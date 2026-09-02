@@ -26,7 +26,7 @@ For each touched node ID:
 1. **JSON export** — via `mcp__pencil__execute` running `Get("<id>", {depth: N})`:
    - Choose depth high enough that the node's complete structure comes through with zero `"..."` elision markers.
    - Pipe output to `design-export/json/<id>.json` (website screens → `website/website-export/json/<id>.json`).
-   - Validation: `python3 -m json.tool <id>.json > /dev/null` must pass.
+   - Validation: `python3 -m json.tool design-export/json/<id>.json > /dev/null` (or `website/website-export/json/<id>.json` for website screens) must pass.
 
 2. **Screenshot export** — via `mcp__pencil__export_nodes`:
    - Export the node ID at 2x scale.
@@ -49,7 +49,12 @@ For each touched node ID:
 The export MUST land in the same commit as the `.pen` file change:
 
 ```sh
+# For dashboard (design.pen) exports:
 git add design.pen design-export/json/<id>.json design-export/screenshots/<id>.png design-export/MANIFEST.md
+
+# For website (website/website.pen) exports:
+git add website/website.pen website/website-export/json/<id>.json website/website-export/screenshots/<id>.png design-export/MANIFEST.md
+
 git commit -s -m "design: <brief description of change>"
 ```
 

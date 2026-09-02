@@ -99,7 +99,7 @@ git add operator/api/v1alpha1/<kind>_types.go \
         charts/gameplane/crds/*.yaml \
         operator/internal/controller/<kind>_controller.go \
         operator/internal/controller/<kind>_envtest_test.go \
-        web/src/types.ts web/src/routes/*.tsx  # if applicable
+        web/src/types.ts [web/src/routes/<changed-files>.tsx]  # Replace with specific route files actually modified (e.g., web/src/routes/Dashboard.tsx web/src/routes/Config.tsx)
 
 git commit -s -m "feat: add <field> to <Kind>
 
