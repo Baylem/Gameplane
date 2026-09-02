@@ -6,7 +6,7 @@ description: "Use when a branch is ready to become a PR, or a merged PR needs cl
 ## Push & Watch CI
 
 1. Ensure the branch is signed and all commits have the full trailer:
-   ```
+   ```text
    Co-Authored-By: <model actually running this session> <noreply@anthropic.com>
    Claude-Session: https://claude.ai/code/session_<id>
    ```
@@ -27,7 +27,10 @@ description: "Use when a branch is ready to become a PR, or a merged PR needs cl
 
 4. If CI fails, fix the issue and create a **new commit** (never amend):
    ```sh
-   git commit -s -m "fix: <scope> - <description>"
+   git commit -s -m "fix: <scope> - <description>
+   
+   Co-Authored-By: <model actually running this session> <noreply@anthropic.com>
+   Claude-Session: https://claude.ai/code/session_<id>"
    git push
    ```
    - The new commit re-triggers CI automatically.
@@ -64,9 +67,9 @@ description: "Use when a branch is ready to become a PR, or a merged PR needs cl
      -f "labels[]=area: api"
    ```
 
-   **Type labels** (pick one): `feature`, `fix`, `refactor`, `test`, `ci`, `chore`, `docs`, `security`
+   **Type labels** (pick one): `type: feature`, `type: fix`, `type: refactor`, `type: test`, `type: ci`, `type: chore`, `type: docs`, `type: security`
 
-   **Area labels** (pick one or more): `operator`, `api`, `agent`, `web`, `modules`, `chart`, `e2e`, `specs`, `shared`, `optional-components`
+   **Area labels** (pick one or more): `area: operator`, `area: api`, `area: agent`, `area: web`, `area: modules`, `area: chart`, `area: e2e`, `area: specs`, `area: shared`, `area: optional-components`
 
    **Special labels** (if applicable): `breaking` (for CRD/API/chart changes)
 
