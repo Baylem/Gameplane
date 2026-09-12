@@ -2,7 +2,6 @@ import {
   RootRoute, Route, Outlet,
 } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
-import { AppLoadingSkeleton } from "@/components/hero/AppLoadingSkeleton";
 import { RequirePermission } from "@/components/RequireRole";
 import { LoginPage } from "@/routes/Login";
 import { SharePage } from "@/routes/Share";
@@ -18,20 +17,7 @@ import { BackupsPage } from "@/routes/Backups";
 import { AuditLogPage } from "@/routes/AuditLog";
 import { AdminLogsPage } from "@/routes/AdminLogs";
 
-// pendingComponent covers a route-level loader taking a while to resolve
-// (the router-wide show-delay/minimum-visible thresholds — defaultPendingMs
-// / defaultPendingMinMs — are set on createRouter in main.tsx, since
-// RootRouteOptions doesn't carry them). Today the actual "app is loading"
-// state (design N13Xud, "Screen/App Loading") is gated inside AppLayout on
-// useMe() rather than a route loader (see AppLayout.tsx and
-// web/e2e/screenshots/slice1.spec.ts, node N13Xud, which delays GET
-// /users/me by 800ms to capture it) — this is defense-in-depth for any
-// future async root-level loader, using the same skeleton so the two paths
-// never visually diverge.
-const rootRoute = new RootRoute({
-  component: Outlet,
-  pendingComponent: AppLoadingSkeleton,
-});
+const rootRoute = new RootRoute({ component: Outlet });
 
 const loginRoute = new Route({
   getParentRoute: () => rootRoute,

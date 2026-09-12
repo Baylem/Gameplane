@@ -24,6 +24,7 @@ import { GlobalSearch } from "@/components/hero/GlobalSearch";
 import { NotificationsPanel } from "@/components/hero/NotificationsPanel";
 import { AppLoadingSkeleton } from "@/components/hero/AppLoadingSkeleton";
 import type { AppearanceMode } from "@/components/hero/AppearanceToggle";
+import { useDelayedLoading } from "@/lib/useDelayedLoading";
 
 // The localStorage key the theme boot script in index.html reads before
 // React mounts — must stay in sync (see index.html and theme-tokens.md).
@@ -100,6 +101,7 @@ export function AppLayout() {
   // the TopBar's hamburger button. Desktop (`lg`+) keeps the always-on
   // sidebar and never mounts the drawer.
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const showSkeleton = useDelayedLoading(isLoading);
 
   useEffect(() => {
     if (error instanceof APIError && error.status === 401) {
@@ -107,7 +109,9 @@ export function AppLayout() {
     }
   }, [error]);
 
-  if (isLoading) return <AppLoadingSkeleton />;
+  // While loading and not yet showing the skeleton, render null to avoid mounting/unmounting the shell
+  if (isLoading && !showSkeleton) return null;
+  if (showSkeleton) return <AppLoadingSkeleton />;
 
   const onLogout = async () => {
     await Auth.logout().catch(() => {});
