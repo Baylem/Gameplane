@@ -1983,3 +1983,14 @@ Per maintainer ruling OD-9 (`specs/done_017-share-link-expiry/OPEN-DECISIONS.md`
 **Export method & validation:** JSON via `Get(id, {depth: 12–14})` for all four nodes, zero elision markers; validated with `python3 -m json.tool`. Screenshots via `export_nodes` at 2x scale: `atqRh.png` 1088×732, `tr6cE.png` 1088×772, `oPF1n.png` 1088×892, `xCJlu.png` 2880×1800, all non-empty RGBA. Content checks: `"This link works until you revoke it"` found only in `tr6cE.json`; `"Long-lived link"` found only in `oPF1n.json`; `"content":"Never"` found in `xCJlu.json`. Read back all edited/created nodes via `Get` after each edit and via screenshot before export.
 
 No `.pen` file was Read/Grep/cat/sed — all access via Pencil MCP `get_app_state`/`execute`/`get_screenshot`/`export_nodes`. The `.pen` file itself was **not** saved (per the task's explicit instruction — the maintainer saves via the GUI). No git add/commit was performed by this pass.
+## Incremental export 2026-09-12 — 010-easy-module-building: BuildModuleDialog modal wizard
+
+Added 3 modal wizard frames for the Web Dashboard Module Builder (US5):
+- `IdbiB`: `Screen/Dialog/Build Module — Step 1 (Preset & Metadata)` (800x700, archetype selector cards, DNS-1123 name validation, display metadata, category chips).
+- `O5kaV`: `Screen/Dialog/Build Module — Step 2 (Container & Ports)` (800x700, pinned image digest badge, dynamic port mapping list, persistent storage configuration).
+- `hmPL7`: `Screen/Dialog/Build Module — Step 3 (Review & Export)` (840x700, dual-pane layout with code viewer tabs for module.yaml/template.yaml/README.md, live offline validation checklist, memory slider preview with heap calculation, and export/install actions).
+
+**Export method & validation:**
+- **JSON:** Exported full subtrees to `design-export/json/IdbiB.json`, `design-export/json/O5kaV.json`, and `design-export/json/hmPL7.json`.
+- **Screenshots:** `export_nodes` PNG export at 2x scale to `design-export/screenshots/{IdbiB,O5kaV,hmPL7}.png`.
+
