@@ -3,14 +3,15 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/ValgulNecron/gameplane/test/e2e/internal/protocol/joindepth"
 )
 
-// TestGameServer_FarmingSimulator25Bot_Query boots a Farming Simulator 25 server
-// and performs a GIANTS HTTP web API health query to assert QUERY depth readiness.
+// TestGameServer_FarmingSimulator25Bot_Query boots a Farming Simulator 25 dedicated server
+// and performs an HTTP query against the dedicated server web API to verify QUERY depth readiness.
 //
 // FS25 is in the HEAVY game set due to Wine/Xvfb overhead and storage requirements.
 // This test DELIBERATELY NEVER RUNS IN CI. It is validated only by maintainer hand-run:
@@ -18,10 +19,11 @@ import (
 //	GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context> GAMEPLANE_E2E_GAME_BOT=1 GAMEPLANE_E2E_GAMES=farming-simulator-25 make test-e2e-keep
 func TestGameServer_FarmingSimulator25Bot_Query(t *testing.T) {
 	skipUnlessGameInScope(t, "farming-simulator-25")
+	t.Parallel()
 
 	runGameBotTest(t, gameBotSpec{
 		Game:        "farming-simulator-25",
-		Template:    "e2e-fs25-bot",
+		Template:    fmt.Sprintf("e2e-fs25-bot-%d", time.Now().UnixNano()),
 		DisplayName: "E2E Farming Simulator 25",
 		Image:       "ghcr.io/valgulnecron/gameplane/farming-simulator-25:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 		Env: map[string]string{

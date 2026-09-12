@@ -85,4 +85,4 @@ This research defines the architectural foundation, container configurations, pr
 
 1. **No Shadowing of Binaries**: `storage.mountPath` must strictly point to data/save/config subdirectories (`/data`, `/serverdata`, `/home/steam/gamesaves`) and never shadow entrypoint binaries or container root filesystems.
 2. **UID/GID Alignment**: For containers running as non-root users (e.g. UID 1000 or 10000), `spec.security.runAsUser`, `spec.security.fsGroup`, and explicit `HOME` environment variables must be declared to ensure SteamCMD operations succeed.
-3. **Save-on-Shutdown Execution**: Every template must define a `lifecycle.stop` action with the engine's native save command before terminating the pod.
+3. **Save-on-Shutdown Execution**: Every template must define a `spec.capabilities.lifecycle.stop` action with the engine's native save command before terminating the pod.

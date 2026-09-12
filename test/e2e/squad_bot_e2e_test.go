@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 
 // TestGameServer_SquadBot_Query boots a Squad dedicated server
 // and performs an A2S_INFO query against the query port to verify QUERY depth readiness.
-// Distinct from TestGameServer_Squad_RCON which tests administrative RCON execution.
 //
 // Squad is in the HEAVY game set due to SteamCMD download and >35Gi storage requirements.
 // This test DELIBERATELY NEVER RUNS IN CI. It is validated only by maintainer hand-run:
@@ -19,10 +19,11 @@ import (
 //	GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context> GAMEPLANE_E2E_GAME_BOT=1 GAMEPLANE_E2E_GAMES=squad make test-e2e-keep
 func TestGameServer_SquadBot_Query(t *testing.T) {
 	skipUnlessGameInScope(t, "squad")
+	t.Parallel()
 
 	runGameBotTest(t, gameBotSpec{
 		Game:        "squad",
-		Template:    "e2e-squad-bot",
+		Template:    fmt.Sprintf("e2e-squad-bot-%d", time.Now().UnixNano()),
 		DisplayName: "E2E Squad",
 		Image:       "ghcr.io/valgulnecron/gameplane/squad:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 		Env: map[string]string{

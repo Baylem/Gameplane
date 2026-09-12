@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 )
 
 // TestGameServer_TheIsleBot_Query boots a The Isle dedicated server
-// and performs an A2S_INFO query against the query port to verify QUERY depth readiness.
+// and performs an A2S_INFO query to verify QUERY depth readiness.
 //
 // The Isle is in the HEAVY game set due to UE4 engine overhead and SteamCMD download.
 // This test DELIBERATELY NEVER RUNS IN CI. It is validated only by maintainer hand-run:
@@ -18,10 +19,11 @@ import (
 //	GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context> GAMEPLANE_E2E_GAME_BOT=1 GAMEPLANE_E2E_GAMES=the-isle make test-e2e-keep
 func TestGameServer_TheIsleBot_Query(t *testing.T) {
 	skipUnlessGameInScope(t, "the-isle")
+	t.Parallel()
 
 	runGameBotTest(t, gameBotSpec{
 		Game:        "the-isle",
-		Template:    "e2e-the-isle-bot",
+		Template:    fmt.Sprintf("e2e-the-isle-bot-%d", time.Now().UnixNano()),
 		DisplayName: "E2E The Isle",
 		Image:       "ghcr.io/valgulnecron/gameplane/the-isle:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 		Env: map[string]string{

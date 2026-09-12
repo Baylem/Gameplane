@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -110,5 +111,76 @@ func TestCLI_WithExecTimeout(t *testing.T) {
 
 	if c.timeout != 42*time.Second {
 		t.Errorf("expected timeout 42s, got %v", c.timeout)
+	}
+}
+
+// TestCLI_FIFO_TimeoutNoReader verifies that writing to a FIFO with no reader times out cleanly without blocking.
+func TestCLI_FIFO_TimeoutNoReader(t *testing.T) {
+	dir := t.TempDir()
+	fifoPath := filepath.Join(dir, "test.fifo")
+	if err := syscall.Mkfifo(fifoPath, 0600); err != nil {
+		t.Fatalf("mkfifo: %v", err)
+	}
+
+	client := NewCLI("127.0.0.1", 0, nil, WithPipePath(fifoPath), WithExecTimeout(100*time.Millisecond))
+	defer client.Close()
+
+	start := time.Now()
+	_, err := client.Exec("test-command")
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected timeout error when no reader is attached to FIFO, got nil")
+	}
+	if !strings.Contains(err.Error(), "has no reader") {
+		t.Errorf("expected 'has no reader' error, got %v", err)
+	}
+	if elapsed > 1*time.Second {
+		t.Errorf("Exec took too long to time out: %v", elapsed)
+	}
+}
+
+// TestCLI_FIFO_WithReader verifies successful FIFO command delivery when a reader is attached.
+func TestCLI_FIFO_WithReader(t *testing.T) {
+	dir := t.TempDir()
+	fifoPath := filepath.Join(dir, "test.fifo")
+	if err := syscall.Mkfifo(fifoPath, 0600); err != nil {
+		t.Fatalf("mkfifo: %v", err)
+	}
+
+	client := NewCLI("127.0.0.1", 0, nil, WithPipePath(fifoPath), WithExecTimeout(2*time.Second))
+	defer client.Close()
+
+	readDone := make(chan string, 1)
+	go func() {
+		r, err := os.OpenFile(fifoPath, os.O_RDONLY, 0)
+		if err != nil {
+			readDone <- "err: " + err.Error()
+			return
+		}
+		defer func() { _ = r.Close() }()
+		buf := make([]byte, 1024)
+		n, _ := r.Read(buf)
+		readDone <- string(buf[:n])
+	}()
+
+	// Allow the reader goroutine to open the FIFO for reading
+	time.Sleep(20 * time.Millisecond)
+
+	out, err := client.Exec("kick player1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected empty output, got %q", out)
+	}
+
+	select {
+	case read := <-readDone:
+		if read != "kick player1\n" {
+			t.Errorf("expected 'kick player1\\n', got %q", read)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for reader")
 	}
 }

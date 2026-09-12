@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 )
 
 // TestGameServer_ArmaReforgerBot_Query boots an Arma Reforger dedicated server
-// and performs an A2S_INFO query against the query port to verify QUERY depth readiness.
+// and performs an A2S_INFO query to verify QUERY depth readiness.
 //
 // Arma Reforger is in the HEAVY game set due to Enfusion engine size and SteamCMD download.
 // This test DELIBERATELY NEVER RUNS IN CI. It is validated only by maintainer hand-run:
@@ -18,10 +19,11 @@ import (
 //	GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context> GAMEPLANE_E2E_GAME_BOT=1 GAMEPLANE_E2E_GAMES=arma-reforger make test-e2e-keep
 func TestGameServer_ArmaReforgerBot_Query(t *testing.T) {
 	skipUnlessGameInScope(t, "arma-reforger")
+	t.Parallel()
 
 	runGameBotTest(t, gameBotSpec{
 		Game:        "arma-reforger",
-		Template:    "e2e-arma-reforger-bot",
+		Template:    fmt.Sprintf("e2e-arma-reforger-bot-%d", time.Now().UnixNano()),
 		DisplayName: "E2E Arma Reforger",
 		Image:       "ghcr.io/valgulnecron/gameplane/arma-reforger:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 		Env: map[string]string{

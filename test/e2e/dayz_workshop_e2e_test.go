@@ -163,8 +163,8 @@ func TestGameServer_DayZ_Workshop(t *testing.T) {
 		}
 
 		expected := "1559212036,1564026768"
-		if !strings.Contains(modListVal, expected) {
-			return false, fmt.Sprintf("MOD_LIST value %q does not contain expected %q", modListVal, expected)
+		if modListVal != expected {
+			return false, fmt.Sprintf("MOD_LIST value %q does not match expected %q", modListVal, expected)
 		}
 		return true, ""
 	})

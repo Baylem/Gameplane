@@ -3,14 +3,15 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/ValgulNecron/gameplane/test/e2e/internal/protocol/joindepth"
 )
 
-// TestGameServer_FiveMBot_Query boots a FiveM dedicated server and probes it
-// via the dynamic.json endpoint to verify QUERY depth readiness.
+// TestGameServer_FiveMBot_Query boots a FiveM FXServer instance
+// and queries the dynamic info.json HTTP endpoint to verify QUERY depth readiness.
 //
 // FiveM is in the HEAVY game set due to container size and embedded database.
 // This test DELIBERATELY NEVER RUNS IN CI. It is validated only by maintainer hand-run:
@@ -18,10 +19,11 @@ import (
 //	GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context> GAMEPLANE_E2E_GAME_BOT=1 GAMEPLANE_E2E_GAMES=fivem make test-e2e-keep
 func TestGameServer_FiveMBot_Query(t *testing.T) {
 	skipUnlessGameInScope(t, "fivem")
+	t.Parallel()
 
 	runGameBotTest(t, gameBotSpec{
 		Game:        "fivem",
-		Template:    "e2e-fivem-bot",
+		Template:    fmt.Sprintf("e2e-fivem-bot-%d", time.Now().UnixNano()),
 		DisplayName: "E2E FiveM",
 		Image:       "ghcr.io/valgulnecron/gameplane/fivem:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 		Env: map[string]string{

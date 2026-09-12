@@ -57,6 +57,7 @@ func main() {
 		templateName string
 		gameName     string
 		capsJSON     string
+		cliPipe      string
 		logLevel     string
 	)
 	flag.StringVar(&addr, "addr", ":8090", "HTTP listen address")
@@ -73,6 +74,8 @@ func main() {
 			"replacing its deprecated source RCON), nuclearoption (Nuclear Option remote-command protocol), "+
 			"rest (generic HTTP/JSON admin API, e.g. FiveM txAdmin or Farming Simulator 25), or cli (container stdin/PTY). "+
 			"Unset or unrecognized falls back to source for back-compat.")
+	flag.StringVar(&cliPipe, "cli-pipe", envOr("GAMEPLANE_CLI_PIPE", "/var/run/gameplane/console.pipe"),
+		"path to FIFO stdin pipe for CLI console protocol")
 	flag.StringVar(&gameLogPath, "game-log-path", "", "path to the game container's log file (for /logs/tail)")
 	flag.StringVar(&certFile, "tls-cert", "", "server TLS cert (PEM). Enables HTTPS + requires client cert")
 	flag.StringVar(&keyFile, "tls-key", "", "server TLS key (PEM)")
@@ -146,7 +149,7 @@ func main() {
 	case strings.EqualFold(rconProtocol, "rest"):
 		rconClient = rcon.NewREST(rconHost, rconPort, rcon.PasswordFromFile(rconPassFile), rcon.WithGame(gameName))
 	case strings.EqualFold(rconProtocol, "cli"):
-		rconClient = rcon.NewCLI(rconHost, rconPort, rcon.PasswordFromFile(rconPassFile))
+		rconClient = rcon.NewCLI(rconHost, rconPort, rcon.PasswordFromFile(rconPassFile), rcon.WithPipePath(cliPipe))
 	default:
 		// "source", empty, or anything unrecognized: back-compat default.
 		rconClient = rcon.New(rconHost, rconPort, rcon.PasswordFromFile(rconPassFile))

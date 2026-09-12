@@ -28,7 +28,7 @@ func TestGameServer_Squad_RCON(t *testing.T) {
 
 	ctx := context.Background()
 	ns := "gameplane-games"
-	uid := time.Now().UnixNano() % 100000
+	uid := time.Now().UnixNano()
 	tmplName := fmt.Sprintf("e2e-squad-rcon-%d", uid)
 	gsName := fmt.Sprintf("squad-rcon-%d", uid)
 	const mountPath = "/serverdata/Squad/Saved"

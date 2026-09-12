@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 )
 
 // TestGameServer_ArkSurvivalEvolvedBot_Query boots an ARK: Survival Evolved dedicated server
-// and performs an A2S_INFO query against the query port to verify QUERY depth readiness.
+// and connects via A2S query to verify QUERY depth readiness.
 //
 // ASE is in the HEAVY game set due to massive SteamCMD download and >30Gi storage requirements.
 // This test DELIBERATELY NEVER RUNS IN CI. It is validated only by maintainer hand-run:
@@ -18,10 +19,11 @@ import (
 //	GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context> GAMEPLANE_E2E_GAME_BOT=1 GAMEPLANE_E2E_GAMES=ark-survival-evolved make test-e2e-keep
 func TestGameServer_ArkSurvivalEvolvedBot_Query(t *testing.T) {
 	skipUnlessGameInScope(t, "ark-survival-evolved")
+	t.Parallel()
 
 	runGameBotTest(t, gameBotSpec{
 		Game:        "ark-survival-evolved",
-		Template:    "e2e-ase-bot",
+		Template:    fmt.Sprintf("e2e-ase-bot-%d", time.Now().UnixNano()),
 		DisplayName: "E2E ARK: Survival Evolved",
 		Image:       "ghcr.io/valgulnecron/gameplane/ark-survival-evolved:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 		Env: map[string]string{

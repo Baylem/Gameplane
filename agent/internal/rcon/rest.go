@@ -332,6 +332,17 @@ func NewREST(host string, port int, pass PassFn, opts ...RESTOption) *REST {
 		opt(c)
 	}
 
+	if c.customPath != "" && c.adapter != nil {
+		switch a := c.adapter.(type) {
+		case *TxAdminAdapter:
+			a.CustomPath = c.customPath
+		case *FarmingSimulatorAdapter:
+			a.CustomPath = c.customPath
+		case *DefaultRESTAdapter:
+			a.CustomPath = c.customPath
+		}
+	}
+
 	tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12}
 	if isLoopbackHost(host) {
 		tlsCfg.InsecureSkipVerify = true
@@ -359,11 +370,11 @@ func (c *REST) Close() error {
 // Exec executes a remote console command via HTTP REST.
 func (c *REST) Exec(cmd string) (string, error) {
 	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if !c.lastAuthFailure.IsZero() && time.Since(c.lastAuthFailure) < c.authFailureCooldown {
-		c.mu.Unlock()
 		return "", fmt.Errorf("rest rcon: %w (cooldown active)", ErrAuth)
 	}
-	c.mu.Unlock()
 
 	var credential string
 	if c.passFn != nil {
@@ -391,20 +402,22 @@ func (c *REST) Exec(cmd string) (string, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		c.mu.Lock()
 		c.lastAuthFailure = time.Now()
-		c.mu.Unlock()
 		return "", fmt.Errorf("rest rcon exec %q: %w (status %d)", cmd, ErrAuth, resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, restMaxResponseBytes))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, restMaxResponseBytes+1))
 	if err != nil {
 		return "", fmt.Errorf("rest rcon read response: %w", err)
+	}
+	if len(body) > restMaxResponseBytes {
+		return "", fmt.Errorf("rest rcon: response body exceeded limit of %d bytes", restMaxResponseBytes)
 	}
 
 	if resp.StatusCode >= 400 {
 		return "", fmt.Errorf("rest rcon exec %q: unexpected status %d: %s", cmd, resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
+	c.lastAuthFailure = time.Time{}
 	return c.adapter.ParseResponse(resp, body)
 }

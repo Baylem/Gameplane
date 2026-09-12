@@ -362,7 +362,7 @@ func TestREST_PassFnError(t *testing.T) {
 	}
 }
 
-// TestREST_LargeResponseCap verifies capping response buffers to restMaxResponseBytes.
+// TestREST_LargeResponseCap verifies detecting oversized response buffers exceeding restMaxResponseBytes.
 func TestREST_LargeResponseCap(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -378,16 +378,16 @@ func TestREST_LargeResponseCap(t *testing.T) {
 	client := NewREST(host, port, staticPass("token"))
 	defer client.Close()
 
-	out, err := client.Exec("dumplogs")
-	if err != nil {
-		t.Fatalf("unexpected error on large response: %v", err)
+	_, err := client.Exec("dumplogs")
+	if err == nil {
+		t.Fatal("expected error on large response exceeding limit, got nil")
 	}
-	if len(out) > restMaxResponseBytes {
-		t.Errorf("output length %d exceeded max %d", len(out), restMaxResponseBytes)
+	if !strings.Contains(err.Error(), "response body exceeded limit") {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
-// TestREST_Options verifies client configuration options.
+// TestREST_Options verifies client configuration options and adapter custom path propagation.
 func TestREST_Options(t *testing.T) {
 	client := NewREST("127.0.0.1", 443, nil, WithCustomPath("/custom/api"), WithScheme("https"))
 	defer client.Close()
@@ -397,6 +397,9 @@ func TestREST_Options(t *testing.T) {
 	}
 	if client.customPath != "/custom/api" {
 		t.Errorf("expected /custom/api, got %s", client.customPath)
+	}
+	if defAdapter, ok := client.adapter.(*DefaultRESTAdapter); !ok || defAdapter.CustomPath != "/custom/api" {
+		t.Errorf("expected adapter CustomPath /custom/api, got %v", client.adapter)
 	}
 }
 

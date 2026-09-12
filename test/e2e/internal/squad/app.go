@@ -88,11 +88,10 @@ func probeSquad(ctx context.Context, addr string) (joindepth.JoinDepth, string, 
 	evidence := fmt.Sprintf("A2S query response received: server=%q map=%q players=%d/%d",
 		info.Name, info.Map, info.Players, info.MaxPlayers)
 
-	// Diagnostic Source handshake attempt
-	_ = retryWithContext(ctx, "squad-source-challenge", 5*time.Second, func(actx context.Context) error {
-		_, chErr := source.Challenge(actx, addr)
-		return chErr
-	})
+	// Diagnostic Source handshake attempt: bounded to a single 3-second attempt so failure does not delay QUERY result.
+	diagCtx, diagCancel := context.WithTimeout(ctx, 3*time.Second)
+	_, _ = source.Challenge(diagCtx, addr)
+	diagCancel()
 
 	return joindepth.QUERY, evidence, nil
 }

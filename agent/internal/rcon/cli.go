@@ -20,6 +20,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -113,27 +114,28 @@ func (c *CLI) Exec(cmd string) (string, error) {
 
 // execPipe writes a command string into the configured stdin FIFO pipe.
 func (c *CLI) execPipe(ctx context.Context, cmd string) error {
-	done := make(chan error, 1)
-	go func() {
-		f, err := os.OpenFile(c.pipePath, os.O_WRONLY|os.O_APPEND, 0600)
-		if err != nil {
-			done <- fmt.Errorf("open cli pipe %q: %w", c.pipePath, err)
-			return
+	var f *os.File
+	for {
+		var err error
+		f, err = os.OpenFile(c.pipePath, os.O_WRONLY|syscall.O_NONBLOCK, 0600)
+		if err == nil {
+			break
 		}
-		defer func() { _ = f.Close() }()
-
-		data := []byte(strings.TrimRight(cmd, "\r\n") + "\n")
-		if _, err := f.Write(data); err != nil {
-			done <- fmt.Errorf("write cli pipe %q: %w", c.pipePath, err)
-			return
+		if !errors.Is(err, syscall.ENXIO) {
+			return fmt.Errorf("open cli pipe %q: %w", c.pipePath, err)
 		}
-		done <- nil
-	}()
-
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("cli pipe write %q timed out: %w", cmd, ctx.Err())
-	case err := <-done:
-		return err
+		// ENXIO indicates that the FIFO currently has no reader attached.
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("cli pipe %q has no reader: %w", c.pipePath, ctx.Err())
+		case <-time.After(25 * time.Millisecond):
+		}
 	}
+	defer func() { _ = f.Close() }()
+
+	data := []byte(strings.TrimRight(cmd, "\r\n") + "\n")
+	if _, err := f.Write(data); err != nil {
+		return fmt.Errorf("write cli pipe %q: %w", c.pipePath, err)
+	}
+	return nil
 }

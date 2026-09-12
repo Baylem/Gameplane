@@ -140,7 +140,7 @@ Defined under `.schema/gametemplate.schema.json`:
 | `spec.storage` | Storage | No | Persistent volume mount point (`size`, `mountPath`, `storageClassName`, `dataSource`, `extra`) |
 | `spec.security` | Security | No | User UID, GID, and filesystem permissions matching image (`runAsUser`, `runAsGroup`, `fsGroup`) |
 | `spec.rcon` | Rcon | No | RCON protocol type, port, and password env key |
-| `spec.capabilities`| Caps | No | Supported features (mods, backups, player list, logs, lifecycle) |
+| `spec.capabilities`| Caps | No | Supported features (mods, backups, player list, lifecycle) |
 | `spec.capabilities.lifecycle.stop` | string[] | No | Pre-stop command sequence (1-16 command strings) for graceful world saves |
 
 ---
@@ -169,4 +169,4 @@ stateDiagram-v2
 1. **Digest Immutability**: Every concrete version in `spec.versions` MUST specify an immutable image digest (`@sha256:...`).
 2. **Mount Safety**: `spec.storage.mountPath` MUST NOT match or be an ancestor of the image's `ENTRYPOINT` or `CMD` executable path.
 3. **SteamCMD User Invariant**: When `spec.security.runAsUser` is set, `spec.env` MUST include `HOME` pointing to a writable directory if not baked into the image.
-4. **Pre-Stop Integrity**: When the engine supports persistence, `capabilities.lifecycle.stop` must contain a valid world-save command sequence.
+4. **Pre-Stop Integrity**: When the engine supports persistence, `spec.capabilities.lifecycle.stop` must contain a valid world-save command sequence.

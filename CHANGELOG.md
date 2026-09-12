@@ -46,7 +46,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **agent / CRD:** two new remote-console protocols behind the agent's existing
   `Exec` interface, so console / players / quiesce / lifecycle / actions work
   over them: `rest` (generic HTTP REST client for games with HTTP administration APIs like FiveM's txAdmin and Farming Simulator 25's web admin) and `cli` (local process execution console interface). The `rcon.protocol` enum is now
-  `source;telnet;websocket;battleye;satisfactory;palworld;rest;cli;none`.
+  `source;telnet;websocket;battleye;satisfactory;palworld;nuclearoption;rest;cli;none`.
 - **images:** four Gameplane-owned container images built, published, and signed with Cosign keyless signatures:
   `ghcr.io/valgulnecron/gameplane/fivem` (FiveM with txAdmin and embedded database),
   `ghcr.io/valgulnecron/gameplane/farming-simulator-25` (Farming Simulator 25 dedicated server runner with headless Wine/Xvfb),

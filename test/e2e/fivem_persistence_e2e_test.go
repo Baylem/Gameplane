@@ -26,7 +26,7 @@ func TestGameServer_FiveM_Persistence(t *testing.T) {
 
 	ctx := context.Background()
 	ns := "gameplane-games"
-	uid := time.Now().UnixNano() % 100000
+	uid := time.Now().UnixNano()
 	tmplName := fmt.Sprintf("e2e-fivem-persist-%d", uid)
 	gsName := fmt.Sprintf("fivem-persist-%d", uid)
 	const mountPath = "/server-data"

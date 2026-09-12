@@ -100,16 +100,24 @@ func probeFiveM(ctx context.Context, addr string) (joindepth.JoinDepth, string, 
 			return readErr
 		}
 
-		var payload map[string]any
-		if jsonErr := json.Unmarshal(body, &payload); jsonErr == nil {
-			evidence = fmt.Sprintf("FiveM server responded with info.json (server: %v)", payload["server"])
-			return nil
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("fivem info.json returned unexpected status %d: %s", resp.StatusCode, string(body))
 		}
-		if resp.StatusCode == http.StatusOK {
-			evidence = fmt.Sprintf("FiveM server responded HTTP 200: %s", strings.TrimSpace(string(body)))
-			return nil
+
+		var payload struct {
+			Server    string         `json:"server"`
+			Enhanced  bool           `json:"enhancedHostSupport"`
+			Resources []string       `json:"resources"`
+			Vars      map[string]any `json:"vars"`
 		}
-		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+		if jsonErr := json.Unmarshal(body, &payload); jsonErr != nil {
+			return fmt.Errorf("fivem invalid info.json: %w", jsonErr)
+		}
+		if payload.Server == "" && len(payload.Resources) == 0 && len(payload.Vars) == 0 {
+			return fmt.Errorf("fivem info.json missing required server metadata fields: %s", string(body))
+		}
+		evidence = fmt.Sprintf("FiveM server responded with info.json (server: %s, resources: %d)", payload.Server, len(payload.Resources))
+		return nil
 	})
 
 	if err != nil {

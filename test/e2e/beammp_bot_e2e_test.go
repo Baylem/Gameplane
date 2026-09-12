@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -18,10 +19,11 @@ import (
 //	GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context> GAMEPLANE_E2E_GAME_BOT=1 GAMEPLANE_E2E_GAMES=beammp make test-e2e-keep
 func TestGameServer_BeamMPBot_Query(t *testing.T) {
 	skipUnlessGameInScope(t, "beammp")
+	t.Parallel()
 
 	runGameBotTest(t, gameBotSpec{
 		Game:        "beammp",
-		Template:    "e2e-beammp-bot",
+		Template:    fmt.Sprintf("e2e-beammp-bot-%d", time.Now().UnixNano()),
 		DisplayName: "E2E BeamMP",
 		Image:       "ghcr.io/valgulnecron/gameplane/beammp:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 		Env: map[string]string{
