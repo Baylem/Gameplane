@@ -8,7 +8,15 @@ import { routeTree } from "@/router/tree";
 import { createAriaNavigate, createAriaUseHref } from "@/lib/ariaRouter";
 import "@/styles/globals.css";
 
-const router = createRouter({ routeTree });
+// defaultPendingMs/defaultPendingMinMs (TanStack Router's own defaults)
+// gate the root route's pendingComponent (AppLoadingSkeleton, design
+// N13Xud) — a 500ms show-delay avoids a flash on fast loads, and a 500ms
+// minimum-visible avoids it flickering back off immediately after.
+const router = createRouter({
+  routeTree,
+  defaultPendingMs: 500,
+  defaultPendingMinMs: 500,
+});
 
 declare module "@tanstack/react-router" {
   interface Register { router: typeof router }
