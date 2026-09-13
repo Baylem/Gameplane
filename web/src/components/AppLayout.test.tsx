@@ -33,8 +33,12 @@ import { AppLayout } from "./AppLayout";
 // "Servers") collides by accessible name with the matching sidebar nav
 // link. Scope queries to the sidebar's own `<nav aria-label="Primary">`
 // landmark wherever a query could ambiguously match both.
-function sidebarNav() {
-  return within(screen.getByRole("navigation", { name: "Primary" }));
+async function sidebarNav() {
+  return within(await screen.findByRole("navigation", { name: "Primary" }));
+}
+
+async function sidebarRoot() {
+  return within(await screen.findByRole("complementary", { name: "Sidebar" }));
 }
 
 describe("AppLayout", () => {
@@ -44,14 +48,15 @@ describe("AppLayout", () => {
       http.get("/cluster/info", () => HttpResponse.json({ clusterName: "homelab" })),
     );
     renderWithQuery(<AppLayout />);
-    await waitFor(() =>
-      expect(sidebarNav().getByRole("link", { name: /Dashboard/i })).toBeInTheDocument(),
+    await waitFor(async () =>
+      expect((await sidebarNav()).getByRole("link", { name: /Dashboard/i })).toBeInTheDocument(),
     );
-    expect(sidebarNav().getByRole("link", { name: /Servers/i })).toBeInTheDocument();
-    expect(sidebarNav().getByRole("link", { name: /Modules/i })).toBeInTheDocument();
-    expect(sidebarNav().getByRole("link", { name: /Backups/i })).toBeInTheDocument();
+    const nav = await sidebarNav();
+    expect(nav.getByRole("link", { name: /Servers/i })).toBeInTheDocument();
+    expect(nav.getByRole("link", { name: /Modules/i })).toBeInTheDocument();
+    expect(nav.getByRole("link", { name: /Backups/i })).toBeInTheDocument();
     // Viewer-restricted: /cluster, /users, /admin nav not rendered.
-    expect(sidebarNav().queryByRole("link", { name: /Audit log/i })).not.toBeInTheDocument();
+    expect(nav.queryByRole("link", { name: /Audit log/i })).not.toBeInTheDocument();
   });
 
   it("operator role unlocks the Cluster nav", async () => {
@@ -262,7 +267,7 @@ describe("AppLayout", () => {
     // before real data arrives — within() on that since-unmounted node then
     // never finds "AL" and hangs. Wait for a loaded-only element (a real
     // nav link, which the skeleton never renders) first.
-    await waitFor(() => expect(sidebarNav().getByRole("link", { name: /Dashboard/i })).toBeInTheDocument());
+    await waitFor(async () => expect((await sidebarNav()).getByRole("link", { name: /Dashboard/i })).toBeInTheDocument());
     const header = screen.getByRole("banner");
     expect(within(header).getByText("AL")).toBeInTheDocument();
   });
@@ -395,7 +400,7 @@ describe("AppLayout", () => {
         http.post("/auth/logout", () => new HttpResponse(null, { status: 204 })),
       );
       renderWithQuery(<AppLayout />);
-      await waitFor(() => expect(sidebarNav().getByRole("link", { name: /Dashboard/i })).toBeInTheDocument());
+      await waitFor(async () => expect((await sidebarNav()).getByRole("link", { name: /Dashboard/i })).toBeInTheDocument());
       const logoutBtn = screen.getAllByRole("button", { name: /sign out/i })[0];
       await userEvent.click(logoutBtn);
       await waitFor(() => {
@@ -416,8 +421,8 @@ describe("AppLayout", () => {
     // the active item with "text-primary" — HeroUI's rebuild no longer
     // relies on TanStack Router's `activeProps`/`.active` class hook, since
     // Sidebar now computes active state itself from useLocation()).
-    await waitFor(() => {
-      const link = sidebarNav().getByRole("link", { name: /^Servers$/i });
+    await waitFor(async () => {
+      const link = (await sidebarNav()).getByRole("link", { name: /^Servers$/i });
       expect(link.className).toContain("text-primary");
     });
   });
@@ -452,7 +457,8 @@ describe("AppLayout", () => {
       http.get("/users/me", () => HttpResponse.json(makeUser())),
     );
     renderWithQuery(<AppLayout />);
-    expect(await screen.findByText("gameplane")).toBeInTheDocument();
+    const root = await sidebarRoot();
+    expect(await root.findByText("gameplane")).toBeInTheDocument();
   });
 
   it("breadcrumb builds from pathname", async () => {
@@ -461,13 +467,14 @@ describe("AppLayout", () => {
       http.get("/users/me", () => HttpResponse.json(makeUser())),
     );
     renderWithQuery(<AppLayout />);
-    // Breadcrumb should show: gameplane > Servers > alpha
+    const root = await sidebarRoot();
     await waitFor(() => {
-      expect(screen.getByText("gameplane")).toBeInTheDocument();
-      // The last breadcrumb (alpha) should be text, not a link
-      const breadcrumbs = screen.getAllByText(/gameplane|Servers|alpha/);
-      expect(breadcrumbs.length).toBeGreaterThan(0);
+      expect(root.getByText("gameplane")).toBeInTheDocument();
     });
+    // Breadcrumb should show: gameplane > alpha (server detail pages drop
+    // the "Servers" ancestor crumb per design dPP50/F9pUrx).
+    const breadcrumbs = screen.getAllByText(/gameplane|alpha/);
+    expect(breadcrumbs.length).toBeGreaterThan(0);
   });
 
   it("appearance toggle switches theme and persists it", async () => {

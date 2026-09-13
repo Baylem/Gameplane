@@ -1,12 +1,22 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import {
+  Button,
+  Input,
+  Chip,
+  Select,
+  SelectValue,
+  SelectTrigger,
+  SelectIndicator,
+  SelectPopover,
+  ListBox,
+  ListBoxItem,
+  Tabs,
+  Tab,
+} from "@heroui/react";
 
 import type { RegistryProject } from "@/types";
 import { Servers } from "@/lib/endpoints";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { errorText } from "@/lib/errors";
 
 const PAGE = 24;
@@ -39,6 +49,15 @@ const PROVIDER_LABELS: Record<string, string> = {
 export function providerLabel(p: string): string {
   return PROVIDER_LABELS[p] ?? p.charAt(0).toUpperCase() + p.slice(1);
 }
+
+// Providers whose backend registry.Search honors SearchQuery.Category as a
+// genuine category facet (api/internal/registry/modrinth.go,
+// api/internal/registry/hangar.go). Every other provider either ignores the
+// param (curseforge, thunderstore, factorio, steam, spigot, github, nexus)
+// or repurposes it for something else (umod's Category selects a game, not
+// a mod category) — the category chips would silently do nothing there, so
+// they render disabled instead of implying a filter that isn't applied.
+const CATEGORY_FILTERABLE_PROVIDERS = new Set(["modrinth", "hangar"]);
 
 // RegistryBrowser is the shared full browser used by the Mods install page
 // and the Modpacks tab: a provider switch (when a game declares more than
@@ -105,7 +124,8 @@ export function RegistryBrowser({
   });
 
   const items = q.data?.pages.flat() ?? [];
-  const showChips = categories && categories.length > 0 && provider === "modrinth";
+  const showChips = !!categories && categories.length > 0;
+  const chipsInteractive = !!provider && CATEGORY_FILTERABLE_PROVIDERS.has(provider);
 
   // No usable provider (none declared, or all need config like a CurseForge key).
   if (!providersQ.isLoading && available.length === 0) {
@@ -115,73 +135,93 @@ export function RegistryBrowser({
   return (
     <div className="flex min-h-0 flex-col gap-3">
       {available.length > 1 && (
-        <div className="flex w-fit rounded border border-border text-xs">
-          {available.map((p, i) => (
-            <button
-              key={p.provider}
-              type="button"
-              onClick={() => setPicked(p.provider)}
-              aria-pressed={p.provider === provider}
-              className={cn(
-                "h-8 px-3",
-                i === 0 && "rounded-l",
-                i === available.length - 1 && "rounded-r",
-                i > 0 && "border-l border-border",
-                p.provider === provider ? "bg-primary font-medium text-primary-foreground" : "text-muted",
-              )}
-            >
-              {providerLabel(p.provider)}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          selectedKey={provider}
+          onSelectionChange={(key) => setPicked(key as string)}
+          aria-label={type === "modpack" ? "Modpack registry" : "Mod registry"}
+        >
+          <Tabs.List className="w-fit">
+            {available.map((p) => (
+              <Tab key={p.provider} id={p.provider} className="text-xs">
+                {providerLabel(p.provider)}
+              </Tab>
+            ))}
+          </Tabs.List>
+        </Tabs>
       )}
 
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <Input
-            autoFocus
-            className="pl-8"
-            placeholder={type === "modpack" ? "Search modpacks…" : "Search mods…"}
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            spellCheck={false}
-          />
-        </div>
-        <select
-          aria-label="Sort"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as RegistrySort)}
-          disabled={!!debounced}
-          title={debounced ? "Sorted by relevance while searching" : undefined}
-          className="h-9 rounded border border-border bg-surface px-2 text-xs disabled:opacity-50"
+        <Input
+          autoFocus
+          className="flex-1"
+          placeholder={type === "modpack" ? "Search modpacks…" : "Search mods…"}
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          spellCheck={false}
+        />
+        <Select
+          selectedKey={sort}
+          onSelectionChange={(key) => setSort(key as RegistrySort)}
+          isDisabled={!!debounced}
+          aria-label={debounced ? "Sort (disabled, sorted by relevance while searching)" : "Sort"}
+          className="max-w-xs"
         >
-          {SORTS.map((s) => (
-            <option key={s.value} value={s.value}>
-              Sort: {s.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue />
+            <SelectIndicator />
+          </SelectTrigger>
+          <SelectPopover>
+            <ListBox
+              items={SORTS}
+            >
+              {(s) => (
+                <ListBoxItem key={s.value} id={s.value} textValue={`Sort: ${s.label}`}>
+                  Sort: {s.label}
+                </ListBoxItem>
+              )}
+            </ListBox>
+          </SelectPopover>
+        </Select>
       </div>
 
       {showChips && (
-        <div className="flex flex-wrap gap-1.5">
-          {[{ value: "", label: "All" }, ...categories].map((c) => {
+        <div className="flex flex-wrap gap-2 modpack-categories">
+          {[{ value: "", label: "All" }, ...(categories ?? [])].map((c) => {
             const active = category === c.value;
+            if (!chipsInteractive) {
+              return (
+                <Chip
+                  key={c.value || "all"}
+                  size="sm"
+                  variant="soft"
+                  aria-disabled="true"
+                  className="cursor-not-allowed opacity-50"
+                  title={`Category filtering isn't available for ${providerLabel(provider ?? "")}.`}
+                >
+                  {c.label}
+                </Chip>
+              );
+            }
             return (
-              <button
+              <Chip
                 key={c.value || "all"}
-                type="button"
+                size="sm"
+                color={active ? "accent" : "default"}
+                variant={active ? "primary" : "soft"}
                 onClick={() => setCategory(c.value)}
+                role="button"
+                tabIndex={0}
                 aria-pressed={active}
-                className={
-                  active
-                    ? "rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-medium text-primary-foreground"
-                    : "rounded-full border border-border px-2.5 py-0.5 text-[11px] text-muted hover:text-fg"
-                }
+                data-active={active}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setCategory(c.value);
+                  }
+                }}
               >
                 {c.label}
-              </button>
+              </Chip>
             );
           })}
         </div>
@@ -201,18 +241,16 @@ export function RegistryBrowser({
                 <div key={`${p.provider}:${p.id}`}>{renderItem(p, provider ?? p.provider)}</div>
               ))}
             </div>
-            {q.hasNextPage && (
-              <div className="flex justify-center pt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void q.fetchNextPage()}
-                  disabled={q.isFetchingNextPage}
-                >
-                  {q.isFetchingNextPage ? "Loading…" : "Load more"}
-                </Button>
-              </div>
-            )}
+            <div className="flex justify-center pt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={() => void q.fetchNextPage()}
+                isDisabled={!q.hasNextPage || q.isFetchingNextPage}
+              >
+                {q.isFetchingNextPage ? "Loading…" : "Load more"}
+              </Button>
+            </div>
           </>
         )}
       </div>

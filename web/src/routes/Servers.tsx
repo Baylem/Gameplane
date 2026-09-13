@@ -173,59 +173,83 @@ export function ServersPage() {
         title="Servers"
         subtitle="Manage game server workloads across your cluster."
         actions={
-          <Link to="/servers/new" className={buttonVariants({ variant: "primary" })}>
+          <Link to="/servers/new" className={cn(buttonVariants({ variant: "primary" }), "rounded-full")}>
             <Plus className="h-4 w-4" /> Create server
           </Link>
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <StatCard
-          label="Running"
-          icon={<Activity className="h-4 w-4" />}
-          value={counts.running}
-          sub={`of ${servers.length} total`}
-          accent="success"
-        />
-        <StatCard
-          label="Players online"
-          icon={<UsersIcon className="h-4 w-4" />}
-          value={counts.players}
-          sub={`peak ${counts.playersMax}`}
-          accent="primary"
-        />
-        <StatCard
-          label="vCPUs"
-          icon={<Cpu className="h-4 w-4" />}
-          value={vcpus > 0 ? vcpus : "—"}
-          sub="cluster cores"
-          accent="warning"
-        />
-        <StatCard
-          label="Storage provisioned"
-          icon={<HardDrive className="h-4 w-4" />}
-          value={storage.valueText}
-          sub={storage.subText ?? "—"}
-          accent={storage.overcommitted ? "warning" : "violet"}
-        />
-        <StatCard
-          label="Cluster size"
-          icon={<ServerIcon className="h-4 w-4" />}
-          value={cluster?.nodes ?? "—"}
-          sub="nodes ready"
-          accent="warning"
-        />
-      </div>
+      {!isMobile && (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <StatCard
+            label="Running"
+            icon={<Activity className="h-4 w-4" />}
+            value={counts.running}
+            sub={`of ${servers.length} total`}
+            accent="success"
+          />
+          <StatCard
+            label="Players online"
+            icon={<UsersIcon className="h-4 w-4" />}
+            value={counts.players}
+            sub={`peak ${counts.playersMax}`}
+            accent="primary"
+          />
+          <StatCard
+            label="vCPUs"
+            icon={<Cpu className="h-4 w-4" />}
+            value={vcpus > 0 ? vcpus : "—"}
+            sub="cluster cores"
+            accent="warning"
+          />
+          <StatCard
+            label="Storage provisioned"
+            icon={<HardDrive className="h-4 w-4" />}
+            value={storage.valueText}
+            sub={storage.subText ?? "—"}
+            accent={storage.overcommitted ? "warning" : "violet"}
+          />
+          <StatCard
+            label="Cluster size"
+            icon={<ServerIcon className="h-4 w-4" />}
+            value={cluster?.nodes ?? "—"}
+            sub="nodes ready"
+            accent="warning"
+          />
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <Tabs
           selectedKey={filter}
           onSelectionChange={(key) => setFilter(key as FilterKey)}
+          variant="secondary"
         >
-          <Tabs.List aria-label="Server status filter">
-            <Tab id="all">{`All ${servers.length}`}</Tab>
-            <Tab id="running">{`Running ${counts.running}`}</Tab>
-            <Tab id="stopped">{`Stopped ${counts.stopped}`}</Tab>
+          <Tabs.List aria-label="Server status filter" className="servers-status-filter">
+            <Tab id="all">
+              <span className="inline-flex items-center gap-1.5">
+                All
+                <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
+                  {servers.length}
+                </span>
+              </span>
+            </Tab>
+            <Tab id="running">
+              <span className="inline-flex items-center gap-1.5">
+                Running
+                <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
+                  {counts.running}
+                </span>
+              </span>
+            </Tab>
+            <Tab id="stopped">
+              <span className="inline-flex items-center gap-1.5">
+                Stopped
+                <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
+                  {counts.stopped}
+                </span>
+              </span>
+            </Tab>
           </Tabs.List>
         </Tabs>
         <div className="ml-auto flex items-center gap-2">
@@ -251,7 +275,7 @@ export function ServersPage() {
             isOpen={isFilterOpen}
             onOpenChange={handleOpenFilterChange}
           >
-            <span className={cn(buttonVariants({ variant: "outline" }), "relative")}>
+            <div className="inline-flex items-center gap-2 rounded-[6px] px-3 py-2 text-sm font-medium border border-default-300 bg-default-100 hover:bg-default-200 cursor-pointer transition-colors">
               <Filter className="h-4 w-4" />
               Filter
               {appliedFacetCount > 0 && (
@@ -259,7 +283,7 @@ export function ServersPage() {
                   {appliedFacetCount}
                 </Chip>
               )}
-            </span>
+            </div>
           </FilterPopover>
         </div>
       </div>

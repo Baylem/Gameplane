@@ -13,6 +13,19 @@ describe("BackupDetailDrawer", () => {
     expect(screen.queryByText(/Backup details/i)).not.toBeInTheDocument();
   });
 
+  it("dialog has accessible name when open", async () => {
+    server.use(
+      http.get("/backups/alpha-1", () =>
+        HttpResponse.json(makeBackup({ metadata: { name: "alpha-1" } })),
+      ),
+    );
+    renderWithQuery(
+      <BackupDetailDrawer name="alpha-1" onClose={() => {}} onRestore={() => {}} />,
+    );
+    await screen.findByText(/Backup details/i);
+    expect(screen.getByRole("dialog", { name: /backup details/i })).toBeInTheDocument();
+  });
+
   it("renders details when open", async () => {
     server.use(
       http.get("/backups/alpha-1", () =>
@@ -47,7 +60,7 @@ describe("BackupDetailDrawer", () => {
       <BackupDetailDrawer name="alpha-1" onClose={onClose} onRestore={() => {}} />,
     );
     await screen.findByText(/Backup details/i);
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await userEvent.click(screen.getByRole("button", { name: /Close backup details/i }));
     expect(onClose).toHaveBeenCalled();
   });
 

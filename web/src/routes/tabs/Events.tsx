@@ -59,7 +59,7 @@ export function EventsTab({
                     size="sm"
                     variant={filter === filterValue ? "primary" : "ghost"}
                     onClick={() => setFilter(filterValue)}
-                    className="h-7 px-3 text-xs font-medium"
+                    className="h-7 rounded-full px-3 text-xs font-medium"
                   >
                     {label}
                   </Button>

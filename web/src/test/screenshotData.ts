@@ -38,6 +38,9 @@ export const screenshotTemplates: GameTemplate[] = [
       version: "1.21",
       description: "Official Minecraft Java Edition server",
       image: "ghcr.io/valgulnecron/gameplane/minecraft:1.21",
+      versions: [
+        { id: "1.21", displayName: "1.21 (Vanilla)", default: true, gameVersion: "1.21" },
+      ],
       rcon: { protocol: "minecraft" },
       capabilities: {
         status: {
@@ -192,6 +195,59 @@ export const screenshotTemplates: GameTemplate[] = [
       image: "ghcr.io/valgulnecron/gameplane/ark:1.30.2",
     },
   }),
+  makeTemplate({
+    metadata: { name: "minecraft-modlist" },
+    spec: {
+      displayName: "Minecraft (Mod List)",
+      game: "minecraft",
+      version: "1.21",
+      description: "Minecraft server with mod list support",
+      image: "ghcr.io/valgulnecron/gameplane/minecraft:1.21",
+      capabilities: {
+        mods: {
+          path: "mods",
+          idList: { env: "MODLIST_FILE" },
+          registry: {
+            providers: [{ provider: "modrinth", modpacks: {} }],
+          },
+        },
+      },
+    },
+  }),
+  makeTemplate({
+    metadata: { name: "minecraft-modded" },
+    spec: {
+      displayName: "Minecraft (Modded)",
+      game: "minecraft",
+      version: "1.21",
+      description: "Minecraft server with mod support (Fabric/Forge)",
+      image: "ghcr.io/valgulnecron/gameplane/minecraft:1.21",
+      versions: [
+        { id: "1.21", displayName: "1.21 (Vanilla)", default: true, gameVersion: "1.21" },
+        { id: "1.21-fabric", displayName: "1.21 (Fabric)", loader: "fabric" },
+        { id: "1.21-forge", displayName: "1.21 (Forge)", loader: "forge" },
+        { id: "1.20.4", displayName: "1.20.4", gameVersion: "1.20.4" },
+      ],
+      capabilities: {
+        mods: {
+          path: "mods",
+          extensions: [".jar"],
+          install: { allowedHosts: ["modrinth.com", "cdn.modrinth.com", "github.com"] },
+          loaders: {
+            fabric: { path: "mods" },
+            forge: { path: "mods" },
+          },
+          registry: {
+            // Two providers (design GayoL, specs/014h) — test-server-09's
+            // mods/registry/providers mock handler exposes both so the
+            // Mods browse screen can capture the provider tabs + category
+            // pills; hangar is additive alongside the pre-existing modrinth.
+            providers: [{ provider: "modrinth", modpacks: {} }, { provider: "hangar" }],
+          },
+        },
+      },
+    },
+  }),
 ];
 
 // ============================================================================
@@ -287,6 +343,221 @@ export const screenshotServers: GameServer[] = [
         playersMax: 0,
       },
       startedAt: undefined,
+    },
+  }),
+  makeServer({
+    metadata: {
+      name: "test-server-09",
+      namespace: "default",
+      annotations: { "gameplane.local/node": "node-01" },
+    },
+    spec: { templateRef: { name: "minecraft-modded" }, version: "1.21-fabric" },
+    status: {
+      phase: "Running",
+      agent: {
+        playersOnline: 4,
+        playersMax: 20,
+        lastHeartbeat: "2026-09-06T10:15:30Z",
+        cpuMillicores: 1680,
+        cpuLimitMillicores: 4000,
+        memoryBytes: 6_200_000_000,
+        memoryLimitBytes: 8_000_000_000,
+        diskUsedBytes: 15_600_000_000,
+        diskTotalBytes: 50_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "main",
+          host: "test-server-09.gameplane-demo.local",
+          port: 25565,
+          protocol: "tcp",
+        },
+      ],
+      startedAt: "2026-09-03T14:20:00Z",
+    },
+  }),
+  makeServer({
+    metadata: {
+      name: "test-server-01",
+      namespace: "gameplane-games",
+      annotations: { "gameplane.local/node": "kubelab-control" },
+    },
+    spec: {
+      templateRef: { name: "minecraft-modded" },
+      idle: {
+        enabled: true,
+        afterMinutes: 30,
+        wakeWindows: ["0 17 * * *", "0 9 * * 6,0"],
+        wakeOnConnect: true,
+      },
+      capture: { enabled: true },
+    },
+    status: {
+      phase: "Running",
+      agent: {
+        gameVersion: "1.21.4-fabric",
+        playersOnline: 0,
+        playersMax: 20,
+        lastHeartbeat: new Date(Date.now() - 15 * 1000).toISOString(),
+        cpuMillicores: 0,
+        cpuLimitMillicores: 2000,
+        memoryBytes: 1_520_000_000,
+        memoryLimitBytes: 4_000_000_000,
+        diskUsedBytes: 3_770_000_000,
+        diskTotalBytes: 29_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "frp",
+          host: "mc.frp.gameplane.dev",
+          port: 25565,
+          tunnelProvider: "FRP",
+        },
+        {
+          name: "external",
+          host: "172.18.255.203",
+          port: 25565,
+          pool: "pool-us-west",
+        },
+        {
+          name: "cluster",
+          host: "10.107.129.42",
+          port: 30812,
+        },
+      ],
+      startedAt: new Date(Date.now() - 185 * 1000).toISOString(),
+    },
+  }),
+  makeServer({
+    metadata: {
+      name: "test-server-02",
+      namespace: "default",
+      annotations: { "gameplane.local/node": "node-01" },
+    },
+    spec: { templateRef: { name: "minecraft-modded" }, version: "1.21-fabric" },
+    status: {
+      phase: "Running",
+      agent: {
+        playersOnline: 4,
+        playersMax: 20,
+        lastHeartbeat: "2026-09-06T10:15:30Z",
+        cpuMillicores: 1680,
+        cpuLimitMillicores: 4000,
+        memoryBytes: 6_200_000_000,
+        memoryLimitBytes: 8_000_000_000,
+        diskUsedBytes: 15_600_000_000,
+        diskTotalBytes: 50_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "main",
+          host: "test-server-02.gameplane-demo.local",
+          port: 25565,
+          protocol: "tcp",
+        },
+      ],
+      startedAt: "2026-09-03T14:20:00Z",
+    },
+  }),
+  makeServer({
+    metadata: {
+      name: "test-server-capture-disabled",
+      namespace: "default",
+      annotations: { "gameplane.local/node": "node-01" },
+    },
+    spec: { templateRef: { name: "minecraft-modded" }, capture: { enabled: false } },
+    status: {
+      phase: "Running",
+      agent: {
+        playersOnline: 0,
+        playersMax: 20,
+        lastHeartbeat: "2026-09-06T10:15:30Z",
+        cpuMillicores: 0,
+        cpuLimitMillicores: 4000,
+        memoryBytes: 1_520_000_000,
+        memoryLimitBytes: 4_000_000_000,
+        diskUsedBytes: 3_770_000_000,
+        diskTotalBytes: 29_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "main",
+          host: "test-server-capture-disabled.gameplane-demo.local",
+          port: 25565,
+          protocol: "tcp",
+        },
+      ],
+      startedAt: "2026-09-03T14:20:00Z",
+    },
+  }),
+  makeServer({
+    metadata: {
+      name: "test-server-no-shares",
+      namespace: "default",
+      annotations: { "gameplane.local/node": "node-01" },
+    },
+    spec: { templateRef: { name: "minecraft-modded" } },
+    status: {
+      phase: "Running",
+      agent: {
+        playersOnline: 0,
+        playersMax: 20,
+        lastHeartbeat: "2026-09-06T10:15:30Z",
+        cpuMillicores: 0,
+        cpuLimitMillicores: 4000,
+        memoryBytes: 1_520_000_000,
+        memoryLimitBytes: 4_000_000_000,
+        diskUsedBytes: 3_770_000_000,
+        diskTotalBytes: 29_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "main",
+          host: "test-server-no-shares.gameplane-demo.local",
+          port: 25565,
+          protocol: "tcp",
+        },
+      ],
+      startedAt: "2026-09-03T14:20:00Z",
+    },
+  }),
+  makeServer({
+    metadata: { name: "test-server-04", namespace: "gameplane-demo" },
+    spec: { templateRef: { name: "rust-vanilla" } },
+    status: {
+      phase: "Failed",
+      agent: { playersOnline: null, playersMax: 128, lastHeartbeat: undefined },
+    },
+  }),
+  makeServer({
+    metadata: {
+      name: "ark-island",
+      namespace: "gameplane-demo",
+      annotations: { "gameplane.local/node": "node-01" },
+    },
+    spec: { templateRef: { name: "minecraft-modlist" } },
+    status: {
+      phase: "Running",
+      agent: {
+        playersOnline: 0,
+        playersMax: 70,
+        lastHeartbeat: "2026-09-06T10:15:30Z",
+        cpuMillicores: 0,
+        cpuLimitMillicores: 4000,
+        memoryBytes: 1_520_000_000,
+        memoryLimitBytes: 4_000_000_000,
+        diskUsedBytes: 3_770_000_000,
+        diskTotalBytes: 29_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "main",
+          host: "ark-island.gameplane-demo.local",
+          port: 27015,
+          protocol: "tcp",
+        },
+      ],
+      startedAt: "2026-09-03T14:20:00Z",
     },
   }),
 ];
@@ -397,6 +668,76 @@ export const screenshotEvents: ServerEvent[] = [
     source: "statefulset-controller",
     object: "mc-survival",
     count: 1,
+  },
+  {
+    id: "evt-001",
+    time: "2026-09-02T15:35:00Z",
+    type: "Normal",
+    reason: "Scheduled",
+    message: 'Successfully assigned gameplane-demo/test-server-04 to node-01',
+    source: "default-scheduler",
+    object: "test-server-04",
+    count: 1,
+  },
+  {
+    id: "evt-002",
+    time: "2026-09-02T15:36:15Z",
+    type: "Normal",
+    reason: "Pulling",
+    message: 'Pulling image "ghcr.io/valgulnecron/gameplane/rust:2026.01"',
+    source: "kubelet",
+    object: "test-server-04",
+    count: 1,
+  },
+  {
+    id: "evt-003",
+    time: "2026-09-02T15:37:30Z",
+    type: "Normal",
+    reason: "Pulled",
+    message: 'Successfully pulled image "ghcr.io/valgulnecron/gameplane/rust:2026.01" in 1m15s',
+    source: "kubelet",
+    object: "test-server-04",
+    count: 1,
+  },
+  {
+    id: "evt-004",
+    time: "2026-09-02T15:37:45Z",
+    type: "Normal",
+    reason: "Created",
+    message: 'Created container rust-server',
+    source: "kubelet",
+    object: "test-server-04",
+    count: 1,
+  },
+  {
+    id: "evt-005",
+    time: "2026-09-02T15:37:50Z",
+    type: "Normal",
+    reason: "Started",
+    message: 'Started container rust-server',
+    source: "kubelet",
+    object: "test-server-04",
+    count: 1,
+  },
+  {
+    id: "evt-006",
+    time: "2026-09-02T15:40:22Z",
+    type: "Warning",
+    reason: "ImagePullBackOff",
+    message: 'Back-off pulling image "ghcr.io/valgulnecron/gameplane/rust:2026.01"',
+    source: "kubelet",
+    object: "test-server-04",
+    count: 3,
+  },
+  {
+    id: "evt-007",
+    time: "2026-09-02T15:41:45Z",
+    type: "Warning",
+    reason: "CrashLoopBackOff",
+    message: 'Back-off restarting failed container rust-server',
+    source: "kubelet",
+    object: "test-server-04",
+    count: 12,
   },
 ];
 
@@ -639,8 +980,95 @@ export function screenshotConfig(): AllConfig {
     modRegistries: {
       registries: [{ provider: "curseforge" }, { provider: "steam" }],
     },
+    installTimeSettings: {
+      gameDataStorageClass: "fast-nvme",
+    },
   });
 }
+
+// Variant of screenshotConfig() with a Helm-seeded OIDC provider (role
+// mappings on all three roles) plus a dashboard override on the admin
+// mapping. Used only by the slice4 Admin Settings — Authentication tests
+// that need the OIDC-configured state (uMiwd, R65Xyx, Rwnu3, XL5ZU,
+// vStkb, uw0dB), selected per-test via the "e2e_admin_config_variant=oidc"
+// cookie (see buildScreenshotHandlers() in handlers.ts) — a page.route
+// override of GET /admin/config doesn't work here because MSW's Service
+// Worker (msw/browser, src/test/browser-msw.ts) answers that request
+// itself; Playwright can't intercept a request already resolved inside a
+// Service Worker's fetch handler. Kept out of the shared screenshotConfig()
+// because most other tests (and the "no OIDC mappings yet" variant below)
+// need the plain, not-yet-configured state instead.
+export function screenshotConfigWithOidc(): AllConfig {
+  const base = screenshotConfig();
+  return {
+    ...base,
+    auth: {
+      providers: [{ name: "local", kind: "local", enabled: true }],
+      helmOverride: {
+        roleMappings: {
+          admin: ["ops-leads"],
+        },
+      },
+    },
+    installTimeSettings: {
+      gameDataStorageClass: "fast-nvme",
+      oidcHelmProvider: {
+        groupsClaim: "groups",
+        defaultRole: "viewer",
+        roleMappings: {
+          admin: ["ops-leads"],
+          operator: ["ops-team"],
+          viewer: ["everyone"],
+        },
+      },
+    },
+  };
+}
+
+// Variant of screenshotConfig() with a Helm-seeded OIDC provider that
+// declares no role mappings at all, and no dashboard override either —
+// the "no OIDC mappings yet" empty state. Backs both nNGDX (the empty-state
+// banner) and BV5ei (the resulting "Not configured" provenance badges),
+// selected via the "e2e_admin_config_variant=oidc-empty-mappings" cookie
+// — see screenshotConfigWithOidc()'s comment on why a cookie, not
+// page.route, is the override mechanism here.
+export function screenshotConfigOidcEmptyMappings(): AllConfig {
+  const base = screenshotConfig();
+  return {
+    ...base,
+    installTimeSettings: {
+      gameDataStorageClass: "fast-nvme",
+      oidcHelmProvider: { groupsClaim: "groups", defaultRole: "viewer" },
+    },
+  };
+}
+
+// Variant of screenshotConfig() with no game-data StorageClass set at
+// install time — the "cluster default" empty state for Cluster Settings
+// (dxdEi), selected via the "e2e_admin_config_variant=empty-storage-class"
+// cookie — see screenshotConfigWithOidc()'s comment on why a cookie, not
+// page.route, is the override mechanism here.
+export function screenshotConfigEmptyStorageClass(): AllConfig {
+  const base = screenshotConfig();
+  return {
+    ...base,
+    installTimeSettings: { gameDataStorageClass: "" },
+  };
+}
+
+// ============================================================================
+// System Log Lines for Admin — System Logs screen (control-plane logs)
+// ============================================================================
+
+export const screenshotSystemLogLines = [
+  '{"level":"info","ts":"2026-09-06T12:00:01Z","msg":"starting gameplane-api","version":"v0.2.0-beta.8"}',
+  '{"level":"info","ts":"2026-09-06T12:00:02Z","msg":"connected to database","driver":"sqlite"}',
+  '{"level":"info","ts":"2026-09-06T12:00:03Z","msg":"listening","addr":":8080"}',
+  '{"level":"info","ts":"2026-09-06T12:01:15Z","msg":"request","method":"GET","path":"/api/v1/servers","status":200,"duration_ms":4}',
+  '{"level":"info","ts":"2026-09-06T12:01:22Z","msg":"request","method":"POST","path":"/api/v1/auth/login","status":200,"duration_ms":112}',
+  '{"level":"warn","ts":"2026-09-06T12:03:47Z","msg":"slow query","table":"audit_events","duration_ms":340}',
+  '{"level":"info","ts":"2026-09-06T12:05:00Z","msg":"reconciled gameserver","name":"test-server-01","phase":"Running"}',
+];
 
 // ============================================================================
 // Game Server Log Lines (exact lines matching Pencil design kPmoo)

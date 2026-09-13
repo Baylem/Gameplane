@@ -121,7 +121,7 @@ export function DashboardPage() {
         <LoadingCard message="Loading dashboard…" />
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
             <StatCard
               label="Running"
               icon={<Activity className="h-4 w-4" />}

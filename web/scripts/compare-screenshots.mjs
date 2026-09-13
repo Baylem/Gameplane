@@ -7,11 +7,51 @@
  * reference baseline screenshots exported from Pencil (design-export/screenshots/*.png).
  *
  * Key features:
+ * - Scale normalization: when a capture's width differs from its reference's width
+ *   (e.g. a 2880-wide design frame vs. a 1440 browser capture), the capture is resized
+ *   to the reference width first (sharp, lanczos3 kernel, aspect ratio preserved,
+ *   upscaling capped at 4x so a tiny element crop can't be blown up past recognition),
+ *   then any remaining height difference is padded as below. The applied factor is
+ *   logged per screen (console + summary.json) even when it is 1 (no scaling needed).
  * - Dimension normalization via sharp padding (anchored at top-left, no distorting stretch)
  * - Subpixel & anti-aliasing tolerance via pixelmatch ({ threshold: 0.15, includeAA: false })
  * - Generation of visual diff highlighting (magenta) and 3-panel composite previews
  * - Configurable global & per-screen diff factor thresholds
  * - Output to console, JSON summary, and GitHub Step Summary ($GITHUB_STEP_SUMMARY)
+ *
+ * Scale gate (SCALE_ALLOWLIST): the 4%/16% global/block diff thresholds and the
+ * 4x4 regional block gate above are deliberately left as-is (maintainer ruling)
+ * — this gate is a separate, narrower check on top of them. A capture whose
+ * scaleFactor is not exactly 1.000 means its native pixel size doesn't match
+ * its reference's width class, and for a full screen that's a real fidelity
+ * problem worth failing on. But a handful of ids are intentionally captured
+ * as tight element crops (a single badge/chip/dialog via captureLocator())
+ * at the component's actual implementation size, while their design-export
+ * reference PNG was exported at a different crop size — for those, a
+ * non-unity scale factor is the expected, accepted shape of the comparison,
+ * not a regression (maintainer ruling: chips/badges keep implementation
+ * size). SCALE_ALLOWLIST names exactly those ids, each mapped to the scale
+ * factor recorded from the last local run. The gate is a two-sided band: a
+ * listed id's scaleFactor must stay within 5% of its recorded value in
+ * *either* direction (SCALE_BAND_FRACTION) — both growth and shrinkage past
+ * the band fail, since either one means the capture's relationship to its
+ * reference crop has changed and the recorded value is stale. A screen not
+ * listed here that drifts off scale=1.000 also fails the gate. This applies
+ * in both the normal run and --check-expected, since both go through the
+ * same per-screen comparison loop below.
+ *
+ * Reference-alpha mask (REFERENCE_ALPHA_MASK, below): maintainer-flagged,
+ * kept behind its own const so it stays easy to find and to turn off. When
+ * on, pixels that are fully transparent in the REFERENCE image (alpha < 8)
+ * are treated as carrying no design intent and are excluded from BOTH the
+ * global and the 4x4 block diff denominators/numerators — i.e. the diff
+ * ratio is computed only over reference-opaque pixels, and a block with
+ * fewer than 8 opaque reference pixels is skipped from the block-max
+ * computation entirely rather than diffing whatever sparse content it has.
+ * The 4%/16% thresholds themselves are unchanged; only which pixels count
+ * toward them changes. The resulting opaque fraction (opaque reference
+ * pixels ÷ canvas pixels) is logged per screen, in summary.json, regardless
+ * of whether the mask is on.
  */
 
 import fs from 'node:fs';
@@ -34,6 +74,15 @@ const DEFAULT_OUT_DIR = path.join(WEB_ROOT, 'test-results/visual-diff');
 const DEFAULT_MAX_DIFF_FACTOR = 0.04; // 4.0% maximum allowed global difference
 const DEFAULT_MAX_BLOCK_DIFF_FACTOR = 0.16; // 16.0% maximum allowed difference in any 4x4 regional block
 const DEFAULT_PIXEL_THRESHOLD = 0.15; // Color delta sensitivity (0 to 1)
+const MAX_UPSCALE_FACTOR = 4; // Never scale a capture up by more than 4x, however small it is vs. the reference
+
+// Maintainer-flagged, kept clearly separable: excludes reference-transparent
+// pixels from both the global and per-block diff denominators/numerators.
+// See the header comment's "Reference-alpha mask" section. Flip this to
+// `false` to fall back to the prior behavior (every canvas pixel compared).
+const REFERENCE_ALPHA_MASK = true;
+const ALPHA_MASK_THRESHOLD = 8; // reference alpha below this = "no design intent"
+const ALPHA_MASK_MIN_BLOCK_PIXELS = 8; // a block with fewer opaque reference pixels than this is skipped
 
 // Per-screen threshold overrides where text density, terminal streams, or
 // specific layouts have justified rendering variance.
@@ -54,6 +103,44 @@ const SCREEN_BLOCK_THRESHOLD_OVERRIDES = {
   tooKB: 0.25,
   SeizD: 0.25,
 };
+
+// Ids maintainer-accepted as component crops captured at implementation size
+// rather than at the reference's exact crop dimensions (see the header
+// comment's "Scale gate" section). Each value is the scaleFactor recorded
+// from the last local run; the gate allows ±5% (SCALE_BAND_FRACTION) around
+// it in either direction, not just growth.
+const SCALE_ALLOWLIST = {
+  BV5ei: 1.27, // Provenance Badge — Not configured
+  R65Xyx: 1.25, // Provenance Badge — Overridden
+  Rwnu3: 1.22, // Provenance Badge — From Helm
+  XL5ZU: 1.45, // Removable Group Chip — Orange (admin)
+  vStkb: 1.45, // Removable Group Chip — Violet (operator)
+  uw0dB: 1.47, // Removable Group Chip — Secondary (viewer)
+  CqaSq: 1.07, // Role Editor Modal
+  E9EEv0: 1.22, // Restore Backup dialog
+  Kp48V: 1.13, // Confirm Admin Mapping dialog
+  MaoHP: 1.22, // Dialog — Reset Password
+  NLDDv: 1.22, // Dialog — Invite User
+  t3IY3u: 1.22, // Dialog — Edit User
+  // DMnEi (Backup List Item): captured as a table-row element crop against a
+  // 1088-wide reference (downscale, scaleFactor < 1). NOTE (design/export
+  // conflict, not a capture-code bug): design-export/screenshots/DMnEi.png
+  // currently shows the "Add module source" dialog rather than the Backup
+  // List Item this id and MANIFEST.md both describe — see slice-3.spec.ts's
+  // DMnEi test comment. Tracked in issue #376; needs a Pencil re-export, not
+  // a change to this allowlist entry.
+  DMnEi: 0.49,
+  zhLZN: 1.3125, // Backup Detail Drawer
+  kIxaJ: 0.6184, // Audit Integrity Banner
+};
+
+// Allowed deviation from an allowlisted id's recorded scaleFactor, in either
+// direction (see the header comment's "Scale gate" section).
+const SCALE_BAND_FRACTION = 0.05;
+
+// Tolerance for float rounding when comparing a scaleFactor against 1.000 or
+// against an allowlisted band edge.
+const SCALE_EPSILON = 0.0005;
 
 // Screens currently expected to be captured by shipped slices (Slice 1 + Slice 2a per contracts/screen-verification.md).
 // Reconciled against current captures when --check-expected is enabled.
@@ -136,26 +223,84 @@ function parseArgs() {
 }
 
 /**
- * Normalizes an image to target dimensions by padding at bottom and right (top-left aligned)
- * and returns raw RGBA pixel buffer.
+ * Computes the scale factor to apply to a capture so its width matches the reference
+ * width, capped so an undersized capture (e.g. a tiny element crop) is never upscaled
+ * by more than MAX_UPSCALE_FACTOR. Downscaling (capture wider than reference) is never
+ * capped. Returns 1 when no source/target width is known or the widths already match.
  */
-async function loadAndPadImage(filePath, targetWidth, targetHeight) {
-  const meta = await sharp(filePath).metadata();
-  const padRight = Math.max(0, targetWidth - (meta.width || 0));
-  const padBottom = Math.max(0, targetHeight - (meta.height || 0));
+function computeScaleFactor(srcWidth, refWidth) {
+  if (!srcWidth || !refWidth || srcWidth === refWidth) {
+    return 1;
+  }
+  const rawScale = refWidth / srcWidth;
+  return Math.min(rawScale, MAX_UPSCALE_FACTOR);
+}
 
+/**
+ * Loads an image and, if scale !== 1, resizes it (lanczos3, aspect-ratio preserved,
+ * width-driven) to correct for a reference/capture size class mismatch. Returns the
+ * raw RGBA pixel buffer plus sharp's own reported dimensions for the result — never
+ * a manually-recomputed width/height, since sharp's aspect-ratio rounding for the
+ * resized height can land a pixel off from a naive `width * (height/width)` guess.
+ */
+async function loadAndScaleImage(filePath, scale) {
   let pipeline = sharp(filePath).ensureAlpha();
-  if (padRight > 0 || padBottom > 0) {
-    pipeline = pipeline.extend({
-      top: 0,
-      left: 0,
-      right: padRight,
-      bottom: padBottom,
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    });
+
+  if (scale !== 1) {
+    const meta = await sharp(filePath).metadata();
+    const scaledWidth = Math.max(1, Math.round((meta.width || 0) * scale));
+    pipeline = pipeline.resize({ width: scaledWidth, kernel: sharp.kernel.lanczos3 });
   }
 
   const { data, info } = await pipeline.raw().toBuffer({ resolveWithObject: true });
+  return { data, width: info.width, height: info.height, channels: info.channels };
+}
+
+/**
+ * Pads a raw RGBA buffer to the target canvas by extending at bottom and right
+ * (top-left aligned, no distorting stretch). Finishes with an `extract` clamp to
+ * exactly targetWidth x targetHeight — `extend` only ever adds pixels, so if the
+ * source is already >= the target on either axis (e.g. sharp's real resized height
+ * came out larger than the caller's own maxHeight estimate) the pad step alone
+ * cannot shrink it back down, and callers rely on this buffer being sized to
+ * exactly match the canvas they allocated for diffing (pixelmatch requires equal
+ * buffer sizes and a mismatch here would throw or read out of bounds).
+ */
+async function padToCanvas(image, targetWidth, targetHeight) {
+  const padRight = Math.max(0, targetWidth - image.width);
+  const padBottom = Math.max(0, targetHeight - image.height);
+
+  let extended = image;
+  if (padRight > 0 || padBottom > 0) {
+    // Materialize the extended buffer before extracting from it (rather than
+    // chaining .extend().extract() on one sharp() pipeline instance): sharp
+    // has a known quirk where an .extract() chained straight after .extend()
+    // on a raw-buffer-backed pipeline can compute the extract region against
+    // the pre-extend dimensions and throw "bad extract area" even though the
+    // extend itself is correct — round-tripping through a fresh raw buffer
+    // sidesteps it.
+    const { data, info } = await sharp(image.data, {
+      raw: { width: image.width, height: image.height, channels: image.channels },
+    })
+      .extend({
+        top: 0,
+        left: 0,
+        right: padRight,
+        bottom: padBottom,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    extended = { data, width: info.width, height: info.height, channels: info.channels };
+  }
+
+  const { data, info } = await sharp(extended.data, {
+    raw: { width: extended.width, height: extended.height, channels: extended.channels },
+  })
+    .extract({ left: 0, top: 0, width: targetWidth, height: targetHeight })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
   return { data, width: info.width, height: info.height };
 }
 
@@ -251,21 +396,71 @@ async function run() {
       continue;
     }
 
-    // Read metadata of both to determine maximum canvas dimensions
+    // Read metadata of both to determine the scale factor
     const refMeta = await sharp(refPath).metadata();
     const currMeta = await sharp(currPath).metadata();
 
-    const maxWidth = Math.max(refMeta.width || 0, currMeta.width || 0);
-    const maxHeight = Math.max(refMeta.height || 0, currMeta.height || 0);
+    // Scale-normalize the capture to the reference's width class before padding —
+    // a 2880-wide design frame vs. a 1440 browser capture is a scale mismatch, not
+    // a crop/content mismatch, and diffing it unscaled would read as near-100% diff.
+    const scaleFactor = computeScaleFactor(currMeta.width || 0, refMeta.width || 0);
+
+    // Actually perform the scale now (rather than only predicting its output size)
+    // so the final canvas dimensions below are driven by sharp's own reported
+    // width/height, never a manually-recomputed one — sharp's aspect-ratio
+    // rounding for the resized height can land a pixel off from a naive
+    // `width * (height/width)` guess, which would otherwise make the diffData
+    // buffer allocated below too small for the actual scaled+padded image.
+    const scaledCurr = await loadAndScaleImage(currPath, scaleFactor);
+
+    if (scaleFactor !== 1) {
+      console.log(
+        `  ↕ [${screenId}] scale-normalized capture ${currMeta.width}x${currMeta.height} → ${scaledCurr.width}x${scaledCurr.height} (factor: ${scaleFactor.toFixed(3)}x)`
+      );
+    }
+
+    // Scale gate — see the header comment's "Scale gate (SCALE_ALLOWLIST)"
+    // section. Independent of, and in addition to, the global/block diff
+    // gate below. Two-sided: an allowlisted id must stay within
+    // SCALE_BAND_FRACTION of its recorded value in either direction.
+    const scaleRecorded = SCALE_ALLOWLIST[screenId];
+    let scaleGateMessage = null;
+    if (Math.abs(scaleFactor - 1) > SCALE_EPSILON) {
+      if (scaleRecorded === undefined) {
+        scaleGateMessage =
+          `[${screenId}] scaleFactor ${scaleFactor.toFixed(4)}x is not 1.000x and "${screenId}" is not in ` +
+          `SCALE_ALLOWLIST (web/scripts/compare-screenshots.mjs) — either this capture regressed to the wrong ` +
+          `element/viewport size, or it's a deliberate implementation-size crop that needs adding to the allowlist.`;
+      } else {
+        const band = scaleRecorded * SCALE_BAND_FRACTION;
+        const lowerBound = scaleRecorded - band;
+        const upperBound = scaleRecorded + band;
+        if (scaleFactor < lowerBound - SCALE_EPSILON || scaleFactor > upperBound + SCALE_EPSILON) {
+          scaleGateMessage =
+            `[${screenId}] scaleFactor ${scaleFactor.toFixed(4)}x deviates from its SCALE_ALLOWLIST recorded value ` +
+            `of ${scaleRecorded.toFixed(2)}x by more than ${(SCALE_BAND_FRACTION * 100).toFixed(0)}% ` +
+            `(allowed range ${lowerBound.toFixed(4)}x–${upperBound.toFixed(4)}x, web/scripts/compare-screenshots.mjs) — ` +
+            `update the recorded value only if this shift is intentional.`;
+        }
+      }
+    }
+    const scalePassed = scaleGateMessage === null;
+
+    const maxWidth = Math.max(refMeta.width || 0, scaledCurr.width);
+    const maxHeight = Math.max(refMeta.height || 0, scaledCurr.height);
 
     // Standardize both onto maxWidth × maxHeight raw RGBA buffers
-    const paddedRef = await loadAndPadImage(refPath, maxWidth, maxHeight);
-    const paddedCurr = await loadAndPadImage(currPath, maxWidth, maxHeight);
+    const refRaw = await loadAndScaleImage(refPath, 1);
+    const paddedRef = await padToCanvas(refRaw, maxWidth, maxHeight);
+    const paddedCurr = await padToCanvas(scaledCurr, maxWidth, maxHeight);
 
     const diffData = Buffer.alloc(maxWidth * maxHeight * 4);
 
-    // Run pixelmatch
-    const numDiffPixels = pixelmatch(
+    // Run pixelmatch to populate diffData (the magenta/yellow-highlighted diff
+    // buffer used below). Its own returned count is unmasked (every canvas
+    // pixel); the effective, possibly reference-alpha-masked count used for
+    // gating and reporting is recomputed from diffData in the block loop below.
+    pixelmatch(
       paddedRef.data,
       paddedCurr.data,
       diffData,
@@ -279,7 +474,13 @@ async function run() {
       }
     );
 
-    // Compute regional 4x4 block diff ratios to protect against dark-canvas dilution
+    // Compute regional 4x4 block diff ratios to protect against dark-canvas dilution.
+    // Also tallies reference-opaque pixel counts (global + per-block) for the
+    // REFERENCE_ALPHA_MASK gate — see the header comment's "Reference-alpha
+    // mask" section. referenceOpaquePixelCount (and the derived opaqueFraction)
+    // are always tracked and logged, independent of whether the mask is on;
+    // only whether a non-opaque pixel is *excluded* from the diff counts below
+    // depends on REFERENCE_ALPHA_MASK.
     const cols = 4;
     const rows = 4;
     const numBlocks = cols * rows;
@@ -289,23 +490,43 @@ async function run() {
     const blockWidth = Math.ceil(maxWidth / cols);
     const blockHeight = Math.ceil(maxHeight / rows);
 
+    let referenceOpaquePixelCount = 0;
+
     for (let y = 0; y < maxHeight; y++) {
       const blockRow = Math.min(rows - 1, Math.floor(y / blockHeight));
       const rowOffset = y * maxWidth * 4;
       for (let x = 0; x < maxWidth; x++) {
+        const pxIdx = rowOffset + x * 4;
+        const isReferenceOpaque = paddedRef.data[pxIdx + 3] >= ALPHA_MASK_THRESHOLD;
+        if (isReferenceOpaque) {
+          referenceOpaquePixelCount++;
+        }
+
+        // A pixel that's transparent in the reference carries no design
+        // intent — excluded from both denominators and numerators below,
+        // global and per-block, when the mask is on.
+        if (REFERENCE_ALPHA_MASK && !isReferenceOpaque) {
+          continue;
+        }
+
         const blockCol = Math.min(cols - 1, Math.floor(x / blockWidth));
         const blockIdx = blockRow * cols + blockCol;
         blockTotalPixels[blockIdx]++;
-        const pxIdx = rowOffset + x * 4;
         if (diffData[pxIdx] === 255 && diffData[pxIdx + 1] === 0 && diffData[pxIdx + 2] === 100) {
           blockDiffPixels[blockIdx]++;
         }
       }
     }
 
+    const opaqueFraction = maxWidth * maxHeight > 0 ? referenceOpaquePixelCount / (maxWidth * maxHeight) : 0;
+
+    // A block whose opaque reference pixel count falls below
+    // ALPHA_MASK_MIN_BLOCK_PIXELS is skipped from the block-max computation
+    // entirely (mask on) — too little reference content to judge from.
+    const minBlockPixels = REFERENCE_ALPHA_MASK ? ALPHA_MASK_MIN_BLOCK_PIXELS : 1;
     let maxBlockDiffRatio = 0;
     for (let b = 0; b < numBlocks; b++) {
-      if (blockTotalPixels[b] > 0) {
+      if (blockTotalPixels[b] >= minBlockPixels) {
         const ratio = blockDiffPixels[b] / blockTotalPixels[b];
         if (ratio > maxBlockDiffRatio) {
           maxBlockDiffRatio = ratio;
@@ -313,8 +534,19 @@ async function run() {
       }
     }
 
-    const totalPixels = maxWidth * maxHeight;
-    const diffRatio = numDiffPixels / totalPixels;
+    // Global totals are the sum of the per-block counts above, so they honor
+    // the same reference-alpha exclusion (when REFERENCE_ALPHA_MASK is on,
+    // this is the count of reference-opaque pixels and diffs among them;
+    // when off, every block counted every pixel, so this equals
+    // maxWidth * maxHeight and pixelmatch's own unmasked diff count, resp.).
+    let totalPixels = 0;
+    let effectiveDiffPixels = 0;
+    for (let b = 0; b < numBlocks; b++) {
+      totalPixels += blockTotalPixels[b];
+      effectiveDiffPixels += blockDiffPixels[b];
+    }
+
+    const diffRatio = totalPixels > 0 ? effectiveDiffPixels / totalPixels : 0;
     const diffPercentage = (diffRatio * 100).toFixed(2);
 
     const allowedThreshold = SCREEN_THRESHOLD_OVERRIDES[screenId] ?? options.maxDiffFactor;
@@ -326,10 +558,14 @@ async function run() {
     const maxBlockPercentage = (maxBlockDiffRatio * 100).toFixed(2);
     const blockPassed = maxBlockDiffRatio <= allowedBlockThreshold;
 
-    const passed = globalPassed && blockPassed;
+    const passed = globalPassed && blockPassed && scalePassed;
 
     if (!passed) {
       hasFailure = true;
+    }
+
+    if (!scalePassed) {
+      console.error(`❌ ${scaleGateMessage}`);
     }
 
     // Save individual diff image
@@ -375,15 +611,19 @@ async function run() {
       .toFile(compositeFilePath);
 
     const statusStr = passed ? '✅ PASS' : '❌ FAIL';
+    const scaleGateStr = scalePassed ? '' : ' | Scale gate: FAIL';
     console.log(
       `${statusStr} [${screenId.padEnd(8)}] Global: ${diffPercentage.padStart(6)}% (max: ${allowedPercentage}%) | ` +
       `Block: ${maxBlockPercentage.padStart(6)}% (max: ${allowedBlockPercentage}%) | ` +
-      `Pixels: ${numDiffPixels.toLocaleString().padStart(9)} / ${totalPixels.toLocaleString()} | Size: ${maxWidth}x${maxHeight}`
+      `Pixels: ${effectiveDiffPixels.toLocaleString().padStart(9)} / ${totalPixels.toLocaleString()} | Size: ${maxWidth}x${maxHeight} | ` +
+      `Scale: ${scaleFactor.toFixed(3)}x${scaleGateStr} | Opaque: ${(opaqueFraction * 100).toFixed(1)}%`
     );
 
     results.push({
       id: screenId,
       status: passed ? 'PASS' : 'FAIL',
+      scaleGatePassed: scalePassed,
+      scaleGateMessage,
       diffRatio,
       diffPercentage,
       threshold: allowedPercentage,
@@ -391,8 +631,10 @@ async function run() {
       maxBlockDiffPercentage: maxBlockPercentage,
       blockThreshold: allowedBlockPercentage,
       totalPixels,
-      diffPixels: numDiffPixels,
+      diffPixels: effectiveDiffPixels,
       dimensions: `${maxWidth}x${maxHeight}`,
+      scaleFactor: Number(scaleFactor.toFixed(4)),
+      opaqueFraction: Number(opaqueFraction.toFixed(4)),
       diffImage: path.relative(WEB_ROOT, diffFilePath),
       compositeImage: path.relative(WEB_ROOT, compositeFilePath),
     });
@@ -422,8 +664,8 @@ async function run() {
       markdown += `Total screens evaluated: **${results.length}** | `;
       markdown += `Passed: **${results.filter((r) => r.status === 'PASS').length}** | `;
       markdown += `Failed: **${results.filter((r) => r.status === 'FAIL').length}**\n\n`;
-      markdown += '| Screen ID | Status | Global Diff % | Max Global % | Max Block % | Max Block % Allowed | Diff Pixels | Canvas Size |\n';
-      markdown += '| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |\n';
+      markdown += '| Screen ID | Status | Global Diff % | Max Global % | Max Block % | Max Block % Allowed | Diff Pixels | Canvas Size | Scale |\n';
+      markdown += '| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |\n';
 
       for (const r of results) {
         const icon = r.status === 'PASS' ? '✅' : '❌';
@@ -431,7 +673,8 @@ async function run() {
         const thresholdText = r.threshold === 'N/A' ? 'N/A' : `${r.threshold}%`;
         const blockText = r.maxBlockDiffPercentage ? `**${r.maxBlockDiffPercentage}%**` : 'N/A';
         const blockThresholdText = r.blockThreshold ? `${r.blockThreshold}%` : 'N/A';
-        markdown += `| \`${r.id}\` | ${icon} ${r.status} | ${diffText} | ${thresholdText} | ${blockText} | ${blockThresholdText} | ${r.diffPixels.toLocaleString()} | ${r.dimensions} |\n`;
+        const scaleText = typeof r.scaleFactor === 'number' ? `${r.scaleFactor.toFixed(3)}x` : 'N/A';
+        markdown += `| \`${r.id}\` | ${icon} ${r.status} | ${diffText} | ${thresholdText} | ${blockText} | ${blockThresholdText} | ${r.diffPixels.toLocaleString()} | ${r.dimensions} | ${scaleText} |\n`;
       }
 
       markdown += '\n> Diff highlighting: Baseline design (left) vs Current browser (center) vs Diff highlight (right, magenta).\n';

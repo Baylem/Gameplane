@@ -55,8 +55,8 @@ describe("RegistryBrowser", () => {
       />,
     );
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Modrinth" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "CurseForge" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Modrinth" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "CurseForge" })).toBeInTheDocument();
     });
   });
 
@@ -87,8 +87,8 @@ describe("RegistryBrowser", () => {
       />,
     );
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Modrinth" })).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: "CurseForge" })).not.toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Modrinth" })).toBeInTheDocument();
+      expect(screen.queryByRole("tab", { name: "CurseForge" })).not.toBeInTheDocument();
     });
   });
 
@@ -185,15 +185,16 @@ describe("RegistryBrowser", () => {
       />,
     );
 
-    const sortSelect = screen.getByRole("combobox", { name: /sort/i }) as HTMLSelectElement;
-    expect(sortSelect).not.toBeDisabled();
+    const sortTrigger = screen.getByRole("button", { name: /sort/i });
+    expect(sortTrigger).not.toHaveAttribute("aria-disabled", "true");
+    expect(sortTrigger).not.toBeDisabled();
 
     const input = screen.getByRole("textbox");
     await userEvent.type(input, "test");
 
     // Sort should become disabled while searching
     await waitFor(() => {
-      expect(sortSelect).toBeDisabled();
+      expect(sortTrigger).toBeDisabled();
     });
   });
 
@@ -310,7 +311,6 @@ describe("RegistryBrowser", () => {
     const projects = Array.from({ length: 30 }, (_, i) =>
       mockProject({ title: `Mod ${i + 1}` }),
     );
-    let callCount = 0;
     server.use(
       http.get("/servers/test/mods/registry/providers", () =>
         HttpResponse.json([
@@ -320,7 +320,6 @@ describe("RegistryBrowser", () => {
       http.get("/servers/test/mods/registry/search", ({ request }) => {
         const url = new URL(request.url);
         const offset = parseInt(url.searchParams.get("offset") ?? "0");
-        callCount++;
         const page = projects.slice(offset, offset + 24);
         return HttpResponse.json(page);
       }),
@@ -481,11 +480,110 @@ describe("RegistryBrowser", () => {
     await screen.findByText("modrinth Result");
 
     // Switch provider
-    await userEvent.click(screen.getByRole("button", { name: "CurseForge" }));
+    await userEvent.click(screen.getByRole("tab", { name: "CurseForge" }));
 
     await waitFor(() => {
       expect(screen.getByText("curseforge Result")).toBeInTheDocument();
     });
+  });
+
+  it("renders category chips for a non-modrinth category-filterable provider (hangar)", async () => {
+    server.use(
+      http.get("/servers/test/mods/registry/providers", () =>
+        HttpResponse.json([{ provider: "hangar", available: true, mods: true, modpacks: false }]),
+      ),
+      http.get("/servers/test/mods/registry/search", () =>
+        HttpResponse.json([mockProject({ provider: "hangar" })]),
+      ),
+    );
+    const categories = [{ value: "utility", label: "Utility" }];
+    renderWithQuery(
+      <RegistryBrowser name="test" categories={categories} renderItem={(p) => <div>{p.title}</div>} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Utility" })).toBeInTheDocument();
+    });
+  });
+
+  it("disables category chips for a provider that can't filter by category", async () => {
+    server.use(
+      http.get("/servers/test/mods/registry/providers", () =>
+        HttpResponse.json([{ provider: "curseforge", available: true, mods: true, modpacks: false }]),
+      ),
+      http.get("/servers/test/mods/registry/search", ({ request }) => {
+        expect(new URL(request.url).searchParams.get("category")).toBeFalsy();
+        return HttpResponse.json([mockProject({ provider: "curseforge" })]);
+      }),
+    );
+    const categories = [{ value: "utility", label: "Utility" }];
+    renderWithQuery(
+      <RegistryBrowser name="test" categories={categories} renderItem={(p) => <div>{p.title}</div>} />,
+    );
+
+    await screen.findByText("Example Mod");
+    // Disabled chips are not exposed as clickable buttons (no role="button",
+    // no onClick), but the label still renders with aria-disabled + a title
+    // explaining why.
+    const chip = screen.getByText("Utility");
+    expect(chip.closest("[aria-disabled]")).toHaveAttribute(
+      "title",
+      "Category filtering isn't available for CurseForge.",
+    );
+    expect(screen.queryByRole("button", { name: "Utility" })).not.toBeInTheDocument();
+  });
+
+  it("switching provider tabs re-queries search with the new provider param", async () => {
+    const seenProviders: string[] = [];
+    server.use(
+      http.get("/servers/test/mods/registry/providers", () =>
+        HttpResponse.json([
+          { provider: "modrinth", available: true, mods: true, modpacks: false },
+          { provider: "hangar", available: true, mods: true, modpacks: false },
+        ]),
+      ),
+      http.get("/servers/test/mods/registry/search", ({ request }) => {
+        const provider = new URL(request.url).searchParams.get("provider") ?? "";
+        seenProviders.push(provider);
+        return HttpResponse.json([mockProject({ provider: provider as ModRegistryProvider })]);
+      }),
+    );
+    renderWithQuery(
+      <RegistryBrowser name="test" renderItem={(p) => <div>{p.title}</div>} />,
+    );
+
+    await waitFor(() => expect(seenProviders).toContain("modrinth"));
+
+    await userEvent.click(screen.getByRole("tab", { name: "Hangar" }));
+
+    await waitFor(() => expect(seenProviders).toContain("hangar"));
+  });
+
+  it("toggling a category chip applies and clears the filter on the search request", async () => {
+    let lastCategory: string | null = null;
+    server.use(
+      http.get("/servers/test/mods/registry/providers", () =>
+        HttpResponse.json([{ provider: "modrinth", available: true, mods: true, modpacks: false }]),
+      ),
+      http.get("/servers/test/mods/registry/search", ({ request }) => {
+        lastCategory = new URL(request.url).searchParams.get("category");
+        return HttpResponse.json([mockProject()]);
+      }),
+    );
+    const categories = [{ value: "utility", label: "Utility" }];
+    renderWithQuery(
+      <RegistryBrowser name="test" categories={categories} renderItem={(p) => <div>{p.title}</div>} />,
+    );
+
+    await screen.findByText("Example Mod");
+    const utilityChip = screen.getByRole("button", { name: "Utility" });
+    await userEvent.click(utilityChip);
+    await waitFor(() => expect(lastCategory).toBe("utility"));
+
+    // Clicking "All" clears it back out.
+    await userEvent.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() => expect(lastCategory).toBeFalsy());
   });
 });
 

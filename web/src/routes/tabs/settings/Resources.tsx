@@ -1,9 +1,10 @@
-import { Input } from "@/components/ui/input";
-import { ResourceInput } from "@/components/ui/resource-input";
+import { Input } from "@heroui/react";
 import type { ResourceRequirements } from "@/types";
 import { isValidQuantity } from "@/lib/validation";
+import { ResourceInput } from "@/components/hero/ResourceInput";
 import { Field } from "./Field";
 import type { SectionProps } from "./types";
+
 
 export function ResourcesSection({ draft, onChange }: SectionProps) {
   const res = draft.spec.resources ?? {};
@@ -34,6 +35,22 @@ export function ResourcesSection({ draft, onChange }: SectionProps) {
 
   const sizeValid = !storage.size || isValidQuantity(storage.size);
 
+  const handleCpuChange = (qty: string) => {
+    setResources({
+      ...res,
+      requests: { ...res.requests, cpu: qty },
+      limits: { ...res.limits, cpu: qty },
+    });
+  };
+
+  const handleMemoryChange = (qty: string) => {
+    setResources({
+      ...res,
+      requests: { ...res.requests, memory: qty },
+      limits: { ...res.limits, memory: qty },
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Field
@@ -43,13 +60,7 @@ export function ResourcesSection({ draft, onChange }: SectionProps) {
         <ResourceInput
           kind="cpu"
           value={res.limits?.cpu ?? res.requests?.cpu ?? "2"}
-          onChange={(q) =>
-            setResources({
-              ...res,
-              requests: { ...res.requests, cpu: q },
-              limits: { ...res.limits, cpu: q },
-            })
-          }
+          onChange={handleCpuChange}
         />
       </Field>
 
@@ -57,13 +68,7 @@ export function ResourcesSection({ draft, onChange }: SectionProps) {
         <ResourceInput
           kind="memory"
           value={res.limits?.memory ?? res.requests?.memory ?? "4Gi"}
-          onChange={(q) =>
-            setResources({
-              ...res,
-              requests: { ...res.requests, memory: q },
-              limits: { ...res.limits, memory: q },
-            })
-          }
+          onChange={handleMemoryChange}
         />
       </Field>
 
@@ -80,10 +85,12 @@ export function ResourcesSection({ draft, onChange }: SectionProps) {
         }
       >
         <Input
+          type="text"
           value={storage.size ?? ""}
           onChange={(e) => setStorage({ ...storage, size: e.target.value || undefined })}
           placeholder="10Gi"
           className={sizeValid ? "" : "border-danger focus:border-danger focus:ring-danger"}
+          aria-label="Storage size"
         />
         {!sizeValid && (
           <div className="pt-1 text-xs text-danger">Invalid quantity (e.g. &quot;10Gi&quot;).</div>
@@ -92,11 +99,13 @@ export function ResourcesSection({ draft, onChange }: SectionProps) {
 
       <Field label="StorageClass" hint="Leave blank to use the cluster default.">
         <Input
+          type="text"
           value={storage.storageClassName ?? ""}
           onChange={(e) =>
             setStorage({ ...storage, storageClassName: e.target.value || undefined })
           }
           placeholder="fast-ssd"
+          aria-label="StorageClass"
         />
       </Field>
     </div>

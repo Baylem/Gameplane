@@ -56,6 +56,7 @@ export default defineConfig({
       "/schedules": { target: apiTarget, changeOrigin: true },
       "/restores": { target: apiTarget, changeOrigin: true },
       "/backup-destinations": { target: apiTarget, changeOrigin: true },
+      "/shares": { target: apiTarget, changeOrigin: true },
       "/modules": { target: apiTarget, changeOrigin: true, bypass: htmlBypass },
       "/admin":  { target: apiTarget, changeOrigin: true, bypass: htmlBypass },
       "/ws":     { target: wsTarget,  ws: true },

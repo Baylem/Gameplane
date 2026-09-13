@@ -539,7 +539,10 @@ describe("AdminSettingsPage", () => {
     // The heading's immediate ancestor div only wraps the title/subtitle
     // block (see SectionCard) — walk up to the enclosing Card so the query
     // also covers the card's body content (groups claim, mappings, etc).
-    const helmCard = helmCardHeading.closest<HTMLElement>(".rounded-lg");
+    // HeroUI v3's Card renders no Tailwind class (its styling comes from
+    // "card"/"card--default" component classes, not "rounded-lg"), so scope
+    // via the data-slot="card" attribute CardRoot always sets instead.
+    const helmCard = helmCardHeading.closest<HTMLElement>('[data-slot="card"]');
     expect(helmCard).toBeInTheDocument();
     expect(within(helmCard!).getByText("teams")).toBeInTheDocument();
     // Scope "viewer" to the default role display, since it appears in both
@@ -1088,6 +1091,61 @@ describe("AdminSettingsPage", () => {
     expect(allText).toContain("Ensure the mapped group contains only authorized personnel");
     expect(allText).toContain("Anyone in these groups gets full admin access from their next login");
     expect(allText).toContain(exactWarning);
+  });
+
+  // AdminGroupsInlineWarning: inline banner in AddProviderForm
+  it("shows AdminGroupsInlineWarning banner when admin groups are entered", async () => {
+    server.use(
+      http.get("/admin/config", () =>
+        HttpResponse.json({
+          auth: {
+            providers: [
+              { name: "Local accounts", kind: "local", enabled: true },
+            ],
+          },
+          general: { instanceName: "", externalURL: "https://example.com", defaultNamespace: "" },
+        }),
+      ),
+      http.get("/auth/providers", () =>
+        HttpResponse.json({ providers: [] }),
+      ),
+    );
+    renderWithQuery(<AdminSettingsPage />);
+    await userEvent.click(screen.getByRole("button", { name: /Authentication/i }));
+
+    // Find the Add provider button and click it
+    const addBtn = await screen.findByRole("button", { name: "Add provider" });
+    await userEvent.click(addBtn);
+
+    // Initially, the warning banner should not be visible
+    expect(
+      screen.queryByText(/Full admin access/),
+    ).not.toBeInTheDocument();
+
+    // Fill in admin groups
+    const adminInput = await screen.findByLabelText("Admin groups");
+    await userEvent.type(adminInput, "admin-group");
+
+    // Now the warning banner should appear
+    expect(
+      await screen.findByText(/Full admin access/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Groups added here will be mapped to the admin role/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/You'll be asked to confirm before this is saved/),
+    ).toBeInTheDocument();
+
+    // Clear the admin groups input
+    await userEvent.clear(adminInput);
+
+    // The warning banner should disappear
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/Full admin access/),
+      ).not.toBeInTheDocument();
+    });
   });
 
   // T050: Admin mapping warning in provider editor

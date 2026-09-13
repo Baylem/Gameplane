@@ -1,4 +1,4 @@
-import { type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs";
@@ -33,5 +33,27 @@ export async function capture(page: Page, id: string): Promise<void> {
     }
   }
 
-  await page.screenshot({ path: screenshotPath });
+  await page.screenshot({ path: screenshotPath, animations: "disabled" });
+}
+
+/**
+ * Capture a screenshot of a single element (dialog, drawer, badge, chip, ...) rather
+ * than the full page, and save to web/e2e/screenshots/<id>.png.
+ *
+ * Use this instead of `capture()` when the reference design frame is a tight crop of
+ * one component rather than a full viewport — comparing a small element crop against
+ * a full-page capture otherwise reads as a near-total diff (mismatched canvas sizes),
+ * not a real rendering difference.
+ *
+ * Waits for web fonts to finish loading before waiting for the target to be visible,
+ * scrolls it into view, then screenshots just that element with animations disabled
+ * and the text caret hidden so the capture is deterministic.
+ */
+export async function captureLocator(page: Page, id: string, locator: Locator): Promise<void> {
+  const screenshotPath = path.join(SCREENSHOTS_DIR, `${id}.png`);
+
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  await expect(locator).toBeVisible();
+  await locator.scrollIntoViewIfNeeded();
+  await locator.screenshot({ path: screenshotPath, animations: "disabled", caret: "hide" });
 }

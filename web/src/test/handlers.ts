@@ -26,7 +26,13 @@ import {
 import {
   getScreenshotData,
   screenshotConsoleOutput,
+  screenshotSystemLogLines,
+  screenshotConfigWithOidc,
+  screenshotConfigOidcEmptyMappings,
+  screenshotConfigEmptyStorageClass,
 } from "./screenshotData";
+
+export const INVALID_BPF_FILTER_FIXTURE = "tcp prot 8080 foo";
 
 export const handlers = [
   // Auth
@@ -196,8 +202,23 @@ export const handlers = [
       filter: "tcp port 25565",
     }),
   ),
-  http.post(/\/servers\/[^/]+:capture-start(\?.*)?$/, () =>
-    HttpResponse.json(
+  http.post(/\/servers\/[^/]+:capture-start(\?.*)?$/, async ({ request }) => {
+    const body = (await request.json().catch(() => null)) as {
+      filter?: string;
+      maxDurationSeconds?: number;
+      maxSizeBytes?: number;
+      ttlSecondsAfterFinished?: number;
+    } | null;
+
+    // Validate BPF filter if provided
+    if (body?.filter) {
+      // Check for invalid syntax patterns
+      if (body.filter === INVALID_BPF_FILTER_FIXTURE || body.filter.includes("{{{{")) {
+        return new HttpResponse("Invalid BPF filter syntax: syntax error at position 12 (invalid token 'foo')\n", { status: 400 });
+      }
+    }
+
+    return HttpResponse.json(
       {
         captureId: "cap-12345",
         serverName: "server-name",
@@ -208,11 +229,11 @@ export const handlers = [
         expiresAt: "2026-08-30T00:00:00Z",
         bytesWritten: 0,
         packetsWritten: 0,
-        filter: "tcp port 25565",
+        filter: body?.filter || "tcp port 25565",
       },
       { status: 202 },
-    ),
-  ),
+    );
+  }),
   http.post(/\/servers\/[^/]+:capture-stop(\?.*)?$/, () =>
     HttpResponse.json({
       captureId: "cap-12345",
@@ -555,6 +576,13 @@ export const handlers = [
     }
     return HttpResponse.json(out);
   }),
+  // Audit chain integrity check — AuditLogPage renders the success/failure
+  // banner from this. No dedicated test exercises the failure path against
+  // this default handler (see AuditLog.test.tsx's own fetch mocks); this
+  // exists so the endpoint isn't unhandled when a test lands on /admin/audit.
+  http.get("/admin/audit/verify", () =>
+    HttpResponse.json({ ok: true, checked: 5, message: "audit chain intact" }),
+  ),
   http.get("/admin/config", () => HttpResponse.json(makeConfig())),
   http.put("/admin/config/:section", () => new HttpResponse(null, { status: 204 })),
   http.post("/admin/notifications/sinks/:name/test", () =>
@@ -851,11 +879,58 @@ export function buildScreenshotHandlers() {
         status: { capture: { enabled: false } },
       }),
     ),
-    http.get(/\/servers\/[^/]+:captures(\?.*)?$/, () =>
-      HttpResponse.json({ captures: [], total: 0, limit: 100, offset: 0 }),
-    ),
-    http.get(/\/servers\/[^/]+:capture$/, () =>
-      HttpResponse.json({
+    http.get(/\/servers\/[^/]+:captures(\?.*)?$/, ({ cookies }) => {
+      if (cookies.e2e_capture_variant === "list") {
+        return HttpResponse.json({
+          captures: [
+            {
+              captureId: "cap-001",
+              serverName: "test-server-01",
+              phase: "Completed",
+              startedAt: "2026-09-12T14:00:00Z",
+              completedAt: "2026-09-12T14:15:00Z",
+              createdAt: "2026-09-12T14:00:00Z",
+              expiresAt: "2026-09-19T14:00:00Z",
+              bytesWritten: 2048,
+              packetsWritten: 250,
+              filter: "tcp port 25565",
+            },
+            {
+              captureId: "cap-002",
+              serverName: "test-server-01",
+              phase: "Completed",
+              startedAt: "2026-09-11T10:30:00Z",
+              completedAt: "2026-09-11T10:45:00Z",
+              createdAt: "2026-09-11T10:30:00Z",
+              expiresAt: "2026-09-18T10:30:00Z",
+              bytesWritten: 1536,
+              packetsWritten: 180,
+              filter: "tcp port 25565",
+            },
+          ],
+          total: 2,
+          limit: 100,
+          offset: 0,
+        });
+      }
+      return HttpResponse.json({ captures: [], total: 0, limit: 100, offset: 0 });
+    }),
+    http.get(/\/servers\/[^/]+:capture$/, ({ cookies }) => {
+      if (cookies.e2e_capture_variant === "running") {
+        return HttpResponse.json({
+          captureId: "cap-running",
+          serverName: "test-server-01",
+          phase: "Running",
+          startedAt: "2026-09-13T12:30:00Z",
+          completedAt: null,
+          createdAt: "2026-09-13T12:30:00Z",
+          expiresAt: "2026-09-20T12:30:00Z",
+          bytesWritten: 512,
+          packetsWritten: 45,
+          filter: "tcp port 25565",
+        });
+      }
+      return HttpResponse.json({
         captureId: "cap-12345",
         serverName: "server-name",
         phase: "Completed",
@@ -866,10 +941,25 @@ export function buildScreenshotHandlers() {
         bytesWritten: 1024,
         packetsWritten: 100,
         filter: "tcp port 25565",
-      }),
-    ),
-    http.post(/\/servers\/[^/]+:capture-start(\?.*)?$/, () =>
-      HttpResponse.json(
+      });
+    }),
+    http.post(/\/servers\/[^/]+:capture-start(\?.*)?$/, async ({ request }) => {
+      const body = (await request.json().catch(() => null)) as {
+        filter?: string;
+        maxDurationSeconds?: number;
+        maxSizeBytes?: number;
+        ttlSecondsAfterFinished?: number;
+      } | null;
+
+      // Validate BPF filter if provided
+      if (body?.filter) {
+        // Check for invalid syntax patterns
+        if (body.filter === INVALID_BPF_FILTER_FIXTURE || body.filter.includes("{{{{")) {
+          return new HttpResponse("Invalid BPF filter syntax: syntax error at position 12 (invalid token 'foo')\n", { status: 400 });
+        }
+      }
+
+      return HttpResponse.json(
         {
           captureId: "cap-12345",
           serverName: "server-name",
@@ -880,11 +970,11 @@ export function buildScreenshotHandlers() {
           expiresAt: "2026-08-30T00:00:00Z",
           bytesWritten: 0,
           packetsWritten: 0,
-          filter: "tcp port 25565",
+          filter: body?.filter || "tcp port 25565",
         },
         { status: 202 },
-      ),
-    ),
+      );
+    }),
     http.post(/\/servers\/[^/]+:capture-stop(\?.*)?$/, () =>
       HttpResponse.json({
         captureId: "cap-12345",
@@ -909,12 +999,21 @@ export function buildScreenshotHandlers() {
     ),
 
     // Backups
+    // T118 (specs/014-heroui-web-rebuild/tasks.md): both entries' spec.serverRef
+    // is pinned to "test-server-01" (previously left at makeBackup()'s "alpha"
+    // default despite the metadata.name already reading "test-server-01-…") so
+    // ServerDetail's per-server Backups tab (which filters by
+    // spec.serverRef.name) actually has rows to render for the screenshot.
     http.get("/backups", () =>
       HttpResponse.json({
         items: [
-          makeBackup(),
+          makeBackup({
+            metadata: { name: "test-server-01-2026-05-07", namespace: "default" },
+            spec: { serverRef: { name: "test-server-01" } },
+          }),
           makeBackup({
             metadata: { name: "test-server-01-2026-05-06", namespace: "default" },
+            spec: { serverRef: { name: "test-server-01" } },
             status: {
               phase: "Failed",
               startTime: "2026-05-06T03:00:00Z",
@@ -1057,8 +1156,23 @@ export function buildScreenshotHandlers() {
     ),
 
     // Mods
-    http.get("/servers/:name/mods/registry/providers", () =>
-      HttpResponse.json([{ provider: "thunderstore", available: true, modpacks: false }]),
+    // T118 (specs/014-heroui-web-rebuild/tasks.md): modpacks flipped true so
+    // the Modpacks tab (screenshot slice2b) has a provider to browse —
+    // matches valheim-default's registry.providers[].modpacks declaration
+    // added to screenshotData.ts for the same task.
+    http.get("/servers/:name/mods/registry/providers", ({ params }) =>
+      // test-server-09 (template minecraft-modded) declares two registries
+      // — modrinth + hangar — so the Mods browse screen (design GayoL) can
+      // capture the provider tabs and category pills (specs/014h). Every
+      // other server keeps the pre-existing single-provider default.
+      HttpResponse.json(
+        String(params.name) === "test-server-09"
+          ? [
+              { provider: "modrinth", available: true, modpacks: true },
+              { provider: "hangar", available: true, modpacks: false },
+            ]
+          : [{ provider: "thunderstore", available: true, modpacks: true }],
+      ),
     ),
     http.get("/servers/:name/mods/registry/search", () => HttpResponse.json(data.registryProjects)),
     http.get("/servers/:name/mods/registry/projects/:project/versions", () =>
@@ -1230,12 +1344,129 @@ export function buildScreenshotHandlers() {
       // Return screenshot audit events up to limit
       return HttpResponse.json(data.auditEvents.slice(0, limit));
     }),
-    http.get("/admin/config", () => HttpResponse.json(data.config())),
-    http.put("/admin/config/:section", () => new HttpResponse(null, { status: 204 })),
+    // Audit chain integrity — default "verified" state (DxKOh). The
+    // failure banner state (kIxaJ) is a one-off variant selected via the
+    // "e2e_audit_verify_variant=failed" cookie (see slice4.spec.ts) rather
+    // than a page.route override: MSW's Service Worker (msw/browser)
+    // answers this route itself, and Playwright can't intercept a request
+    // already resolved inside a Service Worker's fetch handler.
+    http.get("/admin/audit/verify", ({ cookies }) => {
+      if (cookies.e2e_audit_verify_variant === "failed") {
+        return HttpResponse.json({
+          ok: false,
+          checked: 42,
+          firstBadId: 17,
+          message: "Integrity check failed — chain breaks at event #17",
+        });
+      }
+      return HttpResponse.json({ ok: true, checked: data.auditEvents.length, message: "audit chain intact" });
+    }),
+    // GET /admin/config variants, selected via the "e2e_admin_config_variant"
+    // cookie (see slice4.spec.ts) rather than a page.route override — same
+    // Service Worker interception reason as /admin/audit/verify above.
+    http.get("/admin/config", ({ cookies }) => {
+      switch (cookies.e2e_admin_config_variant) {
+        case "oidc":
+          return HttpResponse.json(screenshotConfigWithOidc());
+        case "oidc-empty-mappings":
+          return HttpResponse.json(screenshotConfigOidcEmptyMappings());
+        case "empty-storage-class":
+          return HttpResponse.json(screenshotConfigEmptyStorageClass());
+        default:
+          return HttpResponse.json(data.config());
+      }
+    }),
+    // PUT /admin/config/:section — the "save rejected" variant (QgW58) is
+    // selected via the "e2e_admin_config_put_variant=reject" cookie, same
+    // reason as above.
+    http.put("/admin/config/:section", ({ cookies }) => {
+      if (cookies.e2e_admin_config_put_variant === "reject") {
+        return HttpResponse.json(
+          {
+            error:
+              "helmOverride.roleMappings.admin must not contain blank group names. No changes were saved.",
+          },
+          { status: 400 },
+        );
+      }
+      return new HttpResponse(null, { status: 204 });
+    }),
     http.post("/admin/notifications/sinks/:name/test", () =>
       HttpResponse.json({ delivered: true }),
     ),
     http.get("/admin/users", () => HttpResponse.json({ items: data.users })),
+
+    // Admin — System Logs (Bq2Yg, slice 4). AdminLogsPage fetches this
+    // plaintext stream directly (not through lib/api.ts), so it's mocked
+    // as a plain HttpResponse rather than HttpResponse.json.
+    http.get("/admin/system-logs/:component", () =>
+      new HttpResponse(screenshotSystemLogLines.join("\n") + "\n", {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain",
+          "X-Gameplane-Pod": "gameplane-api-6f9c8d5b7-x2k9p",
+        },
+      }),
+    ),
+    // Share links: list, create, revoke, resolve (public), start (public)
+    http.get(/\/servers\/[^/]+:shares$/, ({ request }) => {
+      // Extract server name from URL
+      const match = new URL(request.url).pathname.match(/\/servers\/([^/:]+):shares$/);
+      const serverName = match?.[1];
+
+      // Return empty list for test-server-no-shares (empty state)
+      if (serverName === "test-server-no-shares") {
+        return HttpResponse.json([]);
+      }
+
+      // Return mock share links for testing
+      return HttpResponse.json([
+        {
+          id: "share-1",
+          createdAt: "2026-07-28T00:00:00Z",
+          expiresAt: "2026-08-04T00:00:00Z",
+          canStart: true,
+        },
+        {
+          id: "share-2",
+          createdAt: "2026-06-01T00:00:00Z",
+          expiresAt: "2026-06-08T00:00:00Z",
+          canStart: false,
+        },
+      ]);
+    }),
+    http.post(/\/servers\/[^/]+:shares$/, async ({ request }) => {
+      const body = (await request.json().catch(() => null)) as {
+        expiresIn?: string;
+        canStart?: boolean;
+      } | null;
+      return HttpResponse.json({
+        id: `share-${Math.random().toString(36).slice(2)}`,
+        createdAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        canStart: body?.canStart ?? false,
+        token: `token_${Math.random().toString(36).slice(2)}`,
+      });
+    }),
+    http.delete("/servers/:name/shares/:id", () =>
+      new HttpResponse(null, { status: 204 }),
+    ),
+    // Public share endpoints (no auth required)
+    http.get("/shares/:token", () => {
+      // Return public share info
+      return HttpResponse.json({
+        serverName: "mc-survival",
+        status: "Running",
+        address: {
+          host: "game.example.com",
+          port: 25565,
+        },
+        playersOnline: 3,
+      });
+    }),
+    http.post("/shares/:token/start", () =>
+      new HttpResponse(null, { status: 202 }),
+    ),
 
     // WebSocket: PTY Console (registered before RCON console to match narrower pattern first)
     ws.link(`${wsOrigin}/ws/servers/*/console-pty*`).addEventListener("connection", ({ client }) => {

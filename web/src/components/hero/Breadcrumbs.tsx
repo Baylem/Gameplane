@@ -30,6 +30,9 @@ export function buildCrumbs(pathname: string): Crumb[] {
   let acc = "";
   for (const p of parts) {
     acc += "/" + p;
+    // Server detail pages ("/servers/:name/...") drop the "Servers" ancestor
+    // crumb per design (dPP50, F9pUrx) — the list page itself still shows it.
+    if (p === "servers" && parts.length > 1) continue;
     crumbs.push({ label: labels[p] ?? p, to: acc });
   }
   if (parts.length === 0) crumbs.push({ label: "Dashboard" });
@@ -53,6 +56,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }): JSX.Element {
               key={crumb.to ?? crumb.label}
               href={crumb.to && !isLast ? crumb.to : undefined}
               className={isLast ? "text-sm text-foreground" : "text-sm text-muted hover:text-foreground"}
+              style={isLast ? { color: "var(--foreground)" } : undefined}
             >
               {crumb.label}
             </HeroBreadcrumbs.Item>

@@ -24,7 +24,7 @@ Binding for `web/src/styles/globals.css` and for the HeroUI variable values in `
 | `--field-border` | `$field/border` | `#2C2932` | `#EFC3D6` | input borders |
 | `--field-foreground` | `$field/foreground` | `#FCFCFC` | `#2A0F1E` | input text |
 | `--field-placeholder` | `$field/placeholder` | `#7B7584` | `#8A6C7B` | input placeholder text |
-| `--focus` | `$focus` | `#A78BFA` | `#7C3AED` | focus ring (purple) |
+| `--focus` | `$focus` | `#A78BFA` | `#7C3AED` | focus ring (purple); Asleep status indicator on public share page |
 | `--link` | `$foreground/link` | `#7DB4FF` | `#2563EB` | hyperlink text |
 | `--surface-tertiary` | `$surface/tertiary` | `#141317` | `#F8DDE9` | deepest surface variant |
 | `--segment` | `$segment/segment` | `#1D1B22` | `#FFFFFF` | segmented control backgrounds |

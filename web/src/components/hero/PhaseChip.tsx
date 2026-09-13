@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 // Maps GameServer, Backup, and Restore phases to HeroUI semantic colors.
 // Asleep is a derived display state overlaid on Suspended.
 
-type PhaseColor = "default" | "success" | "warning" | "danger" | "accent";
+type PhaseColor = "default" | "success" | "warning" | "danger";
 
 // Phase → HeroUI Chip color mapping
 // Covers GameServer phases (Pending/Starting/Running/Stopping/Stopped/Suspended/Failed)
@@ -56,7 +56,7 @@ export function PhaseChip({ phase, asleep, size = "sm", className }: {
 }) {
   const p = phase ?? "Pending";
   const label = asleep ? "Asleep" : p;
-  const color = asleep ? "accent" : (phaseColorMap[p] ?? "default");
+  const color = phaseColorMap[p] ?? "default";
 
   return (
     <HeroChip
@@ -64,6 +64,7 @@ export function PhaseChip({ phase, asleep, size = "sm", className }: {
       size={size}
       data-phase={p}
       data-color={color}
+      data-asleep={asleep}
       data-size={size}
       className={className}
     >
