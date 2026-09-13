@@ -1075,8 +1075,19 @@ export function buildScreenshotHandlers() {
     // the Modpacks tab (screenshot slice2b) has a provider to browse —
     // matches valheim-default's registry.providers[].modpacks declaration
     // added to screenshotData.ts for the same task.
-    http.get("/servers/:name/mods/registry/providers", () =>
-      HttpResponse.json([{ provider: "thunderstore", available: true, modpacks: true }]),
+    http.get("/servers/:name/mods/registry/providers", ({ params }) =>
+      // test-server-09 (template minecraft-modded) declares two registries
+      // — modrinth + hangar — so the Mods browse screen (design GayoL) can
+      // capture the provider tabs and category pills (specs/014h). Every
+      // other server keeps the pre-existing single-provider default.
+      HttpResponse.json(
+        String(params.name) === "test-server-09"
+          ? [
+              { provider: "modrinth", available: true, modpacks: true },
+              { provider: "hangar", available: true, modpacks: false },
+            ]
+          : [{ provider: "thunderstore", available: true, modpacks: true }],
+      ),
     ),
     http.get("/servers/:name/mods/registry/search", () => HttpResponse.json(data.registryProjects)),
     http.get("/servers/:name/mods/registry/projects/:project/versions", () =>

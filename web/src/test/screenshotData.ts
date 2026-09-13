@@ -235,7 +235,11 @@ export const screenshotTemplates: GameTemplate[] = [
             forge: { path: "mods" },
           },
           registry: {
-            providers: [{ provider: "modrinth", modpacks: {} }],
+            // Two providers (design GayoL, specs/014h) — test-server-09's
+            // mods/registry/providers mock handler exposes both so the
+            // Mods browse screen can capture the provider tabs + category
+            // pills; hangar is additive alongside the pre-existing modrinth.
+            providers: [{ provider: "modrinth", modpacks: {} }, { provider: "hangar" }],
           },
         },
       },

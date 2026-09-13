@@ -1,6 +1,19 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Button, Input, Chip, Select, SelectValue, SelectTrigger, SelectIndicator, SelectPopover, ListBox, ListBoxItem } from "@heroui/react";
+import {
+  Button,
+  Input,
+  Chip,
+  Select,
+  SelectValue,
+  SelectTrigger,
+  SelectIndicator,
+  SelectPopover,
+  ListBox,
+  ListBoxItem,
+  Tabs,
+  Tab,
+} from "@heroui/react";
 
 import type { RegistryProject } from "@/types";
 import { Servers } from "@/lib/endpoints";
@@ -36,6 +49,15 @@ const PROVIDER_LABELS: Record<string, string> = {
 export function providerLabel(p: string): string {
   return PROVIDER_LABELS[p] ?? p.charAt(0).toUpperCase() + p.slice(1);
 }
+
+// Providers whose backend registry.Search honors SearchQuery.Category as a
+// genuine category facet (api/internal/registry/modrinth.go,
+// api/internal/registry/hangar.go). Every other provider either ignores the
+// param (curseforge, thunderstore, factorio, steam, spigot, github, nexus)
+// or repurposes it for something else (umod's Category selects a game, not
+// a mod category) — the category chips would silently do nothing there, so
+// they render disabled instead of implying a filter that isn't applied.
+const CATEGORY_FILTERABLE_PROVIDERS = new Set(["modrinth", "hangar"]);
 
 // RegistryBrowser is the shared full browser used by the Mods install page
 // and the Modpacks tab: a provider switch (when a game declares more than
@@ -102,7 +124,8 @@ export function RegistryBrowser({
   });
 
   const items = q.data?.pages.flat() ?? [];
-  const showChips = categories && categories.length > 0 && provider === "modrinth";
+  const showChips = !!categories && categories.length > 0;
+  const chipsInteractive = !!provider && CATEGORY_FILTERABLE_PROVIDERS.has(provider);
 
   // No usable provider (none declared, or all need config like a CurseForge key).
   if (!providersQ.isLoading && available.length === 0) {
@@ -112,19 +135,20 @@ export function RegistryBrowser({
   return (
     <div className="flex min-h-0 flex-col gap-3">
       {available.length > 1 && (
-        <div className="flex gap-2">
-          {available.map((p) => (
-            <Button
-              key={p.provider}
-              size="sm"
-              variant={p.provider === provider ? "primary" : "outline"}
-              onPress={() => setPicked(p.provider)}
-              aria-pressed={p.provider === provider}
-            >
-              {providerLabel(p.provider)}
-            </Button>
-          ))}
-        </div>
+        <Tabs
+          selectedKey={provider}
+          onSelectionChange={(key) => setPicked(key as string)}
+          variant="secondary"
+          aria-label={type === "modpack" ? "Modpack registry" : "Mod registry"}
+        >
+          <Tabs.List className="w-fit">
+            {available.map((p) => (
+              <Tab key={p.provider} id={p.provider} className="text-xs">
+                {providerLabel(p.provider)}
+              </Tab>
+            ))}
+          </Tabs.List>
+        </Tabs>
       )}
 
       <div className="flex items-center gap-2">
@@ -163,8 +187,22 @@ export function RegistryBrowser({
 
       {showChips && (
         <div className="flex flex-wrap gap-2">
-          {[{ value: "", label: "All" }, ...categories].map((c) => {
+          {[{ value: "", label: "All" }, ...(categories ?? [])].map((c) => {
             const active = category === c.value;
+            if (!chipsInteractive) {
+              return (
+                <Chip
+                  key={c.value || "all"}
+                  size="sm"
+                  variant="soft"
+                  aria-disabled="true"
+                  className="cursor-not-allowed opacity-50"
+                  title={`Category filtering isn't available for ${providerLabel(provider ?? "")}.`}
+                >
+                  {c.label}
+                </Chip>
+              );
+            }
             return (
               <Chip
                 key={c.value || "all"}
