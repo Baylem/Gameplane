@@ -125,7 +125,7 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     await page.getByRole("button", { name: /continue/i }).click();
     await page.getByRole("button", { name: /1\.21 \(Vanilla\)/i }).click();
     await page.getByRole("button", { name: /continue/i }).click();
-    await page.getByPlaceholder(/mc-hardcore/i).fill("e2e-screenshot-srv");
+    await page.getByPlaceholder(/mc-hardcore/i).fill("mc-survival");
     await page.getByRole("button", { name: /continue/i }).click();
     await expect(page.getByText(/^expose$/i)).toBeVisible({ timeout: 10_000 });
     // Fill in address pool and requested address to trigger the warning alerts
@@ -238,24 +238,18 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     await captureLocator(page, "E9EEv0", dialog);
   });
 
-  test("DMnEi: Backup List Item", async ({ page }) => {
+  test("DMnEi: Add module source dialog", async ({ page }) => {
     // Design PNG is light theme — see setTheme()'s note.
     await setTheme(page, "light");
-    await page.goto("/backups");
-    const row = page.getByRole("row", { name: /mc-survival-nightly-0713/i });
-    await expect(row).toBeVisible({ timeout: 10_000 });
+    // #376 resolved: design-export/screenshots/DMnEi.png is genuinely the
+    // "Add module source" dialog (Gameplane/Dialog/Add Module Source,
+    // (-17205,28535)) — MANIFEST.md mislabeled the node "Gameplane/Backup
+    // List Item". This test now captures what the reference actually shows.
+    await page.goto("/modules");
+    await page.getByRole("button", { name: /add source/i }).click();
+    const dialog = page.getByRole("dialog", { name: /add module source/i });
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    // Component-level crop (not a full-page capture): DMnEi is the reusable
-    // backup list item (BackupRow), not a routed screen — see
-    // design-export/MANIFEST.md's "Components/Dialogs" table for this id.
-    //
-    // NOTE (design/export conflict, maintainer/design follow-up needed, not a
-    // capture-code bug): design-export/screenshots/DMnEi.png currently shows
-    // the "Add module source" dialog (SourceDialog.tsx), not the Backup List
-    // Item this test and MANIFEST.md both describe. This capture intentionally
-    // keeps targeting the BackupRow per the spec's own intent and MANIFEST —
-    // the mismatched reference PNG needs a Pencil re-export, not a change here.
-    // Tracked in issue #376.
-    await captureLocator(page, "DMnEi", row);
+    await captureLocator(page, "DMnEi", dialog);
   });
 });
