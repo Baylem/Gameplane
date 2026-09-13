@@ -138,7 +138,6 @@ export function RegistryBrowser({
         <Tabs
           selectedKey={provider}
           onSelectionChange={(key) => setPicked(key as string)}
-          variant="secondary"
           aria-label={type === "modpack" ? "Modpack registry" : "Mod registry"}
         >
           <Tabs.List className="w-fit">
