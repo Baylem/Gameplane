@@ -1,6 +1,5 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
-import path from "path";
-import { fileURLToPath } from "node:url";
+import { capture, captureLocator } from "./capture";
 
 // T159 (specs/014-heroui-web-rebuild/tasks.md): Slice 4 — Admin Settings,
 // Users & RBAC, Audit Log, System Logs, and Cluster Settings. Screenshot
@@ -16,14 +15,19 @@ import { fileURLToPath } from "node:url";
 // playwright.config.ts's grep/grepInvert on the @screenshots tag).
 //
 // Several ids on the manifest are component crops (removable group chip
-// variants, provenance badge variants) rather than distinct screens. Per
-// the contract, "the comparison is visual, at reference width" — not a
-// pixel diff — so each of those is captured as the same full-page state
-// that renders the component, under its own id, exactly like the
-// full-screen ids: uMiwd's Authentication section renders the
-// "Overridden" provenance badge (R65Xyx) with an orange chip (XL5ZU) on
-// its admin row and the "From Helm" badge (Rwnu3) with violet/secondary
-// chips (vStkb/uw0dB) on its operator/viewer rows, all in one capture.
+// variants, provenance badge variants, and standalone dialogs) rather than
+// distinct screens. Each of those is captured with captureLocator() (see
+// ./capture) scoped to the rendered element itself — not the full page —
+// and, because the corresponding design-export/screenshots/<id>.png for
+// every one of those component ids was exported from Pencil's light
+// palette while the rest of this suite captures the app in dark theme (per
+// test.use({ colorScheme: "dark" }) above), each of those tests calls
+// setTheme(page, "light") before navigating, the same pattern Wj0V4 uses
+// for its own light-theme frame. uMiwd's Authentication section renders
+// the "Overridden" provenance badge (R65Xyx) with an orange chip (XL5ZU)
+// on its admin row and the "From Helm" badge (Rwnu3) with violet/secondary
+// chips (vStkb/uw0dB) on its operator/viewer rows, each captured in light
+// theme via its own scoped locator despite sharing one page state.
 //
 // screenshotConfig() (web/src/test/screenshotData.ts) stays in the plain
 // "not yet configured" shape shared by most of the suite. The OIDC-
@@ -37,11 +41,11 @@ import { fileURLToPath } from "node:url";
 // MSW's Service Worker (msw/browser), and Playwright cannot intercept a
 // request a Service Worker's own fetch handler has already resolved.
 
-async function capture(page: Page, id: string): Promise<void> {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const screenshotPath = path.join(here, `${id}.png`);
-  await page.screenshot({ path: screenshotPath, fullPage: true });
-}
+// Full-page capture for this spec's routed-screen ids. Delegates to the
+// shared web/e2e/screenshots/capture.ts helper (viewport sized to match the
+// reference design frame, animations disabled) — see slice-3.spec.ts's
+// header note for why this replaced a local `fullPage: true` screenshot
+// (mismatched sizing strategy vs. the reference frame's own dimensions).
 
 // Forces the app's own light/dark toggle (AppLayout.tsx THEME_STORAGE_KEY),
 // which takes priority over the context's prefers-color-scheme — used for
@@ -135,57 +139,101 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
   });
 
   test("R65Xyx: Provenance Badge — Overridden", async ({ page, context }) => {
+    // Design PNG is light theme (design-export/screenshots/R65Xyx.png) — see
+    // the header comment's note on element-captured component ids.
+    await setTheme(page, "light");
     await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     await expect(page.getByText("Overridden in dashboard")).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    await capture(page, "R65Xyx");
+    // Design PNG (design-export/screenshots/R65Xyx.png) is a 408x44 crop of a
+    // single ProvenanceBadge, not a full screen — scope the capture to the
+    // rendered chip via its data-type hook (ProvenanceBadge.tsx: `data-type={type}`).
+    await captureLocator(page, "R65Xyx", page.locator('[data-type="overridden"]').first());
   });
 
   test("Rwnu3: Provenance Badge — From Helm", async ({ page, context }) => {
+    // Design PNG is light theme — see the header comment.
+    await setTheme(page, "light");
     await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     await expect(page.getByText("From Helm values").first()).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    await capture(page, "Rwnu3");
+    // Design PNG is a 308x44 crop of a single ProvenanceBadge — see R65Xyx's note.
+    await captureLocator(page, "Rwnu3", page.locator('[data-type="fromHelm"]').first());
   });
 
   test("XL5ZU: Removable Group Chip — Orange (admin)", async ({ page, context }) => {
+    // Design PNG is light theme — see the header comment.
+    await setTheme(page, "light");
     await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     // Scoped to the "Admin role mapping" group — see uMiwd's note.
-    await expect(page.getByLabel("Admin role mapping").getByText("ops-leads")).toBeVisible({
+    await expect(
+      page.getByLabel("Admin role mapping", { exact: true }).getByText("ops-leads"),
+    ).toBeVisible({
       timeout: 10_000,
     });
     await page.waitForTimeout(200);
-    await capture(page, "XL5ZU");
+    // Design PNG is a 252x64 crop of a single RemovableGroupChip (orange
+    // variant) — scope via its data-variant hook (RemovableGroupChip.tsx:
+    // `data-variant={variant}`), within the admin group so it doesn't match
+    // an unrelated orange chip elsewhere on the page. .first() (as with the
+    // ProvenanceBadge locators above) is fine here: every chip the admin
+    // group renders is an identical orange RemovableGroupChip instance, so
+    // which one resolves doesn't change the capture.
+    await captureLocator(
+      page,
+      "XL5ZU",
+      page.getByLabel("Admin role mapping", { exact: true }).locator('[data-variant="orange"]').first(),
+    );
   });
 
   test("vStkb: Removable Group Chip — Violet (operator)", async ({ page, context }) => {
+    // Design PNG is light theme — see the header comment.
+    await setTheme(page, "light");
     await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     // Scoped to the "Operator role mapping" group — see uMiwd's note.
-    await expect(page.getByLabel("Operator role mapping").getByText("ops-team")).toBeVisible({
+    await expect(
+      page.getByLabel("Operator role mapping", { exact: true }).getByText("ops-team"),
+    ).toBeVisible({
       timeout: 10_000,
     });
     await page.waitForTimeout(200);
-    await capture(page, "vStkb");
+    // Design PNG is a 252x64 crop of a single RemovableGroupChip (violet
+    // variant) — see XL5ZU's note (.first() is fine — identical chips).
+    await captureLocator(
+      page,
+      "vStkb",
+      page.getByLabel("Operator role mapping", { exact: true }).locator('[data-variant="violet"]').first(),
+    );
   });
 
   test("uw0dB: Removable Group Chip — Secondary (viewer)", async ({ page, context }) => {
+    // Design PNG is light theme — see the header comment.
+    await setTheme(page, "light");
     await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     // Scoped to the "Viewer role mapping" group — see uMiwd's note.
-    await expect(page.getByLabel("Viewer role mapping").getByText("everyone")).toBeVisible({
+    await expect(
+      page.getByLabel("Viewer role mapping", { exact: true }).getByText("everyone"),
+    ).toBeVisible({
       timeout: 10_000,
     });
     await page.waitForTimeout(200);
-    await capture(page, "uw0dB");
+    // Design PNG is a 252x64 crop of a single RemovableGroupChip (secondary
+    // variant) — see XL5ZU's note (.first() is fine — identical chips).
+    await captureLocator(
+      page,
+      "uw0dB",
+      page.getByLabel("Viewer role mapping", { exact: true }).locator('[data-variant="secondary"]').first(),
+    );
   });
 
   test("nNGDX: Admin Settings — Authentication (No OIDC mappings)", async ({ page, context }) => {
@@ -204,12 +252,15 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
   test("BV5ei: Provenance Badge — Not configured", async ({ page, context }) => {
     // Same empty-state config as nNGDX — the resulting provenance badges
     // read "Not configured" since there's no Helm mapping and no override.
+    // Design PNG is light theme — see the header comment.
+    await setTheme(page, "light");
     await setAdminConfigVariant(context, "oidc-empty-mappings");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     await expect(page.getByText("Not configured").first()).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    await capture(page, "BV5ei");
+    // Design PNG is a 278x44 crop of a single ProvenanceBadge — see R65Xyx's note.
+    await captureLocator(page, "BV5ei", page.locator('[data-type="notConfigured"]').first());
   });
 
   test("QgW58: Admin Settings — Authentication (Save rejected)", async ({ page, context }) => {
@@ -255,6 +306,8 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
   });
 
   test("Kp48V: Confirm Admin Mapping dialog", async ({ page }) => {
+    // Design PNG is light theme — see the header comment.
+    await setTheme(page, "light");
     await page.goto("/admin");
     await expect(page.getByRole("heading", { name: /admin settings/i })).toBeVisible({
       timeout: 10_000,
@@ -270,8 +323,12 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await page.getByLabel("Admin groups").fill("ops-leads");
     await page.getByRole("button", { name: /^add provider$/i }).click();
     await expect(page.getByText("Confirm admin role mapping?")).toBeVisible({ timeout: 10_000 });
+    // ConfirmAdminMappingDialog wraps ConfirmDialog, which renders HeroUI's
+    // AlertDialog/AlertDialogDialog (role="alertdialog", not "dialog").
+    const dialog = page.getByRole("alertdialog", { name: /confirm admin role mapping\?/i });
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    await capture(page, "Kp48V");
+    await captureLocator(page, "Kp48V", dialog);
   });
 
   test("RC3Kf: Admin Settings — Backup destinations", async ({ page }) => {
@@ -378,6 +435,8 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     // Design frame CqaSq is the *edit* form (RoleEditorModal.tsx's
     // `Edit role: ${role.name}` heading), not the blank "New role" create
     // form — open it via the operator role card's Edit button.
+    // Design PNG is light theme — see the header comment.
+    await setTheme(page, "light");
     await page.goto("/users");
     await page.getByRole("tab", { name: /^roles/i }).click();
     // Users.tsx's role Card ("flex flex-col gap-2 p-4" — unique to these
@@ -393,20 +452,26 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.getByText("Edit role: operator")).toBeVisible();
     await page.waitForTimeout(200);
-    await capture(page, "CqaSq");
+    // Design PNG (1088x1154) is a crop of just the modal, not the full page.
+    await captureLocator(page, "CqaSq", dialog);
   });
 
   test("NLDDv: Dialog — Invite User", async ({ page }) => {
+    // Design PNG is light theme — see the header comment.
+    await setTheme(page, "light");
     await page.goto("/users");
     await page.getByRole("button", { name: /invite user/i }).click();
-    const dialog = page.getByRole("dialog");
+    const dialog = page.getByRole("dialog", { name: /^invite user$/i });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.getByText("Invite user")).toBeVisible();
     await page.waitForTimeout(200);
-    await capture(page, "NLDDv");
+    // Design PNG (1088x922) is a crop of just the modal, not the full page.
+    await captureLocator(page, "NLDDv", dialog);
   });
 
   test("t3IY3u: Dialog — Edit User", async ({ page }) => {
+    // Design PNG is light theme — see the header comment.
+    await setTheme(page, "light");
     await page.goto("/users");
     await expect(page.getByText("operator-01").first()).toBeVisible({ timeout: 10_000 });
     await page.getByRole("button", { name: /^actions for operator-01$/i }).click();
@@ -418,10 +483,13 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.getByText("Edit user")).toBeVisible();
     await page.waitForTimeout(200);
-    await capture(page, "t3IY3u");
+    // Design PNG (1088x782) is a crop of just the modal, not the full page.
+    await captureLocator(page, "t3IY3u", dialog);
   });
 
   test("MaoHP: Dialog — Reset Password", async ({ page }) => {
+    // Design PNG is light theme — see the header comment.
+    await setTheme(page, "light");
     await page.goto("/users");
     await expect(page.getByText("operator-01").first()).toBeVisible({ timeout: 10_000 });
     await page.getByRole("button", { name: /^actions for operator-01$/i }).click();
@@ -432,7 +500,8 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.getByText(/reset password for/i)).toBeVisible();
     await page.waitForTimeout(200);
-    await capture(page, "MaoHP");
+    // Design PNG (1088x542) is a crop of just the modal, not the full page.
+    await captureLocator(page, "MaoHP", dialog);
   });
 
   test("DxKOh: Audit Log", async ({ page }) => {
@@ -449,6 +518,8 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
   });
 
   test("kIxaJ: Audit Integrity Banner (failed)", async ({ page, context }) => {
+    // Design PNG is light theme (white) — see the header comment.
+    await setTheme(page, "light");
     // Cookie-selected, not page.route — see setAdminConfigVariant()'s note;
     // MSW's Service Worker answers /admin/audit/verify itself.
     await context.addCookies([
@@ -460,6 +531,14 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     });
     await expect(page.getByText(/chain breaks at event #17/i)).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
+    // Design PNG (1400x312) crops just the AuditIntegrityBanner, but the
+    // banner has no accessible role or test hook to scope a captureLocator()
+    // call to: AuditIntegrityBanner.tsx:18 renders HeroUI's <Alert> with no
+    // `role` attribute and no `data-testid` (confirmed against the installed
+    // @heroui/react package — Alert emits no ARIA role at all). This is a
+    // PRODUCT a11y gap (AuditIntegrityBanner.tsx:18), not a capture-code
+    // issue; flagging for a follow-up rather than adding a fragile
+    // class-based locator here. Full-page capture stays until that lands.
     await capture(page, "kIxaJ");
   });
 

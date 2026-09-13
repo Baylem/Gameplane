@@ -139,6 +139,16 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
   });
 
   test("J5pjJ3: Server Detail — Settings · Networking", async ({ page }) => {
+    // J5pjJ3's design frame (design-export/MANIFEST.md:64, :441) is a
+    // documentation-style composite stacking five AddressAssignment status
+    // treatments (plus ignored/no-manager alert states) vertically in one
+    // 2880x4140 export — a single live render can only ever show one of
+    // those states at a time. This test captures that one rendered state
+    // (the current test-server-01 assignment) full-page; it is not expected
+    // to pixel-match the multi-state composite 1:1, and switching to
+    // captureLocator would not close that gap (element-capture-plan.md,
+    // J5pjJ3 section) — a maintainer call on the compare contract is needed
+    // before spending more effort here.
     await page.goto("/servers/test-server-01");
     await clickTab(page, "Settings");
     await clickTab(page, "Networking");

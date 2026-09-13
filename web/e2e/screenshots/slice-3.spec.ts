@@ -1,6 +1,5 @@
-import { test, expect, type Page, type Locator } from "@playwright/test";
-import path from "path";
-import { fileURLToPath } from "node:url";
+import { test, expect, type Page } from "@playwright/test";
+import { capture as sharedCapture, captureLocator } from "./capture";
 
 // T137 (specs/014-heroui-web-rebuild/tasks.md): Slice 3 — Onboarding flow
 // (Create Server wizard steps 1-5), Modules Catalog, and Backups
@@ -24,16 +23,19 @@ import { fileURLToPath } from "node:url";
 // one and the wizard's "Version" step (CreateServer.tsx's stepsFor()) only
 // appears when a template has versions — see the comment at that fixture.
 
+// Full-page capture for this spec's routed-screen ids. Delegates to the
+// shared web/e2e/screenshots/capture.ts helper (viewport sized to match the
+// reference design frame, animations disabled) instead of a local
+// `fullPage: true` screenshot — was a local duplicate with a different sizing
+// strategy; consolidated so every capture in this file goes through one
+// path. The element-crop variant (dialogs/drawers/rows) is `captureLocator`,
+// imported directly from `./capture` above — see its per-id use below.
+// All full-screen ids in this file now capture through this one shared
+// viewport-sizing helper (capture.ts's `capture()`, which resizes the
+// browser viewport to match the reference frame's dimensions before
+// screenshotting) rather than any per-spec sizing strategy.
 async function capture(page: Page, id: string): Promise<void> {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const screenshotPath = path.join(here, `${id}.png`);
-  await page.screenshot({ path: screenshotPath, fullPage: true });
-}
-
-async function captureLocator(locator: Locator, id: string): Promise<void> {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const screenshotPath = path.join(here, `${id}.png`);
-  await locator.screenshot({ path: screenshotPath });
+  await sharedCapture(page, id);
 }
 
 // Selects the enriched screenshot dataset before the app's first fetch.
@@ -51,6 +53,22 @@ async function clickTab(page: Page, name: string): Promise<void> {
   const tab = page.getByRole("tab", { name: new RegExp(`^${name}$`, "i") });
   await expect(tab).toBeVisible({ timeout: 10_000 });
   await tab.click();
+}
+
+// Forces the app's own light/dark toggle (AppLayout.tsx THEME_STORAGE_KEY),
+// which takes priority over the context's prefers-color-scheme — mirrors
+// slice4.spec.ts's setTheme() helper, used the same way here: some
+// component-crop design PNGs (E9EEv0, DMnEi) were exported from Pencil's
+// light palette while the rest of this suite stays on the suite's dark
+// colorScheme (test.use() below).
+async function setTheme(page: Page, theme: "light" | "dark"): Promise<void> {
+  await page.addInitScript((t: string) => {
+    try {
+      window.localStorage.setItem("gameplane-theme", t);
+    } catch {
+      // localStorage unavailable (sandboxed)
+    }
+  }, theme);
 }
 
 test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @screenshots", () => {
@@ -183,29 +201,43 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
   });
 
   test("zhLZN: Backup Detail Drawer", async ({ page }) => {
+    // Design PNG is light theme — see setTheme()'s note.
+    await setTheme(page, "light");
     await page.goto("/backups");
     const nameCell = page.getByText("test-server-01-2026-05-07", { exact: true });
     await expect(nameCell).toBeVisible({ timeout: 10_000 });
     await nameCell.click();
     await expect(page.getByText(/backup details/i)).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    await capture(page, "zhLZN");
+    // BackupDetailDrawer.tsx now uses HeroUI's Drawer.Heading (slot="title"),
+    // which wires aria-labelledby — enabling accessible-name scoped capture.
+    const dialog = page.getByRole("dialog", { name: /backup details/i });
+    await expect(dialog).toBeVisible();
+    await captureLocator(page, "zhLZN", dialog);
   });
 
   test("E9EEv0: Restore Backup dialog", async ({ page }) => {
+    // Design PNG is light theme — see setTheme()'s note.
+    await setTheme(page, "light");
     await page.goto("/backups");
     const row = page.getByRole("row", { name: /test-server-01-2026-05-07/i });
     await expect(row).toBeVisible({ timeout: 10_000 });
     // test-server-01-2026-05-07 (default makeBackup()) is Succeeded with a
     // snapshotID, so BackupRow's "Restore" action is enabled on it.
     await row.getByRole("button", { name: /^restore$/i }).click();
-    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 10_000 });
+    // RestoreDialog.tsx uses HeroUI's ModalHeading (slot="title"), which does
+    // wire aria-labelledby — so, unlike zhLZN's drawer below, this dialog can
+    // be scoped by accessible name for an element-level capture.
+    const dialog = page.getByRole("dialog", { name: /restore backup/i });
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/restore backup/i)).toBeVisible();
     await page.waitForTimeout(200);
-    await capture(page, "E9EEv0");
+    await captureLocator(page, "E9EEv0", dialog);
   });
 
   test("DMnEi: Backup List Item", async ({ page }) => {
+    // Design PNG is light theme — see setTheme()'s note.
+    await setTheme(page, "light");
     await page.goto("/backups");
     const row = page.getByRole("row", { name: /test-server-01-2026-05-07/i });
     await expect(row).toBeVisible({ timeout: 10_000 });
@@ -213,6 +245,14 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     // Component-level crop (not a full-page capture): DMnEi is the reusable
     // backup list item (BackupRow), not a routed screen — see
     // design-export/MANIFEST.md's "Components/Dialogs" table for this id.
-    await captureLocator(row, "DMnEi");
+    //
+    // NOTE (design/export conflict, maintainer/design follow-up needed, not a
+    // capture-code bug): design-export/screenshots/DMnEi.png currently shows
+    // the "Add module source" dialog (SourceDialog.tsx), not the Backup List
+    // Item this test and MANIFEST.md both describe. This capture intentionally
+    // keeps targeting the BackupRow per the spec's own intent and MANIFEST —
+    // the mismatched reference PNG needs a Pencil re-export, not a change here.
+    // Tracked in issue #376.
+    await captureLocator(page, "DMnEi", row);
   });
 });
