@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { useDelayedLoading } from "./useDelayedLoading";
 
 describe("useDelayedLoading", () => {
@@ -47,10 +47,14 @@ describe("useDelayedLoading", () => {
     expect(result.current).toBe(false);
 
     // Advance past showAfterMs (default 200ms)
-    vi.advanceTimersByTime(200);
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
     expect(result.current).toBe(true);
 
-    vi.advanceTimersByTime(100);
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
     expect(result.current).toBe(true);
   });
 
@@ -62,7 +66,9 @@ describe("useDelayedLoading", () => {
     expect(result.current).toBe(false);
 
     // Advance past showAfterMs to trigger skeleton
-    vi.advanceTimersByTime(200);
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
     expect(result.current).toBe(true);
 
     // Stop loading
@@ -72,11 +78,15 @@ describe("useDelayedLoading", () => {
     expect(result.current).toBe(true);
 
     // Advance 100ms — still within minVisibleMs (default 300ms)
-    vi.advanceTimersByTime(100);
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
     expect(result.current).toBe(true);
 
     // Advance to the minVisibleMs boundary (total 300ms)
-    vi.advanceTimersByTime(200);
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
     expect(result.current).toBe(false);
   });
 
@@ -85,7 +95,9 @@ describe("useDelayedLoading", () => {
 
     expect(result.current).toBe(false);
 
-    vi.advanceTimersByTime(100);
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
     expect(result.current).toBe(true);
   });
 
@@ -95,7 +107,9 @@ describe("useDelayedLoading", () => {
     });
 
     // Trigger skeleton
-    vi.advanceTimersByTime(200);
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
     expect(result.current).toBe(true);
 
     // Stop loading
@@ -105,7 +119,9 @@ describe("useDelayedLoading", () => {
     expect(result.current).toBe(true);
 
     // Advance exactly 100ms (custom minVisibleMs)
-    vi.advanceTimersByTime(100);
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
     expect(result.current).toBe(false);
   });
 
