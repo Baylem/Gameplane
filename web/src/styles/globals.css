@@ -226,12 +226,6 @@ input:-webkit-autofill:focus {
   white-space: nowrap;
 }
 
-.tabs__tab[aria-selected="true"],
-.tabs__tab[data-selected] {
-  background-color: var(--accent-soft);
-  color: var(--accent-soft-foreground);
-}
-
 /* Meter/Progress fill rounded radius */
 .rounded-full > .h-full {
   border-radius: 999px;
