@@ -251,7 +251,8 @@ export function SharePage() {
             </div>
             <h1 className="font-mono text-2xl font-semibold">{data.serverName}</h1>
             <div className="mt-3 flex justify-center">
-              <span className="inline-block rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-secondary/50 bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">
+                <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
                 Asleep
               </span>
             </div>
@@ -289,7 +290,8 @@ export function SharePage() {
             </div>
             <h1 className="font-mono text-2xl font-semibold">{data.serverName}</h1>
             <div className="mt-3 flex justify-center">
-              <span className="inline-block rounded-full bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-secondary/50 bg-secondary/20 px-3 py-1 text-sm font-medium text-secondary">
+                <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
                 Asleep
               </span>
             </div>
