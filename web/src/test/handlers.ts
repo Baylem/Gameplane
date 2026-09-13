@@ -45,6 +45,18 @@ export const handlers = [
     if (cookies.e2e_force_401 === "1") {
       return new HttpResponse("unauthorized\n", { status: 401 });
     }
+    // e2e affordance: rbacEnforcement.spec.ts needs /users/me to report a
+    // specific role from the moment the SPA loads. MSW's Service Worker
+    // answers this route itself, so a page.route() override can't inject
+    // the role — a cookie the test sets (and which survives navigation)
+    // selects one deterministically. No-op for the unit suite.
+    if (
+      cookies.e2e_me_role === "admin" ||
+      cookies.e2e_me_role === "operator" ||
+      cookies.e2e_me_role === "viewer"
+    ) {
+      return HttpResponse.json(makeUser({ role: cookies.e2e_me_role }));
+    }
     return HttpResponse.json(makeUser());
   }),
   // Mock-mode Playwright login: accept any non-empty credentials and set
@@ -78,7 +90,7 @@ export const handlers = [
     HttpResponse.json({
       providers: [
         { kind: "local", label: "Local account" },
-        { kind: "oidc", label: "OIDC" },
+        { kind: "oidc", label: "Keycloak" },
       ],
     }),
   ),
@@ -104,9 +116,23 @@ export const handlers = [
     });
   }),
 
-  http.get("/cluster", () => HttpResponse.json(makeClusterView())),
+  http.get("/cluster", ({ cookies }) => {
+    // e2e affordance: errorHandling.spec.ts needs /cluster to return 500
+    // to verify the error UI. MSW's Service Worker answers this route
+    // itself, so a page.route() override can't inject the status — a
+    // cookie the test sets forces the failure deterministically.
+    if (cookies.e2e_cluster_500 === "1") {
+      return new HttpResponse("boom\n", { status: 500 });
+    }
+    return HttpResponse.json(makeClusterView());
+  }),
   http.get("/cluster/info", () => HttpResponse.json(makeClusterInfo())),
-  http.get("/cluster/stats", () => HttpResponse.json(makeClusterStats())),
+  http.get("/cluster/stats", ({ cookies }) => {
+    if (cookies.e2e_cluster_500 === "1") {
+      return new HttpResponse("boom\n", { status: 500 });
+    }
+    return HttpResponse.json(makeClusterStats());
+  }),
   http.get("/clusters", () =>
     HttpResponse.json({
       items: [{ name: "local", displayName: "local", phase: "Healthy" as const }],
@@ -1355,8 +1381,8 @@ export function buildScreenshotHandlers() {
         return HttpResponse.json({
           ok: false,
           checked: 42,
-          firstBadId: 17,
-          message: "Integrity check failed — chain breaks at event #17",
+          firstBadId: 286,
+          message: "Integrity check failed — chain breaks at event #286",
         });
       }
       return HttpResponse.json({ ok: true, checked: data.auditEvents.length, message: "audit chain intact" });

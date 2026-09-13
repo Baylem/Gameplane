@@ -45,12 +45,12 @@ test.describe("error handling", () => {
   });
 
   test("500 on /cluster shows an error UI rather than a blank screen", async ({ page }) => {
-    await page.route(/\/cluster$/, async (route) => {
-      await route.fulfill({ status: 500, body: "boom\n" });
-    });
-    await page.route(/\/cluster\/stats$/, async (route) => {
-      await route.fulfill({ status: 500, body: "boom\n" });
-    });
+    // Cookie-selected, not page.route: MSW's Service Worker answers
+    // /cluster and /cluster/stats itself in mock mode (see handlers.ts's
+    // e2e_cluster_500 branch).
+    await page.context().addCookies([
+      { name: "e2e_cluster_500", value: "1", url: "http://localhost:5173" },
+    ]);
     await loginIfNeeded(page);
     await page.goto("/cluster");
     await page.waitForLoadState("domcontentloaded");
