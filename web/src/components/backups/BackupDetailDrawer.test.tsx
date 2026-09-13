@@ -91,7 +91,7 @@ describe("BackupDetailDrawer", () => {
     renderWithQuery(
       <BackupDetailDrawer name="alpha-1" onClose={() => {}} onRestore={onRestore} />,
     );
-    const restoreBtn = await screen.findByRole("button", { name: /Restore/i });
+    const restoreBtn = await screen.findByRole("button", { name: /^Restore$/i });
     await userEvent.click(restoreBtn);
     await waitFor(() => {
       expect(onRestore).toHaveBeenCalled();
@@ -115,7 +115,7 @@ describe("BackupDetailDrawer", () => {
     renderWithQuery(
       <BackupDetailDrawer name="alpha-1" onClose={() => {}} onRestore={() => {}} />,
     );
-    const restoreBtn = await screen.findByRole("button", { name: /Restore/i });
+    const restoreBtn = await screen.findByRole("button", { name: /^Restore$/i });
     expect(restoreBtn).toBeDisabled();
   });
 
@@ -135,7 +135,7 @@ describe("BackupDetailDrawer", () => {
     renderWithQuery(
       <BackupDetailDrawer name="alpha-1" onClose={() => {}} onRestore={() => {}} />,
     );
-    const restoreBtn = await screen.findByRole("button", { name: /Restore/i });
+    const restoreBtn = await screen.findByRole("button", { name: /^Restore$/i });
     expect(restoreBtn).toBeDisabled();
   });
 

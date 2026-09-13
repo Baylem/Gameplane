@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Drawer, Button } from "@heroui/react";
+import { RotateCcw } from "lucide-react";
 import { Backups } from "@/lib/endpoints";
 import { formatRelative } from "@/lib/utils";
 import type { Backup } from "@/types";
@@ -48,15 +49,28 @@ export function BackupDetailDrawer({ name, onClose, onRestore }: Props) {
                 <Drawer.Heading className="text-base font-semibold">Backup details</Drawer.Heading>
                 <div className="font-mono text-xs text-muted">{name}</div>
               </div>
-              <Button
-                isIconOnly
-                variant="ghost"
-                size="sm"
-                onPress={onClose}
-                aria-label="Close backup details"
-              >
-                ✕
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  isDisabled={!restorable}
+                  onPress={() => backup && onRestore(backup)}
+                  className="gap-1.5"
+                  aria-label="Restore backup"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Restore
+                </Button>
+                <Button
+                  isIconOnly
+                  variant="ghost"
+                  size="sm"
+                  onPress={onClose}
+                  aria-label="Close backup details"
+                >
+                  ✕
+                </Button>
+              </div>
             </Drawer.Header>
 
             <Drawer.Body className="flex-1 space-y-4 overflow-y-auto p-5 text-sm">
