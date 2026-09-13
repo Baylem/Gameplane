@@ -120,7 +120,8 @@ test.describe("Slice 5: Share links — public page (Desktop — 1440x900) @scre
     await expect(page.getByRole("heading", { name: "mc-survival" })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByText("Online")).toBeVisible();
+    // C2LQE4: use exact:true to match only the Online badge text
+    await expect(page.getByText("Online", { exact: true })).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "C2LQE4");
   });

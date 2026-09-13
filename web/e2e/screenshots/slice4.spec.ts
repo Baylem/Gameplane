@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import path from "path";
 import { fileURLToPath } from "node:url";
 
@@ -25,19 +25,36 @@ import { fileURLToPath } from "node:url";
 // its admin row and the "From Helm" badge (Rwnu3) with violet/secondary
 // chips (vStkb/uw0dB) on its operator/viewer rows, all in one capture.
 //
-// screenshotConfig() (web/src/test/screenshotData.ts) was extended
-// additively to back this: a dashboard override on the admin role
-// mapping plus a Helm-seeded oidcHelmProvider with role mappings on all
-// three roles, and a set game-data storage class. The "no OIDC mappings
-// yet" (nNGDX/BV5ei), "save rejected" (QgW58), and "default storage
-// class" (dxdEi) variants are one-off states produced per-test via
-// page.route, not dataset fixtures — each is a single test's fixture,
-// not something other tests should see.
+// screenshotConfig() (web/src/test/screenshotData.ts) stays in the plain
+// "not yet configured" shape shared by most of the suite. The OIDC-
+// configured state (uMiwd/R65Xyx/Rwnu3/XL5ZU/vStkb/uw0dB), the "no OIDC
+// mappings yet" empty state (nNGDX/BV5ei), the "save rejected" state
+// (QgW58), the failed audit-chain banner (kIxaJ), and the empty default
+// storage class (dxdEi) are one-off variants selected per-test via a
+// context.addCookies() cookie read inside buildScreenshotHandlers()
+// (src/test/handlers.ts) — see setAdminConfigVariant()'s comment below for
+// why a cookie, not a page.route override: those endpoints are answered by
+// MSW's Service Worker (msw/browser), and Playwright cannot intercept a
+// request a Service Worker's own fetch handler has already resolved.
 
 async function capture(page: Page, id: string): Promise<void> {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const screenshotPath = path.join(here, `${id}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: true });
+}
+
+// Forces the app's own light/dark toggle (AppLayout.tsx THEME_STORAGE_KEY),
+// which takes priority over the context's prefers-color-scheme — used for
+// Wj0V4, captured in light theme per the design frame while every other
+// test in this file stays on the suite's dark colorScheme.
+async function setTheme(page: Page, theme: "light" | "dark"): Promise<void> {
+  await page.addInitScript((t: string) => {
+    try {
+      window.localStorage.setItem("gameplane-theme", t);
+    } catch {
+      // localStorage unavailable (sandboxed)
+    }
+  }, theme);
 }
 
 // Selects the enriched screenshot dataset before the app's first fetch.
@@ -51,10 +68,33 @@ async function useScreenshotDataset(page: Page): Promise<void> {
   });
 }
 
+// Scoped to the Admin Settings section <nav> (AdminSettings.tsx) so this
+// never collides with the header's notification-bell button, which also
+// has the accessible name "Notifications" (NotificationsPanel.tsx) but
+// isn't inside a <nav> landmark.
 async function clickSection(page: Page, name: string): Promise<void> {
-  const btn = page.getByRole("button", { name, exact: true });
+  const btn = page.locator("nav").getByRole("button", { name, exact: true });
   await expect(btn).toBeVisible({ timeout: 10_000 });
   await btn.click();
+}
+
+// Selects a GET /admin/config variant via a cookie read by
+// buildScreenshotHandlers() (src/test/handlers.ts), the same
+// context.addCookies() + MSW-cookie pattern slice2a.spec.ts uses for
+// e2e_server_variant. A page.route() override does NOT work for this
+// endpoint (or /admin/audit/verify, or the /admin/config/:section PUT
+// below): MSW's Service Worker (msw/browser, src/test/browser-msw.ts)
+// answers those requests itself, and Playwright cannot intercept a
+// request already resolved inside a Service Worker's fetch handler.
+// screenshotConfig() itself stays in the plain "not yet configured" shape
+// so the rest of the suite is unaffected; must be called before page.goto.
+async function setAdminConfigVariant(
+  context: BrowserContext,
+  variant: "oidc" | "oidc-empty-mappings" | "empty-storage-class",
+): Promise<void> {
+  await context.addCookies([
+    { name: "e2e_admin_config_variant", value: variant, domain: "localhost", path: "/" },
+  ]);
 }
 
 test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1440x900) @screenshots", () => {
@@ -78,19 +118,24 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await capture(page, "WZdnw");
   });
 
-  test("uMiwd: Admin Settings — Authentication", async ({ page }) => {
+  test("uMiwd: Admin Settings — Authentication", async ({ page, context }) => {
+    await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     // Helm OIDC Provider Card (read-only, groups claim + default role).
     await expect(page.getByText("Helm-seeded OIDC provider")).toBeVisible({ timeout: 10_000 });
     // Role Mapping Overrides Card — admin row is dashboard-overridden.
+    // Scoped to the "Admin role mapping" group (RoleMappingOverridesCard,
+    // AdminSettings.tsx) since the Helm-seeded card above renders the same
+    // group name as a plain read-only chip.
     await expect(page.getByText("Role mapping overrides")).toBeVisible();
-    await expect(page.getByText("ops-leads")).toBeVisible();
+    await expect(page.getByLabel("Admin role mapping").getByText("ops-leads")).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "uMiwd");
   });
 
-  test("R65Xyx: Provenance Badge — Overridden", async ({ page }) => {
+  test("R65Xyx: Provenance Badge — Overridden", async ({ page, context }) => {
+    await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     await expect(page.getByText("Overridden in dashboard")).toBeVisible({ timeout: 10_000 });
@@ -98,7 +143,8 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await capture(page, "R65Xyx");
   });
 
-  test("Rwnu3: Provenance Badge — From Helm", async ({ page }) => {
+  test("Rwnu3: Provenance Badge — From Helm", async ({ page, context }) => {
+    await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     await expect(page.getByText("From Helm values").first()).toBeVisible({ timeout: 10_000 });
@@ -106,53 +152,48 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await capture(page, "Rwnu3");
   });
 
-  test("XL5ZU: Removable Group Chip — Orange (admin)", async ({ page }) => {
+  test("XL5ZU: Removable Group Chip — Orange (admin)", async ({ page, context }) => {
+    await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
-    await expect(page.getByText("ops-leads")).toBeVisible({ timeout: 10_000 });
+    // Scoped to the "Admin role mapping" group — see uMiwd's note.
+    await expect(page.getByLabel("Admin role mapping").getByText("ops-leads")).toBeVisible({
+      timeout: 10_000,
+    });
     await page.waitForTimeout(200);
     await capture(page, "XL5ZU");
   });
 
-  test("vStkb: Removable Group Chip — Violet (operator)", async ({ page }) => {
+  test("vStkb: Removable Group Chip — Violet (operator)", async ({ page, context }) => {
+    await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
-    await expect(page.getByText("ops-team")).toBeVisible({ timeout: 10_000 });
+    // Scoped to the "Operator role mapping" group — see uMiwd's note.
+    await expect(page.getByLabel("Operator role mapping").getByText("ops-team")).toBeVisible({
+      timeout: 10_000,
+    });
     await page.waitForTimeout(200);
     await capture(page, "vStkb");
   });
 
-  test("uw0dB: Removable Group Chip — Secondary (viewer)", async ({ page }) => {
+  test("uw0dB: Removable Group Chip — Secondary (viewer)", async ({ page, context }) => {
+    await setAdminConfigVariant(context, "oidc");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
-    await expect(page.getByText("everyone")).toBeVisible({ timeout: 10_000 });
+    // Scoped to the "Viewer role mapping" group — see uMiwd's note.
+    await expect(page.getByLabel("Viewer role mapping").getByText("everyone")).toBeVisible({
+      timeout: 10_000,
+    });
     await page.waitForTimeout(200);
     await capture(page, "uw0dB");
   });
 
-  test("nNGDX: Admin Settings — Authentication (No OIDC mappings)", async ({ page }) => {
+  test("nNGDX: Admin Settings — Authentication (No OIDC mappings)", async ({ page, context }) => {
     // Empty-state variant: Helm-seeded provider exists but declares no
     // role mappings at all, and there's no dashboard override either.
-    await page.route(/\/admin\/config$/, async (route) => {
-      if (route.request().method() !== "GET") return route.fallback();
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          general: {
-            instanceName: "My Gameplane Cluster",
-            externalURL: "https://gameplane-demo.local",
-            defaultNamespace: "default",
-          },
-          auth: { providers: [{ name: "local", kind: "local", enabled: true }] },
-          modRegistries: { registries: [] },
-          installTimeSettings: {
-            gameDataStorageClass: "fast-nvme",
-            oidcHelmProvider: { groupsClaim: "groups", defaultRole: "viewer" },
-          },
-        }),
-      });
-    });
+    // See setAdminConfigVariant()'s note on why this is a cookie, not a
+    // page.route override.
+    await setAdminConfigVariant(context, "oidc-empty-mappings");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     await expect(page.getByText("No OIDC role mappings yet")).toBeVisible({ timeout: 10_000 });
@@ -160,27 +201,10 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await capture(page, "nNGDX");
   });
 
-  test("BV5ei: Provenance Badge — Not configured", async ({ page }) => {
-    await page.route(/\/admin\/config$/, async (route) => {
-      if (route.request().method() !== "GET") return route.fallback();
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          general: {
-            instanceName: "My Gameplane Cluster",
-            externalURL: "https://gameplane-demo.local",
-            defaultNamespace: "default",
-          },
-          auth: { providers: [{ name: "local", kind: "local", enabled: true }] },
-          modRegistries: { registries: [] },
-          installTimeSettings: {
-            gameDataStorageClass: "fast-nvme",
-            oidcHelmProvider: { groupsClaim: "groups", defaultRole: "viewer" },
-          },
-        }),
-      });
-    });
+  test("BV5ei: Provenance Badge — Not configured", async ({ page, context }) => {
+    // Same empty-state config as nNGDX — the resulting provenance badges
+    // read "Not configured" since there's no Helm mapping and no override.
+    await setAdminConfigVariant(context, "oidc-empty-mappings");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     await expect(page.getByText("Not configured").first()).toBeVisible({ timeout: 10_000 });
@@ -188,23 +212,17 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await capture(page, "BV5ei");
   });
 
-  test("QgW58: Admin Settings — Authentication (Save rejected)", async ({ page }) => {
+  test("QgW58: Admin Settings — Authentication (Save rejected)", async ({ page, context }) => {
     // NOTE: the design frame additionally shows a field-level red-stroked
     // input for the blank group name; the current form has no client-side
     // blank-name validation to trigger that state; this test reproduces
     // the card-level error banner half of the frame (the 400 response
     // surfaced via SaveStatus) by rejecting the section's PUT outright.
-    await page.route(/\/admin\/config\/auth$/, async (route) => {
-      if (route.request().method() !== "PUT") return route.fallback();
-      await route.fulfill({
-        status: 400,
-        contentType: "application/json",
-        body: JSON.stringify({
-          error:
-            "helmOverride.roleMappings.admin must not contain blank group names. No changes were saved.",
-        }),
-      });
-    });
+    // Selected via a cookie (see setAdminConfigVariant()'s note) rather
+    // than page.route, since MSW's Service Worker answers this PUT itself.
+    await context.addCookies([
+      { name: "e2e_admin_config_put_variant", value: "reject", domain: "localhost", path: "/" },
+    ]);
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     await expect(page.getByText("Role mapping overrides")).toBeVisible({ timeout: 10_000 });
@@ -238,10 +256,14 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
 
   test("Kp48V: Confirm Admin Mapping dialog", async ({ page }) => {
     await page.goto("/admin");
+    await expect(page.getByRole("heading", { name: /admin settings/i })).toBeVisible({
+      timeout: 10_000,
+    });
     await clickSection(page, "Authentication");
     await page.getByRole("button", { name: /^add provider$/i }).click();
     await expect(page.getByText("Add identity provider")).toBeVisible({ timeout: 10_000 });
-    await page.getByLabel("Name").fill("corp-sso");
+    await expect(page.getByLabel("Name", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await page.getByLabel("Name", { exact: true }).fill("corp-sso");
     await page.getByLabel("Issuer URL").fill("https://idp.example.com");
     await page.getByLabel("Client ID").fill("abc123");
     await page.getByLabel("Client secret").fill("supersecret");
@@ -269,6 +291,7 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
   });
 
   test("Wj0V4: Admin Settings — Mod registries", async ({ page }) => {
+    await setTheme(page, "light");
     await page.goto("/admin");
     await clickSection(page, "Mod registries");
     await expect(page.getByText("CurseForge")).toBeVisible({ timeout: 10_000 });
@@ -278,6 +301,9 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
 
   test("n6Xlo: Admin Settings — Notifications", async ({ page }) => {
     await page.goto("/admin");
+    await expect(page.getByRole("heading", { name: /admin settings/i })).toBeVisible({
+      timeout: 10_000,
+    });
     await clickSection(page, "Notifications");
     await expect(page.getByText(/no notification sinks configured/i)).toBeVisible({
       timeout: 10_000,
@@ -349,15 +375,23 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
   });
 
   test("CqaSq: Role Editor Modal", async ({ page }) => {
+    // Design frame CqaSq is the *edit* form (RoleEditorModal.tsx's
+    // `Edit role: ${role.name}` heading), not the blank "New role" create
+    // form — open it via the operator role card's Edit button.
     await page.goto("/users");
     await page.getByRole("tab", { name: /^roles/i }).click();
-    await expect(page.getByRole("button", { name: /new role/i })).toBeVisible({
+    // Users.tsx's role Card ("flex flex-col gap-2 p-4" — unique to these
+    // grid cards) containing the "operator" role-name span.
+    const operatorCard = page.locator(".flex.flex-col.gap-2.p-4").filter({
+      has: page.getByText("operator", { exact: true }),
+    });
+    await expect(operatorCard.getByRole("button", { name: /^edit$/i })).toBeVisible({
       timeout: 10_000,
     });
-    await page.getByRole("button", { name: /new role/i }).click();
-    const dialog = page.getByRole("dialog");
+    await operatorCard.getByRole("button", { name: /^edit$/i }).click();
+    const dialog = page.getByRole("dialog", { name: /edit role: operator/i });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
-    await expect(dialog.getByText("New role")).toBeVisible();
+    await expect(dialog.getByText("Edit role: operator")).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "CqaSq");
   });
@@ -377,7 +411,10 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await expect(page.getByText("operator-01").first()).toBeVisible({ timeout: 10_000 });
     await page.getByRole("button", { name: /^actions for operator-01$/i }).click();
     await page.getByRole("menuitem", { name: /edit user/i }).click();
-    const dialog = page.getByRole("dialog");
+    // Named lookup: while the DropdownMenu popover closes it briefly
+    // shares role="dialog" with the modal opening underneath it, so an
+    // unnamed getByRole("dialog") resolves to both.
+    const dialog = page.getByRole("dialog", { name: /edit user/i });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.getByText("Edit user")).toBeVisible();
     await page.waitForTimeout(200);
@@ -389,7 +426,9 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await expect(page.getByText("operator-01").first()).toBeVisible({ timeout: 10_000 });
     await page.getByRole("button", { name: /^actions for operator-01$/i }).click();
     await page.getByRole("menuitem", { name: /reset password/i }).click();
-    const dialog = page.getByRole("dialog");
+    // Named lookup — see t3IY3u's note on the closing DropdownMenu popover
+    // sharing role="dialog" with the modal opening underneath it.
+    const dialog = page.getByRole("dialog", { name: /reset password for/i });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.getByText(/reset password for/i)).toBeVisible();
     await page.waitForTimeout(200);
@@ -409,19 +448,12 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await capture(page, "DxKOh");
   });
 
-  test("kIxaJ: Audit Integrity Banner (failed)", async ({ page }) => {
-    await page.route(/\/admin\/audit\/verify$/, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ok: false,
-          checked: 42,
-          firstBadId: 17,
-          message: "Integrity check failed — chain breaks at event #17",
-        }),
-      });
-    });
+  test("kIxaJ: Audit Integrity Banner (failed)", async ({ page, context }) => {
+    // Cookie-selected, not page.route — see setAdminConfigVariant()'s note;
+    // MSW's Service Worker answers /admin/audit/verify itself.
+    await context.addCookies([
+      { name: "e2e_audit_verify_variant", value: "failed", domain: "localhost", path: "/" },
+    ]);
     await page.goto("/admin/audit");
     await expect(page.getByRole("heading", { name: /audit log/i })).toBeVisible({
       timeout: 10_000,
@@ -436,7 +468,9 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await expect(page.getByRole("heading", { name: /system logs/i })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByRole("button", { name: /^api server$/i })).toBeVisible();
+    // "API server" is a Tabs.Tab (role="tab"), not a plain button —
+    // AdminLogs.tsx COMPONENTS[0].label.
+    await expect(page.getByRole("tab", { name: /^api server$/i })).toBeVisible();
     // Mocked plaintext stream from /admin/system-logs/:component
     // (screenshotSystemLogLines).
     await expect(page.getByText(/starting gameplane-api/i)).toBeVisible({ timeout: 10_000 });
@@ -449,32 +483,20 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await expect(page.getByRole("heading", { name: /cluster/i }).first()).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByText("Storage")).toBeVisible();
+    // Cluster.tsx's <h3>Storage</h3> — a plain getByText("Storage") also
+    // matches non-heading wrapper elements whose only visible child is
+    // that h3, so scope to the heading role for a unique match.
+    await expect(page.getByRole("heading", { name: "Storage" })).toBeVisible();
     await expect(page.getByText("fast-nvme")).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "j9W8A");
   });
 
-  test("dxdEi: Cluster Settings — Default storage class", async ({ page }) => {
-    await page.route(/\/admin\/config$/, async (route) => {
-      if (route.request().method() !== "GET") return route.fallback();
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          general: {
-            instanceName: "My Gameplane Cluster",
-            externalURL: "https://gameplane-demo.local",
-            defaultNamespace: "default",
-          },
-          auth: { providers: [{ name: "local", kind: "local", enabled: true }] },
-          modRegistries: { registries: [] },
-          installTimeSettings: { gameDataStorageClass: "" },
-        }),
-      });
-    });
+  test("dxdEi: Cluster Settings — Default storage class", async ({ page, context }) => {
+    await setAdminConfigVariant(context, "empty-storage-class");
     await page.goto("/cluster");
-    await expect(page.getByText("Storage")).toBeVisible({ timeout: 10_000 });
+    // See j9W8A's note on scoping to the heading role.
+    await expect(page.getByRole("heading", { name: "Storage" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText("Cluster default")).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "dxdEi");

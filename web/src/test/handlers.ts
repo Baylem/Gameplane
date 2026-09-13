@@ -27,6 +27,9 @@ import {
   getScreenshotData,
   screenshotConsoleOutput,
   screenshotSystemLogLines,
+  screenshotConfigWithOidc,
+  screenshotConfigOidcEmptyMappings,
+  screenshotConfigEmptyStorageClass,
 } from "./screenshotData";
 
 export const handlers = [
@@ -925,7 +928,10 @@ export function buildScreenshotHandlers() {
     http.get("/backups", () =>
       HttpResponse.json({
         items: [
-          makeBackup({ spec: { serverRef: { name: "test-server-01" } } }),
+          makeBackup({
+            metadata: { name: "test-server-01-2026-05-07", namespace: "default" },
+            spec: { serverRef: { name: "test-server-01" } },
+          }),
           makeBackup({
             metadata: { name: "test-server-01-2026-05-06", namespace: "default" },
             spec: { serverRef: { name: "test-server-01" } },
@@ -1260,14 +1266,52 @@ export function buildScreenshotHandlers() {
       return HttpResponse.json(data.auditEvents.slice(0, limit));
     }),
     // Audit chain integrity — default "verified" state (DxKOh). The
-    // failure banner state (kIxaJ) is produced per-test via page.route
-    // overriding this route, since it's a one-off variant, not a
-    // dataset-wide fixture.
-    http.get("/admin/audit/verify", () =>
-      HttpResponse.json({ ok: true, checked: data.auditEvents.length, message: "audit chain intact" }),
-    ),
-    http.get("/admin/config", () => HttpResponse.json(data.config())),
-    http.put("/admin/config/:section", () => new HttpResponse(null, { status: 204 })),
+    // failure banner state (kIxaJ) is a one-off variant selected via the
+    // "e2e_audit_verify_variant=failed" cookie (see slice4.spec.ts) rather
+    // than a page.route override: MSW's Service Worker (msw/browser)
+    // answers this route itself, and Playwright can't intercept a request
+    // already resolved inside a Service Worker's fetch handler.
+    http.get("/admin/audit/verify", ({ cookies }) => {
+      if (cookies.e2e_audit_verify_variant === "failed") {
+        return HttpResponse.json({
+          ok: false,
+          checked: 42,
+          firstBadId: 17,
+          message: "Integrity check failed — chain breaks at event #17",
+        });
+      }
+      return HttpResponse.json({ ok: true, checked: data.auditEvents.length, message: "audit chain intact" });
+    }),
+    // GET /admin/config variants, selected via the "e2e_admin_config_variant"
+    // cookie (see slice4.spec.ts) rather than a page.route override — same
+    // Service Worker interception reason as /admin/audit/verify above.
+    http.get("/admin/config", ({ cookies }) => {
+      switch (cookies.e2e_admin_config_variant) {
+        case "oidc":
+          return HttpResponse.json(screenshotConfigWithOidc());
+        case "oidc-empty-mappings":
+          return HttpResponse.json(screenshotConfigOidcEmptyMappings());
+        case "empty-storage-class":
+          return HttpResponse.json(screenshotConfigEmptyStorageClass());
+        default:
+          return HttpResponse.json(data.config());
+      }
+    }),
+    // PUT /admin/config/:section — the "save rejected" variant (QgW58) is
+    // selected via the "e2e_admin_config_put_variant=reject" cookie, same
+    // reason as above.
+    http.put("/admin/config/:section", ({ cookies }) => {
+      if (cookies.e2e_admin_config_put_variant === "reject") {
+        return HttpResponse.json(
+          {
+            error:
+              "helmOverride.roleMappings.admin must not contain blank group names. No changes were saved.",
+          },
+          { status: 400 },
+        );
+      }
+      return new HttpResponse(null, { status: 204 });
+    }),
     http.post("/admin/notifications/sinks/:name/test", () =>
       HttpResponse.json({ delivered: true }),
     ),

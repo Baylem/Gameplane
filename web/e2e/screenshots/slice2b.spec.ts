@@ -109,7 +109,7 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
   test("pssCT: Server Detail — Backups", async ({ page }) => {
     await page.goto("/servers/test-server-01");
     await clickTab(page, "Backups");
-    await expect(page.getByText("test-server-01-2026-05-07")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("rowheader", { name: "test-server-01-2026-05-07" })).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
     await capture(page, "pssCT");
   });
@@ -117,14 +117,16 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
   test("zhLZN: Backup detail drawer (open)", async ({ page }) => {
     await page.goto("/servers/test-server-01");
     await clickTab(page, "Backups");
-    const row = page.getByText("test-server-01-2026-05-07");
+    const row = page.getByRole("row", { name: /test-server-01-2026-05-07/i });
     await expect(row).toBeVisible({ timeout: 10_000 });
     await row.click();
+    // zhLZN is a duplicate with slice-3.spec.ts:184 — keep the capture in
+    // slice-3 (the working one) and remove this duplicate here. The drawer
+    // may not open reliably in the per-server context, so we skip the
+    // capture call.
     await expect(page.getByRole("heading", { name: /backup details/i })).toBeVisible({
       timeout: 10_000,
     });
-    await page.waitForTimeout(200);
-    await capture(page, "zhLZN");
   });
 
   test("VfB0Y: Server Detail — Settings · Resources", async ({ page }) => {
@@ -140,7 +142,9 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
     await page.goto("/servers/test-server-01");
     await clickTab(page, "Settings");
     await clickTab(page, "Networking");
-    await expect(page.getByText(/^provider$/i).first()).toBeVisible({ timeout: 10_000 });
+    // Provider field only renders when tunnel is enabled in the spec. Use
+    // Expose field (always present) to confirm the Networking section loaded.
+    await expect(page.getByText(/^expose$/i)).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
     await capture(page, "J5pjJ3");
   });
@@ -178,7 +182,8 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
     await clickTab(page, "Placement");
     // PlacementSection is lazy-loaded (Suspense) — wait for its Monaco-based
     // editors to actually mount rather than a fixed timeout.
-    await expect(page.getByText("Tolerations")).toBeVisible({ timeout: 10_000 });
+    // Y5cmvI: use exact:true to match only the label, not the description
+    await expect(page.getByText("Tolerations", { exact: true })).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
     await capture(page, "Y5cmvI");
   });
@@ -203,7 +208,11 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
     await page.goto("/servers/test-server-01");
     await clickTab(page, "Settings");
     await clickTab(page, "Version");
-    await expect(page.getByText(/game version/i)).toBeVisible({ timeout: 10_000 });
+    // "Game version" text appears as both a heading and a radiogroup aria-label;
+    // scope to the heading to avoid strict mode violation.
+    await expect(page.getByRole("heading", { name: /game version/i })).toBeVisible({
+      timeout: 10_000,
+    });
     await page.waitForTimeout(200);
     await capture(page, "settings-version");
   });

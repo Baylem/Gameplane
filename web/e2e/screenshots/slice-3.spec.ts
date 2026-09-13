@@ -94,7 +94,8 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     await page.getByRole("button", { name: /continue/i }).click();
     await page.getByRole("button", { name: /1\.21 \(Vanilla\)/i }).click();
     await page.getByRole("button", { name: /continue/i }).click();
-    await expect(page.getByText(/server name/i)).toBeVisible({ timeout: 10_000 });
+    // The label "Server name" appears in the step, scoped to just the label (not the error message)
+    await expect(page.locator("label:has-text('Server name')")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByPlaceholder(/mc-hardcore/i)).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "vUqMl");
@@ -125,7 +126,7 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     await expect(page.getByRole("button", { name: /create server/i })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByText("e2e-screenshot-srv")).toBeVisible();
+    await expect(page.locator("span.font-mono:has-text('e2e-screenshot-srv')")).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "UMJli");
   });
@@ -151,8 +152,8 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     await expect(page.getByRole("heading", { name: /^backups$/i })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByText("alpha-2026-05-07")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("alpha-2026-05-06")).toBeVisible();
+    await expect(page.getByText("test-server-01-2026-05-07")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("test-server-01-2026-05-06")).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "DPrYX");
   });
@@ -183,7 +184,7 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
 
   test("zhLZN: Backup Detail Drawer", async ({ page }) => {
     await page.goto("/backups");
-    const nameCell = page.getByText("alpha-2026-05-07", { exact: true });
+    const nameCell = page.getByText("test-server-01-2026-05-07", { exact: true });
     await expect(nameCell).toBeVisible({ timeout: 10_000 });
     await nameCell.click();
     await expect(page.getByText(/backup details/i)).toBeVisible({ timeout: 10_000 });
@@ -193,9 +194,9 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
 
   test("E9EEv0: Restore Backup dialog", async ({ page }) => {
     await page.goto("/backups");
-    const row = page.getByRole("row", { name: /alpha-2026-05-07/i });
+    const row = page.getByRole("row", { name: /test-server-01-2026-05-07/i });
     await expect(row).toBeVisible({ timeout: 10_000 });
-    // alpha-2026-05-07 (default makeBackup()) is Succeeded with a
+    // test-server-01-2026-05-07 (default makeBackup()) is Succeeded with a
     // snapshotID, so BackupRow's "Restore" action is enabled on it.
     await row.getByRole("button", { name: /^restore$/i }).click();
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 10_000 });
@@ -206,7 +207,7 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
 
   test("DMnEi: Backup List Item", async ({ page }) => {
     await page.goto("/backups");
-    const row = page.getByRole("row", { name: /alpha-2026-05-07/i });
+    const row = page.getByRole("row", { name: /test-server-01-2026-05-07/i });
     await expect(row).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
     // Component-level crop (not a full-page capture): DMnEi is the reusable

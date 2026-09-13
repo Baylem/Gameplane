@@ -38,6 +38,9 @@ export const screenshotTemplates: GameTemplate[] = [
       version: "1.21",
       description: "Official Minecraft Java Edition server",
       image: "ghcr.io/valgulnecron/gameplane/minecraft:1.21",
+      versions: [
+        { id: "1.21", displayName: "1.21 (Vanilla)", default: true, gameVersion: "1.21" },
+      ],
       rcon: { protocol: "minecraft" },
       capabilities: {
         status: {
@@ -526,6 +529,37 @@ export const screenshotServers: GameServer[] = [
       agent: { playersOnline: null, playersMax: 128, lastHeartbeat: undefined },
     },
   }),
+  makeServer({
+    metadata: {
+      name: "ark-island",
+      namespace: "gameplane-demo",
+      annotations: { "gameplane.local/node": "node-01" },
+    },
+    spec: { templateRef: { name: "minecraft-modlist" } },
+    status: {
+      phase: "Running",
+      agent: {
+        playersOnline: 0,
+        playersMax: 70,
+        lastHeartbeat: "2026-09-06T10:15:30Z",
+        cpuMillicores: 0,
+        cpuLimitMillicores: 4000,
+        memoryBytes: 1_520_000_000,
+        memoryLimitBytes: 4_000_000_000,
+        diskUsedBytes: 3_770_000_000,
+        diskTotalBytes: 29_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "main",
+          host: "ark-island.gameplane-demo.local",
+          port: 27015,
+          protocol: "tcp",
+        },
+      ],
+      startedAt: "2026-09-03T14:20:00Z",
+    },
+  }),
 ];
 
 // ============================================================================
@@ -946,7 +980,80 @@ export function screenshotConfig(): AllConfig {
     modRegistries: {
       registries: [{ provider: "curseforge" }, { provider: "steam" }],
     },
+    installTimeSettings: {
+      gameDataStorageClass: "fast-nvme",
+    },
   });
+}
+
+// Variant of screenshotConfig() with a Helm-seeded OIDC provider (role
+// mappings on all three roles) plus a dashboard override on the admin
+// mapping. Used only by the slice4 Admin Settings — Authentication tests
+// that need the OIDC-configured state (uMiwd, R65Xyx, Rwnu3, XL5ZU,
+// vStkb, uw0dB), selected per-test via the "e2e_admin_config_variant=oidc"
+// cookie (see buildScreenshotHandlers() in handlers.ts) — a page.route
+// override of GET /admin/config doesn't work here because MSW's Service
+// Worker (msw/browser, src/test/browser-msw.ts) answers that request
+// itself; Playwright can't intercept a request already resolved inside a
+// Service Worker's fetch handler. Kept out of the shared screenshotConfig()
+// because most other tests (and the "no OIDC mappings yet" variant below)
+// need the plain, not-yet-configured state instead.
+export function screenshotConfigWithOidc(): AllConfig {
+  const base = screenshotConfig();
+  return {
+    ...base,
+    auth: {
+      providers: [{ name: "local", kind: "local", enabled: true }],
+      helmOverride: {
+        roleMappings: {
+          admin: ["ops-leads"],
+        },
+      },
+    },
+    installTimeSettings: {
+      gameDataStorageClass: "fast-nvme",
+      oidcHelmProvider: {
+        groupsClaim: "groups",
+        defaultRole: "viewer",
+        roleMappings: {
+          admin: ["ops-leads"],
+          operator: ["ops-team"],
+          viewer: ["everyone"],
+        },
+      },
+    },
+  };
+}
+
+// Variant of screenshotConfig() with a Helm-seeded OIDC provider that
+// declares no role mappings at all, and no dashboard override either —
+// the "no OIDC mappings yet" empty state. Backs both nNGDX (the empty-state
+// banner) and BV5ei (the resulting "Not configured" provenance badges),
+// selected via the "e2e_admin_config_variant=oidc-empty-mappings" cookie
+// — see screenshotConfigWithOidc()'s comment on why a cookie, not
+// page.route, is the override mechanism here.
+export function screenshotConfigOidcEmptyMappings(): AllConfig {
+  const base = screenshotConfig();
+  return {
+    ...base,
+    installTimeSettings: {
+      gameDataStorageClass: "fast-nvme",
+      oidcHelmProvider: { groupsClaim: "groups", defaultRole: "viewer" },
+    },
+  };
+}
+
+// Variant of screenshotConfig() with no game-data StorageClass set at
+// install time — the "cluster default" empty state for Cluster Settings
+// (dxdEi), selected via the "e2e_admin_config_variant=empty-storage-class"
+// cookie — see screenshotConfigWithOidc()'s comment on why a cookie, not
+// page.route, is the override mechanism here.
+export function screenshotConfigEmptyStorageClass(): AllConfig {
+  const base = screenshotConfig();
+  return {
+    ...base,
+    installTimeSettings: { gameDataStorageClass: "" },
+  };
 }
 
 // ============================================================================

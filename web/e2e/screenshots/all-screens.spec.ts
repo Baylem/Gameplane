@@ -300,30 +300,21 @@ test.describe("All-Screens: Mods tabs (Desktop — 1440x900) @screenshots", () =
     await useScreenshotDataset(page);
   });
 
-  test("KhYNc: Server Detail — Mods (by ID) [expected gap — no idList template]", async ({ page }) => {
-    await page.goto("/servers/test-server-09");
-    await expect(page.getByRole("heading", { name: "test-server-09" })).toBeVisible({
+  test("KhYNc: Server Detail — Mods (by ID)", async ({ page }) => {
+    await page.goto("/servers/ark-island?ns=gameplane-demo");
+    await expect(page.getByRole("heading", { name: "ark-island" })).toBeVisible({
       timeout: 10_000,
     });
     await clickTab(page, "Mods");
-    // FileModsTab is what actually renders (no template declares
-    // capabilities.mods.idList, so ModsByIdTab is unreachable). Assert that
-    // fact plainly instead of asserting on ByID-only UI that can never
-    // appear, so a future fixture fix makes this test start failing loudly
-    // (a signal to replace it with a real capture) rather than silently.
-    await expect(page.getByRole("heading", { name: /^install mods$/i })).not.toBeVisible();
-    const installedHeader = page.getByText(/installed$/i).first();
-    await expect(installedHeader).toBeVisible({ timeout: 10_000 });
-    throw new Error(
-      "KhYNc not captured: its design frame (design-export/screenshots/KhYNc.png) is " +
-        "ModsByIdTab on a server 'ark-island' (Mods.tsx:56, gated on " +
-        "tmpl.spec.capabilities.mods.idList). No template in screenshotData.ts declares " +
-        "idList and no 'ark-island' server exists in screenshotServers, so every current " +
-        "server (including test-server-09, confirmed above via FileModsTab's 'N installed' " +
-        "header) renders FileModsTab instead, which has no by-ID mode. Fixing this requires " +
-        "adding an idList-capable template + server to screenshotData.ts (an e2e fixture " +
-        "change, out of scope for this screenshot-only pass) — not a selector or wrong-server bug.",
-    );
+    // ModsByIdTab renders for templates with capabilities.mods.idList.
+    // ark-island uses minecraft-modlist template which declares idList,
+    // so this test captures the ID-based mods editor (KhYNc design frame).
+    // Scope on the template name to avoid false matches in instructions.
+    const modListHeader = page.getByText(/Minecraft \(Mod List\)/i);
+    await expect(modListHeader).toBeVisible({ timeout: 10_000 });
+
+    await page.waitForTimeout(200);
+    await capture(page, "KhYNc");
   });
 
   test("GayoL: Server Detail — Mods — Browse (added)", async ({ page }) => {
