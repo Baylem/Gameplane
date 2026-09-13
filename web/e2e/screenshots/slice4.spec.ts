@@ -515,7 +515,7 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await capture(page, "DxKOh");
   });
 
-  test("kIxaJ: Audit Integrity Banner (failed)", async ({ page, context }) => {
+  test("m1hP1j: Audit Integrity Banner (failed)", async ({ page, context }) => {
     // Design PNG is light theme (white) — see the header comment.
     await setTheme(page, "light");
     // Cookie-selected, not page.route — see setAdminConfigVariant()'s note;
@@ -527,12 +527,13 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await expect(page.getByRole("heading", { name: /audit log/i })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByText(/chain breaks at event #17/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/chain breaks at event #286/i)).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    // Design PNG (1400x312) crops just the AuditIntegrityBanner — scope
-    // the capture to the rendered alert via its role="alert" attribute
-    // (AuditIntegrityBanner.tsx).
-    await captureLocator(page, "kIxaJ", page.getByRole("alert"));
+    // Bare-banner id: kIxaJ is the 700px caption composition around the
+    // banner; the design reference now lives at m1hP1j (see
+    // design-export/MANIFEST.md's m1hP1j row). kIxaJ stays exported but is
+    // no longer diffed.
+    await captureLocator(page, "m1hP1j", page.getByRole("alert"));
   });
 
   test("Bq2Yg: Admin — System Logs", async ({ page }) => {
