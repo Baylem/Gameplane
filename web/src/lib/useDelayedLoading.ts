@@ -15,8 +15,13 @@ export function useDelayedLoading(
   loading: boolean,
   { showAfterMs = 200, minVisibleMs = 300, initialImmediate = true } = {},
 ): boolean {
-  const [showSkeleton, setShowSkeleton] = useState(false);
+  // Capture the loading state at mount to detect true initial mounts
+  const mountedLoadingRef = useRef(loading);
   const hasFinishedLoadingRef = useRef(false);
+
+  // Lazy-initialize state: show immediately on first render if initialImmediate
+  // is true AND the very first render has loading === true
+  const [showSkeleton, setShowSkeleton] = useState(() => initialImmediate && loading);
 
   useEffect(() => {
     if (!loading) {
@@ -43,14 +48,15 @@ export function useDelayedLoading(
       return;
     }
 
-    // If this is the initial load (never finished loading before) and initialImmediate is true,
-    // show immediately without debounce
-    if (initialImmediate && !hasFinishedLoadingRef.current) {
-      setShowSkeleton(true);
+    // If this is the initial load (first mount had loading === true) and initialImmediate is true,
+    // the skeleton is already shown via lazy-init, so nothing to do. This only applies to that
+    // first mount-in-loading — once a load cycle has finished, a refetch must go through the
+    // normal debounce below, not bail out here.
+    if (initialImmediate && mountedLoadingRef.current && !hasFinishedLoadingRef.current) {
       return;
     }
 
-    // Otherwise use the normal debounce
+    // Otherwise (subsequent loads or initialImmediate=false) use the normal debounce
     const showTimer = setTimeout(() => {
       setShowSkeleton(true);
     }, showAfterMs);

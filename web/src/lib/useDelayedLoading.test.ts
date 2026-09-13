@@ -113,7 +113,7 @@ describe("useDelayedLoading", () => {
   });
 
   it("true past 200ms → shows", () => {
-    const { result } = renderHook(() => useDelayedLoading(true));
+    const { result } = renderHook(() => useDelayedLoading(true, { initialImmediate: false }));
 
     expect(result.current).toBe(false);
 
@@ -130,7 +130,7 @@ describe("useDelayedLoading", () => {
   });
 
   it("true → shows → false → stays visible until 300ms elapsed", () => {
-    const { result, rerender } = renderHook(({ loading }) => useDelayedLoading(loading), {
+    const { result, rerender } = renderHook(({ loading }) => useDelayedLoading(loading, { initialImmediate: false }), {
       initialProps: { loading: true },
     });
 
@@ -162,7 +162,7 @@ describe("useDelayedLoading", () => {
   });
 
   it("respects custom showAfterMs", () => {
-    const { result } = renderHook(() => useDelayedLoading(true, { showAfterMs: 100 }));
+    const { result } = renderHook(() => useDelayedLoading(true, { showAfterMs: 100, initialImmediate: false }));
 
     expect(result.current).toBe(false);
 
@@ -173,7 +173,7 @@ describe("useDelayedLoading", () => {
   });
 
   it("respects custom minVisibleMs", () => {
-    const { result, rerender } = renderHook(({ loading }) => useDelayedLoading(loading, { minVisibleMs: 100 }), {
+    const { result, rerender } = renderHook(({ loading }) => useDelayedLoading(loading, { minVisibleMs: 100, initialImmediate: false }), {
       initialProps: { loading: true },
     });
 
