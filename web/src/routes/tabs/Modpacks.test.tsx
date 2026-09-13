@@ -169,7 +169,9 @@ describe("ModpacksTab", () => {
     await screen.findByText("Cobblemon");
     await waitFor(() => expect(urls.some((u) => u.includes("provider=modrinth"))).toBe(true));
 
-    fireEvent.click(screen.getByRole("button", { name: "Thunderstore" }));
+    // Provider switcher is a HeroUI Tabs list, not buttons — the accessible
+    // role for each provider is "tab".
+    fireEvent.click(screen.getByRole("tab", { name: "Thunderstore" }));
     await waitFor(() => expect(urls.some((u) => u.includes("provider=thunderstore"))).toBe(true));
   });
 

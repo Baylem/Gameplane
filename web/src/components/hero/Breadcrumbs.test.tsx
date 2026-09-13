@@ -32,10 +32,11 @@ describe("buildCrumbs", () => {
   });
 
   it("builds breadcrumbs for multiple route segments", () => {
+    // Server detail pages drop the "Servers" ancestor crumb per design
+    // (dPP50, F9pUrx) — see the comment in buildCrumbs.
     const crumbs = buildCrumbs("/servers/my-server");
     expect(crumbs).toEqual([
       { label: "gameplane", to: "/" },
-      { label: "Servers", to: "/servers" },
       { label: "my-server", to: "/servers/my-server" },
     ]);
   });
@@ -132,19 +133,22 @@ describe("Breadcrumbs component", () => {
   });
 
   it("renders navigation links for non-final crumbs", () => {
-    const crumbs = buildCrumbs("/servers/my-server");
+    // Uses /admin/audit rather than a server detail path: server detail
+    // pages drop the "Servers" ancestor crumb (dPP50, F9pUrx), leaving no
+    // middle crumb to exercise here.
+    const crumbs = buildCrumbs("/admin/audit");
     renderWithQuery(<Breadcrumbs items={crumbs} />);
 
     // Find links by their href attribute
     const homeLink = screen.getByRole("link", { name: /gameplane/i });
     expect(homeLink).toHaveAttribute("href", "/");
 
-    const serversLink = screen.getByRole("link", { name: /servers/i });
-    expect(serversLink).toHaveAttribute("href", "/servers");
+    const settingsLink = screen.getByRole("link", { name: /settings/i });
+    expect(settingsLink).toHaveAttribute("href", "/admin");
 
     // Last item should not be a link
-    const myServerText = screen.getByText("my-server");
-    expect(myServerText.closest("a")).not.toBeInTheDocument();
+    const auditLogText = screen.getByText("Audit log");
+    expect(auditLogText.closest("a")).not.toBeInTheDocument();
   });
 
   it("marks the last crumb with aria-current='page'", () => {
@@ -240,14 +244,17 @@ describe("Breadcrumbs component", () => {
   });
 
   it("renders href on non-last crumbs", () => {
-    const crumbs = buildCrumbs("/servers/my-server");
+    // Uses /admin/audit rather than a server detail path: server detail
+    // pages drop the "Servers" ancestor crumb (dPP50, F9pUrx), leaving no
+    // middle crumb to exercise here.
+    const crumbs = buildCrumbs("/admin/audit");
     renderWithQuery(<Breadcrumbs items={crumbs} />);
 
     const homeLink = screen.getByRole("link", { name: /gameplane/i });
     expect(homeLink).toHaveAttribute("href", "/");
 
-    const serversLink = screen.getByRole("link", { name: /servers/i });
-    expect(serversLink).toHaveAttribute("href", "/servers");
+    const settingsLink = screen.getByRole("link", { name: /settings/i });
+    expect(settingsLink).toHaveAttribute("href", "/admin");
   });
 
   it("handles single crumb without navigation", () => {
@@ -259,11 +266,14 @@ describe("Breadcrumbs component", () => {
   });
 
   it("renders link with to property on non-last item", () => {
-    const crumbs = buildCrumbs("/servers/my-server");
+    // Uses /admin/audit rather than a server detail path: server detail
+    // pages drop the "Servers" ancestor crumb (dPP50, F9pUrx), leaving no
+    // middle crumb to exercise here.
+    const crumbs = buildCrumbs("/admin/audit");
     renderWithQuery(<Breadcrumbs items={crumbs} />);
 
-    const serversLink = screen.getByRole("link", { name: /servers/i });
-    expect(serversLink).toHaveAttribute("href", "/servers");
+    const settingsLink = screen.getByRole("link", { name: /settings/i });
+    expect(settingsLink).toHaveAttribute("href", "/admin");
   });
 
   it("maintains label map translations in breadcrumbs", () => {
