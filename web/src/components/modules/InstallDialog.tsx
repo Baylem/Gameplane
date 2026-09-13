@@ -5,6 +5,7 @@ import {
   ModalContainer,
   ModalDialog,
   ModalHeader,
+  ModalHeading,
   ModalBody,
   ModalFooter,
   Button,
@@ -78,9 +79,9 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
         <ModalContainer>
           <ModalDialog>
           <ModalHeader>
-            <h2 className="text-base font-semibold">
+            <ModalHeading className="text-base font-semibold">
               Install {entry.displayName ?? entry.name}
-            </h2>
+            </ModalHeading>
           </ModalHeader>
 
           <ModalBody className="gap-4">

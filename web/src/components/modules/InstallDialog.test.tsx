@@ -36,6 +36,18 @@ describe("InstallDialog", () => {
     expect(screen.getByText("1.21")).toBeInTheDocument();
   });
 
+  it("renders dialog with the correct accessible name", () => {
+    render(
+      <InstallDialog
+        open
+        onOpenChange={() => {}}
+        entry={makeCatalog({ name: "minecraft", sources: [{ name: "upstream", type: "oci" }], versions: ["1.21"], latestVersion: "1.21" })}
+        onConfirm={() => {}}
+      />,
+    );
+    expect(screen.getByRole("dialog", { name: /^install /i })).toBeInTheDocument();
+  });
+
   it("Install button submits source/version/name", async () => {
     const onConfirm = vi.fn();
     render(
