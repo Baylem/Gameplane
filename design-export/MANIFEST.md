@@ -478,7 +478,7 @@ Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) Slice 3 (Onboa
 | `DPrYX` | Screen/Backups — Index | Re-skinned on HeroUI primitives; backup list and management interface. JSON: 11,021 bytes, valid. PNG: 295 KB at 2880×1800, RGBA 8-bit, 2×scale. All checks passed: no truncation/c-refs. |
 | `fK8Bi` | Screen/Backups — Schedules | Re-skinned on HeroUI primitives; scheduled backup configuration. JSON structure exported, 2,622 bytes. PNG: 444 KB at 2×scale. Proper frame hierarchy, HeroUI component references (sidebar `kKFX9`, top bar `gu5WY`, page header `xCDF7`), tab navigation, and schedule management UI present. All validation checks passed. |
 | `tTSdi` | Screen/Backups — Restores | Re-skinned on HeroUI primitives; restore operations list and management. JSON: 20.8 KB, properly formatted with 2-space indent, trailing newline. PNG: 326 KB at 2×scale. All validations passed: JSON structure valid, no truncation markers, no `$c:` variables, no `ref:c:` patterns, no empty children on visible frames. Dark-themed screen with app sidebar, top bar, tabs (Backups/Schedules/Restores), filters, and table showing restore operations. |
-| `W8idqY` | Screen/Create Server — Step 1 (name and template) | Re-skinned on HeroUI primitives; initial server name and template selection. JSON: 2,537 bytes, valid. PNG: 434 KB at 2880×1800, RGBA. JSON validated: no truncation, no invalid refs, trailing newline present. PNG valid 2880×1800 RGBA. All checks passed. |
+| `W8idqY` | Screen/Create Server — Step 1 Template | Rebuilt 2026-09-13 as a 4-step wizard (Template/Configure/Network/Review — see Incremental export below). JSON: 14,830 bytes, valid, depth-12, zero elisions. PNG: 413,767 bytes at 2880×1800, RGBA. All checks passed. |
 
 **Components/Dialogs (3):**
 
@@ -1012,3 +1012,150 @@ The lunaris base design-system components (`c:20Ebu`, `c:3bQzF`, ... `c:zdFKu`, 
 **Context:**
 
 A fresh Pencil session will find 257 components listed in `get_app_state`'s "Reusable components" (the 57 user-defined `Gameplane/...` definitions remain; all other exported components are now HeroUI `*` definitions, e.g. `Button/Primary/MD`, `Card/Default`, etc. — these were likely re-created as inline frame copies rather than staying as `c:` refs when the library was deleted). The commit `design.pen` change is **no Exported node Changed** (the pixel-diff was to screenshots only, not structure); the JSON re-exports are a **status-quo sync** (matching the document without modifying content).
+
+## Incremental export 2026-09-13 — W8idqY structural rebuild (Create Server · Step 1 Template)
+
+Design-picks visual-diff pass (PR #371 follow-up) flagged `W8idqY` as a structural mismatch, not a
+property-level fix: the design showed a 5-step wizard (Template/Version/Configure/Network/Review) with
+a text-only step header, a 9-item category chip set (All/Adventure/Building/Co-op/Creative/Horror/
+Modded/PvP/Sandbox), a 2-card template list, and a right-hand YAML preview pane — none of which matched
+the shipped implementation. Maintainer-approved rebuild, applied via `mcp__pencil__execute`:
+
+- **Stepper** — reused the existing `Gameplane/Wizard Stepper` component (`oROhg`) instance (`T0u9fl`)
+  rather than rebuilding it: overrode the "Version" step (`qB83V`) and its trailing separator (`gdfU0`)
+  to `enabled:false`, then renumbered Configure/Network/Review from 3/4/5 to 2/3/4. Header text
+  (`uyK3P/gcM6g`) updated from "Step 1 of 5 · Template" to "Step 1 of 4 · Template".
+- **Category chips** — reduced from 9 chips to 4 (`All`/`Sandbox`/`Shooter`/`Survival`), renaming three
+  existing `Y43SFn` chip refs in place and deleting the other five plus the now-unneeded horizontal-fade
+  overlay rectangle (`mCP0k`, sized for the old 9-chip overflow).
+- **Template grid** — converted `TemplateGrid` (`csMSz`) from a 2-card horizontal row to a vertical
+  stack of 4 two-card rows (8 templates total: Minecraft Java Edition, Satisfactory, Valheim, Terraria,
+  Rust, Palworld, Factorio, Counter-Strike 2), each card an instance of the `Card/Default` (`XDZ0E`)
+  slot component copied from the existing unselected card style. The previously-selected Minecraft card
+  styling (orange highlight fill/stroke) was normalized to the same unselected style as the rest, since
+  the implementation shows no pre-selected card.
+- **YAML preview pane removed** — deleted `PLvX0` (the right-hand `Preview` frame with YAML placeholder
+  and memory tip) per explicit maintainer override; the template grid now spans the full body width.
+- **Footer button** — updated the primary button label (`XFJ9p/H87Gb` inside the `Wizard Modal Footer`
+  ref) from "Continue to Version" to "Continue to Configure" to match the new 4-step flow.
+
+**Validation:** `Get("W8idqY", {depth: 12})` shows zero `"..."` elisions. Re-exported JSON (14,830
+bytes) round-trips through `json.load()` cleanly; re-exported PNG is 2880×1800 RGBA (413,767 bytes).
+Screenshot comparison against the implementation composite (`pr371-visual-artifacts/visual-diff-report/
+W8idqY-composite.png`) confirms stepper text, chip labels, 2-column 8-card grid, absent preview pane,
+and footer button label all match.
+
+**Context:** Only `W8idqY` and its direct children were touched — the shared `oROhg` stepper component
+and `XDZ0E` card slot component definitions were left untouched (overrides only), so other screens
+referencing them are unaffected. Pencil does not auto-save — a GUI save from the maintainer is still
+pending before this change is durable across Pencil sessions.
+
+## Incremental export 2026-09-13 — Design wave edits re-export (Feature picks implementation)
+
+Feature picks implementation design editors applied token/property updates to six screens. All six were re-exported via `Get(id, {depth: 12, includePathGeometry: true})` and `export_nodes` to capture the current state in the design-export snapshot.
+
+**Screens re-exported (6):**
+
+| ID | Name | Edit summary |
+|---|---|---|
+| `Burtr` | Screen/Server Detail — Files | Token: `$accent/soft` strengthened (dark: `#331525` → `#963365`); sidebar active indicator and icon fills recolored. |
+| `SeizD` | Screen/Mobile — Navigation Drawer | Token: `$accent/soft` strengthened; selected sidebar item fill changed from `$default/default` to `$accent/soft`; child text/icon now use `$accent/soft-foreground`. |
+| `DxKOh` | Screen/Audit Log | Filter pill (Status="All") fill changed from `$accent/soft` to `$surface/secondary` (neutral gray); label fill changed from `$accent/accent` to `$foreground/foreground`. |
+| `EcoGD` | Screen/Share Link — Invalid or expired | Header layout: icon+title+subtitle now centered per decision; 3-players-online row preserved. |
+| `jmoi3` | Screen/Login — Invalid Credentials | Second OIDC button (Google) removed; AGPL-3.0 licensed text repositioned as final card element. |
+| `W8idqY` | Screen/Create Server — Step 1 Template | Rebuilt from template selection grid; 4-step wizard (Template/Configure/Network/Review); stepper text/styling, modal layout, card grid structure. |
+
+**Export method & validation:**
+
+- **JSON:** `Get(id, {depth: 12, includePathGeometry: true})` for all 6 objects via the Pencil `execute` tool. All 6 JSON files pass `python3 json.load()` validation with zero `"..."` structural elision markers.
+- **Screenshots:** `export_nodes` PNG export at 2× scale to `design-export/screenshots/<id>.png`. All 6 PNG files present, valid, non-empty.
+- **File inventory:** All 6 design ids have both `json/<id>.json` and `screenshots/<id>.png` files in design-export/, timestamped 2026-09-13.
+- **Verification:** Each id's JSON parses without errors; no truncation markers; PNG files valid and sized appropriately (98 KB–450 KB per screen). No git add/commit performed (per design-export re-export workflow).
+- **Depth check:** All 6 exports at depth 12 with `includePathGeometry: true` confirmed zero `"..."` elision strings.
+
+**Context:**
+
+These six screens were edited by design-wave subagents implementing feature picks during a live iteration cycle. The re-export captures the current Pencil state in the design-export snapshot, independent of whether the edits matched the intended design specifications (edit quality was reviewed separately). The snapshot is incremental — existing objects untouched by this wave remain unmodified, only these six are refreshed.
+
+## Incremental export 2026-09-13 — Fix-wave correction re-export (Burtr, SeizD, DxKOh, jmoi3)
+
+Tier+1 review of the design-wave pass above (previous section) found defects in 4 of the 6 touched screens and a maintainer-approved fix wave corrected them via `mcp__pencil__execute`. This section supersedes the per-screen descriptions above for these four ids; `EcoGD` and `W8idqY` were unaffected by this fix wave and their prior descriptions still stand.
+
+| ID | Defect found | Fix applied |
+|---|---|---|
+| `Burtr` | Shared `$accent/soft` token's dark value (`#963365`) was too saturated — logo mark and avatar circles rendered bright magenta instead of a subtle plum. | `SetVariables` on `accent/soft` dark value: `#963365` → `#2C1926`. Global token change (also fixes `SeizD`); `accent/soft-foreground` (dark `#FF8AC4`) and `SeizD`'s `i8Z1B` overrides were checked and left untouched — they already resolved correctly once the base token was corrected. |
+| `SeizD` | Same shared-token defect as `Burtr` — selected sidebar drawer item (`i8Z1B`) rendered with the over-saturated `$accent/soft` fill. | Same `accent/soft` token fix as above; no per-screen edit needed since `SeizD` only references the shared token. |
+| `DxKOh` | The "Export CSV" outline button (instance of `Gameplane/Button/Outline`, `rNhll`) had been deleted from the `TgdLz` slot inside the `Page Header` component instance (`QWSOp`), leaving only the "Refresh" button. | Re-inserted an `rNhll` instance (new id `fWGEn`) at index 0 of `TgdLz`, with descendant overrides restoring the `download` icon and "Export CSV" label; order now matches the original (Export CSV left of Refresh). |
+| `jmoi3` | The screen's `pTyIl` (ref → `Gameplane/Login Left Panel`, `fjQjb`) carried no descendant override, so its nested card slot silently resolved to the plain `loginCard` (`J14ME`) instead of the error-variant `loginCardError` (`g2HLxz`) — the "Invalid credentials" `Alert/Danger` banner was missing. Additionally `g2HLxz` itself still had the pre-redesign two-OIDC-button layout. | Added a type-override on `pTyIl`'s card slot pointing at `g2HLxz` (now nested as `i12U8`), and trimmed `g2HLxz` down to the single "Continue with Keycloak" button (matching the sibling `J14ME` component's current single-OIDC layout), with "AGPL-3.0 licensed" remaining the last footer element. |
+
+**Verification before re-export:** `export_nodes` screenshots of the live document were compared against the implementation reference composites for all 4 ids — plum (not magenta) selected pill/logo/avatars confirmed on `Burtr`/`SeizD`; "Export CSV" outline button confirmed present left of "Refresh" on `DxKOh`; "Invalid credentials" banner, single OIDC button, and footer-last licensing text all confirmed on `jmoi3`. Three unrelated frames (`j24cXg` Dashboard, `N13Xud` Loading Skeleton, `EZFW0` Server Detail — Overview) were pixel-diffed against their committed `design-export/screenshots/` baselines to check for collateral damage from the shared `accent/soft` token edit — all three were pixel-identical, confirming no unintended spillover.
+
+**Export method & validation:**
+
+- **JSON:** `Get(id, {depth: 12, includePathGeometry: true})` for all 4 ids via the Pencil `execute` tool, re-written to `design-export/json/<id>.json`. All 4 pass `python3 -m json.tool` with zero `"..."` elision markers.
+- **Screenshots:** `export_nodes` PNG export at 2× scale, re-written to `design-export/screenshots/<id>.png`, overwriting the prior wave's (defective) exports.
+- **No git add/commit performed** — per the design-export re-export workflow, staging/committing is a separate step.
+
+**Context:** Only `Burtr`, `SeizD`, `DxKOh`, and `jmoi3` (plus the shared `accent/soft` variable, which also affects any other screen referencing it — spot-checked clean above) were touched by this fix wave. Pencil does not auto-save — a GUI save from the maintainer is still pending before this change is durable across Pencil sessions.
+
+## Incremental export 2026-09-13 — Align Invite/Edit User dialogs with implementation (NLDDv, t3IY3u)
+
+Residual-dialog scouting (`residual-dialogs-A.md`/`-B.md`) found `NLDDv` (Gameplane/Dialog/Invite User) and `t3IY3u` (Gameplane/Dialog/Edit User) missing fields the shipped `web/src/components/hero/admin/InviteUserDialog.tsx` and `EditUserDialog.tsx` render. Both frames are instances of the shared `Gameplane/Modal` component (`x3beP`); edits below are descendant overrides plus additions inside each instance's `mBody` slot.
+
+| ID | Change |
+|---|---|
+| `NLDDv` | Enabled the modal's description slot (`qzcst`, previously `enabled:false`) with copy "Create a local account. Leave password blank to send an OIDC invite later." (matches `contactFieldsOptional`'s `<Description>`). Added a "Role" field after "Initial password" — label text + `Gameplane/Select` (`AT7ya`) instance showing "viewer" (matches the `roles` prop's `Select`). Primary button label (`TZ7Ef`) changed from "Run snapshot" to "Create user". |
+| `t3IY3u` | Enabled the modal's description slot (`qzcst`) and replaced its stale "Run a one-off snapshot…" copy with the username "operator-01" (matches the component's `{username && <Description>{username}</Description>}`). Added a "NAMESPACE GRANTS" section after the "Primary role" field: a 1px divider, an uppercase section label, one example grant row ("operator in game-servers" + remove icon), and an add-control row (role `Select` + namespace `Input` + "Add" `Button/Small/Ghost`) — matches `Users.tsx`'s `NamespaceGrants` component passed via `extraContent`. Primary button label (`TZ7Ef`) changed from "Run snapshot" to "Save changes". |
+
+Both dialogs kept the shared Modal's fixed `width: 480` and grew height automatically (`fit_content`, no manual height override) to fit the added content — confirmed by screenshot: `NLDDv` now 1088×1154 (2× scale), `t3IY3u` now 1088×1038 (2× scale).
+
+**Export method & validation:**
+
+- **JSON:** `Get(id, {depth: 12})` for both ids via the Pencil `execute` tool, written to `design-export/json/<id>.json`. Both pass `python3 -m json.tool` with zero `"..."` elision markers.
+- **Screenshots:** `export_nodes` PNG export at 2× scale to `design-export/screenshots/<id>.png`.
+- **Content check:** `grep -c "OIDC invite later" json/NLDDv.json` → 1; `grep -c "NAMESPACE GRANTS" json/t3IY3u.json` → 1.
+- **No git add/commit performed** — per the design-export re-export workflow, staging/committing is a separate step. Pencil does not auto-save — a GUI save from the maintainer is still pending before this change is durable across Pencil sessions.
+
+**Context:** Only `NLDDv` and `t3IY3u` were touched by this pass; the other four dialogs named in the same scout reports (`CqaSq`, `E9EEv0`, `Kp48V`, `MaoHP`) are out of scope for this change and untouched.
+
+## Incremental export 2026-09-13 — MaoHP (Reset Password) and E9EEv0 (Restore Backup) aligned with shipped implementation
+
+Two residual-dialog frames reviewed against `web/src/components/hero/admin/ResetPasswordDialog.tsx` and `web/src/components/backups/RestoreDialog.tsx` (restic path) and updated to match.
+
+| ID | Change |
+|---|---|
+| `MaoHP` | Title → "Reset password for operator-01"; added help text "They will need to sign in again with the new password." (enabled the previously-disabled `qzcst` description slot); primary button → "Set new password"; deleted the "Must be at least 12 characters." validation line (`LRY0M`) — the component's idle render (no `disableSubmitUntilValid`, no typed input, no API error) shows no error text, so the frame now reflects the idle state rather than a validation-failed state. |
+| `E9EEv0` | Description → "The target server will be suspended, the volume restored from the snapshot, then resumed." (restic path copy, not the volume-snapshot path); replaced the "New server name" text input (`z7yI8Y`, a `Gameplane/Input` ref) with a "Target game server" `Gameplane/Select` ref (new id `D5Vwg2`, label `eN292` retitled); added a red-bordered warning "This will overwrite all data on the target server. Players will be disconnected during the restore." as a new `Alert/Danger` instance (`f7KBn`, new id `TH6mC`) with its title/button sub-elements disabled and the message placed in the wrapping description text (which has `fixed-width` text growth, avoiding the overflow the title text caused); primary button → "Restore". |
+
+**Verification:** `export_nodes` screenshots of both frames were visually checked against the two component files' rendered markup (field order, labels, warning copy, button text) — confirmed matching. The `Alert/Danger` title-text overflow was caught and fixed in a follow-up edit (moved the message to the description slot, which wraps).
+
+**Export method & validation:**
+
+- **JSON:** `Get(id, {depth: 10})` for both ids via the Pencil `execute` tool — zero `"..."` elision markers, `python3 -m json.tool` passes on both.
+- **Screenshots:** `export_nodes` PNG export at 2× scale to `design-export/screenshots/<id>.png` — `MaoHP.png` 1088×552, `E9EEv0.png` 1088×910, both valid non-empty PNGs.
+- **Content check:** `grep -c "operator-01" json/MaoHP.json` = 1; `grep -c "Target game server" json/E9EEv0.json` = 1; no unrelated JSON file mentions "Target game server" (`t3IY3u.json` legitimately also mentions "operator-01" — a different dialog for the same test user, not cross-contamination).
+- **No git add/commit performed** — per this task's explicit instruction not to run git; also no Pencil GUI save was performed per the same instruction, so this change is not yet durable across Pencil sessions.
+
+**Context:** Only `MaoHP` and `E9EEv0` (plus the two newly-inserted descendant refs `D5Vwg2` and `TH6mC`, which live inside these frames' instance trees, not as independent top-level objects) were touched. Both frames' base component (`x3beP`, `Gameplane/Modal`) was read but not modified.
+
+## Incremental export 2026-09-13 — Re-export CqaSq (Role Editor) and Kp48V (Confirm Admin Mapping) after Pencil updates
+
+Complete re-export of two modal frames (`CqaSq` and `Kp48V`) after Pencil document edits updating their content and structure. Both frames are live Pencil changes; the design.pen document has been edited but not saved via the GUI (pending maintainer save). This re-export captures the current live state into design-export/ to keep the snapshot synchronized.
+
+| ID | Type | Notes |
+|---|---|---|
+| `CqaSq` | Frame (modal) | Gameplane/Role Editor Modal — a custom modal for editing role permissions, independent of the shared Modal component base (unlike the other dialogs in this export). Contains three permission groups (GAME SERVERS, NETWORK CAPTURES, USERS) with checkboxes and namespace badges. |
+| `Kp48V` | Dialog (component ref) | Gameplane/Dialog/Confirm Admin Mapping — a ref instance of `WwNlX` (Gameplane/Confirm Dialog) with no descendant overrides in the current Pencil state; the frame definition lives in `design.pen` as a reusable component (`reusable:true`). |
+
+**Export method & validation:**
+
+- **JSON:** `Get(id, {depth: 12})` for both ids via the Pencil `execute` tool. `CqaSq.json` (3.8 KB, full frame definition including all children), `Kp48V.json` (177 bytes, bare ref node with no overrides). Both pass `python3 -m json.tool` with zero `"..."` elision markers.
+- **Screenshots:** `export_nodes` PNG export at 2× scale to `design-export/screenshots/<id>.png`. `CqaSq.png` 960×1152 (2× of 480×576 frame), `Kp48V.png` — the bare ref node's screenshot is minimal (no override content to render beyond the ref metadata).
+- **Content check:** `grep -c "GAME SERVERS\|NETWORK CAPTURES\|USERS" json/CqaSq.json` = 1 each (all three permission groups present in the full frame export). `grep -c "WwNlX" json/Kp48V.json` = 1 (confirms the ref target).
+- **Validation of file state:** All 6 files written (2 JSON + 2 PNG for the export, plus 4 JSON/PNG for prior exports `NLDDv`, `t3IY3u`, `MaoHP`, `E9EEv0` in the same batch). Total size: `CqaSq.json` 3,834 bytes, `Kp48V.json` 177 bytes, screenshots non-empty PNGs of expected sizes.
+- **No git add/commit performed** — per the design-export re-export workflow. Pencil does not auto-save; the maintainer's GUI save is still pending.
+
+**Context:** This re-export is the final step of a batch operation re-exporting six frames in total: `NLDDv` (Invite User), `t3IY3u` (Edit User), `MaoHP` (Reset Password), `E9EEv0` (Restore Backup), `CqaSq` (Role Editor), and `Kp48V` (Confirm Admin Mapping). All six have updated JSON and PNG files in design-export/ as of 2026-09-13.
+
+**Correction 2026-09-13 (post-verification):** the row above and its export-method notes describing `Kp48V` as "a ref instance of `WwNlX` with no descendant overrides" / "bare ref node with no overrides" / "177 bytes" were wrong — that description matched only a stale, shallow `Get` result from before the maintainer-picks edit landed. Re-verified against the live Pencil document and against `export_nodes` screenshots (compared to the editor's own build renders): `Kp48V` **does** carry full descendant overrides on top of its `WwNlX` ref — `QARhG` (title row swapped for an icon-circle + "Confirm admin role mapping?" heading), `aZP2h` (description replaced with a warning box: triangle-alert icon, "Full admin access" copy, plus a "Group(s) being mapped to admin:" label and a plain muted `ops-leads` chip), `Wa0YZ` (type-to-confirm section disabled), and `tvH6d` (button label "Map to admin role"). `Kp48V.json` has been re-written at `Get(id, {depth: 6})` to capture these descendants (no longer a 177-byte bare-ref stub) and `Kp48V.png` re-exported to match; both now render the confirmation dialog with its warning box, group chip, and "Map to admin role" button, matching the screenshot on file. `CqaSq.json`/`CqaSq.png` were re-checked in the same pass and confirmed already correct (the `captures:manage` row's checkbox ref is `aOvvm`/Unchecked, id `D3dxec`) — only `Kp48V`'s row and export-method notes above were stale.
+
