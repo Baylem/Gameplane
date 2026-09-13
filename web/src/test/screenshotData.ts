@@ -193,6 +193,25 @@ export const screenshotTemplates: GameTemplate[] = [
     },
   }),
   makeTemplate({
+    metadata: { name: "minecraft-modlist" },
+    spec: {
+      displayName: "Minecraft (Mod List)",
+      game: "minecraft",
+      version: "1.21",
+      description: "Minecraft server with mod list support",
+      image: "ghcr.io/valgulnecron/gameplane/minecraft:1.21",
+      capabilities: {
+        mods: {
+          path: "mods",
+          idList: { env: "MODLIST_FILE" },
+          registry: {
+            providers: [{ provider: "modrinth", modpacks: {} }],
+          },
+        },
+      },
+    },
+  }),
+  makeTemplate({
     metadata: { name: "minecraft-modded" },
     spec: {
       displayName: "Minecraft (Modded)",
@@ -343,6 +362,89 @@ export const screenshotServers: GameServer[] = [
         {
           name: "main",
           host: "test-server-09.gameplane-demo.local",
+          port: 25565,
+          protocol: "tcp",
+        },
+      ],
+      startedAt: "2026-09-03T14:20:00Z",
+    },
+  }),
+  makeServer({
+    metadata: {
+      name: "test-server-01",
+      namespace: "gameplane-games",
+      annotations: { "gameplane.local/node": "kubelab-control" },
+    },
+    spec: {
+      templateRef: { name: "minecraft-modded" },
+      idle: {
+        enabled: true,
+        afterMinutes: 30,
+        wakeWindows: ["0 17 * * *", "0 9 * * 6,0"],
+        wakeOnConnect: true,
+      },
+      capture: { enabled: true },
+    },
+    status: {
+      phase: "Running",
+      agent: {
+        gameVersion: "1.21.4-fabric",
+        playersOnline: 0,
+        playersMax: 20,
+        lastHeartbeat: new Date(Date.now() - 15 * 1000).toISOString(),
+        cpuMillicores: 0,
+        cpuLimitMillicores: 2000,
+        memoryBytes: 1_520_000_000,
+        memoryLimitBytes: 4_000_000_000,
+        diskUsedBytes: 3_770_000_000,
+        diskTotalBytes: 29_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "frp",
+          host: "mc.frp.gameplane.dev",
+          port: 25565,
+          tunnelProvider: "FRP",
+        },
+        {
+          name: "external",
+          host: "172.18.255.203",
+          port: 25565,
+          pool: "pool-us-west",
+        },
+        {
+          name: "cluster",
+          host: "10.107.129.42",
+          port: 30812,
+        },
+      ],
+      startedAt: new Date(Date.now() - 185 * 1000).toISOString(),
+    },
+  }),
+  makeServer({
+    metadata: {
+      name: "test-server-02",
+      namespace: "default",
+      annotations: { "gameplane.local/node": "node-01" },
+    },
+    spec: { templateRef: { name: "minecraft-modded" }, version: "1.21-fabric" },
+    status: {
+      phase: "Running",
+      agent: {
+        playersOnline: 4,
+        playersMax: 20,
+        lastHeartbeat: "2026-09-06T10:15:30Z",
+        cpuMillicores: 1680,
+        cpuLimitMillicores: 4000,
+        memoryBytes: 6_200_000_000,
+        memoryLimitBytes: 8_000_000_000,
+        diskUsedBytes: 15_600_000_000,
+        diskTotalBytes: 50_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "main",
+          host: "test-server-02.gameplane-demo.local",
           port: 25565,
           protocol: "tcp",
         },
