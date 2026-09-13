@@ -223,11 +223,11 @@ export function ServersPage() {
           onSelectionChange={(key) => setFilter(key as FilterKey)}
           variant="secondary"
         >
-          <Tabs.List aria-label="Server status filter">
+          <Tabs.List aria-label="Server status filter" className="servers-status-filter">
             <Tab id="all">
               <span className="inline-flex items-center gap-1.5">
                 All
-                <span className="rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
+                <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
                   {servers.length}
                 </span>
               </span>
@@ -235,7 +235,7 @@ export function ServersPage() {
             <Tab id="running">
               <span className="inline-flex items-center gap-1.5">
                 Running
-                <span className="rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
+                <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
                   {counts.running}
                 </span>
               </span>
@@ -243,7 +243,7 @@ export function ServersPage() {
             <Tab id="stopped">
               <span className="inline-flex items-center gap-1.5">
                 Stopped
-                <span className="rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
+                <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
                   {counts.stopped}
                 </span>
               </span>

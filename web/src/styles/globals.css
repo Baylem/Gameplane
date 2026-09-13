@@ -226,6 +226,20 @@ input:-webkit-autofill:focus {
   white-space: nowrap;
 }
 
+/* Servers status filter (F9pUrx) only: selected filter keeps the neutral raised
+   pill from .tabs__tab but carries accent text/count, per design. Scoped so this
+   does not leak into other Tabs.List instances (bd29c0c7 dropped the global
+   version for exactly that reason). */
+.servers-status-filter .tabs__tab[aria-selected="true"],
+.servers-status-filter .tabs__tab[data-selected] {
+  color: var(--accent);
+}
+.servers-status-filter .tabs__tab[aria-selected="true"] .servers-status-filter__count,
+.servers-status-filter .tabs__tab[data-selected] .servers-status-filter__count {
+  background-color: var(--accent-soft);
+  color: var(--accent);
+}
+
 /* Meter/Progress fill rounded radius */
 .rounded-full > .h-full {
   border-radius: 999px;
