@@ -20,12 +20,15 @@ describe("useDelayedLoading", () => {
     expect(result.current).toBe(false);
   });
 
-  it("true for 100ms then false → never shows", () => {
+  it("true for 100ms then false → never shows (when starting from non-loading)", () => {
     const { result, rerender } = renderHook(({ loading }) => useDelayedLoading(loading), {
-      initialProps: { loading: true },
+      initialProps: { loading: false },
     });
 
     expect(result.current).toBe(false);
+
+    // Flip to loading
+    rerender({ loading: true });
 
     // Advance 100ms — not enough to trigger showAfterMs (default 200ms)
     vi.advanceTimersByTime(100);
@@ -39,6 +42,74 @@ describe("useDelayedLoading", () => {
 
     vi.advanceTimersByTime(500);
     expect(result.current).toBe(false);
+  });
+
+  it("shows immediately on initial load", () => {
+    const { result } = renderHook(() => useDelayedLoading(true));
+
+    // With initialImmediate=true (default), skeleton shows immediately without waiting for showAfterMs
+    expect(result.current).toBe(true);
+
+    // minVisibleMs still applies when loading ends
+    const { rerender } = renderHook(({ loading }) => useDelayedLoading(loading), {
+      initialProps: { loading: true },
+    });
+
+    expect(result.current).toBe(true);
+
+    // Stop loading
+    rerender({ loading: false });
+
+    // Should still be visible immediately
+    expect(result.current).toBe(true);
+
+    // Advance 200ms — still within minVisibleMs (default 300ms)
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(result.current).toBe(true);
+
+    // Advance to the minVisibleMs boundary (total 300ms)
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(result.current).toBe(false);
+  });
+
+  it("debounces a later refetch", () => {
+    const { result, rerender } = renderHook(({ loading }) => useDelayedLoading(loading), {
+      initialProps: { loading: true },
+    });
+
+    // First load shows immediately
+    expect(result.current).toBe(true);
+
+    // Complete the first load cycle
+    rerender({ loading: false });
+
+    // Advance past minVisibleMs to finish hiding the skeleton
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(result.current).toBe(false);
+
+    // Now start a refetch
+    rerender({ loading: true });
+
+    // Should not show immediately — uses the normal showAfterMs debounce
+    expect(result.current).toBe(false);
+
+    // Advance 100ms — not enough
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(result.current).toBe(false);
+
+    // Advance to 200ms (showAfterMs)
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(result.current).toBe(true);
   });
 
   it("true past 200ms → shows", () => {

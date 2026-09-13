@@ -109,8 +109,6 @@ export function AppLayout() {
     }
   }, [error]);
 
-  // While loading and not yet showing the skeleton, render null to avoid mounting/unmounting the shell
-  if (isLoading && !showSkeleton) return null;
   if (showSkeleton) return <AppLoadingSkeleton />;
 
   const onLogout = async () => {

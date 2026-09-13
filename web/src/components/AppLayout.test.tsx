@@ -452,7 +452,7 @@ describe("AppLayout", () => {
       http.get("/users/me", () => HttpResponse.json(makeUser())),
     );
     renderWithQuery(<AppLayout />);
-    expect(await screen.findByText("gameplane")).toBeInTheDocument();
+    expect(await sidebarNav().findByText("gameplane")).toBeInTheDocument();
   });
 
   it("breadcrumb builds from pathname", async () => {
@@ -463,7 +463,7 @@ describe("AppLayout", () => {
     renderWithQuery(<AppLayout />);
     // Breadcrumb should show: gameplane > Servers > alpha
     await waitFor(() => {
-      expect(screen.getByText("gameplane")).toBeInTheDocument();
+      expect(sidebarNav().getByText("gameplane")).toBeInTheDocument();
       // The last breadcrumb (alpha) should be text, not a link
       const breadcrumbs = screen.getAllByText(/gameplane|Servers|alpha/);
       expect(breadcrumbs.length).toBeGreaterThan(0);
