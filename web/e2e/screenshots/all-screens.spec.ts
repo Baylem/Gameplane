@@ -465,47 +465,48 @@ test.describe("All-Screens: Capture tab (Desktop — 1440x900) @screenshots", ()
   });
 
   test("b4eaUf: Server Detail — Capture — Start capture (Invalid filter)", async ({ page }) => {
-    await page.goto("/servers/test-server-01");
+    await page.goto("/servers/test-server-01", { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: "test-server-01" })).toBeVisible({
       timeout: 10_000,
     });
 
-    const captureTab = page.getByRole("tab", { name: /capture|pcap|network/i });
-    if (await captureTab.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await captureTab.click();
+    await clickTab(page, "Capture");
 
-      // Look for start capture button
-      const startButton = page.getByRole("button", { name: /start|begin.*capture|new.*capture/i });
-      if (await startButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-        await startButton.click();
-        // Wait for dialog
-        await page.locator('[role="dialog"]').waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+    // Click the "Start Capture" button to open the dialog
+    const startButton = page.getByRole("button", { name: "Start Capture" });
+    await expect(startButton).toBeVisible({ timeout: 5000 });
+    await startButton.click();
 
-        // Fill in invalid BPF filter
-        const filterInput = page.getByPlaceholder(/filter|bpf/i);
-        if (await filterInput.isVisible({ timeout: 5000 }).catch(() => false)) {
-          await filterInput.fill("invalid bpf syntax {{{{");
-          await page.waitForTimeout(500);
-        } else {
-          // Try to find textarea or text input
-          const inputs = page.locator('input[type="text"], textarea');
-          if (await inputs.first().isVisible({ timeout: 5000 }).catch(() => false)) {
-            await inputs.first().fill("invalid bpf syntax {{{{");
-            await page.waitForTimeout(500);
-          }
-        }
+    // Wait for the Start Capture modal to open
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible({ timeout: 5000 });
 
-        // Assert validation error is visible before screenshot to ensure the
-        // error state actually rendered (per b4eaUf fixture scope).
-        await expect(page.getByText(/invalid|must not contain/i)).toBeVisible({ timeout: 5000 });
-      }
-    }
+    // Wait for the form to be fully rendered
+    const filterInput = page.getByLabel("Packet Filter");
+    await expect(filterInput).toBeVisible({ timeout: 5000 });
 
+    // Fill in an invalid BPF filter to trigger validation error
+    await filterInput.fill("tcp prot 8080 foo");
+    await page.waitForTimeout(500);
+
+    // Click the "Start Capture" button to submit the form and trigger the API validation error
+    const submitButton = modal.getByRole("button", { name: "Start Capture" });
+    await expect(submitButton).toBeVisible({ timeout: 5000 });
+    await submitButton.click();
+
+    // Wait for the validation error to appear (red X icon and error alert message)
+    const errorAlert = page.locator('[role="alert"]');
+    await expect(errorAlert).toBeVisible({ timeout: 5000 });
     await page.waitForTimeout(200);
+
+    // Capture the full page showing the dialog with invalid filter error
     await capture(page, "b4eaUf");
   });
 
   test("m5kOm4: Server Detail — Capture (List)", async ({ page }) => {
+    await page.addInitScript(() => {
+      document.cookie = "e2e_capture_variant=list; path=/";
+    });
     await page.goto("/servers/test-server-01");
     await expect(page.getByRole("heading", { name: "test-server-01" })).toBeVisible({
       timeout: 10_000,
@@ -523,6 +524,9 @@ test.describe("All-Screens: Capture tab (Desktop — 1440x900) @screenshots", ()
   });
 
   test("xvlB6: Server Detail — Capture (Running)", async ({ page }) => {
+    await page.addInitScript(() => {
+      document.cookie = "e2e_capture_variant=running; path=/";
+    });
     await page.goto("/servers/test-server-01");
     await expect(page.getByRole("heading", { name: "test-server-01" })).toBeVisible({
       timeout: 10_000,

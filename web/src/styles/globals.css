@@ -122,6 +122,13 @@ body {
   color: var(--foreground);
 }
 
+/* Focus status indicator (used for Asleep status on share page) */
+.status-focus {
+  border-color: var(--focus);
+  background-color: color-mix(in srgb, var(--focus) 15%, transparent);
+  color: var(--focus);
+}
+
 /* Invisible by default scrollbars, subtle on hover (dashboards need space) */
 .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
 .scrollbar-thin::-webkit-scrollbar-thumb {

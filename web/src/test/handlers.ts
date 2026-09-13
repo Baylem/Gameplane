@@ -32,6 +32,8 @@ import {
   screenshotConfigEmptyStorageClass,
 } from "./screenshotData";
 
+export const INVALID_BPF_FILTER_FIXTURE = "tcp prot 8080 foo";
+
 export const handlers = [
   // Auth
   http.get("/users/me", ({ cookies }) => {
@@ -200,8 +202,23 @@ export const handlers = [
       filter: "tcp port 25565",
     }),
   ),
-  http.post(/\/servers\/[^/]+:capture-start(\?.*)?$/, () =>
-    HttpResponse.json(
+  http.post(/\/servers\/[^/]+:capture-start(\?.*)?$/, async ({ request }) => {
+    const body = (await request.json().catch(() => null)) as {
+      filter?: string;
+      maxDurationSeconds?: number;
+      maxSizeBytes?: number;
+      ttlSecondsAfterFinished?: number;
+    } | null;
+
+    // Validate BPF filter if provided
+    if (body?.filter) {
+      // Check for invalid syntax patterns
+      if (body.filter === INVALID_BPF_FILTER_FIXTURE || body.filter.includes("{{{{")) {
+        return new HttpResponse("Invalid BPF filter syntax: syntax error at position 12 (invalid token 'foo')\n", { status: 400 });
+      }
+    }
+
+    return HttpResponse.json(
       {
         captureId: "cap-12345",
         serverName: "server-name",
@@ -212,11 +229,11 @@ export const handlers = [
         expiresAt: "2026-08-30T00:00:00Z",
         bytesWritten: 0,
         packetsWritten: 0,
-        filter: "tcp port 25565",
+        filter: body?.filter || "tcp port 25565",
       },
       { status: 202 },
-    ),
-  ),
+    );
+  }),
   http.post(/\/servers\/[^/]+:capture-stop(\?.*)?$/, () =>
     HttpResponse.json({
       captureId: "cap-12345",
@@ -862,11 +879,58 @@ export function buildScreenshotHandlers() {
         status: { capture: { enabled: false } },
       }),
     ),
-    http.get(/\/servers\/[^/]+:captures(\?.*)?$/, () =>
-      HttpResponse.json({ captures: [], total: 0, limit: 100, offset: 0 }),
-    ),
-    http.get(/\/servers\/[^/]+:capture$/, () =>
-      HttpResponse.json({
+    http.get(/\/servers\/[^/]+:captures(\?.*)?$/, ({ cookies }) => {
+      if (cookies.e2e_capture_variant === "list") {
+        return HttpResponse.json({
+          captures: [
+            {
+              captureId: "cap-001",
+              serverName: "test-server-01",
+              phase: "Completed",
+              startedAt: "2026-09-12T14:00:00Z",
+              completedAt: "2026-09-12T14:15:00Z",
+              createdAt: "2026-09-12T14:00:00Z",
+              expiresAt: "2026-09-19T14:00:00Z",
+              bytesWritten: 2048,
+              packetsWritten: 250,
+              filter: "tcp port 25565",
+            },
+            {
+              captureId: "cap-002",
+              serverName: "test-server-01",
+              phase: "Completed",
+              startedAt: "2026-09-11T10:30:00Z",
+              completedAt: "2026-09-11T10:45:00Z",
+              createdAt: "2026-09-11T10:30:00Z",
+              expiresAt: "2026-09-18T10:30:00Z",
+              bytesWritten: 1536,
+              packetsWritten: 180,
+              filter: "tcp port 25565",
+            },
+          ],
+          total: 2,
+          limit: 100,
+          offset: 0,
+        });
+      }
+      return HttpResponse.json({ captures: [], total: 0, limit: 100, offset: 0 });
+    }),
+    http.get(/\/servers\/[^/]+:capture$/, ({ cookies }) => {
+      if (cookies.e2e_capture_variant === "running") {
+        return HttpResponse.json({
+          captureId: "cap-running",
+          serverName: "test-server-01",
+          phase: "Running",
+          startedAt: "2026-09-13T12:30:00Z",
+          completedAt: null,
+          createdAt: "2026-09-13T12:30:00Z",
+          expiresAt: "2026-09-20T12:30:00Z",
+          bytesWritten: 512,
+          packetsWritten: 45,
+          filter: "tcp port 25565",
+        });
+      }
+      return HttpResponse.json({
         captureId: "cap-12345",
         serverName: "server-name",
         phase: "Completed",
@@ -877,10 +941,25 @@ export function buildScreenshotHandlers() {
         bytesWritten: 1024,
         packetsWritten: 100,
         filter: "tcp port 25565",
-      }),
-    ),
-    http.post(/\/servers\/[^/]+:capture-start(\?.*)?$/, () =>
-      HttpResponse.json(
+      });
+    }),
+    http.post(/\/servers\/[^/]+:capture-start(\?.*)?$/, async ({ request }) => {
+      const body = (await request.json().catch(() => null)) as {
+        filter?: string;
+        maxDurationSeconds?: number;
+        maxSizeBytes?: number;
+        ttlSecondsAfterFinished?: number;
+      } | null;
+
+      // Validate BPF filter if provided
+      if (body?.filter) {
+        // Check for invalid syntax patterns
+        if (body.filter === INVALID_BPF_FILTER_FIXTURE || body.filter.includes("{{{{")) {
+          return new HttpResponse("Invalid BPF filter syntax: syntax error at position 12 (invalid token 'foo')\n", { status: 400 });
+        }
+      }
+
+      return HttpResponse.json(
         {
           captureId: "cap-12345",
           serverName: "server-name",
@@ -891,11 +970,11 @@ export function buildScreenshotHandlers() {
           expiresAt: "2026-08-30T00:00:00Z",
           bytesWritten: 0,
           packetsWritten: 0,
-          filter: "tcp port 25565",
+          filter: body?.filter || "tcp port 25565",
         },
         { status: 202 },
-      ),
-    ),
+      );
+    }),
     http.post(/\/servers\/[^/]+:capture-stop(\?.*)?$/, () =>
       HttpResponse.json({
         captureId: "cap-12345",
@@ -1330,7 +1409,16 @@ export function buildScreenshotHandlers() {
       }),
     ),
     // Share links: list, create, revoke, resolve (public), start (public)
-    http.get(/\/servers\/[^/]+:shares$/, () => {
+    http.get(/\/servers\/[^/]+:shares$/, ({ request }) => {
+      // Extract server name from URL
+      const match = new URL(request.url).pathname.match(/\/servers\/([^/:]+):shares$/);
+      const serverName = match?.[1];
+
+      // Return empty list for test-server-no-shares (empty state)
+      if (serverName === "test-server-no-shares") {
+        return HttpResponse.json([]);
+      }
+
       // Return mock share links for testing
       return HttpResponse.json([
         {
