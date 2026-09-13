@@ -1010,7 +1010,7 @@ function ModRegistriesSection({ initial }: { initial?: ModRegistriesCfg }) {
               {editing !== provider && (
                 configured ? (
                   <>
-                    <Button variant="outline" size="sm" onPress={() => setEditing(provider)}>
+                    <Button variant="primary" size="sm" onPress={() => setEditing(provider)}>
                       Replace
                     </Button>
                     <Button variant="danger" size="sm" onPress={() => removeEntry(provider)}>
@@ -1018,7 +1018,7 @@ function ModRegistriesSection({ initial }: { initial?: ModRegistriesCfg }) {
                     </Button>
                   </>
                 ) : (
-                  <Button variant="outline" size="sm" onPress={() => setEditing(provider)}>
+                  <Button variant="primary" size="sm" onPress={() => setEditing(provider)}>
                     Set API key
                   </Button>
                 )
