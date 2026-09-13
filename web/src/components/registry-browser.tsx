@@ -202,18 +202,16 @@ export function RegistryBrowser({
                 <div key={`${p.provider}:${p.id}`}>{renderItem(p, provider ?? p.provider)}</div>
               ))}
             </div>
-            {q.hasNextPage && (
-              <div className="flex justify-center pt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onPress={() => void q.fetchNextPage()}
-                  isDisabled={q.isFetchingNextPage}
-                >
-                  {q.isFetchingNextPage ? "Loading…" : "Load more"}
-                </Button>
-              </div>
-            )}
+            <div className="flex justify-center pt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={() => void q.fetchNextPage()}
+                isDisabled={!q.hasNextPage || q.isFetchingNextPage}
+              >
+                {q.isFetchingNextPage ? "Loading…" : "Load more"}
+              </Button>
+            </div>
           </>
         )}
       </div>
