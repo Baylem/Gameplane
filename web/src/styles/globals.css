@@ -267,6 +267,24 @@ input:-webkit-autofill:focus {
   color: var(--accent);
 }
 
+/* Asleep phase chip (q31B6w): render with the violet focus treatment used
+   everywhere else for Asleep status (share page badge, Server Detail
+   header badge) rather than the accent/pink used for other filled chips.
+   Scoped to HeroUI chips only to avoid styling other elements. */
+[data-slot="chip"][data-asleep="true"] {
+  border-color: var(--focus) !important;
+  background-color: color-mix(in srgb, var(--focus) 20%, transparent) !important;
+  color: var(--focus) !important;
+}
+
+/* Modpack category pills (tY6RD): selected pill is filled accent, others
+   are outline. Scoped to the category row so this does not leak into other
+   chip instances (like the Filter button's facet count chip in Servers.tsx). */
+.modpack-categories [data-active="true"] {
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
 /* Meter/Progress fill rounded radius */
 .rounded-full > .h-full {
   border-radius: 999px;

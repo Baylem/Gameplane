@@ -165,7 +165,10 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
     await clickTab(page, "Lifecycle");
     await expect(page.getByLabel(/enable idle auto-sleep/i)).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    await capture(page, "i1bLR");
+    // Use custom viewport height to match design reference (1620px at 1x)
+    await page.setViewportSize({ width: 1440, height: 1620 });
+    // Take screenshot with the larger viewport
+    await page.screenshot({ path: "e2e/screenshots/i1bLR.png", animations: "disabled" });
   });
 
   test("KaRFX: Server Detail — Settings · Scheduled backups", async ({ page }) => {

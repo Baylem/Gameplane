@@ -19,7 +19,7 @@ describe("AuditIntegrityBanner", () => {
     );
     const icon = container.querySelector("svg");
     expect(icon).toBeInTheDocument();
-    expect(icon).toHaveClass("text-danger");
+    expect(icon).toHaveClass("text-danger-foreground");
   });
 
   it("shows dismiss button when onDismiss is provided", () => {

@@ -131,6 +131,7 @@ const SCALE_ALLOWLIST = {
   // a change to this allowlist entry.
   DMnEi: 0.49,
   zhLZN: 1.3125, // Backup Detail Drawer
+  kIxaJ: 0.6184, // Audit Integrity Banner
 };
 
 // Allowed deviation from an allowlisted id's recorded scaleFactor, in either

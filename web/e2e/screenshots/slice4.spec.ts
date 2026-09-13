@@ -22,8 +22,7 @@ import { capture, captureLocator } from "./capture";
 // every one of those component ids was exported from Pencil's light
 // palette while the rest of this suite captures the app in dark theme (per
 // test.use({ colorScheme: "dark" }) above), each of those tests calls
-// setTheme(page, "light") before navigating, the same pattern Wj0V4 uses
-// for its own light-theme frame. uMiwd's Authentication section renders
+// setTheme(page, "light") before navigating. uMiwd's Authentication section renders
 // the "Overridden" provenance badge (R65Xyx) with an orange chip (XL5ZU)
 // on its admin row and the "From Helm" badge (Rwnu3) with violet/secondary
 // chips (vStkb/uw0dB) on its operator/viewer rows, each captured in light
@@ -48,9 +47,9 @@ import { capture, captureLocator } from "./capture";
 // (mismatched sizing strategy vs. the reference frame's own dimensions).
 
 // Forces the app's own light/dark toggle (AppLayout.tsx THEME_STORAGE_KEY),
-// which takes priority over the context's prefers-color-scheme — used for
-// Wj0V4, captured in light theme per the design frame while every other
-// test in this file stays on the suite's dark colorScheme.
+// which takes priority over the context's prefers-color-scheme — used by
+// component crop tests (Kp48V, OIDC provenance-badge variants) that need
+// to be captured in light theme per the design frame.
 async function setTheme(page: Page, theme: "light" | "dark"): Promise<void> {
   await page.addInitScript((t: string) => {
     try {
@@ -348,7 +347,6 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
   });
 
   test("Wj0V4: Admin Settings — Mod registries", async ({ page }) => {
-    await setTheme(page, "light");
     await page.goto("/admin");
     await clickSection(page, "Mod registries");
     await expect(page.getByText("CurseForge")).toBeVisible({ timeout: 10_000 });
@@ -531,15 +529,10 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     });
     await expect(page.getByText(/chain breaks at event #17/i)).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    // Design PNG (1400x312) crops just the AuditIntegrityBanner, but the
-    // banner has no accessible role or test hook to scope a captureLocator()
-    // call to: AuditIntegrityBanner.tsx:18 renders HeroUI's <Alert> with no
-    // `role` attribute and no `data-testid` (confirmed against the installed
-    // @heroui/react package — Alert emits no ARIA role at all). This is a
-    // PRODUCT a11y gap (AuditIntegrityBanner.tsx:18), not a capture-code
-    // issue; flagging for a follow-up rather than adding a fragile
-    // class-based locator here. Full-page capture stays until that lands.
-    await capture(page, "kIxaJ");
+    // Design PNG (1400x312) crops just the AuditIntegrityBanner — scope
+    // the capture to the rendered alert via its role="alert" attribute
+    // (AuditIntegrityBanner.tsx).
+    await captureLocator(page, "kIxaJ", page.getByRole("alert"));
   });
 
   test("Bq2Yg: Admin — System Logs", async ({ page }) => {

@@ -62,12 +62,13 @@ describe("PhaseChip", () => {
     expect(screen.queryByText("Suspended")).not.toBeInTheDocument();
   });
 
-  // Test 9: Asleep maps to accent color
-  it("maps asleep to accent color", () => {
+  // Test 9: Asleep is marked for the violet (focus token) treatment, not accent
+  it("marks asleep chips with data-asleep instead of the accent colour", () => {
     render(<PhaseChip phase="Suspended" asleep={true} />);
     const chip = screen.getByText("Asleep").closest('[data-slot="chip"]');
     expect(chip).not.toBeNull();
-    expect(chip).toHaveAttribute("data-color", "accent");
+    expect(chip).toHaveAttribute("data-asleep", "true");
+    expect(chip).not.toHaveAttribute("data-color", "accent");
   });
 
   // Test 10: Shows phase when asleep is false

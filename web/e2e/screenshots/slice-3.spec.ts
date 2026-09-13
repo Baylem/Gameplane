@@ -128,6 +128,9 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     await page.getByPlaceholder(/mc-hardcore/i).fill("e2e-screenshot-srv");
     await page.getByRole("button", { name: /continue/i }).click();
     await expect(page.getByText(/^expose$/i)).toBeVisible({ timeout: 10_000 });
+    // Fill in address pool and requested address to trigger the warning alerts
+    await page.getByPlaceholder("pool-us-west").fill("pool-us-west");
+    await page.getByPlaceholder("203.0.113.50").fill("203.0.113.50");
     await page.waitForTimeout(200);
     await capture(page, "f1Vga");
   });

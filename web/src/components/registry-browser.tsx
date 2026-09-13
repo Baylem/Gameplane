@@ -185,7 +185,7 @@ export function RegistryBrowser({
       </div>
 
       {showChips && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 modpack-categories">
           {[{ value: "", label: "All" }, ...(categories ?? [])].map((c) => {
             const active = category === c.value;
             if (!chipsInteractive) {
@@ -206,11 +206,13 @@ export function RegistryBrowser({
               <Chip
                 key={c.value || "all"}
                 size="sm"
+                color={active ? "accent" : "default"}
                 variant={active ? "primary" : "soft"}
                 onClick={() => setCategory(c.value)}
                 role="button"
                 tabIndex={0}
                 aria-pressed={active}
+                data-active={active}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();

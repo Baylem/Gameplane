@@ -179,43 +179,45 @@ export function ServersPage() {
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <StatCard
-          label="Running"
-          icon={<Activity className="h-4 w-4" />}
-          value={counts.running}
-          sub={`of ${servers.length} total`}
-          accent="success"
-        />
-        <StatCard
-          label="Players online"
-          icon={<UsersIcon className="h-4 w-4" />}
-          value={counts.players}
-          sub={`peak ${counts.playersMax}`}
-          accent="primary"
-        />
-        <StatCard
-          label="vCPUs"
-          icon={<Cpu className="h-4 w-4" />}
-          value={vcpus > 0 ? vcpus : "—"}
-          sub="cluster cores"
-          accent="warning"
-        />
-        <StatCard
-          label="Storage provisioned"
-          icon={<HardDrive className="h-4 w-4" />}
-          value={storage.valueText}
-          sub={storage.subText ?? "—"}
-          accent={storage.overcommitted ? "warning" : "violet"}
-        />
-        <StatCard
-          label="Cluster size"
-          icon={<ServerIcon className="h-4 w-4" />}
-          value={cluster?.nodes ?? "—"}
-          sub="nodes ready"
-          accent="warning"
-        />
-      </div>
+      {!isMobile && (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <StatCard
+            label="Running"
+            icon={<Activity className="h-4 w-4" />}
+            value={counts.running}
+            sub={`of ${servers.length} total`}
+            accent="success"
+          />
+          <StatCard
+            label="Players online"
+            icon={<UsersIcon className="h-4 w-4" />}
+            value={counts.players}
+            sub={`peak ${counts.playersMax}`}
+            accent="primary"
+          />
+          <StatCard
+            label="vCPUs"
+            icon={<Cpu className="h-4 w-4" />}
+            value={vcpus > 0 ? vcpus : "—"}
+            sub="cluster cores"
+            accent="warning"
+          />
+          <StatCard
+            label="Storage provisioned"
+            icon={<HardDrive className="h-4 w-4" />}
+            value={storage.valueText}
+            sub={storage.subText ?? "—"}
+            accent={storage.overcommitted ? "warning" : "violet"}
+          />
+          <StatCard
+            label="Cluster size"
+            icon={<ServerIcon className="h-4 w-4" />}
+            value={cluster?.nodes ?? "—"}
+            sub="nodes ready"
+            accent="warning"
+          />
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <Tabs
