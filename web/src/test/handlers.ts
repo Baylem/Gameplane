@@ -885,7 +885,7 @@ export function buildScreenshotHandlers() {
           captures: [
             {
               captureId: "cap-001",
-              serverName: "test-server-01",
+              serverName: "mc-survival",
               phase: "Completed",
               startedAt: "2026-09-12T14:00:00Z",
               completedAt: "2026-09-12T14:15:00Z",
@@ -897,7 +897,7 @@ export function buildScreenshotHandlers() {
             },
             {
               captureId: "cap-002",
-              serverName: "test-server-01",
+              serverName: "mc-survival",
               phase: "Completed",
               startedAt: "2026-09-11T10:30:00Z",
               completedAt: "2026-09-11T10:45:00Z",
@@ -919,7 +919,7 @@ export function buildScreenshotHandlers() {
       if (cookies.e2e_capture_variant === "running") {
         return HttpResponse.json({
           captureId: "cap-running",
-          serverName: "test-server-01",
+          serverName: "mc-survival",
           phase: "Running",
           startedAt: "2026-09-13T12:30:00Z",
           completedAt: null,
@@ -1000,7 +1000,7 @@ export function buildScreenshotHandlers() {
 
     // Backups
     // T118 (specs/014-heroui-web-rebuild/tasks.md): both entries' spec.serverRef
-    // is pinned to "test-server-01" (previously left at makeBackup()'s "alpha"
+    // is pinned to "mc-survival" (previously left at makeBackup()'s "alpha"
     // default despite the metadata.name already reading "test-server-01-…") so
     // ServerDetail's per-server Backups tab (which filters by
     // spec.serverRef.name) actually has rows to render for the screenshot.
@@ -1008,12 +1008,12 @@ export function buildScreenshotHandlers() {
       HttpResponse.json({
         items: [
           makeBackup({
-            metadata: { name: "test-server-01-2026-05-07", namespace: "default" },
-            spec: { serverRef: { name: "test-server-01" } },
+            metadata: { name: "mc-survival-nightly-0713", namespace: "default" },
+            spec: { serverRef: { name: "mc-survival" } },
           }),
           makeBackup({
-            metadata: { name: "test-server-01-2026-05-06", namespace: "default" },
-            spec: { serverRef: { name: "test-server-01" } },
+            metadata: { name: "mc-survival-nightly-0712", namespace: "default" },
+            spec: { serverRef: { name: "mc-survival" } },
             status: {
               phase: "Failed",
               startTime: "2026-05-06T03:00:00Z",

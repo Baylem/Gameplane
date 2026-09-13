@@ -378,7 +378,7 @@ export const screenshotServers: GameServer[] = [
   }),
   makeServer({
     metadata: {
-      name: "test-server-01",
+      name: "mc-survival",
       namespace: "gameplane-games",
       annotations: { "gameplane.local/node": "kubelab-control" },
     },
@@ -752,7 +752,7 @@ export const screenshotAuditEvents: AuditEvent[] = [
     actor: "test-user-01",
     method: "POST",
     path: "/api/v1/servers",
-    target: "test-server-01",
+    target: "mc-survival",
     status: 201,
     ip: "<internal>",
   }),
@@ -761,8 +761,8 @@ export const screenshotAuditEvents: AuditEvent[] = [
     ts: "2026-09-02T14:25:03Z",
     actor: "admin-demo",
     method: "PUT",
-    path: "/api/v1/servers/test-server-01",
-    target: "test-server-01",
+    path: "/api/v1/servers/mc-survival",
+    target: "mc-survival",
     status: 200,
     ip: "<internal>",
   }),
@@ -771,8 +771,8 @@ export const screenshotAuditEvents: AuditEvent[] = [
     ts: "2026-09-02T14:31:42Z",
     actor: "operator-01",
     method: "POST",
-    path: "/api/v1/servers/test-server-01:start",
-    target: "test-server-01",
+    path: "/api/v1/servers/mc-survival:start",
+    target: "mc-survival",
     status: 202,
     ip: "<internal>",
   }),
@@ -781,8 +781,8 @@ export const screenshotAuditEvents: AuditEvent[] = [
     ts: "2026-09-02T14:35:18Z",
     actor: "test-user-01",
     method: "GET",
-    path: "/api/v1/servers/test-server-01",
-    target: "test-server-01",
+    path: "/api/v1/servers/mc-survival",
+    target: "mc-survival",
     status: 200,
     ip: "<internal>",
   }),
@@ -792,7 +792,7 @@ export const screenshotAuditEvents: AuditEvent[] = [
     actor: "admin-demo",
     method: "POST",
     path: "/api/v1/backups",
-    target: "test-server-01",
+    target: "mc-survival",
     status: 201,
     ip: "<internal>",
   }),
@@ -811,8 +811,8 @@ export const screenshotAuditEvents: AuditEvent[] = [
     ts: "2026-09-02T15:05:21Z",
     actor: "test-user-01",
     method: "DELETE",
-    path: "/api/v1/backups/test-server-01-2026-05-07",
-    target: "test-server-01-2026-05-07",
+    path: "/api/v1/backups/mc-survival-nightly-0713",
+    target: "mc-survival-nightly-0713",
     status: 204,
     ip: "<internal>",
   }),
@@ -851,7 +851,7 @@ export const screenshotAuditEvents: AuditEvent[] = [
     ts: "2026-09-02T15:31:28Z",
     actor: "test-user-01",
     method: "POST",
-    path: "/api/v1/servers/test-server-01/players/kick",
+    path: "/api/v1/servers/mc-survival/players/kick",
     target: "Player-01",
     status: 200,
     ip: "<internal>",
@@ -941,7 +941,7 @@ export const screenshotSchedules = [
   makeSchedule({
     metadata: { name: "test-server-01-daily", namespace: "default" },
     spec: {
-      serverRef: { name: "test-server-01" },
+      serverRef: { name: "mc-survival" },
       schedule: "0 3 * * *",
       retention: { keepLast: 7 },
     },
@@ -960,8 +960,8 @@ export const screenshotRestores = [
   makeRestore({
     metadata: { name: "restore-test-server-01-1", namespace: "default" },
     spec: {
-      backupRef: { name: "test-server-01-2026-05-07" },
-      serverRef: { name: "test-server-01" },
+      backupRef: { name: "mc-survival-nightly-0713" },
+      serverRef: { name: "mc-survival" },
     },
   }),
 ];
@@ -1067,7 +1067,7 @@ export const screenshotSystemLogLines = [
   '{"level":"info","ts":"2026-09-06T12:01:15Z","msg":"request","method":"GET","path":"/api/v1/servers","status":200,"duration_ms":4}',
   '{"level":"info","ts":"2026-09-06T12:01:22Z","msg":"request","method":"POST","path":"/api/v1/auth/login","status":200,"duration_ms":112}',
   '{"level":"warn","ts":"2026-09-06T12:03:47Z","msg":"slow query","table":"audit_events","duration_ms":340}',
-  '{"level":"info","ts":"2026-09-06T12:05:00Z","msg":"reconciled gameserver","name":"test-server-01","phase":"Running"}',
+  '{"level":"info","ts":"2026-09-06T12:05:00Z","msg":"reconciled gameserver","name":"mc-survival","phase":"Running"}',
 ];
 
 // ============================================================================

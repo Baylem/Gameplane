@@ -173,8 +173,8 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     await expect(page.getByRole("heading", { name: /^backups$/i })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByText("test-server-01-2026-05-07")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("test-server-01-2026-05-06")).toBeVisible();
+    await expect(page.getByText("mc-survival-nightly-0713")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("mc-survival-nightly-0712")).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "DPrYX");
   });
@@ -207,7 +207,7 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     // Design PNG is light theme — see setTheme()'s note.
     await setTheme(page, "light");
     await page.goto("/backups");
-    const nameCell = page.getByText("test-server-01-2026-05-07", { exact: true });
+    const nameCell = page.getByText("mc-survival-nightly-0713", { exact: true });
     await expect(nameCell).toBeVisible({ timeout: 10_000 });
     await nameCell.click();
     await expect(page.getByText(/backup details/i)).toBeVisible({ timeout: 10_000 });
@@ -223,9 +223,9 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     // Design PNG is light theme — see setTheme()'s note.
     await setTheme(page, "light");
     await page.goto("/backups");
-    const row = page.getByRole("row", { name: /test-server-01-2026-05-07/i });
+    const row = page.getByRole("row", { name: /mc-survival-nightly-0713/i });
     await expect(row).toBeVisible({ timeout: 10_000 });
-    // test-server-01-2026-05-07 (default makeBackup()) is Succeeded with a
+    // mc-survival-nightly-0713 (default makeBackup()) is Succeeded with a
     // snapshotID, so BackupRow's "Restore" action is enabled on it.
     await row.getByRole("button", { name: /^restore$/i }).click();
     // RestoreDialog.tsx uses HeroUI's ModalHeading (slot="title"), which does
@@ -242,7 +242,7 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     // Design PNG is light theme — see setTheme()'s note.
     await setTheme(page, "light");
     await page.goto("/backups");
-    const row = page.getByRole("row", { name: /test-server-01-2026-05-07/i });
+    const row = page.getByRole("row", { name: /mc-survival-nightly-0713/i });
     await expect(row).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
     // Component-level crop (not a full-page capture): DMnEi is the reusable
