@@ -14,6 +14,7 @@ import {
   Key,
   Lock,
   Mail,
+  Megaphone,
   MessagesSquare,
   Plus,
   Puzzle,
@@ -436,6 +437,25 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
   );
 }
 
+/**
+ * Inline warning banner shown in AddProviderForm when admin groups are entered.
+ * Alerts the user to the security implications of mapping admin group membership.
+ */
+function AdminGroupsInlineWarning() {
+  return (
+    <div className="rounded-md border border-warning/40 bg-warning/10 p-3 flex gap-3">
+      <Megaphone className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+      <div className="text-xs">
+        <div className="font-medium text-warning mb-1">Full admin access</div>
+        <p className="text-warning/80">
+          Groups added here will be mapped to the admin role and get full cluster
+          control from their next login. You'll be asked to confirm before this is saved.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function AddProviderForm({
   existing,
   externalURLSet,
@@ -647,14 +667,17 @@ function AddProviderForm({
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          <TextField>
-            <Label className="text-xs">Admin groups</Label>
-            <HeroInput
-              placeholder="gameplane-admins"
-              value={adminGroups}
-              onChange={(e) => setAdminGroups(e.target.value)}
-            />
-          </TextField>
+          <div className="flex flex-col gap-3">
+            <TextField>
+              <Label className="text-xs">Admin groups</Label>
+              <HeroInput
+                placeholder="gameplane-admins"
+                value={adminGroups}
+                onChange={(e) => setAdminGroups(e.target.value)}
+              />
+            </TextField>
+            {adminList.length > 0 && <AdminGroupsInlineWarning />}
+          </div>
           <TextField>
             <Label className="text-xs">Operator groups</Label>
             <HeroInput
