@@ -41362,57 +41362,6 @@
                           ]
                         }
                       ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "Iso3L",
-                      "width": "fill_container",
-                      "gap": 8,
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "id": "mNxN2",
-                          "type": "ref",
-                          "ref": "v6WNtR",
-                          "name": "Checkbox",
-                          "descendants": {
-                            "x7vJxB": {
-                              "enabled": false
-                            }
-                          }
-                        },
-                        {
-                          "type": "text",
-                          "id": "Jc1Hs",
-                          "fill": "$foreground/foreground",
-                          "content": "servers:console",
-                          "fontFamily": "$typography/font-mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "v9Ttb",
-                          "fill": "#94949426",
-                          "cornerRadius": 4,
-                          "padding": [
-                            0,
-                            4
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "S1PMq8",
-                              "fill": "$muted",
-                              "content": "ns",
-                              "fontFamily": "$typography/font-sans",
-                              "fontSize": 9,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        }
-                      ]
                     }
                   ]
                 },
@@ -41427,7 +41376,7 @@
                       "type": "text",
                       "id": "PaKJk",
                       "fill": "$muted",
-                      "content": "BACKUPS",
+                      "content": "NETWORK CAPTURES",
                       "fontFamily": "$typography/font-sans",
                       "fontSize": 11,
                       "fontWeight": "600",
@@ -41435,144 +41384,35 @@
                     },
                     {
                       "type": "frame",
-                      "id": "wFlZu",
-                      "width": "fill_container",
-                      "gap": 4,
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "BLdRm",
-                          "width": "fill_container",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "id": "WO0br",
-                              "type": "ref",
-                              "ref": "v6WNtR",
-                              "name": "Checkbox",
-                              "descendants": {
-                                "x7vJxB": {
-                                  "enabled": false
-                                }
-                              }
-                            },
-                            {
-                              "type": "text",
-                              "id": "eCv04",
-                              "fill": "$foreground/foreground",
-                              "content": "backups:read",
-                              "fontFamily": "$typography/font-mono",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "TuaZN",
-                              "fill": "#94949426",
-                              "cornerRadius": 4,
-                              "padding": [
-                                0,
-                                4
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "NWWuY",
-                                  "fill": "$muted",
-                                  "content": "ns",
-                                  "fontFamily": "$typography/font-sans",
-                                  "fontSize": 9,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "MYOJS",
-                          "width": "fill_container",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "id": "syWhj",
-                              "type": "ref",
-                              "ref": "v6WNtR",
-                              "name": "Checkbox",
-                              "descendants": {
-                                "x7vJxB": {
-                                  "enabled": false
-                                }
-                              }
-                            },
-                            {
-                              "type": "text",
-                              "id": "O2pvi",
-                              "fill": "$foreground/foreground",
-                              "content": "backups:write",
-                              "fontFamily": "$typography/font-mono",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "hDYgJ",
-                              "fill": "#94949426",
-                              "cornerRadius": 4,
-                              "padding": [
-                                0,
-                                4
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "tMPHm",
-                                  "fill": "$muted",
-                                  "content": "ns",
-                                  "fontFamily": "$typography/font-sans",
-                                  "fontSize": 9,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "C9fQPy",
+                      "id": "cvl8c",
+                      "name": "captures-manage-row",
                       "width": "fill_container",
                       "gap": 8,
                       "alignItems": "center",
                       "children": [
                         {
-                          "id": "iPHsR",
+                          "id": "D3dxec",
                           "type": "ref",
-                          "ref": "v6WNtR",
+                          "ref": "aOvvm",
                           "name": "Checkbox",
                           "descendants": {
-                            "x7vJxB": {
+                            "rKaQI": {
                               "enabled": false
                             }
                           }
                         },
                         {
                           "type": "text",
-                          "id": "UJslq",
+                          "id": "A9s5F",
                           "fill": "$foreground/foreground",
-                          "content": "backups:restore",
+                          "content": "captures:manage",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         },
                         {
                           "type": "frame",
-                          "id": "L2Xt0Y",
+                          "id": "mBTbI",
                           "fill": "#94949426",
                           "cornerRadius": 4,
                           "padding": [
@@ -41583,96 +41423,11 @@
                           "children": [
                             {
                               "type": "text",
-                              "id": "g6Np1",
+                              "id": "iQwY3",
                               "fill": "$muted",
                               "content": "ns",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 9,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "ubUjg",
-                  "width": "fill_container",
-                  "layout": "vertical",
-                  "gap": 4,
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "L7pBCS",
-                      "fill": "$muted",
-                      "content": "GAME TEMPLATES",
-                      "fontFamily": "$typography/font-sans",
-                      "fontSize": 11,
-                      "fontWeight": "600",
-                      "letterSpacing": 0.55
-                    },
-                    {
-                      "type": "frame",
-                      "id": "V47c1",
-                      "width": "fill_container",
-                      "gap": 4,
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "gMWtG",
-                          "width": "fill_container",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "id": "NpxMm",
-                              "type": "ref",
-                              "ref": "v6WNtR",
-                              "name": "Checkbox",
-                              "descendants": {
-                                "x7vJxB": {
-                                  "enabled": false
-                                }
-                              }
-                            },
-                            {
-                              "type": "text",
-                              "id": "bMxe6",
-                              "fill": "$foreground/foreground",
-                              "content": "templates:read",
-                              "fontFamily": "$typography/font-mono",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "YSiPG",
-                          "width": "fill_container",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "id": "n6Xn6",
-                              "type": "ref",
-                              "ref": "aOvvm",
-                              "name": "Checkbox",
-                              "descendants": {
-                                "rKaQI": {
-                                  "enabled": false
-                                }
-                              }
-                            },
-                            {
-                              "type": "text",
-                              "id": "BbosC",
-                              "fill": "$foreground/foreground",
-                              "content": "templates:write",
-                              "fontFamily": "$typography/font-mono",
-                              "fontSize": 12,
                               "fontWeight": "normal"
                             }
                           ]
@@ -41700,67 +41455,30 @@
                     },
                     {
                       "type": "frame",
-                      "id": "XbYtu",
+                      "id": "BUO9L",
                       "width": "fill_container",
-                      "gap": 4,
+                      "gap": 8,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "frame",
-                          "id": "e3Ncy",
-                          "width": "fill_container",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "id": "Q7lASh",
-                              "type": "ref",
-                              "ref": "aOvvm",
-                              "name": "Checkbox",
-                              "descendants": {
-                                "rKaQI": {
-                                  "enabled": false
-                                }
-                              }
-                            },
-                            {
-                              "type": "text",
-                              "id": "PrWUw",
-                              "fill": "$foreground/foreground",
-                              "content": "users:read",
-                              "fontFamily": "$typography/font-mono",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
+                          "id": "sgPXK",
+                          "type": "ref",
+                          "ref": "aOvvm",
+                          "name": "Checkbox",
+                          "descendants": {
+                            "rKaQI": {
+                              "enabled": false
                             }
-                          ]
+                          }
                         },
                         {
-                          "type": "frame",
-                          "id": "BUO9L",
-                          "width": "fill_container",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "id": "sgPXK",
-                              "type": "ref",
-                              "ref": "aOvvm",
-                              "name": "Checkbox",
-                              "descendants": {
-                                "rKaQI": {
-                                  "enabled": false
-                                }
-                              }
-                            },
-                            {
-                              "type": "text",
-                              "id": "lUtVs",
-                              "fill": "$foreground/foreground",
-                              "content": "users:manage",
-                              "fontFamily": "$typography/font-mono",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
-                            }
-                          ]
+                          "type": "text",
+                          "id": "lUtVs",
+                          "fill": "$foreground/foreground",
+                          "content": "users:manage",
+                          "fontFamily": "$typography/font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -43714,7 +43432,7 @@
           "content": "Restore backup"
         },
         "qzcst": {
-          "content": "Restore into a brand-new server, or overwrite an existing one."
+          "content": "The target server will be suspended, the volume restored from the snapshot, then resumed."
         },
         "Nht52": {
           "type": "frame",
@@ -43772,27 +43490,50 @@
                   "type": "text",
                   "id": "eN292",
                   "fill": "$muted",
-                  "content": "New server name",
+                  "content": "Target game server",
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 12,
                   "fontWeight": "normal"
                 },
                 {
-                  "id": "z7yI8Y",
+                  "id": "D5Vwg2",
                   "type": "ref",
-                  "ref": "D0cDM",
-                  "name": "Input",
+                  "ref": "AT7ya",
+                  "name": "Target server select",
                   "width": "fill_container",
                   "descendants": {
-                    "PJERm": {
-                      "content": "my-restored-server",
-                      "fill": "#5C5C5C"
+                    "cFsFk": {
+                      "content": "Select a server…"
                     }
                   }
                 }
               ]
+            },
+            {
+              "id": "TH6mC",
+              "type": "ref",
+              "ref": "f7KBn",
+              "name": "Restore warning",
+              "width": "fill_container",
+              "descendants": {
+                "IAKLq": {
+                  "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
+                  "enabled": false
+                },
+                "CotwO": {
+                  "enabled": true,
+                  "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
+                  "fill": "$danger/danger"
+                },
+                "sYqNu": {
+                  "enabled": false
+                }
+              }
             }
           ]
+        },
+        "TZ7Ef": {
+          "content": "Restore"
         }
       }
     },
@@ -43809,7 +43550,8 @@
           "content": "Invite user"
         },
         "qzcst": {
-          "enabled": false
+          "enabled": true,
+          "content": "Create a local account. Leave password blank to send an OIDC invite later."
         },
         "Nht52": {
           "type": "frame",
@@ -43948,8 +43690,43 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "dKJFE",
+              "name": "Role field",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YZ11Y",
+                  "name": "Role label",
+                  "fill": "$foreground/foreground",
+                  "content": "Role",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "id": "liaWX",
+                  "type": "ref",
+                  "ref": "AT7ya",
+                  "name": "Select",
+                  "width": "fill_container",
+                  "descendants": {
+                    "cFsFk": {
+                      "content": "viewer"
+                    }
+                  }
+                }
+              ]
             }
           ]
+        },
+        "TZ7Ef": {
+          "content": "Create user"
         }
       }
     },
@@ -43966,7 +43743,8 @@
           "content": "Edit user"
         },
         "qzcst": {
-          "enabled": false
+          "enabled": true,
+          "content": "operator-01"
         },
         "Nht52": {
           "type": "frame",
@@ -44073,8 +43851,140 @@
                   }
                 }
               ]
+            },
+            {
+              "type": "frame",
+              "id": "uwKhS",
+              "name": "Grants Divider",
+              "width": "fill_container",
+              "height": 1,
+              "fill": "$border/border"
+            },
+            {
+              "type": "frame",
+              "id": "gEXCo",
+              "name": "Namespace Grants",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "VqyMf",
+                  "name": "Section Label",
+                  "fill": "$muted",
+                  "content": "NAMESPACE GRANTS",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 11,
+                  "fontWeight": "600",
+                  "letterSpacing": 0.55
+                },
+                {
+                  "type": "frame",
+                  "id": "n7mZCs",
+                  "name": "Grant Row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "NAr7G",
+                      "name": "Grant Role",
+                      "fill": "$foreground/foreground",
+                      "content": "operator",
+                      "fontFamily": "$typography/font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "gfJVo",
+                      "name": "Grant In",
+                      "fill": "$muted",
+                      "content": "in",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "QdISf",
+                      "name": "Grant Namespace",
+                      "fill": "$foreground/foreground",
+                      "content": "game-servers",
+                      "fontFamily": "$typography/font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "e2HAI",
+                      "name": "Remove Grant",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "trash-2",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "afhD0",
+                  "name": "Add Grant Row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "Co5v8",
+                      "type": "ref",
+                      "ref": "AT7ya",
+                      "name": "Grant Role Select",
+                      "width": 120,
+                      "height": 32,
+                      "descendants": {
+                        "cFsFk": {
+                          "content": "operator"
+                        }
+                      }
+                    },
+                    {
+                      "id": "L5IzVL",
+                      "type": "ref",
+                      "ref": "D0cDM",
+                      "name": "Grant Namespace Input",
+                      "width": "fill_container",
+                      "height": 32,
+                      "descendants": {
+                        "PJERm": {
+                          "content": "namespace"
+                        }
+                      }
+                    },
+                    {
+                      "id": "s5pUg",
+                      "type": "ref",
+                      "ref": "J09iP",
+                      "name": "Add Grant Button",
+                      "descendants": {
+                        "eWkIT/WtPjS": {
+                          "enabled": false
+                        },
+                        "eWkIT/r4VbAi": {
+                          "content": "Add"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
             }
           ]
+        },
+        "TZ7Ef": {
+          "content": "Save changes"
         }
       }
     },
@@ -44088,10 +43998,11 @@
       "y": 29203,
       "descendants": {
         "E7Whx": {
-          "content": "Reset password for smoke-collab"
+          "content": "Reset password for operator-01"
         },
         "qzcst": {
-          "enabled": false
+          "enabled": true,
+          "content": "They will need to sign in again with the new password."
         },
         "Nht52": {
           "type": "frame",
@@ -44128,17 +44039,11 @@
                   "fill": "#5C5C5C"
                 }
               }
-            },
-            {
-              "type": "text",
-              "id": "LRY0M",
-              "fill": "#DC2626",
-              "content": "Must be at least 12 characters.",
-              "fontFamily": "$typography/font-sans",
-              "fontSize": 11,
-              "fontWeight": "normal"
             }
           ]
+        },
+        "TZ7Ef": {
+          "content": "Set new password"
         }
       }
     },
@@ -58079,7 +57984,194 @@
       "ref": "WwNlX",
       "name": "Gameplane/Dialog/Confirm Admin Mapping",
       "x": -15865,
-      "y": 28535
+      "y": 28535,
+      "descendants": {
+        "QARhG": {
+          "type": "frame",
+          "id": "wG6NM",
+          "name": "cdTitleRow",
+          "width": "fill_container",
+          "gap": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "QRovu",
+              "name": "icon",
+              "width": 40,
+              "height": 40,
+              "fill": "$danger/soft",
+              "cornerRadius": 9999,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "xRtvB",
+                  "name": "icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "circle-alert",
+                  "library": "lucide",
+                  "fill": "$danger/soft-foreground"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "dqVfv",
+              "name": "cdTitle",
+              "fill": "$foreground/foreground",
+              "content": "Confirm admin role mapping?",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 16,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        "aZP2h": {
+          "type": "frame",
+          "id": "m64ZK",
+          "name": "cdDescWrap",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": [
+            16,
+            0,
+            0,
+            0
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "GxTWx",
+              "name": "warningBox",
+              "width": "fill_container",
+              "fill": "$warning/soft",
+              "cornerRadius": 6,
+              "stroke": "$warning/soft-foreground",
+              "strokeWidth": 1,
+              "gap": 12,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "BBBQX",
+                  "name": "warningIcon",
+                  "padding": [
+                    2,
+                    0,
+                    0,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "qsmfp",
+                      "name": "icon",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "triangle-alert",
+                      "library": "lucide",
+                      "fill": "$warning/warning"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "PZWtd",
+                  "name": "warningContent",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "yeBW8",
+                      "name": "warningTitle",
+                      "fill": "$warning/warning",
+                      "content": "Full admin access",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "F1pyxJ",
+                      "name": "warningDesc",
+                      "fill": "$warning/soft-foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Mapping users to the admin role grants full cluster control. Ensure the mapped group contains only authorized personnel. Anyone in these groups gets full admin access from their next login.",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "pnC0g",
+              "name": "groupSection",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "eTXfC",
+                  "name": "groupLabel",
+                  "fill": "$muted",
+                  "content": "Group(s) being mapped to admin:",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "G7K5ZN",
+                  "name": "chipRow",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "ajuvx",
+                      "name": "Chip ops-leads",
+                      "fill": "#94949426",
+                      "cornerRadius": 4,
+                      "padding": [
+                        4,
+                        8
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "J0BFF",
+                          "name": "chipLabel",
+                          "fill": "$muted",
+                          "content": "ops-leads",
+                          "fontFamily": "$typography/font-sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "Wa0YZ": {
+          "enabled": false
+        },
+        "tvH6d": {
+          "content": "Map to admin role"
+        }
+      }
     },
     {
       "type": "frame",
