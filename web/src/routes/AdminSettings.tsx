@@ -449,7 +449,7 @@ function AdminGroupsInlineWarning() {
         <div className="font-medium text-warning mb-1">Full admin access</div>
         <p className="text-warning/80">
           Groups added here will be mapped to the admin role and get full cluster
-          control from their next login. You'll be asked to confirm before this is saved.
+          control from their next login. You&apos;ll be asked to confirm before this is saved.
         </p>
       </div>
     </div>
