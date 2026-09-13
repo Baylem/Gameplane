@@ -167,7 +167,7 @@ export function UsersPage() {
         variant="secondary"
       >
         <div className="flex items-center gap-3">
-          <Tabs.List className="w-fit min-w-0">
+          <Tabs.List className="users-rbac-tabs w-fit min-w-0">
             <TabComponent id="users">
               <div className="flex items-center gap-2">
                 <span>Users</span>

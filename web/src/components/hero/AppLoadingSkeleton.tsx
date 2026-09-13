@@ -36,7 +36,7 @@ export function AppLoadingSkeleton({ statCount = 4 }: AppLoadingSkeletonProps) {
             </div>
             <div className="min-w-0 flex-1 leading-tight">
               <div className="font-mono text-base font-semibold text-fg">gameplane</div>
-              <Skeleton className="h-3 w-20 rounded" />
+              <Skeleton className="h-3 w-20 rounded bg-surface/secondary" />
             </div>
           </div>
 
@@ -49,8 +49,8 @@ export function AppLoadingSkeleton({ statCount = 4 }: AppLoadingSkeletonProps) {
               {Array.from({ length: 4 }).map((_, i) => (
                 <li key={`general-${i}`}>
                   <div className="flex items-center gap-3 rounded-md px-3 py-2">
-                    <Skeleton className="h-[18px] w-[18px] shrink-0 rounded" />
-                    <Skeleton className="h-3 flex-1 rounded" />
+                    <Skeleton className="h-[18px] w-[18px] shrink-0 rounded bg-surface/secondary" />
+                    <Skeleton className="h-3 flex-1 rounded bg-surface/secondary" />
                   </div>
                 </li>
               ))}
@@ -64,8 +64,8 @@ export function AppLoadingSkeleton({ statCount = 4 }: AppLoadingSkeletonProps) {
               {Array.from({ length: 3 }).map((_, i) => (
                 <li key={`admin-${i}`}>
                   <div className="flex items-center gap-3 rounded-md px-3 py-2">
-                    <Skeleton className="h-[18px] w-[18px] shrink-0 rounded" />
-                    <Skeleton className="h-3 flex-1 rounded" />
+                    <Skeleton className="h-[18px] w-[18px] shrink-0 rounded bg-surface/secondary" />
+                    <Skeleton className="h-3 flex-1 rounded bg-surface/secondary" />
                   </div>
                 </li>
               ))}
@@ -75,10 +75,10 @@ export function AppLoadingSkeleton({ statCount = 4 }: AppLoadingSkeletonProps) {
           {/* Profile footer skeleton */}
           <div className="border-t border-border px-3 py-3">
             <div className="flex items-center gap-3 rounded-md px-2 py-1.5">
-              <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+              <Skeleton className="h-8 w-8 shrink-0 rounded-full bg-surface/secondary" />
               <div className="min-w-0 flex-1 space-y-1">
-                <Skeleton className="h-3 rounded" />
-                <Skeleton className="h-2 w-16 rounded" />
+                <Skeleton className="h-3 rounded bg-surface/secondary" />
+                <Skeleton className="h-2 w-16 rounded bg-surface/secondary" />
               </div>
             </div>
           </div>
@@ -90,21 +90,21 @@ export function AppLoadingSkeleton({ statCount = 4 }: AppLoadingSkeletonProps) {
         {/* TopBar skeleton */}
         <header className="flex h-14 items-center justify-between gap-4 border-b border-border bg-background px-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
-            <Skeleton className="h-3 w-20 rounded" />
+            <Skeleton className="h-3 w-20 rounded bg-surface" />
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <div className="hidden md:flex">
-              <Skeleton className="h-9 w-72 rounded-md" />
+              <Skeleton className="h-9 w-72 rounded-md bg-surface" />
             </div>
-            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+            <Skeleton className="h-8 w-8 shrink-0 rounded-full bg-surface" />
+            <Skeleton className="h-8 w-8 shrink-0 rounded-full bg-surface" />
+            <Skeleton className="h-8 w-8 shrink-0 rounded-full bg-surface" />
           </div>
         </header>
 
         {/* Main content skeleton */}
         <main className="flex-1 overflow-auto scrollbar-thin p-6">
-          <Skeleton className="mb-6 h-4 w-48 rounded" />
+          <Skeleton className="mb-6 h-4 w-48 rounded bg-surface/secondary" />
 
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: statCount }).map((_, i) => (
@@ -113,21 +113,21 @@ export function AppLoadingSkeleton({ statCount = 4 }: AppLoadingSkeletonProps) {
                 data-testid="stat-placeholder"
                 className="rounded-md border border-border bg-surface/60 p-4"
               >
-                <Skeleton className="mb-2 h-3 w-24 rounded" />
-                <Skeleton className="h-6 w-12 rounded" />
+                <Skeleton className="mb-2 h-3 w-24 rounded bg-surface/secondary" />
+                <Skeleton className="h-6 w-12 rounded bg-surface/secondary" />
               </div>
             ))}
           </div>
 
           <div className="rounded-md border border-border">
             <div className="flex border-b border-border px-4 py-3">
-              <Skeleton className="h-3 flex-1 rounded" />
-              <Skeleton className="ml-4 h-3 w-20 rounded" />
+              <Skeleton className="h-3 flex-1 rounded bg-surface/secondary" />
+              <Skeleton className="ml-4 h-3 w-20 rounded bg-surface/secondary" />
             </div>
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={`row-${i}`} className="flex border-b border-border px-4 py-3 last:border-b-0">
-                <Skeleton className="h-3 flex-1 rounded" />
-                <Skeleton className="ml-4 h-3 w-20 rounded" />
+                <Skeleton className="h-3 flex-1 rounded bg-surface/secondary" />
+                <Skeleton className="ml-4 h-3 w-20 rounded bg-surface/secondary" />
               </div>
             ))}
           </div>

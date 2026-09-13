@@ -89,8 +89,8 @@ export function ModuleCard({
   const digest = entry.appliedDigest ?? entry.digest;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-col gap-3">
+    <Card className="flex flex-col h-full">
+      <CardHeader className="flex flex-col gap-3 pb-0">
         <div className="flex items-start justify-between gap-3">
           <GameIcon game={entry.game ?? entry.name} size="md" />
           <div className="flex items-center gap-1.5">
@@ -117,7 +117,7 @@ export function ModuleCard({
           )}
         </div>
         {resolveCategories(entry.categories, entry.game ?? entry.name).length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 pt-0.5">
             {resolveCategories(entry.categories, entry.game ?? entry.name).map((c) => (
               <Chip key={c} variant="soft" size="sm" className="text-[11px]">
                 {c}
@@ -126,8 +126,8 @@ export function ModuleCard({
           </div>
         )}
       </CardHeader>
-      <CardContent className="gap-3">
-        <p className="line-clamp-3 text-xs text-muted">
+      <CardContent className="flex flex-col gap-3 flex-1 py-3">
+        <p className="line-clamp-3 text-xs text-muted leading-relaxed">
           {entry.summary ?? "No summary."}
         </p>
         {versionUnavailable ? (
@@ -148,7 +148,7 @@ export function ModuleCard({
           </div>
         ) : null}
       </CardContent>
-      <CardFooter className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
+      <CardFooter className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted pt-0">
         <span className="font-mono">
           {entry.sources.length === 1
             ? `${entry.sources[0].name} (${entry.sources[0].type})`

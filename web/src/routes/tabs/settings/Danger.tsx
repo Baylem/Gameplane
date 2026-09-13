@@ -22,7 +22,7 @@ export function DangerSection({ name, ns }: Props) {
         title="Wipe world data"
         body="Deletes everything on the data volume and restarts the server on a fresh world. Take a backup first."
         action={
-          <Button variant="outline" size="sm" onPress={() => setWipeOpen(true)}>
+          <Button variant="ghost" size="sm" onPress={() => setWipeOpen(true)}>
             Wipe world…
           </Button>
         }
@@ -31,7 +31,7 @@ export function DangerSection({ name, ns }: Props) {
         title="Transfer ownership"
         body="Hand this server to another user. You keep access only if you stay a collaborator."
         action={
-          <Button variant="outline" size="sm" onPress={() => setTransferOpen(true)}>
+          <Button variant="ghost" size="sm" onPress={() => setTransferOpen(true)}>
             Transfer…
           </Button>
         }
@@ -73,7 +73,7 @@ function Row({
   action: ReactNode;
 }) {
   return (
-    <Card>
+    <Card data-danger-zone={title === "Delete server" ? "delete" : undefined}>
       <CardContent className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="text-sm font-medium">{title}</div>
