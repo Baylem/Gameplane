@@ -456,6 +456,68 @@ export const screenshotServers: GameServer[] = [
       startedAt: "2026-09-03T14:20:00Z",
     },
   }),
+  makeServer({
+    metadata: {
+      name: "test-server-capture-disabled",
+      namespace: "default",
+      annotations: { "gameplane.local/node": "node-01" },
+    },
+    spec: { templateRef: { name: "minecraft-modded" }, capture: { enabled: false } },
+    status: {
+      phase: "Running",
+      agent: {
+        playersOnline: 0,
+        playersMax: 20,
+        lastHeartbeat: "2026-09-06T10:15:30Z",
+        cpuMillicores: 0,
+        cpuLimitMillicores: 4000,
+        memoryBytes: 1_520_000_000,
+        memoryLimitBytes: 4_000_000_000,
+        diskUsedBytes: 3_770_000_000,
+        diskTotalBytes: 29_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "main",
+          host: "test-server-capture-disabled.gameplane-demo.local",
+          port: 25565,
+          protocol: "tcp",
+        },
+      ],
+      startedAt: "2026-09-03T14:20:00Z",
+    },
+  }),
+  makeServer({
+    metadata: {
+      name: "test-server-no-shares",
+      namespace: "default",
+      annotations: { "gameplane.local/node": "node-01" },
+    },
+    spec: { templateRef: { name: "minecraft-modded" } },
+    status: {
+      phase: "Running",
+      agent: {
+        playersOnline: 0,
+        playersMax: 20,
+        lastHeartbeat: "2026-09-06T10:15:30Z",
+        cpuMillicores: 0,
+        cpuLimitMillicores: 4000,
+        memoryBytes: 1_520_000_000,
+        memoryLimitBytes: 4_000_000_000,
+        diskUsedBytes: 3_770_000_000,
+        diskTotalBytes: 29_000_000_000,
+      },
+      endpoints: [
+        {
+          name: "main",
+          host: "test-server-no-shares.gameplane-demo.local",
+          port: 25565,
+          protocol: "tcp",
+        },
+      ],
+      startedAt: "2026-09-03T14:20:00Z",
+    },
+  }),
 ];
 
 // ============================================================================
