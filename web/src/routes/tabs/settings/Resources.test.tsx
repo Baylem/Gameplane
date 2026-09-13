@@ -7,8 +7,8 @@ describe("ResourcesSection", () => {
   it("renders default CPU and memory values when no resources set", () => {
     render(<ResourcesSection draft={makeServer()} onChange={() => {}} />);
     // Defaults are 2 CPU / 4 Gi.
-    expect(screen.getByLabelText("CPU cores value")).toHaveValue("2");
-    expect(screen.getByLabelText("Memory (GiB) value")).toHaveValue("4");
+    expect(screen.getByLabelText("CPU cores value")).toHaveValue(2);
+    expect(screen.getByLabelText("Memory (GiB) value")).toHaveValue(4);
   });
 
   it("changing CPU slider updates draft to a quantity", () => {
