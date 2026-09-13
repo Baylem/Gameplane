@@ -37,6 +37,10 @@ async function sidebarNav() {
   return within(await screen.findByRole("navigation", { name: "Primary" }));
 }
 
+async function sidebarRoot() {
+  return within(await screen.findByRole("complementary", { name: "Sidebar" }));
+}
+
 describe("AppLayout", () => {
   it("renders the sidebar nav items shared by all roles", async () => {
     server.use(
@@ -453,8 +457,8 @@ describe("AppLayout", () => {
       http.get("/users/me", () => HttpResponse.json(makeUser())),
     );
     renderWithQuery(<AppLayout />);
-    const nav = await sidebarNav();
-    expect(await nav.findByText("gameplane")).toBeInTheDocument();
+    const root = await sidebarRoot();
+    expect(await root.findByText("gameplane")).toBeInTheDocument();
   });
 
   it("breadcrumb builds from pathname", async () => {
@@ -463,9 +467,9 @@ describe("AppLayout", () => {
       http.get("/users/me", () => HttpResponse.json(makeUser())),
     );
     renderWithQuery(<AppLayout />);
-    const nav = await sidebarNav();
+    const root = await sidebarRoot();
     await waitFor(() => {
-      expect(nav.getByText("gameplane")).toBeInTheDocument();
+      expect(root.getByText("gameplane")).toBeInTheDocument();
     });
     // Breadcrumb should show: gameplane > alpha (server detail pages drop
     // the "Servers" ancestor crumb per design dPP50/F9pUrx).
