@@ -45,7 +45,7 @@ export function BackupDetailDrawer({ name, onClose, onRestore }: Props) {
           <Drawer.Dialog className="flex flex-col h-full">
             <Drawer.Header className="flex items-start justify-between border-b border-border p-5">
               <div className="space-y-1">
-                <h2 className="text-base font-semibold">Backup details</h2>
+                <Drawer.Heading className="text-base font-semibold">Backup details</Drawer.Heading>
                 <div className="font-mono text-xs text-muted">{name}</div>
               </div>
               <Button
