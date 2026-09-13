@@ -51,29 +51,29 @@ describe("useDelayedLoading", () => {
     expect(result.current).toBe(true);
 
     // minVisibleMs still applies when loading ends
-    const { rerender } = renderHook(({ loading }) => useDelayedLoading(loading), {
+    const { result: result2, rerender } = renderHook(({ loading }) => useDelayedLoading(loading), {
       initialProps: { loading: true },
     });
 
-    expect(result.current).toBe(true);
+    expect(result2.current).toBe(true);
 
     // Stop loading
     rerender({ loading: false });
 
     // Should still be visible immediately
-    expect(result.current).toBe(true);
+    expect(result2.current).toBe(true);
 
     // Advance 200ms — still within minVisibleMs (default 300ms)
     act(() => {
       vi.advanceTimersByTime(200);
     });
-    expect(result.current).toBe(true);
+    expect(result2.current).toBe(true);
 
     // Advance to the minVisibleMs boundary (total 300ms)
     act(() => {
       vi.advanceTimersByTime(100);
     });
-    expect(result.current).toBe(false);
+    expect(result2.current).toBe(false);
   });
 
   it("debounces a later refetch", () => {
