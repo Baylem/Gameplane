@@ -134,8 +134,15 @@ func (c *CLI) execPipe(ctx context.Context, cmd string) error {
 	defer func() { _ = f.Close() }()
 
 	data := []byte(strings.TrimRight(cmd, "\r\n") + "\n")
-	if _, err := f.Write(data); err != nil {
+	if deadline, ok := ctx.Deadline(); ok {
+		_ = f.SetWriteDeadline(deadline)
+	}
+	n, err := f.Write(data)
+	if err != nil {
 		return fmt.Errorf("write cli pipe %q: %w", c.pipePath, err)
+	}
+	if n < len(data) {
+		return fmt.Errorf("write cli pipe %q: short write (%d/%d bytes)", c.pipePath, n, len(data))
 	}
 	return nil
 }

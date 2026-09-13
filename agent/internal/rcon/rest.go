@@ -344,9 +344,6 @@ func NewREST(host string, port int, pass PassFn, opts ...RESTOption) *REST {
 	}
 
 	tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12}
-	if isLoopbackHost(host) {
-		tlsCfg.InsecureSkipVerify = true
-	}
 
 	c.httpClient = &http.Client{
 		Transport: &http.Transport{
