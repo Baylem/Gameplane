@@ -595,15 +595,20 @@ function ServerLifecycleActions({
 // status pill, a row of stat chips, and the same lifecycle actions.
 function ServerCard({
   gs,
-  onAct,
+  onAct: _onAct,
 }: {
   gs: GameServer;
   onAct: (args: { name: string; verb: LifecycleVerb }) => void;
 }) {
-  const { phase, asleep, node, isSharedNonDefault, cpuLabel, memLabel, playersLabel } = serverRowData(gs);
+  const { phase, asleep, isSharedNonDefault, memLabel, playersLabel } = serverRowData(gs);
+
+  // Extract address from the first endpoint, if available
+  const endpoint = gs.status?.endpoints?.[0];
+  const address = endpoint ? `${endpoint.host}:${endpoint.port}` : "—";
 
   return (
     <Card className="border border-border bg-surface p-4">
+      {/* Row 1: Icon + Name + Address on left, Status pill on right */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <GameIcon game={gs.spec.templateRef.name} size="sm" />
@@ -612,30 +617,28 @@ function ServerCard({
               to="/servers/$name"
               params={{ name: gs.metadata.name }}
               search={isSharedNonDefault ? { ns: gs.metadata.namespace } : {}}
-              className="block truncate font-mono text-sm text-foreground hover:text-primary"
+              className="block truncate font-medium text-sm text-foreground hover:text-primary"
             >
               {gs.metadata.name}
             </Link>
-            <div className="truncate text-[11px] text-foreground/60">
-              {gs.spec.templateRef.name} · {gs.metadata.namespace ?? "gameplane-games"}
+            <div className="truncate text-xs text-foreground/60 font-mono">
+              {address}
             </div>
           </div>
         </div>
         <PhaseChip phase={phase} asleep={asleep} />
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        <StatChip icon={<Cpu className="h-3 w-3" />} label="CPU" value={cpuLabel} />
-        <StatChip icon={<HardDrive className="h-3 w-3" />} label="Mem" value={memLabel} />
-        <StatChip icon={<UsersIcon className="h-3 w-3" />} label="Players" value={playersLabel} />
-        <StatChip icon={<ServerIcon className="h-3 w-3" />} label="Node" value={node ?? "—"} />
+      {/* Row 2: Game label */}
+      <div className="mt-2 text-sm text-foreground/60">
+        {gs.spec.templateRef.name}
       </div>
 
-      {!isSharedNonDefault && (
-        <div className="mt-3 flex items-center justify-end border-t border-border pt-3">
-          <ServerLifecycleActions gs={gs} phase={phase} asleep={asleep} onAct={onAct} />
-        </div>
-      )}
+      {/* Row 3: Two chips - Players and Memory */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <StatChip icon={<UsersIcon className="h-3 w-3" />} label="Players" value={playersLabel} />
+        <StatChip icon={<HardDrive className="h-3 w-3" />} label="Mem" value={memLabel} />
+      </div>
     </Card>
   );
 }
