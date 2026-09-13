@@ -91,7 +91,7 @@ export function ModuleCard({
   return (
     <Card className="flex flex-col h-full">
       <CardHeader className="flex flex-col gap-3 pb-0">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <GameIcon game={entry.game ?? entry.name} size="md" />
           <div className="flex items-center gap-1.5">
             {verify && <VerifyBadge verify={verify} />}
@@ -127,7 +127,7 @@ export function ModuleCard({
         )}
       </CardHeader>
       <CardContent className="flex flex-col gap-3 flex-1 py-3">
-        <p className="line-clamp-3 text-xs text-muted leading-relaxed">
+        <p className="line-clamp-3 text-xs text-muted leading-[1.4]">
           {entry.summary ?? "No summary."}
         </p>
         {versionUnavailable ? (
