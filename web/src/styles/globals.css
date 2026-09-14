@@ -312,7 +312,7 @@ input:-webkit-autofill:focus {
    notConfigured (BV5ei) and fromHelm (Rwnu3) still use the pink chip--soft
    pill via color="danger"/"default" and need no override here. */
 [data-slot="chip"][data-type="overridden"] {
-  background-color: transparent;
+  background-color: transparent !important;
   border: 1px solid var(--border);
   color: var(--muted);
 }
