@@ -1,0 +1,160 @@
+{
+  "type": "frame",
+  "id": "XR0f9",
+  "x": 36500,
+  "y": -7988,
+  "name": "settings-danger",
+  "theme": {
+    "semantic": "dark"
+  },
+  "clip": true,
+  "width": 1440,
+  "height": 900,
+  "fill": "$background/background",
+  "children": [
+    {
+      "id": "BW0QU",
+      "type": "ref",
+      "ref": "kKFX9",
+      "height": "fill_container",
+      "descendants": {
+        "iTbd8": {
+          "fill": "#00000000"
+        },
+        "iTbd8/ghUsw": {
+          "fill": "$foreground/foreground"
+        },
+        "iTbd8/bpSQ7": {
+          "fill": "$foreground/foreground"
+        },
+        "i8Z1B": {
+          "fill": "$accent/soft"
+        },
+        "i8Z1B/Sr2Q5": {
+          "fill": "$accent/soft-foreground"
+        },
+        "i8Z1B/Ra9NK": {
+          "fill": "$accent/soft-foreground"
+        }
+      }
+    },
+    {
+      "type": "frame",
+      "id": "xpoec",
+      "name": "Main",
+      "width": "fill_container",
+      "height": "fill_container",
+      "fill": "$background/background",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "V9Edp",
+          "type": "ref",
+          "ref": "gu5WY",
+          "width": "fill_container",
+          "descendants": {
+            "Gl7AY": {
+              "content": "mc-survival"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "ZPWSX",
+          "name": "Body",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$background/background",
+          "layout": "vertical",
+          "gap": 24,
+          "padding": 24,
+          "children": [
+            {
+              "id": "g7Xkt",
+              "type": "ref",
+              "ref": "S4k0x",
+              "name": "Detail Header",
+              "width": "fill_container"
+            },
+            {
+              "id": "mQyth",
+              "type": "ref",
+              "ref": "I9kvlZ",
+              "name": "Tabs Bar",
+              "width": "fill_container",
+              "padding": [
+                0,
+                0,
+                0,
+                24
+              ],
+              "descendants": {
+                "Wp6q1": {
+                  "fill": "#00000000"
+                },
+                "Wp6q1/YUR8N": {
+                  "fill": "$muted"
+                },
+                "Y4QES": {
+                  "fill": "$segment"
+                },
+                "Y4QES/VcxMI": {
+                  "fill": "$foreground/segment"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "X7JocH",
+              "name": "Settings Content",
+              "width": "fill_container",
+              "height": "fill_container",
+              "children": [
+                {
+                  "id": "XSkUr",
+                  "type": "ref",
+                  "ref": "EV8mp",
+                  "name": "Settings Sub Nav",
+                  "width": 224,
+                  "height": "fill_container",
+                  "descendants": {
+                    "axMXL": {
+                      "fill": "#00000000"
+                    },
+                    "axMXL/P8u2Kj": {
+                      "fill": "$muted"
+                    },
+                    "axMXL/VQPTx": {
+                      "fill": "$muted"
+                    },
+                    "QrhqW": {
+                      "fill": "#00000000"
+                    },
+                    "WLobW": {
+                      "fill": "$surface/secondary"
+                    },
+                    "WLobW/zpxa4": {
+                      "fill": "$danger"
+                    },
+                    "WLobW/xlVdh": {
+                      "fill": "$danger"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "B1Vt6",
+                  "name": "Settings Panel Wrap",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "children": "..."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

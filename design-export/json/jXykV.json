@@ -1,0 +1,28 @@
+{
+  "type": "frame",
+  "id": "jXykV",
+  "name": "J5pjJ3 states/Alerts",
+  "theme": {
+    "semantic": "dark"
+  },
+  "width": 700,
+  "height": 400,
+  "placeholder": false,
+  "children": [
+    {
+      "id": "NbcRI",
+      "type": "ref",
+      "name": "AlertStatesCaption"
+    },
+    {
+      "id": "q1zaXx",
+      "type": "ref",
+      "name": "Alert Ignored For Exposure Mode"
+    },
+    {
+      "id": "MLrud",
+      "type": "ref",
+      "name": "Alert No Address Manager Configured"
+    }
+  ]
+}
