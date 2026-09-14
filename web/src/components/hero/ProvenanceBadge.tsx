@@ -56,7 +56,7 @@ export function ProvenanceBadge({
       color={config.color}
       size={size}
       data-type={type}
-      className={className}
+      className={className ? `rounded-full ${className}` : "rounded-full"}
     >
       <div className="flex items-center gap-1">
         {config.icon}

@@ -84,7 +84,7 @@ export function ResetPasswordDialog({
 
             <ModalBody className="gap-4">
             <Description>They will need to sign in again with the new password.</Description>
-            <div>
+            <div className="flex flex-col gap-2">
               <Label htmlFor="reset-password" className="text-xs">
                 New password
               </Label>

@@ -48,7 +48,7 @@ export function RemovableGroupChip({
       variant={config.variant}
       size={size}
       data-variant={variant}
-      className={className}
+      className={className ? `rounded-full ${className}` : "rounded-full"}
     >
       <div className="flex items-center gap-1">
         <span className="text-xs font-medium font-mono">{label}</span>

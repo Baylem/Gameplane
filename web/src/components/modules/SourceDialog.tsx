@@ -230,7 +230,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
             </ModalHeading>
           </ModalHeader>
 
-          <ModalBody className="gap-4 max-h-[60vh] overflow-y-auto">
+          <ModalBody className="gap-4 max-h-[80vh] overflow-y-auto">
             <Description className="text-sm text-muted">
               Where the operator discovers and pulls module bundles from.
             </Description>
