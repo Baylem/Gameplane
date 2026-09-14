@@ -94,7 +94,6 @@ export function ResetPasswordDialog({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={`At least ${MIN_PASSWORD_LEN} characters`}
-                className="mt-1"
                 type="password"
                 disabled={isLoading}
               />
