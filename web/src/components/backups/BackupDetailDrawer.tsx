@@ -43,7 +43,7 @@ export function BackupDetailDrawer({ name, onClose, onRestore }: Props) {
     >
       <Drawer.Backdrop>
         <Drawer.Content placement="right" className="w-[440px]">
-          <Drawer.Dialog className="flex flex-col h-full">
+          <Drawer.Dialog className="flex flex-col max-h-full">
             <Drawer.Header className="flex items-start justify-between border-b border-border p-5">
               <div className="space-y-1">
                 <Drawer.Heading className="text-base font-semibold">Backup details</Drawer.Heading>
@@ -73,7 +73,7 @@ export function BackupDetailDrawer({ name, onClose, onRestore }: Props) {
               </div>
             </Drawer.Header>
 
-            <Drawer.Body className="flex-1 space-y-4 overflow-y-auto p-5 text-sm">
+            <Drawer.Body className="space-y-4 overflow-y-auto p-5 text-sm">
               {error && <ErrorBanner err={error} />}
               {backup && (
                 <>
