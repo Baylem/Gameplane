@@ -110,9 +110,11 @@ const SCREEN_BLOCK_THRESHOLD_OVERRIDES = {
 // from the last local run; the gate allows ±5% (SCALE_BAND_FRACTION) around
 // it in either direction, not just growth.
 const SCALE_ALLOWLIST = {
-  BV5ei: 1.0454, // Provenance Badge — Not configured
-  R65Xyx: 1.0305, // Provenance Badge — Overridden
-  Rwnu3: 1.0, // Provenance Badge — From Helm
+  // BV5ei, R65Xyx, Rwnu3 (Provenance Badge chips): entries removed after the
+  // ProvenanceBadge typography/sizing fix — that fix makes rendered size
+  // match the design size (~338x34/230x34/254x34), so the expected scale
+  // factor is at/near 1.0x (the allowlist default) rather than the old,
+  // stale factors recorded against the previous, larger chip size.
   XL5ZU: 1.023, // Removable Group Chip — Orange (admin)
   vStkb: 1.023, // Removable Group Chip — Violet (operator)
   uw0dB: 1.0349, // Removable Group Chip — Secondary (viewer)
