@@ -124,7 +124,7 @@ export function RoleEditorModal({
                         <Checkbox.Content>
                           <span className="font-mono text-sm">{perm.key}</span>
                           {perm.namespaced && (
-                            <span className="text-xs text-muted bg-muted bg-opacity-25 px-1 py-0.5 rounded">
+                            <span className="text-xs text-muted bg-muted/25 px-1 py-0.5 rounded">
                               ns
                             </span>
                           )}
