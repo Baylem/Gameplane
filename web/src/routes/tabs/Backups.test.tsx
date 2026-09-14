@@ -253,7 +253,7 @@ describe("BackupsTab", () => {
     await userEvent.click(await screen.findByText("alpha-2026-05-07"));
     await screen.findByText("Snapshot ID");
     // The close button should be clickable
-    const closeBtn = screen.getByRole("button", { name: /close/i });
+    const closeBtn = screen.getByRole("button", { name: /Dismiss/i });
     await userEvent.click(closeBtn);
     await waitFor(() => {
       expect(screen.queryByText("Snapshot ID")).not.toBeInTheDocument();
