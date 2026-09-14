@@ -110,7 +110,7 @@ export function EditUserDialog({
               <ModalHeading>Edit user</ModalHeading>
             </ModalHeader>
 
-            <ModalBody className="gap-4">
+            <ModalBody className="gap-3">
             {username && <Description>{username}</Description>}
 
             <div>
