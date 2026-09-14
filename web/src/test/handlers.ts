@@ -30,6 +30,7 @@ import {
   screenshotConfigWithOidc,
   screenshotConfigOidcEmptyMappings,
   screenshotConfigEmptyStorageClass,
+  screenshotConfigCurseforgeOnly,
 } from "./screenshotData";
 
 export const INVALID_BPF_FILTER_FIXTURE = "tcp prot 8080 foo";
@@ -1398,6 +1399,8 @@ export function buildScreenshotHandlers() {
           return HttpResponse.json(screenshotConfigOidcEmptyMappings());
         case "empty-storage-class":
           return HttpResponse.json(screenshotConfigEmptyStorageClass());
+        case "registries-curseforge":
+          return HttpResponse.json(screenshotConfigCurseforgeOnly());
         default:
           return HttpResponse.json(data.config());
       }

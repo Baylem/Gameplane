@@ -245,7 +245,12 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     // "Add module source" dialog (Gameplane/Dialog/Add Module Source,
     // (-17205,28535)) — MANIFEST.md mislabeled the node "Gameplane/Backup
     // List Item". This test now captures what the reference actually shows.
-    await page.goto("/modules");
+    // ModuleSourcesPanel is rendered in AdminSettings only when the section
+    // state is 'modules' (default is 'general'), so navigate to /admin,
+    // click the nav button to switch to the Module sources section, then
+    // click the Add source button.
+    await page.goto("/admin");
+    await page.getByRole("button", { name: /^Module sources$/i }).click();
     await page.getByRole("button", { name: /add source/i }).click();
     const dialog = page.getByRole("dialog", { name: /add module source/i });
     await expect(dialog).toBeVisible({ timeout: 10_000 });

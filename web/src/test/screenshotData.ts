@@ -1056,6 +1056,21 @@ export function screenshotConfigEmptyStorageClass(): AllConfig {
   };
 }
 
+// Variant of screenshotConfig() with only CurseForge configured (no Steam).
+// Backs the Wj0V4 (Admin Settings — Mod registries) screenshot, selected via
+// the "e2e_admin_config_variant=registries-curseforge" cookie — see
+// screenshotConfigWithOidc()'s comment on why a cookie, not page.route, is
+// the override mechanism here.
+export function screenshotConfigCurseforgeOnly(): AllConfig {
+  const base = screenshotConfig();
+  return {
+    ...base,
+    modRegistries: {
+      registries: [{ provider: "curseforge" }],
+    },
+  };
+}
+
 // ============================================================================
 // System Log Lines for Admin — System Logs screen (control-plane logs)
 // ============================================================================

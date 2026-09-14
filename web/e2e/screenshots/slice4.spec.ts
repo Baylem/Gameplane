@@ -93,7 +93,7 @@ async function clickSection(page: Page, name: string): Promise<void> {
 // so the rest of the suite is unaffected; must be called before page.goto.
 async function setAdminConfigVariant(
   context: BrowserContext,
-  variant: "oidc" | "oidc-empty-mappings" | "empty-storage-class",
+  variant: "oidc" | "oidc-empty-mappings" | "empty-storage-class" | "registries-curseforge",
 ): Promise<void> {
   await context.addCookies([
     { name: "e2e_admin_config_variant", value: variant, domain: "localhost", path: "/" },
@@ -346,7 +346,8 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     await capture(page, "g5mEpx");
   });
 
-  test("Wj0V4: Admin Settings — Mod registries", async ({ page }) => {
+  test("Wj0V4: Admin Settings — Mod registries", async ({ page, context }) => {
+    await setAdminConfigVariant(context, "registries-curseforge");
     await page.goto("/admin");
     await clickSection(page, "Mod registries");
     await expect(page.getByText("CurseForge")).toBeVisible({ timeout: 10_000 });

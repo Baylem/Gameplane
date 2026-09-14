@@ -591,8 +591,8 @@ function ServerLifecycleActions({
 }
 
 
-// ServerCard is the mobile (< md) stand-in for a table row: name, game,
-// status pill, a row of stat chips, and the same lifecycle actions.
+// ServerCard is the mobile (< md) stand-in for a table row: compact card
+// with name, address, game, status pill, and players/memory chips.
 function ServerCard({
   gs,
   onAct: _onAct,
