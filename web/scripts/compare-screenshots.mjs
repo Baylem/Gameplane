@@ -122,16 +122,13 @@ const SCALE_ALLOWLIST = {
   MaoHP: 1.0714, // Dialog — Reset Password
   NLDDv: 1.0714, // Dialog — Invite User
   t3IY3u: 1.0714, // Dialog — Edit User
-  // DMnEi (Backup List Item): captured as a table-row element crop against a
-  // 1088-wide reference (downscale, scaleFactor < 1). NOTE (design/export
-  // conflict, not a capture-code bug): design-export/screenshots/DMnEi.png
-  // currently shows the "Add module source" dialog rather than the Backup
-  // List Item this id and MANIFEST.md both describe — see slice-3.spec.ts's
-  // DMnEi test comment. Tracked in issue #376; needs a Pencil re-export, not
-  // a change to this allowlist entry.
-  DMnEi: 0.4857,
+  // DMnEi: design frame rebuilt to show full SourceDialog.tsx 9-field layout
+  // (height grew 888->1892px per MANIFEST.md). Tracked in issue #376;
+  // scale factor re-recorded after Pencil export.
+  DMnEi: 1.2143,
   zhLZN: 1.3125, // Backup Detail Drawer
   kIxaJ: 0.6184, // Audit Integrity Banner
+  m1hP1j: 0.562, // Audit Integrity Banner (broken state)
 };
 
 // Allowed deviation from an allowlisted id's recorded scaleFactor, in either
