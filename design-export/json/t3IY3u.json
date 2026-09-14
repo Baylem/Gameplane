@@ -53,7 +53,7 @@
           "gap": 6,
           "children": [
             {"type": "text", "id": "PhLYl", "fill": "$foreground/foreground", "content": "Primary role (cluster-wide)", "fontFamily": "$typography/font-sans", "fontSize": 12, "fontWeight": "500"},
-            {"id": "I2Shpp", "type": "ref", "ref": "AT7ya", "name": "Select", "width": "fill_container", "descendants": {"cFsFk": {"content": "viewer"}}}
+            {"id": "I2Shpp", "type": "ref", "ref": "AT7ya", "name": "Select", "width": "fill_container", "descendants": {"cFsFk": {"content": "operator"}}}
           ]
         },
         {"type": "frame", "id": "uwKhS", "name": "Grants Divider", "width": "fill_container", "height": 1, "fill": "$border/border"},
@@ -66,20 +66,6 @@
           "gap": 8,
           "children": [
             {"type": "text", "id": "VqyMf", "name": "Section Label", "fill": "$muted", "content": "NAMESPACE GRANTS", "fontFamily": "$typography/font-sans", "fontSize": 11, "fontWeight": "600", "letterSpacing": 0.55},
-            {
-              "type": "frame",
-              "id": "n7mZCs",
-              "name": "Grant Row",
-              "width": "fill_container",
-              "gap": 8,
-              "alignItems": "center",
-              "children": [
-                {"type": "text", "id": "NAr7G", "name": "Grant Role", "fill": "$foreground/foreground", "content": "operator", "fontFamily": "$typography/font-mono", "fontSize": 12, "fontWeight": "normal"},
-                {"type": "text", "id": "gfJVo", "name": "Grant In", "fill": "$muted", "content": "in", "fontFamily": "$typography/font-sans", "fontSize": 12, "fontWeight": "normal"},
-                {"type": "text", "id": "QdISf", "name": "Grant Namespace", "fill": "$foreground/foreground", "content": "game-servers", "fontFamily": "$typography/font-mono", "fontSize": 12, "fontWeight": "normal"},
-                {"type": "icon", "id": "e2HAI", "name": "Remove Grant", "width": 14, "height": 14, "icon": "trash-2", "library": "lucide", "fill": "$muted"}
-              ]
-            },
             {
               "type": "frame",
               "id": "afhD0",

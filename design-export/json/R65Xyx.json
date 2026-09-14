@@ -5,13 +5,9 @@
   "y": 26228,
   "name": "Gameplane/Provenance Badge/Overridden",
   "reusable": true,
-  "fill": "#F6DCE7",
+  "fill": "#00000000",
   "cornerRadius": 9999,
-  "stroke": {
-    "type": "color",
-    "color": "$border/border",
-    "enabled": false
-  },
+  "stroke": "$border/border",
   "strokeWidth": 1,
   "strokeAlignment": "inner",
   "gap": 5,
@@ -29,13 +25,13 @@
       "height": 10,
       "icon": "pencil",
       "library": "lucide",
-      "fill": "#9D3A63"
+      "fill": "$foreground/muted"
     },
     {
       "type": "text",
       "id": "QHjWr",
       "name": "pbLabel",
-      "fill": "#9D3A63",
+      "fill": "$foreground/muted",
       "content": "Overridden in dashboard",
       "fontFamily": "$typography/font-mono",
       "fontSize": 10,
