@@ -85,13 +85,15 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
 
   test("sZtDi: Server Detail — Mods", async ({ page }) => {
     // test-server-02 (minecraft-modded) declares capabilities.mods, which is
-    // what makes the Mods tab visible (see screenshotData.ts).
+    // what makes the Mods tab visible (see screenshotData.ts). The test
+    // captures the empty mods state (matching design frame sZtDi which shows
+    // "0 installed" / "No mods installed.").
     await page.goto("/servers/test-server-02");
     await expect(page.getByRole("heading", { name: "test-server-02" })).toBeVisible({
       timeout: 10_000,
     });
     await clickTab(page, "Mods");
-    await expect(page.getByText("Fabric API")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("No mods installed.")).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
     await capture(page, "sZtDi");
   });

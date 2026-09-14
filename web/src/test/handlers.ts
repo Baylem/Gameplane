@@ -31,6 +31,7 @@ import {
   screenshotConfigOidcEmptyMappings,
   screenshotConfigEmptyStorageClass,
   screenshotConfigCurseforgeOnly,
+  screenshotEmptyMods,
 } from "./screenshotData";
 
 export const INVALID_BPF_FILTER_FIXTURE = "tcp prot 8080 foo";
@@ -1209,7 +1210,13 @@ export function buildScreenshotHandlers() {
       HttpResponse.json({ checkedAt: "2026-09-02T15:40:00Z", updates: [] }),
     ),
     http.get("/servers/:name/mods/ids", () => HttpResponse.json([])),
-    http.get("/servers/:name/mods", () => HttpResponse.json(data.installedMods)),
+    http.get("/servers/:name/mods", ({ params }) =>
+      // test-server-02 (template minecraft-modded) is used by the sZtDi
+      // screenshot test to capture the empty mods state (matching design
+      // frame sZtDi which shows "0 installed" / "No mods installed.").
+      // Every other server keeps the pre-existing fixture with 3 Fabric mods.
+      HttpResponse.json(String(params.name) === "test-server-02" ? screenshotEmptyMods : data.installedMods)
+    ),
 
     // Players
     http.get("/servers/:name/players", () =>

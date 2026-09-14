@@ -269,6 +269,7 @@ export const screenshotServers: GameServer[] = [
         wakeWindows: ["0 17 * * *", "0 9 * * 6,0"],
         wakeOnConnect: true,
       },
+      capture: { enabled: true },
     },
     status: {
       phase: "Running",
@@ -1118,6 +1119,8 @@ export const screenshotConsoleOutput: string[] = [];
 // ============================================================================
 // Installed Mods for test-server-02 (Minecraft, Fabric)
 // ============================================================================
+
+export const screenshotEmptyMods: InstalledMod[] = [];
 
 export const screenshotInstalledMods: InstalledMod[] = [
   {
