@@ -90419,8 +90419,8 @@
     {
       "type": "frame",
       "id": "z6RDco",
-      "x": 30240,
-      "y": 10375,
+      "x": 8200,
+      "y": 12200,
       "name": "J5pjJ3 states/Pending",
       "theme": {
         "semantic": "dark"
@@ -90469,8 +90469,8 @@
     {
       "type": "frame",
       "id": "WSAsQ",
-      "x": 30240,
-      "y": 10375,
+      "x": 8740,
+      "y": 12200,
       "name": "J5pjJ3 states/Pool exhausted",
       "theme": {
         "semantic": "dark"
@@ -90519,8 +90519,8 @@
     {
       "type": "frame",
       "id": "UaEjg",
-      "x": 30240,
-      "y": 10375,
+      "x": 9280,
+      "y": 12200,
       "name": "J5pjJ3 states/Pool not found",
       "theme": {
         "semantic": "dark"
@@ -90569,8 +90569,8 @@
     {
       "type": "frame",
       "id": "D76lH",
-      "x": 30240,
-      "y": 10375,
+      "x": 9820,
+      "y": 12200,
       "name": "J5pjJ3 states/Address in use",
       "theme": {
         "semantic": "dark"
@@ -90619,8 +90619,8 @@
     {
       "type": "frame",
       "id": "uCA23",
-      "x": 30740,
-      "y": -7988,
+      "x": 30440,
+      "y": 10375,
       "name": "settings-general",
       "theme": {
         "semantic": "dark"
@@ -91255,8 +91255,8 @@
     {
       "type": "frame",
       "id": "VctzT",
-      "x": 32180,
-      "y": -7988,
+      "x": 32080,
+      "y": 10375,
       "name": "settings-version",
       "theme": {
         "semantic": "dark"
@@ -91573,8 +91573,8 @@
     {
       "type": "frame",
       "id": "iLm38",
-      "x": 33620,
-      "y": -7988,
+      "x": 33720,
+      "y": 10375,
       "name": "settings-envvars",
       "theme": {
         "semantic": "dark"
@@ -91829,8 +91829,8 @@
     {
       "type": "frame",
       "id": "QpEvu",
-      "x": 35060,
-      "y": -7988,
+      "x": 35360,
+      "y": 10375,
       "name": "settings-access",
       "theme": {
         "semantic": "dark"
@@ -92173,8 +92173,8 @@
     {
       "type": "frame",
       "id": "XR0f9",
-      "x": 36500,
-      "y": -7988,
+      "x": 37000,
+      "y": 10375,
       "name": "settings-danger",
       "theme": {
         "semantic": "dark"
@@ -92543,13 +92543,13 @@
     {
       "type": "frame",
       "id": "IyMFM",
-      "x": 30740,
-      "y": 10375,
+      "x": 10360,
+      "y": 12200,
       "name": "J5pjJ3 states/Tunnel enabled",
       "theme": {
         "semantic": "dark"
       },
-      "width": "fit_content(0)",
+      "width": 500,
       "fill": "$surface/surface",
       "layout": "vertical",
       "gap": 16,
@@ -92892,14 +92892,17 @@
     {
       "type": "frame",
       "id": "jXykV",
-      "x": 0,
-      "y": 0,
+      "x": 10900,
+      "y": 12200,
       "name": "J5pjJ3 states/Alerts",
       "theme": {
         "semantic": "dark"
       },
       "width": 700,
-      "height": 400,
+      "fill": "$surface/surface",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 20,
       "children": [
         {
           "type": "text",
