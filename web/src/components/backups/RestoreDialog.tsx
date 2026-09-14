@@ -18,8 +18,9 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
+  Alert,
 } from "@heroui/react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, AlertCircle } from "lucide-react";
 import { Restores, Servers } from "@/lib/endpoints";
 import { errorText } from "@/lib/errors";
 import type { Backup } from "@/types";
@@ -172,10 +173,15 @@ export function RestoreDialog({ backup, defaultServer, onClose }: Props) {
                   on the original server changes.
                 </div>
               ) : (
-                <div className="rounded-md border border-danger/60 bg-danger/10 p-3 text-xs text-danger">
-                  This will overwrite all data on the target server. Players will
-                  be disconnected during the restore.
-                </div>
+                <Alert status="danger" className="text-xs">
+                  <div className="flex gap-2">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    <span>
+                      This will overwrite all data on the target server. Players will
+                      be disconnected during the restore.
+                    </span>
+                  </div>
+                </Alert>
               )}
 
               {create.isError && (

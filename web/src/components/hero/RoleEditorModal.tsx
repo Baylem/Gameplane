@@ -109,7 +109,7 @@ export function RoleEditorModal({
               />
             </div>
 
-            <div className="border border-border rounded-md p-3 max-h-72 overflow-y-auto space-y-4">
+            <div className="border border-border rounded-md p-3 h-72 overflow-y-auto space-y-4">
               {groups.map((group) => (
                 <div key={group.resource} className="space-y-2">
                   <div className="text-xs font-semibold text-muted uppercase tracking-wider">

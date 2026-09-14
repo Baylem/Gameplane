@@ -17,18 +17,26 @@ export interface ProvenanceBadgeProps {
 const provenanceConfig: Record<ProvenanceType, {
   icon: React.ReactNode;
   label: string;
+  variant: "soft";
+  color: "default" | "danger" | "warning" | "success";
 }> = {
   overridden: {
     icon: <Edit2 className="h-3 w-3" />,
     label: "Overridden in dashboard",
+    variant: "soft",
+    color: "warning",
   },
   fromHelm: {
     icon: <Package className="h-3 w-3" />,
     label: "From Helm values",
+    variant: "soft",
+    color: "default",
   },
   notConfigured: {
     icon: <Minus className="h-3 w-3" />,
     label: "Not configured",
+    variant: "soft",
+    color: "danger",
   },
 };
 
@@ -41,8 +49,8 @@ export function ProvenanceBadge({
 
   return (
     <Chip
-      variant="secondary"
-      color="default"
+      variant={config.variant}
+      color={config.color}
       size={size}
       data-type={type}
       className={className}

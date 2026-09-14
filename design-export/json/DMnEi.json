@@ -92,7 +92,7 @@
               "width": "fill_container",
               "descendants": {
                 "cFsFk": {
-                  "content": "oci"
+                  "content": "OCI registry"
                 }
               }
             }

@@ -291,6 +291,13 @@ input:-webkit-autofill:focus {
   color: var(--accent-foreground) !important;
 }
 
+/* Provenance badge variants (Rwnu3, BV5ei, R65Xyx): icon and label foreground
+   color per design (#9D3A63 mauve/pink). Targets all provenance badge chips via
+   the data-type attribute (overridden, fromHelm, notConfigured). */
+[data-slot="chip"][data-type] {
+  color: #9D3A63 !important;
+}
+
 /* Meter/Progress fill rounded radius */
 .rounded-full > .h-full {
   border-radius: 999px;

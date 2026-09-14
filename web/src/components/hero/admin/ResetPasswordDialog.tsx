@@ -105,7 +105,7 @@ export function ResetPasswordDialog({
           </ModalBody>
 
           <ModalFooter className="flex items-center justify-end gap-2">
-            <Button variant="secondary" size="sm" onPress={handleClose} isDisabled={isLoading}>
+            <Button variant="ghost" size="sm" onPress={handleClose} isDisabled={isLoading}>
               Cancel
             </Button>
             <Button

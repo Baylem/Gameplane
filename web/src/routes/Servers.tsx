@@ -169,15 +169,17 @@ export function ServersPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeader
-        title="Servers"
-        subtitle="Manage game server workloads across your cluster."
-        actions={
-          <Link to="/servers/new" className={cn(buttonVariants({ variant: "primary" }), "rounded-full")}>
-            <Plus className="h-4 w-4" /> Create server
-          </Link>
-        }
-      />
+      {!isMobile && (
+        <PageHeader
+          title="Servers"
+          subtitle="Manage game server workloads across your cluster."
+          actions={
+            <Link to="/servers/new" className={cn(buttonVariants({ variant: "primary" }), "rounded-full")}>
+              <Plus className="h-4 w-4" /> Create server
+            </Link>
+          }
+        />
+      )}
 
       {!isMobile && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -219,41 +221,80 @@ export function ServersPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Tabs
-          selectedKey={filter}
-          onSelectionChange={(key) => setFilter(key as FilterKey)}
-          variant="secondary"
-        >
-          <Tabs.List aria-label="Server status filter" className="servers-status-filter">
-            <Tab id="all">
-              <span className="inline-flex items-center gap-1.5">
-                All
-                <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
-                  {servers.length}
+      {!isMobile && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Tabs
+            selectedKey={filter}
+            onSelectionChange={(key) => setFilter(key as FilterKey)}
+            variant="secondary"
+          >
+            <Tabs.List aria-label="Server status filter" className="servers-status-filter">
+              <Tab id="all">
+                <span className="inline-flex items-center gap-1.5">
+                  All
+                  <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
+                    {servers.length}
+                  </span>
                 </span>
-              </span>
-            </Tab>
-            <Tab id="running">
-              <span className="inline-flex items-center gap-1.5">
-                Running
-                <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
-                  {counts.running}
+              </Tab>
+              <Tab id="running">
+                <span className="inline-flex items-center gap-1.5">
+                  Running
+                  <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
+                    {counts.running}
+                  </span>
                 </span>
-              </span>
-            </Tab>
-            <Tab id="stopped">
-              <span className="inline-flex items-center gap-1.5">
-                Stopped
-                <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
-                  {counts.stopped}
+              </Tab>
+              <Tab id="stopped">
+                <span className="inline-flex items-center gap-1.5">
+                  Stopped
+                  <span className="servers-status-filter__count rounded-[4px] bg-foreground/10 px-1.5 py-0.5 text-xs leading-none">
+                    {counts.stopped}
+                  </span>
                 </span>
-              </span>
-            </Tab>
-          </Tabs.List>
-        </Tabs>
-        <div className="ml-auto flex items-center gap-2">
-          <div className="relative w-64">
+              </Tab>
+            </Tabs.List>
+          </Tabs>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="relative w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/60" />
+              <Input
+                placeholder="Search servers…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full pl-9"
+                aria-label="Search servers"
+              />
+            </div>
+            <FilterPopover
+              games={distinctGames}
+              selectedGames={draftGames}
+              onToggleGame={handleToggleDraftGame}
+              namespaces={distinctNamespaces}
+              selectedNamespaces={draftNamespaces}
+              onToggleNamespace={handleToggleDraftNamespace}
+              onApply={handleApplyFilter}
+              onClear={handleClearFilter}
+              isOpen={isFilterOpen}
+              onOpenChange={handleOpenFilterChange}
+            >
+              <div className="inline-flex items-center gap-2 rounded-[6px] px-3 py-2 text-sm font-medium border border-default-300 bg-default-100 hover:bg-default-200 cursor-pointer transition-colors">
+                <Filter className="h-4 w-4" />
+                Filter
+                {appliedFacetCount > 0 && (
+                  <Chip size="sm" variant="soft" className="ml-1.5">
+                    {appliedFacetCount}
+                  </Chip>
+                )}
+              </div>
+            </FilterPopover>
+          </div>
+        </div>
+      )}
+
+      {isMobile && (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/60" />
             <Input
               placeholder="Search servers…"
@@ -275,18 +316,17 @@ export function ServersPage() {
             isOpen={isFilterOpen}
             onOpenChange={handleOpenFilterChange}
           >
-            <div className="inline-flex items-center gap-2 rounded-[6px] px-3 py-2 text-sm font-medium border border-default-300 bg-default-100 hover:bg-default-200 cursor-pointer transition-colors">
+            <Button
+              isIconOnly
+              variant="ghost"
+              className="w-10 h-10"
+              aria-label="Filter"
+            >
               <Filter className="h-4 w-4" />
-              Filter
-              {appliedFacetCount > 0 && (
-                <Chip size="sm" variant="soft" className="ml-1.5">
-                  {appliedFacetCount}
-                </Chip>
-              )}
-            </div>
+            </Button>
           </FilterPopover>
         </div>
-      </div>
+      )}
 
       {isMobile ? (
         <div className="space-y-3">

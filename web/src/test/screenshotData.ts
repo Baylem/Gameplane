@@ -1288,6 +1288,69 @@ export const screenshotRegistryProjects: RegistryProject[] = [
   },
 ];
 
+export const screenshotModrinthProjects: RegistryProject[] = [
+  {
+    id: "fabulously-optimized",
+    slug: "fabulously-optimized",
+    title: "Fabulously Optimized",
+    description: "Fast, beautiful, and convenient modpack for Minecraft Java Edition",
+    author: "Iskallia",
+    downloads: 18_500_000,
+    pageUrl: "https://modrinth.com/modpack/fabulously-optimized",
+    provider: "modrinth",
+  },
+  {
+    id: "vanilla-perfected",
+    slug: "vanilla-perfected",
+    title: "Vanilla Perfected",
+    description: "Enhanced vanilla experience with quality-of-life improvements",
+    author: "Kadzaitl",
+    downloads: 12_300_000,
+    pageUrl: "https://modrinth.com/modpack/vanilla-perfected",
+    provider: "modrinth",
+  },
+  {
+    id: "optifabric",
+    slug: "optifabric",
+    title: "OptiFabric",
+    description: "Use OptiFine shaders with Fabric mods",
+    author: "modmuss50",
+    downloads: 9_800_000,
+    pageUrl: "https://modrinth.com/modpack/optifabric",
+    provider: "modrinth",
+  },
+  {
+    id: "remarkably-optimized",
+    slug: "remarkably-optimized",
+    title: "Remarkably Optimized",
+    description: "Optimized performance with essential mods",
+    author: "KidneySteal",
+    downloads: 7_600_000,
+    pageUrl: "https://modrinth.com/modpack/remarkably-optimized",
+    provider: "modrinth",
+  },
+  {
+    id: "fps-modpack",
+    slug: "fps-modpack",
+    title: "FPS Modpack",
+    description: "Maximize performance with optimization mods",
+    author: "Sebi",
+    downloads: 6_200_000,
+    pageUrl: "https://modrinth.com/modpack/fps-modpack",
+    provider: "modrinth",
+  },
+  {
+    id: "fresh-smooth",
+    slug: "fresh-smooth",
+    title: "Fresh & Smooth",
+    description: "Balanced modpack for smooth gameplay",
+    author: "JustAzurez",
+    downloads: 5_100_000,
+    pageUrl: "https://modrinth.com/modpack/fresh-smooth",
+    provider: "modrinth",
+  },
+];
+
 // ============================================================================
 // Helper for tests/e2e to conditionally swap handler sets
 // ============================================================================

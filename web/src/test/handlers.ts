@@ -32,6 +32,7 @@ import {
   screenshotConfigEmptyStorageClass,
   screenshotConfigCurseforgeOnly,
   screenshotEmptyMods,
+  screenshotModrinthProjects,
 } from "./screenshotData";
 
 export const INVALID_BPF_FILTER_FIXTURE = "tcp prot 8080 foo";
@@ -1191,18 +1192,28 @@ export function buildScreenshotHandlers() {
     http.get("/servers/:name/mods/registry/providers", ({ params }) =>
       // test-server-09 (template minecraft-modded) declares two registries
       // — modrinth + hangar — so the Mods browse screen (design GayoL) can
-      // capture the provider tabs and category pills (specs/014h). Every
-      // other server keeps the pre-existing single-provider default.
+      // capture the provider tabs and category pills (specs/014h).
+      // test-server-02 (template minecraft-modded) uses modrinth for the
+      // mods-tab screenshot test (design tY6RD).
+      // Every other server keeps the pre-existing single-provider default.
       HttpResponse.json(
         String(params.name) === "test-server-09"
           ? [
               { provider: "modrinth", available: true, modpacks: true },
               { provider: "hangar", available: true, modpacks: false },
             ]
-          : [{ provider: "thunderstore", available: true, modpacks: true }],
+          : String(params.name) === "test-server-02"
+            ? [{ provider: "modrinth", available: true, modpacks: true }]
+            : [{ provider: "thunderstore", available: true, modpacks: true }],
       ),
     ),
-    http.get("/servers/:name/mods/registry/search", () => HttpResponse.json(data.registryProjects)),
+    http.get("/servers/:name/mods/registry/search", ({ params }) =>
+      HttpResponse.json(
+        String(params.name) === "test-server-02"
+          ? screenshotModrinthProjects
+          : data.registryProjects,
+      ),
+    ),
     http.get("/servers/:name/mods/registry/projects/:project/versions", () =>
       HttpResponse.json([]),
     ),

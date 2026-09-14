@@ -61,15 +61,6 @@ export function BackupDetailDrawer({ name, onClose, onRestore }: Props) {
                   <RotateCcw className="h-4 w-4" />
                   Restore
                 </Button>
-                <Button
-                  isIconOnly
-                  variant="ghost"
-                  size="sm"
-                  onPress={onClose}
-                  aria-label="Close backup details"
-                >
-                  ✕
-                </Button>
               </div>
             </Drawer.Header>
 
