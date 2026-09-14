@@ -647,7 +647,7 @@ function ServerCard({
   const address = endpoint ? `${endpoint.host}:${endpoint.port}` : "—";
 
   return (
-    <Card className="border border-border bg-surface p-4">
+    <Card className="border border-border bg-surface p-3.5">
       {/* Row 1: Icon + Name + Address on left, Status pill on right */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
@@ -685,7 +685,7 @@ function ServerCard({
 
 function StatChip({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md bg-default/40 px-2 py-1 text-[11px] text-foreground/60">
+    <span className="inline-flex items-center gap-2 rounded-md bg-default/40 px-2 py-1.5 text-[12px] text-foreground/60">
       {icon}
       {label}
       <span className="font-mono text-foreground">{value}</span>
