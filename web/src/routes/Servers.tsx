@@ -297,7 +297,7 @@ export function ServersPage() {
             <Card className="p-12 text-center text-sm text-foreground/60">No servers match.</Card>
           )}
           {visible.map((gs) => (
-            <ServerCard key={gs.metadata.name} gs={gs} onAct={act.mutate} />
+            <ServerCard key={`${gs.metadata.namespace ?? "gameplane-games"}/${gs.metadata.name}`} gs={gs} onAct={act.mutate} />
           ))}
 
           {visibleShared.length > 0 && (
@@ -339,7 +339,7 @@ export function ServersPage() {
                   )}
                 >
               {visible.map((gs) => (
-                <Table.Row key={gs.metadata.name}>
+                <Table.Row key={`${gs.metadata.namespace ?? "gameplane-games"}/${gs.metadata.name}`}>
                   <Table.Cell>
                     <div className="flex items-center gap-3">
                       <GameIcon game={gs.spec.templateRef.name} size="sm" />

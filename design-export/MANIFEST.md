@@ -1316,3 +1316,32 @@ Pencil fix-wave task: consolidate three alert state frames (AlertStatesCaption, 
 - **New objects created:** 1 new frame id (`jXykV`); no new component definitions.
 - **Modifications to existing objects:** Theme {semantic:"dark"} applied to jXykV and five existing state frames (IyMFM, D76lH, UaEjg, WSAsQ, z6RDco).
 - **No git add/commit performed** — per the design-export re-export workflow. Pencil does not auto-save; maintainer save pending.
+
+## Incremental export 2026-09-14 — DMnEi rebuilt to match SourceDialog.tsx
+
+`DMnEi` (Gameplane/Dialog/Add Module Source) was a stale/incomplete instance of the `x3beP` (Gameplane/Modal) base component: only 3 of the 9 OCI-default-state fields from `web/src/components/modules/SourceDialog.tsx` were present (Name, Type, Registry URL), the subtitle text didn't match the real component's subtitle, and the primary button fell through to the base modal's default label ("Run snapshot") instead of overriding it to "Add source".
+
+**Fixes applied to the `DMnEi` ref instance's descendant overrides:**
+
+| Override | Before | After |
+|---|---|---|
+| `qzcst` (subtitle) | "Equivalent to applying a ModuleSource resource directly." | "Where the operator discovers and pulls module bundles from." |
+| `TZ7Ef` (primary button) | not overridden (fell through to base "Run snapshot") | "Add source" |
+| `Nht52`/`e8g6GR` (mBody) | 3 field groups (Name, Type, Registry URL) | 9 field groups — added Modules, Pull secret, "Allow plain HTTP" checkbox row, Signature verification (Select, default "None"), Allow list, Refresh interval, matching SourceDialog.tsx's OCI-default render order |
+
+**New field group node ids** (each follows the existing `Dy7HC`/`johlb`/`u6it9` pattern — vertical frame, gap 6, label text `$muted`/12px/normal + `D0cDM`/`AT7ya` input/select ref + optional helper text `$muted`/11px/normal):
+
+- `CVnIW` Modules field (label `ShBKa`, input `M73AW`, helper `vtZ6U`)
+- `a59Ig1` Pull secret field (label `Hmycd`, input `jsvc6`, helper `QyoqV`)
+- `xUVD0` Allow plain HTTP row (horizontal, gap 8, alignItems center: checkbox `aH0oy` ref `aOvvm` unchecked-state override matching the `CqaSq` Role Editor Modal checkbox pattern, + label text `q2v8i6`)
+- `F1DqtC` Signature verification field (label `zbyve`, select `D85k8m` ref `AT7ya` default "None", helper `B3rm7`)
+- `Y9caAc` Allow list field (label `nHT3d`, input `GC69u`, helper `pE6ps`)
+- `FYTUs` Refresh interval field (label `QaZnI`, input `nWpyS`, helper `x4FVfL`)
+
+Conditional verify-mode fields (Public key secret / OIDC issuer / Certificate identity) were intentionally NOT added — the design's default state has Signature verification = "None", so those fields are not rendered by the real component in this state either.
+
+**Export method & validation:**
+
+- **JSON:** `Get("DMnEi", {depth: 15})` via `mcp__pencil__execute`, zero `"..."` elision markers, passes `python3 -m json.tool`. Written to `design-export/json/DMnEi.json`.
+- **Screenshot:** `export_nodes` PNG export at 2× scale to `design-export/screenshots/DMnEi.png`, non-empty valid PNG, visually verified against the field list.
+- **No git add/commit performed** — per the design-export re-export workflow. Pencil does not auto-save; maintainer save pending in the GUI before this change can be committed.

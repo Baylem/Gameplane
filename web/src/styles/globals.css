@@ -21,6 +21,8 @@
   --default-foreground: oklch(21.67% 0.0502 347.62); /* #2A0F1E */
   --success: oklch(71.98% 0.1918 149.52); /* #21C45D */
   --warning: oklch(77.04% 0.1646 70.66); /* #F59F0A */
+  --warning-soft: oklch(96% 0.04 70.66); /* light warning-tinted background, mirrors --accent-soft's light-mode pattern */
+  --warning-soft-foreground: oklch(45% 0.14 70.66); /* mirrors --accent-soft-foreground's darker-foreground-on-tint pattern */
   --danger: oklch(57.85% 0.2138 27.17); /* #DC2828 */
   --muted: oklch(47.33% 0.0441 343.67); /* #6E5262 */
   --border: oklch(86.09% 0.0556 350.54); /* #EFC3D6 */
@@ -54,6 +56,8 @@
   --default-foreground: oklch(93.91% 0.0102 311.17); /* #EDE9F0 */
   --success: oklch(71.98% 0.1918 149.52); /* #21C45D */
   --warning: oklch(77.04% 0.1646 70.66); /* #F59F0A */
+  --warning-soft: oklch(26% 0.05 70.66); /* mirrors --danger-soft's dark-tint pattern (line 58) */
+  --warning-soft-foreground: oklch(80% 0.14 70.66); /* mirrors --danger-soft-foreground's pattern (line 59) */
   --danger: oklch(59.64% 0.2093 17.36); /* #E0304F */
   --danger-soft: oklch(22.85% 0.0444 11.86); /* #2E1317 */
   --danger-soft-foreground: oklch(71.06% 0.1661 22.22); /* #F87171 */
@@ -105,6 +109,8 @@
   --color-primary-fg: var(--accent-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
   --color-danger: var(--danger);
   --color-violet: hsl(258 90% 66%); /* operator role chips */
 

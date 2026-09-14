@@ -20,7 +20,7 @@ an arm image is also built but not tested.
 [Install docs on github](https://github.com/ValgulNecron/Gameplane#install-on-a-cluster) or 
 ```sh
 helm upgrade --install gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
-  --version 0.2.0-beta.7 \
+  --version 0.2.0-beta.8 \
   --namespace gameplane-system --create-namespace \
   --set ingress.host=gameplane.your-domain.test
   # --set ingress.tls=false # if you do not want tls, it require a cert manager annotation or a pre created tls cert

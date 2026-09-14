@@ -56,10 +56,18 @@ test.describe("error handling", () => {
     await page.waitForLoadState("domcontentloaded");
 
     // The page must render *something* — heading or any visible text —
-    // not a blank page. This is a coarse but high-signal check; a
-    // detailed error-card assertion lives in the Cluster component test.
-    const visibleText = await page.locator("body").innerText();
-    expect(visibleText.length).toBeGreaterThan(0);
+    // not a blank page, and it must be the error UI, not still the loading
+    // skeleton. Poll instead of a single read to avoid a race against the
+    // SPA's async data-fetch-then-render cycle. A detailed error-card
+    // assertion lives in the Cluster component test.
+    await expect.poll(
+      async () => {
+        const skeleton = await page.locator('[role="status"][aria-label="Loading"]').count();
+        if (skeleton > 0) return "";
+        return page.locator("body").innerText();
+      },
+      { timeout: 10_000 },
+    ).not.toBe("");
   });
 
   test("pre-auth /login does not call /users or /cluster", async ({ page }) => {

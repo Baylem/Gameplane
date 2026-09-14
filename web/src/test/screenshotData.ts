@@ -378,7 +378,14 @@ export const screenshotServers: GameServer[] = [
   }),
   makeServer({
     metadata: {
-      name: "mc-survival",
+      // Distinct from the "mc-survival" entry above: this fixture
+      // pre-dates that rename (commit 07ed2333) and was itself the
+      // "primary mock server" the rename was targeting under its old
+      // name. Renaming both to "mc-survival" duplicated the fixture
+      // (same namespace/name), which double-rendered its row/card and
+      // its <Link to="/servers/$name"> in the Servers list — restore
+      // the pre-rename name here to keep the fixture set unique.
+      name: "test-server-01",
       namespace: "gameplane-games",
       annotations: { "gameplane.local/node": "kubelab-control" },
     },
@@ -1109,43 +1116,43 @@ export const screenshotLogLines = [
 export const screenshotConsoleOutput: string[] = [];
 
 // ============================================================================
-// Installed Mods for test-server-02 (Valheim)
+// Installed Mods for test-server-02 (Minecraft, Fabric)
 // ============================================================================
 
 export const screenshotInstalledMods: InstalledMod[] = [
   {
-    name: "ValheimPlus.dll",
+    name: "fabric-api-0.100.8+1.21.jar",
     size: 1_482_240,
     modTime: "2026-08-30T19:12:00Z",
     meta: {
-      provider: "thunderstore",
-      projectId: "Grantapher-ValheimPlus",
-      projectName: "ValheimPlus",
-      versionNumber: "0.9.16.1",
+      provider: "modrinth",
+      projectId: "P7dR8mSH",
+      projectName: "Fabric API",
+      versionNumber: "0.100.8+1.21",
       installedAt: "2026-08-30T19:12:00Z",
     },
   },
   {
-    name: "EquipmentAndQuickSlots.dll",
+    name: "sodium-fabric-0.5.11+mc1.21.jar",
     size: 212_992,
     modTime: "2026-08-30T19:14:00Z",
     meta: {
-      provider: "thunderstore",
-      projectId: "RandyKnapp-EquipmentAndQuickSlots",
-      projectName: "EquipmentAndQuickSlots",
-      versionNumber: "2.1.15",
+      provider: "modrinth",
+      projectId: "AANobbMI",
+      projectName: "Sodium",
+      versionNumber: "0.5.11+mc1.21",
       installedAt: "2026-08-30T19:14:00Z",
     },
   },
   {
-    name: "PlantEverything.dll",
+    name: "lithium-fabric-0.13.0+mc1.21.jar",
     size: 356_352,
     modTime: "2026-09-01T08:05:00Z",
     meta: {
-      provider: "thunderstore",
-      projectId: "Advize-PlantEverything",
-      projectName: "PlantEverything",
-      versionNumber: "1.18.3",
+      provider: "modrinth",
+      projectId: "gvQqBUqZ",
+      projectName: "Lithium",
+      versionNumber: "0.13.0+mc1.21",
       installedAt: "2026-09-01T08:05:00Z",
     },
   },
