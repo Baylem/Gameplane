@@ -310,10 +310,17 @@ input:-webkit-autofill:focus {
    design — transparent fill, border stroke, muted icon/label — replacing the
    earlier shared pink treatment. Scoped to this one badge type only:
    notConfigured (BV5ei) and fromHelm (Rwnu3) still use the pink chip--soft
-   pill via color="danger"/"default" and need no override here. */
+   pill via color="danger"/"default" and need no override here.
+   Uses outline instead of border: the design's stroke is inner-aligned
+   (doesn't grow the shape's bounding box — see design-export/json/R65Xyx.json
+   "strokeAlignment":"inner"), and CSS outline never participates in layout
+   sizing regardless of offset, matching that exactly. A real `border` here
+   was pushing the rendered chip ~1.2% wider than the reference, forcing the
+   visual-diff scale-normalization step to resample (and blur) every glyph
+   edge, which is what was driving R65Xyx's diff score, not fill color. */
 [data-slot="chip"][data-type="overridden"] {
-  background-color: transparent !important;
-  border: 1px solid var(--border);
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
   color: var(--muted);
 }
 
