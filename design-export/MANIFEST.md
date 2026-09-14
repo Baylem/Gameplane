@@ -1345,3 +1345,39 @@ Conditional verify-mode fields (Public key secret / OIDC issuer / Certificate id
 - **JSON:** `Get("DMnEi", {depth: 15})` via `mcp__pencil__execute`, zero `"..."` elision markers, passes `python3 -m json.tool`. Written to `design-export/json/DMnEi.json`.
 - **Screenshot:** `export_nodes` PNG export at 2× scale to `design-export/screenshots/DMnEi.png`, non-empty valid PNG, visually verified against the field list.
 - **No git add/commit performed** — per the design-export re-export workflow. Pencil does not auto-save; maintainer save pending in the GUI before this change can be committed.
+
+## Incremental export 2026-09-15 — raw hardcoded colors converted to semantic tokens
+
+Audited `design.pen` for nodes using raw hex fill/stroke values that duplicate an existing semantic color token, and converted them in place (`Update()` on the existing node id, never `Replace` — no node ids changed). Conversions verified live against the document's `GetVariables()` table before applying; anything without a confirmed matching token was left as raw hex and reported, not guessed.
+
+**Nodes fixed (raw hex → token, id unchanged):**
+
+| Screen/component | Node(s) | Before | After |
+|---|---|---|---|
+| `BV5ei` (Provenance Badge/Not configured) | `BV5ei` (frame) | `#000000` | `$default/default` |
+| `DxKOh` (Screen/Audit Log) | `PPUAe` (icon), `KaCWO` (text) | `#000000` | `$success/success` |
+| `EV8mp` (Server Settings Sub Nav, shared component) | `zpxa4` (icon), `xlVdh` (text) | `#000000` | `$danger/danger` |
+| `g5mEpx` (Admin Settings — Module sources) | `jrknY` (icon), `K951O` (text) | `#FFFFFF` | `$accent/foreground` |
+| `gu5WY` (Top Bar, shared component) | `ZGIQD` "healthDot" (ellipse) | `#000000` | `$success/success` |
+| `hLB9Z` (Server Detail — Settings) | `kHjho` (icon), `W7e6Fa` (text) | `#DC2828` | `$danger/danger` |
+| `n6Xlo` (Admin Settings — Notifications) | `gRUeD` (frame), `BKLGz` (text) | `#F59F0A26` / `#000000` | `$warning/soft` / `$warning/soft-foreground` |
+| `pssCT` (Server Detail — Backups) | `R3Wo5` (icon) | `#F59F0A` | `$warning/warning` |
+| `tY6RD` (Server Detail — Modpacks) | `k8f19w` (text) | `#FFFFFF` | `$accent/foreground` |
+| `zFiOW` (Screen/Servers, Light) | 8 avatar frames, 6 "Running" pill frames + text, 2 "Failed" pill frames + text (16 nodes total) | `#21C45D33`/`#DC262633` (bg), `#000000`/`#DC2626` (text) | `$success/soft`/`$danger/soft` (bg), `$success/soft-foreground`/`$danger/soft-foreground` (text) |
+| `zhLZN` (Backup Detail Drawer) | `HLP2N` (frame), `VzkPp` (text) | `#21C45D33` / `#000000` | `$success/soft` / `$success/soft-foreground` |
+
+**Established soft-pill pattern** (verified working, reusable going forward): a status badge with a semi-transparent tinted background plus plain-color text/icon maps to a token pair — background → `$<category>/soft`, inner text/icon → `$<category>/soft-foreground` (categories: `success`, `danger`, `warning`). A solid dot/icon/text with no surrounding pill maps directly to `$<category>/<category>` (e.g. `$success/success`).
+
+**Left as raw hex — no confirmed token exists, reported rather than guessed:**
+
+- `BV5ei`/`Rwnu3` provenance-badge icon+text (`#9D3A63`, magenta) — no token in the document's variable table matches this hue.
+- The "Asleep" purple family (`#8B5CF6`/`#A78BFA`) on `DWztv`'s `r3Dt0` pill, `F9pUrx`'s Asleep badge (`fdywY`/`z1DZpL`/`ElKBy`), `q31B6w` — no `$focus/soft` + `$focus/soft-foreground` pair exists.
+- `O08uaD`: `ZGIQD` health dot and `QfmSe` "Valid Check" icon (raw black) — plausible `$success/success` candidates, no in-document precedent to confirm.
+- `pssCT`: `dUAkr` icon (`#895AF6`, unmapped violet), `Fuww0` icon (`#000000`, tied to a disabled/empty state — needs a maintainer design call).
+- `tY6RD`: 5 "Cover" avatar placeholder colors (`#8B5CF6`, `#22A559`, `#3B82F6`, `#000000`, `#14B8A6`) — intentional per-item variety, not semantic.
+- `S4k0x` (Server Detail Header, shared component): game-badge color baked in as raw `#5b9a3e33`/`#5b9a3e` — out of scope of this pass, needs its own investigation.
+- `EV8mp` still has other raw colors beyond the danger-zone ones fixed above (`#17171733` subnav background, black icon/text on non-danger-zone nodes) — out of scope of this pass.
+
+**Re-exported nodes:** `BV5ei`, `DxKOh`, `EV8mp`, `g5mEpx`, `gu5WY`, `hLB9Z`, `n6Xlo`, `pssCT`, `tY6RD`, `zFiOW`, `zhLZN` — JSON via `Get(id, {depth: 20})`, each validated to contain its new token value (not just JSON-valid, since a stale fallback would also pass that check); screenshots via `export_nodes` at 2× scale, all non-trivial file sizes.
+
+**Note on the audit process:** many other screens were checked and found to already use semantic tokens, or to have no occurrence of the originally-suspected raw value (a preliminary edit list built from the committed `design-export/` snapshot turned out to be significantly stale against live `design.pen` — all fixes above were verified against live `Get()` calls, not the export, before being applied).
