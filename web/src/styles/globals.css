@@ -110,7 +110,7 @@
 @theme {
   /* Legacy color aliases for backward compatibility with unrebuilt screens */
   --color-background: var(--background);
-  --color-surface: var(--surface);
+  --color-surface: var(--surface-secondary);
   --color-card: var(--surface);
   --color-border: var(--border);
   --color-muted: var(--muted);
