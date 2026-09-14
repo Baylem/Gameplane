@@ -84,14 +84,14 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
   });
 
   test("sZtDi: Server Detail — Mods", async ({ page }) => {
-    // test-server-02 (valheim-default) declares capabilities.mods, which is
+    // test-server-02 (minecraft-modded) declares capabilities.mods, which is
     // what makes the Mods tab visible (see screenshotData.ts).
     await page.goto("/servers/test-server-02");
     await expect(page.getByRole("heading", { name: "test-server-02" })).toBeVisible({
       timeout: 10_000,
     });
     await clickTab(page, "Mods");
-    await expect(page.getByText("ValheimPlus.dll")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Fabric API")).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
     await capture(page, "sZtDi");
   });
