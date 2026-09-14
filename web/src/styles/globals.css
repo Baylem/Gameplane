@@ -29,6 +29,7 @@
   --warning-soft-foreground: oklch(45% 0.14 70.66); /* mirrors --accent-soft-foreground's darker-foreground-on-tint pattern */
   --danger: oklch(57.85% 0.2138 27.17); /* #DC2828 */
   --danger-soft: oklch(96% 0.04 27.17); /* light danger-tinted background, mirrors --warning-soft's light-mode pattern */
+  --danger-soft-foreground: #9D3A63; /* mauve, matches BV5ei design */
   --muted: oklch(47.33% 0.0441 343.67); /* #6E5262 */
   --border: oklch(86.09% 0.0556 350.54); /* #EFC3D6 */
   --separator: oklch(86.09% 0.0556 350.54); /* #EFC3D6 */
