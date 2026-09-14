@@ -97,7 +97,7 @@ export function RoleEditorModal({
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="role-description" className="text-xs">
                 Description
               </Label>
@@ -109,7 +109,7 @@ export function RoleEditorModal({
               />
             </div>
 
-            <div className="border border-border rounded-md p-3 h-72 overflow-y-auto space-y-4">
+            <div className="border border-border rounded-md p-3 h-72 overflow-y-auto space-y-3">
               {groups.map((group) => (
                 <div key={group.resource} className="space-y-2">
                   <div className="text-xs font-semibold text-muted uppercase tracking-wider">
