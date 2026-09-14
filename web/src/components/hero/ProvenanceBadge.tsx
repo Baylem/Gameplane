@@ -17,14 +17,17 @@ export interface ProvenanceBadgeProps {
 const provenanceConfig: Record<ProvenanceType, {
   icon: React.ReactNode;
   label: string;
-  variant: "soft";
+  variant: "soft" | "tertiary";
   color: "default" | "danger" | "warning" | "success";
 }> = {
+  // Neutral/outlined per R65Xyx (no fill, bordered, muted text/icon) —
+  // this design was moved off the pink chip--soft pill; see the scoped
+  // [data-type="overridden"] rule in globals.css for the border/muted color.
   overridden: {
     icon: <Edit2 className="h-3 w-3" />,
     label: "Overridden in dashboard",
-    variant: "soft",
-    color: "warning",
+    variant: "tertiary",
+    color: "default",
   },
   fromHelm: {
     icon: <Package className="h-3 w-3" />,
