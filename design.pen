@@ -76159,6 +76159,12 @@
                       "id": "xXvKl",
                       "name": "Row user-server-test (Asleep)",
                       "width": "fill_container",
+                      "stroke": "$border/border",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "alignItems": "center",
                       "children": [
                         {
@@ -76256,7 +76262,7 @@
                               "type": "frame",
                               "id": "suGdm",
                               "height": 20,
-                              "fill": "#8B5CF633",
+                              "fill": "$color-sleep",
                               "cornerRadius": 4,
                               "padding": [
                                 0,
@@ -76268,7 +76274,7 @@
                                 {
                                   "type": "text",
                                   "id": "Atus3",
-                                  "fill": "#000000",
+                                  "fill": "$color-sleep-foreground",
                                   "content": "Asleep",
                                   "fontFamily": "JetBrains Mono",
                                   "fontSize": 12,
@@ -77441,6 +77447,8 @@
                             {
                               "type": "frame",
                               "id": "JNAZs",
+                              "clip": true,
+                              "width": "fill_container",
                               "layout": "vertical",
                               "gap": 2,
                               "children": [
@@ -85169,7 +85177,7 @@
                           "type": "frame",
                           "id": "r3Dt0",
                           "name": "statusPill",
-                          "fill": "#8B5CF633",
+                          "fill": "$focus/soft",
                           "cornerRadius": "$radius/2xl",
                           "gap": 2,
                           "padding": [
@@ -85182,7 +85190,7 @@
                               "type": "ellipse",
                               "id": "Tp21K",
                               "name": "status dot",
-                              "fill": "$focus",
+                              "fill": "$focus/soft-foreground",
                               "width": 8,
                               "height": 8
                             },
@@ -85190,7 +85198,7 @@
                               "type": "text",
                               "id": "YAzi0",
                               "name": "Label",
-                              "fill": "$focus",
+                              "fill": "$focus/soft-foreground",
                               "content": "Suspended",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 11,
@@ -87566,7 +87574,7 @@
       "reusable": true,
       "width": 224,
       "height": 640,
-      "fill": "#17171733",
+      "fill": "$surface/secondary",
       "stroke": "$border/border",
       "strokeWidth": {
         "right": 1
@@ -88905,7 +88913,7 @@
                       "id": "aCvd8",
                       "name": "UPTIME",
                       "width": "fill_container",
-                      "fill": "#17171799",
+                      "fill": "$surface/secondary",
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
@@ -88942,7 +88950,7 @@
                       "id": "UOaQu",
                       "name": "PODS",
                       "width": "fill_container",
-                      "fill": "#17171799",
+                      "fill": "$surface/secondary",
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
@@ -88979,7 +88987,7 @@
                       "id": "knpek",
                       "name": "CPU",
                       "width": "fill_container",
-                      "fill": "#17171799",
+                      "fill": "$surface/secondary",
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
@@ -89240,7 +89248,7 @@
                       "id": "LqW24",
                       "name": "UPTIME",
                       "width": "fill_container",
-                      "fill": "#17171799",
+                      "fill": "$surface/secondary",
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
@@ -89277,7 +89285,7 @@
                       "id": "GIOXo",
                       "name": "PODS",
                       "width": "fill_container",
-                      "fill": "#17171799",
+                      "fill": "$surface/secondary",
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
@@ -89314,7 +89322,7 @@
                       "id": "kJCoc",
                       "name": "CPU",
                       "width": "fill_container",
-                      "fill": "#17171799",
+                      "fill": "$surface/secondary",
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
@@ -89575,7 +89583,7 @@
                       "id": "yeGhn",
                       "name": "UPTIME",
                       "width": "fill_container",
-                      "fill": "#17171799",
+                      "fill": "$surface/secondary",
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
@@ -89612,7 +89620,7 @@
                       "id": "afpoU",
                       "name": "PODS",
                       "width": "fill_container",
-                      "fill": "#17171799",
+                      "fill": "$surface/secondary",
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
@@ -89649,7 +89657,7 @@
                       "id": "eitmn",
                       "name": "CPU",
                       "width": "fill_container",
-                      "fill": "#17171799",
+                      "fill": "$surface/secondary",
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
@@ -95233,6 +95241,12 @@
           "theme": {
             "semantic": "dark"
           }
+        },
+        {
+          "value": "#E8DEFD",
+          "theme": {
+            "semantic": "light"
+          }
         }
       ]
     },
@@ -95243,6 +95257,12 @@
           "value": "#A78BFA",
           "theme": {
             "semantic": "dark"
+          }
+        },
+        {
+          "value": "#8B5CF6",
+          "theme": {
+            "semantic": "light"
           }
         }
       ]
@@ -96161,6 +96181,40 @@
           "value": "JetBrains Mono",
           "theme": {
             "typography": "default"
+          }
+        }
+      ]
+    },
+    "focus/soft": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#EDE9FE",
+          "theme": {
+            "semantic": "light"
+          }
+        },
+        {
+          "value": "#C4B5FD26",
+          "theme": {
+            "semantic": "dark"
+          }
+        }
+      ]
+    },
+    "focus/soft-foreground": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#6D28D9",
+          "theme": {
+            "semantic": "light"
+          }
+        },
+        {
+          "value": "#C4B5FD",
+          "theme": {
+            "semantic": "dark"
           }
         }
       ]

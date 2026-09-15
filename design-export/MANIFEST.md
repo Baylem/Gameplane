@@ -1381,3 +1381,26 @@ Audited `design.pen` for nodes using raw hex fill/stroke values that duplicate a
 **Re-exported nodes:** `BV5ei`, `DxKOh`, `EV8mp`, `g5mEpx`, `gu5WY`, `hLB9Z`, `n6Xlo`, `pssCT`, `tY6RD`, `zFiOW`, `zhLZN` — JSON via `Get(id, {depth: 20})`, each validated to contain its new token value (not just JSON-valid, since a stale fallback would also pass that check); screenshots via `export_nodes` at 2× scale, all non-trivial file sizes.
 
 **Note on the audit process:** many other screens were checked and found to already use semantic tokens, or to have no occurrence of the originally-suspected raw value (a preliminary edit list built from the committed `design-export/` snapshot turned out to be significantly stale against live `design.pen` — all fixes above were verified against live `Get()` calls, not the export, before being applied).
+
+## Incremental export 2026-09-15 — dark-looking components, sleep/focus soft tokens, zFiOW table fixes
+
+A full per-root read (`Get(id, {depth: 10000})` without a visitor over all 183 top-level nodes; visitor-based whole-document `Get` crashes with `TypeError`) confirmed 253 reusable components, none with a non-empty theme and none nested under a dark-themed ancestor. Components that looked dark on the canvas did so because of raw near-black fills, not theme inheritance.
+
+**Changes (property-level `Update` / merging `SetVariables`, no node ids changed):**
+
+| Node / variable | Change |
+|---|---|
+| `EV8mp` (Server Settings Sub Nav) root fill | `#17171733` → `$surface/secondary` |
+| `U0VCJ` (Node Grid) stat chips `aCvd8`, `UOaQu`, `knpek`, `LqW24`, `GIOXo`, `kJCoc`, `yeGhn`, `afpoU`, `eitmn` | `#17171799` → `$surface/secondary` |
+| `color-sleep` / `color-sleep-foreground` | added `semantic:light` values `#E8DEFD` / `#8B5CF6` (dark values unchanged) |
+| `focus/soft` / `focus/soft-foreground` (new) | light `#EDE9FE` / `#6D28D9`, dark `#C4B5FD26` / `#C4B5FD` (same derivation as the success/warning soft pairs) |
+| `zFiOW` Asleep badge `suGdm` / text `Atus3` | `#8B5CF633` / `#000000` → `$color-sleep` / `$color-sleep-foreground` |
+| `DWztv` Suspended pill `r3Dt0` / dot `Tp21K` / label `YAzi0` | `#8B5CF633` / `$focus` → `$focus/soft` / `$focus/soft-foreground` |
+| `zFiOW` row `xXvKl` | added bottom border matching sibling rows (`$border/border`, bottom 1, inner) |
+| `zFiOW` row `Pl8rn` name cell `JNAZs` | `clip: true`, `width: fill_container` — long name is clipped to one line (schema has no ellipsis property); row height stays 58 |
+
+Dark screens using these (`swxkJ`, `j9W8A`, `tooKB`) were screenshot-checked and are visually unchanged.
+
+**Open:** no dark screen has a Suspended pill yet, so the dark `focus/soft` values are unused. `Get` still throws on some subtrees (e.g. `F9pUrx`'s Servers Table `ucID1`).
+
+**Re-exported nodes:** `EV8mp`, `U0VCJ` (new), `tooKB`, `zFiOW`, `DWztv` — JSON via `Get(id, {depth: 20})` checked for the new token values; PNGs via `export_nodes` at 2×.
