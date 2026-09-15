@@ -1404,3 +1404,15 @@ Dark screens using these (`swxkJ`, `j9W8A`, `tooKB`) were screenshot-checked and
 **Open:** no dark screen has a Suspended pill yet, so the dark `focus/soft` values are unused. `Get` still throws on some subtrees (e.g. `F9pUrx`'s Servers Table `ucID1`).
 
 **Re-exported nodes:** `EV8mp`, `U0VCJ` (new), `tooKB`, `zFiOW`, `DWztv` — JSON via `Get(id, {depth: 20})` checked for the new token values; PNGs via `export_nodes` at 2×.
+
+## Incremental export 2026-09-15 — Build Module screens dark, dark Suspended row, surface-alt axis
+
+| Node / variable | Change |
+|---|---|
+| `IdbiB`, `O5kaV`, `hmPL7` (Build Module steps 1–3) | no theme → `theme: {semantic: "dark"}` |
+| `surface-alt` | theme axis `mode` → `semantic` (same colors, light `#F4EAE7` / dark `#2E2A27`); only used by the 7 Build Module nodes `rS3t7`, `D0ln7`, `hBxn1`, `upFqi`, `g7O8aN`, `Xb76q`, `x6FO5`. Pencil does not keep `mode` and `semantic` entries on one variable. |
+| `tooKB` (Mobile — Servers, dark) | new card `x24fD` "user-server-test (Suspended)" at index 2 of `B2WkH`, content matching `DWztv`'s `SqmOi` (Satisfactory, `$focus/soft` pill); screen height 844 → 954 so all 6 cards fit |
+
+The dark `focus/soft` values are now used (on `tooKB`). The visitor-`Get` crash cause is documented in `docs/design/pencil-visitor-crash-report.md` (ref nodes storing a literal `children` array instead of `descendants`); the data was not changed.
+
+**Re-exported nodes:** `IdbiB`, `O5kaV`, `hmPL7` (new), `tooKB` — JSON as 2-space `JSON.stringify(Get(id, {depth: 20}), null, 2)`, line counts matched against live; PNGs via `export_nodes` at 2×.
