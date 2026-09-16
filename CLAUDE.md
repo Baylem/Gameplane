@@ -247,7 +247,7 @@ make tidy            # Runs `go mod tidy` across all workspace modules
 | `sentinel` | Go | Wake-on-connect listener that holds ports and triggers pod wakeups. |
 | `capture-sidecar` | Go | Ephemeral packet capture container with BPF filtering. |
 | `mcp-server` | Go | Read-only MCP daemon for cluster debugging via stdio. |
-| `web` | React 18, Vite, TS | Dashboard (TanStack Router & Query, Tailwind, Radix UI). |
+| `web` | React 18, Vite, TS | Dashboard (TanStack Router & Query, Tailwind, HeroUI v3). |
 | `modules/` | OCI / oras | Submodule with game templates (Minecraft, Terraria, Valheim). |
 
 ---

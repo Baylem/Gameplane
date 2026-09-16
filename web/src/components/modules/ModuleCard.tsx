@@ -11,7 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button, buttonVariants, Card, CardHeader, CardContent, CardFooter, Chip } from "@heroui/react";
-import { GameIcon } from "@/components/hero/GameIcon";
+import { GameIcon } from "@/components/ui/GameIcon";
 import { resolveCategories } from "@/lib/games";
 import type { EntryVerify } from "@/lib/verify";
 import type { CatalogEntry } from "@/types";

@@ -38,12 +38,12 @@ import {
   TextField,
   Alert,
 } from "@heroui/react";
-import { PageHeader } from "@/components/hero/PageHeader";
-import { ConfirmDialog } from "@/components/hero/ConfirmDialog";
-import { ConfirmAdminMappingDialog } from "@/components/hero/ConfirmAdminMappingDialog";
-import { RemovableGroupChip } from "@/components/hero/RemovableGroupChip";
-import { ProvenanceBadge } from "@/components/hero/ProvenanceBadge";
-import { SlackIcon } from "@/components/hero/SlackIcon";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { ConfirmAdminMappingDialog } from "@/components/ui/ConfirmAdminMappingDialog";
+import { RemovableGroupChip } from "@/components/ui/RemovableGroupChip";
+import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
+import { SlackIcon } from "@/components/ui/SlackIcon";
 import { cn, formatRelative } from "@/lib/utils";
 import { errorText } from "@/lib/errors";
 import { Auth, AuthProviders, BackupDestinations, Cluster, ModRegistries, Notifications } from "@/lib/endpoints";

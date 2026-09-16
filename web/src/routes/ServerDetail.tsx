@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 import { Servers, Templates, type LifecycleVerb } from "@/lib/endpoints";
 import { resolveConsoleMode, serverHasMods, serverHasModpacks } from "@/lib/capabilities";
-import { PhaseChip } from "@/components/hero/PhaseChip";
-import { GameIcon } from "@/components/hero/GameIcon";
+import { PhaseChip } from "@/components/ui/PhaseChip";
+import { GameIcon } from "@/components/ui/GameIcon";
 import { capitalize, formatUptime } from "@/lib/utils";
 import { ServerActionsMenu } from "@/components/server/ServerActionsMenu";
 import { CaptureWidget } from "@/components/CaptureWidget";

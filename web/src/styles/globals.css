@@ -38,6 +38,7 @@
   --field-placeholder: oklch(56.55% 0.0436 347.05); /* #8A6C7B */
   --field-foreground: oklch(21.67% 0.0502 347.62); /* #2A0F1E */
   --focus: oklch(54.13% 0.2466 293.01); /* #7C3AED */
+  --chart-stat: oklch(60.56% 0.2189 292.72); /* #8B5CF6 — stat-card icon accent, OD-9 */
   --link: oklch(54.61% 0.2152 262.88); /* #2563EB */
   --segment: oklch(100.00% 0.0000 89.88); /* #FFFFFF */
   --segment-foreground: oklch(21.67% 0.0502 347.62); /* #2A0F1E */
@@ -79,6 +80,7 @@
   --field-placeholder: oklch(57.28% 0.0238 303.75); /* #7B7584 */
   --field-foreground: oklch(99.11% 0.0000 89.88); /* #FCFCFC */
   --focus: oklch(70.90% 0.1592 293.54); /* #A78BFA */
+  --chart-stat: oklch(60.56% 0.2189 292.72); /* #8B5CF6 — stat-card icon accent, OD-9 */
   --link: oklch(76.21% 0.1231 256.39); /* #7DB4FF */
   --segment: oklch(22.75% 0.0137 298.37); /* #1D1B22 */
   --segment-foreground: oklch(96.68% 0.0057 308.40); /* #F5F3F7 */
@@ -128,6 +130,7 @@
   --color-default-soft: var(--default-soft);
   --color-default-soft-foreground: var(--default-soft-foreground);
   --color-violet: hsl(258 90% 66%); /* operator role chips */
+  --color-chart-stat: var(--chart-stat); /* stat-card icon accent, OD-9 — settled 2026-09-16 */
 
   --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;

@@ -19,10 +19,10 @@ import {
 } from "lucide-react";
 
 import { Button, Card, Input, Chip, Tabs, Tab, Table, buttonVariants } from "@heroui/react";
-import { StatCard } from "@/components/hero/StatCard";
-import { PhaseChip } from "@/components/hero/PhaseChip";
-import { FilterPopover } from "@/components/hero/FilterPopover";
-import { GameIcon } from "@/components/hero/GameIcon";
+import { StatCard } from "@/components/ui/StatCard";
+import { PhaseChip } from "@/components/ui/PhaseChip";
+import { FilterPopover } from "@/components/ui/FilterPopover";
+import { GameIcon } from "@/components/ui/GameIcon";
 import { PageHeader } from "@/components/PageHeader";
 import { describeStorageProvisioned, formatBytes, cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/media";

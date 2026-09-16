@@ -110,4 +110,18 @@ describe("theme tokens", () => {
       expect(darkTokens["--link"]).toBe("oklch(76.21% 0.1231 256.39)");
     });
   });
+
+  describe("chart-stat is an explicit value (OD-9)", () => {
+    it("light mode: --chart-stat has the explicit oklch value for #8B5CF6", () => {
+      expect(lightTokens["--chart-stat"]).toBe("oklch(60.56% 0.2189 292.72)");
+    });
+
+    it("dark mode: --chart-stat has the explicit oklch value for #8B5CF6", () => {
+      expect(darkTokens["--chart-stat"]).toBe("oklch(60.56% 0.2189 292.72)");
+    });
+
+    it("light and dark chart-stat values match (single-value token, no theme split)", () => {
+      expect(lightTokens["--chart-stat"]).toBe(darkTokens["--chart-stat"]);
+    });
+  });
 });

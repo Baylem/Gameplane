@@ -4,14 +4,16 @@ import { cn } from "@/lib/utils";
 
 // StatCard renders a stat value with label, optional icon, and optional sub-text.
 // Composes HeroUI Card with Gameplane brand tokens (accent, success, warning, danger, violet).
-// Icon color is controlled by the accent prop.
+// Icon color is controlled by the accent prop. The "violet" accent renders the
+// dedicated --chart-stat token (OD-9), not the shared --color-violet used by
+// operator-role chips elsewhere in the app.
 
 const accentClass = {
   primary: "text-accent",
   success: "text-success",
   warning: "text-warning",
   danger: "text-danger",
-  violet: "text-violet",
+  violet: "text-chart-stat",
 } as const;
 
 export type StatCardAccent = keyof typeof accentClass;

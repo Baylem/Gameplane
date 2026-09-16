@@ -38,11 +38,11 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import { PageHeader } from "@/components/hero/PageHeader";
-import { RoleEditorModal } from "@/components/hero/RoleEditorModal";
-import { InviteUserDialog } from "@/components/hero/admin/InviteUserDialog";
-import { EditUserDialog } from "@/components/hero/admin/EditUserDialog";
-import { ResetPasswordDialog } from "@/components/hero/admin/ResetPasswordDialog";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { RoleEditorModal } from "@/components/ui/RoleEditorModal";
+import { InviteUserDialog } from "@/components/ui/admin/InviteUserDialog";
+import { EditUserDialog } from "@/components/ui/admin/EditUserDialog";
+import { ResetPasswordDialog } from "@/components/ui/admin/ResetPasswordDialog";
 import { APIError } from "@/lib/api";
 import { useMe, can } from "@/lib/auth";
 import {

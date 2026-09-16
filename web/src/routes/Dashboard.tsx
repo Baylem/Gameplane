@@ -20,11 +20,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { StatCard } from "@/components/hero/StatCard";
-import { Meter } from "@/components/hero/Meter";
-import { PhaseChip } from "@/components/hero/PhaseChip";
-import { GameIcon } from "@/components/hero/GameIcon";
-import { LoadingCard } from "@/components/hero/LoadingCard";
+import { StatCard } from "@/components/ui/StatCard";
+import { Meter } from "@/components/ui/Meter";
+import { PhaseChip } from "@/components/ui/PhaseChip";
+import { GameIcon } from "@/components/ui/GameIcon";
+import { LoadingCard } from "@/components/ui/LoadingCard";
 import { PageHeader } from "@/components/PageHeader";
 import {
   cn,
