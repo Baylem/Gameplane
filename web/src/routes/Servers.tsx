@@ -5,6 +5,7 @@ import { ServerActionsMenu } from "@/components/server/ServerActionsMenu";
 import {
   Activity,
   Cpu,
+  Database,
   Filter,
   HardDrive,
   Play,
@@ -13,6 +14,7 @@ import {
   Search,
   Server as ServerIcon,
   Share2,
+  SlidersHorizontal,
   Square,
   Sunrise,
   Users as UsersIcon,
@@ -23,10 +25,11 @@ import { StatCard } from "@/components/ui/StatCard";
 import { PhaseChip } from "@/components/ui/PhaseChip";
 import { FilterPopover } from "@/components/ui/FilterPopover";
 import { GameIcon } from "@/components/ui/GameIcon";
+import { useGameCodes } from "@/lib/useGameCodes";
 import { PageHeader } from "@/components/PageHeader";
 import { describeStorageProvisioned, formatBytes, cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/media";
-import type { ClusterStats, ClusterView, GameServer, GameServerPhase } from "@/types";
+import type { ClusterStats, ClusterView, GameServer, GameServerPhase, GameTemplate } from "@/types";
 import { Cluster, Servers, type LifecycleVerb } from "@/lib/endpoints";
 import { countByState } from "@/lib/servers";
 
@@ -39,6 +42,8 @@ export function ServersPage() {
     queryFn: () => Servers.list(),
     refetchInterval: 5_000,
   });
+
+  const { templates, gameCodes, byName } = useGameCodes();
 
   const { data: cluster } = useQuery({
     queryKey: ["cluster-stats"],
@@ -297,7 +302,7 @@ export function ServersPage() {
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/60" />
             <Input
-              placeholder="Search servers…"
+              placeholder="Search…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="w-full pl-9"
@@ -319,10 +324,10 @@ export function ServersPage() {
             <Button
               isIconOnly
               variant="ghost"
-              className="w-10 h-10"
+              className="w-10 h-10 rounded-xl border border-default-300 bg-default-100 hover:bg-default-200"
               aria-label="Filter"
             >
-              <Filter className="h-4 w-4" />
+              <SlidersHorizontal className="h-[18px] w-[18px]" />
             </Button>
           </FilterPopover>
         </div>
@@ -337,7 +342,13 @@ export function ServersPage() {
             <Card className="p-12 text-center text-sm text-foreground/60">No servers match.</Card>
           )}
           {visible.map((gs) => (
-            <ServerCard key={`${gs.metadata.namespace ?? "gameplane-games"}/${gs.metadata.name}`} gs={gs} onAct={act.mutate} />
+            <ServerCard
+              key={`${gs.metadata.namespace ?? "gameplane-games"}/${gs.metadata.name}`}
+              gs={gs}
+              onAct={act.mutate}
+              templates={templates}
+              gameCodes={gameCodes}
+            />
           ))}
 
           {visibleShared.length > 0 && (
@@ -351,6 +362,8 @@ export function ServersPage() {
                   key={`shared-${gs.metadata.namespace ?? ""}-${gs.metadata.name}`}
                   gs={gs}
                   onAct={act.mutate}
+                  templates={templates}
+                  gameCodes={gameCodes}
                 />
               ))}
             </>
@@ -382,7 +395,12 @@ export function ServersPage() {
                 <Table.Row key={`${gs.metadata.namespace ?? "gameplane-games"}/${gs.metadata.name}`}>
                   <Table.Cell>
                     <div className="flex items-center gap-3">
-                      <GameIcon game={gs.spec.templateRef.name} size="sm" />
+                      <GameIcon
+                        game={gs.spec.templateRef.name}
+                        icon={byName.get(gs.spec.templateRef.name)?.spec.icon}
+                        code={gameCodes.get(gs.spec.templateRef.name)}
+                        size="sm"
+                      />
                       <div className="min-w-0">
                         <Link
                           to="/servers/$name"
@@ -452,7 +470,12 @@ export function ServersPage() {
                     <Table.Row key={`shared-${gs.metadata.namespace ?? ""}-${gs.metadata.name}`}>
                       <Table.Cell>
                         <div className="flex items-center gap-3">
-                          <GameIcon game={gs.spec.templateRef.name} size="sm" />
+                          <GameIcon
+                            game={gs.spec.templateRef.name}
+                            icon={byName.get(gs.spec.templateRef.name)?.spec.icon}
+                            code={gameCodes.get(gs.spec.templateRef.name)}
+                            size="sm"
+                          />
                           <div className="min-w-0">
                             <Link
                               to="/servers/$name"
@@ -636,9 +659,13 @@ function ServerLifecycleActions({
 function ServerCard({
   gs,
   onAct: _onAct,
+  templates,
+  gameCodes,
 }: {
   gs: GameServer;
   onAct: (args: { name: string; verb: LifecycleVerb }) => void;
+  templates?: GameTemplate[];
+  gameCodes: Map<string, string>;
 }) {
   const { phase, asleep, isSharedNonDefault, memLabel, playersLabel } = serverRowData(gs);
 
@@ -647,11 +674,16 @@ function ServerCard({
   const address = endpoint ? `${endpoint.host}:${endpoint.port}` : "—";
 
   return (
-    <Card className="border border-border bg-surface p-3.5">
+    <Card className="border border-border bg-card p-3.5">
       {/* Row 1: Icon + Name + Address on left, Status pill on right */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <GameIcon game={gs.spec.templateRef.name} size="sm" />
+          <GameIcon
+            game={gs.spec.templateRef.name}
+            icon={templates?.find((t) => t.metadata.name === gs.spec.templateRef.name)?.spec.icon}
+            code={gameCodes.get(gs.spec.templateRef.name)}
+            size="sm"
+          />
           <div className="min-w-0">
             <Link
               to="/servers/$name"
@@ -676,19 +708,18 @@ function ServerCard({
 
       {/* Row 3: Two chips - Players and Memory */}
       <div className="mt-3 flex flex-wrap gap-2">
-        <StatChip icon={<UsersIcon className="h-3 w-3" />} label="Players" value={playersLabel} />
-        <StatChip icon={<HardDrive className="h-3 w-3" />} label="Mem" value={memLabel} />
+        <StatChip icon={<UsersIcon className="h-3.5 w-3.5" />} value={playersLabel} />
+        <StatChip icon={<Database className="h-3.5 w-3.5" />} value={memLabel} />
       </div>
     </Card>
   );
 }
 
-function StatChip({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
+function StatChip({ icon, value }: { icon: ReactNode; value: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-md bg-default/40 px-2 py-1.5 text-[12px] text-foreground/60">
+    <span className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-1.5 text-[12px] text-muted">
       {icon}
-      {label}
-      <span className="font-mono text-foreground">{value}</span>
+      <span className="font-mono">{value}</span>
     </span>
   );
 }

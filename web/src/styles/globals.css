@@ -29,7 +29,7 @@
   --warning-soft-foreground: oklch(45% 0.14 70.66); /* mirrors --accent-soft-foreground's darker-foreground-on-tint pattern */
   --danger: oklch(57.85% 0.2138 27.17); /* #DC2828 */
   --danger-soft: oklch(96% 0.04 27.17); /* light danger-tinted background, mirrors --warning-soft's light-mode pattern */
-  --danger-soft-foreground: #9D3A63; /* mauve, matches BV5ei design */
+  --danger-soft-foreground: #DC2626; /* red — BV5ei's notConfigured badge (ProvenanceBadge.tsx) now renders via color="default", not color="danger" (see 1.1 above), so this token no longer needs to carry that badge's mauve. Restored to its real danger-red meaning for AlertDialogIcon status="danger" / Chip color="danger" consumers, e.g. Kp48V's Confirm Admin Mapping dialog alert icon. */
   --muted: oklch(47.33% 0.0441 343.67); /* #6E5262 */
   --border: oklch(86.09% 0.0556 350.54); /* #EFC3D6 */
   --separator: oklch(86.09% 0.0556 350.54); /* #EFC3D6 */
@@ -168,7 +168,7 @@ body {
 }
 
 .input:focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
@@ -181,15 +181,18 @@ input:-webkit-autofill:active {
 }
 
 /* Same override, but while focused: keep the fill-color patch AND add the
-   standard --focus ring back on top of it. Without the extra ring layer here,
-   the !important inset shadow above replaces status-focused-field's ring
-   entirely, so a browser-autofilled + focused field (username/password on the
-   login form) painted no focus ring at all while the identical .input inside
-   a modal — never autofilled — kept it. */
+   input focus ring back on top of it. Without the extra ring layer here,
+   the !important inset shadow above replaces the ring entirely, so a
+   browser-autofilled + focused field (username/password on the login form)
+   painted no focus ring at all while the identical .input inside a modal —
+   never autofilled — kept it. Uses --accent (not --focus): PR "focus ring
+   purple" is superseded — the app-wide input focus ring is the theme accent
+   color, not the violet --focus token (which stays reserved for the Asleep
+   status treatment, see .status-focus above). */
 input:-webkit-autofill:focus {
   box-shadow:
     inset 0 0 0 1000px var(--field-background),
-    0 0 0 2px var(--focus) !important;
+    0 0 0 2px var(--accent) !important;
   -webkit-text-fill-color: var(--field-foreground) !important;
 }
 
@@ -309,6 +312,18 @@ input:-webkit-autofill:focus {
   color: var(--accent-foreground) !important;
 }
 
+/* Modpack/mod category pills (tY6RD): unselected pills must be a neutral
+   outline per design — transparent fill, $border/border stroke, $muted
+   text. HeroUI's Chip color="default" variant="soft" renders pink here by
+   default (the same default the [data-type="overridden"] override below
+   works around for a different chip). Scoped to the category row for the
+   same reason as the active-state rule above. */
+.modpack-categories [data-slot="chip"]:not([data-active="true"]) {
+  background-color: transparent !important;
+  border-color: var(--border) !important;
+  color: var(--muted) !important;
+}
+
 /* Overridden provenance badge (R65Xyx): neutral/outlined per the current
    design — transparent fill, border stroke, muted icon/label — replacing the
    earlier shared pink treatment. Scoped to this one badge type only:
@@ -374,4 +389,19 @@ input:-webkit-autofill:focus {
 
 .checkbox.flex-row {
   flex-direction: row;
+}
+
+/* Modal title→subtitle spacing (CqaSq and other dialogs): ModalHeader's
+   own padding plus ModalBody's mt-2 spacing compound into a taller gap
+   between heading and Description than the design's tighter title-to-subtitle
+   rhythm. Scoped to the Description that is the very first element child
+   of ModalBody when that body directly follows ModalHeader, so spacing between
+   later ModalBody children (governed by ModalBody's own gap-N utility) is
+   untouched. Uses data-slot selectors (stable across HeroUI versions) rather
+   than class names. Affects every dialog built from the standard
+   ModalHeader + ModalBody + leading-Description pattern:
+   RoleEditorModal (CqaSq), RestoreDialog (E9EEv0), EditUserDialog
+   (t3IY3u), InviteUserDialog (NLDDv), ResetPasswordDialog (MaoHP). */
+[data-slot="modal-header"] + [data-slot="modal-body"] > [data-slot="description"]:first-of-type {
+  margin-top: -8px;
 }

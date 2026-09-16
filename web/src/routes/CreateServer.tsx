@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ArrowLeft, ArrowRight, Check, ExternalLink, Loader2, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, ArrowRight, Check, ExternalLink, Loader2, Megaphone, X } from "lucide-react";
 import { Button, Input, Alert } from "@heroui/react";
 import { GameIcon } from "@/components/ui/GameIcon";
 import { ResourceInput } from "@/components/ui/ResourceInput";
 import { PortOverridesEditor } from "@/components/server/PortOverridesEditor";
+import { useGameCodes } from "@/lib/useGameCodes";
 import { APIError } from "@/lib/api";
 import { errorText } from "@/lib/errors";
 import { Cluster, Servers, Templates, type ServerCreate } from "@/lib/endpoints";
@@ -329,6 +330,7 @@ export function CreateServerWizard() {
   // loads. One-shot, so manual changes afterwards aren't clobbered.
   const search = useSearch({ from: "/app-layout/servers/new" });
   const { data: templates } = useQuery({ queryKey: ["templates"], queryFn: () => Templates.list() });
+  const { gameCodes, byName } = useGameCodes();
   const [presetApplied, setPresetApplied] = useState(false);
   // Adjusted directly during render (not in an effect): re-checks on every
   // render until a match is found (templates may still be loading, or the
@@ -424,7 +426,7 @@ export function CreateServerWizard() {
 
         <div className="grid flex-1 min-h-0 overflow-auto gap-6 px-6 py-6 md:grid-cols-[1fr_260px]">
           <div className="min-w-0">
-            {currentKey === "template" && <PickTemplate state={state} setState={setState} />}
+            {currentKey === "template" && <PickTemplate state={state} setState={setState} gameCodes={gameCodes} byName={byName} />}
             {currentKey === "version" && <PickVersion state={state} setState={setState} />}
             {currentKey === "configure" && <Configure state={state} setState={setState} />}
             {currentKey === "network" && <Network state={state} setState={setState} />}
@@ -438,7 +440,7 @@ export function CreateServerWizard() {
               />
             )}
           </div>
-          <Preview state={state} />
+          <Preview state={state} gameCodes={gameCodes} byName={byName} />
         </div>
 
         {create.isError && (
@@ -536,7 +538,17 @@ function StepBar({ steps, stepIndex }: { steps: StepKey[]; stepIndex: number }) 
   );
 }
 
-function PickTemplate({ state, setState }: { state: WizardState; setState: (s: WizardState) => void }) {
+function PickTemplate({
+  state,
+  setState,
+  gameCodes,
+  byName,
+}: {
+  state: WizardState;
+  setState: (s: WizardState) => void;
+  gameCodes: Map<string, string>;
+  byName: Map<string, GameTemplate>;
+}) {
   const { data } = useQuery({
     queryKey: ["templates"],
     queryFn: () => Templates.list(),
@@ -606,7 +618,12 @@ function PickTemplate({ state, setState }: { state: WizardState; setState: (s: W
               )}
             >
               <div className="flex items-center gap-3">
-                <GameIcon game={t.spec.game} size="md" />
+                <GameIcon
+                  game={t.spec.game}
+                  icon={byName.get(t.metadata.name)?.spec.icon}
+                  code={gameCodes.get(t.metadata.name)}
+                  size="md"
+                />
                 <div>
                   <div className="text-sm font-medium">{t.spec.displayName}</div>
                   <div className="text-[11px] text-muted">v{t.spec.version}</div>
@@ -1053,17 +1070,15 @@ function Network({ state, setState }: { state: WizardState; setState: (s: Wizard
         </span>
 
         {(state.addressPool.trim() || state.requestedAddress.trim()) && state.expose !== "LoadBalancer" && (
-          <Alert status="warning" className="py-2">
-            <Alert.Indicator>
-              <AlertCircle className="w-4 h-4 shrink-0" />
-            </Alert.Indicator>
-            <Alert.Content className="flex-1">
-              <div className="font-medium mb-0.5">Address preference ignored</div>
-              <div className="text-sm">
+          <div className="flex items-start gap-4 rounded-lg border border-warning-soft-foreground bg-warning-soft px-5 py-4">
+            <Megaphone className="mt-0.5 h-4 w-4 shrink-0 text-warning-soft-foreground" />
+            <div className="flex-1">
+              <div className="mb-0.5 font-medium text-warning">Address preference ignored</div>
+              <div className="text-sm text-warning-soft-foreground">
                 Expose is set to {state.expose}. Address pool and requested address only take effect when Expose (above) is set to LoadBalancer.
               </div>
-            </Alert.Content>
-          </Alert>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -1241,7 +1256,15 @@ function Review({ state, onEdit }: { state: WizardState; onEdit: (key: StepKey) 
   );
 }
 
-function Preview({ state }: { state: WizardState }) {
+function Preview({
+  state,
+  gameCodes,
+  byName,
+}: {
+  state: WizardState;
+  gameCodes: Map<string, string>;
+  byName: Map<string, GameTemplate>;
+}) {
   const name = state.template?.spec.displayName ?? "Pick a template";
   const yaml = state.template
     ? `apiVersion: gameplane.local/v1alpha1
@@ -1260,7 +1283,12 @@ ${state.version ? `  version: ${state.version}\n` : ""}  resources:
   return (
     <aside className="min-w-0 rounded-lg border border-border bg-surface/40 flex flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-3 min-w-0">
-        <GameIcon game={state.template?.spec.game} size="sm" />
+        <GameIcon
+          game={state.template?.spec.game}
+          icon={state.template ? byName.get(state.template.metadata.name)?.spec.icon : undefined}
+          code={state.template ? gameCodes.get(state.template.metadata.name) : undefined}
+          size="sm"
+        />
         <div className="min-w-0">
           <div className="truncate text-sm font-medium">{name}</div>
           <div className="truncate text-[10px] text-muted">

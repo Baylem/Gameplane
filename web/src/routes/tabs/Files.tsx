@@ -540,7 +540,7 @@ function NamePromptDialog({
             </ModalBody>
             <ModalFooter>
               <Button
-                variant="secondary"
+                variant="ghost"
                 onPress={() => onOpenChange(false)}
                 isDisabled={busy}
               >

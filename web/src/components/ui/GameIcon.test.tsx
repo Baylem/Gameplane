@@ -75,4 +75,46 @@ describe("GameIcon", () => {
     expect(tile.style.color).toBe("rgb(255, 0, 255)");
     expect(tile.className).not.toContain("text-danger");
   });
+
+  it("renders the template icon as an <img> when spec.icon is a valid https URL", () => {
+    const { container } = render(
+      <GameIcon game="minecraft-java" icon="https://cdn.example.com/icons/minecraft.png" />,
+    );
+    const tile = container.firstChild as HTMLElement;
+    const img = tile.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute("src")).toBe("https://cdn.example.com/icons/minecraft.png");
+    // No letter/code text should render alongside the image.
+    expect(tile.textContent).toBe("");
+  });
+
+  it("renders the template icon as an <img> when spec.icon is a data: URI", () => {
+    const dataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB";
+    const { container } = render(<GameIcon game="terraria" icon={dataUri} />);
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute("src")).toBe(dataUri);
+  });
+
+  it("ignores a malformed icon value and falls back to the code/letters", () => {
+    const { container } = render(<GameIcon game="terraria" icon="not-a-url" code="TE" />);
+    const tile = container.firstChild as HTMLElement;
+    expect(tile.querySelector("img")).toBeNull();
+    expect(tile.textContent).toBe("TE");
+  });
+
+  it("renders the pre-computed code instead of the legacy letter slice when no icon is present", () => {
+    const { container } = render(<GameIcon game="minecraft-bedrock" code="MN" />);
+    const tile = container.firstChild as HTMLElement;
+    expect(tile.textContent).toBe("MN");
+  });
+
+  it("prefers icon over code when both are provided", () => {
+    const { container } = render(
+      <GameIcon game="minecraft-java" icon="https://cdn.example.com/icons/minecraft.png" code="MI" />,
+    );
+    const tile = container.firstChild as HTMLElement;
+    expect(tile.querySelector("img")).not.toBeNull();
+    expect(tile.textContent).toBe("");
+  });
 });

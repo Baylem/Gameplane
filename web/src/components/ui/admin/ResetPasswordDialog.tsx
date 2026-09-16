@@ -90,7 +90,6 @@ export function ResetPasswordDialog({
               </Label>
               <Input
                 id="reset-password"
-                autoFocus
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={`At least ${MIN_PASSWORD_LEN} characters`}

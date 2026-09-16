@@ -20,33 +20,54 @@ const legacyPalette: Record<string, string> = {
 // hex6 matches a "#rrggbb" color so we only ever inline a value we trust.
 const hex6 = /^#[0-9a-fA-F]{6}$/;
 
-// Small colored tile per game. When the template declares an
-// accentColor, the tile is tinted from that value (background at ~20%
-// alpha, text at full); otherwise it falls back to the legacy palette
-// keyed off the game/template name.
+// iconSrc matches the two shapes GameTemplate.spec.icon (Q7) is allowed to
+// carry — an http(s) URL or a data: URI. Anything else is treated as unset
+// so a malformed value can't be injected as an <img src>.
+const iconSrc = /^(https?:|data:)/;
+
+// Small colored tile per game. When the template declares an icon (Q7),
+// that image is rendered directly. Otherwise the tile shows `code` — a
+// unique per-install abbreviation computed by assignGameCodes/
+// assignGameCodesForTemplates (lib/gameIcon.ts) from the full template
+// list — falling back to the legacy first-two-letters-of-name behavior
+// when the caller doesn't have template data to compute one (unchanged
+// from before, so existing callers are unaffected). The tile is tinted
+// from accentColor when the template declares one; otherwise it falls
+// back to the legacy palette keyed off the game/template name.
 export function GameIcon({
   game,
+  icon,
+  code,
   accentColor,
   size = "md",
 }: {
   game?: string;
+  /** GameTemplate.spec.icon — rendered in place of the letter code when present and well-formed. */
+  icon?: string;
+  /** Pre-computed abbreviation from lib/gameIcon.ts. Falls back to the legacy first-two-letters behavior when omitted. */
+  code?: string;
   accentColor?: string;
   size?: "sm" | "md" | "lg";
 }) {
   const g = (game ?? "??").toLowerCase();
   const dims = { sm: "h-7 w-7 text-xs", md: "h-9 w-9 text-sm", lg: "h-12 w-12 text-base" }[size];
-  const base = "flex shrink-0 items-center justify-center rounded-md font-mono uppercase";
+  const base = "flex shrink-0 items-center justify-center overflow-hidden rounded-md font-mono uppercase";
+  const tint = accentColor && hex6.test(accentColor)
+    ? { backgroundColor: `${accentColor}33`, color: accentColor }
+    : undefined;
+  const color = tint ? undefined : (legacyPalette[g] ?? "bg-muted/30 text-muted");
 
-  if (accentColor && hex6.test(accentColor)) {
+  if (icon && iconSrc.test(icon)) {
     return (
-      <div
-        className={cn(base, dims)}
-        style={{ backgroundColor: `${accentColor}33`, color: accentColor }}
-      >
-        {g.slice(0, 2)}
+      <div className={cn(base, color, dims)} style={tint}>
+        <img src={icon} alt="" className="h-full w-full object-cover" />
       </div>
     );
   }
-  const color = legacyPalette[g] ?? "bg-muted/30 text-muted";
-  return <div className={cn(base, color, dims)}>{g.slice(0, 2)}</div>;
+
+  return (
+    <div className={cn(base, color, dims)} style={tint}>
+      {code ?? g.slice(0, 2)}
+    </div>
+  );
 }

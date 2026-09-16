@@ -70,11 +70,13 @@ export function RegistryBrowser({
   type,
   categories,
   renderItem,
+  pillButtons,
 }: {
   name: string;
   type?: "mod" | "modpack";
   categories?: { value: string; label: string }[];
   renderItem: (project: RegistryProject, provider: string) => ReactNode;
+  pillButtons?: boolean;
 }) {
   const [term, setTerm] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -245,6 +247,7 @@ export function RegistryBrowser({
               <Button
                 variant="outline"
                 size="sm"
+                className={pillButtons ? "rounded-full" : undefined}
                 onPress={() => void q.fetchNextPage()}
                 isDisabled={!q.hasNextPage || q.isFetchingNextPage}
               >

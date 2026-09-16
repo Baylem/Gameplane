@@ -445,11 +445,11 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
  */
 function AdminGroupsInlineWarning() {
   return (
-    <div className="rounded-md border border-warning/40 bg-warning/10 p-3 flex gap-3">
+    <div className="rounded-md border border-warning-soft-foreground bg-warning-soft p-3 flex gap-3">
       <Megaphone className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
       <div className="text-xs">
         <div className="font-medium text-warning mb-1">Full admin access</div>
-        <p className="text-warning/80">
+        <p className="text-warning-soft-foreground">
           Groups added here will be mapped to the admin role and get full cluster
           control from their next login. You&apos;ll be asked to confirm before this is saved.
         </p>
@@ -1862,7 +1862,7 @@ function RoleMappingOverridesCard({
                           label={group}
                           variant={getRoleVariant(typedRole)}
                           onRemove={() => handleRemoveGroup(typedRole, group)}
-                          size="md"
+                          size="sm"
                         />
                       ))}
                     </div>

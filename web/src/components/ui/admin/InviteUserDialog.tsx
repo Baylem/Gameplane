@@ -149,7 +149,6 @@ export function InviteUserDialog({
               </Label>
               <Input
                 id="invite-username"
-                autoFocus
                 fullWidth
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}

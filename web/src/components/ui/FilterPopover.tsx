@@ -96,6 +96,7 @@ export function FilterPopover({
                   <Checkbox
                     isSelected={selectedGames.has(game)}
                     onChange={() => onToggleGame(game)}
+                    className="flex-row items-center gap-2"
                   >
                     <Checkbox.Control>
                       <Checkbox.Indicator />
@@ -126,6 +127,7 @@ export function FilterPopover({
                   <Checkbox
                     isSelected={selectedNamespaces.has(ns)}
                     onChange={() => onToggleNamespace(ns)}
+                    className="flex-row items-center gap-2"
                   >
                     <Checkbox.Control>
                       <Checkbox.Indicator />

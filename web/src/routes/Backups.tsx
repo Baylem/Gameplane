@@ -293,7 +293,7 @@ function BackupNowDialog({ onClose }: { onClose: () => void }) {
               </div>
             </ModalBody>
             <ModalFooter>
-              <Button variant="secondary" onPress={onClose} isDisabled={createNow.isPending}>
+              <Button variant="ghost" onPress={onClose} isDisabled={createNow.isPending}>
                 Cancel
               </Button>
               <Button

@@ -117,7 +117,13 @@ export function RoleEditorModal({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {group.permissions.map((perm) => (
-                      <Checkbox key={perm.key} isSelected={selectedPerms.has(perm.key)} onChange={() => togglePermission(perm.key)} isDisabled={save.isPending}>
+                      <Checkbox
+                        key={perm.key}
+                        isSelected={selectedPerms.has(perm.key)}
+                        onChange={() => togglePermission(perm.key)}
+                        isDisabled={save.isPending}
+                        className="flex-row items-center gap-2"
+                      >
                         <Checkbox.Control>
                           <Checkbox.Indicator />
                         </Checkbox.Control>
@@ -139,7 +145,7 @@ export function RoleEditorModal({
 
           <ModalFooter className="flex items-center justify-end gap-2">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               onPress={() => onOpenChange(false)}
               isDisabled={save.isPending}

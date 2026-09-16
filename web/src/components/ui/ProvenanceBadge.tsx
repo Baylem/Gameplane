@@ -39,7 +39,7 @@ const provenanceConfig: Record<ProvenanceType, {
     icon: <Minus className="h-2.5 w-2.5" />,
     label: "Not configured",
     variant: "soft",
-    color: "danger",
+    color: "default",
   },
 };
 
@@ -64,7 +64,7 @@ export function ProvenanceBadge({
     >
       <div className="flex items-center gap-[5px]">
         {config.icon}
-        <span className="font-mono text-[10px] font-medium">{config.label}</span>
+        <span className="font-mono text-[10px] font-medium leading-none">{config.label}</span>
       </div>
     </Chip>
   );

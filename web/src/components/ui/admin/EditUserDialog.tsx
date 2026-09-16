@@ -119,7 +119,6 @@ export function EditUserDialog({
               </Label>
               <Input
                 id="edit-display-name"
-                autoFocus
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Display name"

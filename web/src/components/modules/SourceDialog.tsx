@@ -261,11 +261,13 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                 aria-label="Type"
               >
                 <Label className="text-xs">Type</Label>
-                <Select.Trigger>
+                <Select.Trigger
+                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
+                >
                   <Select.Value />
                   <Select.Indicator className="ml-auto h-4 w-4" />
                 </Select.Trigger>
-                <Select.Popover>
+                <Select.Popover className="rounded border border-border">
                   <ListBox aria-label="Type options">
                     {TYPE_OPTIONS.map((opt) => (
                       <ListBoxItem key={opt.value} id={opt.value}>
@@ -346,11 +348,13 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     aria-label="Signature verification"
                   >
                     <Label className="text-xs">Signature verification</Label>
-                    <Select.Trigger>
+                    <Select.Trigger
+                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
+                    >
                       <Select.Value />
                       <Select.Indicator className="ml-auto h-4 w-4" />
                     </Select.Trigger>
-                    <Select.Popover>
+                    <Select.Popover className="rounded border border-border">
                       <ListBox aria-label="Signature verification options">
                         {VERIFY_OPTIONS.map((opt) => (
                           <ListBoxItem key={opt.value} id={opt.value}>
@@ -602,7 +606,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
 
           <ModalFooter className="gap-2">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               onPress={() => onOpenChange(false)}
               isDisabled={busy}

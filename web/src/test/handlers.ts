@@ -1052,9 +1052,38 @@ export function buildScreenshotHandlers() {
         ],
       }),
     ),
-    http.get("/backups/:name", ({ params }) =>
-      HttpResponse.json(makeBackup({ metadata: { name: String(params.name) } })),
-    ),
+    http.get("/backups/:name", ({ params }) => {
+      const name = String(params.name);
+      if (name === "mc-survival-nightly-0713") {
+        return HttpResponse.json(
+          makeBackup({
+            metadata: { name, namespace: "default" },
+            spec: { serverRef: { name: "mc-survival" } },
+            status: {
+              phase: "Succeeded",
+              startTime: "2026-07-13T00:12:04Z",
+              completionTime: "2026-07-13T00:14:41Z",
+              size: "1.4 GiB",
+              snapshotID: "a1b2c3d4e5f6",
+            },
+          }),
+        );
+      }
+      if (name === "mc-survival-nightly-0712") {
+        return HttpResponse.json(
+          makeBackup({
+            metadata: { name, namespace: "default" },
+            spec: { serverRef: { name: "mc-survival" } },
+            status: {
+              phase: "Failed",
+              startTime: "2026-05-06T03:00:00Z",
+              completionTime: "2026-05-06T03:00:30Z",
+            },
+          }),
+        );
+      }
+      return HttpResponse.json(makeBackup({ metadata: { name } }));
+    }),
     http.post("/backups", async ({ request }) => {
       const body = (await request.json().catch(() => null)) as {
         metadata?: { name?: string; generateName?: string };

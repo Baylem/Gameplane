@@ -175,8 +175,8 @@ export function RestoreDialog({ backup, defaultServer, onClose }: Props) {
               ) : (
                 <Alert status="danger" className="text-xs">
                   <div className="flex gap-2">
-                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                    <span>
+                    <AlertCircle className="h-4 w-4 flex-shrink-0 text-danger" />
+                    <span className="text-danger">
                       This will overwrite all data on the target server. Players will
                       be disconnected during the restore.
                     </span>
@@ -194,7 +194,7 @@ export function RestoreDialog({ backup, defaultServer, onClose }: Props) {
 
           <ModalFooter className="flex items-center justify-end gap-2">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               onPress={onClose}
               isDisabled={create.isPending}

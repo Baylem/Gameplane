@@ -12,6 +12,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { Servers, Templates, type LifecycleVerb } from "@/lib/endpoints";
+import { useGameCodes } from "@/lib/useGameCodes";
 import { resolveConsoleMode, serverHasMods, serverHasModpacks } from "@/lib/capabilities";
 import { PhaseChip } from "@/components/ui/PhaseChip";
 import { GameIcon } from "@/components/ui/GameIcon";
@@ -73,6 +74,8 @@ export function ServerDetailPage() {
     queryFn: () => Templates.get(templateName as string),
     enabled: !!templateName,
   });
+
+  const { gameCodes } = useGameCodes();
 
   const act = useMutation({
     mutationFn: (verb: LifecycleVerb) => Servers.lifecycle(name, verb, ns),
@@ -162,6 +165,8 @@ export function ServerDetailPage() {
           <div className="flex items-start gap-4">
             <GameIcon
               game={gs?.spec.templateRef.name}
+              icon={tmpl?.spec.icon}
+              code={gameCodes.get(gs?.spec.templateRef.name ?? "")}
               accentColor={tmpl?.spec.accentColor}
               size="lg"
             />

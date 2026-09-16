@@ -44,24 +44,22 @@ export function BackupDetailDrawer({ name, onClose, onRestore }: Props) {
       <Drawer.Backdrop>
         <Drawer.Content placement="right" className="w-[440px]">
           <Drawer.Dialog className="flex flex-col max-h-full">
-            <Drawer.Header className="shrink-0 flex items-start justify-between border-b border-border p-5">
+            <Drawer.Header className="shrink-0 border-b border-border p-5 space-y-3">
               <div className="space-y-1">
                 <Drawer.Heading className="text-base font-semibold">Backup details</Drawer.Heading>
                 <div className="font-mono text-xs text-muted">{name}</div>
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  isDisabled={!restorable}
-                  onPress={() => backup && onRestore(backup)}
-                  className="gap-1.5"
-                  aria-label="Restore backup"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Restore
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                isDisabled={!restorable}
+                onPress={() => backup && onRestore(backup)}
+                className="gap-1.5"
+                aria-label="Restore backup"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Restore
+              </Button>
             </Drawer.Header>
 
             <Drawer.Body className="min-h-0 space-y-4 overflow-y-auto p-5 text-sm">

@@ -61,6 +61,7 @@ export function PhaseChip({ phase, asleep, size = "sm", className }: {
   return (
     <HeroChip
       color={color}
+      variant="soft"
       size={size}
       data-phase={p}
       data-color={color}

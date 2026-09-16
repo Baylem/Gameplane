@@ -463,7 +463,7 @@ function DeleteUserDialog({
               </ModalBody>
               <ModalFooter className="flex items-center justify-end gap-2">
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   onPress={onClose}
                   isDisabled={remove.isPending}
@@ -616,7 +616,7 @@ function DeleteRoleDialog({
               </ModalBody>
               <ModalFooter className="flex items-center justify-end gap-2">
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   onPress={onClose}
                   isDisabled={remove.isPending}

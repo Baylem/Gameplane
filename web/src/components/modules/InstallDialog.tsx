@@ -187,7 +187,7 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
 
           <ModalFooter className="flex items-center justify-end gap-2">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               onPress={() => onOpenChange(false)}
               isDisabled={busy}
