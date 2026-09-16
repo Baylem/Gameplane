@@ -118,7 +118,7 @@
                   "id": "LM3Jc",
                   "name": "subtitleText",
                   "fill": "$muted",
-                  "content": "Welcome to Gameplane",
+                  "content": "Welcome to Gameplane.",
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 13,
                   "fontWeight": "normal"

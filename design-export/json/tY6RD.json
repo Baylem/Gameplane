@@ -56,7 +56,7 @@
           "width": "fill_container",
           "descendants": {
             "Gl7AY": {
-              "content": "mc-survival"
+              "content": "test-server-02"
             }
           }
         },
@@ -78,8 +78,11 @@
               "name": "Detail Header",
               "width": "fill_container",
               "descendants": {
+                "tiIi2": {
+                  "content": "test-server-02"
+                },
                 "UpnRk": {
-                  "content": "minecraft-java · fabric 1.21.4 · ns: gameplane-games · up 3d 4h"
+                  "content": "minecraft-modded · ns: default · up 13d 4h"
                 }
               }
             },

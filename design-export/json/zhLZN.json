@@ -38,9 +38,9 @@
       },
       "strokeAlignment": "inner",
       "strokeLinejoin": "round",
-      "gap": 12,
+      "layout": "vertical",
+      "gap": 8,
       "padding": 20,
-      "justifyContent": "space_between",
       "children": [
         {
           "type": "frame",
@@ -75,7 +75,8 @@
           "name": "Btn Restore",
           "descendants": {
             "eWkIT/WtPjS": {
-              "icon": "rotate-ccw"
+              "icon": "rotate-ccw",
+              "opacity": 1
             },
             "eWkIT/r4VbAi": {
               "content": "Restore"

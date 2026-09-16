@@ -130,9 +130,9 @@
                   "children": [
                     {
                       "type": "ellipse",
-                      "id": "oBWC0",
+                      "id": "Cb63H",
                       "name": "Live Dot",
-                      "fill": "#21C45D",
+                      "fill": "$success/success",
                       "width": 8,
                       "height": 8
                     },

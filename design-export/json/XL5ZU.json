@@ -5,7 +5,7 @@
   "y": 26399,
   "name": "Gameplane/Removable Group Chip/Orange",
   "reusable": true,
-  "fill": "#F8D4C7",
+  "fill": "$warning/soft",
   "cornerRadius": 9999,
   "gap": 4,
   "padding": [
@@ -20,7 +20,7 @@
       "type": "text",
       "id": "v68RDf",
       "name": "chipLabel",
-      "fill": "#8B4A2E",
+      "fill": "$warning/soft-foreground",
       "content": "group-name",
       "lineHeight": 1.1428571428571428,
       "fontFamily": "$typography/font-mono",
@@ -45,7 +45,7 @@
           "height": 8,
           "icon": "x",
           "library": "lucide",
-          "fill": "#8B4A2E"
+          "fill": "$warning/soft-foreground"
         }
       ]
     }

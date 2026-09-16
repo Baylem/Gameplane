@@ -5,7 +5,7 @@
   "y": 26228,
   "name": "Gameplane/Provenance Badge/Overridden",
   "reusable": true,
-  "fill": "#00000000",
+  "fill": "$background/background",
   "cornerRadius": 9999,
   "stroke": "$border/border",
   "strokeWidth": 1,

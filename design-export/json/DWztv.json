@@ -131,7 +131,7 @@
                               "id": "t7brvG",
                               "name": "emoji",
                               "fill": "$foreground/foreground",
-                              "content": "⛏",
+                              "content": "MI",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "normal"
@@ -180,7 +180,10 @@
                       "fill": "$success/soft",
                       "cornerRadius": "$radius/2xl",
                       "gap": 2,
-                      "padding": [2, 4],
+                      "padding": [
+                        2,
+                        4
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -231,7 +234,10 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 8,
-                      "padding": [6, 14],
+                      "padding": [
+                        6,
+                        14
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -265,7 +271,10 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 8,
-                      "padding": [6, 14],
+                      "padding": [
+                        6,
+                        14
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -283,7 +292,7 @@
                           "id": "pkQV8",
                           "name": "label",
                           "fill": "$muted",
-                          "content": "1.5 GB",
+                          "content": "38%",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -338,7 +347,7 @@
                               "id": "n7pU3C",
                               "name": "emoji",
                               "fill": "$foreground/foreground",
-                              "content": "⛏",
+                              "content": "MI",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "normal"
@@ -387,7 +396,10 @@
                       "fill": "$danger/soft",
                       "cornerRadius": "$radius/2xl",
                       "gap": 2,
-                      "padding": [2, 4],
+                      "padding": [
+                        2,
+                        4
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -438,7 +450,10 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 8,
-                      "padding": [6, 14],
+                      "padding": [
+                        6,
+                        14
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -472,7 +487,10 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 8,
-                      "padding": [6, 14],
+                      "padding": [
+                        6,
+                        14
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -545,7 +563,7 @@
                               "id": "SaQX5",
                               "name": "emoji",
                               "fill": "$foreground/foreground",
-                              "content": "🏭",
+                              "content": "SA",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "normal"
@@ -594,7 +612,10 @@
                       "fill": "$focus/soft",
                       "cornerRadius": "$radius/2xl",
                       "gap": 2,
-                      "padding": [2, 4],
+                      "padding": [
+                        2,
+                        4
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -645,7 +666,10 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 8,
-                      "padding": [6, 14],
+                      "padding": [
+                        6,
+                        14
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -679,7 +703,10 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 8,
-                      "padding": [6, 14],
+                      "padding": [
+                        6,
+                        14
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -752,7 +779,7 @@
                               "id": "kmBku",
                               "name": "emoji",
                               "fill": "$foreground/foreground",
-                              "content": "⛏",
+                              "content": "ME",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "normal"
@@ -801,7 +828,10 @@
                       "fill": "$success/soft",
                       "cornerRadius": "$radius/2xl",
                       "gap": 2,
-                      "padding": [2, 4],
+                      "padding": [
+                        2,
+                        4
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -852,7 +882,10 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 8,
-                      "padding": [6, 14],
+                      "padding": [
+                        6,
+                        14
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -886,7 +919,10 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 8,
-                      "padding": [6, 14],
+                      "padding": [
+                        6,
+                        14
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -904,7 +940,7 @@
                           "id": "PLDIK",
                           "name": "label",
                           "fill": "$muted",
-                          "content": "6.2 GB",
+                          "content": "62%",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -959,7 +995,7 @@
                               "id": "t1j0Wn",
                               "name": "emoji",
                               "fill": "$foreground/foreground",
-                              "content": "⛏",
+                              "content": "ME",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "normal"
@@ -1008,7 +1044,10 @@
                       "fill": "$success/soft",
                       "cornerRadius": "$radius/2xl",
                       "gap": 2,
-                      "padding": [2, 4],
+                      "padding": [
+                        2,
+                        4
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -1059,7 +1098,10 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 8,
-                      "padding": [6, 14],
+                      "padding": [
+                        6,
+                        14
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -1093,7 +1135,10 @@
                       "strokeWidth": 1,
                       "strokeAlignment": "inner",
                       "gap": 8,
-                      "padding": [6, 14],
+                      "padding": [
+                        6,
+                        14
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -1111,7 +1156,7 @@
                           "id": "lgNXm",
                           "name": "label",
                           "fill": "$muted",
-                          "content": "1.5 GB",
+                          "content": "38%",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"

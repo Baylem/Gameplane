@@ -25,6 +25,7 @@
       "id": "m1hP1j",
       "name": "Integrity Banner (Broken)",
       "width": "fill_container",
+      "height": 72,
       "fill": "$danger/danger",
       "gap": 12,
       "padding": 16,

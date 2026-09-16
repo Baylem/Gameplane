@@ -1426,3 +1426,63 @@ The dark `focus/soft` values are now used (on `tooKB`). The visitor-`Get` crash 
 **Re-exported:** all 168 JSON + 168 PNG files in this directory. JSON is `JSON.stringify(Get(id, {depth: 20, includePathGeometry: true}), null, 2)` written from the `Print()` output (no retyping). The five `settings-*` files keep their label filenames and are exported from node ids `uCA23`, `VctzT`, `iLm38`, `QpEvu`, `XR0f9`. PNGs come from `export_nodes` at 2×.
 
 **Validation:** every JSON file parses and its root id matches the filename (or its documented node id), and none has a `"geometry": "..."` elision. `LtgNm` has two text nodes whose literal content is `...`. Each file was also checked against the live node, using canonical JSON length + FNV-1a hash or deep-equal. That check ran in a separate agent. All PNGs have valid headers; 101 JSON and 67 PNG files differ from the previous snapshot.
+
+## Incremental export 2026-09-16 — visual-diff wave (provenance badge, chip tokens, shared Top Bar/Appearance Toggle, login copy, wizard modal dimming, Modpacks/mobile sample content, banner height, Backup Drawer restore icon)
+
+Applied `final-design-brief.md` (the visual-diff investigation's design-only findings), with the maintainer's `decisions.md` taking precedence wherever the two disagreed, plus one live correction from the maintainer on `R65Xyx` (fill token is `$background/background`, not `$surface/surface` as the brief's own §1 stated). Every `Update` below was preceded by a live `Get()` confirming the node id/property still matched the brief; two divergences from the brief's literal instructions were required and are called out.
+
+**Changes:**
+
+| Node(s) | Change |
+|---|---|
+| `R65Xyx` (Provenance Badge/Overridden) | `fill` `#00000000` → `$background/background` (maintainer correction, supersedes brief's `$surface/surface`) |
+| `XL5ZU` (Removable Group Chip/Orange) | `fill` `#F8D4C7` → `$warning/soft` |
+| `v68RDf` (XL5ZU chipLabel) | `fill` `#8B4A2E` → `$warning/soft-foreground` |
+| `sYR1u` (XL5ZU chipRemoveIcon) | `fill` `#8B4A2E` → `$warning/soft-foreground` |
+| `z3ZleP` (gu5WY bell icon) | `fill` `$muted` → `$foreground/foreground` |
+| `HrWm8` (gu5WY UnreadDot) | `enabled: false` (phantom unread dot removed at the shared Top Bar level) |
+| `TUlxU` (gu5WY Avatar ref) | `fill` `$accent/soft` → `$accent/accent`; descendant override `Rki8z.fill` `$accent/accent` → `$accent/foreground` (adapted onto the ref's own `descendants` map, not the shared `Rki8z`/Avatar-Text master node, to avoid changing every other Avatar instance in the document) |
+| `Bg6EP` (iA2C8 Dark button) | `fill` `$accent/soft` → `#00000000` (Update/Replace cannot unset a property; fully-transparent is the pragmatic equivalent of "no fill", matching sibling `D5A9Xf`/Light) |
+| `nMMtW` (iA2C8 moon icon) | `fill` `$accent/soft-foreground` → `$foreground/muted` |
+| `icy0X` (iA2C8 System button) | `fill` added: `$accent/soft` |
+| `z3SNRG` (iA2C8 monitor icon) | `fill` `$foreground/muted` → `$accent/soft-foreground` |
+| `j9sz4` (Button/Ghost/Icon/SM, base of iA2C8's three buttons) | `cornerRadius` `$radius/3xl` (24, full-circle on a 28px box) → `6` |
+| `hKfw8` (T8Hug hero heading, shared by all 4 login frames) | `content` 2-line wrap → `"Kubernetes-native\ngame server\nhosting."` (3-line wrap) |
+| `LtTPk` / `LM3Jc` (jmoi3/ljdA5 subtitle text) | `content` `"Welcome to Gameplane"` → `"Welcome to Gameplane."` |
+| `TFc7X` (jmoi3 password eye icon) | `icon`/`name` `eye-off` → `eye` |
+| `VBLxv` (fjQjb→J14ME subtitle, shared by N1GkB/gX7um) | `content` `"Welcome to Gameplane"` → `"Welcome to Gameplane."` |
+| `Z6tmS` (fjQjb→J14ME password eye icon, shared by N1GkB/gX7um) | `icon`/`name` `eye-off` → `eye` |
+| `uNwJc`/`P3aKI`/`Dd9Wc`/`z3Dyn`/`vzifx` (ModalContainer in `f1Vga`/`UMJli`/`nNL3E`/`W8idqY`/`vUqMl`) | Moved from inside `Main` to a root-level sibling of `Sidebar`/`Main`; `layoutPosition: "absolute"`, `x: 0, y: 0`, `width`/`height` set to the frame's full size (1440×1170 for `f1Vga`, 1440×900 for the other three, 1440×1820 for `vUqMl`) — wizard modal now dims the whole screen including Sidebar/TopBar, matching the browser |
+| `RjKFt` (tY6RD's Top Bar ref, `descendants.Gl7AY`) | `content` `"mc-survival"` → `"test-server-02"` |
+| `Kl577` (tY6RD's Detail Header ref, `descendants.UpnRk`) | `content` → `"minecraft-modded · ns: default · up 13d 4h"` |
+| `t7brvG`/`n7pU3C`/`kmBku`/`t1j0Wn` (DWztv game tiles) | `content` `"⛏"` → `"MI"` |
+| `SaQX5` (DWztv game tile) | `content` `"🏭"` → `"SA"` |
+| `pkQV8`/`lgNXm` (DWztv memory chips) | `content` `"1.5 GB"` → `"38%"` |
+| `PLDIK` (DWztv memory chip) | `content` `"6.2 GB"` → `"62%"` |
+| `Q52mVZ` (fGbVF Mobile TopBar avatar, plain ellipse) | Deleted and replaced with `WQMxI`, a `ref` to `p3URd` (Avatar/Text), `fill: $accent/accent`, descendant `Rki8z` override `content: "AD"`, `fill: $accent/foreground`, `fontSize: 12` — `Replace()` errored (`TypeError: Cannot read properties of undefined`) on this node, so `Delete` + `Insert` was used instead |
+| `m1hP1j` (Audit Integrity Banner, Broken) | `height` unset → `72` (hugs content, no clipping) |
+| `sVSGe` (zhLZN drawerHeader) | `layout` (none/horizontal default) → `vertical`, `justifyContent`/`alignItems` → `start`, `gap: 8` — title now stacks above the Restore button, matching the browser |
+| `JINV8` (zhLZN Btn Restore ref, `descendants."eWkIT/WtPjS"`) | added `opacity: 1` alongside the existing `icon: "rotate-ccw"` override — the icon was previously invisible because the base component (`J09iP`) sets that same descendant's default `opacity: 0`, and the override never re-enabled it |
+| `kKFX9` (App Sidebar) | No property change; re-exported (JSON + PNG) because it embeds the changed `iA2C8` Appearance Toggle (`j9sz4`/`Bg6EP`/`nMMtW`/`icy0X`/`z3SNRG`) and was omitted from this section's original re-export list |
+| `Kl577/tiIi2` (tY6RD Detail Header ref, srvName heading) | `content` `"mc-survival"` → `"test-server-02"` — the brief's decision covered the breadcrumb (`RjKFt.Gl7AY`, row above) and the subtitle (`Kl577.UpnRk`, row above) but the header/subtitle text on `tiIi2` itself was missed in the first pass and is fixed here |
+| `kmBku` / `t1j0Wn` (DWztv game tiles, test-server-09 and mc-survival (2) cards) | `content` `"MI"` → `"ME"` — both cards are subtitled "Minecraft (Modded)" (`MK6aw`/`vsOzh`), which per Q7's fixture-template code assignment (input order: minecraft-java→MI, satisfactory→SA, …, minecraft-modlist→MN, minecraft-modded→ME) should read `ME`, not `MI` |
+
+**Note on `j9sz4` (cornerRadius `$radius/3xl` → `6`):** this base component is reused by more than the `iA2C8` Appearance Toggle buttons called out above — it also backs button instances embedded in `F9pUrx`, `bYDHC`, `n6Xlo`, and the Wizard Modal Header (`opmcF`). All four picked up the radius change automatically and are included in this pass's PNG re-export.
+
+**Pre-existing live drift (not edited this pass, captured incidentally by re-export):** `V1VhGE` (typographic/curly quotes on `p65oXc` and two other text nodes) and `Xn5ns` (Live Dot `oBWC0` fill `#21C45D` → `$success/success`) both matched live `design.pen` when re-exported but were not the subject of any `Update` in this pass — their JSON diffs reflect drift that occurred before this wave, not new edits.
+
+**Divergences from the brief (adapted per live inspection, as instructed):**
+1. §3a `Rki8z` — edited via `TUlxU`'s own `descendants` map instead of the shared `Rki8z` node directly (see table above); editing the master would have re-colored every other Avatar/Text instance in the document.
+2. §9b `J09iP` icon fix — root cause confirmed live: the base component's own default override on `WtPjS` sets `opacity: 0`; the per-instance fix adds `opacity: 1` to `JINV8`'s existing override rather than toggling a separate sibling node (no `nWTJb`-style hide/show sibling exists under `J09iP`'s `eWkIT`, unlike the `z9ShNE`/`oxVkD` comparison pattern in the brief).
+3. §3c `j9sz4` cornerRadius — confirmed live at `$radius/3xl` (24 on a 28px slot, which clips to full-circle); treated as the brief's "full-circle" branch and set to `6`.
+4. §7c `fGbVF` avatar — confirmed live as a bare `ellipse` with no initials slot; added one by replacing it with a `p3URd` (Avatar/Text) ref, per the brief's fallback instruction.
+5. `Replace()` failed with an internal `TypeError` on two different nodes this pass (`iA2C8/Bg6EP`, `fGbVF/Q52mVZ`) whenever the target was a direct child of a reusable component's own definition; `Delete` + `Insert` (or a plain `Update` with a fully-opaque-removed color) was used as a workaround both times.
+
+**Resolved live:**
+- §4b N1GkB/gX7um were resolved by finding `fjQjb`'s underlying `J14ME` (loginCard) component live — `VBLxv`/`Z6tmS` — rather than by guessing ids from the brief's placeholder names; no structural surprises found.
+
+**Re-export method & validation:** 91 ids (the brief's 19 directly-edited frames/components plus the 72-id shared-impact set from `gu5WY`/`kKFX9`/`j9sz4`/`T8Hug`/`fjQjb`/`R65Xyx`/`XL5ZU`/`fGbVF` references, computed by grep over the prior `design-export/json/*.json` snapshot). JSON: `JSON.stringify(Get(id, {depth: 20, includePathGeometry: true}), null, 2)`, batched ~10 ids per `execute` call, each call's `## Print output` extracted from its persisted tool-results file with a `python3` regex split on `###ID:<name>` markers (never retyped) and validated with `json.loads` plus a root-`id` check — all 91 passed on the first attempt, zero `"geometry": "..."` or `"children": "..."` elisions. The five `settings-*` files keep their label filenames, sourced from node ids `uCA23`/`VctzT`/`iLm38`/`QpEvu`/`XR0f9`. `fGbVF` is a genuinely new file (no prior standalone export existed for it, as the brief noted).
+
+**PNG correction (follow-up pass, same day):** the first pass only exported 24 PNGs plus the new `fGbVF.png`, leaving 67 of the 91 ids and `kKFX9` (embedded via the App Sidebar ref, omitted from the original 91-id list) on stale PNGs. This was caught and fixed in a follow-up re-export: `export_nodes` (2× scale) was run for the 68 outstanding ids — `Bbnga`, `Bq2Yg`, `Burtr`, `DPrYX`, `Dpb9f`, `DxKOh`, `E0ypH`, `EZFW0`, `F9pUrx`, `FtdkI`, `GayoL`, `Hy9r0`, `IzuY2`, `J5pjJ3`, `KaRFX`, `KhYNc`, `M2sA4u`, `O08uaD`, `P08Uw`, `QgW58`, `RC3Kf`, `RodrS`, `SeizD`, `Ss0Yr`, `TBvTC`, `TE2jI`, `V1VhGE`, `VfB0Y`, `WZdnw`, `Wj0V4`, `Xn5ns`, `Y5cmvI`, `b4eaUf`, `bYDHC`, `dBILX`, `dPP50`, `dQV9N`, `dxdEi`, `e9lV4`, `fK8Bi`, `g5mEpx`, `hLB9Z`, `i1bLR`, `i8wib`, `j24cXg`, `j9W8A`, `kK8Ji`, `kPmoo`, `m5kOm4`, `n6Xlo`, `nNGDX`, `o4LH8W`, `oyoTs`, `pssCT`, `sSISK`, `sZtDi`, `swxkJ`, `tTSdi`, `tooKB`, `uMiwd`, `ugDSa`, `uoxQW`, `xCJlu`, `xvlB6`, `zFiOW`, `zM0VF`, `zqzr4`, and `kKFX9` — plus `tY6RD` and `DWztv` (JSON + PNG) for the `tiIi2`/`kmBku`/`t1j0Wn` content fixes above. All 91 ids in the visual-diff wave's shared-impact set, plus `kKFX9`, now have current PNGs in `design-export/screenshots/`; the five `settings-*` PNGs were exported to a scratchpad directory first (their source node ids, not their label names) and copied into place under the label filenames. Every re-exported JSON file was verified to still parse (`json.loads`) after this pass also stripped trailing whitespace from all `design-export/json/*.json` files per `.editorconfig`'s `trim_trailing_whitespace`. Every directly-edited frame was screenshot-checked (`get_screenshot`) against the brief's stated intent before export; all matched (no broken/clipped/collapsed layout).
+
+**Maintainer action required:** design.pen has not been saved by this pass (Pencil does not auto-save) — the maintainer must save via the Pencil GUI before these changes can be committed.
