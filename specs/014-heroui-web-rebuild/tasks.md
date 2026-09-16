@@ -475,7 +475,7 @@
 
 ### PR Labeling
 
-- [ ] T209 Add labels to the slice 5 PR via gh api: type: refactor, area: web, and type: feature (only slice 5 carries type: feature); use the REST API per CLAUDE.md rule 14 since gh pr edit does not work on this repo.
+- [X] T209 Add labels to the slice 5 PR via gh api: type: refactor, area: web, and type: feature (only slice 5 carries type: feature); use the REST API per CLAUDE.md rule 14 since gh pr edit does not work on this repo. — Done 2026-09-16 on PR #378, which carries slice 5's remaining work.
 
 **Checkpoint**: Feature complete: zero consumers of the old primitives, all gates green, spec folder ready for the `done_` rename (CLAUDE.md rule 16)
 
