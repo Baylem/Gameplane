@@ -1197,6 +1197,12 @@
                   "descendants": {
                     "m20CHt/QdcEm": {
                       "fill": "#000000"
+                    },
+                    "pkvT2/QdcEm": {
+                      "fill": "$chart/stat"
+                    },
+                    "FlXsH/QdcEm": {
+                      "fill": "$chart/stat"
                     }
                   }
                 },
@@ -79008,7 +79014,15 @@
                   "type": "ref",
                   "ref": "LKMjc",
                   "name": "Stats",
-                  "width": "fill_container"
+                  "width": "fill_container",
+                  "descendants": {
+                    "w2bomv/QdcEm": {
+                      "fill": "$chart/stat"
+                    },
+                    "q7SYqZ/QdcEm": {
+                      "fill": "$chart/stat"
+                    }
+                  }
                 },
                 {
                   "id": "XLxmP",
@@ -83582,6 +83596,12 @@
                   "descendants": {
                     "m20CHt/QdcEm": {
                       "fill": "#000000"
+                    },
+                    "pkvT2/QdcEm": {
+                      "fill": "$chart/stat"
+                    },
+                    "FlXsH/QdcEm": {
+                      "fill": "$chart/stat"
                     }
                   }
                 },
@@ -96438,6 +96458,23 @@
         },
         {
           "value": "#C4B5FD",
+          "theme": {
+            "semantic": "dark"
+          }
+        }
+      ]
+    },
+    "chart/stat": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#8B5CF6",
+          "theme": {
+            "semantic": "light"
+          }
+        },
+        {
+          "value": "#8B5CF6",
           "theme": {
             "semantic": "dark"
           }

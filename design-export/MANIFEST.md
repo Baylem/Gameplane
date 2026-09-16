@@ -1416,3 +1416,13 @@ Dark screens using these (`swxkJ`, `j9W8A`, `tooKB`) were screenshot-checked and
 The dark `focus/soft` values are now used (on `tooKB`). The visitor-`Get` crash cause is documented in `docs/design/pencil-visitor-crash-report.md` (ref nodes storing a literal `children` array instead of `descendants`); the data was not changed.
 
 **Re-exported nodes:** `IdbiB`, `O5kaV`, `hmPL7` (new), `tooKB` — JSON as 2-space `JSON.stringify(Get(id, {depth: 20}), null, 2)`, line counts matched against live; PNGs via `export_nodes` at 2×.
+
+## Full re-export 2026-09-16 — OD-9 `chart/stat` token and document-wide staleness
+
+**Design change:** new variable `chart/stat` (`#8B5CF6`, same value on `semantic: light` and `semantic: dark`) — OD-9, settled 2026-09-16. The stat-card icon (`QdcEm`) overrides on the CPU and cluster-size stats now use `$chart/stat`: `F9pUrx` (`n12tZ/w2bomv/QdcEm`, `n12tZ/q7SYqZ/QdcEm`), `j24cXg` (`ugTJ0/pkvT2/QdcEm`, `ugTJ0/FlXsH/QdcEm`), `oyoTs` (`ojXFL/pkvT2/QdcEm`, `ojXFL/FlXsH/QdcEm`). The `ZWcwn` default fill (`$accent/accent`) and the other `#8B5CF6` uses (Wizard Stepper, Detail Header "AI" badge, Share Card status badge, modpack cover swatch) are unchanged.
+
+**Why a full re-export:** the committed snapshot had fallen well behind live `design.pen`. For example, the stats row and App Sidebar on the dashboard and servers screens are now `ref` instances (`LKMjc`/`YF85x`, `kKFX9`), so a few incremental exports were not enough.
+
+**Re-exported:** all 168 JSON + 168 PNG files in this directory. JSON is `JSON.stringify(Get(id, {depth: 20, includePathGeometry: true}), null, 2)` written from the `Print()` output (no retyping). The five `settings-*` files keep their label filenames and are exported from node ids `uCA23`, `VctzT`, `iLm38`, `QpEvu`, `XR0f9`. PNGs come from `export_nodes` at 2×.
+
+**Validation:** every JSON file parses and its root id matches the filename (or its documented node id), and none has a `"geometry": "..."` elision. `LtgNm` has two text nodes whose literal content is `...`. Each file was also checked against the live node, using canonical JSON length + FNV-1a hash or deep-equal. That check ran in a separate agent. All PNGs have valid headers; 101 JSON and 67 PNG files differ from the previous snapshot.

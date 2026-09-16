@@ -27,7 +27,12 @@
       "width": "fill_container",
       "layout": "vertical",
       "gap": 6,
-      "padding": [16, 0, 0, 0],
+      "padding": [
+        16,
+        0,
+        0,
+        0
+      ],
       "children": [
         {
           "type": "text",

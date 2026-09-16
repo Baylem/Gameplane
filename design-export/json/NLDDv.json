@@ -4,16 +4,22 @@
   "reusable": true,
   "ref": "x3beP",
   "name": "Gameplane/Dialog/Invite User",
-  "x": -17185,
-  "y": 29203,
+  "x": -17225,
+  "y": 27745,
   "effect": {
     "type": "shadow",
     "shadowType": "outer",
     "color": "#00000000"
   },
+  "theme": {},
   "descendants": {
-    "E7Whx": {"content": "Invite user"},
-    "qzcst": {"enabled": true, "content": "Create a local account. Leave password blank to send an OIDC invite later."},
+    "E7Whx": {
+      "content": "Invite user"
+    },
+    "qzcst": {
+      "enabled": true,
+      "content": "Create a local account. Leave password blank to send an OIDC invite later."
+    },
     "Nht52": {
       "type": "frame",
       "id": "HjYI5",
@@ -21,7 +27,12 @@
       "width": "fill_container",
       "layout": "vertical",
       "gap": 12,
-      "padding": [16, 0, 0, 0],
+      "padding": [
+        16,
+        0,
+        0,
+        0
+      ],
       "children": [
         {
           "type": "frame",
@@ -30,8 +41,28 @@
           "layout": "vertical",
           "gap": 6,
           "children": [
-            {"type": "text", "id": "Muw8N", "fill": "$foreground/foreground", "content": "Username", "fontFamily": "$typography/font-sans", "fontSize": 12, "fontWeight": "500"},
-            {"id": "zOSAo", "type": "ref", "ref": "D0cDM", "name": "Input", "width": "fill_container", "descendants": {"PJERm": {"content": "alice", "fill": "#5C5C5C"}}}
+            {
+              "type": "text",
+              "id": "Muw8N",
+              "fill": "$foreground/foreground",
+              "content": "Username",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "id": "zOSAo",
+              "type": "ref",
+              "ref": "D0cDM",
+              "name": "Input",
+              "width": "fill_container",
+              "descendants": {
+                "PJERm": {
+                  "content": "alice",
+                  "fill": "#5C5C5C"
+                }
+              }
+            }
           ]
         },
         {
@@ -41,8 +72,28 @@
           "layout": "vertical",
           "gap": 6,
           "children": [
-            {"type": "text", "id": "gVmsd", "fill": "$foreground/foreground", "content": "Display name", "fontFamily": "$typography/font-sans", "fontSize": 12, "fontWeight": "500"},
-            {"id": "uuH6W", "type": "ref", "ref": "D0cDM", "name": "Input", "width": "fill_container", "descendants": {"PJERm": {"content": "Alice Operator", "fill": "#5C5C5C"}}}
+            {
+              "type": "text",
+              "id": "gVmsd",
+              "fill": "$foreground/foreground",
+              "content": "Display name",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "id": "uuH6W",
+              "type": "ref",
+              "ref": "D0cDM",
+              "name": "Input",
+              "width": "fill_container",
+              "descendants": {
+                "PJERm": {
+                  "content": "Alice Operator",
+                  "fill": "#5C5C5C"
+                }
+              }
+            }
           ]
         },
         {
@@ -52,8 +103,28 @@
           "layout": "vertical",
           "gap": 6,
           "children": [
-            {"type": "text", "id": "xQVjN", "fill": "$foreground/foreground", "content": "Email", "fontFamily": "$typography/font-sans", "fontSize": 12, "fontWeight": "500"},
-            {"id": "M9fknd", "type": "ref", "ref": "D0cDM", "name": "Input", "width": "fill_container", "descendants": {"PJERm": {"content": "alice@example.com", "fill": "#5C5C5C"}}}
+            {
+              "type": "text",
+              "id": "xQVjN",
+              "fill": "$foreground/foreground",
+              "content": "Email",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "id": "M9fknd",
+              "type": "ref",
+              "ref": "D0cDM",
+              "name": "Input",
+              "width": "fill_container",
+              "descendants": {
+                "PJERm": {
+                  "content": "alice@example.com",
+                  "fill": "#5C5C5C"
+                }
+              }
+            }
           ]
         },
         {
@@ -63,8 +134,28 @@
           "layout": "vertical",
           "gap": 6,
           "children": [
-            {"type": "text", "id": "PLrMu", "fill": "$foreground/foreground", "content": "Initial password", "fontFamily": "$typography/font-sans", "fontSize": 12, "fontWeight": "500"},
-            {"id": "bayQn", "type": "ref", "ref": "D0cDM", "name": "Input", "width": "fill_container", "descendants": {"PJERm": {"content": "At least 12 characters", "fill": "#5C5C5C"}}}
+            {
+              "type": "text",
+              "id": "PLrMu",
+              "fill": "$foreground/foreground",
+              "content": "Initial password",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "id": "bayQn",
+              "type": "ref",
+              "ref": "D0cDM",
+              "name": "Input",
+              "width": "fill_container",
+              "descendants": {
+                "PJERm": {
+                  "content": "At least 12 characters",
+                  "fill": "#5C5C5C"
+                }
+              }
+            }
           ]
         },
         {
@@ -75,12 +166,34 @@
           "layout": "vertical",
           "gap": 6,
           "children": [
-            {"type": "text", "id": "YZ11Y", "name": "Role label", "fill": "$foreground/foreground", "content": "Role", "fontFamily": "$typography/font-sans", "fontSize": 12, "fontWeight": "500"},
-            {"id": "liaWX", "type": "ref", "ref": "AT7ya", "name": "Select", "width": "fill_container", "descendants": {"cFsFk": {"content": "viewer"}}}
+            {
+              "type": "text",
+              "id": "YZ11Y",
+              "name": "Role label",
+              "fill": "$foreground/foreground",
+              "content": "Role",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "500"
+            },
+            {
+              "id": "liaWX",
+              "type": "ref",
+              "ref": "AT7ya",
+              "name": "Select",
+              "width": "fill_container",
+              "descendants": {
+                "cFsFk": {
+                  "content": "viewer"
+                }
+              }
+            }
           ]
         }
       ]
     },
-    "TZ7Ef": {"content": "Create user"}
+    "TZ7Ef": {
+      "content": "Create user"
+    }
   }
 }

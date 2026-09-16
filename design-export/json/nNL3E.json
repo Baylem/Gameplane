@@ -96,341 +96,47 @@
               "layout": "vertical",
               "children": [
                 {
-                  "type": "frame",
-                  "id": "z39SYh",
+                  "id": "B2vwAi",
+                  "type": "ref",
+                  "ref": "opmcF",
                   "name": "Header",
                   "width": "fill_container",
-                  "stroke": "$border/border",
-                  "strokeWidth": {
-                    "bottom": 1
-                  },
-                  "strokeAlignment": "inner",
-                  "strokeLinejoin": "round",
-                  "padding": [
-                    20,
-                    28
-                  ],
-                  "justifyContent": "space_between",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "RNfAP",
-                      "name": "TitleGroup",
-                      "layout": "vertical",
-                      "gap": 4,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "buKdU",
-                          "name": "Title",
-                          "fill": "$foreground/foreground",
-                          "content": "New game server",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 18,
-                          "fontWeight": "600"
-                        },
-                        {
-                          "type": "text",
-                          "id": "zi1z1",
-                          "name": "Subtitle",
-                          "fill": "$muted",
-                          "content": "Step 2 of 5 · Version",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "id": "WyOgY",
-                      "type": "ref",
-                      "ref": "j9sz4",
-                      "name": "CloseButton",
-                      "descendants": {
-                        "uQ9KQ": {
-                          "icon": "x",
-                          "fill": "$muted"
-                        }
-                      }
+                  "descendants": {
+                    "gcM6g": {
+                      "content": "Step 2 of 5 · Version"
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "frame",
-                  "id": "WFDaX",
+                  "id": "k9z9A",
+                  "type": "ref",
+                  "ref": "oROhg",
                   "name": "Stepper",
                   "width": "fill_container",
-                  "stroke": "$border/border",
-                  "strokeWidth": {
-                    "bottom": 1
-                  },
-                  "strokeAlignment": "inner",
-                  "strokeLinejoin": "round",
-                  "gap": 8,
-                  "padding": [
-                    12,
-                    24
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "ec2JB",
-                      "name": "step_Template",
-                      "gap": 8,
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "b6JPNd",
-                          "width": 20,
-                          "height": 20,
-                          "fill": "#00000000",
-                          "cornerRadius": 999,
-                          "stroke": "#21C45D",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "ychTh",
-                              "name": "Check",
-                              "width": 12,
-                              "height": 12,
-                              "icon": "check",
-                              "library": "lucide",
-                              "fill": "#21C45D"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "text",
-                          "id": "BDFMo",
-                          "name": "StepLabel",
-                          "fill": "$muted",
-                          "content": "Template",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        }
-                      ]
+                  "descendants": {
+                    "F3Au7j": {
+                      "fill": "#00000000",
+                      "stroke": "$border/border"
                     },
-                    {
-                      "type": "text",
-                      "id": "Skoo4",
-                      "name": "Sep",
+                    "jq5x7": {
+                      "fill": "$muted"
+                    },
+                    "bSERJ": {
                       "fill": "$muted",
-                      "content": "·",
-                      "fontFamily": "$typography/font-sans",
-                      "fontSize": 12,
                       "fontWeight": "normal"
                     },
-                    {
-                      "type": "frame",
-                      "id": "gMP9V",
-                      "name": "step_Version",
-                      "gap": 8,
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "jOjp6",
-                          "width": 20,
-                          "height": 20,
-                          "fill": "$accent/soft",
-                          "cornerRadius": 999,
-                          "stroke": "$accent/accent",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "ddAsc",
-                              "fill": "$accent/accent",
-                              "content": "2",
-                              "fontFamily": "$typography/font-mono",
-                              "fontSize": 10,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "text",
-                          "id": "PmeKs",
-                          "name": "StepLabel",
-                          "fill": "$foreground/foreground",
-                          "content": "Version",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        }
-                      ]
+                    "xpeFZ": {
+                      "fill": "$accent/soft",
+                      "stroke": "$accent/accent"
                     },
-                    {
-                      "type": "text",
-                      "id": "uadhO",
-                      "name": "Sep",
-                      "fill": "$muted",
-                      "content": "·",
-                      "fontFamily": "$typography/font-sans",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
+                    "gkXZ0": {
+                      "fill": "$accent/accent"
                     },
-                    {
-                      "type": "frame",
-                      "id": "PNGZo",
-                      "name": "step_Configure",
-                      "gap": 8,
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "huToV",
-                          "width": 20,
-                          "height": 20,
-                          "fill": "#00000000",
-                          "cornerRadius": 999,
-                          "stroke": "$border/border",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "M81u3",
-                              "fill": "$muted",
-                              "content": "3",
-                              "fontFamily": "$typography/font-mono",
-                              "fontSize": 10,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "text",
-                          "id": "B0eVn",
-                          "name": "StepLabel",
-                          "fill": "$muted",
-                          "content": "Configure",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "text",
-                      "id": "ZKSZj",
-                      "name": "Sep",
-                      "fill": "$muted",
-                      "content": "·",
-                      "fontFamily": "$typography/font-sans",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
-                    },
-                    {
-                      "type": "frame",
-                      "id": "TKf2o",
-                      "name": "step_Network",
-                      "gap": 8,
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "tDFvJ",
-                          "width": 20,
-                          "height": 20,
-                          "fill": "#00000000",
-                          "cornerRadius": 999,
-                          "stroke": "$border/border",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "ZIwvl",
-                              "fill": "$muted",
-                              "content": "4",
-                              "fontFamily": "$typography/font-mono",
-                              "fontSize": 10,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "text",
-                          "id": "xQu5a",
-                          "name": "StepLabel",
-                          "fill": "$muted",
-                          "content": "Network",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "text",
-                      "id": "GUJzo",
-                      "name": "Sep",
-                      "fill": "$muted",
-                      "content": "·",
-                      "fontFamily": "$typography/font-sans",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
-                    },
-                    {
-                      "type": "frame",
-                      "id": "TlqWQ",
-                      "name": "step_Review",
-                      "gap": 8,
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "a3QqC",
-                          "width": 20,
-                          "height": 20,
-                          "fill": "#00000000",
-                          "cornerRadius": 999,
-                          "stroke": "$border/border",
-                          "strokeWidth": 1,
-                          "strokeAlignment": "inner",
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "h3NmG",
-                              "fill": "$muted",
-                              "content": "5",
-                              "fontFamily": "$typography/font-mono",
-                              "fontSize": 10,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "text",
-                          "id": "bC2Zc",
-                          "name": "StepLabel",
-                          "fill": "$muted",
-                          "content": "Review",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        }
-                      ]
+                    "D5lUfH": {
+                      "fill": "$foreground/foreground",
+                      "fontWeight": "500"
                     }
-                  ]
+                  }
                 },
                 {
                   "type": "frame",
@@ -835,7 +541,7 @@
                               "name": "PreviewIcon",
                               "width": 28,
                               "height": 28,
-                              "fill": "#21C45D33",
+                              "fill": "#000000",
                               "cornerRadius": 6,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -844,7 +550,7 @@
                                   "type": "text",
                                   "id": "tqm2U",
                                   "name": "Glyph",
-                                  "fill": "#21C45D",
+                                  "fill": "#000000",
                                   "content": "MI",
                                   "fontFamily": "$typography/font-mono",
                                   "fontSize": 11,
@@ -1064,117 +770,11 @@
                   ]
                 },
                 {
-                  "type": "frame",
-                  "id": "E8Y9K",
+                  "id": "zK49E",
+                  "type": "ref",
+                  "ref": "IoDHI",
                   "name": "Footer",
-                  "width": "fill_container",
-                  "stroke": "$border/border",
-                  "strokeWidth": {
-                    "top": 1
-                  },
-                  "strokeAlignment": "inner",
-                  "strokeLinejoin": "round",
-                  "padding": [
-                    16,
-                    28
-                  ],
-                  "justifyContent": "space_between",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "PPrwf",
-                      "name": "DocsLink",
-                      "gap": 6,
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "id": "BAH31",
-                          "name": "ExternalIcon",
-                          "width": 12,
-                          "height": 12,
-                          "icon": "external-link",
-                          "library": "lucide",
-                          "fill": "$muted"
-                        },
-                        {
-                          "type": "text",
-                          "id": "aRrHH",
-                          "fill": "$muted",
-                          "content": "Docs: Creating game servers",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "G8qsag",
-                      "name": "FooterRight",
-                      "gap": 12,
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "id": "NiQRl",
-                          "type": "ref",
-                          "ref": "jsrtu",
-                          "name": "BackBtn",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "PActr",
-                              "name": "arrow",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "arrow-left",
-                              "library": "lucide",
-                              "fill": "$foreground/foreground"
-                            },
-                            {
-                              "type": "text",
-                              "id": "iHPwr",
-                              "name": "Label",
-                              "fill": "$foreground/foreground",
-                              "content": "Back",
-                              "fontFamily": "$typography/font-sans",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            }
-                          ]
-                        },
-                        {
-                          "id": "hBIg3",
-                          "type": "ref",
-                          "ref": "cb4rt",
-                          "name": "PrimaryBtn",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "QzTLY",
-                              "name": "Label",
-                              "fill": "$accent/foreground",
-                              "content": "Continue to Configure",
-                              "fontFamily": "$typography/font-sans",
-                              "fontSize": 14,
-                              "fontWeight": "500"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "qCOF6",
-                              "name": "arrow",
-                              "width": 14,
-                              "height": 14,
-                              "icon": "arrow-right",
-                              "library": "lucide",
-                              "fill": "$accent/foreground"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
+                  "width": "fill_container"
                 }
               ]
             }

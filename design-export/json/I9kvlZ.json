@@ -31,9 +31,11 @@
           "type": "ref",
           "ref": "CEWo3",
           "name": "tabOverview",
+          "fill": "$segment",
           "descendants": {
             "YUR8N": {
-              "content": "Overview"
+              "content": "Overview",
+              "fill": "$foreground/segment"
             }
           }
         },
@@ -75,6 +77,7 @@
           "type": "ref",
           "ref": "qAFbJ",
           "name": "tabFiles",
+          "fill": "#00000000",
           "descendants": {
             "VcxMI": {
               "content": "Files"

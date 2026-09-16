@@ -4,7 +4,6 @@
   "x": -17185,
   "y": 26108,
   "name": "Gameplane/Button/Default",
-  "theme": {},
   "reusable": true,
   "height": 36,
   "fill": "$accent/accent",

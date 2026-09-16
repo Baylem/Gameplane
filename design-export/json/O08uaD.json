@@ -3,7 +3,7 @@
   "id": "O08uaD",
   "x": 25760,
   "y": 10155,
-  "name": "Screen/Server Detail — Capture — Start capture",
+  "name": "Screen/Server Detail \u2014 Capture \u2014 Start capture",
   "theme": {
     "semantic": "dark"
   },
@@ -58,6 +58,9 @@
           "descendants": {
             "Gl7AY": {
               "content": "mc-survival"
+            },
+            "ZGIQD": {
+              "fill": "#000000"
             }
           }
         },
@@ -1176,7 +1179,7 @@
                       "height": 18,
                       "icon": "circle-check-big",
                       "library": "lucide",
-                      "fill": "#21C45D"
+                      "fill": "#000000"
                     }
                   ]
                 },
@@ -1252,7 +1255,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "How long the capture runs before auto-stopping. Range 1–3600 seconds.",
+                  "content": "How long the capture runs before auto-stopping. Range 1\u20133600 seconds.",
                   "lineHeight": 1.4,
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 11,

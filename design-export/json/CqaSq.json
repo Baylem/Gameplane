@@ -32,7 +32,12 @@
       "type": "frame",
       "id": "gSVCR",
       "width": "fill_container",
-      "padding": [4, 0, 0, 0],
+      "padding": [
+        4,
+        0,
+        0,
+        0
+      ],
       "children": [
         {
           "type": "text",
@@ -54,7 +59,12 @@
       "width": "fill_container",
       "layout": "vertical",
       "gap": 12,
-      "padding": [16, 0, 0, 0],
+      "padding": [
+        16,
+        0,
+        0,
+        0
+      ],
       "children": [
         {
           "type": "frame",
@@ -125,7 +135,110 @@
                   "id": "E1Ypbv",
                   "width": "fill_container",
                   "gap": 4,
-                  "children": "..."
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Bi3hv",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "oFhXh",
+                          "type": "ref",
+                          "ref": "v6WNtR",
+                          "name": "Checkbox",
+                          "descendants": {
+                            "x7vJxB": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "s23ME8",
+                          "fill": "$foreground/foreground",
+                          "content": "servers:read",
+                          "fontFamily": "$typography/font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "rsa9z",
+                          "fill": "#94949426",
+                          "cornerRadius": 4,
+                          "padding": [
+                            0,
+                            4
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "CMoja",
+                              "fill": "$muted",
+                              "content": "ns",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 9,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "F1zxe",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "je0Kk",
+                          "type": "ref",
+                          "ref": "v6WNtR",
+                          "name": "Checkbox",
+                          "descendants": {
+                            "x7vJxB": {
+                              "enabled": false
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "GWdYG",
+                          "fill": "$foreground/foreground",
+                          "content": "servers:write",
+                          "fontFamily": "$typography/font-mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "TnfvL",
+                          "fill": "#94949426",
+                          "cornerRadius": 4,
+                          "padding": [
+                            0,
+                            4
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "X7Au3Z",
+                              "fill": "$muted",
+                              "content": "ns",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 9,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             },
@@ -153,7 +266,50 @@
                   "width": "fill_container",
                   "gap": 8,
                   "alignItems": "center",
-                  "children": "..."
+                  "children": [
+                    {
+                      "id": "D3dxec",
+                      "type": "ref",
+                      "ref": "aOvvm",
+                      "name": "Checkbox",
+                      "descendants": {
+                        "rKaQI": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "A9s5F",
+                      "fill": "$foreground/foreground",
+                      "content": "captures:manage",
+                      "fontFamily": "$typography/font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mBTbI",
+                      "fill": "#94949426",
+                      "cornerRadius": 4,
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "iQwY3",
+                          "fill": "$muted",
+                          "content": "ns",
+                          "fontFamily": "$typography/font-sans",
+                          "fontSize": 9,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             },
@@ -180,7 +336,28 @@
                   "width": "fill_container",
                   "gap": 8,
                   "alignItems": "center",
-                  "children": "..."
+                  "children": [
+                    {
+                      "id": "sgPXK",
+                      "type": "ref",
+                      "ref": "aOvvm",
+                      "name": "Checkbox",
+                      "descendants": {
+                        "rKaQI": {
+                          "enabled": false
+                        }
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "lUtVs",
+                      "fill": "$foreground/foreground",
+                      "content": "users:manage",
+                      "fontFamily": "$typography/font-mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
                 }
               ]
             }
@@ -192,7 +369,12 @@
           "name": "reFooter",
           "width": "fill_container",
           "gap": 8,
-          "padding": [8, 0, 0, 0],
+          "padding": [
+            8,
+            0,
+            0,
+            0
+          ],
           "justifyContent": "end",
           "alignItems": "center",
           "children": [
@@ -202,8 +384,12 @@
               "ref": "LMIom",
               "name": "Btn Cancel",
               "descendants": {
-                "vWtyO/bevQZ": {"enabled": false},
-                "vWtyO/ezEy1": {"content": "Cancel"}
+                "vWtyO/bevQZ": {
+                  "enabled": false
+                },
+                "vWtyO/ezEy1": {
+                  "content": "Cancel"
+                }
               }
             },
             {
@@ -212,8 +398,12 @@
               "ref": "tpKRk",
               "name": "Btn Save Role",
               "descendants": {
-                "q58In/Xpn7K": {"enabled": false},
-                "q58In/U6q13B": {"content": "Save role"}
+                "q58In/Xpn7K": {
+                  "enabled": false
+                },
+                "q58In/U6q13B": {
+                  "content": "Save role"
+                }
               }
             }
           ]

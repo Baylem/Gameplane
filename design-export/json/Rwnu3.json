@@ -5,7 +5,7 @@
   "y": 26228,
   "name": "Gameplane/Provenance Badge/From Helm",
   "reusable": true,
-  "fill": "#F6DCE7",
+  "fill": "$default/default",
   "cornerRadius": 9999,
   "stroke": {
     "type": "color",

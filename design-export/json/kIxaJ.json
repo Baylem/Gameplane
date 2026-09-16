@@ -64,6 +64,30 @@
           "fontFamily": "$typography/font-sans",
           "fontSize": 16,
           "fontWeight": "500"
+        },
+        {
+          "type": "frame",
+          "id": "C2OQV9",
+          "name": "Re-check Button",
+          "cornerRadius": 6,
+          "padding": [
+            6,
+            12
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "jEyku",
+              "name": "Re-check Label",
+              "fill": "$danger/foreground",
+              "content": "Re-check",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
         }
       ]
     }

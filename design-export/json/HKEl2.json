@@ -4,7 +4,6 @@
   "x": -13350.0544367535,
   "y": 26612.997924316056,
   "name": "Gameplane/Share Card",
-  "theme": { "mode": "light", "semantic": "light" },
   "reusable": true,
   "width": 440,
   "fill": "$surface/surface",
@@ -102,9 +101,17 @@
           "type": "ref",
           "ref": "UOoQW",
           "name": "statusBadge",
-          "padding": [2, 4, 2, 20],
+          "padding": [
+            2,
+            4,
+            2,
+            20
+          ],
           "descendants": {
-            "YXoPG": { "content": "Online", "fontFamily": "$typography/font-mono" }
+            "YXoPG": {
+              "content": "Online",
+              "fontFamily": "$typography/font-mono"
+            }
           }
         },
         {
@@ -147,7 +154,10 @@
           "cornerRadius": 8,
           "stroke": "$border/border",
           "strokeWidth": 1,
-          "padding": [12, 14],
+          "padding": [
+            12,
+            14
+          ],
           "justifyContent": "space_between",
           "alignItems": "center",
           "children": [

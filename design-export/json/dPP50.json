@@ -124,7 +124,7 @@
                     },
                     "QdcEm": {
                       "icon": "users",
-                      "fill": "#21C45D",
+                      "fill": "$success/success",
                       "library": "lucide",
                       "enabled": false
                     },
