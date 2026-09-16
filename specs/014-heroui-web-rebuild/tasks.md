@@ -432,7 +432,7 @@
 - [X] T193 [US5] Update web/specs.md: add Share links entry under Routing section (path, public access, no auth required, five states) and under Settings sub-sections (ShareLinks tab, create/list/revoke, permission gate); remove any reference to old share-link primitives if any exist.
 - [X] T194 [US5] Verify FR-005 privacy rule: the public Share.tsx page renders no cluster name, namespace, version string, user names, counts, or server enumeration hints; review the Invalid state and all error mappings in the code match the contract.
 - [X] T195 [US5] Verify FR-012 import rule: grep -rl '@/components/ui/\|@radix-ui' web/src/routes/Share.tsx web/src/routes/tabs/settings/ShareLinks.tsx web/src/lib/api.ts web/src/types.ts must return nothing; all new files import from @heroui/react or @/components/hero/ only.
-- [ ] T196 [US5] Record in PR description: Pencil node ids touched (xCJlu dQV9N C2LQE4 q31B6w qFLfB EcoGD epZO2 atqRh VM7ro S7SCDc), screen verification verdicts table, FR-005 privacy check result, FR-012 import check result, test-count verification (ShareLinks.test.tsx, Share.test.tsx, api.test.ts updated, no test files deleted).
+- [X] T196 [US5] Record in PR description: Pencil node ids touched (xCJlu dQV9N C2LQE4 q31B6w qFLfB EcoGD epZO2 atqRh VM7ro S7SCDc), screen verification verdicts table, FR-005 privacy check result, FR-012 import check result, test-count verification (ShareLinks.test.tsx, Share.test.tsx, api.test.ts updated, no test files deleted). — Done 2026-09-16 in the PR #378 description ("Slice 5 verification").
 
 **Checkpoint**: US5 fully functional, slice PR green on the `web`, `web-e2e-mock` and `e2e-web-live` jobs, screenshot comparison accepted, merged before the next slice is cut
 
@@ -471,7 +471,7 @@
 
 ### Quickstart and Housekeeping
 
-- [ ] T208 Run the quickstart.md validation steps (section 1–4): verify design commit precedes code commits, check JSON exports have no '...' elision markers, run tsc --noEmit, confirm web/e2e-mock and e2e-web-live CI jobs pass. (OD-4's `dashboard-utility` (bJ2cg) / OFfAu deletion and OD-5's `.gitignore` entry were both settled and applied in slice 0 — T004, T005 — so no further action on either is needed here.)
+- [X] T208 Run the quickstart.md validation steps (section 1–4): verify design commit precedes code commits, check JSON exports have no '...' elision markers, run tsc --noEmit, confirm web/e2e-mock and e2e-web-live CI jobs pass. (OD-4's `dashboard-utility` (bJ2cg) / OFfAu deletion and OD-5's `.gitignore` entry were both settled and applied in slice 0 — T004, T005 — so no further action on either is needed here.) — Done 2026-09-16: tsc clean; web, coverage/web, web e2e (mock), e2e web live amd64+arm64 pass on 4ce6e857; design commits land with their exports.
 
 ### PR Labeling
 
