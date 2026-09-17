@@ -21,7 +21,7 @@
       "id": "RNxys",
       "name": "chipLabel",
       "fill": "$accent/soft-foreground",
-      "content": "group-name",
+      "content": "ops-team",
       "lineHeight": 1.1428571428571428,
       "fontFamily": "$typography/font-mono",
       "fontSize": 10,

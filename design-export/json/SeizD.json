@@ -111,7 +111,7 @@
                           "name": "icon",
                           "width": 32,
                           "height": 32,
-                          "fill": "#5B8A3A",
+                          "fill": "$success/soft",
                           "cornerRadius": 4,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -120,7 +120,7 @@
                               "type": "text",
                               "id": "mU6Jn",
                               "name": "emoji",
-                              "fill": "$foreground/foreground",
+                              "fill": "$success/soft-foreground",
                               "content": "⛏",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
@@ -173,14 +173,6 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "ellipse",
-                          "id": "MGvLU",
-                          "name": "dot",
-                          "fill": "$success/soft-foreground",
-                          "width": 6,
-                          "height": 6
-                        },
-                        {
                           "type": "text",
                           "id": "TeY2B",
                           "name": "label",
@@ -199,7 +191,7 @@
                   "id": "ZnfIO",
                   "name": "game",
                   "fill": "$foreground/foreground",
-                  "content": "Minecraft Java",
+                  "content": "minecraft-java",
                   "fontFamily": "$typography/font-mono",
                   "fontSize": 13,
                   "fontWeight": "normal"
@@ -241,7 +233,7 @@
                           "id": "O3Gkp",
                           "name": "label",
                           "fill": "$muted",
-                          "content": "14 / 20",
+                          "content": "14/20",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -323,7 +315,7 @@
                           "name": "icon",
                           "width": 32,
                           "height": 32,
-                          "fill": "#8B5A2B",
+                          "fill": "$success/soft",
                           "cornerRadius": 4,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -332,7 +324,7 @@
                               "type": "text",
                               "id": "EL83E",
                               "name": "emoji",
-                              "fill": "$foreground/foreground",
+                              "fill": "$success/soft-foreground",
                               "content": "⚔",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
@@ -384,14 +376,6 @@
                       ],
                       "alignItems": "center",
                       "children": [
-                        {
-                          "type": "ellipse",
-                          "id": "ECwYr",
-                          "name": "dot",
-                          "fill": "$success/soft-foreground",
-                          "width": 6,
-                          "height": 6
-                        },
                         {
                           "type": "text",
                           "id": "nwgTG",
@@ -453,7 +437,7 @@
                           "id": "p1Lv8",
                           "name": "label",
                           "fill": "$muted",
-                          "content": "3 / 10",
+                          "content": "3/10",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -535,7 +519,7 @@
                           "name": "icon",
                           "width": 32,
                           "height": 32,
-                          "fill": "#D4A43C",
+                          "fill": "$success/soft",
                           "cornerRadius": 4,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -544,7 +528,7 @@
                               "type": "text",
                               "id": "D9had",
                               "name": "emoji",
-                              "fill": "$foreground/foreground",
+                              "fill": "$success/soft-foreground",
                               "content": "⚙",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
@@ -596,14 +580,6 @@
                       ],
                       "alignItems": "center",
                       "children": [
-                        {
-                          "type": "ellipse",
-                          "id": "MoxEq",
-                          "name": "dot",
-                          "fill": "$success/soft-foreground",
-                          "width": 6,
-                          "height": 6
-                        },
                         {
                           "type": "text",
                           "id": "dmyxW",
@@ -665,7 +641,7 @@
                           "id": "dtbnC",
                           "name": "label",
                           "fill": "$muted",
-                          "content": "2 / 8",
+                          "content": "2/8",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -747,7 +723,7 @@
                           "name": "icon",
                           "width": 32,
                           "height": 32,
-                          "fill": "#3a6b5b",
+                          "fill": "$success/soft",
                           "cornerRadius": 4,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -756,7 +732,7 @@
                               "type": "text",
                               "id": "T07EGI",
                               "name": "emoji",
-                              "fill": "$foreground/foreground",
+                              "fill": "$success/soft-foreground",
                               "content": "🐾",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
@@ -808,14 +784,6 @@
                       ],
                       "alignItems": "center",
                       "children": [
-                        {
-                          "type": "ellipse",
-                          "id": "w52MII",
-                          "name": "dot",
-                          "fill": "$warning/soft-foreground",
-                          "width": 6,
-                          "height": 6
-                        },
                         {
                           "type": "text",
                           "id": "f2fFO0",
@@ -877,7 +845,7 @@
                           "id": "cPnZl",
                           "name": "label",
                           "fill": "$muted",
-                          "content": "0 / 32",
+                          "content": "0/32",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -959,7 +927,7 @@
                           "name": "icon",
                           "width": 32,
                           "height": 32,
-                          "fill": "#7D3932",
+                          "fill": "$success/soft",
                           "cornerRadius": 4,
                           "justifyContent": "center",
                           "alignItems": "center",
@@ -968,7 +936,7 @@
                               "type": "text",
                               "id": "ty7Sv",
                               "name": "emoji",
-                              "fill": "$foreground/foreground",
+                              "fill": "$success/soft-foreground",
                               "content": "🦖",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
@@ -1020,14 +988,6 @@
                       ],
                       "alignItems": "center",
                       "children": [
-                        {
-                          "type": "ellipse",
-                          "id": "W10fN",
-                          "name": "dot",
-                          "fill": "$danger/soft-foreground",
-                          "width": 6,
-                          "height": 6
-                        },
                         {
                           "type": "text",
                           "id": "MX268",
@@ -1089,7 +1049,7 @@
                           "id": "aedM6",
                           "name": "label",
                           "fill": "$muted",
-                          "content": "0 / 70",
+                          "content": "0/70",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"

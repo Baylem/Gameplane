@@ -21,7 +21,7 @@
       "id": "m7gnz",
       "name": "chipLabel",
       "fill": "$foreground/foreground",
-      "content": "group-name",
+      "content": "everyone",
       "lineHeight": 1.1428571428571428,
       "fontFamily": "$typography/font-mono",
       "fontSize": 10,

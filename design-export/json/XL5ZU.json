@@ -21,7 +21,7 @@
       "id": "v68RDf",
       "name": "chipLabel",
       "fill": "$warning/soft-foreground",
-      "content": "group-name",
+      "content": "ops-leads",
       "lineHeight": 1.1428571428571428,
       "fontFamily": "$typography/font-mono",
       "fontSize": 10,

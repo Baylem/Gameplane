@@ -38,9 +38,9 @@
       },
       "strokeAlignment": "inner",
       "strokeLinejoin": "round",
-      "layout": "vertical",
-      "gap": 8,
+      "gap": 12,
       "padding": 20,
+      "justifyContent": "space_between",
       "children": [
         {
           "type": "frame",

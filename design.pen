@@ -35185,7 +35185,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#5B8A3A",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -35194,7 +35194,7 @@
                                   "type": "text",
                                   "id": "z1B0T",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "⛏",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -35247,14 +35247,6 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "ellipse",
-                              "id": "If9yi",
-                              "name": "status dot",
-                              "fill": "$success/soft-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
-                            {
                               "type": "text",
                               "id": "W0a0m",
                               "name": "Label",
@@ -35273,7 +35265,7 @@
                       "id": "XREqu",
                       "name": "game",
                       "fill": "$foreground/foreground",
-                      "content": "Minecraft Java",
+                      "content": "minecraft-java",
                       "fontFamily": "$typography/font-mono",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -35315,7 +35307,7 @@
                               "id": "IAQML",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "14 / 20",
+                              "content": "14/20",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -35397,7 +35389,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#8B5A2B",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -35406,7 +35398,7 @@
                                   "type": "text",
                                   "id": "A9zSD",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "⚔",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -35458,14 +35450,6 @@
                           ],
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "sets8",
-                              "name": "status dot",
-                              "fill": "$color-sleep-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
                             {
                               "type": "text",
                               "id": "n8J6gN",
@@ -35609,7 +35593,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#4A6FA5",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -35618,7 +35602,7 @@
                                   "type": "text",
                                   "id": "MOnuM",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "🏭",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -35675,14 +35659,6 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "ellipse",
-                              "id": "U2rbn",
-                              "name": "status dot",
-                              "fill": "$focus/soft-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
-                            {
                               "type": "text",
                               "id": "u6eH8o",
                               "name": "Label",
@@ -35701,7 +35677,7 @@
                       "id": "lV0vD",
                       "name": "game",
                       "fill": "$foreground/foreground",
-                      "content": "Satisfactory",
+                      "content": "satisfactory",
                       "fontFamily": "$typography/font-mono",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -35825,7 +35801,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#D4A43C",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -35834,7 +35810,7 @@
                                   "type": "text",
                                   "id": "mT130",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "⚙",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -35886,14 +35862,6 @@
                           ],
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "heSn2",
-                              "name": "status dot",
-                              "fill": "$success/soft-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
                             {
                               "type": "text",
                               "id": "RgYJB",
@@ -35955,7 +35923,7 @@
                               "id": "u3ZRn",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "2 / 8",
+                              "content": "2/8",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -36037,7 +36005,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#3a6b5b",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -36046,7 +36014,7 @@
                                   "type": "text",
                                   "id": "ckCnT",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "🐾",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -36098,14 +36066,6 @@
                           ],
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "Fo19E",
-                              "name": "status dot",
-                              "fill": "$warning/soft-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
                             {
                               "type": "text",
                               "id": "rTGD3",
@@ -36167,7 +36127,7 @@
                               "id": "xsv0I",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "0 / 32",
+                              "content": "0/32",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -36249,7 +36209,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#7D3932",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -36258,7 +36218,7 @@
                                   "type": "text",
                                   "id": "y76bN",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "🦖",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -36310,14 +36270,6 @@
                           ],
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "k0NGP2",
-                              "name": "status dot",
-                              "fill": "$danger/soft-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
                             {
                               "type": "text",
                               "id": "lYHRD",
@@ -36379,7 +36331,7 @@
                               "id": "L6jXyj",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "0 / 70",
+                              "content": "0/70",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -36546,7 +36498,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#5B8A3A",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -36555,7 +36507,7 @@
                                   "type": "text",
                                   "id": "mU6Jn",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "⛏",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -36608,14 +36560,6 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "ellipse",
-                              "id": "MGvLU",
-                              "name": "dot",
-                              "fill": "$success/soft-foreground",
-                              "width": 6,
-                              "height": 6
-                            },
-                            {
                               "type": "text",
                               "id": "TeY2B",
                               "name": "label",
@@ -36634,7 +36578,7 @@
                       "id": "ZnfIO",
                       "name": "game",
                       "fill": "$foreground/foreground",
-                      "content": "Minecraft Java",
+                      "content": "minecraft-java",
                       "fontFamily": "$typography/font-mono",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -36676,7 +36620,7 @@
                               "id": "O3Gkp",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "14 / 20",
+                              "content": "14/20",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -36758,7 +36702,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#8B5A2B",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -36767,7 +36711,7 @@
                                   "type": "text",
                                   "id": "EL83E",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "⚔",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -36819,14 +36763,6 @@
                           ],
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "ECwYr",
-                              "name": "dot",
-                              "fill": "$success/soft-foreground",
-                              "width": 6,
-                              "height": 6
-                            },
                             {
                               "type": "text",
                               "id": "nwgTG",
@@ -36888,7 +36824,7 @@
                               "id": "p1Lv8",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "3 / 10",
+                              "content": "3/10",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -36970,7 +36906,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#D4A43C",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -36979,7 +36915,7 @@
                                   "type": "text",
                                   "id": "D9had",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "⚙",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -37031,14 +36967,6 @@
                           ],
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "MoxEq",
-                              "name": "dot",
-                              "fill": "$success/soft-foreground",
-                              "width": 6,
-                              "height": 6
-                            },
                             {
                               "type": "text",
                               "id": "dmyxW",
@@ -37100,7 +37028,7 @@
                               "id": "dtbnC",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "2 / 8",
+                              "content": "2/8",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -37182,7 +37110,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#3a6b5b",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -37191,7 +37119,7 @@
                                   "type": "text",
                                   "id": "T07EGI",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "🐾",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -37243,14 +37171,6 @@
                           ],
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "w52MII",
-                              "name": "dot",
-                              "fill": "$warning/soft-foreground",
-                              "width": 6,
-                              "height": 6
-                            },
                             {
                               "type": "text",
                               "id": "f2fFO0",
@@ -37312,7 +37232,7 @@
                               "id": "cPnZl",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "0 / 32",
+                              "content": "0/32",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -37394,7 +37314,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#7D3932",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -37403,7 +37323,7 @@
                                   "type": "text",
                                   "id": "ty7Sv",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "🦖",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -37455,14 +37375,6 @@
                           ],
                           "alignItems": "center",
                           "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "W10fN",
-                              "name": "dot",
-                              "fill": "$danger/soft-foreground",
-                              "width": 6,
-                              "height": 6
-                            },
                             {
                               "type": "text",
                               "id": "MX268",
@@ -37524,7 +37436,7 @@
                               "id": "aedM6",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "0 / 70",
+                              "content": "0/70",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -37947,7 +37859,7 @@
       "y": 25269,
       "name": "Gameplane/Audit Integrity Banner",
       "reusable": true,
-      "width": 700,
+      "width": 1196,
       "fill": "$background/background",
       "layout": "vertical",
       "gap": 12,
@@ -37966,8 +37878,7 @@
           "type": "frame",
           "id": "m1hP1j",
           "name": "Integrity Banner (Broken)",
-          "width": "fill_container",
-          "height": 72,
+          "width": 1132,
           "fill": "$danger/danger",
           "gap": 12,
           "padding": 16,
@@ -40786,9 +40697,9 @@
           },
           "strokeAlignment": "inner",
           "strokeLinejoin": "round",
-          "layout": "vertical",
-          "gap": 8,
+          "gap": 12,
           "padding": 20,
+          "justifyContent": "space_between",
           "children": [
             {
               "type": "frame",
@@ -58164,7 +58075,7 @@
           "id": "m7gnz",
           "name": "chipLabel",
           "fill": "$foreground/foreground",
-          "content": "group-name",
+          "content": "everyone",
           "lineHeight": 1.1428571428571428,
           "fontFamily": "$typography/font-mono",
           "fontSize": 10,
@@ -58658,7 +58569,7 @@
           "id": "v68RDf",
           "name": "chipLabel",
           "fill": "$warning/soft-foreground",
-          "content": "group-name",
+          "content": "ops-leads",
           "lineHeight": 1.1428571428571428,
           "fontFamily": "$typography/font-mono",
           "fontSize": 10,
@@ -58711,7 +58622,7 @@
           "id": "RNxys",
           "name": "chipLabel",
           "fill": "$accent/soft-foreground",
-          "content": "group-name",
+          "content": "ops-team",
           "lineHeight": 1.1428571428571428,
           "fontFamily": "$typography/font-mono",
           "fontSize": 10,
@@ -84947,7 +84858,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#5B8A3A",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -84956,7 +84867,7 @@
                                   "type": "text",
                                   "id": "t7brvG",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "MI",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -85013,14 +84924,6 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "ellipse",
-                              "id": "AkRdC",
-                              "name": "status dot",
-                              "fill": "$success/soft-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
-                            {
                               "type": "text",
                               "id": "d0ZSI5",
                               "name": "Label",
@@ -85039,7 +84942,7 @@
                       "id": "mLHoA",
                       "name": "game",
                       "fill": "$foreground/foreground",
-                      "content": "Minecraft Java",
+                      "content": "minecraft-java",
                       "fontFamily": "$typography/font-mono",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -85081,7 +84984,7 @@
                               "id": "SaaAN",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "0 / 20",
+                              "content": "0/20",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -85163,7 +85066,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#5B8A3A",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -85172,7 +85075,7 @@
                                   "type": "text",
                                   "id": "n7pU3C",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "MI",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -85229,14 +85132,6 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "ellipse",
-                              "id": "okz0J",
-                              "name": "status dot",
-                              "fill": "$danger/soft-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
-                            {
                               "type": "text",
                               "id": "CqZ7E",
                               "name": "Label",
@@ -85255,7 +85150,7 @@
                       "id": "SCXtD",
                       "name": "game",
                       "fill": "$foreground/foreground",
-                      "content": "Minecraft Java",
+                      "content": "minecraft-java",
                       "fontFamily": "$typography/font-mono",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -85379,7 +85274,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#4A6FA5",
+                              "fill": "$accent/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -85388,7 +85283,7 @@
                                   "type": "text",
                                   "id": "SaQX5",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$accent/soft-foreground",
                                   "content": "SA",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -85445,14 +85340,6 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "ellipse",
-                              "id": "Tp21K",
-                              "name": "status dot",
-                              "fill": "$focus/soft-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
-                            {
                               "type": "text",
                               "id": "YAzi0",
                               "name": "Label",
@@ -85471,7 +85358,7 @@
                       "id": "FAXAj",
                       "name": "game",
                       "fill": "$foreground/foreground",
-                      "content": "Satisfactory",
+                      "content": "satisfactory",
                       "fontFamily": "$typography/font-mono",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -85595,7 +85482,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#5B8A3A",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -85604,7 +85491,7 @@
                                   "type": "text",
                                   "id": "kmBku",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "ME",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -85661,14 +85548,6 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "ellipse",
-                              "id": "BEqBO",
-                              "name": "status dot",
-                              "fill": "$success/soft-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
-                            {
                               "type": "text",
                               "id": "cxVew",
                               "name": "Label",
@@ -85687,7 +85566,7 @@
                       "id": "MK6aw",
                       "name": "game",
                       "fill": "$foreground/foreground",
-                      "content": "Minecraft (Modded)",
+                      "content": "minecraft-modded",
                       "fontFamily": "$typography/font-mono",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -85729,7 +85608,7 @@
                               "id": "KTvHZ",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "4 / 20",
+                              "content": "4/20",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -85811,7 +85690,7 @@
                               "name": "icon",
                               "width": 32,
                               "height": 32,
-                              "fill": "#5B8A3A",
+                              "fill": "$success/soft",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
@@ -85820,7 +85699,7 @@
                                   "type": "text",
                                   "id": "t1j0Wn",
                                   "name": "emoji",
-                                  "fill": "$foreground/foreground",
+                                  "fill": "$success/soft-foreground",
                                   "content": "ME",
                                   "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
@@ -85877,14 +85756,6 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "type": "ellipse",
-                              "id": "h0dm9",
-                              "name": "status dot",
-                              "fill": "$success/soft-foreground",
-                              "width": 8,
-                              "height": 8
-                            },
-                            {
                               "type": "text",
                               "id": "W7XhC",
                               "name": "Label",
@@ -85903,7 +85774,7 @@
                       "id": "vsOzh",
                       "name": "game",
                       "fill": "$foreground/foreground",
-                      "content": "Minecraft (Modded)",
+                      "content": "minecraft-modded",
                       "fontFamily": "$typography/font-mono",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -85945,7 +85816,7 @@
                               "id": "clmpM",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "0 / 20",
+                              "content": "0/20",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -87063,8 +86934,13 @@
       "height": 900,
       "fill": "$surface/secondary",
       "layout": "vertical",
-      "gap": 24,
-      "padding": 80,
+      "gap": 16,
+      "padding": [
+        48,
+        224,
+        48,
+        48
+      ],
       "justifyContent": "center",
       "children": [
         {
@@ -87077,8 +86953,8 @@
           "strokeAlignment": "inner",
           "gap": 8,
           "padding": [
-            6,
-            14
+            4,
+            12
           ],
           "alignItems": "center",
           "children": [
@@ -87095,7 +86971,7 @@
               "fill": "$muted",
               "content": "AGPL-3.0",
               "fontFamily": "$typography/font-mono",
-              "fontSize": 12,
+              "fontSize": 11,
               "fontWeight": "normal"
             }
           ]
@@ -87104,13 +86980,11 @@
           "type": "text",
           "id": "hKfw8",
           "fill": "$foreground/foreground",
-          "textGrowth": "fixed-width",
-          "width": "fill_container",
           "content": "Kubernetes-native\ngame server\nhosting.",
-          "lineHeight": 1.05,
+          "lineHeight": 1.25,
           "fontFamily": "$typography/font-mono",
           "fontSize": 44,
-          "fontWeight": "700"
+          "fontWeight": "600"
         },
         {
           "type": "text",
@@ -87119,10 +86993,17 @@
           "textGrowth": "fixed-width",
           "width": "fill_container",
           "content": "An open-source alternative to proprietary game panels — CRDs, Operators, and StatefulSets all the way down.",
-          "lineHeight": 1.5,
+          "lineHeight": 1.4286,
           "fontFamily": "$typography/font-sans",
-          "fontSize": 15,
+          "fontSize": 14,
           "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "u8KsP",
+          "name": "heroSpacer",
+          "width": "fill_container",
+          "height": 24
         },
         {
           "type": "frame",
@@ -87130,7 +87011,7 @@
           "name": "feats",
           "width": "fill_container",
           "layout": "vertical",
-          "gap": 12,
+          "gap": 16,
           "children": [
             {
               "type": "frame",
@@ -87138,13 +87019,12 @@
               "name": "f1",
               "width": "fill_container",
               "gap": 12,
-              "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
                   "id": "KNAjG",
-                  "width": 28,
-                  "height": 28,
+                  "width": 32,
+                  "height": 32,
                   "fill": "$default/default",
                   "cornerRadius": 6,
                   "justifyContent": "center",
@@ -87153,8 +87033,8 @@
                     {
                       "type": "icon",
                       "id": "E2SxjW",
-                      "width": 16,
-                      "height": 16,
+                      "width": 20,
+                      "height": 20,
                       "icon": "dns",
                       "library": "Material Symbols Sharp",
                       "weight": 400,
@@ -87169,8 +87049,9 @@
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "Deploy any game. Minecraft, Valheim, Factorio, Palworld, ARK, CS2, Terraria, and more.",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-mono",
-                  "fontSize": 13,
+                  "fontSize": 14,
                   "fontWeight": "normal"
                 }
               ]
@@ -87181,13 +87062,12 @@
               "name": "f2",
               "width": "fill_container",
               "gap": 12,
-              "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
                   "id": "KgRrA",
-                  "width": 28,
-                  "height": 28,
+                  "width": 32,
+                  "height": 32,
                   "fill": "$default/default",
                   "cornerRadius": 6,
                   "justifyContent": "center",
@@ -87196,8 +87076,8 @@
                     {
                       "type": "icon",
                       "id": "a7xDFg",
-                      "width": 16,
-                      "height": 16,
+                      "width": 20,
+                      "height": 20,
                       "icon": "hub",
                       "library": "Material Symbols Sharp",
                       "weight": 400,
@@ -87212,8 +87092,9 @@
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "Scale from single-node k3s to multi-node bare metal or cloud.",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-mono",
-                  "fontSize": 13,
+                  "fontSize": 14,
                   "fontWeight": "normal"
                 }
               ]
@@ -87224,13 +87105,12 @@
               "name": "f3",
               "width": "fill_container",
               "gap": 12,
-              "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
                   "id": "z2T3Vg",
-                  "width": 28,
-                  "height": 28,
+                  "width": 32,
+                  "height": 32,
                   "fill": "$default/default",
                   "cornerRadius": 6,
                   "justifyContent": "center",
@@ -87239,8 +87119,8 @@
                     {
                       "type": "icon",
                       "id": "JQNGJ",
-                      "width": 16,
-                      "height": 16,
+                      "width": 20,
+                      "height": 20,
                       "icon": "backup",
                       "library": "Material Symbols Sharp",
                       "weight": 400,
@@ -87255,8 +87135,9 @@
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "Backups, auto-restart, rolling upgrades, RBAC. Production-grade defaults.",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-mono",
-                  "fontSize": 13,
+                  "fontSize": 14,
                   "fontWeight": "normal"
                 }
               ]
@@ -87267,13 +87148,12 @@
               "name": "f4",
               "width": "fill_container",
               "gap": 12,
-              "alignItems": "center",
               "children": [
                 {
                   "type": "frame",
                   "id": "RjQ0m",
-                  "width": 28,
-                  "height": 28,
+                  "width": 32,
+                  "height": 32,
                   "fill": "$default/default",
                   "cornerRadius": 6,
                   "justifyContent": "center",
@@ -87282,8 +87162,8 @@
                     {
                       "type": "icon",
                       "id": "L5JWxZ",
-                      "width": 16,
-                      "height": 16,
+                      "width": 20,
+                      "height": 20,
                       "icon": "code",
                       "library": "Material Symbols Sharp",
                       "weight": 400,
@@ -87297,9 +87177,10 @@
                   "fill": "$foreground/foreground",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "GitOps-friendly. `kubectl get gameservers` just works.",
+                  "content": "GitOps-friendly. kubectl get gameservers just works.",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-mono",
-                  "fontSize": 13,
+                  "fontSize": 14,
                   "fontWeight": "normal"
                 }
               ]
@@ -88726,7 +88607,7 @@
       "name": "Gameplane/Mobile TopBar",
       "reusable": true,
       "width": 390,
-      "height": 56,
+      "height": 64,
       "stroke": "$border/border",
       "strokeWidth": {
         "bottom": 1
@@ -95487,6 +95368,1091 @@
               "content": "This cluster has no MetalLB or Cilium address manager. Your pool and address preference will be saved but never applied."
             }
           }
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "QQtUD",
+      "x": 8080,
+      "y": 12745,
+      "name": "Screen/Create Server — Step 4 Network (as built)",
+      "theme": {
+        "semantic": "dark"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 1170,
+      "fill": "$background/background",
+      "children": [
+        {
+          "id": "rn0n0",
+          "type": "ref",
+          "ref": "kKFX9",
+          "name": "Sidebar",
+          "height": "fill_container",
+          "descendants": {
+            "iTbd8": {
+              "fill": "#00000000"
+            },
+            "iTbd8/ghUsw": {
+              "fill": "$foreground/foreground"
+            },
+            "iTbd8/bpSQ7": {
+              "fill": "$foreground/foreground"
+            },
+            "i8Z1B": {
+              "fill": "$accent/soft"
+            },
+            "i8Z1B/Sr2Q5": {
+              "fill": "$accent/soft-foreground"
+            },
+            "i8Z1B/Ra9NK": {
+              "fill": "$accent/soft-foreground"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "J8b2Q",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$background/background",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "pN9oL",
+              "type": "ref",
+              "ref": "gu5WY",
+              "name": "TopBar",
+              "width": "fill_container",
+              "descendants": {
+                "Gl7AY": {
+                  "content": "New"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "BcH4J",
+          "layoutPosition": "absolute",
+          "x": 0,
+          "y": 0,
+          "name": "ModalContainer",
+          "width": 1440,
+          "height": 1170,
+          "fill": "#000000B3",
+          "layout": "vertical",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "xtHqZ",
+              "name": "Modal",
+              "clip": true,
+              "width": 960,
+              "fill": "$surface/surface",
+              "cornerRadius": 12,
+              "stroke": "$border/border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#00000080",
+                "offset": {
+                  "x": 0,
+                  "y": 24
+                },
+                "blur": 60
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "id": "TxqZL",
+                  "type": "ref",
+                  "ref": "opmcF",
+                  "name": "Header",
+                  "width": "fill_container",
+                  "descendants": {
+                    "gcM6g": {
+                      "content": "Step 4 of 5 · Network"
+                    }
+                  }
+                },
+                {
+                  "id": "MWASm",
+                  "type": "ref",
+                  "ref": "oROhg",
+                  "name": "Stepper",
+                  "width": "fill_container",
+                  "descendants": {
+                    "F3Au7j": {
+                      "fill": "$success/soft",
+                      "stroke": "$success/success",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "qFK6z",
+                          "name": "CheckIcon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$success/soft-foreground"
+                        }
+                      ]
+                    },
+                    "bSERJ": {
+                      "fill": "$muted",
+                      "fontWeight": "normal"
+                    },
+                    "xpeFZ": {
+                      "fill": "$success/soft",
+                      "stroke": "$success/success",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "u9Kbj",
+                          "name": "CheckIcon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$success/soft-foreground"
+                        }
+                      ]
+                    },
+                    "xzVlE": {
+                      "fill": "$success/soft",
+                      "stroke": "$success/success",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "ByzhA",
+                          "name": "CheckIcon",
+                          "width": 12,
+                          "height": 12,
+                          "icon": "check",
+                          "library": "lucide",
+                          "fill": "$success/soft-foreground"
+                        }
+                      ]
+                    },
+                    "MntgG": {
+                      "fill": "$accent/soft",
+                      "stroke": "$accent/accent"
+                    },
+                    "AWo7q": {
+                      "fill": "$accent/accent"
+                    },
+                    "z2BJtl": {
+                      "fill": "$foreground/foreground",
+                      "fontWeight": "500"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "KXhG2",
+                  "name": "Body",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "padding": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "PaW4I",
+                      "name": "StepBody",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 16,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "moXiJ",
+                          "name": "Expose",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "U6XtS5",
+                              "name": "Label",
+                              "fill": "$muted",
+                              "content": "Expose",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "gosR0",
+                              "name": "CardRow",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "f3vvN",
+                                  "name": "ClusterIPCard",
+                                  "width": "fill_container",
+                                  "cornerRadius": 6,
+                                  "stroke": "$border/border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": 12,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "g2rc5",
+                                      "name": "Title",
+                                      "fill": "$foreground/foreground",
+                                      "content": "ClusterIP",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 14,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "qktVl",
+                                      "name": "Desc",
+                                      "fill": "$muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Internal to cluster only.",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "p4Muer",
+                                  "name": "NodePortCard",
+                                  "width": "fill_container",
+                                  "fill": "#FF84000D",
+                                  "cornerRadius": 6,
+                                  "stroke": "$accent/accent",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": 12,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "rnkIk",
+                                      "name": "Title",
+                                      "fill": "$foreground/foreground",
+                                      "content": "NodePort",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 14,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "qdVLG",
+                                      "name": "Desc",
+                                      "fill": "$muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Reach via any node's IP.",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "n6duf",
+                                  "name": "LoadBalancerCard",
+                                  "width": "fill_container",
+                                  "cornerRadius": 6,
+                                  "stroke": "$border/border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": 12,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "pHL1s",
+                                      "name": "Title",
+                                      "fill": "$foreground/foreground",
+                                      "content": "LoadBalancer",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 14,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "jZtRg",
+                                      "name": "Desc",
+                                      "fill": "$muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Provisions an external LB.",
+                                      "lineHeight": 1.4,
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "gBzPs",
+                          "type": "ref",
+                          "ref": "aOvvm",
+                          "name": "Checkbox Enable Tunnel",
+                          "descendants": {
+                            "rKaQI": {
+                              "content": "Enable tunnel"
+                            }
+                          }
+                        },
+                        {
+                          "id": "jKsHK",
+                          "type": "ref",
+                          "ref": "mhMaM",
+                          "name": "Field Hostname",
+                          "width": "fill_container",
+                          "descendants": {
+                            "peFYu": {
+                              "content": "Hostname (optional)",
+                              "fill": "$muted",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            "RflGC": {
+                              "fill": "$surface/secondary",
+                              "stroke": "$border/border",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "height": 36
+                            },
+                            "O0VQ2": {
+                              "content": "mc.example.dev",
+                              "fill": "$field/placeholder"
+                            },
+                            "kl54d": {
+                              "opacity": 0,
+                              "height": 0
+                            }
+                          }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "HGZYE",
+                          "name": "PortOverrides",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "X29ZY",
+                              "x": 0,
+                              "y": 0,
+                              "name": "Label",
+                              "enabled": false,
+                              "fill": "$muted",
+                              "content": "Port overrides (optional)",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "DbHoJ",
+                              "x": 0,
+                              "y": 22,
+                              "name": "PortHeader",
+                              "enabled": false,
+                              "width": "fill_container(627)",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "TwYsQ",
+                                  "name": "Col",
+                                  "fill": "$muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Port name",
+                                  "fontFamily": "$typography/font-sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "N3ruQ",
+                                  "name": "Col",
+                                  "fill": "$muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": 120,
+                                  "content": "Service port",
+                                  "fontFamily": "$typography/font-sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "AX9zO",
+                                  "name": "Col",
+                                  "fill": "$muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": 120,
+                                  "content": "NodePort",
+                                  "fontFamily": "$typography/font-sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "movx0",
+                                  "name": "spacer",
+                                  "width": 32,
+                                  "height": 1
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "tsvNi",
+                              "x": 0,
+                              "y": 44,
+                              "name": "PortRow",
+                              "enabled": false,
+                              "width": "fill_container(627)",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "B5PxVI",
+                                  "type": "ref",
+                                  "ref": "mhMaM",
+                                  "name": "Field",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "peFYu": {
+                                      "opacity": 0,
+                                      "height": 0
+                                    },
+                                    "RflGC": {
+                                      "fill": "$surface/secondary",
+                                      "stroke": "$border/border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "height": 36
+                                    },
+                                    "O0VQ2": {
+                                      "content": "game",
+                                      "fill": "$foreground/foreground"
+                                    },
+                                    "kl54d": {
+                                      "opacity": 0,
+                                      "height": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "Y6YOB",
+                                  "type": "ref",
+                                  "ref": "mhMaM",
+                                  "name": "Field",
+                                  "width": 120,
+                                  "descendants": {
+                                    "peFYu": {
+                                      "opacity": 0,
+                                      "height": 0
+                                    },
+                                    "RflGC": {
+                                      "fill": "$surface/secondary",
+                                      "stroke": "$border/border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "height": 36
+                                    },
+                                    "O0VQ2": {
+                                      "content": "25565",
+                                      "fill": "$foreground/foreground"
+                                    },
+                                    "kl54d": {
+                                      "opacity": 0,
+                                      "height": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "fBUiQ",
+                                  "type": "ref",
+                                  "ref": "mhMaM",
+                                  "name": "Field",
+                                  "width": 120,
+                                  "descendants": {
+                                    "peFYu": {
+                                      "opacity": 0,
+                                      "height": 0
+                                    },
+                                    "RflGC": {
+                                      "fill": "$surface/secondary",
+                                      "stroke": "$border/border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "height": 36
+                                    },
+                                    "O0VQ2": {
+                                      "content": "31565",
+                                      "fill": "$foreground/foreground"
+                                    },
+                                    "kl54d": {
+                                      "opacity": 0,
+                                      "height": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "saNfr",
+                                  "name": "BtnRemove",
+                                  "width": 32,
+                                  "height": 32,
+                                  "cornerRadius": 6,
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "Ada05",
+                                      "name": "x",
+                                      "width": 12,
+                                      "height": 12,
+                                      "icon": "x",
+                                      "library": "lucide",
+                                      "fill": "$muted"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "p0F58b",
+                              "type": "ref",
+                              "ref": "J09iP",
+                              "name": "AddButton",
+                              "descendants": {
+                                "eWkIT/WtPjS": {
+                                  "icon": "plus"
+                                },
+                                "eWkIT/r4VbAi": {
+                                  "content": "Add port override"
+                                }
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "id": "IPhfI",
+                              "x": 0,
+                              "y": 150,
+                              "name": "Helper",
+                              "enabled": false,
+                              "fill": "$muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container(627)",
+                              "content": "Pin a NodePort or override the Service port for a named template port.",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ATJkD",
+                          "name": "LoadBalancerAddress",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "iDzTi",
+                              "name": "Label",
+                              "fill": "$muted",
+                              "content": "Load balancer address (optional)",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "v7Kwt6",
+                              "name": "ColHeader",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Fd8NQ",
+                                  "name": "Col",
+                                  "fill": "$muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Address pool",
+                                  "fontFamily": "$typography/font-sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "T5bNG",
+                                  "name": "Col",
+                                  "fill": "$muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Requested address",
+                                  "fontFamily": "$typography/font-sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "HmQXv",
+                              "name": "Row",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "LjEcl",
+                                  "type": "ref",
+                                  "ref": "aRqX6",
+                                  "name": "Field",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "ANxU1": {
+                                      "opacity": 0,
+                                      "height": 0
+                                    },
+                                    "K5pqlT": {
+                                      "height": 36
+                                    },
+                                    "hokJ3": {
+                                      "content": "pool-us-west",
+                                      "fill": "$field/placeholder"
+                                    },
+                                    "OiyAM": {
+                                      "opacity": 0,
+                                      "height": 0
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "rtLMb",
+                                  "type": "ref",
+                                  "ref": "aRqX6",
+                                  "name": "Field",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "ANxU1": {
+                                      "opacity": 0,
+                                      "height": 0
+                                    },
+                                    "K5pqlT": {
+                                      "height": 36
+                                    },
+                                    "hokJ3": {
+                                      "content": "203.0.113.50",
+                                      "fill": "$field/placeholder"
+                                    },
+                                    "OiyAM": {
+                                      "opacity": 0,
+                                      "height": 0
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "Tmyp1",
+                              "name": "Helper",
+                              "fill": "$muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Name of a load-balancer address pool configured by your cluster admin, plus an optional specific address to request. Applies only when Expose is set to LoadBalancer — ignored otherwise.",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "id": "eh1FS",
+                              "type": "ref",
+                              "ref": "Llzos",
+                              "name": "Alert Address preference ignored",
+                              "width": "fill_container",
+                              "fill": "$warning/soft",
+                              "stroke": "$warning/soft-foreground",
+                              "strokeWidth": 1,
+                              "cornerRadius": 8,
+                              "padding": [
+                                16,
+                                20
+                              ],
+                              "descendants": {
+                                "sINBP": {
+                                  "icon": "megaphone"
+                                },
+                                "BXuYr": {
+                                  "content": "Address preference ignored"
+                                },
+                                "JmFhb": {
+                                  "content": "Expose is set to NodePort. Address pool and requested address only take effect when Expose (above) is set to LoadBalancer."
+                                },
+                                "c0FRXZ": {
+                                  "opacity": 0,
+                                  "height": 0
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "MEGvK",
+                      "name": "Preview",
+                      "clip": true,
+                      "width": 273,
+                      "fill": "$surface/surface",
+                      "cornerRadius": 8,
+                      "stroke": "$border/border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "layout": "vertical",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "dzZK7",
+                          "name": "PreviewHeader",
+                          "width": "fill_container",
+                          "stroke": "$border/border",
+                          "strokeWidth": {
+                            "bottom": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "gap": 8,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "tUDyF",
+                              "name": "IconWrap",
+                              "width": 28,
+                              "height": 28,
+                              "fill": "$default/default",
+                              "cornerRadius": 6,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "K7PIDi",
+                                  "name": "GameIcon",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "settings",
+                                  "library": "Material Symbols Sharp",
+                                  "weight": 400,
+                                  "fill": "$muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "LuOV0",
+                              "name": "TitleGroup",
+                              "layout": "vertical",
+                              "gap": 2,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "cZR3J",
+                                  "name": "Title",
+                                  "fill": "$foreground/foreground",
+                                  "content": "Minecraft (Java Edition)",
+                                  "fontFamily": "$typography/font-sans",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "BXKUu",
+                                  "name": "Subtitle",
+                                  "fill": "$muted",
+                                  "content": "Template: minecraft-java",
+                                  "fontFamily": "$typography/font-mono",
+                                  "fontSize": 10,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jB13N",
+                          "name": "CodeBlockWrap",
+                          "width": "fill_container",
+                          "fill": "#0a0a0a",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "clHSE",
+                              "name": "L0",
+                              "fill": "$muted",
+                              "content": "apiVersion: gameplane.local/v1alpha1",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "qmwcq",
+                              "name": "L1",
+                              "fill": "$muted",
+                              "content": "kind: GameServer",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "wOaRR",
+                              "name": "L2",
+                              "fill": "$muted",
+                              "content": "metadata:",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "JTNXh",
+                              "name": "L3",
+                              "fill": "$muted",
+                              "content": "  name: mc-survival",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "wn5IV",
+                              "name": "L4",
+                              "fill": "$muted",
+                              "content": "spec:",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "MFnEr",
+                              "name": "L5",
+                              "fill": "$muted",
+                              "content": "  template: minecraft-java",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "q3jgpe",
+                              "name": "L6",
+                              "fill": "$muted",
+                              "content": "  version: fabric-1.21.4",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "IWNyI",
+                              "name": "L7",
+                              "fill": "$muted",
+                              "content": "  resources:",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "P73pUp",
+                              "name": "L8",
+                              "fill": "$muted",
+                              "content": "    cpu: 2000m",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "HsXZB",
+                              "name": "L9",
+                              "fill": "$muted",
+                              "content": "    memory: 6Gi",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "IDDie",
+                              "name": "L10",
+                              "fill": "$muted",
+                              "content": "  network:",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "pkItx",
+                              "name": "L11",
+                              "fill": "$muted",
+                              "content": "    expose: NodePort",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "WI2sY",
+                              "name": "L12",
+                              "fill": "$muted",
+                              "content": "    ports:",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "gDEFx",
+                              "name": "L13",
+                              "fill": "$muted",
+                              "content": "      game: 31565",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "k6a4n",
+                              "name": "L14",
+                              "fill": "$muted",
+                              "content": "  config: {...}",
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Sdt1o",
+                          "name": "MemoryTip",
+                          "width": "fill_container",
+                          "stroke": "$border/border",
+                          "strokeWidth": {
+                            "top": 1
+                          },
+                          "strokeAlignment": "inner",
+                          "strokeLinejoin": "round",
+                          "padding": [
+                            12,
+                            14
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "EHRiR",
+                              "name": "TipText",
+                              "fill": "$muted",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Memory tip — factor in mod/plugin overhead; Minecraft Vanilla uses ~1.5 GB at 4 players.",
+                              "lineHeight": 1.4,
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "XE2dd",
+                  "type": "ref",
+                  "ref": "IoDHI",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "descendants": {
+                    "q4aClI": {
+                      "name": "BackBtn"
+                    },
+                    "q4aClI/bevQZ": {
+                      "enabled": true,
+                      "icon": "arrow-left"
+                    },
+                    "q4aClI/ezEy1": {
+                      "content": "Back"
+                    },
+                    "H87Gb": {
+                      "content": "Continue to Review"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     }

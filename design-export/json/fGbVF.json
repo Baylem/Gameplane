@@ -6,7 +6,7 @@
   "name": "Gameplane/Mobile TopBar",
   "reusable": true,
   "width": 390,
-  "height": 56,
+  "height": 64,
   "stroke": "$border/border",
   "strokeWidth": {
     "bottom": 1
