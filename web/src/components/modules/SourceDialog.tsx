@@ -223,7 +223,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
     <Modal isOpen={open} onOpenChange={onOpenChange}>
       <ModalBackdrop isDismissable={!busy} isKeyboardDismissDisabled={busy}>
         <ModalContainer>
-          <ModalDialog>
+          <ModalDialog className="w-[544px] max-w-[544px]">
           <ModalHeader>
             <ModalHeading>
               {editing ? `Edit source ${source.metadata.name}` : "Add module source"}

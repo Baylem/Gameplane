@@ -210,6 +210,7 @@ export function RegistryBrowser({
                 size="sm"
                 color={active ? "accent" : "default"}
                 variant={active ? "primary" : "soft"}
+                className={active ? undefined : "border border-foreground/20 bg-transparent text-muted"}
                 onClick={() => setCategory(c.value)}
                 role="button"
                 tabIndex={0}

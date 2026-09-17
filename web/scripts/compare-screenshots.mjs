@@ -119,19 +119,8 @@ const SCALE_ALLOWLIST = {
   XL5ZU: 1.023, // Removable Group Chip — Orange (admin)
   vStkb: 1.023, // Removable Group Chip — Violet (operator)
   uw0dB: 1.0349, // Removable Group Chip — Secondary (viewer)
-  CqaSq: 0.9375, // Role Editor Modal
-  E9EEv0: 1.0714, // Restore Backup dialog
   Kp48V: 0.9821, // Confirm Admin Mapping dialog
-  MaoHP: 1.0714, // Dialog — Reset Password
-  NLDDv: 1.0714, // Dialog — Invite User
-  t3IY3u: 1.0714, // Dialog — Edit User
-  // DMnEi: design frame rebuilt to show full SourceDialog.tsx 9-field layout
-  // (height grew 888->1892px per MANIFEST.md). Tracked in issue #376;
-  // scale factor re-recorded after Pencil export.
-  DMnEi: 1.2143,
   zhLZN: 1.3125, // Backup Detail Drawer
-  kIxaJ: 0.6184, // Audit Integrity Banner
-  m1hP1j: 0.562, // Audit Integrity Banner (broken state)
 };
 
 // Allowed deviation from an allowlisted id's recorded scaleFactor, in either

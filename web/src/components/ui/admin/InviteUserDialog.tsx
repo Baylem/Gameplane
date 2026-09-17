@@ -131,7 +131,7 @@ export function InviteUserDialog({
     <Modal isOpen={open} onOpenChange={handleClose}>
       <ModalBackdrop isDismissable={!isLoading} isKeyboardDismissDisabled={isLoading}>
         <ModalContainer>
-          <ModalDialog className="rounded-xl">
+          <ModalDialog className="w-[480px] max-w-[480px] rounded-xl">
             <ModalHeader>
               <ModalHeading>Invite user</ModalHeading>
             </ModalHeader>

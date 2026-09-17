@@ -71,8 +71,8 @@ export function RoleEditorModal({
   return (
     <Modal isOpen={open} onOpenChange={onOpenChange} key={role?.name ?? "new"}>
       <ModalBackdrop isDismissable={!save.isPending} isKeyboardDismissDisabled={save.isPending}>
-        <ModalContainer size="lg">
-          <ModalDialog>
+        <ModalContainer>
+          <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
               <ModalHeading>{role ? `Edit role: ${role.name}` : "New role"}</ModalHeading>
             </ModalHeader>

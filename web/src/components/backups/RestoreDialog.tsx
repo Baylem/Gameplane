@@ -84,7 +84,7 @@ export function RestoreDialog({ backup, defaultServer, onClose }: Props) {
     <Modal isOpen={open} onOpenChange={(o) => !o && onClose()}>
       <ModalBackdrop isDismissable={!create.isPending} isKeyboardDismissDisabled={create.isPending}>
         <ModalContainer>
-          <ModalDialog>
+          <ModalDialog className="w-[480px] max-w-[480px]">
           <ModalHeader>
             <ModalHeading>Restore backup</ModalHeading>
           </ModalHeader>

@@ -105,7 +105,7 @@ export function EditUserDialog({
     <Modal isOpen={open} onOpenChange={handleClose}>
       <ModalBackdrop isDismissable={!isLoading} isKeyboardDismissDisabled={isLoading}>
         <ModalContainer>
-          <ModalDialog>
+          <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
               <ModalHeading>Edit user</ModalHeading>
             </ModalHeader>

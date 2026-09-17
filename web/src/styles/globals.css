@@ -25,11 +25,11 @@
   --success-soft: oklch(96% 0.04 149.52); /* light success-tinted background, mirrors --warning-soft's light-mode pattern */
   --success-soft-foreground: oklch(45% 0.14 149.52); /* mirrors --warning-soft-foreground's darker-foreground-on-tint pattern */
   --warning: oklch(77.04% 0.1646 70.66); /* #F59F0A */
-  --warning-soft: oklch(96% 0.04 70.66); /* light warning-tinted background, mirrors --accent-soft's light-mode pattern */
-  --warning-soft-foreground: oklch(45% 0.14 70.66); /* mirrors --accent-soft-foreground's darker-foreground-on-tint pattern */
+  --warning-soft: #FEF3C7; /* design $warning/soft */
+  --warning-soft-foreground: #D97706; /* design $warning/soft-foreground */
   --danger: oklch(57.85% 0.2138 27.17); /* #DC2828 */
-  --danger-soft: oklch(96% 0.04 27.17); /* light danger-tinted background, mirrors --warning-soft's light-mode pattern */
-  --danger-soft-foreground: #DC2626; /* red — BV5ei's notConfigured badge (ProvenanceBadge.tsx) now renders via color="default", not color="danger" (see 1.1 above), so this token no longer needs to carry that badge's mauve. Restored to its real danger-red meaning for AlertDialogIcon status="danger" / Chip color="danger" consumers, e.g. Kp48V's Confirm Admin Mapping dialog alert icon. */
+  --danger-soft: #FEE2E2; /* design $danger/soft */
+  --danger-soft-foreground: #EF4444; /* design $danger/soft-foreground */
   --muted: oklch(47.33% 0.0441 343.67); /* #6E5262 */
   --border: oklch(86.09% 0.0556 350.54); /* #EFC3D6 */
   --separator: oklch(86.09% 0.0556 350.54); /* #EFC3D6 */
@@ -37,7 +37,8 @@
   --field-border: oklch(86.09% 0.0556 350.54); /* #EFC3D6 */
   --field-placeholder: oklch(56.55% 0.0436 347.05); /* #8A6C7B */
   --field-foreground: oklch(21.67% 0.0502 347.62); /* #2A0F1E */
-  --focus: oklch(54.13% 0.2466 293.01); /* #7C3AED */
+  --sleep: oklch(54.13% 0.2466 293.01); /* #7C3AED — Asleep/sleep status color (violet) */
+  --focus: var(--accent); /* input focus ring uses theme accent, per OD-16 */
   --chart-stat: oklch(60.56% 0.2189 292.72); /* #8B5CF6 — stat-card icon accent, OD-9 */
   --link: oklch(54.61% 0.2152 262.88); /* #2563EB */
   --segment: oklch(100.00% 0.0000 89.88); /* #FFFFFF */
@@ -79,7 +80,8 @@
   --field-border: oklch(28.79% 0.0167 300.56); /* #2C2932 */
   --field-placeholder: oklch(57.28% 0.0238 303.75); /* #7B7584 */
   --field-foreground: oklch(99.11% 0.0000 89.88); /* #FCFCFC */
-  --focus: oklch(70.90% 0.1592 293.54); /* #A78BFA */
+  --sleep: oklch(70.90% 0.1592 293.54); /* #A78BFA — Asleep/sleep status color (light violet) */
+  --focus: var(--accent); /* input focus ring uses theme accent, per OD-16 */
   --chart-stat: oklch(60.56% 0.2189 292.72); /* #8B5CF6 — stat-card icon accent, OD-9 */
   --link: oklch(76.21% 0.1231 256.39); /* #7DB4FF */
   --segment: oklch(22.75% 0.0137 298.37); /* #1D1B22 */
@@ -129,6 +131,7 @@
   --color-danger-soft: var(--danger-soft);
   --color-default-soft: var(--default-soft);
   --color-default-soft-foreground: var(--default-soft-foreground);
+  --color-sleep: var(--sleep); /* Asleep/sleep status color */
   --color-violet: hsl(258 90% 66%); /* operator role chips */
   --color-chart-stat: var(--chart-stat); /* stat-card icon accent, OD-9 — settled 2026-09-16 */
 
@@ -146,11 +149,11 @@ body {
   color: var(--foreground);
 }
 
-/* Focus status indicator (used for Asleep status on share page) */
+/* Sleep status indicator (used for Asleep status on share page) */
 .status-focus {
-  border-color: var(--focus);
-  background-color: color-mix(in srgb, var(--focus) 15%, transparent);
-  color: var(--focus);
+  border-color: var(--sleep);
+  background-color: color-mix(in srgb, var(--sleep) 15%, transparent);
+  color: var(--sleep);
 }
 
 /* Invisible by default scrollbars, subtle on hover (dashboards need space) */
@@ -185,10 +188,9 @@ input:-webkit-autofill:active {
    the !important inset shadow above replaces the ring entirely, so a
    browser-autofilled + focused field (username/password on the login form)
    painted no focus ring at all while the identical .input inside a modal —
-   never autofilled — kept it. Uses --accent (not --focus): PR "focus ring
-   purple" is superseded — the app-wide input focus ring is the theme accent
-   color, not the violet --focus token (which stays reserved for the Asleep
-   status treatment, see .status-focus above). */
+   never autofilled — kept it. Uses --accent (not --sleep): the app-wide
+   input focus ring is the theme accent color. The violet --sleep token is
+   reserved for Asleep status treatment (see .status-focus above). */
 input:-webkit-autofill:focus {
   box-shadow:
     inset 0 0 0 1000px var(--field-background),
@@ -294,15 +296,16 @@ input:-webkit-autofill:focus {
   color: var(--accent);
 }
 
-/* Asleep phase chip (q31B6w): render with the violet focus treatment used
+/* Asleep phase chip (q31B6w): render with the violet sleep treatment used
    everywhere else for Asleep status (share page badge, Server Detail
    header badge) rather than the accent/pink used for other filled chips.
    Scoped to HeroUI chips only to avoid styling other elements. */
 [data-slot="chip"][data-asleep="true"] {
-  border-color: var(--focus) !important;
-  background-color: color-mix(in srgb, var(--focus) 20%, transparent) !important;
-  color: var(--focus) !important;
+  border-color: var(--sleep) !important;
+  background-color: color-mix(in srgb, var(--sleep) 20%, transparent) !important;
+  color: var(--sleep) !important;
 }
+
 
 /* Modpack category pills (tY6RD): selected pill is filled accent, others
    are outline. Scoped to the category row so this does not leak into other
@@ -310,18 +313,6 @@ input:-webkit-autofill:focus {
 .modpack-categories [data-active="true"] {
   background-color: var(--accent) !important;
   color: var(--accent-foreground) !important;
-}
-
-/* Modpack/mod category pills (tY6RD): unselected pills must be a neutral
-   outline per design — transparent fill, $border/border stroke, $muted
-   text. HeroUI's Chip color="default" variant="soft" renders pink here by
-   default (the same default the [data-type="overridden"] override below
-   works around for a different chip). Scoped to the category row for the
-   same reason as the active-state rule above. */
-.modpack-categories [data-slot="chip"]:not([data-active="true"]) {
-  background-color: transparent !important;
-  border-color: var(--border) !important;
-  color: var(--muted) !important;
 }
 
 /* Overridden provenance badge (R65Xyx): neutral/outlined per the current
@@ -391,17 +382,3 @@ input:-webkit-autofill:focus {
   flex-direction: row;
 }
 
-/* Modal title→subtitle spacing (CqaSq and other dialogs): ModalHeader's
-   own padding plus ModalBody's mt-2 spacing compound into a taller gap
-   between heading and Description than the design's tighter title-to-subtitle
-   rhythm. Scoped to the Description that is the very first element child
-   of ModalBody when that body directly follows ModalHeader, so spacing between
-   later ModalBody children (governed by ModalBody's own gap-N utility) is
-   untouched. Uses data-slot selectors (stable across HeroUI versions) rather
-   than class names. Affects every dialog built from the standard
-   ModalHeader + ModalBody + leading-Description pattern:
-   RoleEditorModal (CqaSq), RestoreDialog (E9EEv0), EditUserDialog
-   (t3IY3u), InviteUserDialog (NLDDv), ResetPasswordDialog (MaoHP). */
-[data-slot="modal-header"] + [data-slot="modal-body"] > [data-slot="description"]:first-of-type {
-  margin-top: -8px;
-}

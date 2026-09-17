@@ -1862,7 +1862,7 @@ function RoleMappingOverridesCard({
                           label={group}
                           variant={getRoleVariant(typedRole)}
                           onRemove={() => handleRemoveGroup(typedRole, group)}
-                          size="sm"
+                          size="md"
                         />
                       ))}
                     </div>

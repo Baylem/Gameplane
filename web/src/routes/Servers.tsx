@@ -698,7 +698,7 @@ function ServerCard({
             </div>
           </div>
         </div>
-        <PhaseChip phase={phase} asleep={asleep} />
+        <PhaseChip phase={phase} asleep={asleep} className="px-1 py-0.5 text-[11px] font-medium rounded-2xl" />
       </div>
 
       {/* Row 2: Game label */}

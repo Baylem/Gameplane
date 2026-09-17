@@ -62,7 +62,7 @@ describe("PhaseChip", () => {
     expect(screen.queryByText("Suspended")).not.toBeInTheDocument();
   });
 
-  // Test 9: Asleep is marked for the violet (focus token) treatment, not accent
+  // Test 9: Asleep is marked for the violet (sleep token) treatment, not accent
   it("marks asleep chips with data-asleep instead of the accent colour", () => {
     render(<PhaseChip phase="Suspended" asleep={true} />);
     const chip = screen.getByText("Asleep").closest('[data-slot="chip"]');

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 const legacyPalette: Record<string, string> = {
   "minecraft-java":    "bg-success/20 text-success",
   "minecraft-bedrock": "bg-success/20 text-success",
+  "minecraft-modded":  "bg-success/20 text-success",
   "valheim":           "bg-warning/20 text-warning",
   "factorio":          "bg-primary/20 text-primary",
   "palworld":          "bg-violet/20 text-violet",

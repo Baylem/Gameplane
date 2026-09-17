@@ -64,7 +64,7 @@ export function ProvenanceBadge({
     >
       <div className="flex items-center gap-[5px]">
         {config.icon}
-        <span className="font-mono text-[10px] font-medium leading-none">{config.label}</span>
+        <span className="font-mono text-[10px] font-medium leading-[13px]">{config.label}</span>
       </div>
     </Chip>
   );

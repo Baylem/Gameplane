@@ -119,7 +119,7 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     await capture(page, "vUqMl");
   });
 
-  test("f1Vga: Create Server — Step 4 Network", async ({ page }) => {
+  test("QQtUD: Create Server — Step 4 Network (as built)", async ({ page }) => {
     await page.goto("/servers/new");
     await page.getByRole("button", { name: /Minecraft Java Edition/i }).click();
     await page.getByRole("button", { name: /continue/i }).click();
@@ -132,7 +132,7 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     await page.getByPlaceholder("pool-us-west").fill("pool-us-west");
     await page.getByPlaceholder("203.0.113.50").fill("203.0.113.50");
     await page.waitForTimeout(200);
-    await capture(page, "f1Vga");
+    await capture(page, "QQtUD");
   });
 
   test("UMJli: Create Server — Step 5 Review", async ({ page }) => {
