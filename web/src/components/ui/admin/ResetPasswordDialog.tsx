@@ -80,10 +80,10 @@ export function ResetPasswordDialog({
           <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
               <ModalHeading>Reset password for {username}</ModalHeading>
+              <Description className="text-sm text-muted">They will need to sign in again with the new password.</Description>
             </ModalHeader>
 
             <ModalBody className="gap-4">
-            <Description>They will need to sign in again with the new password.</Description>
             <div className="flex flex-col gap-2">
               <Label htmlFor="reset-password" className="text-xs">
                 New password

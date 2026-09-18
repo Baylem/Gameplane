@@ -1,6 +1,6 @@
 import React from "react";
 import { Chip } from "@heroui/react";
-import { Edit2, Package, Minus } from "lucide-react";
+import { Pencil, Package, Minus } from "lucide-react";
 
 // ProvenanceBadge renders a data provenance indicator showing how a configuration value was sourced.
 // Three variants: "overridden" (manual edit), "fromHelm" (Helm values), "notConfigured" (not set).
@@ -24,7 +24,7 @@ const provenanceConfig: Record<ProvenanceType, {
   // this design was moved off the pink chip--soft pill; see the scoped
   // [data-type="overridden"] rule in globals.css for the border/muted color.
   overridden: {
-    icon: <Edit2 className="h-2.5 w-2.5" />,
+    icon: <Pencil className="h-2.5 w-2.5" />,
     label: "Overridden in dashboard",
     variant: "tertiary",
     color: "default",

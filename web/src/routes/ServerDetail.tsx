@@ -200,6 +200,7 @@ export function ServerDetailPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
+              className="rounded-full"
               onPress={() => act.mutate("restart")}
               isDisabled={!running || act.isPending}
             >
@@ -207,23 +208,34 @@ export function ServerDetailPage() {
             </Button>
             <Button
               variant="outline"
+              className="rounded-full"
               onPress={() => act.mutate("stop")}
               isDisabled={(!running && !asleep) || act.isPending}
             >
               <Square className="h-4 w-4" /> Stop
             </Button>
             {asleep && (
-              <Button variant="primary" onPress={() => act.mutate("wake")} isDisabled={act.isPending}>
+              <Button
+                variant="primary"
+                className="rounded-full"
+                onPress={() => act.mutate("wake")}
+                isDisabled={act.isPending}
+              >
                 <Sunrise className="h-4 w-4" /> Wake
               </Button>
             )}
             {canStart && (
-              <Button variant="outline" onPress={() => act.mutate("start")} isDisabled={act.isPending}>
+              <Button
+                variant="outline"
+                className="rounded-full"
+                onPress={() => act.mutate("start")}
+                isDisabled={act.isPending}
+              >
                 <Play className="h-4 w-4" /> Start
               </Button>
             )}
             {consoleAvailable && (
-              <Button onPress={() => setTab("console")}>
+              <Button className="rounded-full" onPress={() => setTab("console")}>
                 <Terminal className="h-4 w-4" /> Open console
               </Button>
             )}

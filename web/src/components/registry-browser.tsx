@@ -197,7 +197,7 @@ export function RegistryBrowser({
                   size="sm"
                   variant="soft"
                   aria-disabled="true"
-                  className="cursor-not-allowed opacity-50"
+                  className="cursor-not-allowed rounded-full opacity-50"
                   title={`Category filtering isn't available for ${providerLabel(provider ?? "")}.`}
                 >
                   {c.label}
@@ -210,7 +210,11 @@ export function RegistryBrowser({
                 size="sm"
                 color={active ? "accent" : "default"}
                 variant={active ? "primary" : "soft"}
-                className={active ? undefined : "border border-foreground/20 bg-transparent text-muted"}
+                className={
+                  active
+                    ? "rounded-full"
+                    : "rounded-full border border-foreground/20 bg-transparent text-muted"
+                }
                 onClick={() => setCategory(c.value)}
                 role="button"
                 tabIndex={0}

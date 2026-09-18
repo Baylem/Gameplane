@@ -16,27 +16,23 @@ import { fileURLToPath } from "node:url";
 // on the @screenshots tag).
 //
 // ID mapping to design-export (from design-export/MANIFEST.md's Slice 2b
-// table). Five of the eleven Settings sub-sections have no design export at
-// all (checked: `grep -in "Settings.*General\|Version\|Environment\|Access\|
-// Danger" design-export/MANIFEST.md` — no hits beyond unrelated Admin
-// Settings screens) — those five are captured under a descriptive slug
-// instead of a fabricated id:
+// table):
 //   Mods tab          -> sZtDi  (Screen/Server Detail — Mods)
 //   Modpacks tab      -> tY6RD  (Screen/Server Detail — Modpacks)
 //   Backups tab       -> pssCT  (Screen/Server Detail — Backups)
-//   Settings/General       -> settings-general (no design export)
-//   Settings/Version       -> settings-version (no design export)
+//   Settings/General       -> uCA23  (Settings · General)
+//   Settings/Version       -> VctzT  (Settings · Version)
 //   Settings/Resources     -> VfB0Y  (Settings · Resource Limits)
 //   Settings/Networking    -> J5pjJ3 (Settings · Networking)
-//   Settings/EnvVars       -> settings-envvars (no design export)
+//   Settings/EnvVars       -> iLm38  (Settings · Environment)
 //   Settings/Lifecycle     -> i1bLR  (Settings · Restart policy — closest
 //                              existing export; LifecycleSection covers
 //                              restart behavior + idle sleep)
 //   Settings/Backups       -> KaRFX  (Settings · Scheduled Backups)
 //   Settings/NetworkCapture -> RodrS (Settings · Network Capture)
 //   Settings/Placement     -> Y5cmvI (Settings · Placement)
-//   Settings/Access        -> settings-access (no design export)
-//   Settings/Danger        -> settings-danger (no design export)
+//   Settings/Access        -> QpEvu  (Settings · Access)
+//   Settings/Danger        -> XR0f9  (Settings · Danger)
 //   Backup detail drawer (open) -> zhLZN (Slice 3's Restore Backup — Detail
 //                              Drawer export; same component, BackupDetailDrawer)
 //
@@ -101,6 +97,12 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
   test("tY6RD: Server Detail — Modpacks", async ({ page }) => {
     // Same template's registry.providers[].modpacks (added for this task)
     // is what makes the Modpacks tab visible.
+    // Freeze the clock so the header's formatUptime(status.startedAt) reads
+    // "up 13d 4h" (design-export/json/tY6RD.json). test-server-02's
+    // startedAt is 2026-09-03T14:20:00Z (screenshotData.ts); any fixed "now"
+    // in [2026-09-16T18:20:00Z, 2026-09-16T19:20:00Z) floors to 13d 4h.
+    // setFixedTime must run before navigation so the first render sees it.
+    await page.clock.setFixedTime(new Date("2026-09-16T18:30:00Z"));
     await page.goto("/servers/test-server-02");
     await clickTab(page, "Modpacks");
     await expect(page.getByText(/browse modpacks/i)).toBeVisible({ timeout: 10_000 });
@@ -203,7 +205,7 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
     await capture(page, "Y5cmvI");
   });
 
-  test("settings-general: Server Detail — Settings · General", async ({ page }) => {
+  test("uCA23: Server Detail — Settings · General", async ({ page }) => {
     await page.goto("/servers/mc-survival");
     await clickTab(page, "Settings");
     // General is the default-selected section — no click needed, but
@@ -213,10 +215,10 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
       timeout: 10_000,
     });
     await page.waitForTimeout(200);
-    await capture(page, "settings-general");
+    await capture(page, "uCA23");
   });
 
-  test("settings-version: Server Detail — Settings · Version", async ({ page }) => {
+  test("VctzT: Server Detail — Settings · Version", async ({ page }) => {
     // mc-survival's template (minecraft-java) declares a version
     // catalog (added for this task) — required for the Version tab to
     // appear at all (Settings.tsx filters it out otherwise).
@@ -229,10 +231,10 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
       timeout: 10_000,
     });
     await page.waitForTimeout(200);
-    await capture(page, "settings-version");
+    await capture(page, "VctzT");
   });
 
-  test("settings-envvars: Server Detail — Settings · Environment", async ({ page }) => {
+  test("iLm38: Server Detail — Settings · Environment", async ({ page }) => {
     await page.goto("/servers/mc-survival");
     await clickTab(page, "Settings");
     await clickTab(page, "Environment");
@@ -243,24 +245,24 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
       timeout: 10_000,
     });
     await page.waitForTimeout(200);
-    await capture(page, "settings-envvars");
+    await capture(page, "iLm38");
   });
 
-  test("settings-access: Server Detail — Settings · RBAC & access", async ({ page }) => {
+  test("QpEvu: Server Detail — Settings · RBAC & access", async ({ page }) => {
     await page.goto("/servers/mc-survival");
     await clickTab(page, "Settings");
     await clickTab(page, "RBAC & access");
     await expect(page.getByText(/^owner$/i)).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    await capture(page, "settings-access");
+    await capture(page, "QpEvu");
   });
 
-  test("settings-danger: Server Detail — Settings · Danger zone", async ({ page }) => {
+  test("XR0f9: Server Detail — Settings · Danger zone", async ({ page }) => {
     await page.goto("/servers/mc-survival");
     await clickTab(page, "Settings");
     await clickTab(page, "Danger zone");
     await expect(page.getByText("Delete server")).toBeVisible({ timeout: 10_000 });
     await page.waitForTimeout(200);
-    await capture(page, "settings-danger");
+    await capture(page, "XR0f9");
   });
 });

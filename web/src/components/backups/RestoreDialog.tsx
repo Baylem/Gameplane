@@ -87,14 +87,14 @@ export function RestoreDialog({ backup, defaultServer, onClose }: Props) {
           <ModalDialog className="w-[480px] max-w-[480px]">
           <ModalHeader>
             <ModalHeading>Restore backup</ModalHeading>
-          </ModalHeader>
-
-          <ModalBody className="gap-4">
             <Description className="text-sm text-muted">
               {isVolumeSnapshot
                 ? "A new server will be provisioned from this snapshot. The original server is left untouched."
                 : "The target server will be suspended, the volume restored from the snapshot, then resumed."}
             </Description>
+          </ModalHeader>
+
+          <ModalBody className="gap-4">
 
             <div className="space-y-4">
               <div>

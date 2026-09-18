@@ -206,6 +206,15 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
   test("zhLZN: Backup Detail Drawer", async ({ page }) => {
     // Design PNG is light theme — see setTheme()'s note.
     await setTheme(page, "light");
+    // Freeze the clock so BackupDetailDrawer's formatRelative(startTime) /
+    // formatRelative(completionTime) read "3h ago" (design-export/json/
+    // zhLZN.json) instead of drifting with the real wall clock. The
+    // mc-survival-nightly-0713 fixture (handlers.ts) has startTime
+    // 2026-07-13T00:12:04Z and completionTime 2026-07-13T00:14:41Z — 2m37s
+    // apart — so any fixed "now" in [2026-07-13T03:14:41Z,
+    // 2026-07-13T04:12:04Z) floors both to 3h. setFixedTime must run before
+    // navigation so the drawer's first render already sees it.
+    await page.clock.setFixedTime(new Date("2026-07-13T03:20:00Z"));
     await page.goto("/backups");
     const nameCell = page.getByText("mc-survival-nightly-0713", { exact: true });
     await expect(nameCell).toBeVisible({ timeout: 10_000 });

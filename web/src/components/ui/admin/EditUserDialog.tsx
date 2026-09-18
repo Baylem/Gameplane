@@ -108,10 +108,10 @@ export function EditUserDialog({
           <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
               <ModalHeading>Edit user</ModalHeading>
+              {username && <Description className="text-sm text-muted">{username}</Description>}
             </ModalHeader>
 
             <ModalBody className="gap-3">
-            {username && <Description>{username}</Description>}
 
             <div>
               <Label htmlFor="edit-display-name" className="text-xs">

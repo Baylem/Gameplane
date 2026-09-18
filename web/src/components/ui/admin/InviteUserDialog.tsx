@@ -134,14 +134,14 @@ export function InviteUserDialog({
           <ModalDialog className="w-[480px] max-w-[480px] rounded-xl">
             <ModalHeader>
               <ModalHeading>Invite user</ModalHeading>
+              {contactFieldsOptional && (
+                <Description className="text-sm text-muted">
+                  Create a local account. Leave password blank to send an OIDC invite later.
+                </Description>
+              )}
             </ModalHeader>
 
             <ModalBody className="gap-3">
-            {contactFieldsOptional && (
-              <Description>
-                Create a local account. Leave password blank to send an OIDC invite later.
-              </Description>
-            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="invite-username" className="text-xs">

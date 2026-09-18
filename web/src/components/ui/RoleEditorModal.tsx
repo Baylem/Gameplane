@@ -75,12 +75,12 @@ export function RoleEditorModal({
           <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
               <ModalHeading>{role ? `Edit role: ${role.name}` : "New role"}</ModalHeading>
+              <Description className="text-sm text-muted">
+                Grant a curated set of permissions.
+              </Description>
             </ModalHeader>
 
             <ModalBody className="gap-4">
-            <Description className="text-sm text-muted">
-              Grant a curated set of permissions.
-            </Description>
 
             {creating && (
               <div className="space-y-2">
