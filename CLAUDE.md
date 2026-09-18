@@ -554,8 +554,9 @@ The site lives in the **`gameplane-website`** repo, checked out here as the `web
 
 ## Where to read deeper
 
+- **`docs/agent-architecture.md`** — **MUST READ BEFORE EDITING CODE.** The AI agent index mapping tasks and features to the specific component's `specs.md` (e.g., pointing you to `api/specs.md` for auth issues). Do not perform expensive repo-wide greps; use this index first.
 - **`README.md`** — project pitch and quickstart.
-- **`docs/architecture.md`** — components, data flow, security boundaries, and the "operator is authoritative" rationale.
+- **`docs/architecture.md`** — components, data flow, security boundaries, and the "operator is authoritative" rationale (human-focused overview).
 - **`docs/contributing.md`** — full code style, test tiers, PR process, signed commits.
 - **`docs/security.md`** — auth, RBAC, threat model, pod security defaults, and the pre-auth privacy rule.
 - **`docs/install.md`** — Helm values, K8s/Helm prerequisites, OIDC setup.

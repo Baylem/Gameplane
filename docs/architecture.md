@@ -4,6 +4,8 @@ Gameplane is split across long-lived components — dashboard, API, operator,
 and [optional] audit-syslog-bridge / telemetry-receiver satellites — plus a
 short-lived per-pod agent sidecar.
 
+> **For AI Agents & Developers:** This document provides a high-level human-readable overview. For deep technical details, specifications, and boundaries of individual components, read the respective `specs.md` files located in each component directory (e.g., `api/specs.md`, `operator/specs.md`). AI Agents should consult [`agent-architecture.md`](agent-architecture.md) as their primary index.
+
 ```
 ┌───────────────────────────────────────────────────────┐
 │  Browser (web/)                                       │
