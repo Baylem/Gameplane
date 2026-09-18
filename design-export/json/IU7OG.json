@@ -5,14 +5,7 @@
   "y": 26203,
   "name": "Gameplane/Button/Small/Danger",
   "reusable": true,
-  "height": 32,
-  "fill": "$danger/danger",
-  "cornerRadius": "$radius/md",
-  "gap": 8,
-  "padding": [
-    0,
-    12
-  ],
+  "fill": "#00000000",
   "justifyContent": "center",
   "alignItems": "center",
   "children": [

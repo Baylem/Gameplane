@@ -11,9 +11,14 @@
     "shadowType": "outer",
     "color": "#00000000"
   },
+  "theme": {},
   "descendants": {
-    "E7Whx": {"content": "Restore backup"},
-    "qzcst": {"content": "The target server will be suspended, the volume restored from the snapshot, then resumed."},
+    "E7Whx": {
+      "content": "Restore backup"
+    },
+    "qzcst": {
+      "content": "The target server will be suspended, the volume restored from the snapshot, then resumed."
+    },
     "Nht52": {
       "type": "frame",
       "id": "Q2QDV",
@@ -21,7 +26,12 @@
       "width": "fill_container",
       "layout": "vertical",
       "gap": 16,
-      "padding": [16, 0, 0, 0],
+      "padding": [
+        16,
+        0,
+        0,
+        0
+      ],
       "children": [
         {
           "type": "frame",
@@ -30,8 +40,28 @@
           "layout": "vertical",
           "gap": 6,
           "children": [
-            {"type": "text", "id": "MIgc1", "fill": "$muted", "content": "Source backup", "fontFamily": "$typography/font-sans", "fontSize": 12, "fontWeight": "normal"},
-            {"id": "mazee", "type": "ref", "ref": "D0cDM", "name": "Input", "width": "fill_container", "descendants": {"PJERm": {"content": "mc-survival-nightly-0713", "fill": "#949494"}}}
+            {
+              "type": "text",
+              "id": "MIgc1",
+              "fill": "$muted",
+              "content": "Source backup",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "mazee",
+              "type": "ref",
+              "ref": "D0cDM",
+              "name": "Input",
+              "width": "fill_container",
+              "descendants": {
+                "PJERm": {
+                  "content": "mc-survival-nightly-0713",
+                  "fill": "#949494"
+                }
+              }
+            }
           ]
         },
         {
@@ -41,8 +71,27 @@
           "layout": "vertical",
           "gap": 6,
           "children": [
-            {"type": "text", "id": "eN292", "fill": "$muted", "content": "Target game server", "fontFamily": "$typography/font-sans", "fontSize": 12, "fontWeight": "normal"},
-            {"id": "D5Vwg2", "type": "ref", "ref": "AT7ya", "name": "Target server select", "width": "fill_container", "descendants": {"cFsFk": {"content": "Select a server…"}}}
+            {
+              "type": "text",
+              "id": "eN292",
+              "fill": "$muted",
+              "content": "Target game server",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "D5Vwg2",
+              "type": "ref",
+              "ref": "AT7ya",
+              "name": "Target server select",
+              "width": "fill_container",
+              "descendants": {
+                "cFsFk": {
+                  "content": "Select a server…"
+                }
+              }
+            }
           ]
         },
         {
@@ -52,13 +101,24 @@
           "name": "Restore warning",
           "width": "fill_container",
           "descendants": {
-            "IAKLq": {"content": "This will overwrite all data on the target server. Players will be disconnected during the restore.", "enabled": false},
-            "CotwO": {"enabled": true, "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.", "fill": "$danger/danger"},
-            "sYqNu": {"enabled": false}
+            "IAKLq": {
+              "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
+              "enabled": false
+            },
+            "CotwO": {
+              "enabled": true,
+              "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
+              "fill": "$danger/danger"
+            },
+            "sYqNu": {
+              "enabled": false
+            }
           }
         }
       ]
     },
-    "TZ7Ef": {"content": "Restore"}
+    "TZ7Ef": {
+      "content": "Restore"
+    }
   }
 }

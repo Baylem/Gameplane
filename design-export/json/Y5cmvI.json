@@ -124,6 +124,9 @@
                     "faW0l": {
                       "fill": "$surface/secondary"
                     },
+                    "v3XCDT": {
+                      "fill": "$foreground/foreground"
+                    },
                     "zpxa4": {
                       "fill": "$danger/danger"
                     },

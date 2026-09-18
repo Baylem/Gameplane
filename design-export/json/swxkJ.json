@@ -118,6 +118,12 @@
                   "width": 224,
                   "height": "fill_container",
                   "descendants": {
+                    "axMXL": {
+                      "fill": "$surface/secondary"
+                    },
+                    "VQPTx": {
+                      "fill": "$foreground/foreground"
+                    },
                     "zpxa4": {
                       "fill": "$danger/danger"
                     },

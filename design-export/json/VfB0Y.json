@@ -123,6 +123,9 @@
                     },
                     "LktID": {
                       "fill": "$surface/secondary"
+                    },
+                    "paOZA": {
+                      "fill": "$foreground/foreground"
                     }
                   }
                 },

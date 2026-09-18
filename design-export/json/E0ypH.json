@@ -123,6 +123,9 @@
                     },
                     "nnoXy": {
                       "fill": "$surface/secondary"
+                    },
+                    "bHNH0": {
+                      "fill": "$foreground/foreground"
                     }
                   }
                 },

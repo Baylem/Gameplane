@@ -123,6 +123,9 @@
                     },
                     "DnXAN": {
                       "fill": "$surface/secondary"
+                    },
+                    "rWM9D": {
+                      "fill": "$foreground/foreground"
                     }
                   }
                 },

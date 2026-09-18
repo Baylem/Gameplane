@@ -116,7 +116,15 @@
                   "ref": "EV8mp",
                   "name": "Settings Sub Nav",
                   "width": 224,
-                  "height": "fill_container"
+                  "height": "fill_container",
+                  "descendants": {
+                    "hNpsj": {
+                      "fill": "$surface/secondary"
+                    },
+                    "Fkfhz": {
+                      "fill": "$foreground/foreground"
+                    }
+                  }
                 },
                 {
                   "type": "frame",

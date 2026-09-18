@@ -11872,6 +11872,12 @@
                       "width": 224,
                       "height": "fill_container",
                       "descendants": {
+                        "axMXL": {
+                          "fill": "$surface/secondary"
+                        },
+                        "VQPTx": {
+                          "fill": "$foreground/foreground"
+                        },
                         "zpxa4": {
                           "fill": "$danger/danger"
                         },
@@ -12580,6 +12586,9 @@
                         },
                         "nnoXy": {
                           "fill": "$surface/secondary"
+                        },
+                        "bHNH0": {
+                          "fill": "$foreground/foreground"
                         }
                       }
                     },
@@ -13111,6 +13120,9 @@
                         },
                         "QrhqW": {
                           "fill": "$surface/secondary"
+                        },
+                        "J4128": {
+                          "fill": "$foreground/foreground"
                         }
                       }
                     },
@@ -13944,6 +13956,9 @@
                         },
                         "DnXAN": {
                           "fill": "$surface/secondary"
+                        },
+                        "rWM9D": {
+                          "fill": "$foreground/foreground"
                         }
                       }
                     },
@@ -14187,6 +14202,9 @@
                         },
                         "tv3iR": {
                           "fill": "$surface/secondary"
+                        },
+                        "Y2PGH": {
+                          "fill": "$foreground/foreground"
                         },
                         "zpxa4": {
                           "fill": "$danger/danger"
@@ -15605,6 +15623,9 @@
                         },
                         "bLFiu": {
                           "fill": "$surface/secondary"
+                        },
+                        "IUddK": {
+                          "fill": "$foreground/foreground"
                         }
                       }
                     },
@@ -15928,6 +15949,9 @@
                         },
                         "faW0l": {
                           "fill": "$surface/secondary"
+                        },
+                        "v3XCDT": {
+                          "fill": "$foreground/foreground"
                         },
                         "zpxa4": {
                           "fill": "$danger/danger"
@@ -16285,6 +16309,9 @@
                         },
                         "LktID": {
                           "fill": "$surface/secondary"
+                        },
+                        "paOZA": {
+                          "fill": "$foreground/foreground"
                         }
                       }
                     },
@@ -39818,14 +39845,7 @@
       "y": 26108,
       "name": "Gameplane/Button/Default",
       "reusable": true,
-      "height": 36,
-      "fill": "$accent/accent",
-      "cornerRadius": "$radius/3xl",
-      "gap": "$spacing/2",
-      "padding": [
-        8,
-        "$spacing/4"
-      ],
+      "fill": "#00000000",
       "justifyContent": "center",
       "alignItems": "center",
       "children": [
@@ -39849,15 +39869,10 @@
       "y": 26203,
       "name": "Gameplane/Button/Outline",
       "reusable": true,
-      "height": 36,
+      "fill": "#00000000",
       "stroke": "#00000000",
       "strokeWidth": 1,
       "strokeAlignment": "inner",
-      "gap": "$spacing/2",
-      "padding": [
-        8,
-        "$spacing/4"
-      ],
       "justifyContent": "center",
       "alignItems": "center",
       "children": [
@@ -39881,13 +39896,7 @@
       "y": 26108,
       "name": "Gameplane/Button/Ghost",
       "reusable": true,
-      "height": 36,
-      "cornerRadius": "$radius/3xl",
-      "gap": "$spacing/2",
-      "padding": [
-        8,
-        "$spacing/4"
-      ],
+      "fill": "#00000000",
       "justifyContent": "center",
       "alignItems": "center",
       "children": [
@@ -39911,14 +39920,7 @@
       "y": 26203,
       "name": "Gameplane/Button/Danger",
       "reusable": true,
-      "height": 36,
-      "fill": "$danger/danger",
-      "cornerRadius": "$radius/md",
-      "gap": 8,
-      "padding": [
-        0,
-        16
-      ],
+      "fill": "#00000000",
       "justifyContent": "center",
       "alignItems": "center",
       "children": [
@@ -39952,13 +39954,7 @@
       "y": 26108,
       "name": "Gameplane/Button/Small/Default",
       "reusable": true,
-      "height": 32,
       "fill": "#00000000",
-      "gap": 8,
-      "padding": [
-        0,
-        12
-      ],
       "justifyContent": "center",
       "alignItems": "center",
       "children": [
@@ -39992,16 +39988,10 @@
       "y": 26203,
       "name": "Gameplane/Button/Small/Outline",
       "reusable": true,
-      "height": 32,
-      "cornerRadius": "$radius/md",
+      "fill": "#00000000",
       "stroke": "$border/border",
       "strokeWidth": 1,
       "strokeAlignment": "inner",
-      "gap": 8,
-      "padding": [
-        0,
-        12
-      ],
       "justifyContent": "center",
       "alignItems": "center",
       "children": [
@@ -40035,13 +40025,7 @@
       "y": 26107,
       "name": "Gameplane/Button/Small/Ghost",
       "reusable": true,
-      "height": 32,
-      "cornerRadius": "$radius/md",
-      "gap": 8,
-      "padding": [
-        0,
-        12
-      ],
+      "fill": "#00000000",
       "justifyContent": "center",
       "alignItems": "center",
       "children": [
@@ -40369,14 +40353,7 @@
       "y": 26203,
       "name": "Gameplane/Button/Small/Danger",
       "reusable": true,
-      "height": 32,
-      "fill": "$danger/danger",
-      "cornerRadius": "$radius/md",
-      "gap": 8,
-      "padding": [
-        0,
-        12
-      ],
+      "fill": "#00000000",
       "justifyContent": "center",
       "alignItems": "center",
       "children": [
@@ -48697,6 +48674,9 @@
                         },
                         "JlFDJ": {
                           "fill": "$surface/secondary"
+                        },
+                        "Qbxnz": {
+                          "fill": "$foreground/foreground"
                         }
                       }
                     },
@@ -55800,7 +55780,15 @@
                       "ref": "EV8mp",
                       "name": "Settings Sub Nav",
                       "width": 224,
-                      "height": "fill_container"
+                      "height": "fill_container",
+                      "descendants": {
+                        "hNpsj": {
+                          "fill": "$surface/secondary"
+                        },
+                        "Fkfhz": {
+                          "fill": "$foreground/foreground"
+                        }
+                      }
                     },
                     {
                       "type": "frame",
@@ -86776,6 +86764,19 @@
           "width": "fill_container",
           "x": 40,
           "y": 366,
+          "fill": "#00000000",
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "enabled": false,
+            "color": "#000000"
+          },
+          "padding": [
+            4,
+            0
+          ],
+          "gap": 0,
+          "cornerRadius": 0,
           "descendants": {
             "dMZea": {
               "enabled": false,
@@ -86790,10 +86791,12 @@
             "CotwO": {
               "content": "The username or password you entered is incorrect.",
               "opacity": 0,
-              "height": 0
+              "height": 0,
+              "enabled": false
             },
             "sYqNu": {
-              "opacity": 0
+              "opacity": 0,
+              "enabled": false
             }
           }
         },
@@ -87729,14 +87732,20 @@
           "name": "snGeneral",
           "width": "fill_container",
           "fill": "#00000000",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "K2QiS9",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "settings",
@@ -87747,7 +87756,7 @@
             {
               "type": "text",
               "id": "KfnMt",
-              "fill": "$foreground/foreground",
+              "fill": "$muted",
               "content": "General",
               "fontFamily": "$typography/font-sans",
               "fontSize": 14,
@@ -87760,15 +87769,21 @@
           "id": "axMXL",
           "name": "snVersion",
           "width": "fill_container",
-          "fill": "$surface/secondary",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "P8u2Kj",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "layers",
@@ -87792,14 +87807,21 @@
           "id": "nnoXy",
           "name": "snResources",
           "width": "fill_container",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "F1IWTf",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "hard-drive",
@@ -87823,14 +87845,21 @@
           "id": "QrhqW",
           "name": "snNetworking",
           "width": "fill_container",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "b0WSG",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "network",
@@ -87854,14 +87883,21 @@
           "id": "DnXAN",
           "name": "snEnvironment",
           "width": "fill_container",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "RK6jY",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "variable",
@@ -87872,7 +87908,7 @@
             {
               "type": "text",
               "id": "rWM9D",
-              "fill": "$foreground/foreground",
+              "fill": "$muted",
               "content": "Environment",
               "fontFamily": "$typography/font-sans",
               "fontSize": 14,
@@ -87885,14 +87921,21 @@
           "id": "tv3iR",
           "name": "snLifecycle",
           "width": "fill_container",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "nfFt4",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "sliders-vertical",
@@ -87916,14 +87959,21 @@
           "id": "bLFiu",
           "name": "snScheduledBackups",
           "width": "fill_container",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "S7IwYB",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "calendar-clock",
@@ -87947,14 +87997,21 @@
           "id": "hNpsj",
           "name": "snNetworkCapture",
           "width": "fill_container",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "lU1pD",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "video",
@@ -87978,14 +88035,21 @@
           "id": "faW0l",
           "name": "snPlacement",
           "width": "fill_container",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "dDJ3f",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "map-pin",
@@ -88009,14 +88073,21 @@
           "id": "LktID",
           "name": "snRbacAccess",
           "width": "fill_container",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "OdmLx",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "shield-check",
@@ -88027,7 +88098,7 @@
             {
               "type": "text",
               "id": "paOZA",
-              "fill": "$foreground/foreground",
+              "fill": "$muted",
               "content": "RBAC & access",
               "fontFamily": "$typography/font-sans",
               "fontSize": 14,
@@ -88040,14 +88111,21 @@
           "id": "JlFDJ",
           "name": "snShareLinks",
           "width": "fill_container",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "Hw7vh",
+              "x": 8,
+              "y": 9,
+              "enabled": false,
               "width": 16,
               "height": 16,
               "icon": "link",
@@ -88071,14 +88149,21 @@
           "id": "WLobW",
           "name": "snDangerZone",
           "width": "fill_container",
-          "cornerRadius": 4,
-          "gap": 8,
-          "padding": 8,
+          "fill": "#00000000",
+          "cornerRadius": 6,
+          "padding": [
+            8,
+            12
+          ],
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {
               "type": "icon",
               "id": "zpxa4",
+              "x": 8,
+              "y": 19.31370849898476,
+              "enabled": false,
               "rotation": 45,
               "width": 16,
               "height": 16,
@@ -93162,7 +93247,7 @@
                           "fill": "#000000"
                         },
                         "KfnMt": {
-                          "fill": "#000000"
+                          "fill": "$foreground/foreground"
                         },
                         "axMXL": {
                           "fill": "#00000000"
@@ -93794,6 +93879,9 @@
                         "axMXL": {
                           "fill": "$surface/secondary"
                         },
+                        "VQPTx": {
+                          "fill": "$foreground/foreground"
+                        },
                         "QrhqW": {
                           "fill": "#00000000"
                         }
@@ -94117,6 +94205,9 @@
                         },
                         "DnXAN": {
                           "fill": "$surface/secondary"
+                        },
+                        "rWM9D": {
+                          "fill": "$foreground/foreground"
                         }
                       }
                     },
@@ -94373,6 +94464,9 @@
                         },
                         "LktID": {
                           "fill": "$surface/secondary"
+                        },
+                        "paOZA": {
+                          "fill": "$foreground/foreground"
                         }
                       }
                     },

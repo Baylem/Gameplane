@@ -104,7 +104,12 @@
           "width": "fill_container",
           "layout": "vertical",
           "gap": 16,
-          "padding": [0, 16, 16, 16],
+          "padding": [
+            0,
+            16,
+            16,
+            16
+          ],
           "children": [
             {
               "type": "frame",
@@ -434,7 +439,12 @@
           "width": "fill_container",
           "layout": "vertical",
           "gap": 16,
-          "padding": [0, 16, 16, 16],
+          "padding": [
+            0,
+            16,
+            16,
+            16
+          ],
           "children": [
             {
               "type": "frame",
@@ -764,7 +774,12 @@
           "width": "fill_container",
           "layout": "vertical",
           "gap": 16,
-          "padding": [0, 16, 16, 16],
+          "padding": [
+            0,
+            16,
+            16,
+            16
+          ],
           "children": [
             {
               "type": "frame",

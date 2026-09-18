@@ -123,6 +123,9 @@
                     },
                     "bLFiu": {
                       "fill": "$surface/secondary"
+                    },
+                    "IUddK": {
+                      "fill": "$foreground/foreground"
                     }
                   }
                 },

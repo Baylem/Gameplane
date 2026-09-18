@@ -123,6 +123,9 @@
                     },
                     "QrhqW": {
                       "fill": "$surface/secondary"
+                    },
+                    "J4128": {
+                      "fill": "$foreground/foreground"
                     }
                   }
                 },

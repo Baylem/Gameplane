@@ -5,13 +5,7 @@
   "y": 26108,
   "name": "Gameplane/Button/Ghost",
   "reusable": true,
-  "height": 36,
-  "cornerRadius": "$radius/3xl",
-  "gap": "$spacing/2",
-  "padding": [
-    8,
-    "$spacing/4"
-  ],
+  "fill": "#00000000",
   "justifyContent": "center",
   "alignItems": "center",
   "children": [

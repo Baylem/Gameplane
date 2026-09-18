@@ -127,6 +127,9 @@
                     "tv3iR": {
                       "fill": "$surface/secondary"
                     },
+                    "Y2PGH": {
+                      "fill": "$foreground/foreground"
+                    },
                     "zpxa4": {
                       "fill": "$danger/danger"
                     },

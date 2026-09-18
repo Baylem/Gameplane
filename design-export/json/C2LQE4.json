@@ -4,7 +4,9 @@
   "x": 0,
   "y": 23709,
   "name": "Screen/Share Link — Up",
-  "theme": { "semantic": "dark" },
+  "theme": {
+    "semantic": "dark"
+  },
   "clip": true,
   "width": 1440,
   "height": 900,
@@ -13,6 +15,12 @@
   "justifyContent": "center",
   "alignItems": "center",
   "children": [
-    { "id": "Mbzm6", "type": "ref", "ref": "HKEl2", "name": "shareCard", "width": 440 }
+    {
+      "id": "Mbzm6",
+      "type": "ref",
+      "ref": "HKEl2",
+      "name": "shareCard",
+      "width": 440
+    }
   ]
 }

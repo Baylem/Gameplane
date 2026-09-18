@@ -123,6 +123,9 @@
                     },
                     "JlFDJ": {
                       "fill": "$surface/secondary"
+                    },
+                    "Qbxnz": {
+                      "fill": "$foreground/foreground"
                     }
                   }
                 },
