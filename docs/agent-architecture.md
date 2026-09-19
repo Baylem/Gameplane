@@ -28,13 +28,18 @@ This document is the **first stop** for AI agents modifying or extending Gamepla
 | **Audit-Syslog-Bridge** | `audit-syslog-bridge/specs.md` | Relay forwarding HTTP JSON audit events to external syslog servers. |
 | **Telemetry-Receiver** | `telemetry-receiver/specs.md` | Ingests and processes anonymous usage telemetry from the API. |
 | **MCP-Server** | `mcp-server/specs.md` | Read-only Model Context Protocol server exposing cluster state to AI tools. |
+| **Svcutil** | `svcutil/specs.md` | Shared stdlib-only env and graceful-shutdown helpers used by backend components. |
 
 ## Frontend & Other
 
 | Component | `specs.md` location | Primary Responsibilities |
 | --- | --- | --- |
 | **Web Dashboard** | `web/specs.md` | The React SPA frontend. |
+| **Design Export** | `design-export/MANIFEST.md` | Plain-file snapshot of the Pencil source for the product's designed screens. |
+| **Images** | `docs/img/` | Screenshot gallery for documentation and testing. |
+| **Website** | `website/` (submodule) | Public marketing and documentation site. |
 | **Modules** | `modules/<game>/specs.md` | OCI bundle templates for deploying specific games (e.g., Minecraft, Rust). |
+| **Test e2e** | `test/e2e/specs.md` | E2E integration test suite covering operator and API flows. |
 
 ## How to use this index
 1. Identify the domain of your task (e.g., "Add an auth provider").
