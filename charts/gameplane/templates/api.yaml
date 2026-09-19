@@ -162,6 +162,19 @@ subjects:
   - kind: ServiceAccount
     name: gameplane-api
     namespace: {{ .Release.Namespace }}
+{{- /*
+  Safety guard: If switching an existing install to existingClaim, ensure the
+  live gameplane-api-data PVC won't be pruned and destroyed by Helm.
+*/}}
+{{- if and (eq .Values.api.db.driver "sqlite") .Values.api.storage.existingClaim }}
+  {{- $livePVC := lookup "v1" "PersistentVolumeClaim" .Release.Namespace "gameplane-api-data" }}
+  {{- if $livePVC }}
+    {{- $annotations := $livePVC.metadata.annotations | default dict }}
+    {{- if not (eq (index $annotations "helm.sh/resource-policy") "keep") }}
+      {{- fail (printf "PersistentVolumeClaim 'gameplane-api-data' exists in namespace '%s' without annotation 'helm.sh/resource-policy: keep'. Switching to api.storage.existingClaim will cause Helm to prune the un-annotated PVC and erase your SQLite database. To protect your data, run:\n  kubectl annotate pvc -n %s gameplane-api-data helm.sh/resource-policy=keep\nbefore upgrading with existingClaim." .Release.Namespace .Release.Namespace) }}
+    {{- end }}
+  {{- end }}
+{{- end }}
 {{- if and (eq .Values.api.db.driver "sqlite") (not .Values.api.storage.existingClaim) }}
 ---
 apiVersion: v1
@@ -170,6 +183,8 @@ metadata:
   name: gameplane-api-data
   namespace: {{ .Release.Namespace }}
   labels: {{- include "gameplane.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   accessModes: [ReadWriteOnce]
   resources:
