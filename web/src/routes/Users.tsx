@@ -700,10 +700,9 @@ function NamespaceGrants({ userId, roles }: { userId: number; roles: Role[] }) {
             onChange={(v) => setRoleName(String(v))}
           >
             <Select.Trigger
-              className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
-              style={{ height: 32 }}
+              className="h-8! w-full items-center rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
             >
-              <Select.Value />
+              <Select.Value className="text-[var(--field-placeholder)]" />
               <Select.Indicator className="ml-auto h-4 w-4" />
             </Select.Trigger>
             <Select.Popover className="rounded border border-border">

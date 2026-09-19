@@ -54,9 +54,9 @@ export function ConfirmDialog({
     <AlertDialog isOpen={open} onOpenChange={onOpenChange}>
       <AlertDialogBackdrop isDismissable={!busy} isKeyboardDismissDisabled={!!busy}>
         <AlertDialogContainer>
-          <AlertDialogDialog className="w-[440px] max-w-[440px] rounded-[12px] p-5">
-            <AlertDialogHeader>
-              <div className="flex items-center gap-4">
+          <AlertDialogDialog className="w-[440px] max-w-[440px] gap-0 rounded-[12px] p-5">
+            <AlertDialogHeader className="m-0 p-0">
+              <div className="flex items-center gap-3">
                 <AlertDialogIcon
                   status={destructive ? "danger" : "accent"}
                   className="shrink-0"
@@ -67,7 +67,7 @@ export function ConfirmDialog({
               </div>
             </AlertDialogHeader>
 
-            <AlertDialogBody>
+            <AlertDialogBody className="m-0 p-0 pt-4">
               <div className="space-y-4">
                 <div className="text-sm text-muted">{description}</div>
 
@@ -89,7 +89,7 @@ export function ConfirmDialog({
               </div>
             </AlertDialogBody>
 
-            <AlertDialogFooter className="flex items-center justify-end gap-2">
+            <AlertDialogFooter className="m-0 flex items-center justify-end gap-2 p-0 pt-5">
               <Button
                 variant="ghost"
                 size="sm"

@@ -113,7 +113,7 @@ export function EditUserDialog({
 
             <ModalBody className="gap-3">
 
-            <div>
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-display-name" className="text-xs">
                 Display name
               </Label>
@@ -122,12 +122,11 @@ export function EditUserDialog({
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Display name"
-                className="mt-1"
                 disabled={isLoading}
               />
             </div>
 
-            <div>
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="edit-email" className="text-xs">
                 Email
               </Label>
@@ -136,7 +135,6 @@ export function EditUserDialog({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="email@example.com"
-                className="mt-1"
                 type="email"
                 disabled={isLoading}
               />
@@ -144,6 +142,7 @@ export function EditUserDialog({
 
             <div className="space-y-1">
               <Select
+                className="flex flex-col gap-1.5"
                 value={role}
                 onChange={(v) => setRole(String(v))}
                 isDisabled={isLoading}
@@ -153,9 +152,9 @@ export function EditUserDialog({
                 </Label>
                 <Select.Trigger
                   id="edit-role"
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
+                  className="w-full items-center rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
                 >
-                  <Select.Value />
+                  <Select.Value className="text-[var(--field-placeholder)]" />
                   <Select.Indicator className="ml-auto h-4 w-4" />
                 </Select.Trigger>
                 <Select.Popover className="rounded border border-border">
@@ -186,12 +185,13 @@ export function EditUserDialog({
           </ModalBody>
 
           <ModalFooter className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="sm" onPress={handleClose} isDisabled={isLoading}>
+            <Button variant="ghost" size="sm" className="text-xs" onPress={handleClose} isDisabled={isLoading}>
               Cancel
             </Button>
             <Button
               size="sm"
               variant="primary"
+              className="text-xs"
               isDisabled={isLoading || noChanges || wouldDemoteSelf}
               onPress={handleSave}
             >

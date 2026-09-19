@@ -196,6 +196,7 @@ export function RestoreDialog({ backup, defaultServer, onClose }: Props) {
             <Button
               variant="ghost"
               size="sm"
+              className="text-xs"
               onPress={onClose}
               isDisabled={create.isPending}
             >
@@ -204,6 +205,7 @@ export function RestoreDialog({ backup, defaultServer, onClose }: Props) {
             <Button
               size="sm"
               variant={isVolumeSnapshot ? "primary" : "danger"}
+              className="text-xs"
               isDisabled={invalid || create.isPending}
               onPress={() => create.mutate()}
             >

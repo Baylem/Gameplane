@@ -237,10 +237,10 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
         <ModalContainer>
           <ModalDialog className="w-[480px] max-w-[480px]">
           <ModalHeader>
-            <ModalHeading>
+            <ModalHeading className="leading-[21px]">
               {editing ? `Edit source ${source.metadata.name}` : "Add module source"}
             </ModalHeading>
-            <Description className="text-sm text-muted">
+            <Description className="text-sm leading-[21px] text-muted">
               Where the operator discovers and pulls module bundles from.
             </Description>
           </ModalHeader>
@@ -248,8 +248,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
           <ModalBody className="gap-4 max-h-[80vh] overflow-y-auto">
 
             {!editing && (
-              <div className="space-y-1.5">
-                <Label htmlFor="source-name" className="text-xs font-normal text-muted">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="source-name" className="text-xs leading-4 font-normal text-muted">
                   Name
                 </Label>
                 <Input
@@ -257,22 +257,20 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                   value={name}
                   onChange={(e) => setName(e.target.value.toLowerCase())}
                   placeholder="community"
-                  className="mt-1"
                 />
-                <Description className="mt-1 text-[11px] text-muted">
+                <Description className="text-[11px] leading-[14px] text-muted">
                   DNS label identifying this source.
                 </Description>
               </div>
             )}
 
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Select
                 value={f.type}
                 onChange={(v) => set({ type: v as ModuleSourceType })}
-                className="mt-1"
                 aria-label="Type"
               >
-                <Label className="text-xs font-normal text-muted">Type</Label>
+                <Label className="text-xs leading-4 font-normal text-muted">Type</Label>
                 <Select.Trigger
                   className="w-full items-center rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
                 >
@@ -293,8 +291,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
 
             {f.type === "oci" && (
               <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="oci-url" className="text-xs font-normal text-muted">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="oci-url" className="text-xs leading-4 font-normal text-muted">
                     Registry URL
                   </Label>
                   <Input
@@ -302,12 +300,11 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     value={f.url}
                     onChange={(e) => set({ url: e.target.value })}
                     placeholder="ghcr.io/valgulnecron/gameplane-modules"
-                    className="mt-1"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="oci-modules" className="text-xs font-normal text-muted">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="oci-modules" className="text-xs leading-4 font-normal text-muted">
                     Modules
                   </Label>
                   <Input
@@ -315,15 +312,14 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     value={f.modules}
                     onChange={(e) => set({ modules: e.target.value })}
                     placeholder="minecraft-java, valheim"
-                    className="mt-1"
                   />
-                  <Description className="mt-1 text-[11px] text-muted">
+                  <Description className="text-[11px] leading-[14px] text-muted">
                     Comma-separated module names (registries can&apos;t be enumerated).
                   </Description>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="oci-secret" className="text-xs font-normal text-muted">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="oci-secret" className="text-xs leading-4 font-normal text-muted">
                     Pull secret
                   </Label>
                   <Input
@@ -331,9 +327,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     value={f.secretName}
                     onChange={(e) => set({ secretName: e.target.value })}
                     placeholder="registry-creds"
-                    className="mt-1"
                   />
-                  <Description className="mt-1 text-[11px] text-muted">
+                  <Description className="text-[11px] leading-[14px] text-muted">
                     dockerconfigjson Secret in the operator namespace (optional).
                   </Description>
                 </div>
@@ -352,14 +347,13 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                   </Checkbox.Content>
                 </Checkbox>
 
-                <div className="space-y-1.5">
+                <div className="flex flex-col gap-1.5">
                   <Select
                     value={f.verifyMode}
                     onChange={(v) => set({ verifyMode: v as VerifyMode })}
-                    className="mt-1"
                     aria-label="Signature verification"
                   >
-                    <Label className="text-xs font-normal text-muted">Signature verification</Label>
+                    <Label className="text-xs leading-4 font-normal text-muted">Signature verification</Label>
                     <Select.Trigger
                       className="w-full items-center rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
                     >
@@ -376,14 +370,14 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                       </ListBox>
                     </Select.Popover>
                   </Select>
-                  <Description className="mt-1 text-[11px] text-muted">
+                  <Description className="text-[11px] leading-[14px] text-muted">
                     Require a valid cosign signature on every bundle pulled from this source.
                   </Description>
                 </div>
 
                 {f.verifyMode === "keyed" && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="verify-key-secret" className="text-xs font-normal text-muted">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="verify-key-secret" className="text-xs leading-4 font-normal text-muted">
                       Public key secret
                     </Label>
                     <Input
@@ -391,9 +385,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                       value={f.verifyKeySecret}
                       onChange={(e) => set({ verifyKeySecret: e.target.value })}
                       placeholder="cosign-pub"
-                      className="mt-1"
                     />
-                    <Description className="mt-1 text-[11px] text-muted">
+                    <Description className="text-[11px] leading-[14px] text-muted">
                       Secret holding the cosign public key under the cosign.pub data key.
                     </Description>
                   </div>
@@ -401,8 +394,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
 
                 {f.verifyMode === "keyless" && (
                   <>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="verify-issuer" className="text-xs font-normal text-muted">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="verify-issuer" className="text-xs leading-4 font-normal text-muted">
                         OIDC issuer
                       </Label>
                       <Input
@@ -410,15 +403,14 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                         value={f.verifyIssuer}
                         onChange={(e) => set({ verifyIssuer: e.target.value })}
                         placeholder="https://token.actions.githubusercontent.com"
-                        className="mt-1"
                       />
-                      <Description className="mt-1 text-[11px] text-muted">
+                      <Description className="text-[11px] leading-[14px] text-muted">
                         Issuer embedded in the signing certificate.
                       </Description>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor="verify-identity" className="text-xs font-normal text-muted">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="verify-identity" className="text-xs leading-4 font-normal text-muted">
                         Certificate identity
                       </Label>
                       <Input
@@ -426,9 +418,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                         value={f.verifyIdentity}
                         onChange={(e) => set({ verifyIdentity: e.target.value })}
                         placeholder="github.com/org/repo/.github/workflows/release.yml@refs/heads/main"
-                        className="mt-1"
                       />
-                      <Description className="mt-1 text-[11px] text-muted">
+                      <Description className="text-[11px] leading-[14px] text-muted">
                         SAN identity that must have produced the signature.
                       </Description>
                     </div>
@@ -439,8 +430,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
 
             {f.type === "git" && (
               <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="git-url" className="text-xs font-normal text-muted">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="git-url" className="text-xs leading-4 font-normal text-muted">
                     Clone URL
                   </Label>
                   <Input
@@ -448,12 +439,11 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     value={f.url}
                     onChange={(e) => set({ url: e.target.value })}
                     placeholder="https://github.com/example/gameplane-modules"
-                    className="mt-1"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="git-ref" className="text-xs font-normal text-muted">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="git-ref" className="text-xs leading-4 font-normal text-muted">
                     Ref
                   </Label>
                   <Input
@@ -461,15 +451,14 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     value={f.ref}
                     onChange={(e) => set({ ref: e.target.value })}
                     placeholder="main"
-                    className="mt-1"
                   />
-                  <Description className="mt-1 text-[11px] text-muted">
+                  <Description className="text-[11px] leading-[14px] text-muted">
                     Branch or tag. Defaults to main.
                   </Description>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="git-subpath" className="text-xs font-normal text-muted">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="git-subpath" className="text-xs leading-4 font-normal text-muted">
                     Subdirectory
                   </Label>
                   <Input
@@ -477,15 +466,14 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     value={f.subPath}
                     onChange={(e) => set({ subPath: e.target.value })}
                     placeholder="modules"
-                    className="mt-1"
                   />
-                  <Description className="mt-1 text-[11px] text-muted">
+                  <Description className="text-[11px] leading-[14px] text-muted">
                     Scan only this path inside the repo (optional).
                   </Description>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="git-secret" className="text-xs font-normal text-muted">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="git-secret" className="text-xs leading-4 font-normal text-muted">
                     Credentials secret
                   </Label>
                   <Input
@@ -493,9 +481,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     value={f.secretName}
                     onChange={(e) => set({ secretName: e.target.value })}
                     placeholder="gh-creds"
-                    className="mt-1"
                   />
-                  <Description className="mt-1 text-[11px] text-muted">
+                  <Description className="text-[11px] leading-[14px] text-muted">
                     Secret with token / username+password (https) or ssh-privatekey + known_hosts (ssh). Optional.
                   </Description>
                 </div>
@@ -504,8 +491,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
 
             {f.type === "http" && (
               <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="http-url" className="text-xs font-normal text-muted">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="http-url" className="text-xs leading-4 font-normal text-muted">
                     Archive URL
                   </Label>
                   <Input
@@ -513,15 +500,14 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     value={f.url}
                     onChange={(e) => set({ url: e.target.value })}
                     placeholder="https://example.com/modules.tar.gz"
-                    className="mt-1"
                   />
-                  <Description className="mt-1 text-[11px] text-muted">
+                  <Description className="text-[11px] leading-[14px] text-muted">
                     A .tar.gz or .zip of module directories.
                   </Description>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="http-secret" className="text-xs font-normal text-muted">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="http-secret" className="text-xs leading-4 font-normal text-muted">
                     Credentials secret
                   </Label>
                   <Input
@@ -529,9 +515,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     value={f.secretName}
                     onChange={(e) => set({ secretName: e.target.value })}
                     placeholder="archive-creds"
-                    className="mt-1"
                   />
-                  <Description className="mt-1 text-[11px] text-muted">
+                  <Description className="text-[11px] leading-[14px] text-muted">
                     Secret with token (Bearer) or username+password. Optional.
                   </Description>
                 </div>
@@ -553,8 +538,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
             )}
 
             {f.type === "local" && (
-              <div className="space-y-1.5">
-                <Label htmlFor="local-path" className="text-xs font-normal text-muted">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="local-path" className="text-xs leading-4 font-normal text-muted">
                   Path
                 </Label>
                 <Input
@@ -562,9 +547,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                   value={f.path}
                   onChange={(e) => set({ path: e.target.value })}
                   placeholder="bundles"
-                  className="mt-1"
                 />
-                <Description className="mt-1 text-[11px] text-muted">
+                <Description className="text-[11px] leading-[14px] text-muted">
                   Relative to the operator&apos;s module mount (Helm: operator.localModules). Empty scans the mount root.
                 </Description>
               </div>
@@ -577,8 +561,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
               </div>
             )}
 
-            <div className="space-y-1.5">
-              <Label htmlFor="allow-list" className="text-xs font-normal text-muted">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="allow-list" className="text-xs leading-4 font-normal text-muted">
                 Allow list
               </Label>
               <Input
@@ -586,15 +570,14 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                 value={f.allow}
                 onChange={(e) => set({ allow: e.target.value })}
                 placeholder="minecraft-*"
-                className="mt-1"
               />
-              <Description className="mt-1 text-[11px] text-muted">
+              <Description className="text-[11px] leading-[14px] text-muted">
                 Optional module name filter — exact names or globs, comma-separated.
               </Description>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="refresh-interval" className="text-xs font-normal text-muted">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="refresh-interval" className="text-xs leading-4 font-normal text-muted">
                 Refresh interval
               </Label>
               <Input
@@ -602,9 +585,8 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                 value={f.refreshInterval}
                 onChange={(e) => set({ refreshInterval: e.target.value })}
                 placeholder="1h"
-                className="mt-1"
               />
-              <Description className="mt-1 text-[11px] text-muted">
+              <Description className="text-[11px] leading-[14px] text-muted">
                 How often the catalog re-indexes. Defaults to 1h.
               </Description>
             </div>
@@ -620,6 +602,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
             <Button
               variant="ghost"
               size="sm"
+              className="text-xs"
               onPress={() => onOpenChange(false)}
               isDisabled={busy}
             >
@@ -628,6 +611,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
             <Button
               variant="primary"
               size="sm"
+              className="text-xs"
               isDisabled={busy || !canSubmit}
               onPress={submit}
             >

@@ -74,8 +74,8 @@ export function RoleEditorModal({
         <ModalContainer>
           <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
-              <ModalHeading>{role ? `Edit role: ${role.name}` : "New role"}</ModalHeading>
-              <Description className="text-sm text-muted">
+              <ModalHeading className="leading-[21px]">{role ? `Edit role: ${role.name}` : "New role"}</ModalHeading>
+              <Description className="text-sm leading-[18px] text-muted">
                 Grant a curated set of permissions.
               </Description>
             </ModalHeader>
@@ -97,7 +97,7 @@ export function RoleEditorModal({
               </div>
             )}
 
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="role-description" className="text-xs">
                 Description
               </Label>
@@ -112,7 +112,7 @@ export function RoleEditorModal({
             <div className="border border-border rounded-md p-3 h-72 overflow-y-auto space-y-3">
               {groups.map((group) => (
                 <div key={group.resource} className="space-y-1">
-                  <div className="text-[11px] font-semibold text-muted uppercase tracking-[0.55px]">
+                  <div className="text-[11px] leading-[14px] font-semibold text-muted uppercase tracking-[0.55px]">
                     {group.label}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -124,7 +124,7 @@ export function RoleEditorModal({
                         isDisabled={save.isPending}
                         className="flex-row items-center gap-2"
                       >
-                        <Checkbox.Control>
+                        <Checkbox.Control className="size-4">
                           <Checkbox.Indicator />
                         </Checkbox.Control>
                         <Checkbox.Content>
@@ -147,6 +147,7 @@ export function RoleEditorModal({
             <Button
               variant="ghost"
               size="sm"
+              className="h-9 px-4"
               onPress={() => onOpenChange(false)}
               isDisabled={save.isPending}
             >
@@ -155,6 +156,7 @@ export function RoleEditorModal({
             <Button
               size="sm"
               variant="primary"
+              className="h-9 px-4"
               isDisabled={submitDisabled}
               onPress={() => save.mutate()}
             >

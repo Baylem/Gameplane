@@ -291,14 +291,16 @@ input:-webkit-autofill:focus {
 }
 
 /* Field controls inside dialogs — Gameplane/Input (D0cDM) / Gameplane/Select
-   (AT7ya) are 36px tall with a white field fill; HeroUI's Input/Select render
-   40px tall with a --surface-secondary fill. .select__trigger already gets
-   border-radius: 6px from the shared radius rule above (~line 224) — this
-   adds the remaining size/fill/border properties rather than duplicating
-   that declaration. */
+   (AT7ya) are 36px tall with a white field fill and $radius/xl (12px)
+   corners; HeroUI's Input/Select render 40px tall with a --surface-secondary
+   fill. The 12px corner overrides the 6px .select__trigger pin in the radius
+   block above (0,2,0 beats 0,1,0; both unlayered) and HeroUI's 6px
+   --field-radius default on .input (layered), inside dialogs only — round-7
+   DMnEi ruling. */
 .modal__dialog .input,
 .modal__dialog .select__trigger {
   height: 36px;
+  border-radius: 12px;
 }
 
 .select__trigger {

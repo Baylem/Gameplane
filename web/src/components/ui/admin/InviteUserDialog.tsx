@@ -133,9 +133,9 @@ export function InviteUserDialog({
         <ModalContainer>
           <ModalDialog className="w-[480px] max-w-[480px] rounded-xl">
             <ModalHeader>
-              <ModalHeading>Invite user</ModalHeading>
+              <ModalHeading className="leading-[21px]">Invite user</ModalHeading>
               {contactFieldsOptional && (
-                <Description className="text-sm text-muted">
+                <Description className="text-sm leading-[21px] text-muted">
                   Create a local account. Leave password blank to send an OIDC invite later.
                 </Description>
               )}
@@ -143,7 +143,7 @@ export function InviteUserDialog({
 
             <ModalBody className="gap-3">
 
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="invite-username" className="text-xs">
                 Username
               </Label>
@@ -157,7 +157,7 @@ export function InviteUserDialog({
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="invite-display-name" className="text-xs">
                 Display name
               </Label>
@@ -171,7 +171,7 @@ export function InviteUserDialog({
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="invite-email" className="text-xs">
                 Email
               </Label>
@@ -186,7 +186,7 @@ export function InviteUserDialog({
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="invite-password" className="text-xs">
                 Initial password
               </Label>
@@ -202,16 +202,16 @@ export function InviteUserDialog({
             </div>
 
             {hasRoles && (
-              <div className="space-y-1">
-                <Select value={role} onChange={(v) => setRole(String(v))} isDisabled={isLoading}>
+              <div>
+                <Select className="flex flex-col gap-1.5" value={role} onChange={(v) => setRole(String(v))} isDisabled={isLoading}>
                   <Label htmlFor="invite-role" className="text-xs">
                     Role
                   </Label>
                   <Select.Trigger
                     id="invite-role"
-                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
+                    className="w-full items-center rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
                   >
-                    <Select.Value />
+                    <Select.Value className="text-[var(--field-placeholder)]" />
                     <Select.Indicator className="ml-auto h-4 w-4" />
                   </Select.Trigger>
                   <Select.Popover className="rounded border border-border">
@@ -231,12 +231,13 @@ export function InviteUserDialog({
           </ModalBody>
 
           <ModalFooter className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="sm" onPress={handleClose} isDisabled={isLoading}>
+            <Button variant="ghost" size="sm" className="text-xs" onPress={handleClose} isDisabled={isLoading}>
               Cancel
             </Button>
             <Button
               size="sm"
               variant="primary"
+              className="text-xs"
               isDisabled={submitDisabled}
               onPress={handleInvite}
             >

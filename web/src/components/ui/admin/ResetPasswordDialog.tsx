@@ -79,12 +79,12 @@ export function ResetPasswordDialog({
         <ModalContainer>
           <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
-              <ModalHeading>Reset password for {username}</ModalHeading>
-              <Description className="text-sm text-muted">They will need to sign in again with the new password.</Description>
+              <ModalHeading className="leading-[21px]">Reset password for {username}</ModalHeading>
+              <Description className="text-sm leading-[21px] text-muted">They will need to sign in again with the new password.</Description>
             </ModalHeader>
 
             <ModalBody className="gap-4">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="reset-password" className="text-xs">
                 New password
               </Label>
@@ -103,12 +103,13 @@ export function ResetPasswordDialog({
           </ModalBody>
 
           <ModalFooter className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="sm" onPress={handleClose} isDisabled={isLoading}>
+            <Button variant="ghost" size="sm" className="text-xs" onPress={handleClose} isDisabled={isLoading}>
               Cancel
             </Button>
             <Button
               size="sm"
               variant="primary"
+              className="text-xs"
               isDisabled={submitDisabled}
               onPress={handleReset}
             >
