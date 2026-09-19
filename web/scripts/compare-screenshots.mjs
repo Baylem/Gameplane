@@ -131,7 +131,28 @@ const SCALE_ALLOWLIST = {
   vStkb: 1.023, // Removable Group Chip — Violet (operator)
   uw0dB: 1.0349, // Removable Group Chip — Secondary (viewer)
   Kp48V: 0.9821, // Confirm Admin Mapping dialog
-  zhLZN: 1.3125, // Backup Detail Drawer
+  // zhLZN: entry removed (maintainer-approved re-record). Its reference is
+  // now cropped to the opaque panel via REFERENCE_CROP_ALLOWLIST, so the
+  // cropped 880px reference and the 880px captureLocator() crop match and
+  // scaleFactor is exactly 1. The old 1.3125 no longer matched CI's measured
+  // 1.1455 (= 1008px shadow-inclusive export / 880px capture).
+};
+
+// Ids whose design-export/screenshots/<id>.png includes the frame's outer
+// drop shadow as transparent bleed around the opaque panel (Pencil exports
+// the shadow's bounding box). A captureLocator() element crop has no such
+// margin, so the reference is cropped to its opaque panel before the scale
+// factor is computed and before diffing. Rect is sharp .extract() shape
+// { left, top, width, height } in the PNG's raw pixels, taken from the
+// alpha >= 250 bounding box. Re-measure it whenever the id is re-exported
+// or its shadow/size changes.
+const REFERENCE_CROP_ALLOWLIST = {
+  // Backup Detail Drawer: 440x760 panel at 2x; shadow offset x -12 / blur 32 /
+  // spread -8 leaves 44 CSS px bleed left, 20 right, 32 top and bottom.
+  zhLZN: { left: 88, top: 64, width: 880, height: 1520 },
+  // Restore Confirmation dialog: 480x882 panel at 2x, bounding box verified
+  // via PIL alpha>=250 scan of design-export/screenshots/DMnEi.png (1088x1892).
+  DMnEi: { left: 64, top: 40, width: 960, height: 1764 },
 };
 
 // Allowed deviation from an allowlisted id's recorded scaleFactor, in either
@@ -396,8 +417,12 @@ async function run() {
       continue;
     }
 
-    // Read metadata of both to determine the scale factor
-    const refMeta = await sharp(refPath).metadata();
+    // Read metadata of both to determine the scale factor. A
+    // REFERENCE_CROP_ALLOWLIST id's effective reference size is its crop rect.
+    const refCrop = REFERENCE_CROP_ALLOWLIST[screenId];
+    const refMeta = refCrop
+      ? { width: refCrop.width, height: refCrop.height }
+      : await sharp(refPath).metadata();
     const currMeta = await sharp(currPath).metadata();
 
     // Scale-normalize the capture to the reference's width class before padding —
@@ -450,7 +475,16 @@ async function run() {
     const maxHeight = Math.max(refMeta.height || 0, scaledCurr.height);
 
     // Standardize both onto maxWidth × maxHeight raw RGBA buffers
-    const refRaw = await loadAndScaleImage(refPath, 1);
+    const refRaw = refCrop
+      ? await (async () => {
+          const { data, info } = await sharp(refPath)
+            .ensureAlpha()
+            .extract(refCrop)
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+          return { data, width: info.width, height: info.height, channels: info.channels };
+        })()
+      : await loadAndScaleImage(refPath, 1);
     const paddedRef = await padToCanvas(refRaw, maxWidth, maxHeight);
     const paddedCurr = await padToCanvas(scaledCurr, maxWidth, maxHeight);
 

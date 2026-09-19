@@ -250,6 +250,12 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
   test("DMnEi: Add module source dialog", async ({ page }) => {
     // Design PNG is light theme — see setTheme()'s note.
     await setTheme(page, "light");
+    // DMnEi's design panel shows the whole 480px dialog (~881 CSS px tall)
+    // with every field visible. At the suite's 1440x900 viewport, ModalBody's
+    // max-h-[80vh] (SourceDialog.tsx) scrolls the body and captureLocator
+    // screenshots only the visible box, cutting off Allow list / Refresh
+    // interval. Give only this test a taller viewport so the form fits.
+    await page.setViewportSize({ width: 1440, height: 1200 });
     // #376 resolved: design-export/screenshots/DMnEi.png is genuinely the
     // "Add module source" dialog (Gameplane/Dialog/Add Module Source,
     // (-17205,28535)) — MANIFEST.md mislabeled the node "Gameplane/Backup
