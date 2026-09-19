@@ -693,14 +693,14 @@ function NamespaceGrants({ userId, roles }: { userId: number; roles: Role[] }) {
         </ul>
       )}
       <div className="flex items-center gap-2">
-        <div className="w-[120px] shrink-0">
+        <div className="w-[120px] shrink-0" data-grant-role>
           <Select
             aria-label="Grant role"
             value={roleName}
             onChange={(v) => setRoleName(String(v))}
           >
             <Select.Trigger
-              className="h-8! w-full items-center rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
+              className="w-full items-center rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
             >
               <Select.Value className="text-[var(--field-placeholder)]" />
               <Select.Indicator className="ml-auto h-4 w-4" />

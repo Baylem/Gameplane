@@ -303,6 +303,12 @@ input:-webkit-autofill:focus {
   border-radius: 12px;
 }
 
+/* t3IY3u Grant Role Select (Co5v8) is 32px, round-6 ruling. (0,3,0) beats the (0,2,0) dialog field rule above. */
+.modal__dialog [data-grant-role] .select__trigger {
+  height: 32px;
+  min-height: 32px;
+}
+
 .select__trigger {
   padding: 0 12px;
   font-size: 14px;

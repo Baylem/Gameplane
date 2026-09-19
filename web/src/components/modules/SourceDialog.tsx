@@ -266,6 +266,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
 
             <div className="flex flex-col gap-1.5">
               <Select
+                className="flex flex-col gap-1.5"
                 value={f.type}
                 onChange={(v) => set({ type: v as ModuleSourceType })}
                 aria-label="Type"
@@ -349,6 +350,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
 
                 <div className="flex flex-col gap-1.5">
                   <Select
+                    className="flex flex-col gap-1.5"
                     value={f.verifyMode}
                     onChange={(v) => set({ verifyMode: v as VerifyMode })}
                     aria-label="Signature verification"
