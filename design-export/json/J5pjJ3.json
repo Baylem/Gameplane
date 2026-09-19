@@ -738,37 +738,11 @@
                                       "fontWeight": "normal"
                                     },
                                     {
-                                      "type": "frame",
-                                      "id": "SUG76",
+                                      "id": "sJtcq",
+                                      "type": "ref",
+                                      "ref": "SUG76",
                                       "name": "StatusRow",
-                                      "width": "fill_container",
-                                      "gap": 10,
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "id": "yWGKh",
-                                          "type": "ref",
-                                          "ref": "UOoQW",
-                                          "name": "Badge",
-                                          "descendants": {
-                                            "YXoPG": {
-                                              "content": "Assigned"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "JohIc",
-                                          "name": "Msg",
-                                          "fill": "$foreground/foreground",
-                                          "textGrowth": "fixed-width",
-                                          "width": "fill_container",
-                                          "content": "Address 172.18.255.203 assigned from pool 'pool-us-west'.",
-                                          "fontFamily": "$typography/font-sans",
-                                          "fontSize": 13,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
+                                      "width": "fill_container"
                                     }
                                   ]
                                 }

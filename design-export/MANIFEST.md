@@ -1747,3 +1747,70 @@ These four design commits re-exported their frames but shipped without a MANIFES
 | `E9EEv0` | Restore backup — title, description and label line heights follow the app. |
 | `DWztv` | Mobile servers — 15px card padding, 28px mono icon tile, line heights, status pill, chip padding and a 42px search follow the app. |
 | re-export only | Frames instancing x3beP or WwNlX (PNG only): b4eaUf BX0XM I9W8z JLaGB KrREo MaoHP NLDDv O08uaD S7SCDc |
+
+## OD-23 — J5pjJ3 state frames organised as a component family (2026-09-19)
+
+Ruling: `specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`, OD-23. The six loose "J5pjJ3 states/*" frames (export-only, not diffed, three of them sitting among unrelated screens) are reorganised: the four copied StatusRow frames become a reusable `Gameplane/Address Status Row/*` component family in the component area; J5pjJ3's own row becomes an instance of the `Assigned` variant; the tunnel-enabled and alerts frames are relocated next to J5pjJ3 instead of sitting loose elsewhere. The share-link dialog footer buttons additionally take 6px corners per OD-17.
+
+**Old → new id map:**
+
+| Old node (deleted) | New node | What happened |
+|---|---|---|
+| `z6RDco` (frame, "J5pjJ3 states/Pending") | `p1xct` | Its `StatusRow` child was moved out and promoted to the reusable component `Gameplane/Address Status Row/Pending`; the now-empty `z6RDco` frame was deleted. |
+| `WSAsQ` (frame, "J5pjJ3 states/Pool exhausted") | `z9lDl` | Its `StatusRow` child was moved out and promoted to `Gameplane/Address Status Row/Pool exhausted`; the emptied `WSAsQ` frame was deleted. |
+| `UaEjg` (frame, "J5pjJ3 states/Pool not found") | `eNwtE` | Its `StatusRow` child was moved out and promoted to `Gameplane/Address Status Row/Pool not found`; the emptied `UaEjg` frame was deleted. |
+| `D76lH` (frame, "J5pjJ3 states/Address in use") | `qr3mo` | Its `StatusRow` child was moved out and promoted to `Gameplane/Address Status Row/Address in use`; the emptied `D76lH` frame was deleted. |
+| `SUG76` (id unchanged) | `SUG76` | J5pjJ3's own `StatusRow` frame was itself moved into the component area, marked `reusable: true`, and renamed `Gameplane/Address Status Row/Assigned`. J5pjJ3 now renders a new ref instance (`sJtcq`, `ref: SUG76`) in the row's old slot; the screen was verified unchanged by before/after screenshot. |
+| `IyMFM` (id unchanged, "J5pjJ3 states/Tunnel enabled") | `IyMFM` | **Fallback used, per OD-23's explicit fallback clause.** OD-23 asked for a new screen variant `Screen/Server Detail — Settings · Networking (tunnel enabled)` built from IyMFM's fields. IyMFM, however, is only a 500px-wide fields fragment (Provider select, tailnet-only alert, 3 inputs, a remote-ports row) — it has no App Sidebar, Top Bar, Page Header or Tabs Bar, so it is not a full screen composition. Re-deriving the entire ~1440×900 J5pjJ3 screen shell and splicing IyMFM's tunnel fields into a copy of it is a materially larger, riskier change than the mechanical reorganisation this decision covers, so the fallback was taken instead. **2026-09-19 placement correction:** the originally-chosen spot (`x: 6460, y: 10375`, directly right of J5pjJ3) turned out to overlap the unrelated `ugDSa` screen (`Screen/Server Detail — Settings · Environment`, `x: 6560, y: 10375`, 1440×900). IyMFM was moved again, via `FindEmptySpace({width:500,height:476,direction:"right",padding:100,nodeId:"jXykV"})`, to `x: 5720, y: 11375` — directly right of `jXykV` (which sits at `x: 4920, y: 11375` below J5pjJ3) — and verified to overlap no top-level frame (whole-document bounds check via `Get` visitor). |
+| `jXykV` (id unchanged, "J5pjJ3 states/Alerts") | `jXykV` | Moved unchanged to directly below J5pjJ3 (`x: 4920, y: 11375`). |
+
+**New components** (placed in the component area beside the other `Gameplane/*` components, e.g. `Gameplane/Provenance Badge/*`, `Gameplane/Removable Group Chip/*`):
+
+| ID | Name | x, y |
+|---|---|---|
+| `SUG76` | `Gameplane/Address Status Row/Assigned` | -14757, 28240 |
+| `p1xct` | `Gameplane/Address Status Row/Pending` | -14757, 28300 |
+| `z9lDl` | `Gameplane/Address Status Row/Pool exhausted` | -14757, 28360 |
+| `eNwtE` | `Gameplane/Address Status Row/Pool not found` | -14757, 28420 |
+| `qr3mo` | `Gameplane/Address Status Row/Address in use` | -14757, 28480 |
+
+Each mirrors the app's single `AddressStatusField` component (`web/src/routes/tabs/settings/Networking.tsx`): a `Badge` chip instance plus a `Msg` text, at a fixed width of 644 (their computed width when embedded in J5pjJ3).
+
+**OD-17 part — 6px footer-button corners (instance overrides only):**
+
+| Dialog | Buttons overridden | Override |
+|---|---|---|
+| `atqRh` (Gameplane/Dialog/Create Share Link) | `QTxwn` (Cancel), `nKz2n` (Create link) | `cornerRadius: 6` |
+| `VM7ro` (Gameplane/Dialog/Share Link Created) | `kbpwg` (Copy link), `m6ngX` (Done) | `cornerRadius: 6` |
+| `S7SCDc` (Gameplane/Dialog/Revoke Share Link) | `HPQTc` (Cancel), `aEe0m` (Revoke link), addressed via `S7SCDc/HPQTc` and `S7SCDc/aEe0m` since they are plain frames inside the shared `WwNlX` confirm-dialog component | `cornerRadius: 6` |
+
+None of the underlying shared components (`rkF0p`, `j9c5W`, `FIB65`, `WwNlX`) were modified — every button keeps its pill radius everywhere else it is used; only these three dialog instances take the 6px override.
+
+**Export method & validation:**
+
+- **JSON:** `Get(id, {depth: 30})` via the Pencil `execute` tool for all 11 touched/created ids (`SUG76`, `p1xct`, `z9lDl`, `eNwtE`, `qr3mo`, `IyMFM`, `jXykV`, `atqRh`, `VM7ro`, `S7SCDc`, `J5pjJ3`), zero `"..."` elision markers, written with `json.dump(indent=2, ensure_ascii=False)` + trailing newline. `python3 -m json.tool` passes on all 11.
+- **Screenshots:** `export_nodes` batch PNG export at 2× scale for all 11 ids in one call, all valid non-empty PNGs with real pixel dimensions (e.g. `J5pjJ3.png` 2880×1800, `atqRh.png` 1088×768, `S7SCDc.png` 1008×454).
+- **Content check:** unique body-text greps each returned a hit in their own file: `"assigned from pool"` → SUG76; `"waiting for the address manager"` → p1xct; `"no free addresses left"` → z9lDl; `"does not exist. Check the pool name"` → eNwtE; `"already assigned to another service"` → qr3mo; `"tailnet-only"` → IyMFM; `"saved but never applied"` → jXykV; `"Maximum 90 days"` → atqRh; `"one-way hash of the token"` → VM7ro; `"immediately lose access"` → S7SCDc.
+- **Deleted:** `design-export/json/{z6RDco,WSAsQ,UaEjg,D76lH}.json` and `design-export/screenshots/{z6RDco,WSAsQ,UaEjg,D76lH}.png` were removed (plain file deletion — their content lives on in `p1xct`, `z9lDl`, `eNwtE`, `qr3mo` respectively).
+- **Before/after verification:** J5pjJ3 was screenshotted before this change (its `StatusRow` visible as a plain frame) and after (the same "Assigned · Address 172.18.255.203 assigned from pool 'pool-us-west'." row, now a `ref` instance) — pixel-identical rendering confirmed by comparison.
+- **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`/`get_screenshot`, per Rule 2.
+
+## OD-24 — Share-link dialog visual-diff round 8 fixes (2026-09-19)
+
+Ruling: `specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`, OD-24. Instance-only overrides on the three share-link dialogs (`atqRh`, `VM7ro`, `S7SCDc`); the shared base components (`x3beP` Modal, `WwNlX` Confirm Dialog, `f7KBn` Alert/Danger, etc.) were not touched.
+
+| Dialog | Change | How |
+|---|---|---|
+| `atqRh` (Create share link) | The "Allow starting the server" switch moves to the left of its label+explanation stack, matching the app (`Switch` before the `<div className="flex-1">` in `CreateDialog`, `web/src/routes/tabs/settings/ShareLinks.tsx`). | `Move("WCA5l", "x22w2k", 0)` — reordered the `canStartSwitch` frame to be the first child of `fCanStart` (was second, after `canStartText`). No properties changed, no nodes added/removed. Read back: `Get("x22w2k", {depth:1})` confirms child order `WCA5l, uuUdx`. |
+| `VM7ro` (Share link created) | Warning box redrawn to match the app's `CreatedDialog` markup exactly: 2px solid warning-colour border, warning colour at 10% fill (not the `warning/soft` semantic token), a `circle-alert` (lucide) icon instead of `megaphone`, and a bold heading — replacing the previous `Llzos` (`Alert/Warning`) component instance, which used the wrong icon, 1px `warning/soft-foreground` border/text, `warning/soft` fill, and a stray "Manage storage" button not present in the app. | Added a new document-wide token `warning/10` via `SetVariables` (`#F59E0B1A` light / `#F59F0A1A` dark — the `$warning/warning` hex values with a `1A` alpha suffix, i.e. literal 10% opacity, matching Tailwind's `bg-warning/10`). Then `Replace("P8AoUw", {...})` swapped the `Llzos` ref instance for a plain frame `warningBox` (new id `Hp206`): `stroke: "$warning/warning"`, `strokeWidth: 2`, `fill: "$warning/10"`, `cornerRadius: 8`, `padding: 12`, containing a `circle-alert` icon (`fill: "$warning/warning"`, 20×20) and a `warningContent` column with a `fontWeight: "700"` heading and a normal-weight description, both `fill: "$warning/warning"` (matching the app's single `text-warning` class covering both). The footer (`kbpwg` "Copy link" outline button beside `m6ngX` "Done") and the bordered/copy-icon token row (`SICns`) were already correct from OD-17/prior rounds and were left unchanged. | 
+| `S7SCDc` (Revoke share link) | Added the danger icon beside the title, matching the app's `ConfirmDialog`-style `AlertDialogIcon` (`RevokeDialog` in `ShareLinks.tsx`: a `circle-alert`/`AlertCircle` icon in a `danger` badge, left of the heading). | Reused the exact icon pattern from `Kp48V` (`Gameplane/Dialog/Confirm Admin Mapping`)'s `cdTitleRow`: `Replace("S7SCDc/QARhG", {...})` swapped the bare `cdTitle` text node for a `cdTitleRow` frame (`gap: 12`, `alignItems: "center"`) containing a 40×40 circular `icon` frame (`fill: "$danger/soft"`, `cornerRadius: 9999`) wrapping a `circle-alert` icon (`fill: "$danger/soft-foreground"`, 20×20), followed by the original `cdTitle` text unchanged (content/font/weight preserved). New ids: `YZtJb` (row), `o5sOUZ` (icon badge), `k2iD7M` (icon), `j25yK` (title text). |
+
+**IyMFM placement fix (OD-23 follow-up, not an OD-24 item):** see the amended `IyMFM` row in the OD-23 table above — moved from the overlapping `x: 6460, y: 10375` spot to `x: 5720, y: 11375` beside `jXykV`.
+
+**Export method & validation:**
+
+- **JSON:** `Get(id, {depth: 12, resolveInstances: true})` via the Pencil `execute` tool for all 4 touched ids (`IyMFM`, `atqRh`, `VM7ro`, `S7SCDc`), zero `"..."` elision markers (each `Get` call's returned string length matched a separately-computed `JSON.stringify(...).length` check run in the same `execute`, confirming no truncation), written with `json.dump(indent=2, ensure_ascii=False)` + trailing newline. `python3 -m json.tool` passes on all 4.
+- **Screenshots:** `export_nodes` batch PNG export at 2× scale for all 4 ids in one call — `IyMFM.png` 1011×952, `atqRh.png` 1088×768, `VM7ro.png` 1088×768, `S7SCDc.png` 1008×492 — all valid non-empty RGBA PNGs with real pixel dimensions (verified via Pillow).
+- **Content check:** `"Server address"` / `"Tunnel"` → IyMFM; `"Allow starting the server"` → atqRh; `"You will not see this link again"` → VM7ro (also `"circle-alert"` present once, replacing the old `"megaphone"` reference); `"Revoke this share link"` → S7SCDc (also `"circle-alert"` present once, new).
+- **Visual check:** `get_screenshot` on each of the 4 nodes reviewed before export — switch left of label in `atqRh`, 2px-border/10%-fill/circle-alert/bold-heading warning box with unchanged footer+token-row in `VM7ro`, danger-badge icon beside the title in `S7SCDc`, unchanged tunnel-fields rendering for `IyMFM` at its new coordinates.
+- **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`/`get_screenshot`, per Rule 2.

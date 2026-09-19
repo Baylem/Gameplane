@@ -1,20 +1,69 @@
 {
+  "type": "frame",
   "id": "VM7ro",
-  "type": "ref",
-  "reusable": true,
-  "ref": "x3beP",
-  "name": "Gameplane/Dialog/Share Link Created",
   "x": -15865,
   "y": 27934,
+  "name": "Gameplane/Dialog/Share Link Created",
   "theme": {},
-  "descendants": {
-    "E7Whx": {
-      "content": "Share link created"
+  "reusable": true,
+  "width": 480,
+  "fill": "$surface/surface",
+  "cornerRadius": "$radius/xl",
+  "stroke": "$border/border",
+  "strokeWidth": 1,
+  "strokeAlignment": "inner",
+  "effect": {
+    "type": "shadow",
+    "shadowType": "outer",
+    "color": "#00000080",
+    "offset": {
+      "x": 0,
+      "y": 12
     },
-    "qzcst": {
-      "content": "Send this to your friend. It works without a Gameplane account."
+    "blur": 32,
+    "spread": -8
+  },
+  "layout": "vertical",
+  "padding": 20,
+  "children": [
+    {
+      "type": "text",
+      "id": "VM7ro/E7Whx",
+      "name": "mTitle",
+      "fill": "$foreground/foreground",
+      "content": "Share link created",
+      "fontFamily": "$typography/font-sans",
+      "fontSize": 16,
+      "fontWeight": "600"
     },
-    "Nht52": {
+    {
+      "type": "frame",
+      "id": "VM7ro/ABbjS",
+      "name": "mDescWrap",
+      "width": "fill_container",
+      "padding": [
+        4,
+        0,
+        0,
+        0
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "VM7ro/qzcst",
+          "name": "mDesc",
+          "fill": "$muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Send this to your friend. It works without a Gameplane account.",
+          "lineHeight": 1.5,
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
       "type": "frame",
       "id": "J5VxNe",
       "name": "mBody",
@@ -29,25 +78,60 @@
       ],
       "children": [
         {
-          "id": "P8AoUw",
-          "type": "ref",
-          "ref": "Llzos",
-          "name": "One-time warning",
+          "type": "frame",
+          "id": "Hp206",
+          "name": "warningBox",
           "width": "fill_container",
-          "descendants": {
-            "sINBP": {
-              "icon": "megaphone"
+          "fill": "$warning/10",
+          "cornerRadius": 8,
+          "stroke": "$warning/warning",
+          "strokeWidth": 2,
+          "gap": 8,
+          "padding": 12,
+          "children": [
+            {
+              "type": "icon",
+              "id": "UzYfu",
+              "name": "icon",
+              "width": 20,
+              "height": 20,
+              "icon": "circle-alert",
+              "library": "lucide",
+              "fill": "$warning/warning"
             },
-            "BXuYr": {
-              "content": "You will not see this link again"
-            },
-            "JmFhb": {
-              "content": "Gameplane stores only a one-way hash of the token, so it can't be shown or recovered after you close this dialog. Copy it now."
-            },
-            "c0FRXZ": {
-              "enabled": false
+            {
+              "type": "frame",
+              "id": "lATVG",
+              "name": "warningContent",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "b8l6B",
+                  "name": "warningTitle",
+                  "fill": "$warning/warning",
+                  "content": "You will not see this link again",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "mjjwe",
+                  "name": "warningDesc",
+                  "fill": "$warning/warning",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Gameplane stores only a one-way hash of the token, so it can't be shown or recovered after you close this dialog. Copy it now.",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
             }
-          }
+          ]
         },
         {
           "type": "frame",
@@ -90,7 +174,7 @@
         }
       ]
     },
-    "GCwAF": {
+    {
       "type": "frame",
       "id": "bvUYp",
       "name": "mFooter",
@@ -106,34 +190,85 @@
       "alignItems": "center",
       "children": [
         {
+          "type": "frame",
           "id": "kbpwg",
-          "type": "ref",
-          "ref": "FIB65",
           "name": "btnCopy",
-          "descendants": {
-            "K8d1zg": {
-              "icon": "copy"
+          "height": 32,
+          "cornerRadius": 6,
+          "stroke": "$border-2",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "gap": 5,
+          "padding": [
+            8,
+            "$spacing/3"
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "kbpwg/K8d1zg",
+              "name": "i4",
+              "width": 14,
+              "height": 14,
+              "icon": "copy",
+              "library": "lucide",
+              "fill": "$foreground/foreground"
             },
-            "zMNkR": {
-              "content": "Copy link"
+            {
+              "type": "text",
+              "id": "kbpwg/zMNkR",
+              "name": "Label",
+              "fill": "$foreground/foreground",
+              "content": "Copy link",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 13,
+              "fontWeight": "500"
             }
-          }
+          ]
         },
         {
+          "type": "frame",
           "id": "m6ngX",
-          "type": "ref",
-          "ref": "j9c5W",
           "name": "btnPrimary",
-          "descendants": {
-            "n8Hmwk": {
-              "enabled": false
+          "height": 32,
+          "fill": "$accent/accent",
+          "cornerRadius": 6,
+          "gap": 5,
+          "padding": [
+            8,
+            "$spacing/3"
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "m6ngX/n8Hmwk",
+              "x": 12,
+              "y": 9,
+              "name": "i1",
+              "enabled": false,
+              "width": 14,
+              "height": 14,
+              "icon": "plus",
+              "library": "lucide",
+              "fill": "$accent/foreground"
             },
-            "U1xvSo": {
-              "content": "Done"
+            {
+              "type": "text",
+              "id": "m6ngX/U1xvSo",
+              "name": "Label",
+              "fill": "$accent/foreground",
+              "content": "Done",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 13,
+              "fontWeight": "500"
             }
-          }
+          ]
         }
       ]
     }
-  }
+  ]
 }

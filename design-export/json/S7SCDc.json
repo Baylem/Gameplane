@@ -1,27 +1,254 @@
 {
+  "type": "frame",
   "id": "S7SCDc",
-  "type": "ref",
-  "reusable": true,
-  "ref": "WwNlX",
-  "name": "Gameplane/Dialog/Revoke Share Link",
   "x": -15185,
   "y": 27934,
+  "name": "Gameplane/Dialog/Revoke Share Link",
   "theme": {},
-  "descendants": {
-    "QARhG": {
-      "content": "Revoke this share link?"
+  "reusable": true,
+  "width": 440,
+  "fill": "$surface/surface",
+  "cornerRadius": "$radius/xl",
+  "stroke": "$border/border",
+  "strokeWidth": 1,
+  "strokeAlignment": "inner",
+  "effect": {
+    "type": "shadow",
+    "shadowType": "outer",
+    "color": "#00000080",
+    "offset": {
+      "x": 0,
+      "y": 12
     },
-    "WKy74": {
-      "content": "Anyone using this link will immediately lose access to mc-survival's status page. This action cannot be undone."
+    "blur": 32,
+    "spread": -8
+  },
+  "layout": "vertical",
+  "padding": 20,
+  "children": [
+    {
+      "type": "frame",
+      "id": "YZtJb",
+      "name": "cdTitleRow",
+      "width": "fill_container",
+      "gap": 12,
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "o5sOUZ",
+          "name": "icon",
+          "width": 40,
+          "height": 40,
+          "fill": "$danger/soft",
+          "cornerRadius": 9999,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "k2iD7M",
+              "name": "icon",
+              "width": 20,
+              "height": 20,
+              "icon": "circle-alert",
+              "library": "lucide",
+              "fill": "$danger/soft-foreground"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "j25yK",
+          "name": "cdTitle",
+          "fill": "$foreground/foreground",
+          "content": "Revoke this share link?",
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 16,
+          "fontWeight": "600"
+        }
+      ]
     },
-    "Wa0YZ": {
-      "enabled": false
+    {
+      "type": "frame",
+      "id": "S7SCDc/aZP2h",
+      "name": "cdDescWrap",
+      "width": "fill_container",
+      "padding": [
+        8,
+        0,
+        0,
+        0
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "S7SCDc/WKy74",
+          "name": "cdDesc",
+          "fill": "$foreground/muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Anyone using this link will immediately lose access to mc-survival's status page. This action cannot be undone.",
+          "lineHeight": 1.5,
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
     },
-    "uSic3": {
-      "content": "Cancel"
+    {
+      "type": "frame",
+      "id": "S7SCDc/Wa0YZ",
+      "x": 20,
+      "y": 112,
+      "name": "cdPhrase",
+      "enabled": false,
+      "width": "fill_container(400)",
+      "layout": "vertical",
+      "gap": 4,
+      "padding": [
+        16,
+        0,
+        0,
+        0
+      ],
+      "children": [
+        {
+          "type": "frame",
+          "id": "S7SCDc/YIING",
+          "name": "cdPhraseRow",
+          "gap": 4,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "S7SCDc/WSmxz",
+              "name": "cdPhraseType",
+              "fill": "$foreground/muted",
+              "content": "Type",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "S7SCDc/YBWEz",
+              "name": "cdPhraseValue",
+              "fill": "$foreground/foreground",
+              "content": "mc-survival",
+              "fontFamily": "$typography/font-mono",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "S7SCDc/W5iXO",
+              "name": "cdPhraseConfirm",
+              "fill": "$foreground/muted",
+              "content": "to confirm",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "S7SCDc/e0lQy",
+          "name": "cdInput",
+          "width": "fill_container",
+          "height": 36,
+          "fill": "$field/background",
+          "cornerRadius": "$radius/md",
+          "stroke": "$field/border",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "S7SCDc/ABCs7",
+              "name": "cdInputValue",
+              "fill": "$field/foreground",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
     },
-    "tvH6d": {
-      "content": "Revoke link"
+    {
+      "type": "frame",
+      "id": "S7SCDc/n8Cqu",
+      "name": "cdFooter",
+      "width": "fill_container",
+      "gap": 8,
+      "padding": [
+        20,
+        0,
+        0,
+        0
+      ],
+      "justifyContent": "end",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "S7SCDc/HPQTc",
+          "name": "btnCancel",
+          "height": 32,
+          "cornerRadius": 6,
+          "padding": [
+            0,
+            12
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "S7SCDc/uSic3",
+              "name": "cdCancelLabel",
+              "fill": "$foreground/foreground",
+              "content": "Cancel",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "S7SCDc/aEe0m",
+          "name": "btnConfirm",
+          "height": 32,
+          "fill": "$danger/danger",
+          "cornerRadius": 6,
+          "padding": [
+            0,
+            12
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "S7SCDc/tvH6d",
+              "name": "cdConfirmLabel",
+              "fill": "$danger/foreground",
+              "content": "Revoke link",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 14,
+              "fontWeight": "500"
+            }
+          ]
+        }
+      ]
     }
-  }
+  ]
 }

@@ -1,20 +1,69 @@
 {
+  "type": "frame",
   "id": "atqRh",
-  "type": "ref",
-  "reusable": true,
-  "ref": "x3beP",
-  "name": "Gameplane/Dialog/Create Share Link",
   "x": -16545,
   "y": 27934,
+  "name": "Gameplane/Dialog/Create Share Link",
   "theme": {},
-  "descendants": {
-    "E7Whx": {
-      "content": "Create share link for mc-survival"
+  "reusable": true,
+  "width": 480,
+  "fill": "$surface/surface",
+  "cornerRadius": "$radius/xl",
+  "stroke": "$border/border",
+  "strokeWidth": 1,
+  "strokeAlignment": "inner",
+  "effect": {
+    "type": "shadow",
+    "shadowType": "outer",
+    "color": "#00000080",
+    "offset": {
+      "x": 0,
+      "y": 12
     },
-    "qzcst": {
-      "content": "Anyone with this link can check the server's status and connection address without signing in."
+    "blur": 32,
+    "spread": -8
+  },
+  "layout": "vertical",
+  "padding": 20,
+  "children": [
+    {
+      "type": "text",
+      "id": "atqRh/E7Whx",
+      "name": "mTitle",
+      "fill": "$foreground/foreground",
+      "content": "Create share link for mc-survival",
+      "fontFamily": "$typography/font-sans",
+      "fontSize": 16,
+      "fontWeight": "600"
     },
-    "Nht52": {
+    {
+      "type": "frame",
+      "id": "atqRh/ABbjS",
+      "name": "mDescWrap",
+      "width": "fill_container",
+      "padding": [
+        4,
+        0,
+        0,
+        0
+      ],
+      "children": [
+        {
+          "type": "text",
+          "id": "atqRh/qzcst",
+          "name": "mDesc",
+          "fill": "$muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Anyone with this link can check the server's status and connection address without signing in.",
+          "lineHeight": 1.5,
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
       "type": "frame",
       "id": "p483p",
       "name": "mBody",
@@ -46,16 +95,54 @@
               "fontWeight": "500"
             },
             {
+              "type": "frame",
               "id": "ax9CH",
-              "type": "ref",
-              "ref": "AT7ya",
               "name": "Select",
               "width": "fill_container",
-              "descendants": {
-                "cFsFk": {
-                  "content": "7 days"
+              "height": 36,
+              "fill": "$field/background",
+              "cornerRadius": "$radius/xl",
+              "stroke": "$field/border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#0000000F",
+                "offset": {
+                  "x": 0,
+                  "y": 1
+                },
+                "blur": 2
+              },
+              "padding": [
+                8,
+                12
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ax9CH/cFsFk",
+                  "name": "selectValue",
+                  "fill": "$field/placeholder",
+                  "content": "7 days",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "icon",
+                  "id": "ax9CH/mULN8",
+                  "name": "selectChevron",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "chevron-down",
+                  "library": "lucide",
+                  "fill": "$field/placeholder"
                 }
-              }
+              ]
             },
             {
               "type": "text",
@@ -77,6 +164,53 @@
           "justifyContent": "space_between",
           "alignItems": "center",
           "children": [
+            {
+              "type": "frame",
+              "id": "WCA5l",
+              "name": "canStartSwitch",
+              "width": 36,
+              "height": 20,
+              "fill": "$border/border",
+              "cornerRadius": "$radius/3xl",
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "WCA5l/xGn9t",
+                  "x": 0,
+                  "y": 0,
+                  "name": "Track",
+                  "width": 36,
+                  "height": 20,
+                  "fill": "$default/default",
+                  "cornerRadius": 9999,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "WCA5l/eBtYM",
+                      "x": 2,
+                      "y": 2,
+                      "name": "Thumb",
+                      "width": 16,
+                      "height": 16,
+                      "fill": "$accent/foreground",
+                      "cornerRadius": 9999,
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#0000001A",
+                        "offset": {
+                          "x": 0,
+                          "y": 1
+                        },
+                        "blur": 3
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
             {
               "type": "frame",
               "id": "uuUdx",
@@ -107,18 +241,12 @@
                   "fontWeight": "normal"
                 }
               ]
-            },
-            {
-              "id": "WCA5l",
-              "type": "ref",
-              "ref": "rh2QH",
-              "name": "canStartSwitch"
             }
           ]
         }
       ]
     },
-    "GCwAF": {
+    {
       "type": "frame",
       "id": "m1KCBz",
       "name": "mFooter",
@@ -134,34 +262,82 @@
       "alignItems": "center",
       "children": [
         {
+          "type": "frame",
           "id": "QTxwn",
-          "type": "ref",
-          "ref": "rkF0p",
           "name": "btnCancel",
-          "descendants": {
-            "WtPjS": {
-              "enabled": false
+          "height": 32,
+          "cornerRadius": 6,
+          "gap": 5,
+          "padding": [
+            8,
+            "$spacing/3"
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "QTxwn/WtPjS",
+              "x": 12,
+              "y": 9,
+              "name": "i7",
+              "enabled": false,
+              "width": 14,
+              "height": 14,
+              "icon": "plus",
+              "library": "lucide",
+              "fill": "$foreground/foreground"
             },
-            "r4VbAi": {
-              "content": "Cancel"
+            {
+              "type": "text",
+              "id": "QTxwn/r4VbAi",
+              "name": "Label",
+              "fill": "$foreground/foreground",
+              "content": "Cancel",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 13,
+              "fontWeight": "500"
             }
-          }
+          ]
         },
         {
+          "type": "frame",
           "id": "nKz2n",
-          "type": "ref",
-          "ref": "j9c5W",
           "name": "btnPrimary",
-          "descendants": {
-            "n8Hmwk": {
-              "icon": "link"
+          "height": 32,
+          "fill": "$accent/accent",
+          "cornerRadius": 6,
+          "gap": 5,
+          "padding": [
+            8,
+            "$spacing/3"
+          ],
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "nKz2n/n8Hmwk",
+              "name": "i1",
+              "width": 14,
+              "height": 14,
+              "icon": "link",
+              "library": "lucide",
+              "fill": "$accent/foreground"
             },
-            "U1xvSo": {
-              "content": "Create link"
+            {
+              "type": "text",
+              "id": "nKz2n/U1xvSo",
+              "name": "Label",
+              "fill": "$accent/foreground",
+              "content": "Create link",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 13,
+              "fontWeight": "500"
             }
-          }
+          ]
         }
       ]
     }
-  }
+  ]
 }

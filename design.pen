@@ -13729,37 +13729,11 @@
                                           "fontWeight": "normal"
                                         },
                                         {
-                                          "type": "frame",
-                                          "id": "SUG76",
+                                          "id": "sJtcq",
+                                          "type": "ref",
+                                          "ref": "SUG76",
                                           "name": "StatusRow",
-                                          "width": "fill_container",
-                                          "gap": 10,
-                                          "alignItems": "center",
-                                          "children": [
-                                            {
-                                              "id": "yWGKh",
-                                              "type": "ref",
-                                              "ref": "UOoQW",
-                                              "name": "Badge",
-                                              "descendants": {
-                                                "YXoPG": {
-                                                  "content": "Assigned"
-                                                }
-                                              }
-                                            },
-                                            {
-                                              "type": "text",
-                                              "id": "JohIc",
-                                              "name": "Msg",
-                                              "fill": "$foreground/foreground",
-                                              "textGrowth": "fixed-width",
-                                              "width": "fill_container",
-                                              "content": "Address 172.18.255.203 assigned from pool 'pool-us-west'.",
-                                              "fontFamily": "$typography/font-sans",
-                                              "fontSize": 13,
-                                              "fontWeight": "normal"
-                                            }
-                                          ]
+                                          "width": "fill_container"
                                         }
                                       ]
                                     }
@@ -50014,6 +49988,12 @@
               "alignItems": "center",
               "children": [
                 {
+                  "id": "WCA5l",
+                  "type": "ref",
+                  "ref": "rh2QH",
+                  "name": "canStartSwitch"
+                },
+                {
                   "type": "frame",
                   "id": "uuUdx",
                   "name": "canStartText",
@@ -50043,12 +50023,6 @@
                       "fontWeight": "normal"
                     }
                   ]
-                },
-                {
-                  "id": "WCA5l",
-                  "type": "ref",
-                  "ref": "rh2QH",
-                  "name": "canStartSwitch"
                 }
               ]
             }
@@ -50074,6 +50048,7 @@
               "type": "ref",
               "ref": "rkF0p",
               "name": "btnCancel",
+              "cornerRadius": 6,
               "descendants": {
                 "WtPjS": {
                   "enabled": false
@@ -50088,6 +50063,7 @@
               "type": "ref",
               "ref": "j9c5W",
               "name": "btnPrimary",
+              "cornerRadius": 6,
               "descendants": {
                 "n8Hmwk": {
                   "icon": "link"
@@ -50132,25 +50108,60 @@
           ],
           "children": [
             {
-              "id": "P8AoUw",
-              "type": "ref",
-              "ref": "Llzos",
-              "name": "One-time warning",
+              "type": "frame",
+              "id": "Hp206",
+              "name": "warningBox",
               "width": "fill_container",
-              "descendants": {
-                "sINBP": {
-                  "icon": "megaphone"
+              "fill": "$warning/10",
+              "cornerRadius": 8,
+              "stroke": "$warning/warning",
+              "strokeWidth": 2,
+              "gap": 8,
+              "padding": 12,
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "UzYfu",
+                  "name": "icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "circle-alert",
+                  "library": "lucide",
+                  "fill": "$warning/warning"
                 },
-                "BXuYr": {
-                  "content": "You will not see this link again"
-                },
-                "JmFhb": {
-                  "content": "Gameplane stores only a one-way hash of the token, so it can't be shown or recovered after you close this dialog. Copy it now."
-                },
-                "c0FRXZ": {
-                  "enabled": false
+                {
+                  "type": "frame",
+                  "id": "lATVG",
+                  "name": "warningContent",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "b8l6B",
+                      "name": "warningTitle",
+                      "fill": "$warning/warning",
+                      "content": "You will not see this link again",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "mjjwe",
+                      "name": "warningDesc",
+                      "fill": "$warning/warning",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Gameplane stores only a one-way hash of the token, so it can't be shown or recovered after you close this dialog. Copy it now.",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
                 }
-              }
+              ]
             },
             {
               "type": "frame",
@@ -50213,6 +50224,7 @@
               "type": "ref",
               "ref": "FIB65",
               "name": "btnCopy",
+              "cornerRadius": 6,
               "descendants": {
                 "K8d1zg": {
                   "icon": "copy"
@@ -50227,6 +50239,7 @@
               "type": "ref",
               "ref": "j9c5W",
               "name": "btnPrimary",
+              "cornerRadius": 6,
               "descendants": {
                 "n8Hmwk": {
                   "enabled": false
@@ -50251,7 +50264,47 @@
       "theme": {},
       "descendants": {
         "QARhG": {
-          "content": "Revoke this share link?"
+          "type": "frame",
+          "id": "YZtJb",
+          "name": "cdTitleRow",
+          "width": "fill_container",
+          "gap": 12,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "o5sOUZ",
+              "name": "icon",
+              "width": 40,
+              "height": 40,
+              "fill": "$danger/soft",
+              "cornerRadius": 9999,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "k2iD7M",
+                  "name": "icon",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "circle-alert",
+                  "library": "lucide",
+                  "fill": "$danger/soft-foreground"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "j25yK",
+              "name": "cdTitle",
+              "fill": "$foreground/foreground",
+              "content": "Revoke this share link?",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 16,
+              "fontWeight": "600"
+            }
+          ]
         },
         "WKy74": {
           "content": "Anyone using this link will immediately lose access to mc-survival's status page. This action cannot be undone."
@@ -50259,8 +50312,14 @@
         "Wa0YZ": {
           "enabled": false
         },
+        "HPQTc": {
+          "cornerRadius": 6
+        },
         "uSic3": {
           "content": "Cancel"
+        },
+        "aEe0m": {
+          "cornerRadius": 6
         },
         "tvH6d": {
           "content": "Revoke link"
@@ -93059,206 +93118,6 @@
     },
     {
       "type": "frame",
-      "id": "z6RDco",
-      "x": 8200,
-      "y": 12200,
-      "name": "J5pjJ3 states/Pending",
-      "theme": {
-        "semantic": "dark"
-      },
-      "width": 500,
-      "fill": "$surface/surface",
-      "layout": "vertical",
-      "gap": 8,
-      "padding": 20,
-      "children": [
-        {
-          "type": "frame",
-          "id": "p1xct",
-          "name": "StatusRow",
-          "width": "fill_container",
-          "gap": 10,
-          "alignItems": "center",
-          "children": [
-            {
-              "id": "XFSC0",
-              "type": "ref",
-              "ref": "kGH2O",
-              "name": "Badge",
-              "descendants": {
-                "O1PqF5": {
-                  "content": "Pending"
-                }
-              }
-            },
-            {
-              "type": "text",
-              "id": "aoI1T",
-              "name": "Msg",
-              "fill": "$foreground/foreground",
-              "textGrowth": "fixed-width",
-              "width": "fill_container",
-              "content": "LoadBalancer requested — waiting for the address manager to assign an address.",
-              "fontFamily": "$typography/font-sans",
-              "fontSize": 13,
-              "fontWeight": "normal"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "frame",
-      "id": "WSAsQ",
-      "x": 8740,
-      "y": 12200,
-      "name": "J5pjJ3 states/Pool exhausted",
-      "theme": {
-        "semantic": "dark"
-      },
-      "width": 500,
-      "fill": "$surface/surface",
-      "layout": "vertical",
-      "gap": 8,
-      "padding": 20,
-      "children": [
-        {
-          "type": "frame",
-          "id": "z9lDl",
-          "name": "StatusRow",
-          "width": "fill_container",
-          "gap": 10,
-          "alignItems": "center",
-          "children": [
-            {
-              "id": "XE9Lx",
-              "type": "ref",
-              "ref": "Yeemi",
-              "name": "Badge",
-              "descendants": {
-                "fRdhX": {
-                  "content": "Pool exhausted"
-                }
-              }
-            },
-            {
-              "type": "text",
-              "id": "fv8A9",
-              "name": "Msg",
-              "fill": "$foreground/foreground",
-              "textGrowth": "fixed-width",
-              "width": "fill_container",
-              "content": "Pool 'pool-us-west' has no free addresses left. Choose a different pool or free one up.",
-              "fontFamily": "$typography/font-sans",
-              "fontSize": 13,
-              "fontWeight": "normal"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "frame",
-      "id": "UaEjg",
-      "x": 9280,
-      "y": 12200,
-      "name": "J5pjJ3 states/Pool not found",
-      "theme": {
-        "semantic": "dark"
-      },
-      "width": 500,
-      "fill": "$surface/surface",
-      "layout": "vertical",
-      "gap": 8,
-      "padding": 20,
-      "children": [
-        {
-          "type": "frame",
-          "id": "eNwtE",
-          "name": "StatusRow",
-          "width": "fill_container",
-          "gap": 10,
-          "alignItems": "center",
-          "children": [
-            {
-              "id": "T1eev",
-              "type": "ref",
-              "ref": "Yeemi",
-              "name": "Badge",
-              "descendants": {
-                "fRdhX": {
-                  "content": "Pool not found"
-                }
-              }
-            },
-            {
-              "type": "text",
-              "id": "GD0jS",
-              "name": "Msg",
-              "fill": "$foreground/foreground",
-              "textGrowth": "fixed-width",
-              "width": "fill_container",
-              "content": "Pool 'pool-us-west' does not exist. Check the pool name with your cluster admin.",
-              "fontFamily": "$typography/font-sans",
-              "fontSize": 13,
-              "fontWeight": "normal"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "frame",
-      "id": "D76lH",
-      "x": 9820,
-      "y": 12200,
-      "name": "J5pjJ3 states/Address in use",
-      "theme": {
-        "semantic": "dark"
-      },
-      "width": 500,
-      "fill": "$surface/surface",
-      "layout": "vertical",
-      "gap": 8,
-      "padding": 20,
-      "children": [
-        {
-          "type": "frame",
-          "id": "qr3mo",
-          "name": "StatusRow",
-          "width": "fill_container",
-          "gap": 10,
-          "alignItems": "center",
-          "children": [
-            {
-              "id": "kEKPU",
-              "type": "ref",
-              "ref": "Yeemi",
-              "name": "Badge",
-              "descendants": {
-                "fRdhX": {
-                  "content": "Address in use"
-                }
-              }
-            },
-            {
-              "type": "text",
-              "id": "cfjyu",
-              "name": "Msg",
-              "fill": "$foreground/foreground",
-              "textGrowth": "fixed-width",
-              "width": "fill_container",
-              "content": "Requested address 203.0.113.50 is already assigned to another service.",
-              "fontFamily": "$typography/font-sans",
-              "fontSize": 13,
-              "fontWeight": "normal"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "frame",
       "id": "uCA23",
       "x": 30440,
       "y": 10375,
@@ -95192,418 +95051,6 @@
     },
     {
       "type": "frame",
-      "id": "IyMFM",
-      "x": 10360,
-      "y": 12200,
-      "name": "J5pjJ3 states/Tunnel enabled",
-      "theme": {
-        "semantic": "dark"
-      },
-      "width": 500,
-      "fill": "$surface/surface",
-      "layout": "vertical",
-      "gap": 16,
-      "padding": 20,
-      "children": [
-        {
-          "type": "frame",
-          "id": "AbJF1",
-          "name": "Field Tunnel Provider",
-          "width": "fill_container",
-          "stroke": "#00000000",
-          "gap": 16,
-          "children": [
-            {
-              "type": "frame",
-              "id": "Y14Cu2",
-              "name": "lbl",
-              "width": 200,
-              "layout": "vertical",
-              "gap": 4,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "DUChm",
-                  "name": "t",
-                  "fill": "$foreground/foreground",
-                  "content": "Provider",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "cqpvH",
-                  "name": "h",
-                  "fill": "$muted",
-                  "textGrowth": "fixed-width",
-                  "width": 200,
-                  "content": "Relay used to reach players.",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "id": "PGf84",
-              "type": "ref",
-              "ref": "cY9fV",
-              "name": "select",
-              "width": "fill_container",
-              "descendants": {
-                "mgenn": {
-                  "enabled": false
-                },
-                "c94wTj": {
-                  "content": "frp",
-                  "fill": "$foreground/foreground"
-                },
-                "d7Cyay": {
-                  "enabled": false
-                }
-              }
-            }
-          ]
-        },
-        {
-          "id": "znLuB",
-          "type": "ref",
-          "ref": "uJ3KZ",
-          "name": "Alert Tailscale tailnet-only",
-          "width": "fill_container",
-          "descendants": {
-            "JvjWQ": {
-              "icon": "megaphone"
-            },
-            "xzGxP": {
-              "content": "Tailscale is tailnet-only"
-            },
-            "yLGJ9": {
-              "content": "If you select Tailscale as the provider, this server is reachable only from devices on your tailnet — never from the public internet."
-            }
-          }
-        },
-        {
-          "type": "frame",
-          "id": "t7GCQp",
-          "name": "Field Tunnel Credentials",
-          "width": "fill_container",
-          "gap": 16,
-          "children": [
-            {
-              "type": "frame",
-              "id": "rQHJz",
-              "name": "lbl",
-              "width": 200,
-              "layout": "vertical",
-              "gap": 4,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "T3j1K",
-                  "name": "t",
-                  "fill": "$foreground/foreground",
-                  "content": "Credentials Secret",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "Q0sP8d",
-                  "name": "h",
-                  "fill": "$muted",
-                  "textGrowth": "fixed-width",
-                  "width": 200,
-                  "content": "Kubernetes Secret in this namespace holding the provider's auth token(s).",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "id": "fDJ8g",
-              "type": "ref",
-              "ref": "D0cDM",
-              "name": "Input",
-              "width": "fill_container",
-              "descendants": {
-                "PJERm": {
-                  "content": "frp-tunnel-credentials",
-                  "fill": "#5C5C5C"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "RCwXr",
-          "name": "Field Tunnel Server Address",
-          "width": "fill_container",
-          "gap": 16,
-          "children": [
-            {
-              "type": "frame",
-              "id": "sC8vi",
-              "name": "lbl",
-              "width": 200,
-              "layout": "vertical",
-              "gap": 4,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "Pa6vC",
-                  "name": "t",
-                  "fill": "$foreground/foreground",
-                  "content": "Server address",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "DvZhn",
-                  "name": "h",
-                  "fill": "$muted",
-                  "textGrowth": "fixed-width",
-                  "width": 200,
-                  "content": "Public frps host this game server dials out to.",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "id": "smvAa",
-              "type": "ref",
-              "ref": "D0cDM",
-              "name": "Input",
-              "width": "fill_container",
-              "descendants": {
-                "PJERm": {
-                  "content": "tunnel.example.com",
-                  "fill": "#5C5C5C"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "bq76r",
-          "name": "Field Tunnel Server Port",
-          "width": "fill_container",
-          "gap": 16,
-          "children": [
-            {
-              "type": "frame",
-              "id": "wmvEb",
-              "name": "lbl",
-              "width": 200,
-              "layout": "vertical",
-              "gap": 4,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "eHkyc",
-                  "name": "t",
-                  "fill": "$foreground/foreground",
-                  "content": "Server port",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "nCIWj",
-                  "name": "h",
-                  "fill": "$muted",
-                  "textGrowth": "fixed-width",
-                  "width": 200,
-                  "content": "frps control port. Defaults to 7000.",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "id": "GE82I",
-              "type": "ref",
-              "ref": "D0cDM",
-              "name": "Input",
-              "width": "fill_container",
-              "descendants": {
-                "PJERm": {
-                  "content": "7000",
-                  "fill": "#5C5C5C"
-                }
-              }
-            }
-          ]
-        },
-        {
-          "type": "frame",
-          "id": "kWmwj",
-          "name": "Field Tunnel Remote Ports",
-          "width": "fill_container",
-          "gap": 16,
-          "children": [
-            {
-              "type": "frame",
-              "id": "he57o",
-              "name": "lbl",
-              "width": 200,
-              "layout": "vertical",
-              "gap": 4,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "H8bgZ",
-                  "name": "t",
-                  "fill": "$foreground/foreground",
-                  "content": "Remote ports",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "text",
-                  "id": "xDLd7",
-                  "name": "h",
-                  "fill": "$muted",
-                  "textGrowth": "fixed-width",
-                  "width": 200,
-                  "content": "Maps a named template port to a remote port on the frp server.",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "ax9zA",
-              "name": "ctrl",
-              "width": "fill_container",
-              "gap": 8,
-              "alignItems": "center",
-              "children": [
-                {
-                  "id": "nd762",
-                  "type": "ref",
-                  "ref": "D0cDM",
-                  "name": "Input",
-                  "width": "fill_container",
-                  "descendants": {
-                    "PJERm": {
-                      "content": "game",
-                      "fill": "#5C5C5C"
-                    }
-                  }
-                },
-                {
-                  "id": "HStHP",
-                  "type": "ref",
-                  "ref": "D0cDM",
-                  "name": "Input",
-                  "width": "fill_container",
-                  "descendants": {
-                    "PJERm": {
-                      "content": "25565",
-                      "fill": "#5C5C5C"
-                    }
-                  }
-                },
-                {
-                  "id": "V9VdkJ",
-                  "type": "ref",
-                  "ref": "LMIom",
-                  "name": "Btn Add",
-                  "descendants": {
-                    "vWtyO/bevQZ": {
-                      "enabled": false
-                    },
-                    "vWtyO/ezEy1": {
-                      "content": "Add"
-                    }
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "frame",
-      "id": "jXykV",
-      "x": 10900,
-      "y": 12200,
-      "name": "J5pjJ3 states/Alerts",
-      "theme": {
-        "semantic": "dark"
-      },
-      "width": 700,
-      "fill": "$surface/surface",
-      "layout": "vertical",
-      "gap": 12,
-      "padding": 20,
-      "children": [
-        {
-          "type": "text",
-          "id": "NbcRI",
-          "name": "AlertStatesCaption",
-          "fill": "$muted",
-          "content": "These conditions mean the preference is saved but never applied:",
-          "fontFamily": "$typography/font-sans",
-          "fontSize": 11,
-          "fontWeight": "normal"
-        },
-        {
-          "id": "q1zaXx",
-          "type": "ref",
-          "ref": "uJ3KZ",
-          "name": "Alert Ignored For Exposure Mode",
-          "width": "fill_container",
-          "descendants": {
-            "JvjWQ": {
-              "icon": "megaphone"
-            },
-            "xzGxP": {
-              "content": "Address preference ignored"
-            },
-            "yLGJ9": {
-              "content": "Expose is set to NodePort. Address pool and requested address only take effect when Expose (above) is set to LoadBalancer."
-            }
-          }
-        },
-        {
-          "id": "MLrud",
-          "type": "ref",
-          "ref": "uJ3KZ",
-          "name": "Alert No Address Manager Configured",
-          "width": "fill_container",
-          "descendants": {
-            "JvjWQ": {
-              "icon": "megaphone"
-            },
-            "xzGxP": {
-              "content": "No address manager configured"
-            },
-            "yLGJ9": {
-              "content": "This cluster has no MetalLB or Cilium address manager. Your pool and address preference will be saved but never applied."
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "frame",
       "id": "QQtUD",
       "x": 8080,
       "y": 12745,
@@ -96686,6 +96133,598 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "SUG76",
+      "x": -14757,
+      "y": 28240,
+      "name": "Gameplane/Address Status Row/Assigned",
+      "reusable": true,
+      "width": 644,
+      "gap": 10,
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "yWGKh",
+          "type": "ref",
+          "ref": "UOoQW",
+          "name": "Badge",
+          "descendants": {
+            "YXoPG": {
+              "content": "Assigned"
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "JohIc",
+          "name": "Msg",
+          "fill": "$foreground/foreground",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Address 172.18.255.203 assigned from pool 'pool-us-west'.",
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 13,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "p1xct",
+      "x": -14757,
+      "y": 28300,
+      "name": "Gameplane/Address Status Row/Pending",
+      "reusable": true,
+      "width": 644,
+      "gap": 10,
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "XFSC0",
+          "type": "ref",
+          "ref": "kGH2O",
+          "name": "Badge",
+          "descendants": {
+            "O1PqF5": {
+              "content": "Pending"
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "aoI1T",
+          "name": "Msg",
+          "fill": "$foreground/foreground",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "LoadBalancer requested — waiting for the address manager to assign an address.",
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 13,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "z9lDl",
+      "x": -14757,
+      "y": 28360,
+      "name": "Gameplane/Address Status Row/Pool exhausted",
+      "reusable": true,
+      "width": 644,
+      "gap": 10,
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "XE9Lx",
+          "type": "ref",
+          "ref": "Yeemi",
+          "name": "Badge",
+          "descendants": {
+            "fRdhX": {
+              "content": "Pool exhausted"
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "fv8A9",
+          "name": "Msg",
+          "fill": "$foreground/foreground",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Pool 'pool-us-west' has no free addresses left. Choose a different pool or free one up.",
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 13,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "eNwtE",
+      "x": -14757,
+      "y": 28420,
+      "name": "Gameplane/Address Status Row/Pool not found",
+      "reusable": true,
+      "width": 644,
+      "gap": 10,
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "T1eev",
+          "type": "ref",
+          "ref": "Yeemi",
+          "name": "Badge",
+          "descendants": {
+            "fRdhX": {
+              "content": "Pool not found"
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "GD0jS",
+          "name": "Msg",
+          "fill": "$foreground/foreground",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Pool 'pool-us-west' does not exist. Check the pool name with your cluster admin.",
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 13,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "qr3mo",
+      "x": -14757,
+      "y": 28480,
+      "name": "Gameplane/Address Status Row/Address in use",
+      "reusable": true,
+      "width": 644,
+      "gap": 10,
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "kEKPU",
+          "type": "ref",
+          "ref": "Yeemi",
+          "name": "Badge",
+          "descendants": {
+            "fRdhX": {
+              "content": "Address in use"
+            }
+          }
+        },
+        {
+          "type": "text",
+          "id": "cfjyu",
+          "name": "Msg",
+          "fill": "$foreground/foreground",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Requested address 203.0.113.50 is already assigned to another service.",
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 13,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "IyMFM",
+      "x": 5720,
+      "y": 11375,
+      "name": "J5pjJ3 states/Tunnel enabled",
+      "theme": {
+        "semantic": "dark"
+      },
+      "width": 500,
+      "fill": "$surface/surface",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 20,
+      "children": [
+        {
+          "type": "frame",
+          "id": "AbJF1",
+          "name": "Field Tunnel Provider",
+          "width": "fill_container",
+          "stroke": "#00000000",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "Y14Cu2",
+              "name": "lbl",
+              "width": 200,
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "DUChm",
+                  "name": "t",
+                  "fill": "$foreground/foreground",
+                  "content": "Provider",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "cqpvH",
+                  "name": "h",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": 200,
+                  "content": "Relay used to reach players.",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "PGf84",
+              "type": "ref",
+              "ref": "cY9fV",
+              "name": "select",
+              "width": "fill_container",
+              "descendants": {
+                "mgenn": {
+                  "enabled": false
+                },
+                "c94wTj": {
+                  "content": "frp",
+                  "fill": "$foreground/foreground"
+                },
+                "d7Cyay": {
+                  "enabled": false
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "znLuB",
+          "type": "ref",
+          "ref": "uJ3KZ",
+          "name": "Alert Tailscale tailnet-only",
+          "width": "fill_container",
+          "descendants": {
+            "JvjWQ": {
+              "icon": "megaphone"
+            },
+            "xzGxP": {
+              "content": "Tailscale is tailnet-only"
+            },
+            "yLGJ9": {
+              "content": "If you select Tailscale as the provider, this server is reachable only from devices on your tailnet — never from the public internet."
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "t7GCQp",
+          "name": "Field Tunnel Credentials",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "rQHJz",
+              "name": "lbl",
+              "width": 200,
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "T3j1K",
+                  "name": "t",
+                  "fill": "$foreground/foreground",
+                  "content": "Credentials Secret",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Q0sP8d",
+                  "name": "h",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": 200,
+                  "content": "Kubernetes Secret in this namespace holding the provider's auth token(s).",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "fDJ8g",
+              "type": "ref",
+              "ref": "D0cDM",
+              "name": "Input",
+              "width": "fill_container",
+              "descendants": {
+                "PJERm": {
+                  "content": "frp-tunnel-credentials",
+                  "fill": "#5C5C5C"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "RCwXr",
+          "name": "Field Tunnel Server Address",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "sC8vi",
+              "name": "lbl",
+              "width": 200,
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Pa6vC",
+                  "name": "t",
+                  "fill": "$foreground/foreground",
+                  "content": "Server address",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "DvZhn",
+                  "name": "h",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": 200,
+                  "content": "Public frps host this game server dials out to.",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "smvAa",
+              "type": "ref",
+              "ref": "D0cDM",
+              "name": "Input",
+              "width": "fill_container",
+              "descendants": {
+                "PJERm": {
+                  "content": "tunnel.example.com",
+                  "fill": "#5C5C5C"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "bq76r",
+          "name": "Field Tunnel Server Port",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "wmvEb",
+              "name": "lbl",
+              "width": 200,
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "eHkyc",
+                  "name": "t",
+                  "fill": "$foreground/foreground",
+                  "content": "Server port",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "nCIWj",
+                  "name": "h",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": 200,
+                  "content": "frps control port. Defaults to 7000.",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "id": "GE82I",
+              "type": "ref",
+              "ref": "D0cDM",
+              "name": "Input",
+              "width": "fill_container",
+              "descendants": {
+                "PJERm": {
+                  "content": "7000",
+                  "fill": "#5C5C5C"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "kWmwj",
+          "name": "Field Tunnel Remote Ports",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "he57o",
+              "name": "lbl",
+              "width": 200,
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "H8bgZ",
+                  "name": "t",
+                  "fill": "$foreground/foreground",
+                  "content": "Remote ports",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "xDLd7",
+                  "name": "h",
+                  "fill": "$muted",
+                  "textGrowth": "fixed-width",
+                  "width": 200,
+                  "content": "Maps a named template port to a remote port on the frp server.",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ax9zA",
+              "name": "ctrl",
+              "width": "fill_container",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "nd762",
+                  "type": "ref",
+                  "ref": "D0cDM",
+                  "name": "Input",
+                  "width": "fill_container",
+                  "descendants": {
+                    "PJERm": {
+                      "content": "game",
+                      "fill": "#5C5C5C"
+                    }
+                  }
+                },
+                {
+                  "id": "HStHP",
+                  "type": "ref",
+                  "ref": "D0cDM",
+                  "name": "Input",
+                  "width": "fill_container",
+                  "descendants": {
+                    "PJERm": {
+                      "content": "25565",
+                      "fill": "#5C5C5C"
+                    }
+                  }
+                },
+                {
+                  "id": "V9VdkJ",
+                  "type": "ref",
+                  "ref": "LMIom",
+                  "name": "Btn Add",
+                  "descendants": {
+                    "vWtyO/bevQZ": {
+                      "enabled": false
+                    },
+                    "vWtyO/ezEy1": {
+                      "content": "Add"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "jXykV",
+      "x": 4920,
+      "y": 11375,
+      "name": "J5pjJ3 states/Alerts",
+      "theme": {
+        "semantic": "dark"
+      },
+      "width": 700,
+      "fill": "$surface/surface",
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 20,
+      "children": [
+        {
+          "type": "text",
+          "id": "NbcRI",
+          "name": "AlertStatesCaption",
+          "fill": "$muted",
+          "content": "These conditions mean the preference is saved but never applied:",
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 11,
+          "fontWeight": "normal"
+        },
+        {
+          "id": "q1zaXx",
+          "type": "ref",
+          "ref": "uJ3KZ",
+          "name": "Alert Ignored For Exposure Mode",
+          "width": "fill_container",
+          "descendants": {
+            "JvjWQ": {
+              "icon": "megaphone"
+            },
+            "xzGxP": {
+              "content": "Address preference ignored"
+            },
+            "yLGJ9": {
+              "content": "Expose is set to NodePort. Address pool and requested address only take effect when Expose (above) is set to LoadBalancer."
+            }
+          }
+        },
+        {
+          "id": "MLrud",
+          "type": "ref",
+          "ref": "uJ3KZ",
+          "name": "Alert No Address Manager Configured",
+          "width": "fill_container",
+          "descendants": {
+            "JvjWQ": {
+              "icon": "megaphone"
+            },
+            "xzGxP": {
+              "content": "No address manager configured"
+            },
+            "yLGJ9": {
+              "content": "This cluster has no MetalLB or Cilium address manager. Your pool and address preference will be saved but never applied."
+            }
+          }
+        }
+      ]
     }
   ],
   "themes": {
@@ -97702,6 +97741,23 @@
         },
         {
           "value": "#8B5CF6",
+          "theme": {
+            "semantic": "dark"
+          }
+        }
+      ]
+    },
+    "warning/10": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F59E0B1A",
+          "theme": {
+            "semantic": "light"
+          }
+        },
+        {
+          "value": "#F59F0A1A",
           "theme": {
             "semantic": "dark"
           }
