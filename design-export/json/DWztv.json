@@ -44,9 +44,11 @@
               "ref": "Lmaf1",
               "name": "Search",
               "width": "fill_container",
+              "height": 42,
               "descendants": {
                 "EJMtX": {
-                  "content": "Search…"
+                  "content": "Search…",
+                  "fontSize": 16
                 }
               }
             },
@@ -99,7 +101,7 @@
               "strokeAlignment": "inner",
               "layout": "vertical",
               "gap": 20,
-              "padding": 14,
+              "padding": 15,
               "children": [
                 {
                   "type": "frame",
@@ -107,23 +109,22 @@
                   "name": "row1",
                   "width": "fill_container",
                   "justifyContent": "space_between",
-                  "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
                       "id": "fhzAw",
                       "name": "left",
-                      "gap": 10,
+                      "gap": 12,
                       "alignItems": "center",
                       "children": [
                         {
                           "type": "frame",
                           "id": "AFfme",
                           "name": "icon",
-                          "width": 32,
-                          "height": 32,
+                          "width": 28,
+                          "height": 28,
                           "fill": "$success/soft",
-                          "cornerRadius": 4,
+                          "cornerRadius": 6,
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
@@ -133,8 +134,8 @@
                               "name": "emoji",
                               "fill": "$success/soft-foreground",
                               "content": "MI",
-                              "fontFamily": "$typography/font-sans",
-                              "fontSize": 14,
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 12,
                               "fontWeight": "normal"
                             }
                           ]
@@ -146,7 +147,6 @@
                           "clip": true,
                           "width": 210,
                           "layout": "vertical",
-                          "gap": 2,
                           "children": [
                             {
                               "type": "text",
@@ -154,6 +154,7 @@
                               "name": "name",
                               "fill": "$foreground/foreground",
                               "content": "mc-survival",
+                              "lineHeight": 1.4286,
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "500"
@@ -166,6 +167,7 @@
                               "textGrowth": "fixed-width",
                               "width": 210,
                               "content": "mc.frp.gameplane.dev:25565",
+                              "lineHeight": 1.3333,
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -178,6 +180,7 @@
                       "type": "frame",
                       "id": "Q0KUgq",
                       "name": "statusPill",
+                      "height": 24,
                       "fill": "$success/soft",
                       "cornerRadius": "$radius/2xl",
                       "gap": 2,
@@ -208,6 +211,7 @@
                   "opacity": 0.6,
                   "fill": "$foreground/foreground",
                   "content": "minecraft-java",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 14,
                   "fontWeight": "normal"
@@ -235,7 +239,7 @@
                       "strokeAlignment": "inner",
                       "gap": 8,
                       "padding": [
-                        6,
+                        7,
                         14
                       ],
                       "alignItems": "center",
@@ -256,6 +260,7 @@
                           "name": "label",
                           "fill": "$muted",
                           "content": "0/20",
+                          "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -272,7 +277,7 @@
                       "strokeAlignment": "inner",
                       "gap": 8,
                       "padding": [
-                        6,
+                        7,
                         14
                       ],
                       "alignItems": "center",
@@ -293,6 +298,7 @@
                           "name": "label",
                           "fill": "$muted",
                           "content": "38%",
+                          "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -315,7 +321,7 @@
               "strokeAlignment": "inner",
               "layout": "vertical",
               "gap": 20,
-              "padding": 14,
+              "padding": 15,
               "children": [
                 {
                   "type": "frame",
@@ -323,23 +329,22 @@
                   "name": "row1",
                   "width": "fill_container",
                   "justifyContent": "space_between",
-                  "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
                       "id": "tbgV8",
                       "name": "left",
-                      "gap": 10,
+                      "gap": 12,
                       "alignItems": "center",
                       "children": [
                         {
                           "type": "frame",
                           "id": "y3tHBF",
                           "name": "icon",
-                          "width": 32,
-                          "height": 32,
+                          "width": 28,
+                          "height": 28,
                           "fill": "$success/soft",
-                          "cornerRadius": 4,
+                          "cornerRadius": 6,
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
@@ -349,8 +354,8 @@
                               "name": "emoji",
                               "fill": "$success/soft-foreground",
                               "content": "MI",
-                              "fontFamily": "$typography/font-sans",
-                              "fontSize": 14,
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 12,
                               "fontWeight": "normal"
                             }
                           ]
@@ -362,7 +367,6 @@
                           "clip": true,
                           "width": 210,
                           "layout": "vertical",
-                          "gap": 2,
                           "children": [
                             {
                               "type": "text",
@@ -370,6 +374,7 @@
                               "name": "name",
                               "fill": "$foreground/foreground",
                               "content": "mc-test",
+                              "lineHeight": 1.4286,
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "500"
@@ -382,6 +387,7 @@
                               "textGrowth": "fixed-width",
                               "width": 210,
                               "content": "—",
+                              "lineHeight": 1.3333,
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -394,6 +400,7 @@
                       "type": "frame",
                       "id": "VilnW",
                       "name": "statusPill",
+                      "height": 24,
                       "fill": "$danger/soft",
                       "cornerRadius": "$radius/2xl",
                       "gap": 2,
@@ -424,6 +431,7 @@
                   "opacity": 0.6,
                   "fill": "$foreground/foreground",
                   "content": "minecraft-java",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 14,
                   "fontWeight": "normal"
@@ -451,7 +459,7 @@
                       "strokeAlignment": "inner",
                       "gap": 8,
                       "padding": [
-                        6,
+                        7,
                         14
                       ],
                       "alignItems": "center",
@@ -472,6 +480,7 @@
                           "name": "label",
                           "fill": "$muted",
                           "content": "—",
+                          "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -488,7 +497,7 @@
                       "strokeAlignment": "inner",
                       "gap": 8,
                       "padding": [
-                        6,
+                        7,
                         14
                       ],
                       "alignItems": "center",
@@ -509,6 +518,7 @@
                           "name": "label",
                           "fill": "$muted",
                           "content": "0%",
+                          "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -531,7 +541,7 @@
               "strokeAlignment": "inner",
               "layout": "vertical",
               "gap": 20,
-              "padding": 14,
+              "padding": 15,
               "children": [
                 {
                   "type": "frame",
@@ -539,23 +549,22 @@
                   "name": "row1",
                   "width": "fill_container",
                   "justifyContent": "space_between",
-                  "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
                       "id": "E2c9nm",
                       "name": "left",
-                      "gap": 10,
+                      "gap": 12,
                       "alignItems": "center",
                       "children": [
                         {
                           "type": "frame",
                           "id": "F7RWo",
                           "name": "icon",
-                          "width": 32,
-                          "height": 32,
+                          "width": 28,
+                          "height": 28,
                           "fill": "$accent/soft",
-                          "cornerRadius": 4,
+                          "cornerRadius": 6,
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
@@ -565,8 +574,8 @@
                               "name": "emoji",
                               "fill": "$accent/soft-foreground",
                               "content": "SA",
-                              "fontFamily": "$typography/font-sans",
-                              "fontSize": 14,
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 12,
                               "fontWeight": "normal"
                             }
                           ]
@@ -578,7 +587,6 @@
                           "clip": true,
                           "width": 210,
                           "layout": "vertical",
-                          "gap": 2,
                           "children": [
                             {
                               "type": "text",
@@ -586,6 +594,7 @@
                               "name": "name",
                               "fill": "$foreground/foreground",
                               "content": "user-server-test",
+                              "lineHeight": 1.4286,
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "500"
@@ -598,6 +607,7 @@
                               "textGrowth": "fixed-width",
                               "width": 210,
                               "content": "—",
+                              "lineHeight": 1.3333,
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -610,6 +620,7 @@
                       "type": "frame",
                       "id": "r3Dt0",
                       "name": "statusPill",
+                      "height": 24,
                       "fill": "$focus/soft",
                       "cornerRadius": "$radius/2xl",
                       "gap": 2,
@@ -640,6 +651,7 @@
                   "opacity": 0.6,
                   "fill": "$foreground/foreground",
                   "content": "satisfactory",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 14,
                   "fontWeight": "normal"
@@ -667,7 +679,7 @@
                       "strokeAlignment": "inner",
                       "gap": 8,
                       "padding": [
-                        6,
+                        7,
                         14
                       ],
                       "alignItems": "center",
@@ -688,6 +700,7 @@
                           "name": "label",
                           "fill": "$muted",
                           "content": "—",
+                          "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -704,7 +717,7 @@
                       "strokeAlignment": "inner",
                       "gap": 8,
                       "padding": [
-                        6,
+                        7,
                         14
                       ],
                       "alignItems": "center",
@@ -725,6 +738,7 @@
                           "name": "label",
                           "fill": "$muted",
                           "content": "—",
+                          "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -747,7 +761,7 @@
               "strokeAlignment": "inner",
               "layout": "vertical",
               "gap": 20,
-              "padding": 14,
+              "padding": 15,
               "children": [
                 {
                   "type": "frame",
@@ -755,23 +769,22 @@
                   "name": "row1",
                   "width": "fill_container",
                   "justifyContent": "space_between",
-                  "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
                       "id": "McnBT",
                       "name": "left",
-                      "gap": 10,
+                      "gap": 12,
                       "alignItems": "center",
                       "children": [
                         {
                           "type": "frame",
                           "id": "UiATn",
                           "name": "icon",
-                          "width": 32,
-                          "height": 32,
+                          "width": 28,
+                          "height": 28,
                           "fill": "$success/soft",
-                          "cornerRadius": 4,
+                          "cornerRadius": 6,
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
@@ -781,8 +794,8 @@
                               "name": "emoji",
                               "fill": "$success/soft-foreground",
                               "content": "ME",
-                              "fontFamily": "$typography/font-sans",
-                              "fontSize": 14,
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 12,
                               "fontWeight": "normal"
                             }
                           ]
@@ -794,7 +807,6 @@
                           "clip": true,
                           "width": 210,
                           "layout": "vertical",
-                          "gap": 2,
                           "children": [
                             {
                               "type": "text",
@@ -802,6 +814,7 @@
                               "name": "name",
                               "fill": "$foreground/foreground",
                               "content": "test-server-09",
+                              "lineHeight": 1.4286,
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "500"
@@ -812,6 +825,7 @@
                               "name": "addr",
                               "fill": "$muted",
                               "content": "test-server-09.gameplane-dem…",
+                              "lineHeight": 1.3333,
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -824,6 +838,7 @@
                       "type": "frame",
                       "id": "JeDuq",
                       "name": "statusPill",
+                      "height": 24,
                       "fill": "$success/soft",
                       "cornerRadius": "$radius/2xl",
                       "gap": 2,
@@ -854,6 +869,7 @@
                   "opacity": 0.6,
                   "fill": "$foreground/foreground",
                   "content": "minecraft-modded",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 14,
                   "fontWeight": "normal"
@@ -881,7 +897,7 @@
                       "strokeAlignment": "inner",
                       "gap": 8,
                       "padding": [
-                        6,
+                        7,
                         14
                       ],
                       "alignItems": "center",
@@ -902,6 +918,7 @@
                           "name": "label",
                           "fill": "$muted",
                           "content": "4/20",
+                          "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -918,7 +935,7 @@
                       "strokeAlignment": "inner",
                       "gap": 8,
                       "padding": [
-                        6,
+                        7,
                         14
                       ],
                       "alignItems": "center",
@@ -939,6 +956,7 @@
                           "name": "label",
                           "fill": "$muted",
                           "content": "78%",
+                          "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -961,7 +979,7 @@
               "strokeAlignment": "inner",
               "layout": "vertical",
               "gap": 20,
-              "padding": 14,
+              "padding": 15,
               "children": [
                 {
                   "type": "frame",
@@ -969,23 +987,22 @@
                   "name": "row1",
                   "width": "fill_container",
                   "justifyContent": "space_between",
-                  "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
                       "id": "J7Brv",
                       "name": "left",
-                      "gap": 10,
+                      "gap": 12,
                       "alignItems": "center",
                       "children": [
                         {
                           "type": "frame",
                           "id": "cFqwS",
                           "name": "icon",
-                          "width": 32,
-                          "height": 32,
+                          "width": 28,
+                          "height": 28,
                           "fill": "$success/soft",
-                          "cornerRadius": 4,
+                          "cornerRadius": 6,
                           "justifyContent": "center",
                           "alignItems": "center",
                           "children": [
@@ -995,8 +1012,8 @@
                               "name": "emoji",
                               "fill": "$success/soft-foreground",
                               "content": "ME",
-                              "fontFamily": "$typography/font-sans",
-                              "fontSize": 14,
+                              "fontFamily": "$typography/font-mono",
+                              "fontSize": 12,
                               "fontWeight": "normal"
                             }
                           ]
@@ -1008,7 +1025,6 @@
                           "clip": true,
                           "width": 210,
                           "layout": "vertical",
-                          "gap": 2,
                           "children": [
                             {
                               "type": "text",
@@ -1016,6 +1032,7 @@
                               "name": "name",
                               "fill": "$foreground/foreground",
                               "content": "mc-survival",
+                              "lineHeight": 1.4286,
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "500"
@@ -1028,6 +1045,7 @@
                               "textGrowth": "fixed-width",
                               "width": 210,
                               "content": "mc.frp.gameplane.dev:25565",
+                              "lineHeight": 1.3333,
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -1040,6 +1058,7 @@
                       "type": "frame",
                       "id": "D3iriY",
                       "name": "statusPill",
+                      "height": 24,
                       "fill": "$success/soft",
                       "cornerRadius": "$radius/2xl",
                       "gap": 2,
@@ -1070,6 +1089,7 @@
                   "opacity": 0.6,
                   "fill": "$foreground/foreground",
                   "content": "minecraft-modded",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 14,
                   "fontWeight": "normal"
@@ -1097,7 +1117,7 @@
                       "strokeAlignment": "inner",
                       "gap": 8,
                       "padding": [
-                        6,
+                        7,
                         14
                       ],
                       "alignItems": "center",
@@ -1118,6 +1138,7 @@
                           "name": "label",
                           "fill": "$muted",
                           "content": "0/20",
+                          "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -1134,7 +1155,7 @@
                       "strokeAlignment": "inner",
                       "gap": 8,
                       "padding": [
-                        6,
+                        7,
                         14
                       ],
                       "alignItems": "center",
@@ -1155,6 +1176,7 @@
                           "name": "label",
                           "fill": "$muted",
                           "content": "38%",
+                          "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"

@@ -154,7 +154,6 @@
           "type": "frame",
           "id": "SBdeH",
           "name": "btnCancel",
-          "opacity": 0.5,
           "height": 32,
           "cornerRadius": 6,
           "padding": [

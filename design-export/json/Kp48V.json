@@ -130,7 +130,7 @@
                   "fill": "$warning/soft-foreground",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Mapping users to the admin role grants full cluster control. Ensure the mapped group contains only authorized personnel. Anyone in these groups gets full admin access from their next login.",
+                  "content": "Mapping users to the admin role grants full cluster control.\nEnsure the mapped group contains only authorized\npersonnel. Anyone in these groups gets full admin access\nfrom their next login.",
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 12,
                   "fontWeight": "normal"

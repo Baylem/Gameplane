@@ -58,7 +58,7 @@
               "width": "fill_container",
               "descendants": {
                 "PJERm": {
-                  "content": "Smoke Collaborator",
+                  "content": "Server Operator",
                   "fill": "$foreground/foreground"
                 }
               }
@@ -89,7 +89,7 @@
               "width": "fill_container",
               "descendants": {
                 "PJERm": {
-                  "content": "smoke@example.com",
+                  "content": "operator@gameplane-demo.local",
                   "fill": "$foreground/foreground"
                 }
               }
@@ -192,6 +192,7 @@
                   "type": "ref",
                   "ref": "J09iP",
                   "name": "Add Grant Button",
+                  "opacity": 0.5,
                   "descendants": {
                     "eWkIT/WtPjS": {
                       "enabled": false

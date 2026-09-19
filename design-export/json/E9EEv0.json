@@ -14,10 +14,12 @@
   "theme": {},
   "descendants": {
     "E7Whx": {
-      "content": "Restore backup"
+      "content": "Restore backup",
+      "lineHeight": 1.5
     },
     "qzcst": {
-      "content": "The target server will be suspended, the volume restored from the snapshot, then resumed."
+      "content": "The target server will be suspended, the volume restored from the snapshot, then resumed.",
+      "lineHeight": 1.4286
     },
     "Nht52": {
       "type": "frame",
@@ -45,6 +47,7 @@
               "id": "MIgc1",
               "fill": "$foreground/foreground",
               "content": "Source backup",
+              "lineHeight": 1.5,
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
               "fontWeight": "500"
@@ -79,6 +82,7 @@
               "id": "eN292",
               "fill": "$foreground/foreground",
               "content": "Target game server",
+              "lineHeight": 1.5,
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
               "fontWeight": "500"
