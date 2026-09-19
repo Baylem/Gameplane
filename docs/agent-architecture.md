@@ -1,6 +1,6 @@
 # Agent Architecture Index
 
-This document is the **first stop** for AI agents modifying or extending Gameplane. Instead of performing expensive repository-wide greps, use this index to find the component responsible for the feature you are working on, and read its corresponding `specs.md`.
+This document is the **first stop** for AI agents modifying or extending Gameplane. Instead of performing expensive repository-wide greps, use this index to find the component responsible for the feature you are working on, and read the documentation or resource at the path listed in the table (e.g., its corresponding `specs.md`).
 
 ## Core Backend Components
 
@@ -44,4 +44,4 @@ This document is the **first stop** for AI agents modifying or extending Gamepla
 ## How to use this index
 1. Identify the domain of your task (e.g., "Add an auth provider").
 2. Find the component handling this domain (e.g., "API Gateway").
-3. Read that component's `specs.md` (e.g., `api/specs.md`) to understand its architecture, boundaries, and specific rules before modifying code.
+3. Read the documentation or resource at the path listed in the table (e.g., `api/specs.md`) to understand its architecture, boundaries, and specific rules before modifying code.
