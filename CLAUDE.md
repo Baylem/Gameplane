@@ -292,6 +292,7 @@ make tidy            # Runs `go mod tidy` across all workspace modules
 ---
 
 ## Key Reference Documents
+- Agent Architecture Index: `docs/agent-architecture.md` — read before editing code; maps tasks and features to the docs that cover them, instead of repo-wide greps.
 - Architecture & Threat Model: `docs/architecture.md`, `docs/security.md`
 - Module Authoring Spec: `docs/module-authoring.md`
 - MCP Server Usage: `mcp-server/README.md`
