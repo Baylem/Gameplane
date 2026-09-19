@@ -100,6 +100,7 @@
           "ref": "f7KBn",
           "name": "Restore warning",
           "width": "fill_container",
+          "fill": "$danger/soft",
           "descendants": {
             "IAKLq": {
               "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
@@ -108,7 +109,7 @@
             "CotwO": {
               "enabled": true,
               "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
-              "fill": "$danger/danger"
+              "fill": "$danger/soft-foreground"
             },
             "sYqNu": {
               "enabled": false
@@ -117,8 +118,12 @@
         }
       ]
     },
+    "V7HYp": {
+      "fill": "$danger/danger"
+    },
     "TZ7Ef": {
-      "content": "Restore"
+      "content": "Restore",
+      "fill": "$danger/foreground"
     }
   }
 }

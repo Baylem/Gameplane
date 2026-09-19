@@ -43642,6 +43642,7 @@
               "ref": "f7KBn",
               "name": "Restore warning",
               "width": "fill_container",
+              "fill": "$danger/soft",
               "descendants": {
                 "IAKLq": {
                   "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
@@ -43650,7 +43651,7 @@
                 "CotwO": {
                   "enabled": true,
                   "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
-                  "fill": "$danger/danger"
+                  "fill": "$danger/soft-foreground"
                 },
                 "sYqNu": {
                   "enabled": false
@@ -43659,8 +43660,12 @@
             }
           ]
         },
+        "V7HYp": {
+          "fill": "$danger/danger"
+        },
         "TZ7Ef": {
-          "content": "Restore"
+          "content": "Restore",
+          "fill": "$danger/foreground"
         }
       }
     },
@@ -84818,6 +84823,7 @@
                   "name": "Card — mc-survival",
                   "width": "fill_container",
                   "fill": "$surface/surface",
+                  "cornerRadius": "$radius/xl",
                   "stroke": "$border/border",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
@@ -85026,6 +85032,7 @@
                   "name": "Card — mc-test",
                   "width": "fill_container",
                   "fill": "$surface/surface",
+                  "cornerRadius": "$radius/xl",
                   "stroke": "$border/border",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
@@ -85234,6 +85241,7 @@
                   "name": "Card — user-server-test",
                   "width": "fill_container",
                   "fill": "$surface/surface",
+                  "cornerRadius": "$radius/xl",
                   "stroke": "$border/border",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
@@ -85442,6 +85450,7 @@
                   "name": "Card — test-server-09",
                   "width": "fill_container",
                   "fill": "$surface/surface",
+                  "cornerRadius": "$radius/xl",
                   "stroke": "$border/border",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
@@ -85650,6 +85659,7 @@
                   "name": "Card — mc-survival (2)",
                   "width": "fill_container",
                   "fill": "$surface/surface",
+                  "cornerRadius": "$radius/xl",
                   "stroke": "$border/border",
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
