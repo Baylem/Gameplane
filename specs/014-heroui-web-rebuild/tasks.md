@@ -428,7 +428,7 @@
 
 ### Verification and module spec
 
-- [ ] T192 [US5] Compare Playwright screenshots from web/e2e/specs/screenshots.spec.ts against design-export/screenshots/{xCJlu,dQV9N,atqRh,VM7ro,S7SCDc,C2LQE4,q31B6w,qFLfB,EcoGD,epZO2}.png per contracts/screen-verification.md; record one verdict per screen in PR description (match/layout-mismatch/colour-mismatch/component-family-mismatch/content-mismatch); accept only match or content-mismatch.
+- [ ] T192 [US5] Compare Playwright screenshots from web/e2e/specs/screenshots.spec.ts against design-export/screenshots/{xCJlu,dQV9N,atqRh,VM7ro,S7SCDc,C2LQE4,q31B6w,qFLfB,EcoGD,epZO2}.png per contracts/screen-verification.md; record one verdict per screen in PR description (match/layout-mismatch/colour-mismatch/component-family-mismatch/content-mismatch); accept only match or content-mismatch. — Status 2026-09-19: 7 of 10 recorded as match in the PR #378 \"Slice 5 verification\" table; atqRh, VM7ro and S7SCDc are now captured by web/e2e/screenshots/slice5.spec.ts (Settings → Share links, light theme, captureLocator); the task stays open until their visual-diff verdicts are recorded.
 - [X] T193 [US5] Update web/specs.md: add Share links entry under Routing section (path, public access, no auth required, five states) and under Settings sub-sections (ShareLinks tab, create/list/revoke, permission gate); remove any reference to old share-link primitives if any exist.
 - [X] T194 [US5] Verify FR-005 privacy rule: the public Share.tsx page renders no cluster name, namespace, version string, user names, counts, or server enumeration hints; review the Invalid state and all error mappings in the code match the contract.
 - [X] T195 [US5] Verify FR-012 import rule: grep -rl '@/components/ui/\|@radix-ui' web/src/routes/Share.tsx web/src/routes/tabs/settings/ShareLinks.tsx web/src/lib/api.ts web/src/types.ts must return nothing; all new files import from @heroui/react or @/components/hero/ only.
@@ -476,6 +476,10 @@
 ### PR Labeling
 
 - [X] T209 Add labels to the slice 5 PR via gh api: type: refactor, area: web, and type: feature (only slice 5 carries type: feature); use the REST API per CLAUDE.md rule 14 since gh pr edit does not work on this repo. — Done 2026-09-16 on PR #378, which carries slice 5's remaining work.
+
+### Visual diff
+
+- [X] T210 Get the `design vs browser visual diff` job (`.github/workflows/visual-diff.yaml`) green on PR #378 (branch 014i-visual-diff-green; closes #375 #376 #377), reconciling design and app per contracts/screen-verification.md with every maintainer ruling recorded in OPEN-DECISIONS.md (OD-16, OD-17 refined; OD-19..OD-22) and every design change in design-export/MANIFEST.md. — Done 2026-09-19 on `89dae9e9`: 104/104 frames pass.
 
 **Checkpoint**: Feature complete: zero consumers of the old primitives, all gates green, spec folder ready for the `done_` rename (CLAUDE.md rule 16)
 

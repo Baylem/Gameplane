@@ -1688,7 +1688,7 @@ This pass ensures all 346 exported nodes reflect the current saved document stat
 
 ## Incremental export 2026-09-19 — round-7 letterSpacing/lineHeight/shadow rulings re-export (NLDDv, MaoHP, E9EEv0, Kp48V)
 
-Re-export of four dialog frames after round-7 per-issue Pencil edits (letterSpacing on labels/values/footer buttons, `$field/placeholder` fills, `lineHeight` on E9EEv0 labels, `ABbjS` padding, `TH6mC` warning-box corner radius and zero-alpha shadow overrides on `mazee`/`D5Vwg2`/`TH6mC`, `SBdeH`/`V7HYp`/`aEe0m` width bumps). Full detail of the per-node edits is in round7-briefs.json's "design" area; this entry only records the re-export step, which a prior session in this branch had explicitly skipped ("no export was performed (per instructions)") despite Rule 1 requiring it.
+The rulings are OD-16, OD-19, OD-20 and OD-21 in specs/014-heroui-web-rebuild/OPEN-DECISIONS.md; the design edits and this re-export landed together in `28fde47c`.
 
 | ID | Notes |
 |---|---|
@@ -1703,4 +1703,47 @@ Re-export of four dialog frames after round-7 per-issue Pencil edits (letterSpac
 - **Screenshots:** `export_nodes` batch PNG export at 2× scale for all four ids in one call — `NLDDv.png` 960×1026, `MaoHP.png` 960×424, `E9EEv0.png` 960×778, `Kp48V.png` 880×640, all valid non-empty PNGs with real pixel dimensions.
 - **Content check:** unique body-text greps each returned exactly 1 hit in their own file and 0 elsewhere: `"invite later"` → NLDDv; `"need to sign in again"` → MaoHP; `"will be suspended, the volume restored"` → E9EEv0; `"Ensure the mapped group"` → Kp48V.
 - **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`, per Rule 2.
-- **No commit performed** — per this task's explicit instruction not to commit.
+- Committed with the design change in `28fde47c`.
+
+## Incremental export 2026-09-19 — rounds 5-6 catch-up (79172f1b, 4f9e4930, 448bd477, 9df665e3)
+
+These four design commits re-exported their frames but shipped without a MANIFEST entry; this entry records them after the fact. The id lists come from each commit's `design-export/` file list. Rulings: OD-17, OD-19..OD-21 in specs/014-heroui-web-rebuild/OPEN-DECISIONS.md. Base components D0cDM, AT7ya and f7KBn are unchanged throughout.
+
+**`79172f1b` — round 5**
+
+| ID | Notes |
+|---|---|
+| `E9EEv0` | Restore backup — instance overrides only: Restore button takes the danger fill like the app; warning alert soft-danger fill (reverted by `4f9e4930`). |
+| `DWztv` | Mobile servers — the five server cards take `$radius/xl` (12px), matching the app's card radius. |
+
+**`4f9e4930` — round 5 follow-up**
+
+| ID | Notes |
+|---|---|
+| `E9EEv0` | Warning alert instance `TH6mC` follows the app's HeroUI danger alert: fill `$surface/secondary`, text `$danger/danger` at 12px. |
+
+**`448bd477` — round 6, design follows the app where the app was ruled right**
+
+| ID | Notes |
+|---|---|
+| `kKFX9` | App Sidebar — theme selector centred like the app. |
+| `I9kvlZ` | Server Detail Tabs — full width with tabs spread like the app's Tabs.List; the 13 tab-bar instances take padding [0,24]; detail-header More button has no outline. |
+| `tY6RD` | Modpacks — header inset, modpack cards (grey package icon, 16px padding, 12px radius) and filters follow the app. |
+| `DWztv` | Mobile servers — app row spacing, sans name, dimmed sans game label, 24px page inset, the app's sample data. |
+| `E9EEv0` | Restore backup — labels, monospace source value, target select and warning spacing follow the app. |
+| `zhLZN` | Backup drawer — footer buttons 6px (OD-17), this frame only. |
+| `t3IY3u`, `CqaSq` | Input values use the foreground token instead of the near-invisible `#F5F5F5`. |
+| re-export only | Frames instancing kKFX9 or I9kvlZ: b4eaUf Bbnga Bq2Yg Burtr bYDHC dBILX Dpb9f dPP50 DPrYX dQV9N dxdEi DxKOh E0ypH e9lV4 EZFW0 f1Vga F9pUrx fK8Bi FtdkI g5mEpx GayoL hLB9Z Hy9r0 i1bLR i8wib iLm38 IzuY2 j24cXg J5pjJ3 j9W8A KaRFX KhYNc kK8Ji kPmoo M2sA4u m5kOm4 n6Xlo nNGDX nNL3E O08uaD o4LH8W oyoTs P08Uw pssCT QgW58 QpEvu QQtUD RC3Kf RodrS S4k0x SeizD Ss0Yr sSISK swxkJ sZtDi TBvTC TE2jI tTSdi uCA23 ugDSa uMiwd UMJli uoxQW V1VhGE VctzT VfB0Y vUqMl W8idqY Wj0V4 WZdnw xCJlu Xn5ns XR0f9 xvlB6 Y5cmvI zFiOW zM0VF zqzr4 |
+
+**`9df665e3` — round 6 per-issue rulings**
+
+| ID | Notes |
+|---|---|
+| `x3beP` | Shared dialog — Cancel at full strength in every dialog (OD-17); primary disabled look unchanged. |
+| `WwNlX` | Shared confirm dialog — footer labels 14px like the app's ConfirmDialog. |
+| `Kp48V` | Confirm admin mapping — warning text reflowed to Chrome's line breaks. |
+| `DMnEi` | Add module source — inputs show placeholders in `$field/placeholder` like the app. |
+| `t3IY3u` | Edit user — the app's sample user (Server Operator / operator@gameplane-demo.local); grant Add button shows disabled. |
+| `E9EEv0` | Restore backup — title, description and label line heights follow the app. |
+| `DWztv` | Mobile servers — 15px card padding, 28px mono icon tile, line heights, status pill, chip padding and a 42px search follow the app. |
+| re-export only | Frames instancing x3beP or WwNlX (PNG only): b4eaUf BX0XM I9W8z JLaGB KrREo MaoHP NLDDv O08uaD S7SCDc |
