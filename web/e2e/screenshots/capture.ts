@@ -76,5 +76,47 @@ export async function captureLocator(page: Page, id: string, locator: Locator): 
   const trimmed = await sharp(buf).trim({ threshold: 0 }).toBuffer({ resolveWithObject: true });
   const overTrimmed =
     (before.width ?? 0) - trimmed.info.width > 2 || (before.height ?? 0) - trimmed.info.height > 2;
-  await fs.promises.writeFile(screenshotPath, overTrimmed ? buf : trimmed.data);
+  let out = overTrimmed ? buf : trimmed.data;
+  const heightAlreadyRemoved = overTrimmed ? 0 : (before.height ?? 0) - trimmed.info.height;
+
+  // A dialog at a fractional y can still start or end with 1-2 CSS px of modal
+  // backdrop that the threshold-0 trim above leaves behind, because the
+  // backdrop rows are dithered rather than one exact colour (NLDDv rows 0-1 are
+  // rgb 72-74,64-66,68-70; E9EEv0 has a 75/76 grey strip top and bottom).
+  // Strip rows at the top and bottom only, and only rows whose every pixel is
+  // within a small tolerance of that edge's corner pixel. A row holding any
+  // border, fill or glyph pixel stops the strip, so real content is never
+  // removed. Together with the trim above, never remove more than 2 CSS px
+  // (4 device px) per edge, so a genuine size regression still reaches the
+  // scale gate.
+  const NEAR_UNIFORM_TOLERANCE = 6; // per RGB channel, 0-255
+  const stripBudget = Math.max(0, 4 - heightAlreadyRemoved); // device px per edge
+  const { data: raw, info } = await sharp(out).raw().toBuffer({ resolveWithObject: true });
+  const { width, height, channels } = info;
+  const rowIsNearUniform = (y: number, refY: number): boolean => {
+    const ref = refY * width * channels;
+    const rowStart = y * width * channels;
+    for (let x = 0; x < width; x++) {
+      const i = rowStart + x * channels;
+      for (let c = 0; c < 3; c++) {
+        if (Math.abs(raw[i + c] - raw[ref + c]) > NEAR_UNIFORM_TOLERANCE) return false;
+      }
+    }
+    return true;
+  };
+  let top = 0;
+  while (top < stripBudget && height - top > 4 && rowIsNearUniform(top, 0)) top++;
+  let bottom = 0;
+  while (
+    bottom < stripBudget &&
+    height - top - bottom > 4 &&
+    rowIsNearUniform(height - 1 - bottom, height - 1)
+  ) {
+    bottom++;
+  }
+  if (top > 0 || bottom > 0) {
+    out = await sharp(out).extract({ left: 0, top, width, height: height - top - bottom }).toBuffer();
+  }
+
+  await fs.promises.writeFile(screenshotPath, out);
 }
