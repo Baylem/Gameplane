@@ -76,8 +76,6 @@
           "width": "fill_container",
           "padding": [
             0,
-            0,
-            0,
             24
           ],
           "descendants": {

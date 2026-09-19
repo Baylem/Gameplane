@@ -92,7 +92,7 @@
               "descendants": {
                 "PJERm": {
                   "content": "Manage game servers, backups, templates, and schedules.",
-                  "fill": "#F5F5F5"
+                  "fill": "$foreground/foreground"
                 }
               }
             }

@@ -335,7 +335,12 @@
           "id": "CghXi",
           "type": "ref",
           "ref": "IU7OG",
-          "name": "Btn Delete"
+          "name": "Btn Delete",
+          "descendants": {
+            "E4lQce": {
+              "cornerRadius": "$radius/md"
+            }
+          }
         },
         {
           "id": "oxVkD",
@@ -343,6 +348,9 @@
           "ref": "z9ShNE",
           "name": "Btn Restore",
           "descendants": {
+            "IVgQ8": {
+              "cornerRadius": "$radius/md"
+            },
             "nWTJb": {
               "enabled": false,
               "icon": "rotate-ccw"

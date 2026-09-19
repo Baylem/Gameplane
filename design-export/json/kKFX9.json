@@ -373,6 +373,7 @@
           "id": "oByLP",
           "name": "Toggle Row",
           "width": "fill_container",
+          "justifyContent": "center",
           "alignItems": "center",
           "children": [
             {

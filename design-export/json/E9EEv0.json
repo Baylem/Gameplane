@@ -43,11 +43,11 @@
             {
               "type": "text",
               "id": "MIgc1",
-              "fill": "$muted",
+              "fill": "$foreground/foreground",
               "content": "Source backup",
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
-              "fontWeight": "normal"
+              "fontWeight": "500"
             },
             {
               "id": "mazee",
@@ -55,10 +55,13 @@
               "ref": "D0cDM",
               "name": "Input",
               "width": "fill_container",
+              "height": 34,
               "descendants": {
                 "PJERm": {
                   "content": "mc-survival-nightly-0713",
-                  "fill": "#949494"
+                  "fill": "$foreground/foreground",
+                  "fontFamily": "$typography/font-mono",
+                  "fontSize": 12
                 }
               }
             }
@@ -74,11 +77,11 @@
             {
               "type": "text",
               "id": "eN292",
-              "fill": "$muted",
+              "fill": "$foreground/foreground",
               "content": "Target game server",
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
-              "fontWeight": "normal"
+              "fontWeight": "500"
             },
             {
               "id": "D5Vwg2",
@@ -86,9 +89,14 @@
               "ref": "AT7ya",
               "name": "Target server select",
               "width": "fill_container",
+              "height": 38,
               "descendants": {
                 "cFsFk": {
-                  "content": "Select a server…"
+                  "content": "Select a server…",
+                  "fill": "$muted"
+                },
+                "mULN8": {
+                  "fill": "$muted"
                 }
               }
             }
@@ -101,7 +109,11 @@
           "name": "Restore warning",
           "width": "fill_container",
           "fill": "$surface/secondary",
+          "gap": 8,
           "descendants": {
+            "dMZea": {
+              "padding": 0
+            },
             "IAKLq": {
               "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
               "enabled": false
@@ -110,7 +122,8 @@
               "enabled": true,
               "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
               "fill": "$danger/danger",
-              "fontSize": 12
+              "fontSize": 12,
+              "lineHeight": 1.333
             },
             "sYqNu": {
               "enabled": false

@@ -27,8 +27,8 @@
       "width": "fill_container",
       "fill": "$background/background",
       "layout": "vertical",
-      "gap": 16,
-      "padding": 16,
+      "gap": 24,
+      "padding": 24,
       "children": [
         {
           "type": "frame",
@@ -98,7 +98,7 @@
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 8,
+              "gap": 20,
               "padding": 14,
               "children": [
                 {
@@ -154,7 +154,7 @@
                               "name": "name",
                               "fill": "$foreground/foreground",
                               "content": "mc-survival",
-                              "fontFamily": "$typography/font-mono",
+                              "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "500"
                             },
@@ -205,10 +205,11 @@
                   "type": "text",
                   "id": "mLHoA",
                   "name": "game",
+                  "opacity": 0.6,
                   "fill": "$foreground/foreground",
                   "content": "minecraft-java",
-                  "fontFamily": "$typography/font-mono",
-                  "fontSize": 13,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
                   "fontWeight": "normal"
                 },
                 {
@@ -216,6 +217,12 @@
                   "id": "yeMAw",
                   "name": "chips",
                   "gap": 8,
+                  "padding": [
+                    4,
+                    0,
+                    0,
+                    0
+                  ],
                   "alignItems": "center",
                   "children": [
                     {
@@ -307,7 +314,7 @@
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 8,
+              "gap": 20,
               "padding": 14,
               "children": [
                 {
@@ -363,7 +370,7 @@
                               "name": "name",
                               "fill": "$foreground/foreground",
                               "content": "mc-test",
-                              "fontFamily": "$typography/font-mono",
+                              "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "500"
                             },
@@ -414,10 +421,11 @@
                   "type": "text",
                   "id": "SCXtD",
                   "name": "game",
+                  "opacity": 0.6,
                   "fill": "$foreground/foreground",
                   "content": "minecraft-java",
-                  "fontFamily": "$typography/font-mono",
-                  "fontSize": 13,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
                   "fontWeight": "normal"
                 },
                 {
@@ -425,6 +433,12 @@
                   "id": "qzLGp",
                   "name": "chips",
                   "gap": 8,
+                  "padding": [
+                    4,
+                    0,
+                    0,
+                    0
+                  ],
                   "alignItems": "center",
                   "children": [
                     {
@@ -494,7 +508,7 @@
                           "id": "bTW2P",
                           "name": "label",
                           "fill": "$muted",
-                          "content": "—",
+                          "content": "0%",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -516,7 +530,7 @@
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 8,
+              "gap": 20,
               "padding": 14,
               "children": [
                 {
@@ -572,7 +586,7 @@
                               "name": "name",
                               "fill": "$foreground/foreground",
                               "content": "user-server-test",
-                              "fontFamily": "$typography/font-mono",
+                              "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "500"
                             },
@@ -610,7 +624,7 @@
                           "id": "YAzi0",
                           "name": "Label",
                           "fill": "$focus/soft-foreground",
-                          "content": "Suspended",
+                          "content": "Asleep",
                           "fontFamily": "$typography/font-sans",
                           "fontSize": 11,
                           "fontWeight": "500"
@@ -623,10 +637,11 @@
                   "type": "text",
                   "id": "FAXAj",
                   "name": "game",
+                  "opacity": 0.6,
                   "fill": "$foreground/foreground",
                   "content": "satisfactory",
-                  "fontFamily": "$typography/font-mono",
-                  "fontSize": 13,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
                   "fontWeight": "normal"
                 },
                 {
@@ -634,6 +649,12 @@
                   "id": "Et0mk",
                   "name": "chips",
                   "gap": 8,
+                  "padding": [
+                    4,
+                    0,
+                    0,
+                    0
+                  ],
                   "alignItems": "center",
                   "children": [
                     {
@@ -725,7 +746,7 @@
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 8,
+              "gap": 20,
               "padding": 14,
               "children": [
                 {
@@ -781,7 +802,7 @@
                               "name": "name",
                               "fill": "$foreground/foreground",
                               "content": "test-server-09",
-                              "fontFamily": "$typography/font-mono",
+                              "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "500"
                             },
@@ -790,9 +811,7 @@
                               "id": "vAFYa",
                               "name": "addr",
                               "fill": "$muted",
-                              "textGrowth": "fixed-width",
-                              "width": 210,
-                              "content": "test-server-09.gameplane-demo.local:25565",
+                              "content": "test-server-09.gameplane-dem…",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -832,10 +851,11 @@
                   "type": "text",
                   "id": "MK6aw",
                   "name": "game",
+                  "opacity": 0.6,
                   "fill": "$foreground/foreground",
                   "content": "minecraft-modded",
-                  "fontFamily": "$typography/font-mono",
-                  "fontSize": 13,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
                   "fontWeight": "normal"
                 },
                 {
@@ -843,6 +863,12 @@
                   "id": "dBmIr",
                   "name": "chips",
                   "gap": 8,
+                  "padding": [
+                    4,
+                    0,
+                    0,
+                    0
+                  ],
                   "alignItems": "center",
                   "children": [
                     {
@@ -912,7 +938,7 @@
                           "id": "PLDIK",
                           "name": "label",
                           "fill": "$muted",
-                          "content": "62%",
+                          "content": "78%",
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -934,7 +960,7 @@
               "strokeWidth": 1,
               "strokeAlignment": "inner",
               "layout": "vertical",
-              "gap": 8,
+              "gap": 20,
               "padding": 14,
               "children": [
                 {
@@ -990,7 +1016,7 @@
                               "name": "name",
                               "fill": "$foreground/foreground",
                               "content": "mc-survival",
-                              "fontFamily": "$typography/font-mono",
+                              "fontFamily": "$typography/font-sans",
                               "fontSize": 14,
                               "fontWeight": "500"
                             },
@@ -1041,10 +1067,11 @@
                   "type": "text",
                   "id": "vsOzh",
                   "name": "game",
+                  "opacity": 0.6,
                   "fill": "$foreground/foreground",
                   "content": "minecraft-modded",
-                  "fontFamily": "$typography/font-mono",
-                  "fontSize": 13,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
                   "fontWeight": "normal"
                 },
                 {
@@ -1052,6 +1079,12 @@
                   "id": "w4dDV",
                   "name": "chips",
                   "gap": 8,
+                  "padding": [
+                    4,
+                    0,
+                    0,
+                    0
+                  ],
                   "alignItems": "center",
                   "children": [
                     {

@@ -2480,8 +2480,6 @@
               "width": "fill_container",
               "padding": [
                 0,
-                0,
-                0,
                 24
               ]
             },
@@ -4096,8 +4094,6 @@
               "width": "fill_container",
               "padding": [
                 0,
-                0,
-                0,
                 24
               ],
               "descendants": {
@@ -4665,8 +4661,6 @@
               "width": "fill_container",
               "padding": [
                 0,
-                0,
-                0,
                 24
               ],
               "descendants": {
@@ -4911,8 +4905,6 @@
               "name": "Tabs Bar",
               "width": "fill_container",
               "padding": [
-                0,
-                0,
                 0,
                 24
               ],
@@ -5610,8 +5602,6 @@
               "width": "fill_container",
               "padding": [
                 0,
-                0,
-                0,
                 24
               ],
               "descendants": {
@@ -5775,8 +5765,6 @@
               "name": "Tabs Bar",
               "width": "fill_container",
               "padding": [
-                0,
-                0,
                 0,
                 24
               ],
@@ -7529,8 +7517,6 @@
               "name": "Tabs Bar",
               "width": "fill_container",
               "padding": [
-                0,
-                0,
                 0,
                 24
               ],
@@ -9457,6 +9443,12 @@
                   "ref": "S4k0x",
                   "name": "Detail Header",
                   "width": "fill_container",
+                  "padding": [
+                    8,
+                    0,
+                    16,
+                    0
+                  ],
                   "descendants": {
                     "tiIi2": {
                       "content": "test-server-02"
@@ -9472,12 +9464,7 @@
                   "ref": "I9kvlZ",
                   "name": "Tabs Bar",
                   "width": "fill_container",
-                  "padding": [
-                    0,
-                    0,
-                    0,
-                    24
-                  ],
+                  "padding": 0,
                   "descendants": {
                     "Wp6q1": {
                       "fill": "#00000000"
@@ -9540,6 +9527,9 @@
                       "name": "Search",
                       "width": "fill_container",
                       "descendants": {
+                        "vXxT5": {
+                          "enabled": false
+                        },
                         "EJMtX": {
                           "content": "Search modpacks…"
                         }
@@ -9738,12 +9728,12 @@
                           "name": "Card Fabulously Optimized",
                           "width": "fill_container",
                           "fill": "$surface/surface",
-                          "cornerRadius": 4,
+                          "cornerRadius": "$radius/xl",
                           "stroke": "$border/border",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "gap": 12,
-                          "padding": 10,
+                          "padding": "$spacing/4",
                           "alignItems": "center",
                           "children": [
                             {
@@ -9752,19 +9742,20 @@
                               "name": "Cover",
                               "width": 36,
                               "height": 36,
-                              "fill": "#8B5CF6",
+                              "fill": "#00000000",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "rNlUe",
-                                  "fill": "$foreground/foreground",
-                                  "content": "FO",
-                                  "fontFamily": "$typography/font-mono",
-                                  "fontSize": 14,
-                                  "fontWeight": "700"
+                                  "type": "icon",
+                                  "id": "uPiGK",
+                                  "name": "Icon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "icon": "package",
+                                  "library": "lucide",
+                                  "fill": "$muted"
                                 }
                               ]
                             },
@@ -9817,12 +9808,12 @@
                           "name": "Card Vanilla Perfected",
                           "width": "fill_container",
                           "fill": "$surface/surface",
-                          "cornerRadius": 4,
+                          "cornerRadius": "$radius/xl",
                           "stroke": "$border/border",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "gap": 12,
-                          "padding": 10,
+                          "padding": "$spacing/4",
                           "alignItems": "center",
                           "children": [
                             {
@@ -9831,19 +9822,20 @@
                               "name": "Cover",
                               "width": 36,
                               "height": 36,
-                              "fill": "#22A559",
+                              "fill": "#00000000",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "bz9ci",
-                                  "fill": "$foreground/foreground",
-                                  "content": "VP",
-                                  "fontFamily": "$typography/font-mono",
-                                  "fontSize": 14,
-                                  "fontWeight": "700"
+                                  "type": "icon",
+                                  "id": "SiLKq",
+                                  "name": "Icon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "icon": "package",
+                                  "library": "lucide",
+                                  "fill": "$muted"
                                 }
                               ]
                             },
@@ -9905,12 +9897,12 @@
                           "name": "Card OptiFabric",
                           "width": "fill_container",
                           "fill": "$surface/surface",
-                          "cornerRadius": 4,
+                          "cornerRadius": "$radius/xl",
                           "stroke": "$border/border",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "gap": 12,
-                          "padding": 10,
+                          "padding": "$spacing/4",
                           "alignItems": "center",
                           "children": [
                             {
@@ -9919,19 +9911,20 @@
                               "name": "Cover",
                               "width": 36,
                               "height": 36,
-                              "fill": "#3B82F6",
+                              "fill": "#00000000",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "D3VYvA",
-                                  "fill": "$foreground/foreground",
-                                  "content": "OF",
-                                  "fontFamily": "$typography/font-mono",
-                                  "fontSize": 14,
-                                  "fontWeight": "700"
+                                  "type": "icon",
+                                  "id": "ivPjl",
+                                  "name": "Icon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "icon": "package",
+                                  "library": "lucide",
+                                  "fill": "$muted"
                                 }
                               ]
                             },
@@ -9984,12 +9977,12 @@
                           "name": "Card Remarkably Optimized",
                           "width": "fill_container",
                           "fill": "$surface/surface",
-                          "cornerRadius": 4,
+                          "cornerRadius": "$radius/xl",
                           "stroke": "$border/border",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "gap": 12,
-                          "padding": 10,
+                          "padding": "$spacing/4",
                           "alignItems": "center",
                           "children": [
                             {
@@ -9998,19 +9991,20 @@
                               "name": "Cover",
                               "width": 36,
                               "height": 36,
-                              "fill": "#000000",
+                              "fill": "#00000000",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "km0Ru",
-                                  "fill": "$foreground/foreground",
-                                  "content": "RO",
-                                  "fontFamily": "$typography/font-mono",
-                                  "fontSize": 14,
-                                  "fontWeight": "700"
+                                  "type": "icon",
+                                  "id": "D0gl9l",
+                                  "name": "Icon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "icon": "package",
+                                  "library": "lucide",
+                                  "fill": "$muted"
                                 }
                               ]
                             },
@@ -10072,12 +10066,12 @@
                           "name": "Card FPS Modpack",
                           "width": "fill_container",
                           "fill": "$surface/surface",
-                          "cornerRadius": 4,
+                          "cornerRadius": "$radius/xl",
                           "stroke": "$border/border",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "gap": 12,
-                          "padding": 10,
+                          "padding": "$spacing/4",
                           "alignItems": "center",
                           "children": [
                             {
@@ -10086,19 +10080,20 @@
                               "name": "Cover",
                               "width": 36,
                               "height": 36,
-                              "fill": "#000000",
+                              "fill": "#00000000",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "Y8Q3mg",
-                                  "fill": "$foreground/foreground",
-                                  "content": "FP",
-                                  "fontFamily": "$typography/font-mono",
-                                  "fontSize": 14,
-                                  "fontWeight": "700"
+                                  "type": "icon",
+                                  "id": "qf6kJ",
+                                  "name": "Icon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "icon": "package",
+                                  "library": "lucide",
+                                  "fill": "$muted"
                                 }
                               ]
                             },
@@ -10151,12 +10146,12 @@
                           "name": "Card Fresh & Smooth",
                           "width": "fill_container",
                           "fill": "$surface/surface",
-                          "cornerRadius": 4,
+                          "cornerRadius": "$radius/xl",
                           "stroke": "$border/border",
                           "strokeWidth": 1,
                           "strokeAlignment": "inner",
                           "gap": 12,
-                          "padding": 10,
+                          "padding": "$spacing/4",
                           "alignItems": "center",
                           "children": [
                             {
@@ -10165,19 +10160,20 @@
                               "name": "Cover",
                               "width": 36,
                               "height": 36,
-                              "fill": "#14B8A6",
+                              "fill": "#00000000",
                               "cornerRadius": 4,
                               "justifyContent": "center",
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "text",
-                                  "id": "mYJsr",
-                                  "fill": "$foreground/foreground",
-                                  "content": "FS",
-                                  "fontFamily": "$typography/font-mono",
-                                  "fontSize": 14,
-                                  "fontWeight": "700"
+                                  "type": "icon",
+                                  "id": "I1QtY",
+                                  "name": "Icon",
+                                  "width": 20,
+                                  "height": 20,
+                                  "icon": "package",
+                                  "library": "lucide",
+                                  "fill": "$muted"
                                 }
                               ]
                             },
@@ -10333,8 +10329,6 @@
               "name": "Tabs Bar",
               "width": "fill_container",
               "padding": [
-                0,
-                0,
                 0,
                 24
               ],
@@ -38359,6 +38353,7 @@
               "id": "oByLP",
               "name": "Toggle Row",
               "width": "fill_container",
+              "justifyContent": "center",
               "alignItems": "center",
               "children": [
                 {
@@ -38841,7 +38836,7 @@
           "type": "ref",
           "ref": "Dx8S8",
           "name": "tabsBar",
-          "width": "fit_content",
+          "width": "fill_container",
           "children": [
             {
               "id": "Wp6q1",
@@ -38849,6 +38844,7 @@
               "ref": "CEWo3",
               "name": "tabOverview",
               "fill": "$segment",
+              "width": "fill_container",
               "descendants": {
                 "YUR8N": {
                   "content": "Overview",
@@ -38861,6 +38857,7 @@
               "type": "ref",
               "ref": "qAFbJ",
               "name": "tabEvents",
+              "width": "fill_container",
               "descendants": {
                 "VcxMI": {
                   "content": "Events"
@@ -38872,6 +38869,7 @@
               "type": "ref",
               "ref": "qAFbJ",
               "name": "tabConsole",
+              "width": "fill_container",
               "descendants": {
                 "VcxMI": {
                   "content": "Console"
@@ -38883,6 +38881,7 @@
               "type": "ref",
               "ref": "qAFbJ",
               "name": "tabLogs",
+              "width": "fill_container",
               "descendants": {
                 "VcxMI": {
                   "content": "Logs"
@@ -38895,6 +38894,7 @@
               "ref": "qAFbJ",
               "name": "tabFiles",
               "fill": "#00000000",
+              "width": "fill_container",
               "descendants": {
                 "VcxMI": {
                   "content": "Files"
@@ -38906,6 +38906,7 @@
               "type": "ref",
               "ref": "qAFbJ",
               "name": "tabMods",
+              "width": "fill_container",
               "descendants": {
                 "VcxMI": {
                   "content": "Mods"
@@ -38917,6 +38918,7 @@
               "type": "ref",
               "ref": "qAFbJ",
               "name": "tabModpacks",
+              "width": "fill_container",
               "descendants": {
                 "VcxMI": {
                   "content": "Modpacks"
@@ -38928,6 +38930,7 @@
               "type": "ref",
               "ref": "qAFbJ",
               "name": "tabPlayers",
+              "width": "fill_container",
               "descendants": {
                 "VcxMI": {
                   "content": "Players"
@@ -38939,6 +38942,7 @@
               "type": "ref",
               "ref": "qAFbJ",
               "name": "tabBackups",
+              "width": "fill_container",
               "descendants": {
                 "VcxMI": {
                   "content": "Backups"
@@ -38950,6 +38954,7 @@
               "type": "ref",
               "ref": "qAFbJ",
               "name": "tabCapture",
+              "width": "fill_container",
               "descendants": {
                 "VcxMI": {
                   "content": "Capture"
@@ -38961,6 +38966,7 @@
               "type": "ref",
               "ref": "qAFbJ",
               "name": "tabSettings",
+              "width": "fill_container",
               "descendants": {
                 "VcxMI": {
                   "content": "Settings"
@@ -39122,6 +39128,7 @@
               "type": "ref",
               "ref": "J3iWV8",
               "name": "Btn More",
+              "strokeWidth": 0,
               "descendants": {
                 "xjGeb": {
                   "icon": "ellipsis"
@@ -40971,7 +40978,12 @@
               "id": "CghXi",
               "type": "ref",
               "ref": "IU7OG",
-              "name": "Btn Delete"
+              "name": "Btn Delete",
+              "descendants": {
+                "E4lQce": {
+                  "cornerRadius": "$radius/md"
+                }
+              }
             },
             {
               "id": "oxVkD",
@@ -40979,6 +40991,9 @@
               "ref": "z9ShNE",
               "name": "Btn Restore",
               "descendants": {
+                "IVgQ8": {
+                  "cornerRadius": "$radius/md"
+                },
                 "nWTJb": {
                   "enabled": false,
                   "icon": "rotate-ccw"
@@ -41086,7 +41101,7 @@
                   "descendants": {
                     "PJERm": {
                       "content": "Manage game servers, backups, templates, and schedules.",
-                      "fill": "#F5F5F5"
+                      "fill": "$foreground/foreground"
                     }
                   }
                 }
@@ -43585,11 +43600,11 @@
                 {
                   "type": "text",
                   "id": "MIgc1",
-                  "fill": "$muted",
+                  "fill": "$foreground/foreground",
                   "content": "Source backup",
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 12,
-                  "fontWeight": "normal"
+                  "fontWeight": "500"
                 },
                 {
                   "id": "mazee",
@@ -43597,10 +43612,13 @@
                   "ref": "D0cDM",
                   "name": "Input",
                   "width": "fill_container",
+                  "height": 34,
                   "descendants": {
                     "PJERm": {
                       "content": "mc-survival-nightly-0713",
-                      "fill": "#949494"
+                      "fill": "$foreground/foreground",
+                      "fontFamily": "$typography/font-mono",
+                      "fontSize": 12
                     }
                   }
                 }
@@ -43616,11 +43634,11 @@
                 {
                   "type": "text",
                   "id": "eN292",
-                  "fill": "$muted",
+                  "fill": "$foreground/foreground",
                   "content": "Target game server",
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 12,
-                  "fontWeight": "normal"
+                  "fontWeight": "500"
                 },
                 {
                   "id": "D5Vwg2",
@@ -43628,9 +43646,14 @@
                   "ref": "AT7ya",
                   "name": "Target server select",
                   "width": "fill_container",
+                  "height": 38,
                   "descendants": {
                     "cFsFk": {
-                      "content": "Select a server…"
+                      "content": "Select a server…",
+                      "fill": "$muted"
+                    },
+                    "mULN8": {
+                      "fill": "$muted"
                     }
                   }
                 }
@@ -43643,7 +43666,11 @@
               "name": "Restore warning",
               "width": "fill_container",
               "fill": "$surface/secondary",
+              "gap": 8,
               "descendants": {
+                "dMZea": {
+                  "padding": 0
+                },
                 "IAKLq": {
                   "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
                   "enabled": false
@@ -43652,7 +43679,8 @@
                   "enabled": true,
                   "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
                   "fill": "$danger/danger",
-                  "fontSize": 12
+                  "fontSize": 12,
+                  "lineHeight": 1.333
                 },
                 "sYqNu": {
                   "enabled": false
@@ -43930,7 +43958,7 @@
                   "descendants": {
                     "PJERm": {
                       "content": "Smoke Collaborator",
-                      "fill": "#F5F5F5"
+                      "fill": "$foreground/foreground"
                     }
                   }
                 }
@@ -43961,7 +43989,7 @@
                   "descendants": {
                     "PJERm": {
                       "content": "smoke@example.com",
-                      "fill": "#F5F5F5"
+                      "fill": "$foreground/foreground"
                     }
                   }
                 }
@@ -44340,8 +44368,6 @@
               "name": "Tabs Bar",
               "width": "fill_container",
               "padding": [
-                0,
-                0,
                 0,
                 24
               ],
@@ -46152,8 +46178,6 @@
               "name": "Tabs Bar",
               "width": "fill_container",
               "padding": [
-                0,
-                0,
                 0,
                 24
               ],
@@ -63520,8 +63544,6 @@
               "width": "fill_container",
               "padding": [
                 0,
-                0,
-                0,
                 24
               ],
               "descendants": {
@@ -80000,8 +80022,6 @@
               "width": "fill_container",
               "padding": [
                 0,
-                0,
-                0,
                 24
               ],
               "descendants": {
@@ -81763,8 +81783,6 @@
               "name": "Tabs Bar",
               "width": "fill_container",
               "padding": [
-                0,
-                0,
                 0,
                 24
               ],
@@ -84758,8 +84776,8 @@
           "width": "fill_container",
           "fill": "$background/background",
           "layout": "vertical",
-          "gap": 16,
-          "padding": 16,
+          "gap": 24,
+          "padding": 24,
           "children": [
             {
               "type": "frame",
@@ -84829,7 +84847,7 @@
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "layout": "vertical",
-                  "gap": 8,
+                  "gap": 20,
                   "padding": 14,
                   "children": [
                     {
@@ -84885,7 +84903,7 @@
                                   "name": "name",
                                   "fill": "$foreground/foreground",
                                   "content": "mc-survival",
-                                  "fontFamily": "$typography/font-mono",
+                                  "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
                                   "fontWeight": "500"
                                 },
@@ -84936,10 +84954,11 @@
                       "type": "text",
                       "id": "mLHoA",
                       "name": "game",
+                      "opacity": 0.6,
                       "fill": "$foreground/foreground",
                       "content": "minecraft-java",
-                      "fontFamily": "$typography/font-mono",
-                      "fontSize": 13,
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     },
                     {
@@ -84947,6 +84966,12 @@
                       "id": "yeMAw",
                       "name": "chips",
                       "gap": 8,
+                      "padding": [
+                        4,
+                        0,
+                        0,
+                        0
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -85038,7 +85063,7 @@
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "layout": "vertical",
-                  "gap": 8,
+                  "gap": 20,
                   "padding": 14,
                   "children": [
                     {
@@ -85094,7 +85119,7 @@
                                   "name": "name",
                                   "fill": "$foreground/foreground",
                                   "content": "mc-test",
-                                  "fontFamily": "$typography/font-mono",
+                                  "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
                                   "fontWeight": "500"
                                 },
@@ -85145,10 +85170,11 @@
                       "type": "text",
                       "id": "SCXtD",
                       "name": "game",
+                      "opacity": 0.6,
                       "fill": "$foreground/foreground",
                       "content": "minecraft-java",
-                      "fontFamily": "$typography/font-mono",
-                      "fontSize": 13,
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     },
                     {
@@ -85156,6 +85182,12 @@
                       "id": "qzLGp",
                       "name": "chips",
                       "gap": 8,
+                      "padding": [
+                        4,
+                        0,
+                        0,
+                        0
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -85225,7 +85257,7 @@
                               "id": "bTW2P",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "—",
+                              "content": "0%",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -85247,7 +85279,7 @@
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "layout": "vertical",
-                  "gap": 8,
+                  "gap": 20,
                   "padding": 14,
                   "children": [
                     {
@@ -85303,7 +85335,7 @@
                                   "name": "name",
                                   "fill": "$foreground/foreground",
                                   "content": "user-server-test",
-                                  "fontFamily": "$typography/font-mono",
+                                  "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
                                   "fontWeight": "500"
                                 },
@@ -85341,7 +85373,7 @@
                               "id": "YAzi0",
                               "name": "Label",
                               "fill": "$focus/soft-foreground",
-                              "content": "Suspended",
+                              "content": "Asleep",
                               "fontFamily": "$typography/font-sans",
                               "fontSize": 11,
                               "fontWeight": "500"
@@ -85354,10 +85386,11 @@
                       "type": "text",
                       "id": "FAXAj",
                       "name": "game",
+                      "opacity": 0.6,
                       "fill": "$foreground/foreground",
                       "content": "satisfactory",
-                      "fontFamily": "$typography/font-mono",
-                      "fontSize": 13,
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     },
                     {
@@ -85365,6 +85398,12 @@
                       "id": "Et0mk",
                       "name": "chips",
                       "gap": 8,
+                      "padding": [
+                        4,
+                        0,
+                        0,
+                        0
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -85456,7 +85495,7 @@
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "layout": "vertical",
-                  "gap": 8,
+                  "gap": 20,
                   "padding": 14,
                   "children": [
                     {
@@ -85512,7 +85551,7 @@
                                   "name": "name",
                                   "fill": "$foreground/foreground",
                                   "content": "test-server-09",
-                                  "fontFamily": "$typography/font-mono",
+                                  "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
                                   "fontWeight": "500"
                                 },
@@ -85521,9 +85560,7 @@
                                   "id": "vAFYa",
                                   "name": "addr",
                                   "fill": "$muted",
-                                  "textGrowth": "fixed-width",
-                                  "width": 210,
-                                  "content": "test-server-09.gameplane-demo.local:25565",
+                                  "content": "test-server-09.gameplane-dem…",
                                   "fontFamily": "$typography/font-mono",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
@@ -85563,10 +85600,11 @@
                       "type": "text",
                       "id": "MK6aw",
                       "name": "game",
+                      "opacity": 0.6,
                       "fill": "$foreground/foreground",
                       "content": "minecraft-modded",
-                      "fontFamily": "$typography/font-mono",
-                      "fontSize": 13,
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     },
                     {
@@ -85574,6 +85612,12 @@
                       "id": "dBmIr",
                       "name": "chips",
                       "gap": 8,
+                      "padding": [
+                        4,
+                        0,
+                        0,
+                        0
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
@@ -85643,7 +85687,7 @@
                               "id": "PLDIK",
                               "name": "label",
                               "fill": "$muted",
-                              "content": "62%",
+                              "content": "78%",
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 12,
                               "fontWeight": "normal"
@@ -85665,7 +85709,7 @@
                   "strokeWidth": 1,
                   "strokeAlignment": "inner",
                   "layout": "vertical",
-                  "gap": 8,
+                  "gap": 20,
                   "padding": 14,
                   "children": [
                     {
@@ -85721,7 +85765,7 @@
                                   "name": "name",
                                   "fill": "$foreground/foreground",
                                   "content": "mc-survival",
-                                  "fontFamily": "$typography/font-mono",
+                                  "fontFamily": "$typography/font-sans",
                                   "fontSize": 14,
                                   "fontWeight": "500"
                                 },
@@ -85772,10 +85816,11 @@
                       "type": "text",
                       "id": "vsOzh",
                       "name": "game",
+                      "opacity": 0.6,
                       "fill": "$foreground/foreground",
                       "content": "minecraft-modded",
-                      "fontFamily": "$typography/font-mono",
-                      "fontSize": 13,
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
                       "fontWeight": "normal"
                     },
                     {
@@ -85783,6 +85828,12 @@
                       "id": "w4dDV",
                       "name": "chips",
                       "gap": 8,
+                      "padding": [
+                        4,
+                        0,
+                        0,
+                        0
+                      ],
                       "alignItems": "center",
                       "children": [
                         {

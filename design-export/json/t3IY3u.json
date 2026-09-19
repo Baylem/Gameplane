@@ -59,7 +59,7 @@
               "descendants": {
                 "PJERm": {
                   "content": "Smoke Collaborator",
-                  "fill": "#F5F5F5"
+                  "fill": "$foreground/foreground"
                 }
               }
             }
@@ -90,7 +90,7 @@
               "descendants": {
                 "PJERm": {
                   "content": "smoke@example.com",
-                  "fill": "#F5F5F5"
+                  "fill": "$foreground/foreground"
                 }
               }
             }
