@@ -104,7 +104,7 @@ bin/gp-module validate modules/valheim-custom
 == modules/valheim-custom ==
   ERROR [template.yaml:15] [image-unpinned] default image 'mygame:latest' is not pinned with a digest.
     -> Remediation: Pin the image with @sha256:... or append '# gameplane:floating' if intentional.
-  ERROR [template.yaml:18] [invalid-port-range] port 70000 exceeds maximum allowable port 65535.
+  ERROR [template.yaml:18] [invalid-port-number] port 70000 exceeds maximum allowable port 65535.
     -> Remediation: Change containerPort to an integer between 1 and 65535.
   ERROR [template.yaml:32] [credential-field-not-password] config field 'RCON_PASSWORD' looks credential-shaped but type='string'.
     -> Remediation: Set type: password so operator stores this value securely in a Secret.
@@ -172,11 +172,11 @@ Run the full end-to-end verification test in the local development cluster or CI
 
 ### Command:
 ```sh
-# Using make target:
+# Run the focused E2E test via canonical make target:
 make test-e2e BUCKET=operator TEST_ARGS='-run ^TestModule_ScaffoldAndPackage$'
 
-# Or running go test directly against a configured cluster:
-go test -v -tags=e2e ./test/e2e/ -run ^TestModule_ScaffoldAndPackage$
+# Or against an already-running E2E cluster:
+make test-e2e-bucket BUCKET=operator TEST_ARGS='-run ^TestModule_ScaffoldAndPackage$'
 ```
 
 ### Expected Outcome:
@@ -209,5 +209,5 @@ Prove that a user can author, validate, preview, and install a module directly t
 6. Click **"Download Bundle"**:
    - Browser receives `palworld-community.tar.gz` bundle containing `module.yaml`, `template.yaml`, `README.md`, and `icon.png`.
 7. Click **"Install to Cluster"**:
-   - Bundle uploads to the active `upload`-type ModuleSource.
-   - Dialog closes and `Palworld Community Edition` appears immediately in the Modules catalog cards.
+   - Bundle uploads to the active `upload`-type ModuleSource ConfigMap.
+   - The operator discovers and indexes the module bundle into the cluster catalog, making it available for installation as a `Module` CR.

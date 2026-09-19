@@ -72,7 +72,7 @@ This research establishes the technical strategy and architectural decisions for
   - Evaluate version selection via `--version-id`, resolving the active container image, version-specific environment variables, and mod loader mappings.
   - Output rendered result in YAML, JSON, or human-readable summary.
 - **Rationale**:
-  - Reusing Go allows sharing exact types and arithmetic with `operator/internal/controller/gameserver_config.go`.
+  - Encapsulating this in `gp-module/internal/preview` (exposed via public `gp-module/pkg/preview`) provides exact arithmetic with unit and parity test coverage against operator behavior.
 
 ---
 

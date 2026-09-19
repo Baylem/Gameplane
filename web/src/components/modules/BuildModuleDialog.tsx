@@ -248,8 +248,24 @@ export function BuildModuleDialog({
         setValidationResult(valRes);
         setPreviewResult(prevRes);
       }
-    } catch {
-      // Ignored for live preview
+    } catch (err) {
+      if (seq === validationSeqRef.current) {
+        setValidationResult({
+          clean: false,
+          errorCount: 1,
+          warningCount: 0,
+          findings: [
+            {
+              level: "ERROR",
+              ruleId: "validation-error",
+              file: "template.yaml",
+              line: 1,
+              message: err instanceof APIError ? err.body || err.message : (err as Error).message || "Validation failed",
+            },
+          ],
+        });
+        setPreviewResult(null);
+      }
     }
   }
 

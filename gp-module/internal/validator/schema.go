@@ -232,6 +232,25 @@ func validateTemplateSchema(node *yaml.Node) []Finding {
 		}
 	}
 
+	apiVerNode := common.FindNode(node, "apiVersion")
+	if apiVerNode == nil || (apiVerNode.Value != "gameplane.local/v1alpha1" && apiVerNode.Value != "gameplane.io/v1alpha1") {
+		line := 1
+		val := ""
+		if apiVerNode != nil {
+			line = apiVerNode.Line
+			val = apiVerNode.Value
+		}
+		findings = append(findings, Finding{
+			Level:       SeverityError,
+			RuleID:      RuleTemplateSchemaViolation,
+			File:        "template.yaml",
+			Line:        line,
+			Field:       "apiVersion",
+			Message:     fmt.Sprintf("apiVersion must be %q, got %q", "gameplane.local/v1alpha1", val),
+			Remediation: "Set 'apiVersion: gameplane.local/v1alpha1' at the root of template.yaml.",
+		})
+	}
+
 	kindNode := common.FindNode(node, "kind")
 	if kindNode == nil || kindNode.Value != "GameTemplate" {
 		line := 1

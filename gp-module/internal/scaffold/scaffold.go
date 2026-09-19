@@ -106,7 +106,14 @@ func GenerateFiles(opts Options) (*GeneratedFiles, error) {
 
 	summary := opts.Summary
 	if summary == "" {
-		summary = fmt.Sprintf("Dedicated server for %s", displayName)
+		switch arch.ID {
+		case "steamcmd":
+			summary = fmt.Sprintf("Dedicated server for %s powered by SteamCMD", displayName)
+		case "java":
+			summary = fmt.Sprintf("Dedicated server for %s powered by Java/JVM", displayName)
+		default:
+			summary = fmt.Sprintf("Dedicated server for %s", displayName)
+		}
 	}
 
 	// 1. Render module.yaml
@@ -192,6 +199,22 @@ func GenerateFiles(opts Options) (*GeneratedFiles, error) {
 	}
 	readmeBuf.WriteString("\n## Storage\n\n")
 	fmt.Fprintf(&readmeBuf, "- Volume size: `%s`\n- Mount path: `%s`\n", storageSize, storageMount)
+	if len(arch.DefaultEnv) > 0 {
+		readmeBuf.WriteString("\n## Environment Variables\n\n")
+		for _, e := range arch.DefaultEnv {
+			fmt.Fprintf(&readmeBuf, "- `%s`: default `%s`\n", e.Name, e.Value)
+		}
+	}
+	if len(arch.ConfigSchema) > 0 {
+		readmeBuf.WriteString("\n## Configuration Parameters\n\n")
+		for _, c := range arch.ConfigSchema {
+			desc := c.Description
+			if desc == "" {
+				desc = c.DisplayName
+			}
+			fmt.Fprintf(&readmeBuf, "- **%s** (`%s`): %s\n", c.Name, c.Type, desc)
+		}
+	}
 
 	icon := archetypes.PlaceholderIconBytes()
 

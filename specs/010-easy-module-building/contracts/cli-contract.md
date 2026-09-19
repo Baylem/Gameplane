@@ -90,7 +90,7 @@ Usage: gp-module validate [MODULE_PATH...] [options]
 #### Output Format (Human-Readable):
 ```text
 == modules/my-game ==
-  ERROR [template.yaml:45] [invalid-port-range] port 70000 exceeds maximum allowable port 65535.
+  ERROR [template.yaml:45] [invalid-port-number] port 70000 exceeds maximum allowable port 65535.
     -> Remediation: Change containerPort to a valid port number between 1 and 65535.
   WARN  [module.yaml:7] [custom-category] category 'MyCustomCat' is not in canonical catalog taxonomy.
     -> Remediation: Choose from [Survival, Sandbox, Shooter, Simulation, Building, Adventure, Horror, Co-op, PvP, Modded, Creative].

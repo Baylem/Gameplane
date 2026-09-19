@@ -216,7 +216,7 @@ Captures findings emitted by the offline linting engine:
 | | `clean` | `bool` | `True` when `errorCount == 0` (in normal mode) or when `errorCount == 0 && warningCount == 0` (in `--strict` mode) |
 | | `findings` | `list[DiagnosticFinding]` | Diagnostic entries |
 | **`DiagnosticFinding`**| `level` | `string` | `ERROR` or `WARN` |
-| | `ruleId` | `string` | Machine-readable rule slug (e.g. `image-unpinned`, `invalid-port-range`) |
+| | `ruleId` | `string` | Machine-readable rule slug (e.g. `image-unpinned`, `invalid-port-number`) |
 | | `filePath` | `string` | File relative or absolute path (e.g. `template.yaml`) |
 | | `lineNumber` | `int` | 1-based source line number (0 if not file-anchored) |
 | | `fieldPath` | `string` | Dot-notated field path (e.g. `spec.ports[0].containerPort`) |

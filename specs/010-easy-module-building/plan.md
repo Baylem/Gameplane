@@ -156,7 +156,7 @@ test/e2e/
 ```
 
 **Structure Decision**:
-`gp-module` provides the core Go logic (scaffolding, validation, preview, packaging). The `api/` handler imports `gp-module/internal/...` directly to serve the web dashboard, ensuring 100% logic and behavior parity between the CLI tool and the in-browser Web Builder without code duplication.
+`gp-module` provides the core Go logic (scaffolding, validation, preview, packaging). The `api/` handler imports the public `gp-module/pkg/...` wrappers directly to serve the web dashboard, ensuring 100% logic and behavior parity between the CLI tool and the in-browser Web Builder while respecting Go module package boundaries.
 
 ## Complexity Tracking
 
