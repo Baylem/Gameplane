@@ -44,7 +44,7 @@ export function BackupDetailDrawer({ name, onClose, onRestore }: Props) {
       <Drawer.Backdrop>
         <Drawer.Content placement="right" className="me-4">
           <Drawer.Dialog className="flex flex-col w-[440px] h-[760px]">
-            <Drawer.Header className="shrink-0 border-b border-border p-5 flex items-start justify-between">
+            <Drawer.Header className="shrink-0 border-b border-border p-5 flex flex-row items-center justify-between gap-3">
               <div className="space-y-1">
                 <Drawer.Heading className="text-base font-semibold">Backup details</Drawer.Heading>
                 <div className="font-mono text-xs text-muted">{name}</div>

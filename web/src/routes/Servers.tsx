@@ -305,7 +305,7 @@ export function ServersPage() {
               placeholder="Search…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full pl-9"
+              className="w-full pl-9 rounded-xl"
               aria-label="Search servers"
             />
           </div>
@@ -324,7 +324,7 @@ export function ServersPage() {
             <Button
               isIconOnly
               variant="ghost"
-              className="w-10 h-10 rounded-xl border border-default-300 bg-default-100 hover:bg-default-200"
+              className="filter-trigger w-10 h-10 rounded-xl border border-default-300 bg-default-100 hover:bg-default-200"
               aria-label="Filter"
             >
               <SlidersHorizontal className="h-[18px] w-[18px]" />

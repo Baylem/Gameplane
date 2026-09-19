@@ -106,6 +106,10 @@ test.describe("Slice 2b: Mods/Modpacks/Backups + Settings (Desktop — 1440x900)
     await page.goto("/servers/test-server-02");
     await clickTab(page, "Modpacks");
     await expect(page.getByText(/browse modpacks/i)).toBeVisible({ timeout: 10_000 });
+    // Drop the click's focus ring and hover state: the design shows the
+    // selected tab at rest.
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.waitForTimeout(200);
     await capture(page, "tY6RD");
   });

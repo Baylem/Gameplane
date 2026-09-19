@@ -94,6 +94,13 @@ const SCREEN_THRESHOLD_OVERRIDES = {
   // Mobile responsive layout (narrow 390px viewport with condensed cards)
   tooKB: 0.06, // Servers — Mobile
   SeizD: 0.06, // Navigation Drawer — Mobile
+  // Removable group chips: tiny pills whose glyph rows differ only by text
+  // rasterization (Pencil export crisp vs Chrome smoothed). Maintainer
+  // ruled these a capture issue and signed off on per-frame overrides
+  // (2026-09-19). CI worst case: XL5ZU 8.54%, vStkb 7.81%, uw0dB 11.88%.
+  XL5ZU: 0.13, // Removable Group Chip — admin
+  vStkb: 0.13, // Removable Group Chip — operator
+  uw0dB: 0.13, // Removable Group Chip — viewer
 };
 
 const SCREEN_BLOCK_THRESHOLD_OVERRIDES = {
@@ -102,6 +109,10 @@ const SCREEN_BLOCK_THRESHOLD_OVERRIDES = {
   FtdkI: 0.25,
   tooKB: 0.25,
   SeizD: 0.25,
+  // Same three chips, same cause. CI worst case: 28.21% / 31.56% / 35.70%.
+  XL5ZU: 0.38,
+  vStkb: 0.38,
+  uw0dB: 0.38,
 };
 
 // Ids maintainer-accepted as component crops captured at implementation size

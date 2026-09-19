@@ -242,6 +242,12 @@ input:-webkit-autofill:focus {
   border-radius: 6px;
 }
 
+/* Mobile Servers filter trigger (design DWztv U4ZPD, cornerRadius $radius/xl)
+   — an OD-17 exception to the 6px button rule above. */
+.button.filter-trigger {
+  border-radius: 12px;
+}
+
 /* ==========================================================================
    Dialog geometry — pinned to Gameplane/Modal (design-export/json/x3beP.json):
    padding 20, header gap 4, body padding-top 16 + gap 16, footer padding-top
@@ -254,14 +260,14 @@ input:-webkit-autofill:focus {
   display: flex;
   flex-direction: column;
   gap: 4px;                 /* x3beP mDescWrap padding [4,0,0,0] */
-  padding: 20px 20px 0;
+  padding: 20px 0 0;        /* top only — the dialog supplies the 20px side inset */
 }
 
 .modal__body {
   display: flex;
   flex-direction: column;
   gap: 16px;                /* x3beP mBody gap */
-  padding: 16px 20px 0;     /* x3beP mBody padding-top 16 */
+  padding: 16px 0 0;        /* x3beP mBody padding [16,0,0,0] */
 }
 
 /* Per-dialog gap overrides some callers already pass to <ModalBody> — kept
@@ -270,7 +276,10 @@ input:-webkit-autofill:focus {
 .modal__body.gap-4 { gap: 16px; }
 
 .modal__footer {
-  padding: 20px;             /* x3beP mFooter padding-top 20 */
+  display: flex;
+  justify-content: flex-end; /* x3beP mFooter justifyContent end */
+  align-items: center;
+  padding: 20px 0 0;         /* x3beP mFooter padding [20,0,0,0] */
   gap: 8px;                  /* x3beP mFooter gap */
 }
 

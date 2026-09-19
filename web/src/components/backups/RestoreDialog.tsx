@@ -101,7 +101,7 @@ export function RestoreDialog({ backup, defaultServer, onClose }: Props) {
                 <Label htmlFor="source-backup" className="text-xs">
                   Source backup
                 </Label>
-                <div className="mt-1.5 flex items-center rounded-lg border border-border bg-surface/40 px-3 py-2 font-mono text-xs text-fg">
+                <div className="mt-1.5 flex items-center rounded-lg border border-[var(--field-border)] bg-[var(--field-background)] px-3 py-2 font-mono text-xs text-fg">
                   {backup?.metadata.name}
                 </div>
               </div>
@@ -136,7 +136,7 @@ export function RestoreDialog({ backup, defaultServer, onClose }: Props) {
                     <PopoverTrigger
                       id="target-server"
                       className={cn(
-                        "mt-1.5 flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm",
+                        "mt-1.5 flex items-center justify-between gap-2 rounded-lg border border-[var(--field-border)] bg-[var(--field-background)] px-3 py-2 text-sm",
                         "hover:bg-surface transition-colors cursor-pointer",
                       )}
                     >
