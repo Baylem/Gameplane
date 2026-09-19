@@ -131,6 +131,12 @@ const SCALE_ALLOWLIST = {
   vStkb: 1.023, // Removable Group Chip — Violet (operator)
   uw0dB: 1.0349, // Removable Group Chip — Secondary (viewer)
   Kp48V: 0.9821, // Confirm Admin Mapping dialog
+  // Revoke Share Link: provisional. Same w-[440px] AlertDialogDialog pin as
+  // Kp48V (ConfirmDialog.tsx), so the same 880px-reference / captured-width
+  // ratio is expected. The gate only applies when scaleFactor != 1.000, so
+  // this entry is inert if the capture lands at exactly 1. Re-record from the
+  // first CI run.
+  S7SCDc: 0.9821,
   // zhLZN: entry removed (maintainer-approved re-record). Its reference is
   // now cropped to the opaque panel via REFERENCE_CROP_ALLOWLIST, so the
   // cropped 880px reference and the 880px captureLocator() crop match and
@@ -150,9 +156,18 @@ const REFERENCE_CROP_ALLOWLIST = {
   // Backup Detail Drawer: 440x760 panel at 2x; shadow offset x -12 / blur 32 /
   // spread -8 leaves 44 CSS px bleed left, 20 right, 32 top and bottom.
   zhLZN: { left: 88, top: 64, width: 880, height: 1520 },
-  // Restore Confirmation dialog: 480x882 panel at 2x, bounding box verified
+  // Add module source dialog: 480x882 panel at 2x, bounding box verified
   // via PIL alpha>=250 scan of design-export/screenshots/DMnEi.png (1088x1892).
   DMnEi: { left: 64, top: 40, width: 960, height: 1764 },
+  // Create Share Link dialog: 480x320 panel at 2x, bounding box verified via
+  // PIL alpha>=250 scan of design-export/screenshots/atqRh.png (1088x768).
+  atqRh: { left: 64, top: 40, width: 960, height: 640 },
+  // Share Link Created dialog: 480x322 panel at 2x, bounding box verified via
+  // PIL alpha>=250 scan of design-export/screenshots/VM7ro.png (1088x772).
+  VM7ro: { left: 64, top: 40, width: 960, height: 644 },
+  // Revoke Share Link dialog: 440x163 panel at 2x, bounding box verified via
+  // PIL alpha>=250 scan of design-export/screenshots/S7SCDc.png (1008x454).
+  S7SCDc: { left: 64, top: 40, width: 880, height: 326 },
 };
 
 // Allowed deviation from an allowlisted id's recorded scaleFactor, in either

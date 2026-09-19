@@ -127,7 +127,7 @@ function CreateDialog({
         isKeyboardDismissDisabled={create.isPending}
       />
       <ModalContainer>
-        <ModalDialog>
+        <ModalDialog className="w-[480px] max-w-[480px]">
           <ModalHeader>
             <ModalHeading>Create share link for {serverName}</ModalHeading>
           </ModalHeader>
@@ -240,7 +240,7 @@ function CreatedDialog({ open, onOpenChange, link }: CreatedDialogProps) {
     <Modal isOpen={open} onOpenChange={onOpenChange}>
       <ModalBackdrop isDismissable>
         <ModalContainer>
-          <ModalDialog>
+          <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
               <ModalHeading>Share link created</ModalHeading>
             </ModalHeader>
@@ -326,7 +326,7 @@ function RevokeDialog({
         isKeyboardDismissDisabled={revoke.isPending}
       />
       <AlertDialogContainer>
-        <AlertDialogDialog>
+        <AlertDialogDialog className="w-[440px] max-w-[440px]">
           <AlertDialogHeader>
             <div className="flex items-start gap-4">
               <AlertDialogIcon status="danger" className="shrink-0">
