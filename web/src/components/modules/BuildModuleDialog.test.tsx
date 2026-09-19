@@ -135,4 +135,79 @@ describe("BuildModuleDialog", () => {
       expect(onOpenChange).toHaveBeenCalledWith(false);
     });
   });
+
+  it("handles download archive in step 3", async () => {
+    let downloadCalled = false;
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+      http.post("/modules/builder/export", () => {
+        downloadCalled = true;
+        return new HttpResponse(new Blob(["fake tar"]), {
+          status: 200,
+          headers: { "Content-Type": "application/gzip" },
+        });
+      }),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("e.g. cs2-match"), {
+      target: { value: "my-game" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    expect(await screen.findByText("Container Image")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    expect(await screen.findByText("Module Validated Cleanly")).toBeInTheDocument();
+
+    const downloadBtn = screen.getByRole("button", { name: /Download .tar.gz/i });
+    fireEvent.click(downloadBtn);
+
+    await waitFor(() => {
+      expect(downloadCalled).toBe(true);
+    });
+  });
+
+  it("handles revalidation error gracefully in step 3", async () => {
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("e.g. cs2-match"), {
+      target: { value: "my-game" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    expect(await screen.findByText("Container Image")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    expect(await screen.findByText("Module Validated Cleanly")).toBeInTheDocument();
+
+    // Now mock validation failure
+    server.use(
+      http.post("/modules/builder/validate", () => {
+        return HttpResponse.json({ error: "Invalid syntax" }, { status: 400 });
+      }),
+    );
+
+    // Trigger tab change or editor change
+    const textareas = screen.getAllByRole("textbox");
+    if (textareas.length > 0) {
+      fireEvent.change(textareas[0], { target: { value: "invalid: yaml: [" } });
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText(/1 errors/i)).toBeInTheDocument();
+    });
+  });
 });
+
