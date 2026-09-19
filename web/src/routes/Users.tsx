@@ -671,7 +671,7 @@ function NamespaceGrants({ userId, roles }: { userId: number; roles: Role[] }) {
 
   return (
     <div className="space-y-2">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+      <div className="text-[11px] leading-[14px] font-semibold uppercase tracking-wider text-muted">
         Namespace grants
       </div>
       {scoped.length > 0 && (
@@ -727,6 +727,7 @@ function NamespaceGrants({ userId, roles }: { userId: number; roles: Role[] }) {
         <Button
           variant="ghost"
           size="sm"
+          className="text-[13px]"
           isDisabled={!roleName || !namespace || add.isPending}
           onPress={() => add.mutate({ roleName, namespace })}
         >

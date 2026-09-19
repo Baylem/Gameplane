@@ -343,7 +343,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                   <Checkbox.Control>
                     <Checkbox.Indicator />
                   </Checkbox.Control>
-                  <Checkbox.Content className="text-xs text-fg">
+                  <Checkbox.Content className="text-xs font-normal text-fg">
                     Allow plain HTTP (local registries only)
                   </Checkbox.Content>
                 </Checkbox>
@@ -532,7 +532,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                   <Checkbox.Control>
                     <Checkbox.Indicator />
                   </Checkbox.Control>
-                  <Checkbox.Content className="text-xs text-fg">
+                  <Checkbox.Content className="text-xs font-normal text-fg">
                     Allow plain HTTP (local registries only)
                   </Checkbox.Content>
                 </Checkbox>

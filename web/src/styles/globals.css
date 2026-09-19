@@ -301,12 +301,50 @@ input:-webkit-autofill:focus {
 .modal__dialog .select__trigger {
   height: 36px;
   border-radius: 12px;
+  padding: 0 11px;          /* round-7 NLDDv/DMnEi: text starts 12px from the outer edge (11 + 1px border), as in the design */
 }
 
 /* t3IY3u Grant Role Select (Co5v8) is 32px, round-6 ruling. (0,3,0) beats the (0,2,0) dialog field rule above. */
 .modal__dialog [data-grant-role] .select__trigger {
   height: 32px;
   min-height: 32px;
+}
+
+/* round-7 "border everywhere": every dialog and confirm dialog shows the
+   design's 1px $border stroke. outline with a -1px offset draws it inside the
+   box, like the inner-aligned Pencil stroke, so content does not move. It also
+   leaves HeroUI's own box-shadow (elevation) untouched: same technique as the
+   R65Xyx chip rule below. */
+.modal__dialog,
+.alert-dialog__dialog {
+  outline: 1px solid var(--border);
+  outline-offset: -1px;
+}
+
+/* round-7: dialog headings are semibold (600) for every Modal and AlertDialog. */
+.modal__heading,
+.alert-dialog__heading {
+  font-weight: 600;
+}
+
+/* round-7 MaoHP: a focused input inside a dialog shows a 2px accent border
+   inside the field (1px border + 1px inset ring) instead of the outer ring from
+   .input:focus-visible, which .modal__body clips. It still uses the theme
+   accent (OD-16). 0,3,0 beats .input:focus-visible (0,2,0). */
+.modal__dialog .input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* round-7 DMnEi/t3IY3u: every dialog select gets the design's smaller chevron,
+   inset about 15-16px from the trigger's right edge (design: lucide 16px icon,
+   ink about 9-10 CSS px wide). Unlayered, so it beats the h-4 w-4 utilities
+   callers pass to <Select.Indicator>. */
+.modal__dialog .select__indicator {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
 }
 
 .select__trigger {
