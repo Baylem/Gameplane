@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Drawer, Button } from "@heroui/react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Trash2 } from "lucide-react";
 import { Backups } from "@/lib/endpoints";
 import { formatRelative } from "@/lib/utils";
 import type { Backup } from "@/types";
@@ -43,7 +43,7 @@ export function BackupDetailDrawer({ name, onClose, onRestore }: Props) {
     >
       <Drawer.Backdrop>
         <Drawer.Content placement="right" className="me-4">
-          <Drawer.Dialog className="flex flex-col w-[440px] h-[760px]">
+          <Drawer.Dialog className="flex flex-col w-[440px] h-[760px] p-0">
             <Drawer.Header className="shrink-0 border-b border-border p-5 flex flex-row items-center justify-between gap-3">
               <div className="space-y-1">
                 <Drawer.Heading className="text-base font-semibold">Backup details</Drawer.Heading>
@@ -102,6 +102,7 @@ export function BackupDetailDrawer({ name, onClose, onRestore }: Props) {
                 isDisabled={!backup || remove.isPending}
                 onPress={() => remove.mutate()}
               >
+                <Trash2 className="h-3.5 w-3.5" />
                 {remove.isPending ? "Deleting…" : "Delete"}
               </Button>
               <Button

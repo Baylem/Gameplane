@@ -186,6 +186,18 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
 
   const set = (patch: Partial<form>) => setF((prev) => ({ ...prev, ...patch }));
 
+  // canSubmit mirrors the required-field checks in submit() below (kept in
+  // sync manually) so the primary button reflects backend-required fields
+  // without duplicating or changing the validation error messages there.
+  const canSubmit =
+    name.trim().length > 0 &&
+    (f.type === "upload" || f.type === "local" || f.url.trim().length > 0) &&
+    (f.type !== "oci" || splitList(f.modules).length > 0) &&
+    (f.type !== "oci" || f.verifyMode !== "keyed" || f.verifyKeySecret.trim().length > 0) &&
+    (f.type !== "oci" ||
+      f.verifyMode !== "keyless" ||
+      (f.verifyIssuer.trim().length > 0 && f.verifyIdentity.trim().length > 0));
+
   async function submit() {
     if (!name.trim()) {
       setError("name is required");
@@ -223,7 +235,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
     <Modal isOpen={open} onOpenChange={onOpenChange}>
       <ModalBackdrop isDismissable={!busy} isKeyboardDismissDisabled={busy}>
         <ModalContainer>
-          <ModalDialog className="w-[544px] max-w-[544px]">
+          <ModalDialog className="w-[480px] max-w-[480px]">
           <ModalHeader>
             <ModalHeading>
               {editing ? `Edit source ${source.metadata.name}` : "Add module source"}
@@ -237,7 +249,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
 
             {!editing && (
               <div className="space-y-1.5">
-                <Label htmlFor="source-name" className="text-xs">
+                <Label htmlFor="source-name" className="text-xs font-normal text-muted">
                   Name
                 </Label>
                 <Input
@@ -247,7 +259,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                   placeholder="community"
                   className="mt-1"
                 />
-                <Description className="mt-1 text-xs">
+                <Description className="mt-1 text-[11px] text-muted">
                   DNS label identifying this source.
                 </Description>
               </div>
@@ -260,11 +272,11 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                 className="mt-1"
                 aria-label="Type"
               >
-                <Label className="text-xs">Type</Label>
+                <Label className="text-xs font-normal text-muted">Type</Label>
                 <Select.Trigger
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
+                  className="w-full items-center rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
                 >
-                  <Select.Value />
+                  <Select.Value className="text-[var(--field-placeholder)]" />
                   <Select.Indicator className="ml-auto h-4 w-4" />
                 </Select.Trigger>
                 <Select.Popover className="rounded border border-border">
@@ -282,7 +294,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
             {f.type === "oci" && (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="oci-url" className="text-xs">
+                  <Label htmlFor="oci-url" className="text-xs font-normal text-muted">
                     Registry URL
                   </Label>
                   <Input
@@ -295,7 +307,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="oci-modules" className="text-xs">
+                  <Label htmlFor="oci-modules" className="text-xs font-normal text-muted">
                     Modules
                   </Label>
                   <Input
@@ -305,13 +317,13 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     placeholder="minecraft-java, valheim"
                     className="mt-1"
                   />
-                  <Description className="mt-1 text-xs">
+                  <Description className="mt-1 text-[11px] text-muted">
                     Comma-separated module names (registries can&apos;t be enumerated).
                   </Description>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="oci-secret" className="text-xs">
+                  <Label htmlFor="oci-secret" className="text-xs font-normal text-muted">
                     Pull secret
                   </Label>
                   <Input
@@ -321,7 +333,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     placeholder="registry-creds"
                     className="mt-1"
                   />
-                  <Description className="mt-1 text-xs">
+                  <Description className="mt-1 text-[11px] text-muted">
                     dockerconfigjson Secret in the operator namespace (optional).
                   </Description>
                 </div>
@@ -335,7 +347,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                   <Checkbox.Control>
                     <Checkbox.Indicator />
                   </Checkbox.Control>
-                  <Checkbox.Content className="text-xs text-muted">
+                  <Checkbox.Content className="text-xs text-fg">
                     Allow plain HTTP (local registries only)
                   </Checkbox.Content>
                 </Checkbox>
@@ -347,11 +359,11 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     className="mt-1"
                     aria-label="Signature verification"
                   >
-                    <Label className="text-xs">Signature verification</Label>
+                    <Label className="text-xs font-normal text-muted">Signature verification</Label>
                     <Select.Trigger
-                      className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
+                      className="w-full items-center rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
                     >
-                      <Select.Value />
+                      <Select.Value className="text-[var(--field-placeholder)]" />
                       <Select.Indicator className="ml-auto h-4 w-4" />
                     </Select.Trigger>
                     <Select.Popover className="rounded border border-border">
@@ -364,14 +376,14 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                       </ListBox>
                     </Select.Popover>
                   </Select>
-                  <Description className="mt-1 text-xs">
+                  <Description className="mt-1 text-[11px] text-muted">
                     Require a valid cosign signature on every bundle pulled from this source.
                   </Description>
                 </div>
 
                 {f.verifyMode === "keyed" && (
                   <div className="space-y-1.5">
-                    <Label htmlFor="verify-key-secret" className="text-xs">
+                    <Label htmlFor="verify-key-secret" className="text-xs font-normal text-muted">
                       Public key secret
                     </Label>
                     <Input
@@ -381,7 +393,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                       placeholder="cosign-pub"
                       className="mt-1"
                     />
-                    <Description className="mt-1 text-xs">
+                    <Description className="mt-1 text-[11px] text-muted">
                       Secret holding the cosign public key under the cosign.pub data key.
                     </Description>
                   </div>
@@ -390,7 +402,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                 {f.verifyMode === "keyless" && (
                   <>
                     <div className="space-y-1.5">
-                      <Label htmlFor="verify-issuer" className="text-xs">
+                      <Label htmlFor="verify-issuer" className="text-xs font-normal text-muted">
                         OIDC issuer
                       </Label>
                       <Input
@@ -400,13 +412,13 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                         placeholder="https://token.actions.githubusercontent.com"
                         className="mt-1"
                       />
-                      <Description className="mt-1 text-xs">
+                      <Description className="mt-1 text-[11px] text-muted">
                         Issuer embedded in the signing certificate.
                       </Description>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="verify-identity" className="text-xs">
+                      <Label htmlFor="verify-identity" className="text-xs font-normal text-muted">
                         Certificate identity
                       </Label>
                       <Input
@@ -416,7 +428,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                         placeholder="github.com/org/repo/.github/workflows/release.yml@refs/heads/main"
                         className="mt-1"
                       />
-                      <Description className="mt-1 text-xs">
+                      <Description className="mt-1 text-[11px] text-muted">
                         SAN identity that must have produced the signature.
                       </Description>
                     </div>
@@ -428,7 +440,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
             {f.type === "git" && (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="git-url" className="text-xs">
+                  <Label htmlFor="git-url" className="text-xs font-normal text-muted">
                     Clone URL
                   </Label>
                   <Input
@@ -441,7 +453,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="git-ref" className="text-xs">
+                  <Label htmlFor="git-ref" className="text-xs font-normal text-muted">
                     Ref
                   </Label>
                   <Input
@@ -451,13 +463,13 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     placeholder="main"
                     className="mt-1"
                   />
-                  <Description className="mt-1 text-xs">
+                  <Description className="mt-1 text-[11px] text-muted">
                     Branch or tag. Defaults to main.
                   </Description>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="git-subpath" className="text-xs">
+                  <Label htmlFor="git-subpath" className="text-xs font-normal text-muted">
                     Subdirectory
                   </Label>
                   <Input
@@ -467,13 +479,13 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     placeholder="modules"
                     className="mt-1"
                   />
-                  <Description className="mt-1 text-xs">
+                  <Description className="mt-1 text-[11px] text-muted">
                     Scan only this path inside the repo (optional).
                   </Description>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="git-secret" className="text-xs">
+                  <Label htmlFor="git-secret" className="text-xs font-normal text-muted">
                     Credentials secret
                   </Label>
                   <Input
@@ -483,7 +495,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     placeholder="gh-creds"
                     className="mt-1"
                   />
-                  <Description className="mt-1 text-xs">
+                  <Description className="mt-1 text-[11px] text-muted">
                     Secret with token / username+password (https) or ssh-privatekey + known_hosts (ssh). Optional.
                   </Description>
                 </div>
@@ -493,7 +505,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
             {f.type === "http" && (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="http-url" className="text-xs">
+                  <Label htmlFor="http-url" className="text-xs font-normal text-muted">
                     Archive URL
                   </Label>
                   <Input
@@ -503,13 +515,13 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     placeholder="https://example.com/modules.tar.gz"
                     className="mt-1"
                   />
-                  <Description className="mt-1 text-xs">
+                  <Description className="mt-1 text-[11px] text-muted">
                     A .tar.gz or .zip of module directories.
                   </Description>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="http-secret" className="text-xs">
+                  <Label htmlFor="http-secret" className="text-xs font-normal text-muted">
                     Credentials secret
                   </Label>
                   <Input
@@ -519,7 +531,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     placeholder="archive-creds"
                     className="mt-1"
                   />
-                  <Description className="mt-1 text-xs">
+                  <Description className="mt-1 text-[11px] text-muted">
                     Secret with token (Bearer) or username+password. Optional.
                   </Description>
                 </div>
@@ -533,7 +545,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                   <Checkbox.Control>
                     <Checkbox.Indicator />
                   </Checkbox.Control>
-                  <Checkbox.Content className="text-xs text-muted">
+                  <Checkbox.Content className="text-xs text-fg">
                     Allow plain HTTP (local registries only)
                   </Checkbox.Content>
                 </Checkbox>
@@ -542,7 +554,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
 
             {f.type === "local" && (
               <div className="space-y-1.5">
-                <Label htmlFor="local-path" className="text-xs">
+                <Label htmlFor="local-path" className="text-xs font-normal text-muted">
                   Path
                 </Label>
                 <Input
@@ -552,7 +564,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                   placeholder="bundles"
                   className="mt-1"
                 />
-                <Description className="mt-1 text-xs">
+                <Description className="mt-1 text-[11px] text-muted">
                   Relative to the operator&apos;s module mount (Helm: operator.localModules). Empty scans the mount root.
                 </Description>
               </div>
@@ -566,7 +578,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="allow-list" className="text-xs">
+              <Label htmlFor="allow-list" className="text-xs font-normal text-muted">
                 Allow list
               </Label>
               <Input
@@ -576,13 +588,13 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                 placeholder="minecraft-*"
                 className="mt-1"
               />
-              <Description className="mt-1 text-xs">
+              <Description className="mt-1 text-[11px] text-muted">
                 Optional module name filter — exact names or globs, comma-separated.
               </Description>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="refresh-interval" className="text-xs">
+              <Label htmlFor="refresh-interval" className="text-xs font-normal text-muted">
                 Refresh interval
               </Label>
               <Input
@@ -592,7 +604,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                 placeholder="1h"
                 className="mt-1"
               />
-              <Description className="mt-1 text-xs">
+              <Description className="mt-1 text-[11px] text-muted">
                 How often the catalog re-indexes. Defaults to 1h.
               </Description>
             </div>
@@ -616,7 +628,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
             <Button
               variant="primary"
               size="sm"
-              isDisabled={busy}
+              isDisabled={busy || !canSubmit}
               onPress={submit}
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

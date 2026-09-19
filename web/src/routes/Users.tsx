@@ -28,6 +28,9 @@ import {
   AlertDialogBackdrop,
   AlertDialogContainer,
   Alert,
+  Select,
+  ListBox,
+  ListBoxItem,
 } from "@heroui/react";
 import {
   KeyRound,
@@ -642,7 +645,9 @@ function DeleteRoleDialog({
 
 function NamespaceGrants({ userId, roles }: { userId: number; roles: Role[] }) {
   const qc = useQueryClient();
-  const [roleName, setRoleName] = useState(roles[0]?.name ?? "");
+  const [roleName, setRoleName] = useState(
+    roles.find((r) => r.name === "operator")?.name ?? roles[0]?.name ?? "",
+  );
   const [namespace, setNamespace] = useState("");
 
   const { data: bindings = [] } = useQuery({
@@ -665,45 +670,56 @@ function NamespaceGrants({ userId, roles }: { userId: number; roles: Role[] }) {
   });
 
   return (
-    <div className="space-y-2 pt-3">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-foreground/60">
+    <div className="space-y-2">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
         Namespace grants
       </div>
-      {scoped.length === 0 && (
-        <div className="text-xs text-foreground/60">No per-namespace grants.</div>
+      {scoped.length > 0 && (
+        <ul className="space-y-1">
+          {scoped.map((b) => (
+            <li key={`${b.roleName}/${b.namespace}`} className="flex items-center gap-2 text-xs">
+              <span className="font-mono">{b.roleName}</span>
+              <span className="text-foreground/60">in</span>
+              <span className="font-mono">{b.namespace}</span>
+              <button
+                className="ml-auto rounded p-1 text-foreground/60 hover:text-danger"
+                aria-label={`Remove ${b.roleName} in ${b.namespace}`}
+                onClick={() => remove.mutate(b)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
-      <ul className="space-y-1">
-        {scoped.map((b) => (
-          <li key={`${b.roleName}/${b.namespace}`} className="flex items-center gap-2 text-xs">
-            <span className="font-mono">{b.roleName}</span>
-            <span className="text-foreground/60">in</span>
-            <span className="font-mono">{b.namespace}</span>
-            <button
-              className="ml-auto rounded p-1 text-foreground/60 hover:text-danger"
-              aria-label={`Remove ${b.roleName} in ${b.namespace}`}
-              onClick={() => remove.mutate(b)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="flex items-end gap-2">
-        <div className="w-32">
-          <select
+      <div className="flex items-center gap-2">
+        <div className="w-[120px] shrink-0">
+          <Select
+            aria-label="Grant role"
             value={roleName}
-            onChange={(e) => setRoleName(e.target.value)}
-            className="w-full rounded border border-border bg-surface px-3 py-2 text-sm text-foreground"
+            onChange={(v) => setRoleName(String(v))}
           >
-            {roles.map((r) => (
-              <option key={r.name} value={r.name}>
-                {r.name}
-              </option>
-            ))}
-          </select>
+            <Select.Trigger
+              className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
+              style={{ height: 32 }}
+            >
+              <Select.Value />
+              <Select.Indicator className="ml-auto h-4 w-4" />
+            </Select.Trigger>
+            <Select.Popover className="rounded border border-border">
+              <ListBox className="p-0" aria-label="Grant role">
+                {roles.map((r) => (
+                  <ListBoxItem key={r.name} id={r.name}>
+                    {r.name}
+                  </ListBoxItem>
+                ))}
+              </ListBox>
+            </Select.Popover>
+          </Select>
         </div>
         <Input
           className="flex-1"
+          style={{ height: 32 }}
           value={namespace}
           onChange={(e) => setNamespace(e.target.value)}
           placeholder="namespace"
@@ -711,6 +727,7 @@ function NamespaceGrants({ userId, roles }: { userId: number; roles: Role[] }) {
         />
         <Button
           variant="ghost"
+          size="sm"
           isDisabled={!roleName || !namespace || add.isPending}
           onPress={() => add.mutate({ roleName, namespace })}
         >

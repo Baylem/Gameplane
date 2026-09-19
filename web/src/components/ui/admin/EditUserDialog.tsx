@@ -177,7 +177,7 @@ export function EditUserDialog({
 
             {extraContent && (
               <>
-                <Separator className="my-2" />
+                <Separator className="my-0" />
                 {extraContent}
               </>
             )}

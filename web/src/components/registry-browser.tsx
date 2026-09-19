@@ -166,7 +166,7 @@ export function RegistryBrowser({
           onSelectionChange={(key) => setSort(key as RegistrySort)}
           isDisabled={!!debounced}
           aria-label={debounced ? "Sort (disabled, sorted by relevance while searching)" : "Sort"}
-          className="max-w-xs"
+          className="w-[220px]"
         >
           <SelectTrigger>
             <SelectValue />
