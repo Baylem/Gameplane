@@ -165,3 +165,39 @@ func TestGenerateFiles_IconBase64(t *testing.T) {
 		t.Errorf("expected non-empty IconBytes")
 	}
 }
+
+func TestGenerateFiles_ArchetypeSummariesAndReadme(t *testing.T) {
+	// steamcmd
+	files, err := GenerateFiles(Options{
+		Name:      "test-steam",
+		Archetype: "steamcmd",
+	})
+	if err != nil {
+		t.Fatalf("GenerateFiles(steamcmd) failed: %v", err)
+	}
+	if !strings.Contains(files.ModuleYAML, "powered by SteamCMD") {
+		t.Errorf("expected steamcmd summary in module.yaml, got:\n%s", files.ModuleYAML)
+	}
+	if !strings.Contains(files.ReadmeMD, "STEAMAPPID") {
+		t.Errorf("expected STEAMAPPID in README.md, got:\n%s", files.ReadmeMD)
+	}
+	if !strings.Contains(files.ReadmeMD, "SERVER_PASSWORD") {
+		t.Errorf("expected SERVER_PASSWORD in README.md, got:\n%s", files.ReadmeMD)
+	}
+
+	// java
+	files, err = GenerateFiles(Options{
+		Name:      "test-java",
+		Archetype: "java",
+	})
+	if err != nil {
+		t.Fatalf("GenerateFiles(java) failed: %v", err)
+	}
+	if !strings.Contains(files.ModuleYAML, "powered by Java/JVM") {
+		t.Errorf("expected java summary in module.yaml, got:\n%s", files.ModuleYAML)
+	}
+	if !strings.Contains(files.ReadmeMD, "MAX_MEMORY") {
+		t.Errorf("expected MAX_MEMORY in README.md, got:\n%s", files.ReadmeMD)
+	}
+}
+

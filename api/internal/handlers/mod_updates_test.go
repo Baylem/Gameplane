@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -33,6 +34,7 @@ func (f *fakeModLister) GetJSON(_ context.Context, _, _, path string, out any) e
 
 // fakeVersionsProvider returns canned versions per project and counts calls.
 type fakeVersionsProvider struct {
+	mu        sync.Mutex
 	byProject map[string][]registry.Version
 	errFor    map[string]bool
 	calls     atomic.Int64
@@ -45,11 +47,19 @@ func (f *fakeVersionsProvider) Search(context.Context, registry.SearchQuery) ([]
 
 func (f *fakeVersionsProvider) Versions(_ context.Context, project string, fl registry.Filter) ([]registry.Version, error) {
 	f.calls.Add(1)
+	f.mu.Lock()
 	f.gotFilter = fl
+	f.mu.Unlock()
 	if f.errFor[project] {
 		return nil, errors.New("upstream 503")
 	}
 	return f.byProject[project], nil
+}
+
+func (f *fakeVersionsProvider) getGotFilter() registry.Filter {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.gotFilter
 }
 
 func (f *fakeVersionsProvider) ModpackDeps(context.Context, string) ([]registry.File, error) {
@@ -122,8 +132,8 @@ func TestModUpdates_ReportsOutdatedOnly(t *testing.T) {
 		t.Error("checkedAt missing")
 	}
 	// The manifest's loader (paper) drives the filter.
-	if fp.gotFilter.Loader != "paper" {
-		t.Errorf("filter = %+v", fp.gotFilter)
+	if fp.getGotFilter().Loader != "paper" {
+		t.Errorf("filter = %+v", fp.getGotFilter())
 	}
 }
 
@@ -234,8 +244,8 @@ func TestModUpdates_FallsBackToActiveVersionFilter(t *testing.T) {
 
 	do(t, r, "GET", "/servers/alpha/mods/updates", nil)
 	// Meta lacks loader/gameVersion → the server's active version fills in.
-	if fp.gotFilter.Loader != "paper" || fp.gotFilter.GameVersion != "1.21.4" {
-		t.Errorf("filter = %+v, want paper/1.21.4", fp.gotFilter)
+	if fp.getGotFilter().Loader != "paper" || fp.getGotFilter().GameVersion != "1.21.4" {
+		t.Errorf("filter = %+v, want paper/1.21.4", fp.getGotFilter())
 	}
 }
 
