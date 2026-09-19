@@ -43642,7 +43642,7 @@
               "ref": "f7KBn",
               "name": "Restore warning",
               "width": "fill_container",
-              "fill": "$danger/soft",
+              "fill": "$surface/secondary",
               "descendants": {
                 "IAKLq": {
                   "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
@@ -43651,7 +43651,8 @@
                 "CotwO": {
                   "enabled": true,
                   "content": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
-                  "fill": "$danger/soft-foreground"
+                  "fill": "$danger/danger",
+                  "fontSize": 12
                 },
                 "sYqNu": {
                   "enabled": false
