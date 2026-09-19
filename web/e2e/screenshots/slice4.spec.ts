@@ -498,6 +498,10 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     const dialog = page.getByRole("dialog", { name: /reset password for/i });
     await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.getByText(/reset password for/i)).toBeVisible();
+    // Design input YgQBa shows the 2px $accent focus stroke, so focus the
+    // field to match. captureLocator()'s blur guard (capture.ts) leaves focus
+    // inside [role="dialog"] alone, so the field stays focused for the shot.
+    await dialog.getByLabel("New password").focus();
     await page.waitForTimeout(200);
     // Design PNG (1088x542) is a crop of just the modal, not the full page.
     await captureLocator(page, "MaoHP", dialog);
