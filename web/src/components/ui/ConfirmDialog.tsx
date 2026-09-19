@@ -54,7 +54,7 @@ export function ConfirmDialog({
     <AlertDialog isOpen={open} onOpenChange={onOpenChange}>
       <AlertDialogBackdrop isDismissable={!busy} isKeyboardDismissDisabled={!!busy}>
         <AlertDialogContainer>
-          <AlertDialogDialog>
+          <AlertDialogDialog className="w-[440px] max-w-[440px] rounded-[12px] p-5">
             <AlertDialogHeader>
               <div className="flex items-center gap-4">
                 <AlertDialogIcon

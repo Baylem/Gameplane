@@ -80,7 +80,7 @@ export function RoleEditorModal({
               </Description>
             </ModalHeader>
 
-            <ModalBody className="gap-4">
+            <ModalBody className="gap-3">
 
             {creating && (
               <div className="space-y-2">
@@ -111,8 +111,8 @@ export function RoleEditorModal({
 
             <div className="border border-border rounded-md p-3 h-72 overflow-y-auto space-y-3">
               {groups.map((group) => (
-                <div key={group.resource} className="space-y-2">
-                  <div className="text-xs font-semibold text-muted uppercase tracking-wider">
+                <div key={group.resource} className="space-y-1">
+                  <div className="text-[11px] font-semibold text-muted uppercase tracking-[0.55px]">
                     {group.label}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -128,9 +128,9 @@ export function RoleEditorModal({
                           <Checkbox.Indicator />
                         </Checkbox.Control>
                         <Checkbox.Content>
-                          <span className="font-mono text-sm">{perm.key}</span>
+                          <span className="font-mono text-xs">{perm.key}</span>
                           {perm.namespaced && (
-                            <span className="text-xs text-muted bg-muted/25 px-1 py-0.5 rounded">
+                            <span className="text-[9px] text-muted bg-[#94949426] px-1 rounded">
                               ns
                             </span>
                           )}

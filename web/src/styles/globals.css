@@ -256,11 +256,16 @@ input:-webkit-autofill:focus {
    <ModalBody> were inert and every field group collapsed onto the one above
    it. Unlayered, like the radius block above, so it beats HeroUI's
    @layer components rules. */
+.modal__dialog {
+  padding: 20px;            /* x3beP padding 20 — HeroUI's default measures ~24px */
+  gap: 0;                   /* spacing comes only from the x3beP section paddings */
+}
+
 .modal__header {
   display: flex;
   flex-direction: column;
   gap: 4px;                 /* x3beP mDescWrap padding [4,0,0,0] */
-  padding: 20px 0 0;        /* top only — the dialog supplies the 20px side inset */
+  padding: 0;               /* x3beP: title sits directly under the dialog's 20px padding */
 }
 
 .modal__body {
@@ -268,6 +273,7 @@ input:-webkit-autofill:focus {
   flex-direction: column;
   gap: 16px;                /* x3beP mBody gap */
   padding: 16px 0 0;        /* x3beP mBody padding [16,0,0,0] */
+  margin: 0;
 }
 
 /* Per-dialog gap overrides some callers already pass to <ModalBody> — kept
@@ -280,6 +286,7 @@ input:-webkit-autofill:focus {
   justify-content: flex-end; /* x3beP mFooter justifyContent end */
   align-items: center;
   padding: 20px 0 0;         /* x3beP mFooter padding [20,0,0,0] */
+  margin: 0;
   gap: 8px;                  /* x3beP mFooter gap */
 }
 
