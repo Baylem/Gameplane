@@ -43,7 +43,7 @@ func TestCreateShareLink_Success(t *testing.T) {
 
 	// Create a link.
 	expiresAt := time.Now().Add(24 * time.Hour)
-	rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "minecraft-server", userID, true, expiresAt)
+	rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "minecraft-server", userID, true, &expiresAt)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestCreateShareLink_ExpiryInPast_Rejected(t *testing.T) {
 
 	// Try to create with an expiry in the past.
 	expiresAt := time.Now().Add(-1 * time.Hour)
-	_, _, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, expiresAt)
+	_, _, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, &expiresAt)
 	if err == nil {
 		t.Fatal("expected error for expiry in past, got nil")
 	}
@@ -101,8 +101,11 @@ func TestCreateShareLink_ExpiryZero_Rejected(t *testing.T) {
 	ctx := context.Background()
 	userID := insertTestUser(t, s, "bob2")
 
-	// Try to create with a zero expiry.
-	_, _, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, time.Time{})
+	// Try to create with a zero expiry (a non-nil pointer to the zero
+	// time.Time is an explicit, invalid instant — distinct from nil, which
+	// means "never expires").
+	zero := time.Time{}
+	_, _, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, &zero)
 	if err == nil {
 		t.Fatal("expected error for zero expiry, got nil")
 	}
@@ -111,38 +114,81 @@ func TestCreateShareLink_ExpiryZero_Rejected(t *testing.T) {
 	}
 }
 
-func TestCreateShareLink_ExpiryExceedsMaximum_Rejected(t *testing.T) {
+// TestCreateShareLink_FarBeyondOldCap_Accepted replaces the old
+// ExpiryExceedsMaximum_Rejected/ExpiryAtMaximumBoundary_Accepted pair now
+// that MaxShareLinkExpiryDays (90) is removed (OD-1/OD-5; sign-off recorded
+// in spec.md's Assumptions). A custom expiry far beyond the old 90-day cap
+// (200 days, per SC-002) must now succeed with no clamp applied.
+func TestCreateShareLink_FarBeyondOldCap_Accepted(t *testing.T) {
 	s := newShareLinksStore(t)
 	ctx := context.Background()
 	userID := insertTestUser(t, s, "bob3")
 
-	// Try to create with an expiry beyond the maximum.
-	expiresAt := time.Now().AddDate(0, 0, MaxShareLinkExpiryDays+1)
-	_, _, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, expiresAt)
-	if err == nil {
-		t.Fatal("expected error for expiry exceeding maximum, got nil")
-	}
-	if !errors.Is(err, ErrShareLinkExpiryInvalid) {
-		t.Errorf("got %v, want ErrShareLinkExpiryInvalid", err)
-	}
-}
-
-func TestCreateShareLink_ExpiryAtMaximumBoundary_Accepted(t *testing.T) {
-	s := newShareLinksStore(t)
-	ctx := context.Background()
-	userID := insertTestUser(t, s, "bob4")
-
-	// Create with an expiry exactly at the maximum.
-	expiresAt := time.Now().AddDate(0, 0, MaxShareLinkExpiryDays)
-	rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, expiresAt)
+	expiresAt := time.Now().AddDate(0, 0, 200)
+	rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, &expiresAt)
 	if err != nil {
-		t.Fatalf("create at maximum boundary: %v", err)
+		t.Fatalf("create with 200-day expiry: %v", err)
 	}
 	if rawToken == "" {
 		t.Error("expected non-empty raw token")
 	}
-	if link.ID == "" {
-		t.Error("expected non-empty link ID")
+	if link.ExpiresAt == nil {
+		t.Fatal("expected non-nil ExpiresAt")
+	}
+	if !link.ExpiresAt.Equal(expiresAt) {
+		t.Errorf("ExpiresAt=%v, want %v", link.ExpiresAt, expiresAt)
+	}
+
+	// Re-read the link independently of the pointer passed in, to prove the
+	// 200-day expiry actually round-tripped through the database rather than
+	// just echoing back the caller's own *time.Time.
+	looked, err := s.LookupShareLink(ctx, rawToken)
+	if err != nil {
+		t.Fatalf("lookup: %v", err)
+	}
+	if looked.ExpiresAt == nil {
+		t.Fatal("looked up link: expected non-nil ExpiresAt")
+	}
+	wantPersisted := expiresAt.Truncate(time.Second)
+	if !looked.ExpiresAt.Equal(wantPersisted) {
+		t.Errorf("looked up link: ExpiresAt=%v, want %v", looked.ExpiresAt, wantPersisted)
+	}
+}
+
+// TestCreateShareLink_NilExpiry_NeverExpires covers a nil expiresAt
+// (OD-1/OD-3): it is accepted, persists as NULL, and the link is still
+// revocable (User Story 3).
+func TestCreateShareLink_NilExpiry_NeverExpires(t *testing.T) {
+	s := newShareLinksStore(t)
+	ctx := context.Background()
+	userID := insertTestUser(t, s, "bob4")
+
+	rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, nil)
+	if err != nil {
+		t.Fatalf("create with nil expiry: %v", err)
+	}
+	if rawToken == "" {
+		t.Error("expected non-empty raw token")
+	}
+	if link.ExpiresAt != nil {
+		t.Errorf("ExpiresAt=%v, want nil", link.ExpiresAt)
+	}
+
+	// Verify it round-trips as NULL in the database.
+	var expiresAtStr sql.NullString
+	if err := s.DB.QueryRowContext(ctx, `SELECT expires_at FROM share_links WHERE id = ?`, link.ID).Scan(&expiresAtStr); err != nil {
+		t.Fatalf("query expires_at: %v", err)
+	}
+	if expiresAtStr.Valid {
+		t.Errorf("expires_at=%q, want NULL", expiresAtStr.String)
+	}
+
+	// A never-expiring link must still be revocable.
+	if err := s.RevokeShareLink(ctx, "local", link.ID); err != nil {
+		t.Fatalf("revoke never-expiring link: %v", err)
+	}
+	if _, err := s.LookupShareLink(ctx, rawToken); !errors.Is(err, ErrShareLinkInvalid) {
+		t.Errorf("lookup after revoke: got %v, want ErrShareLinkInvalid", err)
 	}
 }
 
@@ -153,7 +199,7 @@ func TestCreateAndLookup_RoundTrip(t *testing.T) {
 
 	// Create a link.
 	expiresAt := time.Now().Add(24 * time.Hour)
-	rawToken, created, err := s.CreateShareLink(ctx, "local", "default", "server", userID, true, expiresAt)
+	rawToken, created, err := s.CreateShareLink(ctx, "local", "default", "server", userID, true, &expiresAt)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -189,7 +235,7 @@ func TestLookupShareLink_RawTokenNotStored(t *testing.T) {
 
 	// Create a link.
 	expiresAt := time.Now().Add(24 * time.Hour)
-	rawToken, _, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, expiresAt)
+	rawToken, _, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, &expiresAt)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -268,7 +314,7 @@ func TestLookupShareLink_Revoked_Invalid(t *testing.T) {
 
 	// Create a valid link.
 	expiresAt := time.Now().Add(24 * time.Hour)
-	rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, expiresAt)
+	rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, &expiresAt)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -343,25 +389,25 @@ func TestListShareLinks_Scoped(t *testing.T) {
 	exp := time.Now().Add(24 * time.Hour)
 
 	// Server A in default namespace.
-	_, _, err := s.CreateShareLink(ctx, "local", "default", "server-a", userID, true, exp)
+	_, _, err := s.CreateShareLink(ctx, "local", "default", "server-a", userID, true, &exp)
 	if err != nil {
 		t.Fatalf("create 1: %v", err)
 	}
 
 	// Server A in default namespace (another link).
-	_, _, err = s.CreateShareLink(ctx, "local", "default", "server-a", userID, false, exp)
+	_, _, err = s.CreateShareLink(ctx, "local", "default", "server-a", userID, false, &exp)
 	if err != nil {
 		t.Fatalf("create 2: %v", err)
 	}
 
 	// Server B in default namespace.
-	_, _, err = s.CreateShareLink(ctx, "local", "default", "server-b", userID, true, exp)
+	_, _, err = s.CreateShareLink(ctx, "local", "default", "server-b", userID, true, &exp)
 	if err != nil {
 		t.Fatalf("create 3: %v", err)
 	}
 
 	// Server A in other namespace.
-	_, _, err = s.CreateShareLink(ctx, "local", "other", "server-a", userID, false, exp)
+	_, _, err = s.CreateShareLink(ctx, "local", "other", "server-a", userID, false, &exp)
 	if err != nil {
 		t.Fatalf("create 4: %v", err)
 	}
@@ -408,7 +454,7 @@ func TestTouchShareLink_Updates_LastUsed(t *testing.T) {
 
 	// Create a link.
 	expiresAt := time.Now().Add(24 * time.Hour)
-	_, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, expiresAt)
+	_, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, &expiresAt)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -457,7 +503,7 @@ func TestLookupShareLink_DoesNotUpdateLastUsed(t *testing.T) {
 
 	// Create a link.
 	expiresAt := time.Now().Add(24 * time.Hour)
-	rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, expiresAt)
+	rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, &expiresAt)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -496,7 +542,7 @@ func TestRevokeShareLink_Success(t *testing.T) {
 
 	// Create a link.
 	expiresAt := time.Now().Add(24 * time.Hour)
-	_, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, expiresAt)
+	_, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, &expiresAt)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -546,13 +592,13 @@ func TestShareLinks_ClusterScoping(t *testing.T) {
 
 	exp := time.Now().Add(24 * time.Hour)
 	// Create link in cluster-a
-	_, linkA, err := s.CreateShareLink(ctx, "cluster-a", "default", "srv-test", userID, true, exp)
+	_, linkA, err := s.CreateShareLink(ctx, "cluster-a", "default", "srv-test", userID, true, &exp)
 	if err != nil {
 		t.Fatalf("create link A: %v", err)
 	}
 
 	// Create link in cluster-b with same namespace and server name
-	_, linkB, err := s.CreateShareLink(ctx, "cluster-b", "default", "srv-test", userID, false, exp)
+	_, linkB, err := s.CreateShareLink(ctx, "cluster-b", "default", "srv-test", userID, false, &exp)
 	if err != nil {
 		t.Fatalf("create link B: %v", err)
 	}
@@ -583,5 +629,209 @@ func TestShareLinks_ClusterScoping(t *testing.T) {
 	// Revoke linkB with cluster-b must succeed
 	if err := s.RevokeShareLink(ctx, "cluster-b", linkB.ID); err != nil {
 		t.Fatalf("revoke linkB with cluster-b failed: %v", err)
+	}
+}
+
+// TestLookupShareLink_NilExpiry_UnexpiredAtYearPlusRange covers SC-001: a
+// link with a nil (never-expires) ExpiresAt remains valid arbitrarily far in
+// the future, since the expiry check is skipped entirely for a nil value.
+func TestLookupShareLink_NilExpiry_UnexpiredAtYearPlusRange(t *testing.T) {
+	s := newShareLinksStore(t)
+	ctx := context.Background()
+	userID := insertTestUser(t, s, "liam")
+
+	rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "server", userID, false, nil)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if link.ExpiresAt != nil {
+		t.Fatalf("ExpiresAt=%v, want nil", link.ExpiresAt)
+	}
+
+	looked, err := s.LookupShareLink(ctx, rawToken)
+	if err != nil {
+		t.Fatalf("lookup should succeed for a never-expiring link: %v", err)
+	}
+	if looked.ExpiresAt != nil {
+		t.Errorf("looked.ExpiresAt=%v, want nil", looked.ExpiresAt)
+	}
+}
+
+// TestListShareLinks_MixedExpiryShapes covers FR-007: a dated expiry and a
+// nil (never-expires) expiry both round-trip correctly through ListShareLinks.
+func TestListShareLinks_MixedExpiryShapes(t *testing.T) {
+	s := newShareLinksStore(t)
+	ctx := context.Background()
+	userID := insertTestUser(t, s, "mia")
+
+	dated := time.Now().Add(48 * time.Hour)
+	_, datedLink, err := s.CreateShareLink(ctx, "local", "default", "mixed-server", userID, false, &dated)
+	if err != nil {
+		t.Fatalf("create dated link: %v", err)
+	}
+	_, neverLink, err := s.CreateShareLink(ctx, "local", "default", "mixed-server", userID, false, nil)
+	if err != nil {
+		t.Fatalf("create never-expiring link: %v", err)
+	}
+
+	links, err := s.ListShareLinks(ctx, "local", "default", "mixed-server")
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(links) != 2 {
+		t.Fatalf("got %d links, want 2", len(links))
+	}
+
+	var sawDated, sawNever bool
+	for _, l := range links {
+		switch l.ID {
+		case datedLink.ID:
+			sawDated = true
+			if l.ExpiresAt == nil {
+				t.Error("dated link: ExpiresAt=nil, want non-nil")
+			} else if !l.ExpiresAt.Equal(dated.Truncate(time.Second)) {
+				t.Errorf("dated link: ExpiresAt=%v, want %v", l.ExpiresAt, dated.Truncate(time.Second))
+			}
+		case neverLink.ID:
+			sawNever = true
+			if l.ExpiresAt != nil {
+				t.Errorf("never-expiring link: ExpiresAt=%v, want nil", l.ExpiresAt)
+			}
+		}
+	}
+	if !sawDated {
+		t.Error("dated link not found in list")
+	}
+	if !sawNever {
+		t.Error("never-expiring link not found in list")
+	}
+}
+
+// TestRevocation_IndependentOfExpiryShape covers User Story 3: revocation
+// works identically regardless of how a link's expiry was shaped — a short
+// expiry, a long/custom (far future) expiry, and a nil (never-expires)
+// expiry all become ErrShareLinkInvalid after RevokeShareLink.
+func TestRevocation_IndependentOfExpiryShape(t *testing.T) {
+	s := newShareLinksStore(t)
+	ctx := context.Background()
+	userID := insertTestUser(t, s, "noah")
+
+	short := time.Now().Add(1 * time.Hour)
+	long := time.Now().AddDate(1, 0, 0) // just over a year out
+	custom := time.Now().AddDate(0, 0, 45)
+
+	shapes := []struct {
+		name      string
+		expiresAt *time.Time
+	}{
+		{"short", &short},
+		{"long", &long},
+		{"custom", &custom},
+		{"never", nil},
+	}
+
+	for _, shape := range shapes {
+		rawToken, link, err := s.CreateShareLink(ctx, "local", "default", "revoke-shape-server", userID, false, shape.expiresAt)
+		if err != nil {
+			t.Fatalf("%s: create: %v", shape.name, err)
+		}
+		if err := s.RevokeShareLink(ctx, "local", link.ID); err != nil {
+			t.Fatalf("%s: revoke: %v", shape.name, err)
+		}
+		if _, err := s.LookupShareLink(ctx, rawToken); !errors.Is(err, ErrShareLinkInvalid) {
+			t.Errorf("%s: lookup after revoke: got %v, want ErrShareLinkInvalid", shape.name, err)
+		}
+	}
+}
+
+// TestMigration010_ExpiresAtNullable proves the 010 rebuild (OD-4) preserves
+// existing data untouched and accepts NULL going forward (User Story 2's
+// Independent Test, SC-003). It applies migrations up through 009 by hand,
+// seeds a row under the pre-010 schema (expires_at NOT NULL) with a non-null
+// value, then applies 010 and confirms that value is byte-for-byte
+// unchanged, and that a row inserted after 010 with a NULL expires_at
+// round-trips as NULL.
+func TestMigration010_ExpiresAtNullable(t *testing.T) {
+	s, err := Open(context.Background(), "sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	ctx := context.Background()
+
+	if _, err := s.DB.ExecContext(ctx,
+		`CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)`,
+	); err != nil {
+		t.Fatalf("create schema_migrations: %v", err)
+	}
+
+	// Apply every migration up through 009 by hand, stopping before 010.
+	names := []string{
+		"001_init.sql", "002_config.sql", "003_roles.sql", "004_cluster_rbac.sql",
+		"005_audit_chain.sql", "006_share_links.sql", "007_audit_reason.sql",
+		"008_captures_rbac.sql", "009_share_links_cluster.sql",
+	}
+	for _, name := range names {
+		content, err := migrations.ReadFile("migrations/" + name)
+		if err != nil {
+			t.Fatalf("read %s: %v", name, err)
+		}
+		if err := s.runMigration(ctx, name, string(content)); err != nil {
+			t.Fatalf("apply %s: %v", name, err)
+		}
+	}
+
+	// Seed a user and a pre-010 row (expires_at NOT NULL at this point)
+	// with a known, non-null expires_at value.
+	userID := insertTestUser(t, s, "pre010-user")
+	const wantExpiresAt = "2027-06-15T12:00:00Z"
+	if _, err := s.DB.ExecContext(ctx,
+		`INSERT INTO share_links(id, cluster, namespace, server_name, created_by, can_start, token_hash, expires_at, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"pre010-id", "local", "default", "server", userID, 0, "deadbeef", wantExpiresAt, "2026-01-01T00:00:00Z"); err != nil {
+		t.Fatalf("seed pre-010 row: %v", err)
+	}
+
+	// Now apply 010.
+	content, err := migrations.ReadFile("migrations/010_share_links_expiry_nullable.sql")
+	if err != nil {
+		t.Fatalf("read 010: %v", err)
+	}
+	if err := s.runMigration(ctx, "010_share_links_expiry_nullable.sql", string(content)); err != nil {
+		t.Fatalf("apply 010: %v", err)
+	}
+
+	// The pre-existing row's expires_at must be byte-for-byte unchanged.
+	var gotExpiresAt string
+	if err := s.DB.QueryRowContext(ctx, `SELECT expires_at FROM share_links WHERE id = ?`, "pre010-id").Scan(&gotExpiresAt); err != nil {
+		t.Fatalf("query pre-010 row after migration: %v", err)
+	}
+	if gotExpiresAt != wantExpiresAt {
+		t.Errorf("expires_at=%q after migration, want unchanged %q", gotExpiresAt, wantExpiresAt)
+	}
+
+	// The three indexes must exist post-rebuild.
+	for _, idx := range []string{"idx_share_links_token", "idx_share_links_server", "idx_share_links_cluster_server"} {
+		var n int
+		if err := s.DB.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = ?`, idx).Scan(&n); err != nil {
+			t.Fatalf("check index %s: %v", idx, err)
+		}
+		if n != 1 {
+			t.Errorf("index %s missing after migration 010", idx)
+		}
+	}
+
+	// A row inserted post-migration with a NULL expires_at must round-trip as NULL.
+	if _, _, err := s.CreateShareLink(ctx, "local", "default", "post010-server", userID, false, nil); err != nil {
+		t.Fatalf("create post-010 row with nil expiry: %v", err)
+	}
+	var postExpiresAt sql.NullString
+	if err := s.DB.QueryRowContext(ctx,
+		`SELECT expires_at FROM share_links WHERE server_name = ?`, "post010-server").Scan(&postExpiresAt); err != nil {
+		t.Fatalf("query post-010 row: %v", err)
+	}
+	if postExpiresAt.Valid {
+		t.Errorf("post-010 NULL expiry round-tripped as %q, want NULL", postExpiresAt.String)
 	}
 }

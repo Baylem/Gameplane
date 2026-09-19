@@ -440,7 +440,7 @@ Verify from `/api/go.mod`.
 - Adds `prev_hash` and `hash` columns to `audit_events` for tamper detection
 
 **006_share_links.sql:** (unauthenticated server access tokens)
-- Creates `share_links` table: signed, expiring, revocable tokens for unauthenticated access to a single GameServer's status and connection address, optionally with start capability
+- Creates `share_links` table: signed, revocable tokens for unauthenticated access to a single GameServer's status and connection address, optionally with start capability
 - Token never stored; only SHA-256 hash persisted and indexed for O(1) lookup
 - Pre-existing; not part of the Phase 2 Foundational feature scope
 
@@ -452,6 +452,16 @@ Verify from `/api/go.mod`.
 **008_captures_rbac.sql:** (Phase 2 Foundational: capture permissions)
 - Seeds `captures:manage` permission to admin role via `INSERT INTO role_permissions(role_name, permission) VALUES ('admin', 'captures:manage')`
 - Only admin role grants capture access in Phase 2 Foundational; future phases determine operator role grantability
+
+**009_share_links_cluster.sql:** (multi-cluster share links)
+- Adds `cluster TEXT NOT NULL DEFAULT 'local'` to `share_links`; binds a link to the cluster it was created on
+
+**010_share_links_expiry_nullable.sql:** (configurable share link expiry, feature 017)
+- Rebuilds `share_links` (create `_new`, copy, drop, rename — SQLite has no `ALTER COLUMN`) so `expires_at` is nullable; every existing non-null `expires_at` is copied verbatim, never recomputed
+- NULL `expires_at` means "never expires"; `LookupShareLink`/`ListShareLinks` treat it as always-valid for expiry purposes (revocation is unaffected and still checked independently)
+- Removes the previous fixed 90-day maximum lifetime (`MaxShareLinkExpiryDays`) from both the store (`CreateShareLink`) and the handler; the only remaining store-side check is that a non-nil `expiresAt` must be strictly in the future
+- `POST /servers/{name}:shares` request body now carries exactly one of `expiresAt` (RFC3339 instant, client-computed) or `neverExpires: true`; a request with neither or both is rejected 400. The response's `expiresAt` is an RFC3339 string, or JSON `null` for a never-expiring link.
+- `expiresIn` (a Go duration string) is **deprecated** and kept working for one release only: it is honored only when neither `expiresAt` nor `neverExpires` is present, and its 7-day default for an omitted/empty value applies only on this legacy path
 
 All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); API layer is authoritative.
 

@@ -26,6 +26,10 @@ import (
 // token reveals nothing about why it failed.
 var wantShareNotFoundBody = []byte(`{"error":"not found"}` + "\n")
 
+// ptrTime returns a pointer to t, for passing an absolute expiry to
+// store.CreateShareLink (which takes *time.Time; nil = never expires).
+func ptrTime(t time.Time) *time.Time { return &t }
+
 // mountSharesRouter wires both the authenticated (owner) and public share
 // routes onto one router, mirroring how api/cmd/main.go mounts them (in
 // different middleware groups, but against the same reg/store).
@@ -146,7 +150,7 @@ func TestShareCreateReturnsTokenOnce(t *testing.T) {
 	h := mountSharesRouter(reg, store)
 	owner := &auth.User{ID: ownerID, Username: "owner-create", Role: "admin"}
 
-	status, body := shareReq(t, h, "POST", "/servers/srv-create:shares", map[string]any{"canStart": false}, owner, "203.0.113.1:1")
+	status, body := shareReq(t, h, "POST", "/servers/srv-create:shares", map[string]any{"canStart": false, "expiresIn": "1h"}, owner, "203.0.113.1:1")
 	if status != http.StatusOK {
 		t.Fatalf("create status = %d, want 200; body=%s", status, body)
 	}
@@ -188,7 +192,7 @@ func TestShareResolveValidToken(t *testing.T) {
 	h := mountSharesRouter(reg, store)
 	owner := &auth.User{ID: ownerID, Username: "owner-resolve", Role: "admin"}
 
-	status, body := shareReq(t, h, "POST", "/servers/srv-resolve:shares", map[string]any{"canStart": false}, owner, "203.0.113.2:1")
+	status, body := shareReq(t, h, "POST", "/servers/srv-resolve:shares", map[string]any{"canStart": false, "expiresIn": "1h"}, owner, "203.0.113.2:1")
 	if status != http.StatusOK {
 		t.Fatalf("create status = %d, want 200; body=%s", status, body)
 	}
@@ -241,7 +245,7 @@ func TestShareResolvePrivateEndpointOmitted(t *testing.T) {
 	h := mountSharesRouter(reg, store)
 	owner := &auth.User{ID: ownerID, Username: "owner-private", Role: "admin"}
 
-	_, body := shareReq(t, h, "POST", "/servers/srv-private:shares", map[string]any{"canStart": false}, owner, "203.0.113.4:1")
+	_, body := shareReq(t, h, "POST", "/servers/srv-private:shares", map[string]any{"canStart": false, "expiresIn": "1h"}, owner, "203.0.113.4:1")
 	var created map[string]any
 	if err := json.Unmarshal(body, &created); err != nil {
 		t.Fatalf("unmarshal create response: %v; body=%s", err, body)
@@ -277,7 +281,7 @@ func TestShareResolveInvalidToken(t *testing.T) {
 
 	// Expired: mint a valid link, then rewrite its expiry into the past
 	// (CreateShareLink itself refuses to mint an already-expired link).
-	expiredToken, expiredLink, err := store.CreateShareLink(ctx, "local", "gameplane-games", "srv-invalid", ownerID, false, time.Now().UTC().Add(time.Hour))
+	expiredToken, expiredLink, err := store.CreateShareLink(ctx, "local", "gameplane-games", "srv-invalid", ownerID, false, ptrTime(time.Now().UTC().Add(time.Hour)))
 	if err != nil {
 		t.Fatalf("create expired link: %v", err)
 	}
@@ -287,7 +291,7 @@ func TestShareResolveInvalidToken(t *testing.T) {
 	}
 
 	// Revoked: mint a valid link, then revoke it.
-	revokedToken, revokedLink, err := store.CreateShareLink(ctx, "local", "gameplane-games", "srv-invalid", ownerID, false, time.Now().UTC().Add(time.Hour))
+	revokedToken, revokedLink, err := store.CreateShareLink(ctx, "local", "gameplane-games", "srv-invalid", ownerID, false, ptrTime(time.Now().UTC().Add(time.Hour)))
 	if err != nil {
 		t.Fatalf("create link to revoke: %v", err)
 	}
@@ -336,7 +340,7 @@ func TestShareStartCanStartGate(t *testing.T) {
 	ctx := context.Background()
 
 	// canStart=false must 404, identically to an invalid token.
-	noStartToken, _, err := store.CreateShareLink(ctx, "local", "gameplane-games", "srv-start", ownerID, false, time.Now().UTC().Add(time.Hour))
+	noStartToken, _, err := store.CreateShareLink(ctx, "local", "gameplane-games", "srv-start", ownerID, false, ptrTime(time.Now().UTC().Add(time.Hour)))
 	if err != nil {
 		t.Fatalf("create canStart=false link: %v", err)
 	}
@@ -350,7 +354,7 @@ func TestShareStartCanStartGate(t *testing.T) {
 
 	// canStart=true must wake the server: 202 + idle-wake annotation stamped,
 	// and the API must not touch spec.suspend (the operator owns that).
-	startToken, _, err := store.CreateShareLink(ctx, "local", "gameplane-games", "srv-start", ownerID, true, time.Now().UTC().Add(time.Hour))
+	startToken, _, err := store.CreateShareLink(ctx, "local", "gameplane-games", "srv-start", ownerID, true, ptrTime(time.Now().UTC().Add(time.Hour)))
 	if err != nil {
 		t.Fatalf("create canStart=true link: %v", err)
 	}
@@ -538,7 +542,7 @@ func TestShareRevokeOwnerOnly(t *testing.T) {
 	owner := &auth.User{ID: ownerID, Username: "owner-revoke", Role: "admin"}
 	stranger := &auth.User{ID: strangerID, Username: "stranger-revoke", Role: "admin"}
 
-	status, body := shareReq(t, h, "POST", "/servers/srv-revoke:shares", map[string]any{"canStart": false}, owner, "203.0.113.9:1")
+	status, body := shareReq(t, h, "POST", "/servers/srv-revoke:shares", map[string]any{"canStart": false, "expiresIn": "1h"}, owner, "203.0.113.9:1")
 	if status != http.StatusOK {
 		t.Fatalf("create status = %d, want 200; body=%s", status, body)
 	}
@@ -600,7 +604,7 @@ func TestShareClusterScoping(t *testing.T) {
 	ctx := context.Background()
 
 	// Mint a share link bound to "remote-cluster".
-	token, link, err := store.CreateShareLink(ctx, "remote-cluster", "gameplane-games", "srv-scoped", ownerID, true, time.Now().UTC().Add(time.Hour))
+	token, link, err := store.CreateShareLink(ctx, "remote-cluster", "gameplane-games", "srv-scoped", ownerID, true, ptrTime(time.Now().UTC().Add(time.Hour)))
 	if err != nil {
 		t.Fatalf("create share link on remote cluster: %v", err)
 	}
@@ -648,5 +652,213 @@ func TestShareClusterScoping(t *testing.T) {
 	err = store.RevokeShareLink(ctx, "remote-cluster", link.ID)
 	if err != nil {
 		t.Fatalf("revoke with correct cluster failed: %v", err)
+	}
+}
+
+// TestShareCreateExpiryNeitherFieldRejected verifies that a create request
+// carrying none of expiresAt, neverExpires, or expiresIn is rejected with 400
+// (OD-7): a missing field must never silently create a permanent or
+// defaulted link outside the explicitly-deprecated expiresIn path.
+func TestShareCreateExpiryNeitherFieldRejected(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-expiry-neither")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(newShareTestServer("srv-expiry-neither", ownerID)))
+	h := mountSharesRouter(reg, store)
+	owner := &auth.User{ID: ownerID, Username: "owner-expiry-neither", Role: "admin"}
+
+	status, body := shareReq(t, h, "POST", "/servers/srv-expiry-neither:shares", map[string]any{"canStart": false}, owner, "203.0.113.30:1")
+	if status != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", status, body)
+	}
+}
+
+// TestShareCreateExpiryBothFieldsRejected verifies that a create request
+// carrying both expiresAt and neverExpires:true is rejected with 400 (OD-1).
+func TestShareCreateExpiryBothFieldsRejected(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-expiry-both")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(newShareTestServer("srv-expiry-both", ownerID)))
+	h := mountSharesRouter(reg, store)
+	owner := &auth.User{ID: ownerID, Username: "owner-expiry-both", Role: "admin"}
+
+	future := time.Now().UTC().Add(48 * time.Hour).Format(time.RFC3339)
+	status, body := shareReq(t, h, "POST", "/servers/srv-expiry-both:shares",
+		map[string]any{"canStart": false, "expiresAt": future, "neverExpires": true}, owner, "203.0.113.31:1")
+	if status != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", status, body)
+	}
+}
+
+// TestShareCreateNeverExpires verifies that neverExpires:true creates a link
+// whose response carries expiresAt: null, and that it resolves successfully
+// (FR-002, SC-001).
+func TestShareCreateNeverExpires(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-never-expires")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(newShareTestServer("srv-never-expires", ownerID)))
+	h := mountSharesRouter(reg, store)
+	owner := &auth.User{ID: ownerID, Username: "owner-never-expires", Role: "admin"}
+
+	status, body := shareReq(t, h, "POST", "/servers/srv-never-expires:shares",
+		map[string]any{"canStart": false, "neverExpires": true}, owner, "203.0.113.32:1")
+	if status != http.StatusOK {
+		t.Fatalf("create status = %d, want 200; body=%s", status, body)
+	}
+	var created map[string]any
+	if err := json.Unmarshal(body, &created); err != nil {
+		t.Fatalf("unmarshal create response: %v; body=%s", err, body)
+	}
+	if v, ok := created["expiresAt"]; !ok || v != nil {
+		t.Fatalf("expiresAt = %v, want explicit null; body=%s", v, body)
+	}
+	token, _ := created["token"].(string)
+	if token == "" {
+		t.Fatalf("missing token; body=%s", body)
+	}
+
+	status, body = shareReq(t, h, "GET", "/shares/"+token, nil, nil, "203.0.113.33:1")
+	if status != http.StatusOK {
+		t.Fatalf("resolve status = %d, want 200; body=%s", status, body)
+	}
+}
+
+// TestShareCreateAbsoluteExpiresAt verifies that a request carrying an
+// absolute RFC3339 expiresAt (including a custom date far beyond the former
+// 90-day cap, SC-002) echoes back the exact requested instant with no clamp.
+func TestShareCreateAbsoluteExpiresAt(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-abs-expiry")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(newShareTestServer("srv-abs-expiry", ownerID)))
+	h := mountSharesRouter(reg, store)
+	owner := &auth.User{ID: ownerID, Username: "owner-abs-expiry", Role: "admin"}
+
+	// 200 days out: previously impossible under the 90-day cap (SC-002).
+	want := time.Now().UTC().AddDate(0, 0, 200).Truncate(time.Second)
+	status, body := shareReq(t, h, "POST", "/servers/srv-abs-expiry:shares",
+		map[string]any{"canStart": false, "expiresAt": want.Format(time.RFC3339)}, owner, "203.0.113.34:1")
+	if status != http.StatusOK {
+		t.Fatalf("create status = %d, want 200; body=%s", status, body)
+	}
+	var created map[string]any
+	if err := json.Unmarshal(body, &created); err != nil {
+		t.Fatalf("unmarshal create response: %v; body=%s", err, body)
+	}
+	gotStr, _ := created["expiresAt"].(string)
+	got, err := time.Parse(time.RFC3339, gotStr)
+	if err != nil {
+		t.Fatalf("parse response expiresAt %q: %v", gotStr, err)
+	}
+	if !got.Equal(want) {
+		t.Fatalf("expiresAt = %v, want exactly %v (no clamp)", got, want)
+	}
+}
+
+// TestShareCreateExpiresAtMalformedRejected verifies that a malformed
+// expiresAt value is rejected with 400 rather than silently defaulted.
+func TestShareCreateExpiresAtMalformedRejected(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-bad-expiry")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(newShareTestServer("srv-bad-expiry", ownerID)))
+	h := mountSharesRouter(reg, store)
+	owner := &auth.User{ID: ownerID, Username: "owner-bad-expiry", Role: "admin"}
+
+	status, body := shareReq(t, h, "POST", "/servers/srv-bad-expiry:shares",
+		map[string]any{"canStart": false, "expiresAt": "not-a-date"}, owner, "203.0.113.35:1")
+	if status != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", status, body)
+	}
+}
+
+// TestShareCreateExpiresAtPastRejected verifies that an expiresAt one hour in
+// the past is rejected with 400 (mapping db.ErrShareLinkExpiryInvalid), not a
+// 500 from httperr.Write.
+func TestShareCreateExpiresAtPastRejected(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-past-expiry")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(newShareTestServer("srv-past-expiry", ownerID)))
+	h := mountSharesRouter(reg, store)
+	owner := &auth.User{ID: ownerID, Username: "owner-past-expiry", Role: "admin"}
+
+	past := time.Now().UTC().Add(-1 * time.Hour).Format(time.RFC3339)
+	status, body := shareReq(t, h, "POST", "/servers/srv-past-expiry:shares",
+		map[string]any{"canStart": false, "expiresAt": past}, owner, "203.0.113.38:1")
+	if status != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", status, body)
+	}
+}
+
+// TestShareCreateDeprecatedExpiresInPastRejected verifies that the deprecated
+// expiresIn path also maps a past/invalid computed expiry to 400, not 500.
+func TestShareCreateDeprecatedExpiresInPastRejected(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-deprecated-past-expiry")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(newShareTestServer("srv-deprecated-past-expiry", ownerID)))
+	h := mountSharesRouter(reg, store)
+	owner := &auth.User{ID: ownerID, Username: "owner-deprecated-past-expiry", Role: "admin"}
+
+	status, body := shareReq(t, h, "POST", "/servers/srv-deprecated-past-expiry:shares",
+		map[string]any{"canStart": false, "expiresIn": "-1h"}, owner, "203.0.113.39:1")
+	if status != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", status, body)
+	}
+}
+
+// TestShareCreateDeprecatedExpiresIn verifies that the deprecated expiresIn
+// path still works for one release (OD-1/OD-5): both an explicit duration and
+// an empty/omitted value (7-day default, only on this path) still succeed,
+// with no maximum-lifetime clamp applied (FR-005 removes the cap everywhere).
+func TestShareCreateDeprecatedExpiresIn(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-deprecated-expiry")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(newShareTestServer("srv-deprecated-expiry", ownerID)))
+	h := mountSharesRouter(reg, store)
+	owner := &auth.User{ID: ownerID, Username: "owner-deprecated-expiry", Role: "admin"}
+
+	// Explicit duration well beyond the old 90-day cap: must not be clamped.
+	status, body := shareReq(t, h, "POST", "/servers/srv-deprecated-expiry:shares",
+		map[string]any{"canStart": false, "expiresIn": "4320h"}, owner, "203.0.113.36:1") // 180 days
+	if status != http.StatusOK {
+		t.Fatalf("create status = %d, want 200; body=%s", status, body)
+	}
+	var created map[string]any
+	if err := json.Unmarshal(body, &created); err != nil {
+		t.Fatalf("unmarshal create response: %v; body=%s", err, body)
+	}
+	gotStr, _ := created["expiresAt"].(string)
+	got, err := time.Parse(time.RFC3339, gotStr)
+	if err != nil {
+		t.Fatalf("parse response expiresAt %q: %v", gotStr, err)
+	}
+	want := time.Now().UTC().AddDate(0, 0, 180)
+	if diff := got.Sub(want); diff < -time.Minute || diff > time.Minute {
+		t.Fatalf("expiresAt = %v, want approximately %v (180d, unclamped)", got, want)
+	}
+
+	// Empty/omitted expiresIn defaults to 7 days, only on this deprecated path.
+	status, body = shareReq(t, h, "POST", "/servers/srv-deprecated-expiry:shares",
+		map[string]any{"canStart": false, "expiresIn": ""}, owner, "203.0.113.37:1")
+	if status != http.StatusOK {
+		t.Fatalf("create (default) status = %d, want 200; body=%s", status, body)
+	}
+	var createdDefault map[string]any
+	if err := json.Unmarshal(body, &createdDefault); err != nil {
+		t.Fatalf("unmarshal create (default) response: %v; body=%s", err, body)
+	}
+	gotDefaultStr, _ := createdDefault["expiresAt"].(string)
+	gotDefault, err := time.Parse(time.RFC3339, gotDefaultStr)
+	if err != nil {
+		t.Fatalf("parse response expiresAt %q: %v", gotDefaultStr, err)
+	}
+	wantDefault := time.Now().UTC().AddDate(0, 0, 7)
+	if diff := gotDefault.Sub(wantDefault); diff < -time.Minute || diff > time.Minute {
+		t.Fatalf("default expiresAt = %v, want approximately %v (7d default)", gotDefault, wantDefault)
 	}
 }

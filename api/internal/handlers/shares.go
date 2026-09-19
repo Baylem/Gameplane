@@ -43,16 +43,36 @@ func MountPublicShares(r chi.Router, reg *kube.Registry, store *db.Store, shareL
 }
 
 type createShareReq struct {
-	ExpiresIn *string `json:"expiresIn"` // e.g. "24h", "7d"; nil = default
-	CanStart  bool    `json:"canStart"`
+	// ExpiresIn is deprecated as of the expiresAt/neverExpires fields below and
+	// is kept working for one release only (OD-1/OD-5). It carries a Go
+	// duration string (e.g. "24h", "168h"); an omitted or empty value defaults
+	// to 7 days, but only on this deprecated path.
+	ExpiresIn *string `json:"expiresIn"`
+	// ExpiresAt is an RFC3339 absolute instant computed by the client (preset
+	// or custom date). Mutually exclusive with NeverExpires.
+	ExpiresAt *string `json:"expiresAt"`
+	// NeverExpires, when true, creates a share link with no expiry (NULL).
+	// Mutually exclusive with ExpiresAt.
+	NeverExpires *bool `json:"neverExpires"`
+	CanStart     bool  `json:"canStart"`
 }
 
 type shareResp struct {
-	ID        string `json:"id"`
-	CreatedAt string `json:"createdAt"`
-	ExpiresAt string `json:"expiresAt"`
-	CanStart  bool   `json:"canStart"`
-	Token     string `json:"token,omitempty"` // only in create response
+	ID        string  `json:"id"`
+	CreatedAt string  `json:"createdAt"`
+	ExpiresAt *string `json:"expiresAt"` // RFC3339 string, or null when the link never expires
+	CanStart  bool    `json:"canStart"`
+	Token     string  `json:"token,omitempty"` // only in create response
+}
+
+// formatExpiresAt renders a nullable expiry as an RFC3339 string pointer, or
+// nil (which marshals as JSON null) when the link never expires.
+func formatExpiresAt(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.UTC().Format(time.RFC3339)
+	return &s
 }
 
 // createShareHandler stamps a new share link for the server. Only the owner can
@@ -94,25 +114,52 @@ func createShareHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 			return
 		}
 
-		// Parse expiry: default 7 days, max 90 days.
-		expiresAt := time.Now().UTC().AddDate(0, 0, 7)
-		if body.ExpiresIn != nil && *body.ExpiresIn != "" {
-			d, err := time.ParseDuration(*body.ExpiresIn)
+		// Determine the expiry to persist. Exactly one of expiresAt or
+		// neverExpires:true must be present; the deprecated expiresIn field is
+		// honored only when neither of those new fields is present (OD-1/OD-5/OD-7).
+		hasExpiresAt := body.ExpiresAt != nil && *body.ExpiresAt != ""
+		hasNeverExpires := body.NeverExpires != nil && *body.NeverExpires
+
+		var expiresAt *time.Time
+		switch {
+		case hasExpiresAt && hasNeverExpires:
+			http.Error(w, "expiresAt and neverExpires are mutually exclusive", http.StatusBadRequest)
+			return
+		case hasExpiresAt:
+			parsed, err := time.Parse(time.RFC3339, *body.ExpiresAt)
 			if err != nil {
-				http.Error(w, "invalid expiresIn", http.StatusBadRequest)
+				http.Error(w, "invalid expiresAt: must be RFC3339", http.StatusBadRequest)
 				return
 			}
-			expiresAt = time.Now().UTC().Add(d)
-		}
-		// Cap at 90 days.
-		maxExpiry := time.Now().UTC().AddDate(0, 0, 90)
-		if expiresAt.After(maxExpiry) {
-			expiresAt = maxExpiry
+			parsed = parsed.UTC()
+			expiresAt = &parsed
+		case hasNeverExpires:
+			expiresAt = nil
+		case body.ExpiresIn != nil:
+			// Deprecated path (kept for one release, OD-1/OD-5): an omitted or
+			// empty value defaults to 7 days, only here.
+			at := time.Now().UTC().AddDate(0, 0, 7)
+			if *body.ExpiresIn != "" {
+				d, err := time.ParseDuration(*body.ExpiresIn)
+				if err != nil {
+					http.Error(w, "invalid expiresIn", http.StatusBadRequest)
+					return
+				}
+				at = time.Now().UTC().Add(d)
+			}
+			expiresAt = &at
+		default:
+			http.Error(w, "must specify exactly one of expiresAt or neverExpires (or the deprecated expiresIn)", http.StatusBadRequest)
+			return
 		}
 
 		cl, _ := scope.ResolveCluster(req, reg)
 		rawToken, link, err := store.CreateShareLink(req.Context(), cl, ns, name, u.ID, body.CanStart, expiresAt)
 		if err != nil {
+			if errors.Is(err, db.ErrShareLinkExpiryInvalid) {
+				http.Error(w, "expiresAt must be in the future", http.StatusBadRequest)
+				return
+			}
 			httperr.Write(w, req, err)
 			return
 		}
@@ -120,7 +167,7 @@ func createShareHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 		resp := shareResp{
 			ID:        link.ID,
 			CreatedAt: link.CreatedAt.UTC().Format(time.RFC3339),
-			ExpiresAt: link.ExpiresAt.UTC().Format(time.RFC3339),
+			ExpiresAt: formatExpiresAt(link.ExpiresAt),
 			CanStart:  link.CanStart,
 			Token:     rawToken, // only in create response
 		}
@@ -173,7 +220,7 @@ func listSharesHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 			resps[i] = shareResp{
 				ID:        link.ID,
 				CreatedAt: link.CreatedAt.UTC().Format(time.RFC3339),
-				ExpiresAt: link.ExpiresAt.UTC().Format(time.RFC3339),
+				ExpiresAt: formatExpiresAt(link.ExpiresAt),
 				CanStart:  link.CanStart,
 				// Token deliberately omitted in list response
 			}
