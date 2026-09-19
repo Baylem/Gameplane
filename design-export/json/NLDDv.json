@@ -18,7 +18,8 @@
     },
     "qzcst": {
       "enabled": true,
-      "content": "Create a local account. Leave password blank to send an OIDC invite later."
+      "content": "Create a local account. Leave password blank to send an OIDC\ninvite later.",
+      "letterSpacing": 0.11
     },
     "Nht52": {
       "type": "frame",
@@ -48,7 +49,8 @@
               "content": "Username",
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
-              "fontWeight": "500"
+              "fontWeight": "500",
+              "letterSpacing": 0.07
             },
             {
               "id": "zOSAo",
@@ -59,7 +61,8 @@
               "descendants": {
                 "PJERm": {
                   "content": "alice",
-                  "fill": "#5C5C5C"
+                  "fill": "$field/placeholder",
+                  "letterSpacing": 0.07
                 }
               }
             }
@@ -79,7 +82,8 @@
               "content": "Display name",
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
-              "fontWeight": "500"
+              "fontWeight": "500",
+              "letterSpacing": 0.07
             },
             {
               "id": "uuH6W",
@@ -90,7 +94,8 @@
               "descendants": {
                 "PJERm": {
                   "content": "Alice Operator",
-                  "fill": "#5C5C5C"
+                  "fill": "$field/placeholder",
+                  "letterSpacing": 0.07
                 }
               }
             }
@@ -110,7 +115,8 @@
               "content": "Email",
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
-              "fontWeight": "500"
+              "fontWeight": "500",
+              "letterSpacing": 0.07
             },
             {
               "id": "M9fknd",
@@ -121,7 +127,8 @@
               "descendants": {
                 "PJERm": {
                   "content": "alice@example.com",
-                  "fill": "#5C5C5C"
+                  "fill": "$field/placeholder",
+                  "letterSpacing": 0.07
                 }
               }
             }
@@ -141,7 +148,8 @@
               "content": "Initial password",
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
-              "fontWeight": "500"
+              "fontWeight": "500",
+              "letterSpacing": 0.07
             },
             {
               "id": "bayQn",
@@ -152,7 +160,8 @@
               "descendants": {
                 "PJERm": {
                   "content": "At least 12 characters",
-                  "fill": "#5C5C5C"
+                  "fill": "$field/placeholder",
+                  "letterSpacing": 0.07
                 }
               }
             }
@@ -174,7 +183,8 @@
               "content": "Role",
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
-              "fontWeight": "500"
+              "fontWeight": "500",
+              "letterSpacing": 0.07
             },
             {
               "id": "liaWX",
@@ -184,7 +194,8 @@
               "width": "fill_container",
               "descendants": {
                 "cFsFk": {
-                  "content": "viewer"
+                  "content": "viewer",
+                  "letterSpacing": 0.07
                 }
               }
             }
@@ -192,8 +203,12 @@
         }
       ]
     },
+    "REcmP": {
+      "letterSpacing": 0.1
+    },
     "TZ7Ef": {
-      "content": "Create user"
+      "content": "Create user",
+      "letterSpacing": 0.1
     }
   }
 }

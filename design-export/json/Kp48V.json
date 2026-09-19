@@ -133,7 +133,8 @@
                   "content": "Mapping users to the admin role grants full cluster control.\nEnsure the mapped group contains only authorized\npersonnel. Anyone in these groups gets full admin access\nfrom their next login.",
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 12,
-                  "fontWeight": "normal"
+                  "fontWeight": "normal",
+                  "letterSpacing": 0.18
                 }
               ]
             }
@@ -194,6 +195,9 @@
     },
     "Wa0YZ": {
       "enabled": false
+    },
+    "aEe0m": {
+      "width": 142
     },
     "tvH6d": {
       "content": "Map to admin role"

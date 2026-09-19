@@ -54,7 +54,7 @@
           "descendants": {
             "PJERm": {
               "content": "At least 12 characters",
-              "fill": "#5C5C5C"
+              "fill": "$field/placeholder"
             }
           }
         }

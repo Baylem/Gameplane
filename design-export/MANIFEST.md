@@ -1685,3 +1685,22 @@ The following frames keep their existing snapshots and are **not** part of this 
 **Context & next steps:**
 
 This pass ensures all 346 exported nodes reflect the current saved document state as of 2026-09-18. The 183 newly exported HeroUI base components provide the complete, versioned snapshot of the component library that downstream design work and code implementation reference. All subsequent design modifications (feature slices, design reviews, bug fixes) will follow the existing export pattern: touch a node → export that node + all screens referencing it → commit the updated JSON/PNG in the same changeset.
+
+## Incremental export 2026-09-19 — round-7 letterSpacing/lineHeight/shadow rulings re-export (NLDDv, MaoHP, E9EEv0, Kp48V)
+
+Re-export of four dialog frames after round-7 per-issue Pencil edits (letterSpacing on labels/values/footer buttons, `$field/placeholder` fills, `lineHeight` on E9EEv0 labels, `ABbjS` padding, `TH6mC` warning-box corner radius and zero-alpha shadow overrides on `mazee`/`D5Vwg2`/`TH6mC`, `SBdeH`/`V7HYp`/`aEe0m` width bumps). Full detail of the per-node edits is in round7-briefs.json's "design" area; this entry only records the re-export step, which a prior session in this branch had explicitly skipped ("no export was performed (per instructions)") despite Rule 1 requiring it.
+
+| ID | Notes |
+|---|---|
+| `NLDDv` | Invite User dialog — description two-line wrap + letterSpacing 0.11; 5 field labels + select value + 4 input placeholders + footer buttons get letterSpacing 0.07–0.1; input placeholders' fill changed from `#5C5C5C` to `$field/placeholder`. |
+| `MaoHP` | Reset Password dialog — `YgQBa/PJERm` placeholder fill set to `$field/placeholder`. |
+| `E9EEv0` | Restore Backup dialog — `MIgc1`/`eN292` label lineHeight 1.6667; `ABbjS` padding `[5,0,0,0]`; `qzcst` letterSpacing 0.09; `TH6mC/CotwO` letterSpacing 0.2; `SBdeH` width 65, `V7HYp` width 69; zero-alpha outer-shadow override on `mazee`, `D5Vwg2`, and `TH6mC`; `TH6mC` cornerRadius 28. |
+| `Kp48V` | Confirm Admin Mapping dialog — `F1pyxJ` warning-desc letterSpacing 0.18 (forced line breaks preserved); `aEe0m` width 142. |
+
+**Export method & validation:**
+
+- **JSON:** `Get(id, {depth: 20})` via the Pencil `execute` tool for each id, `JSON.stringify`'d in the tool response and written with `json.dump(indent=2, ensure_ascii=False)` + trailing newline — matches the existing files' formatting convention. Zero `"..."` elision markers; `python3 -m json.tool` passes on all four.
+- **Screenshots:** `export_nodes` batch PNG export at 2× scale for all four ids in one call — `NLDDv.png` 960×1026, `MaoHP.png` 960×424, `E9EEv0.png` 960×778, `Kp48V.png` 880×640, all valid non-empty PNGs with real pixel dimensions.
+- **Content check:** unique body-text greps each returned exactly 1 hit in their own file and 0 elsewhere: `"invite later"` → NLDDv; `"need to sign in again"` → MaoHP; `"will be suspended, the volume restored"` → E9EEv0; `"Ensure the mapped group"` → Kp48V.
+- **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`, per Rule 2.
+- **No commit performed** — per this task's explicit instruction not to commit.
