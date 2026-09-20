@@ -1,11 +1,25 @@
 import { useState, useId, useRef } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
+import {
+  Modal,
+  ModalBackdrop,
+  ModalContainer,
+  ModalDialog,
+  ModalHeader,
+  ModalHeading,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  Select,
+  ListBox,
+  ListBoxItem,
+  Description,
+} from "@heroui/react";
 import {
   CheckCircle2,
   AlertCircle,
   Download,
   UploadCloud,
-  X,
   Plus,
   Trash2,
   Server,
@@ -15,9 +29,6 @@ import {
   ArrowLeft,
   Loader2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { APIError } from "@/lib/api";
 import {
   ModuleBuilder,
@@ -324,91 +335,84 @@ export function BuildModuleDialog({
   const isImagePinned = image.includes("@sha256:");
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[840px] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-card text-fg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-6 py-4">
-            <div>
-              <Dialog.Title className="text-lg font-semibold">Create game module</Dialog.Title>
-              <Dialog.Description className="text-xs text-muted">
-                Step {step} of 3 ·{" "}
-                {step === 1
-                  ? "Preset & Metadata"
-                  : step === 2
-                  ? "Container & Ports"
-                  : "Review, Preview & Export"}
-              </Dialog.Description>
-            </div>
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="rounded-md p-1.5 text-muted hover:bg-surface hover:text-fg"
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+    <Modal isOpen={open} onOpenChange={onOpenChange}>
+      <ModalBackdrop isDismissable={!busy} isKeyboardDismissDisabled={busy}>
+        <ModalContainer>
+          <ModalDialog className="w-[840px] max-w-[calc(100vw-2rem)] overflow-hidden flex flex-col max-h-[90vh]">
+            <ModalHeader>
+              <div className="w-full">
+                <ModalHeading className="text-lg font-semibold">Create game module</ModalHeading>
+                <Description className="text-xs text-muted">
+                  Step {step} of 3 ·{" "}
+                  {step === 1
+                    ? "Preset & Metadata"
+                    : step === 2
+                    ? "Container & Ports"
+                    : "Review, Preview & Export"}
+                </Description>
+              </div>
+            </ModalHeader>
 
-          {/* Stepper */}
-          <div className="flex items-center gap-3 border-b border-border px-6 py-2.5 text-xs">
-            <div className="flex items-center gap-2">
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
-                  step === 1
-                    ? "bg-primary text-primary-fg"
-                    : "bg-surface text-fg border border-border"
-                }`}
-              >
-                {step > 1 ? "✓" : "1"}
-              </span>
-              <span className={step === 1 ? "font-medium text-fg" : "text-muted"}>
-                Preset & Metadata
-              </span>
-            </div>
-            <span className="text-muted">·</span>
-            <div className="flex items-center gap-2">
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
-                  step === 2
-                    ? "bg-primary text-primary-fg"
-                    : "bg-surface text-fg border border-border"
-                }`}
-              >
-                {step > 2 ? "✓" : "2"}
-              </span>
-              <span className={step === 2 ? "font-medium text-fg" : "text-muted"}>
-                Container & Ports
-              </span>
-            </div>
-            <span className="text-muted">·</span>
-            <div className="flex items-center gap-2">
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
-                  step === 3
-                    ? "bg-primary text-primary-fg"
-                    : "bg-surface text-fg border border-border"
-                }`}
-              >
-                3
-              </span>
-              <span className={step === 3 ? "font-medium text-fg" : "text-muted"}>
-                Review & Export
-              </span>
-            </div>
-          </div>
+            <ModalBody>
+              <div className="space-y-4">
+                {/* Stepper */}
+                <div className="flex items-center gap-3 text-xs border-b border-border pb-4">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
+                        step === 1
+                          ? "bg-primary text-primary-fg"
+                          : "bg-surface text-fg border border-border"
+                      }`}
+                    >
+                      {step > 1 ? "✓" : "1"}
+                    </span>
+                    <span className={step === 1 ? "font-medium text-fg" : "text-muted"}>
+                      Preset & Metadata
+                    </span>
+                  </div>
+                  <span className="text-muted">·</span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
+                        step === 2
+                          ? "bg-primary text-primary-fg"
+                          : "bg-surface text-fg border border-border"
+                      }`}
+                    >
+                      {step > 2 ? "✓" : "2"}
+                    </span>
+                    <span className={step === 2 ? "font-medium text-fg" : "text-muted"}>
+                      Container & Ports
+                    </span>
+                  </div>
+                  <span className="text-muted">·</span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold ${
+                        step === 3
+                          ? "bg-primary text-primary-fg"
+                          : "bg-surface text-fg border border-border"
+                      }`}
+                    >
+                      3
+                    </span>
+                    <span className={step === 3 ? "font-medium text-fg" : "text-muted"}>
+                      Review & Export
+                    </span>
+                  </div>
+                </div>
 
-          {/* Error Banner */}
-          {error && (
-            <div className="mx-6 mt-4 flex items-center gap-2 rounded-md bg-danger/10 p-3 text-xs text-danger">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+                {/* Error Banner */}
+                {error && (
+                  <div className="flex items-center gap-2 rounded-md bg-danger/10 p-3 text-xs text-danger">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
 
-          {/* Body Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+                {/* Body Content */}
+                <div className="overflow-y-auto">
             {step === 1 && (
               <div className="space-y-5">
                 <div>
@@ -422,6 +426,7 @@ export function BuildModuleDialog({
                           key={p.id}
                           type="button"
                           onClick={() => handleSelectArchetype(p.id)}
+                          disabled={busy}
                           className={`flex flex-col text-left rounded-lg border p-3.5 transition-all ${
                             selected
                               ? "border-primary bg-primary/5 shadow-xs"
@@ -500,6 +505,7 @@ export function BuildModuleDialog({
                             key={cat}
                             type="button"
                             onClick={() => toggleCategory(cat)}
+                            disabled={busy}
                             className={`rounded-full px-2.5 py-1 text-xs transition-colors ${
                               active
                                 ? "bg-primary text-primary-fg font-medium"
@@ -547,7 +553,7 @@ export function BuildModuleDialog({
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-medium text-fg">Port Mappings</label>
-                    <Button type="button" variant="outline" size="sm" onClick={addPort} className="h-7 text-xs">
+                    <Button variant="outline" size="sm" onPress={addPort} className="h-7 text-xs">
                       <Plus className="mr-1 h-3.5 w-3.5" />
                       Add Port
                     </Button>
@@ -574,12 +580,21 @@ export function BuildModuleDialog({
                         <div className="w-24">
                           <Select
                             value={p.protocol}
-                            onValueChange={(val) => updatePort(idx, { protocol: val })}
-                            options={[
-                              { value: "UDP", label: "UDP" },
-                              { value: "TCP", label: "TCP" },
-                            ]}
-                          />
+                            onChange={(v) => updatePort(idx, { protocol: (v ?? p.protocol) as string })}
+                            className="w-24"
+                            aria-label="Protocol"
+                          >
+                            <Select.Trigger>
+                              <Select.Value />
+                              <Select.Indicator className="ml-auto h-4 w-4" />
+                            </Select.Trigger>
+                            <Select.Popover>
+                              <ListBox aria-label="Protocol options">
+                                <ListBoxItem id="UDP" textValue="UDP">UDP</ListBoxItem>
+                                <ListBoxItem id="TCP" textValue="TCP">TCP</ListBoxItem>
+                              </ListBox>
+                            </Select.Popover>
+                          </Select>
                         </div>
                         <label className="flex items-center gap-1.5 text-xs text-muted cursor-pointer select-none px-2">
                           <input
@@ -591,14 +606,16 @@ export function BuildModuleDialog({
                           Advertise
                         </label>
                         {ports.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removePort(idx)}
-                            className="rounded p-1 text-muted hover:text-danger hover:bg-surface"
+                          <Button
+                            isIconOnly
+                            variant="ghost"
+                            size="sm"
+                            onPress={() => removePort(idx)}
+                            className="text-muted hover:text-danger"
                             aria-label="Remove port"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         )}
                       </div>
                     ))}
@@ -647,6 +664,7 @@ export function BuildModuleDialog({
                         key={tab}
                         type="button"
                         onClick={() => setActiveTab(tab)}
+                        disabled={busy}
                         className={`px-4 py-2 text-xs font-medium border-r border-border transition-colors ${
                           activeTab === tab
                             ? "bg-card text-fg border-b-2 border-b-primary"
@@ -744,6 +762,7 @@ export function BuildModuleDialog({
                             setSimMemory(mem);
                             void revalidate(moduleYaml, templateYaml, mem);
                           }}
+                          disabled={busy}
                           className={`flex-1 rounded py-1 text-center font-mono text-[11px] border transition-colors ${
                             simMemory === mem
                               ? "border-primary bg-primary/10 text-primary font-semibold"
@@ -782,102 +801,114 @@ export function BuildModuleDialog({
                       <div className="mt-1">
                         <Select
                           value={targetSource}
-                          onValueChange={setTargetSource}
-                          options={sources.map((s) => ({ value: s, label: s }))}
-                        />
+                          onChange={(v) => setTargetSource((v ?? targetSource) as string)}
+                          className="w-full"
+                          aria-label="Cluster destination source"
+                        >
+                          <Select.Trigger>
+                            <Select.Value />
+                            <Select.Indicator className="ml-auto h-4 w-4" />
+                          </Select.Trigger>
+                          <Select.Popover>
+                            <ListBox aria-label="Source options">
+                              {sources.map((s) => (
+                                <ListBoxItem key={s} id={s} textValue={s}>
+                                  {s}
+                                </ListBoxItem>
+                              ))}
+                            </ListBox>
+                          </Select.Popover>
+                        </Select>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
             )}
-          </div>
+                </div>
+              </div>
+            </ModalBody>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between border-t border-border px-6 py-4 bg-surface/30">
-            {step > 1 ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setStep((s) => (s - 1) as 1 | 2)}
-                disabled={busy}
-              >
-                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-                Back
-              </Button>
-            ) : (
-              <span className="text-xs text-muted">Step 1 of 3</span>
-            )}
-
-            <div className="flex items-center gap-2.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => onOpenChange(false)}
-                disabled={busy}
-              >
-                Cancel
-              </Button>
-
-              {step === 1 && (
+            <ModalFooter className="flex items-center justify-between">
+              {step > 1 ? (
                 <Button
-                  type="button"
+                  variant="outline"
                   size="sm"
-                  onClick={goToStep2}
-                  disabled={!isDnsValid || busy}
+                  onPress={() => setStep((s) => (s - 1) as 1 | 2)}
+                  isDisabled={busy}
                 >
-                  Continue to Container & Ports
-                  <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                  <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                  Back
                 </Button>
+              ) : (
+                <span className="text-xs text-muted">Step 1 of 3</span>
               )}
 
-              {step === 2 && (
-                <Button type="button" size="sm" onClick={goToStep3} disabled={busy}>
-                  {busy && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-                  Continue to Review & Export
-                  <ChevronRight className="ml-1 h-3.5 w-3.5" />
+              <div className="flex items-center gap-2.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onPress={() => onOpenChange(false)}
+                  isDisabled={busy}
+                >
+                  Cancel
                 </Button>
-              )}
 
-              {step === 3 && (
-                <>
+                {step === 1 && (
                   <Button
-                    type="button"
-                    variant="outline"
                     size="sm"
-                    onClick={handleDownloadArchive}
-                    disabled={busy}
+                    onPress={goToStep2}
+                    isDisabled={!isDnsValid || busy}
                   >
-                    {busy ? (
-                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Download className="mr-1.5 h-3.5 w-3.5" />
-                    )}
-                    Download .tar.gz
+                    Continue to Container & Ports
+                    <ChevronRight className="ml-1 h-3.5 w-3.5" />
                   </Button>
-                  {sources.length > 0 && (
+                )}
+
+                {step === 2 && (
+                  <Button size="sm" onPress={goToStep3} isDisabled={busy}>
+                    {busy && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+                    Continue to Review & Export
+                    <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                  </Button>
+                )}
+
+                {step === 3 && (
+                  <>
                     <Button
-                      type="button"
+                      variant="outline"
                       size="sm"
-                      onClick={handleInstallToCluster}
-                      disabled={busy || !targetSource}
+                      onPress={handleDownloadArchive}
+                      isDisabled={busy}
                     >
                       {busy ? (
                         <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                       ) : (
-                        <UploadCloud className="mr-1.5 h-3.5 w-3.5" />
+                        <Download className="mr-1.5 h-3.5 w-3.5" />
                       )}
-                      Install to Cluster
+                      Download .tar.gz
                     </Button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+                    {sources.length > 0 && (
+                      <Button
+                        size="sm"
+                        onPress={handleInstallToCluster}
+                        isDisabled={busy || !targetSource}
+                      >
+                        {busy ? (
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <UploadCloud className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        Install to Cluster
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            </ModalFooter>
+          </ModalDialog>
+        </ModalContainer>
+      </ModalBackdrop>
+    </Modal>
   );
 }

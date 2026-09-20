@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
 import { renderWithQuery } from "@/test/render";
 import { BuildModuleDialog } from "./BuildModuleDialog";
@@ -37,7 +38,8 @@ const mockPreviewResponse = {
 };
 
 describe("BuildModuleDialog", () => {
-  it("renders wizard step 1 with archetypes and validates DNS-1123 name", () => {
+  it("renders wizard step 1 with archetypes and validates DNS-1123 name", async () => {
+    const user = userEvent.setup();
     renderWithQuery(
       <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
     );
@@ -52,17 +54,20 @@ describe("BuildModuleDialog", () => {
     expect(screen.getByRole("button", { name: /Continue to Container & Ports/i })).toBeDisabled();
 
     // Invalid DNS name
-    fireEvent.change(nameInput, { target: { value: "INVALID_UPPERCASE" } });
+    await user.clear(nameInput);
+    await user.type(nameInput, "INVALID_UPPERCASE");
     expect(screen.getByText("Must be lowercase alphanumeric with hyphens")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue to Container & Ports/i })).toBeDisabled();
 
     // Valid DNS name
-    fireEvent.change(nameInput, { target: { value: "cs2-server" } });
+    await user.clear(nameInput);
+    await user.type(nameInput, "cs2-server");
     expect(screen.getByText("✓ Valid DNS-1123 label")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Continue to Container & Ports/i })).not.toBeDisabled();
   });
 
   it("navigates through step 1, 2, and 3 with live scaffold and validation", async () => {
+    const user = userEvent.setup();
     server.use(
       http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
       http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
@@ -74,18 +79,16 @@ describe("BuildModuleDialog", () => {
     );
 
     // Provide valid module name
-    fireEvent.change(screen.getByPlaceholderText("e.g. cs2-match"), {
-      target: { value: "my-game" },
-    });
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
 
     // Step 1 -> Step 2
-    fireEvent.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
     expect(await screen.findByText("Container Image")).toBeInTheDocument();
     expect(screen.getByText("Port Mappings")).toBeInTheDocument();
     expect(screen.getByText("Persistent Storage")).toBeInTheDocument();
 
     // Step 2 -> Step 3
-    fireEvent.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    await user.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
 
     // Step 3 Review & Export
     expect(await screen.findByText("Module Validated Cleanly")).toBeInTheDocument();
@@ -95,6 +98,7 @@ describe("BuildModuleDialog", () => {
   });
 
   it("installs module directly to cluster from step 3", async () => {
+    const user = userEvent.setup();
     let exportCalled = false;
     server.use(
       http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
@@ -114,20 +118,18 @@ describe("BuildModuleDialog", () => {
     );
 
     // Provide valid module name
-    fireEvent.change(screen.getByPlaceholderText("e.g. cs2-match"), {
-      target: { value: "my-game" },
-    });
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
 
     // Navigate to step 3
-    fireEvent.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
     expect(await screen.findByText("Container Image")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    await user.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
     expect(await screen.findByText("Module Validated Cleanly")).toBeInTheDocument();
 
     // Install to cluster
     const installBtn = screen.getByRole("button", { name: /Install to Cluster/i });
-    fireEvent.click(installBtn);
+    await user.click(installBtn);
 
     await waitFor(() => {
       expect(exportCalled).toBe(true);
@@ -137,6 +139,7 @@ describe("BuildModuleDialog", () => {
   });
 
   it("handles download archive in step 3", async () => {
+    const user = userEvent.setup();
     let downloadCalled = false;
     server.use(
       http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
@@ -155,17 +158,15 @@ describe("BuildModuleDialog", () => {
       <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
     );
 
-    fireEvent.change(screen.getByPlaceholderText("e.g. cs2-match"), {
-      target: { value: "my-game" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
     expect(await screen.findByText("Container Image")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    await user.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
     expect(await screen.findByText("Module Validated Cleanly")).toBeInTheDocument();
 
     const downloadBtn = screen.getByRole("button", { name: /Download .tar.gz/i });
-    fireEvent.click(downloadBtn);
+    await user.click(downloadBtn);
 
     await waitFor(() => {
       expect(downloadCalled).toBe(true);
@@ -173,6 +174,7 @@ describe("BuildModuleDialog", () => {
   });
 
   it("handles revalidation error gracefully in step 3", async () => {
+    const user = userEvent.setup();
     server.use(
       http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
       http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
@@ -183,13 +185,11 @@ describe("BuildModuleDialog", () => {
       <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
     );
 
-    fireEvent.change(screen.getByPlaceholderText("e.g. cs2-match"), {
-      target: { value: "my-game" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
     expect(await screen.findByText("Container Image")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    await user.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
     expect(await screen.findByText("Module Validated Cleanly")).toBeInTheDocument();
 
     // Now mock validation failure
