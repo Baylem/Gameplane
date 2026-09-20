@@ -333,6 +333,15 @@ input:-webkit-autofill:focus {
   min-height: 32px;
 }
 
+/* Share-link "Expires on" date field (feature 017, OD-9 / T028): Chrome paints
+   its own calendar glyph via ::-webkit-calendar-picker-indicator, which
+   doubles up with the lucide CalendarIcon overlaid on top of it. Hide the
+   native glyph only for this dialog's date field (scoped by the
+   .date-input--modal marker class), not for date inputs anywhere else. */
+.modal__dialog input[type="date"].date-input--modal::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
 /* round-7 "border everywhere": every dialog and confirm dialog shows the
    design's 1px $border stroke. outline with a -1px offset draws it inside the
    box, like the inner-aligned Pencil stroke, so content does not move. It also

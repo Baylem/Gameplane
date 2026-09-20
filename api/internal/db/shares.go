@@ -21,7 +21,7 @@ type ShareLink struct {
 	ServerName string     // GameServer name
 	CreatedBy  int64      // user ID who created it
 	CanStart   bool       // whether the link grants start capability
-	ExpiresAt  time.Time  // mandatory expiry timestamp
+	ExpiresAt  *time.Time // nil = never expires; matches RevokedAt/LastUsed's pattern
 	RevokedAt  *time.Time // NULL = active; set for audit trail
 	CreatedAt  time.Time  // when created
 	LastUsed   *time.Time // when last accessed via LookupShareLink
@@ -32,31 +32,29 @@ type ShareLink struct {
 // an attacker probing tokens must not learn that one existed.
 var ErrShareLinkInvalid = errors.New("invalid share link")
 
-// ErrShareLinkExpiryInvalid is returned by CreateShareLink when the expiry
-// timestamp is invalid (zero, in the past, or beyond the maximum allowed).
+// ErrShareLinkExpiryInvalid is returned by CreateShareLink when a given
+// expiry timestamp is invalid (zero or not strictly in the future). A nil
+// expiry (never expires) is always valid and skips this check entirely.
 var ErrShareLinkExpiryInvalid = errors.New("share link expiry invalid")
 
-// MaxShareLinkExpiryDays is the maximum lifetime in days for a share link.
-const MaxShareLinkExpiryDays = 90
-
 // CreateShareLink mints a new share link and returns the raw token, which is
-// never stored and never recoverable afterwards. Expiry is mandatory and must
-// be in the future, and must not exceed MaxShareLinkExpiryDays.
-func (s *Store) CreateShareLink(ctx context.Context, cluster, ns, serverName string, createdBy int64, canStart bool, expiresAt time.Time) (rawToken string, link ShareLink, err error) {
+// never stored and never recoverable afterwards. expiresAt is optional: nil
+// means the link never expires. When non-nil it must be strictly in the
+// future; there is no maximum lifetime.
+func (s *Store) CreateShareLink(ctx context.Context, cluster, ns, serverName string, createdBy int64, canStart bool, expiresAt *time.Time) (rawToken string, link ShareLink, err error) {
 	if cluster == "" {
 		cluster = "local"
 	}
-	// Validate expiry.
+	// Validate expiry, when one is given. A nil expiresAt means "never
+	// expires" and bypasses this check entirely.
 	now := time.Now()
-	if expiresAt.IsZero() {
-		return "", ShareLink{}, fmt.Errorf("share link expiry: %w", ErrShareLinkExpiryInvalid)
-	}
-	if expiresAt.Before(now) {
-		return "", ShareLink{}, fmt.Errorf("share link expiry in the past: %w", ErrShareLinkExpiryInvalid)
-	}
-	maxExpiry := now.AddDate(0, 0, MaxShareLinkExpiryDays)
-	if expiresAt.After(maxExpiry) {
-		return "", ShareLink{}, fmt.Errorf("share link expiry exceeds maximum: %w", ErrShareLinkExpiryInvalid)
+	if expiresAt != nil {
+		if expiresAt.IsZero() {
+			return "", ShareLink{}, fmt.Errorf("share link expiry: %w", ErrShareLinkExpiryInvalid)
+		}
+		if !expiresAt.After(now) {
+			return "", ShareLink{}, fmt.Errorf("share link expiry in the past: %w", ErrShareLinkExpiryInvalid)
+		}
 	}
 
 	// Generate a random ID (12 bytes base64-encoded).
@@ -76,15 +74,26 @@ func (s *Store) CreateShareLink(ctx context.Context, cluster, ns, serverName str
 	// created_at is generated here in Go (RFC3339 UTC), not via SQL
 	// datetime('now') — see the migration's header comment for why.
 	createdAt := now.UTC()
+	var expiresAtArg any
+	if expiresAt != nil {
+		expiresAtArg = expiresAt.Format(time.RFC3339)
+	}
 	_, err = s.DB.ExecContext(ctx,
 		`INSERT INTO share_links(id, cluster, namespace, server_name, created_by, can_start, token_hash, expires_at, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, cluster, ns, serverName, createdBy, canStartInt, tokenHash, expiresAt.Format(time.RFC3339), createdAt.Format(time.RFC3339))
+		id, cluster, ns, serverName, createdBy, canStartInt, tokenHash, expiresAtArg, createdAt.Format(time.RFC3339))
 	if err != nil {
 		return "", ShareLink{}, fmt.Errorf("insert share link: %w", err)
 	}
 
-	// Return the raw token (never persisted) and the link metadata.
+	// Return the raw token (never persisted) and the link metadata. Copy the
+	// caller's expiresAt value rather than storing their pointer, so the
+	// returned struct is not aliased to memory the caller may still mutate.
+	var expiresAtCopy *time.Time
+	if expiresAt != nil {
+		v := *expiresAt
+		expiresAtCopy = &v
+	}
 	link = ShareLink{
 		ID:         id,
 		Cluster:    cluster,
@@ -92,7 +101,7 @@ func (s *Store) CreateShareLink(ctx context.Context, cluster, ns, serverName str
 		ServerName: serverName,
 		CreatedBy:  createdBy,
 		CanStart:   canStart,
-		ExpiresAt:  expiresAt,
+		ExpiresAt:  expiresAtCopy,
 		CreatedAt:  createdAt,
 	}
 
@@ -111,7 +120,7 @@ func (s *Store) LookupShareLink(ctx context.Context, rawToken string) (ShareLink
 	var canStartInt int
 	var revokedAtStr sql.NullString
 	var lastUsedStr sql.NullString
-	var expiresAtStr string
+	var expiresAtStr sql.NullString
 	var createdAtStr string
 
 	err := s.DB.QueryRowContext(ctx,
@@ -137,12 +146,14 @@ func (s *Store) LookupShareLink(ctx context.Context, rawToken string) (ShareLink
 		return ShareLink{}, fmt.Errorf("lookup share link: %w", err)
 	}
 
-	// Parse timestamps.
-	expiresAt, err := time.Parse(time.RFC3339, expiresAtStr)
-	if err != nil {
-		return ShareLink{}, fmt.Errorf("parse expires_at: %w", err)
+	// Parse timestamps. expires_at is nullable: nil means the link never expires.
+	if expiresAtStr.Valid {
+		expiresAt, err := time.Parse(time.RFC3339, expiresAtStr.String)
+		if err != nil {
+			return ShareLink{}, fmt.Errorf("parse expires_at: %w", err)
+		}
+		link.ExpiresAt = &expiresAt
 	}
-	link.ExpiresAt = expiresAt
 
 	createdAt, err := time.Parse(time.RFC3339, createdAtStr)
 	if err != nil {
@@ -176,8 +187,9 @@ func (s *Store) LookupShareLink(ctx context.Context, rawToken string) (ShareLink
 		return ShareLink{}, ErrShareLinkInvalid
 	}
 
-	// Check if the link is expired.
-	if time.Now().After(link.ExpiresAt) {
+	// Check if the link is expired. A nil ExpiresAt means it never expires,
+	// so the expiry check is skipped entirely.
+	if link.ExpiresAt != nil && time.Now().After(*link.ExpiresAt) {
 		return ShareLink{}, ErrShareLinkInvalid
 	}
 
@@ -208,7 +220,7 @@ func (s *Store) ListShareLinks(ctx context.Context, cluster, ns, serverName stri
 		var canStartInt int
 		var revokedAtStr sql.NullString
 		var lastUsedStr sql.NullString
-		var expiresAtStr string
+		var expiresAtStr sql.NullString
 		var createdAtStr string
 
 		if err := rows.Scan(
@@ -226,12 +238,14 @@ func (s *Store) ListShareLinks(ctx context.Context, cluster, ns, serverName stri
 			return nil, fmt.Errorf("scan share link: %w", err)
 		}
 
-		// Parse timestamps.
-		expiresAt, err := time.Parse(time.RFC3339, expiresAtStr)
-		if err != nil {
-			return nil, fmt.Errorf("parse expires_at: %w", err)
+		// Parse timestamps. expires_at is nullable: nil means the link never expires.
+		if expiresAtStr.Valid {
+			expiresAt, err := time.Parse(time.RFC3339, expiresAtStr.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse expires_at: %w", err)
+			}
+			link.ExpiresAt = &expiresAt
 		}
-		link.ExpiresAt = expiresAt
 
 		createdAt, err := time.Parse(time.RFC3339, createdAtStr)
 		if err != nil {

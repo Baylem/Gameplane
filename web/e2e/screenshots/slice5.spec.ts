@@ -42,6 +42,20 @@ interface ScriptedResponse {
   body?: unknown;
 }
 
+// Local-time "YYYY-MM-DD" for `days` days from now, matching the format the
+// create dialog's native date input expects. Uses getFullYear/getMonth/
+// getDate (not toISOString, which would shift the day for negative UTC
+// offsets) — mirrors ShareLinks.test.tsx's isoDateNDaysFromNow so both files
+// compute this the same way.
+function isoDateNDaysFromNow(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 async function mockShareResolve(
   page: Page,
   responses: Record<string, ScriptedResponse | ScriptedResponse[]>,
@@ -196,6 +210,52 @@ test.describe("Slice 5: Share links — Settings surfaces (Desktop — 1440x900)
     await expect(dialog.getByText("Allow starting the server", { exact: true })).toBeVisible();
     await page.waitForTimeout(200);
     await captureLocator(page, "atqRh", dialog);
+  });
+
+  test("tr6cE: Settings — Share links (create dialog, no expiry)", async ({ page }) => {
+    // Design PNG is light theme — see setTheme()'s note.
+    await setTheme(page, "light");
+    await openShareLinks(page);
+    await page.getByRole("button", { name: /^create link$/i }).click();
+    const dialog = page.getByRole("dialog", { name: /^create share link for mc-survival$/i });
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    // Drive the HeroUI Select over to "No expiry" (ShareLinks.test.tsx's
+    // pattern): open it (default "30 days") and pick the option.
+    const expiryTrigger = dialog.getByRole("button", { name: /30 days/i });
+    await expiryTrigger.click();
+    const noExpiryOption = await page.getByRole("option", { name: /^no expiry$/i });
+    await noExpiryOption.click();
+    // FR-002 warning replaces the days-Select's helper area.
+    await expect(dialog.getByText("This link works until you revoke it.")).toBeVisible();
+    await page.waitForTimeout(200);
+    await captureLocator(page, "tr6cE", dialog);
+  });
+
+  test("oPF1n: Settings — Share links (create dialog, custom date)", async ({ page }) => {
+    // Design PNG is light theme — see setTheme()'s note.
+    await setTheme(page, "light");
+    await openShareLinks(page);
+    await page.getByRole("button", { name: /^create link$/i }).click();
+    const dialog = page.getByRole("dialog", { name: /^create share link for mc-survival$/i });
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    // Drive the HeroUI Select over to "Custom".
+    const expiryTrigger = dialog.getByRole("button", { name: /30 days/i });
+    await expiryTrigger.click();
+    const customOption = await page.getByRole("option", { name: /^custom$/i });
+    await customOption.click();
+    // Any date 365+ days out exercises the OD-6 long-lived warning shown in
+    // the design frame; computed relative to the real clock (400 days out),
+    // like ShareLinks.test.tsx's isoDateNDaysFromNow, so this doesn't rot
+    // once the design's sample date (2027-11-04) is no longer 365+ days
+    // away. The captured date text therefore deliberately mismatches the
+    // frame's sample date "2027-11-04" — an accepted content-mismatch per
+    // contracts/screen-verification.md, same as VM7ro's URL text below.
+    await dialog.getByLabel("Expires on").fill(isoDateNDaysFromNow(400));
+    await expect(
+      dialog.getByText("Long-lived link — it stays valid for over a year unless you revoke it."),
+    ).toBeVisible();
+    await page.waitForTimeout(200);
+    await captureLocator(page, "oPF1n", dialog);
   });
 
   test("VM7ro: Settings — Share links (created dialog)", async ({ page }) => {
