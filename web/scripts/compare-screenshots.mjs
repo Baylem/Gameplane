@@ -161,11 +161,28 @@ const REFERENCE_CROP_ALLOWLIST = {
   // via PIL alpha>=250 scan of design-export/screenshots/DMnEi.png (now
   // 1088x1898, bbox (64,40)-(1024,1810) => 960x1770).
   DMnEi: { left: 64, top: 40, width: 960, height: 1770 },
-  // Create Share Link dialog: OD-26 round-10 (atqRh N4srNq/uuUdx gap fix)
-  // re-export shrank the panel; bounding box re-verified via PIL alpha>=250
-  // scan of design-export/screenshots/atqRh.png (now 1088x772, bbox
+  // Create Share Link dialog: feature 017 / OD-9's redesign deleted the
+  // "Maximum 90 days" helper line below the expiry Select, shrinking the
+  // panel. This rect went stale at that re-export (it still cited the
+  // round-10 1088x772 export) and would have cropped 40 rows of empty canvas
+  // into the reference, scoring them as a full-width mismatch, had it reached
+  // CI unfixed. Bounding box re-verified via PIL alpha>=250 scan of
+  // design-export/screenshots/atqRh.png (now 1088x732, bbox
+  // (64,40)-(1024,644) => 960x604).
+  atqRh: { left: 64, top: 40, width: 960, height: 604 },
+  // Create Share Link dialog, "No expiry" state (OD-9 T024/T025 new frame):
+  // same 480px-wide panel as atqRh but with the FR-002 warning line
+  // ("This link works until you revoke it.") in place of the custom-date
+  // fields, one text row taller than atqRh. Bounding box re-verified via PIL
+  // alpha>=250 scan of design-export/screenshots/tr6cE.png (1088x772, bbox
   // (64,40)-(1024,684) => 960x644).
-  atqRh: { left: 64, top: 40, width: 960, height: 644 },
+  tr6cE: { left: 64, top: 40, width: 960, height: 644 },
+  // Create Share Link dialog, "Custom" date state (OD-9 T024/T025 new
+  // frame): adds the "Expires on" date field plus the OD-6 long-lived
+  // warning line, two rows taller than atqRh. Bounding box re-verified via
+  // PIL alpha>=250 scan of design-export/screenshots/oPF1n.png (1088x892,
+  // bbox (64,40)-(1024,804) => 960x764).
+  oPF1n: { left: 64, top: 40, width: 960, height: 764 },
   // Share Link Created dialog: OD-27 round-12 (qzcst lineHeight 1.4286,
   // Hp206 padding 14, SICns padding [11,14]) re-export grew the panel by the
   // net +3 CSS px those three overrides add; bounding box re-verified via PIL

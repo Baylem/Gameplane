@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { ReactNode } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setupServer } from "msw/node";
@@ -29,6 +29,29 @@ const mockLinks: ShareLink[] = [
   },
 ];
 
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+// Local-time "YYYY-MM-DD" for `days` days from now (negative/zero allowed),
+// matching the format the create dialog's native date input expects. Always
+// computed relative to the real clock (never a hardcoded calendar date) so
+// the custom-date tests (c)/(d) don't rot as time passes.
+function isoDateNDaysFromNow(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Mirrors ShareLinks.tsx's own customDateToExpiresAt: end of the local
+// calendar day (23:59:59.999 local time) for a "YYYY-MM-DD" date, converted
+// to the UTC instant a test can compare against the captured request body.
+function endOfLocalDayISO(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: false },
@@ -45,7 +68,7 @@ const server = setupServer(
     HttpResponse.json(mockLinks),
   ),
   http.post(/\/servers\/[^/]+:shares$/, async ({ request }) => {
-    const body = (await request.json()) as { expiresIn?: string; canStart: boolean };
+    const body = (await request.json()) as { expiresAt?: string; neverExpires?: boolean; canStart: boolean };
     const newLink: ShareLink = {
       id: `link-${Date.now()}`,
       createdAt: new Date().toISOString(),
@@ -448,5 +471,282 @@ describe("ShareLinksSection", () => {
     await waitFor(() => {
       expect(screen.getByText("Expired")).toBeInTheDocument();
     });
+  });
+
+  // T029: expiry-choice request shapes, warnings, and client-side blocking.
+  describe("expiry choice request shapes (T029)", () => {
+    // (a) The four day-count presets: each must send an absolute `expiresAt`
+    // computed client-side, with no `neverExpires` field, and no other
+    // preset's day count. Captures the outgoing request body the same way
+    // AdminSettings.test.tsx does (a `vi.fn()` POST handler stashing
+    // `request.json()` into a variable this test then asserts on).
+    it.each([
+      ["15 days", 15],
+      ["30 days", 30],
+      ["60 days", 60],
+      ["90 days", 90],
+    ])("preset %s sends an absolute expiresAt ~%d days out", async (label, days) => {
+      const user = userEvent.setup();
+      let capturedBody: Record<string, unknown> | null = null;
+      const postHandler = vi.fn(async ({ request }: { request: Request }) => {
+        capturedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          id: "link-new",
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 7 * ONE_DAY_MS).toISOString(),
+          canStart: false,
+          token: "test-token",
+        });
+      });
+      server.use(http.post(/\/servers\/[^/]+:shares$/, postHandler));
+
+      render(<ShareLinksSection name="mc-survival" />, { wrapper: Wrapper });
+      await user.click(screen.getByRole("button", { name: /Create link/ }));
+      await waitFor(() => {
+        expect(screen.getByText("Create share link for mc-survival")).toBeInTheDocument();
+      });
+
+      // 30 days is already the default selection; only drive the Select for
+      // the other presets so this exercises a real selection change there.
+      if (label !== "30 days") {
+        const expiryTrigger = screen.getByRole("button", { name: /30 days/ });
+        await user.click(expiryTrigger);
+        const option = await screen.findByRole("option", { name: label });
+        await user.click(option);
+      }
+
+      await user.click(screen.getByRole("button", { name: "Create link" }));
+      await waitFor(() => expect(postHandler).toHaveBeenCalled());
+
+      expect(capturedBody).not.toBeNull();
+      const body = capturedBody as unknown as {
+        expiresAt?: string;
+        neverExpires?: boolean;
+      };
+      expect(body.neverExpires).toBeUndefined();
+      expect(body.expiresAt).toBeDefined();
+      const gotMs = new Date(body.expiresAt as string).getTime();
+      const wantMs = Date.now() + days * ONE_DAY_MS;
+      // Generous tolerance for the time the test itself takes to run.
+      expect(Math.abs(gotMs - wantMs)).toBeLessThan(60_000);
+    });
+
+    // (a)+(b) "No expiry" shows the FR-002 warning and sends
+    // `neverExpires: true` with no `expiresAt` field at all.
+    it('"No expiry" shows the FR-002 warning and sends neverExpires: true', async () => {
+      const user = userEvent.setup();
+      let capturedBody: Record<string, unknown> | null = null;
+      const postHandler = vi.fn(async ({ request }: { request: Request }) => {
+        capturedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          id: "link-new",
+          createdAt: new Date().toISOString(),
+          expiresAt: null,
+          canStart: false,
+          token: "test-token",
+        });
+      });
+      server.use(http.post(/\/servers\/[^/]+:shares$/, postHandler));
+
+      render(<ShareLinksSection name="mc-survival" />, { wrapper: Wrapper });
+      await user.click(screen.getByRole("button", { name: /Create link/ }));
+      await waitFor(() => {
+        expect(screen.getByText("Create share link for mc-survival")).toBeInTheDocument();
+      });
+
+      const expiryTrigger = screen.getByRole("button", { name: /30 days/ });
+      await user.click(expiryTrigger);
+      const neverOption = await screen.findByRole("option", { name: "No expiry" });
+      await user.click(neverOption);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("This link works until you revoke it."),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: "Create link" }));
+      await waitFor(() => expect(postHandler).toHaveBeenCalled());
+
+      expect(capturedBody).not.toBeNull();
+      const body = capturedBody as unknown as {
+        expiresAt?: string;
+        neverExpires?: boolean;
+      };
+      expect(body.neverExpires).toBe(true);
+      expect(body.expiresAt).toBeUndefined();
+    });
+
+    // (a) "Custom": a normal (non-long-lived) future date sends an absolute
+    // expiresAt at the end of that local calendar day (OD-2), with no
+    // neverExpires field and no long-lived (OD-6) warning.
+    it('"Custom" with a normal future date sends end-of-day expiresAt', async () => {
+      const user = userEvent.setup();
+      let capturedBody: Record<string, unknown> | null = null;
+      const postHandler = vi.fn(async ({ request }: { request: Request }) => {
+        capturedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          id: "link-new",
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 10 * ONE_DAY_MS).toISOString(),
+          canStart: false,
+          token: "test-token",
+        });
+      });
+      server.use(http.post(/\/servers\/[^/]+:shares$/, postHandler));
+
+      const customDate = isoDateNDaysFromNow(10);
+
+      render(<ShareLinksSection name="mc-survival" />, { wrapper: Wrapper });
+      await user.click(screen.getByRole("button", { name: /Create link/ }));
+      await waitFor(() => {
+        expect(screen.getByText("Create share link for mc-survival")).toBeInTheDocument();
+      });
+
+      const expiryTrigger = screen.getByRole("button", { name: /30 days/ });
+      await user.click(expiryTrigger);
+      const customOption = await screen.findByRole("option", { name: "Custom" });
+      await user.click(customOption);
+
+      const dateInput = await screen.findByLabelText("Expires on");
+      fireEvent.change(dateInput, { target: { value: customDate } });
+
+      expect(
+        screen.queryByText(/Long-lived link/),
+      ).not.toBeInTheDocument();
+
+      const createConfirmBtn = screen.getByRole("button", { name: "Create link" });
+      await waitFor(() => expect(createConfirmBtn).not.toBeDisabled());
+      await user.click(createConfirmBtn);
+      await waitFor(() => expect(postHandler).toHaveBeenCalled());
+
+      expect(capturedBody).not.toBeNull();
+      const body = capturedBody as unknown as {
+        expiresAt?: string;
+        neverExpires?: boolean;
+      };
+      expect(body.neverExpires).toBeUndefined();
+      expect(body.expiresAt).toBe(endOfLocalDayISO(customDate));
+    });
+
+    // (c) A custom date 400 days out shows the OD-6 long-lived warning and
+    // the request still submits successfully with the correct expiresAt.
+    it("custom date 400 days out shows the OD-6 long-lived warning and still submits", async () => {
+      const user = userEvent.setup();
+      let capturedBody: Record<string, unknown> | null = null;
+      const postHandler = vi.fn(async ({ request }: { request: Request }) => {
+        capturedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({
+          id: "link-new",
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 400 * ONE_DAY_MS).toISOString(),
+          canStart: false,
+          token: "test-token",
+        });
+      });
+      server.use(http.post(/\/servers\/[^/]+:shares$/, postHandler));
+
+      const farDate = isoDateNDaysFromNow(400);
+
+      render(<ShareLinksSection name="mc-survival" />, { wrapper: Wrapper });
+      await user.click(screen.getByRole("button", { name: /Create link/ }));
+      await waitFor(() => {
+        expect(screen.getByText("Create share link for mc-survival")).toBeInTheDocument();
+      });
+
+      const expiryTrigger = screen.getByRole("button", { name: /30 days/ });
+      await user.click(expiryTrigger);
+      const customOption = await screen.findByRole("option", { name: "Custom" });
+      await user.click(customOption);
+
+      const dateInput = await screen.findByLabelText("Expires on");
+      fireEvent.change(dateInput, { target: { value: farDate } });
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            "Long-lived link — it stays valid for over a year unless you revoke it.",
+          ),
+        ).toBeInTheDocument();
+      });
+
+      const createConfirmBtn = screen.getByRole("button", { name: "Create link" });
+      await waitFor(() => expect(createConfirmBtn).not.toBeDisabled());
+      await user.click(createConfirmBtn);
+      await waitFor(() => expect(postHandler).toHaveBeenCalled());
+
+      expect(capturedBody).not.toBeNull();
+      const body = capturedBody as unknown as { expiresAt?: string };
+      expect(body.expiresAt).toBe(endOfLocalDayISO(farDate));
+    });
+
+    // (d) A custom date of today or earlier is blocked client-side: the
+    // submit button stays disabled and no request is ever sent — not merely
+    // that an error later appears.
+    it("custom date of today is blocked client-side and never sends a request", async () => {
+      const user = userEvent.setup();
+      const postHandler = vi.fn(async () =>
+        HttpResponse.json({
+          id: "link-new",
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date().toISOString(),
+          canStart: false,
+          token: "test-token",
+        }),
+      );
+      server.use(http.post(/\/servers\/[^/]+:shares$/, postHandler));
+
+      const todayDate = isoDateNDaysFromNow(0);
+
+      render(<ShareLinksSection name="mc-survival" />, { wrapper: Wrapper });
+      await user.click(screen.getByRole("button", { name: /Create link/ }));
+      await waitFor(() => {
+        expect(screen.getByText("Create share link for mc-survival")).toBeInTheDocument();
+      });
+
+      const expiryTrigger = screen.getByRole("button", { name: /30 days/ });
+      await user.click(expiryTrigger);
+      const customOption = await screen.findByRole("option", { name: "Custom" });
+      await user.click(customOption);
+
+      const dateInput = await screen.findByLabelText("Expires on");
+      fireEvent.change(dateInput, { target: { value: todayDate } });
+
+      const createConfirmBtn = screen.getByRole("button", { name: "Create link" });
+      await waitFor(() => expect(createConfirmBtn).toBeDisabled());
+
+      // Attempting the click on a genuinely disabled button is a no-op (no
+      // click event is dispatched), which is exactly what this test needs
+      // to prove: not just that an error shows, but that the request is
+      // never made at all.
+      await user.click(createConfirmBtn);
+
+      expect(postHandler).not.toHaveBeenCalled();
+      expect(screen.getByText("Create share link for mc-survival")).toBeInTheDocument();
+    });
+  });
+
+  // (e) A NULL-expiry mock row renders "Never" in the Expires column and is
+  // never reported "Expired", regardless of how much time passes.
+  it('renders "Never" and never "Expired" for a null-expiry link', async () => {
+    server.use(
+      http.get(/\/servers\/[^/]+:shares$/, () =>
+        HttpResponse.json([
+          {
+            id: "never-link",
+            createdAt: "2026-01-01T00:00:00Z",
+            expiresAt: null,
+            canStart: false,
+          },
+        ]),
+      ),
+    );
+    render(<ShareLinksSection name="mc-survival" />, { wrapper: Wrapper });
+    await waitFor(() => {
+      expect(screen.getByText("Never")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Expired")).not.toBeInTheDocument();
+    // The status chip for a never-expiring link is "Active", never "Expired".
+    expect(screen.getByText("Active")).toBeInTheDocument();
   });
 });
