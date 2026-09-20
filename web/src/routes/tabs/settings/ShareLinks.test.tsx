@@ -524,11 +524,10 @@ describe("ShareLinksSection", () => {
         neverExpires?: boolean;
       };
       expect(body.neverExpires).toBeUndefined();
-      expect(body.expiresAt).toBeDefined();
-      const gotMs = new Date(body.expiresAt as string).getTime();
-      const wantMs = Date.now() + days * ONE_DAY_MS;
-      // Generous tolerance for the time the test itself takes to run.
-      expect(Math.abs(gotMs - wantMs)).toBeLessThan(60_000);
+      // OD-1 (settled 2026-09-20): a preset of N days is a calendar date,
+      // end-of-day local, exactly like a custom date (OD-2) — deterministic,
+      // so this is an exact match, not a tolerance window.
+      expect(body.expiresAt).toBe(endOfLocalDayISO(isoDateNDaysFromNow(days)));
     });
 
     // (a)+(b) "No expiry" shows the FR-002 warning and sends
