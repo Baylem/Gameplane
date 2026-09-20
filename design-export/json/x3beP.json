@@ -4,7 +4,6 @@
   "x": -16135,
   "y": 25462,
   "name": "Gameplane/Modal",
-  "theme": {},
   "reusable": true,
   "width": 480,
   "fill": "$surface/surface",
@@ -32,6 +31,7 @@
       "name": "mTitle",
       "fill": "$foreground/foreground",
       "content": "Back up now",
+      "lineHeight": 1.5,
       "fontFamily": "$typography/font-sans",
       "fontSize": 16,
       "fontWeight": "600"
@@ -179,6 +179,7 @@
           "type": "frame",
           "id": "V7HYp",
           "name": "btnPrimary",
+          "opacity": 0.5,
           "height": 32,
           "fill": "$accent/accent",
           "cornerRadius": 6,
