@@ -60,7 +60,7 @@ describe("theme tokens", () => {
   });
 
   describe("light mode", () => {
-    // Contract values from specs/014-heroui-web-rebuild/contracts/theme-tokens.md
+    // Contract values from specs/done_014-heroui-web-rebuild/contracts/theme-tokens.md
     const expected: Record<string, string> = {
       "--accent": "oklch(59.16% 0.2180 0.58)",
       "--surface": "oklch(98.34% 0.0100 345.41)",
@@ -80,7 +80,7 @@ describe("theme tokens", () => {
   });
 
   describe("dark mode", () => {
-    // Contract values from specs/014-heroui-web-rebuild/contracts/theme-tokens.md
+    // Contract values from specs/done_014-heroui-web-rebuild/contracts/theme-tokens.md
     const expected: Record<string, string> = {
       "--accent": "oklch(69.50% 0.2229 355.31)",
       "--surface": "oklch(22.27% 0.0119 300.63)",

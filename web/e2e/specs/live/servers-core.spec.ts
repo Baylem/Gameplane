@@ -4,7 +4,7 @@ import { loginIfNeeded, seedServer, seedTemplate } from "./_seed";
 import { ServersPage } from "../../pages/ServersPage";
 import { ServerDetailPage } from "../../pages/ServerDetailPage";
 
-// T085 (specs/014-heroui-web-rebuild/tasks.md): live Playwright coverage for
+// T085 (specs/done_014-heroui-web-rebuild/tasks.md): live Playwright coverage for
 // the Slice 2a flows (Servers list + Server Detail core tabs) against a real
 // cluster — this is the feature's E2E tier per OD-3 (Settled 2026-09-03); no
 // corresponding test/e2e/ Go test is added for Slice 2a.

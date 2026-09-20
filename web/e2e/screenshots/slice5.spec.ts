@@ -3,7 +3,7 @@ import path from "path";
 import { fileURLToPath } from "node:url";
 import { captureLocator } from "./capture";
 
-// T191 (specs/014-heroui-web-rebuild/tasks.md): Slice 5 — Share links screen
+// T191 (specs/done_014-heroui-web-rebuild/tasks.md): Slice 5 — Share links screen
 // captures, for comparison against design-export/screenshots/<id>.png per
 // contracts/screen-verification.md. Mirrors slice2a.spec.ts's structure
 // (viewport, capture() helper, id-named PNGs, dark @screenshots-tagged
@@ -12,7 +12,7 @@ import { captureLocator } from "./capture";
 // the @screenshots tag).
 //
 // Ten screen ids were designed for this slice
-// (specs/014-heroui-web-rebuild/contracts/share-link-ui.md): five Settings ·
+// (specs/done_014-heroui-web-rebuild/contracts/share-link-ui.md): five Settings ·
 // Share links frames (xCJlu, dQV9N, atqRh, VM7ro, S7SCDc) and five public
 // /share/$token page states (C2LQE4, q31B6w, qFLfB, EcoGD, epZO2).
 //

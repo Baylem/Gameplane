@@ -2,7 +2,7 @@
 
 **Branch**: `014-heroui-web-rebuild` | **Date**: 2026-09-02 | **Spec**: ./spec.md
 
-**Input**: Feature specification from `specs/014-heroui-web-rebuild/spec.md`
+**Input**: Feature specification from `specs/done_014-heroui-web-rebuild/spec.md`
 
 ## Summary
 
@@ -48,7 +48,7 @@ Post-design re-check (after Phase 1): no violation introduced. OD-3 is settled (
 ### Documentation (this feature)
 
 ```text
-specs/014-heroui-web-rebuild/
+specs/done_014-heroui-web-rebuild/
 ├── spec.md                  # what and why; Clarifications section holds the maintainer's rulings
 ├── plan.md                  # this file
 ├── research.md              # Phase 0: verified facts R-01…R-08

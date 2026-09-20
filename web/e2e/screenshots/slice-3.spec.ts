@@ -1,14 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
 import { capture as sharedCapture, captureLocator } from "./capture";
 
-// T137 (specs/014-heroui-web-rebuild/tasks.md): Slice 3 — Onboarding flow
+// T137 (specs/done_014-heroui-web-rebuild/tasks.md): Slice 3 — Onboarding flow
 // (Create Server wizard steps 1-5), Modules Catalog, and Backups
 // (Index/Schedules/Restores + detail drawer/restore dialog/list item).
 // Screenshot verification tests for the HeroUI rebuild, capturing the 12
 // design frames listed in design-export/MANIFEST.md's "Incremental export
 // 2026-09-05 — Slice 3 design wave" section at 1440px, for comparison
 // against design-export/screenshots/<id>.png per
-// specs/014-heroui-web-rebuild/contracts/screen-verification.md.
+// specs/done_014-heroui-web-rebuild/contracts/screen-verification.md.
 //
 // Mirrors slice2a.spec.ts's structure (viewport, capture() helper,
 // id-named PNGs, GAMEPLANE_SCREENSHOTS=1 gating via playwright.config.ts's

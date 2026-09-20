@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// T189 (specs/014-heroui-web-rebuild/tasks.md): Slice 5 — Share links, mock
-// mode. Contract: specs/014-heroui-web-rebuild/contracts/share-link-ui.md.
+// T189 (specs/done_014-heroui-web-rebuild/tasks.md): Slice 5 — Share links, mock
+// mode. Contract: specs/done_014-heroui-web-rebuild/contracts/share-link-ui.md.
 //
 // ShareLinksSection (web/src/routes/tabs/settings/ShareLinks.tsx) is built
 // but not yet mounted into Settings.tsx's SECTIONS (T179 is deferred — see

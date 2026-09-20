@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import type { APIRequestContext, Page } from "@playwright/test";
 import { loginIfNeeded, seedServer, seedTemplate } from "./_seed";
 
-// T190 (specs/014-heroui-web-rebuild/tasks.md): live share-link coverage —
+// T190 (specs/done_014-heroui-web-rebuild/tasks.md): live share-link coverage —
 // this is the feature's E2E tier per OD-3 (Settled 2026-09-03); no
 // corresponding test/e2e/ Go test is added for share links.
 //

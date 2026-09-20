@@ -3,7 +3,7 @@ import { LoginPage, loginIfNeeded } from "../pages/LoginPage";
 import { ServersPage } from "../pages/ServersPage";
 import { ServerDetailPage } from "../pages/ServerDetailPage";
 
-// SC-007 keyboard-only pass (specs/014-heroui-web-rebuild, T207), automated.
+// SC-007 keyboard-only pass (specs/done_014-heroui-web-rebuild, T207), automated.
 //
 // After the initial page.goto, every step uses page.keyboard only (Tab,
 // Shift+Tab, Enter, arrow keys, Home/End, Escape). Every Tab stop on the way

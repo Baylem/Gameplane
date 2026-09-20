@@ -58,7 +58,7 @@ FROM users;
 
 **Decision**:  
 Structure theme tokens in `web/src/styles/globals.css` using `data-theme-preset` attributes on `<html>`:
-- `data-theme-preset="pink"` (default): Uses the existing HeroUI semantic tokens approved in `specs/014-heroui-web-rebuild/contracts/theme-tokens.md` (Pink accent `#FF4FA3` dark / `#DB2777` light).
+- `data-theme-preset="pink"` (default): Uses the existing HeroUI semantic tokens approved in `specs/done_014-heroui-web-rebuild/contracts/theme-tokens.md` (Pink accent `#FF4FA3` dark / `#DB2777` light).
 - `data-theme-preset="legacy"`: Rebinds HeroUI semantic variables (`--accent`, `--surface`, `--background`, `--foreground`, `--border`, etc.) to the original Gameplane palette (Orange accent `#F97316`, dark neutral ground `#0F0F0F`, card `#1C1C1C`, border `#292929`).
 
 **Rationale**:

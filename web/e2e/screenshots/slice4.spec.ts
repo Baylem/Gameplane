@@ -1,10 +1,10 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import { capture, captureLocator } from "./capture";
 
-// T159 (specs/014-heroui-web-rebuild/tasks.md): Slice 4 — Admin Settings,
+// T159 (specs/done_014-heroui-web-rebuild/tasks.md): Slice 4 — Admin Settings,
 // Users & RBAC, Audit Log, System Logs, and Cluster Settings. Screenshot
 // verification tests for the HeroUI rebuild, capturing the design frames
-// listed in specs/014-heroui-web-rebuild/contracts/component-map.md's
+// listed in specs/done_014-heroui-web-rebuild/contracts/component-map.md's
 // "Slice 4" entry / design-export/MANIFEST.md, at 1440px, for comparison
 // against design-export/screenshots/<id>.png per
 // contracts/screen-verification.md.
