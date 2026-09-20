@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import { loginIfNeeded, seedServer, seedTemplate } from "./_seed";
 import { ServerDetailPage } from "../../pages/ServerDetailPage";
 
@@ -149,57 +149,71 @@ test.describe("live: share links", () => {
   }
 
   // Opens the Settings tab's "Share links" sub-section and clicks "Create
-  // link", leaving the dialog open for the caller to drive.
-  async function openCreateDialog(page: Page): Promise<void> {
+  // link", leaving the dialog open for the caller to drive. Returns the
+  // dialog's own Locator so callers can scope every subsequent interaction
+  // to it — mirrors slice5.spec.ts's `page.getByRole("dialog", { name })`
+  // pattern for the same three dialogs (atqRh/VM7ro/S7SCDc).
+  //
+  // The opener button itself is scoped to the app's <main> landmark
+  // (AppShell.tsx renders it; AppLayout.tsx's Sidebar-drawer comment notes
+  // HeroUI portals dialog content to document.body, i.e. outside <main>),
+  // not because a dialog could be open yet here (none is), but so this
+  // stays correct even if a previous dialog's DOM lingers — the button text
+  // "Create link" is shared with the create dialog's own submit button.
+  async function openCreateDialog(page: Page): Promise<Locator> {
     const detail = new ServerDetailPage(page);
     await detail.goto(serverName);
     await expect(page.getByRole("heading", { name: serverName })).toBeVisible({ timeout: 20_000 });
     await detail.clickTab("Settings");
     await page.getByRole("tab", { name: /^share links$/i }).click();
-    await page
-      .getByRole("button", { name: /create link/i })
-      .first()
-      .click();
-    await expect(page.getByText(`Create share link for ${serverName}`)).toBeVisible({
-      timeout: 10_000,
+    await page.getByRole("main").getByRole("button", { name: "Create link" }).click();
+    const dialog = page.getByRole("dialog", {
+      name: new RegExp(`^create share link for ${serverName}$`, "i"),
     });
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    return dialog;
   }
 
   // Confirms the create dialog, closes the follow-up "Share link created"
-  // dialog, and waits for the list to refresh.
-  async function submitAndCloseCreatedDialog(page: Page): Promise<void> {
-    await page.getByRole("button", { name: "Create link" }).click();
-    await expect(page.getByText("Share link created")).toBeVisible({ timeout: 10_000 });
-    await page.getByRole("button", { name: "Done" }).click();
-    await expect(page.getByText("Share link created")).toHaveCount(0);
+  // dialog, and waits for the list to refresh. Every locator here is scoped
+  // to its own dialog so it can't collide with the page's "Create link"
+  // button (shared name) or with the other dialog's "Done"/"Copy link"
+  // controls.
+  async function submitAndCloseCreatedDialog(createDialog: Locator, page: Page): Promise<void> {
+    await createDialog.getByRole("button", { name: "Create link" }).click();
+    const createdDialog = page.getByRole("dialog", { name: /^share link created$/i });
+    await expect(createdDialog).toBeVisible({ timeout: 10_000 });
+    await createdDialog.getByRole("button", { name: "Done" }).click();
+    await expect(createdDialog).toHaveCount(0);
   }
 
   test("create a link via a preset expiry choice and see it in the list", async ({ page }) => {
-    await openCreateDialog(page);
+    const dialog = await openCreateDialog(page);
 
     // Drive the HeroUI Select: open it (default is "30 days") and pick
     // "60 days", a genuine selection change (mirrors
-    // ShareLinks.test.tsx's component-test pattern).
-    await page.getByRole("button", { name: /30 days/ }).click();
+    // ShareLinks.test.tsx's component-test pattern). Scoped to the create
+    // dialog so it can't match a same-named control elsewhere.
+    await dialog.getByRole("button", { name: /30 days/ }).click();
     await page.getByRole("option", { name: "60 days" }).click();
 
     const expectedDate = formatExpiry(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000));
-    await submitAndCloseCreatedDialog(page);
+    await submitAndCloseCreatedDialog(dialog, page);
 
     const grid = page.getByRole("grid", { name: "Share links" });
     await expect(grid.getByText(expectedDate).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("create a 'No expiry' link and see 'Never' in the list", async ({ page }) => {
-    await openCreateDialog(page);
+    const dialog = await openCreateDialog(page);
 
-    await page.getByRole("button", { name: /30 days/ }).click();
+    await dialog.getByRole("button", { name: /30 days/ }).click();
     await page.getByRole("option", { name: "No expiry" }).click();
 
     // FR-002: the warning shows once "No expiry" is selected.
-    await expect(page.getByText(/this link works until you revoke it/i)).toBeVisible();
+    await expect(dialog.getByText(/this link works until you revoke it/i)).toBeVisible();
 
-    await submitAndCloseCreatedDialog(page);
+    await submitAndCloseCreatedDialog(dialog, page);
 
     const grid = page.getByRole("grid", { name: "Share links" });
     await expect(grid.getByText("Never", { exact: true }).first()).toBeVisible({
@@ -213,9 +227,9 @@ test.describe("live: share links", () => {
   });
 
   test("create a link with a custom expiry date and see it in the list", async ({ page }) => {
-    await openCreateDialog(page);
+    const dialog = await openCreateDialog(page);
 
-    await page.getByRole("button", { name: /30 days/ }).click();
+    await dialog.getByRole("button", { name: /30 days/ }).click();
     await page.getByRole("option", { name: "Custom" }).click();
 
     // FR-003: a date strictly after today. Pick 20 days out — comfortably
@@ -226,10 +240,10 @@ test.describe("live: share links", () => {
     const y = customDate.getFullYear();
     const m = String(customDate.getMonth() + 1).padStart(2, "0");
     const d = String(customDate.getDate()).padStart(2, "0");
-    await page.getByLabel("Expires on").fill(`${y}-${m}-${d}`);
+    await dialog.getByLabel("Expires on").fill(`${y}-${m}-${d}`);
 
     const expectedDate = formatExpiry(customDate);
-    await submitAndCloseCreatedDialog(page);
+    await submitAndCloseCreatedDialog(dialog, page);
 
     const grid = page.getByRole("grid", { name: "Share links" });
     await expect(grid.getByText(expectedDate).first()).toBeVisible({ timeout: 10_000 });
