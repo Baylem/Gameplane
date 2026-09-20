@@ -6,12 +6,14 @@
   "name": "Gameplane/Dialog/Share Link Created",
   "x": -15865,
   "y": 27934,
+  "theme": {},
   "descendants": {
     "E7Whx": {
       "content": "Share link created"
     },
     "qzcst": {
-      "content": "Send this to your friend. It works without a Gameplane account."
+      "content": "Send this to your friend. It works without a Gameplane account.",
+      "lineHeight": 1.4286
     },
     "Nht52": {
       "type": "frame",
@@ -19,7 +21,7 @@
       "name": "mBody",
       "width": "fill_container",
       "layout": "vertical",
-      "gap": 12,
+      "gap": 16,
       "padding": [
         16,
         0,
@@ -28,25 +30,63 @@
       ],
       "children": [
         {
-          "id": "P8AoUw",
-          "type": "ref",
-          "ref": "Llzos",
-          "name": "One-time warning",
+          "type": "frame",
+          "id": "Hp206",
+          "name": "warningBox",
           "width": "fill_container",
-          "descendants": {
-            "sINBP": {
-              "icon": "megaphone"
+          "fill": "$warning/10",
+          "cornerRadius": 8,
+          "stroke": "$warning/warning",
+          "strokeWidth": 2,
+          "strokeAlignment": "inner",
+          "gap": 8,
+          "padding": 14,
+          "children": [
+            {
+              "type": "icon",
+              "id": "UzYfu",
+              "name": "icon",
+              "width": 20,
+              "height": 20,
+              "icon": "circle-alert",
+              "library": "lucide",
+              "fill": "$warning/warning"
             },
-            "BXuYr": {
-              "content": "You will not see this link again"
-            },
-            "JmFhb": {
-              "content": "Gameplane stores only a one-way hash of the token, so it can't be shown or recovered after you close this dialog. Copy it now."
-            },
-            "c0FRXZ": {
-              "enabled": false
+            {
+              "type": "frame",
+              "id": "lATVG",
+              "name": "warningContent",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 4,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "b8l6B",
+                  "name": "warningTitle",
+                  "fill": "$warning/warning",
+                  "content": "You will not see this link again",
+                  "lineHeight": 1.4286,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "mjjwe",
+                  "name": "warningDesc",
+                  "fill": "$warning/warning",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Gameplane stores only a one-way hash of the token, so it\ncan't be shown or recovered after you close this dialog.\nCopy it now.",
+                  "lineHeight": 1.4286,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
             }
-          }
+          ]
         },
         {
           "type": "frame",
@@ -57,13 +97,13 @@
           "cornerRadius": 8,
           "stroke": "$border/border",
           "strokeWidth": 1,
+          "strokeAlignment": "inner",
           "gap": 12,
           "padding": [
-            10,
+            11,
             14
           ],
           "justifyContent": "space_between",
-          "alignItems": "center",
           "children": [
             {
               "type": "text",
@@ -71,7 +111,8 @@
               "fill": "$foreground/foreground",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "https://play.gameplane.example/s/8f3ac1e0b2d94f7c9a5e6b7d1c0e2f4a",
+              "content": "http://localhost:5173/share/8f3ac1e0b2d94f7c9a5e\n6b7d1c0e2f4a5b6c7",
+              "lineHeight": 1.4615,
               "fontFamily": "$typography/font-mono",
               "fontSize": 13,
               "fontWeight": "normal"
@@ -109,6 +150,8 @@
           "type": "ref",
           "ref": "FIB65",
           "name": "btnCopy",
+          "cornerRadius": 6,
+          "width": 99,
           "descendants": {
             "K8d1zg": {
               "icon": "copy"
@@ -123,6 +166,7 @@
           "type": "ref",
           "ref": "j9c5W",
           "name": "btnPrimary",
+          "cornerRadius": 6,
           "descendants": {
             "n8Hmwk": {
               "enabled": false

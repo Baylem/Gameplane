@@ -125,24 +125,23 @@ function CreateDialog({
       <ModalBackdrop
         isDismissable={!create.isPending}
         isKeyboardDismissDisabled={create.isPending}
-      />
+      >
       <ModalContainer>
-        <ModalDialog>
+        <ModalDialog className="w-[480px] max-w-[480px]">
           <ModalHeader>
             <ModalHeading>Create share link for {serverName}</ModalHeading>
-          </ModalHeader>
-
-          <ModalBody className="gap-4">
-            <Description className="text-sm text-muted">
+            <Description className="text-sm leading-[21px] text-muted">
               Anyone with this link can check the server&apos;s status and connection address
               without signing in.
             </Description>
+          </ModalHeader>
 
+          <ModalBody className="gap-4">
             <div>
-              <Select value={expiry} onChange={(key) => setExpiry(String(key))} className="mt-1">
+              <Select value={expiry} onChange={(key) => setExpiry(String(key))}>
                 <Label className="text-xs">Expires in</Label>
                 <Select.Trigger>
-                  <Select.Value />
+                  <Select.Value className="text-[var(--field-placeholder)]" />
                   <Select.Indicator />
                 </Select.Trigger>
                 <Select.Popover>
@@ -173,8 +172,8 @@ function CreateDialog({
                 </Switch.Content>
               </Switch>
               <div className="flex-1">
-                <Label className="text-sm">Allow starting the server</Label>
-                <Description className="text-xs text-muted">
+                <Label className="block text-sm">Allow starting the server</Label>
+                <Description className="block text-xs text-muted">
                   The link holder can wake {serverName} from asleep. Without this, they can
                   only view its status.
                 </Description>
@@ -190,8 +189,9 @@ function CreateDialog({
 
           <ModalFooter className="flex items-center justify-end gap-2">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
+              className="gap-[5px] text-[13px]"
               onPress={() => onOpenChange(false)}
               isDisabled={create.isPending}
             >
@@ -200,14 +200,17 @@ function CreateDialog({
             <Button
               size="sm"
               variant="primary"
+              className="gap-[5px] text-[13px]"
               isDisabled={create.isPending}
               onPress={() => create.mutate()}
             >
+              <Link2 className="h-3.5 w-3.5" />
               {create.isPending ? "Creating…" : "Create link"}
             </Button>
           </ModalFooter>
         </ModalDialog>
       </ModalContainer>
+      </ModalBackdrop>
     </Modal>
   );
 }
@@ -240,15 +243,15 @@ function CreatedDialog({ open, onOpenChange, link }: CreatedDialogProps) {
     <Modal isOpen={open} onOpenChange={onOpenChange}>
       <ModalBackdrop isDismissable>
         <ModalContainer>
-          <ModalDialog>
+          <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
               <ModalHeading>Share link created</ModalHeading>
+              <Description className="text-sm text-muted">
+                Send this to your friend. It works without a Gameplane account.
+              </Description>
             </ModalHeader>
 
             <ModalBody className="gap-4">
-              <Description className="text-sm text-foreground">
-                Send this to your friend. It works without a Gameplane account.
-              </Description>
 
               <div className="rounded-lg border-2 border-warning bg-warning/10 p-3">
                 <div className="flex items-start gap-2">
@@ -263,16 +266,16 @@ function CreatedDialog({ open, onOpenChange, link }: CreatedDialogProps) {
                 </div>
               </div>
 
-              <div className="rounded-lg bg-surface p-3">
-                <div className="break-all font-mono text-sm text-foreground">{url}</div>
+              <div className="relative rounded-lg border border-divider bg-surface p-2.5 px-3.5 pr-10">
+                <div className="break-all font-mono text-[13px] text-foreground">{url}</div>
                 <Button
+                  variant="ghost"
                   size="sm"
-                  variant="secondary"
-                  className="mt-3"
+                  className="absolute right-1 top-1 h-7 w-7 min-w-0 p-0"
+                  aria-label="Copy URL"
                   onPress={handleCopy}
                 >
                   <Copy className="h-4 w-4" />
-                  {copied ? "Copied!" : "Copy link"}
                 </Button>
               </div>
             </ModalBody>
@@ -280,7 +283,17 @@ function CreatedDialog({ open, onOpenChange, link }: CreatedDialogProps) {
             <ModalFooter className="flex items-center justify-end gap-2">
               <Button
                 size="sm"
+                variant="outline"
+                className="gap-[5px] text-[13px]"
+                onPress={handleCopy}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                {copied ? "Copied!" : "Copy link"}
+              </Button>
+              <Button
+                size="sm"
                 variant="primary"
+                className="gap-[5px] text-[13px]"
                 onPress={() => onOpenChange(false)}
               >
                 Done
@@ -324,11 +337,11 @@ function RevokeDialog({
       <AlertDialogBackdrop
         isDismissable={!revoke.isPending}
         isKeyboardDismissDisabled={revoke.isPending}
-      />
+      >
       <AlertDialogContainer>
-        <AlertDialogDialog>
-          <AlertDialogHeader>
-            <div className="flex items-start gap-4">
+        <AlertDialogDialog className="w-[440px] max-w-[440px] gap-0 rounded-[12px] p-5">
+          <AlertDialogHeader className="m-0 p-0">
+            <div className="flex items-center gap-3">
               <AlertDialogIcon status="danger" className="shrink-0">
                 <AlertCircle className="h-5 w-5" />
               </AlertDialogIcon>
@@ -336,9 +349,9 @@ function RevokeDialog({
             </div>
           </AlertDialogHeader>
 
-          <AlertDialogBody>
+          <AlertDialogBody className="m-0 p-0 pt-4">
             <div className="space-y-4">
-              <Description className="text-sm text-foreground">
+              <Description className="text-sm leading-[21px] text-muted">
                 Anyone using this link will immediately lose access to {serverName}&apos;s status
                 page. This action cannot be undone.
               </Description>
@@ -350,9 +363,9 @@ function RevokeDialog({
             </div>
           </AlertDialogBody>
 
-          <AlertDialogFooter className="flex items-center justify-end gap-2">
+          <AlertDialogFooter className="m-0 flex items-center justify-end gap-2 p-0 pt-5">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               isDisabled={revoke.isPending}
               onPress={() => onOpenChange(false)}
@@ -370,6 +383,7 @@ function RevokeDialog({
           </AlertDialogFooter>
         </AlertDialogDialog>
       </AlertDialogContainer>
+      </AlertDialogBackdrop>
     </AlertDialog>
   );
 }

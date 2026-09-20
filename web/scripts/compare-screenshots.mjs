@@ -94,6 +94,13 @@ const SCREEN_THRESHOLD_OVERRIDES = {
   // Mobile responsive layout (narrow 390px viewport with condensed cards)
   tooKB: 0.06, // Servers — Mobile
   SeizD: 0.06, // Navigation Drawer — Mobile
+  // Removable group chips: tiny pills whose glyph rows differ only by text
+  // rasterization (Pencil export crisp vs Chrome smoothed). Maintainer
+  // ruled these a capture issue and signed off on per-frame overrides
+  // (2026-09-19). CI worst case: XL5ZU 8.54%, vStkb 7.81%, uw0dB 11.88%.
+  XL5ZU: 0.13, // Removable Group Chip — admin
+  vStkb: 0.13, // Removable Group Chip — operator
+  uw0dB: 0.13, // Removable Group Chip — viewer
 };
 
 const SCREEN_BLOCK_THRESHOLD_OVERRIDES = {
@@ -102,6 +109,10 @@ const SCREEN_BLOCK_THRESHOLD_OVERRIDES = {
   FtdkI: 0.25,
   tooKB: 0.25,
   SeizD: 0.25,
+  // Same three chips, same cause. CI worst case: 28.21% / 31.56% / 35.70%.
+  XL5ZU: 0.38,
+  vStkb: 0.38,
+  uw0dB: 0.38,
 };
 
 // Ids maintainer-accepted as component crops captured at implementation size
@@ -110,28 +121,80 @@ const SCREEN_BLOCK_THRESHOLD_OVERRIDES = {
 // from the last local run; the gate allows ±5% (SCALE_BAND_FRACTION) around
 // it in either direction, not just growth.
 const SCALE_ALLOWLIST = {
-  BV5ei: 1.27, // Provenance Badge — Not configured
-  R65Xyx: 1.25, // Provenance Badge — Overridden
-  Rwnu3: 1.22, // Provenance Badge — From Helm
-  XL5ZU: 1.45, // Removable Group Chip — Orange (admin)
-  vStkb: 1.45, // Removable Group Chip — Violet (operator)
-  uw0dB: 1.47, // Removable Group Chip — Secondary (viewer)
-  CqaSq: 1.07, // Role Editor Modal
-  E9EEv0: 1.22, // Restore Backup dialog
-  Kp48V: 1.13, // Confirm Admin Mapping dialog
-  MaoHP: 1.22, // Dialog — Reset Password
-  NLDDv: 1.22, // Dialog — Invite User
-  t3IY3u: 1.22, // Dialog — Edit User
-  // DMnEi (Backup List Item): captured as a table-row element crop against a
-  // 1088-wide reference (downscale, scaleFactor < 1). NOTE (design/export
-  // conflict, not a capture-code bug): design-export/screenshots/DMnEi.png
-  // currently shows the "Add module source" dialog rather than the Backup
-  // List Item this id and MANIFEST.md both describe — see slice-3.spec.ts's
-  // DMnEi test comment. Tracked in issue #376; needs a Pencil re-export, not
-  // a change to this allowlist entry.
-  DMnEi: 0.49,
-  zhLZN: 1.3125, // Backup Detail Drawer
-  kIxaJ: 0.6184, // Audit Integrity Banner
+  // BV5ei, Rwnu3 (Provenance Badge chips): entries removed after the
+  // ProvenanceBadge typography/sizing fix — that fix makes rendered size
+  // match the design size (~230x34/254x34), so the expected scale factor is
+  // at/near 1.0x (the allowlist default) rather than the old, stale factors
+  // recorded against the previous, larger chip size.
+  R65Xyx: 0.9883, // Provenance Badge (Overridden) — CI-measured post-typography-fix scale
+  XL5ZU: 1.023, // Removable Group Chip — Orange (admin)
+  vStkb: 1.023, // Removable Group Chip — Violet (operator)
+  uw0dB: 1.0349, // Removable Group Chip — Secondary (viewer)
+  Kp48V: 0.9821, // Confirm Admin Mapping dialog
+  // Revoke Share Link: provisional. Same w-[440px] AlertDialogDialog pin as
+  // Kp48V (ConfirmDialog.tsx), so the same 880px-reference / captured-width
+  // ratio is expected. The gate only applies when scaleFactor != 1.000, so
+  // this entry is inert if the capture lands at exactly 1. Re-record from the
+  // first CI run.
+  S7SCDc: 0.9821,
+  // zhLZN: entry removed (maintainer-approved re-record). Its reference is
+  // now cropped to the opaque panel via REFERENCE_CROP_ALLOWLIST, so the
+  // cropped 880px reference and the 880px captureLocator() crop match and
+  // scaleFactor is exactly 1. The old 1.3125 no longer matched CI's measured
+  // 1.1455 (= 1008px shadow-inclusive export / 880px capture).
+};
+
+// Ids whose design-export/screenshots/<id>.png includes the frame's outer
+// drop shadow as transparent bleed around the opaque panel (Pencil exports
+// the shadow's bounding box). A captureLocator() element crop has no such
+// margin, so the reference is cropped to its opaque panel before the scale
+// factor is computed and before diffing. Rect is sharp .extract() shape
+// { left, top, width, height } in the PNG's raw pixels, taken from the
+// alpha >= 250 bounding box. Re-measure it whenever the id is re-exported
+// or its shadow/size changes.
+const REFERENCE_CROP_ALLOWLIST = {
+  // Backup Detail Drawer: 440x760 panel at 2x; shadow offset x -12 / blur 32 /
+  // spread -8 leaves 44 CSS px bleed left, 20 right, 32 top and bottom (bbox
+  // (88,64)-(968,1584) => 880x1520).
+  zhLZN: { left: 88, top: 64, width: 880, height: 1520 },
+  // Add module source dialog: 480x882 panel at 2x, bounding box re-verified
+  // via PIL alpha>=250 scan of design-export/screenshots/DMnEi.png (now
+  // 1088x1898, bbox (64,40)-(1024,1810) => 960x1770).
+  DMnEi: { left: 64, top: 40, width: 960, height: 1770 },
+  // Create Share Link dialog: OD-26 round-10 (atqRh N4srNq/uuUdx gap fix)
+  // re-export shrank the panel; bounding box re-verified via PIL alpha>=250
+  // scan of design-export/screenshots/atqRh.png (now 1088x772, bbox
+  // (64,40)-(1024,684) => 960x644).
+  atqRh: { left: 64, top: 40, width: 960, height: 644 },
+  // Share Link Created dialog: OD-27 round-12 (qzcst lineHeight 1.4286,
+  // Hp206 padding 14, SICns padding [11,14]) re-export grew the panel by the
+  // net +3 CSS px those three overrides add; bounding box re-verified via PIL
+  // alpha>=250 scan of design-export/screenshots/VM7ro.png (now 1088x816,
+  // bbox (64,40)-(1024,728) => 960x688, which is exactly the browser
+  // capture's 960x688 — the two halves now agree on height).
+  VM7ro: { left: 64, top: 40, width: 960, height: 688 },
+  // Revoke Share Link dialog: OD-26 round-10 HARNESS clause. Design side is
+  // unchanged (S7SCDc references master WwNlX, not touched this round);
+  // opaque-panel bbox re-verified via PIL alpha>=250 scan of
+  // design-export/screenshots/S7SCDc.png (1008x508, bbox
+  // (64,40)-(944,420) => 880x380). Per OD-26, captureLocator() keeps 2 CSS px
+  // (4 device px) of modal backdrop in the browser capture and capture.ts is
+  // intentionally left unchanged — the reference crop absorbs the difference
+  // instead. The round-10 rect assumed that backdrop was split 1 CSS px per
+  // edge and used top 38, but the capture measures it all at the bottom: the
+  // 880x384 browser capture carries its panel at rows 0-379 (0 device px of
+  // backdrop above, 4 below), so a top-38 crop put the reference panel at rows
+  // 2-381 and mis-registered every glyph by 2 device px (CI: 5.72% global,
+  // over the 4% gate). Registering the crop on the panel's own top edge
+  // (top 40, height still 384 => bbox (64,40)-(944,424)) re-aligns the two
+  // panels: locally re-measured at 2.91% global / 5.67% block. Note the 4
+  // extra rows below the panel are NOT free: measured alpha 46-98 across
+  // x 64-943, all above ALPHA_MASK_THRESHOLD (8), so REFERENCE_ALPHA_MASK
+  // keeps that shadow gradient in both the numerator and the denominator
+  // and it is diffed against the browser's backdrop. It costs ~1.04% of the
+  // 880x384 area, concentrated in the two bottom blocks, and the 2.91% /
+  // 5.67% above already includes it.
+  S7SCDc: { left: 64, top: 40, width: 880, height: 384 },
 };
 
 // Allowed deviation from an allowlisted id's recorded scaleFactor, in either
@@ -396,8 +459,12 @@ async function run() {
       continue;
     }
 
-    // Read metadata of both to determine the scale factor
-    const refMeta = await sharp(refPath).metadata();
+    // Read metadata of both to determine the scale factor. A
+    // REFERENCE_CROP_ALLOWLIST id's effective reference size is its crop rect.
+    const refCrop = REFERENCE_CROP_ALLOWLIST[screenId];
+    const refMeta = refCrop
+      ? { width: refCrop.width, height: refCrop.height }
+      : await sharp(refPath).metadata();
     const currMeta = await sharp(currPath).metadata();
 
     // Scale-normalize the capture to the reference's width class before padding —
@@ -450,7 +517,16 @@ async function run() {
     const maxHeight = Math.max(refMeta.height || 0, scaledCurr.height);
 
     // Standardize both onto maxWidth × maxHeight raw RGBA buffers
-    const refRaw = await loadAndScaleImage(refPath, 1);
+    const refRaw = refCrop
+      ? await (async () => {
+          const { data, info } = await sharp(refPath)
+            .ensureAlpha()
+            .extract(refCrop)
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+          return { data, width: info.width, height: info.height, channels: info.channels };
+        })()
+      : await loadAndScaleImage(refPath, 1);
     const paddedRef = await padToCanvas(refRaw, maxWidth, maxHeight);
     const paddedCurr = await padToCanvas(scaledCurr, maxWidth, maxHeight);
 
