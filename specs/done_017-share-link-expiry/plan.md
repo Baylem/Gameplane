@@ -2,7 +2,7 @@
 
 **Branch**: `017-share-link-expiry` | **Date**: 2026-09-20 | **Spec**: [./spec.md](./spec.md)
 
-**Input**: Feature specification from `specs/017-share-link-expiry/spec.md`, settled by maintainer rulings in `specs/017-share-link-expiry/OPEN-DECISIONS.md` (OD-1/3/5/7, OD-2, OD-4, OD-6 all **Settled** as of 2026-09-19).
+**Input**: Feature specification from `specs/done_017-share-link-expiry/spec.md`, settled by maintainer rulings in `specs/done_017-share-link-expiry/OPEN-DECISIONS.md` (OD-1/3/5/7, OD-2, OD-4, OD-6 all **Settled** as of 2026-09-19).
 
 ## Summary
 
@@ -54,7 +54,7 @@ Replace the fixed 90-day maximum lifetime on share links with six create-dialog 
 ### Documentation (this feature)
 
 ```text
-specs/017-share-link-expiry/
+specs/done_017-share-link-expiry/
 ├── plan.md                      # This file
 ├── tasks.md                     # Phase breakdown (this feature)
 ├── OPEN-DECISIONS.md            # Settled rulings (OD-1..OD-7) + any newly surfaced opens

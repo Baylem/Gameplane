@@ -1,5 +1,5 @@
 -- Make share_links.expires_at nullable so a link can have no expiry at all
--- (NULL = never expires), per specs/017-share-link-expiry OD-1/OD-3/OD-4.
+-- (NULL = never expires), per specs/done_017-share-link-expiry OD-1/OD-3/OD-4.
 --
 -- SQLite has no ALTER TABLE ... ALTER COLUMN, so the column can't be
 -- loosened from NOT NULL to nullable in place on that driver. Rebuild the

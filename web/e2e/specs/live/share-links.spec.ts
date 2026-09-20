@@ -23,7 +23,7 @@ import { ServerDetailPage } from "../../pages/ServerDetailPage";
 // storageState / loginIfNeeded's no-op safety net) covers the whole file,
 // mirroring servers-core.spec.ts's login-budget discipline.
 //
-// T030 (specs/017-share-link-expiry/tasks.md): ShareLinksSection is now
+// T030 (specs/done_017-share-link-expiry/tasks.md): ShareLinksSection is now
 // mounted into Settings.tsx's SECTIONS (Phase 5 landed), so the redesigned
 // create dialog (six expiry choices, "No expiry", "Custom") has real UI to
 // drive. The tests below reach it the way a user would — ServerDetailPage's

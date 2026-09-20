@@ -1,4 +1,4 @@
-# Open Decisions: 017-share-link-expiry
+# Open Decisions: done_017-share-link-expiry
 
 Unsettled items not fixed by the maintainer's 2026-09-19 chat decisions. Do not treat any of the below as decided until a maintainer rules on it here.
 

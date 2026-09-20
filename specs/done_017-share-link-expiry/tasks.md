@@ -4,7 +4,7 @@ description: "Task list for Feature 017: Configurable Share Link Expiry"
 
 # Tasks: Configurable Share Link Expiry
 
-**Input**: Design documents from `specs/017-share-link-expiry/`: `spec.md`, `plan.md`, `OPEN-DECISIONS.md` (all rulings OD-1..OD-7 settled 2026-09-19), `docs-security-draft.md`.
+**Input**: Design documents from `specs/done_017-share-link-expiry/`: `spec.md`, `plan.md`, `OPEN-DECISIONS.md` (all rulings OD-1..OD-7 settled 2026-09-19), `docs-security-draft.md`.
 
 **Prerequisites**: plan.md (required), spec.md (required for user stories), OPEN-DECISIONS.md (required — every ruling below cites its OD item; nothing here re-decides an OD).
 
@@ -23,8 +23,8 @@ description: "Task list for Feature 017: Configurable Share Link Expiry"
 
 **Purpose**: Confirm the migration slot and settled rulings before any file changes.
 
-- [X] T001 [P] Confirm `010` is still the next free migration number in `api/internal/db/migrations/` (no other branch has claimed it) — anchor file `api/internal/db/migrations/009_share_links_cluster.sql`. If `010_*.sql` already exists on this worktree from another concurrent feature, record the conflict in `specs/017-share-link-expiry/OPEN-DECISIONS.md` as a new open item and pick the next free number instead of overwriting. — Done 2026-09-20 in 724f4f9f: 010_share_links_expiry_nullable.sql is the next free number; 011_* does not exist.
-- [X] T002 [P] Re-read `specs/017-share-link-expiry/OPEN-DECISIONS.md` in full and confirm no item needed by Phases 2-4 (OD-1, OD-2, OD-4, OD-6) is still marked Open; only OD-3's two sub-questions are folded into OD-1's Settled ruling (`*time.Time`, JSON `null`) and need no separate re-check. Nothing to write; this is a go/no-go gate for Phase 2. — Done 2026-09-20 in 724f4f9f: OPEN-DECISIONS.md OD-1, OD-2, OD-4, OD-6 all Settled; no Open item gates Phase 2.
+- [X] T001 [P] Confirm `010` is still the next free migration number in `api/internal/db/migrations/` (no other branch has claimed it) — anchor file `api/internal/db/migrations/009_share_links_cluster.sql`. If `010_*.sql` already exists on this worktree from another concurrent feature, record the conflict in `specs/done_017-share-link-expiry/OPEN-DECISIONS.md` as a new open item and pick the next free number instead of overwriting. — Done 2026-09-20 in 724f4f9f: 010_share_links_expiry_nullable.sql is the next free number; 011_* does not exist.
+- [X] T002 [P] Re-read `specs/done_017-share-link-expiry/OPEN-DECISIONS.md` in full and confirm no item needed by Phases 2-4 (OD-1, OD-2, OD-4, OD-6) is still marked Open; only OD-3's two sub-questions are folded into OD-1's Settled ruling (`*time.Time`, JSON `null`) and need no separate re-check. Nothing to write; this is a go/no-go gate for Phase 2. — Done 2026-09-20 in 724f4f9f: OPEN-DECISIONS.md OD-1, OD-2, OD-4, OD-6 all Settled; no Open item gates Phase 2.
 
 **Checkpoint**: migration slot confirmed, rulings re-verified as settled.
 
@@ -76,7 +76,7 @@ description: "Task list for Feature 017: Configurable Share Link Expiry"
 
 **Purpose**: FR-011 — record the token-hashing-remains-safe rationale in `docs/security.md` now that the cap is gone.
 
-- [X] T022 [Docs] Splice `specs/017-share-link-expiry/docs-security-draft.md`'s full "## Share links" section into `docs/security.md` immediately after the existing "## Authorization" section (per the draft file's own header comment), verbatim except for updating any code-line references (`api/internal/audit/audit.go:764` → `redactShareToken`'s current line, `api/cmd/main.go:640` → `secureHeaders`'s current line) if either has drifted since the draft was written — check both before pasting. Depends on nothing (can run any time; sequenced last only because the draft references "once implementation lands", so pasting after Phase 2 makes the described behavior already true). — Done 2026-09-20 in 724f4f9f: the draft's "## Share links" section is spliced into docs/security.md after Authorization.
+- [X] T022 [Docs] Splice `specs/done_017-share-link-expiry/docs-security-draft.md`'s full "## Share links" section into `docs/security.md` immediately after the existing "## Authorization" section (per the draft file's own header comment), verbatim except for updating any code-line references (`api/internal/audit/audit.go:764` → `redactShareToken`'s current line, `api/cmd/main.go:640` → `secureHeaders`'s current line) if either has drifted since the draft was written — check both before pasting. Depends on nothing (can run any time; sequenced last only because the draft references "once implementation lands", so pasting after Phase 2 makes the described behavior already true). — Done 2026-09-20 in 724f4f9f: the draft's "## Share links" section is spliced into docs/security.md after Authorization.
 - [X] T023 [P] [Docs] Run a repo-wide check that `docs/security.md` has no duplicate "## Share links" heading and that the table of contents (if `docs/security.md` has one) is updated to include it. Depends on T022. — Done 2026-09-20 in 724f4f9f: exactly one "## Share links" heading in docs/security.md; the file has no table of contents.
 
 **Checkpoint**: `docs/security.md` documents the no-cap rationale; FR-011 satisfied.
