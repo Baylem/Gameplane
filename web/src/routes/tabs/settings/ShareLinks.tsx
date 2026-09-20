@@ -93,6 +93,19 @@ function customDateToExpiresAt(customDate: string): string {
   return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
 }
 
+// The end-of-day expiresAt instant for a preset of N calendar days from
+// today (OD-1's ruling, 2026-09-20): a preset is a CALENDAR date, not N x
+// 24h from the request time, so it goes through the same end-of-day path
+// as a custom date (OD-2) — a "30 days" link expires at 23:59:59.999 local
+// on that calendar date, not at whatever wall-clock time it was created.
+// `setDate` advances by whole calendar days, which is correct across a DST
+// boundary, unlike `Date.now() + N * ONE_DAY_MS`.
+function presetDaysToExpiresAt(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return customDateToExpiresAt(localISODate(d));
+}
+
 // Whether a custom date is 365 days or more from today (OD-6), measured as
 // the whole-day difference between local midnight today and local midnight
 // on the chosen date.
@@ -167,9 +180,7 @@ function CreateDialog({
           : expiryChoice === "custom"
             ? { expiresAt: customDateToExpiresAt(customDate), canStart }
             : {
-                expiresAt: new Date(
-                  Date.now() + PRESET_DAYS[expiryChoice] * ONE_DAY_MS,
-                ).toISOString(),
+                expiresAt: presetDaysToExpiresAt(PRESET_DAYS[expiryChoice]),
                 canStart,
               };
       return Shares.create(serverName, body, ns);
