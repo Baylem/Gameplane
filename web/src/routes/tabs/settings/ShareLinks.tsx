@@ -27,10 +27,11 @@ import {
   Description,
   Switch,
   Chip,
+  Input,
 } from "@heroui/react";
-import { AlertCircle, Copy, Link2 } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, Copy, Link2 } from "lucide-react";
 import type { ShareLink } from "@/types";
-import { Shares } from "@/lib/api";
+import { Shares, type ShareLinkCreateBody } from "@/lib/api";
 import { errorText } from "@/lib/errors";
 
 interface ShareLinksProps {
@@ -38,15 +39,71 @@ interface ShareLinksProps {
   ns?: string;
 }
 
-// Expiry options for the create dialog
+// Expiry options for the create dialog (FR-001): four day-count presets,
+// "No expiry" (FR-002), and "Custom" (FR-003/FR-004). 30 days is the default.
 const EXPIRY_OPTIONS = [
-  { label: "24 hours", value: "24h" },
-  { label: "7 days", value: "168h" },
-  { label: "30 days", value: "720h" },
-  { label: "90 days", value: "2160h" },
+  { label: "15 days", value: "15" },
+  { label: "30 days", value: "30" },
+  { label: "60 days", value: "60" },
+  { label: "90 days", value: "90" },
+  { label: "No expiry", value: "never" },
+  { label: "Custom", value: "custom" },
 ];
 
-const EXPIRY_HELP_TEXT = "Maximum 90 days. You can revoke it earlier at any time.";
+const DEFAULT_EXPIRY_CHOICE = "30";
+
+// Maps a preset choice's value to its day count.
+const PRESET_DAYS: Record<string, number> = { "15": 15, "30": 30, "60": 60, "90": 90 };
+
+// OD-6: the long-lived-token warning shows at 365+ days from today.
+const LONG_LIVED_THRESHOLD_DAYS = 365;
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+// Today's (or `date`'s) calendar date as "YYYY-MM-DD" in the browser's local
+// time zone. Used for the custom-date picker's minimum and for comparing
+// against the chosen custom date; safe to compare lexicographically since
+// both sides always use this same zero-padded format.
+function localISODate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+// The earliest selectable custom date: tomorrow, local time (FR-003 requires
+// a date strictly after today).
+function tomorrowISODate(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return localISODate(d);
+}
+
+// A custom date is valid once it is strictly after today, local time.
+function isCustomDateValid(customDate: string): boolean {
+  return customDate !== "" && customDate > localISODate(new Date());
+}
+
+// Converts a "YYYY-MM-DD" custom date into the UTC instant at which the link
+// stops working: the end of that calendar day in the browser's local time
+// zone (OD-2's ruling), i.e. 23:59:59.999 local time on the chosen date —
+// not midnight.
+function customDateToExpiresAt(customDate: string): string {
+  const [year, month, day] = customDate.split("-").map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+}
+
+// Whether a custom date is 365 days or more from today (OD-6), measured as
+// the whole-day difference between local midnight today and local midnight
+// on the chosen date.
+function isLongLivedCustomDate(customDate: string): boolean {
+  const [year, month, day] = customDate.split("-").map(Number);
+  const chosen = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((chosen.getTime() - today.getTime()) / ONE_DAY_MS);
+  return diffDays >= LONG_LIVED_THRESHOLD_DAYS;
+}
 
 // Status badge coloring
 function statusColor(status: string): "success" | "warning" | "danger" | "default" {
@@ -56,16 +113,20 @@ function statusColor(status: string): "success" | "warning" | "danger" | "defaul
   return "default";
 }
 
-// Determine link status based on expiry
-function getLinkStatus(expiresAt: string): string {
+// Determine link status based on expiry. A null expiry means the link
+// never expires (FR-007), so it can never be reported "Expired".
+function getLinkStatus(expiresAt: string | null): string {
+  if (expiresAt === null) return "Active";
   const expiry = new Date(expiresAt);
   const now = new Date();
   if (expiry <= now) return "Expired";
   return "Active";
 }
 
-// Format date for display (e.g., "Jul 28, 2026")
-function formatDate(dateStr: string): string {
+// Format date for display (e.g., "Jul 28, 2026"), or "Never" for a
+// no-expiry link (SC-004).
+function formatDate(dateStr: string | null): string {
+  if (dateStr === null) return "Never";
   const date = new Date(dateStr);
   return date.toLocaleDateString("en-US", {
     month: "short",
@@ -90,19 +151,29 @@ function CreateDialog({
   ns,
   onLinkCreated,
 }: CreateDialogProps) {
-  const [expiry, setExpiry] = useState("168h");
+  const [expiryChoice, setExpiryChoice] = useState(DEFAULT_EXPIRY_CHOICE);
+  const [customDate, setCustomDate] = useState("");
   const [canStart, setCanStart] = useState(false);
 
+  const customDateValid = expiryChoice !== "custom" || isCustomDateValid(customDate);
+  const showLongLivedWarning =
+    expiryChoice === "custom" && customDate !== "" && isLongLivedCustomDate(customDate);
+
   const create = useMutation({
-    mutationFn: () =>
-      Shares.create(
-        serverName,
-        {
-          expiresIn: expiry,
-          canStart,
-        },
-        ns,
-      ),
+    mutationFn: () => {
+      const body: ShareLinkCreateBody =
+        expiryChoice === "never"
+          ? { neverExpires: true, canStart }
+          : expiryChoice === "custom"
+            ? { expiresAt: customDateToExpiresAt(customDate), canStart }
+            : {
+                expiresAt: new Date(
+                  Date.now() + PRESET_DAYS[expiryChoice] * ONE_DAY_MS,
+                ).toISOString(),
+                canStart,
+              };
+      return Shares.create(serverName, body, ns);
+    },
     onSuccess: (link) => {
       onOpenChange(false);
       onLinkCreated?.(link);
@@ -114,7 +185,8 @@ function CreateDialog({
   if (open !== prevOpen) {
     setPrevOpen(open);
     if (open) {
-      setExpiry("168h");
+      setExpiryChoice(DEFAULT_EXPIRY_CHOICE);
+      setCustomDate("");
       setCanStart(false);
       create.reset();
     }
@@ -137,8 +209,11 @@ function CreateDialog({
           </ModalHeader>
 
           <ModalBody className="gap-4">
-            <div>
-              <Select value={expiry} onChange={(key) => setExpiry(String(key))}>
+            <div className="flex flex-col gap-1">
+              <Select
+                value={expiryChoice}
+                onChange={(key) => setExpiryChoice(String(key))}
+              >
                 <Label className="text-xs">Expires in</Label>
                 <Select.Trigger>
                   <Select.Value className="text-[var(--field-placeholder)]" />
@@ -154,9 +229,32 @@ function CreateDialog({
                   </ListBox>
                 </Select.Popover>
               </Select>
-              <Description className="mt-1 text-xs text-muted">
-                {EXPIRY_HELP_TEXT}
-              </Description>
+
+              {expiryChoice === "never" && (
+                <p className="text-xs text-warning">This link works until you revoke it.</p>
+              )}
+
+              {expiryChoice === "custom" && (
+                <>
+                  <Label className="text-xs">Expires on</Label>
+                  <div className="relative">
+                    <Input
+                      type="date"
+                      aria-label="Expires on"
+                      min={tomorrowISODate()}
+                      value={customDate}
+                      onChange={(e) => setCustomDate(e.target.value)}
+                      className="date-input--modal pr-9"
+                    />
+                    <CalendarIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                  </div>
+                  {showLongLivedWarning && (
+                    <p className="text-xs text-warning">
+                      Long-lived link — it stays valid for over a year unless you revoke it.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -201,7 +299,7 @@ function CreateDialog({
               size="sm"
               variant="primary"
               className="gap-[5px] text-[13px]"
-              isDisabled={create.isPending}
+              isDisabled={create.isPending || !customDateValid}
               onPress={() => create.mutate()}
             >
               <Link2 className="h-3.5 w-3.5" />

@@ -209,11 +209,13 @@ describe("ShareLinksSection", () => {
     });
     await user.click(allowStartSwitch);
 
-    // Drive the HeroUI Select: open it and pick the 30-day expiry option
-    const expiryTrigger = screen.getByRole("button", { name: /7 days/ });
+    // Drive the HeroUI Select: open it (default is "30 days") and pick a
+    // different option, "90 days", so the test exercises an actual
+    // selection change rather than re-picking the already-selected value.
+    const expiryTrigger = screen.getByRole("button", { name: /30 days/ });
     await user.click(expiryTrigger);
-    const thirtyDaysOption = await screen.findByRole("option", { name: "30 days" });
-    await user.click(thirtyDaysOption);
+    const ninetyDaysOption = await screen.findByRole("option", { name: "90 days" });
+    await user.click(ninetyDaysOption);
 
     // Submit with the selected expiry
     const createConfirmBtn = screen.getByRole("button", { name: "Create link" });

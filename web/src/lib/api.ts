@@ -10,7 +10,6 @@ import type {
   NetworkCapture,
   NetworkCaptureList,
   ShareLink,
-  ShareLinkCreateRequest,
   ShareLinkPublic,
 } from "@/types";
 
@@ -205,14 +204,31 @@ export const Config = {
     ),
 };
 
+// ShareLinkCreateBody is the discriminated create-request shape callers
+// build: exactly one of an absolute `expiresAt` instant or `neverExpires:
+// true` (OD-1/OD-5), or the deprecated-for-one-release relative `expiresIn`
+// duration string. `canStart` is always required. This narrows
+// ShareLinkCreateRequest's flat optional fields into a shape the compiler
+// can enforce at call sites, while the wire type (and the deprecated path)
+// stay defined in `types.ts`.
+export type ShareLinkCreateBody = { canStart: boolean } & (
+  | { expiresAt: string; neverExpires?: never; expiresIn?: never }
+  | { neverExpires: true; expiresAt?: never; expiresIn?: never }
+  | { expiresIn: string; expiresAt?: never; neverExpires?: never }
+  // All three omitted: legacy callers relying on the server's existing
+  // omitted-expiry default (OD-7), e.g. api.test.ts's URL-encoding test.
+  | { expiresAt?: never; neverExpires?: never; expiresIn?: never }
+);
+
 // Share link management. Authenticated operations (create, list, revoke) require
 // an active session and server ownership; public operations (resolve, start) are
 // rate-limited but require no auth. All operations map rate-limit and invalid-link
 // errors to neutral responses per FR-005 (privacy: no error detail).
 export const Shares = {
   // POST /servers/{name}:shares (authenticated, owner-only).
-  // Creates a new share link with optional expiry and start permission.
-  create: (server: string, body: ShareLinkCreateRequest, ns?: string) =>
+  // Creates a new share link with an absolute expiry, no expiry, or (deprecated
+  // for one release) a relative expiry, plus the start permission.
+  create: (server: string, body: ShareLinkCreateBody, ns?: string) =>
     api<ShareLink>(withNS(`/servers/${encodeURIComponent(server)}:shares`, ns), {
       method: "POST",
       body,

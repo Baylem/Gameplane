@@ -1007,14 +1007,18 @@ export interface CatalogEntry {
 export interface ShareLink {
   id: string;
   createdAt: string; // RFC3339 timestamp
-  expiresAt: string; // RFC3339 timestamp
+  expiresAt: string | null; // RFC3339 timestamp, or null = never expires
   canStart: boolean;
   token?: string; // only in create response
 }
 
 // ShareLinkCreateRequest is the request body for POST /servers/{name}:shares.
+// Callers send exactly one of `expiresAt` or `neverExpires: true` (OD-1/OD-5).
 export interface ShareLinkCreateRequest {
+  /** @deprecated for one release per OD-1/OD-5; prefer `expiresAt`/`neverExpires`. */
   expiresIn?: string; // e.g. "24h", "7d"; undefined = default (7 days)
+  expiresAt?: string; // RFC3339 instant; the absolute replacement for expiresIn
+  neverExpires?: boolean; // true = create a link with no expiry
   canStart: boolean;
 }
 

@@ -1514,12 +1514,22 @@ export function buildScreenshotHandlers() {
     http.post(/\/servers\/[^/]+:shares$/, async ({ request }) => {
       const body = (await request.json().catch(() => null)) as {
         expiresIn?: string;
+        expiresAt?: string;
+        neverExpires?: boolean;
         canStart?: boolean;
       } | null;
+      // neverExpires wins over any expiresAt/expiresIn also present, and
+      // returns expiresAt: null so component tests can assert on it.
+      // Otherwise an explicit absolute expiresAt is echoed back, and finally
+      // the deprecated expiresIn keeps its existing 7-day-default behavior
+      // so currently-passing tests on that path are unaffected.
+      const expiresAt: string | null = body?.neverExpires
+        ? null
+        : (body?.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString());
       return HttpResponse.json({
         id: `share-${Math.random().toString(36).slice(2)}`,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        expiresAt,
         canStart: body?.canStart ?? false,
         token: `token_${Math.random().toString(36).slice(2)}`,
       });
