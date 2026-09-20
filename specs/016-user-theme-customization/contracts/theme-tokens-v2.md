@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-This contract extends `specs/014-heroui-web-rebuild/contracts/theme-tokens.md` by defining:
+This contract extends `specs/done_014-heroui-web-rebuild/contracts/theme-tokens.md` by defining:
 1. The token declarations for the **Legacy Theme** preset (`data-theme-preset="legacy"`).
 2. The dynamic override mechanism for **Simple Custom Color Scheme** (`data-theme-type="custom_colors"`).
 3. The injection and scoping contract for **Custom CSS** (`#gameplane-custom-css`).

@@ -1028,7 +1028,7 @@ export function buildScreenshotHandlers() {
     ),
 
     // Backups
-    // T118 (specs/014-heroui-web-rebuild/tasks.md): both entries' spec.serverRef
+    // T118 (specs/done_014-heroui-web-rebuild/tasks.md): both entries' spec.serverRef
     // is pinned to "mc-survival" (previously left at makeBackup()'s "alpha"
     // default despite the metadata.name already reading "test-server-01-…") so
     // ServerDetail's per-server Backups tab (which filters by
@@ -1214,7 +1214,7 @@ export function buildScreenshotHandlers() {
     ),
 
     // Mods
-    // T118 (specs/014-heroui-web-rebuild/tasks.md): modpacks flipped true so
+    // T118 (specs/done_014-heroui-web-rebuild/tasks.md): modpacks flipped true so
     // the Modpacks tab (screenshot slice2b) has a provider to browse —
     // matches valheim-default's registry.providers[].modpacks declaration
     // added to screenshotData.ts for the same task.

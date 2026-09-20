@@ -223,7 +223,7 @@ The previous pass's `warningLine` insert (documented above) was applied to the *
 
 ## HeroUI Frame Export 2026-09-03 — Design System Components Library (Feature 014)
 
-Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) requires a snapshot of the HeroUI component library frame (`LtgNm`, "HeroUI: Design System Components") in `design.pen` — 192+ HeroUI-based component definitions that all downstream screens will reference and compose from. This frame was exported in a single pass as the foundational deliverable for Phase 2 (Atoms).
+Feature 014 (HeroUI Web Rebuild, `specs/done_014-heroui-web-rebuild/`) requires a snapshot of the HeroUI component library frame (`LtgNm`, "HeroUI: Design System Components") in `design.pen` — 192+ HeroUI-based component definitions that all downstream screens will reference and compose from. This frame was exported in a single pass as the foundational deliverable for Phase 2 (Atoms).
 
 **Object (1):**
 
@@ -246,7 +246,7 @@ When a HeroUI component a screen needs is absent from the `LtgNm` frame, import 
 
 ## Incremental export 2026-09-04 — Phase 2 Foundation: 24 redrawn atom components + Cell Actions clip fix (Feature 014, Slice 0, T016)
 
-Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) required all 24 foundational Gameplane atom components to be redrawn from HeroUI definitions in `design.pen` per contracts/component-map.md. This pass re-exports the 25 objects below (24 atoms + the `LtgNm` library frame) after a clip-fix pass on the redrawn atoms (`K7IJBQ` set to `width: fit_content`, `ntSEK`/`PoVsI`/`q5swpb` set to `height: 32`) and after the T017-adjacent `xCDF7` fit-content fix (`TgdLz` → `width: "fit_content(140)"`, verified resolving to 140×40). Superseded the previous 2026-09-03 interim export of the same 25 ids, which predated the clip fix.
+Feature 014 (HeroUI Web Rebuild, `specs/done_014-heroui-web-rebuild/`) required all 24 foundational Gameplane atom components to be redrawn from HeroUI definitions in `design.pen` per contracts/component-map.md. This pass re-exports the 25 objects below (24 atoms + the `LtgNm` library frame) after a clip-fix pass on the redrawn atoms (`K7IJBQ` set to `width: fit_content`, `ntSEK`/`PoVsI`/`q5swpb` set to `height: 32`) and after the T017-adjacent `xCDF7` fit-content fix (`TgdLz` → `width: "fit_content(140)"`, verified resolving to 140×40). Superseded the previous 2026-09-03 interim export of the same 25 ids, which predated the clip fix.
 
 **Verified via `pencil` MCP (depth 2, `resolveInstances:true`) on 2026-09-04:**
 
@@ -308,7 +308,7 @@ These 25 components constitute the Phase 2 Foundation (Slice 0, second half) ato
 
 ## Incremental export 2026-09-04/2026-09-05 — Slice 1 design wave (Feature 014)
 
-Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) Slice 1 (Shell + login) design wave completed. Phase 2 Foundation atoms (24 components, T016) were exported 2026-09-04; Slice 1 screens and shell compositions were redrawn, repaired, and re-exported 2026-09-05 after resolving HeroUI primitives and repairing interim preview copies.
+Feature 014 (HeroUI Web Rebuild, `specs/done_014-heroui-web-rebuild/`) Slice 1 (Shell + login) design wave completed. Phase 2 Foundation atoms (24 components, T016) were exported 2026-09-04; Slice 1 screens and shell compositions were redrawn, repaired, and re-exported 2026-09-05 after resolving HeroUI primitives and repairing interim preview copies.
 
 **Screens exported (7):**
 
@@ -360,7 +360,7 @@ Slice 1 (Shell + login, P1 priority per spec.md) delivers User Story 1: authenti
 ## Incremental export 2026-09-05 — Slice 5 design wave (Feature 014)
 ## Incremental export 2026-09-05 — Slice 2a design wave (Feature 014)
 
-Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) Slice 2a (Servers + core tabs) design wave completed. Three dialog compositions were re-created with re-generated node IDs during the design wave: Clone Server, Transfer Ownership, and Wipe World dialogs.
+Feature 014 (HeroUI Web Rebuild, `specs/done_014-heroui-web-rebuild/`) Slice 2a (Servers + core tabs) design wave completed. Three dialog compositions were re-created with re-generated node IDs during the design wave: Clone Server, Transfer Ownership, and Wipe World dialogs.
 
 **Compositions (3):**
 
@@ -382,7 +382,7 @@ Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) Slice 2a (Serv
 Slice 2a (Servers + core tabs, P2 priority per spec.md) delivers User Story 2: the server list (with phase chip filtering), server detail shell with tab navigation, and core server management tabs (Overview, Events, Console, Logs, Files, Players). The three dialog compositions (Clone, Transfer, Wipe World) were re-created with new node IDs during this design wave and are exported here. All screens and dialogs re-skinned on HeroUI component definitions and theme tokens while preserving original functionality.
 
 
-Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) Slice 5 (Server Detail — Settings · Share links screens and dialog compositions) design wave completed. Ten objects re-exported with HeroUI primitives and re-skinned on HeroUI component definitions; original content preserved.
+Feature 014 (HeroUI Web Rebuild, `specs/done_014-heroui-web-rebuild/`) Slice 5 (Server Detail — Settings · Share links screens and dialog compositions) design wave completed. Ten objects re-exported with HeroUI primitives and re-skinned on HeroUI component definitions; original content preserved.
 
 **Screens (5):**
 
@@ -417,7 +417,7 @@ Slice 5 (Server Detail — Settings · Share links, P2 priority per spec.md) del
 
 ## Incremental export 2026-09-05 — Slice 2b design wave (Feature 014)
 
-Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) Slice 2b re-exports completed. Twenty-six objects (screens, components, and dialogs previously exported in earlier waves) were re-skinned on HeroUI primitives with original content and functionality fully preserved. Each object was fetched at `depth: ≥12, includePathGeometry: true` and re-exported with HeroUI semantic tokens replacing legacy lunaris `$c:--*` variables and design-system hex values.
+Feature 014 (HeroUI Web Rebuild, `specs/done_014-heroui-web-rebuild/`) Slice 2b re-exports completed. Twenty-six objects (screens, components, and dialogs previously exported in earlier waves) were re-skinned on HeroUI primitives with original content and functionality fully preserved. Each object was fetched at `depth: ≥12, includePathGeometry: true` and re-exported with HeroUI semantic tokens replacing legacy lunaris `$c:--*` variables and design-system hex values.
 
 **Objects re-exported (26 — re-skinned on HeroUI primitives, original content preserved):**
 
@@ -470,7 +470,7 @@ Slice 2b (Server Detail — Mods, Backups, Capture, Settings sub-pages, P2 prior
 
 ## Incremental export 2026-09-05 — Slice 3 design wave (Feature 014)
 
-Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) Slice 3 (Onboarding flow: Create Server steps 1–5, Modules Catalog, Backups index/schedules/restores) design wave completed. Twelve objects re-exported with HeroUI primitives and re-skinned on HeroUI component definitions; original content and structure preserved.
+Feature 014 (HeroUI Web Rebuild, `specs/done_014-heroui-web-rebuild/`) Slice 3 (Onboarding flow: Create Server steps 1–5, Modules Catalog, Backups index/schedules/restores) design wave completed. Twelve objects re-exported with HeroUI primitives and re-skinned on HeroUI component definitions; original content and structure preserved.
 
 **Screens (9):**
 
@@ -508,7 +508,7 @@ Slice 3 (Onboarding flow + Modules + Backups, P1 priority per spec.md) delivers 
 
 ## Incremental export 2026-09-06 — Slice 4 design wave (Feature 014)
 
-Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) Slice 4 (Admin settings, Users & RBAC, Audit Log, Cluster Settings, and supporting components) design wave completed. Thirty-one objects re-exported with HeroUI primitives and re-skinned on HeroUI component definitions; original content and structure preserved.
+Feature 014 (HeroUI Web Rebuild, `specs/done_014-heroui-web-rebuild/`) Slice 4 (Admin settings, Users & RBAC, Audit Log, Cluster Settings, and supporting components) design wave completed. Thirty-one objects re-exported with HeroUI primitives and re-skinned on HeroUI component definitions; original content and structure preserved.
 
 **Screens (20):**
 
@@ -570,7 +570,7 @@ Slice 4 (Admin settings, Users & RBAC, Audit, Cluster Settings, and supporting m
 
 ## Incremental export 2026-09-06 — Slice 2a design wave (Feature 014)
 
-Feature 014 (HeroUI Web Rebuild, `specs/014-heroui-web-rebuild/`) Slice 2a (Server list and Server Detail sub-pages: Overview + state variants, Events, Console, Logs, Files, Players) design wave completed. Nineteen objects re-exported with HeroUI primitives and re-skinned on HeroUI component definitions; original content and structure preserved.
+Feature 014 (HeroUI Web Rebuild, `specs/done_014-heroui-web-rebuild/`) Slice 2a (Server list and Server Detail sub-pages: Overview + state variants, Events, Console, Logs, Files, Players) design wave completed. Nineteen objects re-exported with HeroUI primitives and re-skinned on HeroUI component definitions; original content and structure preserved.
 
 **Screens (12):**
 
@@ -1688,7 +1688,7 @@ This pass ensures all 346 exported nodes reflect the current saved document stat
 
 ## Incremental export 2026-09-19 — round-7 letterSpacing/lineHeight/shadow rulings re-export (NLDDv, MaoHP, E9EEv0, Kp48V)
 
-The rulings are OD-16, OD-19, OD-20 and OD-21 in specs/014-heroui-web-rebuild/OPEN-DECISIONS.md; the design edits and this re-export landed together in `28fde47c`.
+The rulings are OD-16, OD-19, OD-20 and OD-21 in specs/done_014-heroui-web-rebuild/OPEN-DECISIONS.md; the design edits and this re-export landed together in `28fde47c`.
 
 | ID | Notes |
 |---|---|
@@ -1707,7 +1707,7 @@ The rulings are OD-16, OD-19, OD-20 and OD-21 in specs/014-heroui-web-rebuild/OP
 
 ## Incremental export 2026-09-19 — rounds 5-6 catch-up (79172f1b, 4f9e4930, 448bd477, 9df665e3)
 
-These four design commits re-exported their frames but shipped without a MANIFEST entry; this entry records them after the fact. The id lists come from each commit's `design-export/` file list. Rulings: OD-17, OD-19..OD-21 in specs/014-heroui-web-rebuild/OPEN-DECISIONS.md. Base components D0cDM, AT7ya and f7KBn are unchanged throughout.
+These four design commits re-exported their frames but shipped without a MANIFEST entry; this entry records them after the fact. The id lists come from each commit's `design-export/` file list. Rulings: OD-17, OD-19..OD-21 in specs/done_014-heroui-web-rebuild/OPEN-DECISIONS.md. Base components D0cDM, AT7ya and f7KBn are unchanged throughout.
 
 **`79172f1b` — round 5**
 
@@ -1750,7 +1750,7 @@ These four design commits re-exported their frames but shipped without a MANIFES
 
 ## OD-23 — J5pjJ3 state frames organised as a component family (2026-09-19)
 
-Ruling: `specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`, OD-23. The six loose "J5pjJ3 states/*" frames (export-only, not diffed, three of them sitting among unrelated screens) are reorganised: the four copied StatusRow frames become a reusable `Gameplane/Address Status Row/*` component family in the component area; J5pjJ3's own row becomes an instance of the `Assigned` variant; the tunnel-enabled and alerts frames are relocated next to J5pjJ3 instead of sitting loose elsewhere. The share-link dialog footer buttons additionally take 6px corners per OD-17.
+Ruling: `specs/done_014-heroui-web-rebuild/OPEN-DECISIONS.md`, OD-23. The six loose "J5pjJ3 states/*" frames (export-only, not diffed, three of them sitting among unrelated screens) are reorganised: the four copied StatusRow frames become a reusable `Gameplane/Address Status Row/*` component family in the component area; J5pjJ3's own row becomes an instance of the `Assigned` variant; the tunnel-enabled and alerts frames are relocated next to J5pjJ3 instead of sitting loose elsewhere. The share-link dialog footer buttons additionally take 6px corners per OD-17.
 
 **Old → new id map:**
 
@@ -1797,7 +1797,7 @@ None of the underlying shared components (`rkF0p`, `j9c5W`, `FIB65`, `WwNlX`) we
 
 ## OD-24 — Share-link dialog visual-diff round 8 fixes (2026-09-19)
 
-Ruling: `specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`, OD-24. Instance-only overrides on the three share-link dialogs (`atqRh`, `VM7ro`, `S7SCDc`); the shared base components (`x3beP` Modal, `WwNlX` Confirm Dialog, `f7KBn` Alert/Danger, etc.) were not touched.
+Ruling: `specs/done_014-heroui-web-rebuild/OPEN-DECISIONS.md`, OD-24. Instance-only overrides on the three share-link dialogs (`atqRh`, `VM7ro`, `S7SCDc`); the shared base components (`x3beP` Modal, `WwNlX` Confirm Dialog, `f7KBn` Alert/Danger, etc.) were not touched.
 
 | Dialog | Change | How |
 |---|---|---|
@@ -1835,7 +1835,7 @@ Both nodes were verified live via `Get(id, {depth: 0})` before editing (confirme
 
 ## OD-25 — round-9 rulings for the share-link dialogs, DESIGN clauses (2026-09-20)
 
-Implements the design-side clauses of OD-25 (`specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`, settled 2026-09-20). The app-side clauses in the same ruling (VM7ro link box, share-dialog footer button spec, `--field-placeholder` select values) are out of scope for this pass — they land in `web/`, not `design.pen`.
+Implements the design-side clauses of OD-25 (`specs/done_014-heroui-web-rebuild/OPEN-DECISIONS.md`, settled 2026-09-20). The app-side clauses in the same ruling (VM7ro link box, share-dialog footer button spec, `--field-placeholder` select values) are out of scope for this pass — they land in `web/`, not `design.pen`.
 
 | Issue | Node(s) | Change | Why |
 |---|---|---|---|
@@ -1892,7 +1892,7 @@ Applied the two `classification: "same"` issues from the round-10 visual-diff tr
 
 ## OD-26 — round-10 rulings for the share-link dialogs, DESIGN clauses (2026-09-20)
 
-Implements the design-only clauses of OD-26 (`specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`, settled 2026-09-20, commit `6cad640b`). OD-26's S7SCDc clause (`captureLocator` backdrop stripping) and its `REFERENCE_CROP_ALLOWLIST` re-measurement clause are harness/app-side and out of scope for this pass — `S7SCDc` was not touched.
+Implements the design-only clauses of OD-26 (`specs/done_014-heroui-web-rebuild/OPEN-DECISIONS.md`, settled 2026-09-20, commit `6cad640b`). OD-26's S7SCDc clause (`captureLocator` backdrop stripping) and its `REFERENCE_CROP_ALLOWLIST` re-measurement clause are harness/app-side and out of scope for this pass — `S7SCDc` was not touched.
 
 | Issue | Node(s) | Change | Why |
 |---|---|---|---|
@@ -1957,7 +1957,7 @@ No `.pen` file was Read/Grep/cat/sed this round — all access via Pencil MCP `g
 
 ## Round-12 — OD-27 VM7ro-local overrides (2026-09-20)
 
-Per maintainer ruling OD-27 (`specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`), three VM7ro-local descendant overrides were applied on `VM7ro` (Share link created), a ref instance of the shared master `x3beP`. The master `x3beP` and the other 12 instancing frames were not touched.
+Per maintainer ruling OD-27 (`specs/done_014-heroui-web-rebuild/OPEN-DECISIONS.md`), three VM7ro-local descendant overrides were applied on `VM7ro` (Share link created), a ref instance of the shared master `x3beP`. The master `x3beP` and the other 12 instancing frames were not touched.
 
 1. `qzcst` (mDesc): added `lineHeight: 1.4286` alongside its existing `content` override (master's 1.5 renders 21 CSS px against the browser's `text-sm` 20 px).
 2. `Hp206` (warningBox): `padding` 13 → 14 (single number, uniform), matching browser `border-2` + `p-3` = 14 CSS px inset. All other properties (`strokeWidth: 2`, `strokeAlignment: "inner"`, `gap: 8`, `cornerRadius: 8`, fills) unchanged.

@@ -47,7 +47,7 @@ The dashboard's visual surface composes its foundational atom components on `@he
 - **Sparkline** — mini inline chart for resource trends (CPU, memory)
 - **GameIcon** — cached game-specific icon with fallback
 
-Each atom composes HeroUI's headless react-aria-components (Adobe React Aria) and applies Gameplane's brand palette — orange accent, dark default mode, light mode supported — via HeroUI's semantic token layer. Token mapping from Gameplane brand values to HeroUI variables is documented in `specs/014-heroui-web-rebuild/contracts/theme-tokens.md` (FR-013).
+Each atom composes HeroUI's headless react-aria-components (Adobe React Aria) and applies Gameplane's brand palette — orange accent, dark default mode, light mode supported — via HeroUI's semantic token layer. Token mapping from Gameplane brand values to HeroUI variables is documented in `specs/done_014-heroui-web-rebuild/contracts/theme-tokens.md` (FR-013).
 
 The multi-slice rebuild is complete: the previous Radix-based primitives that used to live in `web/src/components/ui/` have been deleted, and `web/src/components/hero/` was renamed to `web/src/components/ui/` to become the permanent HeroUI composition layer (OD-7, Settled 2026-09-03). **No screen imports `@radix-ui/*` or `class-variance-authority`** — this was enforced mechanically at review throughout the rebuild (FR-012) and is now enforced by their absence from `web/package.json`.
 
@@ -157,7 +157,7 @@ The old Radix-based `ui/` components that shipped before this rebuild — `butto
 
 ## T066–T088 — Slice 2a: Servers List and ServerDetail Screens
 
-**Scope:** Slice 2a (tasks T066–T088, `specs/014-heroui-web-rebuild/tasks.md`) rebuilds two core screens — the Servers list page and the ServerDetail (full server view with tabbed interface) — on HeroUI components. This is the primary user-facing surface after login, showing all game server instances and their live status. The slice composes existing ui/ atoms from slice 0 with new HeroUI form/table/dialog components.
+**Scope:** Slice 2a (tasks T066–T088, `specs/done_014-heroui-web-rebuild/tasks.md`) rebuilds two core screens — the Servers list page and the ServerDetail (full server view with tabbed interface) — on HeroUI components. This is the primary user-facing surface after login, showing all game server instances and their live status. The slice composes existing ui/ atoms from slice 0 with new HeroUI form/table/dialog components.
 
 ### Screens and Routes
 
@@ -295,7 +295,7 @@ CloneServerDialog, TransferServerDialog and WipeServerDialog do not route throug
 
 ## T097–T120 — Slice 2b: Mods, Modpacks, Backups Tab, and Settings
 
-**Scope:** Slice 2b (tasks T097–T120, `specs/014-heroui-web-rebuild/tasks.md`) completes ServerDetail by rebuilding four tabbed interfaces — Mods (installed mod browsing and installation), Modpacks (modpack selection), Backups (per-server backup listing and restore), and Settings (11 sub-sections for server configuration). All nine tabs in ServerDetail are now HeroUI-based; legacy primitives are fully purged from the authenticated shell and server management surfaces.
+**Scope:** Slice 2b (tasks T097–T120, `specs/done_014-heroui-web-rebuild/tasks.md`) completes ServerDetail by rebuilding four tabbed interfaces — Mods (installed mod browsing and installation), Modpacks (modpack selection), Backups (per-server backup listing and restore), and Settings (11 sub-sections for server configuration). All nine tabs in ServerDetail are now HeroUI-based; legacy primitives are fully purged from the authenticated shell and server management surfaces.
 
 ### Screens and Routes
 
@@ -392,7 +392,7 @@ Every file in slice 2b imports **only** from `@heroui/react` and `@/components/u
 - ✅ Verified by `grep -rl -e '@radix-ui' -e 'class-variance-authority' web/src/routes/tabs/{Mods,Modpacks,Backups,Settings}.tsx web/src/routes/tabs/settings/ web/src/components/{CaptureWidget,registry-browser}.tsx web/src/components/modules/{InstallDialog,UploadModuleDialog}.tsx 2>/dev/null` must return **zero results** (task T120)
 ## T119–T137 — Slice 3: Create Server Wizard, Modules Catalog, and Backups Management
 
-**Scope:** Slice 3 (tasks T119–T137, `specs/014-heroui-web-rebuild/tasks.md`) rebuilds three onboarding and operational management surfaces on HeroUI components: the multi-step Create Server wizard (Steps 1–5), the Modules library catalog, and the Backups management interface (index, schedules, restores). This slice completes the foundational surfaces for server creation and backup operations, applying the same HeroUI component family and theme tokens established in slices 0–2a.
+**Scope:** Slice 3 (tasks T119–T137, `specs/done_014-heroui-web-rebuild/tasks.md`) rebuilds three onboarding and operational management surfaces on HeroUI components: the multi-step Create Server wizard (Steps 1–5), the Modules library catalog, and the Backups management interface (index, schedules, restores). This slice completes the foundational surfaces for server creation and backup operations, applying the same HeroUI component family and theme tokens established in slices 0–2a.
 
 ### Screens and Routes
 
@@ -1019,7 +1019,7 @@ openEventStream(opts: EventStreamOptions)
 - `@tanstack/react-query@5.59.0` — data fetching, caching, invalidation
 - `@tanstack/react-virtual@3.10.8` — virtualized lists for large tables
 - `@heroui/react@3.2.4` — component library (Button, Card, Modal, Table, Tabs, etc.); underlies every atom in `web/src/components/ui/`
-- `@heroui/styles` — HeroUI's semantic token / theme layer, mapped to Gameplane brand tokens (see `specs/014-heroui-web-rebuild/contracts/theme-tokens.md`)
+- `@heroui/styles` — HeroUI's semantic token / theme layer, mapped to Gameplane brand tokens (see `specs/done_014-heroui-web-rebuild/contracts/theme-tokens.md`)
 - `clsx@2.1.1` — conditional classNames
 - `tailwind-merge@2.5.2` — Tailwind class conflict resolution
 - `tailwindcss@3.4.13` — utility-first CSS framework

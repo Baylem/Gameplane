@@ -45,7 +45,7 @@ test.describe("backups page", () => {
     await page.goto("/backups");
 
     // HeroUI Tabs: the top-level tab strip is role="tab", not a native button
-    // (T137, specs/014-heroui-web-rebuild — was a native <button> strip
+    // (T137, specs/done_014-heroui-web-rebuild — was a native <button> strip
     // pre-rebuild).
     await page.getByRole("tab", { name: /^schedules$/i }).click();
     await expect(page.getByText("alpha-daily")).toBeVisible();
@@ -67,7 +67,7 @@ test.describe("backups page", () => {
     const dialog = page.getByRole("dialog");
 
     // HeroUI Select: a compound trigger/popover/listbox, not a native
-    // <select> (T137, specs/014-heroui-web-rebuild). The trigger's
+    // <select> (T137, specs/done_014-heroui-web-rebuild). The trigger's
     // accessible/visible text is its placeholder until a value is chosen;
     // opening it reveals role="option" items.
     await dialog.getByRole("button", { name: /select a server/i }).click();

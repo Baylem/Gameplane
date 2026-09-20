@@ -3,7 +3,7 @@ import type { APIRequestContext, APIResponse } from "@playwright/test";
 import { loginIfNeeded, seedServer } from "./_seed";
 import { ServerDetailPage } from "../../pages/ServerDetailPage";
 
-// T117 (specs/014-heroui-web-rebuild/tasks.md): live Playwright coverage for
+// T117 (specs/done_014-heroui-web-rebuild/tasks.md): live Playwright coverage for
 // the Slice 2b flows (Server Detail — Mods/Modpacks/Backups tabs and every
 // Settings sub-tab) against a real cluster — this is the feature's E2E tier
 // per OD-3 (Settled 2026-09-03); no corresponding test/e2e/ Go test is added

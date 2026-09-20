@@ -2,13 +2,13 @@ import { test, expect, type Page } from "@playwright/test";
 import path from "path";
 import { fileURLToPath } from "node:url";
 
-// T118 (specs/014-heroui-web-rebuild/tasks.md): Slice 2b — Mods/Modpacks/
+// T118 (specs/done_014-heroui-web-rebuild/tasks.md): Slice 2b — Mods/Modpacks/
 // Backups tabs, every Settings sub-tab, and the backup detail drawer.
 // Screenshot verification tests for the HeroUI rebuild, capturing the
 // design frames listed in design-export/MANIFEST.md's "Incremental export
 // 2026-09-05 — Slice 2b design wave" section at 1440px, for comparison
 // against design-export/screenshots/<id>.png per
-// specs/014-heroui-web-rebuild/contracts/screen-verification.md.
+// specs/done_014-heroui-web-rebuild/contracts/screen-verification.md.
 //
 // Mirrors slice2a.spec.ts's structure (viewport, capture() helper,
 // useScreenshotDataset, id-named PNGs) and is selected the same way — only

@@ -1,6 +1,6 @@
 # Tasks: Rebuild the dashboard on the HeroUI design system
 
-**Input**: Design documents from `/specs/014-heroui-web-rebuild/`
+**Input**: Design documents from `/specs/done_014-heroui-web-rebuild/`
 
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/, quickstart.md, OPEN-DECISIONS.md
 
@@ -18,7 +18,7 @@
 
 - Dashboard code: `web/src/…` (routes, components, lib, router, styles, test), Playwright: `web/e2e/…`
 - Design source: `design.pen` (Pencil MCP only, never read or edited directly); plain-file snapshot: `design-export/{json,screenshots}/<id>.{json,png}` + `design-export/MANIFEST.md`
-- Open decisions OD-1..OD-7 live in `specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`; all seven were settled by the maintainer on 2026-09-03, and every task below that depended on one cites it as "OD-n (Settled 2026-09-03)" with the ruled value
+- Open decisions OD-1..OD-7 live in `specs/done_014-heroui-web-rebuild/OPEN-DECISIONS.md`; all seven were settled by the maintainer on 2026-09-03, and every task below that depended on one cites it as "OD-n (Settled 2026-09-03)" with the ruled value
 
 ---
 

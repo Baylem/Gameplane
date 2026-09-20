@@ -1,9 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// T086 (specs/014-heroui-web-rebuild/tasks.md): Slice 2a — Servers list +
+// T086 (specs/done_014-heroui-web-rebuild/tasks.md): Slice 2a — Servers list +
 // Server Detail core tabs. Screenshot verification tests for the HeroUI
 // rebuild, capturing the design frames listed in
-// specs/014-heroui-web-rebuild/contracts/component-map.md /
+// specs/done_014-heroui-web-rebuild/contracts/component-map.md /
 // design-export/MANIFEST.md's "Incremental export — Slice 2a" section at
 // 1440px, for comparison against design-export/screenshots/<id>.png per
 // contracts/screen-verification.md.
