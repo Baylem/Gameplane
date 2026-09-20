@@ -12,6 +12,7 @@ Status of every item below: **Open** (2026-09-19). Record each ruling here, with
 - **OD-2 — Settled:** a custom date is valid through the end of the chosen calendar day in the owner's local time (23:59:59 local), converted to an instant by the client.
 - **OD-4 — Settled:** table rebuild in `010_share_links_expiry_nullable.sql` following `004_cluster_rbac.sql` (create `_new`, copy with named columns, drop, rename, recreate the three indexes), meeting every constraint listed under OD-4.
 - **OD-6 — Settled:** the warning shows when the custom date is 365 days or more from today, with the text "Long-lived link — it stays valid for over a year unless you revoke it."
+- **OD-1 preset semantics — Settled 2026-09-20 (maintainer, in chat):** a preset of N days is computed as a CALENDAR date, not as N x 24h from the request time: the client takes today + N calendar days and expires the link at the end of that day in the owner's local zone, exactly as OD-2 already ruled for a custom date. This closes the clause OD-1 left open. The previous `Date.now() + N * 86400000` shipped in c07419c2 made the two halves of one selector behave differently — a "30 days" link expired at whatever wall-clock time it was created while a custom date expired at 23:59:59 local — and was not N calendar days across a DST boundary.
 
 ## OD-1: Request/response shape for expiry
 
