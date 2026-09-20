@@ -1954,3 +1954,19 @@ Note: this table uses inclusive maxes while `web/scripts/compare-screenshots.mjs
 `S7SCDc.png` was not re-exported this round — it does not instance `x3beP` (it instances the separate `WwNlX` Confirm Dialog master) and does not reference `j9c5W`/`rkF0p`/`z9ShNE`/`J09iP` anywhere in its tree (checked live via `Get("S7SCDc", (n,c) => ...)`), so it is outside every blast radius touched this round; the bbox above is measured from the existing, unchanged file for the harness step's convenience. `VM7ro.png`'s dimensions themselves (1088×810) are unchanged from the round-10 entry and were re-verified correct; the correction here is to the bbox/panel figures, and to the round-10 blast-radius and re-export-list claims above.
 
 No `.pen` file was Read/Grep/cat/sed this round — all access via Pencil MCP `get_app_state`/`execute`/`export_nodes`/`get_screenshot`. No `git checkout`/`restore`/`stash`/`rm` was run, and nothing in `design-export/` or `design.pen` was staged or committed by this pass.
+
+## Round-12 — OD-27 VM7ro-local overrides (2026-09-20)
+
+Per maintainer ruling OD-27 (`specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`), three VM7ro-local descendant overrides were applied on `VM7ro` (Share link created), a ref instance of the shared master `x3beP`. The master `x3beP` and the other 12 instancing frames were not touched.
+
+1. `qzcst` (mDesc): added `lineHeight: 1.4286` alongside its existing `content` override (master's 1.5 renders 21 CSS px against the browser's `text-sm` 20 px).
+2. `Hp206` (warningBox): `padding` 13 → 14 (single number, uniform), matching browser `border-2` + `p-3` = 14 CSS px inset. All other properties (`strokeWidth: 2`, `strokeAlignment: "inner"`, `gap: 8`, `cornerRadius: 8`, fills) unchanged.
+3. `SICns` (tokenRow): `padding` `[10, 14]` → `[11, 14]`, matching browser `border` + `p-2.5` = 11 CSS px vertical inset. All other properties unchanged.
+
+Applied via `Update("VM7ro/qzcst", {...})`, `Update("VM7ro/Hp206", {...})`, `Update("VM7ro/SICns", {...})` through the Pencil `execute` tool. Read back immediately via `Get("VM7ro/<id>")` for each, confirming exact values before and after export.
+
+**Export method & validation:** JSON via `Get("VM7ro", {depth: 30})`, zero elision markers, re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline; `python3 -m json.tool` passes. Screenshot via `export_nodes` at 2x scale → `VM7ro.png` 1088×816 RGBA, non-empty. Content check: `"Send this to your friend"` (qzcst's body text) found exactly once across all exports, in `VM7ro.json` only. Confirmed in the re-exported JSON: `descendants.qzcst.lineHeight === 1.4286`, `descendants.Nht52.children[0].padding === 14` (Hp206), `descendants.Nht52.children[1].padding === [11, 14]` (SICns).
+
+Only `VM7ro` was re-exported this round — none of the other 12 `x3beP` instances carry these overrides, so their JSON/PNG exports are unaffected and were not touched.
+
+No `.pen` file was Read/Grep/cat/sed this round — all access via Pencil MCP `execute`/`export_nodes`. The `.pen` file itself was not saved (per task instructions, the maintainer saves via the GUI). No git add/commit was performed by this pass.

@@ -166,23 +166,35 @@ const REFERENCE_CROP_ALLOWLIST = {
   // scan of design-export/screenshots/atqRh.png (now 1088x772, bbox
   // (64,40)-(1024,684) => 960x644).
   atqRh: { left: 64, top: 40, width: 960, height: 644 },
-  // Share Link Created dialog: OD-26 round-10 (OEaBF lineHeight, Hp206/SICns
-  // inner stroke, kbpwg width) re-export grew the panel; bounding box
-  // re-verified via PIL alpha>=250 scan of design-export/screenshots/VM7ro.png
-  // (now 1088x810, bbox (64,40)-(1024,722) => 960x682).
-  VM7ro: { left: 64, top: 40, width: 960, height: 682 },
+  // Share Link Created dialog: OD-27 round-12 (qzcst lineHeight 1.4286,
+  // Hp206 padding 14, SICns padding [11,14]) re-export grew the panel by the
+  // net +3 CSS px those three overrides add; bounding box re-verified via PIL
+  // alpha>=250 scan of design-export/screenshots/VM7ro.png (now 1088x816,
+  // bbox (64,40)-(1024,728) => 960x688, which is exactly the browser
+  // capture's 960x688 — the two halves now agree on height).
+  VM7ro: { left: 64, top: 40, width: 960, height: 688 },
   // Revoke Share Link dialog: OD-26 round-10 HARNESS clause. Design side is
   // unchanged (S7SCDc references master WwNlX, not touched this round);
   // opaque-panel bbox re-verified via PIL alpha>=250 scan of
   // design-export/screenshots/S7SCDc.png (1008x508, bbox
-  // (64,40)-(944,420) => 880x380). Per OD-26, captureLocator() keeps 1 CSS px
-  // (2 device px) of modal backdrop at the browser capture's top and bottom
-  // edge, and capture.ts is intentionally left unchanged — the reference
-  // crop absorbs the difference instead, so this rect is extended by 2
-  // device px at the top (top 40 -> 38) and 4 device px total in height
-  // (380 -> 384, i.e. +2 top +2 bottom) to match the browser capture's
-  // taller backdrop-inclusive crop (final bbox (64,38)-(944,422) => 880x384).
-  S7SCDc: { left: 64, top: 38, width: 880, height: 384 },
+  // (64,40)-(944,420) => 880x380). Per OD-26, captureLocator() keeps 2 CSS px
+  // (4 device px) of modal backdrop in the browser capture and capture.ts is
+  // intentionally left unchanged — the reference crop absorbs the difference
+  // instead. The round-10 rect assumed that backdrop was split 1 CSS px per
+  // edge and used top 38, but the capture measures it all at the bottom: the
+  // 880x384 browser capture carries its panel at rows 0-379 (0 device px of
+  // backdrop above, 4 below), so a top-38 crop put the reference panel at rows
+  // 2-381 and mis-registered every glyph by 2 device px (CI: 5.72% global,
+  // over the 4% gate). Registering the crop on the panel's own top edge
+  // (top 40, height still 384 => bbox (64,40)-(944,424)) re-aligns the two
+  // panels: locally re-measured at 2.91% global / 5.67% block. Note the 4
+  // extra rows below the panel are NOT free: measured alpha 46-98 across
+  // x 64-943, all above ALPHA_MASK_THRESHOLD (8), so REFERENCE_ALPHA_MASK
+  // keeps that shadow gradient in both the numerator and the denominator
+  // and it is diffed against the browser's backdrop. It costs ~1.04% of the
+  // 880x384 area, concentrated in the two bottom blocks, and the 2.91% /
+  // 5.67% above already includes it.
+  S7SCDc: { left: 64, top: 40, width: 880, height: 384 },
 };
 
 // Allowed deviation from an allowlisted id's recorded scaleFactor, in either

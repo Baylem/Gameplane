@@ -12,7 +12,8 @@
       "content": "Share link created"
     },
     "qzcst": {
-      "content": "Send this to your friend. It works without a Gameplane account."
+      "content": "Send this to your friend. It works without a Gameplane account.",
+      "lineHeight": 1.4286
     },
     "Nht52": {
       "type": "frame",
@@ -39,7 +40,7 @@
           "strokeWidth": 2,
           "strokeAlignment": "inner",
           "gap": 8,
-          "padding": 13,
+          "padding": 14,
           "children": [
             {
               "type": "icon",
@@ -99,7 +100,7 @@
           "strokeAlignment": "inner",
           "gap": 12,
           "padding": [
-            10,
+            11,
             14
           ],
           "justifyContent": "space_between",
