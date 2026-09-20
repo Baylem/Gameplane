@@ -1983,14 +1983,32 @@ Per maintainer ruling OD-9 (`specs/done_017-share-link-expiry/OPEN-DECISIONS.md`
 **Export method & validation:** JSON via `Get(id, {depth: 12–14})` for all four nodes, zero elision markers; validated with `python3 -m json.tool`. Screenshots via `export_nodes` at 2x scale: `atqRh.png` 1088×732, `tr6cE.png` 1088×772, `oPF1n.png` 1088×892, `xCJlu.png` 2880×1800, all non-empty RGBA. Content checks: `"This link works until you revoke it"` found only in `tr6cE.json`; `"Long-lived link"` found only in `oPF1n.json`; `"content":"Never"` found in `xCJlu.json`. Read back all edited/created nodes via `Get` after each edit and via screenshot before export.
 
 No `.pen` file was Read/Grep/cat/sed — all access via Pencil MCP `get_app_state`/`execute`/`get_screenshot`/`export_nodes`. The `.pen` file itself was **not** saved (per the task's explicit instruction — the maintainer saves via the GUI). No git add/commit was performed by this pass.
-## Incremental export 2026-09-12 — 010-easy-module-building: BuildModuleDialog modal wizard
+## 010-easy-module-building: BuildModuleDialog modal wizard frames (commits 391e1960, fa5a4370)
 
-Added 3 modal wizard frames for the Web Dashboard Module Builder (US5):
+Three modal wizard frames for the Web Dashboard Module Builder (US5) were designed and initially exported in prior commits and merged to master:
 - `IdbiB`: `Screen/Dialog/Build Module — Step 1 (Preset & Metadata)` (800x700, archetype selector cards, DNS-1123 name validation, display metadata, category chips).
 - `O5kaV`: `Screen/Dialog/Build Module — Step 2 (Container & Ports)` (800x700, pinned image digest badge, dynamic port mapping list, persistent storage configuration).
 - `hmPL7`: `Screen/Dialog/Build Module — Step 3 (Review & Export)` (840x700, dual-pane layout with code viewer tabs for module.yaml/template.yaml/README.md, live offline validation checklist, memory slider preview with heap calculation, and export/install actions).
 
+**Initial exports:** commit `391e1960` (2026-09-15) first exported `IdbiB`, `O5kaV`, `hmPL7` at full length (~700+ lines each, dark theme applied). Commit `fa5a4370` (2026-09-16) made minor follow-up changes to these same three frames (2-3 line diffs each, documented in those commits). Both commits are already on master and reached this feature branch through a merge. Commit `12b4d449` (2026-09-12) contributed only the manifest narrative entry (11 lines added to MANIFEST.md); the actual frame exports are entirely from commits 391e1960/fa5a4370.
+
+## Export correction 2026-09-21 — 010-easy-module-building: O5kaV container image reference
+
+Fixed the sample container image reference in `O5kaV` (Screen/Dialog/Build Module — Step 2, Container & Ports) to match the existing `ARCHETYPE_PRESETS.steamcmd.defaultImage` in `web/src/components/modules/BuildModuleDialog.tsx`, which was already correct.
+
+| Node | Previous value | New value | Why |
+|---|---|---|---|
+| `NQ8y0` (image sample string) | `ghcr.io/valgulnecron/cs2:latest@sha256:4b9a8e23...4d4e5` (wrong repo slug "cs2", digest truncated to 40 hex chars) | `ghcr.io/valgulnecron/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7` (correct slug, full 64-char digest) | The design sample (`NQ8y0`) was corrected to match the already-correct `ARCHETYPE_PRESETS.steamcmd.defaultImage` in `web/src/components/modules/BuildModuleDialog.tsx`; the component's preset was never changed by this work. |
+
+**Port rows unchanged:** `f4U7oU` (port 1 name: "game"), `b4CUxa` (port 1 number: 27015), `bcGo3` (port 1 protocol: UDP), `prNFB` (port 2 number: 27015), `evKQq` (port 2 protocol: TCP), and `q96ywV` (storage mount: /home/steam/cs2-data) were examined and deliberately left as-is — they correctly represent a running server configuration. All other siblings (`IVUPC` storage capacity: 20Gi) unchanged.
+
+**Prior hand-edit overridden:** commit `10fe068a` had previously hand-edited `design-export/json/O5kaV.json` directly, changing the digest, port 27015→27016 and TCP→UDP without any corresponding Pencil design changes. That manual edit was reverted; the current export supersedes it with a proper Pencil-sourced update containing only the image reference correction and no port mutations.
+
 **Export method & validation:**
-- **JSON:** Exported full subtrees to `design-export/json/IdbiB.json`, `design-export/json/O5kaV.json`, and `design-export/json/hmPL7.json`.
-- **Screenshots:** `export_nodes` PNG export at 2x scale to `design-export/screenshots/{IdbiB,O5kaV,hmPL7}.png`.
+
+- **JSON:** `Get("O5kaV", {depth: 30})` via the Pencil `execute` tool, zero `"..."` elision markers. Re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline; `python3 -m json.tool` passes.
+- **Screenshot:** `export_nodes` at 2× scale → `design-export/screenshots/O5kaV.png` 1600×1070 RGBA non-empty PNG (verified via PIL: 192052 bytes).
+- **Content check:** the full pinned image reference `ghcr.io/valgulnecron/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7` found exactly once, in `design-export/json/O5kaV.json` only. Port and storage values confirmed unchanged via grep.
+- **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`, per Rule 2.
+- No git add/commit performed (task instructions: export and manifest correction only).
 
