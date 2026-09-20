@@ -133,7 +133,7 @@ export function InviteUserDialog({
         <ModalContainer>
           <ModalDialog className="w-[480px] max-w-[480px] rounded-xl">
             <ModalHeader>
-              <ModalHeading className="leading-[21px]">Invite user</ModalHeading>
+              <ModalHeading>Invite user</ModalHeading>
               {contactFieldsOptional && (
                 <Description className="text-sm leading-[21px] text-muted">
                   Create a local account. Leave password blank to send an OIDC invite later.

@@ -321,6 +321,8 @@ input:-webkit-autofill:focus {
 .modal__dialog .input,
 .modal__dialog .select__trigger {
   height: 36px;
+  display: flex;
+  align-items: center;
   border-radius: 12px;
   padding: 0 11px;          /* round-7 NLDDv/DMnEi: text starts 12px from the outer edge (11 + 1px border), as in the design */
 }

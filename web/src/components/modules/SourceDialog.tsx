@@ -237,7 +237,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
         <ModalContainer>
           <ModalDialog className="w-[480px] max-w-[480px]">
           <ModalHeader>
-            <ModalHeading className="leading-[21px]">
+            <ModalHeading>
               {editing ? `Edit source ${source.metadata.name}` : "Add module source"}
             </ModalHeading>
             <Description className="text-sm leading-[21px] text-muted">

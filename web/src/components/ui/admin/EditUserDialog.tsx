@@ -107,7 +107,7 @@ export function EditUserDialog({
         <ModalContainer>
           <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
-              <ModalHeading className="leading-[21px]">Edit user</ModalHeading>
+              <ModalHeading>Edit user</ModalHeading>
               {username && <Description className="text-sm leading-[21px] text-muted">{username}</Description>}
             </ModalHeader>
 

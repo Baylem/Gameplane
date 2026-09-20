@@ -79,7 +79,7 @@ export function ResetPasswordDialog({
         <ModalContainer>
           <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
-              <ModalHeading className="leading-[21px]">Reset password for {username}</ModalHeading>
+              <ModalHeading>Reset password for {username}</ModalHeading>
               <Description className="text-sm leading-[21px] text-muted">They will need to sign in again with the new password.</Description>
             </ModalHeader>
 
