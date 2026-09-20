@@ -67,10 +67,10 @@ Tasks that turn out not to be gaps get marked withdrawn in `tasks.md` with a cit
 
 For each requirement or claim you audit, return a structured finding:
 
-```
+```text
 **FR-NNN:** [requirement prose]
 - **Verdict:** CONFIRMED / PLAUSIBLE / NOT_MET / WITHDRAWN / EXEMPT  
-- **Artifacts checked:** spec.md, data-model.md E1, contracts/api.md  
+- **Artifacts checked:** specs/<feature>/spec.md, specs/<feature>/data-model.md (E1), specs/<feature>/contracts/api.md  
 - **Evidence:** [cite the text that settles this, or "withdrawn via tasks.md line X"]  
 - **Notes:** [any additional context]
 ```

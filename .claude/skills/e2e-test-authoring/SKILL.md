@@ -32,6 +32,7 @@ The e2e suite is divided into buckets by **login pressure**, not feature area. E
 
 **Resource names**: Prefix all K8s objects (GameServer, GameTemplate, Service, ConfigMap, etc.) with `e2e-<name>-<kind>` to ensure per-test uniqueness and aid debugging. Examples:
 ```go
+// Note: gameplane-games is an intentional shared namespace for module tests; isolation is maintained via ociPushMu guard (see CLAUDE.md).
 ns := "gameplane-games"
 tmpl := "e2e-my-feature-tmpl"
 gs := "e2e-my-feature-gs"
@@ -140,7 +141,7 @@ Operator tests (no API logins) have no budget constraints and run with full para
 
 ## Reference
 
-- **buckets.sh**: `/home/valgul/project/Gameplane/test/e2e/buckets.sh` — source of truth for bucket membership and login budgets.
+- **buckets.sh**: `test/e2e/buckets.sh` — source of truth for bucket membership and login budgets.
 - **CLAUDE.md rule 8**: "Never run test/lint locally — CI is the source of truth."
 - **CLAUDE.md test tiers**: `make test-e2e` (10–20 min) is the CI e2e tier; `make test-integration` is operator/api envtest.
 - **Lint**: `make lint` includes a check that every Go module in `go.work` plus `web/` has a non-empty `specs.md`.

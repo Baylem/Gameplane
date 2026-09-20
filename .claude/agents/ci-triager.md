@@ -21,7 +21,7 @@ gh run view <run-id>
 gh run view <run-id> --log-failed
 
 # Get full output of one job
-gh run download <run-id> -n <job-name>
+gh run view <run-id> --job <job-id> --log
 
 # Check a PR's status and required checks
 gh pr checks <pr-number>
@@ -139,14 +139,14 @@ gh api repos/ValgulNecron/Gameplane/issues/<n>/labels -q '[.[].name]|join(", ")'
 
 Produce a **diagnostic report**, not a fix:
 
-```
+```text
 **Failing job:** ci.yaml / lint: api [amd64]
 
-**Root cause:** golangci-lint reported `@typescript-eslint/no-explicit-any` on web/src/lib/api.ts:42. But this is the `go` matrix job, not the web job — error categorization is wrong. ACTUAL: go lint on api module. Check api/.golangci.yml.
+**Root cause:** golangci-lint reported `errcheck` on api/internal/handlers/gameserver.go:92. A function's error return is ignored without `_` assignment.
 
-**Owning module/file:** api/.golangci.yml (or api/ source if the rule is correct but code violates it)
+**Owning module/file:** api/internal/handlers/gameserver.go:92
 
-**Suggested fix:** [Describe the change, e.g., "Remove `@typescript-eslint/no-explicit-any` from api/ linter config, or add a one-line comment in api/internal/handlers/foo.go:42 explaining why `any` is unavoidable here (rule 5)."]
+**Suggested fix:** Either handle the error with `if err != nil { ... }`, assign it with `_ = err`, or add a one-line comment explaining why it is safe to ignore (rule 5).
 ```
 
 Never edit code, commit, or push. Only diagnose and report. The maintainer or an implementing agent will apply fixes in a follow-up.
