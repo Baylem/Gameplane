@@ -10,7 +10,7 @@
   "gap": 5,
   "padding": [
     8,
-    "$spacing/3"
+    10
   ],
   "justifyContent": "center",
   "alignItems": "center",

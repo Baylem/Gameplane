@@ -37,8 +37,9 @@
           "cornerRadius": 8,
           "stroke": "$warning/warning",
           "strokeWidth": 2,
+          "strokeAlignment": "inner",
           "gap": 8,
-          "padding": 14,
+          "padding": 13,
           "children": [
             {
               "type": "icon",
@@ -95,6 +96,7 @@
           "cornerRadius": 8,
           "stroke": "$border/border",
           "strokeWidth": 1,
+          "strokeAlignment": "inner",
           "gap": 12,
           "padding": [
             10,
@@ -108,7 +110,8 @@
               "fill": "$foreground/foreground",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "http://localhost:5173/share/8f3ac1e0b2d94f7c9a5e6b7d1c0e2f4a5b6c7",
+              "content": "http://localhost:5173/share/8f3ac1e0b2d94f7c9a5e\n6b7d1c0e2f4a5b6c7",
+              "lineHeight": 1.4615,
               "fontFamily": "$typography/font-mono",
               "fontSize": 13,
               "fontWeight": "normal"
@@ -147,6 +150,7 @@
           "ref": "FIB65",
           "name": "btnCopy",
           "cornerRadius": 6,
+          "width": 99,
           "descendants": {
             "K8d1zg": {
               "icon": "copy"

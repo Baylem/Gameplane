@@ -154,20 +154,35 @@ const SCALE_ALLOWLIST = {
 // or its shadow/size changes.
 const REFERENCE_CROP_ALLOWLIST = {
   // Backup Detail Drawer: 440x760 panel at 2x; shadow offset x -12 / blur 32 /
-  // spread -8 leaves 44 CSS px bleed left, 20 right, 32 top and bottom.
+  // spread -8 leaves 44 CSS px bleed left, 20 right, 32 top and bottom (bbox
+  // (88,64)-(968,1584) => 880x1520).
   zhLZN: { left: 88, top: 64, width: 880, height: 1520 },
-  // Add module source dialog: 480x882 panel at 2x, bounding box verified
-  // via PIL alpha>=250 scan of design-export/screenshots/DMnEi.png (1088x1892).
-  DMnEi: { left: 64, top: 40, width: 960, height: 1764 },
-  // Create Share Link dialog: 480x320 panel at 2x, bounding box verified via
-  // PIL alpha>=250 scan of design-export/screenshots/atqRh.png (1088x768).
-  atqRh: { left: 64, top: 40, width: 960, height: 640 },
-  // Share Link Created dialog: 480x322 panel at 2x, bounding box verified via
-  // PIL alpha>=250 scan of design-export/screenshots/VM7ro.png (1088x772).
-  VM7ro: { left: 64, top: 40, width: 960, height: 644 },
-  // Revoke Share Link dialog: 440x163 panel at 2x, bounding box verified via
-  // PIL alpha>=250 scan of design-export/screenshots/S7SCDc.png (1008x454).
-  S7SCDc: { left: 64, top: 40, width: 880, height: 326 },
+  // Add module source dialog: 480x882 panel at 2x, bounding box re-verified
+  // via PIL alpha>=250 scan of design-export/screenshots/DMnEi.png (now
+  // 1088x1898, bbox (64,40)-(1024,1810) => 960x1770).
+  DMnEi: { left: 64, top: 40, width: 960, height: 1770 },
+  // Create Share Link dialog: OD-26 round-10 (atqRh N4srNq/uuUdx gap fix)
+  // re-export shrank the panel; bounding box re-verified via PIL alpha>=250
+  // scan of design-export/screenshots/atqRh.png (now 1088x772, bbox
+  // (64,40)-(1024,684) => 960x644).
+  atqRh: { left: 64, top: 40, width: 960, height: 644 },
+  // Share Link Created dialog: OD-26 round-10 (OEaBF lineHeight, Hp206/SICns
+  // inner stroke, kbpwg width) re-export grew the panel; bounding box
+  // re-verified via PIL alpha>=250 scan of design-export/screenshots/VM7ro.png
+  // (now 1088x810, bbox (64,40)-(1024,722) => 960x682).
+  VM7ro: { left: 64, top: 40, width: 960, height: 682 },
+  // Revoke Share Link dialog: OD-26 round-10 HARNESS clause. Design side is
+  // unchanged (S7SCDc references master WwNlX, not touched this round);
+  // opaque-panel bbox re-verified via PIL alpha>=250 scan of
+  // design-export/screenshots/S7SCDc.png (1008x508, bbox
+  // (64,40)-(944,420) => 880x380). Per OD-26, captureLocator() keeps 1 CSS px
+  // (2 device px) of modal backdrop at the browser capture's top and bottom
+  // edge, and capture.ts is intentionally left unchanged — the reference
+  // crop absorbs the difference instead, so this rect is extended by 2
+  // device px at the top (top 40 -> 38) and 4 device px total in height
+  // (380 -> 384, i.e. +2 top +2 bottom) to match the browser capture's
+  // taller backdrop-inclusive crop (final bbox (64,38)-(944,422) => 880x384).
+  S7SCDc: { left: 64, top: 38, width: 880, height: 384 },
 };
 
 // Allowed deviation from an allowlisted id's recorded scaleFactor, in either

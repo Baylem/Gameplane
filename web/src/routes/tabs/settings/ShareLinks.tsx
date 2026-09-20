@@ -351,7 +351,7 @@ function RevokeDialog({
 
           <AlertDialogBody className="m-0 p-0 pt-4">
             <div className="space-y-4">
-              <Description className="text-sm text-muted">
+              <Description className="text-sm leading-[21px] text-muted">
                 Anyone using this link will immediately lose access to {serverName}&apos;s status
                 page. This action cannot be undone.
               </Description>

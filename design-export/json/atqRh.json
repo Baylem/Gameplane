@@ -34,7 +34,7 @@
           "name": "fExpiry",
           "width": "fill_container",
           "layout": "vertical",
-          "gap": 6,
+          "gap": 4,
           "children": [
             {
               "type": "text",
@@ -90,7 +90,6 @@
               "name": "canStartText",
               "width": "fill_container",
               "layout": "vertical",
-              "gap": 4,
               "children": [
                 {
                   "type": "text",
