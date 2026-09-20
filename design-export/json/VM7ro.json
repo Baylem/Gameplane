@@ -1,75 +1,26 @@
 {
-  "type": "frame",
   "id": "VM7ro",
+  "type": "ref",
+  "reusable": true,
+  "ref": "x3beP",
+  "name": "Gameplane/Dialog/Share Link Created",
   "x": -15865,
   "y": 27934,
-  "name": "Gameplane/Dialog/Share Link Created",
   "theme": {},
-  "reusable": true,
-  "width": 480,
-  "fill": "$surface/surface",
-  "cornerRadius": "$radius/xl",
-  "stroke": "$border/border",
-  "strokeWidth": 1,
-  "strokeAlignment": "inner",
-  "effect": {
-    "type": "shadow",
-    "shadowType": "outer",
-    "color": "#00000080",
-    "offset": {
-      "x": 0,
-      "y": 12
+  "descendants": {
+    "E7Whx": {
+      "content": "Share link created"
     },
-    "blur": 32,
-    "spread": -8
-  },
-  "layout": "vertical",
-  "padding": 20,
-  "children": [
-    {
-      "type": "text",
-      "id": "VM7ro/E7Whx",
-      "name": "mTitle",
-      "fill": "$foreground/foreground",
-      "content": "Share link created",
-      "fontFamily": "$typography/font-sans",
-      "fontSize": 16,
-      "fontWeight": "600"
+    "qzcst": {
+      "content": "Send this to your friend. It works without a Gameplane account."
     },
-    {
-      "type": "frame",
-      "id": "VM7ro/ABbjS",
-      "name": "mDescWrap",
-      "width": "fill_container",
-      "padding": [
-        4,
-        0,
-        0,
-        0
-      ],
-      "children": [
-        {
-          "type": "text",
-          "id": "VM7ro/qzcst",
-          "name": "mDesc",
-          "fill": "$muted",
-          "textGrowth": "fixed-width",
-          "width": "fill_container",
-          "content": "Send this to your friend. It works without a Gameplane account.",
-          "lineHeight": 1.5,
-          "fontFamily": "$typography/font-sans",
-          "fontSize": 14,
-          "fontWeight": "normal"
-        }
-      ]
-    },
-    {
+    "Nht52": {
       "type": "frame",
       "id": "J5VxNe",
       "name": "mBody",
       "width": "fill_container",
       "layout": "vertical",
-      "gap": 12,
+      "gap": 16,
       "padding": [
         16,
         0,
@@ -87,7 +38,7 @@
           "stroke": "$warning/warning",
           "strokeWidth": 2,
           "gap": 8,
-          "padding": 12,
+          "padding": 14,
           "children": [
             {
               "type": "icon",
@@ -113,6 +64,7 @@
                   "name": "warningTitle",
                   "fill": "$warning/warning",
                   "content": "You will not see this link again",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 14,
                   "fontWeight": "700"
@@ -124,7 +76,8 @@
                   "fill": "$warning/warning",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "Gameplane stores only a one-way hash of the token, so it can't be shown or recovered after you close this dialog. Copy it now.",
+                  "content": "Gameplane stores only a one-way hash of the token, so it\ncan't be shown or recovered after you close this dialog.\nCopy it now.",
+                  "lineHeight": 1.4286,
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 14,
                   "fontWeight": "normal"
@@ -148,7 +101,6 @@
             14
           ],
           "justifyContent": "space_between",
-          "alignItems": "center",
           "children": [
             {
               "type": "text",
@@ -156,7 +108,7 @@
               "fill": "$foreground/foreground",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "https://play.gameplane.example/s/8f3ac1e0b2d94f7c9a5e6b7d1c0e2f4a",
+              "content": "http://localhost:5173/share/8f3ac1e0b2d94f7c9a5e6b7d1c0e2f4a5b6c7",
               "fontFamily": "$typography/font-mono",
               "fontSize": 13,
               "fontWeight": "normal"
@@ -174,7 +126,7 @@
         }
       ]
     },
-    {
+    "GCwAF": {
       "type": "frame",
       "id": "bvUYp",
       "name": "mFooter",
@@ -190,85 +142,36 @@
       "alignItems": "center",
       "children": [
         {
-          "type": "frame",
           "id": "kbpwg",
+          "type": "ref",
+          "ref": "FIB65",
           "name": "btnCopy",
-          "height": 32,
           "cornerRadius": 6,
-          "stroke": "$border-2",
-          "strokeWidth": 1,
-          "strokeAlignment": "inner",
-          "gap": 5,
-          "padding": [
-            8,
-            "$spacing/3"
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "icon",
-              "id": "kbpwg/K8d1zg",
-              "name": "i4",
-              "width": 14,
-              "height": 14,
-              "icon": "copy",
-              "library": "lucide",
-              "fill": "$foreground/foreground"
+          "descendants": {
+            "K8d1zg": {
+              "icon": "copy"
             },
-            {
-              "type": "text",
-              "id": "kbpwg/zMNkR",
-              "name": "Label",
-              "fill": "$foreground/foreground",
-              "content": "Copy link",
-              "fontFamily": "$typography/font-sans",
-              "fontSize": 13,
-              "fontWeight": "500"
+            "zMNkR": {
+              "content": "Copy link"
             }
-          ]
+          }
         },
         {
-          "type": "frame",
           "id": "m6ngX",
+          "type": "ref",
+          "ref": "j9c5W",
           "name": "btnPrimary",
-          "height": 32,
-          "fill": "$accent/accent",
           "cornerRadius": 6,
-          "gap": 5,
-          "padding": [
-            8,
-            "$spacing/3"
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "icon",
-              "id": "m6ngX/n8Hmwk",
-              "x": 12,
-              "y": 9,
-              "name": "i1",
-              "enabled": false,
-              "width": 14,
-              "height": 14,
-              "icon": "plus",
-              "library": "lucide",
-              "fill": "$accent/foreground"
+          "descendants": {
+            "n8Hmwk": {
+              "enabled": false
             },
-            {
-              "type": "text",
-              "id": "m6ngX/U1xvSo",
-              "name": "Label",
-              "fill": "$accent/foreground",
-              "content": "Done",
-              "fontFamily": "$typography/font-sans",
-              "fontSize": 13,
-              "fontWeight": "500"
+            "U1xvSo": {
+              "content": "Done"
             }
-          ]
+          }
         }
       ]
     }
-  ]
+  }
 }

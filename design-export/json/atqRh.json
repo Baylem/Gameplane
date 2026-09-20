@@ -1,69 +1,20 @@
 {
-  "type": "frame",
   "id": "atqRh",
+  "type": "ref",
+  "reusable": true,
+  "ref": "x3beP",
+  "name": "Gameplane/Dialog/Create Share Link",
   "x": -16545,
   "y": 27934,
-  "name": "Gameplane/Dialog/Create Share Link",
   "theme": {},
-  "reusable": true,
-  "width": 480,
-  "fill": "$surface/surface",
-  "cornerRadius": "$radius/xl",
-  "stroke": "$border/border",
-  "strokeWidth": 1,
-  "strokeAlignment": "inner",
-  "effect": {
-    "type": "shadow",
-    "shadowType": "outer",
-    "color": "#00000080",
-    "offset": {
-      "x": 0,
-      "y": 12
+  "descendants": {
+    "E7Whx": {
+      "content": "Create share link for mc-survival"
     },
-    "blur": 32,
-    "spread": -8
-  },
-  "layout": "vertical",
-  "padding": 20,
-  "children": [
-    {
-      "type": "text",
-      "id": "atqRh/E7Whx",
-      "name": "mTitle",
-      "fill": "$foreground/foreground",
-      "content": "Create share link for mc-survival",
-      "fontFamily": "$typography/font-sans",
-      "fontSize": 16,
-      "fontWeight": "600"
+    "qzcst": {
+      "content": "Anyone with this link can check the server's status and connection address without signing in."
     },
-    {
-      "type": "frame",
-      "id": "atqRh/ABbjS",
-      "name": "mDescWrap",
-      "width": "fill_container",
-      "padding": [
-        4,
-        0,
-        0,
-        0
-      ],
-      "children": [
-        {
-          "type": "text",
-          "id": "atqRh/qzcst",
-          "name": "mDesc",
-          "fill": "$muted",
-          "textGrowth": "fixed-width",
-          "width": "fill_container",
-          "content": "Anyone with this link can check the server's status and connection address without signing in.",
-          "lineHeight": 1.5,
-          "fontFamily": "$typography/font-sans",
-          "fontSize": 14,
-          "fontWeight": "normal"
-        }
-      ]
-    },
-    {
+    "Nht52": {
       "type": "frame",
       "id": "p483p",
       "name": "mBody",
@@ -95,54 +46,16 @@
               "fontWeight": "500"
             },
             {
-              "type": "frame",
               "id": "ax9CH",
+              "type": "ref",
+              "ref": "AT7ya",
               "name": "Select",
               "width": "fill_container",
-              "height": 36,
-              "fill": "$field/background",
-              "cornerRadius": "$radius/xl",
-              "stroke": "$field/border",
-              "strokeWidth": 1,
-              "strokeAlignment": "inner",
-              "effect": {
-                "type": "shadow",
-                "shadowType": "outer",
-                "color": "#0000000F",
-                "offset": {
-                  "x": 0,
-                  "y": 1
-                },
-                "blur": 2
-              },
-              "padding": [
-                8,
-                12
-              ],
-              "justifyContent": "space_between",
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "ax9CH/cFsFk",
-                  "name": "selectValue",
-                  "fill": "$field/placeholder",
-                  "content": "7 days",
-                  "fontFamily": "$typography/font-sans",
-                  "fontSize": 14,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "icon",
-                  "id": "ax9CH/mULN8",
-                  "name": "selectChevron",
-                  "width": 16,
-                  "height": 16,
-                  "icon": "chevron-down",
-                  "library": "lucide",
-                  "fill": "$field/placeholder"
+              "descendants": {
+                "cFsFk": {
+                  "content": "7 days"
                 }
-              ]
+              }
             },
             {
               "type": "text",
@@ -150,7 +63,7 @@
               "fill": "$muted",
               "content": "Maximum 90 days. You can revoke it earlier at any time.",
               "fontFamily": "$typography/font-sans",
-              "fontSize": 11,
+              "fontSize": 12,
               "fontWeight": "normal"
             }
           ]
@@ -160,56 +73,16 @@
           "id": "x22w2k",
           "name": "fCanStart",
           "width": "fill_container",
-          "gap": 16,
+          "gap": 12,
           "justifyContent": "space_between",
           "alignItems": "center",
           "children": [
             {
-              "type": "frame",
               "id": "WCA5l",
+              "type": "ref",
+              "ref": "rh2QH",
               "name": "canStartSwitch",
-              "width": 36,
-              "height": 20,
-              "fill": "$border/border",
-              "cornerRadius": "$radius/3xl",
-              "layout": "none",
-              "children": [
-                {
-                  "type": "frame",
-                  "id": "WCA5l/xGn9t",
-                  "x": 0,
-                  "y": 0,
-                  "name": "Track",
-                  "width": 36,
-                  "height": 20,
-                  "fill": "$default/default",
-                  "cornerRadius": 9999,
-                  "layout": "none",
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "WCA5l/eBtYM",
-                      "x": 2,
-                      "y": 2,
-                      "name": "Thumb",
-                      "width": 16,
-                      "height": 16,
-                      "fill": "$accent/foreground",
-                      "cornerRadius": 9999,
-                      "effect": {
-                        "type": "shadow",
-                        "shadowType": "outer",
-                        "color": "#0000001A",
-                        "offset": {
-                          "x": 0,
-                          "y": 1
-                        },
-                        "blur": 3
-                      }
-                    }
-                  ]
-                }
-              ]
+              "width": 40
             },
             {
               "type": "frame",
@@ -225,7 +98,7 @@
                   "fill": "$foreground/foreground",
                   "content": "Allow starting the server",
                   "fontFamily": "$typography/font-sans",
-                  "fontSize": 13,
+                  "fontSize": 14,
                   "fontWeight": "500"
                 },
                 {
@@ -237,7 +110,7 @@
                   "content": "The link holder can wake mc-survival from asleep. Without this, they can only view its status.",
                   "lineHeight": 1.4,
                   "fontFamily": "$typography/font-sans",
-                  "fontSize": 11,
+                  "fontSize": 12,
                   "fontWeight": "normal"
                 }
               ]
@@ -246,7 +119,7 @@
         }
       ]
     },
-    {
+    "GCwAF": {
       "type": "frame",
       "id": "m1KCBz",
       "name": "mFooter",
@@ -262,82 +135,40 @@
       "alignItems": "center",
       "children": [
         {
-          "type": "frame",
           "id": "QTxwn",
+          "type": "ref",
+          "ref": "rkF0p",
           "name": "btnCancel",
-          "height": 32,
           "cornerRadius": 6,
-          "gap": 5,
-          "padding": [
-            8,
-            "$spacing/3"
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "icon",
-              "id": "QTxwn/WtPjS",
-              "x": 12,
-              "y": 9,
-              "name": "i7",
-              "enabled": false,
-              "width": 14,
-              "height": 14,
-              "icon": "plus",
-              "library": "lucide",
-              "fill": "$foreground/foreground"
+          "descendants": {
+            "WtPjS": {
+              "enabled": false
             },
-            {
-              "type": "text",
-              "id": "QTxwn/r4VbAi",
-              "name": "Label",
-              "fill": "$foreground/foreground",
+            "r4VbAi": {
               "content": "Cancel",
-              "fontFamily": "$typography/font-sans",
-              "fontSize": 13,
-              "fontWeight": "500"
+              "fontSize": 13
             }
-          ]
+          }
         },
         {
-          "type": "frame",
           "id": "nKz2n",
+          "type": "ref",
+          "ref": "j9c5W",
           "name": "btnPrimary",
-          "height": 32,
-          "fill": "$accent/accent",
           "cornerRadius": 6,
-          "gap": 5,
-          "padding": [
-            8,
-            "$spacing/3"
-          ],
-          "justifyContent": "center",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "icon",
-              "id": "nKz2n/n8Hmwk",
-              "name": "i1",
-              "width": 14,
-              "height": 14,
+          "descendants": {
+            "n8Hmwk": {
               "icon": "link",
-              "library": "lucide",
-              "fill": "$accent/foreground"
+              "width": 14,
+              "height": 14
             },
-            {
-              "type": "text",
-              "id": "nKz2n/U1xvSo",
-              "name": "Label",
-              "fill": "$accent/foreground",
+            "U1xvSo": {
               "content": "Create link",
-              "fontFamily": "$typography/font-sans",
-              "fontSize": 13,
-              "fontWeight": "500"
+              "fontSize": 13
             }
-          ]
+          }
         }
       ]
     }
-  ]
+  }
 }

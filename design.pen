@@ -39458,6 +39458,7 @@
           "name": "mTitle",
           "fill": "$foreground/foreground",
           "content": "Back up now",
+          "lineHeight": 1.5,
           "fontFamily": "$typography/font-sans",
           "fontSize": 16,
           "fontWeight": "600"
@@ -49973,7 +49974,7 @@
                   "fill": "$muted",
                   "content": "Maximum 90 days. You can revoke it earlier at any time.",
                   "fontFamily": "$typography/font-sans",
-                  "fontSize": 11,
+                  "fontSize": 12,
                   "fontWeight": "normal"
                 }
               ]
@@ -49983,7 +49984,7 @@
               "id": "x22w2k",
               "name": "fCanStart",
               "width": "fill_container",
-              "gap": 16,
+              "gap": 12,
               "justifyContent": "space_between",
               "alignItems": "center",
               "children": [
@@ -49991,7 +49992,8 @@
                   "id": "WCA5l",
                   "type": "ref",
                   "ref": "rh2QH",
-                  "name": "canStartSwitch"
+                  "name": "canStartSwitch",
+                  "width": 40
                 },
                 {
                   "type": "frame",
@@ -50007,7 +50009,7 @@
                       "fill": "$foreground/foreground",
                       "content": "Allow starting the server",
                       "fontFamily": "$typography/font-sans",
-                      "fontSize": 13,
+                      "fontSize": 14,
                       "fontWeight": "500"
                     },
                     {
@@ -50019,7 +50021,7 @@
                       "content": "The link holder can wake mc-survival from asleep. Without this, they can only view its status.",
                       "lineHeight": 1.4,
                       "fontFamily": "$typography/font-sans",
-                      "fontSize": 11,
+                      "fontSize": 12,
                       "fontWeight": "normal"
                     }
                   ]
@@ -50054,7 +50056,8 @@
                   "enabled": false
                 },
                 "r4VbAi": {
-                  "content": "Cancel"
+                  "content": "Cancel",
+                  "fontSize": 13
                 }
               }
             },
@@ -50066,10 +50069,13 @@
               "cornerRadius": 6,
               "descendants": {
                 "n8Hmwk": {
-                  "icon": "link"
+                  "icon": "link",
+                  "width": 14,
+                  "height": 14
                 },
                 "U1xvSo": {
-                  "content": "Create link"
+                  "content": "Create link",
+                  "fontSize": 13
                 }
               }
             }
@@ -50099,7 +50105,7 @@
           "name": "mBody",
           "width": "fill_container",
           "layout": "vertical",
-          "gap": 12,
+          "gap": 16,
           "padding": [
             16,
             0,
@@ -50117,7 +50123,7 @@
               "stroke": "$warning/warning",
               "strokeWidth": 2,
               "gap": 8,
-              "padding": 12,
+              "padding": 14,
               "children": [
                 {
                   "type": "icon",
@@ -50143,6 +50149,7 @@
                       "name": "warningTitle",
                       "fill": "$warning/warning",
                       "content": "You will not see this link again",
+                      "lineHeight": 1.4286,
                       "fontFamily": "$typography/font-sans",
                       "fontSize": 14,
                       "fontWeight": "700"
@@ -50154,7 +50161,8 @@
                       "fill": "$warning/warning",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Gameplane stores only a one-way hash of the token, so it can't be shown or recovered after you close this dialog. Copy it now.",
+                      "content": "Gameplane stores only a one-way hash of the token, so it\ncan't be shown or recovered after you close this dialog.\nCopy it now.",
+                      "lineHeight": 1.4286,
                       "fontFamily": "$typography/font-sans",
                       "fontSize": 14,
                       "fontWeight": "normal"
@@ -50178,7 +50186,6 @@
                 14
               ],
               "justifyContent": "space_between",
-              "alignItems": "center",
               "children": [
                 {
                   "type": "text",
@@ -50186,7 +50193,7 @@
                   "fill": "$foreground/foreground",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "https://play.gameplane.example/s/8f3ac1e0b2d94f7c9a5e6b7d1c0e2f4a",
+                  "content": "http://localhost:5173/share/8f3ac1e0b2d94f7c9a5e6b7d1c0e2f4a5b6c7",
                   "fontFamily": "$typography/font-mono",
                   "fontSize": 13,
                   "fontWeight": "normal"
@@ -50304,6 +50311,14 @@
               "fontSize": 16,
               "fontWeight": "600"
             }
+          ]
+        },
+        "aZP2h": {
+          "padding": [
+            16,
+            0,
+            0,
+            0
           ]
         },
         "WKy74": {

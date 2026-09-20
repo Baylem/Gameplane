@@ -1814,3 +1814,65 @@ Ruling: `specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`, OD-24. Instance-only o
 - **Content check:** `"Server address"` / `"Tunnel"` → IyMFM; `"Allow starting the server"` → atqRh; `"You will not see this link again"` → VM7ro (also `"circle-alert"` present once, replacing the old `"megaphone"` reference); `"Revoke this share link"` → S7SCDc (also `"circle-alert"` present once, new).
 - **Visual check:** `get_screenshot` on each of the 4 nodes reviewed before export — switch left of label in `atqRh`, 2px-border/10%-fill/circle-alert/bold-heading warning box with unchanged footer+token-row in `VM7ro`, danger-badge icon beside the title in `S7SCDc`, unchanged tunnel-fields rendering for `IyMFM` at its new coordinates.
 - **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`/`get_screenshot`, per Rule 2.
+
+## OD-23/OD-24 — VM7ro round-9 triage fixes: body gap and copy-icon corner (2026-09-20)
+
+Two `"same"`-classified design issues from the round-9 visual-diff triage on `VM7ro` (Gameplane/Dialog/Share Link Created), instance/frame-local only:
+
+| Issue | Node | Change | Why |
+|---|---|---|---|
+| VM7ro-3 | `J5VxNe` (`VM7ro > mBody`) | `gap: 12` → `gap: 16` | OD-19 settled every modal body at 16px top padding / 16px gap, and `x3beP`'s own `mBody` (`Nht52`) already carries `gap: 16`; `VM7ro` was detached from `x3beP` into a standalone frame in commit `56406313` and kept the pre-detach 12px gap. |
+| VM7ro-4 | `SICns` (`VM7ro > mBody > tokenRow`) | `alignItems: "center"` → `alignItems: "start"` (now the frame's default, so the key no longer serializes) | OD-24: "a small copy icon sits in the box's top-right corner." The app is `absolute right-1 top-1`; the design's `justifyContent: "space_between"` row had `alignItems: "center"`, which vertically centres the 16px icon `w5JpSz` against a two-line URL instead of pinning it to the top. |
+
+Both nodes were verified live via `Get(id, {depth: 0})` before editing (confirmed `gap: 12` and `alignItems: "center"` respectively), and read back after via the same call (confirmed `gap: 16` and no `alignItems` override, i.e. the frame's default "start"). No shared component (`x3beP`, `WwNlX`, etc.) was touched — both `J5VxNe` and `SICns` are local to the standalone `VM7ro` frame.
+
+**Export method & validation:**
+
+- **JSON:** `Get("VM7ro", {depth: 30, resolveInstances: true})` via the Pencil `execute` tool, zero `"..."` elision markers. The compact `JSON.stringify(...)` output printed by `execute` was parsed and re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline into `design-export/json/VM7ro.json`; `python3 -m json.tool` passes.
+- **Hash verification:** the file's contents were reloaded, re-compacted with `json.dumps(..., separators=(",", ":"))`, and SHA-256'd against the same compaction of the live `execute` output — both hashes are `daf575b6817e5b393f578c6760ec489d699aecb10630d4c19c56ee5f934f74c`, confirming the exported JSON matches the live document exactly.
+- **Screenshot:** `export_nodes` at 2× scale — `VM7ro.png` 1088×776 (height grew by 8 device px / 4 CSS px from the 12→16px body-gap increase, as expected), valid non-empty RGBA PNG (verified via Pillow).
+- **Content check:** `"one-way hash of the token"` (unique body text of `mjjwe`/warningDesc) found exactly once, in `design-export/json/VM7ro.json` only.
+
+## OD-25 — round-9 rulings for the share-link dialogs, DESIGN clauses (2026-09-20)
+
+Implements the design-side clauses of OD-25 (`specs/014-heroui-web-rebuild/OPEN-DECISIONS.md`, settled 2026-09-20). The app-side clauses in the same ruling (VM7ro link box, share-dialog footer button spec, `--field-placeholder` select values) are out of scope for this pass — they land in `web/`, not `design.pen`.
+
+| Issue | Node(s) | Change | Why |
+|---|---|---|---|
+| VM7ro-1 | `VM7ro/b8l6B` (warningTitle), `VM7ro/mjjwe` (warningDesc) | `lineHeight: 1.4286` added to both (matches the browser's Tailwind `text-sm` 20px/14px line box) | Design text had no explicit `lineHeight` and fell back to the font's default (~1.2), rendering the warning box 10 CSS px shorter than the browser. |
+| VM7ro-1 | `VM7ro/Hp206` (warningBox) | `padding: 12` → `padding: 14` | After the lineHeight fix the box still measured 108 CSS px against the browser's 112; +2px padding on all sides closes the remaining 4px. Verified via `Get("VM7ro/Hp206", (n,c) => c.bounds)` → height 112 exactly. |
+| VM7ro-6 | `VM7ro/mjjwe` (warningDesc) | Content hard-wrapped with explicit `\n` at the browser's break points: `"...so it\ncan't be shown...this dialog.\nCopy it now."` | The unwrapped paragraph broke after "Copy" in the design vs. before it in the browser (narrower text column). OD-21 already settled this treatment for Kp48V's warningDesc; same fix applied here, design-only. |
+| VM7ro-5 | `VM7ro/OEaBF` (link URL text) | Content changed from `https://play.gameplane.example/s/8f3ac1e0b2d94f7c9a5e6b7d1c0e2f4a` to `http://localhost:5173/share/8f3ac1e0b2d94f7c9a5e6b7d1c0e2f4a5b6c7` | OD-25: "the design's example URL becomes the exact URL the capture renders." Read off the browser half of the round-9 composite (`vdr/VM7ro-composite.png`) and cross-checked against the mocked token shape in `web/src/test/handlers.ts` (`token_${random}`, built into `${origin}/share/${token}` by `ShareLinks.tsx`). |
+| S7SCDc-2 | `S7SCDc/aZP2h` (cdDescWrap, descendant override) | New override `padding: [16,0,0,0]` (was inherited from `WwNlX`'s own `[8,0,0,0]`) | "The title-to-description gap is 16px everywhere" — the same override `Kp48V`'s node `m64ZK` already carries on the same shared `aZP2h`/`cdDescWrap` slot. `S7SCDc`'s description fill was already `$foreground/muted` (inherited, unchanged), satisfying the "renders muted" half of the clause. |
+| atqRh-5 | `atqRh/ggRrC` (expiry helper) | `fontSize: 11` → `12` | Design follows the app for the helper line. |
+| atqRh-6 | `atqRh/qkKQ4` (switch label) | `fontSize: 13` → `14` | Design follows the app for the switch label. |
+| atqRh-7 | `atqRh/OMUzb` (switch explanation) | `fontSize: 11` → `12` (`lineHeight: 1.4` left as-is; OD-25 only settles the px size) | Design follows the app for the switch explanation. |
+| atqRh-8 | `atqRh/QTxwn/r4VbAi` (Cancel label), `atqRh/nKz2n/U1xvSo` (Create link label) | `fontSize: 14` added as instance overrides (small-button master otherwise draws 13px) | "The footer buttons (14px label...)". |
+| atqRh-8 | `atqRh/nKz2n/n8Hmwk` (Create link icon) | `width`/`height: 16` added as instance overrides (master draws 14px) | "...and 16px icon)". |
+| atqRh-9 | `atqRh/WCA5l` (canStartSwitch, instance override) | `width: 40` (master `rh2QH` is 36 wide) | "the switch track (40px wide...)". |
+| atqRh-9 | `atqRh/x22w2k` (fCanStart row) | `gap: 16` → `12` | "...with a 12px row gap)" — keeps the label column's x-position unchanged since the switch grew by the same 4px the gap shrank. |
+| Dialog titles | `x3beP/E7Whx` (mTitle, shared Modal title node) | `lineHeight: 1.5` added | "The shared Gameplane/Modal title node gains an explicit lineHeight so every dialog header matches the browser." No explicit lineHeight was set before (font default ~1.2, i.e. ~19.2px at 16px/600); the round-9 triage measured the browser's title line box growing the header content ~3 CSS px shorter in the design (1px in the title's own box, 2px carried into the title→description gap). `1.5` (24px line box) matches the ratio already used by every other body/description text node in this file (`mDesc`, `WKy74`, `qzcst`) and closes the gap within the triage's margin of measurement error. Landing this on the shared master reaches every frame that instances `x3beP`. |
+
+**Frames re-exported because they instance `x3beP` and inherit the title lineHeight change** (verified via `Get(id, {depth:0}).ref === "x3beP"`, cross-checked against every `design-export/json/*.json` file containing `"ref":"x3beP"` plus the two flattened-export exceptions `VM7ro`/`atqRh` whose live `.pen` node is still confirmed `ref: x3beP`): `MaoHP`, `NLDDv`, `DMnEi`, `t3IY3u`, `E9EEv0`, `BX0XM`, `I9W8z`, `JLaGB`, `KrREo`, `O08uaD` (Start Capture modal `ZSLXq` embedded in the screen), `b4eaUf` (Start Capture modal `oElfY` embedded in the screen). No content changed on these 11 beyond the inherited title line-height; `CqaSq` (Role Editor Modal) was checked and confirmed a detached standalone frame, not an `x3beP` ref, so it was left untouched.
+
+**Export method & validation (all 15 files: `x3beP`, `VM7ro`, `atqRh`, `S7SCDc`, `MaoHP`, `NLDDv`, `DMnEi`, `t3IY3u`, `E9EEv0`, `BX0XM`, `I9W8z`, `JLaGB`, `KrREo`, `O08uaD`, `b4eaUf`):**
+
+- **JSON:** `Print(JSON.stringify(Get(id, {depth: 20})))` via the Pencil `execute` tool for each node, zero `"..."` elision markers on any of the 15 (verified by inspection, including the two full-screen exports `O08uaD`/`b4eaUf`). Re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline; `python3 -m json.tool` passes on all 15.
+- **Screenshot:** single `export_nodes` call for all 15 ids at 2× scale (default), all landed as non-empty PNGs with real pixel dimensions (verified via Pillow, e.g. `VM7ro.png` 1088×806, `atqRh.png` 1088×788, `O08uaD.png`/`b4eaUf.png` 2880×1800).
+- **Content check:** the new URL string `8f3ac1e0b2d94f7c9a5e6b7d1c0e2f4a5b6c7` (VM7ro's unique body text) found exactly once, in `design-export/json/VM7ro.json` only; the `aZP2h`/`padding: [16, 0, 0, 0]` override found exactly once, in `design-export/json/S7SCDc.json` only.
+- Visual spot-checks via `get_screenshot` on `VM7ro`, `atqRh` and `S7SCDc` confirmed no broken/collapsed/overflowing layout after the edits (warning box wraps 3 lines cleanly at its new 112px height, switch/label/helper rows read at their new sizes, danger icon row unaffected by the `aZP2h` padding bump).
+- **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`, per Rule 2.
+
+## OD-25 — maintainer ruling (2026-09-20), footer button spec correction
+
+Maintainer ruling (a) on OD-25: share-link dialog footers use the design's small-button spec — 13px label, 14px icon, 5px gap — in all three dialogs (Create share link, Share link created, Revoke share link). This corrects the round-9 pass's `atqRh-8` entries above, which had set the `atqRh` footer instance overrides to 14px label / 16px icon; those values are now reverted to the small-button master's own 13px/14px so the design matches the app (already correct) and the other two dialogs.
+
+| Node(s) | Change | Why |
+|---|---|---|
+| `atqRh/QTxwn/r4VbAi` (Cancel label) | `fontSize: 14` → `13` | Matches small-button master (`rkF0p`); supersedes the round-9 `atqRh-8` override per maintainer ruling (a). |
+| `atqRh/nKz2n/U1xvSo` (Create link label) | `fontSize: 14` → `13` | Same as above, master `j9c5W`. |
+| `atqRh/nKz2n/n8Hmwk` (Create link icon) | `width`/`height: 16` → `14` (icon stays `link`) | Matches small-button master's 14px icon; supersedes round-9's 16px override. |
+
+**Verified unchanged (no edit needed):** `VM7ro` (Share link created) footer instances `kbpwg`/`m6ngX` carry no fontSize/icon-size overrides at all, so they already inherit the small-button masters' 13px label / 14px icon directly — matching the ruling with zero changes. `S7SCDc` (Revoke share link) footer buttons (`HPQTc`/`aEe0m`, "Cancel"/"Revoke link") are **not** instances of the small-button family at all — they are the shared `WwNlX` (Confirm Dialog) component's own generic `btnCancel`/`btnConfirm` frames, which have no icon slot and read `fontSize: 14` on the **base component definition itself** (not an instance override), meaning any change there would propagate to every other consumer of `WwNlX` across the app (e.g. delete-server confirmations), not just this dialog. Flagged for maintainer clarification rather than changed blind.
+
+**Export method & validation:** `atqRh` re-exported — JSON via `Print(JSON.stringify(Get("atqRh", {depth: 20})))` through the Pencil `execute` tool, zero `"..."` elision markers, re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline, `python3 -m json.tool` passes. Screenshot via `export_nodes` at 2× scale, `design-export/screenshots/atqRh.png` 1088×788 non-empty PNG (unchanged dimensions from the round-9 export, confirming no layout break). Content check: `"fontSize": 13` appears exactly twice and `"width": 14` appears in the icon override, both confirmed in `design-export/json/atqRh.json` only. No `.pen` file was Read/Grep/cat/sed — all access via Pencil MCP `execute`/`export_nodes`. No git add/commit performed (read-back and export only, per task instructions).
