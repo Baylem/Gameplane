@@ -200,4 +200,3 @@ func TestGenerateFiles_ArchetypeSummariesAndReadme(t *testing.T) {
 		t.Errorf("expected MAX_MEMORY in README.md, got:\n%s", files.ReadmeMD)
 	}
 }
-

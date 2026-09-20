@@ -445,9 +445,9 @@ func TestValidationReport(t *testing.T) {
 
 func TestValidate_TemplateApiVersion(t *testing.T) {
 	files := map[string][]byte{
-		"module.yaml": []byte("apiVersion: gameplane.local/module/v1\nname: test-mod\ndisplayName: Test Mod\nversion: 1.0.0\ngame: test\nsummary: Test\n"),
+		"module.yaml":   []byte("apiVersion: gameplane.local/module/v1\nname: test-mod\ndisplayName: Test Mod\nversion: 1.0.0\ngame: test\nsummary: Test\n"),
 		"template.yaml": []byte("apiVersion: invalid/v1\nkind: GameTemplate\nmetadata:\n  name: test-mod\nspec:\n  game: test\n  image: \"ghcr.io/example/game@sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad\"\n"),
-		"README.md": []byte("# Test\n"),
+		"README.md":     []byte("# Test\n"),
 	}
 
 	report, err := ValidateFiles("test-mod", files, ValidateOptions{})
@@ -466,4 +466,3 @@ func TestValidate_TemplateApiVersion(t *testing.T) {
 		t.Errorf("expected RuleTemplateSchemaViolation for invalid apiVersion, got: %+v", report.Findings)
 	}
 }
-
