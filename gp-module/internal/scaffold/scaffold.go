@@ -74,18 +74,20 @@ func GenerateFiles(opts Options) (*GeneratedFiles, error) {
 		ports = arch.DefaultPorts
 	} else {
 		seenPorts := make(map[int]string)
-		for _, p := range ports {
-			if p.ContainerPort < 1 || p.ContainerPort > 65535 {
-				return nil, fmt.Errorf("invalid port number %d: must be 1-65535", p.ContainerPort)
+		for i := range ports {
+			if ports[i].ContainerPort < 1 || ports[i].ContainerPort > 65535 {
+				return nil, fmt.Errorf("invalid port number %d: must be 1-65535", ports[i].ContainerPort)
 			}
-			proto := strings.ToUpper(p.Protocol)
+			// Canonicalize protocol to uppercase
+			ports[i].Protocol = strings.ToUpper(ports[i].Protocol)
+			proto := ports[i].Protocol
 			if proto != "TCP" && proto != "UDP" {
-				return nil, fmt.Errorf("invalid protocol %q for port %d: must be TCP or UDP", p.Protocol, p.ContainerPort)
+				return nil, fmt.Errorf("invalid protocol %q for port %d: must be TCP or UDP", proto, ports[i].ContainerPort)
 			}
-			if existingName, exists := seenPorts[p.ContainerPort]; exists {
-				return nil, fmt.Errorf("duplicate port %d used by %q and %q", p.ContainerPort, existingName, p.Name)
+			if existingName, exists := seenPorts[ports[i].ContainerPort]; exists {
+				return nil, fmt.Errorf("duplicate port %d used by %q and %q", ports[i].ContainerPort, existingName, ports[i].Name)
 			}
-			seenPorts[p.ContainerPort] = p.Name
+			seenPorts[ports[i].ContainerPort] = ports[i].Name
 		}
 	}
 

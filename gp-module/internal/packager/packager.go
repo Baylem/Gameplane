@@ -293,7 +293,6 @@ func PushOCI(opts PackageOptions) ([]PackageWarning, error) {
 	}
 
 	if opts.TagLatest {
-		latestRef := fmt.Sprintf("%s/%s:latest", strings.TrimRight(opts.Registry, "/"), modName)
 		cmdLatest := exec.CommandContext(context.Background(), "oras", "tag")
 		if opts.PlainHTTP {
 			cmdLatest.Args = append(cmdLatest.Args, "--plain-http")
@@ -305,10 +304,7 @@ func PushOCI(opts PackageOptions) ([]PackageWarning, error) {
 		cmdLatest.Stdout = os.Stdout
 		cmdLatest.Stderr = os.Stderr
 		if err := cmdLatest.Run(); err != nil {
-			warnings = append(warnings, PackageWarning{
-				File:    latestRef,
-				Message: fmt.Sprintf("failed to tag :latest: %v", err),
-			})
+			return warnings, fmt.Errorf("failed to tag :latest: %w", err)
 		}
 	}
 

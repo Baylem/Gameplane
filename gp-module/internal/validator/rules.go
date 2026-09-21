@@ -364,9 +364,18 @@ func validateConfigSchemaRules(node *yaml.Node) []Finding {
 		// Credential name check
 		upper := strings.ToUpper(fieldName)
 		isCred := false
-		for _, kw := range credentialKeywords {
-			if strings.Contains(upper, kw) {
-				isCred = true
+		// Split field name on '_' and '-' to match whole tokens only
+		tokens := strings.FieldsFunc(upper, func(r rune) bool {
+			return r == '_' || r == '-'
+		})
+		for _, token := range tokens {
+			for _, kw := range credentialKeywords {
+				if token == kw {
+					isCred = true
+					break
+				}
+			}
+			if isCred {
 				break
 			}
 		}

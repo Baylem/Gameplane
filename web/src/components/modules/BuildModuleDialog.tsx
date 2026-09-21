@@ -334,7 +334,7 @@ export function BuildModuleDialog({
   }
 
   const isDnsValid = isValidDns1123(name);
-  const isImagePinned = image.includes("@sha256:");
+  const isImagePinned = /@sha256:[a-f0-9]{64}$/.test(image);
 
   return (
     <Modal isOpen={open} onOpenChange={onOpenChange}>
@@ -482,7 +482,7 @@ export function BuildModuleDialog({
                     <Input
                       id={nameInputId}
                       value={name}
-                      onChange={(e) => setName(e.target.value.toLowerCase())}
+                      onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. cs2-match"
                       className="mt-1"
                     />

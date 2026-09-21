@@ -254,7 +254,7 @@ func (h modulesHandler) builderPreview(w http.ResponseWriter, req *http.Request)
 		configSourceMap[cf.Name] = cf.Source
 	}
 
-	var effectiveEnv []BuilderEffectiveEnvVar
+	effectiveEnv := make([]BuilderEffectiveEnvVar, 0, len(res.EffectiveEnv))
 	for k, v := range res.EffectiveEnv {
 		source := "template"
 		if s, ok := configSourceMap[k]; ok && s != "" {
@@ -267,7 +267,7 @@ func (h modulesHandler) builderPreview(w http.ResponseWriter, req *http.Request)
 		})
 	}
 
-	var ports []BuilderPreviewPort
+	ports := make([]BuilderPreviewPort, 0, len(res.Ports))
 	for _, p := range res.Ports {
 		ports = append(ports, BuilderPreviewPort{
 			Name:          p.Name,
@@ -340,11 +340,16 @@ func (h modulesHandler) builderExport(w http.ResponseWriter, req *http.Request) 
 
 	if body.IconBase64 != "" {
 		decoded, err := base64.StdEncoding.DecodeString(body.IconBase64)
-		if err == nil && len(decoded) > 0 {
-			files["icon.png"] = decoded
+		if err != nil {
+			httperr.WriteCode(w, req, http.StatusBadRequest, fmt.Errorf("invalid base64 in iconBase64: %w", err))
+			return
 		}
-	}
-	if _, ok := files["icon.png"]; !ok {
+		if len(decoded) == 0 {
+			httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("iconBase64 decodes to empty data"))
+			return
+		}
+		files["icon.png"] = decoded
+	} else {
 		files["icon.png"] = archetypes.PlaceholderIconBytes()
 	}
 
