@@ -66,9 +66,9 @@ spec:
 
 	// FindColumnNumber returns the VALUE node's column (findMapChild resolves mapping keys to their value nodes).
 	// For apiVersion: gameplane.local/v1alpha1, the value starts at column 13.
-	colApiVersion := FindColumnNumber(root, "apiVersion")
-	if colApiVersion != 13 {
-		t.Errorf("expected column 13 for apiVersion, got %d", colApiVersion)
+	colAPIVersion := FindColumnNumber(root, "apiVersion")
+	if colAPIVersion != 13 {
+		t.Errorf("expected column 13 for apiVersion, got %d", colAPIVersion)
 	}
 
 	// For spec.displayName: Test Game, the value starts at column 16 (indented under spec, then the string value).
