@@ -26,6 +26,8 @@ This feature introduces comprehensive theme customization for users:
 4. **Custom CSS Overrides**:
    - An advanced custom styling option enabling users to inject custom CSS declarations directly into their personal application interface, paired with safety protections to prevent unusable UI states.
 
+Export and import of a user's complete theme configuration (as portable JSON text) is included so users can move their setup between Gameplane instances. Theme sharing galleries, admin-enforced default themes, and per-server or per-page themes are explicitly out of scope for this feature.
+
 ---
 
 ## User Scenarios & Testing *(mandatory)*
@@ -92,16 +94,19 @@ A power user or system administrator wants granular control over fonts, layout s
 
 1. **Given** the Custom CSS editor, **When** the user inputs valid CSS rules and saves, **Then** the rules are saved to their user profile, injected into the application, and take immediate effect.
 2. **Given** a user enters invalid or syntax-broken CSS, **When** they save, **Then** the application does not crash, and a syntax warning or indicator informs the user.
-3. **Given** custom CSS that accidentally hides critical user interface elements (such as navigation or the settings button), **When** the user enters safe mode (e.g. via a dedicated reset key, URL parameter, or recovery dialog), **Then** custom CSS injection is temporarily suspended, allowing the user to edit or clear the broken stylesheet.
+3. **Given** custom CSS that accidentally hides critical user interface elements (such as navigation or the settings button), **When** the user enters safe mode via the URL query parameter, the keyboard shortcut, or the safe-mode sign-in link on the login page, **Then** custom CSS injection is temporarily suspended, allowing the user to edit or clear the broken stylesheet.
 4. **Given** custom CSS configured by User A, **When** User B logs in on the same machine or another machine, **Then** User A's custom CSS is NOT applied to User B.
+5. **Given** a user with a configured theme (preset, custom colors, and custom CSS), **When** they export their theme configuration and import it on another Gameplane instance, **Then** their full theme setup is reproduced on that instance, with the imported CSS sanitized per FR-013.
 
 ---
 
 ### Edge Cases
 
-- **Broken or Malicious Custom CSS**: A user inputs CSS that makes text invisible (e.g. black text on black background), hides modal action buttons, or includes disruptive animations. The system must provide an accessible escape hatch / safe recovery mechanism (such as a URL query flag or keybinding) to disable custom CSS and revert to defaults.
+- **Broken or Malicious Custom CSS**: A user inputs CSS that makes text invisible (e.g. black text on black background), hides modal action buttons, or includes disruptive animations. The system must provide an accessible escape hatch / safe recovery mechanism — a URL query parameter as the guaranteed path, a keyboard shortcut as a convenience, and a safe-mode sign-in link on the login page (FR-009) — to disable custom CSS and revert to defaults.
+- **Remote Content in Custom CSS**: CSS referencing external resources (`@import`, external `url()`, remote fonts) is rejected at save time with a validation message identifying the offending rule; users may instead paste third-party CSS content inline within the 32 KB cap (FR-013) if they see fit.
+- **Base Theme Switch with Active Custom CSS**: When a user switches the base theme (preset or custom colors) while the custom CSS overlay is enabled, elements not targeted by custom CSS adopt the new base styles immediately, while customized elements retain their custom appearance because the overlay remains last in the cascade.
 - **Extreme Contrast / Incompatible Custom Colors**: A user picks an accent color identical to the background surface. The system should provide accessible contrast indicators or minimum contrast guards to prevent illegible buttons or text.
-- **Unauthenticated Surfaces (Login and Share Links)**: Unauthenticated pages must remain consistent, predictable, and secure. Unauthenticated pages always use the modern Pink theme preset, and custom CSS from previously logged-in sessions must never execute on unauthenticated pages to prevent security spoofing or clickjacking risks.
+- **Unauthenticated Surfaces (Login and Share Links)**: Unauthenticated pages must remain consistent, predictable, and secure. Unauthenticated pages always use the modern Pink theme preset, and custom CSS from previously logged-in sessions must never execute on unauthenticated pages to prevent security spoofing or clickjacking risks. The login page may offer a safe-mode sign-in link (FR-009): it renders in the standard Pink theme like the rest of the page and carries no custom styling — it only passes the safe-mode flag into the authenticated session.
 - **First Visit by Returning Users with Cleared Cache**: Because existing accounts are migrated directly in the user profile database, an existing user visiting from a fresh browser or with cleared cache still receives their migrated Legacy theme upon authentication.
 - **Offline / Transient Connectivity**: If a user updates their theme while offline or during intermittent network connectivity, local client state updates immediately and synchronizes with the backend profile once connectivity resumes.
 - **High Contrast / Accessibility Modes**: If the operating system or browser requests high contrast (`forced-colors` or `prefers-contrast`), system accessibility settings must take precedence over custom colors.
@@ -118,23 +123,27 @@ A power user or system administrator wants granular control over fonts, layout s
 - **FR-004**: Users MUST be able to switch between available theme options at any time through the application interface.
 - **FR-005**: System MUST persist the user's selected theme (preset choice, custom colors, and custom CSS) in their backend user profile in the database, syncing preferences across devices, with client-side caching for instant application boot.
 - **FR-006**: System MUST provide a "Simple Custom Color Scheme" feature allowing users to customize their Primary Accent color and Background Surface tone without writing code, with automatic text contrast and border calculation.
-- **FR-007**: System MUST provide a "Custom CSS" configuration allowing users to input and apply custom stylesheet rules to their dashboard interface.
+- **FR-007**: System MUST provide a "Custom CSS" configuration allowing users to input and apply custom stylesheet rules to their dashboard interface. Custom CSS is an independent overlay layered on the active base theme (preset or custom colors), injected last in the cascade so user rules take precedence at equal specificity.
 - **FR-008**: System MUST isolate custom CSS strictly to the user who configured it; custom styling MUST NOT affect other users or unauthenticated public screens.
-- **FR-009**: System MUST provide a failsafe or safe-mode recovery mechanism allowing users to disable or reset broken custom CSS if interface usability is impaired.
+- **FR-009**: System MUST provide a failsafe or safe-mode recovery mechanism allowing users to disable or reset broken custom CSS if interface usability is impaired, via three entry points: a URL query parameter (e.g. `?safe-mode=1`) as the guaranteed path, a keyboard shortcut as a convenience, and a safe-mode sign-in link on the login page. Safe mode suspends the custom CSS overlay for the session without deleting the stored stylesheet.
 - **FR-010**: System MUST support Light, Dark, and System appearance modes in conjunction with theme presets.
 - **FR-011**: Unauthenticated surfaces (including the Login page and public Server Share links) MUST always render with the modern Pink theme preset and MUST NOT execute user-defined custom CSS under any circumstances.
-- **FR-012**: System MUST allow users to reset any custom color scheme or custom CSS back to a default preset with a single confirmation action.
+- **FR-012**: System MUST allow users to reset any custom color scheme or custom CSS back to a default preset with a single confirmation action. Switching presets or disabling the custom CSS overlay MUST NOT discard stored custom colors or CSS; only this explicit reset action deletes them.
+- **FR-013**: Custom CSS MUST be sanitized before it is saved and injected: `@import` rules and external `url()` references (including remote fonts) are rejected, inline `data:` URIs are permitted, syntax is validated, and the stylesheet size is capped at 32 KB.
+- **FR-014**: System MUST allow users to export their complete theme configuration (preset selection, appearance mode, custom colors, and custom CSS) as portable JSON text, and to import such an export on another Gameplane instance; imported custom CSS MUST pass the same sanitization as FR-013 before it is stored or applied.
 
 ### Key Entities
 
 - **Theme Configuration**: The user's active styling preferences stored in their user profile, including:
-  - `themeType`: The active mode (`preset` | `custom_colors` | `custom_css`).
+  - `themeType`: The active base mode (`preset` | `custom_colors`).
   - `presetId`: The selected preset identifier (`pink` | `legacy`).
   - `appearanceMode`: The light/dark/system mode selection (`light` | `dark` | `system`).
-  - `customColors`: Structured color settings (`primaryAccent`, `surfaceTone`) used when `themeType` is `custom_colors`.
-  - `customCss`: Plain text containing user-specified CSS rules applied when `themeType` is `custom_css`.
+  - `customColors`: Structured color settings (`primaryAccent`, `surfaceTone`) used when `themeType` is `custom_colors`. Retained (inactive) when the user switches back to a preset; deleted only via the FR-012 reset.
+  - `customCssEnabled`: Whether the custom CSS overlay layer is active on top of the base theme.
+  - `customCss`: Plain text containing user-specified CSS rules applied as an overlay on the active base theme when `customCssEnabled` is true. Sanitized per FR-013: no `@import` or external `url()` references, maximum size 32 KB. Retained when the overlay is disabled; deleted only via the FR-012 reset.
 - **Theme Preset**: A named collection of semantic visual tokens defining colors for background, surface, foreground text, primary accent, borders, and status indicators.
 - **User Migration Record**: Database schema migration flag or default assignment establishing the Legacy theme for existing users created prior to the migration timestamp.
+- **Theme Export**: A portable JSON representation of a user's Theme Configuration used for manual transfer between Gameplane instances; imported content is validated and sanitized (FR-013) before storage.
 
 ---
 
@@ -162,6 +171,14 @@ A power user or system administrator wants granular control over fonts, layout s
   - **Decision**: Option A (Primary Accent + Background Surface). Users choose their primary accent color (for buttons, highlights, focus rings) and their preferred base dark/light surface tone; the system automatically calculates accessible text contrast and neutral borders.
 - **Q3 (Unauthenticated Public Pages)**: What default theme should unauthenticated public pages (login screen and public share links) display?
   - **Decision**: Option A (Modern Pink default, strict custom CSS exclusion). Unauthenticated pages always display the modern Pink theme and never inject any custom CSS, ensuring consistent public branding and protection against CSS injection or spoofing.
+
+### Session 2026-09-21
+
+- Q: What safety restrictions should apply to user-supplied custom CSS before it is saved and injected? → A: Sanitized before save/injection (modified Option B): `@import` and external `url()` references (including remote fonts) are rejected, inline `data:` URIs are permitted, syntax is validated, and the stylesheet is capped at 32 KB so users can manually paste in content they would otherwise import.
+- Q: Should custom CSS be a standalone third mode that replaces the other theme options, or an overlay that layers on top of the active base theme? → A: Layered overlay with user priority (modified Option A): custom CSS is an independent on/off layer stacked on the active base (Pink/Legacy preset or custom colors), injected last in the cascade so user rules take precedence — elements not targeted by custom CSS render per the base theme, while customized elements keep their custom color, rounding, positioning, etc., even when the base theme changes.
+- Q: Which concrete mechanism should trigger the safe mode that disables broken custom CSS? → A: Option D plus login-page entry: a URL query parameter (e.g. `?safe-mode=1`) as the guaranteed recovery path, a keyboard shortcut as a convenience, and a safe-mode sign-in link on the login page — a guaranteed-clean surface because custom CSS never executes there (FR-011) — that starts the authenticated session with the custom CSS overlay suspended.
+- Q: When a user switches away from a custom setup — changes the base preset, or toggles the custom CSS overlay off — should their custom colors and CSS text be kept in their profile or discarded? → A: Retain until explicit reset (Option A): switching presets or disabling the custom CSS overlay keeps `customColors`/`customCss` stored but inactive; only the explicit "Reset to Default Preset" action (FR-012) deletes them.
+- Q: Which of these commonly associated capabilities should be explicitly declared out of scope for this feature? → A: Include export/import only (Option B): users can export their complete theme configuration (preset, custom colors, custom CSS) as portable JSON text and import it on another Gameplane instance; theme sharing galleries, admin-enforced default themes, and per-server or per-page themes are out of scope.
 
 ---
 
