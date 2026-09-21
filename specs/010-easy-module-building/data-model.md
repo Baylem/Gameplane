@@ -149,7 +149,7 @@ Corresponds to `template.yaml` specification conforming to `GameTemplate` CRD:
 | :--- | :--- | :---: | :--- |
 | `apiVersion` | `string` | Yes | Fixed constant: `gameplane.local/v1alpha1` |
 | `kind` | `string` | Yes | Fixed constant: `GameTemplate` |
-| `metadata` | `object` | Yes | Empty object `{}` (name injected at install time by operator) |
+| `metadata` | `object` | Yes | Contains `name` (module identifier) and `labels` (`gameplane.local/module: <name>`); operator overrides `metadata.name` at apply time with the Module resource name |
 | `spec.displayName` | `string` | Yes | Human-readable title |
 | `spec.game` | `string` | Yes | Game family slug matching `module.yaml#game` |
 | `spec.version` | `string` | Yes | Semver matching `module.yaml#version` |

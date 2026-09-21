@@ -228,3 +228,80 @@ spec:
 		t.Errorf("expected port 1 Advertise=false")
 	}
 }
+
+func TestPreview_AutoMemoryPercentValidation(t *testing.T) {
+	// Test that fractional percent (75.9) is rejected
+	fractionalYAML := `apiVersion: gameplane.local/v1alpha1
+kind: GameTemplate
+metadata:
+  name: test
+spec:
+  game: test
+  image: "img@sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  configSchema:
+    - name: MEM
+      type: string
+      autoFromMemoryLimit:
+        percent: 75.9
+`
+	_, err := GeneratePreview(Options{
+		TemplateYAML: []byte(fractionalYAML),
+		MemoryLimit:  "4Gi",
+	})
+	if err == nil {
+		t.Errorf("expected error for fractional percent 75.9, but got none")
+	}
+	if !strings.Contains(err.Error(), "non-integral") {
+		t.Errorf("expected error message to mention 'non-integral', got: %v", err)
+	}
+
+	// Test that whole float (75.0) is accepted
+	wholeFloatYAML := `apiVersion: gameplane.local/v1alpha1
+kind: GameTemplate
+metadata:
+  name: test
+spec:
+  game: test
+  image: "img@sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  configSchema:
+    - name: MEM
+      type: string
+      autoFromMemoryLimit:
+        percent: 75.0
+`
+	res, err := GeneratePreview(Options{
+		TemplateYAML: []byte(wholeFloatYAML),
+		MemoryLimit:  "4Gi",
+	})
+	if err != nil {
+		t.Fatalf("expected no error for whole float 75.0, got: %v", err)
+	}
+	if res.ComputedConfig["MEM"] != "3072M" {
+		t.Errorf("expected MEM = 3072M, got %s", res.ComputedConfig["MEM"])
+	}
+
+	// Test that int percent still works
+	intYAML := `apiVersion: gameplane.local/v1alpha1
+kind: GameTemplate
+metadata:
+  name: test
+spec:
+  game: test
+  image: "img@sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  configSchema:
+    - name: MEM
+      type: string
+      autoFromMemoryLimit:
+        percent: 75
+`
+	res, err = GeneratePreview(Options{
+		TemplateYAML: []byte(intYAML),
+		MemoryLimit:  "4Gi",
+	})
+	if err != nil {
+		t.Fatalf("expected no error for int percent 75, got: %v", err)
+	}
+	if res.ComputedConfig["MEM"] != "3072M" {
+		t.Errorf("expected MEM = 3072M, got %s", res.ComputedConfig["MEM"])
+	}
+}

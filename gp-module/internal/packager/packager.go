@@ -57,6 +57,25 @@ type PackageOptions struct {
 	Limits     PackageLimits
 }
 
+// validateEntryName checks that an archive entry name is safe to extract.
+// Rejects absolute paths, ".." path segments, and names that change when normalized.
+func validateEntryName(name string) error {
+	if name == "" {
+		return fmt.Errorf("archive entry name cannot be empty")
+	}
+	if filepath.IsAbs(name) {
+		return fmt.Errorf("archive entry name %q must be relative, not absolute", name)
+	}
+	if strings.Contains(name, "..") {
+		return fmt.Errorf("archive entry name %q contains path traversal (..) segment", name)
+	}
+	cleaned := filepath.Clean(name)
+	if cleaned != name {
+		return fmt.Errorf("archive entry name %q is not normalized (cleaned form is %q)", name, cleaned)
+	}
+	return nil
+}
+
 // CreateArchiveFromFiles compresses an in-memory map of bundle files into a .tar.gz archive.
 func CreateArchiveFromFiles(files map[string][]byte, limits PackageLimits) ([]byte, []PackageWarning, error) {
 	required := []string{"module.yaml", "template.yaml", "README.md"}
@@ -96,6 +115,10 @@ func CreateArchiveFromFiles(files map[string][]byte, limits PackageLimits) ([]by
 	written := make(map[string]bool)
 
 	writeFile := func(name string, data []byte) error {
+		// Validate entry name to prevent path traversal attacks.
+		if err := validateEntryName(name); err != nil {
+			return err
+		}
 		hdr := &tar.Header{
 			Name:     name,
 			Mode:     0644,
