@@ -2012,3 +2012,36 @@ Fixed the sample container image reference in `O5kaV` (Screen/Dialog/Build Modul
 - **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`, per Rule 2.
 - No git add/commit performed (task instructions: export and manifest correction only).
 
+
+## Design/code reconciliation — 010-easy-module-building: module-builder screens (2026-09-21)
+
+Per the design/code reconciliation pass, four module-builder screen frames were brought into line with the already-shipped React implementation (`web/src/routes/Modules.tsx`, `web/src/components/modules/BuildModuleDialog.tsx`). Code was the source of truth; design was updated to match.
+
+**kK8Ji (Screen/Modules Catalog):**
+- Added "Create module" button (plus icon) as the first of three header action buttons, matching `web/src/routes/Modules.tsx:139` action layout.
+- Pre-existing buttons "Upload module" and "Manage sources" had their Pencil-internal ids regenerated during insertion (`mhJd3` → `lQ1ua`, `KCxx5` → `luTx8`); this is cosmetic and internal to the export snapshot only.
+
+**IdbiB (Screen/Dialog/Build Module — Step 1, Preset & Metadata):**
+- Button label "Continue to Container & Ports ->" split into text node plus separate ChevronRight icon, matching React component structure.
+- Category chips expanded from 3 placeholder items to all 11 canonical categories with "Shooter" only selected; removed "+ Add category" chip (`e4hEWM`) and pre-selected "Co-op" chip (`u7g81`).
+- Chip row layout manually split: single row `QV9u4` divided into two horizontal sub-frames (`c3DZqO`, `ytYZ9`) to emulate CSS flex-wrap — 10 chips on line 1, "Creative" on line 2 — matching where flex-wrap breaks at this width in the browser.
+
+**O5kaV (Screen/Dialog/Build Module — Step 2, Container & Ports):**
+- Storage section heading "Persistent Storage Volume" → "Persistent Storage", matching React label.
+- Added icon-only delete button to each port row (`PortRow1_Delete`, `PortRow2_Delete`), matching React's row-action spec for dynamic list management.
+- Port rows deliberately kept unchanged (row 1: game/27015/UDP; row 2: query/27015/TCP) as an intentional illustration of a dynamic list configuration.
+
+**hmPL7 (Screen/Dialog/Build Module — Step 3, Review & Export):**
+- Memory slider replaced with a row of four quick-select preset buttons (2Gi, 4Gi, 8Gi, 16Gi, with 8Gi selected), matching React's button-group UI.
+- Removed `resolvedImage` stat line (not rendered by React component).
+- Added "Cluster destination source" select card (matches React's cluster-selection dropdown addition).
+- Updated validation success copy and set text to wrap inside its card, matching React's layout.
+
+**Export method & validation (all 4 nodes: `kK8Ji`, `IdbiB`, `O5kaV`, `hmPL7`):**
+
+- **kK8Ji and IdbiB** exported cleanly on the first pass: `Get(id, {depth: 30})` via Pencil `execute` tool, zero `"..."` elision markers. Re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline; `python3 -m json.tool` passes on both.
+- **O5kaV and hmPL7 initially failed to regenerate:** the first-pass agent invoked `execute` with the wrong argument shape (passing `code` instead of `input`), which the tool rejected, and mistakenly concluded `Get()` returns no JSON payload; it left the pre-reconciliation content in `design-export/json/O5kaV.json` and `design-export/json/hmPL7.json` in place and reported success anyway. This was caught and corrected in a follow-up pass: both nodes were re-fetched via `Get(id, {depth: 30})` through `execute` with the correct `input` argument, re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline, and `python3 -m json.tool` passes on both.
+- **Screenshot:** `export_nodes` at 2× scale for all 4 ids. First-pass agent self-reports were unreliable: kK8Ji, IdbiB, and hmPL7 generated valid non-empty RGBA PNGs with correct pixel dimensions on the first pass, while O5kaV's PNG never regenerated at all (remained ~20 hours older than design.pen save timestamp, not shown as modified in git status). O5kaV's PNG was corrected in a follow-up pass. Final verification via PNG mtime compared against design.pen save time for all four ids; complemented by change-proving greps (post-change strings present, pre-change strings absent) documented in content checks below.
+- **Content checks:** unique body text per node validated — kK8Ji "Create module" button label found in `design-export/json/kK8Ji.json` only; IdbiB category chips ("Shooter", "Creative", etc.) confirmed in `design-export/json/IdbiB.json` only. For O5kaV and hmPL7, the follow-up pass used change-proving greps instead of a same-in-both-versions check: O5kaV confirmed to contain "Persistent Storage" and `PortRow1_Delete`/`PortRow2_Delete` while no longer containing "Persistent Storage Volume", with the unflipped port rows (game/27015/UDP; query/27015/TCP) and storage values (`/home/steam/cs2-data`, `20Gi`) intact; hmPL7 confirmed to contain "All schema constraints" and "Cluster destination source" and the memory presets ("2Gi", "4Gi", "8Gi", "16Gi") while no longer containing "Instant offline verification passed" or "Resolved image".
+- **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`, per Rule 2.
+- No git add/commit performed (export and manifest correction only, per task instructions).

@@ -572,76 +572,287 @@
                   "type": "frame",
                   "id": "QV9u4",
                   "name": "ChipsRow",
+                  "layout": "vertical",
                   "gap": 8,
-                  "alignItems": "center",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "sorV6",
-                      "name": "Chip_Shooter_Selected",
-                      "fill": "$accent/accent",
-                      "cornerRadius": 999,
-                      "padding": [
-                        4,
-                        10
-                      ],
+                      "id": "c3DZqO",
+                      "name": "ChipsRow_Line1",
+                      "gap": 8,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "haa3W",
-                          "name": "Txt",
-                          "fill": "#ffffff",
-                          "content": "Shooter ×",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
+                          "type": "frame",
+                          "id": "sorV6",
+                          "name": "Chip_Shooter_Selected",
+                          "fill": "$accent/accent",
+                          "cornerRadius": 999,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "haa3W",
+                              "name": "Txt",
+                              "fill": "#ffffff",
+                              "content": "Shooter ×",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Uo0jI",
+                          "name": "Chip_Sandbox",
+                          "cornerRadius": 999,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "XrKvW",
+                              "name": "Txt",
+                              "fill": "$muted",
+                              "content": "Sandbox",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "F4Z2X",
+                          "name": "Chip_Survival",
+                          "cornerRadius": 999,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "MjB0H",
+                              "name": "Txt",
+                              "fill": "$muted",
+                              "content": "Survival",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ZBefp",
+                          "name": "Chip_Simulation",
+                          "cornerRadius": 999,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "i5SIk",
+                              "name": "Txt",
+                              "fill": "$muted",
+                              "content": "Simulation",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "HnoiW",
+                          "name": "Chip_Building",
+                          "cornerRadius": 999,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "s0vsy",
+                              "name": "Txt",
+                              "fill": "$muted",
+                              "content": "Building",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "o8QG62",
+                          "name": "Chip_Adventure",
+                          "cornerRadius": 999,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "uWnas",
+                              "name": "Txt",
+                              "fill": "$muted",
+                              "content": "Adventure",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "U14tB",
+                          "name": "Chip_Horror",
+                          "cornerRadius": 999,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "pJoj1",
+                              "name": "Txt",
+                              "fill": "$muted",
+                              "content": "Horror",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "oEPHz",
+                          "name": "Chip_Coop_Unselected",
+                          "cornerRadius": 999,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "toBFi",
+                              "name": "Txt",
+                              "fill": "$muted",
+                              "content": "Co-op",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "x3x9Tb",
+                          "name": "Chip_PvP",
+                          "cornerRadius": 999,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "vfHDC",
+                              "name": "Txt",
+                              "fill": "$muted",
+                              "content": "PvP",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "o8E2Qw",
+                          "name": "Chip_Modded",
+                          "cornerRadius": 999,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "GLS1d",
+                              "name": "Txt",
+                              "fill": "$muted",
+                              "content": "Modded",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         }
                       ]
                     },
                     {
                       "type": "frame",
-                      "id": "u7g81",
-                      "name": "Chip_Coop_Selected",
-                      "fill": "$accent/accent",
-                      "cornerRadius": 999,
-                      "padding": [
-                        4,
-                        10
-                      ],
+                      "id": "ytYZ9",
+                      "name": "ChipsRow_Line2",
+                      "gap": 8,
+                      "alignItems": "center",
                       "children": [
                         {
-                          "type": "text",
-                          "id": "UcIYb",
-                          "name": "Txt",
-                          "fill": "#ffffff",
-                          "content": "Co-op ×",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "e4hEWM",
-                      "name": "Chip_Add",
-                      "cornerRadius": 999,
-                      "stroke": "$border/border",
-                      "strokeWidth": 1,
-                      "padding": [
-                        4,
-                        10
-                      ],
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "dH4Uy",
-                          "name": "Txt",
-                          "fill": "$muted",
-                          "content": "+ Add category",
-                          "fontFamily": "$typography/font-sans",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
+                          "type": "frame",
+                          "id": "s9pOVh",
+                          "name": "Chip_Creative",
+                          "cornerRadius": 999,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "padding": [
+                            4,
+                            10
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "f7SKHN",
+                              "name": "Txt",
+                              "fill": "$muted",
+                              "content": "Creative",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         }
                       ]
                     }
@@ -728,10 +939,20 @@
                   "id": "ORw54",
                   "name": "Label",
                   "fill": "#ffffff",
-                  "content": "Continue to Container & Ports →",
+                  "content": "Continue to Container & Ports",
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 13,
                   "fontWeight": "500"
+                },
+                {
+                  "type": "icon",
+                  "id": "LP5EA",
+                  "name": "ChevronRightIcon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "chevron-right",
+                  "library": "lucide",
+                  "fill": "$muted"
                 }
               ]
             }

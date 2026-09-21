@@ -522,6 +522,22 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "id": "IbUiY",
+                      "type": "ref",
+                      "ref": "J09iP",
+                      "name": "PortRow1_Delete",
+                      "descendants": {
+                        "eWkIT/WtPjS": {
+                          "icon": "trash-2",
+                          "opacity": 1
+                        },
+                        "eWkIT/r4VbAi": {
+                          "opacity": 1,
+                          "content": ""
+                        }
+                      }
                     }
                   ]
                 },
@@ -653,6 +669,22 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "id": "YEmrb",
+                      "type": "ref",
+                      "ref": "J09iP",
+                      "name": "PortRow2_Delete",
+                      "descendants": {
+                        "eWkIT/WtPjS": {
+                          "icon": "trash-2",
+                          "opacity": 1
+                        },
+                        "eWkIT/r4VbAi": {
+                          "opacity": 1,
+                          "content": ""
+                        }
+                      }
                     }
                   ]
                 }
@@ -673,7 +705,7 @@
               "id": "ax35q",
               "name": "Title",
               "fill": "$foreground/foreground",
-              "content": "Persistent Storage Volume",
+              "content": "Persistent Storage",
               "fontFamily": "$typography/font-sans",
               "fontSize": 13,
               "fontWeight": "500"

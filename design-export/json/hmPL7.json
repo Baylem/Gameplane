@@ -540,7 +540,9 @@
                   "id": "R0RKjK",
                   "name": "FindingsSummary",
                   "fill": "$muted",
-                  "content": "0 errors · 0 warnings · Instant offline verification passed",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "All schema constraints, DNS names, and image rules passed.",
                   "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -583,7 +585,7 @@
                       "id": "ByXOd",
                       "name": "Lbl",
                       "fill": "$muted",
-                      "content": "Simulated Limit:",
+                      "content": "Memory Simulation",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -593,7 +595,7 @@
                       "id": "jOAUZ",
                       "name": "Val",
                       "fill": "$foreground/foreground",
-                      "content": "8Gi (Selected)",
+                      "content": "8Gi",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -602,21 +604,98 @@
                 },
                 {
                   "type": "frame",
-                  "id": "e7XCy4",
-                  "name": "SliderBar",
+                  "id": "lnbOV",
+                  "name": "MemoryPresetsRow",
                   "width": "fill_container",
-                  "height": 6,
-                  "fill": "$border/border",
-                  "cornerRadius": 3,
+                  "gap": 6,
                   "children": [
                     {
-                      "type": "frame",
-                      "id": "g7uALw",
-                      "name": "Progress",
-                      "width": 140,
-                      "height": 6,
-                      "fill": "$accent/accent",
-                      "cornerRadius": 3
+                      "id": "vunSR",
+                      "type": "ref",
+                      "ref": "d5N3W3",
+                      "name": "Preset 2Gi",
+                      "width": "fill_container",
+                      "fill": "$surface/surface",
+                      "stroke": "$border/border",
+                      "descendants": {
+                        "i3zB62": {
+                          "fill": "transparent",
+                          "stroke": "transparent"
+                        },
+                        "X3iEI": {
+                          "enabled": false
+                        },
+                        "i3zB62/zMNkR": {
+                          "content": "2Gi",
+                          "fill": "$foreground/foreground"
+                        }
+                      }
+                    },
+                    {
+                      "id": "AdrHj",
+                      "type": "ref",
+                      "ref": "d5N3W3",
+                      "name": "Preset 4Gi",
+                      "width": "fill_container",
+                      "fill": "$surface/surface",
+                      "stroke": "$border/border",
+                      "descendants": {
+                        "i3zB62": {
+                          "fill": "transparent",
+                          "stroke": "transparent"
+                        },
+                        "X3iEI": {
+                          "enabled": false
+                        },
+                        "i3zB62/zMNkR": {
+                          "content": "4Gi",
+                          "fill": "$foreground/foreground"
+                        }
+                      }
+                    },
+                    {
+                      "id": "K9QpL",
+                      "type": "ref",
+                      "ref": "d5N3W3",
+                      "name": "Preset 8Gi",
+                      "width": "fill_container",
+                      "fill": "$accent/soft",
+                      "stroke": "$accent/accent",
+                      "descendants": {
+                        "i3zB62": {
+                          "fill": "transparent",
+                          "stroke": "transparent"
+                        },
+                        "X3iEI": {
+                          "enabled": false
+                        },
+                        "i3zB62/zMNkR": {
+                          "content": "8Gi",
+                          "fill": "$accent/accent"
+                        }
+                      }
+                    },
+                    {
+                      "id": "u78xoT",
+                      "type": "ref",
+                      "ref": "d5N3W3",
+                      "name": "Preset 16Gi",
+                      "width": "fill_container",
+                      "fill": "$surface/surface",
+                      "stroke": "$border/border",
+                      "descendants": {
+                        "i3zB62": {
+                          "fill": "transparent",
+                          "stroke": "transparent"
+                        },
+                        "X3iEI": {
+                          "enabled": false
+                        },
+                        "i3zB62/zMNkR": {
+                          "content": "16Gi",
+                          "fill": "$foreground/foreground"
+                        }
+                      }
                     }
                   ]
                 },
@@ -640,18 +719,45 @@
                       "fontFamily": "Roboto Mono",
                       "fontSize": 11,
                       "fontWeight": "normal"
-                    },
-                    {
-                      "type": "text",
-                      "id": "r0AvE",
-                      "name": "Stat2",
-                      "fill": "$muted",
-                      "content": "Resolved image: ghcr.io/valgul...:latest@sha256:4b9a",
-                      "fontFamily": "Roboto Mono",
-                      "fontSize": 10,
-                      "fontWeight": "normal"
                     }
                   ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "M6AD9",
+              "name": "ClusterSourceCard",
+              "width": "fill_container",
+              "fill": "$surface-alt",
+              "cornerRadius": 8,
+              "stroke": "$border/border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 14,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "QCo5k",
+                  "name": "ClusterSourceLabel",
+                  "fill": "$muted",
+                  "content": "Cluster destination source",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "eMxZk",
+                  "type": "ref",
+                  "ref": "AT7ya",
+                  "name": "ClusterSourceSelect",
+                  "width": "fill_container",
+                  "descendants": {
+                    "cFsFk": {
+                      "content": "Operator default"
+                    }
+                  }
                 }
               ]
             }
