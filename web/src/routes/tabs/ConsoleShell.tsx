@@ -66,7 +66,7 @@ export function ConsoleShell({ handle }: { handle: ConsoleHandle }) {
           </Button>
         </div>
       </div>
-      <div className="flex-1 p-4">
+      <div className="flex-1 min-h-0 p-4">
         <div ref={hostRef} className="h-full rounded-lg border border-border bg-[#0b0b0d] p-2" />
       </div>
       <form
