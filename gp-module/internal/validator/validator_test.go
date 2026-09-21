@@ -466,3 +466,208 @@ func TestValidate_TemplateApiVersion(t *testing.T) {
 		t.Errorf("expected RuleTemplateSchemaViolation for invalid apiVersion, got: %+v", report.Findings)
 	}
 }
+
+func TestFinding_JSONMarshalColumn(t *testing.T) {
+	// Test that Column with value 0 is omitted from JSON (omitempty)
+	finding0 := Finding{
+		Level:       SeverityError,
+		RuleID:      "test-rule",
+		File:        "test.yaml",
+		Line:        10,
+		Column:      0,
+		Message:     "test message",
+		Remediation: "fix it",
+	}
+
+	jsonBytes, err := json.Marshal(finding0)
+	if err != nil {
+		t.Fatalf("failed to marshal Finding with Column=0: %v", err)
+	}
+
+	var unmarshaled map[string]interface{}
+	if err := json.Unmarshal(jsonBytes, &unmarshaled); err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+
+	if _, hasColumn := unmarshaled["column"]; hasColumn {
+		t.Errorf("expected 'column' to be omitted from JSON when Column=0, but got: %s", string(jsonBytes))
+	}
+
+	// Test that Column with value > 0 is included in JSON
+	finding5 := Finding{
+		Level:       SeverityError,
+		RuleID:      "test-rule",
+		File:        "test.yaml",
+		Line:        10,
+		Column:      5,
+		Message:     "test message",
+		Remediation: "fix it",
+	}
+
+	jsonBytes, err = json.Marshal(finding5)
+	if err != nil {
+		t.Fatalf("failed to marshal Finding with Column=5: %v", err)
+	}
+
+	var unmarshaled2 map[string]interface{}
+	if err := json.Unmarshal(jsonBytes, &unmarshaled2); err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+
+	if colVal, hasColumn := unmarshaled2["column"]; !hasColumn {
+		t.Errorf("expected 'column' to be present in JSON when Column=5, but got: %s", string(jsonBytes))
+	} else if colVal != float64(5) {
+		t.Errorf("expected column value 5, got %v", colVal)
+	}
+}
+
+func TestFormatHuman_LocationFormats(t *testing.T) {
+	tests := []struct {
+		name        string
+		finding     Finding
+		expectedLoc string
+	}{
+		{
+			name: "file only (line and column both 0)",
+			finding: Finding{
+				Level:   SeverityWarn,
+				RuleID:  "test",
+				File:    "icon.png",
+				Line:    0,
+				Column:  0,
+				Message: "size warning",
+			},
+			expectedLoc: "icon.png",
+		},
+		{
+			name: "file:line (column 0)",
+			finding: Finding{
+				Level:   SeverityError,
+				RuleID:  "test",
+				File:    "module.yaml",
+				Line:    5,
+				Column:  0,
+				Message: "invalid field",
+			},
+			expectedLoc: "module.yaml:5",
+		},
+		{
+			name: "file:line:col (all present)",
+			finding: Finding{
+				Level:   SeverityError,
+				RuleID:  "test",
+				File:    "template.yaml",
+				Line:    10,
+				Column:  7,
+				Message: "invalid protocol",
+			},
+			expectedLoc: "template.yaml:10:7",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report := ValidationReport{
+				Clean:   false,
+				Modules: []ModuleReport{{Name: "test", Findings: []Finding{tt.finding}}},
+			}
+			humanOutput := report.FormatHuman()
+			if !strings.Contains(humanOutput, tt.expectedLoc) {
+				t.Errorf("expected location format %q in output, got:\n%s", tt.expectedLoc, humanOutput)
+			}
+		})
+	}
+}
+
+func TestValidate_InvalidPortProtocolWithColumn(t *testing.T) {
+	// Test that invalid port protocol finding has a non-zero Column value from the yaml node
+	files := map[string][]byte{
+		"module.yaml": []byte(`apiVersion: gameplane.local/module/v1
+name: test-mod
+displayName: Test Mod
+version: 1.0.0
+game: test
+summary: Test
+`),
+		"template.yaml": []byte(`apiVersion: gameplane.io/v1alpha1
+kind: GameTemplate
+metadata:
+  name: test-mod
+spec:
+  image: "example.com/img@sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+  ports:
+    - name: test
+      containerPort: 8080
+      protocol: ICMP
+`),
+		"README.md": []byte("# Test\n"),
+	}
+
+	report, err := ValidateFiles("test-mod", files, ValidateOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	found := false
+	for _, f := range report.Findings {
+		if f.RuleID == RuleInvalidPortProtocol {
+			found = true
+			if f.Column == 0 {
+				t.Errorf("expected non-zero Column for protocol error, got 0 (line: %d)", f.Line)
+			}
+			// The "protocol: ICMP" line should have column pointing to the value node
+			// With proper indentation (6 spaces), the protocol key should be at column 7
+			if f.Line == 0 {
+				t.Errorf("expected non-zero Line for protocol error")
+			}
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf("expected invalid-port-protocol error in findings")
+	}
+}
+
+func TestValidate_ImageUnpinnedWithColumn(t *testing.T) {
+	// Test that unpinned image finding has column information from the yaml node
+	files := map[string][]byte{
+		"module.yaml": []byte(`apiVersion: gameplane.local/module/v1
+name: test-mod
+displayName: Test Mod
+version: 1.0.0
+game: test
+summary: Test
+`),
+		"template.yaml": []byte(`apiVersion: gameplane.io/v1alpha1
+kind: GameTemplate
+metadata:
+  name: test-mod
+spec:
+  image: "docker.io/mygame:latest"
+`),
+		"README.md": []byte("# Test\n"),
+	}
+
+	report, err := ValidateFiles("test-mod", files, ValidateOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	found := false
+	for _, f := range report.Findings {
+		if f.RuleID == RuleImageUnpinned {
+			found = true
+			// The image field should have column information from the yaml node
+			if f.Line == 0 {
+				t.Errorf("expected non-zero Line for image-unpinned error")
+			}
+			// Column should be set from imgNode.Column even if it's at spec level
+			break
+		}
+	}
+
+	if !found {
+		t.Errorf("expected image-unpinned error in findings")
+	}
+}

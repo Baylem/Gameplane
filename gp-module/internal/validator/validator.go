@@ -84,6 +84,7 @@ func ValidateFiles(dirName string, files map[string][]byte, opts ValidateOptions
 				RuleID:      RuleMissingRequiredFile,
 				File:        req,
 				Line:        0,
+				Column:      0,
 				Message:     fmt.Sprintf("required file %q is missing", req),
 				Remediation: "Create the missing required file or re-scaffold using 'gp-module init'.",
 			})
@@ -100,6 +101,7 @@ func ValidateFiles(dirName string, files map[string][]byte, opts ValidateOptions
 				RuleID:      RuleMetadataSchemaViolation,
 				File:        "module.yaml",
 				Line:        1,
+				Column:      0,
 				Message:     fmt.Sprintf("failed to parse YAML: %v", err),
 				Remediation: "Review error line and correct invalid field format according to module.schema.json.",
 			})
@@ -128,6 +130,7 @@ func ValidateFiles(dirName string, files map[string][]byte, opts ValidateOptions
 				RuleID:      RuleTemplateSchemaViolation,
 				File:        "template.yaml",
 				Line:        1,
+				Column:      0,
 				Message:     fmt.Sprintf("failed to parse YAML: %v", err),
 				Remediation: "Correct the malformed YAML field matching the schema definition.",
 			})

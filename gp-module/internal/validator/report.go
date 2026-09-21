@@ -40,6 +40,7 @@ type Finding struct {
 	RuleID      string   `json:"ruleId"`
 	File        string   `json:"file"`
 	Line        int      `json:"line"`
+	Column      int      `json:"column,omitempty"`
 	Field       string   `json:"field,omitempty"`
 	Message     string   `json:"message"`
 	Remediation string   `json:"remediation"`
@@ -115,7 +116,11 @@ func (r *ValidationReport) FormatHuman() string {
 			for _, f := range m.Findings {
 				loc := f.File
 				if f.Line > 0 {
-					loc = fmt.Sprintf("%s:%d", f.File, f.Line)
+					if f.Column > 0 {
+						loc = fmt.Sprintf("%s:%d:%d", f.File, f.Line, f.Column)
+					} else {
+						loc = fmt.Sprintf("%s:%d", f.File, f.Line)
+					}
 				}
 				fmt.Fprintf(&sb, "  %-5s [%s] %s: %s\n", f.Level, f.RuleID, loc, f.Message)
 				if f.Remediation != "" {

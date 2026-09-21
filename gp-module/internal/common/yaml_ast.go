@@ -68,6 +68,15 @@ func FindLineNumber(root *yaml.Node, path string) int {
 	return 0
 }
 
+// FindColumnNumber returns the 1-based column number for a given path in the node, or 0 if not found.
+func FindColumnNumber(root *yaml.Node, path string) int {
+	node := FindNode(root, path)
+	if node != nil {
+		return node.Column
+	}
+	return 0
+}
+
 func findMapChild(node *yaml.Node, key string) *yaml.Node {
 	if node == nil || node.Kind != yaml.MappingNode {
 		return nil

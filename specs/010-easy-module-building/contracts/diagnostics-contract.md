@@ -60,6 +60,7 @@ When invoked with `--json`, `gp-module validate` outputs:
                 "ruleId": { "type": "string" },
                 "file": { "type": "string" },
                 "line": { "type": "integer" },
+                "column": { "type": "integer" },
                 "field": { "type": "string" },
                 "message": { "type": "string" },
                 "remediation": { "type": "string" }
@@ -72,3 +73,18 @@ When invoked with `--json`, `gp-module validate` outputs:
   }
 }
 ```
+
+### Finding Item Properties
+
+Each finding object in the `findings` array includes:
+
+- **`level`**: Diagnostic severity — `"ERROR"` or `"WARN"`.
+- **`ruleId`**: Machine-readable identifier matching the rule catalog (e.g., `"missing-required-file"`).
+- **`file`**: Relative path to the source file where the issue was detected (e.g., `"module.yaml"`, `"template.yaml"`).
+- **`line`**: 1-based line number where the issue occurs.
+- **`column`** *(optional)*: 1-based column number indicating the precise position within the line. This field is emitted only when the YAML AST node position is known; it is omitted when column information is unavailable (represented as absent in the JSON or `0` in the Go struct).
+- **`field`** *(optional)*: For schema violations and field-level issues, the logical field name (e.g., `"name"`, `"spec.image"`).
+- **`message`**: Human-readable diagnostic message describing the issue.
+- **`remediation`**: Suggested corrective action for the operator.
+
+**Human-Readable Output:** When rendered to the terminal, findings are formatted as `<file>:<line>:<column>` when column information is available, or `<file>:<line>` otherwise.

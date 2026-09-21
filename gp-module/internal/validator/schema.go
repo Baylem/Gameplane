@@ -41,6 +41,7 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 				RuleID:      RuleMetadataSchemaViolation,
 				File:        "module.yaml",
 				Line:        1,
+				Column:      0,
 				Message:     "module.yaml is empty or malformed YAML",
 				Remediation: "Review error line and correct invalid field format according to module.schema.json.",
 			},
@@ -55,6 +56,7 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 				RuleID:      RuleMetadataSchemaViolation,
 				File:        "module.yaml",
 				Line:        rootMap.Line,
+				Column:      rootMap.Column,
 				Message:     "root of module.yaml must be a mapping",
 				Remediation: "Review error line and correct invalid field format according to module.schema.json.",
 			},
@@ -70,6 +72,7 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 				RuleID:      RuleMetadataSchemaViolation,
 				File:        "module.yaml",
 				Line:        keyNode.Line,
+				Column:      keyNode.Column,
 				Field:       keyNode.Value,
 				Message:     fmt.Sprintf("unrecognized field %q in module.yaml", keyNode.Value),
 				Remediation: "Review error line and correct invalid field format according to module.schema.json.",
@@ -83,11 +86,16 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 		kn := common.FindKeyNode(rootMap, req)
 		vn := common.FindNode(node, req)
 		if kn == nil || vn == nil {
+			col := 0
+			if kn != nil {
+				col = kn.Column
+			}
 			findings = append(findings, Finding{
 				Level:       SeverityError,
 				RuleID:      RuleMetadataSchemaViolation,
 				File:        "module.yaml",
 				Line:        1,
+				Column:      col,
 				Field:       req,
 				Message:     fmt.Sprintf("missing required field %q", req),
 				Remediation: "Review error line and correct invalid field format according to module.schema.json.",
@@ -104,6 +112,7 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 				RuleID:      RuleMetadataSchemaViolation,
 				File:        "module.yaml",
 				Line:        apiVerNode.Line,
+				Column:      apiVerNode.Column,
 				Field:       "apiVersion",
 				Message:     fmt.Sprintf("apiVersion must be %q, got %q", "gameplane.local/module/v1", apiVerNode.Value),
 				Remediation: "Review error line and correct invalid field format according to module.schema.json.",
@@ -119,6 +128,7 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 			RuleID:      RuleMetadataSchemaViolation,
 			File:        "module.yaml",
 			Line:        dispNode.Line,
+			Column:      dispNode.Column,
 			Field:       "displayName",
 			Message:     "displayName must not be empty",
 			Remediation: "Review error line and correct invalid field format according to module.schema.json.",
@@ -133,6 +143,7 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 			RuleID:      RuleMetadataSchemaViolation,
 			File:        "module.yaml",
 			Line:        verNode.Line,
+			Column:      verNode.Column,
 			Field:       "version",
 			Message:     fmt.Sprintf("version %q does not conform to semantic versioning regex", verNode.Value),
 			Remediation: "Review error line and correct invalid field format according to module.schema.json.",
@@ -147,6 +158,7 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 			RuleID:      RuleMetadataSchemaViolation,
 			File:        "module.yaml",
 			Line:        sumNode.Line,
+			Column:      sumNode.Column,
 			Field:       "summary",
 			Message:     "summary must not be empty",
 			Remediation: "Review error line and correct invalid field format according to module.schema.json.",
@@ -161,6 +173,7 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 			RuleID:      RuleMetadataSchemaViolation,
 			File:        "module.yaml",
 			Line:        gameNode.Line,
+			Column:      gameNode.Column,
 			Field:       "game",
 			Message:     "game must not be empty",
 			Remediation: "Review error line and correct invalid field format according to module.schema.json.",
@@ -177,6 +190,7 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 				RuleID:      RuleMetadataSchemaViolation,
 				File:        "module.yaml",
 				Line:        homeNode.Line,
+				Column:      homeNode.Column,
 				Field:       "homepage",
 				Message:     fmt.Sprintf("homepage %q is not a valid absolute URI", homeNode.Value),
 				Remediation: "Review error line and correct invalid field format according to module.schema.json.",
@@ -192,6 +206,7 @@ func validateModuleSchema(node *yaml.Node) []Finding {
 			RuleID:      RuleMetadataSchemaViolation,
 			File:        "module.yaml",
 			Line:        gpMinNode.Line,
+			Column:      gpMinNode.Column,
 			Field:       "gameplaneMinVersion",
 			Message:     fmt.Sprintf("gameplaneMinVersion %q is not a valid semver", gpMinNode.Value),
 			Remediation: "Review error line and correct invalid field format according to module.schema.json.",
@@ -212,6 +227,7 @@ func validateTemplateSchema(node *yaml.Node) []Finding {
 				RuleID:      RuleTemplateSchemaViolation,
 				File:        "template.yaml",
 				Line:        1,
+				Column:      0,
 				Message:     "template.yaml is empty or malformed YAML",
 				Remediation: "Correct the malformed YAML field matching the schema definition.",
 			},
@@ -226,6 +242,7 @@ func validateTemplateSchema(node *yaml.Node) []Finding {
 				RuleID:      RuleTemplateSchemaViolation,
 				File:        "template.yaml",
 				Line:        rootMap.Line,
+				Column:      rootMap.Column,
 				Message:     "root of template.yaml must be a mapping",
 				Remediation: "Correct the malformed YAML field matching the schema definition.",
 			},
@@ -235,9 +252,11 @@ func validateTemplateSchema(node *yaml.Node) []Finding {
 	apiVerNode := common.FindNode(node, "apiVersion")
 	if apiVerNode == nil || (apiVerNode.Value != "gameplane.local/v1alpha1" && apiVerNode.Value != "gameplane.io/v1alpha1") {
 		line := 1
+		col := 0
 		val := ""
 		if apiVerNode != nil {
 			line = apiVerNode.Line
+			col = apiVerNode.Column
 			val = apiVerNode.Value
 		}
 		findings = append(findings, Finding{
@@ -245,6 +264,7 @@ func validateTemplateSchema(node *yaml.Node) []Finding {
 			RuleID:      RuleTemplateSchemaViolation,
 			File:        "template.yaml",
 			Line:        line,
+			Column:      col,
 			Field:       "apiVersion",
 			Message:     fmt.Sprintf("apiVersion must be %q, got %q", "gameplane.local/v1alpha1", val),
 			Remediation: "Set 'apiVersion: gameplane.local/v1alpha1' at the root of template.yaml.",
@@ -254,14 +274,17 @@ func validateTemplateSchema(node *yaml.Node) []Finding {
 	kindNode := common.FindNode(node, "kind")
 	if kindNode == nil || kindNode.Value != "GameTemplate" {
 		line := 1
+		col := 0
 		if kindNode != nil {
 			line = kindNode.Line
+			col = kindNode.Column
 		}
 		findings = append(findings, Finding{
 			Level:       SeverityError,
 			RuleID:      RuleTemplateSchemaViolation,
 			File:        "template.yaml",
 			Line:        line,
+			Column:      col,
 			Field:       "kind",
 			Message:     "kind must be \"GameTemplate\"",
 			Remediation: "Correct the malformed YAML field matching the schema definition.",
