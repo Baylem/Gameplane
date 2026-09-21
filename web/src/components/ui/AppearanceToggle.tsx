@@ -1,7 +1,8 @@
 import { Sun, Moon, Monitor } from "lucide-react";
 import type { ReactNode } from "react";
+import type { AppearanceMode } from "@/types";
 
-export type AppearanceMode = "light" | "dark" | "system";
+export type { AppearanceMode };
 
 export interface AppearanceToggleProps {
   value: AppearanceMode;

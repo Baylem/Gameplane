@@ -20,6 +20,7 @@ import {
 } from "@heroui/react";
 import { APIError } from "@/lib/api";
 import { Auth } from "@/lib/endpoints";
+import { enforceUnauthenticatedTheme } from "@/lib/enforceUnauthenticatedTheme";
 import type { LoginProvider } from "@/types";
 
 // IMPORTANT: This pre-auth surface must not display any internal
@@ -40,6 +41,11 @@ export function LoginPage() {
   // Self-service reset isn't wired up (admins reset via the CLI), so "Forgot?"
   // just reveals an inline hint rather than linking to a non-existent flow.
   const [forgot, setForgot] = useState(false);
+
+  // Unauthenticated surfaces always render the Pink preset with no custom
+  // CSS (FR-011): pin the DOM for the route's lifetime so theme prefs cached
+  // by a previous session on this browser can never leak onto /login.
+  useEffect(() => enforceUnauthenticatedTheme(), []);
 
   useEffect(() => {
     let active = true;

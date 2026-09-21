@@ -7,6 +7,7 @@ import {
 } from "@heroui/react";
 import { ShieldCheck, Copy, Check } from "lucide-react";
 import { Shares } from "@/lib/api";
+import { enforceUnauthenticatedTheme } from "@/lib/enforceUnauthenticatedTheme";
 import type { ShareLinkPublic } from "@/types";
 import type { AppearanceMode } from "@/components/ui/AppearanceToggle";
 
@@ -49,6 +50,12 @@ export function SharePage() {
   const [isStarting, setIsStarting] = useState(false);
   const [copied, setCopied] = useState(false);
   const pollingRef = useRef<number | null>(null);
+
+  // Public share links always render the Pink preset with no custom CSS
+  // (FR-011), even for browsers with theme prefs cached from a logged-in
+  // session — pin for the route's lifetime, then keep the stored
+  // light/dark appearance behavior below.
+  useEffect(() => enforceUnauthenticatedTheme(), []);
 
   // Apply stored appearance preference on mount
   useEffect(() => {

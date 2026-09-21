@@ -1,0 +1,385 @@
+// Theme preferences plumbing (specs/016-user-theme-customization, research.md
+// R-05): local cache, DOM application, profile reconciliation, and the
+// optimistic PUT mutation with offline retry. The inline boot script in
+// index.html mirrors the cache format and DOM attributes — keep the storage
+// keys, element ids, and attribute values in sync with it.
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { APIError } from "@/lib/api";
+import { Users, type UserPreferencesUpdate } from "@/lib/endpoints";
+import type {
+  AppearanceMode,
+  CustomColorConfig,
+  ThemePresetId,
+  ThemeType,
+  User,
+  UserThemePreferences,
+} from "@/types";
+
+export const THEME_PREFS_STORAGE_KEY = "gameplane-theme-prefs";
+export const SAFE_MODE_SESSION_KEY = "gameplane-safe-mode";
+export const CUSTOM_CSS_ELEMENT_ID = "gameplane-custom-css";
+// Dispatched on window when a preferences update fails, so a toast layer can
+// listen without this plumbing owning any UI (the toast ships in a later
+// task of this feature).
+export const THEME_ERROR_EVENT = "gameplane-theme-error";
+
+// Pink preset + system appearance, per data-model.md §2.1 defaults.
+export const DEFAULT_THEME_PREFERENCES: UserThemePreferences = {
+  themeType: "preset",
+  presetId: "pink",
+  appearanceMode: "system",
+  customColors: null,
+  customCssEnabled: false,
+  customCss: null,
+};
+
+const HEX_COLOR_RE = /^#([0-9a-fA-F]{6})$/;
+
+/**
+ * Safe mode (FR-009) suspends only the custom CSS overlay; the base theme
+ * still applies. Entry points: the `?safe-mode=1` URL parameter, or the
+ * `gameplane-safe-mode` sessionStorage flag set by the keyboard shortcut
+ * and the login-page safe-mode link (both owned by later tasks).
+ */
+export function isSafeModeActive(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (new URLSearchParams(window.location.search).get("safe-mode") === "1") return true;
+  } catch {
+    // Malformed query string — treat the URL entry point as inactive.
+  }
+  try {
+    const flag = window.sessionStorage.getItem(SAFE_MODE_SESSION_KEY);
+    return flag === "1" || flag === "true";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validates and coerces an unknown payload (localStorage cache or API
+ * response) into a well-formed UserThemePreferences, defaulting invalid
+ * fields. Returns null when the payload is not an object at all — callers
+ * then treat it as "no prefs".
+ */
+export function normalizeThemePreferences(input: unknown): UserThemePreferences | null {
+  if (typeof input !== "object" || input === null) return null;
+  const raw = input as Record<string, unknown>;
+
+  const themeType: ThemeType = raw.themeType === "custom_colors" ? "custom_colors" : "preset";
+  const presetId: ThemePresetId = raw.presetId === "legacy" ? "legacy" : "pink";
+  const appearanceMode: AppearanceMode =
+    raw.appearanceMode === "light" || raw.appearanceMode === "dark" ? raw.appearanceMode : "system";
+
+  let customColors: CustomColorConfig | null = null;
+  if (typeof raw.customColors === "object" && raw.customColors !== null) {
+    const colors = raw.customColors as Record<string, unknown>;
+    // Invalid hex never reaches the DOM: drop the whole pair back to null.
+    if (
+      typeof colors.accent === "string" &&
+      typeof colors.surface === "string" &&
+      HEX_COLOR_RE.test(colors.accent) &&
+      HEX_COLOR_RE.test(colors.surface)
+    ) {
+      customColors = { accent: colors.accent, surface: colors.surface };
+    }
+  }
+
+  const customCss =
+    typeof raw.customCss === "string" && raw.customCss.length > 0 ? raw.customCss : null;
+
+  return {
+    themeType,
+    presetId,
+    appearanceMode,
+    customColors,
+    customCssEnabled: raw.customCssEnabled === true,
+    customCss,
+    ...(typeof raw.updatedAt === "string" ? { updatedAt: raw.updatedAt } : {}),
+  };
+}
+
+/** Content comparison for drift detection; updatedAt is metadata, ignored. */
+export function themePreferencesEqual(
+  a: UserThemePreferences,
+  b: UserThemePreferences,
+): boolean {
+  return (
+    a.themeType === b.themeType &&
+    a.presetId === b.presetId &&
+    a.appearanceMode === b.appearanceMode &&
+    a.customCssEnabled === b.customCssEnabled &&
+    a.customCss === b.customCss &&
+    a.customColors?.accent === b.customColors?.accent &&
+    a.customColors?.surface === b.customColors?.surface
+  );
+}
+
+/** Reads and normalizes the cached prefs; null when absent or unreadable. */
+export function readThemePreferences(): UserThemePreferences | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(THEME_PREFS_STORAGE_KEY);
+    if (!raw) return null;
+    return normalizeThemePreferences(JSON.parse(raw));
+  } catch {
+    // Storage blocked or corrupt cache — behave as "no cached prefs".
+    return null;
+  }
+}
+
+export function writeThemePreferences(prefs: UserThemePreferences): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(THEME_PREFS_STORAGE_KEY, JSON.stringify(prefs));
+  } catch {
+    // Storage blocked — preferences still apply for this session.
+  }
+}
+
+function resolveAppearanceMode(mode: AppearanceMode): "dark" | "light" {
+  if (mode !== "system") return mode;
+  // Mirrors the boot script: an unavailable matchMedia keeps the markup's
+  // dark default rather than flipping to light.
+  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  return "dark";
+}
+
+export interface ApplyThemePreferencesOptions {
+  /**
+   * false suppresses the custom CSS overlay (logout, /login, /share/:token).
+   * Only the mounted element is removed — the stored stylesheet is never
+   * deleted (disable-vs-reset, contracts/theme-tokens-v2.md §5.6).
+   */
+  overlay?: boolean;
+}
+
+/**
+ * Applies preferences to the DOM: the dark/light class + data-theme,
+ * data-theme-preset, data-theme-type, data-custom-css, and the
+ * #gameplane-custom-css overlay mounted as the LAST child of document.head
+ * (after the preset tokens and #gameplane-custom-theme-vars) so user rules
+ * win at equal specificity. Safe mode suspends only the overlay.
+ */
+export function applyThemePreferences(
+  prefs: UserThemePreferences | null,
+  options: ApplyThemePreferencesOptions = {},
+): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  const resolved = resolveAppearanceMode(prefs?.appearanceMode ?? "system");
+
+  root.classList.remove("dark", "light");
+  root.classList.add(resolved);
+  root.dataset.theme = resolved;
+  root.dataset.themePreset = prefs?.presetId ?? "pink";
+  root.dataset.themeType = prefs?.themeType ?? "preset";
+
+  const css = prefs?.customCssEnabled === true ? prefs.customCss : null;
+  const inject =
+    (options.overlay ?? true) && typeof css === "string" && css.length > 0 && !isSafeModeActive();
+
+  root.dataset.customCss = inject ? "on" : "off";
+  const existing = document.getElementById(CUSTOM_CSS_ELEMENT_ID);
+  if (inject && typeof css === "string") {
+    const el = existing ?? document.createElement("style");
+    el.id = CUSTOM_CSS_ELEMENT_ID;
+    el.textContent = css;
+    document.head.appendChild(el); // (re)append keeps it last in <head>
+  } else if (existing) {
+    existing.remove();
+  }
+}
+
+/** Removes only the mounted overlay element and flips data-custom-css=off. */
+export function unmountCustomCssOverlay(): void {
+  if (typeof document === "undefined") return;
+  document.getElementById(CUSTOM_CSS_ELEMENT_ID)?.remove();
+  document.documentElement.dataset.customCss = "off";
+}
+
+// Builds the PUT body (FR-012 retention): optional customs are omitted when
+// unset so the server keeps stored values — never send an explicit null.
+function toUpdateBody(prefs: UserThemePreferences): UserPreferencesUpdate {
+  const body: UserPreferencesUpdate = {
+    themeType: prefs.themeType,
+    presetId: prefs.presetId,
+    appearanceMode: prefs.appearanceMode,
+    customCssEnabled: prefs.customCssEnabled,
+  };
+  if (prefs.customColors) body.customColors = prefs.customColors;
+  if (prefs.customCss) body.customCss = prefs.customCss;
+  return body;
+}
+
+// Network-level failures surface from fetch as a raw TypeError (never an
+// APIError, which means the server answered — validation/auth failures are
+// not worth an automatic retry).
+function isConnectivityError(err: unknown): boolean {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
+  return !(err instanceof APIError);
+}
+
+export interface UseThemePreferencesOptions {
+  /**
+   * Called with a human-readable message when an update fails after the
+   * optimistic state was reverted. The toast UI is a later task; until then
+   * failures also dispatch THEME_ERROR_EVENT on window.
+   */
+  onError?: (message: string) => void;
+}
+
+export interface UseThemePreferencesResult {
+  /** Effective preferences (backend-reconciled cache), null before the profile loads. */
+  preferences: UserThemePreferences | null;
+  /**
+   * Optimistically applies the patch to the DOM and localStorage, then PUTs
+   * it. On failure the previous state is restored and the error is reported
+   * via onError / THEME_ERROR_EVENT; a connectivity failure is queued and
+   * retried when the browser fires `online`, then re-reconciled from the
+   * server response.
+   */
+  updatePreferences: (patch: Partial<UserThemePreferences>) => void;
+  isUpdating: boolean;
+  /** Message of the last failed update, if any. */
+  error: string | null;
+}
+
+interface UpdateVars {
+  body: UserPreferencesUpdate;
+  previous: UserThemePreferences | null;
+}
+
+/**
+ * Owns the user's theme preferences for a session: reconciles the backend
+ * copy from useMe() over the localStorage cache (backend wins on drift,
+ * e.g. a change made on another device), keeps the DOM attributes and the
+ * custom CSS overlay in sync, and persists mutations.
+ */
+export function useThemePreferences(
+  me?: User,
+  { onError }: UseThemePreferencesOptions = {},
+): UseThemePreferencesResult {
+  const [preferences, setPreferences] = useState<UserThemePreferences | null>(() =>
+    readThemePreferences(),
+  );
+  const [error, setError] = useState<string | null>(null);
+  const pendingRetryRef = useRef<UpdateVars | null>(null);
+  const mePreferences = useMemo(
+    () => (me?.preferences ? normalizeThemePreferences(me.preferences) : null),
+    [me?.preferences],
+  );
+
+  // Profile reconciliation (research.md R-05 §3): the backend copy wins on
+  // drift; localStorage and the DOM follow it.
+  useEffect(() => {
+    if (!mePreferences) return;
+    const cached = readThemePreferences();
+    if (!cached || !themePreferencesEqual(cached, mePreferences)) {
+      writeThemePreferences(mePreferences);
+    }
+    setPreferences(mePreferences);
+    applyThemePreferences(mePreferences);
+  }, [mePreferences]);
+
+  // Re-resolve the base theme when the OS preference flips while in "system".
+  useEffect(() => {
+    if (preferences?.appearanceMode !== "system") return;
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = () => applyThemePreferences(readThemePreferences());
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, [preferences?.appearanceMode]);
+
+  const reportError = useCallback(
+    (message: string) => {
+      setError(message);
+      onError?.(message);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent<string>(THEME_ERROR_EVENT, { detail: message }));
+      }
+    },
+    [onError],
+  );
+
+  const mutation = useMutation({
+    mutationFn: (vars: UpdateVars) => Users.updatePreferences(vars.body),
+    onSuccess: (server) => {
+      pendingRetryRef.current = null;
+      setError(null);
+      const next = normalizeThemePreferences(server) ?? readThemePreferences();
+      if (!next) return;
+      writeThemePreferences(next);
+      setPreferences(next);
+      applyThemePreferences(next);
+    },
+    onError: (err: unknown, vars) => {
+      // Revert the optimistic application.
+      setPreferences(vars.previous);
+      if (vars.previous) {
+        writeThemePreferences(vars.previous);
+        applyThemePreferences(vars.previous);
+      }
+      const message =
+        err instanceof APIError
+          ? err.body || `Request failed (${err.status})`
+          : err instanceof Error
+            ? err.message
+            : "Theme update failed";
+      reportError(message);
+      // Offline resilience: queue the PUT and replay it when connectivity
+      // returns; onSuccess then re-reconciles cache and DOM from the
+      // authoritative response.
+      if (isConnectivityError(err)) {
+        pendingRetryRef.current = vars;
+      }
+    },
+  });
+
+  // Replay a queued PUT once the browser reports connectivity again.
+  const mutateRef = useRef(mutation.mutate);
+  mutateRef.current = mutation.mutate;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleOnline = () => {
+      const pending = pendingRetryRef.current;
+      if (!pending) return;
+      pendingRetryRef.current = null;
+      mutateRef.current(pending);
+    };
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, []);
+
+  const updatePreferences = useCallback(
+    (patch: Partial<UserThemePreferences>) => {
+      const current = readThemePreferences() ?? preferences ?? DEFAULT_THEME_PREFERENCES;
+      const next: UserThemePreferences = {
+        ...current,
+        ...patch,
+        customColors:
+          patch.customColors !== undefined ? patch.customColors : current.customColors,
+        customCss: patch.customCss !== undefined ? patch.customCss : current.customCss,
+      };
+      // Optimistic: DOM + cache first…
+      setPreferences(next);
+      writeThemePreferences(next);
+      applyThemePreferences(next);
+      // …then the authoritative PUT.
+      mutation.mutate({ body: toUpdateBody(next), previous: current });
+    },
+    [preferences, mutation.mutate],
+  );
+
+  return {
+    preferences,
+    updatePreferences,
+    isUpdating: mutation.isPending,
+    error,
+  };
+}

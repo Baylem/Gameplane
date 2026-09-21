@@ -4,6 +4,7 @@ import type { KeyedRegistryProvider } from "@/lib/config";
 import type {
   AuditEvent,
   AuditVerifyResult,
+  AppearanceMode,
   Backup,
   BackupDestination,
   BackupSchedule,
@@ -13,6 +14,7 @@ import type {
   ClusterRegistry,
   ClusterStats,
   ClusterView,
+  CustomColorConfig,
   ExtendedUser,
   GameServer,
   GameTemplate,
@@ -39,7 +41,10 @@ import type {
   RoleBinding,
   ServerEvent,
   StatusReading,
+  ThemePresetId,
+  ThemeType,
   User,
+  UserThemePreferences,
 } from "@/types";
 
 // Typed wrappers around the generic api<T>() fetcher. Every URL and request
@@ -442,6 +447,24 @@ export interface UserUpdate {
   role?: string;
 }
 
+// Theme preferences request bodies (contracts/user-preferences-api.md
+// §1.2–1.3). PUT retention (FR-012): optional custom fields are omitted
+// (never sent as null), so the server keeps stored values; only the reset
+// endpoint clears customs.
+export interface UserPreferencesUpdate {
+  themeType: ThemeType;
+  presetId: ThemePresetId;
+  appearanceMode: AppearanceMode;
+  customColors?: CustomColorConfig | null;
+  customCssEnabled: boolean;
+  customCss?: string | null;
+}
+
+export interface UserPreferencesReset {
+  presetId?: ThemePresetId;
+  appearanceMode?: AppearanceMode;
+}
+
 export const Users = {
   me: () => api<User>("/users/me"),
   list: () => api<ExtendedUser[]>("/users"),
@@ -463,6 +486,15 @@ export const Users = {
     api<void>(`/users/${id}/bindings/${roleName}/${namespace}`, {
       method: "DELETE",
     }),
+  // Theme preferences (contracts/user-preferences-api.md §1.1–1.3): GET
+  // returns the effective preferences (pink/system defaults when the user
+  // has no stored row); PUT applies an update without clearing stored
+  // customs; POST reset is the only operation that deletes them (FR-012).
+  getPreferences: () => api<UserThemePreferences>("/users/me/preferences"),
+  updatePreferences: (body: UserPreferencesUpdate) =>
+    api<UserThemePreferences>("/users/me/preferences", { method: "PUT", body }),
+  resetPreferences: (body?: UserPreferencesReset) =>
+    api<UserThemePreferences>("/users/me/preferences/reset", { method: "POST", body }),
 };
 
 export interface RoleWrite {

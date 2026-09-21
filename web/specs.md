@@ -116,11 +116,12 @@ This rule was enforced by lint and review throughout the rebuild: any rebuilt fi
 
 **Appearance selection:** Two mechanisms work together to avoid theme flicker on page load:
 
-1. **Boot script in `index.html`** (T053, lines ~398–411):
+1. **Boot script in `index.html`** (T053; extended by feature 016 — see "User Theme Customization" below):
    - Runs as the first script in `<head>` (before Google Fonts)
-   - Reads `localStorage.getItem("gameplane-theme")` — must match the key HeroUI's `useTheme()` persists
+   - Reads `localStorage.getItem("gameplane-theme-prefs")` first (feature 016 prefs cache, authoritative); the legacy `gameplane-theme` key (light/dark/system only) remains the fallback when the prefs cache is absent
    - Resolves system theme via `window.matchMedia("(prefers-color-scheme: dark)")`
-   - Sets both `document.documentElement.classList` (add/remove "dark" and "light") and `document.documentElement.dataset.theme` (for HeroUI token fallback)
+   - Sets `document.documentElement.classList` (add/remove "dark" and "light") and `document.documentElement.dataset.theme`, plus `data-theme-preset` ("pink" | "legacy") and `data-theme-type` ("preset" | "custom_colors")
+   - Boot-time unauthenticated guard (FR-011): on `/login` and `/share/*` the cached prefs are never applied — those routes force pink/no-overlay chrome for their whole lifetime
    - Gracefully handles localStorage unavailability; keeps the dark default from markup
 
 2. **`AppearanceToggle.tsx` + `AppLayout.tsx` (T052):**
@@ -132,6 +133,41 @@ This rule was enforced by lint and review throughout the rebuild: any rebuilt fi
    - `applyTheme()` (web/src/components/AppLayout.tsx lines 48–57) explicitly sets both `document.documentElement.classList` (adds/removes dark/light) and `document.documentElement.dataset.theme = resolved`, ensuring consistent theme application without requiring a separate hook from HeroUI
 
 **Shipped default:** `<html class="dark" data-theme="dark">` in markup (dark theme as the no-JavaScript fallback; overridden by boot script if a stored preference exists).
+
+### User Theme Customization (feature 016 — non-UI plumbing, landed 2026-09-21)
+
+Spec: `specs/016-user-theme-customization/`. Only the non-UI plumbing has landed: preset tokens, the extended boot script, preferences sync, and the isolation/safe-mode guards. **The Theme Settings modal, SafeModeBanner, keyboard shortcut, login-page safe-mode link, custom-colors derivation utility (`deriveCustomThemeTokens`), and the export/import utilities are designed in `specs/016-user-theme-customization/contracts/` (theme-ui.md, theme-tokens-v2.md, theme-export.md) but NOT implemented** — design-first via `design.pen` (CLAUDE.md rule 1) is pending. The `ThemeExport` wire type is declared in `src/types.ts`; nothing consumes it yet.
+
+**Preset token system (`web/src/styles/globals.css`):**
+- The default (Pink) preset keeps the HeroUI semantic tokens from the slice-0 rebuild: `[data-theme]` / `.dark` / `.light` blocks define `--accent` (pink `#FF4FA3` dark / `#DB2777` light), surfaces, borders, fields, focus, link, etc.
+- The **Legacy preset** adds `data-theme-preset="legacy"` blocks (dark + light) that rebind the same HeroUI semantic variables to the historical Gameplane orange palette — dark accent `oklch(69.11% 0.1944 44.01)` (#F97316), light accent `oklch(62.0% 0.20 40.0)` (#EA580C), dark ground `#0F0F0F`, card `#1C1C1C`, border `#292929`. Only CSS variables rebind, so every screen adapts with zero component changes (research.md R-02)
+- The old `--gp-*` HSL triplets are retained alongside (renamed to avoid HeroUI token collisions) for legacy consumers
+- The active preset is selected by the `data-theme-preset` attribute on `<html>` ("pink" default | "legacy")
+
+**Accessibility guards (globals.css):**
+- `@media (forced-colors: active)` — the OS palette wins: semantic tokens are restored to CSS system colors with `!important` (beats the higher-specificity preset selectors and any runtime-injected overlay), interactive controls get `forced-color-adjust: auto`, and links use `LinkText`
+- `@media (prefers-contrast: more)` — field/border strokes (`--border`, `--separator`, `--field-border`) are strengthened to `CanvasText`
+
+**Boot script hydration contract (inline `theme-boot` script, `index.html`, first script in `<head>`):**
+- Storage key: `gameplane-theme-prefs` (localStorage), JSON shape `{ themeType, presetId, appearanceMode, customColors, customCssEnabled, customCss }` (the `UserThemePreferences` type minus `updatedAt`); the legacy `gameplane-theme` key (light/dark/system only) is the appearance-mode fallback when the prefs cache is absent
+- Applies everything synchronously pre-paint (FOUC-free): `.dark`/`.light` class + `data-theme` (resolved from `appearanceMode` via matchMedia; markup's dark default survives unavailable matchMedia or storage), `data-theme-preset`, `data-theme-type`
+- Unauthenticated guard: on `/login` and `/share/*` cached prefs are never applied (those routes pin pink/no-overlay themselves); only the legacy appearance key applies there
+- Custom CSS overlay: when `customCssEnabled` and non-empty `customCss` and NOT safe mode, injects `<style id="gameplane-custom-css">` as the **last** `<head>` child (so user rules win at equal specificity); otherwise `data-custom-css="off"`
+- Safe-mode skip: `?safe-mode=1` in the URL, or sessionStorage `gameplane-safe-mode` of `"1"`/`"true"`, suspends only the overlay (base theme still applies)
+
+**`useThemePreferences` (`web/src/lib/useThemePreferences.ts`) — AppLayout-owned preferences pipeline:**
+- Reconciles the backend `preferences` from `GET /users/me` over the localStorage cache: backend wins on drift (e.g. a change made on another device), rewriting the cache and re-applying the DOM
+- `updatePreferences(patch)`: optimistic DOM + cache first, then `PUT /users/me/preferences` via `Users.updatePreferences`; on failure the previous state is restored and the error is reported via the `onError` callback **and** a `gameplane-theme-error` window `CustomEvent` (no toast UI yet — the banner/modal are deferred)
+- Offline resilience: a connectivity failure (non-`APIError`, or `navigator.onLine === false`) queues the PUT and replays it when the browser fires `online`; the server response then re-reconciles cache and DOM
+- PUT body follows FR-012 retention: optional custom fields are omitted when unset — never sent as explicit nulls
+- Keeps `data-theme-preset` / `data-theme-type` / `data-custom-css` and the `#gameplane-custom-css` overlay in sync on every change ((re)append keeps the overlay last in `<head>`), and re-resolves the base theme when the OS preference flips while in "system" mode (matchMedia subscription)
+- `AppLayout.tsx` consumes the hook through `useAppearance()`: when a profile is loaded, AppearanceToggle changes persist through the preferences pipeline (optimistic apply + PUT, syncing across devices); without a profile it falls back to the legacy `gameplane-theme` key + direct apply. `unmountCustomCssOverlay()` runs on AppLayout unmount and on logout — the overlay is an authenticated-only surface, and the stored stylesheet is never deleted by unmounting (disable-vs-reset)
+
+**Unauthenticated isolation (FR-011) — route-lifetime pinning:**
+- `enforceUnauthenticatedTheme()` (`web/src/lib/enforceUnauthenticatedTheme.ts`) pins `data-theme-preset="pink"`, `data-theme-type="preset"`, `data-custom-css="off"` on `<html>` and strips `#gameplane-custom-css` / `#gameplane-custom-theme-vars` for the route's lifetime, via a `MutationObserver` that reverts any flip (covers residue from a previously logged-in session on the same browser). Light/dark state is deliberately untouched
+- Mounted by `Login.tsx` and `Share.tsx` as a route-level `useEffect(() => enforceUnauthenticatedTheme(), [])`; complements the boot-time guard in `index.html`, which only covers the pre-paint window
+
+**Client endpoints:** `Users.getPreferences` / `Users.updatePreferences` / `Users.resetPreferences` (Layer 2 above); `Users.me()` returns `preferences` embedded (types.ts `User.preferences`)
 
 ### Test Count Rule (FR-010)
 
@@ -924,7 +960,7 @@ Each namespace is an object of typed functions building and fetching URLs:
 
 - **Players** — `snapshot(server, ns?)`, `banned(server, ns?)`, `moderate(server, action, body, ns?)` (kick/ban/unban), `whitelist(server, ns?)`, `whitelistAdd(server, name, ns?)`, `whitelistRemove(server, name, ns?)`
 
-- **Users** — `me()`, `list()`, `create(body)`, `update(id, body)`, `remove(id)`, `resetPassword(id, password)`, `bindings(id)`, `addBinding(id, body)`, `removeBinding(id, roleName, namespace)`
+- **Users** — `me()`, `list()`, `create(body)`, `update(id, body)`, `remove(id)`, `resetPassword(id, password)`, `bindings(id)`, `addBinding(id, body)`, `removeBinding(id, roleName, namespace)`, `getPreferences()` (GET `/users/me/preferences`), `updatePreferences(body)` (PUT `/users/me/preferences`; optional custom fields omitted, never null — server-side FR-012 retention keeps stored customs), `resetPreferences(body?)` (POST `/users/me/preferences/reset`, the only operation that clears customs)
 
 - **Roles** — `list()`, `catalog()` (permission groups), `create(body)`, `update(name, body)`, `remove(name)`
 
@@ -955,6 +991,7 @@ Each namespace is an object of typed functions building and fetching URLs:
 ### Layer 3: Domain Helpers (`lib/*.ts`)
 
 - **capabilities.ts** — `resolveConsoleMode(template)`, `serverHasMods(template, server)`, `serverHasModpacks(template, server)` — drive tab visibility
+- **useThemePreferences.ts** — theme preferences plumbing (feature 016; full behavior documented under "User Theme Customization" above): `useThemePreferences(me?, opts?)` reconciles the backend `preferences` from `/users/me` over the `gameplane-theme-prefs` localStorage cache (backend wins on drift), exposes `preferences` + an optimistic `updatePreferences(patch)` mutation (DOM + cache first, PUT via `Users.updatePreferences`, revert-and-report on failure, replay-on-`online` after connectivity loss), and keeps the DOM attributes (`class`/`data-theme`, `data-theme-preset`, `data-theme-type`, `data-custom-css`) and the `#gameplane-custom-css` overlay (always last in `<head>`; unmounted on logout and on `/login`/`/share/:token`) in sync. Plain helpers exported for routes and the boot script's post-boot path: `isSafeModeActive()` (`?safe-mode=1` or the `gameplane-safe-mode` sessionStorage flag — suspends only the overlay), `readThemePreferences` / `writeThemePreferences`, `normalizeThemePreferences`, `themePreferencesEqual`, `applyThemePreferences`, `unmountCustomCssOverlay`, plus the storage keys/element ids and the `gameplane-theme-error` window event. The inline `theme-boot` script in `index.html` applies the same cache synchronously pre-paint and is the authoritative boot path (never applies cached prefs on `/login` or `/share/:token`).
 - **servers.ts** — `isServerRunning(phase)`, phase → string formatters
 - **games.ts** — game icon URLs, console protocol detection (RCON/Satisfactory/Battleye)
 - **auth.ts** — `getCurrentUser()`, OIDC provider list, logout flow

@@ -13,7 +13,7 @@ import {
 import { APIError } from "@/lib/api";
 import { Cluster as ClusterAPI, Auth } from "@/lib/endpoints";
 import { useMe, can } from "@/lib/auth";
-import type { ClusterInfo } from "@/types";
+import type { ClusterInfo, User } from "@/types";
 import { useEffect, useState } from "react";
 import { ClusterSelector } from "@/components/ClusterSelector";
 import { AppShell } from "@/components/ui/AppShell";
@@ -25,9 +25,18 @@ import { NotificationsPanel } from "@/components/ui/NotificationsPanel";
 import { AppLoadingSkeleton } from "@/components/ui/AppLoadingSkeleton";
 import type { AppearanceMode } from "@/components/ui/AppearanceToggle";
 import { useDelayedLoading } from "@/lib/useDelayedLoading";
+import {
+  applyThemePreferences,
+  DEFAULT_THEME_PREFERENCES,
+  unmountCustomCssOverlay,
+  useThemePreferences,
+} from "@/lib/useThemePreferences";
 
 // The localStorage key the theme boot script in index.html reads before
 // React mounts — must stay in sync (see index.html and theme-tokens.md).
+// The prefs cache (gameplane-theme-prefs, owned by useThemePreferences) is
+// authoritative once it exists; this legacy key (light/dark/system only)
+// remains for backwards compatibility.
 // Note: HeroUI's own `useTheme()` hook hardcodes a different key
 // ("heroui-theme"), which would silently diverge from the boot script, so
 // theme state is owned here rather than via that hook (deviation from the
@@ -44,39 +53,26 @@ function readStoredTheme(): AppearanceMode {
   return "system";
 }
 
-function applyTheme(mode: AppearanceMode) {
-  const resolved =
-    mode === "system"
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
-      : mode;
-  document.documentElement.classList.remove("dark", "light");
-  document.documentElement.classList.add(resolved);
-  document.documentElement.dataset.theme = resolved;
-}
+function useAppearance(me: User | undefined): [AppearanceMode, (mode: AppearanceMode) => void] {
+  const { preferences, updatePreferences } = useThemePreferences(me);
+  const [legacyTheme, setLegacyTheme] = useState<AppearanceMode>(readStoredTheme);
 
-function useAppearance(): [AppearanceMode, (mode: AppearanceMode) => void] {
-  const [theme, setThemeState] = useState<AppearanceMode>(readStoredTheme);
-
-  useEffect(() => {
-    applyTheme(theme);
-
-    // Subscribe to OS theme changes only in system mode
-    if (theme === "system") {
-      const mq = window.matchMedia("(prefers-color-scheme: dark)");
-      const handleChange = () => applyTheme("system");
-      mq.addEventListener("change", handleChange);
-      return () => mq.removeEventListener("change", handleChange);
-    }
-  }, [theme]);
+  const theme: AppearanceMode = preferences?.appearanceMode ?? legacyTheme;
 
   const setTheme = (mode: AppearanceMode) => {
-    setThemeState(mode);
+    setLegacyTheme(mode);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, mode);
     } catch {
       // localStorage unavailable — theme still applies for this session.
+    }
+    if (preferences) {
+      // Persist through the preferences pipeline (optimistic DOM apply +
+      // PUT) so the choice syncs across devices; the hook also owns the
+      // system-mode media-query subscription.
+      updatePreferences({ appearanceMode: mode });
+    } else {
+      applyThemePreferences({ ...DEFAULT_THEME_PREFERENCES, appearanceMode: mode });
     }
   };
 
@@ -96,7 +92,7 @@ export function AppLayout() {
   const { data: me, error, isLoading } = useMe();
   const { data: cluster } = useClusterInfo();
   const { pathname } = useLocation();
-  const [theme, setTheme] = useAppearance();
+  const [theme, setTheme] = useAppearance(me);
   // Below `lg`, the fixed sidebar becomes an off-canvas drawer toggled by
   // the TopBar's hamburger button. Desktop (`lg`+) keeps the always-on
   // sidebar and never mounts the drawer.
@@ -109,9 +105,15 @@ export function AppLayout() {
     }
   }, [error]);
 
+  // The custom CSS overlay is authenticated-only surface: unmount it when
+  // the layout unmounts (navigation to /login or /share/:token) as well as
+  // on logout. The stored stylesheet itself is never deleted.
+  useEffect(() => () => unmountCustomCssOverlay(), []);
+
   if (showSkeleton) return <AppLoadingSkeleton />;
 
   const onLogout = async () => {
+    unmountCustomCssOverlay();
     await Auth.logout().catch(() => {});
     location.assign("/login");
   };
