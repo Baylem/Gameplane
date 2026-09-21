@@ -868,7 +868,60 @@ export interface BuilderExportInstallResponse {
   moduleName: string;
 }
 
+export interface BuilderPortDef {
+  name: string;
+  containerPort: number;
+  protocol: string;
+  advertise?: boolean;
+}
+
+export interface BuilderStorageDef {
+  size: string;
+  mountPath: string;
+}
+
+export interface BuilderEnvDef {
+  name: string;
+  value: string;
+}
+
+export interface BuilderConfigFieldDef {
+  name: string;
+  displayName?: string;
+  description?: string;
+  type: string;
+  default?: string;
+  required?: boolean;
+  min?: number;
+  max?: number;
+}
+
+export interface BuilderCapabilitiesDef {
+  lifecycle?: {
+    stop?: string[];
+  };
+}
+
+export interface BuilderArchetypeDefinition {
+  id: string;
+  title: string;
+  description: string;
+  defaultImage: string;
+  defaultPorts: BuilderPortDef[];
+  defaultStorage: BuilderStorageDef;
+  defaultEnv: BuilderEnvDef[];
+  configSchema: BuilderConfigFieldDef[];
+  capabilities: BuilderCapabilitiesDef;
+  defaultCategories: string[];
+}
+
+export interface BuilderArchetypesResponse {
+  archetypes: BuilderArchetypeDefinition[];
+}
+
 export const ModuleBuilder = {
+  archetypes: () =>
+    api<BuilderArchetypesResponse>("/modules/builder/archetypes", { method: "GET" }),
   scaffold: (body: BuilderScaffoldRequest) =>
     api<BuilderScaffoldResponse>("/modules/builder/scaffold", { method: "POST", body }),
   validate: (body: { moduleYaml: string; templateYaml: string }) =>

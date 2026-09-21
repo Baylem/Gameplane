@@ -633,3 +633,61 @@ func TestBuilderExport_InstallToCluster_UpdateAndConflicts(t *testing.T) {
 		t.Fatalf("expected 409 for conflict, got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+func TestBuilderArchetypes(t *testing.T) {
+	r, _ := setupTestBuilderRouter(t)
+
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/modules/builder/archetypes", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp BuilderArchetypesResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(resp.Archetypes) == 0 {
+		t.Fatalf("expected non-empty archetypes array, got %d items", len(resp.Archetypes))
+	}
+
+	// Verify deterministic order: steamcmd first, java second, generic third
+	if len(resp.Archetypes) > 0 && resp.Archetypes[0].ID != "steamcmd" {
+		t.Errorf("expected first archetype to be 'steamcmd', got %q", resp.Archetypes[0].ID)
+	}
+	if len(resp.Archetypes) > 1 && resp.Archetypes[1].ID != "java" {
+		t.Errorf("expected second archetype to be 'java', got %q", resp.Archetypes[1].ID)
+	}
+	if len(resp.Archetypes) > 2 && resp.Archetypes[2].ID != "generic" {
+		t.Errorf("expected third archetype to be 'generic', got %q", resp.Archetypes[2].ID)
+	}
+
+	// Verify steamcmd has STEAMAPPID in defaultEnv
+	steamcmd := resp.Archetypes[0]
+	hasSteamAppID := false
+	for _, env := range steamcmd.DefaultEnv {
+		if env.Name == "STEAMAPPID" {
+			hasSteamAppID = true
+			break
+		}
+	}
+	if !hasSteamAppID {
+		t.Errorf("expected steamcmd to have STEAMAPPID in defaultEnv, got %+v", steamcmd.DefaultEnv)
+	}
+
+	// Verify all archetypes have required fields
+	for i, arch := range resp.Archetypes {
+		if arch.ID == "" {
+			t.Errorf("archetype %d missing ID", i)
+		}
+		if arch.Title == "" {
+			t.Errorf("archetype %d (%s) missing Title", i, arch.ID)
+		}
+		if arch.DefaultImage == "" {
+			t.Errorf("archetype %d (%s) missing DefaultImage", i, arch.ID)
+		}
+	}
+}

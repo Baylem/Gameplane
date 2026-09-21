@@ -45,9 +45,9 @@ describe("BuildModuleDialog", () => {
     );
 
     expect(screen.getByText("Create game module")).toBeInTheDocument();
-    expect(screen.getByText("SteamCMD Dedicated")).toBeInTheDocument();
-    expect(screen.getByText("Java Server")).toBeInTheDocument();
-    expect(screen.getByText("Generic Container")).toBeInTheDocument();
+    expect(await screen.findByText("SteamCMD Dedicated Server")).toBeInTheDocument();
+    expect(await screen.findByText("Java Application Server")).toBeInTheDocument();
+    expect(await screen.findByText("Generic Container Server")).toBeInTheDocument();
 
     const nameInput = screen.getByPlaceholderText("e.g. cs2-match");
     expect(nameInput).toHaveValue("");

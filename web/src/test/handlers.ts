@@ -423,6 +423,115 @@ export const handlers = [
   http.get("/modules/sources", () =>
     HttpResponse.json({ items: [makeModuleSource()] }),
   ),
+  // Module builder archetypes catalog
+  http.get("/modules/builder/archetypes", () =>
+    HttpResponse.json({
+      archetypes: [
+        {
+          id: "steamcmd",
+          title: "SteamCMD Dedicated Server",
+          description: "Dedicated game server installed and managed via SteamCMD (Valve UDP ports, save volume, non-root user)",
+          defaultImage: "cm2network/steamcmd:root@sha256:4d830b0475b8719f96b9978ba57404434bb3da3f260388d75cfb373cf5889ea8",
+          defaultPorts: [
+            { name: "game", containerPort: 27015, protocol: "UDP", advertise: true },
+            { name: "query", containerPort: 27016, protocol: "UDP", advertise: true },
+          ],
+          defaultStorage: {
+            size: "20Gi",
+            mountPath: "/serverdata",
+          },
+          defaultEnv: [
+            { name: "STEAMAPPID", value: "0" },
+            { name: "SERVER_NAME", value: "Game Server" },
+          ],
+          configSchema: [
+            {
+              name: "SERVER_PASSWORD",
+              displayName: "Server Password",
+              description: "Password required for players to join the server",
+              type: "password",
+              required: false,
+            },
+            {
+              name: "MAX_PLAYERS",
+              displayName: "Maximum Players",
+              description: "Maximum allowed concurrent players",
+              type: "int",
+              default: "16",
+              min: 1,
+              max: 128,
+            },
+          ],
+          capabilities: {
+            lifecycle: {
+              stop: ["quit"],
+            },
+          },
+          defaultCategories: ["Survival", "Co-op"],
+        },
+        {
+          id: "java",
+          title: "Java Application Server",
+          description: "JVM-based game server (Minecraft, etc.) with automatic memory heap calculation and RCON support",
+          defaultImage: "eclipse-temurin:21-jre-jammy@sha256:0d5bba8111956f2f01fbf9c054238e55e09f58ea9fc3a3b5c6e838ebdcbb636d",
+          defaultPorts: [
+            { name: "game", containerPort: 25565, protocol: "TCP", advertise: true },
+            { name: "rcon", containerPort: 25575, protocol: "TCP", advertise: false },
+          ],
+          defaultStorage: {
+            size: "10Gi",
+            mountPath: "/data",
+          },
+          defaultEnv: [
+            { name: "EULA", value: "TRUE" },
+            { name: "ENABLE_RCON", value: "true" },
+            { name: "RCON_PORT", value: "25575" },
+          ],
+          configSchema: [
+            {
+              name: "MAX_MEMORY",
+              displayName: "Maximum JVM Heap Memory",
+              description: "Maximum memory allocated to JVM, dynamically calculated from container limit",
+              type: "string",
+              autoFromMemoryLimit: {
+                percent: 75,
+              },
+            },
+            {
+              name: "RCON_PASSWORD",
+              displayName: "RCON Password",
+              description: "Remote console management password",
+              type: "password",
+              required: false,
+            },
+          ],
+          capabilities: {
+            lifecycle: {
+              stop: ["stop"],
+            },
+          },
+          defaultCategories: ["Sandbox", "Survival"],
+        },
+        {
+          id: "generic",
+          title: "Generic Container Server",
+          description: "General-purpose containerized game server with configurable TCP/UDP ports and persistent storage",
+          defaultImage: "alpine:3.20@sha256:b89d9c10e96b8da1b4874828d0a479b157d60b49364fae0db5122e1b5056f918",
+          defaultPorts: [
+            { name: "game", containerPort: 8080, protocol: "TCP", advertise: true },
+          ],
+          defaultStorage: {
+            size: "5Gi",
+            mountPath: "/data",
+          },
+          defaultEnv: [],
+          configSchema: [],
+          capabilities: {},
+          defaultCategories: ["Co-op"],
+        },
+      ],
+    }),
+  ),
   http.get("/modules/:name", ({ params }) =>
     HttpResponse.json(makeModule({ metadata: { name: String(params.name) } })),
   ),

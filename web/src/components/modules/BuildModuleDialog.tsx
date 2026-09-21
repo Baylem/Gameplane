@@ -1,4 +1,5 @@
 import { useState, useId, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Modal,
   ModalBackdrop,
@@ -58,35 +59,15 @@ const CANONICAL_CATEGORIES = [
   "Creative",
 ];
 
-const ARCHETYPE_PRESETS = [
-  {
-    id: "steamcmd",
-    title: "SteamCMD Dedicated",
-    description: "Automated updates & Steam login for Steamworks games",
-    icon: Server,
-    defaultImage: "ghcr.io/valgulnecron/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7",
-    defaultPorts: [{ name: "game", containerPort: 27015, protocol: "UDP", advertise: true }],
-    defaultStorage: { size: "20Gi", mountPath: "/home/steam/cs2-data" },
-  },
-  {
-    id: "java",
-    title: "Java Server",
-    description: "Minecraft / Paper with heap calculation & JVM flags",
-    icon: Coffee,
-    defaultImage: "itzg/minecraft-server:java21@sha256:1111111111111111111111111111111111111111111111111111111111111111",
-    defaultPorts: [{ name: "game", containerPort: 25565, protocol: "TCP", advertise: true }],
-    defaultStorage: { size: "10Gi", mountPath: "/data" },
-  },
-  {
-    id: "generic",
-    title: "Generic Container",
-    description: "Custom binaries, scripts, or container images",
-    icon: Box,
-    defaultImage: "ghcr.io/valgulnecron/custom-game:v1.0@sha256:2222222222222222222222222222222222222222222222222222222222222222",
-    defaultPorts: [{ name: "game", containerPort: 7777, protocol: "UDP", advertise: true }],
-    defaultStorage: { size: "5Gi", mountPath: "/server" },
-  },
-];
+// Map archetype IDs to lucide icons
+function getArchetypeIcon(id: string) {
+  const iconMap: Record<string, typeof Server> = {
+    steamcmd: Server,
+    java: Coffee,
+    generic: Box,
+  };
+  return iconMap[id] || Box; // Default to Box for unknown archetypes
+}
 
 function isValidDns1123(name: string): boolean {
   if (!name || name.length > 63) return false;
@@ -99,8 +80,13 @@ export function BuildModuleDialog({
   sources,
   onInstalled,
 }: BuildModuleDialogProps) {
+  const { data: archetypesData, isLoading: archetypesLoading, error: archetypesError } = useQuery({
+    queryKey: ["builder-archetypes"],
+    queryFn: () => ModuleBuilder.archetypes(),
+  });
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [archetype, setArchetype] = useState("steamcmd");
+  const [archetype, setArchetype] = useState("");
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [summary, setSummary] = useState("");
@@ -108,11 +94,9 @@ export function BuildModuleDialog({
   const [customTagInput, setCustomTagInput] = useState("");
 
   const [image, setImage] = useState("");
-  const [ports, setPorts] = useState<BuilderPortDef[]>([
-    { name: "game", containerPort: 27015, protocol: "UDP", advertise: true },
-  ]);
-  const [storageSize, setStorageSize] = useState("20Gi");
-  const [storageMountPath, setStorageMountPath] = useState("/data");
+  const [ports, setPorts] = useState<BuilderPortDef[]>([]);
+  const [storageSize, setStorageSize] = useState("");
+  const [storageMountPath, setStorageMountPath] = useState("");
 
   const [activeTab, setActiveTab] = useState<"module.yaml" | "template.yaml" | "README.md">("module.yaml");
   const [moduleYaml, setModuleYaml] = useState("");
@@ -144,16 +128,16 @@ export function BuildModuleDialog({
     setResetFor({ open, sources });
     if (open) {
       setStep(1);
-      setArchetype("steamcmd");
+      setArchetype(""); // Will be set to first archetype once they load
       setName("");
       setDisplayName("");
       setSummary("");
       setCategories([]);
       setCustomTagInput("");
-      setImage("ghcr.io/valgulnecron/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7");
-      setPorts([{ name: "game", containerPort: 27015, protocol: "UDP", advertise: true }]);
-      setStorageSize("20Gi");
-      setStorageMountPath("/home/steam/cs2-data");
+      setImage("");
+      setPorts([]);
+      setStorageSize("");
+      setStorageMountPath("");
       setModuleYaml("");
       setTemplateYaml("");
       setReadmeMd("");
@@ -165,14 +149,20 @@ export function BuildModuleDialog({
     }
   }
 
+  // Once archetypes are loaded and user hasn't selected one, auto-select the first
+  if (archetypesData && !archetype && archetypesData.archetypes.length > 0) {
+    const firstArch = archetypesData.archetypes[0];
+    handleSelectArchetype(firstArch.id);
+  }
+
   function handleSelectArchetype(archId: string) {
     setArchetype(archId);
-    const preset = ARCHETYPE_PRESETS.find((p) => p.id === archId);
-    if (preset) {
-      setImage(preset.defaultImage);
-      setPorts(preset.defaultPorts.map((p) => ({ ...p })));
-      setStorageSize(preset.defaultStorage.size);
-      setStorageMountPath(preset.defaultStorage.mountPath);
+    const arch = archetypesData?.archetypes.find((a) => a.id === archId);
+    if (arch) {
+      setImage(arch.defaultImage);
+      setPorts(arch.defaultPorts.map((p) => ({ ...p })));
+      setStorageSize(arch.defaultStorage.size);
+      setStorageMountPath(arch.defaultStorage.mountPath);
     }
   }
 
@@ -208,6 +198,10 @@ export function BuildModuleDialog({
   async function goToStep2() {
     if (!isValidDns1123(name)) {
       setError("Module name must be a valid lowercase DNS-1123 label.");
+      return;
+    }
+    if (!image) {
+      setError("Please select an archetype or provide a container image.");
       return;
     }
     setError(null);
@@ -425,31 +419,48 @@ export function BuildModuleDialog({
               <div className="space-y-5">
                 <div>
                   <label className="text-xs font-medium text-fg">Archetype preset</label>
-                  <div className="mt-2 grid grid-cols-3 gap-3">
-                    {ARCHETYPE_PRESETS.map((p) => {
-                      const Icon = p.icon;
-                      const selected = archetype === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => handleSelectArchetype(p.id)}
-                          disabled={busy}
-                          className={`flex flex-col text-left rounded-lg border p-3.5 transition-all ${
-                            selected
-                              ? "border-primary bg-primary/5 shadow-xs"
-                              : "border-border bg-surface/50 hover:bg-surface"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Icon className={`h-4 w-4 ${selected ? "text-primary" : "text-muted"}`} />
-                            <span className="text-sm font-semibold text-fg">{p.title}</span>
-                          </div>
-                          <p className="mt-1 text-xs text-muted leading-relaxed">{p.description}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
+
+                  {archetypesLoading && (
+                    <div className="mt-2 flex items-center justify-center gap-2 py-8 text-muted">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="text-xs">Loading archetypes...</span>
+                    </div>
+                  )}
+
+                  {archetypesError && (
+                    <div className="flex items-center gap-2 rounded-md bg-danger/10 p-3 text-xs text-danger mt-2">
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                      <span>Failed to load archetypes</span>
+                    </div>
+                  )}
+
+                  {!archetypesLoading && archetypesData?.archetypes && (
+                    <div className="mt-2 grid grid-cols-3 gap-3">
+                      {archetypesData.archetypes.map((arch) => {
+                        const Icon = getArchetypeIcon(arch.id);
+                        const selected = archetype === arch.id;
+                        return (
+                          <button
+                            key={arch.id}
+                            type="button"
+                            onClick={() => handleSelectArchetype(arch.id)}
+                            disabled={busy}
+                            className={`flex flex-col text-left rounded-lg border p-3.5 transition-all ${
+                              selected
+                                ? "border-primary bg-primary/5 shadow-xs"
+                                : "border-border bg-surface/50 hover:bg-surface"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Icon className={`h-4 w-4 ${selected ? "text-primary" : "text-muted"}`} />
+                              <span className="text-sm font-semibold text-fg">{arch.title}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-muted leading-relaxed">{arch.description}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -918,7 +929,7 @@ export function BuildModuleDialog({
                   <Button
                     size="sm"
                     onPress={goToStep2}
-                    isDisabled={!isDnsValid || busy}
+                    isDisabled={!isDnsValid || busy || archetypesLoading || !!archetypesError || !image}
                   >
                     Continue to Container & Ports
                     <ChevronRight className="ml-1 h-3.5 w-3.5" />

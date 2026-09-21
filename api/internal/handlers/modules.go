@@ -46,6 +46,7 @@ func MountModules(r chi.Router, k *kube.Client, namespace string) {
 		r.Delete("/sources/{name}/upload/{module}", h.deleteUpload)
 		r.Get("/catalog", h.catalog)
 		r.Route("/builder", func(r chi.Router) {
+			r.Get("/archetypes", h.builderArchetypes)
 			r.Post("/scaffold", h.builderScaffold)
 			r.Post("/validate", h.builderValidate)
 			r.Post("/preview", h.builderPreview)

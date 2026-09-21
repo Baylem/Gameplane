@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -115,6 +116,11 @@ type BuilderExportRequest struct {
 type BuilderExportResponse struct {
 	Installed  bool   `json:"installed"`
 	ModuleName string `json:"moduleName"`
+}
+
+// BuilderArchetypesResponse returns the list of available archetypes in canonical order.
+type BuilderArchetypesResponse struct {
+	Archetypes []archetypes.ArchetypeDefinition `json:"archetypes"`
 }
 
 func (h modulesHandler) builderScaffold(w http.ResponseWriter, req *http.Request) {
@@ -420,4 +426,50 @@ func (h modulesHandler) builderExport(w http.ResponseWriter, req *http.Request) 
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", body.Name+".tar.gz"))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(archive)
+}
+
+func (h modulesHandler) builderArchetypes(w http.ResponseWriter, req *http.Request) {
+	all := archetypes.AllArchetypes()
+	if len(all) == 0 {
+		writeJSON(w, BuilderArchetypesResponse{Archetypes: []archetypes.ArchetypeDefinition{}})
+		return
+	}
+
+	// Define the deterministic order: steamcmd, java, generic, then alphabetical
+	orderedKeys := make([]string, 0, len(all))
+	order := []string{"steamcmd", "java", "generic"}
+
+	// Add ordered keys first
+	for _, key := range order {
+		if _, ok := all[key]; ok {
+			orderedKeys = append(orderedKeys, key)
+		}
+	}
+
+	// Collect remaining keys
+	remaining := make([]string, 0)
+	for key := range all {
+		found := false
+		for _, orderedKey := range orderedKeys {
+			if key == orderedKey {
+				found = true
+				break
+			}
+		}
+		if !found {
+			remaining = append(remaining, key)
+		}
+	}
+
+	// Sort remaining keys alphabetically
+	sort.Strings(remaining)
+	orderedKeys = append(orderedKeys, remaining...)
+
+	// Build ordered response
+	result := make([]archetypes.ArchetypeDefinition, len(orderedKeys))
+	for i, key := range orderedKeys {
+		result[i] = all[key]
+	}
+
+	writeJSON(w, BuilderArchetypesResponse{Archetypes: result})
 }
