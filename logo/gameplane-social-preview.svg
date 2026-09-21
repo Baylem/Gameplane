@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="100%" height="100%">
+  <defs>
+    <!-- Background Space Radial Gradient (Dark theme tokens) -->
+    <radialGradient id="spaceGlow" cx="50%" cy="42%" r="65%">
+      <stop offset="0%" stop-color="#1C1A20" />
+      <stop offset="55%" stop-color="#17151A" />
+      <stop offset="100%" stop-color="#121114" />
+    </radialGradient>
+
+    <!-- Aircraft Fuselage Spine Shading -->
+    <linearGradient id="fuselageMain" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="35%" stop-color="#EDE9F0" />
+      <stop offset="100%" stop-color="#2C2932" />
+    </linearGradient>
+
+    <!-- Wing Gradients: Accent Magenta (Port) and Sleep Violet (Starboard) -->
+    <linearGradient id="stealthWingLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#232128" />
+      <stop offset="50%" stop-color="#331525" />
+      <stop offset="100%" stop-color="#FF4FA3" />
+    </linearGradient>
+
+    <linearGradient id="stealthWingRight" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#232128" />
+      <stop offset="50%" stop-color="#251833" />
+      <stop offset="100%" stop-color="#A78BFA" />
+    </linearGradient>
+
+    <!-- Tricolor Thruster Jets: Blue, White, Red -->
+    <linearGradient id="blueFlame" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="40%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#0284c7" stop-opacity="0" />
+    </linearGradient>
+
+    <linearGradient id="whiteFlame" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="50%" stop-color="#e2e8f0" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#64748b" stop-opacity="0" />
+    </linearGradient>
+
+    <linearGradient id="redFlame" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#f87171" />
+      <stop offset="40%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#991b1b" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Neon Glow Filter -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- 1280x640 Background Canvas -->
+  <rect width="1280" height="640" fill="url(#spaceGlow)" />
+
+  <!-- Extended Topology Mesh Backdrop -->
+  <g opacity="0.18" stroke="#9E98A6" stroke-width="1">
+    <circle cx="640" cy="240" r="230" fill="none" stroke-dasharray="4 8" />
+    <circle cx="640" cy="240" r="160" fill="none" stroke-dasharray="2 6" />
+    <line x1="140" y1="240" x2="1140" y2="240" />
+    <line x1="640" y1="30" x2="640" y2="450" />
+  </g>
+
+  <!-- Centered Graphic Stage (Offset: +190 X, +10 Y) -->
+  <g transform="translate(190, 10)">
+    <!-- ==================================================== -->
+    <!-- 1. THE GAMEPLANE AIRCRAFT                            -->
+    <!-- ==================================================== -->
+    <g id="aircraft">
+      <!-- TRICOLOR THRUSTERS -->
+      <polygon points="432,340 436,430 442,340" fill="url(#blueFlame)" opacity="0.95" filter="url(#neonGlow)" />
+      <polygon points="458,340 464,430 468,340" fill="url(#redFlame)" opacity="0.95" filter="url(#neonGlow)" />
+      <polygon points="445,345 450,450 455,345" fill="url(#whiteFlame)" opacity="0.95" filter="url(#neonGlow)" />
+
+      <!-- Left Wing -->
+      <polygon points="450,60 290,270 340,325 400,305 435,335 448,320" fill="url(#stealthWingLeft)" stroke="#FF4FA3" stroke-width="1.5" stroke-linejoin="round" />
+
+      <!-- Right Wing -->
+      <polygon points="450,60 610,270 560,325 500,305 465,335 452,320" fill="url(#stealthWingRight)" stroke="#A78BFA" stroke-width="1.5" stroke-linejoin="round" />
+
+      <!-- Inner Facets -->
+      <polygon points="450,60 390,230 450,315" fill="#232128" opacity="0.85" />
+      <polygon points="450,60 510,230 450,315" fill="#2C2932" opacity="0.85" />
+
+      <!-- Spine Line -->
+      <line x1="450" y1="60" x2="450" y2="320" stroke="url(#fuselageMain)" stroke-width="2.5" stroke-linecap="round" />
+
+      <!-- Cockpit Core -->
+      <g transform="translate(450, 185)">
+        <polygon points="0,-48 15,10 0,22 -15,10" fill="#331525" stroke="#FF4FA3" stroke-width="1.5" opacity="0.95" filter="url(#neonGlow)" />
+        <circle cx="0" cy="-10" r="10" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4 4" />
+        <polygon points="0,-18 7,-6 0,6 -7,-6" fill="#ffffff" filter="url(#neonGlow)" />
+        <line x1="-12" y1="-10" x2="12" y2="-10" stroke="#ffffff" stroke-width="1.5" />
+        <line x1="0" y1="-22" x2="0" y2="2" stroke="#ffffff" stroke-width="1.5" />
+      </g>
+
+      <!-- LEFT WING: TELEMETRY -->
+      <g transform="translate(340, 240) rotate(-53.34)">
+        <g transform="translate(-42, -8)">
+          <rect x="0" y="0" width="20" height="16" rx="2" fill="#141317" stroke="#2C2932" stroke-width="1.2" />
+          <circle cx="5" cy="4" r="1.5" fill="#FF4FA3" filter="url(#neonGlow)" />
+          <circle cx="15" cy="4" r="1.5" fill="#ffffff" />
+          <circle cx="5" cy="12" r="1.5" fill="#FF4FA3" />
+          <circle cx="15" cy="12" r="1.5" fill="#ffffff" />
+        </g>
+        <text x="-18" y="-2" font-family="ui-monospace, monospace" font-size="6.5" font-weight="600" fill="#FF8AC4" letter-spacing="0.5">NODES: 63/64</text>
+        <line x1="-18" y1="1" x2="32" y2="1" stroke="#FF4FA3" stroke-width="0.8" opacity="0.6" />
+        <text x="-18" y="8" font-family="ui-monospace, monospace" font-size="6.5" font-weight="600" fill="#F5F3F7" letter-spacing="0.5">LATENCY: 14ms</text>
+      </g>
+
+      <!-- RIGHT WING: FLEET METRICS -->
+      <g transform="translate(560, 240) rotate(53.34)">
+        <text x="18" y="-2" font-family="ui-monospace, monospace" font-size="6.5" font-weight="600" fill="#A78BFA" letter-spacing="0.5" text-anchor="end">PODS: 128 RDY</text>
+        <line x1="-32" y1="1" x2="18" y2="1" stroke="#A78BFA" stroke-width="0.8" opacity="0.6" />
+        <text x="18" y="8" font-family="ui-monospace, monospace" font-size="6.5" font-weight="600" fill="#F5F3F7" letter-spacing="0.5" text-anchor="end">AUTOSCALE: OK</text>
+        <g transform="translate(30, 0)">
+          <circle cx="0" cy="0" r="8" fill="#141317" stroke="#2C2932" stroke-width="1.8" />
+          <path d="M 0 -8 A 8 8 0 0 1 8 0" fill="none" stroke="#A78BFA" stroke-width="1.8" stroke-linecap="round" />
+          <text x="0" y="2.5" font-family="system-ui, sans-serif" font-size="5" font-weight="900" fill="#ffffff" text-anchor="middle">75%</text>
+        </g>
+      </g>
+
+      <!-- FORWARD-FACING WINGTIP POD: GS-UDP-01 -->
+      <g id="port-pod">
+        <polygon points="290,250 297,260 297,285 290,295" fill="#331525" stroke="#FF4FA3" stroke-width="1" />
+        <polygon points="288,212 296,230 296,305 292,324 288,328 284,324 280,305 280,230" fill="#17151A" stroke="#FF4FA3" stroke-width="1.4" stroke-linejoin="round" />
+        <polygon points="288,214 294,232 294,303 288,318 282,303 282,232" fill="#232128" />
+        <line x1="283" y1="248" x2="293" y2="248" stroke="#2C2932" stroke-width="1.5" />
+        <line x1="283" y1="256" x2="293" y2="256" stroke="#2C2932" stroke-width="1.5" />
+        <line x1="283" y1="264" x2="293" y2="264" stroke="#2C2932" stroke-width="1.5" />
+        <line x1="283" y1="272" x2="293" y2="272" stroke="#2C2932" stroke-width="1.5" />
+        <line x1="283" y1="280" x2="293" y2="280" stroke="#2C2932" stroke-width="1.5" />
+        <polygon points="288,212 293,225 288,220 283,225" fill="#FF4FA3" filter="url(#neonGlow)" />
+        <circle cx="288" cy="292" r="1.5" fill="#ffffff" />
+        <circle cx="288" cy="299" r="1.5" fill="#FF4FA3" filter="url(#neonGlow)" />
+        <circle cx="278" cy="270" r="3.5" fill="#FF4FA3" filter="url(#neonGlow)" />
+        <text x="288" y="196" font-family="ui-monospace, monospace" font-size="7.5" font-weight="700" fill="#FF8AC4" letter-spacing="0.5" text-anchor="middle">POD: GS-UDP-01</text>
+        <line x1="265" y1="202" x2="311" y2="202" stroke="#FF4FA3" stroke-width="0.8" opacity="0.6" />
+      </g>
+
+      <!-- FORWARD-FACING WINGTIP POD: GS-UDP-02 -->
+      <g id="starboard-pod">
+        <polygon points="610,250 603,260 603,285 610,295" fill="#251833" stroke="#A78BFA" stroke-width="1" />
+        <polygon points="612,212 620,230 620,305 616,324 612,328 608,324 604,305 604,230" fill="#17151A" stroke="#A78BFA" stroke-width="1.4" stroke-linejoin="round" />
+        <polygon points="612,214 618,232 618,303 612,318 606,303 606,232" fill="#232128" />
+        <line x1="607" y1="248" x2="617" y2="248" stroke="#2C2932" stroke-width="1.5" />
+        <line x1="607" y1="256" x2="617" y2="256" stroke="#2C2932" stroke-width="1.5" />
+        <line x1="607" y1="264" x2="617" y2="264" stroke="#2C2932" stroke-width="1.5" />
+        <line x1="607" y1="272" x2="617" y2="272" stroke="#2C2932" stroke-width="1.5" />
+        <line x1="607" y1="280" x2="617" y2="280" stroke="#2C2932" stroke-width="1.5" />
+        <polygon points="612,212 617,225 612,220 607,225" fill="#A78BFA" filter="url(#neonGlow)" />
+        <circle cx="612" cy="292" r="1.5" fill="#ffffff" />
+        <circle cx="612" cy="299" r="1.5" fill="#A78BFA" filter="url(#neonGlow)" />
+        <circle cx="622" cy="270" r="3.5" fill="#A78BFA" filter="url(#neonGlow)" />
+        <text x="612" y="196" font-family="ui-monospace, monospace" font-size="7.5" font-weight="700" fill="#A78BFA" letter-spacing="0.5" text-anchor="middle">POD: GS-UDP-02</text>
+        <line x1="589" y1="202" x2="635" y2="202" stroke="#A78BFA" stroke-width="0.8" opacity="0.6" />
+      </g>
+    </g>
+
+    <!-- ==================================================== -->
+    <!-- 2. BRANDING & FOOTER                                 -->
+    <!-- ==================================================== -->
+    <g transform="translate(450, 490)">
+      <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="42" font-weight="900" letter-spacing="12" fill="#F5F3F7" text-anchor="middle">
+        GAME<tspan fill="#FF4FA3">PLANE</tspan>
+      </text>
+
+      <g transform="translate(0, 16)">
+        <line x1="-280" y1="0" x2="-30" y2="0" stroke="#FF4FA3" stroke-width="1.5" opacity="0.8" />
+        <polygon points="0,-4 4,0 0,4 -4,0" fill="#ffffff" />
+        <circle cx="0" cy="0" r="8" fill="none" stroke="#ffffff" stroke-width="1" />
+        <line x1="30" y1="0" x2="280" y2="0" stroke="#A78BFA" stroke-width="1.5" opacity="0.8" />
+      </g>
+
+      <text x="0" y="42" font-family="ui-monospace, SFMono-Regular, monospace" font-size="12" font-weight="600" letter-spacing="4" fill="#EDE9F0" text-anchor="middle">
+        KUBERNETES GAME SERVER <tspan fill="#A78BFA">CONTROL PLANE</tspan>
+      </text>
+    </g>
+  </g>
+</svg>
