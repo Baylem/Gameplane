@@ -40,17 +40,18 @@ export function matchesCategory(
   return resolveCategories(explicit, game).some((c) => c.toLowerCase() === want);
 }
 
-// matchesAnyCategory returns true when a module matches ANY of the selected
+// matchesAllCategories returns true when a module matches ALL of the selected
 // category chips. An empty selection means "no filter" (show everything).
 // Comparison is case-insensitive to agree with categoryFilters/matchesCategory.
-export function matchesAnyCategory(
+export function matchesAllCategories(
   explicit: string[] | undefined,
   game: string,
   selected: Set<string>,
 ): boolean {
   if (selected.size === 0) return true;
   const wants = new Set([...selected].map((c) => c.toLowerCase()));
-  return resolveCategories(explicit, game).some((c) => wants.has(c.toLowerCase()));
+  const resolvedLower = resolveCategories(explicit, game).map((c) => c.toLowerCase());
+  return [...wants].every((want) => resolvedLower.includes(want));
 }
 
 // categoryFilters builds the ordered chip list from the resolved categories
