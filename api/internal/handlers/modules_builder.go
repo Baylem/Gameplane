@@ -428,7 +428,7 @@ func (h modulesHandler) builderExport(w http.ResponseWriter, req *http.Request) 
 	_, _ = w.Write(archive)
 }
 
-func (h modulesHandler) builderArchetypes(w http.ResponseWriter, req *http.Request) {
+func (h modulesHandler) builderArchetypes(w http.ResponseWriter, _ *http.Request) {
 	all := archetypes.AllArchetypes()
 	if len(all) == 0 {
 		writeJSON(w, BuilderArchetypesResponse{Archetypes: []archetypes.ArchetypeDefinition{}})

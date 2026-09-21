@@ -795,7 +795,7 @@ export interface BuilderPortDef {
   name: string;
   containerPort: number;
   protocol: string;
-  advertise?: boolean;
+  advertise: boolean;
 }
 
 export interface BuilderScaffoldRequest {
@@ -866,13 +866,6 @@ export type BuilderExportRequest = BuilderArchiveRequest | BuilderInstallRequest
 export interface BuilderExportInstallResponse {
   installed: boolean;
   moduleName: string;
-}
-
-export interface BuilderPortDef {
-  name: string;
-  containerPort: number;
-  protocol: string;
-  advertise?: boolean;
 }
 
 export interface BuilderStorageDef {
