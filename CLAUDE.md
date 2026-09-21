@@ -7,15 +7,27 @@ This file provides architectural context, commands, and non-negotiable operation
 
 ---
 
-## ⏳ Start-of-Session Check: TypeScript 7 (Delete when unblocked)
+## ⏳ Start-of-Session Check: Blocked Dependency Upgrades (delete each entry when unblocked)
 
-Execute at the start of every session:
+Execute at the start of every session.
+
+### TypeScript 7
+
 ```sh
 npm view @typescript-eslint/parser@latest version peerDependencies.typescript
 npm view @typescript-eslint/parser@canary version peerDependencies.typescript
 ```
 - **Blocked:** Peer dependency range ends `<7` (e.g., `<6.1.0`). Dependabot PR #272 is blocked at `npm ci` (`ERESOLVE`). Do not attempt workarounds, overrides, or code fixes. Do not close #272.
-- **Unblocked:** Published release accepts TS 7. Fulfill tasks T055/T056 in `specs/009-remediate-security-dependabot/tasks.md`: bump `typescript` and `@typescript-eslint/*` in `web/package.json`, resolve real type errors (no `@ts-ignore`), merge #272, mark tasks `[X]`, and delete this entire section.
+- **Unblocked:** Published release accepts TS 7. Fulfill tasks T055/T056 in `specs/009-remediate-security-dependabot/tasks.md`: bump `typescript` and `@typescript-eslint/*` in `web/package.json`, resolve real type errors (no `@ts-ignore`), merge #272, mark tasks `[X]`, and delete this entry.
+
+### ESLint 10
+
+```sh
+npm view eslint-plugin-react@latest version peerDependencies.eslint
+```
+- **Blocked:** Peer dependency range does not accept `^10`. Dependabot PR #386 (`eslint` 9.39.5 → 10.x) is blocked at `npm ci` because `eslint-plugin-react@7.37.5` declares `peerDependencies.eslint: "^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9.7"` (no ESLint 10 support). Fails in ~10 seconds at step 4 of the `web` job before any test runs; `web e2e (mock)` and `design vs browser visual diff` jobs fail identically. The other ESLint plugins are already ready: `eslint-plugin-react-hooks@7.1.1`, `@typescript-eslint/eslint-plugin@8.69.0`, and `@typescript-eslint/parser@8.69.0` all accept `^10.0.0`. Do not attempt workarounds (`--legacy-peer-deps`, `overrides` blocks, pinning tricks). Do not close #386.
+  Note PR #387 (`@eslint/js` 9 → 10) is **not** blocked and its `web` jobs pass: the `eslint-plugin-react` peer range constrains `eslint` itself, not `@eslint/js`. Do not assume the two move together.
+- **Unblocked:** Published `eslint-plugin-react` accepts ESLint 10. Bump `eslint` and `@eslint/js` together in `web/package.json`, resolve any real lint errors without adding `eslint-disable`, merge #386 (and #387 if still open), and delete this entry.
 
 ---
 
