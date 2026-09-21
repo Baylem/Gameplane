@@ -15,3 +15,7 @@ var dnsLabelRE = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$`)
 // conservative alphanumeric set with limited special chars. This stops
 // homoglyph tricks and keeps names URL-safe and log-friendly.
 var identifierRE = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$`)
+
+// hexColorRE matches a 6-digit RGB hex color with a leading '#', the format
+// used by user theme custom colors (e.g. "#3B82F6").
+var hexColorRE = regexp.MustCompile(`^#([0-9a-fA-F]{6})$`)

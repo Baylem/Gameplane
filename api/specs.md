@@ -56,7 +56,7 @@ api/
 - **handlers:** 23+ route groups (Audit, AuthProviderSecrets, Capture, Cluster, ClusterActions, Clusters, Config, Destinations, Events, Lifecycle, ModIDs, ModSources, Modules, ModUpdates, Notifications, Ownership, PodEvents, Registry, RegistrySecrets, Resources, Roles, SystemLogs, Users, WebSocket Mount)
 - **auth:** SessionStore (CSRF + expiry), Local (argon2id password check), OIDC (provider registry + claim mapping), Registry (auth provider discovery per request)
 - **rbac:** Middleware (namespace/cluster-scoped permission check + owner/collaborator fallback), rule table (method/path -> permission), catalog (permission definitions)
-- **db:** driver-selectable (modernc.org/sqlite or pgx/v5 via postgres build tag), migrations (001-005), Store (query interface)
+- **db:** driver-selectable (modernc.org/sqlite or pgx/v5 via postgres build tag), migrations (001-011), Store (query interface)
 - **kube:** Client (K8s API wrapper), Registry (per-cluster clients from Cluster CRDs), watch (cluster-config sync)
 - **audit:** Auditor (insert to DB + distribute to sinks), webhook sink (POST JSON to URL), S3 sink (object storage), hash-chain (detect tampering)
 - **notify:** Notifier (watch GameServer/Backup/Restore status, format + deliver to sinks), sinks (Discord, Slack, SMTP, webhook)
@@ -130,8 +130,10 @@ The HTTP server listens on `:8000` (configurable) with these route groups:
 - `/clusters` — multi-cluster: list remote Cluster CRDs; create/delete cluster registrations
 - `/events` — SSE: real-time K8s events (multiplexed per namespace + cluster)
 - `/pod-events` — SSE: pod-level events
-- `/users/me` — GET: own profile
+- `/users/me` — GET: own profile (embeds `preferences`, see below)
 - `/users/me/servers` — GET: own GameServers (owner/collaborator)
+- `/users/me/preferences` — GET/PUT: own theme/styling preferences (feature 016)
+- `/users/me/preferences/reset` — POST: reset own theme preferences to defaults (feature 016)
 - `/users/{id}` — CRUD for users (admin only)
 - `/users/{id}/role-bindings` — PATCH: role assignments (per namespace + cluster)
 - `/roles` — GET catalog and custom roles; POST/PATCH/DELETE custom roles
@@ -260,6 +262,43 @@ All cluster-dispatch routes accept `?cluster={name}` (validates against register
 - **Immutability:** Never changes after startup, unaffected by any override (helmOverride.roleMappings changes do not appear here). Allows clients to always see what was Helm-configured vs. what was overridden.
 - **Presence:** Absent entirely when no install-time values are reportable (empty storage class, no Helm OIDC).
 
+### User theme preferences (feature 016)
+
+Per-user dashboard styling (theme preset, appearance mode, custom colors, custom CSS overlay) stored server-side so it follows the account across devices. Contract: `specs/016-user-theme-customization/contracts/user-preferences-api.md`.
+
+**Storage (migration `011_user_theme_preferences.sql`, api/internal/db/migrations/):**
+
+- `user_preferences` — 1:1 with `users`:
+  - `user_id` INTEGER PRIMARY KEY, REFERENCES `users(id)` ON DELETE CASCADE (FK enforced only on Postgres; modernc-sqlite runs with FK OFF, matching the convention noted in 003_roles.sql)
+  - `theme_type` TEXT NOT NULL DEFAULT 'preset' — base mode: `"preset"` | `"custom_colors"` (custom CSS is an independent overlay flag, not a base mode)
+  - `preset_id` TEXT NOT NULL DEFAULT 'pink' — `"pink"` | `"legacy"`
+  - `appearance_mode` TEXT NOT NULL DEFAULT 'system' — `"light"` | `"dark"` | `"system"`
+  - `custom_accent`, `custom_surface` TEXT NULL — `#RRGGBB` hex colors
+  - `custom_css_enabled` INTEGER NOT NULL DEFAULT 0 — overlay on/off flag
+  - `custom_css` TEXT NULL — sanitized stylesheet (max 32 KiB, see FR-013 below)
+  - `updated_at` TEXT NOT NULL (application-generated RFC3339 UTC in Go)
+  - Index `idx_user_preferences_user` on `user_id`
+- **Backfill (FR-003, SC-001):** every user existing at migration time is initialized with the legacy preset (`INSERT ... SELECT id, 'preset', 'legacy', 'system' FROM users`), preserving the pre-feature orange appearance on upgrade. Accounts created afterwards rely on column defaults plus the code-level `db.DefaultUserPreferences()` (pink preset, system appearance, overlay off) returned by `Store.GetPreferences` when no row exists.
+- **Store layer (api/internal/db/preferences.go):** `GetPreferences` (returns `DefaultUserPreferences()` on no row), `UpsertPreferences` (full-row replace — the caller owns merge/retention semantics), `ResetPreferences` (the single operation that NULLs the custom columns). Enum validation and CSS sanitization live in the handlers, not the store.
+
+**Endpoints (mounted in `MountUsers`, all require a valid session — any authenticated user manages their own styling; no RBAC permission beyond authentication):**
+
+- **GET `/users/me/preferences`** — returns the effective preferences object `{themeType, presetId, appearanceMode, customColors, customCssEnabled, customCss, updatedAt}`; a user without a stored row gets the defaults (pink/system/nulls). 401 when unauthenticated.
+- **PUT `/users/me/preferences`** — handler-level merge (FR-012). Required: `themeType` (enum), `presetId` (`"pink" | "legacy"`), `appearanceMode` (enum), `customCssEnabled` (bool). Optional: `customColors` (`accent`/`surface`, each validated against `^#([0-9a-fA-F]{6})$`), `customCss` (sanitized per FR-013). The handler reads the stored row and applies only the fields present in the body, so omitted custom fields keep their stored values — an ordinary update (preset switch, overlay toggle) can never null them. 400 names the offending field/rule; 401 unauthenticated; 403 CSRF mismatch.
+- **POST `/users/me/preferences/reset`** — the **only** operation that deletes stored custom settings (FR-012): NULLs `custom_accent`/`custom_surface`/`custom_css`, sets `custom_css_enabled = 0` and `theme_type = 'preset'`. Optional body `{presetId?, appearanceMode?}` (each validated; omitted fields resolve to the user's current values). Returns the resulting preferences object.
+- **GET `/users/me`** — embeds `preferences` in the profile payload (`userDTO.Preferences`) so the dashboard can apply the theme without a second round-trip on boot. Not present on other user payloads.
+
+**FR-013 custom CSS sanitization (authoritative enforcement gate, `sanitizeCustomCSS` in api/internal/handlers/users.go):**
+
+A submitted stylesheet is rejected with 400 and a message naming the offending rule when it:
+- exceeds 32,768 characters (32 KiB);
+- contains an `@import` rule;
+- contains an external `url()` reference (absolute `http://`/`https://` or protocol-relative `//host/...`, remote fonts included) — inline `data:` URIs are permitted;
+- has unbalanced `{`/`}` braces;
+- contains `<style`, `</style`, `<script`, or `</script` (DOM-escape defense against breaking out of the `<style>` element).
+
+**FR-012 retention invariant:** `custom_accent`, `custom_surface`, and `custom_css` survive preset switches and overlay toggles; only the reset endpoint clears them. Client contract: ordinary updates omit optional custom fields rather than sending explicit nulls.
+
 ### Capture operation auditing
 
 **Scope — which operations are audited** (per T010, specs/done_003-network-capture-sidecar/research.md):
@@ -373,7 +412,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 2. **Every mutating request audited:** audit middleware logs actor, method, path, target, status, IP to database + external sinks
 3. **Three-role baseline RBAC:** admin/operator/viewer roles reproduce historical permission matrix exactly
 4. **Multi-dimensional RBAC:** namespace + cluster + owner/collaborator dimensions; cluster gating prevents cross-cluster privilege escalation
-5. **Append-only migrations:** database schema mutations are irreversible (migrations 001-008); no down-migrations
+5. **Append-only migrations:** database schema mutations are irreversible (migrations 001-011); no down-migrations
 6. **Login rate limiting:** per-IP (burst 10, 5/min) + per-user (burst 6, 3/min) on `/auth/login` + OIDC callback
 7. **Audit hash-chain:** each audit_events row includes hash of previous row (prev_hash) + its own content hash (hash); detects DB-level UPDATE/DELETE tampering
 8. **Audit pagination is bounded:** The `Auditor.Page(ctx, limit)` method clamps the untrusted `limit` parameter to a maximum of 500 entries (`MaxAuditPageSize`). Clamping occurs at both the API handler layer (api/internal/handlers/audit.go line 25) and the store layer (api/internal/audit/audit.go lines 820–822) so untrusted input is bounded at the earliest opportunity and again at use time. The allocated slice is always created with capacity within the bound (`make([]Event, 0, limit)` after clamping), guaranteeing that no untrusted client input can cause unbounded memory allocation regardless of how the limit value flows through the system.
@@ -416,7 +455,7 @@ Verify from `/api/go.mod`.
 - Driver selected at startup via `--db-driver` (sqlite|postgres) + `--db-dsn`
 - Migrations run automatically on startup (`store.Migrate(ctx)`)
 
-### Schema (migrations 001-008)
+### Schema (migrations 001-011)
 
 **001_init.sql:**
 - `users` — username (unique), email, display_name, pw_hash (argon2id), role (legacy, now via role_bindings), created_at, updated_at
@@ -462,6 +501,11 @@ Verify from `/api/go.mod`.
 - Removes the previous fixed 90-day maximum lifetime (`MaxShareLinkExpiryDays`) from both the store (`CreateShareLink`) and the handler; the only remaining store-side check is that a non-nil `expiresAt` must be strictly in the future
 - `POST /servers/{name}:shares` request body now carries exactly one of `expiresAt` (RFC3339 instant, client-computed) or `neverExpires: true`; a request with neither or both is rejected 400. The response's `expiresAt` is an RFC3339 string, or JSON `null` for a never-expiring link.
 - `expiresIn` (a Go duration string) is **deprecated** and kept working for one release only: it is honored only when neither `expiresAt` nor `neverExpires` is present, and its 7-day default for an omitted/empty value applies only on this legacy path
+
+**011_user_theme_preferences.sql:** (per-user theme customization, feature 016)
+- Creates `user_preferences` (1:1 with `users`): base mode (`theme_type`), preset (`preset_id`), appearance mode, nullable custom colors (`custom_accent`/`custom_surface`), custom CSS overlay flag + sanitized text, `updated_at`; index `idx_user_preferences_user`
+- Backfills every pre-existing user with the legacy preset (`preset_id = 'legacy'`, dark-preserving upgrade per FR-003); accounts created later default to pink via column defaults + `db.DefaultUserPreferences()`
+- Retention rule (FR-012): the custom columns are nulled only by the reset endpoint, never by ordinary updates (see "User theme preferences" under External interface / contracts)
 
 All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); API layer is authoritative.
 

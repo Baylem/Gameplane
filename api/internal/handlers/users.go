@@ -5,10 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/mail"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -25,6 +29,9 @@ func MountUsers(r chi.Router, store *db.Store, sessions *auth.SessionStore, clus
 		r.Get("/", h.list)
 		r.Post("/", h.create)
 		r.Get("/me", h.me)
+		r.Get("/me/preferences", h.getPreferences)
+		r.Put("/me/preferences", h.putPreferences)
+		r.Post("/me/preferences/reset", h.resetPreferences)
 		r.Delete("/{id}", h.del)
 		r.Patch("/{id}", h.update)
 		r.Post("/{id}/reset-password", h.resetPassword)
@@ -54,6 +61,10 @@ type userDTO struct {
 	// namespace ("*" = cluster-wide). Populated only on /users/me; it
 	// drives the dashboard's can()-based UI gating.
 	Permissions map[string][]string `json:"permissions,omitempty"`
+	// Preferences is the caller's theme/styling preferences. Populated only
+	// on /users/me so the dashboard can apply the theme without a second
+	// round-trip on boot (contracts/user-preferences-api.md §1.4).
+	Preferences *userPreferencesDTO `json:"preferences,omitempty"`
 }
 
 func (h *userHandler) list(w http.ResponseWriter, req *http.Request) {
@@ -162,10 +173,266 @@ func (h *userHandler) me(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
+	prefs, err := h.db.GetPreferences(req.Context(), u.ID)
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
+	}
 	writeJSON(w, userDTO{
 		ID: u.ID, Username: u.Username, DisplayName: u.DisplayName,
 		Email: u.Email, Role: u.Role, Permissions: auth.PermsToJSON(u.Perms),
+		Preferences: preferencesDTO(prefs),
 	})
+}
+
+// customColorsDTO is the optional custom color pair applied when the base
+// mode is custom_colors.
+type customColorsDTO struct {
+	Accent  string `json:"accent"`
+	Surface string `json:"surface"`
+}
+
+// userPreferencesDTO is the API shape of a user's theme/styling preferences
+// (contracts/user-preferences-api.md §1).
+type userPreferencesDTO struct {
+	ThemeType        string           `json:"themeType"`
+	PresetID         string           `json:"presetId"`
+	AppearanceMode   string           `json:"appearanceMode"`
+	CustomColors     *customColorsDTO `json:"customColors"`
+	CustomCSSEnabled bool             `json:"customCssEnabled"`
+	CustomCSS        *string          `json:"customCss"`
+	UpdatedAt        string           `json:"updatedAt"`
+}
+
+func preferencesDTO(p db.UserPreferences) *userPreferencesDTO {
+	out := &userPreferencesDTO{
+		ThemeType:        p.ThemeType,
+		PresetID:         p.PresetID,
+		AppearanceMode:   p.AppearanceMode,
+		CustomCSSEnabled: p.CustomCSSEnabled,
+		CustomCSS:        p.CustomCSS,
+		UpdatedAt:        p.UpdatedAt,
+	}
+	if p.CustomAccent != nil || p.CustomSurface != nil {
+		out.CustomColors = &customColorsDTO{}
+		if p.CustomAccent != nil {
+			out.CustomColors.Accent = *p.CustomAccent
+		}
+		if p.CustomSurface != nil {
+			out.CustomColors.Surface = *p.CustomSurface
+		}
+	}
+	return out
+}
+
+// FR-013 custom CSS limits (contracts/user-preferences-api.md §1.2). A
+// rejected stylesheet returns 400 with a message naming the offending rule.
+const maxCustomCSSLen = 32768
+
+var (
+	// cssImportRE matches an @import rule anywhere in the stylesheet.
+	cssImportRE = regexp.MustCompile(`(?i)@import\b`)
+	// cssURLRE captures the reference inside each url(...) so it can be
+	// inspected; surrounding quotes are optional and excluded.
+	cssURLRE = regexp.MustCompile(`(?i)url\(\s*["']?([^"')]*)["']?\s*\)`)
+)
+
+// sanitizeCustomCSS applies the FR-013 rules to a submitted stylesheet,
+// returning "" when the CSS is acceptable or a caller-safe message naming
+// the offending rule. It rejects oversized payloads, @import rules,
+// external url() references (absolute http(s) or protocol-relative, remote
+// fonts included) while allowing inline data: URIs, unbalanced braces, and
+// anything smuggling HTML <style>/<script> delimiters.
+func sanitizeCustomCSS(css string) string {
+	if len(css) > maxCustomCSSLen {
+		return fmt.Sprintf("customCss rejected: exceeds the maximum length of %d characters", maxCustomCSSLen)
+	}
+	if cssImportRE.MatchString(css) {
+		return "customCss rejected: @import rules are not allowed"
+	}
+	for _, m := range cssURLRE.FindAllStringSubmatch(css, -1) {
+		ref := strings.TrimSpace(m[1])
+		lower := strings.ToLower(ref)
+		if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") || strings.HasPrefix(ref, "//") {
+			return fmt.Sprintf("customCss rejected: external url() reference '%s' is not allowed", ref)
+		}
+	}
+	if strings.Count(css, "{") != strings.Count(css, "}") {
+		return "customCss rejected: unbalanced braces"
+	}
+	lower := strings.ToLower(css)
+	for _, d := range []string{"<style", "</style", "<script", "</script"} {
+		if strings.Contains(lower, d) {
+			return fmt.Sprintf("customCss rejected: HTML delimiter %q is not allowed", d)
+		}
+	}
+	return ""
+}
+
+func (h *userHandler) getPreferences(w http.ResponseWriter, req *http.Request) {
+	u := auth.UserFromContext(req.Context())
+	if u == nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	prefs, err := h.db.GetPreferences(req.Context(), u.ID)
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
+	}
+	writeJSON(w, preferencesDTO(prefs))
+}
+
+// updatePreferencesReq carries a PUT merge: nil means "leave unchanged".
+// themeType/presetId/appearanceMode/customCssEnabled are required; the
+// optional customColors/customCss fields keep their stored values when
+// omitted (FR-012 retention — only reset clears them).
+type updatePreferencesReq struct {
+	ThemeType        *string          `json:"themeType"`
+	PresetID         *string          `json:"presetId"`
+	AppearanceMode   *string          `json:"appearanceMode"`
+	CustomColors     *customColorsReq `json:"customColors"`
+	CustomCSSEnabled *bool            `json:"customCssEnabled"`
+	CustomCSS        *string          `json:"customCss"`
+}
+
+type customColorsReq struct {
+	Accent  *string `json:"accent"`
+	Surface *string `json:"surface"`
+}
+
+func (h *userHandler) putPreferences(w http.ResponseWriter, req *http.Request) {
+	u := auth.UserFromContext(req.Context())
+	if u == nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	var body updatePreferencesReq
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	if body.ThemeType == nil {
+		http.Error(w, "themeType is required", http.StatusBadRequest)
+		return
+	}
+	if *body.ThemeType != "preset" && *body.ThemeType != "custom_colors" {
+		http.Error(w, `themeType must be "preset" or "custom_colors"`, http.StatusBadRequest)
+		return
+	}
+	if body.PresetID == nil {
+		http.Error(w, "presetId is required", http.StatusBadRequest)
+		return
+	}
+	if *body.PresetID != "pink" && *body.PresetID != "legacy" {
+		http.Error(w, `presetId must be "pink" or "legacy"`, http.StatusBadRequest)
+		return
+	}
+	if body.AppearanceMode == nil {
+		http.Error(w, "appearanceMode is required", http.StatusBadRequest)
+		return
+	}
+	if *body.AppearanceMode != "light" && *body.AppearanceMode != "dark" && *body.AppearanceMode != "system" {
+		http.Error(w, `appearanceMode must be "light", "dark" or "system"`, http.StatusBadRequest)
+		return
+	}
+	if body.CustomCSSEnabled == nil {
+		http.Error(w, "customCssEnabled is required", http.StatusBadRequest)
+		return
+	}
+	if body.CustomColors != nil {
+		if body.CustomColors.Accent != nil && !hexColorRE.MatchString(*body.CustomColors.Accent) {
+			http.Error(w, "customColors.accent must be a #RRGGBB hex color", http.StatusBadRequest)
+			return
+		}
+		if body.CustomColors.Surface != nil && !hexColorRE.MatchString(*body.CustomColors.Surface) {
+			http.Error(w, "customColors.surface must be a #RRGGBB hex color", http.StatusBadRequest)
+			return
+		}
+	}
+	if body.CustomCSS != nil {
+		if msg := sanitizeCustomCSS(*body.CustomCSS); msg != "" {
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+	}
+
+	// FR-012 retention: read the stored row (or defaults), then apply only
+	// the fields present in the body. Omitted customColors/customCss ride
+	// along with their stored values; an ordinary update can never null them.
+	prefs, err := h.db.GetPreferences(req.Context(), u.ID)
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
+	}
+	prefs.ThemeType = *body.ThemeType
+	prefs.PresetID = *body.PresetID
+	prefs.AppearanceMode = *body.AppearanceMode
+	prefs.CustomCSSEnabled = *body.CustomCSSEnabled
+	if body.CustomColors != nil {
+		if body.CustomColors.Accent != nil {
+			prefs.CustomAccent = body.CustomColors.Accent
+		}
+		if body.CustomColors.Surface != nil {
+			prefs.CustomSurface = body.CustomColors.Surface
+		}
+	}
+	if body.CustomCSS != nil {
+		prefs.CustomCSS = body.CustomCSS
+	}
+	saved, err := h.db.UpsertPreferences(req.Context(), u.ID, prefs)
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
+	}
+	writeJSON(w, preferencesDTO(saved))
+}
+
+// resetPreferencesReq carries the optional preset/appearance to restore;
+// nil fields default to the user's current values.
+type resetPreferencesReq struct {
+	PresetID       *string `json:"presetId"`
+	AppearanceMode *string `json:"appearanceMode"`
+}
+
+func (h *userHandler) resetPreferences(w http.ResponseWriter, req *http.Request) {
+	u := auth.UserFromContext(req.Context())
+	if u == nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	var body resetPreferencesReq
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	// Resolve the target preset/appearance from the body, defaulting to the
+	// user's current values when omitted (contracts §1.3).
+	prefs, err := h.db.GetPreferences(req.Context(), u.ID)
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
+	}
+	if body.PresetID != nil {
+		if *body.PresetID != "pink" && *body.PresetID != "legacy" {
+			http.Error(w, `presetId must be "pink" or "legacy"`, http.StatusBadRequest)
+			return
+		}
+		prefs.PresetID = *body.PresetID
+	}
+	if body.AppearanceMode != nil {
+		if *body.AppearanceMode != "light" && *body.AppearanceMode != "dark" && *body.AppearanceMode != "system" {
+			http.Error(w, `appearanceMode must be "light", "dark" or "system"`, http.StatusBadRequest)
+			return
+		}
+		prefs.AppearanceMode = *body.AppearanceMode
+	}
+	saved, err := h.db.ResetPreferences(req.Context(), u.ID, prefs.PresetID, prefs.AppearanceMode)
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
+	}
+	writeJSON(w, preferencesDTO(saved))
 }
 
 func (h *userHandler) del(w http.ResponseWriter, req *http.Request) {
