@@ -135,11 +135,11 @@ describe("ModulesPage", () => {
     expect(screen.getByText("Minecraft (Java)")).toBeInTheDocument();
     expect(screen.queryByText("Valheim")).toBeNull();
 
-    // Click Survival to show modules in either Sandbox or Survival
+    // Click Survival to show only modules with both Sandbox AND Survival
     const survivalBtn = screen.getByRole("button", { name: "Survival" });
     await userEvent.click(survivalBtn);
     expect(screen.getByText("Minecraft (Java)")).toBeInTheDocument();
-    expect(screen.getByText("Valheim")).toBeInTheDocument();
+    expect(screen.queryByText("Valheim")).not.toBeInTheDocument();
   });
 
   it("shows modules matching all of the selected categories (multi-select AND)", async () => {
