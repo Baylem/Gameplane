@@ -406,6 +406,13 @@ input:-webkit-autofill:focus {
   width: fit-content;
 }
 
+/* Vertical tab list (Settings submenu) only: use modest radius (8px) instead
+   of the pill radius (999px) that works for horizontal segmented controls.
+   Scoped to vertical orientation to preserve the horizontal pill shape. */
+.tabs__list[data-orientation="vertical"] {
+  border-radius: 8px;
+}
+
 .tabs__list.w-fit {
   min-width: fit-content;
 }
