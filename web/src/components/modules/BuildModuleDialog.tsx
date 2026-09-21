@@ -67,7 +67,6 @@ const ARCHETYPE_PRESETS = [
     defaultImage: "ghcr.io/valgulnecron/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7",
     defaultPorts: [{ name: "game", containerPort: 27015, protocol: "UDP", advertise: true }],
     defaultStorage: { size: "20Gi", mountPath: "/home/steam/cs2-data" },
-    defaultCategories: ["Shooter", "Co-op"],
   },
   {
     id: "java",
@@ -77,7 +76,6 @@ const ARCHETYPE_PRESETS = [
     defaultImage: "itzg/minecraft-server:java21@sha256:1111111111111111111111111111111111111111111111111111111111111111",
     defaultPorts: [{ name: "game", containerPort: 25565, protocol: "TCP", advertise: true }],
     defaultStorage: { size: "10Gi", mountPath: "/data" },
-    defaultCategories: ["Survival", "Sandbox"],
   },
   {
     id: "generic",
@@ -87,7 +85,6 @@ const ARCHETYPE_PRESETS = [
     defaultImage: "ghcr.io/valgulnecron/custom-game:v1.0@sha256:2222222222222222222222222222222222222222222222222222222222222222",
     defaultPorts: [{ name: "game", containerPort: 7777, protocol: "UDP", advertise: true }],
     defaultStorage: { size: "5Gi", mountPath: "/server" },
-    defaultCategories: ["Co-op"],
   },
 ];
 
@@ -107,7 +104,8 @@ export function BuildModuleDialog({
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [summary, setSummary] = useState("");
-  const [categories, setCategories] = useState<string[]>(["Shooter"]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState("");
 
   const [image, setImage] = useState("");
   const [ports, setPorts] = useState<BuilderPortDef[]>([
@@ -133,6 +131,7 @@ export function BuildModuleDialog({
   const nameInputId = useId();
   const displayNameInputId = useId();
   const summaryInputId = useId();
+  const customTagInputId = useId();
   const imageInputId = useId();
   const storageSizeInputId = useId();
   const storageMountPathInputId = useId();
@@ -149,7 +148,8 @@ export function BuildModuleDialog({
       setName("");
       setDisplayName("");
       setSummary("");
-      setCategories(["Shooter"]);
+      setCategories([]);
+      setCustomTagInput("");
       setImage("ghcr.io/valgulnecron/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7");
       setPorts([{ name: "game", containerPort: 27015, protocol: "UDP", advertise: true }]);
       setStorageSize("20Gi");
@@ -173,7 +173,6 @@ export function BuildModuleDialog({
       setPorts(preset.defaultPorts.map((p) => ({ ...p })));
       setStorageSize(preset.defaultStorage.size);
       setStorageMountPath(preset.defaultStorage.mountPath);
-      setCategories([...preset.defaultCategories]);
     }
   }
 
@@ -183,6 +182,15 @@ export function BuildModuleDialog({
     } else {
       setCategories([...categories, cat]);
     }
+  }
+
+  function addCustomTag(tag: string) {
+    const trimmed = tag.trim();
+    if (!trimmed || categories.includes(trimmed)) {
+      return;
+    }
+    setCategories([...categories, trimmed]);
+    setCustomTagInput("");
   }
 
   function addPort() {
@@ -496,7 +504,10 @@ export function BuildModuleDialog({
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-fg">Categories</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-fg">Categories</label>
+                      <span className="text-[11px] text-muted">Recommended</span>
+                    </div>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {CANONICAL_CATEGORIES.map((cat) => {
                         const active = categories.includes(cat);
@@ -517,6 +528,55 @@ export function BuildModuleDialog({
                         );
                       })}
                     </div>
+
+                    {/* Custom tag input */}
+                    <div className="mt-3 flex gap-2">
+                      <Input
+                        id={customTagInputId}
+                        value={customTagInput}
+                        onChange={(e) => setCustomTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addCustomTag(customTagInput);
+                          }
+                        }}
+                        placeholder="Add custom tag..."
+                        className="text-xs"
+                        aria-label="Custom tag input"
+                      />
+                      <Button
+                        size="sm"
+                        onPress={() => addCustomTag(customTagInput)}
+                        isDisabled={busy || !customTagInput.trim()}
+                        className="h-10"
+                        aria-label="Add tag"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    {/* Selected tags (custom only) */}
+                    {categories.filter((c) => !CANONICAL_CATEGORIES.includes(c)).length > 0 && (
+                      <>
+                        <div className="text-xs font-medium text-fg mt-3">Selected Tags</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {categories
+                            .filter((c) => !CANONICAL_CATEGORIES.includes(c))
+                            .map((cat) => (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => toggleCategory(cat)}
+                                disabled={busy}
+                                className="rounded-full px-2.5 py-1 text-xs bg-primary text-primary-fg font-medium transition-colors hover:opacity-80"
+                              >
+                                {cat} ×
+                              </button>
+                            ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
