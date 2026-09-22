@@ -102,7 +102,7 @@ A power user or system administrator wants granular control over fonts, layout s
 
 ### Edge Cases
 
-- **Broken or Malicious Custom CSS**: A user inputs CSS that makes text invisible (e.g. black text on black background), hides modal action buttons, or includes disruptive animations. The system must provide an accessible escape hatch / safe recovery mechanism — a URL query parameter as the guaranteed path, a keyboard shortcut as a convenience, and a safe-mode sign-in link on the login page (FR-009) — to disable custom CSS and revert to defaults.
+- **Broken or Malicious Custom CSS**: A user inputs CSS that makes text invisible (e.g. black text on black background), hides the settings page's action buttons, or includes disruptive animations. The system must provide an accessible escape hatch / safe recovery mechanism — a URL query parameter as the guaranteed path, a keyboard shortcut as a convenience, and a safe-mode sign-in link on the login page (FR-009) — to disable custom CSS and revert to defaults.
 - **Remote Content in Custom CSS**: CSS referencing external resources (`@import`, external `url()`, remote fonts) is rejected at save time with a validation message identifying the offending rule; users may instead paste third-party CSS content inline within the 32 KB cap (FR-013) if they see fit.
 - **Base Theme Switch with Active Custom CSS**: When a user switches the base theme (preset or custom colors) while the custom CSS overlay is enabled, elements not targeted by custom CSS adopt the new base styles immediately, while customized elements retain their custom appearance because the overlay remains last in the cascade.
 - **Extreme Contrast / Incompatible Custom Colors**: A user picks an accent color identical to the background surface. The system should provide accessible contrast indicators or minimum contrast guards to prevent illegible buttons or text.
@@ -179,6 +179,11 @@ A power user or system administrator wants granular control over fonts, layout s
 - Q: Which concrete mechanism should trigger the safe mode that disables broken custom CSS? → A: Option D plus login-page entry: a URL query parameter (e.g. `?safe-mode=1`) as the guaranteed recovery path, a keyboard shortcut as a convenience, and a safe-mode sign-in link on the login page — a guaranteed-clean surface because custom CSS never executes there (FR-011) — that starts the authenticated session with the custom CSS overlay suspended.
 - Q: When a user switches away from a custom setup — changes the base preset, or toggles the custom CSS overlay off — should their custom colors and CSS text be kept in their profile or discarded? → A: Retain until explicit reset (Option A): switching presets or disabling the custom CSS overlay keeps `customColors`/`customCss` stored but inactive; only the explicit "Reset to Default Preset" action (FR-012) deletes them.
 - Q: Which of these commonly associated capabilities should be explicitly declared out of scope for this feature? → A: Include export/import only (Option B): users can export their complete theme configuration (preset, custom colors, custom CSS) as portable JSON text and import it on another Gameplane instance; theme sharing galleries, admin-enforced default themes, and per-server or per-page themes are out of scope.
+
+### Session 2026-09-22
+
+- Q: Since custom colors have no on/off toggle, how are they activated and deactivated? → A: A third "Custom colors" radio card in the Preset theme card: selecting it sets `themeType` to `custom_colors`; selecting Modern Pink or Legacy Orange sets `themeType` back to `preset`. The Custom colors card's controls are disabled (stored values visible but greyed) unless the Custom colors radio is selected. Stored customs are retained across switches (FR-012).
+- Q: Is the theme UI a modal or a page? → A (operator design decision): a full settings page at `/settings/theme` — app shell + settings navigation column (with a new "Theme" entry after "General") + stacked section cards (Preset theme / Appearance mode / Custom colors / Custom CSS / Export-Import) — replacing the originally specified `ThemeSettingsModal`.
 
 ---
 

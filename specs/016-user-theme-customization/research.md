@@ -233,6 +233,8 @@ Users can export their complete theme configuration as portable JSON text and im
 4. **Enforcement gate**: The server-side PUT validation and FR-013 sanitization are authoritative — an imported stylesheet containing `@import` or external `url()` references is rejected exactly as if typed by hand. Import therefore cannot bypass sanitization.
 5. **Scope boundaries**: Theme sharing galleries, admin-enforced default themes, and per-server/per-page themes are explicitly out of scope.
 
+**Revision (2026-09-22)**: The operator replaced the Theme Settings modal with a full settings page at route `/settings/theme` (standard app shell: sidebar + top bar + page header; Presets / Custom Colors / Custom CSS / Export as in-page tabs per contracts/theme-ui.md). The export/import format and flows above are unchanged — copy/download and paste/file-upload now live in the page's Export / Import tab.
+
 **Alternatives Considered**:
 - *Dedicated server export/import endpoints*: Rejected as unnecessary — export is a re-serialization of data the client already holds, and import must pass through PUT validation anyway.
 - *Import applying raw CSS without sanitization*: Rejected outright (FR-014 requires imported CSS to pass FR-013).
@@ -244,8 +246,8 @@ Users can export their complete theme configuration as portable JSON text and im
 | Constitution Principle | Compliance Assessment |
 |---|---|
 | **I. E2E-Tested Delivery** | Playwright live specs in `web/e2e/specs/live/theme-customization.spec.ts` will test preset switching, migration defaults, persistence across reloads, custom colors, overlay cascade priority across base switches, retention after toggles, safe-mode recovery via URL parameter and login-page link, sanitization rejection, and export/import round-trip. Tests call `t.Parallel()` equivalents per project e2e conventions with unique resource names. |
-| **II. Design-First** | The Theme Settings modal, appearance controls, Safe Mode banner, export/import controls, and the login-page safe-mode link will be mapped and designed in `design.pen` via the Pencil MCP server before code implementation, with exports to `design-export/`. |
+| **II. Design-First** | The theme settings page at `/settings/theme`, appearance controls, Safe Mode banner, export/import controls, and the login-page safe-mode link will be mapped and designed in `design.pen` via the Pencil MCP server before code implementation, with exports to `design-export/`. |
 | **III. Language & Ecosystem** | Strict TypeScript; Go handlers wrapped with `%w`; zero suppression directives (`//nolint`, `// @ts-ignore`). |
 | **IV. Spec-Driven Development** | Follows spec -> clarify -> plan -> research -> data-model -> contracts -> quickstart. `web/specs.md` and `api/specs.md` will be updated in the same change as the implementation. |
-| **V. Delegate to Workflows** | Tasks will be decomposed into independent subagent units (API/DB slice, token slice, overlay/sanitization slice, UI modal slice, export/import slice, E2E slice). |
+| **V. Delegate to Workflows** | Tasks will be decomposed into independent subagent units (API/DB slice, token slice, overlay/sanitization slice, UI settings-page slice, export/import slice, E2E slice). |
 | **VI. CI Bears the Heavy Lifting** | Verified on GitHub Actions CI; local checks limited to `go build ./...` and `tsc --noEmit`. |

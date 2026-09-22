@@ -1,8 +1,8 @@
 # Contract: Theme Customization UI
 
 **Feature**: `016-user-theme-customization`  
-**Binding Modules**: `web/src/components/ui/ThemeSettingsModal.tsx`, `web/src/components/ui/TopBar.tsx`, `web/src/components/ui/Sidebar.tsx`, `web/src/components/ui/SafeModeBanner.tsx`, `web/src/routes/Login.tsx`  
-**Status**: Binding (revised 2026-09-21 after clarification session 2026-09-21)  
+**Binding Modules**: `web/src/routes/ThemeSettings.tsx`, `web/src/components/ui/TopBar.tsx`, `web/src/components/ui/Sidebar.tsx`, `web/src/components/ui/SafeModeBanner.tsx`, `web/src/routes/Login.tsx`  
+**Status**: Binding (revised 2026-09-22: ThemeSettingsModal replaced by a full settings page at route `/settings/theme`, matching the other `Screen/* Settings` designs; revised 2026-09-21 after clarification session 2026-09-21)  
 
 ---
 
@@ -13,7 +13,7 @@
 The user avatar dropdown in `TopBar.tsx` gains a dedicated item:
 - **Label**: `"Theme & Appearance"`
 - **Icon**: `Palette` (from `lucide-react`)
-- **Action**: Opens `ThemeSettingsModal`
+- **Action**: Navigates to the theme settings page (`/settings/theme`)
 
 ```text
 +------------------------------+
@@ -29,7 +29,7 @@ The user avatar dropdown in `TopBar.tsx` gains a dedicated item:
 
 The `Sidebar.tsx` footer appearance row is enhanced:
 - Retains the quick light/dark/system mode toggle (`AppearanceToggle`).
-- Adds a small settings icon button (`Palette` or `Sliders`) with `aria-label="Customize theme"` that also opens `ThemeSettingsModal`.
+- Adds a small settings icon button (`Palette` or `Sliders`) with `aria-label="Customize theme"` that also navigates to `/settings/theme`.
 
 ### 1.3 Login Page Safe-Mode Link
 
@@ -40,54 +40,62 @@ The `Sidebar.tsx` footer appearance row is enhanced:
 
 ---
 
-## 2. Theme Settings Modal Structure
+## 2. Theme Settings Page Structure
 
-Composed entirely from HeroUI primitives (`Modal`, `ModalHeader`, `ModalBody`, `ModalFooter`, `Tabs`, `Tab`, `Button`, `RadioGroup`, `Radio`, `Input`, `Textarea`, `Alert`):
+The theme settings UI is a full settings page at route `/settings/theme`, rendered inside the standard app shell (App Sidebar + Top Bar + Page Header) exactly like the other `Screen/* Settings` designs (e.g. `Screen/Admin Settings`). Breadcrumb: `gameplane › Settings › Theme & Appearance`. Page title: `"Theme & Appearance"`.
+
+Composed entirely from HeroUI primitives (`Button`, `RadioGroup`, `Radio`, `Input`, `Textarea`, `Switch`, `Alert`, `Link`) inside the standard page layout. All sections live on **one scrollable page as stacked cards** in a single constrained content column (no sub-navigation, no tabs) — the simple-page convention used by screens like `Screen/Backups — Index`. Section order: **Preset theme**, **Appearance mode**, **Custom colors**, **Custom CSS**, **Export / Import**. Each section is a standard bordered settings card (title + subtitle + fields). The actions row sits at the bottom of the page: destructive **Reset to Defaults** on the left, primary **Save** on the right (changes apply live for preview; **Save** persists to the server).
 
 ```text
 +-------------------------------------------------------------+
-| Theme & Appearance                                      [X] |
+| gameplane > Settings > Theme & Appearance                   |
+| Theme & Appearance                                          |
 +-------------------------------------------------------------+
-| [ Presets ]  [ Custom Colors ]  [ Custom CSS ]  [ Export ]  |
-|-------------------------------------------------------------|
-| Choose a preset theme:                                      |
-|                                                             |
-| +-------------------------+     +-------------------------+ |
-| | (o) Modern Pink         |     | ( ) Legacy Orange       | |
-| | [Pink Swatch]           |     | [Orange Swatch]         | |
-| | Modern HeroUI brand     |     | Original Gameplane      | |
-| +-------------------------+     +-------------------------+ |
-|                                                             |
-| Appearance Mode:                                            |
-| [ ( ) Light  (o) Dark  ( ) System ]                         |
-+-------------------------------------------------------------+
-| [Reset to Defaults]                       [Cancel]  [Save]  |
+| +-- Preset theme ------------------------------------------+|
+| | (o) Modern Pink [swatch]   ( ) Legacy Orange [swatch]    ||
+| | "Your custom colors and CSS are kept ..."                ||
+| +-----------------------------------------------------------+
+| +-- Appearance mode ---------------------------------------+|
+| | [ ( ) Light   (o) Dark   ( ) System ]                    ||
+| +-----------------------------------------------------------+
+| +-- Custom colors -----------------------------------------+|
+| | Accent swatches ... Surface Tone radios ... preview chip ||
+| +-----------------------------------------------------------+
+| +-- Custom CSS --------------------------------------------+|
+| | [x] Enable custom CSS overlay   [textarea]  X / 32,768   ||
+| +-----------------------------------------------------------+
+| +-- Export / Import ---------------------------------------+|
+| | [Copy] [Download]   paste area / file picker  [Apply]    ||
+| +-----------------------------------------------------------+
+| [Reset to Defaults]                                    [Save]|
 +-------------------------------------------------------------+
 ```
 
 ---
 
-## 3. Tabs & Controls
+## 3. Sections & Controls
 
-### 3.1 Tab 1: Presets (`preset`)
+### 3.1 Section 1: Presets (`preset`)
 
-- Shows two interactive radio cards:
+- **Preset theme** card shows three interactive radio cards:
   - **Modern Pink** (`presetId: "pink"`): Shows pink accent swatch (`#FF4FA3`) and dark preview swatch (`#1C1A20`).
   - **Legacy Orange** (`presetId: "legacy"`): Shows orange accent swatch (`#F97316`) and classic dark preview swatch (`#171717`).
-- Appearance mode selector: Segmented control for Light / Dark / System.
+  - **Custom colors** (`themeType: "custom_colors"`): Activates the user's stored custom colors (palette/spectrum swatch). Selecting it sets `themeType` to `custom_colors`; selecting either preset sets `themeType` back to `preset`.
+- The **Appearance mode** selector (segmented control for Light / Dark / System) is its own card directly below Preset theme.
 - Selecting a preset never discards stored custom colors or custom CSS (FR-012); a note says so: *"Your custom colors and CSS are kept and can be re-applied later."*
 
-### 3.2 Tab 2: Custom Colors (`custom_colors`)
+### 3.2 Section 2: Custom Colors (`custom_colors`)
 
+- **Activation**: This card's controls are **disabled** until the "Custom colors" radio card in the Preset theme card is selected (`themeType: "custom_colors"`); selecting a preset disables them again. The stored values remain visible (greyed) while disabled.
 - **Primary Accent**:
   - Color picker input or palette swatches (Blue, Emerald, Purple, Amber, Cyan, Rose, Orange).
   - Preview chip showing button with accent color and computed contrast text.
 - **Surface Tone**:
   - Dropdown or Radio cards: `"Dark Slate"`, `"Midnight"`, `"Charcoal"`, `"Crisp Light"`.
-- Live preview: All dashboard elements underneath the modal immediately show the updated colors.
+- Live preview: All dashboard elements underneath the page immediately show the updated colors.
 - Contrast guard: warns when the chosen accent/surface pair fails WCAG AA.
 
-### 3.3 Tab 3: Custom CSS (overlay)
+### 3.3 Section 3: Custom CSS (overlay)
 
 - **Overlay toggle**: a switch labeled `"Enable custom CSS overlay"` bound to `customCssEnabled`, with helper text: *"Your rules are applied on top of the active base theme and win over it; elements you don't target follow the base theme."*
 - Textarea code input with monospace font (`font-mono`, `JetBrains Mono`).
@@ -105,7 +113,7 @@ Composed entirely from HeroUI primitives (`Modal`, `ModalHeader`, `ModalBody`, `
 - Warning alert: *"Custom CSS modifies application appearance directly. If the interface becomes unusable, recover via the `?safe-mode=1` URL parameter, the safe-mode keyboard shortcut, or the 'Sign in with safe mode' link on the login page."*
 - Disabling the toggle keeps the saved stylesheet; only **Reset to Defaults** deletes it.
 
-### 3.4 Tab 4: Export / Import
+### 3.4 Section 4: Export / Import
 
 - **Export**: buttons for `Copy to clipboard` and `Download gameplane-theme.json`, built from the saved profile state per `contracts/theme-export.md` (includes retained-but-inactive customs).
 - **Import**: paste area + file picker accepting `gameplane-theme` v1 documents; shows a preview (preset name, accent swatch, CSS byte size) and an explicit `Apply import` confirmation. Validation and server `400` messages surface inline.
@@ -122,13 +130,13 @@ When safe mode is active — via the `?safe-mode=1` URL parameter, the safe-mode
                [Open Appearance Settings] | [Dismiss]
   ```
 - The custom CSS overlay is not mounted (`data-custom-css="off"`); the base theme renders normally.
-- The stored stylesheet is NOT deleted — the banner's *Open Appearance Settings* action opens the modal so the user can edit or clear it.
+- The stored stylesheet is NOT deleted — the banner's *Open Appearance Settings* action navigates to `/settings/theme` so the user can edit or clear it.
 - Safe mode applies for the session only; removing the parameter and reloading restores normal behavior.
 
 ---
 
 ## 5. Reset to Defaults
 
-- **Placement**: Modal footer, destructive-style button.
+- **Placement**: Page actions row (below the active tab panel), destructive-style button.
 - **Confirmation**: Single confirmation dialog: *"This deletes your custom colors and custom CSS and restores the selected preset. Continue?"*
 - **Effect**: Calls `POST /api/v1/users/me/preferences/reset` (contracts/user-preferences-api.md §1.3) — the only action that deletes stored customs.

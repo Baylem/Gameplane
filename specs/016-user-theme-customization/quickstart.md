@@ -91,17 +91,17 @@ npm test -- src/lib/theme-sanitize.test.ts src/lib/theme-export.test.ts src/lib/
 - `theme-export.test.ts`: export produces a valid `gameplane-theme` v1 document including retained-but-inactive customs; import validation rejects malformed/oversized/unknown-version documents; valid documents map to the PUT payload.
 - `theme-derivation.test.ts`: contrast math picks a legible accent-foreground for extreme accent/surface pairs.
 
-### 4.3 Theme Settings Modal Tests
+### 4.3 Theme Settings Page Tests
 
-Verify UI interactions in `ThemeSettingsModal.test.tsx`:
+Verify UI interactions in `ThemeSettings.test.tsx`:
 
 ```bash
 cd /home/valgul/project/Gameplane-Sec/web
-npm test -- src/components/ui/ThemeSettingsModal.test.tsx
+npm test -- src/routes/ThemeSettings.test.tsx
 ```
 
 **Expected Outcome**:
-- Modal renders tabs: Presets, Custom Colors, Custom CSS, Export.
+- The page renders the four tabs: Presets, Custom Colors, Custom CSS, Export.
 - Clicking "Legacy" updates DOM attribute `data-theme-preset="legacy"` without clearing stored custom values.
 - The overlay toggle flips `data-custom-css` between `"on"`/`"off"` and mounts/unmounts `#gameplane-custom-css` as the last `<head>` child.
 - Clicking "Reset to Defaults" asks for one confirmation, then calls the reset endpoint and clears custom CSS and colors.

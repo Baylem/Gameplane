@@ -16,7 +16,7 @@ Key architecture points:
 5. **Safe Mode (FR-009)**: Three entry points suspend the overlay for the session without deleting it: the `?safe-mode=1` URL parameter (guaranteed path), a keyboard shortcut, and a "Sign in with safe mode" link on the login page (a guaranteed-clean surface per FR-011). A `SafeModeBanner` offers quick access to fix or clear the stylesheet.
 6. **Retention & Reset (FR-012)**: Switching presets or disabling the overlay never deletes stored custom colors/CSS. Only the explicit "Reset to Defaults" confirmation (`POST /api/v1/users/me/preferences/reset`) clears them.
 7. **Export / Import (FR-014)**: Client-generated versioned JSON (`gameplane-theme` v1, `web/src/lib/theme-export.ts`) exported via copy/download; import is validated client-side and applied through the PUT endpoint so server sanitization stays authoritative. Sharing galleries, admin-enforced defaults, and per-page themes are out of scope.
-8. **UI & Design**: A dedicated `ThemeSettingsModal` (Presets / Custom Colors / Custom CSS / Export tabs) built on HeroUI primitives, triggered from the TopBar user avatar dropdown and Sidebar appearance footer.
+8. **UI & Design**: A dedicated theme settings page at route `/settings/theme` (Presets / Custom Colors / Custom CSS / Export in-page tabs) built from HeroUI primitives inside the standard app shell (sidebar + top bar + page header), with triggers in the TopBar user avatar dropdown and Sidebar appearance footer that navigate to the page.
 
 ---
 
@@ -32,7 +32,7 @@ Key architecture points:
 
 **Testing**:
 - Go unit tests: `internal/db` (migration verification), `internal/handlers` (preferences + reset endpoints, sanitization rejections, retention).
-- Web unit tests: Vitest 5 (`theme.test.tsx`, `themeBoot.test.ts`, `theme-sanitize.test.ts`, `theme-export.test.ts`, `theme-derivation.test.ts`, `ThemeSettingsModal.test.tsx`).
+- Web unit tests: Vitest 5 (`theme.test.tsx`, `themeBoot.test.ts`, `theme-sanitize.test.ts`, `theme-export.test.ts`, `theme-derivation.test.ts`, `ThemeSettings.test.tsx`).
 - E2E tests: Playwright live specs (`web/e2e/specs/live/theme-customization.spec.ts`) for dashboard flows.
 - Go API-contract E2E: `test/e2e/api_theme_preferences_e2e_test.go`, registered in `test/e2e/buckets.sh` per Constitution I (preferences/reset endpoints, migration defaults, sanitization rejections, retention through the real API).
 - Legacy-preset parity E2E: `web/e2e/screenshots/all-screens.spec.ts` parametrized to run under `data-theme-preset="legacy"` (SC-006).
@@ -47,7 +47,7 @@ Key architecture points:
 
 **Constraints**:
 - Constitution Principle I: E2E coverage for theme switching, overlay cascade, safe-mode recovery (URL param + login link), and export/import round-trip (Playwright live), plus a Go API-contract E2E registered in `test/e2e/buckets.sh`, plus Legacy-preset parity coverage of core workflow screens (SC-006).
-- Constitution Principle II: Theme Settings Modal, Safe Mode banner, export/import controls, and login-page safe-mode link designed in `design.pen` via Pencil MCP server before code implementation, with matching `design-export/` snapshots.
+- Constitution Principle II: Theme Settings page (route `/settings/theme`), Safe Mode banner, export/import controls, and login-page safe-mode link designed in `design.pen` via Pencil MCP server before code implementation, with matching `design-export/` snapshots.
 - Constitution Principle III: Strict TypeScript, Go `%w` error wrapping, no `//nolint` or `// @ts-ignore`.
 - FR-003: 100% of pre-existing accounts migrated to Legacy theme.
 - FR-011: Unauthenticated public pages (login and share links) strictly render with the default Pink theme preset and never execute custom CSS (the login-page safe-mode link is plain pink chrome).
@@ -62,10 +62,10 @@ Key architecture points:
 | Principle | Status | How this plan satisfies it |
 |---|---|---|
 | **I. E2E-Tested Delivery** | PASS | Playwright live specs (`web/e2e/specs/live/theme-customization.spec.ts`) verify preset switching, migration defaults, persistence across reloads, custom colors, overlay cascade priority across base switches, retention, safe-mode recovery via URL parameter and login-page link, sanitization rejection, and export/import round-trip — per project e2e conventions (unique resource names, parallel-safe). Additionally, a Go API-contract E2E (`test/e2e/api_theme_preferences_e2e_test.go`) is registered in `test/e2e/buckets.sh` per the constitution's bucket requirement, and `web/e2e/screenshots/all-screens.spec.ts` is parametrized under the Legacy preset for SC-006 parity. |
-| **II. Design-First** | PASS | The `ThemeSettingsModal`, `SafeModeBanner`, export/import tab, and login-page safe-mode link will be created in `design.pen` via the Pencil MCP server and exported to `design-export/{json,screenshots}/` before React code is merged. |
+| **II. Design-First** | PASS | The theme settings page at `/settings/theme` (Presets / Custom Colors / Custom CSS / Export tabs), `SafeModeBanner`, export/import tab, and login-page safe-mode link will be created in `design.pen` via the Pencil MCP server and exported to `design-export/{json,screenshots}/` before React code is merged. |
 | **III. Language & Ecosystem** | PASS | Strict TypeScript enabled; error wrapping with `%w`; zero in-source linter suppressions (`//nolint`, `// @ts-ignore`). Coverage gates remain intact. |
 | **IV. Spec-Driven** | PASS | Specification, clarifications, plan, research, data model, contracts, and quickstart guide precede implementation. `web/specs.md` and `api/specs.md` will be updated in the same change as the implementation. |
-| **V. Delegate to Workflows** | PASS | Implementation tasks will be fanned out across independent slices (API/DB slice, CSS token slice, overlay/sanitization slice, UI modal slice, export/import slice, E2E slice) with tier-appropriate review. |
+| **V. Delegate to Workflows** | PASS | Implementation tasks will be fanned out across independent slices (API/DB slice, CSS token slice, overlay/sanitization slice, UI settings-page slice, export/import slice, E2E slice) with tier-appropriate review. |
 | **VI. CI Bears the Heavy Lifting** | PASS | All unit tests, migrations, linting, and Playwright E2E suites run on GitHub Actions CI; only local `go build` and `tsc --noEmit` checks. |
 
 *Post-design re-check (after Phase 1, 2026-09-21): All principles continue to pass. The overlay model reduces DOM-surface complexity (one flag instead of a third mode); sanitization adds a server validation slice but no architectural violation. No Complexity Tracking entries required.*
@@ -86,7 +86,7 @@ specs/016-user-theme-customization/
 ├── contracts/
 │   ├── user-preferences-api.md  # REST contract: preferences GET/PUT + reset POST
 │   ├── theme-tokens-v2.md       # Semantic token mappings + overlay injection/ordering rules
-│   ├── theme-ui.md              # UI contract: modal tabs, safe-mode link/banner, reset, export
+│   ├── theme-ui.md              # UI contract: settings-page tabs, safe-mode link/banner, reset, export
 │   └── theme-export.md          # gameplane-theme v1 export/import JSON schema
 ├── checklists/
 │   └── requirements.md      # Specification quality checklist (validated)
@@ -127,11 +127,11 @@ web/
 │   │   ├── ui/
 │   │   │   ├── TopBar.tsx                      # UPDATE: add "Theme & Appearance" item in user dropdown
 │   │   │   ├── Sidebar.tsx                     # UPDATE: add settings trigger button in footer
-│   │   │   ├── ThemeSettingsModal.tsx          # NEW: HeroUI modal — Presets/Colors/CSS/Export tabs
-│   │   │   ├── ThemeSettingsModal.test.tsx     # NEW: unit tests for modal interactions
 │   │   │   └── SafeModeBanner.tsx              # NEW: floating banner when safe mode is active
 │   │   └── AppLayout.tsx                       # UPDATE: integrate theme provider & safe mode banner
 │   ├── routes/
+│   │   ├── ThemeSettings.tsx                   # NEW: settings page at /settings/theme — Presets/Colors/CSS/Export tabs
+│   │   ├── ThemeSettings.test.tsx              # NEW: unit tests for page interactions
 │   │   └── Login.tsx                           # UPDATE: add "Sign in with safe mode" link (Pink chrome)
 │   └── __tests__/
 │       ├── theme.test.tsx                      # UPDATE: assert Pink vs Legacy token values
