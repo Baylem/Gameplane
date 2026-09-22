@@ -51,17 +51,17 @@ func getThemePrefs(t *testing.T, cli *APIClient) themePrefs {
 	return decodeThemePrefs(t, body)
 }
 
-// putThemePrefs issues a PUT /users/me/preferences and hands the raw
-// status/body back so subtests can assert both successful round-trips
-// and rejection messages.
-func putThemePrefs(t *testing.T, cli *APIClient, body map[string]any) (*http.Response, []byte) {
+// putThemePrefs issues a PUT /users/me/preferences and returns the status code
+// and body so subtests can assert both successful round-trips and rejection
+// messages. The response body is fully drained and closed internally.
+func putThemePrefs(t *testing.T, cli *APIClient, body map[string]any) (int, []byte) {
 	t.Helper()
 	resp, rb, err := cli.Do(http.MethodPut, "/users/me/preferences", body)
 	if err != nil {
 		t.Fatalf("PUT /users/me/preferences: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	return resp, rb
+	return resp.StatusCode, rb
 }
 
 // getMeThemePrefs extracts the preferences object embedded in
@@ -85,15 +85,15 @@ func getMeThemePrefs(t *testing.T, cli *APIClient) themePrefs {
 	return me.Preferences
 }
 
-// requireRuleError asserts a 400 whose body carries a non-empty,
+// requireRuleError asserts a 400 status code whose body carries a non-empty,
 // rule-identifying message (contract §1.2). The message is read out of
 // the {"error": "..."} envelope when the body is one, and matched
 // against the raw body otherwise, so mustContain substrings apply either
 // way.
-func requireRuleError(t *testing.T, resp *http.Response, body []byte, mustContain ...string) {
+func requireRuleError(t *testing.T, status int, body []byte, mustContain ...string) {
 	t.Helper()
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d body=%q", resp.StatusCode, string(body))
+	if status != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d body=%q", status, string(body))
 	}
 	msg := string(body)
 	if strings.TrimSpace(msg) == "" {
@@ -200,14 +200,14 @@ func TestAPI_ThemePreferences(t *testing.T) {
 		// Switch the base to Legacy (the preset migration 011 assigns to
 		// pre-existing accounts) and read it back from the PUT response,
 		// the dedicated endpoint, and the /users/me embedding (§1.4).
-		resp, body := putThemePrefs(t, user, map[string]any{
+		status, body := putThemePrefs(t, user, map[string]any{
 			"themeType":        "preset",
 			"presetId":         "legacy",
 			"appearanceMode":   "dark",
 			"customCssEnabled": false,
 		})
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("PUT legacy preset: status=%d body=%s", resp.StatusCode, string(body))
+		if status != http.StatusOK {
+			t.Fatalf("PUT legacy preset: status=%d body=%s", status, string(body))
 		}
 		if p := decodeThemePrefs(t, body); p.PresetID != "legacy" || p.AppearanceMode != "dark" || p.ThemeType != "preset" {
 			t.Fatalf("PUT response = %+v, want preset/legacy/dark", p)
@@ -222,9 +222,9 @@ func TestAPI_ThemePreferences(t *testing.T) {
 	})
 
 	t.Run("CustomColorsAndCSSRoundTrip", func(t *testing.T) {
-		resp, body := putThemePrefs(t, user, fullPrefsBody(dashboardCSS))
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("PUT custom colors + css: status=%d body=%s", resp.StatusCode, string(body))
+		status, body := putThemePrefs(t, user, fullPrefsBody(dashboardCSS))
+		if status != http.StatusOK {
+			t.Fatalf("PUT custom colors + css: status=%d body=%s", status, string(body))
 		}
 		assertCustomState := func(p themePrefs, where string) {
 			t.Helper()
@@ -261,14 +261,14 @@ func TestAPI_ThemePreferences(t *testing.T) {
 		// Baseline: customs stored with the overlay on (end state of the
 		// previous subtest).
 		// Preset switch only: pink -> legacy, base preset mode, overlay stays on.
-		resp, body := putThemePrefs(t, user, map[string]any{
+		status, body := putThemePrefs(t, user, map[string]any{
 			"themeType":        "preset",
 			"presetId":         "legacy",
 			"appearanceMode":   "dark",
 			"customCssEnabled": true,
 		})
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("switch to legacy preset: status=%d body=%s", resp.StatusCode, string(body))
+		if status != http.StatusOK {
+			t.Fatalf("switch to legacy preset: status=%d body=%s", status, string(body))
 		}
 		if p := decodeThemePrefs(t, body); p.PresetID != "legacy" || p.ThemeType != "preset" {
 			t.Fatalf("switch response = %+v, want preset/legacy", p)
@@ -276,14 +276,14 @@ func TestAPI_ThemePreferences(t *testing.T) {
 		assertRetained(decodeThemePrefs(t, body), "preset switch response")
 
 		// Overlay toggle off: customCss must survive the disable.
-		resp, body = putThemePrefs(t, user, map[string]any{
+		status, body = putThemePrefs(t, user, map[string]any{
 			"themeType":        "preset",
 			"presetId":         "legacy",
 			"appearanceMode":   "dark",
 			"customCssEnabled": false,
 		})
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("disable overlay: status=%d body=%s", resp.StatusCode, string(body))
+		if status != http.StatusOK {
+			t.Fatalf("disable overlay: status=%d body=%s", status, string(body))
 		}
 		if p := decodeThemePrefs(t, body); p.CustomCSSEnabled {
 			t.Fatalf("overlay still enabled after toggle off: %+v", p)
@@ -291,14 +291,14 @@ func TestAPI_ThemePreferences(t *testing.T) {
 		assertRetained(decodeThemePrefs(t, body), "overlay-off response")
 
 		// Switch back: legacy -> pink, custom base mode, overlay on again.
-		resp, body = putThemePrefs(t, user, map[string]any{
+		status, body = putThemePrefs(t, user, map[string]any{
 			"themeType":        "custom_colors",
 			"presetId":         "pink",
 			"appearanceMode":   "system",
 			"customCssEnabled": true,
 		})
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("switch back to pink: status=%d body=%s", resp.StatusCode, string(body))
+		if status != http.StatusOK {
+			t.Fatalf("switch back to pink: status=%d body=%s", status, string(body))
 		}
 		assertRetained(decodeThemePrefs(t, body), "switch-back response")
 
@@ -360,9 +360,9 @@ func TestAPI_ThemePreferences(t *testing.T) {
 		// a message naming the offending rule, and must not alter stored
 		// state. Baseline first so the post-table GET proves the 400s were
 		// side-effect free.
-		resp, body := putThemePrefs(t, user, fullPrefsBody(dashboardCSS))
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("baseline PUT: status=%d body=%s", resp.StatusCode, string(body))
+		status, body := putThemePrefs(t, user, fullPrefsBody(dashboardCSS))
+		if status != http.StatusOK {
+			t.Fatalf("baseline PUT: status=%d body=%s", status, string(body))
 		}
 
 		cases := []struct {
@@ -398,8 +398,8 @@ func TestAPI_ThemePreferences(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				resp, body := putThemePrefs(t, user, fullPrefsBody(tc.css))
-				requireRuleError(t, resp, body, tc.want...)
+				status, body := putThemePrefs(t, user, fullPrefsBody(tc.css))
+				requireRuleError(t, status, body, tc.want...)
 			})
 		}
 
@@ -413,9 +413,9 @@ func TestAPI_ThemePreferences(t *testing.T) {
 		// Inline data: URIs are the sanctioned exception to the external
 		// url() ban and must round-trip (§1.2 validation rules).
 		const dataCSS = `.logo { background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUg="); }`
-		resp, body := putThemePrefs(t, user, fullPrefsBody(dataCSS))
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("PUT data: URI css: status=%d body=%s", resp.StatusCode, string(body))
+		status, body := putThemePrefs(t, user, fullPrefsBody(dataCSS))
+		if status != http.StatusOK {
+			t.Fatalf("PUT data: URI css: status=%d body=%s", status, string(body))
 		}
 		if p := getThemePrefs(t, user); p.CustomCSS == nil || *p.CustomCSS != dataCSS {
 			t.Fatalf("data: URI css not stored verbatim: %+v", p)
@@ -450,8 +450,8 @@ func TestAPI_ThemePreferences(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				resp, body := putThemePrefs(t, user, tc.body)
-				requireRuleError(t, resp, body)
+				status, body := putThemePrefs(t, user, tc.body)
+				requireRuleError(t, status, body)
 			})
 		}
 
