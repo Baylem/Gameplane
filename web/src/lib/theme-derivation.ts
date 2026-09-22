@@ -157,7 +157,7 @@ function legibleTone(baseHex: string, h: number, s: number, towardLight: boolean
   const start = hexToHsl(baseHex).l;
   const extreme = towardLight ? 100 : 0;
   const step = towardLight ? 1 : -1;
-  let candidate = hslToHex(h, s, start);
+  let candidate: string;
   for (let l = start; ; l += step) {
     candidate = hslToHex(h, s, l);
     if (contrastRatio(candidate, baseHex) >= WCAG_AA_TEXT_RATIO || l === extreme) {

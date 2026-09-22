@@ -130,6 +130,55 @@ describe("ThemeSettingsPage", () => {
     expect(screen.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("entering valid hex in accent hex input updates the color picker", async () => {
+    seedPrefs({ themeType: "custom_colors", customColors: { accent: "#3B82F6", surface: "#1E293B" } });
+    renderWithQuery(<ThemeSettingsPage />);
+    await screen.findByRole("heading", { name: "Theme & Appearance" });
+
+    // Custom colors are active, so the hex input is enabled.
+    const accentHexInput = screen.getByLabelText("Primary accent hex value");
+    expect(accentHexInput).not.toBeDisabled();
+
+    // Type a valid hex value and press Enter.
+    await userEvent.clear(accentHexInput);
+    await userEvent.type(accentHexInput, "#123456");
+    await userEvent.keyboard("{Enter}");
+
+    // The color picker should now reflect the new value.
+    const accentPicker = screen.getByLabelText("Primary accent color picker") as HTMLInputElement;
+    expect(accentPicker.value).toBe("#123456");
+  });
+
+  it("entering valid hex in surface tone hex input updates the color picker", async () => {
+    seedPrefs({ themeType: "custom_colors", customColors: { accent: "#3B82F6", surface: "#1E293B" } });
+    renderWithQuery(<ThemeSettingsPage />);
+    await screen.findByRole("heading", { name: "Theme & Appearance" });
+
+    // Custom colors are active, so the hex input is enabled.
+    const surfaceHexInput = screen.getByLabelText("Surface tone hex value");
+    expect(surfaceHexInput).not.toBeDisabled();
+
+    // Type a valid hex value and press Enter.
+    await userEvent.clear(surfaceHexInput);
+    await userEvent.type(surfaceHexInput, "#abcdef");
+    await userEvent.keyboard("{Enter}");
+
+    // The color picker should now reflect the new value.
+    const surfacePicker = screen.getByLabelText("Surface tone color picker") as HTMLInputElement;
+    expect(surfacePicker.value).toBe("#abcdef");
+  });
+
+  it("reverts an invalid hex typed into the free accent field", async () => {
+    seedPrefs({ themeType: "custom_colors", customColors: { accent: "#10B981", surface: "#1E293B" } });
+    renderWithQuery(<ThemeSettingsPage />);
+    await screen.findByRole("heading", { name: "Theme & Appearance" });
+    const accentHex = (await screen.findByLabelText("Primary accent hex value")) as HTMLInputElement;
+    await userEvent.clear(accentHex);
+    await userEvent.type(accentHex, "not-a-color");
+    await userEvent.tab();
+    expect(accentHex.value).toBe("#10B981");
+  });
+
   it("save calls PUT /users/me/preferences with the draft", async () => {
     let captured: unknown = null;
     server.use(

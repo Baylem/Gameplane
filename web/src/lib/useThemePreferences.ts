@@ -301,20 +301,35 @@ export function useThemePreferences(
   );
   const [error, setError] = useState<string | null>(null);
   const pendingRetryRef = useRef<UpdateVars | null>(null);
+  // Pulled into its own binding (rather than the optional-chain expression
+  // inline) so the memo has a single, stable dependency to key off.
+  const rawPrefs = me?.preferences;
   const mePreferences = useMemo(
-    () => (me?.preferences ? normalizeThemePreferences(me.preferences) : null),
-    [me?.preferences],
+    () => (rawPrefs ? normalizeThemePreferences(rawPrefs) : null),
+    [rawPrefs],
   );
 
   // Profile reconciliation (research.md R-05 §3): the backend copy wins on
-  // drift; localStorage and the DOM follow it.
+  // drift. Adopting the new value into `preferences` happens here, during
+  // render, via React's "adjust state when a prop changes" pattern (comparing
+  // against the last-seen mePreferences) rather than in an effect — only the
+  // DOM/localStorage side effects below stay in the effect.
+  // Starting from null (rather than mePreferences) makes the first non-null
+  // profile get adopted on mount, e.g. right after login when ["me"] is
+  // already cached.
+  const [prevMePreferences, setPrevMePreferences] = useState<UserThemePreferences | null>(null);
+  if (mePreferences !== prevMePreferences) {
+    setPrevMePreferences(mePreferences);
+    if (mePreferences) {
+      setPreferences(mePreferences);
+    }
+  }
   useEffect(() => {
     if (!mePreferences) return;
     const cached = readThemePreferences();
     if (!cached || !themePreferencesEqual(cached, mePreferences)) {
       writeThemePreferences(mePreferences);
     }
-    setPreferences(mePreferences);
     applyThemePreferences(mePreferences);
   }, [mePreferences]);
 
@@ -375,7 +390,9 @@ export function useThemePreferences(
 
   // Replay a queued PUT once the browser reports connectivity again.
   const mutateRef = useRef(mutation.mutate);
-  mutateRef.current = mutation.mutate;
+  useEffect(() => {
+    mutateRef.current = mutation.mutate;
+  }, [mutation.mutate]);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleOnline = () => {

@@ -91,6 +91,8 @@ function utf8Len(s: string): number {
   return new TextEncoder().encode(s).length;
 }
 
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
 // ---------------------------------------------------------------------------
 // Custom CSS editor validation (contracts/theme-ui.md §3.3): the sanitizer
 // decides, the editor copy quotes the offending line like the T1wkiT design.
@@ -167,18 +169,21 @@ export function ThemeSettingsPage() {
   // preferences; on a profile with no prefs anywhere it falls back to the
   // pink/system defaults.
   const [draft, setDraft] = useState<UserThemePreferences | null>(null);
-  const initializedRef = useRef(false);
   const noPrefsAnywhere = me !== undefined && me.preferences == null && readThemePreferences() === null;
   const ready = preferences !== null || noPrefsAnywhere;
-  useEffect(() => {
-    if (initializedRef.current || !ready) return;
-    initializedRef.current = true;
+  // Initializes the draft the first time preferences become available (the
+  // false -> true transition of `ready`). Setting state during render here
+  // follows React's "adjust state when a prop changes" pattern instead of an
+  // effect; `wasReady` makes the transition one-shot, same as the old ref.
+  const [wasReady, setWasReady] = useState(false);
+  if (ready && !wasReady) {
+    setWasReady(true);
     setDraft(
       preferences
         ? { ...preferences, customColors: preferences.customColors ? { ...preferences.customColors } : null }
         : { ...DEFAULT_THEME_PREFERENCES },
     );
-  }, [ready, preferences]);
+  }
 
   const update = (patch: Partial<UserThemePreferences>) => {
     setLastError(null);
@@ -202,19 +207,21 @@ export function ThemeSettingsPage() {
   }, []);
 
   // After a successful import the draft follows the server's stored profile
-  // (which may retain customs the document omitted, FR-012). The ref guards
-  // the sync so a later ["me"] refetch can't clobber subsequent edits, and
-  // the "Import applied" indicator survives until the next edit.
+  // (which may retain customs the document omitted, FR-012). Keyed on the
+  // completion object, so the sync runs once per import, a later ["me"]
+  // refetch can't clobber subsequent edits, and the "Import applied"
+  // indicator survives until the next edit.
   const [importText, setImportText] = useState("");
-  const importSyncedRef = useRef(false);
-  useEffect(() => {
-    if (lastDone?.where !== "import" || importSyncedRef.current) return;
-    importSyncedRef.current = true;
-    setImportText("");
-    if (preferences) {
-      setDraft({ ...preferences, customColors: preferences.customColors ? { ...preferences.customColors } : null });
+  const [syncedDone, setSyncedDone] = useState(lastDone);
+  if (lastDone !== syncedDone) {
+    setSyncedDone(lastDone);
+    if (lastDone?.where === "import") {
+      setImportText("");
+      if (preferences) {
+        setDraft({ ...preferences, customColors: preferences.customColors ? { ...preferences.customColors } : null });
+      }
     }
-  }, [lastDone, preferences]);
+  }
 
   // Record a completion only when the mutation settled without an error
   // report (onError runs before this effect's re-render on failure).
@@ -227,7 +234,6 @@ export function ThemeSettingsPage() {
 
   const runUpdate = (patch: Partial<UserThemePreferences>, where: "save" | "import") => {
     whereRef.current = where;
-    if (where === "import") importSyncedRef.current = false;
     setLastError(null);
     setLastDone(null);
     updatePreferences(patch);
@@ -395,7 +401,6 @@ export function ThemeSettingsPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        breadcrumbs={[{ label: "gameplane", href: "/" }, { label: "Settings" }]}
         title="Theme & Appearance"
         description="Personal theme presets, colors, custom CSS, and theme portability."
       />
@@ -409,7 +414,7 @@ export function ThemeSettingsPage() {
           onSelect={(key) => void navigate({ to: "/admin", search: { section: key } })}
         />
 
-        <div className="max-w-3xl space-y-6">
+        <div className="space-y-6">
           {!draft ? (
             <Card>
               <Card.Content className="text-sm text-muted">Loading theme preferences…</Card.Content>
@@ -484,7 +489,7 @@ export function ThemeSettingsPage() {
                 <div
                   role="group"
                   aria-label="Appearance mode"
-                  className="inline-flex rounded-lg border border-border bg-surface/40 p-1"
+                  className="inline-flex self-start rounded-lg border border-border bg-surface/40 p-1"
                 >
                   {APPEARANCE_MODES.map(({ value, label }) => (
                     <button
@@ -531,6 +536,37 @@ export function ThemeSettingsPage() {
                         );
                       })}
                     </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="color"
+                        aria-label="Primary accent color picker"
+                        disabled={!colorsActive}
+                        value={effectiveColors.accent.toLowerCase()}
+                        onChange={(e) => pickAccent(e.target.value)}
+                        className="h-8 w-8 cursor-pointer rounded-md border border-border bg-transparent p-0 disabled:cursor-not-allowed"
+                      />
+                      <input
+                        type="text"
+                        inputMode="text"
+                        aria-label="Primary accent hex value"
+                        disabled={!colorsActive}
+                        defaultValue={effectiveColors.accent}
+                        key={effectiveColors.accent}
+                        placeholder="#RRGGBB"
+                        maxLength={7}
+                        className="w-28 rounded-md border border-border bg-surface px-2 py-1 font-mono text-xs text-fg placeholder:text-muted focus:border-primary focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          if (HEX_COLOR_RE.test(v)) pickAccent(v);
+                          else e.target.value = effectiveColors.accent;
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter") return;
+                          const v = e.currentTarget.value.trim();
+                          if (HEX_COLOR_RE.test(v)) pickAccent(v);
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
@@ -549,9 +585,13 @@ export function ThemeSettingsPage() {
                     <Label className="text-xs">Surface tone</Label>
                     <RadioGroup
                       aria-label="Surface tone"
-                      value={effectiveColors.surface}
+                      value={
+                        SURFACE_TONES.find((t) => t.hex.toLowerCase() === effectiveColors.surface.toLowerCase())
+                          ?.hex ?? effectiveColors.surface
+                      }
                       onChange={(hex) => pickSurface(hex)}
                       isDisabled={!colorsActive}
+                      orientation="horizontal"
                       className="flex flex-wrap gap-2"
                     >
                       {SURFACE_TONES.map((t) => (
@@ -568,6 +608,37 @@ export function ThemeSettingsPage() {
                         </Radio>
                       ))}
                     </RadioGroup>
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="color"
+                        aria-label="Surface tone color picker"
+                        disabled={!colorsActive}
+                        value={effectiveColors.surface.toLowerCase()}
+                        onChange={(e) => pickSurface(e.target.value)}
+                        className="h-8 w-8 cursor-pointer rounded-md border border-border bg-transparent p-0 disabled:cursor-not-allowed"
+                      />
+                      <input
+                        type="text"
+                        inputMode="text"
+                        aria-label="Surface tone hex value"
+                        disabled={!colorsActive}
+                        defaultValue={effectiveColors.surface}
+                        key={effectiveColors.surface}
+                        placeholder="#RRGGBB"
+                        maxLength={7}
+                        className="w-28 rounded-md border border-border bg-surface px-2 py-1 font-mono text-xs text-fg placeholder:text-muted focus:border-primary focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          if (HEX_COLOR_RE.test(v)) pickSurface(v);
+                          else e.target.value = effectiveColors.surface;
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter") return;
+                          const v = e.currentTarget.value.trim();
+                          if (HEX_COLOR_RE.test(v)) pickSurface(v);
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 
