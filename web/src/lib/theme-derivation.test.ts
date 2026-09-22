@@ -152,6 +152,17 @@ describe("customThemeTokensToCss", () => {
     expect(css).toContain("  --link: ");
   });
 
+  it("targets only the custom_colors root", () => {
+    const html = document.documentElement;
+    html.setAttribute("data-theme", "dark");
+    html.setAttribute("data-theme-type", "custom_colors");
+    expect(html.matches(CUSTOM_THEME_VARS_SELECTOR)).toBe(true);
+    html.setAttribute("data-theme-type", "preset");
+    expect(html.matches(CUSTOM_THEME_VARS_SELECTOR)).toBe(false);
+    html.removeAttribute("data-theme-type");
+    html.removeAttribute("data-theme");
+  });
+
   it("accepts a custom selector", () => {
     const tokens = deriveCustomThemeTokens("#10B981", DARK_SURFACE);
     const css = customThemeTokensToCss(tokens, ".preview-scope");

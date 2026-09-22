@@ -241,13 +241,14 @@ export function passesContrastGuard(accent: string, surface: string): boolean {
   );
 }
 
-// Selector the modal uses when injecting the derived tokens into
-// <style id="gameplane-custom-theme-vars">.
-export const CUSTOM_THEME_VARS_SELECTOR = ":root, .dark, .light";
+// Selector for the derived tokens in <style id="gameplane-custom-theme-vars">.
+// Scoped to the custom_colors root and weighted (0,2,1) so it outranks every
+// preset block — e.g. .dark[data-theme-preset="legacy"] at (0,2,0) — however
+// the stylesheets end up ordered in <head>.
+export const CUSTOM_THEME_VARS_SELECTOR = 'html[data-theme-type="custom_colors"][data-theme]';
 
 // customThemeTokensToCss serializes a token map into a CSS block for the
-// given selector (defaults to the selector shared by both appearance
-// modes, so the derived base wins over the active preset tokens).
+// given selector (defaults to CUSTOM_THEME_VARS_SELECTOR).
 export function customThemeTokensToCss(
   tokens: CustomThemeTokens,
   selector: string = CUSTOM_THEME_VARS_SELECTOR,

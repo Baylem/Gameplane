@@ -63,7 +63,7 @@ When `data-theme-type="custom_colors"`, dynamic tokens are derived from user-sel
 
 ```html
 <style id="gameplane-custom-theme-vars">
-  :root, .dark, .light {
+  html[data-theme-type="custom_colors"][data-theme] {
     --accent: oklch(62.5% 0.22 250);
     --accent-foreground: #FFFFFF;
     --accent-soft: oklch(25% 0.05 250);
@@ -73,6 +73,8 @@ When `data-theme-type="custom_colors"`, dynamic tokens are derived from user-sel
   }
 </style>
 ```
+
+The selector is scoped to the custom_colors root and carries specificity (0,2,1), so it outranks the preset token blocks (e.g. `.dark[data-theme-preset="legacy"]`, (0,2,0)) regardless of stylesheet order (revised 2026-09-23).
 
 ---
 
