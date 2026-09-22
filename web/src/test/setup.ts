@@ -11,6 +11,19 @@ import { server } from "./server";
 // resolve as fast as the data does — and removes a recurring slow-CI flake.
 configure({ asyncUtilTimeout: 5000 });
 
+// Recover Node's FormData constructor. By the time this module evaluates, vitest's
+// jsdom environment has already replaced globalThis.FormData with jsdom's, so it
+// cannot simply be read off the global. Response, however, is still Node's — the
+// jsdom environment copies it over verbatim — and Response.formData() resolves to
+// a Node FormData instance, so round-tripping a trivial urlencoded body hands back
+// the real constructor. The cast is unavoidable: `.constructor` is typed as
+// Function rather than as a FormData constructor.
+const NodeFormData = (
+  await new Response("a=1", {
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+  }).formData()
+).constructor as typeof globalThis.FormData;
+
 // Radix UI components (Dropdown, Dialog) call into pointer-capture and
 // scrollIntoView APIs that jsdom doesn't implement. Without these
 // stubs, fireEvent against a Radix trigger throws or silently no-ops.
@@ -90,6 +103,23 @@ if (typeof window !== "undefined") {
   });
   Object.defineProperty(globalThis, "File", {
     value: NodeFile,
+    writable: true,
+    configurable: true,
+  });
+
+  // ...and FormData, for the same reason. endpoints.ts builds its upload bodies
+  // with `new FormData()`; jsdom's FormData.append runs an IDL conversion that
+  // rejects a Node File ("parameter 2 is not of type 'Blob'"). Node's FormData
+  // accepts one natively and serialises to a correct multipart body. Neither call
+  // site constructs FormData from an HTMLFormElement, which Node's does not
+  // support, so the swap is safe.
+  Object.defineProperty(window, "FormData", {
+    value: NodeFormData,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "FormData", {
+    value: NodeFormData,
     writable: true,
     configurable: true,
   });
