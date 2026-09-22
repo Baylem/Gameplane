@@ -22,6 +22,9 @@ export const THEME_PREFS_STORAGE_KEY = "gameplane-theme-prefs";
 export const SAFE_MODE_SESSION_KEY = "gameplane-safe-mode";
 export const CUSTOM_CSS_ELEMENT_ID = "gameplane-custom-css";
 export const CUSTOM_THEME_VARS_ELEMENT_ID = "gameplane-custom-theme-vars";
+// Pre-serialized custom-color tokens for the index.html boot script, which
+// cannot run the derivation itself; kept in step with the prefs cache.
+export const THEME_VARS_CSS_STORAGE_KEY = "gameplane-theme-vars-css";
 // Dispatched on window when a preferences update fails, so a toast layer can
 // listen without this plumbing owning any UI (the toast ships in a later
 // task of this feature).
@@ -136,6 +139,12 @@ export function writeThemePreferences(prefs: UserThemePreferences): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(THEME_PREFS_STORAGE_KEY, JSON.stringify(prefs));
+    if (prefs.themeType === "custom_colors" && prefs.customColors) {
+      const tokens = deriveCustomThemeTokens(prefs.customColors.accent, prefs.customColors.surface);
+      window.localStorage.setItem(THEME_VARS_CSS_STORAGE_KEY, customThemeTokensToCss(tokens));
+    } else {
+      window.localStorage.removeItem(THEME_VARS_CSS_STORAGE_KEY);
+    }
   } catch {
     // Storage blocked — preferences still apply for this session.
   }
