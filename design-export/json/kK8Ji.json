@@ -93,7 +93,21 @@
                   "alignItems": "center",
                   "children": [
                     {
-                      "id": "mhJd3",
+                      "id": "CF440",
+                      "type": "ref",
+                      "ref": "i6gfu",
+                      "name": "btnCreate",
+                      "descendants": {
+                        "FCYQ9": {
+                          "icon": "plus"
+                        },
+                        "GqVun": {
+                          "content": "Create module"
+                        }
+                      }
+                    },
+                    {
+                      "id": "lQ1ua",
                       "type": "ref",
                       "ref": "i6gfu",
                       "name": "btnUpload",
@@ -107,7 +121,7 @@
                       }
                     },
                     {
-                      "id": "KCxx5",
+                      "id": "luTx8",
                       "type": "ref",
                       "ref": "i6gfu",
                       "name": "btnSources",

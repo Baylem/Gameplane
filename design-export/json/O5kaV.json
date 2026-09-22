@@ -25,10 +25,7 @@
       "strokeWidth": {
         "bottom": 1
       },
-      "padding": [
-        20,
-        28
-      ],
+      "padding": [20, 28],
       "justifyContent": "space_between",
       "alignItems": "center",
       "children": [
@@ -83,10 +80,7 @@
         "bottom": 1
       },
       "gap": 12,
-      "padding": [
-        12,
-        28
-      ],
+      "padding": [12, 28],
       "alignItems": "center",
       "children": [
         {
@@ -247,10 +241,7 @@
       "width": "fill_container",
       "layout": "vertical",
       "gap": 20,
-      "padding": [
-        24,
-        28
-      ],
+      "padding": [24, 28],
       "children": [
         {
           "type": "frame",
@@ -299,10 +290,7 @@
               "cornerRadius": 6,
               "stroke": "$border/border",
               "strokeWidth": 1,
-              "padding": [
-                0,
-                12
-              ],
+              "padding": [0, 12],
               "justifyContent": "center",
               "children": [
                 {
@@ -310,7 +298,7 @@
                   "id": "NQ8y0",
                   "name": "Val",
                   "fill": "$foreground/foreground",
-                  "content": "ghcr.io/valgulnecron/cs2:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5",
+                  "content": "cm2network/steamcmd:root@sha256:4d830b0475b8719f96b9978ba57404434bb3da3f260388d75cfb373cf5889ea8",
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -353,10 +341,7 @@
                   "stroke": "$border/border",
                   "strokeWidth": 1,
                   "gap": 4,
-                  "padding": [
-                    4,
-                    10
-                  ],
+                  "padding": [4, 10],
                   "alignItems": "center",
                   "children": [
                     {
@@ -398,10 +383,7 @@
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
-                      "padding": [
-                        0,
-                        10
-                      ],
+                      "padding": [0, 10],
                       "justifyContent": "center",
                       "children": [
                         {
@@ -425,10 +407,7 @@
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
-                      "padding": [
-                        0,
-                        10
-                      ],
+                      "padding": [0, 10],
                       "justifyContent": "center",
                       "children": [
                         {
@@ -452,10 +431,7 @@
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
-                      "padding": [
-                        0,
-                        10
-                      ],
+                      "padding": [0, 10],
                       "justifyContent": "space_between",
                       "alignItems": "center",
                       "children": [
@@ -522,6 +498,22 @@
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "id": "IbUiY",
+                      "type": "ref",
+                      "ref": "J09iP",
+                      "name": "PortRow1_Delete",
+                      "descendants": {
+                        "eWkIT/WtPjS": {
+                          "icon": "trash-2",
+                          "opacity": 1
+                        },
+                        "eWkIT/r4VbAi": {
+                          "opacity": 1,
+                          "content": ""
+                        }
+                      }
                     }
                   ]
                 },
@@ -542,10 +534,7 @@
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
-                      "padding": [
-                        0,
-                        10
-                      ],
+                      "padding": [0, 10],
                       "justifyContent": "center",
                       "children": [
                         {
@@ -569,10 +558,7 @@
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
-                      "padding": [
-                        0,
-                        10
-                      ],
+                      "padding": [0, 10],
                       "justifyContent": "center",
                       "children": [
                         {
@@ -580,7 +566,7 @@
                           "id": "prNFB",
                           "name": "Val",
                           "fill": "$foreground/foreground",
-                          "content": "27015",
+                          "content": "27016",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
@@ -596,10 +582,7 @@
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
-                      "padding": [
-                        0,
-                        10
-                      ],
+                      "padding": [0, 10],
                       "justifyContent": "space_between",
                       "alignItems": "center",
                       "children": [
@@ -608,7 +591,7 @@
                           "id": "evKQq",
                           "name": "Val",
                           "fill": "$foreground/foreground",
-                          "content": "TCP",
+                          "content": "UDP",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
@@ -634,25 +617,54 @@
                       "children": [
                         {
                           "type": "frame",
-                          "id": "hqhlE",
+                          "id": "AmIhQ",
                           "name": "Box",
                           "width": 16,
                           "height": 16,
+                          "fill": "$accent/accent",
                           "cornerRadius": 4,
-                          "stroke": "$border/border",
-                          "strokeWidth": 1
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "SBDAp",
+                              "name": "Check",
+                              "fill": "#ffffff",
+                              "content": "✓",
+                              "fontFamily": "Inter",
+                              "fontSize": 11,
+                              "fontWeight": "normal"
+                            }
+                          ]
                         },
                         {
                           "type": "text",
                           "id": "bTk9B",
                           "name": "Label",
-                          "fill": "$muted",
+                          "fill": "$foreground/foreground",
                           "content": "Advertise",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
+                    },
+                    {
+                      "id": "YEmrb",
+                      "type": "ref",
+                      "ref": "J09iP",
+                      "name": "PortRow2_Delete",
+                      "descendants": {
+                        "eWkIT/WtPjS": {
+                          "icon": "trash-2",
+                          "opacity": 1
+                        },
+                        "eWkIT/r4VbAi": {
+                          "opacity": 1,
+                          "content": ""
+                        }
+                      }
                     }
                   ]
                 }
@@ -673,7 +685,7 @@
               "id": "ax35q",
               "name": "Title",
               "fill": "$foreground/foreground",
-              "content": "Persistent Storage Volume",
+              "content": "Persistent Storage",
               "fontFamily": "$typography/font-sans",
               "fontSize": 13,
               "fontWeight": "500"
@@ -712,10 +724,7 @@
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
-                      "padding": [
-                        0,
-                        10
-                      ],
+                      "padding": [0, 10],
                       "justifyContent": "center",
                       "children": [
                         {
@@ -759,10 +768,7 @@
                       "cornerRadius": 6,
                       "stroke": "$border/border",
                       "strokeWidth": 1,
-                      "padding": [
-                        0,
-                        10
-                      ],
+                      "padding": [0, 10],
                       "justifyContent": "center",
                       "children": [
                         {
@@ -770,7 +776,7 @@
                           "id": "q96ywV",
                           "name": "Val",
                           "fill": "$foreground/foreground",
-                          "content": "/home/steam/cs2-data",
+                          "content": "/serverdata",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
@@ -794,10 +800,7 @@
       "strokeWidth": {
         "top": 1
       },
-      "padding": [
-        16,
-        28
-      ],
+      "padding": [16, 28],
       "justifyContent": "space_between",
       "alignItems": "center",
       "children": [
@@ -808,10 +811,7 @@
           "cornerRadius": 6,
           "stroke": "$border/border",
           "strokeWidth": 1,
-          "padding": [
-            8,
-            16
-          ],
+          "padding": [8, 16],
           "children": [
             {
               "type": "text",
@@ -839,10 +839,7 @@
               "cornerRadius": 6,
               "stroke": "$border/border",
               "strokeWidth": 1,
-              "padding": [
-                8,
-                16
-              ],
+              "padding": [8, 16],
               "children": [
                 {
                   "type": "text",
@@ -863,10 +860,7 @@
               "fill": "$accent/accent",
               "cornerRadius": 6,
               "gap": 6,
-              "padding": [
-                8,
-                18
-              ],
+              "padding": [8, 18],
               "alignItems": "center",
               "children": [
                 {

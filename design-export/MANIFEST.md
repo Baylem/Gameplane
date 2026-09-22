@@ -1983,3 +1983,131 @@ Per maintainer ruling OD-9 (`specs/done_017-share-link-expiry/OPEN-DECISIONS.md`
 **Export method & validation:** JSON via `Get(id, {depth: 12–14})` for all four nodes, zero elision markers; validated with `python3 -m json.tool`. Screenshots via `export_nodes` at 2x scale: `atqRh.png` 1088×732, `tr6cE.png` 1088×772, `oPF1n.png` 1088×892, `xCJlu.png` 2880×1800, all non-empty RGBA. Content checks: `"This link works until you revoke it"` found only in `tr6cE.json`; `"Long-lived link"` found only in `oPF1n.json`; `"content":"Never"` found in `xCJlu.json`. Read back all edited/created nodes via `Get` after each edit and via screenshot before export.
 
 No `.pen` file was Read/Grep/cat/sed — all access via Pencil MCP `get_app_state`/`execute`/`get_screenshot`/`export_nodes`. The `.pen` file itself was **not** saved (per the task's explicit instruction — the maintainer saves via the GUI). No git add/commit was performed by this pass.
+## 010-easy-module-building: BuildModuleDialog modal wizard frames (commits 391e1960, fa5a4370)
+
+Three modal wizard frames for the Web Dashboard Module Builder (US5) were designed and initially exported in prior commits and merged to master:
+- `IdbiB`: `Screen/Dialog/Build Module — Step 1 (Preset & Metadata)` (800x700, archetype selector cards, DNS-1123 name validation, display metadata, category chips).
+- `O5kaV`: `Screen/Dialog/Build Module — Step 2 (Container & Ports)` (800x700, pinned image digest badge, dynamic port mapping list, persistent storage configuration).
+- `hmPL7`: `Screen/Dialog/Build Module — Step 3 (Review & Export)` (840x700, dual-pane layout with code viewer tabs for module.yaml/template.yaml/README.md, live offline validation checklist, memory slider preview with heap calculation, and export/install actions).
+
+**Initial exports:** commit `391e1960` (2026-09-15) first exported `IdbiB`, `O5kaV`, `hmPL7` at full length (~700+ lines each, dark theme applied). Commit `fa5a4370` (2026-09-16) made minor follow-up changes to these same three frames (2-3 line diffs each, documented in those commits). Both commits are already on master and reached this feature branch through a merge. Commit `12b4d449` (2026-09-12) contributed only the manifest narrative entry (11 lines added to MANIFEST.md); the actual frame exports are entirely from commits 391e1960/fa5a4370.
+
+## Export correction 2026-09-21 — 010-easy-module-building: O5kaV container image reference
+
+Fixed the sample container image reference in `O5kaV` (Screen/Dialog/Build Module — Step 2, Container & Ports) to match the existing `ARCHETYPE_PRESETS.steamcmd.defaultImage` in `web/src/components/modules/BuildModuleDialog.tsx`, which was already correct.
+
+| Node | Previous value | New value | Why |
+|---|---|---|---|
+| `NQ8y0` (image sample string) | `ghcr.io/valgulnecron/cs2:latest@sha256:4b9a8e23...4d4e5` (wrong repo slug "cs2", digest truncated to 40 hex chars) | `ghcr.io/valgulnecron/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7` (correct slug, full 64-char digest) | The design sample (`NQ8y0`) was corrected to match the already-correct `ARCHETYPE_PRESETS.steamcmd.defaultImage` in `web/src/components/modules/BuildModuleDialog.tsx`; the component's preset was never changed by this work. |
+
+**Port rows unchanged:** `f4U7oU` (port 1 name: "game"), `b4CUxa` (port 1 number: 27015), `bcGo3` (port 1 protocol: UDP), `prNFB` (port 2 number: 27015), `evKQq` (port 2 protocol: TCP), and `q96ywV` (storage mount: /home/steam/cs2-data) were examined and deliberately left as-is — they correctly represent a running server configuration. All other siblings (`IVUPC` storage capacity: 20Gi) unchanged.
+
+**Prior hand-edit overridden:** commit `10fe068a` had previously hand-edited `design-export/json/O5kaV.json` directly, changing the digest, port 27015→27016 and TCP→UDP without any corresponding Pencil design changes. That manual edit was reverted; the current export supersedes it with a proper Pencil-sourced update containing only the image reference correction and no port mutations.
+
+**Export method & validation:**
+
+- **JSON:** `Get("O5kaV", {depth: 30})` via the Pencil `execute` tool, zero `"..."` elision markers. Re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline; `python3 -m json.tool` passes.
+- **Screenshot:** `export_nodes` at 2× scale → `design-export/screenshots/O5kaV.png` 1600×1070 RGBA non-empty PNG (verified via PIL: 192052 bytes).
+- **Content check:** the full pinned image reference `ghcr.io/valgulnecron/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7` found exactly once, in `design-export/json/O5kaV.json` only. Port and storage values confirmed unchanged via grep.
+- **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`, per Rule 2.
+- No git add/commit performed (task instructions: export and manifest correction only).
+
+
+## Design/code reconciliation — 010-easy-module-building: module-builder screens (2026-09-21)
+
+Per the design/code reconciliation pass, four module-builder screen frames were brought into line with the already-shipped React implementation (`web/src/routes/Modules.tsx`, `web/src/components/modules/BuildModuleDialog.tsx`). Code was the source of truth; design was updated to match.
+
+**kK8Ji (Screen/Modules Catalog):**
+- Added "Create module" button (plus icon) as the first of three header action buttons, matching `web/src/routes/Modules.tsx:139` action layout.
+- Pre-existing buttons "Upload module" and "Manage sources" had their Pencil-internal ids regenerated during insertion (`mhJd3` → `lQ1ua`, `KCxx5` → `luTx8`); this is cosmetic and internal to the export snapshot only.
+
+**IdbiB (Screen/Dialog/Build Module — Step 1, Preset & Metadata):**
+- Button label "Continue to Container & Ports ->" split into text node plus separate ChevronRight icon, matching React component structure.
+- Category chips expanded from 3 placeholder items to all 11 canonical categories with "Shooter" only selected; removed "+ Add category" chip (`e4hEWM`) and pre-selected "Co-op" chip (`u7g81`).
+- Chip row layout manually split: single row `QV9u4` divided into two horizontal sub-frames (`c3DZqO`, `ytYZ9`) to emulate CSS flex-wrap — 10 chips on line 1, "Creative" on line 2 — matching where flex-wrap breaks at this width in the browser.
+
+**O5kaV (Screen/Dialog/Build Module — Step 2, Container & Ports):**
+- Storage section heading "Persistent Storage Volume" → "Persistent Storage", matching React label.
+- Added icon-only delete button to each port row (`PortRow1_Delete`, `PortRow2_Delete`), matching React's row-action spec for dynamic list management.
+- Port rows deliberately kept unchanged (row 1: game/27015/UDP; row 2: query/27015/TCP) as an intentional illustration of a dynamic list configuration.
+
+**hmPL7 (Screen/Dialog/Build Module — Step 3, Review & Export):**
+- Memory slider replaced with a row of four quick-select preset buttons (2Gi, 4Gi, 8Gi, 16Gi, with 8Gi selected), matching React's button-group UI.
+- Removed `resolvedImage` stat line (not rendered by React component).
+- Added "Cluster destination source" select card (matches React's cluster-selection dropdown addition).
+- Updated validation success copy and set text to wrap inside its card, matching React's layout.
+
+**Export method & validation (all 4 nodes: `kK8Ji`, `IdbiB`, `O5kaV`, `hmPL7`):**
+
+- **kK8Ji and IdbiB** exported cleanly on the first pass: `Get(id, {depth: 30})` via Pencil `execute` tool, zero `"..."` elision markers. Re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline; `python3 -m json.tool` passes on both.
+- **O5kaV and hmPL7 initially failed to regenerate:** the first-pass agent invoked `execute` with the wrong argument shape (passing `code` instead of `input`), which the tool rejected, and mistakenly concluded `Get()` returns no JSON payload; it left the pre-reconciliation content in `design-export/json/O5kaV.json` and `design-export/json/hmPL7.json` in place and reported success anyway. This was caught and corrected in a follow-up pass: both nodes were re-fetched via `Get(id, {depth: 30})` through `execute` with the correct `input` argument, re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline, and `python3 -m json.tool` passes on both.
+- **Screenshot:** `export_nodes` at 2× scale for all 4 ids. First-pass agent self-reports were unreliable: kK8Ji, IdbiB, and hmPL7 generated valid non-empty RGBA PNGs with correct pixel dimensions on the first pass, while O5kaV's PNG never regenerated at all (remained ~20 hours older than design.pen save timestamp, not shown as modified in git status). O5kaV's PNG was corrected in a follow-up pass. Final verification via PNG mtime compared against design.pen save time for all four ids; complemented by change-proving greps (post-change strings present, pre-change strings absent) documented in content checks below.
+- **Content checks:** unique body text per node validated — kK8Ji "Create module" button label found in `design-export/json/kK8Ji.json` only; IdbiB category chips ("Shooter", "Creative", etc.) confirmed in `design-export/json/IdbiB.json` only. For O5kaV and hmPL7, the follow-up pass used change-proving greps instead of a same-in-both-versions check: O5kaV confirmed to contain "Persistent Storage" and `PortRow1_Delete`/`PortRow2_Delete` while no longer containing "Persistent Storage Volume", with the unflipped port rows (game/27015/UDP; query/27015/TCP) and storage values (`/home/steam/cs2-data`, `20Gi`) intact; hmPL7 confirmed to contain "All schema constraints" and "Cluster destination source" and the memory presets ("2Gi", "4Gi", "8Gi", "16Gi") while no longer containing "Instant offline verification passed" or "Resolved image".
+- **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`, per Rule 2.
+- No git add/commit performed (export and manifest correction only, per task instructions).
+
+## 010-easy-module-building — archetype truth, console states, capture copy (2026-09-21)
+
+Five frames exported. Four were edited to match shipped code; `O5kaV` was corrected
+against the canonical archetype definitions after the web wizard stopped using its
+hardcoded copy of them.
+
+**`O5kaV` (Dialog/Build Module — Step 2, Container & Ports):** the frame had been drawn
+from the wizard's fabricated archetype presets. Corrected against the `steamcmd` entry in
+`gp-module/internal/archetypes/archetypes.go`: the container image now reads
+`cm2network/steamcmd:root@sha256:4d830b0475b8719f96b9978ba57404434bb3da3f260388d75cfb373cf5889ea8`
+(the invented `@sha256:4b9a8e23…` digest is gone from the frame), the query port reads
+27016/UDP rather than 27015/TCP, the mount path reads `/serverdata` rather than
+`/home/steam/cs2-data`, and row 2's Advertise checkbox is checked to match
+`advertise: true`. Row 1 (game / 27015 / UDP) is unchanged. Row 2's checkbox was rebuilt
+with `Replace` because Pencil rejects `null` on `stroke`/`strokeWidth`, so its node id
+changed `hqhlE` → `AmIhQ` with a new check-mark child `SBDAp`; same tree position,
+styling identical to row 1.
+
+**`IdbiB` (Dialog/Build Module — Step 1, Preset & Metadata):** restored the custom-tag
+input and "Add tag" button that an earlier reconciliation wrongly deleted; added a
+"Recommended" hint beside the Categories label; no category chip is preselected, since
+categories are the author's choice; added an "Archetype Configuration" section between
+the preset cards and the metadata fields, mocking the SteamCMD case with Maximum Players
+(default 16), Server Password and Steam Application ID. Those values come from the
+`steamcmd` ConfigSchema and DefaultEnv in `archetypes.go`. A "Selected Tags" area shows a
+`speedrun ×` example chip to illustrate the populated custom-tag state.
+
+**`Bbnga` (Server Detail — Capture, not-enabled):** the badge no longer renders the raw
+HTTP 501 status text "Not Implemented", which told users the feature does not exist.
+Capture is implemented; it is disabled cluster-wide by default
+(`charts/gameplane/values.yaml`, `capture.enabled: false`) and
+`api/internal/handlers/capture.go:338` returns 501 deliberately for that configuration
+state. The frame now reads "Capture is disabled by cluster configuration."
+
+**`X405l` (Server Detail — Console, server not running) — NEW frame:** the console
+previously showed "connecting…" forever with an empty terminal when no pod was running.
+This frame shows a neutral "Stopped" header chip, no uptime, a "Start Server" action, and
+body copy "Server is stopped." / "Start it to access the console."
+
+**`j88bl0` (Server Detail — Console, failed to start) — NEW frame:** sibling variant for
+the pod-failure case. Danger "Failed" header chip, no uptime, the Stop action hidden
+(nothing to stop), and body copy "Server failed to start: ImagePullBackOff" / "Check the
+Events tab for details."
+
+**Shared component untouched:** `S4k0x` (Gameplane/Server Detail Header) was not
+modified. `X405l` and `j88bl0` override their own header instances only; all 42 instances
+in the document were checked, and no other frame carries these overrides.
+
+**Export method and validation:** JSON via Pencil MCP `execute` running
+`Get(id, {depth: 30})` — note the parameter is named `input`, not `code`; validated with
+`python3 -m json.tool`. PNG via `export_nodes` at 2x, dimensions read from each file's
+IHDR header: `O5kaV` 1600x1070, `Bbnga` 2880x1800, `IdbiB` 1600x1964, `X405l` 2880x1800,
+`j88bl0` 2880x1800. Freshness proven by content rather than by size or mtime — for each
+frame a post-change string must be present AND a pre-change string absent (e.g. `O5kaV`
+contains `cm2network` and no `4b9a8e23`; `Bbnga` contains "disabled by cluster
+configuration" and no "Not Implemented"; `X405l`/`j88bl0` contain their body copy and no
+"up 3m"). Mtime and file size both produced false verdicts during this pass and are not
+relied on.
+
+*Correction:* an earlier version of this entry was generated by an agent summarising work
+it had not performed, and invented specifics — a 1–256 player range (the schema says
+1–128), a Steam App ID of 740 (the archetype default is "0"), four wrong PNG dimensions,
+and an inverted description of `j88bl0`'s actions. It also omitted `O5kaV`. It has been
+replaced by this entry, written from values verified directly against the exported JSON
+and `archetypes.go`.

@@ -16,6 +16,7 @@ const upgrade = vi.fn();
 const uninstall = vi.fn();
 const removeUpload = vi.fn();
 const listSources = vi.fn();
+const archetypes = vi.fn();
 vi.mock("@/lib/endpoints", () => ({
   Modules: {
     catalog: () => catalog(),
@@ -26,6 +27,14 @@ vi.mock("@/lib/endpoints", () => ({
   ModuleSources: {
     list: () => listSources(),
     removeUpload: (source: string, module: string) => removeUpload(source, module),
+  },
+  ModuleBuilder: {
+    archetypes: () => archetypes(),
+    scaffold: vi.fn(),
+    validate: vi.fn(),
+    preview: vi.fn(),
+    installToCluster: vi.fn(),
+    downloadArchive: vi.fn(),
   },
 }));
 
@@ -94,6 +103,7 @@ afterEach(() => {
   uninstall.mockReset();
   removeUpload.mockReset();
   listSources.mockReset();
+  archetypes.mockReset();
 });
 
 // Provide default mock for listSources to avoid hanging
@@ -463,5 +473,64 @@ describe("ModulesPage", () => {
       const uninstallBtn = screen.getByRole("button", { name: /uninstall/i, hidden: true });
       expect(uninstallBtn).toBeDisabled();
     }, { timeout: 2000 });
+  });
+
+  it("opens BuildModuleDialog when clicking Create module", async () => {
+    catalog.mockResolvedValue({ items: [MINECRAFT] });
+    archetypes.mockResolvedValue({
+      archetypes: [
+        {
+          id: "steamcmd",
+          title: "SteamCMD Dedicated Server",
+          description: "Dedicated game server installed and managed via SteamCMD (Valve UDP ports, save volume, non-root user)",
+          defaultImage: "cm2network/steamcmd:root@sha256:4d830b0475b8719f96b9978ba57404434bb3da3f260388d75cfb373cf5889ea8",
+          defaultPorts: [
+            { name: "game", containerPort: 27015, protocol: "UDP", advertise: true },
+            { name: "query", containerPort: 27016, protocol: "UDP", advertise: true },
+          ],
+          defaultStorage: {
+            size: "20Gi",
+            mountPath: "/serverdata",
+          },
+          defaultEnv: [
+            { name: "STEAMAPPID", value: "0" },
+            { name: "SERVER_NAME", value: "Game Server" },
+          ],
+          configSchema: [
+            {
+              name: "SERVER_PASSWORD",
+              displayName: "Server Password",
+              description: "Password required for players to join the server",
+              type: "password",
+              required: false,
+            },
+            {
+              name: "MAX_PLAYERS",
+              displayName: "Maximum Players",
+              description: "Maximum allowed concurrent players",
+              type: "int",
+              default: "16",
+              min: 1,
+              max: 128,
+            },
+          ],
+          capabilities: {
+            lifecycle: {
+              stop: ["quit"],
+            },
+          },
+          defaultCategories: ["Survival", "Co-op"],
+        },
+      ],
+    });
+    renderPage();
+
+    await screen.findByText("Minecraft (Java)");
+    const createBtn = screen.getByRole("button", { name: /Create module/i });
+    expect(createBtn).toBeInTheDocument();
+
+    await userEvent.click(createBtn);
+    expect(await screen.findByText("Create game module")).toBeInTheDocument();
+    expect(await screen.findByText("SteamCMD Dedicated Server")).toBeInTheDocument();
   });
 });

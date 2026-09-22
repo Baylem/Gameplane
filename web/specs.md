@@ -741,6 +741,10 @@ package.json                # @gameplane/web v0.2.0-beta.8; dev: vite, npm scrip
 6. **Modules** (`/modules`) → `ModulesPage`
    - Merged catalog from all registered ModuleSources + installed Module CRs
    - Browse by game, install from catalog, manage installations, bulk upload
+   - **Module Builder** (`BuildModuleDialog.tsx`): 3-step modal wizard for creating, validating, simulating, and packaging custom game modules directly from the dashboard:
+     - **Step 1 (Preset & Metadata)**: Choose an archetype preset (`steamcmd`, `java`, `generic`), enter DNS-1123 module name with live validation, display title, summary, and canonical category chips.
+     - **Step 2 (Container & Ports)**: Configure container image ref (with digest pinning verification badge), custom TCP/UDP ports with advertise flags, and persistent volume size and mount path.
+     - **Step 3 (Review & Export)**: Dual-pane view with syntax-editable YAML manifests (`module.yaml`, `template.yaml`, `README.md`), live offline validation diagnostics, memory scaling simulation (`autoFromMemoryLimit`), and action buttons to download a `.tar.gz` archive or install directly into a cluster upload `ModuleSource`.
 
 7. **Cluster** (`/cluster`) → `ClusterPage` (gated by `servers:write` permission)
    - Cluster health, node list, kubeconfig download
@@ -941,6 +945,8 @@ Each namespace is an object of typed functions building and fetching URLs:
 - **Modules** — `catalog()`, `list()`, `get(name)`, `install(body)`, `upgrade(name, version)`, `uninstall(name)`
 
 - **ModuleSources** — `list()`, `create(name, spec)`, `update(name, spec)`, `remove(name)`, `upload(source, file, opts?)` (blob), `removeUpload(source, module)`
+
+- **ModuleBuilder** — `scaffold(body)`, `validate(body)`, `preview(body)`, `installToCluster(body)`, `downloadArchive(body)`
 
 - **Captures** (`web/src/lib/api.ts:127-175`) — wraps the 8 REST routes `api/internal/handlers/capture.go` mounts under `MountCapture` (all gated by the `captures:manage` permission, `api/internal/rbac/catalog.go`): `POST /servers/{name}:capture-enable`, `POST /servers/{name}:capture-disable`, `POST /servers/{name}:capture-start`, `POST /servers/{name}:capture-stop`, `GET /servers/{name}:captures` (list), `GET /servers/{name}:capture?id=` (status), `GET /servers/{name}:capture-file?id=` (download), `DELETE /servers/{name}:capture?id=`. Per `specs/done_003-network-capture-sidecar/research.md`'s "Decision 1: Download Path" (T007, resolved): the download handler streams directly from the capture sidecar's `:9091 GET /captures/{id}/file` through the existing `<gs>-agent` ClusterIP Service's second port — not proxied through the agent's general `/files/*` file-browser surface (which is single-rooted at `--data-root` and cannot serve the capture emptyDir). The dashboard API client is expected to call through that one `:capture-file` indirection point rather than reconstructing the sidecar path itself.
 

@@ -3,7 +3,7 @@
   "id": "Bbnga",
   "x": 19680,
   "y": 10155,
-  "name": "Screen/Server Detail — Capture (Not enabled)",
+  "name": "Screen/Server Detail \u2014 Capture (Not enabled)",
   "theme": {
     "semantic": "dark"
   },
@@ -207,6 +207,32 @@
                           }
                         }
                       ]
+                    },
+                    {
+                      "id": "faDKK",
+                      "type": "ref",
+                      "ref": "igj2U",
+                      "name": "Cluster Disabled Error",
+                      "width": "fill_container",
+                      "descendants": {
+                        "Xsw9m": {
+                          "content": "Capture is disabled by cluster configuration."
+                        }
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "id": "nLDsn",
+                      "name": "Admin Hint",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "To enable cluster-wide capture, set capture.enabled: true in your Helm values and upgrade the release.",
+                      "lineHeight": 1.4,
+                      "textAlign": "center",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
                     }
                   ]
                 }
