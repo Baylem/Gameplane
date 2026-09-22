@@ -1,7 +1,6 @@
-import { useLocation } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
+import { useLocation, Link } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { ShieldCheck, X, LogOut } from "lucide-react";
+import { ShieldCheck, X, LogOut, Palette } from "lucide-react";
 import {
   Drawer,
 } from "@heroui/react";
@@ -31,6 +30,8 @@ export interface SidebarProps {
   onLogout: () => void | Promise<void>;
   theme?: AppearanceMode;
   onThemeChange?: (mode: AppearanceMode) => void;
+  /** Called when the footer "Customize theme" button is pressed (navigates to /settings/theme). */
+  onCustomizeTheme?: () => void;
 }
 
 export function Sidebar({
@@ -44,6 +45,7 @@ export function Sidebar({
   onLogout,
   theme = "system",
   onThemeChange,
+  onCustomizeTheme,
 }: SidebarProps) {
   const { pathname } = useLocation();
 
@@ -135,14 +137,30 @@ export function Sidebar({
       {/* Footer */}
       <div className="border-t border-border px-3 py-3 space-y-2" aria-label="Sidebar footer">
         {/* Appearance toggle row */}
-        <div className="flex justify-center">
-          {onThemeChange && (
-            <AppearanceToggle
-              value={theme}
-              onChange={onThemeChange}
-            />
-          )}
-        </div>
+        {(onThemeChange || onCustomizeTheme) && (
+          <div className="flex items-center justify-center gap-2">
+            {onThemeChange && (
+              <AppearanceToggle
+                value={theme}
+                onChange={onThemeChange}
+              />
+            )}
+            {onCustomizeTheme && (
+              <button
+                type="button"
+                aria-label="Customize theme"
+                title="Customize theme"
+                onClick={() => {
+                  onNavigate?.();
+                  onCustomizeTheme();
+                }}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-border/60 hover:text-fg"
+              >
+                <Palette className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* User info + logout row */}
         <div className="flex items-center gap-3 rounded-md px-2 py-1.5">

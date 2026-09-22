@@ -21,6 +21,7 @@ import {
 import { APIError } from "@/lib/api";
 import { Auth } from "@/lib/endpoints";
 import { enforceUnauthenticatedTheme } from "@/lib/enforceUnauthenticatedTheme";
+import { SAFE_MODE_SESSION_KEY } from "@/lib/useThemePreferences";
 import type { LoginProvider } from "@/types";
 
 // IMPORTANT: This pre-auth surface must not display any internal
@@ -61,6 +62,35 @@ export function LoginPage() {
     };
   }, []);
 
+  // Shared by the form submit and the safe-mode link below the form: the
+  // same credentials flow, but the safe-mode variant plants the session
+  // flag before navigating so the authenticated session starts with the
+  // custom CSS overlay suspended (contracts/theme-ui.md §1.3).
+  const login = async (safe: boolean) => {
+    if (busy) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      const { user } = await Auth.login({ username: u, password: p });
+      // Seed the identity cache so the app shell renders the real user on
+      // first paint — no post-reload "guest" flash, no second /users/me fetch.
+      queryClient.setQueryData(["me"], user);
+      if (safe) {
+        try {
+          window.sessionStorage.setItem(SAFE_MODE_SESSION_KEY, "1");
+        } catch {
+          // sessionStorage blocked — sign-in still proceeds, just without
+          // the safe-mode flag carried into the session.
+        }
+      }
+      await navigate({ to: "/" });
+    } catch (e) {
+      setErr(e instanceof APIError ? "Invalid credentials" : "Network error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // One button per enabled SSO provider; the password form renders unless
   // the server explicitly reports local login disabled.
   const sso = providers?.filter((x) => x.kind !== "local") ?? [];
@@ -88,21 +118,9 @@ export function LoginPage() {
           {localEnabled ? (
             <form
               className="space-y-4"
-              onSubmit={async (e) => {
+              onSubmit={(e) => {
                 e.preventDefault();
-                setErr(null);
-                setBusy(true);
-                try {
-                  const { user } = await Auth.login({ username: u, password: p });
-                  // Seed the identity cache so the app shell renders the real user on
-                  // first paint — no post-reload "guest" flash, no second /users/me fetch.
-                  queryClient.setQueryData(["me"], user);
-                  await navigate({ to: "/" });
-                } catch (e) {
-                  setErr(e instanceof APIError ? "Invalid credentials" : "Network error");
-                } finally {
-                  setBusy(false);
-                }
+                void login(false);
               }}
             >
               <div className="space-y-1.5">
@@ -204,6 +222,25 @@ export function LoginPage() {
               )}
 
               <SSOButtons providers={sso} />
+
+              {/* Safe-mode entry point (contracts/theme-ui.md §1.3): same
+                  credentials flow, but the session lands with the custom CSS
+                  overlay suspended. Rendered as a link (design ref s12HO),
+                  styled like the card's "Forgot?" link — standard pink
+                  chrome via enforceUnauthenticatedTheme. href is the
+                  post-login destination; the click runs the sign-in flow. */}
+              <div className="text-center">
+                <a
+                  href="/"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    void login(true);
+                  }}
+                  className="font-mono text-xs text-accent hover:text-accent/80"
+                >
+                  Sign in with safe mode (custom styling disabled)
+                </a>
+              </div>
             </form>
           ) : (
             <div className="space-y-4">

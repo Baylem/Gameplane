@@ -1,5 +1,6 @@
-import { Menu, UserCircle, LogOut } from "lucide-react";
+import { Menu, UserCircle, LogOut, Palette } from "lucide-react";
 import type { ReactNode } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Button,
   Avatar,
@@ -49,6 +50,7 @@ export function TopBar({
 }: TopBarProps): JSX.Element {
   const name = user?.displayName || user?.username || "guest";
   const initials = name.slice(0, 2).toUpperCase();
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
@@ -115,6 +117,15 @@ export function TopBar({
             <DropdownMenu className="w-48">
               <DropdownSection>
                 <Separator className="my-1" />
+                <DropdownItem
+                  key="theme"
+                  onClick={() => void navigate({ to: "/settings/theme" })}
+                >
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4" />
+                    Theme & Appearance
+                  </div>
+                </DropdownItem>
                 <DropdownItem
                   key="logout"
                   onClick={() => void handleLogout()}

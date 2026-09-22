@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "@tanstack/react-router";
+import { Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   Archive,
@@ -28,9 +28,12 @@ import { useDelayedLoading } from "@/lib/useDelayedLoading";
 import {
   applyThemePreferences,
   DEFAULT_THEME_PREFERENCES,
+  isSafeModeActive,
+  SAFE_MODE_SESSION_KEY,
   unmountCustomCssOverlay,
   useThemePreferences,
 } from "@/lib/useThemePreferences";
+import { SafeModeBanner } from "@/components/ui/SafeModeBanner";
 
 // The localStorage key the theme boot script in index.html reads before
 // React mounts — must stay in sync (see index.html and theme-tokens.md).
@@ -92,11 +95,17 @@ export function AppLayout() {
   const { data: me, error, isLoading } = useMe();
   const { data: cluster } = useClusterInfo();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [theme, setTheme] = useAppearance(me);
   // Below `lg`, the fixed sidebar becomes an off-canvas drawer toggled by
   // the TopBar's hamburger button. Desktop (`lg`+) keeps the always-on
   // sidebar and never mounts the drawer.
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Safe mode (FR-009, contracts/theme-ui.md §4): ?safe-mode=1 in the URL,
+  // the Ctrl+Shift+Alt+T shortcut, or the sessionStorage flag planted by the
+  // safe-mode login link. Suspends only the custom CSS overlay.
+  const [safeMode, setSafeMode] = useState(() => isSafeModeActive());
+  const [safeModeBannerDismissed, setSafeModeBannerDismissed] = useState(false);
   const showSkeleton = useDelayedLoading(isLoading);
 
   useEffect(() => {
@@ -104,6 +113,31 @@ export function AppLayout() {
       location.assign("/login");
     }
   }, [error]);
+
+  // The keyboard safe-mode entry point: plant the same sessionStorage flag
+  // as the login-page link so safe mode (and the banner) survive reloads,
+  // then activate it for the current view.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || !e.shiftKey || !e.altKey || e.repeat) return;
+      if (e.key.toLowerCase() !== "t") return;
+      try {
+        window.sessionStorage.setItem(SAFE_MODE_SESSION_KEY, "1");
+      } catch {
+        // sessionStorage blocked — safe mode still applies for this view.
+      }
+      setSafeMode(true);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // Suspension is overlay-only: unmountCustomCssOverlay flips
+  // data-custom-css="off" and removes the mounted <style> element — the
+  // stored stylesheet in preferences/localStorage is never deleted.
+  useEffect(() => {
+    if (safeMode) unmountCustomCssOverlay();
+  }, [safeMode]);
 
   // The custom CSS overlay is authenticated-only surface: unmount it when
   // the layout unmounts (navigation to /login or /share/:token) as well as
@@ -116,6 +150,12 @@ export function AppLayout() {
     unmountCustomCssOverlay();
     await Auth.logout().catch(() => {});
     location.assign("/login");
+  };
+
+  // Sidebar is deliberately router-free (its tests mock the router module),
+  // so the footer's customize-theme button reports through this callback.
+  const openThemeSettings = () => {
+    void navigate({ to: "/settings/theme" });
   };
 
   const navItems: SidebarNavGroup[] = [
@@ -158,6 +198,17 @@ export function AppLayout() {
 
   return (
     <>
+      {/* Safe-mode banner: sticky at the top of the viewport so it stays
+          reachable while recovering from broken custom CSS. Dismiss only
+          hides it — safe mode remains active for the session. */}
+      {safeMode && !safeModeBannerDismissed && (
+        <div className="sticky top-0 z-50">
+          <SafeModeBanner
+            onOpenSettings={openThemeSettings}
+            onDismiss={() => setSafeModeBannerDismissed(true)}
+          />
+        </div>
+      )}
       <AppShell
         sidebar={
           <Sidebar
@@ -168,6 +219,7 @@ export function AppLayout() {
             onLogout={onLogout}
             theme={theme}
             onThemeChange={setTheme}
+            onCustomizeTheme={openThemeSettings}
           />
         }
         topBar={
@@ -200,6 +252,7 @@ export function AppLayout() {
         onLogout={onLogout}
         theme={theme}
         onThemeChange={setTheme}
+        onCustomizeTheme={openThemeSettings}
       />
     </>
   );
