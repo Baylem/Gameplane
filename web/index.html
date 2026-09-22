@@ -53,7 +53,11 @@
           // React mounts (no Pink flash). Injected before the overlay below.
           if (root.dataset.themeType === "custom_colors") {
             var varsCss = window.localStorage.getItem(VARS_KEY);
-            if (varsCss) {
+            // Only accept the exact shape customThemeTokensToCss writes
+            // (--token: #rrggbb; lines under the shared selector), so a
+            // tampered cache can never smuggle arbitrary CSS in pre-React.
+            var VARS_SHAPE = /^:root, \.dark, \.light \{\n(  --[a-z-]+: #[0-9a-f]{6};\n)+\}$/;
+            if (varsCss && VARS_SHAPE.test(varsCss)) {
               var vars = document.createElement("style");
               vars.id = "gameplane-custom-theme-vars";
               vars.textContent = varsCss;
