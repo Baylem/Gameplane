@@ -2216,3 +2216,52 @@ Contract §3.1/§3.2 were amended: the Preset theme card now has THREE radio car
 **Noticed but NOT touched (collaborative-document rule):** both screens' Top Bar breadcrumbs were replaced outside this pass with new 2-level frames (lWvcv `cOfsB`, T1wkiT `evCjB` — "gameplane › Settings"), dropping the contract's third crumb "Theme & Appearance". Left as found; flagged to the operator.
 
 **Validation:** `ctx.problems` sweeps (`resolveInstances: true`, ×2) — T1wkiT clean; lWvcv's only report is the intentionally hidden `b9v04` (`enabled:false` nodes report "fully clipped", same artifact class as prior disabled helpers). Screenshots verified: preset cards on both screens (correct selection states, no overflow), `p8cbrD` greyed without the red meta, `ffLVD` fully enabled with both alerts. Exports: `json/lWvcv.json` (17,598 B) + `json/T1wkiT.json` (18,528 B) verbatim depth-14 includePathGeometry, both `json.load`-valid, zero `"..."` elisions; greps — lWvcv "Custom colors" ×2 (radio card + section header), T1wkiT "fails WCAG AA" ×2 (preview meta + contrast-guard alert; the lWvcv JSON still contains the phrase once inside the hidden `b9v04` node). PNGs at 2x: `lWvcv.png` 881 KB (2880×3808), `T1wkiT.png` 972 KB (2880×4072). Only the two Feature-016 screens were modified; no git; the `.pen` was not saved and never accessed via shell.
+
+### Free color picker hex inputs (2026-09-23, D2 implementation, rewritten after clipping + value-consistency fix pass) — lWvcv + T1wkiT
+
+WP-design operand pair: insertions of ccAccentFreePicker and ccSurfaceFreePicker frames in both Theme Settings screens to support free hex color entry alongside the preset swatches and surface radios.
+
+**`lWvcv` (Custom colors INACTIVE, stored Accent #F59E0B "Amber" + Surface #F8FAFC "Crisp Light"):** two horizontal frames in `Y9YsS1` (Card Fields), both at `opacity: 0.5` (disabled, matching the section's other controls):
+1. **ccAccentFreePicker** (`iSgJ4`): a 28×28 rounded swatch frame with palette icon (`TZvv8`/`FcIIH`, fill `#F59E0B`) + ref to `qvQPg` (Gameplane/Input/Small, `ep9Jm`) width 96 showing hex text `"#F59E0B"`.
+2. **ccSurfaceFreePicker** (`w3wnz`): a 28×28 rounded swatch frame with palette icon (`pZ1gY`/`TtaGZ`, fill `#F8FAFC`) + ref to `qvQPg` (`UEuU5`) width 96 showing hex text `"#F8FAFC"`.
+
+Both values now match the screen's own preview chip (Amber `#F59E0B`, `SAvLR`) and the selected surface radio (Crisp Light `#F8FAFC`, `X4VnPS`) — the placeholder values #3B82F6 / #1E293B from the initial insertion were corrected to the stored Amber/Crisp Light values. The Amber preset swatch `wEV1E` in `PFzKl` now also carries the same selected-stroke treatment T1wkiT uses (`stroke: $foreground/foreground`, `strokeWidth: 2`, vs the default `$border/border` 1px on the other six swatches).
+
+**`T1wkiT` (Custom colors ACTIVE, Accent #F59E0B + Surface #F8FAFC):** identical structure in `u3VzxL` (Card Fields), full opacity (no 0.5):
+1. **ccAccentFreePicker** (`jCPmK`): 28×28 rounded swatch frame with palette icon (`SLXhL`/`a7NBc`, fill `#F59E0B`) + `qvQPg` ref (`c1Alx`) hex text `"#F59E0B"`.
+2. **ccSurfaceFreePicker** (`Viurq`): 28×28 rounded swatch frame with palette icon (`q1CZim`/`L547qD`, fill `#F8FAFC`) + `qvQPg` ref (`gxx0X`) hex text `"#F8FAFC"`.
+
+T1wkiT's values were already correct; unchanged in this pass except for the hex-text color fix below.
+
+**Hex input text color fix (both screens, all 4 inputs — `ep9Jm`, `UEuU5`, `c1Alx`, `gxx0X`):** the `qvQPg` component's `inputValue` text (`tK3VZ`) defaults to `fill: $field/placeholder`, so a content override alone still rendered as placeholder-grey. Added a `fill: $foreground/foreground` descendant override alongside each `content` override — the token used by the majority of filled (non-placeholder) inputs elsewhere in the document (e.g. the login screen's entered username `D1O4P` and password `aCGwF`, `i12U8`). All four hex values now read as entered text, not placeholder text.
+
+**Structural notes (unchanged from original D2 pass):**
+- Each free-picker frame uses the existing `qvQPg` component (Gameplane/Input/Small, 250×32) via ref with a width override to 96 and an `inputValue` descendant content override.
+- Swatch containers are 28×28 rounded frames (cornerRadius 6, stroke `$border/border`) with a centered 16×16 palette icon (`"palette"` lucide, weight 400, fill `$muted`) — matching the existing `tsCardCustom` swatch styling at `Q0uesI` (lWvcv) / `wHCI4` (T1wkiT).
+- Surface tone rows (`nG8Kx` / `ez9A7`) are horizontal layout (gap 24) — unchanged.
+- Both screens' Top Bar breadcrumbs are 2-level `"gameplane › Settings"` — unchanged.
+
+**Final child order — `Y9YsS1` (lWvcv Card Custom Colors → Card Fields):**
+1. `PFzKl` — ccSwatches (accent swatch row)
+2. `iSgJ4` — ccAccentFreePicker
+3. `JGzsZ` — ccPreviewRow
+4. `nG8Kx` — ccSurfaceRow (surface-tone row)
+5. `w3wnz` — ccSurfaceFreePicker
+
+**Final child order — `u3VzxL` (T1wkiT Card Custom Colors → Card Fields):**
+1. `GpVGU` — ccSwatches (accent swatch row)
+2. `jCPmK` — ccAccentFreePicker
+3. `R8x9R` — ccPreviewRow
+4. `ez9A7` — ccSurfaceRow (surface-tone row)
+5. `Viurq` — ccSurfaceFreePicker
+6. `O8yQoQ` — ccContrastWarning (contrast-guard warning, unchanged position after the surface picker)
+
+**Clipping fix (screen heights):** the two free-picker rows added by the D2 pass grew each screen's auto-sized `Content Column` (`A1pd4` / `F5MnIY`, vertical-layout, no explicit height) past the fixed, `clip: true` screen frame's height, clipping the bottom `tsActionsRow` (Reset to Defaults / Save, `k1qKk` / `pqHRF`) and partially clipping the content column itself. `Body`/`Settings Layout` on both screens are `fill_container` (no independent fixed height to adjust — they simply inherit whatever the screen allows), so the fix is at the screen root only:
+- `lWvcv`: `height` `1904` → **`2000`** (content column settles at 1810; 64 top bar + 24 + 53 header + 24 + 1810 column + 24 bottom margin ≈ 1999).
+- `T1wkiT`: `height` `2036` → **`2114`** (content column settles at 1924; same margin arithmetic ≈ 2113).
+
+**Real `ctx.problems` sweep (`resolveInstances: true`) after all fixes, run separately per screen (root frame down):**
+- `lWvcv`: **one** report — `b9v04` (`ccPreviewMeta`, "Contrast 2.9:1 — fails WCAG AA") "fully clipped", which is expected and correct: the node is `enabled: false` (intentionally hidden, contrast warning only applies to the active/T1wkiT state) and a disabled/zero-area node reporting as clipped is the established artifact class for hidden helpers in this document (same pattern noted in the 2026-09-22 third-pass entry above). No other node on either screen reports `partially clipped` or `fully clipped` — the `Content Column` / `tsActionsRow` clipping is gone on both.
+- `T1wkiT`: **zero** reports — fully clean.
+
+**Exports (this pass):** `json/lWvcv.json` (18,943 B) and `json/T1wkiT.json` (19,839 B), `Get(id, {depth: 12})` (zero `"..."` elisions confirmed by string search), both `python3 -m json.tool`-valid; greps confirm `ccAccentFreePicker` ×1 and `ccSurfaceFreePicker` ×1 in each file, and `"Contrast 2.9:1"` present in both (visible/active in T1wkiT, present-but-hidden in lWvcv's `b9v04`). PNGs re-exported via `export_nodes` at 2x scale: `screenshots/lWvcv.png` **2880×4000** (907 KB) and `screenshots/T1wkiT.png` **2880×4228** (998 KB) — both `2×` the corrected screen heights (2000/2114), confirmed via PNG IHDR dimensions, not estimated. Screenshots visually verified: both screens show the full `tsActionsRow` (Reset to Defaults / Save) with normal bottom padding, no overflow; the Custom Colors card shows the 7 preset swatches (Amber ring-highlighted) and the two free-picker 28×28 palette-icon swatches (Amber accent, Crisp Light surface), and legible (non-grey) hex text `#F59E0B` / `#F8FAFC` in all four inputs. All access via Pencil MCP; `.pen` file not read/edited via shell; no git commands run — the human saves the `.pen` file via the Pencil GUI after this session.

@@ -98635,7 +98635,7 @@
       },
       "clip": true,
       "width": 1440,
-      "height": 1904,
+      "height": 2000,
       "fill": "$background/background",
       "children": [
         {
@@ -99349,8 +99349,8 @@
                                       "fill": "#F59E0B",
                                       "width": 28,
                                       "height": 28,
-                                      "stroke": "$border/border",
-                                      "strokeWidth": 1,
+                                      "stroke": "$foreground/foreground",
+                                      "strokeWidth": 2,
                                       "strokeAlignment": "inner"
                                     },
                                     {
@@ -99388,6 +99388,57 @@
                                       "stroke": "$border/border",
                                       "strokeWidth": 1,
                                       "strokeAlignment": "inner"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "iSgJ4",
+                                  "name": "ccAccentFreePicker",
+                                  "opacity": 0.5,
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "TZvv8",
+                                      "name": "Swatch + Icon",
+                                      "width": 28,
+                                      "height": 28,
+                                      "fill": "#F59E0B",
+                                      "cornerRadius": 6,
+                                      "stroke": "$border/border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "FcIIH",
+                                          "name": "Palette Icon",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "palette",
+                                          "library": "lucide",
+                                          "weight": 400,
+                                          "fill": "$muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "ep9Jm",
+                                      "type": "ref",
+                                      "ref": "qvQPg",
+                                      "name": "Hex Input",
+                                      "width": 96,
+                                      "descendants": {
+                                        "tK3VZ": {
+                                          "content": "#F59E0B",
+                                          "fill": "$foreground/foreground"
+                                        }
+                                      }
                                     }
                                   ]
                                 },
@@ -99488,6 +99539,57 @@
                                       "descendants": {
                                         "jAx6p": {
                                           "content": "Crisp Light"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "w3wnz",
+                                  "name": "ccSurfaceFreePicker",
+                                  "opacity": 0.5,
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "pZ1gY",
+                                      "name": "Swatch + Icon",
+                                      "width": 28,
+                                      "height": 28,
+                                      "fill": "#F8FAFC",
+                                      "cornerRadius": 6,
+                                      "stroke": "$border/border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "TtaGZ",
+                                          "name": "Palette Icon",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "palette",
+                                          "library": "lucide",
+                                          "weight": 400,
+                                          "fill": "$muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "UEuU5",
+                                      "type": "ref",
+                                      "ref": "qvQPg",
+                                      "name": "Hex Input",
+                                      "width": 96,
+                                      "descendants": {
+                                        "tK3VZ": {
+                                          "content": "#F8FAFC",
+                                          "fill": "$foreground/foreground"
                                         }
                                       }
                                     }
@@ -99956,7 +100058,7 @@
       },
       "clip": true,
       "width": 1440,
-      "height": 2036,
+      "height": 2114,
       "fill": "$background/background",
       "children": [
         {
@@ -100713,6 +100815,56 @@
                                 },
                                 {
                                   "type": "frame",
+                                  "id": "jCPmK",
+                                  "name": "ccAccentFreePicker",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "SLXhL",
+                                      "name": "Swatch + Icon",
+                                      "width": 28,
+                                      "height": 28,
+                                      "fill": "#F59E0B",
+                                      "cornerRadius": 6,
+                                      "stroke": "$border/border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "a7NBc",
+                                          "name": "Palette Icon",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "palette",
+                                          "library": "lucide",
+                                          "weight": 400,
+                                          "fill": "$muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "c1Alx",
+                                      "type": "ref",
+                                      "ref": "qvQPg",
+                                      "name": "Hex Input",
+                                      "width": 96,
+                                      "descendants": {
+                                        "tK3VZ": {
+                                          "content": "#F59E0B",
+                                          "fill": "$foreground/foreground"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
                                   "id": "R8x9R",
                                   "name": "ccPreviewRow",
                                   "gap": 10,
@@ -100803,6 +100955,56 @@
                                       "descendants": {
                                         "jAx6p": {
                                           "content": "Crisp Light"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Viurq",
+                                  "name": "ccSurfaceFreePicker",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "q1CZim",
+                                      "name": "Swatch + Icon",
+                                      "width": 28,
+                                      "height": 28,
+                                      "fill": "#F8FAFC",
+                                      "cornerRadius": 6,
+                                      "stroke": "$border/border",
+                                      "strokeWidth": 1,
+                                      "strokeAlignment": "inner",
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "L547qD",
+                                          "name": "Palette Icon",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "palette",
+                                          "library": "lucide",
+                                          "weight": 400,
+                                          "fill": "$muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "gxx0X",
+                                      "type": "ref",
+                                      "ref": "qvQPg",
+                                      "name": "Hex Input",
+                                      "width": 96,
+                                      "descendants": {
+                                        "tK3VZ": {
+                                          "content": "#F8FAFC",
+                                          "fill": "$foreground/foreground"
                                         }
                                       }
                                     }
