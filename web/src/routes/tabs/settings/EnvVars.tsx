@@ -47,6 +47,7 @@ export function EnvVarsSection({ draft, onChange }: SectionProps) {
             <Table.Content
               aria-label="Environment variables"
               className="mb-4 max-h-[400px]"
+              keyboardNavigationBehavior="arrow"
             >
               <Table.Header>
                 <Table.Column key="type" width="80" isRowHeader>

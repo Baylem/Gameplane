@@ -146,7 +146,7 @@ export function AuditLogPage() {
       <Card className="overflow-hidden p-0">
         <Table.Root className="bg-transparent text-xs">
           <Table.ScrollContainer className="max-h-[70vh]">
-            <Table.Content aria-label="Audit log">
+            <Table.Content aria-label="Audit log" keyboardNavigationBehavior="arrow">
               <Table.Header>
                 <Table.Column id="time" isRowHeader className="w-40">Time</Table.Column>
                 <Table.Column id="actor" className="w-36">Actor</Table.Column>

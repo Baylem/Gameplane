@@ -209,7 +209,7 @@ export function UsersPage() {
             <Card className="overflow-hidden p-0">
             <Table.Root>
               <Table.ScrollContainer>
-                <Table.Content aria-label="Users list">
+                <Table.Content aria-label="Users list" keyboardNavigationBehavior="arrow">
                   <Table.Header>
                     <Table.Column id="user" isRowHeader>User</Table.Column>
                     <Table.Column id="role">Role</Table.Column>

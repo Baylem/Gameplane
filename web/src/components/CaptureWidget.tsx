@@ -334,7 +334,10 @@ export function CaptureWidget({ name, ns, gs }: Props) {
           <div className="overflow-x-auto rounded-lg border border-default-200">
             <Table.Root className="w-full">
               <Table.ScrollContainer>
-                <Table.Content aria-label="Completed and failed packet captures for this server">
+                <Table.Content
+                  aria-label="Completed and failed packet captures for this server"
+                  keyboardNavigationBehavior="arrow"
+                >
                   <TableHeader>
                     <TableColumn isRowHeader>ID</TableColumn>
                     <TableColumn>Status</TableColumn>
