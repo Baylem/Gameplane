@@ -42,7 +42,7 @@ An operator signs in to the dashboard and wants to choose their visual appearanc
 
 **Acceptance Scenarios**:
 
-1. **Given** a user viewing the dashboard in the Pink theme, **When** they select the "Legacy" preset in appearance settings, **Then** all primary accent elements (buttons, active tabs, focus rings, status highlights) change to the legacy orange tone, and surface backgrounds shift to the legacy dark/neutral palette.
+1. **Given** a user viewing the dashboard in the Pink theme, **When** they select the "Legacy" preset in appearance settings, **Then** all primary accent elements (buttons, active navigation, focus rings, status highlights) change to the legacy orange tone, and surface backgrounds shift to the legacy dark/neutral palette.
 2. **Given** a user viewing the dashboard in the Legacy theme, **When** they select the "Pink" preset in appearance settings, **Then** all accent elements change to the modern pink tone, and surfaces shift to the modern palette.
 3. **Given** either preset theme is active, **When** the user toggles between Light and Dark appearance mode, **Then** the active theme renders with its respective light or dark palette variants while maintaining its brand accents (pink for Modern, orange for Legacy).
 4. **Given** a user has changed their theme preset, **When** they navigate to different pages or reload the application, **Then** the chosen theme remains active without flashing or resetting.
@@ -84,7 +84,7 @@ An operator wants a personalized visual theme that matches their personal prefer
 
 ### User Story 4 - Apply and Manage Custom CSS (Priority: P3)
 
-A power user or system administrator wants granular control over fonts, layout spacing, or specific component treatments. They navigate to Theme Settings, open the "Custom CSS" tab, input their custom CSS rules into an editor, and save. The custom stylesheet is saved to their profile and applied to their personal session.
+A power user or system administrator wants granular control over fonts, layout spacing, or specific component treatments. They navigate to Theme Settings, scroll to the Custom CSS section, input their custom CSS rules into an editor, and save. The custom stylesheet is saved to their profile and applied to their personal session.
 
 **Why this priority**: Delivers maximum flexibility for advanced users and power operators while remaining optional and decoupled from the basic preset functionality.
 
@@ -184,6 +184,12 @@ A power user or system administrator wants granular control over fonts, layout s
 
 - Q: Since custom colors have no on/off toggle, how are they activated and deactivated? → A: A third "Custom colors" radio card in the Preset theme card: selecting it sets `themeType` to `custom_colors`; selecting Modern Pink or Legacy Orange sets `themeType` back to `preset`. The Custom colors card's controls are disabled (stored values visible but greyed) unless the Custom colors radio is selected. Stored customs are retained across switches (FR-012).
 - Q: Is the theme UI a modal or a page? → A (operator design decision): a full settings page at `/settings/theme` — app shell + settings navigation column (with a new "Theme" entry after "General") + stacked section cards (Preset theme / Appearance mode / Custom colors / Custom CSS / Export-Import) — replacing the originally specified `ThemeSettingsModal`.
+
+### Session 2026-09-23
+
+- Q: The Theme Settings page (`/settings/theme`) diverges visually from `/admin` (extra in-page breadcrumb row, misaligned header, narrower content column, sidebar "Settings" item not highlighted). What is the fix? → A (D1, operator decision): `/settings/theme` must match the `/admin` settings shell exactly — no in-page breadcrumb row (the app-shell TopBar breadcrumb alone reads "gameplane › Settings", collapsing the route's two path segments into the same single "Settings" crumb `/admin` produces), header and settings nav at the same vertical position as `/admin`, content column full width (no `max-w-3xl` constraint), and the sidebar "Settings" nav item highlighted while on `/settings/theme`. Section titles/subtitles ("Theme & Appearance") are unchanged.
+- Q: Custom Colors only offers 7 preset accent swatches and 4 preset surface tones — how does a user pick an arbitrary color? → A (D2, operator decision): both Primary accent and Surface tone gain a free color choice — a native color-picker input plus a `#RRGGBB` text field — kept alongside (not replacing) the existing quick-pick swatches/radio tones. The contrast guard (WCAG AA) and the "disabled unless Custom colors is selected" activation rule (§3.2, Session 2026-09-22) apply identically to freely-chosen colors. No backend change: `custom_accent`/`custom_surface` were already validated only by `^#[0-9a-fA-F]{6}$` (data-model.md §2.3), not restricted to the UI's quick-pick list.
+- Q: The login response omits `preferences`, so a returning user briefly sees the Pink default until the next `/users/me` refetch (up to the query's staleTime). Is this acceptable? → A (D3, operator decision): No — `POST /auth/login`'s response must embed `preferences` in the same shape GET `/users/me` returns, so the dashboard seeds the correct theme from the login response itself with no flash and no extra round-trip. The OIDC callback flow is unaffected (it redirects to a fresh page load, which always fetches `/users/me`).
 
 ---
 

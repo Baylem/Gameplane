@@ -52,7 +52,7 @@ Out of scope (per clarification session 2026-09-21): theme sharing galleries, ad
 ## 3. Export Behavior
 
 1. Built in `web/src/lib/theme-export.ts` from the currently loaded `UserThemePreferences`.
-2. Offered on the Theme Settings page (Export / Import tab) as:
+2. Offered on the Theme Settings page (Export / Import section) as:
    - **Copy to clipboard** (JSON text, pretty-printed, 2-space indent).
    - **Download** as `gameplane-theme.json` (`application/json`).
 3. The export always reflects the saved profile state, including retained-but-inactive custom settings (e.g. `customCss` with `customCssEnabled: false`), so a full setup survives the transfer.
@@ -61,7 +61,7 @@ Out of scope (per clarification session 2026-09-21): theme sharing galleries, ad
 
 ## 4. Import Behavior
 
-1. User pastes JSON text or selects a `.json` file on the Theme Settings page (Export / Import tab).
+1. User pastes JSON text or selects a `.json` file on the Theme Settings page (Export / Import section).
 2. Client-side validation in `theme-export.ts` rejects with a specific message when:
    - JSON is unparseable, `format`/`version` mismatch, or required fields are missing;
    - any enum or hex color fails the rules in §2;

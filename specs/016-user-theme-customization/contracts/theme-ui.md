@@ -2,7 +2,7 @@
 
 **Feature**: `016-user-theme-customization`  
 **Binding Modules**: `web/src/routes/ThemeSettings.tsx`, `web/src/components/ui/TopBar.tsx`, `web/src/components/ui/Sidebar.tsx`, `web/src/components/ui/SafeModeBanner.tsx`, `web/src/routes/Login.tsx`  
-**Status**: Binding (revised 2026-09-22: ThemeSettingsModal replaced by a full settings page at route `/settings/theme`, matching the other `Screen/* Settings` designs; revised 2026-09-21 after clarification session 2026-09-21)  
+**Status**: Binding (revised 2026-09-22: ThemeSettingsModal replaced by a full settings page at route `/settings/theme`, matching the other `Screen/* Settings` designs; revised 2026-09-21 after clarification session 2026-09-21); revised 2026-09-23 (D1 settings-shell parity, D2 free color choice, D3 login preferences) after clarification session 2026-09-23  
 
 ---
 
@@ -42,13 +42,16 @@ The `Sidebar.tsx` footer appearance row is enhanced:
 
 ## 2. Theme Settings Page Structure
 
-The theme settings UI is a full settings page at route `/settings/theme`, rendered inside the standard app shell (App Sidebar + Top Bar + Page Header) exactly like the other `Screen/* Settings` designs (e.g. `Screen/Admin Settings`). Breadcrumb: `gameplane › Settings › Theme & Appearance`. Page title: `"Theme & Appearance"`.
+The theme settings UI is a full settings page at route `/settings/theme`, rendered inside the standard app shell (App Sidebar + Top Bar + Page Header) exactly like the other `Screen/* Settings` designs (e.g. `Screen/Admin Settings`). Page title: `"Theme & Appearance"`. Layout details (revised 2026-09-23, D1):
+- No in-page breadcrumb row; the TopBar breadcrumb alone reads `"gameplane › Settings"` (collapsing both route segments like `/admin` does).
+- Content column full width with no constrained max-width.
+- Sidebar "Settings" nav item highlighted while on `/settings/theme`.
 
-Composed entirely from HeroUI primitives (`Button`, `RadioGroup`, `Radio`, `Input`, `Textarea`, `Switch`, `Alert`, `Link`) inside the standard page layout. All sections live on **one scrollable page as stacked cards** in a single constrained content column (no sub-navigation, no tabs) — the simple-page convention used by screens like `Screen/Backups — Index`. Section order: **Preset theme**, **Appearance mode**, **Custom colors**, **Custom CSS**, **Export / Import**. Each section is a standard bordered settings card (title + subtitle + fields). The actions row sits at the bottom of the page: destructive **Reset to Defaults** on the left, primary **Save** on the right (changes apply live for preview; **Save** persists to the server).
+Composed entirely from HeroUI primitives (`Button`, `RadioGroup`, `Radio`, `Input`, `Textarea`, `Switch`, `Alert`, `Link`) inside the standard page layout. All sections live on **one scrollable page as stacked cards** (no sub-navigation, no tabs) — the simple-page convention used by screens like `Screen/Backups — Index`. Section order: **Preset theme**, **Appearance mode**, **Custom colors**, **Custom CSS**, **Export / Import**. Each section is a standard bordered settings card (title + subtitle + fields). The actions row sits at the bottom of the page: destructive **Reset to Defaults** on the left, primary **Save** on the right (changes apply live for preview; **Save** persists to the server).
 
 ```text
 +-------------------------------------------------------------+
-| gameplane > Settings > Theme & Appearance                   |
+| gameplane > Settings                                        |
 | Theme & Appearance                                          |
 +-------------------------------------------------------------+
 | +-- Preset theme ------------------------------------------+|
@@ -59,7 +62,11 @@ Composed entirely from HeroUI primitives (`Button`, `RadioGroup`, `Radio`, `Inpu
 | | [ ( ) Light   (o) Dark   ( ) System ]                    ||
 | +-----------------------------------------------------------+
 | +-- Custom colors -----------------------------------------+|
-| | Accent swatches ... Surface Tone radios ... preview chip ||
+| | Accent swatches (quick picks)                           ||
+| | [■ picker]  [#RRGGBB]                                  ||
+| | Contrast preview chip                                   ||
+| | Surface Tone (quick picks)                              ||
+| | [■ picker]  [#RRGGBB]                                  ||
 | +-----------------------------------------------------------+
 | +-- Custom CSS --------------------------------------------+|
 | | [x] Enable custom CSS overlay   [textarea]  X / 32,768   ||
@@ -88,10 +95,10 @@ Composed entirely from HeroUI primitives (`Button`, `RadioGroup`, `Radio`, `Inpu
 
 - **Activation**: This card's controls are **disabled** until the "Custom colors" radio card in the Preset theme card is selected (`themeType: "custom_colors"`); selecting a preset disables them again. The stored values remain visible (greyed) while disabled.
 - **Primary Accent**:
-  - Color picker input or palette swatches (Blue, Emerald, Purple, Amber, Cyan, Rose, Orange).
+  - Palette swatches (Blue, Emerald, Purple, Amber, Cyan, Rose, Orange) as quick picks, plus a free color choice: a native color-picker input and a `#RRGGBB` text field, both bound to the same `customColors.accent` value (revised 2026-09-23, D2).
   - Preview chip showing button with accent color and computed contrast text.
 - **Surface Tone**:
-  - Dropdown or Radio cards: `"Dark Slate"`, `"Midnight"`, `"Charcoal"`, `"Crisp Light"`.
+  - Radio cards (`"Dark Slate"`, `"Midnight"`, `"Charcoal"`, `"Crisp Light"`) as quick picks, plus a free color choice: a native color-picker input and a `#RRGGBB` text field, both bound to the same `customColors.surface` value (revised 2026-09-23, D2).
 - Live preview: All dashboard elements underneath the page immediately show the updated colors.
 - Contrast guard: warns when the chosen accent/surface pair fails WCAG AA.
 
@@ -137,6 +144,6 @@ When safe mode is active — via the `?safe-mode=1` URL parameter, the safe-mode
 
 ## 5. Reset to Defaults
 
-- **Placement**: Page actions row (below the active tab panel), destructive-style button.
+- **Placement**: Page actions row (at the bottom of the page), destructive-style button.
 - **Confirmation**: Single confirmation dialog: *"This deletes your custom colors and custom CSS and restores the selected preset. Continue?"*
 - **Effect**: Calls `POST /api/v1/users/me/preferences/reset` (contracts/user-preferences-api.md §1.3) — the only action that deletes stored customs.

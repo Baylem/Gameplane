@@ -229,11 +229,11 @@ Custom CSS is an **independent overlay layer**, not a third theme mode:
 Users can export their complete theme configuration as portable JSON text and import it on another Gameplane instance.
 1. **Format**: A versioned JSON document (`gameplane-theme` v1) containing `themeType`, `presetId`, `appearanceMode`, `customColors`, `customCssEnabled`, and `customCss`. Full schema in `contracts/theme-export.md`.
 2. **Export**: Generated **client-side** from the loaded preferences (`web/src/lib/theme-export.ts`) and offered as copy-to-clipboard and `.json` file download. No backend endpoint required — the data is already in the user's own profile payload.
-3. **Import**: Paste or file-upload in the Theme Settings modal → client validates shape, enums, hex colors, and CSS size → calls the existing `PUT /api/v1/users/me/preferences`.
+3. **Import**: Paste or file-upload on the Theme Settings page → client validates shape, enums, hex colors, and CSS size → calls the existing `PUT /api/v1/users/me/preferences`.
 4. **Enforcement gate**: The server-side PUT validation and FR-013 sanitization are authoritative — an imported stylesheet containing `@import` or external `url()` references is rejected exactly as if typed by hand. Import therefore cannot bypass sanitization.
 5. **Scope boundaries**: Theme sharing galleries, admin-enforced default themes, and per-server/per-page themes are explicitly out of scope.
 
-**Revision (2026-09-22)**: The operator replaced the Theme Settings modal with a full settings page at route `/settings/theme` (standard app shell: sidebar + top bar + page header; Presets / Custom Colors / Custom CSS / Export as in-page tabs per contracts/theme-ui.md). The export/import format and flows above are unchanged — copy/download and paste/file-upload now live in the page's Export / Import tab.
+**Revision (2026-09-22)**: The operator replaced the Theme Settings modal with a full settings page at route `/settings/theme` (standard app shell: sidebar + top bar + page header; Presets / Custom Colors / Custom CSS / Export as stacked section cards per contracts/theme-ui.md). The export/import format and flows above are unchanged — copy/download and paste/file-upload now live in the page's Export / Import section.
 
 **Alternatives Considered**:
 - *Dedicated server export/import endpoints*: Rejected as unnecessary — export is a re-serialization of data the client already holds, and import must pass through PUT validation anyway.

@@ -101,7 +101,7 @@ npm test -- src/routes/ThemeSettings.test.tsx
 ```
 
 **Expected Outcome**:
-- The page renders the four tabs: Presets, Custom Colors, Custom CSS, Export.
+- The page renders the four sections: Presets, Custom Colors, Custom CSS, Export.
 - Clicking "Legacy" updates DOM attribute `data-theme-preset="legacy"` without clearing stored custom values.
 - The overlay toggle flips `data-custom-css` between `"on"`/`"off"` and mounts/unmounts `#gameplane-custom-css` as the last `<head>` child.
 - Clicking "Reset to Defaults" asks for one confirmation, then calls the reset endpoint and clears custom CSS and colors.
@@ -136,12 +136,12 @@ npx playwright test e2e/specs/live/theme-customization.spec.ts
    - Refresh page; verify Modern Pink remains active with no flash of the wrong theme.
 
 3. **Configure Custom Colors**:
-   - Reopen **Theme & Appearance** -> Switch to **Custom Colors** tab.
+   - Reopen **Theme & Appearance** and navigate to the **Custom Colors** section.
    - Choose an Emerald green accent (`#10B981`) -> Click **Save**.
    - Verify primary buttons and active navigation markers turn emerald green.
 
 4. **Verify Overlay Priority Across a Base Switch**:
-   - In the **Custom CSS** tab, enable the overlay and save:
+   - In the **Custom CSS** section, enable the overlay and save:
      ```css
      .topbar { border-bottom: 3px solid lime; }
      ```
@@ -150,7 +150,7 @@ npx playwright test e2e/specs/live/theme-customization.spec.ts
    - Verify the lime border persists through both switches while all untargeted elements follow each base theme.
 
 5. **Verify Custom CSS Sanitization**:
-   - In the **Custom CSS** tab, paste:
+   - In the **Custom CSS** section, paste:
      ```css
      @import url("https://evil.example.com/track.css");
      ```
@@ -165,8 +165,8 @@ npx playwright test e2e/specs/live/theme-customization.spec.ts
    - From the banner, open Appearance Settings and click **Reset to Defaults** (one confirmation). Verify custom styling is deleted and the preset restored.
 
 7. **Verify Export / Import Round-Trip**:
-   - With a full configuration active (Legacy preset + emerald custom colors retained + CSS overlay), open the **Export** tab and copy/download the JSON.
-   - Sign in as a second user, open **Export** tab, paste the JSON, preview, and apply the import.
+   - With a full configuration active (Legacy preset + emerald custom colors retained + CSS overlay), navigate to the **Export / Import** section and copy/download the JSON.
+   - Sign in as a second user, navigate to the **Export / Import** section, paste the JSON, preview, and apply the import.
    - Verify the second user's dashboard reproduces the full setup; verify an exported document hand-edited to include `@import` is rejected on import with the server message.
 
 8. **Verify Unauthenticated Exclusion**:
