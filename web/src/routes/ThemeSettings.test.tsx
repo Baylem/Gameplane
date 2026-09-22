@@ -5,6 +5,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
 import { renderWithQuery } from "@/test/render";
+import { makeUser } from "@/test/factories";
 import { THEME_PREFS_STORAGE_KEY, DEFAULT_THEME_PREFERENCES } from "@/lib/useThemePreferences";
 import type { UserThemePreferences } from "@/types";
 
@@ -64,9 +65,22 @@ describe("ThemeSettingsPage", () => {
     const themeLink = screen.getByRole("link", { name: /Theme/i });
     expect(themeLink).toHaveAttribute("href", "/settings/theme");
     expect(themeLink).toHaveAttribute("aria-current", "page");
-    // Other entries route back to the admin settings page.
-    await userEvent.click(screen.getByRole("button", { name: /General/i }));
-    expect(navigate).toHaveBeenCalledWith({ to: "/admin" });
+    // Other entries deep-link the matching admin settings section.
+    // Admin sections appear once /users/me confirms config:manage.
+    await userEvent.click(await screen.findByRole("button", { name: /General/i }));
+    expect(navigate).toHaveBeenCalledWith({ to: "/admin", search: { section: "general" } });
+  });
+
+  it("shows only the Theme entry to users without config:manage", async () => {
+    server.use(http.get("/users/me", () => HttpResponse.json(makeUser({ role: "viewer" }))));
+    seedPrefs();
+    const { client } = renderWithQuery(<ThemeSettingsPage />);
+    await screen.findByRole("heading", { name: "Theme & Appearance" });
+    await waitFor(() => expect(client.getQueryData(["me"])).toBeDefined());
+    expect(screen.getByRole("link", { name: /Theme/i })).toHaveAttribute("aria-current", "page");
+    for (const label of [/General/i, /Authentication/i, /Backup destinations/i, /Module sources/i]) {
+      expect(screen.queryByRole("button", { name: label })).not.toBeInTheDocument();
+    }
   });
 
   it("clicking Legacy sets data-theme-preset=\"legacy\" (live preview)", async () => {

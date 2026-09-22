@@ -26,7 +26,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SettingsNav } from "@/components/ui/SettingsNav";
 import { cn } from "@/lib/utils";
 import { errorText } from "@/lib/errors";
-import { useMe } from "@/lib/auth";
+import { can, useMe } from "@/lib/auth";
 import { Users } from "@/lib/endpoints";
 import {
   applyThemePreferences,
@@ -401,7 +401,13 @@ export function ThemeSettingsPage() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-        <SettingsNav active="theme" onSelect={(key) => void navigate({ to: "/admin", search: { section: key } })} />
+        {/* Theme is open to every user; the admin sections only show for
+            users who can open /admin (config:manage). */}
+        <SettingsNav
+          active="theme"
+          showAdminSections={can(me, "config:manage")}
+          onSelect={(key) => void navigate({ to: "/admin", search: { section: key } })}
+        />
 
         <div className="max-w-3xl space-y-6">
           {!draft ? (

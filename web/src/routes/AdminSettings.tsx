@@ -110,7 +110,8 @@ export function AdminSettingsPage() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-        <SettingsNav active={section} onSelect={selectSection} />
+        {/* /admin is gated on config:manage, so every section is reachable. */}
+        <SettingsNav active={section} onSelect={selectSection} showAdminSections />
 
         <div className="space-y-6">
           {cfg.isLoading && (

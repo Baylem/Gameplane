@@ -63,13 +63,17 @@ const itemClass = (active: boolean) =>
 export function SettingsNav({
   active,
   onSelect,
+  showAdminSections,
 }: {
   active: SettingsNavKey;
   onSelect: (key: SettingsSectionKey) => void;
+  /** false hides every admin section (they need config:manage), leaving only Theme. */
+  showAdminSections: boolean;
 }) {
+  const items = showAdminSections ? navItems : navItems.filter((i) => i.key === "theme");
   return (
     <nav className="space-y-0.5" aria-label="Settings sections">
-      {navItems.map(({ key, label, icon: Icon }) =>
+      {items.map(({ key, label, icon: Icon }) =>
         key === "theme" ? (
           <Link key={key} to="/settings/theme" className={itemClass(active === key)} aria-current={active === key ? "page" : undefined}>
             <Icon className="h-4 w-4" />
