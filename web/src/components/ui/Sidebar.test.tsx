@@ -436,5 +436,19 @@ describe("Sidebar", () => {
       // Servers should be active (prefix match)
       expect(serversLink).toHaveClass("bg-primary/10");
     });
+
+    it("highlights the Settings nav item while on /settings/theme", () => {
+      mockLocation.pathname = "/settings/theme";
+      const navItems: SidebarNavGroup[] = [
+        {
+          label: "Admin",
+          items: [{ to: "/admin", label: "Settings", icon: Settings }],
+        },
+      ];
+      render(
+        <Sidebar variant="fixed" navItems={navItems} user={mockUser} onLogout={vi.fn()} />
+      );
+      expect(screen.getByRole("link", { name: /Settings/i })).toHaveClass("bg-primary/10");
+    });
   });
 });

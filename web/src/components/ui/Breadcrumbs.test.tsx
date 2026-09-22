@@ -115,6 +115,14 @@ describe("buildCrumbs", () => {
       { label: "Servers", to: "/servers" },
     ]);
   });
+
+  it("collapses /settings/theme into a single Settings crumb, matching /admin", () => {
+    const crumbs = buildCrumbs("/settings/theme");
+    expect(crumbs).toEqual([
+      { label: "gameplane", to: "/" },
+      { label: "Settings", to: "/settings/theme" },
+    ]);
+  });
 });
 
 describe("Breadcrumbs component", () => {

@@ -27,7 +27,9 @@ export function enforceUnauthenticatedTheme(): () => void {
 
   const pin = () => {
     for (const [name, value] of PINNED_ATTRIBUTES) {
-      html.setAttribute(name, value);
+      if (html.getAttribute(name) !== value) {
+        html.setAttribute(name, value);
+      }
     }
     for (const id of THEME_STYLE_ELEMENT_IDS) {
       document.getElementById(id)?.remove();
@@ -37,8 +39,8 @@ export function enforceUnauthenticatedTheme(): () => void {
   pin();
 
   // If anything flips the pinned attributes or re-adds the overlay while
-  // this route is mounted, revert it. Re-setting an already-pinned
-  // attribute is a no-op, so the observer settles instead of looping.
+  // this route is mounted, revert it. pin() only writes attributes that
+  // drifted, so its own writes settle the observer instead of looping.
   const observer = new MutationObserver(pin);
   observer.observe(html, {
     attributes: true,

@@ -51,6 +51,9 @@ export function Sidebar({
 
   // Compute which nav item is active (exact vs prefix matching per contract).
   const isActive = (to: string): boolean => {
+    // /settings/theme sits outside /admin but belongs to the Settings
+    // surface, so it lights up the Settings item.
+    if (to === "/admin" && pathname.startsWith("/settings/")) return true;
     const exact = to === "/" || navItems.some((group) =>
       group.items.some((o) => o.to !== to && o.to.startsWith(to + "/"))
     );
