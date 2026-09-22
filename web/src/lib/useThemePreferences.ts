@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { APIError } from "@/lib/api";
 import { Users, type UserPreferencesUpdate } from "@/lib/endpoints";
+import { customThemeTokensToCss, deriveCustomThemeTokens } from "@/lib/theme-derivation";
 import type {
   AppearanceMode,
   CustomColorConfig,
@@ -20,6 +21,7 @@ import type {
 export const THEME_PREFS_STORAGE_KEY = "gameplane-theme-prefs";
 export const SAFE_MODE_SESSION_KEY = "gameplane-safe-mode";
 export const CUSTOM_CSS_ELEMENT_ID = "gameplane-custom-css";
+export const CUSTOM_THEME_VARS_ELEMENT_ID = "gameplane-custom-theme-vars";
 // Dispatched on window when a preferences update fails, so a toast layer can
 // listen without this plumbing owning any UI (the toast ships in a later
 // task of this feature).
@@ -159,6 +161,26 @@ export interface ApplyThemePreferencesOptions {
 }
 
 /**
+ * Mounts (or removes, when colors is null) the derived custom-color tokens in
+ * <style id="gameplane-custom-theme-vars"> (contracts/theme-tokens-v2.md §4).
+ * applyThemePreferences re-appends the custom CSS overlay afterwards, so an
+ * enabled overlay still wins over these tokens.
+ */
+export function applyCustomThemeVars(colors: CustomColorConfig | null | undefined): void {
+  if (typeof document === "undefined") return;
+  const existing = document.getElementById(CUSTOM_THEME_VARS_ELEMENT_ID);
+  if (!colors) {
+    existing?.remove();
+    return;
+  }
+  const tokens = deriveCustomThemeTokens(colors.accent, colors.surface);
+  const el = existing ?? document.createElement("style");
+  el.id = CUSTOM_THEME_VARS_ELEMENT_ID;
+  el.textContent = customThemeTokensToCss(tokens);
+  document.head.appendChild(el);
+}
+
+/**
  * Applies preferences to the DOM: the dark/light class + data-theme,
  * data-theme-preset, data-theme-type, data-custom-css, and the
  * #gameplane-custom-css overlay mounted as the LAST child of document.head
@@ -178,6 +200,7 @@ export function applyThemePreferences(
   root.dataset.theme = resolved;
   root.dataset.themePreset = prefs?.presetId ?? "pink";
   root.dataset.themeType = prefs?.themeType ?? "preset";
+  applyCustomThemeVars(prefs?.themeType === "custom_colors" ? prefs.customColors : null);
 
   const css = prefs?.customCssEnabled === true ? prefs.customCss : null;
   const inject =
