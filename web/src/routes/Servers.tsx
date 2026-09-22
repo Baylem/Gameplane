@@ -373,7 +373,7 @@ export function ServersPage() {
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <Table.Root className="bg-transparent">
             <Table.ScrollContainer>
-              <Table.Content aria-label="Server list">
+              <Table.Content aria-label="Server list" keyboardNavigationBehavior="arrow">
                 <Table.Header>
                   <Table.Column id="name" isRowHeader>Name</Table.Column>
                   <Table.Column id="game">Game</Table.Column>

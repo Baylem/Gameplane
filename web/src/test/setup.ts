@@ -1,4 +1,4 @@
-import { Blob as NodeBlob } from "node:buffer";
+import { Blob as NodeBlob, File as NodeFile } from "node:buffer";
 import "@testing-library/jest-dom/vitest";
 import { configure } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll } from "vitest";
@@ -71,6 +71,25 @@ if (typeof window !== "undefined") {
   });
   Object.defineProperty(globalThis, "Blob", {
     value: NodeBlob,
+    writable: true,
+    configurable: true,
+  });
+
+  // Align File with Node's File for the same reason. Vitest 5's jsdom environment
+  // wraps the global Request and, for any body that is `instanceof` the jsdom
+  // window's Blob, rewrites it through a helper that reads jsdom's internal impl
+  // via Object.getOwnPropertySymbols(...)[0]. jsdom 30.1.0 moved that impl off the
+  // wrapper instance, so the probe yields undefined and the rewrite throws
+  // "Cannot read properties of undefined (reading '_buffer')" on every fetch that
+  // posts a raw File. A Node File is not instanceof the jsdom Blob, so it skips
+  // that path and reaches undici intact. See vitest's createCompatUtils.
+  Object.defineProperty(window, "File", {
+    value: NodeFile,
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "File", {
+    value: NodeFile,
     writable: true,
     configurable: true,
   });
