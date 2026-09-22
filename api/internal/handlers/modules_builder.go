@@ -95,6 +95,7 @@ type BuilderPreviewStorage struct {
 
 // BuilderPreviewResponse returns runtime preview and simulation results.
 type BuilderPreviewResponse struct {
+	VersionID      string                   `json:"versionId,omitempty"`
 	ResolvedImage  string                   `json:"resolvedImage"`
 	EffectiveEnv   []BuilderEffectiveEnvVar `json:"effectiveEnv"`
 	ComputedConfig map[string]string        `json:"computedConfig"`
@@ -283,6 +284,7 @@ func (h modulesHandler) builderPreview(w http.ResponseWriter, req *http.Request)
 	}
 
 	resp := BuilderPreviewResponse{
+		VersionID:      res.VersionID,
 		ResolvedImage:  res.EffectiveImage,
 		EffectiveEnv:   effectiveEnv,
 		ComputedConfig: computedConfig,

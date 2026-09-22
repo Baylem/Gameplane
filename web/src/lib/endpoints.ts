@@ -842,6 +842,7 @@ export interface BuilderPreviewRequest {
 }
 
 export interface BuilderPreviewResponse {
+  versionId?: string;
   resolvedImage: string;
   effectiveEnv: Array<{ name: string; value: string; source: string }>;
   computedConfig: Record<string, string>;
