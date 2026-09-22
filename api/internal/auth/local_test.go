@@ -174,3 +174,47 @@ func TestLogin_PerUserRateLimit(t *testing.T) {
 		t.Fatalf("code=%d", rr.Code)
 	}
 }
+
+// TestLogin_EmbedsPreferences verifies POST /auth/login's response carries
+// the same "preferences" shape GET /users/me does (D3, 2026-09-23) so the
+// dashboard can seed the correct theme without a second round-trip.
+func TestLogin_EmbedsPreferences(t *testing.T) {
+	s := newAuthDB(t)
+	seedUser(t, s, "prefs-alice", "hunter2", "admin")
+	// Look up the seeded user's id to seed preferences through the store API.
+	var id int64
+	if err := s.DB.QueryRowContext(context.Background(), "SELECT id FROM users WHERE username = ?", "prefs-alice").Scan(&id); err != nil {
+		t.Fatalf("query user id: %v", err)
+	}
+	// Seed a non-default preferences row so the assertion can't pass on
+	// DefaultUserPreferences() alone.
+	if _, err := s.UpsertPreferences(context.Background(), id, db.UserPreferences{
+		ThemeType:      "preset",
+		PresetID:       "legacy",
+		AppearanceMode: "dark",
+	}); err != nil {
+		t.Fatalf("seed preferences: %v", err)
+	}
+
+	body := strings.NewReader(`{"username":"prefs-alice","password":"hunter2"}`)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(context.Background(), "POST", "/login", body)
+	req.Header.Set("Content-Type", "application/json")
+	NewLocal(s).HandleLogin(NewSessionStore(s), nil).ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("code=%d body=%s", rr.Code, rr.Body)
+	}
+	if !strings.Contains(rr.Body.String(), `"preferences"`) {
+		t.Fatalf("login response missing 'preferences': %s", rr.Body)
+	}
+	var got loginResp
+	if err := json.NewDecoder(strings.NewReader(rr.Body.String())).Decode(&got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if got.User.Preferences == nil {
+		t.Fatal("decoded login response has nil Preferences")
+	}
+	if got.User.Preferences.PresetID != "legacy" || got.User.Preferences.AppearanceMode != "dark" {
+		t.Errorf("preferences = %+v, want legacy/dark", got.User.Preferences)
+	}
+}
