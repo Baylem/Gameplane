@@ -138,7 +138,7 @@ Bundles the authored files into a valid `.tar.gz` OCI bundle archive.
 - Clicking opens `BuildModuleDialog`.
 
 ### 2.2 `BuildModuleDialog.tsx`
-A 3-step modal wizard using Radix Dialog / HeroUI primitives:
+A 3-step modal wizard using HeroUI Modal primitives:
 
 1. **Step 1: Preset & Metadata**
    - Archetype card selector: `SteamCMD Dedicated Server`, `Java Application Server`, `Generic Container`.

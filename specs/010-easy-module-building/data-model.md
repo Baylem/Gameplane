@@ -79,6 +79,7 @@ classDiagram
 
     class RenderedPreview {
         +string moduleName
+        +string versionId
         +string resolvedImage
         +list~RenderedEnvVar~ effectiveEnv
         +map~string,string~ computedConfig
@@ -149,7 +150,7 @@ Corresponds to `template.yaml` specification conforming to `GameTemplate` CRD:
 | :--- | :--- | :---: | :--- |
 | `apiVersion` | `string` | Yes | Fixed constant: `gameplane.local/v1alpha1` |
 | `kind` | `string` | Yes | Fixed constant: `GameTemplate` |
-| `metadata` | `object` | Yes | Contains `name` (module identifier) and `labels` (`gameplane.local/module: <name>`); operator overrides `metadata.name` at apply time with the Module resource name |
+| `metadata` | `object` | Yes | Contains `name` (advisory placeholder; see below) and `labels` (`gameplane.local/module: <name>`). The operator authoritatively overwrites `metadata.name` with the Module resource's own name during materialization. |
 | `spec.displayName` | `string` | Yes | Human-readable title |
 | `spec.game` | `string` | Yes | Game family slug matching `module.yaml#game` |
 | `spec.version` | `string` | Yes | Semver matching `module.yaml#version` |
@@ -159,6 +160,14 @@ Corresponds to `template.yaml` specification conforming to `GameTemplate` CRD:
 | `spec.env` | `list[EnvVarDeclaration]` | No | Default container environment variables |
 | `spec.configSchema` | `list[ConfigField]` | No | Exposable configuration schema fields |
 | `spec.versions` | `list[VersionEntry]`| No | Catalog of selectable version variants |
+
+**Metadata Name Lifecycle:** `metadata.name` follows a three-stage lifecycle:
+
+1. **Scaffold Emission**: `gp-module init` emits `metadata.name` as a placeholder equal to the module slug (e.g., `my-game`).
+2. **Validator Enforcement**: `gp-module validate` requires `metadata.name` to be present and non-empty; bundles without it fail validation.
+3. **Operator Authority**: The Gameplane operator overwrites `metadata.name` with the Module resource's own name during materialization (at reconciliation time). Thus, the emitted value is advisory only and does not constrain the final GameTemplate's identity.
+
+This design ensures scaffolded bundles are immediately valid and installable, while permitting the operator to enforce naming conventions independently of module authorship.
 
 ---
 
@@ -182,22 +191,22 @@ class ArchetypeDefinition:
 
 #### Archetype Presets:
 1. **`steamcmd`**:
-   - `default_image`: Pinned steamcmd/dedicated server image
-   - `default_ports`: `[{"name": "game", "containerPort": 27015, "protocol": "UDP", "advertise": True}]`
+   - `default_image`: Pinned steamcmd/dedicated server image (cm2network/steamcmd:root@sha256:...)
+   - `default_ports`: `[{"name": "game", "containerPort": 27015, "protocol": "UDP", "advertise": true}, {"name": "query", "containerPort": 27016, "protocol": "UDP", "advertise": true}]`
    - `default_storage`: `{"size": "20Gi", "mountPath": "/serverdata"}`
-   - `default_env`: `[{"name": "STEAMAPPID", "value": "..."}]`
-   - `config_schema`: Server name, server password (`type: password`), max players.
+   - `default_env`: `[{"name": "STEAMAPPID", "value": "0"}, {"name": "SERVER_NAME", "value": "Game Server"}]`
+   - `config_schema`: SERVER_PASSWORD (`type: password`), MAX_PLAYERS (`type: int`, min: 1, max: 128).
 
 2. **`java`**:
-   - `default_image`: Pinned Java runtime image (e.g. `eclipse-temurin` or `itzg/minecraft-server`)
-   - `default_ports`: `[{"name": "game", "containerPort": 25565, "protocol": "TCP", "advertise": True}]`
+   - `default_image`: Pinned Java runtime image (eclipse-temurin:21-jre-jammy@sha256:...)
+   - `default_ports`: `[{"name": "game", "containerPort": 25565, "protocol": "TCP", "advertise": true}, {"name": "rcon", "containerPort": 25575, "protocol": "TCP", "advertise": false}]`
    - `default_storage`: `{"size": "10Gi", "mountPath": "/data"}`
-   - `default_env`: `[{"name": "EULA", "value": "TRUE"}]`
-   - `config_schema`: JVM heap configuration with `autoFromMemoryLimit: {percent: 75}`.
+   - `default_env`: `[{"name": "EULA", "value": "TRUE"}, {"name": "ENABLE_RCON", "value": "true"}, {"name": "RCON_PORT", "value": "25575"}]`
+   - `config_schema`: MAX_MEMORY (`type: string`, `autoFromMemoryLimit: {percent: 75}`), RCON_PASSWORD (`type: password`).
 
 3. **`generic`**:
-   - `default_image`: Generic server container
-   - `default_ports`: `[{"name": "game", "containerPort": 8080, "protocol": "TCP", "advertise": True}]`
+   - `default_image`: Pinned minimal base image (alpine:3.20@sha256:...)
+   - `default_ports`: `[{"name": "game", "containerPort": 8080, "protocol": "TCP", "advertise": true}]`
    - `default_storage`: `{"size": "5Gi", "mountPath": "/data"}`
    - `default_env`: `[]`
    - `config_schema`: `[]`
@@ -232,7 +241,7 @@ Result of evaluating `template.yaml` against a test configuration:
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `moduleName` | `string` | Name of the module being simulated |
-| `selectedVersion` | `string` | Selected version ID (or "default") |
+| `versionId` | `string` | Selected version ID; omitted from the JSON response when no version variant is selected |
 | `resolvedImage` | `string` | Effective image ref (with digest) |
 | `effectiveEnv` | `list[tuple[str, str, str]]` | List of `(name, value, source)` showing origin (`template`, `version`, or `configSchema`) |
 | `computedConfig` | `map[string, str]` | Key-value map of computed configuration fields (including `autoFromMemoryLimit`) |

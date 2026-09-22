@@ -15,7 +15,7 @@
 ## Responsibilities
 
 - Generate valid `module.yaml`, `template.yaml`, `README.md`, and `icon.png` from archetype definitions.
-- Enforce Kubernetes DNS-1123 label naming standards (`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`).
+- Enforce Kubernetes DNS-1123 label naming standards: 1–63 characters, matching `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`.
 - Perform static preflight checks completely offline without network or cluster connectivity.
 - Parse YAML AST to report exact file and line numbers for all diagnostic findings.
 - Replicate Gameplane operator runtime logic for memory percentage calculations:
