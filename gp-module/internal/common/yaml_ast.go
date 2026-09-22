@@ -37,6 +37,10 @@ func FindNode(root *yaml.Node, path string) *yaml.Node {
 
 		if strings.HasSuffix(part, "]") {
 			idxOpen := strings.Index(part, "[")
+			if idxOpen < 0 {
+				// Malformed path segment: has ']' but no '['. Treat as not found.
+				return nil
+			}
 			key := part[:idxOpen]
 			idxStr := part[idxOpen+1 : len(part)-1]
 			idx, err := strconv.Atoi(idxStr)

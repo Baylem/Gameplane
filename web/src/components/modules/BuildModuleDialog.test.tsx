@@ -173,6 +173,413 @@ describe("BuildModuleDialog", () => {
     });
   });
 
+  it("adds, updates, and removes ports in step 2", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
+    );
+
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await screen.findByText("Port Mappings");
+
+    // Initial port should exist (from archetype default)
+    const portInputs = screen.getAllByPlaceholderText("name");
+    const initialPortCount = portInputs.length;
+    expect(initialPortCount).toBeGreaterThan(0);
+
+    // Add a new port
+    await user.click(screen.getByRole("button", { name: /Add Port/i }));
+    expect(screen.getAllByPlaceholderText("name")).toHaveLength(initialPortCount + 1);
+
+    // Update the new port's name
+    const newPortNameInput = screen.getAllByPlaceholderText("name")[initialPortCount];
+    await user.clear(newPortNameInput);
+    await user.type(newPortNameInput, "metrics");
+    expect(newPortNameInput).toHaveValue("metrics");
+
+    // Update the port number
+    const portNumberInputs = screen.getAllByPlaceholderText("port");
+    await user.clear(portNumberInputs[initialPortCount]);
+    await user.type(portNumberInputs[initialPortCount], "9090");
+    expect(portNumberInputs[initialPortCount]).toHaveValue(9090);
+
+    // Remove a port (only if we have more than 1)
+    if (screen.getAllByPlaceholderText("name").length > 1) {
+      const trashButtons = screen.getAllByRole("button", { name: /Remove port/i });
+      await user.click(trashButtons[0]);
+      expect(screen.getAllByPlaceholderText("name")).toHaveLength(initialPortCount);
+    }
+  });
+
+  it("handles custom tag input with Enter key", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get("/modules/builder/archetypes", () =>
+        HttpResponse.json({
+          archetypes: [
+            {
+              id: "steamcmd",
+              title: "SteamCMD",
+              description: "SteamCMD server",
+              defaultImage: "img:latest",
+              defaultPorts: [],
+              defaultStorage: { size: "10Gi", mountPath: "/data" },
+            },
+          ],
+        })
+      )
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={[]} />
+    );
+
+    await screen.findByText("SteamCMD");
+
+    const customTagInput = screen.getByPlaceholderText("Add custom tag...");
+    const addTagButton = screen.getByRole("button", { name: /Add tag/i });
+
+    // Type a custom tag and click button
+    await user.type(customTagInput, "hardcore");
+    await user.click(addTagButton);
+    expect(screen.getByText(/hardcore ×/)).toBeInTheDocument();
+    expect(customTagInput).toHaveValue("");
+
+    // Type another tag and press Enter
+    await user.type(customTagInput, "pvp");
+    await user.keyboard("{Enter}");
+    expect(screen.getByText(/pvp ×/)).toBeInTheDocument();
+    expect(customTagInput).toHaveValue("");
+
+    // Duplicate tag should not be added
+    await user.type(customTagInput, "hardcore");
+    await user.click(addTagButton);
+    expect(screen.getAllByText(/hardcore ×/)).toHaveLength(1);
+
+    // Remove a custom tag by clicking it
+    const pvpTag = screen.getByText(/pvp ×/);
+    await user.click(pvpTag);
+    expect(screen.queryByText(/pvp ×/)).not.toBeInTheDocument();
+    expect(screen.getByText(/hardcore ×/)).toBeInTheDocument();
+  });
+
+  it("switches memory simulation values and triggers revalidation", async () => {
+    const user = userEvent.setup();
+    let validateCallCount = 0;
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => {
+        validateCallCount++;
+        return HttpResponse.json(mockValidateResponse);
+      }),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
+    );
+
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await screen.findByText("Container Image");
+    await user.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    await screen.findByText("Memory Simulation");
+
+    // Default is 8Gi
+    expect(screen.getByRole("button", { name: /^8Gi$/i })).toHaveClass("border-primary");
+
+    // Click 16Gi
+    const validateBefore = validateCallCount;
+    await user.click(screen.getByRole("button", { name: /^16Gi$/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^16Gi$/i })).toHaveClass("border-primary");
+    });
+    // Revalidation should have been called
+    await waitFor(() => {
+      expect(validateCallCount).toBeGreaterThan(validateBefore);
+    });
+
+    // Click 2Gi
+    await user.click(screen.getByRole("button", { name: /^2Gi$/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^2Gi$/i })).toHaveClass("border-primary");
+    });
+  });
+
+  it("switches between tabs in step 3 and displays correct content", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
+    );
+
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await screen.findByText("Container Image");
+    await user.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    await screen.findByText("Module Validated Cleanly");
+
+    // Verify module.yaml is initially displayed
+    const textareas = screen.getAllByRole("textbox");
+    const moduleYamlTextarea = textareas.find((ta) =>
+      ta.textContent?.includes("apiVersion: gameplane.local/module")
+    ) as HTMLTextAreaElement | undefined;
+    expect(moduleYamlTextarea?.value).toContain("apiVersion: gameplane.local/module");
+
+    // Click template.yaml tab
+    await user.click(screen.getByRole("button", { name: /template\.yaml/i }));
+    const templateTextarea = textareas.find((ta) =>
+      ta.textContent?.includes("apiVersion: gameplane.local")
+    ) as HTMLTextAreaElement | undefined;
+    expect(templateTextarea?.value).toContain("GameTemplate");
+
+    // Click README.md tab
+    await user.click(screen.getByRole("button", { name: /README\.md/i }));
+    const readmeTextarea = textareas.find((ta) =>
+      ta.textContent?.includes("# Test Module")
+    ) as HTMLTextAreaElement | undefined;
+    expect(readmeTextarea?.value).toContain("# Test Module");
+  });
+
+  it("navigates back from step 3 to step 2 and step 2 to step 1", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
+    );
+
+    // Progress to step 3
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await screen.findByText("Container Image");
+    await user.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    await screen.findByText("Memory Simulation");
+
+    // Click back button (from step 3 to step 2)
+    await user.click(screen.getByRole("button", { name: /Back/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Container Image")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Memory Simulation")).not.toBeInTheDocument();
+
+    // Click back again (from step 2 to step 1)
+    await user.click(screen.getByRole("button", { name: /Back/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Archetype preset")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Container Image")).not.toBeInTheDocument();
+  });
+
+  it("shows validation errors in step 2 when required fields are missing", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get("/modules/builder/archetypes", () =>
+        HttpResponse.json({
+          archetypes: [
+            {
+              id: "custom",
+              title: "Custom",
+              description: "Custom archetype",
+              defaultImage: "", // No default image
+              defaultPorts: [],
+              defaultStorage: { size: "10Gi", mountPath: "/data" },
+            },
+          ],
+        })
+      )
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={[]} />
+    );
+
+    await screen.findByText("Custom");
+
+    // Try to advance without a valid name
+    const continueBtn = screen.getByRole("button", { name: /Continue to Container & Ports/i });
+    expect(continueBtn).toBeDisabled(); // No name and archetype has no default image
+
+    // Add invalid name
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "INVALID_NAME");
+    expect(continueBtn).toBeDisabled();
+    expect(screen.getByText(/Must be lowercase/i)).toBeInTheDocument();
+
+    // Fix name to valid format
+    const nameInput = screen.getByPlaceholderText("e.g. cs2-match");
+    await user.clear(nameInput);
+    await user.type(nameInput, "valid-name");
+    expect(screen.getByText(/✓ Valid DNS-1123/i)).toBeInTheDocument();
+
+    // Now button is still disabled due to missing image
+    expect(continueBtn).toBeDisabled();
+  });
+
+  it("displays image pinning validation status in step 2", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
+    );
+
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await screen.findByText("Container Image");
+
+    const imageInput = screen.getByDisplayValue(/^cm2network\/steamcmd:root@sha256:[a-f0-9]{64}$/);
+
+    // Initially shows pinned status (from archetype default)
+    expect(screen.getByText(/✓ Pinned by digest/i)).toBeInTheDocument();
+
+    // Change to unpinned image
+    await user.clear(imageInput);
+    await user.type(imageInput, "ghcr.io/valgul/game:latest");
+    await screen.findByText(/⚠ Unpinned image/i);
+    expect(screen.getByText(/recommend @sha256/i)).toBeInTheDocument();
+
+    // Change back to pinned
+    await user.clear(imageInput);
+    await user.type(
+      imageInput,
+      "ghcr.io/valgul/game:v1@sha256:" + "a".repeat(64)
+    );
+    await screen.findByText(/✓ Pinned by digest/i);
+  });
+
+  it("edits storage size and mount path in step 2", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
+    );
+
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await screen.findByText("Persistent Storage");
+
+    // Find storage inputs
+    const storageSizeInput = screen.getByPlaceholderText("e.g. 10Gi");
+    const mountPathInput = screen.getByPlaceholderText("e.g. /data");
+
+    // Verify they have default values
+    expect(storageSizeInput).toHaveValue("20Gi");
+    expect(mountPathInput).toHaveValue("/serverdata");
+
+    // Update storage size
+    await user.clear(storageSizeInput);
+    await user.type(storageSizeInput, "50Gi");
+    expect(storageSizeInput).toHaveValue("50Gi");
+
+    // Update mount path
+    await user.clear(mountPathInput);
+    await user.type(mountPathInput, "/gamedata");
+    expect(mountPathInput).toHaveValue("/gamedata");
+  });
+
+  it("shows error when download archive fails", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+      http.post("/modules/builder/export", () => {
+        return HttpResponse.json({ error: "Network timeout" }, { status: 500 });
+      }),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
+    );
+
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await screen.findByText("Container Image");
+    await user.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    await screen.findByText("Module Validated Cleanly");
+
+    const downloadBtn = screen.getByRole("button", { name: /Download .tar.gz/i });
+    await user.click(downloadBtn);
+
+    await screen.findByText(/Network timeout/);
+  });
+
+  it("shows error when install to cluster fails", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+      http.post("/modules/builder/export", () => {
+        return HttpResponse.json({ error: "Permission denied" }, { status: 403 });
+      }),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={["uploads"]} />
+    );
+
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await screen.findByText("Container Image");
+    await user.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    await screen.findByText("Module Validated Cleanly");
+
+    const installBtn = screen.getByRole("button", { name: /Install to Cluster/i });
+    await user.click(installBtn);
+
+    await screen.findByText(/Permission denied/);
+  });
+
+  it("hides install button when no upload sources exist", async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post("/modules/builder/scaffold", () => HttpResponse.json(mockScaffoldResponse)),
+      http.post("/modules/builder/validate", () => HttpResponse.json(mockValidateResponse)),
+      http.post("/modules/builder/preview", () => HttpResponse.json(mockPreviewResponse)),
+    );
+
+    renderWithQuery(
+      <BuildModuleDialog open onOpenChange={() => undefined} sources={[]} />
+    );
+
+    await user.type(screen.getByPlaceholderText("e.g. cs2-match"), "my-game");
+    await user.click(screen.getByRole("button", { name: /Continue to Container & Ports/i }));
+    await screen.findByText("Container Image");
+    await user.click(screen.getByRole("button", { name: /Continue to Review & Export/i }));
+    await screen.findByText("Module Validated Cleanly");
+
+    // Install button should not be present (lines 962-975 show this conditional)
+    expect(screen.queryByRole("button", { name: /Install to Cluster/i })).not.toBeInTheDocument();
+    // But download button should still be present
+    expect(screen.getByRole("button", { name: /Download .tar.gz/i })).toBeInTheDocument();
+  });
+
   it("handles revalidation error gracefully in step 3", async () => {
     const user = userEvent.setup();
     server.use(

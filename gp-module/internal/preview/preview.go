@@ -4,6 +4,7 @@ package preview
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -190,6 +191,9 @@ func GeneratePreview(opts Options) (*Result, error) {
 				case int:
 					pct = p
 				case float64:
+					if p != math.Trunc(p) {
+						return nil, fmt.Errorf("field %q has non-integral autoFromMemoryLimit percent value %v", fieldName, p)
+					}
 					pct = int(p)
 				}
 				if pct <= 0 || pct > 100 {

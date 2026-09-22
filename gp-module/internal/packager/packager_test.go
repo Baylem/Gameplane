@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ValgulNecron/gameplane/gp-module/internal/scaffold"
@@ -225,5 +226,53 @@ func TestReadModuleFiles_SymlinkRejected(t *testing.T) {
 	_, err := ReadModuleFiles(modDir)
 	if err == nil {
 		t.Errorf("expected error when directory contains symbolic link")
+	}
+}
+
+func TestValidateEntryName_TraversalPath(t *testing.T) {
+	files := map[string][]byte{
+		"module.yaml":   []byte("apiVersion: gameplane.local/module/v1\nname: test\nversion: 1.0.0\n"),
+		"template.yaml": []byte("apiVersion: gameplane.local/v1alpha1\nkind: GameTemplate\n"),
+		"README.md":     []byte("# Test\n"),
+		"../etc/passwd": []byte("malicious"),
+	}
+
+	_, _, err := CreateArchiveFromFiles(files, DefaultPackageLimits)
+	if err == nil {
+		t.Errorf("expected error for traversal path ../etc/passwd")
+	}
+	if !strings.Contains(err.Error(), "..") {
+		t.Errorf("expected error message to mention '..' traversal, got: %v", err)
+	}
+}
+
+func TestValidateEntryName_AbsolutePath(t *testing.T) {
+	files := map[string][]byte{
+		"module.yaml":   []byte("apiVersion: gameplane.local/module/v1\nname: test\nversion: 1.0.0\n"),
+		"template.yaml": []byte("apiVersion: gameplane.local/v1alpha1\nkind: GameTemplate\n"),
+		"README.md":     []byte("# Test\n"),
+		"/etc/passwd":   []byte("malicious"),
+	}
+
+	_, _, err := CreateArchiveFromFiles(files, DefaultPackageLimits)
+	if err == nil {
+		t.Errorf("expected error for absolute path /etc/passwd")
+	}
+	if !strings.Contains(err.Error(), "absolute") {
+		t.Errorf("expected error message to mention absolute path, got: %v", err)
+	}
+}
+
+func TestValidateEntryName_ValidPath(t *testing.T) {
+	files := map[string][]byte{
+		"module.yaml":   []byte("apiVersion: gameplane.local/module/v1\nname: test\nversion: 1.0.0\n"),
+		"template.yaml": []byte("apiVersion: gameplane.local/v1alpha1\nkind: GameTemplate\n"),
+		"README.md":     []byte("# Test\n"),
+		"icon.png":      []byte("PNG"),
+	}
+
+	_, _, err := CreateArchiveFromFiles(files, DefaultPackageLimits)
+	if err != nil {
+		t.Errorf("expected valid entry names to succeed, got error: %v", err)
 	}
 }

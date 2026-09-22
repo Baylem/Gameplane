@@ -50,7 +50,7 @@ Usage: gp-module init [NAME] [options]
 
 | Argument / Flag | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `NAME` (positional) | String | None | Module slug (e.g. `my-game`). Must conform to DNS-1123 label regex: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`. |
+| `NAME` (positional) | String | None | Module slug (e.g. `my-game`). Must be 1-63 characters and conform to DNS-1123 label regex: `^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`. |
 | `--name <str>` | String | `NAME` | Alternate flag for module name. |
 | `--display-name <str>`| String | Titleized `NAME` | Human-readable title (e.g. "My Game"). |
 | `--archetype <type>` | Enum | `generic` | Starter archetype preset: `steamcmd`, `java`, or `generic`. |

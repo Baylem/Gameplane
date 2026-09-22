@@ -16,6 +16,7 @@ const upgrade = vi.fn();
 const uninstall = vi.fn();
 const removeUpload = vi.fn();
 const listSources = vi.fn();
+const archetypes = vi.fn();
 vi.mock("@/lib/endpoints", () => ({
   Modules: {
     catalog: () => catalog(),
@@ -28,6 +29,7 @@ vi.mock("@/lib/endpoints", () => ({
     removeUpload: (source: string, module: string) => removeUpload(source, module),
   },
   ModuleBuilder: {
+    archetypes: () => archetypes(),
     scaffold: vi.fn(),
     validate: vi.fn(),
     preview: vi.fn(),
@@ -101,6 +103,7 @@ afterEach(() => {
   uninstall.mockReset();
   removeUpload.mockReset();
   listSources.mockReset();
+  archetypes.mockReset();
 });
 
 // Provide default mock for listSources to avoid hanging
@@ -142,17 +145,17 @@ describe("ModulesPage", () => {
     expect(screen.getByText("Minecraft (Java)")).toBeInTheDocument();
     expect(screen.queryByText("Valheim")).toBeNull();
 
-    // Click Survival to show modules in either Sandbox or Survival
+    // Click Survival to show only modules with both Sandbox AND Survival
     const survivalBtn = screen.getByRole("button", { name: "Survival" });
     await userEvent.click(survivalBtn);
     expect(screen.getByText("Minecraft (Java)")).toBeInTheDocument();
-    expect(screen.getByText("Valheim")).toBeInTheDocument();
+    expect(screen.queryByText("Valheim")).not.toBeInTheDocument();
   });
 
-  it("shows modules matching any of the selected categories (multi-select)", async () => {
+  it("shows modules matching all of the selected categories (multi-select AND)", async () => {
     const minecraftEntry = { ...MINECRAFT, categories: ["Sandbox", "Survival"] };
     const valheimEntry = { ...VALHEIM_INSTALLED, game: "valheim", categories: ["Survival"] };
-    const terraria = { ...TERRARIA_UPGRADE, game: "terraria", categories: ["Sandbox"] };
+    const terraria = { ...TERRARIA_UPGRADE, game: "terraria", categories: ["Sandbox", "Modded"] };
     catalog.mockResolvedValue({
       items: [minecraftEntry, valheimEntry, terraria],
     });
@@ -161,19 +164,19 @@ describe("ModulesPage", () => {
     expect(screen.getByText("Valheim")).toBeInTheDocument();
     expect(screen.getByText("Terraria")).toBeInTheDocument();
 
-    // Click Sandbox: shows Minecraft and Terraria
+    // Click Sandbox: shows Minecraft and Terraria (both have Sandbox)
     await userEvent.click(screen.getByRole("button", { name: "Sandbox" }));
     expect(screen.getByText("Minecraft (Java)")).toBeInTheDocument();
     expect(screen.queryByText("Valheim")).not.toBeInTheDocument();
     expect(screen.getByText("Terraria")).toBeInTheDocument();
 
-    // Click Survival: now shows all three (Sandbox OR Survival)
+    // Click Survival: now shows only Minecraft (must have BOTH Sandbox AND Survival)
     await userEvent.click(screen.getByRole("button", { name: "Survival" }));
     expect(screen.getByText("Minecraft (Java)")).toBeInTheDocument();
-    expect(screen.getByText("Valheim")).toBeInTheDocument();
-    expect(screen.getByText("Terraria")).toBeInTheDocument();
+    expect(screen.queryByText("Valheim")).not.toBeInTheDocument();
+    expect(screen.queryByText("Terraria")).not.toBeInTheDocument();
 
-    // Click Survival again to deselect it: shows only Sandbox (Minecraft and Terraria)
+    // Click Survival again to deselect it: shows Minecraft and Terraria (only Sandbox required)
     await userEvent.click(screen.getByRole("button", { name: "Survival" }));
     expect(screen.getByText("Minecraft (Java)")).toBeInTheDocument();
     expect(screen.queryByText("Valheim")).not.toBeInTheDocument();
@@ -429,7 +432,7 @@ describe("ModulesPage", () => {
 
   it("filters 'All categories' clears the category set", async () => {
     // Minecraft is Sandbox-only; Valheim is Survival-only, so selecting
-    // Survival hides Minecraft (matchesAnyCategory requires overlap).
+    // Survival hides Minecraft (matchesAllCategories requires all selected tags).
     // Clicking the "All categories" chip itself — not re-toggling Survival
     // — must reset the filter regardless of what's currently selected.
     const mc = { ...MINECRAFT, categories: ["Sandbox"] };
@@ -474,6 +477,52 @@ describe("ModulesPage", () => {
 
   it("opens BuildModuleDialog when clicking Create module", async () => {
     catalog.mockResolvedValue({ items: [MINECRAFT] });
+    archetypes.mockResolvedValue({
+      archetypes: [
+        {
+          id: "steamcmd",
+          title: "SteamCMD Dedicated Server",
+          description: "Dedicated game server installed and managed via SteamCMD (Valve UDP ports, save volume, non-root user)",
+          defaultImage: "cm2network/steamcmd:root@sha256:4d830b0475b8719f96b9978ba57404434bb3da3f260388d75cfb373cf5889ea8",
+          defaultPorts: [
+            { name: "game", containerPort: 27015, protocol: "UDP", advertise: true },
+            { name: "query", containerPort: 27016, protocol: "UDP", advertise: true },
+          ],
+          defaultStorage: {
+            size: "20Gi",
+            mountPath: "/serverdata",
+          },
+          defaultEnv: [
+            { name: "STEAMAPPID", value: "0" },
+            { name: "SERVER_NAME", value: "Game Server" },
+          ],
+          configSchema: [
+            {
+              name: "SERVER_PASSWORD",
+              displayName: "Server Password",
+              description: "Password required for players to join the server",
+              type: "password",
+              required: false,
+            },
+            {
+              name: "MAX_PLAYERS",
+              displayName: "Maximum Players",
+              description: "Maximum allowed concurrent players",
+              type: "int",
+              default: "16",
+              min: 1,
+              max: 128,
+            },
+          ],
+          capabilities: {
+            lifecycle: {
+              stop: ["quit"],
+            },
+          },
+          defaultCategories: ["Survival", "Co-op"],
+        },
+      ],
+    });
     renderPage();
 
     await screen.findByText("Minecraft (Java)");
@@ -482,6 +531,6 @@ describe("ModulesPage", () => {
 
     await userEvent.click(createBtn);
     expect(await screen.findByText("Create game module")).toBeInTheDocument();
-    expect(screen.getByText("SteamCMD Dedicated")).toBeInTheDocument();
+    expect(await screen.findByText("SteamCMD Dedicated Server")).toBeInTheDocument();
   });
 });

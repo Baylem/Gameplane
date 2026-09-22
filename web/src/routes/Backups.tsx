@@ -136,7 +136,7 @@ function BackupsTabPanel() {
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table.Root>
           <Table.ScrollContainer>
-            <Table.Content aria-label="Backups">
+            <Table.Content aria-label="Backups" keyboardNavigationBehavior="arrow">
               <Table.Header>
                 <Table.Column key="name" isRowHeader>
                   Name
@@ -382,7 +382,7 @@ function SchedulesTabPanel() {
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table.Root>
           <Table.ScrollContainer>
-            <Table.Content aria-label="Schedules">
+            <Table.Content aria-label="Schedules" keyboardNavigationBehavior="arrow">
               <Table.Header>
                 <Table.Column key="name" isRowHeader>
                   Name
@@ -514,7 +514,7 @@ function RestoresTabPanel() {
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table.Root>
           <Table.ScrollContainer>
-            <Table.Content aria-label="Restores">
+            <Table.Content aria-label="Restores" keyboardNavigationBehavior="arrow">
               <Table.Header>
                 <Table.Column key="name" isRowHeader>
                   Name

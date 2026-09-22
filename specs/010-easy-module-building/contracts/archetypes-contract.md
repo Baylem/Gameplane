@@ -211,7 +211,19 @@ spec:
 
 ---
 
-## 3. Placeholder Assets
+## 3. Metadata Name Handling
+
+The `template.yaml` emitted by `gp-module init` includes `metadata.name` set to the module slug (matching `module.yaml#name`). This field serves three roles:
+
+1. **Scaffold Emission:** `gp-module init` emits `metadata.name` as a placeholder equal to the module slug provided at initialization.
+2. **Validator Requirement:** The offline validator (`gp-module validate`) requires `metadata.name` to be present and non-empty in any `template.yaml`; bundles lacking this field fail validation.
+3. **Operator Authority:** The Gameplane operator (`gameplane-operator`) authoritatively **overwrites** `metadata.name` with the Module resource's own name during materialization. The emitted value is therefore advisory only and does not constrain the final GameTemplate name.
+
+This design ensures scaffolded bundles are immediately valid and installable, while allowing flexible deployment naming independent of module authorship.
+
+---
+
+## 4. Placeholder Assets
 
 For all archetypes, scaffolding generates:
 - `README.md`: Pre-populated with configuration guidance, environment variable summaries, and port documentation.

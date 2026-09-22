@@ -110,6 +110,8 @@ Options:
 	archetypeID := flagArchetype
 	image := flagImage
 	summary := flagSummary
+	var storageSize string
+	var storageMountPath string
 
 	if !flagNonInteractive {
 		if displayName == "" {
@@ -147,6 +149,86 @@ Options:
 		os.Exit(1)
 	}
 
+	// Continue with interactive prompts for remaining fields
+	if !flagNonInteractive {
+		if image == "" {
+			defaultImage := arch.DefaultImage
+			fmt.Printf("Enter container image [%s]: ", defaultImage)
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(input)
+			if input != "" {
+				image = input
+			} else {
+				image = defaultImage
+			}
+		}
+
+		if len(flagPorts) == 0 {
+			defaultPortStr := ""
+			if len(arch.DefaultPorts) > 0 {
+				p := arch.DefaultPorts[0]
+				defaultPortStr = fmt.Sprintf("%d/%s", p.ContainerPort, strings.ToLower(p.Protocol))
+			}
+			fmt.Printf("Enter game port [%s] (format: PORT/PROTOCOL): ", defaultPortStr)
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(input)
+			if input != "" {
+				pDef, err := parsePortDef(input)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "warning: invalid port %q, using archetype default\n", input)
+				} else {
+					flagPorts = append(flagPorts, fmt.Sprintf("%d/%s", pDef.ContainerPort, strings.ToLower(pDef.Protocol)))
+				}
+			}
+		}
+
+		if len(flagCategories) == 0 {
+			defaultCats := strings.Join(arch.DefaultCategories, ", ")
+			fmt.Printf("Enter categories [%s] (comma-separated): ", defaultCats)
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(input)
+			if input != "" {
+				flagCategories = stringSlice(strings.Split(input, ","))
+				for i := range flagCategories {
+					flagCategories[i] = strings.TrimSpace(flagCategories[i])
+				}
+			} else {
+				flagCategories = stringSlice(arch.DefaultCategories)
+			}
+		}
+
+		if summary == "" {
+			fmt.Print("Enter one-line summary: ")
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(input)
+			if input != "" {
+				summary = input
+			}
+		}
+
+		if storageSize == "" {
+			fmt.Printf("Enter storage size [%s]: ", arch.DefaultStorage.Size)
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(input)
+			if input != "" {
+				storageSize = input
+			} else {
+				storageSize = arch.DefaultStorage.Size
+			}
+		}
+
+		if storageMountPath == "" {
+			fmt.Printf("Enter storage mount path [%s]: ", arch.DefaultStorage.MountPath)
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(input)
+			if input != "" {
+				storageMountPath = input
+			} else {
+				storageMountPath = arch.DefaultStorage.MountPath
+			}
+		}
+	}
+
 	// Parse custom ports if provided
 	var ports []archetypes.PortDef
 	for _, pStr := range flagPorts {
@@ -164,15 +246,17 @@ Options:
 	}
 
 	opts := scaffold.Options{
-		Name:        name,
-		DisplayName: displayName,
-		Archetype:   arch.ID,
-		Image:       image,
-		Ports:       ports,
-		Categories:  flagCategories,
-		Summary:     summary,
-		OutputDir:   outDir,
-		Overwrite:   flagOverwrite,
+		Name:             name,
+		DisplayName:      displayName,
+		Archetype:        arch.ID,
+		Image:            image,
+		Ports:            ports,
+		StorageSize:      storageSize,
+		StorageMountPath: storageMountPath,
+		Categories:       flagCategories,
+		Summary:          summary,
+		OutputDir:        outDir,
+		Overwrite:        flagOverwrite,
 	}
 
 	res, err := scaffold.Scaffold(opts)

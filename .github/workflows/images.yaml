@@ -41,8 +41,8 @@ jobs:
       steamcmd-tags: ${{ steps.meta.outputs.tags }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
-      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       # Login only when pushing to registry; skip on PRs to avoid unnecessary token operations.
       # Fork PRs have read-only GITHUB_TOKEN anyway, so login would fail confusingly.
       - if: github.event_name != 'pull_request'
@@ -59,7 +59,7 @@ jobs:
             type=ref,event=branch
             type=raw,value=latest,enable={{is_default_branch}}
       - id: build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: images/common/${{ matrix.base }}
           # Common base images support both architectures (Ubuntu 26.04 LTS-based).
@@ -156,8 +156,8 @@ jobs:
             context: images/games/nuclear-option
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
-      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       # Login only when pushing to registry; skip on PRs to avoid unnecessary token operations.
       # Fork PRs have read-only GITHUB_TOKEN anyway, so login would fail confusingly.
       - if: github.event_name != 'pull_request'
@@ -177,7 +177,7 @@ jobs:
       # Build amd64 only (game binary is x86_64-only; loading multi-platform is not supported).
       - if: github.event_name == 'pull_request'
         id: build-base-pr
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: images/common/steamcmd
           platforms: linux/amd64
@@ -222,7 +222,7 @@ jobs:
             type=ref,event=branch
             type=raw,value=latest,enable={{is_default_branch}}
       - id: build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: ${{ matrix.context }}
           # Game server binaries are x86_64 only (e.g., Unity runtime for Nuclear Option).

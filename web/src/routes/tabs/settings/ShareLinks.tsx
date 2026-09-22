@@ -561,7 +561,7 @@ export function ShareLinksSection({ name, ns }: ShareLinksProps) {
       ) : (
         <div className="overflow-x-auto rounded-lg border border-divider">
           <Table.Root className="table--mono">
-            <Table.Content aria-label="Share links">
+            <Table.Content aria-label="Share links" keyboardNavigationBehavior="arrow">
               <Table.Header>
                 <Table.Column isRowHeader>Created</Table.Column>
                 <Table.Column>Expires</Table.Column>

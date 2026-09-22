@@ -192,7 +192,7 @@ export function BackupsTab({ name, ns: _ns }: { name: string; ns?: string }) {
         {createNow.error && <ErrorBanner err={createNow.error} />}
         <Table.Root>
           <Table.ScrollContainer>
-            <Table.Content aria-label="Backups table">
+            <Table.Content aria-label="Backups table" keyboardNavigationBehavior="arrow">
               <Table.Header>
                 <Table.Column key="name" isRowHeader>Name</Table.Column>
                 <Table.Column key="phase">Phase</Table.Column>

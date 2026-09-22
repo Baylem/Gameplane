@@ -36,12 +36,16 @@ bin/gp-module init my-steam-game
 4. **Game Port**: Press Enter to accept `27015/udp`
 5. **Categories**: Press Enter to accept `[Survival, Co-op]`
 6. **Summary**: `Dedicated server for My Steam Game`
+7. **Storage Size**: Press Enter to accept `20Gi` (steamcmd archetype default)
+8. **Storage Mount Path**: Press Enter to accept `/serverdata` (steamcmd archetype default)
 
 ### Expected Outcome:
 - Directory `modules/my-steam-game/` is created containing:
   - `module.yaml`: Conforming to [ModuleMetadata](data-model.md#22-module-metadata-modulemetadata)
-  - `template.yaml`: Conforming to [steamcmd archetype](contracts/archetypes-contract.md#21-archetype-steamcmd)
-  - `README.md`: Containing getting-started instructions
+  - `template.yaml`: Conforming to [steamcmd archetype](contracts/archetypes-contract.md#21-archetype-steamcmd), including:
+    - `spec.storage.size: 20Gi`
+    - `spec.storage.mountPath: /serverdata`
+  - `README.md`: Containing getting-started instructions with storage documentation
   - `icon.png`: Valid 256x256 placeholder PNG
 - Command exits with code `0`.
 
