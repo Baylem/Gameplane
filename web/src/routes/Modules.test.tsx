@@ -482,6 +482,6 @@ describe("ModulesPage", () => {
 
     await userEvent.click(createBtn);
     expect(await screen.findByText("Create game module")).toBeInTheDocument();
-    expect(screen.getByText("SteamCMD Dedicated")).toBeInTheDocument();
+    expect(await screen.findByText("SteamCMD Dedicated Server")).toBeInTheDocument();
   });
 });
