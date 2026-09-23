@@ -6,6 +6,7 @@ import {
   customThemeTokensToCss,
   deriveCustomThemeTokens,
   hexToHsl,
+  hslToHex,
   mixHex,
   passesContrastGuard,
   surfaceAppearance,
@@ -168,6 +169,22 @@ describe("customThemeTokensToCss", () => {
     const tokens = deriveCustomThemeTokens("#10B981", DARK_SURFACE);
     const css = customThemeTokensToCss(tokens, ".preview-scope");
     expect(css.startsWith(".preview-scope {\n")).toBe(true);
+  });
+});
+
+describe("hslToHex — hue segment coverage", () => {
+  it("computes the [60, 120) hue segment (r falling, g at max)", () => {
+    // At hue 90 (yellow-green), R should fall from the c/x formula (x at
+    // this hue) and G should sit at the chroma peak — the branch at
+    // theme-derivation.ts:107-108, not exercised by any preset/custom
+    // fixture hue elsewhere in this suite.
+    expect(hslToHex(90, 100, 50)).toBe("#80ff00");
+  });
+
+  it("round-trips a [60, 120) hue through hexToHsl", () => {
+    const hex = hslToHex(90, 100, 50);
+    const hsl = hexToHsl(hex);
+    expect(hsl.h).toBe(90);
   });
 });
 
