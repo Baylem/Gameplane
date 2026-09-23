@@ -5,6 +5,10 @@
 // (console/RCON/log streams) remain bound to the local cluster. Cross-cluster
 // WebSocket support is a follow-up task. See docs/roadmap.md.
 
+// WebSocket.OPEN state constant. Defined locally to avoid relying on static
+// properties in test stubs that may not implement them.
+const WS_OPEN = 1; // WebSocket.OPEN
+
 // Connection lifecycle, surfaced to callers via onStatus so the UI can
 // reflect "reconnecting…" in its chrome instead of writing a status line
 // on every socket cycle. This is a dumb per-cycle emitter; consumers that
@@ -31,12 +35,36 @@ export function openWS(path: string, opts: WSOptions) {
   const reconnect = opts.reconnect ?? true;
   let attempt = 0;
 
+  // Queue for messages sent while the first connection is opening.
+  // After the first successful open, messages sent while disconnected
+  // are dropped (not queued), since replaying them after reconnect
+  // (e.g., a "stop" command) is worse than losing them.
+  const MAX_QUEUED = 500;
+  let messageQueue: (string | Blob | BufferSource)[] = [];
+  let hasEverOpened = false;
+
   function connect() {
     opts.onStatus?.("connecting", { attempt });
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
     sock = new WebSocket(`${proto}//${location.host}${path}`);
     sock.onopen = () => {
       attempt = 0;
+
+      // Flush queued messages only on the first successful open.
+      // On reconnects, pending commands are dropped to avoid silent
+      // replays that could have unintended side effects.
+      if (!hasEverOpened && messageQueue.length > 0) {
+        hasEverOpened = true;
+        while (messageQueue.length > 0) {
+          const msg = messageQueue.shift();
+          if (sock && sock.readyState === WS_OPEN) {
+            sock.send(msg!);
+          }
+        }
+      } else if (!hasEverOpened) {
+        hasEverOpened = true;
+      }
+
       opts.onOpen?.();
       opts.onStatus?.("open", { attempt: 0 });
     };
@@ -56,7 +84,29 @@ export function openWS(path: string, opts: WSOptions) {
   connect();
 
   return {
-    send(data: string | Blob | BufferSource) { sock?.send(data); },
-    close() { closedByUser = true; sock?.close(); },
+    send(data: string | Blob | BufferSource) {
+      if (closedByUser) return;
+
+      // Before the first open: queue the message (bounded by MAX_QUEUED).
+      // Dropping oldest if the queue is full prevents unbounded memory growth.
+      if (!hasEverOpened && sock && sock.readyState !== WS_OPEN) {
+        if (messageQueue.length >= MAX_QUEUED) {
+          messageQueue.shift(); // Drop oldest
+        }
+        messageQueue.push(data);
+        return;
+      }
+
+      // After the first open: only send if actually open. Messages sent
+      // while reconnecting are dropped (not queued or replayed).
+      if (sock && sock.readyState === WS_OPEN) {
+        sock.send(data);
+      }
+    },
+    close() {
+      closedByUser = true;
+      messageQueue = [];
+      sock?.close();
+    },
   };
 }

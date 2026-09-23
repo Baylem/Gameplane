@@ -114,7 +114,8 @@ server {
         proxy_pass $upstream$request_uri;
 
         proxy_http_version 1.1;
-        proxy_set_header Host              $host;
+        # $http_host keeps the port so it matches the browser's Origin on non-default ports (WebSocket origin check).
+        proxy_set_header Host              $http_host;
         proxy_set_header X-Real-IP         $remote_addr;
         proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;

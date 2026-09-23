@@ -19,11 +19,19 @@ class FakeSocket {
     FakeSocket.instances.push(this);
   }
 
-  send(data: unknown) { this.sent.push(data); }
-  close() { this.onclose?.(new CloseEvent("close")); }
+  send(data: unknown) {
+    if (this.readyState === 0) {
+      throw new DOMException("Still in CONNECTING state.", "InvalidStateError");
+    }
+    if (this.readyState === 2 || this.readyState === 3) {
+      throw new Error("send() called while CLOSING/CLOSED — should have been guarded");
+    }
+    this.sent.push(data);
+  }
+  close() { this.readyState = 3; this.onclose?.(new CloseEvent("close")); }
   triggerOpen() { this.readyState = 1; this.onopen?.(new Event("open")); }
   triggerMessage(data: string) { this.onmessage?.(new MessageEvent("message", { data })); }
-  triggerClose() { this.onclose?.(new CloseEvent("close")); }
+  triggerClose() { this.readyState = 3; this.onclose?.(new CloseEvent("close")); }
 }
 
 describe("openWS", () => {
@@ -95,6 +103,57 @@ describe("openWS", () => {
     sock.triggerOpen();
     handle.send("ping");
     expect(sock.sent).toEqual(["ping"]);
+  });
+
+  it("queues input sent before the first open and flushes it in order on open", () => {
+    const handle = openWS("/ws/x", { onMessage: () => {} });
+    const sock = FakeSocket.instances[0];
+    handle.send("msg1");
+    handle.send("msg2");
+    handle.send("msg3");
+    expect(sock.sent).toEqual([]);
+    sock.triggerOpen();
+    expect(sock.sent).toEqual(["msg1", "msg2", "msg3"]);
+  });
+
+  it("drops input sent while reconnecting instead of replaying it", () => {
+    const handle = openWS("/ws/x", { onMessage: () => {} });
+    const sock1 = FakeSocket.instances[0];
+    sock1.triggerOpen();
+    sock1.triggerClose();
+    vi.advanceTimersByTime(100); // Before reconnect
+    handle.send("dropped");
+    vi.advanceTimersByTime(900); // Complete the reconnect delay (1000 total)
+    const sock2 = FakeSocket.instances[1];
+    sock2.triggerOpen();
+    // The new socket should not have received the message sent while reconnecting
+    expect(sock2.sent).toEqual([]);
+    // The first socket should not have received the message either
+    expect(sock1.sent).not.toContain("dropped");
+  });
+
+  it("ignores sends after close()", () => {
+    const handle = openWS("/ws/x", { onMessage: () => {} });
+    const sock = FakeSocket.instances[0];
+    sock.triggerOpen();
+    handle.close();
+    // Should not throw and should not record
+    handle.send("ignored");
+    expect(sock.sent).toEqual([]);
+  });
+
+  it("bounds the pre-open queue and drops the oldest frames", () => {
+    const handle = openWS("/ws/x", { onMessage: () => {} });
+    const sock = FakeSocket.instances[0];
+    // Send 501 messages before open (exceeds MAX_QUEUED of 500)
+    for (let i = 0; i < 501; i++) {
+      handle.send(`f${i}`);
+    }
+    sock.triggerOpen();
+    // After open, should have 500 messages and the first should be f1 (f0 was dropped)
+    expect(sock.sent).toHaveLength(500);
+    expect(sock.sent[0]).toBe("f1");
+    expect(sock.sent[499]).toBe("f500");
   });
 
   it("invokes onClose hook", () => {
