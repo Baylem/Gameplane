@@ -74,4 +74,21 @@ describe("AppearanceToggle", () => {
     await userEvent.click(lightBtn);
     expect(onChange).toHaveBeenLastCalledWith("light");
   });
+
+  it("disables all three buttons and adds the surface-color note when disabled", () => {
+    const onChange = vi.fn();
+    render(<AppearanceToggle value="dark" onChange={onChange} disabled />);
+
+    expect(screen.getByLabelText(/Light/i)).toBeDisabled();
+    expect(screen.getByLabelText(/Dark/i)).toBeDisabled();
+    expect(screen.getByLabelText(/System/i)).toBeDisabled();
+    expect(screen.getByText("Set by your surface color")).toBeInTheDocument();
+  });
+
+  it("does not call onChange when a disabled button is clicked", async () => {
+    const onChange = vi.fn();
+    render(<AppearanceToggle value="dark" onChange={onChange} disabled />);
+    await userEvent.click(screen.getByLabelText(/Light/i));
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

@@ -33,7 +33,10 @@ export function buildCrumbs(pathname: string): Crumb[] {
     // Server detail pages ("/servers/:name/...") drop the "Servers" ancestor
     // crumb per design (dPP50, F9pUrx) — the list page itself still shows it.
     if (p === "servers" && parts.length > 1) continue;
-    crumbs.push({ label: labels[p] ?? p, to: acc });
+    // /settings/theme renders as the same single "Settings" crumb as /admin.
+    if (p === "settings" && parts[parts.length - 1] === "theme") continue;
+    const label = p === "theme" && parts[0] === "settings" ? "Settings" : (labels[p] ?? p);
+    crumbs.push({ label, to: acc });
   }
   if (parts.length === 0) crumbs.push({ label: "Dashboard" });
   return crumbs;

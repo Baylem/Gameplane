@@ -20,9 +20,9 @@ export function ConfirmAdminMappingDialog({
   const description: ReactNode = (
     <div className="space-y-4">
       <div className="rounded-md border border-warning-soft-foreground bg-warning-soft p-[11px] flex gap-3">
-        <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+        <AlertTriangle className="h-4 w-4 text-warning-soft-foreground flex-shrink-0 mt-0.5" />
         <div className="text-xs">
-          <div className="font-medium text-warning mb-1">Full admin access</div>
+          <div className="font-medium text-warning-soft-foreground mb-1">Full admin access</div>
           <p className="text-warning-soft-foreground">
             Mapping users to the admin role grants full cluster control. Ensure the mapped group
             contains only authorized personnel. Anyone in these groups gets full admin access

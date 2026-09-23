@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "@tanstack/react-router";
+import { Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   Archive,
@@ -13,7 +13,7 @@ import {
 import { APIError } from "@/lib/api";
 import { Cluster as ClusterAPI, Auth } from "@/lib/endpoints";
 import { useMe, can } from "@/lib/auth";
-import type { ClusterInfo } from "@/types";
+import type { ClusterInfo, User } from "@/types";
 import { useEffect, useState } from "react";
 import { ClusterSelector } from "@/components/ClusterSelector";
 import { AppShell } from "@/components/ui/AppShell";
@@ -25,9 +25,21 @@ import { NotificationsPanel } from "@/components/ui/NotificationsPanel";
 import { AppLoadingSkeleton } from "@/components/ui/AppLoadingSkeleton";
 import type { AppearanceMode } from "@/components/ui/AppearanceToggle";
 import { useDelayedLoading } from "@/lib/useDelayedLoading";
+import {
+  applyThemePreferences,
+  DEFAULT_THEME_PREFERENCES,
+  isSafeModeActive,
+  SAFE_MODE_SESSION_KEY,
+  unmountCustomCssOverlay,
+  useThemePreferences,
+} from "@/lib/useThemePreferences";
+import { SafeModeBanner } from "@/components/ui/SafeModeBanner";
 
 // The localStorage key the theme boot script in index.html reads before
 // React mounts — must stay in sync (see index.html and theme-tokens.md).
+// The prefs cache (gameplane-theme-prefs, owned by useThemePreferences) is
+// authoritative once it exists; this legacy key (light/dark/system only)
+// remains for backwards compatibility.
 // Note: HeroUI's own `useTheme()` hook hardcodes a different key
 // ("heroui-theme"), which would silently diverge from the boot script, so
 // theme state is owned here rather than via that hook (deviation from the
@@ -44,43 +56,36 @@ function readStoredTheme(): AppearanceMode {
   return "system";
 }
 
-function applyTheme(mode: AppearanceMode) {
-  const resolved =
-    mode === "system"
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
-      : mode;
-  document.documentElement.classList.remove("dark", "light");
-  document.documentElement.classList.add(resolved);
-  document.documentElement.dataset.theme = resolved;
-}
+function useAppearance(
+  me: User | undefined,
+): [AppearanceMode, (mode: AppearanceMode) => void, boolean] {
+  const { preferences, updatePreferences } = useThemePreferences(me);
+  const [legacyTheme, setLegacyTheme] = useState<AppearanceMode>(readStoredTheme);
 
-function useAppearance(): [AppearanceMode, (mode: AppearanceMode) => void] {
-  const [theme, setThemeState] = useState<AppearanceMode>(readStoredTheme);
-
-  useEffect(() => {
-    applyTheme(theme);
-
-    // Subscribe to OS theme changes only in system mode
-    if (theme === "system") {
-      const mq = window.matchMedia("(prefers-color-scheme: dark)");
-      const handleChange = () => applyTheme("system");
-      mq.addEventListener("change", handleChange);
-      return () => mq.removeEventListener("change", handleChange);
-    }
-  }, [theme]);
+  const theme: AppearanceMode = preferences?.appearanceMode ?? legacyTheme;
+  // D4: the sidebar footer toggle is meaningless (and disabled) while a
+  // custom-colors theme is active — light/dark follows the surface color.
+  const isCustomColorsActive =
+    preferences?.themeType === "custom_colors" && !!preferences.customColors;
 
   const setTheme = (mode: AppearanceMode) => {
-    setThemeState(mode);
+    setLegacyTheme(mode);
     try {
       localStorage.setItem(THEME_STORAGE_KEY, mode);
     } catch {
       // localStorage unavailable — theme still applies for this session.
     }
+    if (preferences) {
+      // Persist through the preferences pipeline (optimistic DOM apply +
+      // PUT) so the choice syncs across devices; the hook also owns the
+      // system-mode media-query subscription.
+      updatePreferences({ appearanceMode: mode });
+    } else {
+      applyThemePreferences({ ...DEFAULT_THEME_PREFERENCES, appearanceMode: mode });
+    }
   };
 
-  return [theme, setTheme];
+  return [theme, setTheme, isCustomColorsActive];
 }
 
 function useClusterInfo() {
@@ -96,11 +101,17 @@ export function AppLayout() {
   const { data: me, error, isLoading } = useMe();
   const { data: cluster } = useClusterInfo();
   const { pathname } = useLocation();
-  const [theme, setTheme] = useAppearance();
+  const navigate = useNavigate();
+  const [theme, setTheme, isCustomColorsActive] = useAppearance(me);
   // Below `lg`, the fixed sidebar becomes an off-canvas drawer toggled by
   // the TopBar's hamburger button. Desktop (`lg`+) keeps the always-on
   // sidebar and never mounts the drawer.
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Safe mode (FR-009, contracts/theme-ui.md §4): ?safe-mode=1 in the URL,
+  // the Ctrl+Shift+Alt+T shortcut, or the sessionStorage flag planted by the
+  // safe-mode login link. Suspends only the custom CSS overlay.
+  const [safeMode, setSafeMode] = useState(() => isSafeModeActive());
+  const [safeModeBannerDismissed, setSafeModeBannerDismissed] = useState(false);
   const showSkeleton = useDelayedLoading(isLoading);
 
   useEffect(() => {
@@ -109,11 +120,48 @@ export function AppLayout() {
     }
   }, [error]);
 
+  // The keyboard safe-mode entry point: plant the same sessionStorage flag
+  // as the login-page link so safe mode (and the banner) survive reloads,
+  // then activate it for the current view.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || !e.shiftKey || !e.altKey || e.repeat) return;
+      if (e.key.toLowerCase() !== "t") return;
+      try {
+        window.sessionStorage.setItem(SAFE_MODE_SESSION_KEY, "1");
+      } catch {
+        // sessionStorage blocked — safe mode still applies for this view.
+      }
+      setSafeMode(true);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // Suspension is overlay-only: unmountCustomCssOverlay flips
+  // data-custom-css="off" and removes the mounted <style> element — the
+  // stored stylesheet in preferences/localStorage is never deleted.
+  useEffect(() => {
+    if (safeMode) unmountCustomCssOverlay();
+  }, [safeMode]);
+
+  // The custom CSS overlay is authenticated-only surface: unmount it when
+  // the layout unmounts (navigation to /login or /share/:token) as well as
+  // on logout. The stored stylesheet itself is never deleted.
+  useEffect(() => () => unmountCustomCssOverlay(), []);
+
   if (showSkeleton) return <AppLoadingSkeleton />;
 
   const onLogout = async () => {
+    unmountCustomCssOverlay();
     await Auth.logout().catch(() => {});
     location.assign("/login");
+  };
+
+  // Sidebar is deliberately router-free (its tests mock the router module),
+  // so the footer's customize-theme button reports through this callback.
+  const openThemeSettings = () => {
+    void navigate({ to: "/settings/theme" });
   };
 
   const navItems: SidebarNavGroup[] = [
@@ -156,6 +204,17 @@ export function AppLayout() {
 
   return (
     <>
+      {/* Safe-mode banner: sticky at the top of the viewport so it stays
+          reachable while recovering from broken custom CSS. Dismiss only
+          hides it — safe mode remains active for the session. */}
+      {safeMode && !safeModeBannerDismissed && (
+        <div className="sticky top-0 z-50">
+          <SafeModeBanner
+            onOpenSettings={openThemeSettings}
+            onDismiss={() => setSafeModeBannerDismissed(true)}
+          />
+        </div>
+      )}
       <AppShell
         sidebar={
           <Sidebar
@@ -166,6 +225,8 @@ export function AppLayout() {
             onLogout={onLogout}
             theme={theme}
             onThemeChange={setTheme}
+            onCustomizeTheme={openThemeSettings}
+            isCustomColorsActive={isCustomColorsActive}
           />
         }
         topBar={
@@ -198,6 +259,8 @@ export function AppLayout() {
         onLogout={onLogout}
         theme={theme}
         onThemeChange={setTheme}
+        onCustomizeTheme={openThemeSettings}
+        isCustomColorsActive={isCustomColorsActive}
       />
     </>
   );

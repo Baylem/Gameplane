@@ -8,15 +8,104 @@
     <script id="theme-boot">
       (function () {
         try {
-          var KEY = "gameplane-theme";
-          var saved = localStorage.getItem(KEY);
-          var mode = saved || "system";
-          var resolved = mode === "system"
-            ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-            : mode;
-          document.documentElement.classList.remove("dark", "light");
-          document.documentElement.classList.add(resolved);
-          document.documentElement.dataset.theme = resolved;
+          var PREFS_KEY = "gameplane-theme-prefs";
+          var LEGACY_KEY = "gameplane-theme";
+          var SAFE_MODE_KEY = "gameplane-safe-mode";
+          var VARS_KEY = "gameplane-theme-vars-css";
+          var MODE_KEY = "gameplane-theme-custom-mode"; // must equal CUSTOM_MODE_STORAGE_KEY in useThemePreferences.ts
+          var root = document.documentElement;
+          var path = window.location.pathname;
+          // Boot-time unauthenticated guard (FR-011): cached prefs are never
+          // applied on /login or /share/:token — those routes force
+          // pink/off themselves for their whole lifetime.
+          var unauthenticated = path.substring(0, 6) === "/login" || path.substring(0, 7) === "/share/";
+
+          // gameplane-theme-prefs is authoritative when present; the legacy
+          // gameplane-theme key (light/dark/system only) remains as the
+          // fallback for browsers that never wrote the prefs cache.
+          var prefs = null;
+          try {
+            var raw = window.localStorage.getItem(PREFS_KEY);
+            if (raw) prefs = JSON.parse(raw);
+          } catch (e) {
+            prefs = null; // corrupt cache — fall through to the legacy key
+          }
+
+          var mode = prefs && !unauthenticated
+            ? (prefs.appearanceMode || "system")
+            : (window.localStorage.getItem(LEGACY_KEY) || "system");
+
+          // D4 (2026-09-23): while a custom-colors theme is active, light/dark
+          // follows the cached surface brightness (CUSTOM_MODE_STORAGE_KEY,
+          // written by writeThemePreferences/surfaceAppearance) instead of
+          // appearanceMode — never applies when unauthenticated (guard above
+          // already forces prefs=null-equivalent mode resolution there).
+          var customActive = !!(prefs && !unauthenticated && prefs.themeType === "custom_colors" && prefs.customColors);
+
+          var resolved;
+          if (customActive) {
+            var cachedMode = window.localStorage.getItem(MODE_KEY);
+            resolved = (cachedMode === "light" || cachedMode === "dark") ? cachedMode : "dark";
+          } else {
+            resolved = mode;
+            if (mode === "system") {
+              resolved = typeof window.matchMedia === "function"
+                ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+                : "dark";
+            }
+          }
+
+          root.classList.remove("dark", "light");
+          root.classList.add(resolved);
+          root.dataset.theme = resolved;
+
+          if (unauthenticated) return;
+
+          root.dataset.themePreset = prefs && prefs.presetId === "legacy" ? "legacy" : "pink";
+          root.dataset.themeType = prefs && prefs.themeType === "custom_colors" ? "custom_colors" : "preset";
+
+          // Custom-color base (contracts/theme-tokens-v2.md §4): the app
+          // caches the derived tokens under VARS_KEY whenever it persists
+          // prefs, so a custom_colors user paints in their own colors before
+          // React mounts (no Pink flash). Injected before the overlay below.
+          if (root.dataset.themeType === "custom_colors") {
+            var varsCss = window.localStorage.getItem(VARS_KEY);
+            // Only accept the exact shape customThemeTokensToCss writes
+            // (--token: #rrggbb; lines under the shared selector), so a
+            // tampered cache can never smuggle arbitrary CSS in pre-React.
+            var VARS_SHAPE = /^html\[data-theme-type="custom_colors"\]\[data-theme\] \{\n(  --[a-z-]+: #[0-9a-f]{6};\n)+\}$/;
+            if (varsCss && VARS_SHAPE.test(varsCss)) {
+              var vars = document.createElement("style");
+              vars.id = "gameplane-custom-theme-vars";
+              vars.textContent = varsCss;
+              document.head.appendChild(vars);
+            }
+          }
+
+          // Custom CSS overlay (contracts/theme-tokens-v2.md §5): the cached
+          // stylesheet is injected as the LAST <head> child — after the
+          // preset tokens and gameplane-custom-theme-vars — so user rules
+          // win at equal specificity. Safe mode (?safe-mode=1, or the
+          // sessionStorage flag set by the keyboard shortcut / safe-mode
+          // login link) suspends only the overlay; the stored stylesheet is
+          // never touched.
+          var css = prefs && typeof prefs.customCss === "string" ? prefs.customCss : "";
+          var enabled = !!(prefs && prefs.customCssEnabled) && css.length > 0;
+          var safeMode = /[?&]safe-mode=1(?:&|$)/.test(window.location.search);
+          try {
+            var flag = window.sessionStorage.getItem(SAFE_MODE_KEY);
+            safeMode = safeMode || flag === "1" || flag === "true";
+          } catch (e) { /* sessionStorage unavailable */ }
+
+          if (enabled && !safeMode) {
+            root.dataset.customCss = "on";
+            var style = document.createElement("style");
+            style.id = "gameplane-custom-css";
+            style.textContent = css;
+            document.head.appendChild(style);
+          } else {
+            root.dataset.customCss = "off";
+          }
         } catch (e) { /* localStorage unavailable — keep the dark default already in markup */ }
       })();
     </script>

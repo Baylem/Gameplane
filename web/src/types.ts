@@ -707,6 +707,43 @@ export interface User {
   // permission means all). Present on /users/me; drives can()-based UI
   // gating. Absent elsewhere.
   permissions?: Record<string, string[]>;
+  // Styling/theme preferences embedded by GET /users/me (absent on other
+  // user payloads) — see UserThemePreferences below.
+  preferences?: UserThemePreferences | null;
+}
+
+// User theme customization (specs/016-user-theme-customization): client-side
+// representation of the user_preferences row (data-model.md §2.3).
+
+// Base mode only — custom CSS is an overlay (customCssEnabled), not a mode.
+export type ThemeType = "preset" | "custom_colors";
+export type ThemePresetId = "pink" | "legacy";
+export type AppearanceMode = "light" | "dark" | "system";
+
+export interface CustomColorConfig {
+  accent: string; // #RRGGBB
+  surface: string; // #RRGGBB
+}
+
+export interface UserThemePreferences {
+  themeType: ThemeType;
+  presetId: ThemePresetId;
+  appearanceMode: AppearanceMode;
+  // null when unset (the wire format sends JSON null, not an omitted key);
+  // retained across preset/overlay changes, cleared only by reset (FR-012).
+  customColors?: CustomColorConfig | null;
+  // Overlay on/off; independent of themeType. Toggling never deletes customCss.
+  customCssEnabled: boolean;
+  customCss?: string | null;
+  updatedAt?: string;
+}
+
+// Portable export document (FR-014, data-model.md §2.4; full schema in
+// contracts/theme-export.md).
+export interface ThemeExport {
+  format: "gameplane-theme";
+  version: 1;
+  preferences: Omit<UserThemePreferences, "updatedAt">;
 }
 
 // A named set of catalog permissions.

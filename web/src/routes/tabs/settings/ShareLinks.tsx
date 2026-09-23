@@ -364,8 +364,8 @@ function CreatedDialog({ open, onOpenChange, link }: CreatedDialogProps) {
 
               <div className="rounded-lg border-2 border-warning bg-warning/10 p-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 shrink-0 text-warning" />
-                  <div className="text-sm text-warning">
+                  <AlertCircle className="h-5 w-5 shrink-0 text-warning-soft-foreground" />
+                  <div className="text-sm text-warning-soft-foreground">
                     <strong>You will not see this link again</strong>
                     <p className="mt-1">
                       Gameplane stores only a one-way hash of the token, so it can&apos;t be shown

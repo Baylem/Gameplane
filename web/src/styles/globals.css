@@ -26,7 +26,7 @@
   --success-soft-foreground: oklch(45% 0.14 149.52); /* mirrors --warning-soft-foreground's darker-foreground-on-tint pattern */
   --warning: oklch(77.04% 0.1646 70.66); /* #F59F0A */
   --warning-soft: #FEF3C7; /* design $warning/soft */
-  --warning-soft-foreground: #D97706; /* design $warning/soft-foreground */
+  --warning-soft-foreground: #92400E; /* design $warning/soft-foreground — AA-safe: 6.37:1 on #FEF3C7 (--warning-soft), 7.09:1 on white */
   --danger: oklch(57.85% 0.2138 27.17); /* #DC2828 */
   --danger-soft: #FEE2E2; /* design $danger/soft */
   --danger-soft-foreground: #EF4444; /* design $danger/soft-foreground */
@@ -86,6 +86,115 @@
   --link: oklch(76.21% 0.1231 256.39); /* #7DB4FF */
   --segment: oklch(22.75% 0.0137 298.37); /* #1D1B22 */
   --segment-foreground: oklch(96.68% 0.0057 308.40); /* #F5F3F7 */
+}
+
+/* ==========================================================================
+   Legacy preset tokens (feature 016, contracts/theme-tokens-v2.md §2,
+   research.md R-02). Rebinds the HeroUI semantic tokens to the historical
+   Gameplane orange palette when data-theme-preset="legacy" is active, so
+   every rebuilt screen adapts without component changes.
+   ========================================================================== */
+
+/* Legacy Dark Theme */
+.dark[data-theme-preset="legacy"],
+[data-theme="dark"][data-theme-preset="legacy"] {
+  --background: oklch(14.5% 0 0); /* #0F0F0F */
+  --foreground: oklch(96.5% 0 0); /* #F5F5F5 */
+  --surface: oklch(18.5% 0 0); /* #171717 */
+  --surface-secondary: oklch(16.5% 0 0); /* #141414 */
+  --surface-tertiary: oklch(15.0% 0 0); /* #111111 */
+  --overlay: oklch(21.0% 0 0); /* #1C1C1C */
+  --accent: oklch(69.11% 0.1944 44.01); /* #F97316 orange */
+  --accent-foreground: oklch(100% 0 0); /* #FFFFFF */
+  --accent-soft: oklch(25.0% 0.06 45.0);
+  --accent-soft-foreground: oklch(80.0% 0.15 45.0);
+  --default: oklch(21.0% 0 0); /* #1C1C1C */
+  --default-foreground: oklch(96.5% 0 0); /* #F5F5F5 */
+  --border: oklch(26.0% 0 0); /* #292929 */
+  --separator: oklch(26.0% 0 0); /* #292929 */
+  --muted: oklch(65.0% 0 0); /* #949494 */
+  --field-background: oklch(18.5% 0 0); /* #171717 */
+  --field-border: oklch(26.0% 0 0); /* #292929 */
+  --field-placeholder: oklch(50.0% 0 0); /* #737373 */
+  --field-foreground: oklch(96.5% 0 0); /* #F5F5F5 */
+  --focus: oklch(69.11% 0.1944 44.01); /* #F97316 */
+  --link: oklch(72.0% 0.16 45.0); /* #FB923C */
+  --segment: oklch(21.0% 0 0); /* #1C1C1C */
+  --segment-foreground: oklch(96.5% 0 0); /* #F5F5F5 */
+}
+
+/* Legacy Light Theme */
+.light[data-theme-preset="legacy"],
+[data-theme="light"][data-theme-preset="legacy"] {
+  --background: oklch(100% 0 0); /* #FFFFFF */
+  --foreground: oklch(18.0% 0.03 260); /* #0F172A */
+  --surface: oklch(98.5% 0.005 260); /* #F8FAFC */
+  --surface-secondary: oklch(96.0% 0.01 260); /* #F1F5F9 */
+  --surface-tertiary: oklch(91.0% 0.02 260); /* #E2E8F0 */
+  --overlay: oklch(98.5% 0.005 260); /* #F8FAFC */
+  --accent: oklch(62.0% 0.20 40.0); /* #EA580C */
+  --accent-foreground: oklch(100% 0 0); /* #FFFFFF */
+  --accent-soft: oklch(95.0% 0.04 45.0);
+  --accent-soft-foreground: oklch(55.0% 0.20 40.0);
+  --border: oklch(90.0% 0.01 260); /* #E2E8F0 */
+  --separator: oklch(90.0% 0.01 260); /* #E2E8F0 */
+  --muted: oklch(50.0% 0.02 260); /* #64748B */
+  --field-background: oklch(100% 0 0); /* #FFFFFF */
+  --field-border: oklch(90.0% 0.01 260); /* #E2E8F0 */
+  --field-foreground: oklch(18.0% 0.03 260); /* #0F172A */
+  --focus: oklch(62.0% 0.20 40.0); /* #EA580C */
+  --link: oklch(55.0% 0.20 40.0); /* #C2410C */
+}
+
+/* ==========================================================================
+   Accessibility guards — High Contrast / Accessibility Modes
+   (spec.md Edge Case: system accessibility settings take precedence over
+   custom colors). Under forced-colors the OS palette wins: the semantic
+   tokens are restored to CSS system colors (!important beats the
+   higher-specificity preset selectors above regardless of cascade order,
+   and likewise beats custom-color overlays injected at runtime), and
+   interactive controls keep their forced-color behavior. Under
+   prefers-contrast: more, field/border strokes are strengthened to the
+   system text color.
+   ========================================================================== */
+@media (forced-colors: active) {
+  :root, .light, .dark, [data-theme="light"], [data-theme="dark"] {
+    --background: Canvas !important;
+    --foreground: CanvasText !important;
+    --surface: Canvas !important;
+    --surface-secondary: Canvas !important;
+    --surface-tertiary: Canvas !important;
+    --overlay: Canvas !important;
+    --default: ButtonFace !important;
+    --default-foreground: ButtonText !important;
+    --segment: ButtonFace !important;
+    --segment-foreground: ButtonText !important;
+    --border: CanvasText !important;
+    --separator: CanvasText !important;
+    --muted: GrayText !important;
+    --field-background: Field !important;
+    --field-foreground: FieldText !important;
+    --field-border: CanvasText !important;
+    --field-placeholder: GrayText !important;
+    --link: LinkText !important;
+    --focus: Highlight !important;
+  }
+
+  /* Buttons, fields, tabs, and chips must follow the system palette even
+     when a preset or the custom CSS overlay paints them. */
+  .button, .input, .select__trigger, .checkbox__control, .tabs__tab, .menu-item, .list-box-item, .chip, .card, .table-root--primary {
+    forced-color-adjust: auto;
+  }
+
+  a { color: LinkText; }
+}
+
+@media (prefers-contrast: more) {
+  :root, .light, .dark, [data-theme="light"], [data-theme="dark"] {
+    --border: CanvasText !important;
+    --separator: CanvasText !important;
+    --field-border: CanvasText !important;
+  }
 }
 
 /* Legacy HSL triplets renamed to avoid collision with HeroUI tokens */

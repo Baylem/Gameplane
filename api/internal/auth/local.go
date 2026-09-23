@@ -36,12 +36,60 @@ type userJSON struct {
 	Provider    string              `json:"provider"`
 	CreatedAt   string              `json:"createdAt"`
 	Permissions map[string][]string `json:"permissions,omitempty"`
+	// Preferences mirrors the "preferences" field GET /users/me embeds
+	// (api/internal/handlers/users.go userDTO.Preferences), so the login
+	// response seeds the dashboard's theme without a second round-trip
+	// (D3, 2026-09-23; handlers can't be imported here — auth already sits
+	// below handlers in the import graph — so this DTO is a deliberate
+	// duplicate of handlers.userPreferencesDTO; keep both in sync).
+	Preferences *userPreferencesJSON `json:"preferences,omitempty"`
 }
 
-func newUserJSON(u *User) userJSON {
+// customColorsJSON mirrors handlers.customColorsDTO.
+type customColorsJSON struct {
+	Accent  string `json:"accent"`
+	Surface string `json:"surface"`
+}
+
+// userPreferencesJSON mirrors handlers.userPreferencesDTO
+// (api/internal/handlers/users.go) field-for-field and tag-for-tag.
+type userPreferencesJSON struct {
+	ThemeType        string            `json:"themeType"`
+	PresetID         string            `json:"presetId"`
+	AppearanceMode   string            `json:"appearanceMode"`
+	CustomColors     *customColorsJSON `json:"customColors"`
+	CustomCSSEnabled bool              `json:"customCssEnabled"`
+	CustomCSS        *string           `json:"customCss"`
+	UpdatedAt        string            `json:"updatedAt"`
+}
+
+// newUserPreferencesJSON mirrors handlers.preferencesDTO.
+func newUserPreferencesJSON(p db.UserPreferences) *userPreferencesJSON {
+	out := &userPreferencesJSON{
+		ThemeType:        p.ThemeType,
+		PresetID:         p.PresetID,
+		AppearanceMode:   p.AppearanceMode,
+		CustomCSSEnabled: p.CustomCSSEnabled,
+		CustomCSS:        p.CustomCSS,
+		UpdatedAt:        p.UpdatedAt,
+	}
+	if p.CustomAccent != nil || p.CustomSurface != nil {
+		out.CustomColors = &customColorsJSON{}
+		if p.CustomAccent != nil {
+			out.CustomColors.Accent = *p.CustomAccent
+		}
+		if p.CustomSurface != nil {
+			out.CustomColors.Surface = *p.CustomSurface
+		}
+	}
+	return out
+}
+
+func newUserJSON(u *User, prefs db.UserPreferences) userJSON {
 	return userJSON{
 		ID: u.ID, Username: u.Username, DisplayName: u.DisplayName,
 		Email: u.Email, Role: u.Role, Permissions: PermsToJSON(u.Perms),
+		Preferences: newUserPreferencesJSON(prefs),
 	}
 }
 
@@ -105,6 +153,13 @@ func (l *Local) HandleLogin(sessions *SessionStore, reg *Registry) http.HandlerF
 			return
 		}
 		u.Perms = perms
+		// Load preferences so the login response can seed the theme in one
+		// round-trip (D3, 2026-09-23) — same data GET /users/me embeds.
+		prefs, err := l.db.GetPreferences(req.Context(), u.ID)
+		if err != nil {
+			http.Error(w, "session error", http.StatusInternalServerError)
+			return
+		}
 		token, csrf, err := sessions.Create(req.Context(), u.ID)
 		if err != nil {
 			http.Error(w, "session error", http.StatusInternalServerError)
@@ -113,7 +168,7 @@ func (l *Local) HandleLogin(sessions *SessionStore, reg *Registry) http.HandlerF
 		setSessionCookie(w, token, sessionTTL)
 		setCSRFCookie(w, csrf, sessionTTL)
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(loginResp{User: newUserJSON(u), CSRF: csrf})
+		_ = json.NewEncoder(w).Encode(loginResp{User: newUserJSON(u, prefs), CSRF: csrf})
 	}
 }
 

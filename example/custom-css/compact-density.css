@@ -1,0 +1,76 @@
+/*
+ * Gameplane — Compact Density Theme (example Custom CSS overlay)
+ * ==============================================================
+ * What this does
+ * --------------
+ * A density-only theme: no color changes at all — every screen keeps
+ * whatever preset or Custom Colors palette is active — but the whole
+ * UI packs tighter so more fits on screen:
+ *
+ *   1. Root font size drops from 16px to 14px. The app is built on
+ *      Tailwind v4, whose spacing utilities (p-4, gap-3, text-sm, ...)
+ *      are all rem-based, so shrinking the root font size scales
+ *      padding, gaps, and type together, proportionally.
+ *   2. The few places the app pins spacing in raw px instead of rem
+ *      (modal dialog padding/gaps in web/src/styles/globals.css) are
+ *      re-pinned to smaller values by hand.
+ *
+ * This is the "show me more rows" theme — useful on small laptop
+ * screens or dense server lists.
+ *
+ * How to apply
+ * ------------
+ *   Settings -> Theme -> Custom CSS overlay -> paste this file's
+ *   contents -> enable the overlay -> Save.
+ *
+ * How to revert / recover
+ * -----------------------
+ *   - Turn the overlay off and Save again from Settings -> Theme, or
+ *   - Append ?safe-mode=1 to any app URL (suspends the overlay only,
+ *     the stored text is not deleted), or
+ *   - Press Ctrl+Shift+Alt+T while the app is open.
+ *
+ * Notes
+ * -----
+ *   - Nothing here touches color tokens, so this composes with any
+ *     base preset (pink or legacy) and with Custom Colors picks.
+ *   - html font-size is the one "global lever" in CSS that rem-based
+ *     design systems expose; elements sized in px (a few focus rings,
+ *     1px borders, the modal geometry pinned in globals.css) do not
+ *     scale, which is why the modal rules below exist.
+ *   - 14px is a 12.5% reduction. Going much lower starts to hurt
+ *     readability; treat that as the floor.
+ */
+
+/* ---------------------------------------------------------------- */
+/* 1. Global scale — shrink every rem-based utility at once          */
+/* ---------------------------------------------------------------- */
+
+html {
+  font-size: 14px; /* default is 16px; 14/16 = 0.875x everywhere */
+}
+
+/* ---------------------------------------------------------------- */
+/* 2. Px-pinned geometry that does not follow the root font size     */
+/* ---------------------------------------------------------------- */
+
+/* Modal dialog geometry (pinned to 20px padding / 16px gaps in
+   globals.css for the design scale) — re-pin proportionally tighter. */
+.modal__dialog {
+  padding: 14px;
+}
+.modal__body {
+  gap: 12px;
+  padding: 12px 0 0;
+}
+.modal__footer {
+  padding: 14px 0 0;
+  gap: 6px;
+}
+
+/* Dialog field controls are pinned to 36px tall in globals.css for the
+   design scale — drop them to 32px to match the denser dialogs. */
+.modal__dialog .input,
+.modal__dialog .select__trigger {
+  height: 32px;
+}

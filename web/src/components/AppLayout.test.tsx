@@ -1,11 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 import type { ReactNode } from "react";
 import { http, HttpResponse } from "msw";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
 import { renderWithQuery } from "@/test/render";
 import { makeServer, makeUser } from "@/test/factories";
+import {
+  SAFE_MODE_SESSION_KEY,
+  THEME_PREFS_STORAGE_KEY,
+  DEFAULT_THEME_PREFERENCES,
+} from "@/lib/useThemePreferences";
 
 // TanStack Router APIs the layout (and the hero/* components it composes)
 // reach into.
@@ -494,5 +499,100 @@ describe("AppLayout", () => {
       expect(document.documentElement.dataset.theme).toBe("dark");
       expect(localStorage.getItem("gameplane-theme")).toBe("dark");
     });
+  });
+
+  it("redirects to /login when useMe resolves a 401", async () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, "location", {
+      writable: true,
+      value: { ...originalLocation, assign: vi.fn() },
+    });
+    try {
+      server.use(http.get("/users/me", () => new HttpResponse("unauthorized", { status: 401 })));
+      renderWithQuery(<AppLayout />);
+      await waitFor(() => {
+        expect(window.location.assign).toHaveBeenCalledWith("/login");
+      });
+    } finally {
+      Object.defineProperty(window, "location", { value: originalLocation });
+    }
+  });
+
+  it("persists the appearance choice through the preferences pipeline when preferences are loaded", async () => {
+    window.localStorage.setItem(
+      THEME_PREFS_STORAGE_KEY,
+      JSON.stringify({ ...DEFAULT_THEME_PREFERENCES, appearanceMode: "system" }),
+    );
+    let captured: unknown = null;
+    server.use(
+      http.get("/users/me", () => HttpResponse.json(makeUser())),
+      http.put("/users/me/preferences", async ({ request }) => {
+        captured = await request.json();
+        return HttpResponse.json({ ...DEFAULT_THEME_PREFERENCES, appearanceMode: "dark" });
+      }),
+    );
+    try {
+      renderWithQuery(<AppLayout />);
+      await screen.findByRole("link", { name: /Dashboard/i });
+      const darkBtn = screen.getAllByRole("button", { name: /^Dark$/i })[0];
+      await userEvent.click(darkBtn);
+      await waitFor(() => expect(captured).not.toBeNull());
+      expect(captured).toMatchObject({ appearanceMode: "dark" });
+    } finally {
+      window.localStorage.removeItem(THEME_PREFS_STORAGE_KEY);
+    }
+  });
+
+  it("shows the safe-mode banner and its Open Appearance Settings button navigates to theme settings", async () => {
+    window.sessionStorage.setItem(SAFE_MODE_SESSION_KEY, "1");
+    try {
+      server.use(http.get("/users/me", () => HttpResponse.json(makeUser())));
+      renderWithQuery(<AppLayout />);
+      expect(
+        await screen.findByText("Safe Mode Active: Custom CSS is suspended."),
+      ).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: /Open Appearance Settings/i }));
+      expect(navigateMock).toHaveBeenCalledWith({ to: "/settings/theme" });
+    } finally {
+      window.sessionStorage.removeItem(SAFE_MODE_SESSION_KEY);
+    }
+  });
+
+  it("dismissing the safe-mode banner hides it for the session", async () => {
+    window.sessionStorage.setItem(SAFE_MODE_SESSION_KEY, "1");
+    try {
+      server.use(http.get("/users/me", () => HttpResponse.json(makeUser())));
+      renderWithQuery(<AppLayout />);
+      await screen.findByText("Safe Mode Active: Custom CSS is suspended.");
+      await userEvent.click(screen.getByRole("button", { name: /^Dismiss$/i }));
+      await waitFor(() => {
+        expect(
+          screen.queryByText("Safe Mode Active: Custom CSS is suspended."),
+        ).not.toBeInTheDocument();
+      });
+    } finally {
+      window.sessionStorage.removeItem(SAFE_MODE_SESSION_KEY);
+    }
+  });
+
+  it("Ctrl+Shift+Alt+T activates safe mode via the keyboard shortcut", async () => {
+    window.sessionStorage.removeItem(SAFE_MODE_SESSION_KEY);
+    try {
+      server.use(http.get("/users/me", () => HttpResponse.json(makeUser())));
+      renderWithQuery(<AppLayout />);
+      await screen.findByRole("link", { name: /Dashboard/i });
+      expect(
+        screen.queryByText("Safe Mode Active: Custom CSS is suspended."),
+      ).not.toBeInTheDocument();
+      fireEvent.keyDown(window, { key: "t", ctrlKey: true, shiftKey: true, altKey: true });
+      await waitFor(() => {
+        expect(
+          screen.getByText("Safe Mode Active: Custom CSS is suspended."),
+        ).toBeInTheDocument();
+      });
+      expect(window.sessionStorage.getItem(SAFE_MODE_SESSION_KEY)).toBe("1");
+    } finally {
+      window.sessionStorage.removeItem(SAFE_MODE_SESSION_KEY);
+    }
   });
 });

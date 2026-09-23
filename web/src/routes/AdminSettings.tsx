@@ -5,12 +5,10 @@ import {
   Archive,
   Bell,
   BellRing,
-  Boxes,
   CircleSlash2,
   Cog,
   Flame,
   Gamepad2,
-  Info,
   Key,
   Lock,
   Mail,
@@ -18,10 +16,7 @@ import {
   MessagesSquare,
   Plus,
   Puzzle,
-  RefreshCcw,
   RotateCcw,
-  ShieldCheck,
-  Activity,
   Trash2,
   Webhook,
 } from "lucide-react";
@@ -44,6 +39,7 @@ import { ConfirmAdminMappingDialog } from "@/components/ui/ConfirmAdminMappingDi
 import { RemovableGroupChip } from "@/components/ui/RemovableGroupChip";
 import { ProvenanceBadge } from "@/components/ui/ProvenanceBadge";
 import { SlackIcon } from "@/components/ui/SlackIcon";
+import { SettingsNav, type SettingsSectionKey } from "@/components/ui/SettingsNav";
 import { cn, formatRelative } from "@/lib/utils";
 import { errorText } from "@/lib/errors";
 import { Auth, AuthProviders, BackupDestinations, Cluster, ModRegistries, Notifications } from "@/lib/endpoints";
@@ -76,21 +72,35 @@ type Section =
   | "general" | "auth" | "backups" | "modules" | "modRegistries" | "notifications"
   | "telemetry" | "updates" | "about";
 
-const sections: Array<{ key: Section; label: string; icon: typeof Cog }> = [
-  { key: "general",       label: "General",             icon: Cog },
-  { key: "auth",          label: "Authentication",      icon: ShieldCheck },
-  { key: "backups",       label: "Backup destinations", icon: Archive },
-  { key: "modules",       label: "Module sources",      icon: Boxes },
-  { key: "modRegistries", label: "Mod registries",      icon: Key },
-  { key: "notifications", label: "Notifications",       icon: Bell },
-  { key: "telemetry",     label: "Telemetry",           icon: Activity },
-  { key: "updates",       label: "Updates",             icon: RefreshCcw },
-  { key: "about",         label: "About",               icon: Info },
+const SECTIONS: readonly Section[] = [
+  "general", "auth", "backups", "modules", "modRegistries", "notifications",
+  "telemetry", "updates", "about",
 ];
 
+// initialSection honours /admin?section=<key> (the theme page's settings nav
+// deep-links here). Read from window.location rather than the router so the
+// page still renders standalone in tests.
+function initialSection(): Section {
+  if (typeof window === "undefined") return "general";
+  const key = new URLSearchParams(window.location.search).get("section");
+  return SECTIONS.find((s) => s === key) ?? "general";
+}
+
 export function AdminSettingsPage() {
-  const [section, setSection] = useState<Section>("general");
+  const [section, setSection] = useState<Section>(initialSection);
   const cfg = useConfig();
+
+  const selectSection = (key: SettingsSectionKey) => {
+    setSection(key);
+    // cfg is a single query shared by every section (staleTime: 0
+    // in tests, 10s in prod) with one long-lived observer here in
+    // AdminSettingsPage — switching sections alone never creates a
+    // new observer, so nothing would otherwise refetch it. Force a
+    // refetch on every nav click so revisiting a section (e.g.
+    // Authentication, after another admin or Helm changed
+    // installTimeSettings) shows current data.
+    void cfg.refetch();
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -100,34 +110,8 @@ export function AdminSettingsPage() {
       />
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-        <nav className="space-y-0.5">
-          {sections.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => {
-                setSection(key);
-                // cfg is a single query shared by every section (staleTime: 0
-                // in tests, 10s in prod) with one long-lived observer here in
-                // AdminSettingsPage — switching sections alone never creates a
-                // new observer, so nothing would otherwise refetch it. Force a
-                // refetch on every nav click so revisiting a section (e.g.
-                // Authentication, after another admin or Helm changed
-                // installTimeSettings) shows current data.
-                void cfg.refetch();
-              }}
-              className={cn(
-                "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-                "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary",
-                section === key
-                  ? "bg-surface text-fg"
-                  : "text-muted hover:bg-surface/60 hover:text-fg",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              <span>{label}</span>
-            </button>
-          ))}
-        </nav>
+        {/* /admin is gated on config:manage, so every section is reachable. */}
+        <SettingsNav active={section} onSelect={selectSection} showAdminSections />
 
         <div className="space-y-6">
           {cfg.isLoading && (
@@ -446,9 +430,9 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
 function AdminGroupsInlineWarning() {
   return (
     <div className="rounded-md border border-warning-soft-foreground bg-warning-soft p-3 flex gap-3">
-      <Megaphone className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+      <Megaphone className="h-4 w-4 text-warning-soft-foreground flex-shrink-0 mt-0.5" />
       <div className="text-xs">
-        <div className="font-medium text-warning mb-1">Full admin access</div>
+        <div className="font-medium text-warning-soft-foreground mb-1">Full admin access</div>
         <p className="text-warning-soft-foreground">
           Groups added here will be mapped to the admin role and get full cluster
           control from their next login. You&apos;ll be asked to confirm before this is saved.
@@ -1651,10 +1635,10 @@ function HelmOIDCProviderCard({ provider }: { provider: OIDCHelmProvider }) {
         )}
         {adminMapped && (
           <div className="rounded-md border border-warning/40 bg-warning/10 p-3 flex gap-3">
-            <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="h-4 w-4 text-warning-soft-foreground flex-shrink-0 mt-0.5" />
             <div className="text-xs">
-              <div className="font-medium text-warning mb-1">Helm-configured admin mapping</div>
-              <p className="text-warning/80">
+              <div className="font-medium text-warning-soft-foreground mb-1">Helm-configured admin mapping</div>
+              <p className="text-warning-soft-foreground">
                 The group(s) on the Admin row above were mapped to admin via Helm values, not the dashboard, so there
                 is no confirmation step here. Verify they contain only trusted accounts — anyone in them gets full
                 admin access.

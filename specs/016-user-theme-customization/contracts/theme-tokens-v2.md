@@ -2,7 +2,7 @@
 
 **Feature**: `016-user-theme-customization`  
 **Binding Modules**: `web/src/styles/globals.css`, `web/src/components/AppLayout.tsx`, `web/index.html`  
-**Status**: Binding  
+**Status**: Binding (revised 2026-09-21 after clarification session 2026-09-21)  
 
 ---
 
@@ -11,7 +11,7 @@
 This contract extends `specs/done_014-heroui-web-rebuild/contracts/theme-tokens.md` by defining:
 1. The token declarations for the **Legacy Theme** preset (`data-theme-preset="legacy"`).
 2. The dynamic override mechanism for **Simple Custom Color Scheme** (`data-theme-type="custom_colors"`).
-3. The injection and scoping contract for **Custom CSS** (`#gameplane-custom-css`).
+3. The injection, ordering, and scoping contract for the **Custom CSS overlay** (`#gameplane-custom-css`, gated by `customCssEnabled`).
 
 ---
 
@@ -42,15 +42,18 @@ Theme selection is represented on the root `<html>` element using standard attri
 
 1. **`class` and `data-theme`**:
    - Holds `"dark"` or `"light"`, resolving system preference when appearance is `"system"`.
+   - (D4, revised 2026-09-23) While `data-theme-type="custom_colors"` and custom colors are set, this resolves from the custom surface color's brightness instead of `appearanceMode` — see §4a.
 2. **`data-theme-preset`**:
    - Holds `"pink"` (default) or `"legacy"`.
 3. **`data-theme-type`**:
-   - Holds `"preset"`, `"custom_colors"`, or `"custom_css"`.
+   - Holds the base mode: `"preset"` or `"custom_colors"`. (Custom CSS is an overlay, not a base mode.)
+4. **`data-custom-css`**:
+   - Holds `"on"` when the custom CSS overlay is enabled and injected; `"off"` otherwise (including safe mode). Exists to make overlay state inspectable in tests and devtools.
 
-### Example: Legacy Theme in Dark Mode
+### Example: Legacy Theme in Dark Mode with Custom CSS Overlay Active
 
 ```html
-<html lang="en" class="dark" data-theme="dark" data-theme-preset="legacy" data-theme-type="preset">
+<html lang="en" class="dark" data-theme="dark" data-theme-preset="legacy" data-theme-type="preset" data-custom-css="on">
 ```
 
 ---
@@ -61,7 +64,7 @@ When `data-theme-type="custom_colors"`, dynamic tokens are derived from user-sel
 
 ```html
 <style id="gameplane-custom-theme-vars">
-  :root, .dark, .light {
+  html[data-theme-type="custom_colors"][data-theme] {
     --accent: oklch(62.5% 0.22 250);
     --accent-foreground: #FFFFFF;
     --accent-soft: oklch(25% 0.05 250);
@@ -72,11 +75,27 @@ When `data-theme-type="custom_colors"`, dynamic tokens are derived from user-sel
 </style>
 ```
 
+The selector is scoped to the custom_colors root and carries specificity (0,2,1), so it outranks the preset token blocks (e.g. `.dark[data-theme-preset="legacy"]`, (0,2,0)) regardless of stylesheet order (revised 2026-09-23).
+
 ---
 
-## 5. Custom CSS Injection Rules
+## 4a. Mode Resolution for Custom Colors (D4, 2026-09-23)
 
-1. Mounted as `<style id="gameplane-custom-css">` as the last child of `document.head`.
-2. Disallowed when URL includes `?safe-theme=1`.
-3. Stripped of HTML delimiters (`<` and `>`) before mounting.
-4. Strictly unmounted on logout or navigation to `/login` and `/share/:token`.
+While `data-theme-type="custom_colors"` and custom colors are set, `class`/`data-theme` is derived from the surface color's own relative luminance instead of `appearanceMode`:
+- `surfaceAppearance(surface)` (`web/src/lib/theme-derivation.ts`) returns `"light"` when `relativeLuminance(surface) > 0.179`, else `"dark"`.
+- `useThemePreferences.ts` (`applyThemePreferences` / `resolveAppearanceMode`) applies this after every draft change, including live preview on `/settings/theme`.
+- `index.html`'s boot script reads the pre-computed value from `localStorage["gameplane-theme-custom-mode"]` (written by `writeThemePreferences` alongside `gameplane-theme-vars-css`), validated to be exactly `"light"` or `"dark"` before use, falling back to `"dark"` otherwise.
+- `appearanceMode` itself is never mutated by this — it stays stored and reapplies unchanged the moment `themeType` returns to `"preset"`.
+- Never applies on `/login` or `/share/:token` (FR-011) — those routes force the Pink preset and never read the custom-colors path at all.
+
+---
+
+## 5. Custom CSS Overlay Injection Rules
+
+1. **Gating**: Mounted only when the user is authenticated, `customCssEnabled` is true, and safe mode is not active. Unauthenticated surfaces (`/login`, `/share/:token`) never mount it (FR-008, FR-011).
+2. **Cascade ordering (user priority)**: Mounted as `<style id="gameplane-custom-css">` as the **last** child of `document.head`, after the preset token declarations and after `<style id="gameplane-custom-theme-vars">`. At equal specificity, user rules win over every base layer; elements not targeted by custom CSS follow the active base theme.
+3. **Base-switch behavior**: Switching `data-theme-preset` or `data-theme-type` while the overlay is enabled leaves `#gameplane-custom-css` mounted and last, so customized elements keep their custom appearance across base theme changes.
+4. **Safe mode**: Not mounted when the URL contains `?safe-mode=1`, when the safe-mode keyboard shortcut was used, or when the session arrived via the safe-mode login link. `data-custom-css` reads `"off"` and the Safe Mode banner (contracts/theme-ui.md §4) is shown. The stored stylesheet is untouched.
+5. **Sanitization**: Content must have passed FR-013 sanitization (no `@import`, no external `url()` references, `data:` URIs allowed, valid syntax, max 32,768 chars, no `<style`/`<script` delimiters) — enforced server-side at save time and re-checked client-side before mounting cached CSS at boot.
+6. **Disable vs reset**: Toggling the overlay off unmounts the element but retains the stored stylesheet; only the FR-012 reset deletes it.
+7. Strictly unmounted on logout or navigation to `/login` and `/share/:token`.

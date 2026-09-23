@@ -129,6 +129,13 @@ EOF
 # (separate CI job/cluster per bucket, so no conflict, but maintains login-budget discipline).
 # It costs +1 admin login, bringing api-roles to 5 (up from the previous 4).
 # Budget remains within the ~7 admin-logins-per-job ceiling.
+#
+# TestAPI_ThemePreferences (user theme preferences, contracts/user-preferences-api.md)
+# lands here because api-auth is at its admin-login ceiling and this bucket still
+# has headroom: it costs +1 e2e-admin login (to create its own viewer user) plus one
+# login under a fresh UnixNano username, bringing api-roles to 6. It writes only its
+# own user's preference rows — no auth config, no roleMappings — so it cannot
+# interfere with the OIDC/role-mapping tests above.
 bucket_api_roles() { cat <<'EOF'
 TestAPI_CustomRole_Lifecycle
 TestAPI_BuiltinRole_Immutable
@@ -136,6 +143,7 @@ TestAPI_PerNamespaceBinding_GrantsScopedAccess
 TestAPI_OwnerCollaboratorAccess
 TestAPI_AuthConfig_RoleMappings
 TestAPI_OIDCHelmOverride_EffectiveAtLoginTime
+TestAPI_ThemePreferences
 EOF
 }
 

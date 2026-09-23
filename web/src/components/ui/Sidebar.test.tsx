@@ -202,6 +202,21 @@ describe("Sidebar", () => {
       expect(onThemeChange).toHaveBeenCalledWith("dark");
     });
 
+    it("disables the footer appearance toggle when isCustomColorsActive is true", () => {
+      render(
+        <Sidebar
+          variant="fixed"
+          navItems={generalNav}
+          user={mockUser}
+          theme="dark"
+          onThemeChange={vi.fn()}
+          onLogout={vi.fn()}
+          isCustomColorsActive
+        />
+      );
+      expect(screen.getByLabelText(/Dark/i)).toBeDisabled();
+    });
+
     it("renders cluster name in header", () => {
       render(
         <Sidebar
@@ -435,6 +450,20 @@ describe("Sidebar", () => {
 
       // Servers should be active (prefix match)
       expect(serversLink).toHaveClass("bg-primary/10");
+    });
+
+    it("highlights the Settings nav item while on /settings/theme", () => {
+      mockLocation.pathname = "/settings/theme";
+      const navItems: SidebarNavGroup[] = [
+        {
+          label: "Admin",
+          items: [{ to: "/admin", label: "Settings", icon: Settings }],
+        },
+      ];
+      render(
+        <Sidebar variant="fixed" navItems={navItems} user={mockUser} onLogout={vi.fn()} />
+      );
+      expect(screen.getByRole("link", { name: /Settings/i })).toHaveClass("bg-primary/10");
     });
   });
 });

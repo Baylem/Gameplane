@@ -83,6 +83,13 @@ func TestAllow(t *testing.T) {
 		{RoleAdmin, "GET", "/users", scope.DefaultCluster, true},
 		{RoleViewer, "POST", "/users/me", scope.DefaultCluster, false},
 		{RoleViewer, "PUT", "/users/me", scope.DefaultCluster, false},
+		// Own theme preferences (feature 016): every authenticated role
+		// reads, writes and resets its own preferences.
+		{RoleViewer, "GET", "/users/me/preferences", scope.DefaultCluster, true},
+		{RoleViewer, "PUT", "/users/me/preferences", scope.DefaultCluster, true},
+		{RoleViewer, "POST", "/users/me/preferences/reset", scope.DefaultCluster, true},
+		{RoleOperator, "PUT", "/users/me/preferences", scope.DefaultCluster, true},
+		{RoleViewer, "DELETE", "/users/me/preferences", scope.DefaultCluster, false},
 		{RoleOperator, "GET", "/admin/audit", scope.DefaultCluster, false},
 		{RoleAdmin, "GET", "/admin/audit", scope.DefaultCluster, true},
 		{RoleViewer, "PATCH", "/servers/foo", scope.DefaultCluster, false},

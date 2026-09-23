@@ -13,6 +13,26 @@ const cssText = readFileSync(cssPath, "utf8");
 // parses the stylesheet source directly instead of using getComputedStyle().
 
 /**
+ * Parse `--name: value;` custom property declarations out of a declaration
+ * block's source text, stripping trailing comments, e.g.
+ * { "--accent": "oklch(69.11% 0.1944 44.01)" }.
+ */
+function parseDeclarations(declarationText: string): Record<string, string> {
+  const tokens: Record<string, string> = {};
+
+  // Match each property: --name: value; (dropping a trailing /* comment */)
+  const propRegex = /--([\w-]+):\s*([^;]+);/g;
+  let propMatch;
+  while ((propMatch = propRegex.exec(declarationText)) !== null) {
+    const name = `--${propMatch[1]}`;
+    const value = propMatch[2].replace(/\/\*.*?\*\//g, "").trim();
+    tokens[name] = value;
+  }
+
+  return tokens;
+}
+
+/**
  * Parse CSS custom property declarations out of the first `:root { ... }`
  * block, or the `.dark { ... }` block, in a stylesheet's source text.
  * Returns a map of property names to their raw declared values (trailing
@@ -35,19 +55,23 @@ function parseTokens(cssSource: string, selectorPrefix: ":root" | ".dark"): Reco
     );
   }
 
-  const declarationText = match[1];
-  const tokens: Record<string, string> = {};
+  return parseDeclarations(match[1]);
+}
 
-  // Match each property: --name: value; (dropping a trailing /* comment */)
-  const propRegex = /--([\w-]+):\s*([^;]+);/g;
-  let propMatch;
-  while ((propMatch = propRegex.exec(declarationText)) !== null) {
-    const name = `--${propMatch[1]}`;
-    const value = propMatch[2].replace(/\/\*.*?\*\//g, "").trim();
-    tokens[name] = value;
+/**
+ * Parse CSS custom property declarations out of the block whose selector
+ * list starts with the given selector, e.g.
+ * `.dark[data-theme-preset="legacy"]` for the Legacy preset tokens.
+ */
+function parseBlock(cssSource: string, blockSelector: string): Record<string, string> {
+  const escaped = blockSelector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = cssSource.match(new RegExp(escaped + "[^{]*\\{([^}]+)\\}"));
+
+  if (!match) {
+    throw new Error(`Could not find block for selector ${blockSelector} in CSS`);
   }
 
-  return tokens;
+  return parseDeclarations(match[1]);
 }
 
 describe("theme tokens", () => {
@@ -132,6 +156,171 @@ describe("theme tokens", () => {
 
     it("light and dark chart-stat values match (single-value token, no theme split)", () => {
       expect(lightTokens["--chart-stat"]).toBe(darkTokens["--chart-stat"]);
+    });
+  });
+
+  describe("legacy preset tokens (contracts/theme-tokens-v2.md §2, research.md R-02)", () => {
+    let legacyDarkTokens: Record<string, string>;
+    let legacyLightTokens: Record<string, string>;
+
+    beforeAll(() => {
+      legacyDarkTokens = parseBlock(cssText, '.dark[data-theme-preset="legacy"]');
+      legacyLightTokens = parseBlock(cssText, '.light[data-theme-preset="legacy"]');
+    });
+
+    it("binds the legacy tokens for both the class and data-theme selector forms", () => {
+      expect(cssText).toContain('.dark[data-theme-preset="legacy"],');
+      expect(cssText).toContain('[data-theme="dark"][data-theme-preset="legacy"]');
+      expect(cssText).toContain('.light[data-theme-preset="legacy"],');
+      expect(cssText).toContain('[data-theme="light"][data-theme-preset="legacy"]');
+    });
+
+    describe("dark mode", () => {
+      // Contract values from specs/016-user-theme-customization/research.md R-02
+      const expected: Record<string, string> = {
+        "--accent": "oklch(69.11% 0.1944 44.01)",
+        "--accent-foreground": "oklch(100% 0 0)",
+        "--accent-soft": "oklch(25.0% 0.06 45.0)",
+        "--accent-soft-foreground": "oklch(80.0% 0.15 45.0)",
+        "--background": "oklch(14.5% 0 0)",
+        "--foreground": "oklch(96.5% 0 0)",
+        "--surface": "oklch(18.5% 0 0)",
+        "--surface-secondary": "oklch(16.5% 0 0)",
+        "--surface-tertiary": "oklch(15.0% 0 0)",
+        "--overlay": "oklch(21.0% 0 0)",
+        "--default": "oklch(21.0% 0 0)",
+        "--default-foreground": "oklch(96.5% 0 0)",
+        "--border": "oklch(26.0% 0 0)",
+        "--separator": "oklch(26.0% 0 0)",
+        "--muted": "oklch(65.0% 0 0)",
+        "--field-background": "oklch(18.5% 0 0)",
+        "--field-border": "oklch(26.0% 0 0)",
+        "--field-placeholder": "oklch(50.0% 0 0)",
+        "--field-foreground": "oklch(96.5% 0 0)",
+        "--focus": "oklch(69.11% 0.1944 44.01)",
+        "--link": "oklch(72.0% 0.16 45.0)",
+        "--segment": "oklch(21.0% 0 0)",
+        "--segment-foreground": "oklch(96.5% 0 0)",
+      };
+
+      for (const [name, value] of Object.entries(expected)) {
+        it(`${name} should be ${value}`, () => {
+          expect(legacyDarkTokens[name]).toBe(value);
+        });
+      }
+    });
+
+    describe("light mode", () => {
+      // Contract values from specs/016-user-theme-customization/research.md R-02
+      const expected: Record<string, string> = {
+        "--accent": "oklch(62.0% 0.20 40.0)",
+        "--accent-foreground": "oklch(100% 0 0)",
+        "--accent-soft": "oklch(95.0% 0.04 45.0)",
+        "--accent-soft-foreground": "oklch(55.0% 0.20 40.0)",
+        "--background": "oklch(100% 0 0)",
+        "--foreground": "oklch(18.0% 0.03 260)",
+        "--surface": "oklch(98.5% 0.005 260)",
+        "--surface-secondary": "oklch(96.0% 0.01 260)",
+        "--surface-tertiary": "oklch(91.0% 0.02 260)",
+        "--overlay": "oklch(98.5% 0.005 260)",
+        "--border": "oklch(90.0% 0.01 260)",
+        "--separator": "oklch(90.0% 0.01 260)",
+        "--muted": "oklch(50.0% 0.02 260)",
+        "--field-background": "oklch(100% 0 0)",
+        "--field-border": "oklch(90.0% 0.01 260)",
+        "--field-foreground": "oklch(18.0% 0.03 260)",
+        "--focus": "oklch(62.0% 0.20 40.0)",
+        "--link": "oklch(55.0% 0.20 40.0)",
+      };
+
+      for (const [name, value] of Object.entries(expected)) {
+        it(`${name} should be ${value}`, () => {
+          expect(legacyLightTokens[name]).toBe(value);
+        });
+      }
+    });
+
+    describe("accent differs from the pink preset (T014)", () => {
+      it("light mode: legacy --accent is #EA580C, pink --accent is #DB2777", () => {
+        expect(legacyLightTokens["--accent"]).toBe("oklch(62.0% 0.20 40.0)");
+        expect(lightTokens["--accent"]).toBe("oklch(59.16% 0.2180 0.58)");
+        expect(legacyLightTokens["--accent"]).not.toBe(lightTokens["--accent"]);
+      });
+
+      it("dark mode: legacy --accent is #F97316, pink --accent is #FF4FA3", () => {
+        expect(legacyDarkTokens["--accent"]).toBe("oklch(69.11% 0.1944 44.01)");
+        expect(darkTokens["--accent"]).toBe("oklch(69.50% 0.2229 355.31)");
+        expect(legacyDarkTokens["--accent"]).not.toBe(darkTokens["--accent"]);
+      });
+    });
+
+    describe("surface/border spot-checks per the token table", () => {
+      it("dark mode: legacy background #0F0F0F is darker than pink #121114", () => {
+        expect(legacyDarkTokens["--background"]).toBe("oklch(14.5% 0 0)");
+        expect(darkTokens["--background"]).toBe("oklch(18.02% 0.0063 300.93)");
+      });
+
+      it("dark mode: legacy overlay #1C1C1C matches the historical card color", () => {
+        expect(legacyDarkTokens["--overlay"]).toBe("oklch(21.0% 0 0)");
+      });
+
+      it("light mode: legacy surface stack is slate #F8FAFC/#F1F5F9/#E2E8F0, not pink", () => {
+        expect(legacyLightTokens["--surface"]).toBe("oklch(98.5% 0.005 260)");
+        expect(legacyLightTokens["--surface-secondary"]).toBe("oklch(96.0% 0.01 260)");
+        expect(legacyLightTokens["--surface-tertiary"]).toBe("oklch(91.0% 0.02 260)");
+        expect(legacyLightTokens["--surface"]).not.toBe(lightTokens["--surface"]);
+      });
+
+      it("dark mode: legacy border #292929 differs from pink #2C2932", () => {
+        expect(legacyDarkTokens["--border"]).toBe("oklch(26.0% 0 0)");
+        expect(legacyDarkTokens["--border"]).not.toBe(darkTokens["--border"]);
+      });
+    });
+  });
+
+  describe("accessibility guards (T017: High Contrast / Accessibility Modes)", () => {
+    function mediaBlock(mediaQuery: string): string {
+      const start = cssText.indexOf(`@media (${mediaQuery})`);
+      if (start === -1) {
+        throw new Error(`@media (${mediaQuery}) guard not found in globals.css`);
+      }
+      return cssText.slice(start);
+    }
+
+    it("declares a forced-colors guard that restores system colors for surfaces and text", () => {
+      const block = mediaBlock("forced-colors: active");
+      expect(block).toMatch(/--background:\s*Canvas/);
+      expect(block).toMatch(/--foreground:\s*CanvasText/);
+      expect(block).toMatch(/--surface:\s*Canvas/);
+      expect(block).toMatch(/--overlay:\s*Canvas/);
+    });
+
+    it("forced-colors guard restores system colors for borders, fields, links, and focus", () => {
+      const block = mediaBlock("forced-colors: active");
+      expect(block).toMatch(/--border:\s*CanvasText/);
+      expect(block).toMatch(/--separator:\s*CanvasText/);
+      expect(block).toMatch(/--field-border:\s*CanvasText/);
+      expect(block).toMatch(/--link:\s*LinkText/);
+      expect(block).toMatch(/--focus:\s*Highlight/);
+    });
+
+    it("forced-colors guard keeps interactive controls and links on forced-color behavior", () => {
+      const block = mediaBlock("forced-colors: active");
+      expect(block).toMatch(/forced-color-adjust:\s*auto/);
+      expect(block).toMatch(/a\s*\{[^}]*color:\s*LinkText/);
+    });
+
+    it("declares a prefers-contrast: more guard that strengthens border strokes", () => {
+      const block = mediaBlock("prefers-contrast: more");
+      expect(block).toMatch(/--border:\s*CanvasText/);
+      expect(block).toMatch(/--field-border:\s*CanvasText/);
+    });
+
+    it("guards are declared after the legacy preset blocks so accessibility wins the cascade", () => {
+      const legacyStart = cssText.indexOf('[data-theme-preset="legacy"]');
+      expect(legacyStart).toBeGreaterThan(-1);
+      expect(cssText.indexOf("@media (forced-colors: active)")).toBeGreaterThan(legacyStart);
+      expect(cssText.indexOf("@media (prefers-contrast: more)")).toBeGreaterThan(legacyStart);
     });
   });
 });

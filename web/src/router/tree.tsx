@@ -12,6 +12,7 @@ import { ModulesPage } from "@/routes/Modules";
 import { ClusterPage } from "@/routes/Cluster";
 import { UsersPage } from "@/routes/Users";
 import { AdminSettingsPage } from "@/routes/AdminSettings";
+import { ThemeSettingsPage } from "@/routes/ThemeSettings";
 import { CreateServerWizard } from "@/routes/CreateServer";
 import { BackupsPage } from "@/routes/Backups";
 import { AuditLogPage } from "@/routes/AuditLog";
@@ -98,11 +99,25 @@ const usersRoute = new Route({
 const adminRoute = new Route({
   getParentRoute: () => appLayoutRoute,
   path: "/admin",
+  // Lets the theme page's settings nav deep-link a section via
+  // /admin?section=<key>; AdminSettingsPage reads it on mount.
+  validateSearch: (search: Record<string, unknown>): { section?: string } => ({
+    section: typeof search.section === "string" ? search.section : undefined,
+  }),
   component: () => (
     <RequirePermission perm="config:manage">
       <AdminSettingsPage />
     </RequirePermission>
   ),
+});
+
+// Per-user theme preferences need no special permission (any authenticated
+// user styles their own dashboard), so the route has no RequirePermission
+// gate — same as /backups.
+const themeSettingsRoute = new Route({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings/theme",
+  component: ThemeSettingsPage,
 });
 
 const auditLogRoute = new Route({
@@ -145,6 +160,7 @@ export const routeTree = rootRoute.addChildren([
     clusterRoute,
     usersRoute,
     adminRoute,
+    themeSettingsRoute,
     auditLogRoute,
     adminLogsRoute,
     backupsRoute,
