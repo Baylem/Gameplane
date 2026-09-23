@@ -4,6 +4,8 @@ Run one central Gameplane API/dashboard and an operator plus optional gateway in
 each remote cluster. The gateway proxies approved agent operations over mTLS. The
 central API still connects directly to each registered Kubernetes API for CRD
 management, Pod logs and PTY attach; a gateway does not replace those credentials.
+See [central registration and request routing](multicluster-agent-gateway.md) for
+the matching central API configuration.
 
 ## Prepare the remote cluster
 
@@ -25,9 +27,13 @@ The gateway additionally requires an exact `gateway.peerURI` URI SAN in the cent
 client certificate. Use a separate management trust root from the local agent CA.
 The chart mounts only `ca.crt` from the agent CA Secret, never its signing key.
 The existing chart continues provisioning the local agent CA/client Secrets when
-the central API is disabled. Credential rotation requires a rolling restart of
-the gateway so new material is loaded; coordinate client/server trust overlap
-before retiring old certificates.
+the central API is disabled. The gateway reloads mounted server/trust material on
+new TLS handshakes, rechecks central-peer trust on requests, and reloads agent
+credentials for new upstream requests. Allow time for Kubernetes Secret volume
+projection to update and coordinate client/server trust overlap before retiring
+old certificates. Existing streams last at most `maxRequestDuration` (five minutes
+by default) or the central client certificate's remaining lifetime, whichever is
+shorter. A rolling restart can terminate existing streams sooner if required.
 
 ## Helm configuration for a fresh remote installation
 
