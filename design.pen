@@ -58396,7 +58396,7 @@
                       "height": 16,
                       "icon": "triangle-alert",
                       "library": "lucide",
-                      "fill": "$warning/warning"
+                      "fill": "$warning/soft-foreground"
                     }
                   ]
                 },
@@ -58412,7 +58412,7 @@
                       "type": "text",
                       "id": "yeBW8",
                       "name": "warningTitle",
-                      "fill": "$warning/warning",
+                      "fill": "$warning/soft-foreground",
                       "content": "Full admin access",
                       "fontFamily": "$typography/font-sans",
                       "fontSize": 12,
@@ -66289,7 +66289,7 @@
                   "type": "text",
                   "id": "BXuYr",
                   "name": "Title",
-                  "fill": "$warning/warning",
+                  "fill": "$warning/soft-foreground",
                   "content": "Storage almost full",
                   "lineHeight": 1.7,
                   "fontFamily": "$typography/font-sans",
@@ -66697,7 +66697,7 @@
                   "height": 16,
                   "icon": "triangle-alert",
                   "library": "lucide",
-                  "fill": "$warning/warning"
+                  "fill": "$warning/soft-foreground"
                 }
               ]
             },
@@ -66712,7 +66712,7 @@
                   "type": "text",
                   "id": "xzGxP",
                   "name": "Title",
-                  "fill": "$warning/warning",
+                  "fill": "$warning/soft-foreground",
                   "content": "Scheduled maintenance",
                   "lineHeight": 1.7,
                   "fontFamily": "$typography/font-sans",
@@ -99483,7 +99483,7 @@
                                       "name": "ccPreviewMeta",
                                       "enabled": false,
                                       "fill": "$danger/danger",
-                                      "content": "Contrast 2.9:1 — fails WCAG AA",
+                                      "content": "Contrast 2.1:1 — fails WCAG AA",
                                       "fontFamily": "$typography/font-sans",
                                       "fontSize": 12,
                                       "fontWeight": "500"
@@ -100054,11 +100054,11 @@
       "y": -7988,
       "name": "Screen/Theme Settings — Warnings",
       "theme": {
-        "semantic": "dark"
+        "semantic": "light"
       },
       "clip": true,
       "width": 1440,
-      "height": 2114,
+      "height": 2146,
       "fill": "$background/background",
       "children": [
         {
@@ -100148,6 +100148,21 @@
             },
             "ya5KB/Ra9NK": {
               "fill": "$accent/soft-foreground"
+            },
+            "q1Xat": {
+              "opacity": "$disabled-opacity"
+            },
+            "q1Xat/Bg6EP": {
+              "fill": "$accent/soft"
+            },
+            "q1Xat/Bg6EP/nMMtW": {
+              "fill": "$accent/soft-foreground"
+            },
+            "q1Xat/icy0X": {
+              "fill": "#00000000"
+            },
+            "q1Xat/icy0X/z3SNRG": {
+              "fill": "$foreground/muted"
             }
           }
         },
@@ -100635,6 +100650,7 @@
                                   "type": "ref",
                                   "ref": "Dx8S8",
                                   "name": "tsModeTabs",
+                                  "opacity": "$disabled-opacity",
                                   "children": [
                                     {
                                       "id": "B2Gq8",
@@ -100668,6 +100684,36 @@
                                           "content": "System"
                                         }
                                       }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "jLsJM",
+                                  "name": "tsModeDisabledNote",
+                                  "width": "fill_container",
+                                  "gap": 8,
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "fFT5z",
+                                      "name": "tsModeDisabledNoteIcon",
+                                      "width": 14,
+                                      "height": 14,
+                                      "icon": "info",
+                                      "library": "lucide",
+                                      "fill": "$muted"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "LS4MT",
+                                      "name": "tsModeDisabledNoteText",
+                                      "fill": "$muted",
+                                      "content": "Set by your surface color",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
                                     }
                                   ]
                                 }
@@ -100900,7 +100946,7 @@
                                       "id": "RaaH4",
                                       "name": "ccPreviewMeta",
                                       "fill": "$danger/danger",
-                                      "content": "Contrast 2.9:1 — fails WCAG AA",
+                                      "content": "Contrast 2.1:1 — fails WCAG AA",
                                       "fontFamily": "$typography/font-sans",
                                       "fontSize": 12,
                                       "fontWeight": "500"
@@ -101024,7 +101070,7 @@
                                       "content": "Contrast guard"
                                     },
                                     "JmFhb": {
-                                      "content": "The selected accent and surface combination fails WCAG AA (2.9:1). Choose a darker accent or a darker surface tone."
+                                      "content": "The selected accent and surface combination fails WCAG AA (2.1:1). Choose a darker accent or a darker surface tone."
                                     },
                                     "c0FRXZ": {
                                       "type": "frame",
@@ -102379,7 +102425,7 @@
       "type": "color",
       "value": [
         {
-          "value": "#D97706",
+          "value": "#92400E",
           "theme": {
             "semantic": "light"
           }

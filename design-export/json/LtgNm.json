@@ -937,7 +937,7 @@
               "type": "text",
               "id": "BXuYr",
               "name": "Title",
-              "fill": "$warning/warning",
+              "fill": "$warning/soft-foreground",
               "content": "Storage almost full",
               "lineHeight": 1.7,
               "fontFamily": "$typography/font-sans",
@@ -1345,7 +1345,7 @@
               "height": 16,
               "icon": "triangle-alert",
               "library": "lucide",
-              "fill": "$warning/warning"
+              "fill": "$warning/soft-foreground"
             }
           ]
         },
@@ -1360,7 +1360,7 @@
               "type": "text",
               "id": "xzGxP",
               "name": "Title",
-              "fill": "$warning/warning",
+              "fill": "$warning/soft-foreground",
               "content": "Scheduled maintenance",
               "lineHeight": 1.7,
               "fontFamily": "$typography/font-sans",
@@ -1396,7 +1396,7 @@
       "gap": 5,
       "padding": [
         8,
-        "$spacing/3"
+        10
       ],
       "justifyContent": "center",
       "alignItems": "center",
@@ -1989,7 +1989,7 @@
       "gap": 5,
       "padding": [
         8,
-        "$spacing/3"
+        10
       ],
       "justifyContent": "center",
       "alignItems": "center",
@@ -2103,7 +2103,7 @@
       "reusable": true,
       "width": 32,
       "height": 32,
-      "cornerRadius": "$radius/3xl",
+      "cornerRadius": 6,
       "justifyContent": "center",
       "alignItems": "center",
       "children": [
