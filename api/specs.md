@@ -634,3 +634,32 @@ Final 20% gap concentrated in:
 - **`CLAUDE.md`** rule 10 — "The operator is authoritative" principle (API is UX layer only)
 - **`api/go.mod`** — dependency versions (source of truth for go.mod)
 - **Makefile** — `make test-go`, `make cover`, `make lint-go`, `make images`; CI runs via GitHub Actions
+
+## Optional private agent gateway
+
+The `gateway` subcommand starts an mTLS-only listener without the application
+database, browser sessions, or administrative API routes. It defaults to
+`127.0.0.1:8443` and requires an explicit registered cluster ID, namespace
+allowlist, dedicated central-client CA, and exact allowed central URI SAN.
+The central API remains the user-authorization authority.
+
+`gatewayprotocol` defines versioned target routes and the shared exact
+method/path allowlist. `gateway` validates the addressed GameServer UID and
+controller-owned agent Service, then forwards to the fixed cluster-local
+port-8090 agent using `/v1/targets/{uid}`. Final agent UID enforcement prevents
+a name-reuse race from reaching a replacement server. The gateway never falls
+back to unversioned routes, and does not route optional capture sidecar traffic.
+
+Mounted gateway trust is reloaded on each TLS handshake and revalidated on
+every request, including reused connections. Invalid/removed trust rejects
+new requests; TLS session resumption is disabled. Agent credentials reload on
+every operation. Streams and requests end after at most five minutes or the
+central peer certificate's expiry, whichever comes first. Existing streams
+may remain active within that bound following trust or permission removal.
+No ambiguous mutation is automatically retried.
+
+Kubernetes operations still use the central API's independently scoped remote
+Kubernetes clients. Gateway loss does not inherently disable those clients.
+The protocol does not provide storage replication, workload migration, or
+central database availability. Deployment guidance is in
+[`docs/gateway-install.md`](../docs/gateway-install.md).

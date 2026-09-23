@@ -2126,6 +2126,7 @@ func buildAgentContainer(
 	}
 	env := []corev1.EnvVar{
 		{Name: "GAMEPLANE_SERVER_NAME", Value: gs.Name},
+		{Name: "GAMEPLANE_SERVER_UID", Value: string(gs.UID)},
 		{Name: "GAMEPLANE_TEMPLATE", Value: tmpl.Name},
 		{Name: "GAMEPLANE_GAME", Value: tmpl.Spec.Game},
 		// Games without RCON (consoleMode pty/none) must not have the

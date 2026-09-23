@@ -52,6 +52,12 @@ func main() {
 		switch args[0] {
 		case "serve":
 			args = args[1:]
+		case "gateway":
+			if err := runGateway(ctx, args[1:]); err != nil {
+				logger.Error("gateway", "err", err)
+				os.Exit(1)
+			}
+			return
 		case "bootstrap-admin":
 			if err := bootstrapAdmin(ctx, args[1:], os.Stdin, os.Stderr); err != nil {
 				logger.Error("bootstrap-admin", "err", err)

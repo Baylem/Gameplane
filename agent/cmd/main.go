@@ -32,6 +32,7 @@ import (
 	"github.com/ValgulNecron/gameplane/agent/internal/quiesce"
 	"github.com/ValgulNecron/gameplane/agent/internal/rcon"
 	"github.com/ValgulNecron/gameplane/agent/internal/status"
+	"github.com/ValgulNecron/gameplane/agent/internal/target"
 	"github.com/ValgulNecron/gameplane/agent/internal/usage"
 )
 
@@ -54,6 +55,7 @@ func main() {
 		clientCAFile string
 		apiTokenFile string
 		serverName   string
+		serverUID    string
 		templateName string
 		gameName     string
 		capsJSON     string
@@ -82,6 +84,7 @@ func main() {
 	flag.StringVar(&clientCAFile, "tls-client-ca", "", "CA that signs API client certs")
 	flag.StringVar(&apiTokenFile, "api-token-file", "", "fallback shared-secret auth (used when TLS is not configured)")
 	flag.StringVar(&serverName, "server-name", envOr("GAMEPLANE_SERVER_NAME", ""), "owning GameServer name")
+	flag.StringVar(&serverUID, "server-uid", envOr("GAMEPLANE_SERVER_UID", ""), "immutable owning GameServer UID for versioned routes")
 	flag.StringVar(&templateName, "template", envOr("GAMEPLANE_TEMPLATE", ""), "GameTemplate name")
 	flag.StringVar(&gameName, "game", envOr("GAMEPLANE_GAME", ""), "game identifier")
 	flag.StringVar(&capsJSON, "capabilities", envOr("GAMEPLANE_CAPABILITIES", ""),
@@ -164,8 +167,7 @@ func main() {
 	})
 	r.Handle("/metrics", promhttp.Handler())
 
-	r.Group(func(protected chi.Router) {
-		protected.Use(authCheck.Middleware)
+	mountProtected := func(protected chi.Router) {
 		files.Mount(protected, dataRoot)
 		logs.Mount(protected, gameLogPath)
 		console.Mount(protected, rconClient)
@@ -175,6 +177,14 @@ func main() {
 		actions.Mount(protected, rconClient, gameName, actionSpecs)
 		status.Mount(protected, rconClient, statusSpec)
 		mods.Mount(protected, dataRoot, modsSpec)
+	}
+	r.Group(func(protected chi.Router) {
+		protected.Use(authCheck.Middleware)
+		mountProtected(protected)
+	})
+	r.Route("/v1/targets/{uid}", func(protected chi.Router) {
+		protected.Use(authCheck.Middleware, target.Guard(serverUID))
+		mountProtected(protected)
 	})
 
 	srv := &http.Server{
