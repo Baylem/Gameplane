@@ -178,10 +178,16 @@ headers retain the existing allowlist, so browser cookies, authorization and CSR
 material do not reach agents. Proxy body limits and JSON response limits remain at
 the caller boundary.
 
-This extraction preserves the local-only guards on agent operations. It does not
-register remote transports or enable remote console, files, players, mods, module
-actions, or internal mod-update reads. Those require a cluster-aware target resolver
-and an authenticated remote gateway; a missing remote route must fail closed.
+Registered clusters may additionally configure `spec.agentGateway.url` and a
+labeled `tlsSecretRef` in the central API namespace. Each remote request resolves
+its Kubernetes client, GameServer UID and gateway mTLS credentials independently;
+unknown/missing routes never fall back locally. HTTP/WebSocket agent operations,
+RCON module actions and internal mod-update reads use the versioned gateway
+protocol. Stdin actions use the selected Kubernetes client with workload ownership
+preflight. Existing installations retain their direct local adapter.
+
+See [remote agent access](../docs/multicluster-agent-gateway.md) for registration,
+trust assumptions, rotation behavior and surfaces outside this protocol.
 
 ### Network capture endpoints
 

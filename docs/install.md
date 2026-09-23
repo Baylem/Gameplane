@@ -504,6 +504,7 @@ mods remain local-cluster-only until remote agent transport is implemented.
    - `displayName` (optional): Human-readable name shown in the dashboard
    - `kubeconfigSecret.name` (required): Name of the Secret containing the kubeconfig
    - `kubeconfigSecret.key` (optional): Data key within the Secret; defaults to `"kubeconfig"`
+   - `agentGateway` (optional): HTTPS gateway and labeled TLS Secret reference for [remote agent access](multicluster-agent-gateway.md)
 
 3. Apply both to the control-plane cluster:
 
