@@ -264,8 +264,13 @@ async function setAppearance(
   // (role="group" aria-label="Appearance mode"), distinct from the
   // sidebar footer's "Appearance" group.
   const modeGroup = page.getByRole("group", { name: "Appearance mode" });
-  await modeGroup.getByRole("button", { name: MODE_LABEL[mode], exact: true }).click();
-  await saveThemeSettings(page);
+  const button = modeGroup.getByRole("button", { name: MODE_LABEL[mode], exact: true });
+  // Already selected: the draft stays clean and Save is disabled, so only
+  // assert the stored and applied mode below.
+  if ((await button.getAttribute("aria-pressed")) !== "true") {
+    await button.click();
+    await saveThemeSettings(page);
+  }
   await expect
     .poll(async () => (await getPrefs(request)).appearanceMode, { timeout: 15_000 })
     .toBe(mode);
