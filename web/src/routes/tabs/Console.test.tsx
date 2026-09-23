@@ -85,6 +85,7 @@ vi.mock("@/lib/ws", () => ({
   }),
 }));
 
+import { setCurrentCluster } from "@/lib/cluster";
 import { ConsoleTab } from "./Console";
 
 // Captured ResizeObserver callback (the hook constructs it with safeFit) so
@@ -92,6 +93,7 @@ import { ConsoleTab } from "./Console";
 let capturedRoCb: (() => void) | null = null;
 
 beforeEach(() => {
+  setCurrentCluster("local");
   mocks.terms.length = 0;
   mocks.fits.length = 0;
   mocks.wsCalls.length = 0;
@@ -151,6 +153,17 @@ async function renderConsole(mode: "rcon" | "pty") {
 }
 
 describe("ConsoleTab", () => {
+  it("disposes the old terminal and opens a fresh session when clusters change", async () => {
+    const { term, unmount } = await renderConsole("pty");
+    const calls = mocks.wsCalls.length;
+    act(() => setCurrentCluster("remote-1"));
+    await waitFor(() => expect(mocks.wsCalls.length).toBeGreaterThan(calls));
+    expect(term.dispose).toHaveBeenCalled();
+    expect(mocks.wsHandle.close).toHaveBeenCalled();
+    unmount();
+    setCurrentCluster("local");
+  });
+
   it("renders an empty-state when the template has no console", async () => {
     server.use(
       http.get("/servers/alpha", () =>

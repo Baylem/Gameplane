@@ -439,6 +439,28 @@ Before registering a target cluster, ensure it has:
 - Gameplane operator and agent images accessible (same registry as the control-plane)
 - A valid kubeconfig with admin credentials to manage Gameplane CRDs on that cluster
 
+### Pod logs and PTY console permissions
+
+The central API must reach the target Kubernetes API (including streaming/SPDY
+upgrades). Remote Pod logs and PTY attach need no cross-cluster Pod networking or
+agent mTLS. In each allowed game namespace the registered kubeconfig needs:
+
+| API group | Resources | Verbs | Purpose |
+|---|---|---|---|
+| `gameplane.local` | `gameservers` | `get` | Resolve the selected server |
+| `apps` | `statefulsets` | `get` | Verify its controller ownership |
+| core | `pods` | `get` | Verify ownership and startup status |
+| core | `pods/log` | `get` | Stream init and game container logs |
+| core | `pods/attach` | `create` | Interactive PTY input/output over SPDY |
+
+These are the minimum **streaming** permissions, in addition to any CRD management
+permissions used by other dashboard operations. Attach is write-capable and
+requires Gameplane's `servers:console` permission; logs use `servers:read`. Bind
+Kubernetes permissions only in the intended game namespaces. The chart adds the
+StatefulSet read permission for the local API; existing custom remote credentials
+must be updated too. Agent-backed RCON, files, file logs, players, actions and
+mods remain local-cluster-only until remote agent transport is implemented.
+
 ### Path 1: kubectl apply
 
 1. Create a `kubeconfig` Secret in the control-plane's `gameplane-system` namespace.

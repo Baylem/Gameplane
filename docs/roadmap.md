@@ -19,7 +19,8 @@ These items have shipped and are reflected in current `main`.
 
 A Topbar cluster selector with per-cluster health, threading `?cluster=` through
 the API client and raw-fetch escape hatches, with `queryClient.clear()` on cluster
-switch. WebSocket streams remain local-cluster-scoped — a documented follow-up.
+switch. Pod logs and PTY WebSockets now target the selected Kubernetes cluster.
+Remote agent-backed streams and file/player/mod operations remain follow-up work.
 
 ### Multi-cluster: dual-cluster e2e coverage (PR #104) (shipped v0.2.0-beta.6) <!-- doc-versions: historical -->
 

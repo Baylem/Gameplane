@@ -61,6 +61,8 @@ package e2e
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -69,6 +71,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
@@ -254,7 +257,8 @@ func TestMultiCluster_ClusterDispatchAndScopedRBAC(t *testing.T) {
 			"game":        "busybox",
 			"version":     "1",
 			"image":       "busybox:1.36",
-			"command":     []any{"sh", "-c", "sleep 100000"},
+			"command":     []any{"sh", "-c", "echo remote-stream-start; export STREAM_SITE=remote; exec sh"},
+			"consoleMode": "pty",
 			"ports": []any{
 				map[string]any{"name": "noop", "containerPort": int64(12345), "advertise": true, "protocol": "TCP"},
 			},
@@ -380,6 +384,10 @@ func TestMultiCluster_ClusterDispatchAndScopedRBAC(t *testing.T) {
 	}
 	resp.Body.Close()
 
+	// Also create a same-named local server with distinguishable output.
+	// Streaming must use B's API URL AND credentials, not the local namesake.
+	exerciseMultiClusterStreams(t, envB, operatorClient, clusterID, tmplName, gsName)
+
 	// --- RBAC: a viewer bound only to "local" cannot see cluster B's server -
 	viewerName, viewerPW, viewerID := envInstance.CreateUser(t, admin, "viewer", "e2e-mc-viewer")
 	t.Cleanup(func() {
@@ -410,6 +418,17 @@ func TestMultiCluster_ClusterDispatchAndScopedRBAC(t *testing.T) {
 	}
 	resp.Body.Close()
 
+	for _, route := range []string{"logs/pod", "console-pty"} {
+		resp, body, err := viewer.Get("/ws/servers/" + gsName + "/" + route + "?cluster=" + clusterID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusForbidden {
+			t.Errorf("local viewer remote %s: status=%d body=%s", route, resp.StatusCode, body)
+		}
+	}
+
 	// --- An unregistered cluster is a 400 for any caller, admin included ----
 	resp, body, err = admin.Get("/servers?cluster=e2e-mc-does-not-exist")
 	if err != nil {
@@ -419,5 +438,94 @@ func TestMultiCluster_ClusterDispatchAndScopedRBAC(t *testing.T) {
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("admin GET /servers?cluster=<unknown>: status=%d want=%d body=%s",
 			resp.StatusCode, http.StatusBadRequest, string(body))
+	}
+}
+
+// This runs inside the existing multicluster bucket test to share cluster
+// registration and sessions rather than consume extra login-rate budget.
+func exerciseMultiClusterStreams(t *testing.T, envB *Env, remote *APIClient, clusterID, templateName, serverName string) {
+	t.Helper()
+	const ns = "gameplane-games"
+	ctx := t.Context()
+	tmpl, err := envB.Dyn.Resource(gameTemplateGVR).Get(ctx, templateName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpl.SetResourceVersion("")
+	tmpl.SetUID("")
+	tmpl.SetManagedFields(nil)
+	tmpl.SetCreationTimestamp(metav1.Time{})
+	tmpl.Object["spec"].(map[string]any)["command"] = []any{"sh", "-c", "echo local-stream-start; export STREAM_SITE=local; exec sh"}
+	if _, err := envInstance.Dyn.Resource(gameTemplateGVR).Create(ctx, tmpl, metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = envInstance.Dyn.Resource(gameTemplateGVR).Delete(context.Background(), templateName, metav1.DeleteOptions{})
+	})
+	applyBusyboxGameServer(t, ns, serverName, templateName)
+	for _, env := range []*Env{envInstance, envB} {
+		env.Eventually(t, 3*time.Minute, func() (bool, string) {
+			pod, err := env.K8s.CoreV1().Pods(ns).Get(ctx, serverName+"-0", metav1.GetOptions{})
+			if err != nil {
+				return false, err.Error()
+			}
+			for _, c := range pod.Status.ContainerStatuses {
+				if c.Name == "game" && c.Ready {
+					return true, ""
+				}
+			}
+			return false, "game container not ready"
+		})
+	}
+	for _, route := range []string{"logs/pod?from=end", "logs/pod?from=start", "console-pty?"} {
+		conn, stop := dialAuthedWS(t, remote, "/ws/servers/"+serverName+"/"+route+"&cluster="+clusterID)
+		func() {
+			defer stop()
+			readCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
+			want := "remote-stream-start"
+			if strings.HasPrefix(route, "console") {
+				// The expected remote value is not in the input; seeing terminal echo
+				// alone cannot falsely satisfy the assertion.
+				command := "printf 'SITE:%s\\n' \"$STREAM_SITE\"\n"
+				envelope, err := json.Marshal(ptyEnvelope{Kind: "stdin", Body: base64.StdEncoding.EncodeToString([]byte(command))})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := conn.Write(readCtx, websocket.MessageText, envelope); err != nil {
+					t.Fatal(err)
+				}
+				want = "SITE:remote"
+			}
+			var output strings.Builder
+			for {
+				_, frame, err := conn.Read(readCtx)
+				if err != nil {
+					t.Fatalf("remote %s without marker: %v; output=%q", route, err, output.String())
+				}
+				if strings.HasPrefix(route, "console") {
+					var envelope ptyEnvelope
+					if err := json.Unmarshal(frame, &envelope); err != nil {
+						t.Fatal(err)
+					}
+					if envelope.Kind == "err" {
+						t.Fatalf("remote attach error: %s", envelope.Body)
+					}
+					raw, err := base64.StdEncoding.DecodeString(envelope.Body)
+					if err != nil {
+						t.Fatal(err)
+					}
+					output.Write(raw)
+				} else {
+					output.Write(frame)
+				}
+				if strings.Contains(output.String(), "local-stream-start") || strings.Contains(output.String(), "SITE:local") {
+					t.Fatalf("remote stream reached local namesake: %s", output.String())
+				}
+				if strings.Contains(output.String(), want) {
+					break
+				}
+			}
+		}()
 	}
 }

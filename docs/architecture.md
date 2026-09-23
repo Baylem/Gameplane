@@ -254,6 +254,23 @@ a cluster-scoped CRD.
   the named cluster's Kubernetes client. Omitting the selector targets
   the built-in "local" cluster.
 
+**Interactive connections:**
+
+- Pod startup/stdout logs and PTY console attach resolve a Kubernetes client
+  from the registry for each connection. Both the API URL and attach credentials
+  come from that client. Unknown or removed clusters fail closed.
+- The API checks the GameServer → StatefulSet → Pod controller owner UIDs before
+  accessing a workload. Pod-log polling stops when the Pod UID changes; reconnects
+  validate the new workload. Kubernetes log/attach APIs address Pods by name and
+  do not support UID preconditions, so this is a preflight check, not an atomic
+  authorization guarantee across deletion/recreation.
+- The browser binds a socket to the selected cluster and closes it, cancels
+  retries and discards queued input on a cluster switch. A new view opens a new
+  connection. Unsupported remote agent operations carry the selector and are
+  rejected instead of reaching the local namesake.
+- RCON, file logs, files, players, module actions and agent-based mods still use
+  local DNS and mTLS credentials. Remote agent connectivity is separate work.
+
 **RBAC and permissions:**
 
 Registering an additional cluster grants **no implicit RBAC** on it.
