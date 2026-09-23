@@ -9,7 +9,7 @@ import type {
 import { readFileSync } from "node:fs";
 import { loginIfNeeded, seedServer, seedTemplate } from "./_seed";
 
-// Live: feature 016 user theme customization (specs/016-user-theme-customization).
+// Live: feature 016 user theme customization (specs/done_016-user-theme-customization).
 // This is the Playwright tier of the feature's E2E coverage per quickstart.md
 // §5.1/§5.2, written against the binding contracts:
 //

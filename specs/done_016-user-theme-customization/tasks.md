@@ -1,6 +1,6 @@
 # Tasks: User Theme Customization
 
-**Input**: Design documents from `/specs/016-user-theme-customization/`
+**Input**: Design documents from `/specs/done_016-user-theme-customization/`
 
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/ (user-preferences-api.md, theme-tokens-v2.md, theme-ui.md, theme-export.md), quickstart.md
 
@@ -102,7 +102,7 @@
 
 - [X] T027 [P] [US3] Write derivation unit tests in web/src/lib/theme-derivation.test.ts per research.md R-03: WCAG AA (>= 4.5:1) accent-foreground selection, surface layer offsets, border calculation, muted-text contrast, and extreme pairs (accent identical to surface triggers the contrast guard)
 - [X] T028 [US3] Append the custom-colors flow to web/e2e/specs/live/theme-customization.spec.ts per quickstart.md §5.2.3: pick Emerald accent (#10B981) + surface, verify controls adopt it live (SC-004 within 3 clicks), switch light/dark and verify contrast recalculation, reset restores the preset (depends on T023 — same file) — WITHDRAWN 2026-09-23 (D4): "switch light/dark" step is obsolete — Appearance mode is disabled while Custom colors is active; see T028a.
-- [ ] T028a [US3] (D4, 2026-09-23) Rewrite the "custom colors ... light/dark" scenario in web/e2e/specs/live/theme-customization.spec.ts per spec.md D4: assert the Appearance mode control is disabled with the "Set by your surface color" note while Custom colors is active, and swap the light/dark-toggle assertions for a dark-surface-then-light-surface tone swap, checking data-theme and --accent-foreground after each (needs human sign-off before editing this test file, per CLAUDE.md Rule 1).
+- [X] T028a [US3] (D4, 2026-09-23) Rewrite the "custom colors ... light/dark" scenario in web/e2e/specs/live/theme-customization.spec.ts per spec.md D4: assert the Appearance mode control is disabled with the "Set by your surface color" note while Custom colors is active, and swap the light/dark-toggle assertions for a dark-surface-then-light-surface tone swap, checking data-theme and --accent-foreground after each (needs human sign-off before editing this test file, per CLAUDE.md Rule 1). (done: 4982b714, 840a3eb9, 87683784)
 
 ### Implementation for User Story 3
 
@@ -146,8 +146,8 @@
 - [X] T041 [P] Update api/specs.md: document the user_preferences table, the preferences/reset endpoints, FR-013 server-side sanitization, and FR-012 retention semantics (Constitution IV — same change as the behavior it documents)
 - [X] T042 [P] Update web/specs.md: document the preset token system, custom-colors base derivation, custom CSS overlay cascade and injection order, safe-mode entry points, unauthenticated isolation, accessibility guards, and export/import format (Constitution IV)
 - [X] T043 Add Legacy-preset parity E2E coverage for SC-006: parametrize web/e2e/screenshots/all-screens.spec.ts (or add a parity pass alongside it) to run the core workflow screens — server management, log viewing, module browsing, settings management — under data-theme-preset="legacy" and assert functional parity and legibility against the Pink baseline
-- [ ] T044 Verify the full quickstart.md validation guide passes on CI (Constitution VI — no local suite runs): confirm the pipeline executes the migration/API tests (§3), frontend unit tests (§4), the Playwright live suite (§5.1), the Go API e2e bucket (T024), and the Legacy parity spec (T043); quickstart.md serves as the executable checklist the CI run is validated against
-- [ ] T045 Push the branch and verify full CI green per Constitution I/VI: Go unit tests, web unit tests with coverage gates (web/vitest.config.ts, api/.testcoverage.yml), lint with zero suppressions, the Go e2e bucket including api_theme_preferences_e2e_test.go, and the Playwright suites including theme-customization and the Legacy parity run; confirm web/e2e/specs/live/theme-customization.spec.ts is picked up by the web e2e CI workflow
+- [X] T044 Verify the full quickstart.md validation guide passes on CI (Constitution VI — no local suite runs): confirm the pipeline executes the migration/API tests (§3), frontend unit tests (§4), the Playwright live suite (§5.1), the Go API e2e bucket (T024), and the Legacy parity spec (T043); quickstart.md serves as the executable checklist the CI run is validated against (done: PR #415 CI green at 6625f151, incl. e2e web live on amd64+arm64)
+- [X] T045 Push the branch and verify full CI green per Constitution I/VI: Go unit tests, web unit tests with coverage gates (web/vitest.config.ts, api/.testcoverage.yml), lint with zero suppressions, the Go e2e bucket including api_theme_preferences_e2e_test.go, and the Playwright suites including theme-customization and the Legacy parity run; confirm web/e2e/specs/live/theme-customization.spec.ts is picked up by the web e2e CI workflow (done: PR #415 CI green at 6625f151; merged as f61a94bc)
 
 ---
 

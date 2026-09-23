@@ -136,7 +136,7 @@ This rule was enforced by lint and review throughout the rebuild: any rebuilt fi
 
 ### User Theme Customization (feature 016 — non-UI plumbing, landed 2026-09-21)
 
-Spec: `specs/016-user-theme-customization/`. Only the non-UI plumbing has landed: preset tokens, the extended boot script, preferences sync, and the isolation/safe-mode guards. **The Theme Settings modal, SafeModeBanner, keyboard shortcut, login-page safe-mode link, custom-colors derivation utility (`deriveCustomThemeTokens`), and the export/import utilities are designed in `specs/016-user-theme-customization/contracts/` (theme-ui.md, theme-tokens-v2.md, theme-export.md) but NOT implemented** — design-first via `design.pen` (CLAUDE.md rule 1) is pending. The `ThemeExport` wire type is declared in `src/types.ts`; nothing consumes it yet.
+Spec: `specs/done_016-user-theme-customization/`. Only the non-UI plumbing has landed: preset tokens, the extended boot script, preferences sync, and the isolation/safe-mode guards. **The Theme Settings modal, SafeModeBanner, keyboard shortcut, login-page safe-mode link, custom-colors derivation utility (`deriveCustomThemeTokens`), and the export/import utilities are designed in `specs/done_016-user-theme-customization/contracts/` (theme-ui.md, theme-tokens-v2.md, theme-export.md) but NOT implemented** — design-first via `design.pen` (CLAUDE.md rule 1) is pending. The `ThemeExport` wire type is declared in `src/types.ts`; nothing consumes it yet.
 
 **Preset token system (`web/src/styles/globals.css`):**
 - The default (Pink) preset keeps the HeroUI semantic tokens from the slice-0 rebuild: `[data-theme]` / `.dark` / `.light` blocks define `--accent` (pink `#FF4FA3` dark / `#DB2777` light), surfaces, borders, fields, focus, link, etc.

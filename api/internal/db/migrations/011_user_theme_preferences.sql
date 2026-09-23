@@ -1,5 +1,5 @@
 -- User theme preferences: per-user dashboard styling choices (preset theme,
--- custom colors, custom CSS overlay) for specs/016-user-theme-customization.
+-- custom colors, custom CSS overlay) for specs/done_016-user-theme-customization.
 --
 -- Migration rule: accounts created before this migration are explicitly
 -- initialized with the legacy orange & dark theme (INSERT ... SELECT below)

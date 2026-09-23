@@ -10,7 +10,7 @@ import (
 )
 
 // themePrefs mirrors the UserThemePreferences payload from
-// specs/016-user-theme-customization/contracts/user-preferences-api.md §1.1.
+// specs/done_016-user-theme-customization/contracts/user-preferences-api.md §1.1.
 // Optional fields are pointers so a JSON null (or an absent key) decodes as
 // nil and can be told apart from an empty-but-present value.
 type themePrefs struct {
@@ -113,7 +113,7 @@ func requireRuleError(t *testing.T, status int, body []byte, mustContain ...stri
 }
 
 // TestAPI_ThemePreferences is the API-contract e2e for feature
-// 016-user-theme-customization (contracts/user-preferences-api.md). A
+// done_016-user-theme-customization (contracts/user-preferences-api.md). A
 // single viewer user exercises the real endpoints end to end: fresh-user
 // Pink defaults, preset round-trips (including Legacy) through both
 // GET /users/me/preferences and the preferences object embedded in

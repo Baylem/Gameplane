@@ -1,6 +1,6 @@
 # Contract: Theme Export Format
 
-**Feature**: `016-user-theme-customization` (FR-014)  
+**Feature**: `done_016-user-theme-customization` (FR-014)  
 **Binding Modules**: `web/src/lib/theme-export.ts`, `web/src/routes/ThemeSettings.tsx`, `web/src/lib/theme-sanitize.ts`  
 **Status**: Binding (revised 2026-09-22: `ThemeSettingsModal` superseded by the `/settings/theme` settings page; export format unchanged)  
 

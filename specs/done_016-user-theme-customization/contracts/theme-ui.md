@@ -1,6 +1,6 @@
 # Contract: Theme Customization UI
 
-**Feature**: `016-user-theme-customization`  
+**Feature**: `done_016-user-theme-customization`  
 **Binding Modules**: `web/src/routes/ThemeSettings.tsx`, `web/src/components/ui/TopBar.tsx`, `web/src/components/ui/Sidebar.tsx`, `web/src/components/ui/SafeModeBanner.tsx`, `web/src/routes/Login.tsx`  
 **Status**: Binding (revised 2026-09-22: ThemeSettingsModal replaced by a full settings page at route `/settings/theme`, matching the other `Screen/* Settings` designs; revised 2026-09-21 after clarification session 2026-09-21); revised 2026-09-23 (D1 settings-shell parity, D2 free color choice, D3 login preferences) after clarification session 2026-09-23  
 

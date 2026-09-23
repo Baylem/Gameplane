@@ -1,4 +1,4 @@
-// Theme preferences plumbing (specs/016-user-theme-customization, research.md
+// Theme preferences plumbing (specs/done_016-user-theme-customization, research.md
 // R-05): local cache, DOM application, profile reconciliation, and the
 // optimistic PUT mutation with offline retry. The inline boot script in
 // index.html mirrors the cache format and DOM attributes — keep the storage

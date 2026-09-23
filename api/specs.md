@@ -264,7 +264,7 @@ All cluster-dispatch routes accept `?cluster={name}` (validates against register
 
 ### User theme preferences (feature 016)
 
-Per-user dashboard styling (theme preset, appearance mode, custom colors, custom CSS overlay) stored server-side so it follows the account across devices. Contract: `specs/016-user-theme-customization/contracts/user-preferences-api.md`.
+Per-user dashboard styling (theme preset, appearance mode, custom colors, custom CSS overlay) stored server-side so it follows the account across devices. Contract: `specs/done_016-user-theme-customization/contracts/user-preferences-api.md`.
 
 **Storage (migration `011_user_theme_preferences.sql`, api/internal/db/migrations/):**
 

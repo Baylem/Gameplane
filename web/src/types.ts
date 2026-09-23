@@ -712,7 +712,7 @@ export interface User {
   preferences?: UserThemePreferences | null;
 }
 
-// User theme customization (specs/016-user-theme-customization): client-side
+// User theme customization (specs/done_016-user-theme-customization): client-side
 // representation of the user_preferences row (data-model.md §2.3).
 
 // Base mode only — custom CSS is an overlay (customCssEnabled), not a mode.
