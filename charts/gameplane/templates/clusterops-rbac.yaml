@@ -1,4 +1,4 @@
-{{- if .Values.clusterOps.enabled }}
+{{- if and .Values.api.enabled .Values.clusterOps.enabled }}
 # RBAC for the credential-minting cluster operations (Add node, Download
 # kubeconfig). Granted ONLY when clusterOps.enabled — these are powerful
 # (create bootstrap tokens; approve client-cert CSRs), so they are opt-in

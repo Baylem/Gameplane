@@ -63,7 +63,7 @@ subjects:
   - kind: ServiceAccount
     name: {{ .Release.Name }}-crd-apply
     namespace: {{ .Release.Namespace }}
-{{- if eq .Values.api.db.driver "sqlite" }}
+{{- if and .Values.api.enabled (eq .Values.api.db.driver "sqlite") }}
 ---
 # One-time workload migration, riding along with this hook because it needs
 # exactly the same thing: a kubectl that runs BEFORE Helm applies the release.
@@ -151,7 +151,7 @@ spec:
         runAsUser: 65532
         fsGroup: 65532
         seccompProfile: { type: RuntimeDefault }
-      {{- if eq .Values.api.db.driver "sqlite" }}
+      {{- if and .Values.api.enabled (eq .Values.api.db.driver "sqlite") }}
       initContainers:
         # Clear the stale spec.strategy.rollingUpdate left by releases that
         # predate the Recreate strategy — see the Role above for why Helm
