@@ -327,7 +327,8 @@ async function setOverlayEnabled(
   await expect(sw).toBeVisible({ timeout: 15_000 });
   const on = (await sw.getAttribute("aria-checked")) === "true";
   if (on === enabled) return;
-  await sw.click();
+  // HeroUI's Switch keeps the role=switch input visually hidden under its own decorative spans, so a pointer click is intercepted; toggle it the way a keyboard user does.
+  await sw.press("Space");
   await expect(sw).toHaveAttribute("aria-checked", String(enabled));
   await saveThemeSettings(page);
   await expect
@@ -684,9 +685,9 @@ test.describe("live: theme customization", () => {
     await expect(page.locator("#gameplane-custom-theme-vars")).toBeAttached();
     expect(await rootVar(page, "--accent")).toBe(EMERALD_ACCENT);
 
-    // Click 3 — a surface tone.
+    // Click 3 — a surface tone (Midnight, not the default Dark Slate).
     const presetSurface = await rootVar(page, "--surface");
-    await page.getByText("Dark Slate", { exact: true }).click();
+    await page.getByText("Midnight", { exact: true }).click();
     expect(await rootVar(page, "--surface")).not.toBe(presetSurface);
 
     // Save persists the custom-colors base (persisting is not an adoption
