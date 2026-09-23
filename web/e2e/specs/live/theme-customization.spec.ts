@@ -325,11 +325,11 @@ async function setOverlayEnabled(
 ): Promise<void> {
   const sw = overlaySwitch(page);
   await expect(sw).toBeVisible({ timeout: 15_000 });
-  const on = (await sw.getAttribute("aria-checked")) === "true";
+  const on = await sw.isChecked();
   if (on === enabled) return;
   // HeroUI's Switch keeps the role=switch input visually hidden under its own decorative spans, so a pointer click is intercepted; toggle it the way a keyboard user does.
   await sw.press("Space");
-  await expect(sw).toHaveAttribute("aria-checked", String(enabled));
+  await expect(sw).toBeChecked({ checked: enabled });
   await saveThemeSettings(page);
   await expect
     .poll(async () => (await getPrefs(request)).customCssEnabled, { timeout: 15_000 })
@@ -713,7 +713,7 @@ test.describe("live: theme customization", () => {
     // instead follows the surface tone's own brightness (spec.md D4).
     const modeGroup = page.getByRole("group", { name: "Appearance mode" });
     await expect(modeGroup.getByRole("button", { name: "Light", exact: true })).toBeDisabled();
-    await expect(page.getByText("Set by your surface color")).toBeVisible();
+    await expect(modeGroup).toHaveAccessibleDescription("Set by your surface color");
 
     for (const [surfaceLabel, expectDark] of [
       ["Dark Slate", true],
