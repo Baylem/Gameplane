@@ -1,0 +1,128 @@
+/*
+ * Gameplane — High Contrast + Focus Theme (example Custom CSS overlay)
+ * ====================================================================
+ * What this does
+ * --------------
+ * An accessibility-oriented theme. It does NOT rebrand the app — the
+ * accent color stays whatever the active preset (or Custom Colors
+ * pick) says — it makes structure and keyboard navigation easier to
+ * see:
+ *
+ *   1. Stronger separation: border and separator tokens move further
+ *      from the surface color in both modes, and muted text moves
+ *      closer to the foreground color.
+ *   2. Unmissable focus: a 3px focus ring with a 2px offset on every
+ *      interactive element, regardless of which component painted it.
+ *   3. Links you can find: real text links in page content (not nav
+ *      items, not button-styled anchors) get an underline.
+ *
+ * How to apply
+ * ------------
+ *   Settings -> Theme -> Custom CSS overlay -> paste this file's
+ *   contents -> enable the overlay -> Save.
+ *
+ * How to revert / recover
+ * -----------------------
+ *   - Turn the overlay off and Save again from Settings -> Theme, or
+ *   - Append ?safe-mode=1 to any app URL (suspends the overlay only,
+ *     the stored text is not deleted), or
+ *   - Press Ctrl+Shift+Alt+T while the app is open.
+ *
+ * Notes
+ * -----
+ *   - This composes with both presets and with Custom Colors: only
+ *     --border, --separator, --muted, and --field-border are retinted.
+ *   - The app already restores full system colors under
+ *     forced-colors: active (Windows High Contrast); this overlay is
+ *     for users who want a middle ground short of that.
+ *   - The global focus rule intentionally uses the element-selectors
+ *     below instead of * so it does not fight the app's own inner-ring
+ *     treatment for dialog inputs (which paints border + inset shadow
+ *     instead of an outline that the modal body would clip).
+ */
+
+/* ---------------------------------------------------------------- */
+/* 1. Stronger borders and muted text — both modes                   */
+/* ---------------------------------------------------------------- */
+
+:root,
+.light {
+  --border: #9ca3af !important;   /* gray-400 — clearly visible on white */
+  --separator: #9ca3af !important;
+  --field-border: #6b7280 !important; /* gray-500 — inputs read as fields */
+  --muted: #4b5563 !important;    /* gray-600 — 7.0:1 on white */
+}
+.dark {
+  --border: #6b7280 !important;   /* gray-500 — clearly visible on near-black */
+  --separator: #6b7280 !important;
+  --field-border: #9ca3af !important;
+  --muted: #c9ccd3 !important;    /* ~10:1 on the dark background */
+}
+/* Legacy preset variants redeclare these tokens with an extra
+   attribute selector that outranks the plain class selectors above —
+   restate them so the overlay wins there too. */
+.light[data-theme-preset="legacy"],
+[data-theme="light"][data-theme-preset="legacy"] {
+  --border: #9ca3af !important;
+  --separator: #9ca3af !important;
+  --field-border: #6b7280 !important;
+  --muted: #4b5563 !important;
+}
+.dark[data-theme-preset="legacy"],
+[data-theme="dark"][data-theme-preset="legacy"] {
+  --border: #6b7280 !important;
+  --separator: #6b7280 !important;
+  --field-border: #9ca3af !important;
+  --muted: #c9ccd3 !important;
+}
+
+/* ---------------------------------------------------------------- */
+/* 2. Unmissable keyboard focus                                      */
+/* ---------------------------------------------------------------- */
+/* A single global ring on every focusable element, in the theme's own
+   --focus color. outline (not box-shadow) so it also shows up in
+   forced-colors mode as a system-painted outline. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible,
+[role="tab"]:focus-visible,
+[role="menuitem"]:focus-visible,
+[role="option"]:focus-visible,
+[role="switch"]:focus-visible,
+[role="checkbox"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--focus) !important;
+  outline-offset: 2px !important;
+}
+
+/* Table rows are focused by react-aria with a data attribute rather
+   than :focus-visible; the app already gives them a 2px ring — thicken
+   it to match. */
+.table__row:is(:focus-visible, [data-focus-visible="true"]) {
+  outline: 3px solid var(--focus) !important;
+  outline-offset: -2px !important;
+}
+
+/* Dialog inputs paint their focus as border + inset ring instead of an
+   outline (an outer outline would be clipped by the modal body) —
+   keep that pattern but make it 2px so it reads at the same weight. */
+.modal__dialog .input:focus-visible {
+  outline: none !important;
+  border-color: var(--accent) !important;
+  box-shadow: inset 0 0 0 2px var(--accent) !important;
+}
+
+/* ---------------------------------------------------------------- */
+/* 3. Underlined text links in page content                          */
+/* ---------------------------------------------------------------- */
+/* Scoped to <main> so sidebar/topbar navigation links stay clean, and
+   excluding .button anchors ("Create server" and friends) which are
+   already visually buttons. */
+main a:not(.button):not([role="button"]) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

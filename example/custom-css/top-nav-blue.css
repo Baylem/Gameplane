@@ -1,0 +1,212 @@
+/*
+ * Gameplane — Top Navigation + Blue Theme (example Custom CSS overlay)
+ * =====================================================================
+ * What this does
+ * ---------------
+ * 1. Moves the desktop left sidebar into a horizontal bar above the
+ *    header, instead of a fixed-width column on the left.
+ * 2. Re-themes the accent color (buttons, active nav item, focus ring,
+ *    links) to a blue palette, in both light and dark mode.
+ *
+ * How to apply
+ * ------------
+ *   Settings -> Theme -> Custom CSS overlay -> paste this file's
+ *   contents -> enable the overlay -> Save.
+ *
+ * How to revert / recover
+ * ------------------------
+ *   - Turn the overlay off and Save again from Settings -> Theme, or
+ *   - Append ?safe-mode=1 to any app URL (suspends the overlay only,
+ *     the stored text is not deleted), or
+ *   - Press Ctrl+Shift+Alt+T while the app is open.
+ *
+ * Selector notes
+ * --------------
+ * Selectors below prefer ARIA landmarks and data-testid hooks over
+ * Tailwind's generated utility classes, since utility class names are
+ * an implementation detail that changes far more often than the
+ * accessible markup:
+ *   - [data-testid="app-shell-sidebar"]  the desktop sidebar's shell
+ *     wrapper (web/src/components/ui/AppShell.tsx)
+ *   - aside[aria-label="Sidebar"]        the sidebar landmark itself
+ *     (web/src/components/ui/Sidebar.tsx)
+ *   - nav[aria-label="Primary"]          the desktop nav list inside
+ *     the sidebar (the mobile drawer's nav is aria-label="Mobile
+ *     navigation" and is intentionally left untouched below)
+ *   - [aria-label="Sidebar footer"]      user/appearance controls
+ *
+ * This markup can change over time — if the sidebar stops moving to
+ * the top after an app update, re-check these selectors against the
+ * current AppShell/Sidebar/TopBar source.
+ *
+ * Scope: all layout overrides are gated behind a min-width: 1024px
+ * media query (Tailwind's "lg" breakpoint), matching the breakpoint
+ * at which the app itself switches from the mobile drawer to the
+ * fixed desktop sidebar. The mobile drawer reuses the same aside
+ * markup (aside[aria-label="Sidebar"], [aria-label="Sidebar footer"])
+ * but renders outside AppShell's sidebar wrapper, so every layout
+ * rule below is scoped under [data-testid="app-shell-sidebar"] >
+ * aside[aria-label="Sidebar"] and never matches it — it is unaffected
+ * by this overlay.
+ */
+
+/* ---------------------------------------------------------------- */
+/* 1. Blue accent theme — both color schemes                        */
+/* ---------------------------------------------------------------- */
+
+/* Light mode: blue-700 accent on white gives 6.70:1 contrast (WCAG AA
+   for normal text; AA requires 4.5:1, AAA requires 7:1). */
+:root,
+.light {
+  --accent: #1d4ed8 !important; /* blue-700 */
+  --accent-foreground: #ffffff !important;
+  --accent-soft: #dbeafe !important; /* blue-100 */
+  --accent-soft-foreground: #1e3a8a !important; /* blue-900, 8.49:1 on accent-soft */
+  --focus: #1d4ed8 !important;
+}
+
+/* Dark mode: blue-400 accent on near-black text gives 7.41:1 contrast. */
+.dark {
+  --accent: #60a5fa !important; /* blue-400 */
+  --accent-foreground: #0b1120 !important;
+  --accent-soft: #1e3a5f !important;
+  --accent-soft-foreground: #bfdbfe !important; /* blue-200 */
+  --focus: #60a5fa !important;
+}
+
+/* Plain text links (e.g. inside markdown/log output) use the
+   --link token, not --accent, so retint that instead of setting
+   `a { color }` directly — a blanket `a` rule would also recolor
+   HeroUI buttons that render as <a> elements (e.g. "Create server"
+   on /servers), leaving them blue text on the new blue accent
+   background. */
+:root,
+.light {
+  --link: #1d4ed8 !important;
+}
+.dark {
+  --link: #60a5fa !important;
+}
+
+/* ---------------------------------------------------------------- */
+/* 2. Sidebar -> top navigation bar (desktop only, >= 1024px)       */
+/* ---------------------------------------------------------------- */
+
+@media (min-width: 1024px) {
+  /* The AppShell root is a row flexbox with the sidebar wrapper as its
+     first child; flip it to a column so the (now full-width) sidebar
+     wrapper stacks above the header + content column instead of
+     sitting beside it. */
+  div:has(> [data-testid="app-shell-sidebar"]) {
+    flex-direction: column !important;
+  }
+
+  /* The sidebar wrapper itself: full width, natural height, row of
+     its own so the <aside> inside can lay out horizontally. */
+  [data-testid="app-shell-sidebar"] {
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    flex-direction: row !important;
+    order: -1;
+  }
+
+  /* The sidebar landmark: horizontal bar instead of a left column. */
+  [data-testid="app-shell-sidebar"] > aside[aria-label="Sidebar"] {
+    width: 100% !important;
+    height: auto !important;
+    flex-direction: row !important;
+    align-items: center;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Logo/cluster-name header block: no bottom border (the bar itself
+     already has one), keep it compact and non-shrinking. */
+  [data-testid="app-shell-sidebar"] > aside[aria-label="Sidebar"] > div:first-child {
+    border-bottom: none !important;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  /* Primary nav: lay the nav groups out in a row instead of a
+     scrollable column, and let it scroll horizontally if it ever
+     overflows a narrow desktop window instead of wrapping/growing
+     the bar's height. */
+  [data-testid="app-shell-sidebar"] > aside[aria-label="Sidebar"] nav[aria-label="Primary"] {
+    display: flex !important;
+    flex: 1 1 auto;
+    flex-direction: row !important;
+    align-items: center;
+    overflow-x: auto;
+    overflow-y: hidden !important;
+    padding: 0 0.5rem !important;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  /* Each nav group (label + list) becomes an inline row. */
+  [data-testid="app-shell-sidebar"] > aside[aria-label="Sidebar"] nav[aria-label="Primary"] > div {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  /* Group labels ("General", "Admin"): compact rather than the
+     stacked uppercase heading style, so the bar stays one line. */
+  [data-testid="app-shell-sidebar"] > aside[aria-label="Sidebar"] nav[aria-label="Primary"] > div > div:first-child {
+    padding: 0 !important;
+    white-space: nowrap;
+  }
+
+  /* Nav item lists: row instead of column. */
+  [data-testid="app-shell-sidebar"] > aside[aria-label="Sidebar"] nav[aria-label="Primary"] ul {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.25rem !important;
+  }
+
+  /* The vertical spacer the sidebar renders between nav groups
+     (h-3 = 0.75rem tall block) only makes sense in a column layout. */
+  [data-testid="app-shell-sidebar"] > aside[aria-label="Sidebar"] nav[aria-label="Primary"] .h-3 {
+    display: none !important;
+  }
+
+  /* Footer (appearance toggle + customize-theme + user/logout): no
+     top border (the bar already has a bottom one), sits at the end
+     of the row instead of the bottom of the column, rows-within
+     become an inline row too. */
+  [data-testid="app-shell-sidebar"] > aside[aria-label="Sidebar"] [aria-label="Sidebar footer"] {
+    border-top: none !important;
+    border-left: 1px solid var(--border);
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.75rem;
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 0.5rem 0.75rem !important;
+  }
+  [data-testid="app-shell-sidebar"] > aside[aria-label="Sidebar"] [aria-label="Sidebar footer"] > * {
+    /* The footer's children are spaced with space-y-*, which sets
+       margin-block-end, not margin-top — override the property that
+       is actually applied. */
+    margin: 0 !important;
+  }
+
+  /* Main content column (header + page content): the AppShell root
+     flip to a column direction above changes this sibling's sizing
+     axis from horizontal to vertical, but flex items still default
+     to min-height: auto on their main axis — so this column can grow
+     past the viewport to fit its content instead of being capped to
+     the space flex: 1 gives it. That lets <main class="flex-1
+     overflow-auto"> grow to its content's natural height instead of
+     ever hitting its own overflow, so the whole document scrolls
+     instead (the top bar scrolls out of view with it). Force the
+     min-height back to 0 so flex-1 can actually constrain this
+     column's height and <main> resumes scrolling internally. */
+  [data-testid="app-shell-sidebar"] + div {
+    min-height: 0 !important;
+  }
+}

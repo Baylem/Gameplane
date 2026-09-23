@@ -1,0 +1,290 @@
+/*
+ * Gameplane — Phosphor Terminal Theme (example Custom CSS overlay)
+ * =================================================================
+ * What this does
+ * --------------
+ * Turns the whole app into a green-phosphor CRT terminal:
+ *
+ *   1. Monochrome green palette — deep green-black surfaces, bright
+ *      phosphor-green accent (buttons, active nav, focus ring, links),
+ *      cyan shifted "success" so it stays distinguishable from the
+ *      accent. Light mode becomes a "green paper" terminal instead.
+ *   2. All-monospace typography — --font-sans is rebound to the mono
+ *      stack the app already ships (JetBrains Mono), so every screen
+ *      reads like a terminal.
+ *   3. Square corners — buttons, chips, cards, dialogs, popovers, tab
+ *      pills and fields drop to a 2px radius.
+ *   4. CRT effects (dark mode only) — a scanline overlay across the
+ *      whole app and a soft green glow on primary buttons.
+ *
+ * How to apply
+ * ------------
+ *   Settings -> Theme -> Custom CSS overlay -> paste this file's
+ *   contents -> enable the overlay -> Save.
+ *
+ * How to revert / recover
+ * -----------------------
+ *   - Turn the overlay off and Save again from Settings -> Theme, or
+ *   - Append ?safe-mode=1 to any app URL (suspends the overlay only,
+ *     the stored text is not deleted), or
+ *   - Press Ctrl+Shift+Alt+T while the app is open.
+ *
+ * Selector notes
+ * --------------
+ * Token blocks use `!important` for the same reason the top-nav-blue
+ * example does: they have to outrank the app's own preset token blocks
+ * (including the higher-specificity legacy-preset variants) and the
+ * Custom Colors injection (the gameplane-custom-theme-vars style
+ * element), which is never `!important` — so this overlay wins over a
+ * Colors pick for every token it sets. Component overrides (.button,
+ * .chip, .card, ...) target HeroUI's stable semantic classes and
+ * aria/testid hooks, not Tailwind utility classes; the overlay is
+ * appended last in <head> so it wins ties at equal specificity.
+ */
+
+/* ---------------------------------------------------------------- */
+/* 1. Phosphor palette — light mode ("green paper" terminal)        */
+/* ---------------------------------------------------------------- */
+
+:root,
+.light {
+  --background: #eef7ea !important;
+  --foreground: #0d2812 !important;
+  --surface: #f7fcf3 !important;
+  --surface-secondary: #e3f1dc !important;
+  --surface-tertiary: #d4e8cc !important;
+  --overlay: #f7fcf3 !important;
+  --accent: #15803d !important; /* green-700, 5.0:1 on accent-foreground */
+  --accent-foreground: #ffffff !important;
+  --accent-soft: #dcfce7 !important;
+  --accent-soft-foreground: #14532d !important;
+  --default: #d4e8cc !important;
+  --default-foreground: #0d2812 !important;
+  --default-soft: #dcfce7 !important;
+  --default-soft-foreground: #14532d !important;
+  --muted: #4a6b52 !important;
+  --border: #b7d6bd !important;
+  --separator: #cbe4d0 !important;
+  --field-background: #f7fcf3 !important;
+  --field-border: #b7d6bd !important;
+  --field-foreground: #0d2812 !important;
+  --field-placeholder: #6b9173 !important;
+  --segment: #f7fcf3 !important;
+  --segment-foreground: #0d2812 !important;
+  --focus: #15803d !important;
+  --link: #15803d !important;
+  --chart-stat: #0e7490 !important; /* cyan-700 */
+  /* Status hues shifted into the terminal palette: success becomes
+     cyan so it does not merge with the green accent. */
+  --success: #0891b2 !important;
+  --success-soft: #cffafe !important;
+  --success-soft-foreground: #155e75 !important;
+  --radius: 2px !important;
+  --field-radius: 2px !important;
+}
+
+/* ---------------------------------------------------------------- */
+/* 2. Phosphor palette — dark mode (the real CRT look)              */
+/* ---------------------------------------------------------------- */
+
+.dark {
+  --background: #070d07 !important;
+  --foreground: #c8f7cf !important;
+  --surface: #0d1a0f !important;
+  --surface-secondary: #0a140b !important;
+  --surface-tertiary: #081008 !important;
+  --overlay: #102213 !important;
+  --accent: #2bff62 !important; /* phosphor green, 12+:1 on accent-foreground */
+  --accent-foreground: #031007 !important;
+  --accent-soft: #123a1c !important;
+  --accent-soft-foreground: #7dff9d !important;
+  --default: #122b16 !important;
+  --default-foreground: #c8f7cf !important;
+  --default-soft: #123a1c !important;
+  --default-soft-foreground: #7dff9d !important;
+  --muted: #6f9e76 !important;
+  --border: #1e3a24 !important;
+  --separator: #16301a !important;
+  --field-background: #0a140b !important;
+  --field-border: #1e3a24 !important;
+  --field-foreground: #eaffec !important;
+  --field-placeholder: #5d8a64 !important;
+  --segment: #0d1a0f !important;
+  --segment-foreground: #c8f7cf !important;
+  --focus: #2bff62 !important;
+  --link: #5dff8f !important;
+  --chart-stat: #22d3ee !important; /* cyan-400 */
+  --success: #22d3ee !important;
+  --success-soft: #0b2f38 !important;
+  --success-soft-foreground: #67e8f9 !important;
+  --radius: 2px !important;
+  --field-radius: 2px !important;
+}
+
+/* Legacy preset variants carry an extra attribute selector that beats
+   the plain class selectors above on specificity — restate the tokens
+   for them so the overlay still wins if the legacy preset is active. */
+.light[data-theme-preset="legacy"],
+[data-theme="light"][data-theme-preset="legacy"] {
+  --background: #eef7ea !important;
+  --foreground: #0d2812 !important;
+  --surface: #f7fcf3 !important;
+  --surface-secondary: #e3f1dc !important;
+  --surface-tertiary: #d4e8cc !important;
+  --overlay: #f7fcf3 !important;
+  --accent: #15803d !important;
+  --accent-foreground: #ffffff !important;
+  --accent-soft: #dcfce7 !important;
+  --accent-soft-foreground: #14532d !important;
+  --default: #d4e8cc !important;
+  --default-foreground: #0d2812 !important;
+  --muted: #4a6b52 !important;
+  --border: #b7d6bd !important;
+  --separator: #cbe4d0 !important;
+  --field-background: #f7fcf3 !important;
+  --field-border: #b7d6bd !important;
+  --field-foreground: #0d2812 !important;
+  --field-placeholder: #6b9173 !important;
+  --segment: #f7fcf3 !important;
+  --segment-foreground: #0d2812 !important;
+  --focus: #15803d !important;
+  --link: #15803d !important;
+}
+.dark[data-theme-preset="legacy"],
+[data-theme="dark"][data-theme-preset="legacy"] {
+  --background: #070d07 !important;
+  --foreground: #c8f7cf !important;
+  --surface: #0d1a0f !important;
+  --surface-secondary: #0a140b !important;
+  --surface-tertiary: #081008 !important;
+  --overlay: #102213 !important;
+  --accent: #2bff62 !important;
+  --accent-foreground: #031007 !important;
+  --accent-soft: #123a1c !important;
+  --accent-soft-foreground: #7dff9d !important;
+  --default: #122b16 !important;
+  --default-foreground: #c8f7cf !important;
+  --muted: #6f9e76 !important;
+  --border: #1e3a24 !important;
+  --separator: #16301a !important;
+  --field-background: #0a140b !important;
+  --field-border: #1e3a24 !important;
+  --field-foreground: #eaffec !important;
+  --field-placeholder: #5d8a64 !important;
+  --segment: #0d1a0f !important;
+  --segment-foreground: #c8f7cf !important;
+  --focus: #2bff62 !important;
+  --link: #5dff8f !important;
+}
+
+/* Legacy HSL triplets, for any not-yet-rebuilt screen still reading
+   the --gp-* variables. */
+.light {
+  --gp-bg: 110 40% 94%;
+  --gp-surface: 110 35% 90%;
+  --gp-card: 100 45% 97%;
+  --gp-border: 120 22% 76%;
+  --gp-muted: 130 18% 36%;
+  --gp-fg: 135 51% 10%;
+  --gp-primary: 142 71% 29%;
+  --gp-primary-fg: 0 0% 100%;
+}
+.dark {
+  --gp-bg: 120 30% 4%;
+  --gp-surface: 130 33% 8%;
+  --gp-card: 130 33% 8%;
+  --gp-border: 125 32% 17%;
+  --gp-muted: 128 17% 53%;
+  --gp-fg: 118 83% 88%;
+  --gp-primary: 136 100% 58%;
+  --gp-primary-fg: 130 81% 4%;
+}
+
+/* ---------------------------------------------------------------- */
+/* 3. All-monospace typography                                       */
+/* ---------------------------------------------------------------- */
+/* --font-sans is declared inside the app's @theme block, which the
+   Tailwind v4 compiler turns into the font-sans utility used by the
+   body and components. Rebinding it on :root (a later, equal-or-higher
+   specificity declaration) redirects every consumer to the mono stack
+   the app already loads for --font-mono. */
+:root,
+.light,
+.dark {
+  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
+}
+
+/* Terminal chrome: tracked-out uppercase on buttons and small caps
+   feel on table headers (already uppercase by the app's own rule). */
+.button {
+  letter-spacing: 0.04em;
+}
+
+/* ---------------------------------------------------------------- */
+/* 4. Square corners                                                 */
+/* ---------------------------------------------------------------- */
+/* The app pins per-family radii at the component selector (6px
+   buttons, 12px cards/dialogs, 999px tab pills, ...), so rebinding
+   --radius alone does nothing for them — repin each family here.
+   The `!important` on these is needed because the app's own pins are
+   unlayered like this overlay; source order would win ties, but the
+   rounded-full CTA carve-out below needs to beat the app's
+   .button:not(.rounded-full) pin outright. */
+.button:not(.rounded-full),
+.tabs__tab,
+.tabs__indicator,
+.tabs__list,
+.tabs__list[data-orientation="vertical"],
+.menu-item,
+.list-box-item,
+.select__trigger,
+.chip,
+.card,
+.modal__dialog,
+.dropdown__popover,
+.input,
+.table-root--primary {
+  border-radius: 2px !important;
+}
+
+/* Even the pill CTAs ("Sign in", "Create server") go square — a
+   terminal has no pills. */
+.button.rounded-full {
+  border-radius: 2px !important;
+}
+
+/* ---------------------------------------------------------------- */
+/* 5. CRT effects (dark mode only)                                   */
+/* ---------------------------------------------------------------- */
+
+/* Scanlines: a fixed, non-interactive overlay of 1px dark lines every
+   3px across the whole viewport. Kept faint so text contrast is
+   untouched; pointer-events: none so it never blocks clicks. */
+.dark body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.14) 2px,
+    rgba(0, 0, 0, 0.14) 3px
+  );
+}
+
+/* Phosphor glow on primary actions and the focus ring. Scoped to
+   dark mode: a green halo reads as glow on the dark background but
+   would look like a rendering artifact on the light "paper" theme. */
+.dark .button[data-variant="primary"] {
+  box-shadow: 0 0 10px rgba(43, 255, 98, 0.35);
+}
+
+/* Respect users who ask for reduced motion/effects: no glow. */
+@media (prefers-reduced-motion: reduce) {
+  .dark .button[data-variant="primary"] {
+    box-shadow: none;
+  }
+}

@@ -1,0 +1,180 @@
+/*
+ * Gameplane — Solarized Theme (example Custom CSS overlay)
+ * =========================================================
+ * What this does
+ * --------------
+ * A pure palette re-theme: Ethan Schoonover's Solarized palette
+ * (solarized.mantle is left untouched) in both modes, with Solarized
+ * Dark on the dark side and Solarized Light on the light side. No
+ * layout, spacing, or shape changes — this is the "minimum viable
+ * custom theme" shape: tokens only.
+ *
+ *   - Accent:   solarized cyan (#2aa198) with dark text on it
+ *   - Links:    solarized blue (#268bd2)
+ *   - Success:  solarized green (#859900)
+ *   - Warning:  solarized yellow (#b58900)
+ *   - Danger:   solarized red (#dc322f)
+ *   - Stat icons / sleep: solarized violet (#6c71c4)
+ *
+ * How to apply
+ * ------------
+ *   Settings -> Theme -> Custom CSS overlay -> paste this file's
+ *   contents -> enable the overlay -> Save.
+ *
+ * How to revert / recover
+ * -----------------------
+ *   - Turn the overlay off and Save again from Settings -> Theme, or
+ *   - Append ?safe-mode=1 to any app URL (suspends the overlay only,
+ *     the stored text is not deleted), or
+ *   - Press Ctrl+Shift+Alt+T while the app is open.
+ *
+ * Selector notes
+ * --------------
+ * Token blocks use `!important` so they outrank the app's own preset
+ * token blocks (including the higher-specificity legacy-preset
+ * variants) and the never-`!important` Custom Colors injection — this
+ * overlay wins over a Custom Colors pick for every token it sets.
+ */
+
+/* ---------------------------------------------------------------- */
+/* Solarized Light                                                   */
+/* ---------------------------------------------------------------- */
+
+:root,
+.light {
+  --background: #fdf6e3 !important; /* base3 */
+  --foreground: #586e75 !important; /* base01 */
+  --surface: #fffcf0 !important; /* card fill, slightly lighter than base3 */
+  --surface-secondary: #eee8d5 !important; /* base2 */
+  --surface-tertiary: #e3dcc4 !important;
+  --overlay: #fffcf0 !important;
+  --accent: #2aa198 !important; /* cyan */
+  --accent-foreground: #002b36 !important; /* base03, ~5.3:1 on cyan */
+  --accent-soft: #d9efea !important;
+  --accent-soft-foreground: #0f5952 !important;
+  --default: #eee8d5 !important;
+  --default-foreground: #586e75 !important;
+  --default-soft: #d9efea !important;
+  --default-soft-foreground: #0f5952 !important;
+  --muted: #657b83 !important; /* base00 */
+  --border: #d6cdb0 !important;
+  --separator: #e0d8bd !important;
+  --field-background: #fffcf0 !important;
+  --field-border: #d6cdb0 !important;
+  --field-foreground: #073642 !important; /* base02 */
+  --field-placeholder: #93a1a1 !important; /* base1 */
+  --segment: #fffcf0 !important;
+  --segment-foreground: #586e75 !important;
+  --focus: #2aa198 !important;
+  --link: #268bd2 !important; /* blue */
+  --chart-stat: #6c71c4 !important; /* violet */
+  --sleep: #6c71c4 !important;
+  --success: #859900 !important; /* green */
+  --success-soft: #e6ecc8 !important;
+  --success-soft-foreground: #4c5900 !important;
+  --warning: #b58900 !important; /* yellow */
+  --warning-soft: #f0e4b8 !important;
+  --warning-soft-foreground: #6d5400 !important;
+  --danger: #dc322f !important; /* red */
+  --danger-soft: #f7d8d7 !important;
+  --danger-soft-foreground: #a02624 !important;
+}
+
+/* ---------------------------------------------------------------- */
+/* Solarized Dark                                                    */
+/* ---------------------------------------------------------------- */
+
+.dark {
+  --background: #002b36 !important; /* base03 */
+  --foreground: #93a1a1 !important; /* base1 */
+  --surface: #073642 !important; /* base02 */
+  --surface-secondary: #05313d !important;
+  --surface-tertiary: #03242d !important;
+  --overlay: #073642 !important;
+  --accent: #2aa198 !important; /* cyan */
+  --accent-foreground: #002b36 !important;
+  --accent-soft: #0e4a47 !important;
+  --accent-soft-foreground: #8adfd6 !important;
+  --default: #0a3b47 !important;
+  --default-foreground: #93a1a1 !important;
+  --default-soft: #0e4a47 !important;
+  --default-soft-foreground: #8adfd6 !important;
+  --muted: #657b83 !important; /* base00 */
+  --border: #134653 !important;
+  --separator: #0d3a45 !important;
+  --field-background: #05313d !important;
+  --field-border: #134653 !important;
+  --field-foreground: #eee8d5 !important; /* base2 */
+  --field-placeholder: #586e75 !important; /* base01 */
+  --segment: #073642 !important;
+  --segment-foreground: #93a1a1 !important;
+  --focus: #2aa198 !important;
+  --link: #268bd2 !important; /* blue */
+  --chart-stat: #6c71c4 !important; /* violet */
+  --sleep: #6c71c4 !important;
+  --success: #859900 !important; /* green */
+  --success-soft: #243407 !important;
+  --success-soft-foreground: #b3c34d !important;
+  --warning: #b58900 !important; /* yellow */
+  --warning-soft: #3a2f06 !important;
+  --warning-soft-foreground: #d8b449 !important;
+  --danger: #dc322f !important; /* red */
+  --danger-soft: #471d1d !important;
+  --danger-soft-foreground: #f08582 !important;
+}
+
+/* Legacy preset variants carry an extra attribute selector that beats
+   the plain class selectors above on specificity — restate the tokens
+   for them so the overlay still wins if the legacy preset is active. */
+.light[data-theme-preset="legacy"],
+[data-theme="light"][data-theme-preset="legacy"] {
+  --background: #fdf6e3 !important;
+  --foreground: #586e75 !important;
+  --surface: #fffcf0 !important;
+  --surface-secondary: #eee8d5 !important;
+  --surface-tertiary: #e3dcc4 !important;
+  --overlay: #fffcf0 !important;
+  --accent: #2aa198 !important;
+  --accent-foreground: #002b36 !important;
+  --accent-soft: #d9efea !important;
+  --accent-soft-foreground: #0f5952 !important;
+  --default: #eee8d5 !important;
+  --default-foreground: #586e75 !important;
+  --muted: #657b83 !important;
+  --border: #d6cdb0 !important;
+  --separator: #e0d8bd !important;
+  --field-background: #fffcf0 !important;
+  --field-border: #d6cdb0 !important;
+  --field-foreground: #073642 !important;
+  --field-placeholder: #93a1a1 !important;
+  --segment: #fffcf0 !important;
+  --segment-foreground: #586e75 !important;
+  --focus: #2aa198 !important;
+  --link: #268bd2 !important;
+}
+.dark[data-theme-preset="legacy"],
+[data-theme="dark"][data-theme-preset="legacy"] {
+  --background: #002b36 !important;
+  --foreground: #93a1a1 !important;
+  --surface: #073642 !important;
+  --surface-secondary: #05313d !important;
+  --surface-tertiary: #03242d !important;
+  --overlay: #073642 !important;
+  --accent: #2aa198 !important;
+  --accent-foreground: #002b36 !important;
+  --accent-soft: #0e4a47 !important;
+  --accent-soft-foreground: #8adfd6 !important;
+  --default: #0a3b47 !important;
+  --default-foreground: #93a1a1 !important;
+  --muted: #657b83 !important;
+  --border: #134653 !important;
+  --separator: #0d3a45 !important;
+  --field-background: #05313d !important;
+  --field-border: #134653 !important;
+  --field-foreground: #eee8d5 !important;
+  --field-placeholder: #586e75 !important;
+  --segment: #073642 !important;
+  --segment-foreground: #93a1a1 !important;
+  --focus: #2aa198 !important;
+  --link: #268bd2 !important;
+}
