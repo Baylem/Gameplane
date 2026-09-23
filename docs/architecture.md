@@ -221,6 +221,10 @@ converge on the same outcome. Format spec: `docs/module-authoring.md`.
 
 ## Multi-cluster (federation)
 
+For the proposed extension to remote console, files, and other agent operations,
+see the [cluster-aware interactive access RFC](rfcs/multicluster-interactive-access/README.md).
+Its optional gateway is a proposal, not an available deployment component.
+
 Gameplane scales across multiple Kubernetes clusters through a
 federation model: each target cluster runs its own operator and agents,
 while the API server (on the control-plane cluster) holds a pool of
