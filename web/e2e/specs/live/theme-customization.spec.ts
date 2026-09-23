@@ -249,6 +249,12 @@ async function activateCustomColors(page: Page): Promise<void> {
   await expect(swatch).toBeEnabled();
 }
 
+const MODE_LABEL: Record<"light" | "dark" | "system", string> = {
+  light: "Light",
+  dark: "Dark",
+  system: "System",
+};
+
 async function setAppearance(
   page: Page,
   request: APIRequestContext,
@@ -258,7 +264,7 @@ async function setAppearance(
   // (role="group" aria-label="Appearance mode"), distinct from the
   // sidebar footer's "Appearance" group.
   const modeGroup = page.getByRole("group", { name: "Appearance mode" });
-  await modeGroup.getByRole("button", { name: mode, exact: true }).click();
+  await modeGroup.getByRole("button", { name: MODE_LABEL[mode], exact: true }).click();
   await saveThemeSettings(page);
   await expect
     .poll(async () => (await getPrefs(request)).appearanceMode, { timeout: 15_000 })
@@ -653,7 +659,7 @@ test.describe("live: theme customization", () => {
   // "Custom colors" radio, live adoption (SC-004), contrast across
   // light/dark, reset to preset (quickstart.md §5.2.3, theme-ui.md §3.2).
 
-  test("custom colors activate via the preset card, apply live within three clicks, keep contrast across light/dark, and reset restores the preset", async ({
+  test("custom colors activate via the preset card, apply live within three clicks, follow the surface's brightness for light/dark, and reset restores the preset", async ({
     page,
     request,
   }) => {
@@ -702,17 +708,24 @@ test.describe("live: theme customization", () => {
     await expect(page.locator("html")).toHaveAttribute("data-theme-type", "custom_colors");
     await expect.poll(() => rootVar(page, "--accent")).toBe(EMERALD_ACCENT);
 
-    // Light/dark keeps the custom accent; the derived accent foreground
-    // stays a legible extreme in both modes (contrast derivation,
-    // theme-derivation.ts).
-    for (const mode of ["light", "dark"] as const) {
-      await setAppearance(page, request, mode);
+    // D4: Appearance mode is disabled while Custom colors is active — light/dark
+    // instead follows the surface tone's own brightness (spec.md D4).
+    const modeGroup = page.getByRole("group", { name: "Appearance mode" });
+    await expect(modeGroup.getByRole("button", { name: "Light", exact: true })).toBeDisabled();
+    await expect(page.getByText("Set by your surface color")).toBeVisible();
+
+    for (const [surfaceLabel, expectDark] of [
+      ["Dark Slate", true],
+      ["Crisp Light", false],
+    ] as const) {
+      await page.getByText(surfaceLabel, { exact: true }).click();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", expectDark ? "dark" : "light");
       expect(await rootVar(page, "--accent")).toBe(EMERALD_ACCENT);
       const accentForeground = await rootVar(page, "--accent-foreground");
-      expect(["#ffffff", "#000000"], `accent-foreground in ${mode} mode`).toContain(
-        accentForeground,
-      );
+      expect(["#ffffff", "#000000"], `accent-foreground on ${surfaceLabel}`).toContain(accentForeground);
     }
+    // Restore Dark Slate so the rest of the test (reload/reset assertions) is unaffected.
+    await page.getByText("Dark Slate", { exact: true }).click();
 
     // Reset to Defaults: one confirmation, then the preset base is back and
     // the custom colors are deleted (FR-012 — reset is the only deletion).
