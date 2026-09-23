@@ -206,6 +206,19 @@ async function saveThemeSettings(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^save/i }).click();
 }
 
+// Same button, but a no-op when the draft already matches the last-saved
+// preferences (Save is disabled while clean — ThemeSettings.tsx's Save
+// button, isDisabled={!dirty || …}). Used where a
+// call site can't otherwise tell whether its preceding steps left anything
+// unsaved (e.g. a retried test whose earlier attempt already persisted the
+// same target state), so an unconditional click would hang until the test
+// timeout instead of failing fast or succeeding.
+async function saveIfDirty(page: Page): Promise<void> {
+  const button = page.getByRole("button", { name: /^save/i });
+  if (await button.isDisabled()) return;
+  await button.click();
+}
+
 // The Preset theme card's radio cards (theme-ui.md §3.1): Modern Pink,
 // Legacy Orange, and the Custom colors activation card.
 const presetThemeGroup = (page: Page) => page.getByRole("radiogroup", { name: "Preset theme" });
@@ -977,7 +990,12 @@ test.describe("live: theme customization", () => {
     await page.getByText("Dark Slate", { exact: true }).click();
     await cssEditor(page).fill(OVERLAY_RULE);
     await setOverlayEnabled(page, request, true);
-    await saveThemeSettings(page);
+    // A retried run of this test can already have every field above saved
+    // from its earlier attempt (setOverlayEnabled's own save covers the
+    // full draft), leaving nothing dirty here — Save would then stay
+    // disabled and an unconditional click would hang until the test
+    // timeout, so only click it while there's something to persist.
+    await saveIfDirty(page);
     await expect
       .poll(
         async () => {
@@ -1013,11 +1031,12 @@ test.describe("live: theme customization", () => {
           JSON.stringify(doc, null, 2),
         );
 
-        // Preview before applying (theme-ui.md §3.4).
+        // Preview before applying (theme-ui.md §3.4). Scoped to the "Preset:
+        // <name>" summary line specifically — a bare "legacy orange" match
+        // also resolves the Preset theme radiogroup's own "Legacy Orange"
+        // card label underneath the import panel, tripping strict mode.
         await expect(bPage.getByText(/import preview/i)).toBeVisible({ timeout: 10_000 });
-        await expect(
-          bPage.getByText(/legacy orange|preset:\s*legacy/i),
-        ).toBeVisible();
+        await expect(bPage.getByText(/preset:\s*legacy orange/i)).toBeVisible();
 
         await bPage.getByRole("button", { name: /apply import/i }).click();
 
