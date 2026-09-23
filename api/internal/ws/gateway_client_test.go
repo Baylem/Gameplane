@@ -205,3 +205,14 @@ func TestGatewayEndpointCannotChangeClusterWithQuery(t *testing.T) {
 		t.Fatalf("endpoint = %s", endpoint)
 	}
 }
+
+func TestGatewayStdinRejectsRecreatedServerWithValidOwnership(t *testing.T) {
+	k := &kube.Client{}
+	_ = streamTestRegistry(k)
+	if _, err := serverPod(t.Context(), k, "gameplane-games", "alpha"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := serverPodForUID(t.Context(), k, "gameplane-games", "alpha", "previous-server-uid"); err == nil {
+		t.Fatal("a valid replacement workload was accepted for the previously bound server")
+	}
+}

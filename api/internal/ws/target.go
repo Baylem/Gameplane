@@ -45,9 +45,19 @@ func streamClient(w http.ResponseWriter, req *http.Request, reg *kube.Registry) 
 // pod name. A stale StatefulSet or unrelated same-named pod cannot satisfy
 // authorization for a newly created GameServer.
 func serverPod(ctx context.Context, k *kube.Client, ns, name string) (*corev1.Pod, error) {
+	return serverPodForUID(ctx, k, ns, name, "")
+}
+
+// serverPodForUID also binds ownership preflight to an earlier authorized or
+// resolved GameServer identity. A legitimate replacement's ownership chain must
+// not be accepted for an operation on the previous server.
+func serverPodForUID(ctx context.Context, k *kube.Client, ns, name, expectedUID string) (*corev1.Pod, error) {
 	gs, err := k.GetServer(ctx, ns, name)
 	if err != nil {
 		return nil, fmt.Errorf("get stream server: %w", err)
+	}
+	if expectedUID != "" && string(gs.GetUID()) != expectedUID {
+		return nil, apierrors.NewNotFound(schema.GroupResource{Group: "gameplane.local", Resource: "gameservers"}, name)
 	}
 	ss, err := k.Typed.AppsV1().StatefulSets(ns).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
