@@ -191,13 +191,6 @@ export function ThemeSettingsPage() {
     setDraft((d) => (d ? { ...d, ...patch } : d));
   };
 
-  // Live preview: the draft applies to the DOM as it changes; applyThemePreferences
-  // mounts the custom-color vars and re-appends #gameplane-custom-css last in <head>.
-  useEffect(() => {
-    if (!draft) return;
-    applyThemePreferences(draft);
-  }, [draft]);
-
   // Leaving without saving restores the last persisted state to the DOM.
   useEffect(() => {
     return () => {
@@ -289,6 +282,16 @@ export function ThemeSettingsPage() {
   const cssBytes = utf8Len(cssDraft);
   const cssResult = useMemo(() => sanitizeCustomCss(cssDraft), [cssDraft]);
   const cssError = cssResult.ok ? null : editorErrorMessage(cssDraft, cssResult);
+
+  // Live preview: the draft applies to the DOM as it changes; applyThemePreferences
+  // mounts the custom-color vars and re-appends #gameplane-custom-css last in <head>.
+  // A stylesheet the sanitizer rejects is never previewed (FR-013): the last
+  // saved overlay stays in place instead, so e.g. an @import is never fetched.
+  const savedCss = preferences?.customCss ?? null;
+  useEffect(() => {
+    if (!draft) return;
+    applyThemePreferences(cssResult.ok ? draft : { ...draft, customCss: savedCss });
+  }, [draft, cssResult.ok, savedCss]);
 
   // --- Export ----------------------------------------------------------------
 
