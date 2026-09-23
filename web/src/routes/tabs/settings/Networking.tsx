@@ -231,10 +231,10 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
               {tunnel.provider === "tailscale" && (
                 <div className="rounded-md border-l-4 border-warning bg-warning/10 p-3 text-sm">
                   <div className="flex gap-2">
-                    <AlertCircle className="h-5 w-5 shrink-0 text-warning" />
+                    <AlertCircle className="h-5 w-5 shrink-0 text-warning-soft-foreground" />
                     <div>
-                      <div className="font-medium text-warning">Tailnet only — not public</div>
-                      <div className="pt-0.5 text-xs text-warning/80">
+                      <div className="font-medium text-warning-soft-foreground">Tailnet only — not public</div>
+                      <div className="pt-0.5 text-xs text-warning-soft-foreground">
                         The server becomes reachable only from your Tailscale network, never from the public internet.
                       </div>
                     </div>
@@ -604,7 +604,7 @@ function AddressAssignmentSection({
         <div className="flex items-start gap-4 rounded-lg border border-warning-soft-foreground bg-warning-soft px-5 py-4 text-sm">
           <Megaphone className="mt-0.5 h-4 w-4 shrink-0 text-warning-soft-foreground" />
           <div className="flex-1">
-            <div className="mb-0.5 font-medium text-warning">Address preference ignored</div>
+            <div className="mb-0.5 font-medium text-warning-soft-foreground">Address preference ignored</div>
             <div className="text-xs text-warning-soft-foreground">
               Expose is set to {net.expose || "ClusterIP"}. Address pool and requested address only take effect when Expose (above) is set to LoadBalancer.
             </div>
@@ -615,10 +615,10 @@ function AddressAssignmentSection({
       {condition?.reason === "NoAddressManagerConfigured" && (
         <div className="rounded-md border-l-4 border-warning bg-warning/10 p-3 text-sm">
           <div className="flex gap-2">
-            <AlertCircle className="h-5 w-5 shrink-0 text-warning" />
+            <AlertCircle className="h-5 w-5 shrink-0 text-warning-soft-foreground" />
             <div>
-              <div className="font-medium text-warning">No address manager configured</div>
-              <div className="pt-0.5 text-xs text-warning/80">
+              <div className="font-medium text-warning-soft-foreground">No address manager configured</div>
+              <div className="pt-0.5 text-xs text-warning-soft-foreground">
                 This cluster has no MetalLB or Cilium address manager. Your pool and address preference will be saved but never applied.
               </div>
             </div>

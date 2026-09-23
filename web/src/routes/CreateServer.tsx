@@ -1073,7 +1073,7 @@ function Network({ state, setState }: { state: WizardState; setState: (s: Wizard
           <div className="flex items-start gap-4 rounded-lg border border-warning-soft-foreground bg-warning-soft px-5 py-4">
             <Megaphone className="mt-0.5 h-4 w-4 shrink-0 text-warning-soft-foreground" />
             <div className="flex-1">
-              <div className="mb-0.5 font-medium text-warning">Address preference ignored</div>
+              <div className="mb-0.5 font-medium text-warning-soft-foreground">Address preference ignored</div>
               <div className="text-sm text-warning-soft-foreground">
                 Expose is set to {state.expose}. Address pool and requested address only take effect when Expose (above) is set to LoadBalancer.
               </div>

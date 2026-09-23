@@ -653,10 +653,10 @@ export function ThemeSettingsPage() {
 
                 {colorsActive && !guardOk && (
                   <div role="alert" className="flex gap-3 rounded-md border border-warning/40 bg-warning/10 p-3">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning-soft-foreground" />
                     <div className="text-xs">
-                      <div className="mb-1 font-medium text-warning">Contrast guard</div>
-                      <p className="text-warning/80">
+                      <div className="mb-1 font-medium text-warning-soft-foreground">Contrast guard</div>
+                      <p className="text-warning-soft-foreground">
                         The selected accent and surface combination fails WCAG AA (
                         {accentSurfaceRatio.toFixed(1)}:1). Choose a darker accent or a darker surface tone.
                       </p>
@@ -710,10 +710,10 @@ export function ThemeSettingsPage() {
                   </p>
                 )}
                 <div className="flex gap-3 rounded-md border border-warning/40 bg-warning/10 p-3">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning" />
+                  <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning-soft-foreground" />
                   <div className="text-xs">
-                    <div className="mb-1 font-medium text-warning">Custom CSS recovery</div>
-                    <p className="text-warning/80">
+                    <div className="mb-1 font-medium text-warning-soft-foreground">Custom CSS recovery</div>
+                    <p className="text-warning-soft-foreground">
                       Custom CSS modifies application appearance directly. If the interface becomes
                       unusable, recover via the <code className="font-mono">?safe-mode=1</code> URL
                       parameter, the safe-mode keyboard shortcut, or the &lsquo;Sign in with safe

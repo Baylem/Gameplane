@@ -26,7 +26,7 @@
   --success-soft-foreground: oklch(45% 0.14 149.52); /* mirrors --warning-soft-foreground's darker-foreground-on-tint pattern */
   --warning: oklch(77.04% 0.1646 70.66); /* #F59F0A */
   --warning-soft: #FEF3C7; /* design $warning/soft */
-  --warning-soft-foreground: #D97706; /* design $warning/soft-foreground */
+  --warning-soft-foreground: #92400E; /* design $warning/soft-foreground — AA-safe: 6.37:1 on #FEF3C7 (--warning-soft), 7.09:1 on white */
   --danger: oklch(57.85% 0.2138 27.17); /* #DC2828 */
   --danger-soft: #FEE2E2; /* design $danger/soft */
   --danger-soft-foreground: #EF4444; /* design $danger/soft-foreground */

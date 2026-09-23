@@ -430,9 +430,9 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
 function AdminGroupsInlineWarning() {
   return (
     <div className="rounded-md border border-warning-soft-foreground bg-warning-soft p-3 flex gap-3">
-      <Megaphone className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+      <Megaphone className="h-4 w-4 text-warning-soft-foreground flex-shrink-0 mt-0.5" />
       <div className="text-xs">
-        <div className="font-medium text-warning mb-1">Full admin access</div>
+        <div className="font-medium text-warning-soft-foreground mb-1">Full admin access</div>
         <p className="text-warning-soft-foreground">
           Groups added here will be mapped to the admin role and get full cluster
           control from their next login. You&apos;ll be asked to confirm before this is saved.
@@ -1635,10 +1635,10 @@ function HelmOIDCProviderCard({ provider }: { provider: OIDCHelmProvider }) {
         )}
         {adminMapped && (
           <div className="rounded-md border border-warning/40 bg-warning/10 p-3 flex gap-3">
-            <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="h-4 w-4 text-warning-soft-foreground flex-shrink-0 mt-0.5" />
             <div className="text-xs">
-              <div className="font-medium text-warning mb-1">Helm-configured admin mapping</div>
-              <p className="text-warning/80">
+              <div className="font-medium text-warning-soft-foreground mb-1">Helm-configured admin mapping</div>
+              <p className="text-warning-soft-foreground">
                 The group(s) on the Admin row above were mapped to admin via Helm values, not the dashboard, so there
                 is no confirmation step here. Verify they contain only trusted accounts — anyone in them gets full
                 admin access.
