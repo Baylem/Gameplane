@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,12 +31,12 @@ func Mount(r chi.Router, k *kube.Client, caBundle, clientCert, clientKey string)
 		// the chart's mTLS hook populates the Secrets.
 		tlsCfg = nil
 	}
-	client := &http.Client{
-		Timeout:   0,
-		Transport: &http.Transport{TLSClientConfig: tlsCfg},
+	var transport agentTransport
+	if tlsCfg != nil {
+		transport = newDirectAgentTransport(tlsCfg, 0)
 	}
 
-	p := &proxy{k: k, tls: tlsCfg, http: client, stdin: k}
+	p := &proxy{k: k, transport: transport, stdin: k}
 	r.Get("/ws/servers/{name}/console", rejectRemoteCluster(p.wsProxy("/console")))
 	r.Get("/ws/servers/{name}/logs", rejectRemoteCluster(p.wsProxy("/logs/tail")))
 	r.Get("/servers/{name}/logs/download", rejectRemoteCluster(p.httpProxy("/logs/download")))
@@ -139,41 +138,18 @@ func rejectRemoteCluster(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// validateAndBuildAgentHost validates namespace and pod name are valid
-// DNS-1123 labels, then constructs the in-cluster agent FQDN. Returns the
-// constructed host string if both inputs are valid, or an error if validation
-// fails. The returned host string is guaranteed safe for URL construction
-// since its components are validated DNS-1123 labels.
-func (p *proxy) validateAndBuildAgentHost(name, namespace string) (string, error) {
-	if !isDNS1123Label(namespace) || !isDNS1123Label(name) {
-		return "", errors.New("invalid namespace or pod name")
-	}
-	return p.agentHost(name, namespace), nil
-}
-
 type proxy struct {
-	k    *kube.Client
-	tls  *tls.Config
-	http *http.Client
+	k         *kube.Client
+	transport agentTransport
 	// stdin executes the stdin-transport branch of runAction. Defaults to
 	// k (see Mount) but is a separate interface field so tests can inject
 	// a fake that records writes instead of attaching to a real pod.
 	stdin stdinWriter
 }
 
-// agentHost returns the in-cluster DNS + port of the agent sidecar.
-// Kept as a method so tests can override it.
-func (p *proxy) agentHost(name, namespace string) string {
-	// The operator maintains a dedicated ClusterIP Service named
-	// <gs>-agent for the sidecar (the game's own Service may be
-	// NodePort/LoadBalancer and per-pod DNS only resolves under
-	// headless Services). Agent listens on :8090.
-	return agentHostFor(name, namespace)
-}
-
 func (p *proxy) wsProxy(agentPath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		if p.tls == nil {
+		if p.transport == nil {
 			http.Error(w, "agent mTLS not configured", http.StatusServiceUnavailable)
 			return
 		}
@@ -183,27 +159,19 @@ func (p *proxy) wsProxy(agentPath string) http.HandlerFunc {
 			httperr.Write(w, req, err)
 			return
 		}
-		// Validate namespace and pod name are valid DNS-1123 labels, and construct
-		// the agent host. The returned host is guaranteed safe for URL construction.
-		// CodeQL analysis recognizes this pattern: validation and construction are
-		// unified in validateAndBuildAgentHost, and only its return value is used
-		// in the URL, making the data flow legible to taint analysis.
-		host, err := p.validateAndBuildAgentHost(name, ns)
-		if err != nil {
+		target := agentTarget{name: name, namespace: ns}
+		// Validate before opening an upstream or upgrading the browser connection.
+		if err := target.validate(); err != nil {
 			httperr.WriteCode(w, req, http.StatusBadRequest, err)
 			return
 		}
-		upstream := "wss://" + host + agentPath
-
 		downConn, err := websocket.Accept(w, req, nil)
 		if err != nil {
 			return
 		}
 		defer func() { _ = downConn.Close(websocket.StatusNormalClosure, "") }()
 
-		upConn, upResp, err := websocket.Dial(req.Context(), upstream, &websocket.DialOptions{
-			HTTPClient: p.http,
-		})
+		upConn, upResp, err := p.transport.Dial(req.Context(), target, agentPath)
 		if upResp != nil && upResp.Body != nil {
 			_ = upResp.Body.Close()
 		}
@@ -251,7 +219,7 @@ func (p *proxy) httpProxy(agentPath string) http.HandlerFunc {
 // few routes that legitimately carry more (mod uploads).
 func (p *proxy) httpProxyLimit(agentPath string, maxBody int64) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
-		if p.tls == nil {
+		if p.transport == nil {
 			http.Error(w, "agent mTLS not configured", http.StatusServiceUnavailable)
 			return
 		}
@@ -261,31 +229,10 @@ func (p *proxy) httpProxyLimit(agentPath string, maxBody int64) http.HandlerFunc
 			httperr.Write(w, req, err)
 			return
 		}
-		// Validate namespace and pod name are valid DNS-1123 labels, and construct
-		// the agent host. The returned host is guaranteed safe for URL construction.
-		// CodeQL analysis recognizes this pattern: validation and construction are
-		// unified in validateAndBuildAgentHost, and only its return value is used
-		// in the URL, making the data flow legible to taint analysis.
-		host, err := p.validateAndBuildAgentHost(name, ns)
-		if err != nil {
+		target := agentTarget{name: name, namespace: ns}
+		// Validate before opening an upstream or upgrading the browser connection.
+		if err := target.validate(); err != nil {
 			httperr.WriteCode(w, req, http.StatusBadRequest, err)
-			return
-		}
-		// Construct URL using url.URL with validated host to prevent injection.
-		u := &url.URL{
-			Scheme:   "https",
-			Host:     host,
-			Path:     agentPath,
-			RawQuery: req.URL.RawQuery,
-		}
-		upstream := u.String()
-
-		upReq, err := http.NewRequestWithContext(
-			req.Context(), req.Method, upstream,
-			http.MaxBytesReader(w, req.Body, maxBody),
-		)
-		if err != nil {
-			httperr.Write(w, req, err)
 			return
 		}
 		// Forward only headers the agent actually consumes. Never proxy
@@ -293,8 +240,11 @@ func (p *proxy) httpProxyLimit(agentPath string, maxBody int64) http.HandlerFunc
 		// session material and the agent doesn't need them (mTLS is what
 		// it authenticates on). Leaking them to agent logs or a
 		// compromised sidecar would hand over live session tokens.
-		copyProxyHeaders(upReq.Header, req.Header)
-		resp, err := p.http.Do(upReq)
+		resp, err := p.transport.Do(req.Context(), agentRequest{
+			target: target, method: req.Method, path: agentPath,
+			rawQuery: req.URL.RawQuery, header: req.Header,
+			body: http.MaxBytesReader(w, req.Body, maxBody),
+		})
 		if err != nil {
 			writeUpstreamErr(w, req, err)
 			return
