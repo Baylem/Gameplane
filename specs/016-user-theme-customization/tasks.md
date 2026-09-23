@@ -96,12 +96,13 @@
 
 **Goal**: Users can pick a primary accent color and background surface tone without writing code, with automatic accessible contrast, live preview, and one-click revert to a preset
 
-**Independent Test**: Choose a custom accent + surface in the Custom colors card, confirm the palette renders across navigation/buttons/panels, toggle light/dark and confirm legibility, then revert to a preset (spec.md US3)
+**Independent Test**: Choose a custom accent + surface in the Custom colors card, confirm the palette renders across navigation/buttons/panels, choose a light and then a dark surface tone and confirm the page relights itself and stays legible (D4 — Appearance mode is disabled while Custom colors is active), then revert to a preset (spec.md US3)
 
 ### Tests for User Story 3
 
 - [X] T027 [P] [US3] Write derivation unit tests in web/src/lib/theme-derivation.test.ts per research.md R-03: WCAG AA (>= 4.5:1) accent-foreground selection, surface layer offsets, border calculation, muted-text contrast, and extreme pairs (accent identical to surface triggers the contrast guard)
-- [X] T028 [US3] Append the custom-colors flow to web/e2e/specs/live/theme-customization.spec.ts per quickstart.md §5.2.3: pick Emerald accent (#10B981) + surface, verify controls adopt it live (SC-004 within 3 clicks), switch light/dark and verify contrast recalculation, reset restores the preset (depends on T023 — same file)
+- [X] T028 [US3] Append the custom-colors flow to web/e2e/specs/live/theme-customization.spec.ts per quickstart.md §5.2.3: pick Emerald accent (#10B981) + surface, verify controls adopt it live (SC-004 within 3 clicks), switch light/dark and verify contrast recalculation, reset restores the preset (depends on T023 — same file) — WITHDRAWN 2026-09-23 (D4): "switch light/dark" step is obsolete — Appearance mode is disabled while Custom colors is active; see T028a.
+- [ ] T028a [US3] (D4, 2026-09-23) Rewrite the "custom colors ... light/dark" scenario in web/e2e/specs/live/theme-customization.spec.ts per spec.md D4: assert the Appearance mode control is disabled with the "Set by your surface color" note while Custom colors is active, and swap the light/dark-toggle assertions for a dark-surface-then-light-surface tone swap, checking data-theme and --accent-foreground after each (needs human sign-off before editing this test file, per CLAUDE.md Rule 1).
 
 ### Implementation for User Story 3
 

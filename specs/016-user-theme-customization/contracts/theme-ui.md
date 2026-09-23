@@ -30,6 +30,7 @@ The user avatar dropdown in `TopBar.tsx` gains a dedicated item:
 The `Sidebar.tsx` footer appearance row is enhanced:
 - Retains the quick light/dark/system mode toggle (`AppearanceToggle`).
 - Adds a small settings icon button (`Palette` or `Sliders`) with `aria-label="Customize theme"` that also navigates to `/settings/theme`.
+- (D4, revised 2026-09-23) Disabled with a `title`/`aria-describedby` note reading *"Set by your surface color"* while a custom-colors theme is active (`themeType: "custom_colors"` with `customColors` set) — light/dark then follows the surface color, not this toggle.
 
 ### 1.3 Login Page Safe-Mode Link
 
@@ -88,7 +89,7 @@ Composed entirely from HeroUI primitives (`Button`, `RadioGroup`, `Radio`, `Inpu
   - **Modern Pink** (`presetId: "pink"`): Shows pink accent swatch (`#FF4FA3`) and dark preview swatch (`#1C1A20`).
   - **Legacy Orange** (`presetId: "legacy"`): Shows orange accent swatch (`#F97316`) and classic dark preview swatch (`#171717`).
   - **Custom colors** (`themeType: "custom_colors"`): Activates the user's stored custom colors (palette/spectrum swatch). Selecting it sets `themeType` to `custom_colors`; selecting either preset sets `themeType` back to `preset`.
-- The **Appearance mode** selector (segmented control for Light / Dark / System) is its own card directly below Preset theme.
+- The **Appearance mode** selector (segmented control for Light / Dark / System) is its own card directly below Preset theme. (D4, revised 2026-09-23) While the **Custom colors** base is active, this control is disabled and shows the note *"Set by your surface color"* — light/dark then follows the surface color's brightness (see `contracts/theme-tokens-v2.md` §4a), not this selector; the stored `appearanceMode` is unchanged and reapplies once a preset is reselected.
 - Selecting a preset never discards stored custom colors or custom CSS (FR-012); a note says so: *"Your custom colors and CSS are kept and can be re-applied later."*
 
 ### 3.2 Section 2: Custom Colors (`custom_colors`)

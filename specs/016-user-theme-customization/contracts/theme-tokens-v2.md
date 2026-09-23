@@ -42,6 +42,7 @@ Theme selection is represented on the root `<html>` element using standard attri
 
 1. **`class` and `data-theme`**:
    - Holds `"dark"` or `"light"`, resolving system preference when appearance is `"system"`.
+   - (D4, revised 2026-09-23) While `data-theme-type="custom_colors"` and custom colors are set, this resolves from the custom surface color's brightness instead of `appearanceMode` — see §4a.
 2. **`data-theme-preset`**:
    - Holds `"pink"` (default) or `"legacy"`.
 3. **`data-theme-type`**:
@@ -75,6 +76,17 @@ When `data-theme-type="custom_colors"`, dynamic tokens are derived from user-sel
 ```
 
 The selector is scoped to the custom_colors root and carries specificity (0,2,1), so it outranks the preset token blocks (e.g. `.dark[data-theme-preset="legacy"]`, (0,2,0)) regardless of stylesheet order (revised 2026-09-23).
+
+---
+
+## 4a. Mode Resolution for Custom Colors (D4, 2026-09-23)
+
+While `data-theme-type="custom_colors"` and custom colors are set, `class`/`data-theme` is derived from the surface color's own relative luminance instead of `appearanceMode`:
+- `surfaceAppearance(surface)` (`web/src/lib/theme-derivation.ts`) returns `"light"` when `relativeLuminance(surface) > 0.179`, else `"dark"`.
+- `useThemePreferences.ts` (`applyThemePreferences` / `resolveAppearanceMode`) applies this after every draft change, including live preview on `/settings/theme`.
+- `index.html`'s boot script reads the pre-computed value from `localStorage["gameplane-theme-custom-mode"]` (written by `writeThemePreferences` alongside `gameplane-theme-vars-css`), validated to be exactly `"light"` or `"dark"` before use, falling back to `"dark"` otherwise.
+- `appearanceMode` itself is never mutated by this — it stays stored and reapplies unchanged the moment `themeType` returns to `"preset"`.
+- Never applies on `/login` or `/share/:token` (FR-011) — those routes force the Pink preset and never read the custom-colors path at all.
 
 ---
 
