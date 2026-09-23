@@ -63,10 +63,21 @@ func TestDirectAgentTransportRejectsInvalidTargets(t *testing.T) {
 		{name: "alpha", namespace: "games.attacker.example"},
 		{name: "", namespace: "games"},
 	} {
-		if _, err := transport.Do(t.Context(), agentRequest{target: target, method: http.MethodGet, path: "/mods"}); err == nil {
+		resp, err := transport.Do(t.Context(), agentRequest{target: target, method: http.MethodGet, path: "/mods"})
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
+		if err == nil {
 			t.Errorf("HTTP accepted invalid target %+v", target)
 		}
-		if _, _, err := transport.Dial(t.Context(), target, "/console"); err == nil {
+		conn, resp, err := transport.Dial(t.Context(), target, "/console")
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
+		if conn != nil {
+			_ = conn.CloseNow()
+		}
+		if err == nil {
 			t.Errorf("WebSocket accepted invalid target %+v", target)
 		}
 	}
