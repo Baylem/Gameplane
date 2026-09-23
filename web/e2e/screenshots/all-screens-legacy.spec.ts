@@ -8,7 +8,8 @@ import { capture } from "./capture";
 // asserted functionally, not pixel-compared: the same interactive elements
 // must be present, and the computed legacy token values (orange accent
 // #F97316 / dark ground #0F0F0F) must actually reach the CSS cascade on
-// every screen. Screenshots are captured alongside the pink baseline.
+// every screen. Screenshots are captured to web/e2e/screenshots/legacy/ and
+// excluded from the design-vs-browser visual diff comparison.
 //
 // The preset is seeded through the boot contract (no settings UI exists
 // yet): an init script writes the gameplane-theme-prefs localStorage cache
@@ -112,7 +113,7 @@ test.describe("Legacy preset parity: core workflow (Desktop — 1440x900) @scree
     expect(await rootVar(page, "--foreground")).toBe("oklch(96.5% 0 0)");
 
     await page.waitForTimeout(200);
-    await capture(page, "legacy-dashboard");
+    await capture(page, "legacy/dashboard");
   });
 
   test("legacy-servers: Server management list renders with legacy tokens", async ({ page }) => {
@@ -125,7 +126,7 @@ test.describe("Legacy preset parity: core workflow (Desktop — 1440x900) @scree
     await expectLegacyThemeApplied(page);
 
     await page.waitForTimeout(200);
-    await capture(page, "legacy-servers");
+    await capture(page, "legacy/servers");
   });
 
   test("legacy-server-detail: Server detail (Overview) renders with legacy tokens", async ({
@@ -140,7 +141,7 @@ test.describe("Legacy preset parity: core workflow (Desktop — 1440x900) @scree
     await expectLegacyThemeApplied(page);
 
     await page.waitForTimeout(200);
-    await capture(page, "legacy-server-detail");
+    await capture(page, "legacy/server-detail");
   });
 
   test("legacy-logs: Log viewing renders with legacy tokens", async ({ page }) => {
@@ -159,7 +160,7 @@ test.describe("Legacy preset parity: core workflow (Desktop — 1440x900) @scree
     await expectLegacyThemeApplied(page);
 
     await page.waitForTimeout(200);
-    await capture(page, "legacy-logs");
+    await capture(page, "legacy/logs");
   });
 
   test("legacy-mods: Module browsing (Mods tab) renders with legacy tokens", async ({ page }) => {
@@ -178,7 +179,7 @@ test.describe("Legacy preset parity: core workflow (Desktop — 1440x900) @scree
     await expectLegacyThemeApplied(page);
 
     await page.waitForTimeout(200);
-    await capture(page, "legacy-mods");
+    await capture(page, "legacy/mods");
   });
 
   test("legacy-modules: Modules catalog renders with legacy tokens", async ({ page }) => {
@@ -196,7 +197,7 @@ test.describe("Legacy preset parity: core workflow (Desktop — 1440x900) @scree
     await expectLegacyThemeApplied(page);
 
     await page.waitForTimeout(200);
-    await capture(page, "legacy-modules");
+    await capture(page, "legacy/modules");
   });
 
   test("legacy-settings: Server settings render with legacy tokens", async ({ page }) => {
@@ -211,6 +212,6 @@ test.describe("Legacy preset parity: core workflow (Desktop — 1440x900) @scree
     await expectLegacyThemeApplied(page);
 
     await page.waitForTimeout(200);
-    await capture(page, "legacy-settings");
+    await capture(page, "legacy/settings");
   });
 });
