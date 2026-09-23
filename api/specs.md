@@ -60,7 +60,7 @@ api/
 - **kube:** Client (K8s API wrapper), Registry (per-cluster clients from Cluster CRDs), watch (cluster-config sync)
 - **audit:** Auditor (insert to DB + distribute to sinks), webhook sink (POST JSON to URL), S3 sink (object storage), hash-chain (detect tampering)
 - **notify:** Notifier (watch GameServer/Backup/Restore status, format + deliver to sinks), sinks (Discord, Slack, SMTP, webhook)
-- **ws:** Mount (WebSocket router), agent-client (mTLS to agent), actions (RCON/PTY execution), attach (SPDY proxy), podlogs (live pod logs)
+- **ws:** Mount (WebSocket router), agent-client (JSON agent reads), transport (shared HTTP/WebSocket agent connection), actions (RCON/PTY execution), attach (SPDY proxy), podlogs (live pod logs)
 - **registry:** provider types (each implements Search, Details, Manifest, Download), Set (versioned provider pool with key fallback)
 - **scope:** ResolveNamespace (extract from path or default), ResolveCluster (validate `?cluster=` against registry)
 - **httperr:** classify error type to safe HTTP status + message; preserve full error server-side
@@ -159,6 +159,22 @@ All cluster-dispatch routes accept `?cluster={name}` (validates against register
 - **`/ws/servers/{name}/logs/pod` (GET upgrade)** — pod stdout stream via Kubernetes watch; read-only
 - All authenticate via session + mTLS to agent (for console routes)
 - Multiplexed per `?cluster=` + namespace
+
+### Agent transport boundary
+
+The browser-facing agent proxy and internal `AgentClient` use the same transport
+interface for HTTP operations and WebSocket connections. Handlers supply a server
+name and namespace plus a registered agent path; they never supply a destination
+URL. The direct transport validates the target, constructs its cluster-local DNS
+address, uses the configured agent mTLS credentials, and refuses redirects. HTTP
+headers retain the existing allowlist, so browser cookies, authorization and CSRF
+material do not reach agents. Proxy body limits and JSON response limits remain at
+the caller boundary.
+
+This extraction preserves the local-only guards on agent operations. It does not
+register remote transports or enable remote console, files, players, mods, module
+actions, or internal mod-update reads. Those require a cluster-aware target resolver
+and an authenticated remote gateway; a missing remote route must fail closed.
 
 ### Network capture endpoints
 
