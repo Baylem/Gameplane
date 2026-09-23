@@ -1,4 +1,4 @@
-// Theme & Appearance settings page (specs/016-user-theme-customization,
+// Theme & Appearance settings page (specs/done_016-user-theme-customization,
 // contracts/theme-ui.md; design-export lWvcv). One scrollable page of
 // stacked cards inside the standard app shell: Preset theme, Appearance
 // mode, Custom colors, Custom CSS overlay, Export / Import. Edits apply to

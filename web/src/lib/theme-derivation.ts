@@ -1,4 +1,4 @@
-// Custom color derivation (specs/016-user-theme-customization research.md
+// Custom color derivation (specs/done_016-user-theme-customization research.md
 // R-03): from a user-chosen accent + surface pair, compute the full set of
 // semantic theme tokens. Pure module — no DOM access; the caller injects
 // the serialized tokens into <style id="gameplane-custom-theme-vars">.

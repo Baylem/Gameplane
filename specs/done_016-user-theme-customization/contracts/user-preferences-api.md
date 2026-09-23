@@ -1,6 +1,6 @@
 # Contract: User Preferences API
 
-**Feature**: `016-user-theme-customization`  
+**Feature**: `done_016-user-theme-customization`  
 **Binding Modules**: `api/internal/handlers/users.go`, `api/internal/db/`, `web/src/lib/endpoints.ts`  
 **Status**: Binding (revised 2026-09-21 after clarification session 2026-09-21)  
 

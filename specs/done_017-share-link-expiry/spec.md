@@ -120,7 +120,7 @@ An owner must be able to revoke any link — expiring, custom-dated, or one with
 
 ## Assumptions
 
-- **Feature number.** `016-user-theme-customization` is already on master, so this feature is `017`. Branch `017-share-link-expiry`, worktree `/home/valgul/project/Gameplane-017` (maintainer decision).
+- **Feature number.** `done_016-user-theme-customization` is already on master, so this feature is `017`. Branch `017-share-link-expiry`, worktree `/home/valgul/project/Gameplane-017` (maintainer decision).
 - **Design first.** The create dialog `atqRh` (its "Maximum 90 days" help text and the expiry Select) and the Share links screen `xCJlu` (Expires column showing "Never") are changed in `design.pen` through the Pencil MCP and exported to `design-export/` before any React change (CLAUDE.md rule 1). The original UI contract is `specs/014-heroui-web-rebuild/contracts/share-link-ui.md`.
 - **Tests that enforce today's cap.** `api/internal/db/shares_test.go:120` (90+1 days rejected) and `:136` (exactly 90 days accepted) reference `MaxShareLinkExpiryDays`. Replacing them needs maintainer sign-off (CLAUDE.md rule 1); they are replaced by tests of the new behaviour, not deleted. The handler's silent clamp (`api/internal/handlers/shares.go:107-111`) has no dedicated handler test today.
 - **E2E tier.** Browser E2E for share links is the Playwright live spec `web/e2e/specs/live/share-links.spec.ts` (it sends `expiresIn: "24h"` at line 77), per feature 014's OD-3 ruling; no Go `test/e2e/` bucket is added.

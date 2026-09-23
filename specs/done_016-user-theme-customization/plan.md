@@ -2,7 +2,7 @@
 
 **Branch**: `016-user-theme-customization` | **Date**: 2026-09-19 (revised 2026-09-21 after clarification session 2026-09-21) | **Spec**: ./spec.md
 
-**Input**: Feature specification from `specs/016-user-theme-customization/spec.md`
+**Input**: Feature specification from `specs/done_016-user-theme-customization/spec.md`
 
 ## Summary
 
@@ -77,7 +77,7 @@ Key architecture points:
 ### Documentation (this feature)
 
 ```text
-specs/016-user-theme-customization/
+specs/done_016-user-theme-customization/
 ├── spec.md                  # Feature specification with clarification resolutions
 ├── plan.md                  # This implementation plan
 ├── research.md              # Phase 0: Technical decisions (R-01 to R-07)

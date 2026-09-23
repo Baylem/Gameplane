@@ -2114,7 +2114,7 @@ and `archetypes.go`.
 
 ## Incremental export 2026-09-22 — User theme customization (Feature 016)
 
-Feature 016 (user theme customization, `specs/016-user-theme-customization/contracts/theme-ui.md`) design wave, final form: a single stacked settings page plus a warnings variant.
+Feature 016 (user theme customization, `specs/done_016-user-theme-customization/contracts/theme-ui.md`) design wave, final form: a single stacked settings page plus a warnings variant.
 
 **History (four passes):**
 

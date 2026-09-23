@@ -176,7 +176,7 @@ describe("theme tokens", () => {
     });
 
     describe("dark mode", () => {
-      // Contract values from specs/016-user-theme-customization/research.md R-02
+      // Contract values from specs/done_016-user-theme-customization/research.md R-02
       const expected: Record<string, string> = {
         "--accent": "oklch(69.11% 0.1944 44.01)",
         "--accent-foreground": "oklch(100% 0 0)",
@@ -211,7 +211,7 @@ describe("theme tokens", () => {
     });
 
     describe("light mode", () => {
-      // Contract values from specs/016-user-theme-customization/research.md R-02
+      // Contract values from specs/done_016-user-theme-customization/research.md R-02
       const expected: Record<string, string> = {
         "--accent": "oklch(62.0% 0.20 40.0)",
         "--accent-foreground": "oklch(100% 0 0)",

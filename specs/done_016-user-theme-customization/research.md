@@ -1,6 +1,6 @@
 # Research: User Theme Customization
 
-**Feature**: `016-user-theme-customization`  
+**Feature**: `done_016-user-theme-customization`  
 **Date**: 2026-09-19 (revised 2026-09-21 after clarification session 2026-09-21)  
 **Status**: Completed  
 
