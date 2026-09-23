@@ -820,10 +820,10 @@ test.describe("live: theme customization", () => {
     expect(prefs.customCss).not.toContain("@import");
     expect(await page.locator("#gameplane-custom-css").textContent()).toContain("lime");
 
-    // Restore the probe rule for the scenarios that follow.
+    // Restore the probe rule for the scenarios that follow (matches the
+    // stored value, so no save is needed — Save is disabled while clean).
     await cssEditor(page).fill(OVERLAY_RULE);
     await expect(page.getByText(EDITOR_IMPORT_REJECTION)).toHaveCount(0);
-    await saveThemeSettings(page);
     await expect
       .poll(async () => (await getPrefs(request)).customCss, { timeout: 15_000 })
       .toContain("lime");
