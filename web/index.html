@@ -12,6 +12,7 @@
           var LEGACY_KEY = "gameplane-theme";
           var SAFE_MODE_KEY = "gameplane-safe-mode";
           var VARS_KEY = "gameplane-theme-vars-css";
+          var MODE_KEY = "gameplane-theme-custom-mode"; // must equal CUSTOM_MODE_STORAGE_KEY in useThemePreferences.ts
           var root = document.documentElement;
           var path = window.location.pathname;
           // Boot-time unauthenticated guard (FR-011): cached prefs are never
@@ -34,9 +35,25 @@
             ? (prefs.appearanceMode || "system")
             : (window.localStorage.getItem(LEGACY_KEY) || "system");
 
-          var resolved = mode === "system"
-            ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-            : mode;
+          // D4 (2026-09-23): while a custom-colors theme is active, light/dark
+          // follows the cached surface brightness (CUSTOM_MODE_STORAGE_KEY,
+          // written by writeThemePreferences/surfaceAppearance) instead of
+          // appearanceMode — never applies when unauthenticated (guard above
+          // already forces prefs=null-equivalent mode resolution there).
+          var customActive = !!(prefs && !unauthenticated && prefs.themeType === "custom_colors" && prefs.customColors);
+
+          var resolved;
+          if (customActive) {
+            var cachedMode = window.localStorage.getItem(MODE_KEY);
+            resolved = (cachedMode === "light" || cachedMode === "dark") ? cachedMode : "dark";
+          } else {
+            resolved = mode;
+            if (mode === "system") {
+              resolved = typeof window.matchMedia === "function"
+                ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+                : "dark";
+            }
+          }
 
           root.classList.remove("dark", "light");
           root.classList.add(resolved);

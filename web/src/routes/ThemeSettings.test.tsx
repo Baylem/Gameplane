@@ -130,6 +130,43 @@ describe("ThemeSettingsPage", () => {
     expect(screen.getByRole("button", { name: "Emerald" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("disables Appearance mode with a note while Custom colors is active, and re-enables it on a preset (D4)", async () => {
+    seedPrefs({ customColors: { accent: "#10B981", surface: "#1E293B" } });
+    renderWithQuery(<ThemeSettingsPage />);
+    await screen.findByRole("heading", { name: "Theme & Appearance" });
+
+    const modeGroup = screen.getByRole("group", { name: "Appearance mode" });
+    expect(within(modeGroup).getByRole("button", { name: "Light" })).toBeEnabled();
+    expect(screen.queryByText("Set by your surface color")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Custom colors/ }));
+    await waitFor(() => {
+      expect(within(modeGroup).getByRole("button", { name: "Light" })).toBeDisabled();
+    });
+    expect(within(modeGroup).getByRole("button", { name: "Dark" })).toBeDisabled();
+    expect(within(modeGroup).getByRole("button", { name: "System" })).toBeDisabled();
+    expect(screen.getByText("Set by your surface color")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Modern Pink/i }));
+    await waitFor(() => {
+      expect(within(modeGroup).getByRole("button", { name: "Light" })).toBeEnabled();
+    });
+    expect(screen.queryByText("Set by your surface color")).not.toBeInTheDocument();
+  });
+
+  it("live preview follows the surface tone's brightness while Custom colors is active (D4)", async () => {
+    seedPrefs({
+      themeType: "custom_colors",
+      customColors: { accent: "#10B981", surface: "#1E293B" }, // Dark Slate
+    });
+    renderWithQuery(<ThemeSettingsPage />);
+    await screen.findByRole("heading", { name: "Theme & Appearance" });
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+
+    await userEvent.click(screen.getByText("Crisp Light", { exact: true }));
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("light"));
+  });
+
   it("entering valid hex in accent hex input updates the color picker", async () => {
     seedPrefs({ themeType: "custom_colors", customColors: { accent: "#3B82F6", surface: "#1E293B" } });
     renderWithQuery(<ThemeSettingsPage />);

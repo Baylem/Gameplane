@@ -336,6 +336,66 @@ describe("theme boot script", () => {
     });
   });
 
+  describe("D4: custom-colors mode resolution (spec.md D4, contracts/theme-tokens-v2.md §4a)", () => {
+    function setCustomPrefs(window: Window, surface: string) {
+      window.localStorage.setItem(
+        "gameplane-theme-prefs",
+        JSON.stringify({
+          themeType: "custom_colors",
+          presetId: "pink",
+          appearanceMode: "dark", // deliberately mismatched — must be ignored
+          customColors: { accent: "#3B82F6", surface },
+          customCssEnabled: false,
+          customCss: null,
+        }),
+      );
+    }
+
+    function makeDom(url = "http://localhost") {
+      return new JSDOM(
+        `<!doctype html>
+         <html lang="en" class="dark" data-theme="dark">
+         <head></head>
+         <body></body>
+         </html>`,
+        { url, runScripts: "dangerously" },
+      );
+    }
+
+    it("uses the cached gameplane-theme-custom-mode over appearanceMode when custom colors are active", () => {
+      const dom = makeDom();
+      const { window } = dom;
+      setCustomPrefs(window, "#F8FAFC"); // Crisp Light — cached mode says light
+      window.localStorage.setItem("gameplane-theme-custom-mode", "light");
+      runBootScript(dom);
+
+      const root = window.document.documentElement;
+      expect(root.classList.contains("light")).toBe(true);
+      expect(root.dataset.theme).toBe("light");
+    });
+
+    it("falls back to dark when the custom-mode cache is missing or tampered", () => {
+      const dom = makeDom();
+      const { window } = dom;
+      setCustomPrefs(window, "#F8FAFC");
+      window.localStorage.setItem("gameplane-theme-custom-mode", "not-a-mode");
+      runBootScript(dom);
+
+      expect(window.document.documentElement.dataset.theme).toBe("dark");
+    });
+
+    it("never reads the custom-mode cache on /login even if themeType is custom_colors (FR-011)", () => {
+      const dom = makeDom("http://localhost/login");
+      const { window } = dom;
+      setCustomPrefs(window, "#F8FAFC");
+      window.localStorage.setItem("gameplane-theme-custom-mode", "light");
+      runBootScript(dom);
+
+      // FR-011: unauthenticated surfaces never apply cached prefs at all.
+      expect(window.document.documentElement.dataset.themeType).not.toBe("custom_colors");
+    });
+  });
+
   describe("custom CSS overlay injection (theme-tokens-v2.md §5)", () => {
     const customCss = ".gp-custom { color: red; }";
 

@@ -8,6 +8,7 @@ import {
   hexToHsl,
   mixHex,
   passesContrastGuard,
+  surfaceAppearance,
 } from "./theme-derivation";
 
 const DARK_SURFACE = "#121114"; // research.md R-03 default dark surface
@@ -167,5 +168,23 @@ describe("customThemeTokensToCss", () => {
     const tokens = deriveCustomThemeTokens("#10B981", DARK_SURFACE);
     const css = customThemeTokensToCss(tokens, ".preview-scope");
     expect(css.startsWith(".preview-scope {\n")).toBe(true);
+  });
+});
+
+describe("surfaceAppearance — D4 mode resolution", () => {
+  it("classifies the four SURFACE_TONES swatches correctly", () => {
+    expect(surfaceAppearance("#1E293B")).toBe("dark");  // Dark Slate
+    expect(surfaceAppearance("#0F172A")).toBe("dark");  // Midnight
+    expect(surfaceAppearance("#171717")).toBe("dark");  // Charcoal
+    expect(surfaceAppearance("#F8FAFC")).toBe("light"); // Crisp Light
+  });
+
+  it("classifies the #808080 edge case as light (just above the 0.179 luminance threshold)", () => {
+    expect(surfaceAppearance("#808080")).toBe("light");
+  });
+
+  it("classifies pure black and pure white at the extremes", () => {
+    expect(surfaceAppearance("#000000")).toBe("dark");
+    expect(surfaceAppearance("#ffffff")).toBe("light");
   });
 });

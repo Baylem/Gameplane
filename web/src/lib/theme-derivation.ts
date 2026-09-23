@@ -132,6 +132,18 @@ export function relativeLuminance(hex: string): number {
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
 }
 
+// D4 (2026-09-23): while a custom-colors theme is active, light/dark follows
+// the surface's own brightness instead of appearanceMode — custom tokens
+// only override CUSTOM_THEME_TOKEN_NAMES; everything else comes from the
+// preset's .light/.dark block, so a mismatched mode gives black-on-black or
+// light-on-light. Threshold is the standard WCAG luminance cut used to pick
+// legible text color (mirrors the well-known #808080 boundary case).
+export const SURFACE_APPEARANCE_LUMINANCE_THRESHOLD = 0.179;
+
+export function surfaceAppearance(surface: string): "light" | "dark" {
+  return relativeLuminance(surface) > SURFACE_APPEARANCE_LUMINANCE_THRESHOLD ? "light" : "dark";
+}
+
 // WCAG contrast ratio between two sRGB hex colors.
 export function contrastRatio(a: string, b: string): number {
   const la = relativeLuminance(a);

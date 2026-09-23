@@ -32,6 +32,8 @@ export interface SidebarProps {
   onThemeChange?: (mode: AppearanceMode) => void;
   /** Called when the footer "Customize theme" button is pressed (navigates to /settings/theme). */
   onCustomizeTheme?: () => void;
+  /** D4: true while a custom-colors theme is active — disables the footer AppearanceToggle. */
+  isCustomColorsActive?: boolean;
 }
 
 export function Sidebar({
@@ -46,6 +48,7 @@ export function Sidebar({
   theme = "system",
   onThemeChange,
   onCustomizeTheme,
+  isCustomColorsActive = false,
 }: SidebarProps) {
   const { pathname } = useLocation();
 
@@ -146,6 +149,7 @@ export function Sidebar({
               <AppearanceToggle
                 value={theme}
                 onChange={onThemeChange}
+                disabled={isCustomColorsActive}
               />
             )}
             {onCustomizeTheme && (

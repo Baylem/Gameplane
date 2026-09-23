@@ -489,6 +489,7 @@ export function ThemeSettingsPage() {
                 <div
                   role="group"
                   aria-label="Appearance mode"
+                  aria-describedby={colorsActive ? "appearance-mode-note" : undefined}
                   className="inline-flex self-start rounded-lg border border-border bg-surface/40 p-1"
                 >
                   {APPEARANCE_MODES.map(({ value, label }) => (
@@ -496,9 +497,11 @@ export function ThemeSettingsPage() {
                       key={value}
                       type="button"
                       aria-pressed={draft.appearanceMode === value}
+                      disabled={colorsActive}
                       onClick={() => update({ appearanceMode: value })}
                       className={cn(
                         "rounded-md px-4 py-1.5 text-sm transition-colors",
+                        "disabled:cursor-not-allowed disabled:opacity-50",
                         draft.appearanceMode === value
                           ? "bg-surface text-fg shadow-sm"
                           : "text-muted hover:text-fg",
@@ -508,6 +511,12 @@ export function ThemeSettingsPage() {
                     </button>
                   ))}
                 </div>
+                {colorsActive && (
+                  <p id="appearance-mode-note" className="flex items-center gap-2 text-xs text-muted">
+                    <Info className="h-3.5 w-3.5 shrink-0" />
+                    Set by your surface color
+                  </p>
+                )}
               </ThemeCard>
 
               {/* Custom colors (§3.2) */}

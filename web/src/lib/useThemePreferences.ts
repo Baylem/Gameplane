@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { APIError } from "@/lib/api";
 import { Users, type UserPreferencesUpdate } from "@/lib/endpoints";
-import { customThemeTokensToCss, deriveCustomThemeTokens } from "@/lib/theme-derivation";
+import { customThemeTokensToCss, deriveCustomThemeTokens, surfaceAppearance } from "@/lib/theme-derivation";
 import type {
   AppearanceMode,
   CustomColorConfig,
@@ -25,6 +25,10 @@ export const CUSTOM_THEME_VARS_ELEMENT_ID = "gameplane-custom-theme-vars";
 // Pre-serialized custom-color tokens for the index.html boot script, which
 // cannot run the derivation itself; kept in step with the prefs cache.
 export const THEME_VARS_CSS_STORAGE_KEY = "gameplane-theme-vars-css";
+// D4: the resolved light/dark mode for the active custom-colors surface,
+// cached so the index.html boot script never has to duplicate the
+// relative-luminance math in ES5 — one source of truth (surfaceAppearance).
+export const CUSTOM_MODE_STORAGE_KEY = "gameplane-theme-custom-mode";
 // Dispatched on window when a preferences update fails, so a toast layer can
 // listen without this plumbing owning any UI (the toast ships in a later
 // task of this feature).
@@ -142,15 +146,26 @@ export function writeThemePreferences(prefs: UserThemePreferences): void {
     if (prefs.themeType === "custom_colors" && prefs.customColors) {
       const tokens = deriveCustomThemeTokens(prefs.customColors.accent, prefs.customColors.surface);
       window.localStorage.setItem(THEME_VARS_CSS_STORAGE_KEY, customThemeTokensToCss(tokens));
+      window.localStorage.setItem(
+        CUSTOM_MODE_STORAGE_KEY,
+        surfaceAppearance(prefs.customColors.surface),
+      );
     } else {
       window.localStorage.removeItem(THEME_VARS_CSS_STORAGE_KEY);
+      window.localStorage.removeItem(CUSTOM_MODE_STORAGE_KEY);
     }
   } catch {
     // Storage blocked — preferences still apply for this session.
   }
 }
 
-function resolveAppearanceMode(mode: AppearanceMode): "dark" | "light" {
+function resolveAppearanceMode(prefs: UserThemePreferences | null): "dark" | "light" {
+  // D4: custom colors override appearanceMode entirely — the whole page's
+  // light/dark follows the surface's own brightness, not the stored mode.
+  if (prefs?.themeType === "custom_colors" && prefs.customColors) {
+    return surfaceAppearance(prefs.customColors.surface);
+  }
+  const mode = prefs?.appearanceMode ?? "system";
   if (mode !== "system") return mode;
   // Mirrors the boot script: an unavailable matchMedia keeps the markup's
   // dark default rather than flipping to light.
@@ -202,7 +217,7 @@ export function applyThemePreferences(
 ): void {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
-  const resolved = resolveAppearanceMode(prefs?.appearanceMode ?? "system");
+  const resolved = resolveAppearanceMode(prefs);
 
   root.classList.remove("dark", "light");
   root.classList.add(resolved);
@@ -333,15 +348,20 @@ export function useThemePreferences(
     applyThemePreferences(mePreferences);
   }, [mePreferences]);
 
-  // Re-resolve the base theme when the OS preference flips while in "system".
+  // Re-resolve the base theme when the OS preference flips while in
+  // "system". D4: skip subscribing entirely while a custom-colors theme is
+  // active — resolveAppearanceMode already ignores appearanceMode in that
+  // case, so this is a pure no-op guard against re-render churn, not a
+  // correctness fix (belt-and-suspenders with WP-lib 1e).
   useEffect(() => {
     if (preferences?.appearanceMode !== "system") return;
+    if (preferences?.themeType === "custom_colors" && preferences.customColors) return;
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = () => applyThemePreferences(readThemePreferences());
     mq.addEventListener("change", handleChange);
     return () => mq.removeEventListener("change", handleChange);
-  }, [preferences?.appearanceMode]);
+  }, [preferences?.appearanceMode, preferences?.themeType, preferences?.customColors]);
 
   const reportError = useCallback(
     (message: string) => {

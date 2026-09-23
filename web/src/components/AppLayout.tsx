@@ -56,11 +56,17 @@ function readStoredTheme(): AppearanceMode {
   return "system";
 }
 
-function useAppearance(me: User | undefined): [AppearanceMode, (mode: AppearanceMode) => void] {
+function useAppearance(
+  me: User | undefined,
+): [AppearanceMode, (mode: AppearanceMode) => void, boolean] {
   const { preferences, updatePreferences } = useThemePreferences(me);
   const [legacyTheme, setLegacyTheme] = useState<AppearanceMode>(readStoredTheme);
 
   const theme: AppearanceMode = preferences?.appearanceMode ?? legacyTheme;
+  // D4: the sidebar footer toggle is meaningless (and disabled) while a
+  // custom-colors theme is active — light/dark follows the surface color.
+  const isCustomColorsActive =
+    preferences?.themeType === "custom_colors" && !!preferences.customColors;
 
   const setTheme = (mode: AppearanceMode) => {
     setLegacyTheme(mode);
@@ -79,7 +85,7 @@ function useAppearance(me: User | undefined): [AppearanceMode, (mode: Appearance
     }
   };
 
-  return [theme, setTheme];
+  return [theme, setTheme, isCustomColorsActive];
 }
 
 function useClusterInfo() {
@@ -96,7 +102,7 @@ export function AppLayout() {
   const { data: cluster } = useClusterInfo();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [theme, setTheme] = useAppearance(me);
+  const [theme, setTheme, isCustomColorsActive] = useAppearance(me);
   // Below `lg`, the fixed sidebar becomes an off-canvas drawer toggled by
   // the TopBar's hamburger button. Desktop (`lg`+) keeps the always-on
   // sidebar and never mounts the drawer.
@@ -220,6 +226,7 @@ export function AppLayout() {
             theme={theme}
             onThemeChange={setTheme}
             onCustomizeTheme={openThemeSettings}
+            isCustomColorsActive={isCustomColorsActive}
           />
         }
         topBar={
@@ -253,6 +260,7 @@ export function AppLayout() {
         theme={theme}
         onThemeChange={setTheme}
         onCustomizeTheme={openThemeSettings}
+        isCustomColorsActive={isCustomColorsActive}
       />
     </>
   );

@@ -202,6 +202,21 @@ describe("Sidebar", () => {
       expect(onThemeChange).toHaveBeenCalledWith("dark");
     });
 
+    it("disables the footer appearance toggle when isCustomColorsActive is true", () => {
+      render(
+        <Sidebar
+          variant="fixed"
+          navItems={generalNav}
+          user={mockUser}
+          theme="dark"
+          onThemeChange={vi.fn()}
+          onLogout={vi.fn()}
+          isCustomColorsActive
+        />
+      );
+      expect(screen.getByLabelText(/Dark/i)).toBeDisabled();
+    });
+
     it("renders cluster name in header", () => {
       render(
         <Sidebar
