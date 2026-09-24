@@ -112,13 +112,16 @@ func TestMultiClusterStreams_SelectRemoteClientAndCredentials(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 			defer cancel()
 			conn, resp, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/ws/servers/alpha/"+route+"&cluster=remote", nil)
-			if resp != nil {
+			if resp != nil && resp.Body != nil {
 				_ = resp.Body.Close()
 			}
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer conn.CloseNow()
+			if resp == nil || resp.StatusCode != http.StatusSwitchingProtocols {
+				t.Fatalf("expected successful WebSocket upgrade, got response %+v", resp)
+			}
 			_, data, err := conn.Read(ctx)
 			if err != nil {
 				t.Fatal(err)
