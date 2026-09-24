@@ -40,6 +40,12 @@ import (
 // backing them caps out at 1 MiB including metadata, so stay under it.
 const maxUploadBundleBytes = 900 << 10
 
+// maxUploadExtractedBytes bounds the total bytes extraction may produce
+// across every member of one archive. It is counted as members are read,
+// repeated member names included. The kept bundle files must still fit
+// maxUploadBundleBytes; this budget only leaves room for ignored extras.
+const maxUploadExtractedBytes = 4 << 20
+
 // labelModuleUpload mirrors the operator's v1alpha1.LabelModuleUpload
 // (the api module doesn't depend on the operator module).
 const (
@@ -287,10 +293,14 @@ func parseUploadedBundle(body []byte) (map[string][]byte, *uploadedMetadata, err
 }
 
 // extractUploadArchive unpacks a tar.gz or zip body (detected by magic
-// bytes) with path-traversal rejection. Size is pre-capped by the
-// caller, so only the file count needs guarding here.
+// bytes) with path-traversal rejection. The caller caps the compressed
+// body. Here each member is capped at maxUploadBundleBytes, the archive
+// at 256 distinct paths, and the running total of extracted bytes at
+// maxUploadExtractedBytes, so extraction stops at the first member that
+// takes the archive past its budget.
 func extractUploadArchive(body []byte) (map[string][]byte, error) {
 	out := map[string][]byte{}
+	remaining := int64(maxUploadExtractedBytes)
 	add := func(name string, r io.Reader) error {
 		p := path.Clean(strings.ReplaceAll(name, `\`, "/"))
 		if p == "." || strings.HasSuffix(name, "/") {
@@ -302,13 +312,18 @@ func extractUploadArchive(body []byte) (map[string][]byte, error) {
 		if len(out) >= 256 {
 			return errors.New("archive has too many files")
 		}
-		data, err := io.ReadAll(io.LimitReader(r, maxUploadBundleBytes+1))
+		limit := min(int64(maxUploadBundleBytes), remaining)
+		data, err := io.ReadAll(io.LimitReader(r, limit+1))
 		if err != nil {
 			return err
 		}
 		if len(data) > maxUploadBundleBytes {
 			return fmt.Errorf("archive member %q exceeds the %d KiB limit", name, maxUploadBundleBytes>>10)
 		}
+		if int64(len(data)) > remaining {
+			return fmt.Errorf("archive expands past the %d KiB total limit", maxUploadExtractedBytes>>10)
+		}
+		remaining -= int64(len(data))
 		out[p] = data
 		return nil
 	}
