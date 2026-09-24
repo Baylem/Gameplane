@@ -179,8 +179,8 @@ func TestGatewayForwardsOnlyBoundTargetAndSafeHeaders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := request(t, cert, http.MethodPost, path+"?path=%2Fconfig.txt")
-	req.Body = io.NopCloser(strings.NewReader("setting=true"))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, path+"?path=%2Fconfig.txt", strings.NewReader("setting=true"))
+	req.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{cert}}
 	for _, header := range []string{"Cookie", "Authorization", "X-Gameplane-Csrf", "X-Forwarded-For", "Idempotency-Key"} {
 		req.Header.Set(header, "secret")
 	}
