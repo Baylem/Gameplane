@@ -24,6 +24,11 @@ var tunnelProviderKeys = map[string][]string{
 	"playit":    {"secretKey"},
 }
 
+// tunnelProviderOrder fixes the order in which providers are matched
+// against a Secret's keys, so reads never depend on map iteration order.
+// It must list every key of tunnelProviderKeys.
+var tunnelProviderOrder = []string{"frp", "tailscale", "playit"}
+
 // MountTunnelCredentials wires tunnel credential management endpoints.
 // Routes use the :tunnel-credentials verb so parseServerPath correctly
 // extracts the server name and verb, and RBAC checks servers:write.
@@ -132,11 +137,14 @@ func (h *tunnelCredsHandler) put(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		// Patch it instead to preserve extra fields.
-		patch := map[string]any{
-			"stringData": body.Values,
+		// Patch it instead to preserve extra fields. The same patch removes
+		// the keys of every other tunnel provider, so the Secret only ever
+		// holds the credential of the provider just set.
+		patchBytes, mErr := json.Marshal(tunnelCredentialPatch(body.Provider, body.Values))
+		if mErr != nil {
+			httperr.Write(w, req, mErr)
+			return
 		}
-		patchBytes, _ := json.Marshal(patch)
 		_, err = k.Typed.CoreV1().Secrets(ns).Patch(
 			req.Context(), secretName, types.MergePatchType, patchBytes, metav1.PatchOptions{},
 		)
@@ -221,14 +229,16 @@ func (h *tunnelCredsHandler) get(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Determine the provider and expected keys from the Secret's keys.
-	var expectedKeys []string
-	for _, keys := range tunnelProviderKeys {
-		if hasKeys(secret.Data, keys) {
-			expectedKeys = keys
-			break
-		}
+	// Determine the provider and expected keys from the Secret's keys. The
+	// provider named in the GameServer spec wins when its keys are present;
+	// otherwise providers are matched in tunnelProviderOrder, so the answer
+	// never depends on map iteration order.
+	specProvider, _, err := getNestedString(gs.Object, "spec", "networking", "tunnel", "provider")
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
 	}
+	expectedKeys := tunnelKeysForSecret(secret.Data, specProvider)
 
 	writeJSON(w, getResp{
 		Configured: true,
@@ -357,6 +367,51 @@ func hasKeys(m map[string][]byte, keys []string) bool {
 		}
 	}
 	return true
+}
+
+// tunnelCredentialPatch builds the JSON merge patch that rotates an existing
+// tunnel credential Secret to provider's values. Every key that belongs to a
+// different provider is set to null, which a merge patch treats as a delete,
+// in both data and stringData. Keys that no provider uses (for example
+// fields an admin added with kubectl) are left untouched.
+func tunnelCredentialPatch(provider string, values map[string]string) map[string]any {
+	stringData := make(map[string]any, len(values))
+	for key, val := range values {
+		stringData[key] = val
+	}
+	data := map[string]any{}
+	for _, other := range tunnelProviderOrder {
+		if other == provider {
+			continue
+		}
+		for _, key := range tunnelProviderKeys[other] {
+			if _, keep := values[key]; keep {
+				continue
+			}
+			data[key] = nil
+			stringData[key] = nil
+		}
+	}
+	patch := map[string]any{"stringData": stringData}
+	if len(data) > 0 {
+		patch["data"] = data
+	}
+	return patch
+}
+
+// tunnelKeysForSecret returns the credential keys of the provider whose keys
+// are all present in data: preferred (the GameServer's spec provider) first,
+// then each provider in tunnelProviderOrder. It returns nil when none match.
+func tunnelKeysForSecret(data map[string][]byte, preferred string) []string {
+	if keys, ok := tunnelProviderKeys[preferred]; ok && hasKeys(data, keys) {
+		return keys
+	}
+	for _, p := range tunnelProviderOrder {
+		if keys := tunnelProviderKeys[p]; hasKeys(data, keys) {
+			return keys
+		}
+	}
+	return nil
 }
 
 // getNestedString retrieves a string value from a nested map using a path of keys.

@@ -107,6 +107,7 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/servers/{name}/console` — WebSocket: RCON/exec; cluster-dispatch
 - `/servers/{name}:start`, `:stop`, `:restart` — actions (operator-handled)
 - `/servers/{name}:collaborators`, `:transfer` — GameServer owner/collaborator management
+- `/servers/{name}:tunnel-credentials` — PUT/GET/DELETE: the server's tunnel credential Secret (`<server>-tunnel-auth`, owned by the GameServer). PUT stores exactly one provider's key (`frp`: `token`, `tailscale`: `authKey`, `playit`: `secretKey`) and removes any other provider's key, keeping keys no provider uses. GET reports the key names, never the values, and is deterministic: the GameServer's `spec.networking.tunnel.provider` wins, then the fixed order frp, tailscale, playit.
 - `/servers/{name}/files/*` — file browser, upload, download (proxied to agent); cluster-dispatch
 - `/servers/{name}:capture-enable`, `:capture-disable` — sidecar lifecycle actions (fully implemented; see "Network capture endpoints" below)
 - `/servers/{name}:capture-start` — POST: start a network packet capture (creates NetworkCapture CR, transitions to Pending)

@@ -741,3 +741,170 @@ func TestTunnelCreds_Delete_UnownedSecretForbidden(t *testing.T) {
 		t.Fatal("foreign secret was deleted! Must be preserved.")
 	}
 }
+
+// TestTunnelCreds_ProviderSwitchLeavesOnlyNewProviderKey checks that after
+// the provider changes the credential Secret holds exactly the new
+// provider's key, keeps keys that no provider uses, and reads back the
+// same keys every time.
+func TestTunnelCreds_ProviderSwitchLeavesOnlyNewProviderKey(t *testing.T) {
+	const ns, name, secretName = "gameplane-games", "test-server", "test-server-tunnel-auth"
+	gs := newGameServer(ns, name)
+	k := fakeKubeClient(gs)
+	router := newTunnelCredsRouter(k)
+	path := "/servers/" + name + ":tunnel-credentials"
+
+	status, respBody := doTunnelReq(t, router, "PUT", path, putReq{
+		Provider: "frp",
+		Values:   map[string]string{"token": "frp-token"},
+	})
+	if status != http.StatusNoContent {
+		t.Fatalf("frp PUT status = %d, want 204; body=%s", status, respBody)
+	}
+	syncSecretData(t, k, ns, secretName)
+
+	// A key set outside the API must survive the switch.
+	secret, err := k.Typed.CoreV1().Secrets(ns).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get secret: %v", err)
+	}
+	secret.Data["admin-note"] = []byte("keep-me")
+	if _, err := k.Typed.CoreV1().Secrets(ns).Update(context.Background(), secret, metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update secret: %v", err)
+	}
+
+	status, respBody = doTunnelReq(t, router, "PUT", path, putReq{
+		Provider: "tailscale",
+		Values:   map[string]string{"authKey": "ts-key"},
+	})
+	if status != http.StatusNoContent {
+		t.Fatalf("tailscale PUT status = %d, want 204; body=%s", status, respBody)
+	}
+	syncSecretData(t, k, ns, secretName)
+
+	secret, err = k.Typed.CoreV1().Secrets(ns).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get secret after switch: %v", err)
+	}
+	if _, ok := secret.Data["token"]; ok {
+		t.Fatalf("previous provider key still in data after the switch (%d data keys)", len(secret.Data))
+	}
+	if _, ok := secret.StringData["token"]; ok {
+		t.Fatal("previous provider key still in stringData after the switch")
+	}
+	if got := string(secret.Data["authKey"]); got != "ts-key" {
+		t.Fatalf("authKey = %q, want ts-key", got)
+	}
+	if got := string(secret.Data["admin-note"]); got != "keep-me" {
+		t.Fatalf("admin-note = %q, want keep-me (non-provider keys must be kept)", got)
+	}
+
+	for i := range 20 {
+		status, respBody := doTunnelReq(t, router, "GET", path, nil)
+		if status != http.StatusOK {
+			t.Fatalf("GET #%d status = %d, want 200; body=%s", i, status, respBody)
+		}
+		var resp getResp
+		if err := json.Unmarshal(respBody, &resp); err != nil {
+			t.Fatalf("GET #%d unmarshal: %v", i, err)
+		}
+		if !resp.Configured || len(resp.Keys) != 1 || resp.Keys[0] != "authKey" {
+			t.Fatalf("GET #%d = %+v, want configured with keys [authKey]", i, resp)
+		}
+	}
+}
+
+// TestTunnelCreds_GetReportsKeysDeterministically checks that GET reports the
+// GameServer's own provider when a Secret holds keys for several providers,
+// and falls back to a fixed provider order when the spec names none.
+func TestTunnelCreds_GetReportsKeysDeterministically(t *testing.T) {
+	cases := []struct {
+		name     string
+		provider string
+		want     string
+	}{
+		{"spec provider wins", "tailscale", "authKey"},
+		{"fixed order without a spec provider", "", "token"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tunnel := map[string]any{
+				"enabled": false,
+				"credentialsSecretRef": map[string]any{
+					"name": "test-server-tunnel-auth",
+				},
+			}
+			if tc.provider != "" {
+				tunnel["provider"] = tc.provider
+			}
+			gs := &unstructured.Unstructured{
+				Object: map[string]any{
+					"apiVersion": "gameplane.local/v1alpha1",
+					"kind":       "GameServer",
+					"metadata": map[string]any{
+						"name":      "test-server",
+						"namespace": "gameplane-games",
+						"uid":       "test-uid-12345",
+					},
+					"spec": map[string]any{
+						"template": "minecraft-java",
+						"networking": map[string]any{
+							"expose": "ClusterIP",
+							"tunnel": tunnel,
+						},
+					},
+				},
+			}
+			k := fakeKubeClient(gs)
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-server-tunnel-auth",
+					Namespace: "gameplane-games",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gameplane.local/v1alpha1",
+							Kind:       "GameServer",
+							Name:       "test-server",
+							UID:        "test-uid-12345",
+						},
+					},
+				},
+				Data: map[string][]byte{
+					"token":     []byte("a"),
+					"authKey":   []byte("b"),
+					"secretKey": []byte("c"),
+				},
+			}
+			if _, err := k.Typed.CoreV1().Secrets("gameplane-games").Create(context.Background(), secret, metav1.CreateOptions{}); err != nil {
+				t.Fatalf("create secret: %v", err)
+			}
+			router := newTunnelCredsRouter(k)
+
+			for i := range 20 {
+				status, respBody := doTunnelReq(t, router, "GET", "/servers/test-server:tunnel-credentials", nil)
+				if status != http.StatusOK {
+					t.Fatalf("GET #%d status = %d, want 200; body=%s", i, status, respBody)
+				}
+				var resp getResp
+				if err := json.Unmarshal(respBody, &resp); err != nil {
+					t.Fatalf("GET #%d unmarshal: %v", i, err)
+				}
+				if len(resp.Keys) != 1 || resp.Keys[0] != tc.want {
+					t.Fatalf("GET #%d keys = %v, want [%s]", i, resp.Keys, tc.want)
+				}
+			}
+		})
+	}
+}
+
+// TestTunnelProviderOrder_CoversEveryProvider checks that reads match every
+// provider that has credential keys.
+func TestTunnelProviderOrder_CoversEveryProvider(t *testing.T) {
+	if len(tunnelProviderOrder) != len(tunnelProviderKeys) {
+		t.Fatalf("tunnelProviderOrder has %d providers, tunnelProviderKeys has %d", len(tunnelProviderOrder), len(tunnelProviderKeys))
+	}
+	for _, p := range tunnelProviderOrder {
+		if _, ok := tunnelProviderKeys[p]; !ok {
+			t.Fatalf("tunnelProviderOrder lists %q, which has no credential keys", p)
+		}
+	}
+}
