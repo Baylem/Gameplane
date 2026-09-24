@@ -13,6 +13,7 @@ import (
 
 	"github.com/ValgulNecron/gameplane/api/internal/httperr"
 	"github.com/ValgulNecron/gameplane/api/internal/kube"
+	"github.com/ValgulNecron/gameplane/api/internal/rbac"
 	"github.com/ValgulNecron/gameplane/api/internal/scope"
 )
 
@@ -27,6 +28,10 @@ func streamClient(w http.ResponseWriter, req *http.Request, reg *kube.Registry) 
 	id, err := scope.ResolveCluster(req, reg)
 	if err != nil {
 		httperr.Write(w, req, err)
+		return nil, false
+	}
+	if bound, ok := rbac.BoundServerIdentity(req.Context()); ok && bound.Cluster != id {
+		http.NotFound(w, req)
 		return nil, false
 	}
 	k, ok := reg.Get(id)
@@ -55,6 +60,11 @@ func serverPodForUID(ctx context.Context, k *kube.Client, ns, name, expectedUID 
 	gs, err := k.GetServer(ctx, ns, name)
 	if err != nil {
 		return nil, fmt.Errorf("get stream server: %w", err)
+	}
+	if bound, ok := rbac.BoundServerIdentity(ctx); ok {
+		if err := rbac.ValidateServerIdentity(ctx, bound.Cluster, ns, name, string(gs.GetUID())); err != nil {
+			return nil, apierrors.NewNotFound(schema.GroupResource{Group: "gameplane.local", Resource: "gameservers"}, name)
+		}
 	}
 	if expectedUID != "" && string(gs.GetUID()) != expectedUID {
 		return nil, apierrors.NewNotFound(schema.GroupResource{Group: "gameplane.local", Resource: "gameservers"}, name)
