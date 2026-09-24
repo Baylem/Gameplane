@@ -437,7 +437,7 @@ Before registering a target cluster, ensure it has:
 
 - Kubernetes 1.28+
 - Gameplane operator and agent images accessible (same registry as the control-plane)
-- A valid kubeconfig with admin credentials to manage Gameplane CRDs on that cluster
+- A valid kubeconfig scoped to the intended Gameplane operations and namespaces
 
 ### Pod logs and PTY console permissions
 
@@ -458,8 +458,21 @@ permissions used by other dashboard operations. Attach is write-capable and
 requires Gameplane's `servers:console` permission; logs use `servers:read`. Bind
 Kubernetes permissions only in the intended game namespaces. The chart adds the
 StatefulSet read permission for the local API; existing custom remote credentials
-must be updated too. Agent-backed RCON, files, file logs, players, actions and
-mods remain local-cluster-only until remote agent transport is implemented.
+must be updated too.
+
+### Optional remote agent access
+
+Add a [private gateway in the target cluster](gateway-install.md) and
+[register its endpoint and credentials](multicluster-agent-gateway.md) to enable
+supported RCON, game-file logs, file/player operations, module actions, live
+status and agent-based mods. This requires the updated operator and UID-aware
+agents; old agents fail closed on the versioned protocol. The gateway has no
+separate user database, and the central API still needs direct access to the
+target Kubernetes API. Existing local installations retain direct agent access.
+
+Capture-file downloads and ID-list mod configuration remain gated remotely.
+The existing `Cluster` health status reports Kubernetes connectivity, not gateway
+readiness or complete interactive feature coverage.
 
 ### Path 1: kubectl apply
 
