@@ -34,7 +34,7 @@ func TestOwnershipGrantBindsExactServerIdentity(t *testing.T) {
 					}
 					w.WriteHeader(http.StatusNoContent)
 				}))
-				req := httptest.NewRequest(http.MethodPost, "/servers/same-name/files/write?cluster=remote", nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/servers/same-name/files/write?cluster=remote", nil)
 				req = req.WithContext(auth.WithUser(req.Context(), &auth.User{ID: 42}))
 				response := httptest.NewRecorder()
 				handler.ServeHTTP(response, req)
@@ -80,7 +80,7 @@ func TestNamespacePermissionDoesNotBecomeOwnershipBound(t *testing.T) {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))
-	req := httptest.NewRequest(http.MethodPost, "/servers/same-name/files/write?cluster=remote", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/servers/same-name/files/write?cluster=remote", nil)
 	req = req.WithContext(auth.WithUser(req.Context(), user))
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, req)
