@@ -237,3 +237,89 @@ func TestServeBadListenAddr(t *testing.T) {
 		t.Fatal("expected listen error")
 	}
 }
+
+// Only a single JSON object carrying all three required fields is accepted;
+// anything else gets 400 and is not counted.
+func TestIngestRequiresCompleteSingleReport(t *testing.T) {
+	srv := testServer(t, config{})
+	valid := `{"version":"1.0.0","servers":1,"templates":1}`
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"missing version", `{"servers":1,"templates":1}`},
+		{"missing servers", `{"version":"1.0.0","templates":1}`},
+		{"missing templates", `{"version":"1.0.0","servers":1}`},
+		{"empty object", `{}`},
+		{"null field", `{"version":"1.0.0","servers":null,"templates":1}`},
+		{"null body", `null`},
+		{"array body", `[` + valid + `]`},
+		{"number body", `42`},
+		{"empty body", ``},
+		{"trailing garbage", valid + `xyz`},
+		{"second object", valid + valid},
+		{"trailing value", valid + ` 1`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := post(t, srv, tc.body, nil)
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400", resp.StatusCode)
+			}
+		})
+	}
+	if m := metrics(t, srv); strings.Contains(m, "gameplane_telemetry_reports_total{") {
+		t.Fatalf("rejected reports were counted:\n%s", m)
+	}
+}
+
+// A complete report with zero counts, or followed only by whitespace, is
+// still accepted.
+func TestIngestAcceptsZeroCountsAndTrailingWhitespace(t *testing.T) {
+	srv := testServer(t, config{})
+	for _, body := range []string{
+		`{"version":"1.0.0","servers":0,"templates":0}`,
+		"{\"version\":\"1.0.0\",\"servers\":2,\"templates\":3}\n",
+		"  {\"version\":\"1.0.0\",\"servers\":2,\"templates\":3}  \r\n\t",
+	} {
+		resp := post(t, srv, body, nil)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusNoContent {
+			t.Fatalf("body %q: status = %d, want 204", body, resp.StatusCode)
+		}
+	}
+	if m := metrics(t, srv); !strings.Contains(m, `gameplane_telemetry_reports_total{version="1.0.0"} 3`) {
+		t.Fatalf("accepted reports not counted:\n%s", m)
+	}
+}
+
+// The 16 KiB limit applies to the whole body, including anything after the
+// report, and a rejected body is not counted.
+func TestIngestBodyLimitCoversWholeBody(t *testing.T) {
+	srv := testServer(t, config{})
+	valid := `{"version":"1.0.0","servers":1,"templates":1}`
+	for name, body := range map[string]string{
+		"padding after report":  valid + strings.Repeat(" ", maxBody),
+		"content after report":  valid + strings.Repeat("x", maxBody),
+		"exactly one byte over": valid + strings.Repeat(" ", maxBody-len(valid)+1),
+	} {
+		t.Run(name, func(t *testing.T) {
+			resp := post(t, srv, body, nil)
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusRequestEntityTooLarge {
+				t.Fatalf("status = %d, want 413", resp.StatusCode)
+			}
+		})
+	}
+	// A body exactly at the limit is still read and judged on its content.
+	atLimit := valid + strings.Repeat(" ", maxBody-len(valid))
+	resp := post(t, srv, atLimit, nil)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("body at the limit: status = %d, want 204", resp.StatusCode)
+	}
+	if m := metrics(t, srv); !strings.Contains(m, `gameplane_telemetry_reports_total{version="1.0.0"} 1`) {
+		t.Fatalf("expected only the at-limit report to be counted:\n%s", m)
+	}
+}

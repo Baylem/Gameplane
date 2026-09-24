@@ -12,6 +12,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/subtle"
 	"encoding/json"
@@ -69,6 +70,37 @@ type payload struct {
 	Templates int    `json:"templates"`
 }
 
+// wirePayload is what ingest decodes. Pointer fields tell an absent (or
+// null) field apart from a present zero, so every required field is checked.
+type wirePayload struct {
+	Version   *string `json:"version"`
+	Servers   *int    `json:"servers"`
+	Templates *int    `json:"templates"`
+}
+
+// errInvalidPayload is returned by decodePayload for any body that is not
+// exactly one JSON object carrying all three required fields.
+var errInvalidPayload = errors.New("invalid payload")
+
+// decodePayload parses a body that has already been read in full. It accepts
+// exactly one JSON object with version, servers and templates present and no
+// other fields; anything after that object other than whitespace is rejected.
+func decodePayload(body []byte) (payload, error) {
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.DisallowUnknownFields()
+	var w wirePayload
+	if err := dec.Decode(&w); err != nil {
+		return payload{}, fmt.Errorf("%w: %w", errInvalidPayload, err)
+	}
+	if w.Version == nil || w.Servers == nil || w.Templates == nil {
+		return payload{}, fmt.Errorf("%w: missing required field", errInvalidPayload)
+	}
+	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return payload{}, fmt.Errorf("%w: trailing content after the report", errInvalidPayload)
+	}
+	return payload{Version: *w.Version, Servers: *w.Servers, Templates: *w.Templates}, nil
+}
+
 type server struct {
 	cfg config
 	reg *prometheus.Registry
@@ -122,15 +154,20 @@ func (s *server) ingest(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	dec := json.NewDecoder(http.MaxBytesReader(w, req.Body, maxBody))
-	dec.DisallowUnknownFields()
-	var p payload
-	if err := dec.Decode(&p); err != nil {
+	// Read the whole body first so the size limit applies to all of it, not
+	// just to the part a JSON decoder happens to consume.
+	body, err := io.ReadAll(http.MaxBytesReader(w, req.Body, maxBody))
+	if err != nil {
 		var tooBig *http.MaxBytesError
 		if errors.As(err, &tooBig) {
 			http.Error(w, "body too large", http.StatusRequestEntityTooLarge)
 			return
 		}
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+	p, err := decodePayload(body)
+	if err != nil {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
