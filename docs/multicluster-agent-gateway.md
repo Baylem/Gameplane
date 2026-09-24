@@ -20,7 +20,7 @@ Create a Secret in the central API namespace (normally `gameplane-system`):
 apiVersion: v1
 kind: Secret
 metadata:
-  name: chicago-1-gateway-client
+  name: remote-1-gateway-client
   namespace: gameplane-system
   labels:
     gameplane.local/agent-gateway-credentials: "true"
@@ -40,14 +40,14 @@ Add the optional gateway reference to the existing `Cluster` resource:
 apiVersion: gameplane.local/v1alpha1
 kind: Cluster
 metadata:
-  name: chicago-1
+  name: remote-1
 spec:
   kubeconfigSecret:
-    name: chicago-1-kubeconfig
+    name: remote-1-kubeconfig
   agentGateway:
-    url: https://chicago-1-gateway.internal:8443
+    url: https://remote-1-gateway.internal:8443
     tlsSecretRef:
-      name: chicago-1-gateway-client
+      name: remote-1-gateway-client
 ```
 
 The registration name must match the gateway's configured cluster ID. The URL is
