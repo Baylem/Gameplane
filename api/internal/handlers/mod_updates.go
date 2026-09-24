@@ -14,6 +14,7 @@ import (
 
 	"github.com/ValgulNecron/gameplane/api/internal/httperr"
 	"github.com/ValgulNecron/gameplane/api/internal/kube"
+	"github.com/ValgulNecron/gameplane/api/internal/rbac"
 	"github.com/ValgulNecron/gameplane/api/internal/registry"
 	"github.com/ValgulNecron/gameplane/api/internal/scope"
 )
@@ -187,6 +188,10 @@ func (h *modUpdatesHandler) updates(w http.ResponseWriter, req *http.Request) {
 	gs, err := k.Dynamic.Resource(kube.GVRs["servers"]).Namespace(ns).Get(req.Context(), name, metav1.GetOptions{})
 	if err != nil {
 		httperr.Write(w, req, err)
+		return
+	}
+	if err := rbac.ValidateServerIdentity(req.Context(), cluster, ns, name, string(gs.GetUID())); err != nil {
+		http.NotFound(w, req)
 		return
 	}
 	tmplName, _, _ := unstructured.NestedString(gs.Object, "spec", "templateRef", "name")
