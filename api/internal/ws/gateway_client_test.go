@@ -19,8 +19,10 @@ import (
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 
+	"github.com/ValgulNecron/gameplane/api/internal/auth"
 	"github.com/ValgulNecron/gameplane/api/internal/gatewayprotocol"
 	"github.com/ValgulNecron/gameplane/api/internal/kube"
+	"github.com/ValgulNecron/gameplane/api/internal/rbac"
 	"github.com/ValgulNecron/gameplane/api/internal/scope"
 )
 
@@ -214,5 +216,22 @@ func TestGatewayStdinRejectsRecreatedServerWithValidOwnership(t *testing.T) {
 	}
 	if _, err := serverPodForUID(t.Context(), k, "gameplane-games", "alpha", "previous-server-uid"); err == nil {
 		t.Fatal("a valid replacement workload was accepted for the previously bound server")
+	}
+}
+
+func TestGatewayRejectsReplacementAfterOwnershipAuthorization(t *testing.T) {
+	resolver, home, _ := gatewayFixture(t, "https://gateway.test")
+	p := &proxy{k: home, gateway: resolver}
+	router := chi.NewRouter()
+	router.Use(rbac.Middleware(authorizationSnapshot{uid: "previous-server-uid"}))
+	router.Get("/servers/{name}/status", p.agentRoute(func(*proxy) http.HandlerFunc {
+		return func(http.ResponseWriter, *http.Request) { t.Error("replacement reached the agent operation") }
+	}))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/servers/alpha/status?cluster=remote", nil)
+	req = req.WithContext(auth.WithUser(req.Context(), &auth.User{ID: 42}))
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, req)
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("status = %d: %s", response.Code, response.Body)
 	}
 }

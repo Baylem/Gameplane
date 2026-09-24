@@ -14,6 +14,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/go-chi/chi/v5"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -21,6 +22,7 @@ import (
 	"github.com/ValgulNecron/gameplane/api/internal/gatewayprotocol"
 	"github.com/ValgulNecron/gameplane/api/internal/httperr"
 	"github.com/ValgulNecron/gameplane/api/internal/kube"
+	"github.com/ValgulNecron/gameplane/api/internal/rbac"
 	"github.com/ValgulNecron/gameplane/api/internal/scope"
 )
 
@@ -89,6 +91,9 @@ func (r *agentGatewayResolver) resolve(ctx context.Context, cluster string, targ
 	server, err := k.GetServer(ctx, target.namespace, target.name)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read gateway target: %w", err)
+	}
+	if err := rbac.ValidateServerIdentity(ctx, cluster, target.namespace, target.name, string(server.GetUID())); err != nil {
+		return nil, nil, apierrors.NewNotFound(kube.GVRs["servers"].GroupResource(), target.name)
 	}
 	if server.GetUID() == "" {
 		return nil, nil, errors.New("gateway target has no UID")
