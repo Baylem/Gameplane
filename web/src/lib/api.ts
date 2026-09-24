@@ -68,6 +68,7 @@ export interface Options {
 export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   const method = opts.method ?? "GET";
   const headers: Record<string, string> = {
+    Accept: "application/json",
     "Content-Type": "application/json",
     ...(opts.headers ?? {}),
   };
@@ -87,6 +88,9 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
     method,
     headers,
     credentials: "include",
+    // Older web deployments cached HTML at these same URLs without Vary.
+    // Bypass those entries; TanStack Query owns application data caching.
+    cache: "no-store",
     signal: opts.signal,
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
   });
