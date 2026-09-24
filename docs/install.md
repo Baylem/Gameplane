@@ -137,8 +137,9 @@ Top-level knobs (see `values.yaml` for the full list):
   - Role mapping (new, seeded at install time) (unreleased; ships in the next release):
     - `groupsClaim` — OIDC claim name containing group memberships (default `""`).
       Typically `"groups"` or `"roles"` depending on your IdP. Empty/omitted =
-      group-based role mapping disabled; new OIDC users default to `defaultRole`
-      (see below). Example: `--set api.oidc.groupsClaim=groups`
+      read the `"groups"` claim. This only chooses which claim is read; it does
+      not turn group-based role mapping on or off (`roleMappings` below does).
+      Example: `--set api.oidc.groupsClaim=roles`
     - `roleMappings.admin`, `roleMappings.operator`, `roleMappings.viewer` — arrays
       of IdP group names mapping to each dashboard role (default `[]`). Example:
       `roleMappings.admin: ["gameplane-admins", "ops-team"]` means users in either
@@ -151,10 +152,13 @@ Top-level knobs (see `values.yaml` for the full list):
     - `defaultRole` — Helm-only (no dashboard override in v1). Default role when a
       user's IdP groups don't match any `roleMappings` entry (default `""`).
       Accepted values: `""` (treat as `"viewer"`), `"viewer"`, `"operator"`,
-      `"admin"`, or `"deny"` (reject login). Meaningful only if `groupsClaim` and
-      `roleMappings` are configured. Example: `--set api.oidc.defaultRole=viewer`
-  **Backward compatibility**: Omitting `groupsClaim` and `roleMappings` disables
-  group-based mapping — existing OIDC setups continue unchanged
+      `"admin"`, or `"deny"` (reject login). Meaningful only when role mappings
+      are configured. Example: `--set api.oidc.defaultRole=viewer`
+  **Backward compatibility**: Group-based mapping is active whenever at least
+  one `roleMappings` list is non-empty or an admin has set a mapping override
+  in the dashboard, whatever `groupsClaim` says. With neither, mapping is off:
+  new OIDC users get `viewer`, existing users' roles are never re-evaluated,
+  and existing OIDC setups continue unchanged
 - `ingress.host` — dashboard hostname
 - `gamesNamespace` — namespace where GameServers are created (default `gameplane-games`)
 - `networkPolicies.enabled` — default-deny in games namespace (recommended on)

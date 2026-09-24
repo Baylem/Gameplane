@@ -253,6 +253,16 @@ audit-syslog-bridge) runs as:
 - `capabilities.drop: [ALL]`
 - `allowPrivilegeEscalation: false`
 
+The agent sidecar in each game pod gets the same fixed hardening. The game
+container itself does not: it runs as the template's
+`spec.security.runAsUser`/`runAsGroup` when the template sets them (see
+[module authoring](module-authoring.md#security-context)), and otherwise as
+the image's own default user, which may be root. The operator sets no
+`runAsNonRoot`, `allowPrivilegeEscalation`, `readOnlyRootFilesystem`,
+`seccompProfile` or capability drop on the game container, so it keeps the
+container runtime's defaults. This keeps arbitrary third-party game images
+working unchanged.
+
 Game pods are shaped per-template. For a hostile game module, enable
 Pod Security Standards `restricted` on the games namespace via
 `podSecurity.enforceRestricted=true`.
@@ -288,10 +298,14 @@ Kubernetes sets `no_new_privs` whenever `allowPrivilegeEscalation: false`.
 Therefore, the container must also set `allowPrivilegeEscalation: true` for the
 file capability to function.
 
-The game container retains its unprivileged posture: `runAsNonRoot: true`,
-`allowPrivilegeEscalation: false`, and no elevated capabilities. Only the capture
-sidecar holds `CAP_NET_RAW`; exploit of game code cannot grant packet-capture
-ability.
+The game container does not share this exception: the operator never sets
+`allowPrivilegeEscalation: true` on it or adds `NET_RAW` to it, and the capture
+sidecar is the only container Gameplane grants `CAP_NET_RAW` for capture. The
+game container keeps the posture described in [Pod security](#pod-security):
+the template's uid/gid or the image's default user, and the container
+runtime's default capability set. Which capabilities the game container holds
+therefore depends on that runtime default and on the user the image runs as,
+not on the capture feature.
 
 **Trade-off with PodSecurity `restricted`**: A cluster enforcing the `restricted`
 Pod Security Standards profile on the games namespace will reject any pod with
