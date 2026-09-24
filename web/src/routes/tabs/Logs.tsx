@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle, Download, Loader2 } from "lucide-react";
 import { Button, Input, Tabs, Tab as TabComponent } from "@heroui/react";
 
+import { useCurrentCluster } from "@/lib/cluster";
 import { Logs } from "@/lib/endpoints";
 import { openWS } from "@/lib/ws";
 import { capitalize, cn } from "@/lib/utils";
@@ -53,6 +54,7 @@ export function LogsTab({
   phase?: GameServerPhase;
   progressMessage?: string;
 }) {
+  const cluster = useCurrentCluster();
   const [lines, setLines] = useState<string[]>([]);
   const [filter, setFilter] = useState("");
   const [level, setLevel] = useState<"all" | LogLevel>("all");
@@ -97,7 +99,7 @@ export function LogsTab({
         }),
     });
     return () => sock.close();
-  }, [name, ns, effectiveSource]);
+  }, [name, ns, effectiveSource, cluster]);
 
   // Parse each line's level once; derive counts + the filtered view from it.
   const parsed = useMemo(

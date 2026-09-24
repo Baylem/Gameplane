@@ -154,11 +154,18 @@ All cluster-dispatch routes accept `?cluster={name}` (validates against register
 ### WebSocket bridge
 
 - **`/ws/servers/{name}/console` (GET upgrade)** — RCON to game pod via agent; write-capable
-- **`/ws/servers/{name}/console-pty` (GET upgrade)** — PTY/exec to game pod; write-capable
+- **`/ws/servers/{name}/console-pty` (GET upgrade)** — PTY attach to the selected cluster's game pod; write-capable
 - **`/ws/servers/{name}/logs` (GET upgrade)** — game/agent log file stream via agent; read-only
-- **`/ws/servers/{name}/logs/pod` (GET upgrade)** — pod stdout stream via Kubernetes watch; read-only
-- All authenticate via session + mTLS to agent (for console routes)
-- Multiplexed per `?cluster=` + namespace
+- **`/ws/servers/{name}/logs/pod` (GET upgrade)** — selected cluster's init/game stdout via the Kubernetes Pod log API; read-only
+- All authenticate via session and cluster/namespace RBAC. Pod logs and PTY use
+  the selected registry client's Kubernetes credentials and verify the
+  GameServer → StatefulSet → Pod owner UID chain before opening streams.
+- Agent routes use local mTLS and reject non-local selectors. Pod logs and PTY
+  accept registered `?cluster=` targets without requiring agent mTLS.
+- A browser cluster switch closes old streams and cancels retries/queued input.
+  Pod log polling stops if a Pod is replaced; reconnects validate ownership again.
+- Kubernetes log/attach calls are name-addressed, without UID preconditions;
+  the owner checks do not make deletion/recreation atomic with stream startup.
 
 ### Agent transport boundary
 

@@ -348,7 +348,7 @@ func main() {
 			DefaultMaxDurationSecs:  cfg.captureDefaultMaxDurationS,
 			DefaultMaxSizeBytes:     cfg.captureDefaultMaxSizeBytes,
 		}, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
-		ws.Mount(p, k8s, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
+		ws.Mount(p, reg, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
 	})
 
 	// Opt-in, off-by-default anonymous usage telemetry. No-op unless an

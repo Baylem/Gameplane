@@ -90,18 +90,18 @@ func TestMount_LocalClusterStillReachesHandler(t *testing.T) {
 	}
 }
 
-// TestMountAttach_RejectsNonLocalCluster covers the PTY console route,
+// TestMountAttach_RejectsUnknownCluster covers the PTY console route,
 // which attaches via the API's own in-cluster kubeconfig rather than the
 // agent proxy — a separate code path from Mount's own routes, so it needs
 // its own regression coverage.
-func TestMountAttach_RejectsNonLocalCluster(t *testing.T) {
+func TestMountAttach_RejectsUnknownCluster(t *testing.T) {
 	r := chi.NewRouter()
-	mountAttach(r, &kube.Client{})
+	mountAttach(r, streamTestRegistry(&kube.Client{}))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ws/servers/alpha/console-pty?cluster=remote-1", nil)
 	r.ServeHTTP(rr, req)
-	if rr.Code != http.StatusNotFound {
-		t.Fatalf("got %d, want 404", rr.Code)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("got %d, want 400", rr.Code)
 	}
 }
 
@@ -111,7 +111,7 @@ func TestMountAttach_RejectsNonLocalCluster(t *testing.T) {
 // but that failure is never a 404.
 func TestMountAttach_LocalClusterReachesHandler(t *testing.T) {
 	r := chi.NewRouter()
-	mountAttach(r, &kube.Client{})
+	mountAttach(r, streamTestRegistry(&kube.Client{}))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ws/servers/alpha/console-pty", nil)
 	r.ServeHTTP(rr, req)
@@ -120,16 +120,16 @@ func TestMountAttach_LocalClusterReachesHandler(t *testing.T) {
 	}
 }
 
-// TestMountPodLogs_RejectsNonLocalCluster mirrors the attach guard for the
-// other Kubernetes-API-direct route (pod-log streaming during startup).
-func TestMountPodLogs_RejectsNonLocalCluster(t *testing.T) {
+// TestMountPodLogs_RejectsUnknownCluster mirrors the attach guard for the
+// other Kubernetes-API-direct route; registered remote targets are tested separately.
+func TestMountPodLogs_RejectsUnknownCluster(t *testing.T) {
 	r := chi.NewRouter()
-	mountPodLogs(r, &kube.Client{})
+	mountPodLogs(r, streamTestRegistry(&kube.Client{}))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ws/servers/alpha/logs/pod?cluster=remote-1", nil)
 	r.ServeHTTP(rr, req)
-	if rr.Code != http.StatusNotFound {
-		t.Fatalf("got %d, want 404", rr.Code)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("got %d, want 400", rr.Code)
 	}
 }
 
@@ -137,7 +137,7 @@ func TestMountPodLogs_RejectsNonLocalCluster(t *testing.T) {
 // TestMountAttach_LocalClusterReachesHandler.
 func TestMountPodLogs_LocalClusterReachesHandler(t *testing.T) {
 	r := chi.NewRouter()
-	mountPodLogs(r, &kube.Client{})
+	mountPodLogs(r, streamTestRegistry(&kube.Client{}))
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ws/servers/alpha/logs/pod", nil)
 	r.ServeHTTP(rr, req)
