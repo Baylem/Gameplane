@@ -23,7 +23,11 @@ JSON-webhook source, not just audit events. Nothing in it is Gameplane-specific.
 
 The forwarder reuses a lazily-dialed connection, bounds each write with a
 deadline (so a hung collector can't wedge the relay), and reconnects once on a
-write error.
+write error. Before it reuses a TCP connection it checks that the collector
+hasn't closed it, and opens a fresh one if it has.
+
+Each inbound request must arrive in full (headers and body) within 15 s, and
+idle keep-alive connections close after 120 s.
 
 ## Transport: prefer TCP
 

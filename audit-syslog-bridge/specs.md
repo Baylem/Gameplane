@@ -12,7 +12,7 @@ Optional, schema-agnostic HTTP-JSON → RFC 5424 syslog relay. Sits behind the A
 - Listen on HTTP, accept `POST /` with a JSON body, forward it as one RFC 5424 syslog record
 - Encode the received timestamp, hostname, app-name, and collapse the JSON body to a single-line MSG field
 - Frame the message for the wire: RFC 6587 octet-counting (`<len> <msg>`) for TCP (reliable stream framing), bare message for UDP (one datagram)
-- Maintain a lazily-dialed, reused syslog connection; reconnect once on write error
+- Maintain a lazily-dialed, reused syslog connection; before reusing a TCP connection, check that the collector has not closed it and redial if it has; reconnect once on write error
 - Bound each write with a deadline (default 5s) to prevent a hung collector from blocking the HTTP handler indefinitely
 - Provide `/healthz` for Kubernetes probes
 - Enforce optional bearer-token auth on POST /
@@ -46,7 +46,7 @@ Single flat package (`main`): `main.go` (relay + config + server logic), `bridge
 
 - Forwards the received JSON body verbatim (schema-agnostic; does not parse, validate, or understand audit events)
 - Prefers TCP over UDP for audit/compliance trails (UDP has no delivery confirmation; TCP surfaces a dead collector as a 502)
-- Connection reuse: lazily dials once, then reuses; on write error, closes and reconnects once before surfacing the error
+- Connection reuse: lazily dials once, then reuses; before each TCP write a short read probe (5 ms) checks whether the collector has closed the connection, and the bridge redials if it has; on write error, closes and reconnects once before surfacing the error
 - Write deadline per frame (5s default) prevents a collector that accepts but does not drain from blocking indefinitely and wedging the handler behind the connection mutex
 - RFC 5424 compliance: formats message as `<PRI>1 TIMESTAMP HOSTNAME APP-NAME PROCID MSGID STRUCTURED-DATA MSG`; collapses embedded newlines/CRs to spaces so each syslog record is one line; PROCID, MSGID, STRUCTURED-DATA are "-"
 - `APP_NAME` and `SYSLOG_HOSTNAME` are validated at startup the same way `FACILITY`/`SEVERITY` are: each must be 1*max PRINTUSASCII (RFC 5424 %d33-126, no spaces or control bytes), APP-NAME capped at 48 bytes and HOSTNAME at 255 bytes, or `newServer` rejects the config before the process starts serving. An empty value is accepted and rendered as the RFC 5424 nil value `-`; when `SYSLOG_HOSTNAME` is empty the OS hostname is used instead, and an OS hostname that fails the same check (or can't be read) falls back to `-`
@@ -62,11 +62,11 @@ Single flat package (`main`): `main.go` (relay + config + server logic), `bridge
 - **Auth boundary:** optional bearer token (`AUTH_HEADER` env var) gates who may inject records (constant-time comparison; absence = open)
 - **TLS transport:** `SYSLOG_TLS=true` wraps the TCP connection in verified TLS 1.2+, protecting audit events in transit
 - **Trust boundary:** API ← audit-syslog-bridge ← SIEM/syslog collector. The API rate-limits webhook submissions; the bridge forwards verbatim and is stateless, so it does not amplify or replay events
-- **DoS mitigation:** inbound body capped at 64 KiB; read and write deadlines bound goroutines so a misbehaving client/collector cannot wedge the process
+- **DoS mitigation:** inbound body capped at 64 KiB; each request must arrive in full (headers and body) within 15 s (`http.Server.ReadTimeout`, with a 10 s header bound) and idle keep-alive connections close after 120 s; the per-frame write deadline bounds the collector side, so a misbehaving client/collector cannot wedge the process
 
 ## Testing & coverage
 
-**Coverage gate:** 70% (`.testcoverage.yml`). Tests cover HTTP handler (methods, auth, empty body), RFC 5424 framing, APP-NAME/HOSTNAME/facility/severity validation, TCP/UDP forward, connection reuse, reconnect-after-write-failure, write deadline enforcement, forward-failure 502, graceful shutdown on context cancel, and env-var defaults. Uncovered: `main()`/`run()` process signal handling (ListenAndServe + SIGTERM), which is not unit-testable; ~30% gap is acceptable and noted in the gate comment.
+**Coverage gate:** 70% (`.testcoverage.yml`). Tests cover HTTP handler (methods, auth, empty body), RFC 5424 framing, APP-NAME/HOSTNAME/facility/severity validation, TCP/UDP forward, connection reuse, reconnect after the collector closes the connection, reconnect-after-write-failure, write deadline enforcement, forward-failure 502 (including a collector that has gone away), the intake read bound, graceful shutdown on context cancel, and env-var defaults. Uncovered: `main()`/`run()` process signal handling (ListenAndServe + SIGTERM), which is not unit-testable; ~30% gap is acceptable and noted in the gate comment.
 
 ## References
 

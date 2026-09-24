@@ -604,3 +604,184 @@ func TestFallbackHostname(t *testing.T) {
 		})
 	}
 }
+
+// A record sent after the collector has closed the reused connection is
+// delivered on a fresh connection, not written to the closed one.
+func TestForwarder_RecordAfterCollectorCloseReachesNewConnection(t *testing.T) {
+	lc := &net.ListenConfig{}
+	ln, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer ln.Close()
+
+	firstClosed := make(chan struct{})
+	second := make(chan string, 1)
+	go func() {
+		// Connection 1: read one frame, then close it, as a collector that
+		// reaps idle connections does.
+		c1, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		buf := make([]byte, 256)
+		_, _ = c1.Read(buf)
+		_ = c1.Close()
+		close(firstClosed)
+
+		// Connection 2: accumulate everything read until "two" arrives.
+		c2, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer c2.Close()
+		var acc []byte
+		for {
+			n, err := c2.Read(buf)
+			acc = append(acc, buf[:n]...)
+			if strings.Contains(string(acc), "two") {
+				second <- string(acc)
+				return
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	f := newForwarder("tcp", ln.Addr().String(), false, time.Second)
+	if err := f.send(context.Background(), []byte("one")); err != nil {
+		t.Fatalf("send one: %v", err)
+	}
+	select {
+	case <-firstClosed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("collector did not receive the first frame")
+	}
+	// Give the collector's close time to reach the forwarder's socket.
+	time.Sleep(50 * time.Millisecond)
+
+	if err := f.send(context.Background(), []byte("two")); err != nil {
+		t.Fatalf("send two: %v", err)
+	}
+	select {
+	case got := <-second:
+		if !strings.Contains(got, "two") {
+			t.Errorf("new connection received %q, want the second frame", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("the record sent after the collector closed its connection did not reach a new connection")
+	}
+}
+
+// When the collector has closed the connection and is no longer reachable, the
+// next POST is answered with 502 rather than reported as delivered.
+func TestHandle_CollectorGoneAfterCloseIs502(t *testing.T) {
+	lc := &net.ListenConfig{}
+	ln, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer ln.Close()
+
+	gone := make(chan struct{})
+	go func() {
+		c, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		buf := make([]byte, 4096)
+		_, _ = c.Read(buf)
+		// The collector goes away: its connection and its listener both close.
+		_ = c.Close()
+		_ = ln.Close()
+		close(gone)
+	}()
+
+	s, err := newServer(config{
+		syslogAddr: ln.Addr().String(), network: "tcp", appName: "gp",
+		facility: "local0", severity: "info", hostname: "h", dialTimeout: time.Second,
+	})
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+
+	post := func() int {
+		rr := httptest.NewRecorder()
+		s.handle(rr, httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/", strings.NewReader(`{"k":"v"}`)))
+		return rr.Code
+	}
+
+	if code := post(); code != http.StatusNoContent {
+		t.Fatalf("first POST status = %d, want 204", code)
+	}
+	select {
+	case <-gone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("collector did not receive the first record")
+	}
+	// Give the collector's close time to reach the forwarder's socket.
+	time.Sleep(50 * time.Millisecond)
+
+	if code := post(); code != http.StatusBadGateway {
+		t.Fatalf("POST after the collector went away: status = %d, want 502", code)
+	}
+}
+
+// A request whose body does not arrive within the read bound is closed by the
+// server instead of holding the connection open.
+func TestIntake_BodyReadIsTimeBounded(t *testing.T) {
+	s := &server{network: "tcp", fwd: newForwarder("tcp", "127.0.0.1:1", false, time.Second)}
+
+	lc := &net.ListenConfig{}
+	ln, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	srv := newHTTPServer(config{readTimeout: 300 * time.Millisecond}, s.routes())
+	go func() { _ = srv.Serve(ln) }()
+	defer srv.Close()
+
+	d := &net.Dialer{Timeout: time.Second}
+	conn, err := d.DialContext(context.Background(), "tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	start := time.Now()
+	// Complete headers announcing a body, then no body at all.
+	if _, err := io.WriteString(conn,
+		"POST / HTTP/1.1\r\nHost: bridge\r\nContent-Type: application/json\r\nContent-Length: 64\r\n\r\n"); err != nil {
+		t.Fatalf("write headers: %v", err)
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	if _, err := io.ReadAll(conn); err != nil {
+		t.Fatalf("server did not close the connection within the read bound: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > 3*time.Second {
+		t.Fatalf("connection closed after %v, want well under 3s", elapsed)
+	}
+}
+
+// The intake server bounds the header phase, the whole request and keep-alive
+// idle time, and a zero read bound falls back to the default.
+func TestNewHTTPServer_BoundsEveryPhase(t *testing.T) {
+	if got := loadConfig().readTimeout; got != defaultReadTimeout {
+		t.Errorf("default readTimeout = %v, want %v", got, defaultReadTimeout)
+	}
+	srv := newHTTPServer(config{listen: "127.0.0.1:0"}, http.NewServeMux())
+	if srv.ReadTimeout != defaultReadTimeout {
+		t.Errorf("ReadTimeout = %v, want %v", srv.ReadTimeout, defaultReadTimeout)
+	}
+	if srv.ReadHeaderTimeout != headerReadTimeout {
+		t.Errorf("ReadHeaderTimeout = %v, want %v", srv.ReadHeaderTimeout, headerReadTimeout)
+	}
+	if srv.IdleTimeout != idleTimeout {
+		t.Errorf("IdleTimeout = %v, want %v", srv.IdleTimeout, idleTimeout)
+	}
+	short := newHTTPServer(config{readTimeout: time.Second}, http.NewServeMux())
+	if short.ReadHeaderTimeout != time.Second || short.ReadTimeout != time.Second {
+		t.Errorf("short bound: header=%v read=%v, want 1s for both", short.ReadHeaderTimeout, short.ReadTimeout)
+	}
+}
