@@ -42,7 +42,7 @@ type agentGatewayResolver struct {
 // resolve binds a remote transport to a live GameServer UID. Both the Cluster
 // and its credential Secret are read for every new operation: deletion or
 // rotation must never leave a cached credential/route silently usable.
-func (r *agentGatewayResolver) resolve(ctx context.Context, cluster string, target agentTarget) (*kube.Client, agentTransport, error) {
+func (r *agentGatewayResolver) resolve(ctx context.Context, cluster string, target agentTarget) (*kube.Client, *gatewayAgentTransport, error) {
 	k, ok := r.registry.Get(cluster)
 	if !ok || k == nil {
 		return nil, nil, scope.ErrForbiddenCluster
@@ -221,7 +221,7 @@ func (p *proxy) agentRoute(handler func(*proxy) http.HandlerFunc) http.HandlerFu
 		}
 		selected := *p
 		selected.k, selected.stdin, selected.transport = k, k, transport
-		selected.remoteUID = transport.(*gatewayAgentTransport).target.UID
+		selected.remoteUID = transport.target.UID
 		handler(&selected)(w, req)
 	}
 }

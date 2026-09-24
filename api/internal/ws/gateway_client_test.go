@@ -85,7 +85,7 @@ func TestGatewayResolverBindsRemoteUIDAndReadsCredentialsFresh(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if selected != remote || transport.(*gatewayAgentTransport).target.UID != "remote-uid" {
+	if selected != remote || transport.target.UID != "remote-uid" {
 		t.Fatal("resolved the local namesake")
 	}
 	secret, err := home.Typed.CoreV1().Secrets("gameplane-system").Get(t.Context(), "gateway-client", metav1.GetOptions{})

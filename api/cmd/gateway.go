@@ -67,7 +67,7 @@ func runGateway(ctx context.Context, args []string) error {
 		}
 		return fmt.Errorf("serve gateway: %w", err)
 	case <-ctx.Done():
-		shutdownContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		shutdownContext, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 		defer cancel()
 		if err := server.Shutdown(shutdownContext); err != nil {
 			return fmt.Errorf("shutdown gateway: %w", err)

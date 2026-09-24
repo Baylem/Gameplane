@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -18,7 +19,9 @@ type TLSFiles struct {
 }
 
 func readPool(path string) (*x509.CertPool, error) {
-	raw, err := os.ReadFile(path)
+	// The path comes from mounted-credential configuration, never a request.
+	// Normalize it without restricting the administrator's Secret mount location.
+	raw, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("read trust bundle: %w", err)
 	}
