@@ -25,7 +25,7 @@ func TestGuardRejectsReplacementAndUnconfiguredAgents(t *testing.T) {
 				r.Post("/files/write", func(w http.ResponseWriter, _ *http.Request) { called = true; w.WriteHeader(http.StatusNoContent) })
 			})
 			response := httptest.NewRecorder()
-			router.ServeHTTP(response, httptest.NewRequest(http.MethodPost, "/v1/targets/"+tc.requested+"/files/write", nil))
+			router.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/v1/targets/"+tc.requested+"/files/write", nil))
 			if response.Code != tc.status {
 				t.Fatalf("status=%d, want %d", response.Code, tc.status)
 			}

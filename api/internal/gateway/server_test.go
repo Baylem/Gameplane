@@ -104,7 +104,7 @@ func newFixture(t *testing.T) (*handler, *x509.Certificate) {
 
 func request(t *testing.T, cert *x509.Certificate, method, path string) *http.Request {
 	t.Helper()
-	req := httptest.NewRequest(method, path, nil)
+	req := httptest.NewRequestWithContext(t.Context(), method, path, nil)
 	req.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{cert}}
 	return req
 }
@@ -281,7 +281,7 @@ func TestGatewayWebSocketUsesUIDAndClosesAtDeadline(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 	defer cancel()
 	conn, response, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(front.URL, "http")+path, nil)
 	if response != nil && response.Body != nil {
@@ -344,8 +344,15 @@ func TestGatewayTLSListenerRequiresEnrolledClient(t *testing.T) {
 	transport := &http.Transport{TLSClientConfig: &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, Timeout: time.Second}
-	if response, err := client.Get(listener.URL + "/v1/capabilities"); err == nil {
-		response.Body.Close()
+	anonymousRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, listener.URL+"/v1/capabilities", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	anonymousResponse, anonymousErr := client.Do(anonymousRequest)
+	if anonymousResponse != nil {
+		anonymousResponse.Body.Close()
+	}
+	if anonymousErr == nil {
 		t.Fatal("TLS accepted a client without an enrolled certificate")
 	}
 	peer, err := tls.LoadX509KeyPair(h.cfg.TLS.Certificate, h.cfg.TLS.Key)
@@ -356,7 +363,11 @@ func TestGatewayTLSListenerRequiresEnrolledClient(t *testing.T) {
 	enrolledTransport.TLSClientConfig.Certificates = []tls.Certificate{peer}
 	defer enrolledTransport.CloseIdleConnections()
 	enrolled := &http.Client{Transport: enrolledTransport, Timeout: time.Second}
-	response, err := enrolled.Get(listener.URL + "/v1/capabilities")
+	enrolledRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, listener.URL+"/v1/capabilities", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := enrolled.Do(enrolledRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
