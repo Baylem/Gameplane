@@ -1,3 +1,10 @@
+{{- if not .Values.api.enabled }}
+{{- $livePVC := lookup "v1" "PersistentVolumeClaim" .Release.Namespace "gameplane-api-data" }}
+{{- if and $livePVC (ne (index ($livePVC.metadata.annotations | default dict) "helm.sh/resource-policy") "keep") }}
+{{- fail "Before disabling api.enabled on an existing install, annotate gameplane-api-data with helm.sh/resource-policy=keep to preserve the SQLite database" }}
+{{- end }}
+{{- end }}
+{{- if .Values.api.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -422,3 +429,5 @@ spec:
   selector: { app.kubernetes.io/name: gameplane-api }
   ports:
     - { name: http, port: 80, targetPort: http }
+
+{{- end }}

@@ -93,6 +93,7 @@ Mode: In-pod HTTP/HTTPS sidecar (runs as a container sidecar or as a pod share-p
 | `--tls-key` | `` | — | Server TLS key (PEM) |
 | `--tls-client-ca` | `` | — | CA bundle that signs API client certs (required if `--tls-cert` is set) |
 | `--api-token-file` | `` | — | Fallback shared-secret auth (used when TLS is not configured); file contents become the bearer token |
+| `--server-uid` | `` | `GAMEPLANE_SERVER_UID` | Immutable owning GameServer UID; required for versioned gateway routes |
 | `--server-name` | `` | `GAMEPLANE_SERVER_NAME` | Owning GameServer name (for status patches) |
 | `--template` | `` | `GAMEPLANE_TEMPLATE` | GameTemplate name |
 | `--game` | `` | `GAMEPLANE_GAME` | Game identifier (e.g., `minecraft`, `rust`, `satisfactory`) |
@@ -218,3 +219,19 @@ All endpoints (except `/healthz` and `/metrics`) return `401 Unauthorized` if th
 - **`docs/security.md`** — Auth model, threat boundaries, pod security defaults, and the module-trust relationship.
 - **`go.mod`** (agent) — Dependency versions and workspace references.
 
+
+## Versioned gateway targets
+
+The optional private cluster gateway uses `/v1/targets/{uid}` followed by an
+existing protected agent route. These endpoints apply the same authentication,
+input validation, and operation handlers as local routes, then reject any UID
+other than the immutable `GAMEPLANE_SERVER_UID` injected by the operator.
+An empty configured UID also fails closed. Legacy unprefixed routes remain
+available to local API/operator callers during upgrades.
+
+A gateway must never retry a failed versioned request through the legacy path:
+older agents deliberately return 404. This binds the final network hop to the
+actual server incarnation even if the name-based agent Service changes between
+the gateway's Kubernetes lookup and connection. Existing operator-owned game
+Pod templates gain the UID environment variable on reconciliation, which can
+roll existing game workloads during an operator upgrade.

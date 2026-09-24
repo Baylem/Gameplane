@@ -20,7 +20,14 @@ These items have shipped and are reflected in current `main`.
 A Topbar cluster selector with per-cluster health, threading `?cluster=` through
 the API client and raw-fetch escape hatches, with `queryClient.clear()` on cluster
 switch. Pod logs and PTY WebSockets now target the selected Kubernetes cluster.
-Remote agent-backed streams and file/player/mod operations remain follow-up work.
+
+The current implementation also has an [optional private agent gateway](multicluster-agent-gateway.md)
+for supported RCON, game-file logs, file/player operations, module actions and
+agent-based mods. It requires an updated operator and UID-aware agents; the
+central API still uses direct Kubernetes connections. Capture-file downloads,
+ID-list mod configuration, dedicated gateway health in the dashboard, and full
+multicluster parity remain follow-up work. Gateway availability is not implied
+by the existing Kubernetes cluster-health indicator.
 
 ### Multi-cluster: dual-cluster e2e coverage (PR #104) (shipped v0.2.0-beta.6) <!-- doc-versions: historical -->
 
