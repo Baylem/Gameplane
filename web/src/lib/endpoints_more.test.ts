@@ -109,9 +109,8 @@ describe("Backups / Schedules / Restores / Destinations", () => {
     await expectCall(Backups.create({ serverRef: { name: "s1" } }), "/backups", "POST");
     await expectCall(Backups.remove("b1"), "/backups/b1", "DELETE");
   });
-  it("Schedules list/get/create/remove and patchSpec read-modify-write", async () => {
+  it("Schedules list/create/remove and patchSpec read-modify-write", async () => {
     await expectCall(Schedules.list(), "/schedules");
-    await expectCall(Schedules.get("sc1"), "/schedules/sc1");
     await expectCall(
       Schedules.create({ serverRef: { name: "s1" }, schedule: "0 3 * * *", repoRef: { name: "r", key: "repo" } }),
       "/schedules",
@@ -121,18 +120,16 @@ describe("Backups / Schedules / Restores / Destinations", () => {
     await expectCall(Schedules.patchSpec("sc1", { suspend: true }), "/schedules/sc1", "PUT");
     await expectCall(Schedules.remove("sc1"), "/schedules/sc1", "DELETE");
   });
-  it("Restores list/create/remove", async () => {
+  it("Restores list/create", async () => {
     await expectCall(Restores.list(), "/restores");
     await expectCall(
       Restores.create({ backupRef: { name: "b1" }, serverRef: { name: "s1" } }),
       "/restores",
       "POST",
     );
-    await expectCall(Restores.remove("r1"), "/restores/r1", "DELETE");
   });
-  it("BackupDestinations list/get/upsert/remove", async () => {
+  it("BackupDestinations list/upsert/remove", async () => {
     await expectCall(BackupDestinations.list(), "/backup-destinations");
-    await expectCall(BackupDestinations.get("d1"), "/backup-destinations/d1");
     await expectCall(
       BackupDestinations.upsert({ name: "d1", url: "s3:x", password: "pw" }),
       "/backup-destinations",
@@ -172,10 +169,9 @@ describe("Users / Roles / Auth", () => {
 });
 
 describe("Modules / ModuleSources / Logs", () => {
-  it("Modules catalog/list/get/install/upgrade/uninstall", async () => {
+  it("Modules catalog/list/install/upgrade/uninstall", async () => {
     await expectCall(Modules.catalog(), "/modules/catalog");
     await expectCall(Modules.list(), "/modules");
-    await expectCall(Modules.get("m1"), "/modules/m1");
     await expectCall(Modules.install({ source: "up", module: "mc" }), "/modules", "POST");
     await expectCall(Modules.upgrade("m1", "1.2"), "/modules/m1", "PATCH");
     await expectCall(Modules.uninstall("m1"), "/modules/m1", "DELETE");

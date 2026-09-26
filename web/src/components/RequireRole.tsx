@@ -2,30 +2,11 @@ import { useEffect, type ReactNode } from "react";
 import { ShieldAlert, PlugZap } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { APIError } from "@/lib/api";
-import { useMe, can, type Role } from "@/lib/auth";
+import { useMe, can } from "@/lib/auth";
 import { Button, Card } from "@heroui/react";
 
 function isUnauthorized(error: unknown): boolean {
   return error instanceof APIError && error.status === 401;
-}
-
-interface Props {
-  roles: readonly Role[];
-  children: ReactNode;
-}
-
-export function RequireRole({ roles, children }: Props) {
-  const { data: me, error, isLoading, refetch } = useMe();
-
-  useEffect(() => {
-    if (isUnauthorized(error)) location.assign("/login");
-  }, [error]);
-
-  if (isLoading) return <RoleSkeleton />;
-  if (isUnauthorized(error)) return <RoleSkeleton />;
-  if (!me) return <IdentityUnavailable error={error} onRetry={() => void refetch()} />;
-  if (!roles.includes(me.role)) return <Forbidden />;
-  return <>{children}</>;
 }
 
 interface PermProps {
