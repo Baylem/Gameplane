@@ -215,8 +215,18 @@ func (s *Server) Routes(mw func(http.Handler) http.Handler) *http.ServeMux {
 	return mux
 }
 
-// HandleHealthz answers an unauthenticated liveness check. It reports nothing
-// about the pod, the cluster, or any capture.
+// HandleHealthz answers a liveness check that reports nothing about the pod,
+// the cluster, or any capture.
+//
+// It is not wrapped in the mTLS auth middleware here (unlike every other
+// route), but that does not make it reachable without a client certificate:
+// cmd/main.go serves every route, including this one, over the same
+// ListenAndServeTLS listener whose TLSConfig requires and verifies a client
+// certificate at the TLS handshake, before any request reaches this mux at
+// all. Nothing calls this route today - the Kubernetes API does not support
+// probes on ephemeral containers, which is what the sidecar always is - so
+// it is unauthenticated only in the sense that this file's own middleware
+// wrapping does not gate it a second time (F-193).
 func HandleHealthz(w http.ResponseWriter, _ *http.Request) {
 	if _, err := fmt.Fprint(w, "ok"); err != nil {
 		slog.Error("failed to write healthz response", "err", err)
@@ -443,8 +453,14 @@ func (s *Server) HandleStart(w http.ResponseWriter, r *http.Request) {
 
 	s.mu.Lock()
 	if s.currentCapture != nil {
+		// Name the capture that is actually running (s.currentCapture.id),
+		// not the rejected request's id: they differ whenever a second,
+		// different capture id is requested while one is already in
+		// progress, and naming the rejected id here would describe a
+		// capture that never started as "in progress" (F-192).
+		runningID := s.currentCapture.id
 		s.mu.Unlock()
-		http.Error(w, fmt.Sprintf("capture '%s' already in progress", id), http.StatusConflict)
+		http.Error(w, fmt.Sprintf("capture '%s' already in progress", runningID), http.StatusConflict)
 		return
 	}
 

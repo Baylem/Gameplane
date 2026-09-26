@@ -901,6 +901,27 @@ jobs:
             exit 1
           fi
           echo "chart cosign key matches root cosign.pub"
+      - name: docs/oidc.md example values render (F-252)
+        # docs/oidc.md's Keycloak "Or in values.yaml" example is meant to be
+        # copy-pasteable. Render it as a real -f values file (with
+        # api.oidc.enabled: true, since the doc's own example turns it on)
+        # and fail if the object-shaped clientSecretRef the chart schema
+        # expects ever regresses to the bare string the doc used to show.
+        run: |
+          python3 - <<'PY' > /tmp/oidc-example-values.yaml
+          import re
+          text = open('docs/oidc.md').read()
+          m = re.search(r"Or in `values\.yaml`:\n```yaml\n(.*?)\n```", text, re.S)
+          if not m:
+              raise SystemExit("could not find the Keycloak 'Or in values.yaml' example in docs/oidc.md")
+          print(m.group(1))
+          PY
+          helm template gameplane charts/gameplane \
+            -f /tmp/oidc-example-values.yaml \
+            --show-only templates/api.yaml > /tmp/rendered-oidc.yaml
+          grep -q 'GAMEPLANE_OIDC_CLIENT_SECRET' /tmp/rendered-oidc.yaml
+          grep -q 'name: keycloak-oidc-secret' /tmp/rendered-oidc.yaml
+          grep -qE 'key: +clientSecret' /tmp/rendered-oidc.yaml
 
   workflow-lint:
     name: workflow lint
