@@ -156,8 +156,10 @@ Every job that signs (`release.yaml`, `publish-edge.yaml`, `images.yaml` and
 deployment policy admits only `master` and `v*` tags, so a run on any other ref
 never receives the key. Images are pushed by digest, signed and verified, and
 only then tagged, so a published tag always names a signed image. The image
-matrix does not cancel sibling legs when one fails. If a leg fails, re-run the
-failed jobs: an unfinished leg leaves at most an untagged digest behind.
+matrix does not cancel sibling legs when one fails. A leg that fails before tag
+attachment leaves at most an untagged digest behind. A leg whose `oras tag`
+succeeded but whose later `oras resolve` check failed may leave published tags,
+so inspect the image's tags before re-running the failed jobs.
 
 ## Community Visibility & Outreach
 

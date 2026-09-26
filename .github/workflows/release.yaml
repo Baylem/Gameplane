@@ -140,8 +140,9 @@ jobs:
       # Attach the release tags only now that the digest carries a verified
       # signature. `oras tag` points each tag at the existing manifest without
       # rewriting it; the loop confirms every tag resolves to the signed digest.
-      # A leg that fails before this step leaves only an untagged digest, so
-      # re-running the failed jobs is always safe.
+      # A leg that fails before this step leaves only an untagged digest. A
+      # leg that fails in the resolve loop has already published its tags, so
+      # inspect the image's tags before re-running the failed jobs.
       - name: install oras
         uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
       - name: attach release tags to the signed digest
