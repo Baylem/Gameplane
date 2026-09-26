@@ -72,8 +72,9 @@ type Command struct {
 Validates raw user values against declared parameters. Returns a sanitized map or a validation error.
 
 Behavior:
+- Rejects a required param that was explicitly given an empty value, before any default is applied.
 - Fills missing params with their declared defaults.
-- Rejects parameters whose required=true and value is empty or whitespace-only.
+- Rejects parameters whose required=true and (post-default) value is empty or whitespace-only.
 - For non-empty values, calls `validateParam`, which:
   - **`int` type:** parses as base-10 int64 (post-trim), returns trimmed string; rejects non-integer strings.
   - **`bool` type:** accepts "true" or "false" (case-insensitive, post-trim); rejects other values.
@@ -114,11 +115,11 @@ Executes the compiled template with the resolved parameters.
 
 4. **Type enforcement:** Enums reject values outside the declared set. Ints reject non-numeric strings. Bools reject values outside {true, false}. Types are case-insensitive for bool (before lowercasing) and trimmed for int, but exact-match for enum.
 
-5. **Required params:** A param with `Required: true` rejects empty or whitespace-only values, even with a default. If no default is provided, the value is required. If a default is provided, a missing value is filled with the default, then checked for emptiness.
+5. **Required params:** A param with `Required: true` rejects a value that is explicitly given as empty or whitespace-only, even when a default is declared — a default only fills in a *missing* value, it never overrides one the caller supplied as empty. If no default is provided, a missing value is also rejected. If a default is provided, a missing value is filled with the default, then checked for emptiness.
 
 6. **Template strictness:** `Compile` uses `missingkey=error`, so any template reference to a param that wasn't provided to `Resolve` (or declared) will fail at render time.
 
-7. **Rendering is deterministic:** Template execution is pure — given the same template and params, rendering always produces the same output (modulo non-determinism in the template itself, e.g., `rand`).
+7. **Rendering is deterministic:** Template execution is pure — no function map is registered, so the template has no access to non-deterministic functions (randomness, time, I/O). Given the same template and params, rendering always produces the same output.
 
 ## Dependencies
 
