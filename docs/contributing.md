@@ -145,10 +145,21 @@ bundles by digest, recording all signatures in the public Sigstore Rekor
 transparency log.
 
 Signing is **mandatory and fail-closed**: if `COSIGN_PRIVATE_KEY` is not
-configured, the release job fails. A one-time key setup is required: run `cosign
-generate-key-pair`, set `COSIGN_PRIVATE_KEY`/`COSIGN_PASSWORD` as CI secrets,
-and publish `cosign.pub` at the repo root. See
+configured, the release job fails before anything is pushed. A one-time key
+setup is required: run `cosign generate-key-pair`, set
+`COSIGN_PRIVATE_KEY`/`COSIGN_PASSWORD` as secrets of the `release-signing`
+environment, and publish `cosign.pub` at the repo root. See
 [`module-authoring.md`](module-authoring.md#signing-official-bundles) for details.
+
+Every job that signs (`release.yaml`, `publish-edge.yaml`, `images.yaml` and
+`republish-modules.yaml`) runs in the `release-signing` environment. Its
+deployment policy admits only `master` and `v*` tags, so a run on any other ref
+never receives the key. Images are pushed by digest, signed and verified, and
+only then tagged, so a published tag always names a signed image. The image
+matrix does not cancel sibling legs when one fails. A leg that fails before tag
+attachment leaves at most an untagged digest behind. A leg whose `oras tag`
+succeeded but whose later `oras resolve` check failed may leave published tags,
+so inspect the image's tags before re-running the failed jobs.
 
 ## Community Visibility & Outreach
 
