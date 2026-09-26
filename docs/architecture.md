@@ -123,6 +123,12 @@ the object alone, whether idle time is accruing:
 > look like an empty server, and a game with no player-count protocol must never
 > sleep. Both cases record the reason on `status.idle` so the dashboard can say
 > why a server will never sleep.
+>
+> **Unparseable wake window.** If a `wakeWindows` entry fails to parse, the
+> operator surfaces it as its own `IdleScheduleInvalid` condition (reason
+> `WakeWindowUnparseable`, message the parse error) rather than only folding it
+> into `status.idle.reason` — visible whether or not the server happens to be
+> asleep, and cleared once the schedule is fixed.
 
 ### Tail logs
 

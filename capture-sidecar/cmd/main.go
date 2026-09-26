@@ -40,11 +40,33 @@ const shutdownTimeout = 30 * time.Second
 // emptyDir SizeLimit minus the same 10% safety margin.
 const defaultVolumeBudgetBytes int64 = 1*1024*1024*1024 - (1*1024*1024*1024)/10
 
+// envOrDefault returns the named environment variable's value, or fallback
+// if it is unset or empty. Used for the flag defaults below so an operator-
+// set env var actually takes effect (F-188), while an explicit CLI flag
+// still wins over both, and running with no env vars at all (standalone,
+// tests) keeps the same hardcoded fallback as before.
+func envOrDefault(name, fallback string) string {
+	if v := os.Getenv(name); v != "" {
+		return v
+	}
+	return fallback
+}
+
 func main() {
+	// TLS_CERT_FILE/TLS_KEY_FILE/TLS_CA_FILE are the env vars specs.md
+	// documents as required, and the ones buildCaptureEphemeralContainer
+	// (operator/internal/controller/gameserver_controller.go) actually sets
+	// on the ephemeral container. They only take effect as flag defaults
+	// here (mirroring the CAPTURE_VOLUME_BUDGET_BYTES pattern below): the
+	// operator never passes -tls-cert/-tls-key/-tls-client-ca args, so
+	// before this the env vars had no effect at all and the sidecar worked
+	// only because the flag defaults happened to equal the env values
+	// (F-188). An explicit flag still overrides the env value, same as any
+	// other flag/default relationship.
 	listenAddr := flag.String("listen", "0.0.0.0:9091", "HTTP listen address")
-	certFile := flag.String("tls-cert", "/etc/tls/tls.crt", "Server certificate file")
-	keyFile := flag.String("tls-key", "/etc/tls/tls.key", "Server key file")
-	caFile := flag.String("tls-client-ca", "/etc/tls/ca.crt", "Client CA certificate file")
+	certFile := flag.String("tls-cert", envOrDefault("TLS_CERT_FILE", "/etc/tls/tls.crt"), "Server certificate file")
+	keyFile := flag.String("tls-key", envOrDefault("TLS_KEY_FILE", "/etc/tls/tls.key"), "Server key file")
+	caFile := flag.String("tls-client-ca", envOrDefault("TLS_CA_FILE", "/etc/tls/ca.crt"), "Client CA certificate file")
 	captureDataDir := flag.String("capture-dir", "/tmp/captures", "Directory for capture files")
 
 	// The operator sets CAPTURE_VOLUME_BUDGET_BYTES on the capture ephemeral
@@ -82,7 +104,12 @@ func main() {
 	}
 
 	// Every capture endpoint is wrapped in the mTLS middleware; /healthz is
-	// the only unauthenticated route and reports nothing but "ok".
+	// the only route not additionally wrapped by it. That does not make it
+	// reachable without a client certificate: the http.Server below serves
+	// every route, /healthz included, over the same TLS listener whose
+	// TLSConfig requires and verifies a client certificate at the handshake
+	// (see HandleHealthz's doc comment for why nothing actually calls this
+	// route today; F-193).
 	mux := captureServer.Routes(auth.Middleware)
 
 	server := &http.Server{

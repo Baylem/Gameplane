@@ -160,9 +160,12 @@ The callback URL is automatically set to `{External URL}/auth/oidc/{provider-nam
 ```yaml
 api:
   oidc:
+    enabled: true
     issuer: "https://dev-123456.okta.com"
     clientID: "0oa123abc..."
-    clientSecretRef: "okta-oidc-secret"
+    clientSecretRef:
+      name: "okta-oidc-secret"
+      key: "clientSecret"
     redirectURL: "https://gameplane.example.com/auth/oidc/okta/callback"
     displayName: "Okta"
     groupsClaim: "groups"
@@ -224,9 +227,12 @@ api:
 ```yaml
 api:
   oidc:
+    enabled: true
     issuer: "https://login.microsoftonline.com/12345678-1234-1234-1234-123456789012/v2.0"
     clientID: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-    clientSecretRef: "azuread-oidc-secret"
+    clientSecretRef:
+      name: "azuread-oidc-secret"
+      key: "clientSecret"
     redirectURL: "https://gameplane.example.com/auth/oidc/azuread/callback"
     displayName: "Azure AD"
     groupsClaim: "roles"
@@ -261,9 +267,11 @@ Suppose you have a Keycloak realm with groups:
 ```bash
 helm install gameplane ./charts/gameplane \
   --namespace gameplane \
+  --set api.oidc.enabled=true \
   --set api.oidc.issuer="https://keycloak.example.com/realms/master" \
   --set api.oidc.clientID="gameplane" \
-  --set api.oidc.clientSecretRef="keycloak-oidc-secret" \
+  --set api.oidc.clientSecretRef.name="keycloak-oidc-secret" \
+  --set api.oidc.clientSecretRef.key="clientSecret" \
   --set api.oidc.redirectURL="https://gameplane.example.com/auth/oidc/keycloak/callback" \
   --set api.oidc.displayName="Keycloak" \
   --set api.oidc.groupsClaim="groups" \
@@ -277,9 +285,12 @@ Or in `values.yaml`:
 ```yaml
 api:
   oidc:
+    enabled: true
     issuer: "https://keycloak.example.com/realms/master"
     clientID: "gameplane"
-    clientSecretRef: "keycloak-oidc-secret"
+    clientSecretRef:
+      name: "keycloak-oidc-secret"
+      key: "clientSecret"
     redirectURL: "https://gameplane.example.com/auth/oidc/keycloak/callback"
     displayName: "Keycloak"
     groupsClaim: "groups"

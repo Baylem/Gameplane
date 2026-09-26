@@ -2,6 +2,29 @@ package main
 
 import "testing"
 
+// TestEnvOrDefault_UsesEnvWhenSet is the regression test for F-188: the
+// TLS_CERT_FILE/TLS_KEY_FILE/TLS_CA_FILE env vars specs.md documents as
+// required (and that the operator's buildCaptureEphemeralContainer actually
+// sets) previously had no effect at all - the sidecar only appeared to
+// honor them because its flag defaults happened to equal the same paths.
+func TestEnvOrDefault_UsesEnvWhenSet(t *testing.T) {
+	const name = "GAMEPLANE_CAPTURE_SIDECAR_TEST_ENV_OR_DEFAULT"
+
+	t.Run("unset falls back", func(t *testing.T) {
+		t.Setenv(name, "")
+		if got := envOrDefault(name, "/fallback/path"); got != "/fallback/path" {
+			t.Errorf("envOrDefault = %q, want fallback %q", got, "/fallback/path")
+		}
+	})
+
+	t.Run("set value takes effect", func(t *testing.T) {
+		t.Setenv(name, "/mounted/custom.crt")
+		if got := envOrDefault(name, "/fallback/path"); got != "/mounted/custom.crt" {
+			t.Errorf("envOrDefault = %q, want the env value %q", got, "/mounted/custom.crt")
+		}
+	})
+}
+
 // TestDefaultVolumeBudgetBytes_MatchesOperator pins defaultVolumeBudgetBytes
 // to the value it must keep matching by hand: the operator's
 // captureVolumeBudgetBytes in

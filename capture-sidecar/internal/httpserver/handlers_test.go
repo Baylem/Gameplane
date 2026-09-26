@@ -545,6 +545,13 @@ func TestHandleStart_ConcurrentRejected(t *testing.T) {
 	if rr.Code != http.StatusConflict {
 		t.Fatalf("second start = %d, want 409", rr.Code)
 	}
+	// F-192 regression: the 409 must name the capture that is actually
+	// running (cap-first), not the rejected request's id (cap-second) -
+	// otherwise the caller sees a capture that never started described as
+	// "in progress".
+	if body := rr.Body.String(); !strings.Contains(body, "cap-first") || strings.Contains(body, "cap-second") {
+		t.Fatalf("409 body = %q; want it to name the running capture cap-first, not the rejected cap-second", body)
+	}
 	if factory.count() != 1 {
 		t.Fatalf("opened %d packet sources; the rejected start must not open one", factory.count())
 	}

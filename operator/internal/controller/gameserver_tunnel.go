@@ -454,15 +454,16 @@ func (r *GameServerReconciler) reconcileTunnelNetworkPolicy(
 				)
 
 			case "playit":
-				// playit: relies on TCP and UDP to its relay endpoints.
-				// Since playit does not publish a fixed set of relay endpoints,
-				// we permit all ports. The tunnel pod's egress is still constrained
-				// to these two protocols and the backing Service DNS.
-				// Note: this allows any outbound TCP/UDP, but DNS is already granted,
-				// and the tunnel pod can only reach the backing Service DNS by name,
-				// so concrete egress is still limited to the tunnel relay destinations.
-				// A more restrictive approach would require knowing playit's relay IPs,
-				// which are not discoverable statically.
+				// playit does not publish a fixed set of relay endpoints or ports:
+				// the playit agent dials its control plane and relay nodes on
+				// varying TCP and UDP ports that are not known ahead of time.
+				// A per-port allow list (like frp's ServerPort or tailscale's
+				// 443/41641) can't express that, so playit gets its own egress
+				// rule below with no Ports field at all -- which, per the K8s
+				// NetworkPolicy semantics, means all ports/protocols -- to any
+				// destination, matching how the frp/tailscale rule above omits
+				// "To" to allow any destination. The DNS and advertised-port
+				// rule built here is left untouched for playit.
 			}
 		}
 
@@ -484,10 +485,18 @@ func (r *GameServerReconciler) reconcileTunnelNetworkPolicy(
 
 		// Egress with no "To" means "to any destination".
 		np.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
-		np.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
+		egressRules := []networkingv1.NetworkPolicyEgressRule{{
 			Ports: egressPorts,
 			// Empty To = allow to any destination
 		}}
+		if tunnel != nil && tunnel.Provider == "playit" {
+			// playit's relay/control-plane ports aren't statically known, so
+			// grant it a separate rule with no Ports (= all ports/protocols)
+			// and no To (= any destination), on top of the DNS/advertised-port
+			// rule above.
+			egressRules = append(egressRules, networkingv1.NetworkPolicyEgressRule{})
+		}
+		np.Spec.Egress = egressRules
 
 		return controllerutil.SetControllerReference(gs, np, r.Scheme)
 	})
