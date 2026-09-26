@@ -180,13 +180,13 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-217 | Telemetry receiver /metrics endpoint unreachable (NetworkPolicy) | charts/gameplane/ | review:charts/gameplane | S3 | fixed-unverified | #476 | | |
 | F-218 | CRD schema not updated on reinstall (pre-upgrade hook is upgrade-only) | charts/gameplane/ | review:charts/gameplane | S3 | fixed-unverified | #443 | | |
 | F-219 | Default module catalog omits 14 spec-015 modules | charts/gameplane/ | review:charts/gameplane | S3 | open | | | |
-| F-220 | CRD doc contradicts upgrade procedure | charts/gameplane/ | review:charts/gameplane | S4 | open | | | |
-| F-221 | Capture buffer default (5 GiB) too large for 1 GiB emptyDir | charts/gameplane/ | review:charts/gameplane | S4 | open | | | |
+| F-220 | CRD doc contradicts upgrade procedure | charts/gameplane/ | review:charts/gameplane | S4 | fixed-unverified | #485 | | |
+| F-221 | Capture buffer default (5 GiB) too large for 1 GiB emptyDir | charts/gameplane/ | review:charts/gameplane | S4 | fixed-unverified | #485 | | |
 | F-222 | Module source git.ref doc says main, but values pins v0.2.0-beta.6 | charts/gameplane/ | review:charts/gameplane | S4 | open | | | |
-| F-223 | OIDC displayName config key missing from chart | charts/gameplane/ | review:charts/gameplane | S4 | open | | | |
-| F-224 | S3 region doc says path-style, code uses virtual-hosted | charts/gameplane/ | review:charts/gameplane | S4 | open | | | |
-| F-225 | podSecurity.enforceRestricted doc promises per-pod opt-in that doesn't exist | charts/gameplane/ | review:charts/gameplane | S4 | open | | | |
-| F-226 | Image list doc incomplete (12 images, lists 3) | charts/gameplane/ | review:charts/gameplane | S4 | open | | | |
+| F-223 | OIDC displayName config key missing from chart | charts/gameplane/ | review:charts/gameplane | S4 | fixed-unverified | #485 | | |
+| F-224 | S3 region doc says path-style, code uses virtual-hosted | charts/gameplane/ | review:charts/gameplane | S4 | fixed-unverified | #485 | | |
+| F-225 | podSecurity.enforceRestricted doc promises per-pod opt-in that doesn't exist | charts/gameplane/ | review:charts/gameplane | S4 | fixed-unverified | #485 | | |
+| F-226 | Image list doc incomplete (12 images, lists 3) | charts/gameplane/ | review:charts/gameplane | S4 | fixed-unverified | #485 | | |
 | F-232 | dev-up re-run targets wrong kubectl context | deploy/ | review:deploy | S3 | fixed-unverified | #452 | | |
 | F-233 | e2e.sh comment/message lists wrong image names | deploy/ | review:deploy | S4 | fixed-unverified | #478 | | |
 | F-234 | Docker registry container name conflict blocks bootstrap if stopped manually | deploy/ | review:deploy | S3 | fixed-unverified | #452 | | |
@@ -201,7 +201,7 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-244 | gp-module missing from dependabot gomod | .github/workflows/ | review:github-workflows | S3 | fixed-unverified | #450 | | |
 | F-245 | actionlint doc command uses wrong extension glob | .github/workflows/ | review:github-workflows | S4 | open | | | |
 | F-251 | nginx.conf.template missing client_max_body_size | web/ | review:web | S2 | fixed-unverified | #426 | | |
-| F-252 | docs/oidc.md gives clientSecretRef as plain string | charts/gameplane/ | review:charts/gameplane | S3 | open | | | |
+| F-252 | docs/oidc.md gives clientSecretRef as plain string | charts/gameplane/ | review:charts/gameplane | S3 | fixed-unverified | #485 | | |
 | F-253 | README.md / plan.md say "Go 1.25" vs go.mod's 1.26 requirement | root docs | review:root-docs | S4 | open | | | |
 | F-254 | sentinel/sentinel untracked binary, no .gitignore entry | sentinel/ | review:sentinel | S4 | fixed-unverified | #467 | | |
 | F-255 | make dev-load loads 4 of 12 built images | deploy/ | review:deploy | S3 | fixed-unverified | #452 | | |
