@@ -85,7 +85,7 @@ func TestCaptureDelete_SidecarUnreachableStillDeletesCR(t *testing.T) {
 	nc := newCompletedNetworkCapture(t, "cap-del", "del-unreachable", time.Minute, 86400)
 	k := fakeCaptureClient(srv, nc)
 
-	tlsClient := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+	tlsClient := &http.Client{Transport: roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 		return nil, errSimulatedSidecarUnreachable
 	})}
 
