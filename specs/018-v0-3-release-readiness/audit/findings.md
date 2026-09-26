@@ -153,12 +153,12 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-185 | Four specs.md statements contradict code | sentinel | review:sentinel | S4 | fixed-unverified | #467 | | |
 | F-186 | Dependencies, tests and doc references don't resolve | sentinel | review:sentinel | S4 | fixed-unverified | #467 | | |
 | F-187 | Retained captures evict pod when passing 1 GiB total | capture-sidecar | review:capture-sidecar | S3 | fixed-unverified | #483 | | |
-| F-188 | Environment variables ignored; works by flag-default coincidence | capture-sidecar | review:capture-sidecar | S4 | open | | | |
-| F-189 | Specs.md lists 4 endpoints but code has 6; delete endpoint undocumented | capture-sidecar | review:capture-sidecar | S4 | open | | | |
-| F-190 | Four specs.md contradictions | capture-sidecar | review:capture-sidecar | S4 | open | | | |
-| F-191 | Gopacket dependency drift: fork vs upstream, version mismatch | capture-sidecar | review:capture-sidecar | S4 | open | | | |
-| F-192 | 409 error message names wrong capture on status-poll failure | capture-sidecar | review:capture-sidecar | S4 | open | | | |
-| F-193 | /healthz route requires mTLS despite comments calling it unauthenticated | capture-sidecar | review:capture-sidecar | S4 | open | | | |
+| F-188 | Environment variables ignored; works by flag-default coincidence | capture-sidecar | review:capture-sidecar | S4 | fixed-unverified | #487 | | |
+| F-189 | Specs.md lists 4 endpoints but code has 6; delete endpoint undocumented | capture-sidecar | review:capture-sidecar | S4 | fixed-unverified | #487 | | |
+| F-190 | Four specs.md contradictions | capture-sidecar | review:capture-sidecar | S4 | fixed-unverified | #487 | | |
+| F-191 | Gopacket dependency drift: fork vs upstream, version mismatch | capture-sidecar | review:capture-sidecar | S4 | fixed-unverified | #487 | | |
+| F-192 | 409 error message names wrong capture on status-poll failure | capture-sidecar | review:capture-sidecar | S4 | fixed-unverified | #487 | | |
+| F-193 | /healthz route requires mTLS despite comments calling it unauthenticated | capture-sidecar | review:capture-sidecar | S4 | fixed-unverified | #487 | | |
 | F-195 | specs.md references wrong files for webhook sender | audit-syslog-bridge | review:audit-syslog-bridge | S4 | fixed-unverified | #466 | | |
 | F-196 | Untested reconnect and write deadline in specs.md | audit-syslog-bridge | review:audit-syslog-bridge | S4 | fixed-unverified | #466 | | |
 | F-197 | specs.md says Go 1.25 but go.mod is 1.26 | audit-syslog-bridge | review:audit-syslog-bridge | S4 | fixed-unverified | #486 | | |
@@ -209,7 +209,7 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-258 | A Failed Module rewrites its status twice on every reconcile and re-triggers itself through its own watch | operator | review:operator | S4 | fixed-unverified | #445 | | seen while fixing CI on a hardening PR: an envtest update to a Failed Module lost every RetryOnConflict attempt; same caveat on the ID as F-257 |
 | F-259 | Capture download returns 409 right after a user stop although the capture reads Completed | api | ci:e2e | S3 | fixed-unverified | #449, #453 | | seen as sporadic arm64 e2e failures on unrelated PRs (#441); same caveat on the ID as F-257 |
 | F-260 | GameServer.Stopped and Restore.Resuming phases declared but never assigned | operator | review:operator | S4 | open | | | |
-| F-261 | Capture files deleted through the API keep counting against the sidecar volume budget until the pod restarts | capture-sidecar, api | review:#483 | S3 | open | | | follow-up to F-187 (#483) |
+| F-261 | Capture files deleted through the API keep counting against the sidecar volume budget until the pod restarts | capture-sidecar, api | review:#483 | S3 | fixed-unverified | #487 | | follow-up to F-187 (#483) |
 | F-262 | playit tunnel NetworkPolicy adds no egress ports although its comment says all ports are permitted | operator | review:#468 | S3 | fixed-unverified | #488 | | |
 
 ## Details

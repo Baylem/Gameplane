@@ -93,6 +93,7 @@ All of these still apply.
 - #488: F-262, playit tunnel egress (merged 2026-09-26; findings `fixed-unverified`).
 - #486: group 52, Go version docs (F-253 plan.md half fixed on the 018 branch) (merged 2026-09-26; findings `fixed-unverified`).
 - #489: F-138, the 7 test-only web exports removed (maintainer sign-off) (merged 2026-09-26; findings `fixed-unverified`).
+- #487: group 42 plus F-261, capture-sidecar code, docs and delete-frees-budget (merged 2026-09-26; findings `fixed-unverified`).
 - #427: held H02 (merged 2026-09-25 11:05 UTC). Update `held/findings.md` on the devbox.
 
 ### Open
