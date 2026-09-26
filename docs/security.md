@@ -632,11 +632,13 @@ by several layers:
   arbitrary control-plane Secret (e.g., the OIDC client secret or
   backup credentials) and using it as a kubeconfig.
 - **Delete guard.** `DELETE /clusters/{name}` drops the cluster's client at
-  once and deletes the referenced Secret only when the API created it: the
-  Secret must carry both `gameplane.local/cluster-kubeconfig=true` and
-  `gameplane.local/managed-by=gameplane-api`, the labels `POST /clusters`
-  sets. A Secret created with kubectl or GitOps is never deleted over HTTP,
-  the same rule the other API-managed Secrets follow.
+  once and deletes the referenced Secret only when it is the one POST generates
+  for that cluster (cluster-<name>-kubeconfig) and carries
+  `gameplane.local/cluster-kubeconfig=true` (Secrets created before the
+  managed-by label was added are also cleaned up). Any other Secret, including
+  one named for a different cluster or one without the kubeconfig label, is
+  left in place. A kubeconfig Secret you create with kubectl or GitOps under
+  another name is never deleted over HTTP.
 - **Never logged or returned.** The kubeconfig is never logged by the
   API, never echoed in responses, never visible in audit trails. It
   exists only to bootstrap the Kubernetes client for that cluster.

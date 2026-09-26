@@ -7,6 +7,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -30,6 +31,39 @@ func MountClusters(r chi.Router, reg *kube.Registry, k *kube.Client, ns string) 
 		r.Post("/", h.create)
 		r.Delete("/{name}", h.delete)
 	})
+}
+
+// clusterKubeconfigSecretName returns the Kubernetes Secret name that POST /clusters
+// generates for a cluster's kubeconfig.
+func clusterKubeconfigSecretName(cluster string) string {
+	return "cluster-" + cluster + "-kubeconfig"
+}
+
+// deleteClusterKubeconfigSecret deletes a kubeconfig Secret only when it is the one
+// that POST /clusters generates for this cluster (cluster-<name>-kubeconfig) and carries
+// the kube.ClusterKubeconfigLabel label. Secrets created before managed-by labelling
+// are cleaned up; any other Secret (different name or missing the kubeconfig label)
+// is left in place and returns apierrors.NewNotFound.
+func deleteClusterKubeconfigSecret(ctx context.Context, k *kube.Client, ns, cluster, secretName string) error {
+	// Check if the secret name matches what POST /clusters generates.
+	expectedName := clusterKubeconfigSecretName(cluster)
+	if secretName != expectedName {
+		return apierrors.NewNotFound(corev1.Resource("secrets"), secretName)
+	}
+
+	// Fetch the Secret to check its labels.
+	secret, err := k.Typed.CoreV1().Secrets(ns).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// Only delete if it carries the kubeconfig label.
+	if secret.Labels[kube.ClusterKubeconfigLabel] != "true" {
+		return apierrors.NewNotFound(corev1.Resource("secrets"), secretName)
+	}
+
+	// Delete the Secret.
+	return k.Typed.CoreV1().Secrets(ns).Delete(ctx, secretName, metav1.DeleteOptions{})
 }
 
 type clustersHandler struct {
@@ -131,7 +165,7 @@ func (h clustersHandler) create(w http.ResponseWriter, req *http.Request) {
 	// Create the kubeconfig Secret in the control-plane namespace. The
 	// managed-by label marks it as created by the API, which is what lets
 	// DELETE /clusters/{name} remove it again.
-	secretName := "cluster-" + in.Name + "-kubeconfig"
+	secretName := clusterKubeconfigSecretName(in.Name)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -234,12 +268,12 @@ func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
 	// watch, so no request is dispatched through a removed registration.
 	h.reg.Remove(name)
 
-	// Clean up the kubeconfig Secret, but only one the API created itself
-	// (kubeconfig label plus managed-by=gameplane-api). A Secret created with
-	// kubectl or GitOps, or any other control-plane Secret the Cluster
-	// names, is left in place.
+	// Clean up the kubeconfig Secret only if it is the one this cluster was created with
+	// (cluster-<name>-kubeconfig) and carries the kubeconfig label. This includes Secrets
+	// created before the managed-by label was added. Any other Secret — different name
+	// or missing the kubeconfig label — is left in place.
 	if secretName != "" {
-		if err := deleteManagedSecret(req.Context(), h.k, h.namespace, secretName, kube.ClusterKubeconfigLabel); err != nil && !apierrors.IsNotFound(err) {
+		if err := deleteClusterKubeconfigSecret(req.Context(), h.k, h.namespace, name, secretName); err != nil && !apierrors.IsNotFound(err) {
 			slog.Warn("cluster delete: kubeconfig secret cleanup failed", "cluster", name, "err", err)
 		}
 	}

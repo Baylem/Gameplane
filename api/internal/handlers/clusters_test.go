@@ -461,3 +461,73 @@ func TestMountClusters_DeleteDropsClusterClientImmediately(t *testing.T) {
 		t.Fatal("local cluster client removed by a remote cluster delete")
 	}
 }
+
+func TestMountClusters_DeleteRemovesKubeconfigSecretWithoutManagedByLabel(t *testing.T) {
+	reg := kube.NewRegistry("local")
+	k := fakeKubeClientWithClusters(
+		newCluster("remote", map[string]any{
+			"kubeconfigSecret": map[string]any{"name": "cluster-remote-kubeconfig"},
+		}, nil),
+	)
+	reg.Set("local", k)
+	createClusterTestSecret(t, k, "cluster-remote-kubeconfig", map[string]string{
+		kube.ClusterKubeconfigLabel: "true",
+	})
+	r := mountClustersRouter(k, reg)
+
+	rr := doClusters(t, r, "DELETE", "/clusters/remote", nil)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("delete remote: expected 204, got %d %s", rr.Code, rr.Body)
+	}
+	_, err := k.Typed.CoreV1().Secrets("gameplane-system").Get(t.Context(), "cluster-remote-kubeconfig", metav1.GetOptions{})
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("kubeconfig secret without managed-by label should be deleted (err=%v)", err)
+	}
+}
+
+func TestMountClusters_DeleteKeepsAnotherClustersKubeconfigSecret(t *testing.T) {
+	reg := kube.NewRegistry("local")
+	k := fakeKubeClientWithClusters(
+		newCluster("b", map[string]any{
+			"kubeconfigSecret": map[string]any{"name": "cluster-a-kubeconfig"},
+		}, nil),
+	)
+	reg.Set("local", k)
+	createClusterTestSecret(t, k, "cluster-a-kubeconfig", map[string]string{
+		kube.ClusterKubeconfigLabel: "true",
+		ManagedByLabel:              managedByValue,
+	})
+	r := mountClustersRouter(k, reg)
+
+	rr := doClusters(t, r, "DELETE", "/clusters/b", nil)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("delete b: expected 204, got %d %s", rr.Code, rr.Body)
+	}
+	_, err := k.Typed.CoreV1().Secrets("gameplane-system").Get(t.Context(), "cluster-a-kubeconfig", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("another cluster's kubeconfig secret should not be deleted: %v", err)
+	}
+}
+
+func TestMountClusters_DeleteKeepsGeneratedNameSecretWithoutKubeconfigLabel(t *testing.T) {
+	reg := kube.NewRegistry("local")
+	k := fakeKubeClientWithClusters(
+		newCluster("remote", map[string]any{
+			"kubeconfigSecret": map[string]any{"name": "cluster-remote-kubeconfig"},
+		}, nil),
+	)
+	reg.Set("local", k)
+	createClusterTestSecret(t, k, "cluster-remote-kubeconfig", map[string]string{
+		ManagedByLabel: managedByValue,
+	})
+	r := mountClustersRouter(k, reg)
+
+	rr := doClusters(t, r, "DELETE", "/clusters/remote", nil)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("delete remote: expected 204, got %d %s", rr.Code, rr.Body)
+	}
+	_, err := k.Typed.CoreV1().Secrets("gameplane-system").Get(t.Context(), "cluster-remote-kubeconfig", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("secret without kubeconfig label should not be deleted: %v", err)
+	}
+}
