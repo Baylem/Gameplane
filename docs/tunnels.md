@@ -342,14 +342,14 @@ If you want to avoid reconnects on wake, consider:
    provider-specific relay ports:
    - **frp:** the frp server's `ServerAddr:ServerPort` (default TCP 7000).
    - **tailscale:** the control plane on TCP 443 and DERP relays on UDP 41641.
-   - **playit:** no additional relay ports are added — playit does not
-     publish a fixed set of relay endpoints, so relay reachability depends
-     on the advertised ports already being open or on an additional
-     NetworkPolicy for your environment.
+   - **playit:** an unrestricted egress rule (all ports, all protocols, any
+     destination), in addition to the DNS/advertised-ports rule every
+     provider gets. playit does not publish a fixed set of relay endpoints
+     or ports, so a per-port allow list can't be expressed the way it can
+     for frp and tailscale.
 
-   For frp and tailscale, no manual NetworkPolicy is needed for a standard
-   setup. For playit, check whether the generated policy covers your relay
-   traffic before assuming it does.
+   For frp, tailscale, and playit, no manual NetworkPolicy is needed for a
+   standard setup.
    
    If the tunnel pod cannot reach the relay:
    ```bash
