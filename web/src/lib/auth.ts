@@ -2,8 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { api, APIError } from "@/lib/api";
 import type { User } from "@/types";
 
-export type Role = User["role"];
-
 // Total attempts for /users/me before the route guards give up and show a
 // retry card. Three covers a rolling API restart without stalling the UI.
 const ME_ATTEMPTS = 3;
@@ -18,10 +16,6 @@ export function useMe() {
     retry: (failureCount, err) =>
       !(err instanceof APIError && err.status === 401) && failureCount < ME_ATTEMPTS,
   });
-}
-
-export function hasRole(me: User | undefined, allowed: readonly Role[]): boolean {
-  return !!me && allowed.includes(me.role);
 }
 
 /**

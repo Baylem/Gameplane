@@ -346,7 +346,6 @@ export interface ScheduleCreate {
 
 export const Schedules = {
   list: (ns?: string) => api<List<BackupSchedule>>(withNS("/schedules", ns)),
-  get: (name: string, ns?: string) => api<BackupSchedule>(withNS(`/schedules/${name}`, ns)),
   create: (opts: ScheduleCreate, ns?: string) => {
     const { name, generateName, ...spec } = opts;
     const ident = name ? { name } : { generateName: generateName ?? `${spec.serverRef.name}-sched-` };
@@ -380,8 +379,6 @@ export const Restores = {
     const ident = name ? { name } : { generateName: generateName ?? "restore-" };
     return api<Restore>(withNS("/restores", ns), { method: "POST", body: envelope("Restore", ident, spec) });
   },
-  remove: (name: string, ns?: string) =>
-    api<void>(withNS(`/restores/${name}`, ns), { method: "DELETE" }),
 };
 
 export interface BackupDestinationCreate {
@@ -392,8 +389,6 @@ export interface BackupDestinationCreate {
 
 export const BackupDestinations = {
   list: () => api<List<BackupDestination>>("/backup-destinations"),
-  get: (name: string) =>
-    api<BackupDestination>(`/backup-destinations/${name}`),
   // POST is also used to rotate the password of an existing destination —
   // the server treats {name} as the upsert key.
   upsert: (body: BackupDestinationCreate) =>
@@ -748,7 +743,6 @@ export interface InstallRequest {
 export const Modules = {
   catalog: () => api<List<CatalogEntry>>("/modules/catalog"),
   list: () => api<List<Module>>("/modules"),
-  get: (name: string) => api<Module>(`/modules/${name}`),
   install: (body: InstallRequest) =>
     api<Module>("/modules", { method: "POST", body }),
   upgrade: (name: string, version: string) =>
