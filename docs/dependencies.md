@@ -266,8 +266,8 @@ handshake. Direct deps from `sentinel/go.mod` (excluding the local
 
 | Dependency | Version | Why |
 |---|---|---|
-| `k8s.io/apimachinery` | v0.37.0 | `main.go` — typed/unstructured plumbing for reading the target `GameServer`'s status and idle/wake fields |
-| `k8s.io/client-go` | v0.37.0 | `main.go` — in-cluster client used to read `GameServer` status and patch it to trigger a wake |
+| `k8s.io/apimachinery` | v0.37.0 | `main.go` — typed/unstructured plumbing for reading the target `GameServer`'s status and idle/wake fields | <!-- doc-versions: dependency -->
+| `k8s.io/client-go` | v0.37.0 | `main.go` — in-cluster client used to read `GameServer` status and patch it to trigger a wake | <!-- doc-versions: dependency -->
 
 ### capture-sidecar
 
@@ -279,8 +279,8 @@ trade-off). Direct deps from `capture-sidecar/go.mod`:
 | Dependency | Version | Why |
 |---|---|---|
 | `github.com/gopacket/gopacket` | v1.7.2 | `internal/capture/writer.go`/`afpacket.go` — `AF_PACKET` socket capture via `gopacket/afpacket`, plus pcap-format frame writing via `pcapgo`/`layers` |
-| `github.com/packetcap/go-pcap` | v0.0.0-20260731105150-c86974bbfbcd | `internal/capture/filter.go` — compiles the tcpdump-style filter expression to BPF without requiring libpcap at runtime |
-| `golang.org/x/net` | v0.59.0 | `internal/capture/filter.go`/`afpacket.go` — `x/net/bpf`: assembling the classic-BPF program attached to the AF_PACKET socket |
+| `github.com/packetcap/go-pcap` | v0.0.0-20260731105150-c86974bbfbcd | `internal/capture/filter.go` — compiles the tcpdump-style filter expression to BPF without requiring libpcap at runtime | <!-- doc-versions: dependency -->
+| `golang.org/x/net` | v0.59.0 | `internal/capture/filter.go`/`afpacket.go` — `x/net/bpf`: assembling the classic-BPF program attached to the AF_PACKET socket | <!-- doc-versions: dependency -->
 
 ### tunnel
 
@@ -310,7 +310,7 @@ package a game module before publishing it. Direct deps from
 | Dependency | Version | Why |
 |---|---|---|
 | `gopkg.in/yaml.v3` | v3.0.1 | `internal/common/yaml_ast.go`, `internal/validator/`, `internal/scaffold/`, `internal/preview/`, `internal/packager/` — parses/round-trips `module.yaml`/`template.yaml` while preserving comments and key order for scaffold output |
-| `k8s.io/apimachinery` | v0.37.0 | `internal/preview/memory.go` — `resource.Quantity` parsing, to preview a template's resource requests/limits the same way the operator would |
+| `k8s.io/apimachinery` | v0.37.0 | `internal/preview/memory.go` — `resource.Quantity` parsing, to preview a template's resource requests/limits the same way the operator would | <!-- doc-versions: dependency -->
 
 ## Frontend
 
