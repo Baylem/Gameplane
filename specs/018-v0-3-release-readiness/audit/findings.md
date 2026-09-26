@@ -56,18 +56,18 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-048 | Backup with quiesce can be deleted before unquiesce | operator | review:operator | S3 | fixed-unverified | #454 | | |
 | F-049 | Restore does not delete post-snapshot files | operator | review:operator | S3 | fixed-unverified | #454 | | |
 | F-050 | Deleted managed GameTemplate not recreated on next reconcile | operator | review:operator | S3 | fixed-unverified | #451 | | |
-| F-051 | Capture expiration waits for unreachable sidecar | operator | review:operator | S4 | open | | | |
+| F-051 | Capture expiration waits for unreachable sidecar | operator | review:operator | S4 | fixed-unverified | #490 | | |
 | F-052 | UDP tunnel forwarding sends TCP | operator | review:operator | S3 | fixed-unverified | #428 | | |
 | F-054 | Wipe always succeeds even if it failed | operator | review:operator | S3 | fixed-unverified | #436 | | |
-| F-055 | TunnelHostnameIgnored condition not removed | operator | review:operator | S4 | open | | | |
-| F-056 | Address not validated before sending to MetalLB/Cilium | operator | review:operator | S4 | open | | | |
-| F-057 | Idle window parse error appears only in status, not as condition | operator | review:operator | S4 | open | | | |
-| F-058 | Four unused capture configuration fields with misleading comments | operator | review:operator | S4 | open | | | |
-| F-059 | Operator specs.md contradicts working code | operator | review:operator | S4 | open | | | |
-| F-060 | Seven CLI flags missing from specs.md table | operator | review:operator | S4 | open | | | |
-| F-061 | Operator specs.md dependencies stale vs go.mod | operator | review:operator | S4 | open | | | |
-| F-062 | Seven spec.md statements contradict code | operator | review:operator | S4 | open | | | |
-| F-063 | Operator config/ dev path samples fail end-to-end | operator | review:operator | S4 | open | | | |
+| F-055 | TunnelHostnameIgnored condition not removed | operator | review:operator | S4 | fixed-unverified | #490 | | |
+| F-056 | Address not validated before sending to MetalLB/Cilium | operator | review:operator | S4 | fixed-unverified | #490 | | |
+| F-057 | Idle window parse error appears only in status, not as condition | operator | review:operator | S4 | fixed-unverified | #490 | | |
+| F-058 | Four unused capture configuration fields with misleading comments | operator | review:operator | S4 | fixed-unverified | #490 | | |
+| F-059 | Operator specs.md contradicts working code | operator | review:operator | S4 | fixed-unverified | #490 | | |
+| F-060 | Seven CLI flags missing from specs.md table | operator | review:operator | S4 | fixed-unverified | #490 | | |
+| F-061 | Operator specs.md dependencies stale vs go.mod | operator | review:operator | S4 | fixed-unverified | #490 | | |
+| F-062 | Seven spec.md statements contradict code | operator | review:operator | S4 | fixed-unverified | #490 | | |
+| F-063 | Operator config/ dev path samples fail end-to-end | operator | review:operator | S4 | fixed-unverified | #490 | | |
 | F-074 | requestTimeout(60s) exempts WebSocket/SSE only; upload/capture proxies cut at 60s | api/ | review:api | S3 | fixed-unverified | #444 | | |
 | F-075 | bodyLimit(1 MiB) deadcaps /mods/upload and /files/write; declared limits ignored | api/ | review:api | S3 | fixed-unverified | #444 | | |
 | F-076 | config row missing returns 500 instead of 200 on idempotent reset | api/ | review:api | S4 | fixed-unverified | #477 | | |
