@@ -98,7 +98,11 @@ All of these still apply.
 
 ### Open
 
-- **Wave 5** (groups 38, 44, 48, 50) is running in session 7 as workflow `wf_d0f7e3b9-7fa` (script `scratchpad/wave5.js` in the session-5 scratchpad, worktrees wtg38/44/48/50 from master `b57c0a59`). Each group gets its own PR after an opus review. Groups 38, 48 and 50 must not edit the Go-version lines that #486 changes.
+- **Wave 5** (workflow `wf_d0f7e3b9-7fa`, session 7) opened:
+  - #491: group 38, F-149, F-150, F-151 (gameaction). Behaviour change: a required parameter sent as an explicit empty string is now rejected (400) instead of taking its default.
+  - #492: group 48, F-201 (telemetry-receiver method-guard tests).
+  - #493: group 44, F-205..F-210 (mcp-server). Leftover nit: `docs/dependencies.md` still says "the 7 Gameplane CRDs" (it touches the same file as #494, so fix it after #494 lands).
+  - #494: group 50, F-032..F-036, F-245 (docs). The review loop stalled on three stale `comparison-sources.md` citations; the main loop fixed them by hand after checking the source lines.
 - Wave 4 is fully merged (23:04 UTC). Record each merge with `scratchpad/rec.sh`.
 - The held fixes (#462, #463, #469, #471–#474) belong to the maintainer, on the devbox. The cloud session doesn't drive them.
 - The Dependabot PRs #272 (TypeScript 7) and #458 (ESLint 10) are blocked; see CLAUDE.md.
@@ -146,7 +150,7 @@ The cloud container restarted three times; the third restart (session 6, 2026-09
    - group 27 waits on a decision; wave 2 is partly done (see §3c);
    - wave 2 and wave 3 are done: 17, 25, 27, 33, 35, 37, 39, 40, 41, 43, 45, 46, 47, 49;
    - wave 4 is merged: 31, 34, 42 + F-261, 52, F-138, F-262 (#485–#490);
-   - wave 5 (38, 44, 48, 50) in flight (session 7); 51 has an external blocker;
+   - wave 5 open as #491–#494 (38, 48, 44, 50); 51 has an external blocker;
    - 28 is blocked on the module tag (T054), 32 is T063, and 19 may need design.
 4. The OD-021 follow-ups (see OPEN-DECISIONS.md OD-021):
    - the new Go e2e bucket (item 12);
