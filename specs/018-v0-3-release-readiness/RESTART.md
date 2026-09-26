@@ -1,6 +1,6 @@
 # Restart Guide: spec 018 (v0.3 release readiness)
 
-Live hand-off, last updated during session 6 (a cloud session, 2026-09-26 ~22:30 UTC). **After every context compaction, re-read this file first**, then [tasks.md](tasks.md) and [OPEN-DECISIONS.md](OPEN-DECISIONS.md). Keep this file current before context runs out.
+Live hand-off, last updated during session 7 (a cloud session, 2026-09-26 ~23:10 UTC). **After every context compaction, re-read this file first**, then [tasks.md](tasks.md) and [OPEN-DECISIONS.md](OPEN-DECISIONS.md). Keep this file current before context runs out.
 
 ## 0. Setup
 
@@ -93,8 +93,8 @@ All of these still apply.
 
 ### Open
 
-- Wave 4, all green and ready to merge as of 22:23 UTC. Record each merge with `scratchpad/rec.sh`:
-  - #485: group 31, F-252, F-220, F-221, F-223, F-224, F-225, F-226.
+- **Wave 5** (groups 38, 44, 48, 50) is running in session 7 as workflow `wf_d0f7e3b9-7fa` (script `scratchpad/wave5.js` in the session-5 scratchpad, worktrees wtg38/44/48/50 from master `b57c0a59`). Each group gets its own PR after an opus review. Groups 38, 48 and 50 must not edit the Go-version lines that #486 changes.
+- Wave 4, all green and ready to merge as of 22:23 UTC (re-checked 23:00 UTC). Record each merge with `scratchpad/rec.sh`:
   - #486: group 52, F-152, F-197, F-200. F-253 is only half fixed: the `plan.md` half lives on this branch.
   - #487: group 42 plus F-261, F-188..F-193, F-261.
   - #488: F-262.
@@ -145,8 +145,8 @@ The cloud container restarted three times; the third restart (session 6, 2026-09
    - done: groups 1, 2, 4, 5, 6, 8, 9, 10, 11, 14, 15, 16, 18, 20, 21, 22, 23, 24, 26, 29, 30;
    - group 27 waits on a decision; wave 2 is partly done (see §3c);
    - wave 2 and wave 3 are done: 17, 25, 27, 33, 35, 37, 39, 40, 41, 43, 45, 46, 47, 49;
-   - wave 4 (31, 34, 42, 52, plus F-138, F-261 and F-262) is open as #485–#490;
-   - not started: wave 5 (38, 44, 48, 50); 51 has an external blocker;
+   - wave 4: 31 merged (#485); 34, 42, 52, F-138, F-261 and F-262 open as #486–#490;
+   - wave 5 (38, 44, 48, 50) in flight (session 7); 51 has an external blocker;
    - 28 is blocked on the module tag (T054), 32 is T063, and 19 may need design.
 4. The OD-021 follow-ups (see OPEN-DECISIONS.md OD-021):
    - the new Go e2e bucket (item 12);
