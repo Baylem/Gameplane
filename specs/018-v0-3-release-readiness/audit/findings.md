@@ -120,7 +120,7 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-149 | Parameter length cap is bytes, not characters | gameaction/ | review:gameaction | S4 | open | | | |
 | F-150 | Required parameter with default accepts empty value | gameaction/ | review:gameaction | S4 | open | | | |
 | F-151 | Template spec claims non-deterministic function exists | gameaction/ | review:gameaction | S4 | open | | | |
-| F-152 | gameaction specs.md says Go 1.25, module is 1.26 | gameaction/ | review:gameaction | S4 | open | | | |
+| F-152 | gameaction specs.md says Go 1.25, module is 1.26 | gameaction/ | review:gameaction | S4 | fixed-unverified | #486 | | |
 | F-153 | Classify error returns differ from spec promise | gameproto/ | review:gameproto | S4 | fixed-unverified | #470 | | |
 | F-154 | Terraria version string exceeds documented 32 KB cap | gameproto/ | review:gameproto | S4 | fixed-unverified | #470 | | |
 | F-155 | BuildStatusResponse skips JSON validation contract | gameproto/ | review:gameproto | S4 | fixed-unverified | #470 | | |
@@ -161,9 +161,9 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-193 | /healthz route requires mTLS despite comments calling it unauthenticated | capture-sidecar | review:capture-sidecar | S4 | open | | | |
 | F-195 | specs.md references wrong files for webhook sender | audit-syslog-bridge | review:audit-syslog-bridge | S4 | fixed-unverified | #466 | | |
 | F-196 | Untested reconnect and write deadline in specs.md | audit-syslog-bridge | review:audit-syslog-bridge | S4 | fixed-unverified | #466 | | |
-| F-197 | specs.md says Go 1.25 but go.mod is 1.26 | audit-syslog-bridge | review:audit-syslog-bridge | S4 | open | | | |
+| F-197 | specs.md says Go 1.25 but go.mod is 1.26 | audit-syslog-bridge | review:audit-syslog-bridge | S4 | fixed-unverified | #486 | | |
 | F-198 | RFC 5424 APP-NAME validation missing | audit-syslog-bridge | review:audit-syslog-bridge | S4 | fixed-unverified | #466 | | |
-| F-200 | specs.md says Go 1.25 but go.mod is 1.26 | telemetry-receiver | review:telemetry-receiver | S4 | open | | | |
+| F-200 | specs.md says Go 1.25 but go.mod is 1.26 | telemetry-receiver | review:telemetry-receiver | S4 | fixed-unverified | #486 | | |
 | F-201 | specs.md claims untested HTTP method guards | telemetry-receiver | review:telemetry-receiver | S4 | open | | | |
 | F-204 | Pod logs truncation keeps old end instead of newest | mcp-server | review:mcp-server | S3 | fixed-unverified | #439 | | |
 | F-205 | Examples use nonexistent label keys | mcp-server | review:mcp-server | S4 | open | | | |
@@ -202,7 +202,7 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-245 | actionlint doc command uses wrong extension glob | .github/workflows/ | review:github-workflows | S4 | open | | | |
 | F-251 | nginx.conf.template missing client_max_body_size | web/ | review:web | S2 | fixed-unverified | #426 | | |
 | F-252 | docs/oidc.md gives clientSecretRef as plain string | charts/gameplane/ | review:charts/gameplane | S3 | fixed-unverified | #485 | | |
-| F-253 | README.md / plan.md say "Go 1.25" vs go.mod's 1.26 requirement | root docs | review:root-docs | S4 | open | | | |
+| F-253 | README.md / plan.md say "Go 1.25" vs go.mod's 1.26 requirement | root docs | review:root-docs | S4 | fixed-unverified | #486 | | |
 | F-254 | sentinel/sentinel untracked binary, no .gitignore entry | sentinel/ | review:sentinel | S4 | fixed-unverified | #467 | | |
 | F-255 | make dev-load loads 4 of 12 built images | deploy/ | review:deploy | S3 | fixed-unverified | #452 | | |
 | F-257 | Release image job times out building the multi-arch operator image, so an RC publishes no operator image, chart or GitHub release | .github/workflows/ | review:.github/workflows | S2 | fixed-unverified | #435 | | seen on the `v0.3.0-rc.1` release run (T014); ID after F-255 assumes F-256 is taken in the held list, so check on the devbox |

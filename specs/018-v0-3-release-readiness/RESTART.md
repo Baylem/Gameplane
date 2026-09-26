@@ -91,6 +91,7 @@ All of these still apply.
 - #485: group 31, chart OIDC quoting and install/security docs drift (merged 2026-09-26; findings `fixed-unverified`).
 - #490: group 34, operator code cleanup and docs drift (merged 2026-09-26; findings `fixed-unverified`).
 - #488: F-262, playit tunnel egress (merged 2026-09-26; findings `fixed-unverified`).
+- #486: group 52, Go version docs (F-253 plan.md half fixed on the 018 branch) (merged 2026-09-26; findings `fixed-unverified`).
 - #427: held H02 (merged 2026-09-25 11:05 UTC). Update `held/findings.md` on the devbox.
 
 ### Open
