@@ -247,23 +247,26 @@ spec:
             - --db-driver={{ .Values.api.db.driver }}
             - --db-dsn={{ .Values.api.db.dsn }}
             {{- if .Values.api.oidc.enabled }}
-            - --oidc-issuer={{ .Values.api.oidc.issuer }}
-            - --oidc-client-id={{ .Values.api.oidc.clientID }}
-            - --oidc-redirect-url={{ .Values.api.oidc.redirectURL }}
+            - {{ printf "--oidc-issuer=%s" .Values.api.oidc.issuer | quote }}
+            - {{ printf "--oidc-client-id=%s" .Values.api.oidc.clientID | quote }}
+            - {{ printf "--oidc-redirect-url=%s" .Values.api.oidc.redirectURL | quote }}
+            {{- if .Values.api.oidc.displayName }}
+            - {{ printf "--oidc-display-name=%s" .Values.api.oidc.displayName | quote }}
+            {{- end }}
             {{- if .Values.api.oidc.groupsClaim }}
-            - --oidc-groups-claim={{ .Values.api.oidc.groupsClaim }}
+            - {{ printf "--oidc-groups-claim=%s" .Values.api.oidc.groupsClaim | quote }}
             {{- end }}
             {{- if .Values.api.oidc.defaultRole }}
-            - --oidc-default-role={{ .Values.api.oidc.defaultRole }}
+            - {{ printf "--oidc-default-role=%s" .Values.api.oidc.defaultRole | quote }}
             {{- end }}
             {{- if and .Values.api.oidc.roleMappings .Values.api.oidc.roleMappings.admin }}
-            - --oidc-role-mapping-admin={{ join "," .Values.api.oidc.roleMappings.admin }}
+            - {{ printf "--oidc-role-mapping-admin=%s" (join "," .Values.api.oidc.roleMappings.admin) | quote }}
             {{- end }}
             {{- if and .Values.api.oidc.roleMappings .Values.api.oidc.roleMappings.operator }}
-            - --oidc-role-mapping-operator={{ join "," .Values.api.oidc.roleMappings.operator }}
+            - {{ printf "--oidc-role-mapping-operator=%s" (join "," .Values.api.oidc.roleMappings.operator) | quote }}
             {{- end }}
             {{- if and .Values.api.oidc.roleMappings .Values.api.oidc.roleMappings.viewer }}
-            - --oidc-role-mapping-viewer={{ join "," .Values.api.oidc.roleMappings.viewer }}
+            - {{ printf "--oidc-role-mapping-viewer=%s" (join "," .Values.api.oidc.roleMappings.viewer) | quote }}
             {{- end }}
             {{- end }}
             {{- if and .Values.operator.gameDataStorage .Values.operator.gameDataStorage.storageClassName }}
