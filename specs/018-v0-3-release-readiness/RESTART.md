@@ -96,6 +96,7 @@ All of these still apply.
 - #487: group 42 plus F-261, capture-sidecar code, docs and delete-frees-budget (merged 2026-09-26; findings `fixed-unverified`).
 - #485: group 31, chart and docs drift (merged 2026-09-26; findings `fixed-unverified`).
 - #490: group 34, operator cleanup and docs (merged 2026-09-26; findings `fixed-unverified`).
+- #487: group 42, capture-sidecar code and docs, plus F-261 (merged 2026-09-26; findings `fixed-unverified`).
 - #427: held H02 (merged 2026-09-25 11:05 UTC). Update `held/findings.md` on the devbox.
 
 ### Open
