@@ -17,7 +17,7 @@ Each audit round runs against a public release candidate (`v0.3.0-rc.N`) publish
 
 ## Technical Context
 
-**Language/Version**: No new product code of its own. Fixes land in the existing stack: Go 1.25 (`go.work`, 15 modules including `gp-module` and `test/e2e`), TypeScript strict / React 18 / Vite (`web/`), and Helm 3 (`charts/gameplane`).
+**Language/Version**: No new product code of its own. Fixes land in the existing stack: Go 1.26 (`go.work`, 15 modules including `gp-module` and `test/e2e`), TypeScript strict / React 18 / Vite (`web/`), and Helm 3 (`charts/gameplane`).
 
 **Primary Dependencies**: Existing release pipeline `.github/workflows/release.yaml` (GHCR images, OCI Helm chart, cosign signing, prerelease flag set for any tag containing `-`). Also `kubectl` and `helm` against `~/kubelab.yaml`, `curl` for API probes, and Chrome MCP for dashboard walkthroughs.
 
