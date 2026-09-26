@@ -6,9 +6,16 @@ metadata:
 spec:
   serverRef:
     name: smp-01
+  # repoRef.key is required by the CRD schema but unused by the operator:
+  # the restic Job always reads the "repo" and "password" data keys off
+  # the named Secret (repoRef.name), regardless of what repoRef.key says.
+  # The Secret referenced here must define both keys, e.g.:
+  #   kubectl create secret generic gameplane-backup-repo -n gameplane-games \
+  #     --from-literal=repo=s3:https://minio.example.com/gameplane-backups \
+  #     --from-literal=password=<restic-repo-password>
   repoRef:
     name: gameplane-backup-repo
-    key: url
+    key: repo
   strategy: restic-snapshot
   quiesce: true
   tags:

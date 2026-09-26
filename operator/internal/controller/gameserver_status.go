@@ -41,7 +41,7 @@ const GameServerConditionReasonPVCProvisioningFailed = "PVCProvisioningFailed"
 // Connection card reads the tunnel address when present.
 func (r *GameServerReconciler) reconcileStatus(
 	ctx context.Context, gs *gameplanev1alpha1.GameServer,
-	idle idleState, idleStatus *gameplanev1alpha1.IdleStatus, tunnelPlan tunnelPlan,
+	idle idleState, idleStatus *gameplanev1alpha1.IdleStatus, idleScheduleErr error, tunnelPlan tunnelPlan,
 	tmpl *gameplanev1alpha1.GameTemplate, svcEvents []corev1.Event, conflictingServer string,
 ) (time.Duration, error) {
 	// base captures the object as fetched so we can issue a JSON merge
@@ -235,6 +235,23 @@ func (r *GameServerReconciler) reconcileStatus(
 	// here would be a second thing to race. A nil block clears status.idle,
 	// which is how disabling the feature drops its stale read model.
 	gs.Status.Idle = idleStatus
+
+	// F-057: an unparseable wake-window entry used to appear only in
+	// status.idle.reason (and only while asleep). Surface it as its own
+	// condition instead, so it is visible whether or not the server happens
+	// to be asleep right now, and cleared once the schedule is fixed.
+	if idleScheduleErr != nil {
+		gs.Status.Conditions = upsertCondition(gs.Status.Conditions, metav1.Condition{
+			Type:               "IdleScheduleInvalid",
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: gs.Generation,
+			Reason:             "WakeWindowUnparseable",
+			Message:            idleScheduleErr.Error(),
+			LastTransitionTime: metav1.Now(),
+		})
+	} else {
+		gs.Status.Conditions = removeCondition(gs.Status.Conditions, "IdleScheduleInvalid")
+	}
 
 	// Endpoints: tunnel endpoints come first (when present) so the dashboard's
 	// Connection card reads the address players actually use.
@@ -714,6 +731,14 @@ func addressAssignmentCondition(
 			"Requested %s is ignored: it applies only to expose mode 'LoadBalancer', "+
 				"and this server is exposed as '%s'.",
 			addressRequestSummary(plan), expose)
+	case plan.Outcome == addressPlanInvalidAddress:
+		// spec.networking.address is not a parseable IP address (F-056):
+		// report a clear format error instead of handing the raw value to
+		// the address manager, which would otherwise apply it verbatim and
+		// report a generic pending reason.
+		cond.Reason = "InvalidAddress"
+		cond.Message = fmt.Sprintf(
+			"Requested address %q is not a valid IP address.", gs.Spec.Networking.Address)
 	case plan.Outcome == addressPlanNoAddressManagerConfigured:
 		// Reported rather than passed over in silence: with no address manager
 		// the server still comes up on whatever the cluster's default policy
@@ -986,10 +1011,47 @@ func computeTunnelConditions(
 ) []metav1.Condition {
 	conds := gs.Status.Conditions
 
-	// If tunnel is not wanted, remove the TunnelReady condition.
+	// If tunnel is not wanted, remove the TunnelReady condition along with
+	// the informational TunnelHostnameIgnored condition, which only applies
+	// while a tunnel is active.
 	if !plan.wantTunnel {
 		conds = removeCondition(conds, "TunnelReady")
+		conds = removeCondition(conds, "TunnelHostnameIgnored")
 		return conds
+	}
+
+	// Report informational conditions when tunnel settings don't apply to tunnel
+	// traffic. Computed up front, before the readiness checks below, so that
+	// TunnelHostnameIgnored always reflects the current spec rather than going
+	// stale behind an early return (e.g. a hostname cleared while the tunnel
+	// Deployment isn't ready yet, or the provider config is invalid) — F-055.
+	var ignoredSettings []string
+	if gs.Spec.Networking.Hostname != "" {
+		ignoredSettings = append(ignoredSettings, "hostname")
+	}
+	if len(gs.Spec.Networking.SourceRanges) > 0 {
+		ignoredSettings = append(ignoredSettings, "sourceRanges")
+	}
+	for _, po := range gs.Spec.Networking.PortOverrides {
+		if po.NodePort != 0 {
+			ignoredSettings = append(ignoredSettings, "nodePort")
+			break
+		}
+	}
+	if len(ignoredSettings) > 0 {
+		conds = upsertCondition(conds, metav1.Condition{
+			Type:               "TunnelHostnameIgnored",
+			Status:             metav1.ConditionTrue,
+			ObservedGeneration: gs.Generation,
+			Reason:             "SettingIgnored",
+			Message:            fmt.Sprintf("%s apply to the backing Service, not tunnel traffic", strings.Join(ignoredSettings, ", ")),
+		})
+	} else {
+		// None of the settings the tunnel ignores are set anymore (e.g. the
+		// hostname was cleared, or the tunnel was disabled): drop the stale
+		// informational condition rather than leaving an outdated True value
+		// on status indefinitely.
+		conds = removeCondition(conds, "TunnelHostnameIgnored")
 	}
 
 	// Tunnel is wanted: determine readiness.
@@ -1106,32 +1168,6 @@ func computeTunnelConditions(
 		tunnelReady.Status = metav1.ConditionFalse
 		tunnelReady.Reason = "UnknownProvider"
 		tunnelReady.Message = fmt.Sprintf("unknown tunnel provider: %s", tunnel.Provider)
-	}
-
-	// Report informational conditions when tunnel settings don't apply to tunnel traffic.
-	// These are set to True with an informational reason so users understand the limitation.
-	var ignoredSettings []string
-	if gs.Spec.Networking.Hostname != "" {
-		ignoredSettings = append(ignoredSettings, "hostname")
-	}
-	if len(gs.Spec.Networking.SourceRanges) > 0 {
-		ignoredSettings = append(ignoredSettings, "sourceRanges")
-	}
-	for _, po := range gs.Spec.Networking.PortOverrides {
-		if po.NodePort != 0 {
-			ignoredSettings = append(ignoredSettings, "nodePort")
-			break
-		}
-	}
-	if len(ignoredSettings) > 0 {
-		infoCondition := metav1.Condition{
-			Type:               "TunnelHostnameIgnored",
-			Status:             metav1.ConditionTrue,
-			ObservedGeneration: gs.Generation,
-			Reason:             "SettingIgnored",
-			Message:            fmt.Sprintf("%s apply to the backing Service, not tunnel traffic", strings.Join(ignoredSettings, ", ")),
-		}
-		conds = upsertCondition(conds, infoCondition)
 	}
 
 	conds = upsertCondition(conds, tunnelReady)

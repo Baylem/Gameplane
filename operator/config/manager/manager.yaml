@@ -32,6 +32,17 @@ spec:
             - "--leader-elect"
             - "--health-probe-bind-address=:8081"
             - "--metrics-bind-address=:8080"
+            # Operator -> agent mTLS material. Without these the operator
+            # cannot talk to any agent sidecar (console, files, RCON,
+            # heartbeats). The referenced Secrets must exist in this
+            # namespace before the pod starts (see the volumes below) —
+            # e.g. via `make dev-up`'s bootstrap or cert-manager in a real
+            # cluster; this sample does not create them.
+            - "--agent-ca-bundle=/etc/gameplane/agent-ca/ca.crt"
+            - "--agent-client-cert=/etc/gameplane/agent-client/tls.crt"
+            - "--agent-client-key=/etc/gameplane/agent-client/tls.key"
+            - "--agent-ca-secret-name=gameplane-agent-ca"
+            - "--agent-ca-secret-namespace=gameplane-system"
           ports:
             - name: metrics
               containerPort: 8080
@@ -61,4 +72,12 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+          volumeMounts:
+            - { name: agent-ca, mountPath: /etc/gameplane/agent-ca, readOnly: true }
+            - { name: agent-client, mountPath: /etc/gameplane/agent-client, readOnly: true }
+      volumes:
+        - name: agent-ca
+          secret: { secretName: gameplane-agent-ca }
+        - name: agent-client
+          secret: { secretName: gameplane-agent-client }
       terminationGracePeriodSeconds: 30

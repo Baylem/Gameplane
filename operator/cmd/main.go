@@ -75,8 +75,9 @@ var errInt32Range = errors.New("value out of int32 range")
 // and NetworkCaptureReconciler's retention fields use. This is the single
 // int64→int32 conversion in the capture retention path — every caller of
 // NetworkCaptureReconciler downstream is int32 end to end, and every other
-// int64 flag stays int64 with no cast (GameServerReconciler.CaptureDefault/
-// MaxRetention, unused elsewhere, are unaffected).
+// int64 capture flag (captureDefaultMaxDurationSeconds, captureDefaultMaxSizeBytes)
+// stays int64 with no cast, passed straight to NetworkCaptureReconciler's own
+// int64 fields.
 //
 // The literal `v > math.MaxInt32` comparison immediately guarding the
 // `int32(v)` conversion below, in the same function body and straight-line
@@ -377,17 +378,13 @@ func main() {
 			Config:    mgr.GetConfig(),
 			Clientset: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
 		},
-		AddressManager:                   addressManager,
-		MetalLBNamespace:                 metalLBNamespace,
-		GameIngressPolicyEnabled:         gameIngressPolicy,
-		GameIngressFromCIDRs:             gameIngressFromCIDR,
-		CaptureEnabled:                   captureEnabled,
-		CaptureDefaultRetention:          captureDefaultRetention,
-		CaptureMaxRetention:              captureMaxRetention,
-		CaptureDefaultMaxDurationSeconds: captureDefaultMaxDurationSeconds,
-		CaptureDefaultMaxSizeBytes:       captureDefaultMaxSizeBytes,
-		CaptureSidecarImage:              captureSidecarImage,
-		DefaultStorageClassName:          gameDataStorageClass,
+		AddressManager:           addressManager,
+		MetalLBNamespace:         metalLBNamespace,
+		GameIngressPolicyEnabled: gameIngressPolicy,
+		GameIngressFromCIDRs:     gameIngressFromCIDR,
+		CaptureEnabled:           captureEnabled,
+		CaptureSidecarImage:      captureSidecarImage,
+		DefaultStorageClassName:  gameDataStorageClass,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to set up controller", "controller", "GameServer")
 		os.Exit(1)

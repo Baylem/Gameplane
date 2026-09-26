@@ -8,3 +8,5 @@ resources:
   - gameplane.local_restores.yaml
   - gameplane.local_modulesources.yaml
   - gameplane.local_modules.yaml
+  - gameplane.local_clusters.yaml
+  - gameplane.local_networkcaptures.yaml

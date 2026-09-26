@@ -1458,7 +1458,7 @@ func TestReconcileStatus_AllocationFailedSurvivesEventExpiry(t *testing.T) {
 	// Pass N: a fresh AllocationFailed event for the exhausted pool.
 	events := []corev1.Event{warnEvent("metallb-controller", "AllocationFailed",
 		`Failed to allocate IP for "games/smp": no available IPs in pool pool-tiny for ipv4 IPFamily`)}
-	if _, err := r.reconcileStatus(ctx, gs, idleAwake, nil, tunnelPlan{}, nil, events, ""); err != nil {
+	if _, err := r.reconcileStatus(ctx, gs, idleAwake, nil, nil, tunnelPlan{}, nil, events, ""); err != nil {
 		t.Fatalf("reconcileStatus (pass N): %v", err)
 	}
 	cond, ok := condByType(gs.Status.Conditions, gameplanev1alpha1.GameServerConditionAddressAssignment)
@@ -1473,7 +1473,7 @@ func TestReconcileStatus_AllocationFailedSurvivesEventExpiry(t *testing.T) {
 	if err := r.Get(ctx, types.NamespacedName{Name: "smp", Namespace: "games"}, &refetched); err != nil {
 		t.Fatalf("re-fetch: %v", err)
 	}
-	if _, err := r.reconcileStatus(ctx, &refetched, idleAwake, nil, tunnelPlan{}, nil, nil, ""); err != nil {
+	if _, err := r.reconcileStatus(ctx, &refetched, idleAwake, nil, nil, tunnelPlan{}, nil, nil, ""); err != nil {
 		t.Fatalf("reconcileStatus (pass N+1): %v", err)
 	}
 
@@ -1516,7 +1516,7 @@ func TestReconcileStatus_PoolNotFoundClearsWhenPoolCreated(t *testing.T) {
 	r := newTestGameServerReconciler(t, gs, svc)
 	ctx := context.Background()
 
-	if _, err := r.reconcileStatus(ctx, gs, idleAwake, nil, tunnelPlan{}, nil, nil, ""); err != nil {
+	if _, err := r.reconcileStatus(ctx, gs, idleAwake, nil, nil, tunnelPlan{}, nil, nil, ""); err != nil {
 		t.Fatalf("reconcileStatus (pool missing): %v", err)
 	}
 	cond, ok := condByType(gs.Status.Conditions, gameplanev1alpha1.GameServerConditionAddressAssignment)
@@ -1534,7 +1534,7 @@ func TestReconcileStatus_PoolNotFoundClearsWhenPoolCreated(t *testing.T) {
 	if err := r.Get(ctx, types.NamespacedName{Name: "smp", Namespace: "games"}, &refetched); err != nil {
 		t.Fatalf("re-fetch: %v", err)
 	}
-	if _, err := r.reconcileStatus(ctx, &refetched, idleAwake, nil, tunnelPlan{}, nil, nil, ""); err != nil {
+	if _, err := r.reconcileStatus(ctx, &refetched, idleAwake, nil, nil, tunnelPlan{}, nil, nil, ""); err != nil {
 		t.Fatalf("reconcileStatus (pool created): %v", err)
 	}
 	cond, ok = condByType(refetched.Status.Conditions, gameplanev1alpha1.GameServerConditionAddressAssignment)
