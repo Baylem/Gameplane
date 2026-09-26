@@ -27,3 +27,20 @@ spec:
   rcon:
     protocol: source
     port: 25575
+  # configSchema declares the user-tunable fields the GameServer sample
+  # sets under spec.config — any key not listed here is rejected by
+  # materializeConfig ("unknown config keys").
+  configSchema:
+    - name: TYPE
+      type: string
+      default: VANILLA
+    - name: VERSION
+      type: string
+      default: LATEST
+    - name: DIFFICULTY
+      type: enum
+      enum: ["peaceful", "easy", "normal", "hard"]
+      default: normal
+    - name: MAX_PLAYERS
+      type: int
+      default: "20"

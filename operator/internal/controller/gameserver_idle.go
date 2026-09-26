@@ -126,11 +126,17 @@ func idleDecide(in idleInputs) idleOutcome {
 		st.LastWakeTime = &metav1.Time{Time: *in.lastWakeTime}
 	}
 
+	// Validate the wake-window schedule up front, whenever idle is enabled,
+	// regardless of sleep state (F-057). A malformed schedule must be visible
+	// on the IdleScheduleInvalid condition on an awake server too, not only
+	// while asleep, and must not disappear the moment the server wakes.
+	scheduleErr := validateWakeWindows(in.spec.WakeWindows)
+
 	// The user's own stop wins outright, and clears any sleep marker so that
 	// resuming by hand doesn't come back to a server still flagged asleep.
 	if in.suspended {
 		st.Reason = "stopped by user"
-		return idleOutcome{state: idleAwake, wake: in.asleepSince != nil, status: st}
+		return idleOutcome{state: idleAwake, wake: in.asleepSince != nil, status: st, err: scheduleErr}
 	}
 
 	// An explicit wake request outranks the wake windows and the idle clock:
@@ -139,15 +145,20 @@ func idleDecide(in idleInputs) idleOutcome {
 	if in.wakePending {
 		st.LastWakeTime = &metav1.Time{Time: in.now}
 		st.Reason = "woken by request"
-		return idleOutcome{state: idleAwake, wake: true, status: st}
+		return idleOutcome{state: idleAwake, wake: true, status: st, err: scheduleErr}
 	}
 
 	if in.asleepSince != nil {
 		st.Asleep = true
 		st.AsleepSince = &metav1.Time{Time: *in.asleepSince}
 
+		if scheduleErr != nil {
+			st.Reason = fmt.Sprintf("asleep; wake window invalid: %v", scheduleErr)
+			return idleOutcome{state: idleAsleep, status: st, requeue: idleReevaluate, err: scheduleErr}
+		}
 		due, next, err := wakeWindowDue(in.spec.WakeWindows, *in.asleepSince, in.now)
 		if err != nil {
+			// Already validated above; defensive only.
 			st.Reason = fmt.Sprintf("asleep; wake window invalid: %v", err)
 			return idleOutcome{state: idleAsleep, status: st, requeue: idleReevaluate, err: err}
 		}
@@ -164,7 +175,7 @@ func idleDecide(in idleInputs) idleOutcome {
 	// Awake: decide whether idle time is accruing.
 	if reason, ok := idleEligible(in); !ok {
 		st.Reason = reason
-		return idleOutcome{state: idleAwake, status: st} // clock cleared (EmptySince stays nil)
+		return idleOutcome{state: idleAwake, status: st, err: scheduleErr} // clock cleared (EmptySince stays nil)
 	}
 
 	since := in.now
@@ -179,14 +190,14 @@ func idleDecide(in idleInputs) idleOutcome {
 	}
 	if remaining := after - in.now.Sub(since); remaining > 0 {
 		st.Reason = fmt.Sprintf("empty, sleeping in %s", remaining.Round(time.Second))
-		return idleOutcome{state: idleAwake, status: st, requeue: remaining}
+		return idleOutcome{state: idleAwake, status: st, requeue: remaining, err: scheduleErr}
 	}
 
 	st.Asleep = true
 	st.AsleepSince = &metav1.Time{Time: in.now}
 	st.EmptySince = nil
 	st.Reason = "asleep (no players)"
-	return idleOutcome{state: idleAsleep, sleep: true, status: st}
+	return idleOutcome{state: idleAsleep, sleep: true, status: st, err: scheduleErr}
 }
 
 // idleEligible reports whether the server is currently accruing idle time,
@@ -215,6 +226,19 @@ func nonEmptyPhase(p gameplanev1alpha1.GameServerPhase) gameplanev1alpha1.GameSe
 		return "Pending"
 	}
 	return p
+}
+
+// validateWakeWindows reports whether every entry in windows parses as a
+// standard cron schedule, without evaluating any of them against a clock.
+// Called every idleDecide pass so a malformed schedule surfaces regardless of
+// whether the server happens to be asleep right now (F-057).
+func validateWakeWindows(windows []string) error {
+	for _, w := range windows {
+		if _, err := cron.ParseStandard(w); err != nil {
+			return fmt.Errorf("parse wake window %q: %w", w, err)
+		}
+	}
+	return nil
 }
 
 // wakeWindowDue reports whether any wake window would have fired between
@@ -260,9 +284,14 @@ func untilNext(next, now time.Time) time.Duration {
 // Only annotations are written here. The status read model is returned for
 // reconcileStatus to fold into its single status patch, so the agent's
 // concurrent status.agent heartbeat has exactly one writer to race, not two.
+// reconcileIdle runs the idle policy and returns, in order: the resulting
+// state, the status read model, the requeue interval, an unparseable
+// wake-window error (F-057 — surfaced by the caller as a status condition;
+// never wedges the reconcile), and a fatal error from writing the sleep/wake
+// annotation.
 func (r *GameServerReconciler) reconcileIdle(
 	ctx context.Context, gs *gameplanev1alpha1.GameServer,
-) (idleState, *gameplanev1alpha1.IdleStatus, time.Duration, error) {
+) (idleState, *gameplanev1alpha1.IdleStatus, time.Duration, error, error) {
 	in := idleInputs{
 		spec:      gs.Spec.Idle,
 		suspended: gs.Spec.Suspend,
@@ -291,10 +320,10 @@ func (r *GameServerReconciler) reconcileIdle(
 	out := idleDecide(in)
 	if out.sleep || out.wake {
 		if err := r.applyIdleTransition(ctx, gs, out, in.now); err != nil {
-			return idleAwake, nil, 0, err
+			return idleAwake, nil, 0, nil, err
 		}
 	}
-	return out.state, out.status, out.requeue, nil
+	return out.state, out.status, out.requeue, out.err, nil
 }
 
 // applyIdleTransition writes the sleep marker or clears it (acking any wake

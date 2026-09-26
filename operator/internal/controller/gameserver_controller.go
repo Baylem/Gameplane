@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/netip"
 	"path"
 	"sort"
 	"strconv"
@@ -147,30 +148,6 @@ type GameServerReconciler struct {
 	// default false. When false, the capture capability cannot be enabled
 	// per-GameServer; when true, it can be toggled on/off per server.
 	CaptureEnabled bool
-
-	// CaptureDefaultRetention is the default retention period for completed
-	// network captures, in seconds. Set from the --capture-default-retention-seconds
-	// operator flag, default 86400 (24 hours). Used when a GameServer's
-	// spec.capture.retentionSeconds is not set.
-	CaptureDefaultRetention int64
-
-	// CaptureMaxRetention is the maximum retention period for network captures,
-	// in seconds. Set from the --capture-max-retention-seconds operator flag,
-	// default 604800 (7 days). Any requested retention higher than this is
-	// clamped to this value.
-	CaptureMaxRetention int64
-
-	// CaptureDefaultMaxDurationSeconds is the default maximum duration for a single
-	// network capture, in seconds. Set from the --capture-default-max-duration-seconds
-	// operator flag, default 300 (5 minutes). Used when a capture request does not
-	// provide an explicit maxDuration.
-	CaptureDefaultMaxDurationSeconds int64
-
-	// CaptureDefaultMaxSizeBytes is the default maximum file size for a single
-	// network capture, in bytes. Set from the --capture-default-max-size-bytes
-	// operator flag, default 5368709120 (5 GiB). Used when a capture request does not
-	// provide an explicit maxSize.
-	CaptureDefaultMaxSizeBytes int64
 
 	// CaptureSidecarImage is the container image for the network capture sidecar
 	// injected when capture is enabled on a GameServer. Set from the
@@ -343,7 +320,7 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// decided this pass is already reflected in the count below. It writes
 	// only annotations; its status read model is folded into reconcileStatus'
 	// single status patch further down.
-	idle, idleStatus, idleRequeue, err := r.reconcileIdle(ctx, &gs)
+	idle, idleStatus, idleRequeue, idleScheduleErr, err := r.reconcileIdle(ctx, &gs)
 	if err != nil {
 		logger.Error(err, "reconcile idle")
 		return ctrl.Result{}, err
@@ -439,7 +416,7 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	requeue, err := r.reconcileStatus(ctx, &gs, idle, idleStatus, tunnelPlan, &tmpl, svcEvents, conflictingServer)
+	requeue, err := r.reconcileStatus(ctx, &gs, idle, idleStatus, idleScheduleErr, tunnelPlan, &tmpl, svcEvents, conflictingServer)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -833,6 +810,13 @@ const (
 	addressPlanTranslated                 addressPlanOutcome = "Translated"
 	addressPlanIgnoredForExposureMode     addressPlanOutcome = "IgnoredForExposureMode"
 	addressPlanNoAddressManagerConfigured addressPlanOutcome = "NoAddressManagerConfigured"
+	// addressPlanInvalidAddress: spec.networking.address was set but is not a
+	// parseable IP address (netip.ParseAddr). The CRD accepts any non-empty
+	// string, so this is caught here rather than left to the address manager,
+	// which would otherwise pass the raw value straight through to a
+	// MetalLB/Cilium annotation and report a generic pending reason instead
+	// of a clear format error.
+	addressPlanInvalidAddress addressPlanOutcome = "InvalidAddress"
 )
 
 // addressPlan is the decision reconcileService reached about a GameServer's
@@ -881,6 +865,11 @@ func planAddressPreference(gs *gameplanev1alpha1.GameServer, manager string) add
 	switch {
 	case gs.Spec.Networking.Expose != "LoadBalancer":
 		p.Outcome = addressPlanIgnoredForExposureMode
+	case p.Address != "" && !isValidAddress(p.Address):
+		// Caught before the manager-flavor branch so an invalid address is
+		// reported the same way regardless of which address manager (or
+		// none) is configured.
+		p.Outcome = addressPlanInvalidAddress
 	case manager == addressManagerMetalLB, manager == addressManagerCilium:
 		p.Outcome = addressPlanTranslated
 	default:
@@ -891,6 +880,15 @@ func planAddressPreference(gs *gameplanev1alpha1.GameServer, manager string) add
 		p.Outcome = addressPlanNoAddressManagerConfigured
 	}
 	return p
+}
+
+// isValidAddress reports whether addr parses as an IP address (v4 or v6).
+// spec.networking.address is a free-form string at the CRD level, so this is
+// the operator's own format check before handing the value to an address
+// manager (F-056).
+func isValidAddress(addr string) bool {
+	_, err := netip.ParseAddr(addr)
+	return err == nil
 }
 
 // addressPlanFor plans this reconciler's configured flavor against gs.
