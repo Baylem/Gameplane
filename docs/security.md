@@ -301,10 +301,14 @@ games namespace, you have three options:
    `privileged` instead. The games namespace remains an untrusted environment
    (game code can run arbitrary containers), but the admission level permits the
    capture sidecar to be injected when needed.
-3. **Disable `restricted` cluster-wide** — if the games namespace is managed by
-   your deployment and you accept the operational trade-off, set `podSecurity.enforceRestricted=false`
-   in the Helm values. Captures will work, and other pods are not forced into
-   `restricted` mode (they can still opt in per-pod via labels).
+3. **Leave the games-namespace label off** — the chart only adds the
+   `pod-security.kubernetes.io/enforce: restricted` label to the games namespace
+   when `podSecurity.enforceRestricted=true`; that value defaults to `false`.
+   A default install therefore already leaves the label off, and captures work
+   without any change. If you previously set `podSecurity.enforceRestricted=true`
+   and accept the operational trade-off, set it back to `false` in the Helm
+   values to drop the label. This setting only affects the games `Namespace`
+   object; it has no cluster-wide effect and there is no per-pod opt-in.
 
 **Data sensitivity**: Captures contain binary game protocols, player IP addresses,
 and may include sensitive data like in-game chat or credentials. An admin with
