@@ -7,9 +7,11 @@ kind: ModuleSource
 metadata:
   name: example-source
 spec:
-  url: ghcr.io/valgulnecron/gameplane-modules
+  type: oci
+  oci:
+    url: ghcr.io/valgulnecron/gameplane-modules
+    modules:
+      - name: minecraft-java
+      - name: valheim
+      - name: terraria
   refreshInterval: 1h
-  modules:
-    - name: minecraft-java
-    - name: valheim
-    - name: terraria

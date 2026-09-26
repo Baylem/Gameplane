@@ -20,9 +20,16 @@ helm upgrade --install gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
   --set ingress.host=gameplane.your-domain.test
 ```
 
-The chart's `appVersion` pins matching component images
-(`ghcr.io/valgulnecron/gameplane/{operator,api,agent}:<version>`), so no image
-overrides are needed for a released version.
+The chart's `appVersion` pins matching component images under
+`ghcr.io/valgulnecron/gameplane/<name>:<version>`, so no image overrides are
+needed for a released version. A default install pulls four of them:
+`operator`, `api`, `web`, and `agent` (the last is pulled per-GameServer, on
+demand). The remaining eight — `audit-syslog-bridge`, `telemetry-receiver`,
+`sentinel`, `tunnel-frp`, `tunnel-tailscale`, `tunnel-playit`, `mcp-server`,
+and `capture-sidecar` — are only pulled when the optional component they
+belong to is enabled (and, for `sentinel` and `capture-sidecar`, only for
+GameServers that opt in). See each component's values block for its enable
+flag.
 
 ### Edge channel (latest beta)
 
@@ -230,14 +237,17 @@ Top-level knobs (see `values.yaml` for the full list):
   - `capture.defaultMaxDurationSeconds` — default maximum runtime per capture in seconds
     (default `300` = 5 minutes); captures stop automatically when the duration is reached.
   - `capture.defaultMaxSizeBytes` — default maximum file size per capture in bytes
-    (default `5368709120` = 5 GiB); captures stop automatically when the size limit is reached.
+    (default `943718400` = 900 MiB, kept under the 1 GiB `emptyDir` limit backing
+    the capture volume); captures stop automatically when the size limit is reached.
   - `capture.image` — sidecar container image (defaults to `{image.registry}/capture-sidecar:{image.tag}`).
 
 ## Observability
 
 The operator, API, and in-pod agent sidecars expose Prometheus metrics on
-`/metrics` (operator `:8080`, API `:8000`). The agent's control port
-(`:8090`) requires an mTLS client cert for every route it serves, so its
+`/metrics` (operator `:8080`, API `:9090`). The API serves metrics on a
+dedicated listener (`api.metricsPort`, default `9090`), not on its public
+port (`:8000`), so only in-cluster scrapers reach them. The agent's control
+port (`:8090`) requires an mTLS client cert for every route it serves, so its
 `/metrics` lives on a separate, unauthenticated listener instead
 (`:9090`, `agent/cmd/main.go`'s `--metrics-addr`) — a Prometheus scraper
 never needs, and never gets, the client cert that unlocks console/files/RCON
@@ -372,8 +382,8 @@ a slow or down sink never blocks or fails a request.
   - `api.audit.s3.bucket` — bucket name (required when endpoint is set).
   - `api.audit.s3.prefix` — optional object key prefix (e.g.,
     `gameplane-audit`; empty = root).
-  - `api.audit.s3.region` — S3 region (e.g., `us-east-1`; empty = path-style
-    requests).
+  - `api.audit.s3.region` — S3 region (e.g., `us-east-1`; empty defaults to
+    `us-east-1`).
   - `api.audit.s3.insecure` — `true` to skip TLS certificate verification
     (for self-signed certs on dev/homelab clusters).
   - `api.audit.s3.credentialsSecretRef` — reference to a Secret holding S3
@@ -632,13 +642,6 @@ See `test/e2e/upgrade_e2e_test.go`. What this does **not** yet cover: upgrades
 that skip several releases at once, and Postgres (still an experimental
 driver — see [`roadmap.md`](roadmap.md)). Take a backup before upgrading
 production either way.
-
-CRDs are installed once by Helm and not updated on upgrade (by design).
-For CRD schema changes, run:
-
-```sh
-kubectl apply -f charts/gameplane/crds/
-```
 
 ### SQLite database adoption (Kestrel → Gameplane)
 

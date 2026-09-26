@@ -274,7 +274,7 @@ against a real live cluster or exercising CI-down fallback paths.
 
 Technology choices, coverage thresholds, module boundaries, and generated-artifact
 rules are governed in detail by `CLAUDE.md` at the repo root, which this constitution
-takes precedence over in case of conflict. In particular: Go 1.25 across the
+takes precedence over in case of conflict. In particular: Go 1.26 across the
 `go.work` modules, React 18 + TypeScript strict + Vite for the dashboard, the
 `controller-runtime`/`client-go` operator stack, `chi` + `coder/websocket` for the API,
 per-module coverage gates defined in each module's `.testcoverage.yml` (and

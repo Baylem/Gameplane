@@ -227,7 +227,7 @@ Ed25519 key and do not have transparency log entries — verify them with
 
 ## Quickstart (local dev)
 
-Requires: Go 1.25+, Node 20+, Docker, kind, kubectl, helm,
+Requires: Go 1.26+, Node 20+, Docker, kind, kubectl, helm,
 [oras](https://oras.land/docs/installation) (>= 1.2.0).
 
 The game modules live in the separate `gameplane-module` repo, wired in here
