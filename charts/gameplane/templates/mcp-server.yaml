@@ -16,7 +16,7 @@ metadata:
 # Cluster-wide, read-only: get/list/watch only, on exactly the resources the
 # server's tools read. No write verb (create/update/patch/delete) appears
 # anywhere in this file — see mcp-server/README.md for the read-only
-# guarantee this mirrors in code (Client in mcp-server/client.go exposes no
+# guarantee this mirrors in code (Client in mcp-server/internal/kube/client.go exposes no
 # mutating method, and main_test.go asserts no tool is registered that could
 # use one).
 apiVersion: rbac.authorization.k8s.io/v1
