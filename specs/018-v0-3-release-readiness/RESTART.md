@@ -1,6 +1,6 @@
 # Restart Guide: spec 018 (v0.3 release readiness)
 
-Live hand-off, last updated during session 6 (a cloud session, 2026-09-26 ~12:40 UTC). **After every context compaction, re-read this file first**, then [tasks.md](tasks.md) and [OPEN-DECISIONS.md](OPEN-DECISIONS.md). Keep this file current before context runs out.
+Live hand-off, last updated during session 6 (a cloud session, 2026-09-26 ~22:30 UTC). **After every context compaction, re-read this file first**, then [tasks.md](tasks.md) and [OPEN-DECISIONS.md](OPEN-DECISIONS.md). Keep this file current before context runs out.
 
 ## 0. Setup
 
@@ -92,10 +92,15 @@ All of these still apply.
 
 ### Open
 
-- #460 and #461: held fixes the maintainer made on the devbox. The cloud session doesn't drive them.
-- Wave 2, opened in session 6 by workflow `wf_86f6ffc1-6e8` after opus review: #465 (group 35), #466 (group 43), #467 (group 41), #468 (group 47), #470 (group 39). Watch CI; the maintainer merges.
-- #476: group 27, F-216/F-217 (plain agent metrics port 9090, PodMonitor without client cert, telemetry-receiver ServiceMonitor and Service label). Opus-approved. It includes the maintainer-approved `build_agent_container_test.go` edit.
-- #475: add-only agent tests that give the coverage gate a real margin (report: scratchpad/agentcov-report.md). Opus-approved. One fix-up commit carries a `Co-Authored-By: Claude Sonnet 5` trailer, which names the model that actually ran it (CLAUDE.md rule 11).
+- Wave 4, all green and ready to merge as of 22:23 UTC. Record each merge with `scratchpad/rec.sh`:
+  - #485: group 31, F-252, F-220, F-221, F-223, F-224, F-225, F-226.
+  - #486: group 52, F-152, F-197, F-200. F-253 is only half fixed: the `plan.md` half lives on this branch.
+  - #487: group 42 plus F-261, F-188..F-193, F-261.
+  - #488: F-262.
+  - #489: F-138.
+  - #490: group 34, F-051, F-055..F-063.
+- The held fixes (#462, #463, #469, #471–#474) belong to the maintainer, on the devbox. The cloud session doesn't drive them.
+- The Dependabot PRs #272 (TypeScript 7) and #458 (ESLint 10) are blocked; see CLAUDE.md.
 
 Local `npm ci` fails with ERESOLVE (`@eslint/js` 10 vs `eslint` 9, from merged #387). Use `--legacy-peer-deps` for the compile check only.
 
@@ -139,7 +144,8 @@ The cloud container restarted three times; the third restart (session 6, 2026-09
    - done: groups 1, 2, 4, 5, 6, 8, 9, 10, 11, 14, 15, 16, 18, 20, 21, 22, 23, 24, 26, 29, 30;
    - group 27 waits on a decision; wave 2 is partly done (see §3c);
    - wave 2 and wave 3 are done: 17, 25, 27, 33, 35, 37, 39, 40, 41, 43, 45, 46, 47, 49;
-   - not started: wave 4 (31, 34, 42, 52), wave 5 (38, 44, 48, 50), 51 (external blocker);
+   - wave 4 (31, 34, 42, 52, plus F-138, F-261 and F-262) is open as #485–#490;
+   - not started: wave 5 (38, 44, 48, 50); 51 has an external blocker;
    - 28 is blocked on the module tag (T054), 32 is T063, and 19 may need design.
 4. The OD-021 follow-ups (see OPEN-DECISIONS.md OD-021):
    - the new Go e2e bucket (item 12);
