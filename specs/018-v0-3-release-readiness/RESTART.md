@@ -99,8 +99,7 @@ All of these still apply.
 ### Open
 
 - **Wave 5** (groups 38, 44, 48, 50) is running in session 7 as workflow `wf_d0f7e3b9-7fa` (script `scratchpad/wave5.js` in the session-5 scratchpad, worktrees wtg38/44/48/50 from master `b57c0a59`). Each group gets its own PR after an opus review. Groups 38, 48 and 50 must not edit the Go-version lines that #486 changes.
-- Wave 4, all green and ready to merge as of 22:23 UTC (re-checked 23:00 UTC). Record each merge with `scratchpad/rec.sh`:
-  - #487: group 42 plus F-261, F-188..F-193, F-261.
+- Wave 4 is fully merged (23:04 UTC). Record each merge with `scratchpad/rec.sh`.
 - The held fixes (#462, #463, #469, #471–#474) belong to the maintainer, on the devbox. The cloud session doesn't drive them.
 - The Dependabot PRs #272 (TypeScript 7) and #458 (ESLint 10) are blocked; see CLAUDE.md.
 
@@ -146,7 +145,7 @@ The cloud container restarted three times; the third restart (session 6, 2026-09
    - done: groups 1, 2, 4, 5, 6, 8, 9, 10, 11, 14, 15, 16, 18, 20, 21, 22, 23, 24, 26, 29, 30;
    - group 27 waits on a decision; wave 2 is partly done (see §3c);
    - wave 2 and wave 3 are done: 17, 25, 27, 33, 35, 37, 39, 40, 41, 43, 45, 46, 47, 49;
-   - wave 4: 31, 34, 52, F-138 and F-262 merged (#485, #490, #486, #489, #488); 42 + F-261 open as #487;
+   - wave 4 is merged: 31, 34, 42 + F-261, 52, F-138, F-262 (#485–#490);
    - wave 5 (38, 44, 48, 50) in flight (session 7); 51 has an external blocker;
    - 28 is blocked on the module tag (T054), 32 is T063, and 19 may need design.
 4. The OD-021 follow-ups (see OPEN-DECISIONS.md OD-021):
