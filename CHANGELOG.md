@@ -304,6 +304,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **operator:** hardened module bundle integrity checks.
 - **web:** hardened the Admin Settings draft and managed-secret lifecycle.
 - **api:** hardened ownership checks on owner-only server operations.
+- **api:** hardened account removal and share-link revocation.
 - **api:** hardened client IP derivation behind trusted proxies.
 - **api:** hardened OIDC role re-evaluation, role-assignment auditing for every OIDC provider, and the `bootstrap-admin` break-glass reset.
 - **api:** hardened role-edit guards and event-stream authorization.
