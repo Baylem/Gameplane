@@ -134,11 +134,11 @@ func (h *configHandler) put(w http.ResponseWriter, req *http.Request) {
 
 	if _, err := h.db.DB.ExecContext(req.Context(),
 		`INSERT INTO config(key, value, updated_at)
-		 VALUES (?, ?, datetime('now'))
+		 VALUES (?, ?, ?)
 		 ON CONFLICT(key) DO UPDATE SET
 		     value      = excluded.value,
 		     updated_at = excluded.updated_at`,
-		section, string(canon),
+		section, string(canon), db.NowTimestamp(),
 	); err != nil {
 		httperr.Write(w, req, err)
 		return
@@ -233,11 +233,11 @@ func (h *configHandler) resetRoleMapping(w http.ResponseWriter, req *http.Reques
 	// Persist the updated config (even if unchanged, for idempotency).
 	if _, err := h.db.DB.ExecContext(req.Context(),
 		`INSERT INTO config(key, value, updated_at)
-		 VALUES (?, ?, datetime('now'))
+		 VALUES (?, ?, ?)
 		 ON CONFLICT(key) DO UPDATE SET
 		     value      = excluded.value,
 		     updated_at = excluded.updated_at`,
-		"auth", string(canon),
+		"auth", string(canon), db.NowTimestamp(),
 	); err != nil {
 		httperr.Write(w, req, err)
 		return
