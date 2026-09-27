@@ -75,11 +75,12 @@ test.describe("live: data screens render real backend data", () => {
   });
 
   test("servers list shows the seeded GameServer", async ({ page }) => {
-    const fleetResponse = page.waitForResponse((response) =>
-      new URL(response.url()).pathname === "/fleet/servers" && response.request().method() === "GET",
-    );
     await page.goto("/servers");
-    const response = await fleetResponse;
+    // Use the same session and Vite origin after navigation. A response event
+    // from the previous document can lose its body when Chromium unloads it.
+    const response = await page.request.get(new URL("/fleet/servers", page.url()).href, {
+      headers: { Accept: "application/json" },
+    });
     expect(response.ok()).toBeTruthy();
     expect(response.headers()["content-type"]).toContain("application/json");
     // A missing dev proxy must fail here, rather than serving the SPA shell
