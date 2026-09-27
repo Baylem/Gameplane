@@ -184,6 +184,16 @@ func TestNamespaces_NoUserReturnsEmpty(t *testing.T) {
 	if len(got) != 0 {
 		t.Fatalf("got %v, want none", got)
 	}
+	// The handler builds the slice with make([]string, 0, ...) so the
+	// authoritative "no namespaces" answer serializes as [], not null —
+	// callers can range over it without a nil check.
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(rr.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if string(raw["namespaces"]) != "[]" {
+		t.Fatalf("namespaces = %s, want []", raw["namespaces"])
+	}
 }
 
 func TestNamespaces_ResponseShape(t *testing.T) {

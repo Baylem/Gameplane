@@ -723,6 +723,24 @@ describe("ServersPage", () => {
       // shape as the pre-fan-out single-namespace behavior.
       expect(serversHandler).toHaveBeenCalledTimes(1);
     });
+
+    it("falls back to the default namespace's servers when /namespaces errors", async () => {
+      const serversHandler = vi.fn(({ request }: { request: Request }) => {
+        const url = new URL(request.url);
+        expect(url.searchParams.get("namespace")).toBe("gameplane-games");
+        return HttpResponse.json({
+          items: [makeServer({ metadata: { name: "fallback-server", namespace: "gameplane-games" } })],
+        });
+      });
+      server.use(
+        http.get("/namespaces", () => HttpResponse.json({ error: "boom" }, { status: 500 })),
+        http.get("/servers", serversHandler),
+      );
+      renderWithQuery(<ServersPage />);
+      await screen.findByText("fallback-server");
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+      expect(serversHandler).toHaveBeenCalledTimes(1);
+    });
   });
 
   // C1: an asleep server is phase Suspended, but :stop is still a real

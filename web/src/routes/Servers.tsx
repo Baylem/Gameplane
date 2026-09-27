@@ -38,8 +38,8 @@ type FilterKey = "all" | "running" | "stopped";
 
 // DEFAULT_NAMESPACE mirrors the API's scope.DefaultNamespace: the namespace
 // a bare GET /servers (no ?namespace=) resolves to. Used as the fan-out
-// fallback for a single-namespace install (or while /namespaces hasn't
-// resolved yet), so the page's behavior there is unchanged from before F-263.
+// fallback only once /namespaces has errored, so the page's behavior there
+// is unchanged from before F-263.
 const DEFAULT_NAMESPACE = "gameplane-games";
 
 export function ServersPage() {
@@ -64,10 +64,19 @@ export function ServersPage() {
     retry: 2,
     refetchInterval: 30_000,
   });
+  // Gate the fan-out on /namespaces having settled: while it's still
+  // pending, fan out over nothing rather than guessing the default
+  // namespace, so a user with no role binding never sends a spurious
+  // GET /servers?namespace=gameplane-games that 403s and briefly flashes
+  // the "Couldn't load servers in" banner before /namespaces returns [].
+  // The default-namespace fallback applies only once /namespaces has
+  // actually errored, reproducing pre-fan-out behavior instead of leaving
+  // the page empty.
   const namespaces = useMemo(() => {
     if (namespacesData) return namespacesData.namespaces;
-    return [DEFAULT_NAMESPACE];
-  }, [namespacesData]);
+    if (namespacesError) return [DEFAULT_NAMESPACE];
+    return [];
+  }, [namespacesData, namespacesError]);
 
   // Fan out GET /servers?namespace=X across every allowed namespace and
   // merge the results. Namespace-qualified query keys keep each namespace's
