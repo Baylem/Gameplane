@@ -177,6 +177,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **api:** hardened cluster registration removal.
 - **ci:** hardened the release signing order and the scope of the signing key.
 - **api:** hardened Prometheus metrics serving with a dedicated in-cluster listener.
+- **operator, api, web:** hardened the module "verified" badge to reflect a recorded signature check instead of a source's current policy.
 
 ## [0.3.0-rc.1] — 2026-09-23
 

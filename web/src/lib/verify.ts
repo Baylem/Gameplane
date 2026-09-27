@@ -19,9 +19,7 @@ export function verifyMode(spec?: ModuleVerifySpec): VerifyMode {
 export interface EntryVerify {
   // mode is the representative policy to badge.
   mode: VerifyMode;
-  // enforced is true only for an installed entry whose source actually
-  // verifies — i.e. the running bytes were signature-checked. It is false
-  // pre-install, because nothing has been verified yet.
+  // enforced is true only for an installed entry whose Module status records a verification (verifiedDigest), i.e. the operator actually signature-checked the installed digest. The source's current policy alone never sets it. It is false before install.
   enforced: boolean;
   // mixed flags a not-yet-installed entry whose candidate sources disagree on
   // policy, so a single badge would over-claim.
@@ -30,10 +28,10 @@ export interface EntryVerify {
 
 // verifyForEntry derives the verification posture for one catalog row by
 // joining it against the live ModuleSource list (already fetched by the
-// Modules page). The join lives client-side on purpose: the operator exposes
-// no "verified" flag, and aggregating one server-side would both add business
-// logic to the API (rule 10 — it stays a pure read/map) and erase the
-// per-source distinction the UI needs. For an installed entry the
+// Modules page). The join lives client-side on purpose: the operator records
+// whether a verification ran (CatalogEntry.verifiedDigest), but not the
+// policy of sibling sources; the per-source policy join stays client-side so
+// the API remains a pure read/map (rule 10). For an installed entry the
 // authoritative source is the one it was pulled from; otherwise we summarise
 // across the candidate sources.
 export function verifyForEntry(
@@ -47,7 +45,13 @@ export function verifyForEntry(
 
   if (entry.installed && entry.installedFrom) {
     const mode = verifyMode(byName.get(entry.installedFrom)?.spec.verify);
-    return { mode, enforced: mode !== "none", mixed: false };
+    // enforced reflects a recorded verification (the operator actually ran
+    // cosign.Verify at install time), not the source's current policy: a
+    // policy added after install must not retroactively claim bytes that
+    // were never checked. mode still comes from the live source, so an
+    // unenforced-but-declared policy still renders the softer "policy" chip
+    // instead of no badge.
+    return { mode, enforced: !!entry.verifiedDigest, mixed: false };
   }
 
   const modes = (entry.sources ?? []).map((ref) =>
