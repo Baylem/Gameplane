@@ -138,13 +138,40 @@ None (audit018- pods already exist).
    done
    ```
 
-6. **Verify new pods are created on other nodes**:
+6. **Wait for each pod to reach Running on another node while the target node is still cordoned** (OD-021 item 11 — this runs before Step 8's uncordon, so a cordoned target node rules out a same-node restart. OD-021 item 24 allows a cold boot up to 10 minutes, and Step 5 only sleeps 20s after the evictions, so the StatefulSet's replacement pod — same name, e.g. `audit018-x-0` — is often still `Pending` or `ContainerCreating` at this point; poll instead of checking once. The assertion never exits the shell on failure: it records FAIL and falls through to Step 8's uncordon, so a failed drain test never leaves the node cordoned):
    ```sh
+   RESULT=0
+   for pod in $PODS; do
+     NEW_NODE=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.spec.nodeName}')
+     if [ "$NEW_NODE" = "$TARGET_NODE" ]; then
+       echo "FAIL: $pod -> node=$NEW_NODE phase=n/a (still scheduled on the cordoned node $TARGET_NODE)"
+       RESULT=1
+       continue
+     fi
+
+     # Up to 10 minutes for a cold boot (OD-021 item 24), polled while
+     # $TARGET_NODE is still cordoned.
+     if kubectl wait --for=condition=Ready "pod/$pod" -n gameplane-games --timeout=10m; then
+       PHASE=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.status.phase}')
+       NEW_NODE=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.spec.nodeName}')
+       echo "PASS: $pod -> node=$NEW_NODE phase=$PHASE"
+     else
+       PHASE=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.status.phase}' 2>/dev/null || echo Unknown)
+       NEW_NODE=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.spec.nodeName}' 2>/dev/null || echo "$TARGET_NODE")
+       echo "FAIL: $pod -> node=$NEW_NODE phase=$PHASE (did not reach Running/Ready within 10m)"
+       RESULT=1
+     fi
+   done 2>&1 | tee ~/gameplane-audit-018/scheduling/drain-assert.txt
+
+   # Snapshot of final pod placement/phase, taken after the wait above (not
+   # before it, so it reflects the pods this assertion actually checked).
    kubectl get pod -n gameplane-games -o wide | awk 'NR==1 || $1 ~ /^audit018-/' > ~/gameplane-audit-018/scheduling/post-eviction.txt
-   
-   # Check that the audit018- pods are now on different nodes
-   cat ~/gameplane-audit-018/scheduling/post-eviction.txt | grep -v "$TARGET_NODE" | head -5
+
+   if [ "$RESULT" -ne 0 ]; then
+     echo "Recording FAIL for INV-NODE-002; proceeding to Step 8 to uncordon $TARGET_NODE regardless."
+   fi
    ```
+   Note: `audit018-` GameServers use a StatefulSet with a `<gs>-data` PVC. On kubelab, that PVC binds through the k3s local-path provisioner, whose PVs carry node affinity to the node they were first provisioned on. While `$TARGET_NODE` is cordoned, a pod whose PVC is bound to `$TARGET_NODE` can stay `Pending` (unschedulable elsewhere) and never reach `Running` before the 10-minute bound. That outcome is a **finding** (storage is node-bound, not portable across nodes) and not a procedure error — record it as such rather than treating the `RESULT=1` it produces as a broken assertion.
 
 7. **Verify pre-existing pods on target node are untouched**:
    ```sh
@@ -155,7 +182,7 @@ None (audit018- pods already exist).
    cat ~/gameplane-audit-018/scheduling/target-node-pods-after.txt
    ```
 
-8. **Uncordon the node**:
+8. **Uncordon the node** (run this regardless of Step 6's result — a FAIL there is recorded, not fatal, precisely so this step still runs):
    ```sh
    kubectl uncordon "$TARGET_NODE"
    kubectl describe node "$TARGET_NODE" | grep -A 1 "SchedulingDisabled"
@@ -169,13 +196,15 @@ None (audit018- pods already exist).
 **Expected**
 
 - audit018- pods on the target node are evicted and recreated on other nodes
-- Pod nodes change in the post-eviction snapshot compared to pre-drain
+- Each recreated pod is confirmed `Running` on a node other than `$TARGET_NODE` within 10 minutes (OD-021 item 24) while that node is still cordoned (Step 6, before uncordon)
 - Pre-existing pods (non-audit018-) on the target node remain Running (not evicted)
 - Cordon/uncordon operations complete without errors
 - No full kubectl drain is executed
+- If a pod's PVC is bound (via node affinity) to `$TARGET_NODE`, it may stay `Pending` on kubelab's local-path storage and never reach `Running` while the node is cordoned — record this as a finding (storage is node-bound), not as a failed procedure
 
 **Cleanup**
 
+- The node is uncordoned in Step 8 whether or not Step 6's assertion passed, so `$TARGET_NODE` never stays cordoned after this procedure
 - Node is uncordoned and back to SchedulingEnabled
 - Evicted pods are recreated by the operator
 - New pod assignments are recorded for node-loss test

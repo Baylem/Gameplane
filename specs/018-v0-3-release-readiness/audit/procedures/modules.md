@@ -2,6 +2,18 @@
 
 Shared conventions: [conventions.md](conventions.md).
 
+**Restic fixture (OD-021 items 9/16, shared by every Backup/Restore step below):** kubelab has no restic repository, and the e2e fixture Secret `e2e-restic-creds` doesn't exist here. `test/e2e/fixtures/restic-server.yaml` has three objects: the Deployment `gameplane-test-restic` and Service `gameplane-test-restic` (both in `gameplane-system`), plus a NetworkPolicy `allow-egress-to-restic` in `gameplane-games` whose `podSelector` targets `app.kubernetes.io/name: gameplane-test-restic`. Do not apply the file as-is: besides renaming `metadata.name`, the Deployment's `spec.selector`/pod-template labels, the Service's `spec.selector`, and the NetworkPolicy's `podSelector.matchLabels` all carry `app.kubernetes.io/name: gameplane-test-restic`, which must become `app.kubernetes.io/name: audit018-restic` everywhere it appears, or the Deployment's pods and the Service/NetworkPolicy selectors stop matching each other. Apply it as follows:
+- Deployment and Service, both in `gameplane-system`, `metadata.name: audit018-restic`, `app.kubernetes.io/name: audit018-restic` in the Deployment's `spec.selector.matchLabels`, pod template `metadata.labels`, and the Service's `spec.selector`. Both labelled `gameplane.io/audit: "018"`.
+- NetworkPolicy: only create it if egress is enforced on kubelab. Name it `audit018-restic` (not `allow-egress-to-restic`, which is the pre-existing e2e fixture's name and must never be reused or written to), label it `gameplane.io/audit: "018"`, and set `spec.podSelector.matchLabels` to `app.kubernetes.io/name: audit018-restic` so it targets the audit018-restic pods, not the e2e fixture's.
+
+Then create a matching `audit018-restic` Secret in `gameplane-games` (based on `test/e2e/fixtures/backup-restic-secret.yaml`, same `gameplane.io/audit: "018"` label) with:
+```yaml
+stringData:
+  repo: "rest:http://audit018-restic.gameplane-system.svc:8000/"
+  password: "<round-local value, not committed>"
+```
+Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-restic-creds`. The Deployment/Service, the (if created) NetworkPolicy `audit018-restic`, and the Secret are all per-round: remove them at round teardown, alongside the last module procedure's cleanup.
+
 ### garrys-mod
 
 **Preconditions:** The `gameplane-games` namespace exists. The `audit018-admin` role has session cookie set in `~/gameplane-audit-018/session-admin.txt`. The module `garrys-mod` is installed in the cluster (via ModuleSource `default`).
@@ -38,7 +50,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 4. **Console command (none family).** This category has consoleMode=none, so no console is available. Skip this step.
 
-5. **Backup.** Create a Backup CR. First, ensure a backup repository is available (test/e2e/fixtures/backup-restic-secret.yaml or equivalent).
+5. **Backup.** Create a Backup CR. The `audit018-restic` repository (see the Restic fixture note above) must already be up for the round.
    ```bash
    kubectl apply -f - <<EOF
    apiVersion: gameplane.local/v1alpha1
@@ -50,7 +62,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-garrys-mod
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -127,7 +139,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-farming-simulator-25
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -204,7 +216,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-beammp
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -281,7 +293,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-valheim
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -358,7 +370,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-dont-starve-together
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -435,7 +447,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-tmodloader
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -512,7 +524,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-terraria
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -589,7 +601,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-factorio
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -668,7 +680,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-dayz
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -712,7 +724,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Resources created:** `audit018-nuclear-option` (GameServer).
 
-**Note:** This module uses UDP with no automated probe (join family: "udp (no probe)"). The test will create and start the server, but the protocol join step cannot be automated via a standard e2e probe. Manual verification via `nc -u` or inspection of pod logs is required.
+**Note:** This module uses UDP with no automated probe (join family: "udp (no probe)"). The create/start/console/backup/restore/delete steps are automatable (OD-021 item 10); only the protocol join step (step 3) needs a manual client, since there is no e2e bot or probe for `nuclear-option` under `test/e2e/`. Manual verification via `nc -u` or inspection of pod logs is required for that step.
 
 **Steps:**
 
@@ -747,7 +759,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-nuclear-option
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -781,7 +793,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-nuclear-option`.
 
-**Automatable?** Partial (no automated probe join). Propose bucket: `api-mods` with manual verification required for join step.
+**Automatable?** Yes (OD-021 item 10). Propose bucket: `bot-heavy` (not `api-mods`; the client join, step 3, stays manual).
 
 ---
 
@@ -824,7 +836,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-palworld
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -901,7 +913,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-fivem
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -980,7 +992,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-satisfactory
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -1059,7 +1071,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-ark-survival-ascended
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -1136,7 +1148,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-cs2
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -1180,6 +1192,10 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Resources created:** `audit018-minecraft-java` (GameServer).
 
+**Note (OD-021 item 23a):** the baseline showed the `minecraft-java` Module stuck in `Pulling`. Before step 1, run `kubectl get module minecraft-java -o yaml` watched over ~30s, saving the watched output to this procedure's evidence file (e.g. `audit/evidence/INV-MOD-minecraft-java/module-watch.yaml`) rather than only printing it to the terminal. Check it first against F-258/#445: if `status.phase` and the `Pulling` condition's `lastTransitionTime` are flapping on every reconcile with a non-empty `status.conditions[Failed].reason` underneath, that is F-258 (`operator/internal/controller/module_controller.go`'s `markPullingTransition` re-triggering itself through its own watch, `audit/findings.md:2918` (F-258), tracked in `#445`) — confirm `#445` is merged and the churn stops; if it isn't merged or the churn continues, file a finding.
+
+If the watched output does not match F-258's flapping signature, this is a real pull failure, not F-258. In every case — F-258 or a real failure — root-cause the stuck `Pulling` state (check `status.conditions[Failed].reason`/`.message`, the ModuleSource, and the pulled artifact/tag) and fix the underlying cause: this may mean a fix in `modules/minecraft-java/` (e.g. a bad `module.yaml`/`template.yaml` reference) as well as, or instead of, an operator fix, and file a finding either way. Only once the Module is genuinely `Ready` should step 1 run.
+
 **Steps:**
 
 1. **Create server from template.**
@@ -1195,7 +1211,7 @@ Shared conventions: [conventions.md](conventions.md).
      -d '{"apiVersion":"gameplane.local/v1alpha1","kind":"GameServer","metadata":{"name":"audit018-minecraft-java"},"spec":{"templateRef":{"name":"minecraft-java"}}}'
    ```
 
-2. **Start server.** Poll until phase=Running, 2m timeout.
+2. **Start server.** Poll until phase=Running. This is a cold first boot (image pull plus world generation), so the bound is 10 minutes, not 2 (OD-021 item 24). Record the actual wall-clock time to `Running` in the evidence file.
 
 3. **Protocol join.** Run test/e2e/internal/minecraft-java/app.go (gameproto:minecraft-java wire protocol). Use the gameproto Minecraft Java handshake parser in gameproto/minecraft.go to connect to service IP:25565.
 
@@ -1213,7 +1229,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-minecraft-java
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false
@@ -1243,7 +1259,7 @@ Shared conventions: [conventions.md](conventions.md).
      -H "X-Gameplane-CSRF: $(echo $COOKIE | grep -o 'gameplane_csrf=[^;]*' | cut -d= -f2)"
    ```
 
-**Expected:** Server created, started, gameproto Minecraft Java handshake succeeds, Source RCON responds, backup and restore complete, deletion removes resource.
+**Expected:** Server created, reaches Running within 10 minutes (actual boot time recorded), gameproto Minecraft Java handshake succeeds, Source RCON responds, backup and restore complete, deletion removes resource.
 
 **Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-minecraft-java`.
 
@@ -1290,7 +1306,7 @@ Shared conventions: [conventions.md](conventions.md).
      serverRef:
        name: audit018-rust
      repoRef:
-       name: e2e-restic-creds
+       name: audit018-restic
        key: repo
      strategy: restic-snapshot
      quiesce: false

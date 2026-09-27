@@ -147,7 +147,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -165,7 +165,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -265,21 +265,77 @@ Shared conventions: [conventions.md](conventions.md).
 
 ### servers-filter-by-namespace
 
-**Preconditions:** Servers exist in non-default namespaces.
+**Preconditions:** Servers exist in more than one namespace (OD-021 item 14: kubelab has one games namespace, `gameplane-games`, so this round creates a second one). BLOCKED as specified — see the note below the steps.
 
-**Resources created:** none
+**Resources created:** `audit018-games2` namespace (kubectl, labeled `gameplane.io/audit: "018"`), one small GameServer in it (e.g. `audit018-ns2-mc`, copied from `minecraft-java` with reduced resource requests)
 
 **Steps:**
-1. Navigate to $GP/servers
-2. Click "Filter" button
-3. Toggle one or more namespace checkboxes
-4. Click "Apply"
+1. Create the namespace and one small server for the round with `kubectl` directly against the Kubernetes API (not through the gameplane API — see the note below):
+   ```sh
+   kubectl create namespace audit018-games2
+   kubectl label namespace audit018-games2 gameplane.io/audit=018
+   # apply a minimal GameServer manifest for audit018-ns2-mc in audit018-games2
+   # (copied from minecraft-java, with a small resources block), e.g.:
+   kubectl apply -n audit018-games2 -f audit018-ns2-mc.yaml
+   ```
+2. Navigate to $GP/servers
+3. Click "Filter" button
+4. Toggle one or more namespace checkboxes (look for `audit018-games2`)
+5. Click "Apply"
 
-**Expected:** List shows only servers in selected namespaces.
+**Note (reviewer correction, not yet resolved):** the gameplane API has no
+`POST $GP/api/v1alpha1/namespaces/<ns>/gameservers` route — GameServers are
+created through the generic resource router, `POST /servers/`, with the
+target namespace passed as the `?namespace=` query string param
+(`api/internal/handlers/resources.go:53-58` mounts `POST /servers/`;
+`scope.Resolve` reads `?namespace=`, `api/internal/scope/scope.go:48-57`).
+That router will not accept `audit018-games2` regardless: `scope.Resolve`
+rejects any namespace not on `scope.AllowedNamespaces` (`gameplane-games`
+plus `GAMEPLANE_EXTRA_NAMESPACES`, `api/internal/scope/scope.go:27-57`) with
+`ErrForbiddenNamespace` — a `POST` there 403s. Step 1 above therefore creates
+the GameServer with `kubectl apply` directly (bypassing the gameplane API
+entirely), which the operator will still reconcile; it does not depend on
+`scope.AllowedNamespaces`.
 
-**Cleanup:** Clear and reapply filter.
+Even so, step 4/5 cannot pass as written: the dashboard's server list never
+learns `audit018-games2` exists. `Servers.list()` calls `Servers` route's
+`/servers` with no namespace parameter (`web/src/lib/endpoints.ts:109`), and
+the handler behind it lists only the resolved namespace — `gameplane-games`
+by default — via `resolveNS`/`scope.Resolve` (`api/internal/handlers/resources.go:110-127`,
+`api/internal/scope/scope.go:41-57`), which never returns a namespace outside
+`AllowedNamespaces`. The namespace filter facet in `web/src/routes/Servers.tsx:110-114`
+is built only from the namespaces present in that already-namespace-scoped
+list, so `audit018-games2` cannot appear as a checkbox to toggle. Making it
+appear would require adding `audit018-games2` to `GAMEPLANE_EXTRA_NAMESPACES`
+on the API Deployment *and* a matching RoleBinding
+(`charts/gameplane/templates/api.yaml:66-74`, whose comment states both are
+required) — a per-round Helm/env override to a pre-existing Deployment, the
+same category of change as the item 17 `capture.enabled` override, which
+needed the maintainer's explicit OK before being written into a procedure.
+Item 14's resolution ("create an `audit018-games2` namespace with one small
+server per round") does not by itself make the namespace filterable in the
+UI with the code as it stands today; this procedure cannot be run as
+originally resolved without that further maintainer decision.
 
-**Automatable?** yes (operator)
+**Expected:** With only the GameServer created via `kubectl apply` (no
+`GAMEPLANE_EXTRA_NAMESPACES`/RoleBinding change), `audit018-games2` does not
+appear in the namespace filter list at all, and `audit018-ns2-mc` never shows
+in $GP/servers — this is expected given the code above, not a defect to
+chase during the round. If the maintainer separately approves the
+`GAMEPLANE_EXTRA_NAMESPACES` + RoleBinding override for this round, then:
+list shows only servers in selected namespaces, including
+`audit018-ns2-mc` when `audit018-games2` is checked and excluding it when
+unchecked.
+
+**Cleanup:** Clear and reapply filter, then delete `audit018-ns2-mc` and the
+`audit018-games2` namespace. If the Helm override was approved and applied,
+also revert `GAMEPLANE_EXTRA_NAMESPACES` and the RoleBinding, with a
+snapshot-diff, per the item 17-style convention.
+
+**Automatable?** blocked pending maintainer decision on the
+`GAMEPLANE_EXTRA_NAMESPACES`/RoleBinding override (OD-021 item 14 follow-up;
+cf. `api/internal/scope/scope.go:27-57`, `charts/gameplane/templates/api.yaml:66-74`,
+`web/src/lib/endpoints.ts:109`, `web/src/routes/Servers.tsx:110-114`)
 
 ---
 
@@ -538,7 +594,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -841,7 +897,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Close without installing.
 
-**Automatable?** yes (api) but game-specific
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh) but game-specific
 
 ---
 
@@ -898,7 +954,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api) but registry-dependent
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh) but registry-dependent
 
 ---
 
@@ -936,7 +992,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Close without installing.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1090,7 +1146,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Backup completes or fails naturally.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1108,7 +1164,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1127,7 +1183,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Restore completes naturally.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1147,7 +1203,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Delete schedule.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1166,7 +1222,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1186,7 +1242,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed (changes are persisted).
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1206,7 +1262,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1226,7 +1282,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1246,7 +1302,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1266,7 +1322,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1286,7 +1342,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1306,7 +1362,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Delete schedule.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1326,7 +1382,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Capture pod is cleaned up after duration expires.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1346,7 +1402,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1366,7 +1422,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Remove role binding.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1387,7 +1443,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Revoke link.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1406,7 +1462,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1426,7 +1482,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1447,7 +1503,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed (server is deleted).
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1468,7 +1524,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Transfer back.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1486,7 +1542,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1504,7 +1560,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Clear search.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1523,7 +1579,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Select "All sources".
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1541,7 +1597,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Click "All".
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1562,7 +1618,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Uninstall module.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1582,7 +1638,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1602,7 +1658,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1622,7 +1678,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Uninstall module.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1715,7 +1771,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1736,7 +1792,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Delete user.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1756,7 +1812,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Revert role.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1775,7 +1831,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed (user can set new password).
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1794,7 +1850,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1815,48 +1871,61 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Delete role (if unused).
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
 ### users-manage-service-accounts
 
-**Preconditions:** User has users:manage.
+**Preconditions:** n/a (withdrawn, OD-021 item 13).
 
-**Resources created:** one service account (audit018-<purpose>)
+**Resources created:** none
 
-**Steps:**
-1. Navigate to $GP/users
-2. Click "Service accounts" tab
-3. Click "Create service account"
-4. Enter name and scope
-5. Click create
+**Steps:** none — the "Service accounts" tab under $GP/users is a placeholder
+(`ServiceAccountsTab`, `web/src/routes/Users.tsx:751-756`): it renders the
+static text "Service accounts (machine-to-machine API tokens) are tracked for
+v1.1." and has no create/list/delete flow. No route in `api/internal/handlers/`
+serves service accounts. `docs/roadmap.md` does not carry a matching "v1.1" or
+service-account line to cite — the only verifiable source for the "tracked for
+v1.1" wording is the placeholder component itself. Item 13's resolution asks
+for a `docs/roadmap.md` citation, and none exists to give; this row stays
+`n/a` on the code evidence above, but the citation part of item 13 cannot be
+applied as resolved and needs a maintainer follow-up (a new OPEN-DECISIONS
+entry or an actual `docs/roadmap.md` v1.1 entry) rather than resting on this
+inline note.
 
-**Expected:** Service account is created. API token is displayed (one-time).
+**Expected:** n/a
 
-**Cleanup:** Delete service account.
+**Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** n/a — feature not implemented (OD-021 item 13; cf. `web/src/routes/Users.tsx:751-756`; roadmap citation still outstanding, needs maintainer follow-up)
 
 ---
 
 ### users-manage-oidc-providers
 
-**Preconditions:** User has users:manage and config:manage.
+**Preconditions:** n/a (withdrawn, OD-021 item 13).
 
 **Resources created:** none
 
-**Steps:**
-1. Navigate to $GP/users
-2. Click "OIDC providers" tab (if available)
-3. Add or edit OIDC provider configuration
-4. Click save
+**Steps:** none — the "OIDC providers" tab under $GP/users is a placeholder
+(`IdpTab`, `web/src/routes/Users.tsx:742-747`): it renders the static text
+"OIDC identity providers configured in Helm values appear here. UI
+configuration is tracked for v1.1." and has no add/edit/save flow from this
+tab. (Runtime OIDC provider management does exist, but under Admin Settings —
+see `web/src/routes/AdminSettings.tsx` and `docs/oidc.md:3` — not under
+$GP/users, so this procedure as specified still does not apply.)
+`docs/roadmap.md` does not carry a matching "v1.1" or OIDC-providers-tab line
+to cite. As with users-manage-service-accounts, item 13's citation
+requirement cannot be applied as resolved from the code alone; it needs a
+maintainer follow-up (a new OPEN-DECISIONS entry or an actual
+`docs/roadmap.md` v1.1 entry), not just this inline note.
 
-**Expected:** OIDC configuration is persisted. Login options may update.
+**Expected:** n/a
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** n/a — feature not implemented under this tab (OD-021 item 13; cf. `web/src/routes/Users.tsx:742-747`; roadmap citation still outstanding, needs maintainer follow-up)
 
 ---
 
@@ -1876,7 +1945,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1896,7 +1965,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1916,7 +1985,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1936,7 +2005,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1956,7 +2025,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1976,7 +2045,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -1996,7 +2065,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2015,7 +2084,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2033,7 +2102,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2146,7 +2215,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Import a different theme.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2165,7 +2234,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2184,7 +2253,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Select "All servers".
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2203,7 +2272,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Select "All".
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2223,7 +2292,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Backup completes.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2243,7 +2312,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Restore completes.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2261,7 +2330,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Close drawer.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2282,7 +2351,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Delete schedule.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2303,7 +2372,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Revert to original.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2322,7 +2391,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Toggle back.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2342,7 +2411,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2360,7 +2429,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2378,7 +2447,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2396,7 +2465,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Click "All".
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2414,7 +2483,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Select "All".
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2432,7 +2501,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Clear input.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2451,7 +2520,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2488,7 +2557,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2507,7 +2576,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2526,7 +2595,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2544,7 +2613,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2562,7 +2631,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Toggle "Follow" off.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2616,7 +2685,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** Token owner can stop server.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 
@@ -2634,7 +2703,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Cleanup:** None needed.
 
-**Automatable?** yes (api)
+**Automatable?** yes (web-api) (new bucket, OD-021 item 12; not yet in test/e2e/buckets.sh)
 
 ---
 

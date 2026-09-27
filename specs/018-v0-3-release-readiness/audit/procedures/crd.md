@@ -19,9 +19,9 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
    - Login cost: 0 (reuse admin session)
 4. Verify creation: `kubectl get gameserver audit018-server-create -n gameplane-games -o yaml`.
 
-**Expected:** GameServer phase transitions from Pending → Starting → Running within 2 minutes. Agent reports heartbeat in status.agent.lastHeartbeat.
+**Expected:** GameServer phase transitions from Pending → Starting → Running within 10 minutes (OD-021 item 24: a cold first boot — image pull plus world generation — can exceed 2 minutes). Record the actual boot time in the evidence. Agent reports heartbeat in status.agent.lastHeartbeat.
 
-**Cleanup:** none (used by the procedures below; deleted by `gameserver-delete-with-finalizer`).
+**Cleanup:** none (used by the procedures below; deleted by `gameserver-delete-no-finalizer`).
 
 **Automatable?** yes; bucket: `api-agent`.
 
@@ -219,7 +219,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 **Steps:**
 1. Arm wake-on-connect: `kubectl patch gameserver audit018-server-create -n gameplane-games --type merge -p '{"spec":{"idle":{"wakeOnConnect":true}}}'`, then wait (6+ minutes, no players) until `kubectl get gameserver audit018-server-create -n gameplane-games -o jsonpath='{.status.idle.asleep}'` prints `true`.
 2. Locate the sentinel pod: `kubectl get pod -n gameplane-games -l app.kubernetes.io/name=gameplane-waker,app.kubernetes.io/instance=audit018-server-create`.
-3. From outside the cluster, make a real game connection to the game port (e.g. `kubectl port-forward -n gameplane-games svc/audit018-server-create 25565:25565`, then join or server-list-ping `127.0.0.1:25565` with a Minecraft client). This simulates a player joining.
+3. The devbox has no Minecraft client or ping tool, and the sentinel's Service DNS resolves only in-cluster, so `kubectl port-forward` from the devbox cannot reach it (OD-021 item 23d). Instead, run the repo's own headless protocol bot as an in-cluster Job, the same way `test/e2e/wake_on_connect_e2e_test.go`'s `TestGameServer_WakeOnConnect_LoginWakes` does via `RunGameProbe` (`test/e2e/gameprobe_job.go`): a Job in the `default` namespace (never `gameplane-games` — its default-deny-egress NetworkPolicy would drop the probe's connection) running the `gameplane-test/gameprobe:<tag>` image with `-mode wake`, dialing `audit018-server-create.gameplane-games.svc:25565` directly. Build/side-load that image on kubelab first if it isn't already there (`docker-bake.hcl` target `e2e-gameprobe`, loaded by `deploy/kind/e2e.sh`). This simulates a player joining.
 4. Watch sentinel detect the connection and trigger wake (may trigger via webhook or controller event).
 5. Confirm game pod is created: `kubectl get pod -n gameplane-games -l app.kubernetes.io/name=gameplane-game,app.kubernetes.io/instance=audit018-server-create`.
 6. Verify phase: `kubectl get gameserver audit018-server-create -n gameplane-games -o jsonpath='{.status.phase}'`.
@@ -232,9 +232,9 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 ---
 
-### gameserver-delete-with-finalizer
+### gameserver-delete-no-finalizer
 
-**Preconditions:** GameServer `audit018-server-create` exists (may be running or stopped). Run this after every other procedure in this file that uses `audit018-server-create` (the backup, schedule, capture and volume-snapshot procedures below).
+**Preconditions:** GameServer `audit018-server-create` exists (may be running or stopped). Run this after every other procedure in this file that uses `audit018-server-create` (the backup, schedule, capture and volume-snapshot procedures below). (OD-021 item 22: retitled from "gameserver-delete-with-finalizer" — `gameserver_controller.go` never calls `AddFinalizer`/sets a finalizer on the GameServer, matching F-260 in `audit/findings.md`.)
 
 **Resources created:** none (deleting existing).
 
@@ -259,7 +259,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 **Resources created:** GameServer named `audit018-server-failed`.
 
 **Steps:**
-1. Create a GameServer from the template whose `spec.image` override exits at once (busybox's default `sh` exits with no stdin, so the container restart-loops):
+1. Create a GameServer from the template whose `spec.image` override exits at once (busybox's default `sh` exits with no stdin, so the container restart-loops). Use `busybox:1.37.0` — the operator's own `DefaultConfigInitImage` (`operator/internal/controller/gameserver_controller.go:1543`), not `1.36` (OD-021 item 23b):
    ```sh
    kubectl apply -f - <<'EOF'
    apiVersion: gameplane.local/v1alpha1
@@ -272,7 +272,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
    spec:
      templateRef:
        name: audit018-test-template
-     image: busybox:1.36
+     image: busybox:1.37.0
    EOF
    ```
 2. Watch pod crash: `kubectl get pod -n gameplane-games -l app.kubernetes.io/name=gameplane-game,app.kubernetes.io/instance=audit018-server-failed -w`.
@@ -290,7 +290,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 ### gametemplate-create
 
-**Preconditions:** User or admin role. The pre-existing GameTemplate `minecraft-java` exists (it is only read, never written).
+**Preconditions:** User or admin role. Before the round, check the pre-existing GameTemplate `minecraft-java`'s backing Module: `kubectl get module minecraft-java -o jsonpath='{.status.phase}'`. If it is stuck `Pulling`, root-cause and fix it against F-258 (`operator/internal/controller/module_controller.go`, `markPullingTransition`/`markFailed`) and PR #445 before continuing, and file a finding if the cause is new (OD-021 item 23a). `minecraft-java` is only read, never written.
 
 **Resources created:** GameTemplate named `audit018-test-template`.
 
@@ -310,13 +310,13 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 ### backup-create-and-run
 
-**Preconditions:** GameServer `audit018-server-create` running. A restic repository URL reachable from `gameplane-games` (the Backup Job runs `restic init` if the repository does not exist yet).
+**Preconditions:** GameServer `audit018-server-create` running. The round-setup `audit018-restic` restic-server (`test/e2e/fixtures/restic-server.yaml`, Deployment/Service `gameplane-test-restic` in `gameplane-system`) and its `audit018-restic` Secret in `gameplane-games` already exist (OD-021 items 9/16, conventions.md "Restic backend"; the Backup Job runs `restic init` if the repository does not exist yet).
 
-**Resources created:** Secret `audit018-repo-secret`, Backup named `audit018-backup-1`, marker file `audit018-backup-marker.txt` on the server's data volume.
+**Resources created:** Backup named `audit018-backup-1`, marker file `audit018-backup-marker.txt` on the server's data volume.
 
 **Steps:**
-1. Create the repo Secret (keys `repo` and `password`; the password is generated and never printed or saved): `kubectl create secret generic audit018-repo-secret -n gameplane-games --from-literal=repo='<restic-repo-url>' --from-literal=password="$(openssl rand -hex 24)"`, then `kubectl label secret audit018-repo-secret -n gameplane-games gameplane.io/audit=018`.
-2. Write a marker file for `restore-complete-and-resume` to find later: `curl -s -o /dev/null -w '%{http_code}\n' -X POST -H "Cookie: gameplane_session=$SESS; gameplane_csrf=$CSRF" -H "X-Gameplane-CSRF: $CSRF" --data-binary "audit018-backup-marker" "$GP/servers/audit018-server-create/files/write?path=/audit018-backup-marker.txt"` (expect 204).
+1. Confirm the round's restic Secret is present (created at round setup, not by this procedure): `kubectl get secret audit018-restic -n gameplane-games -o jsonpath='{.data.repo}' | base64 -d` should print `rest:http://gameplane-test-restic.gameplane-system.svc:8000/`.
+2. Write a marker file for `restore-running-to-succeeded` to find later: `curl -s -o /dev/null -w '%{http_code}\n' -X POST -H "Cookie: gameplane_session=$SESS; gameplane_csrf=$CSRF" -H "X-Gameplane-CSRF: $CSRF" --data-binary "audit018-backup-marker" "$GP/servers/audit018-server-create/files/write?path=/audit018-backup-marker.txt"` (expect 204).
 3. Create Backup:
    ```sh
    kubectl apply -f - <<'EOF'
@@ -331,7 +331,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
      serverRef:
        name: audit018-server-create
      repoRef:
-       name: audit018-repo-secret
+       name: audit018-restic
        key: repo
    EOF
    ```
@@ -342,7 +342,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 **Expected:** Backup phase = Running. Backup Job pod created and runs restic. On success, phase = Succeeded, status.completionTime set, status.snapshotID populated.
 
-**Cleanup:** none yet (`restore-create-and-suspend-server` needs the Backup and the schedule procedures need the Secret). After `restore-complete-and-resume`: `kubectl delete backup audit018-backup-1 -n gameplane-games`.
+**Cleanup:** none yet (`restore-create-and-suspend-server` needs the Backup; the round's `audit018-restic` Secret is removed at round teardown, not here). After `restore-running-to-succeeded`: `kubectl delete backup audit018-backup-1 -n gameplane-games`.
 
 **Automatable?** yes; bucket: `api-mods`.
 
@@ -350,12 +350,12 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 ### backup-failure-and-phase
 
-**Preconditions:** The restic repository was initialized by `backup-create-and-run` (Secret `audit018-repo-secret` exists).
+**Preconditions:** The restic repository was initialized by `backup-create-and-run` (round-setup Secret `audit018-restic` exists, OD-021 items 9/16).
 
 **Resources created:** Secret `audit018-repo-secret-bad`, Backup named `audit018-backup-fail`.
 
 **Steps:**
-1. Create a Secret for the same repository with a wrong password: `kubectl create secret generic audit018-repo-secret-bad -n gameplane-games --from-literal=repo="$(kubectl get secret audit018-repo-secret -n gameplane-games -o jsonpath='{.data.repo}' | base64 -d)" --from-literal=password="$(openssl rand -hex 24)"`, then `kubectl label secret audit018-repo-secret-bad -n gameplane-games gameplane.io/audit=018`.
+1. Create a Secret for the same repository with a wrong password: `kubectl create secret generic audit018-repo-secret-bad -n gameplane-games --from-literal=repo="$(kubectl get secret audit018-restic -n gameplane-games -o jsonpath='{.data.repo}' | base64 -d)" --from-literal=password="$(openssl rand -hex 24)"`, then `kubectl label secret audit018-repo-secret-bad -n gameplane-games gameplane.io/audit=018`.
 2. Create Backup with bad repo credentials: the manifest from `backup-create-and-run` step 3 with `metadata.name: audit018-backup-fail` and `spec.repoRef.name: audit018-repo-secret-bad`, applied with `kubectl apply -f -`.
 3. Watch phase: `kubectl get backup audit018-backup-fail -n gameplane-games -w -o jsonpath='{.status.phase}{"\n"}'`.
 4. Observe Job failure: `kubectl get job -n gameplane-games | grep audit018-backup-fail`.
@@ -421,9 +421,9 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 ---
 
-### restore-complete-and-resume
+### restore-running-to-succeeded
 
-**Preconditions:** Restore `audit018-restore-1` in Running phase from above.
+**Preconditions:** Restore `audit018-restore-1` in Running phase from above. (OD-021 item 22: retitled from "restore-complete-and-resume" — `RestorePhase` declares `Resuming` (`operator/api/v1alpha1/restore_types.go:8-16`) but `restore_controller.go:40-200` never assigns it; the only transition out of Running is straight to Succeeded/Failed, matching F-260 in `audit/findings.md`.)
 
 **Resources created:** none (completing existing).
 
@@ -443,7 +443,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 ### backup-schedule-create
 
-**Preconditions:** GameServer `audit018-server-create` running. Secret `audit018-repo-secret` from `backup-create-and-run`. User/admin role.
+**Preconditions:** GameServer `audit018-server-create` running. Round-setup Secret `audit018-restic` (OD-021 items 9/16). User/admin role.
 
 **Resources created:** BackupSchedule named `audit018-schedule-1`.
 
@@ -463,7 +463,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
        name: audit018-server-create
      schedule: "*/5 * * * *"
      repoRef:
-       name: audit018-repo-secret
+       name: audit018-restic
        key: repo
    EOF
    ```
@@ -511,7 +511,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 **Expected:** When retention.keepLast=2, at most 2 Succeeded Backups remain; older Succeeded ones are deleted by the controller. In-flight (Pending/Running) Backups are never deleted.
 
-**Cleanup:** `kubectl delete backupschedule audit018-schedule-1 -n gameplane-games` (its Backups are garbage-collected with it) and `kubectl delete secret audit018-repo-secret -n gameplane-games`.
+**Cleanup:** `kubectl delete backupschedule audit018-schedule-1 -n gameplane-games` (its Backups are garbage-collected with it). The round's `audit018-restic` Secret is left in place — it is removed at round teardown, not here (OD-021 items 9/16).
 
 **Automatable?** yes; bucket: `api-mods`.
 
@@ -572,7 +572,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 ### module-bad-signature-fails
 
-**Preconditions:** An `audit018-` ModuleSource of type `oci` with `spec.verify` configured (never `default` or `uploads`), pointing at a registry that holds an unsigned or incorrectly signed module bundle.
+**Preconditions:** The round-setup `audit018-registry` in-cluster OCI registry (`registry:2` Deployment + Service in `gameplane-system`) holds the unsigned test bundle (OD-021 items 6/21). An `audit018-` ModuleSource of type `oci` with `spec.verify` configured points at it (never `default` or `uploads`).
 
 **Resources created:** that `audit018-` ModuleSource, Module named `audit018-module-bad-sig`.
 
@@ -661,63 +661,48 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 ---
 
-### cluster-register-and-health-check
+### cluster-register-blocked-candidate
 
-**Preconditions:** User/admin role. Target remote Kubernetes cluster kubeconfig accessible as a local file (off-git).
+**Preconditions:** User/admin role. (OD-021 item 19, RESOLVED blocked: no second Kubernetes cluster's kubeconfig is available to the audit, and kubelab's own kubeconfig is not used as a stand-in — registering kubelab as its own "remote" Cluster would not exercise cross-cluster reachability. This was decided blocked rather than choosing kubelab's own kubeconfig or a second test cluster.)
 
-**Resources created:** Cluster named `audit018-cluster-1`. Secret `audit018-kubeconfig-secret` in `gameplane-system` holding the kubeconfig.
+**Resources created:** none (blocked).
 
 **Steps:**
-1. Create the kubeconfig Secret in the control-plane namespace (key `kubeconfig`, label `gameplane.local/cluster-kubeconfig=true`): `kubectl create secret generic audit018-kubeconfig-secret -n gameplane-system --from-file=kubeconfig=<remote-kubeconfig-file>`, then `kubectl label secret audit018-kubeconfig-secret -n gameplane-system gameplane.local/cluster-kubeconfig=true gameplane.io/audit=018`.
-2. Create Cluster:
-   ```sh
-   kubectl apply -f - <<'EOF'
-   apiVersion: gameplane.local/v1alpha1
-   kind: Cluster
-   metadata:
-     name: audit018-cluster-1
-     labels:
-       gameplane.io/audit: "018"
-   spec:
-     kubeconfigSecret:
-       name: audit018-kubeconfig-secret
-   EOF
-   ```
-3. Watch phase: `kubectl get cluster audit018-cluster-1 -w -o jsonpath='{.status.phase}{"\n"}'`.
-4. Phase should transition: Unknown → Healthy (if reachable) or Unknown → Unhealthy (if not).
-5. Check serverVersion: `kubectl get cluster audit018-cluster-1 -o jsonpath='{.status.serverVersion}'`.
+1. Note: registering a Cluster CR (`cluster_controller.go:31-170`) needs a target cluster's kubeconfig in a Secret (key `kubeconfig`, label `gameplane.local/cluster-kubeconfig=true`) distinct from kubelab itself.
+2. This is a blocked candidate on kubelab: no second cluster is available to the audit devbox.
+3. Alternative (recorded, not run here): the operator's Cluster reconciler and health-check loop (Unknown → Healthy/Unhealthy) have envtest coverage; this exercises only the live "no live remote cluster available" gap.
+4. Related, verified live (not a substitute test, but confirms the API's current cluster-scoping boundary independent of having a remote cluster registered): the `rejectRemoteCluster` guard defined in `api/internal/handlers/resources.go:104-110` (called from `mod_ids.go:73,93` and `mod_updates.go:119`) rejects a non-local `?cluster=` selector with `501` (`httperr.WriteRemoteClusterNotImplemented`), matching OD-021 item 19's resolution — confirm live with `curl -s -w '\nHTTP %{http_code}\n' -H "Cookie: gameplane_session=$SESS; gameplane_csrf=$CSRF" "$GP/servers/audit018-server-create/mods/ids?namespace=gameplane-games&cluster=audit018-nonexistent-cluster"` (expect HTTP 501, `RemoteClusterNotImplemented` body).
 
-**Expected:** Cluster phase = Healthy or Unhealthy. If Healthy, serverVersion is populated. Conditions show health check result.
+**Expected:** Cluster registration itself cannot be exercised live. The guard check in step 4 confirms the resolved 501 behavior for a remote cluster selector.
 
-**Cleanup:** none (used by `cluster-health-check-unreachable`).
+**Cleanup:** none.
 
-**Automatable?** yes; bucket: `multicluster`.
+**Automatable?** no (blocked: requires a second live cluster; the 501 guard check in step 4 is separately automatable in bucket `multicluster`).
 
 ---
 
 ### cluster-health-check-unreachable
 
-**Preconditions:** Cluster `audit018-cluster-1` registered from above.
+**Preconditions:** Blocked, cascading from `cluster-register-blocked-candidate` (OD-021 item 19): this procedure needs a Cluster `audit018-cluster-1` already registered against a real (if soon-to-be-broken) remote kubeconfig, which the audit has no second cluster to provide.
 
-**Resources created:** none (observing existing).
+**Resources created:** none (blocked).
 
 **Steps:**
-1. Make the target unreachable without touching any real cluster: replace the Secret's kubeconfig with one whose `server:` is `https://192.0.2.1:6443` (TEST-NET-1, never routable): `kubectl create secret generic audit018-kubeconfig-secret -n gameplane-system --from-file=kubeconfig=<unreachable-kubeconfig-file> --dry-run=client -o yaml | kubectl apply -f -`, then re-run the `kubectl label` command from `cluster-register-and-health-check` step 1 with `--overwrite`. Never stop or firewall kubelab's own apiserver.
-2. Watch Cluster status: `kubectl get cluster audit018-cluster-1 -w -o jsonpath='{.status.phase}{"\n"}'`.
-3. Within the next health check (the controller re-checks every 2 minutes), phase should become Unhealthy.
-4. Check message: `kubectl get cluster audit018-cluster-1 -o jsonpath='{.status.message}'`.
+1. Note: the intended test replaces a registered Cluster's kubeconfig Secret with one whose `server:` is unroutable (e.g. `https://192.0.2.1:6443`, TEST-NET-1) and waits for the controller's periodic health check (every 2 minutes) to flip `status.phase` to Unhealthy with an explanatory `status.message`.
+2. This is a blocked candidate on kubelab for the same reason as `cluster-register-blocked-candidate`: no Cluster can be registered live to begin with.
+3. Alternative (recorded, not run here): `cluster_controller.go:130-165`'s Unhealthy transition has envtest coverage using a fake unreachable kubeconfig.
 
-**Expected:** Phase = Unhealthy. message explains the failure (e.g., "connection refused", "timeout"). serverVersion may be stale.
+**Expected:** Not exercised live; see envtest coverage instead.
 
-**Cleanup:** `kubectl delete cluster audit018-cluster-1` and `kubectl delete secret audit018-kubeconfig-secret -n gameplane-system`.
+**Cleanup:** none.
 
-**Automatable?** yes; bucket: `multicluster`.
+**Automatable?** no (blocked: depends on `cluster-register-blocked-candidate`, itself blocked for lack of a second live cluster).
 
 ---
 
 ### networkcapture-create-pending
 
-**Preconditions:** Helm value `capture.enabled=true` for this round (it is `false` in the kubelab baseline). GameServer `audit018-server-create` running. Admin role (capture needs `captures:manage`).
+**Preconditions:** Helm value `capture.enabled=true` for this round (it is `false` in the kubelab baseline; OD-021 item 17 approves this as a per-round override — the pre-round value, the `helm upgrade --set capture.enabled=true` command and its revert are recorded in `rounds.md`, and the toggle is restored at teardown). GameServer `audit018-server-create` running. Admin role (capture needs `captures:manage`).
 
 **Resources created:** NetworkCapture named `audit018-capture-1`.
 
@@ -801,12 +786,12 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 **Steps:**
 1. Start a capture: the manifest from `networkcapture-create-pending` step 2 with `metadata.name: audit018-capture-fail`, applied with `kubectl apply -f -`, then wait for Running: `kubectl wait --for=jsonpath='{.status.phase}'=Running networkcapture/audit018-capture-fail -n gameplane-games --timeout=30s`.
-2. Take the sidecar down mid-capture. The capture image is distroless (no shell or `kill`), so `kubectl exec` cannot kill it; delete the game pod instead, which kills the ephemeral sidecar with it: `kubectl delete pod audit018-server-create-0 -n gameplane-games`.
+2. Take the sidecar down mid-capture. The capture image is distroless (no shell or `kill`), so `kubectl exec` cannot kill it; deleting the game pod instead (which kills the ephemeral sidecar with it) counts as the crash test, per OD-021 item 18: `kubectl delete pod audit018-server-create-0 -n gameplane-games`.
 3. Watch capture phase: `kubectl get networkcapture audit018-capture-fail -n gameplane-games -w -o jsonpath='{.status.phase}{"\n"}'`.
 4. Phase should transition to Failed within ~30s.
-5. Check message: `kubectl get networkcapture audit018-capture-fail -n gameplane-games -o jsonpath='{.status.message}'`.
+5. Check the condition reason and message: `kubectl get networkcapture audit018-capture-fail -n gameplane-games -o jsonpath='{.status.conditions[?(@.type=="Ready")].reason}{" "}{.status.message}'`.
 
-**Expected:** Phase = Failed. message explains the loss of the sidecar (e.g., "game pod was deleted while the capture was running").
+**Expected:** Phase = Failed. The reconciler re-fetches the game pod before trusting the sidecar and, finding it deleted/recreated, fails the capture directly with condition reason `PodRestarted` (`operator/internal/controller/networkcapture_controller.go:443-459`) rather than polling the (now-gone) sidecar. message explains the loss of the sidecar (e.g., "game pod was deleted while the capture was running").
 
 **Cleanup:** `kubectl delete networkcapture audit018-capture-fail -n gameplane-games`.
 
@@ -835,7 +820,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 ### backup-volumesnapshot-strategy
 
-**Preconditions:** GameServer `audit018-server-create` running. Cluster CSI driver supports VolumeSnapshot (a default VolumeSnapshotClass exists, or one is named via `spec.volumeSnapshotClassName`; check with `kubectl get volumesnapshotclass`, and record the row `blocked` if there is none).
+**Preconditions:** GameServer `audit018-server-create` running. k3s local-path has no CSI snapshot support out of the box (`github.com/kubernetes-csi/external-snapshotter/client/v8`, `docs/dependencies.md`), so this and `restore-volumesnapshot-strategy` (INV-CRD-036/037) need `csi-driver-host-path` plus the external-snapshotter's snapshot controller and CRDs installed on kubelab for the round (OD-021 item 20; the manifests/Helm release used are recorded in `rounds.md`, and both are uninstalled at round teardown). Confirm the install with `kubectl get volumesnapshotclass` (expect a default VolumeSnapshotClass, or one named via `spec.volumeSnapshotClassName` below).
 
 **Resources created:** Backup named `audit018-backup-vs` with `spec.strategy: volume-snapshot` (no `repoRef`).
 

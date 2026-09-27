@@ -200,18 +200,19 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Preconditions:** None (policies are chart-defined, no external resources needed).
 
-**Resources created:** audit018-network-policies (multiple NetworkPolicy objects in gamesNamespace if created for testing).
+**Resources created:** audit018-netpol-test (GameServer in gamesNamespace, created and deleted by this procedure, used only to produce a game pod to check selectors against). The NetworkPolicy objects themselves are the chart's own fixed-name objects (`default-deny-ingress`, `default-deny-egress`, `allow-agent-to-apiserver`, `allow-api-to-agent`, `allow-kubelet-probes`), not audit018-named or audit018-labeled — they are Helm-managed, not created by this procedure with `kubectl`.
 
 **Steps:**
 1. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'networkPolicies.enabled=true'` and wait for Helm to apply.
 2. Verify NetworkPolicy objects exist in gamesNamespace: `kubectl get networkpolicies -n gameplane-games | wc -l` (expect >0, at least the default-deny and allow-kubelet policies).
 3. Verify the default-deny-ingress policy renders as the chart defines it (`templates/networkpolicies.yaml`): `kubectl get networkpolicy default-deny-ingress -n gameplane-games -o jsonpath='{.spec.podSelector} {.spec.ingress}'` (expect `{}` for podSelector, matching every pod in the namespace, and an empty list for ingress — the default-deny baseline the template actually renders when networkPolicies.enabled=true).
-4. Create a test GameServer with a game pod and verify it has the network policy applied: check `kubectl get networkpolicies -n gameplane-games -o yaml` to see selectors.
-5. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'networkPolicies.enabled=false'` and verify NetworkPolicy objects are removed: `kubectl get networkpolicies -n gameplane-games | wc -l` (expect `0` — `templates/networkpolicies.yaml` gates every NetworkPolicy it defines behind a single top-level `{{- if .Values.networkPolicies.enabled }}`, so disabling the flag renders none of them).
+4. Create a test GameServer (`audit018-netpol-test`, labeled `gameplane.io/audit: "018"`, using the `minecraft-java` template) and wait for its pod to start. Do **not** try to find "the" NetworkPolicy applied to it by filtering `kubectl get networkpolicies -n gameplane-games -l app.kubernetes.io/name=gameplane-game` or any other label selector — the chart labels these NetworkPolicy *objects* only via the shared `gameplane.labels` helper (`app.kubernetes.io/instance`, `app.kubernetes.io/version`, `app.kubernetes.io/managed-by`; `charts/gameplane/templates/_helpers.tpl:88-92`), which never includes `app.kubernetes.io/name`, so that filter returns zero objects even though the policies exist and apply. Instead list every policy unfiltered and read `spec.podSelector` from each: `kubectl get networkpolicies -n gameplane-games -o yaml`. Confirm the test pod's own labels (`kubectl get pod -n gameplane-games -l app.kubernetes.io/instance=audit018-netpol-test -o jsonpath='{.items[0].metadata.labels}'`, expect `app.kubernetes.io/name=gameplane-game` among them, set by the StatefulSet pod-template builder at `operator/internal/controller/gameserver_controller.go:1373-1376` — not line 596, which is the game Service's selector, not a pod label) match `default-deny-ingress`'s empty podSelector (matches every pod) and `allow-kubelet-probes`'/`allow-api-to-agent`'s `matchLabels: {app.kubernetes.io/name: gameplane-game}` (`charts/gameplane/templates/networkpolicies.yaml:54,85,118`).
+5. Delete the test GameServer: `kubectl delete gameserver audit018-netpol-test -n gameplane-games --wait=true`.
+6. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'networkPolicies.enabled=false'` and verify NetworkPolicy objects are removed: `kubectl get networkpolicies -n gameplane-games | wc -l` (expect `0` — `templates/networkpolicies.yaml` gates every NetworkPolicy it defines behind a single top-level `{{- if .Values.networkPolicies.enabled }}`, so disabling the flag renders none of them).
 
 **Expected:** NetworkPolicy objects are created in gamesNamespace when enabled; are removed when disabled. Policies enforce ingress/egress rules as defined in the chart.
 
-**Cleanup:** Helm upgrade with networkPolicies.enabled=false.
+**Cleanup:** Helm upgrade with networkPolicies.enabled=false; delete `audit018-netpol-test` if step 5 did not already remove it.
 
 **Automatable?** yes (bucket: api-rbac or multicluster; NetworkPolicy resource observation).
 
@@ -352,77 +353,319 @@ Shared conventions: [conventions.md](conventions.md).
 
 ### default-module-source
 
-**Preconditions:** None (module source is created in the operator namespace by default).
+**OD-021 item 5 (resolved):** `defaultModuleSource.enabled` gates whether the chart's Helm-managed `default` ModuleSource exists at all — toggling it to `false` against the live release **deletes** the pre-existing `default` ModuleSource (and back to `true` recreates it as a new object with a new UID), and `default` is one of the pre-existing objects the audit must never write to (conventions.md). The live toggle is therefore **blocked**. This procedure is a `helm template` rendering check only: it never runs `helm upgrade` against kubelab.
 
-**Resources created:** audit018-default-modulesource (ModuleSource custom resource in operator namespace).
+**Preconditions:** A local checkout of `charts/gameplane` (no cluster access required for this check).
+
+**Resources created:** none (dry-run template rendering only; nothing is applied to the cluster).
 
 **Steps:**
-1. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'defaultModuleSource.enabled=true'` and wait for Helm to apply.
-2. Verify ModuleSource object is created: `kubectl get modulesource default` (ModuleSource is cluster-scoped — no `-n` flag — and it carries no `name` label, so get it by object name).
-3. Verify operator indexes the module source: `kubectl get modulesource default -o jsonpath='{.status.conditions[?(@.type=="Ready")].reason}'` (ModuleSource is cluster-scoped; no `-n` flag).
-4. Access the dashboard Modules page and verify game templates are listed (e.g., Minecraft, Terraria, etc.).
-5. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'defaultModuleSource.enabled=false'` and verify ModuleSource object is removed (or marked as disabled).
-6. Refresh the dashboard Modules page; verify templates are no longer available.
+1. Render with the source enabled (the chart default), scoped to just the ModuleSource template — a full `helm template` render of this chart also emits `templates/mtls.yaml`'s generated CA/client-cert Secrets (`genCA`/`genSignedCert`, since the `lookup` call returns empty in an offline template render), and those Secrets hold generated private keys that must never land in evidence (conventions.md): `helm template gameplane charts/gameplane -n gameplane-system --set 'defaultModuleSource.enabled=true' --show-only templates/modulesource.yaml > /tmp/audit018-tpl-default-on.yaml` and confirm it contains a `ModuleSource` document named `default`: `grep -A2 '^kind: ModuleSource' /tmp/audit018-tpl-default-on.yaml | grep 'name: default'`.
+2. Render with the source disabled, same scoped template: `helm template gameplane charts/gameplane -n gameplane-system --set 'defaultModuleSource.enabled=false' --show-only templates/modulesource.yaml > /tmp/audit018-tpl-default-off.yaml` and confirm no `ModuleSource` named `default` is rendered: `grep -c '^kind: ModuleSource' /tmp/audit018-tpl-default-off.yaml` (expect `0`, or if other ModuleSources are enabled by other values in the same render, confirm none of them is named `default`).
+3. Save both rendered files as evidence: `mkdir -p ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-017 && cp /tmp/audit018-tpl-default-on.yaml /tmp/audit018-tpl-default-off.yaml ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-017/` (see conventions.md; scoped to `templates/modulesource.yaml` only, so this contains no secrets or cluster state, only chart output for that one template).
 
-**Expected:** Default ModuleSource object is created when enabled; is removed when disabled. Operator indexes the source and dashboard Modules page populates/empties accordingly.
+**Expected:** The rendered manifest includes a `default` ModuleSource when `defaultModuleSource.enabled=true` and omits it when `false`. This is not verified live against kubelab's actual `default` ModuleSource.
 
-**Cleanup:** Helm upgrade with defaultModuleSource.enabled=false.
+**Cleanup:** none (no cluster resources touched); remove the two `/tmp/audit018-tpl-default-*.yaml` scratch files once copied to evidence.
 
-**Automatable?** yes (bucket: api-mods; ModuleSource resource observation and dashboard API query).
+**Automatable?** yes (bucket: api-mods; pure `helm template` rendering check, no cluster required — the live toggle itself is blocked per OD-021 item 5 and is not automated).
 
 ---
 
 ### module-signature-verification
 
-**Preconditions:** defaultModuleSource.type=oci (OCI module source). Module signature verification is only applicable to OCI sources, not git sources.
+**OD-021 items 6 and 21 (resolved):** kubelab's `default` ModuleSource is `type: git` (not `oci`), and `ModuleSourceSpec.verify` is only valid when `spec.type == "oci"` (`operator/api/v1alpha1/modulesource_types.go:31`, a CEL rule) — so there is no `defaultModuleSource.oci.verify.enabled` Helm value to toggle on kubelab's real source, and this procedure never touches Helm or the `default`/`uploads` ModuleSources at all. Instead it stands up an in-cluster registry (`audit018-registry`) and a `kubectl`-created OCI ModuleSource (`audit018-verify-source`) with `spec.verify.key` set, then pushes one signed and one unsigned test bundle to it: the unsigned one must be rejected. This mirrors the operator's own e2e coverage in `test/e2e/module_verify_e2e_test.go` and `test/e2e/module_verify_signed_e2e_test.go`, scaled down to `kubectl`/`oras`/`cosign` one-shot Jobs run by hand instead of Go test helpers.
 
-**Resources created:** none (verification is configured in ModuleSource spec).
+**Preconditions:** None beyond cluster access. No Helm change and no interaction with the `default` or `uploads` ModuleSources.
+
+**Resources created:** `audit018-registry` (Deployment + Service, in-cluster plain-HTTP OCI registry, modeled on `test/e2e/fixtures/oci-registry.yaml`); `audit018-module-bundle` (ConfigMap holding the test module's `module.yaml`/`template.yaml`, modeled on `test/e2e/fixtures/oras-push-job.yaml`); `audit018-cosign-signer` (ServiceAccount + Role + RoleBinding, scoped to Secret CRUD in `gameplane-system`, modeled on `test/e2e/fixtures/cosign-sign-job.yaml:28-63`); `audit018-oras-push-unsigned` and `audit018-oras-push-signed` (one-shot oras push Jobs, pushing tags `0.1.0` and `0.2.0` of module `audit018-test-game` — the operator's OCI client only keeps semver tags, `semver.IsValid("v"+t)` in `operator/internal/oci/client.go:79-83`, so tags must be valid semver, not the literal strings `unsigned`/`signed`); `audit018-cosign-keypair` (Secret holding a cosign keypair generated in-cluster, modeled on `test/e2e/fixtures/cosign-sign-job.yaml`); `audit018-cosign-sign` (one-shot Job, running as the `audit018-cosign-signer` ServiceAccount, that signs only the `0.2.0` tag); `audit018-verify-source` (ModuleSource, `type: oci`, `spec.verify.key.name: audit018-cosign-keypair`); `audit018-verify-unsigned` (Module CR installing version `0.1.0`, unsigned) and `audit018-verify-signed` (Module CR installing version `0.2.0`, signed).
 
 **Steps:**
-1. Ensure defaultModuleSource.type=oci (default value in values.yaml).
-2. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'defaultModuleSource.oci.verify.enabled=true'`.
-3. Wait for operator to reconcile ModuleSource.
-4. Verify the ModuleSource spec includes cosign verification settings: `kubectl get modulesource default -o jsonpath='{.spec.verify}'` (ModuleSource is cluster-scoped; no `-n` flag).
-5. Attempt to pull a module and verify operator validates the cosign signature before indexing.
-6. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'defaultModuleSource.oci.verify.enabled=false'`.
-7. Verify unsigned/tampered modules are now accepted (verification disabled).
+1. Deploy the in-cluster registry:
+```sh
+kubectl apply -f - <<'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit018-registry
+  namespace: gameplane-system
+  labels:
+    gameplane.io/audit: "018"
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: audit018-registry }
+  template:
+    metadata:
+      labels: { app: audit018-registry, gameplane.io/audit: "018" }
+    spec:
+      containers:
+        - name: registry
+          image: registry:2.8.3
+          ports: [{ name: http, containerPort: 5000 }]
+          env: [{ name: REGISTRY_HTTP_ADDR, value: ":5000" }]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit018-registry
+  namespace: gameplane-system
+  labels:
+    gameplane.io/audit: "018"
+spec:
+  selector: { app: audit018-registry }
+  ports: [{ name: http, port: 5000, targetPort: http }]
+EOF
+kubectl wait --for=condition=available deployment/audit018-registry -n gameplane-system --timeout=90s
+```
+2. Create the test bundle ConfigMap (module name `audit018-test-game`, same two-file layout `modules/build.sh` produces) and push it under two semver tags with `oras`, unsigned. Tags must be valid semver — the operator's OCI client keeps only semver tags and drops everything else (`ListTags`, `operator/internal/oci/client.go:79-83`, `semver.IsValid("v"+t)`); the literal tags `unsigned`/`signed` are not semver and are silently filtered out, which leaves `ListTags` empty, `indexModule` failing with `"no semver tags found"` (`operator/internal/modsrc/oci.go:76-77`), and — because a single-module source treats any one module error as total failure (`operator/internal/modsrc/oci.go:58-59`, "all N module(s) failed to index") — `status.modules` on `audit018-verify-source` never populates at all, so step 4's wait times out before either Module in steps 5-6 can even resolve a version. Use `0.1.0` for the unsigned tag and `0.2.0` for the signed tag instead (the bundle's own `version:` field inside `module.yaml` is not checked against the OCI tag by the operator, so the same file content can be pushed under both tags):
+```sh
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit018-module-bundle
+  namespace: gameplane-system
+  labels: { gameplane.io/audit: "018" }
+data:
+  module.yaml: |
+    apiVersion: gameplane.local/module/v1
+    name: audit018-test-game
+    displayName: Audit018 Test Game
+    version: "0.1.0"
+    game: audit018-test-game
+    summary: Audit-only test module
+    license: MIT
+    gameplaneMinVersion: 0.1.0
+  template.yaml: |
+    apiVersion: gameplane.local/v1alpha1
+    kind: GameTemplate
+    metadata:
+      name: audit018-test-game
+      labels: { gameplane.local/module: audit018-test-game, gameplane.io/audit: "018" }
+    spec:
+      displayName: Audit018 Test Game
+      game: audit018-test-game
+      version: "0.1.0"
+      image: busybox:1.37.0
+      command: ["sh", "-c", "sleep 100000"]
+      ports:
+        - { name: noop, containerPort: 12345, advertise: true, protocol: TCP }
+EOF
+for pair in "audit018-oras-push-unsigned:0.1.0" "audit018-oras-push-signed:0.2.0"; do
+  jobname="${pair%%:*}"
+  tag="${pair##*:}"
+  kubectl apply -f - <<EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: $jobname
+  namespace: gameplane-system
+  labels: { gameplane.io/audit: "018" }
+spec:
+  backoffLimit: 4
+  template:
+    metadata: { labels: { gameplane.io/audit: "018" } }
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: push
+          image: ghcr.io/oras-project/oras:v1.3.3
+          command: ["oras"]
+          args:
+            - push
+            - --plain-http
+            - --artifact-type=application/vnd.gameplane.module.v1+json
+            - audit018-registry.gameplane-system.svc:5000/audit018-test-game:$tag
+            - module.yaml:application/vnd.gameplane.module.metadata.v1+yaml
+            - template.yaml:application/vnd.gameplane.module.template.v1+yaml
+          workingDir: /workspace
+          volumeMounts: [{ name: bundle, mountPath: /workspace }]
+      volumes:
+        - { name: bundle, configMap: { name: audit018-module-bundle } }
+EOF
+  kubectl wait --for=condition=complete job/$jobname -n gameplane-system --timeout=90s
+done
+```
+(the unsigned bundle is pushed as tag `0.1.0`, the one to be signed as tag `0.2.0` — both valid semver, so the operator's `ListTags` keeps them.)
+3. Sign only the `0.2.0` tag in-cluster (keyed, offline, no Rekor — matches `modules/build.sh --sign` minus the Rekor upload). This Job needs `get/list/create/update/patch/delete` on Secrets in `gameplane-system` for `generate-key-pair k8s://…` — the default ServiceAccount has no such permissions, so first create a scoped `audit018-cosign-signer` ServiceAccount/Role/RoleBinding (modeled on `test/e2e/fixtures/cosign-sign-job.yaml:28-63`) and reference it from the Job:
+```sh
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: audit018-cosign-signer
+  namespace: gameplane-system
+  labels: { gameplane.io/audit: "018" }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: audit018-cosign-signer
+  namespace: gameplane-system
+  labels: { gameplane.io/audit: "018" }
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, list, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: audit018-cosign-signer
+  namespace: gameplane-system
+  labels: { gameplane.io/audit: "018" }
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: audit018-cosign-signer
+subjects:
+  - kind: ServiceAccount
+    name: audit018-cosign-signer
+    namespace: gameplane-system
+EOF
+```
+```sh
+kubectl apply -f - <<'EOF'
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: audit018-cosign-sign
+  namespace: gameplane-system
+  labels: { gameplane.io/audit: "018" }
+spec:
+  backoffLimit: 0
+  template:
+    metadata: { labels: { gameplane.io/audit: "018" } }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: audit018-cosign-signer
+      initContainers:
+        - name: keygen
+          image: ghcr.io/sigstore/cosign/cosign:v3.1.2
+          args: ["generate-key-pair", "k8s://gameplane-system/audit018-cosign-keypair"]
+          env: [{ name: COSIGN_PASSWORD, value: "audit018-pass" }, { name: COSIGN_YES, value: "true" }, { name: HOME, value: /tmp }]
+          volumeMounts: [{ name: tmp, mountPath: /tmp }]
+      containers:
+        - name: sign
+          image: ghcr.io/sigstore/cosign/cosign:v3.1.2
+          args:
+            - sign
+            - --key=k8s://gameplane-system/audit018-cosign-keypair
+            - --new-bundle-format=false
+            - --use-signing-config=false
+            - --tlog-upload=false
+            - --allow-http-registry
+            - --allow-insecure-registry
+            - --yes
+            - audit018-registry.gameplane-system.svc:5000/audit018-test-game:0.2.0
+          env: [{ name: COSIGN_PASSWORD, value: "audit018-pass" }, { name: COSIGN_YES, value: "true" }, { name: HOME, value: /tmp }]
+          volumeMounts: [{ name: tmp, mountPath: /tmp }]
+      volumes: [{ name: tmp, emptyDir: {} }]
+EOF
+kubectl wait --for=condition=complete job/audit018-cosign-sign -n gameplane-system --timeout=120s
+```
+4. Create the verify-enabled OCI ModuleSource, keyed to the Secret cosign just wrote:
+```sh
+kubectl apply -f - <<'EOF'
+apiVersion: gameplane.local/v1alpha1
+kind: ModuleSource
+metadata:
+  name: audit018-verify-source
+  labels: { gameplane.io/audit: "018" }
+spec:
+  type: oci
+  oci:
+    url: audit018-registry.gameplane-system.svc:5000
+    insecure: true
+    modules: [{ name: audit018-test-game }]
+  verify:
+    key: { name: audit018-cosign-keypair }
+  refreshInterval: 10m
+EOF
+kubectl wait --for=jsonpath='{.status.modules}' modulesource/audit018-verify-source --timeout=90s
+```
+5. Install the **unsigned** tag (`0.1.0`) and confirm it is rejected:
+```sh
+mkdir -p ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-018
+kubectl apply -f - <<'EOF'
+apiVersion: gameplane.local/v1alpha1
+kind: Module
+metadata:
+  name: audit018-verify-unsigned
+  labels: { gameplane.io/audit: "018" }
+spec:
+  source: { name: audit018-verify-source }
+  name: audit018-test-game
+  version: "0.1.0"
+EOF
+kubectl wait --for=jsonpath='{.status.phase}'=Failed module/audit018-verify-unsigned --timeout=120s
+kubectl get module audit018-verify-unsigned -o jsonpath='{.status.lastError}' | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-018/unsigned-lasterror.txt
+# expect lastError to contain "cosign verify" (operator wraps it: "cosign verify <ref>@<digest>: …")
+kubectl get gametemplate audit018-verify-unsigned 2>&1 | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-018/unsigned-no-gametemplate.txt | grep -i "not found"  # no GameTemplate must be materialized
+```
+6. Install the **signed** tag (`0.2.0`) and confirm it is accepted:
+```sh
+kubectl apply -f - <<'EOF'
+apiVersion: gameplane.local/v1alpha1
+kind: Module
+metadata:
+  name: audit018-verify-signed
+  labels: { gameplane.io/audit: "018" }
+spec:
+  source: { name: audit018-verify-source }
+  name: audit018-test-game
+  version: "0.2.0"
+EOF
+kubectl wait --for=jsonpath='{.status.phase}'=Ready module/audit018-verify-signed --timeout=120s
+kubectl get module audit018-verify-signed -o jsonpath='{.status.phase}' | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-018/signed-phase.txt
+kubectl get gametemplate audit018-verify-signed | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-018/signed-gametemplate.txt  # must exist
+```
 
-**Expected:** ModuleSource includes cosign public key and verification flag when enabled; verification is skipped when disabled. Tampered modules are rejected when verification is on; accepted when off.
+**Expected:** The unsigned bundle drives `Module.status.phase=Failed` with a `cosign verify` error in `status.lastError`, and materializes no GameTemplate. The signed bundle reaches `Ready` and materializes its GameTemplate. `kubelab`'s real `default` (git) ModuleSource is untouched throughout.
 
-**Cleanup:** Helm upgrade with module verification disabled.
+**Cleanup:** `kubectl delete module audit018-verify-unsigned audit018-verify-signed; kubectl delete modulesource audit018-verify-source; kubectl delete job audit018-oras-push-unsigned audit018-oras-push-signed audit018-cosign-sign -n gameplane-system; kubectl delete secret audit018-cosign-keypair -n gameplane-system; kubectl delete configmap audit018-module-bundle -n gameplane-system; kubectl delete deployment,service audit018-registry -n gameplane-system; kubectl delete serviceaccount,role,rolebinding audit018-cosign-signer -n gameplane-system` (the ServiceAccount/Role/RoleBinding created in step 3).
 
-**Automatable?** no (blocked candidate: requires pulling and validating actual module bundles; alternative: verify ModuleSource spec includes verify settings).
+**Automatable?** yes (bucket: api-mods; this is exactly what `test/e2e/module_verify_e2e_test.go` and `test/e2e/module_verify_signed_e2e_test.go` already cover in CI — this manual run is a spot-check, not new coverage).
 
 ---
 
 ### upload-module-source
 
-**Preconditions:** None (upload source is created by default if enabled).
+**OD-021 item 5 (resolved):** same as `default-module-source` above — `uploadModuleSource.enabled` gates the pre-existing `uploads` ModuleSource, and toggling it against the live release deletes/recreates that pre-existing object, which the audit must never write to. The live toggle is **blocked**; this is a `helm template` rendering check only.
 
-**Resources created:** audit018-upload-modulesource (ModuleSource custom resource).
+**Preconditions:** A local checkout of `charts/gameplane` (no cluster access required for this check).
+
+**Resources created:** none (dry-run template rendering only; nothing is applied to the cluster).
 
 **Steps:**
-1. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'uploadModuleSource.enabled=true'` and wait for Helm to apply.
-2. Verify upload ModuleSource object is created: `kubectl get modulesource uploads -n gameplane-system` (or check for object with name matching `uploadModuleSource.name` from values).
-3. Access the dashboard Modules page and look for an "Upload" option or "Uploads" catalog section.
-4. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'uploadModuleSource.enabled=false'` and verify ModuleSource object is removed.
-5. Refresh dashboard Modules page; verify upload capability is no longer available.
+1. Render with the source enabled, scoped to just the ModuleSource template (a full chart render also emits `templates/mtls.yaml`'s generated CA/client-cert Secrets, which must never land in evidence — see `default-module-source` above): `helm template gameplane charts/gameplane -n gameplane-system --set 'uploadModuleSource.enabled=true' --show-only templates/modulesource.yaml > /tmp/audit018-tpl-upload-on.yaml` and confirm it contains a `ModuleSource` document named `uploads`: `grep -A2 '^kind: ModuleSource' /tmp/audit018-tpl-upload-on.yaml | grep 'name: uploads'`.
+2. Render with the source disabled, same scoped template: `helm template gameplane charts/gameplane -n gameplane-system --set 'uploadModuleSource.enabled=false' --show-only templates/modulesource.yaml > /tmp/audit018-tpl-upload-off.yaml` and confirm no `ModuleSource` named `uploads` is rendered.
+3. Save both rendered files as evidence: `mkdir -p ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-019 && cp /tmp/audit018-tpl-upload-on.yaml /tmp/audit018-tpl-upload-off.yaml ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-019/` (conventions.md; scoped to `templates/modulesource.yaml` only, so this is chart output with no secrets or cluster state).
 
-**Expected:** Upload ModuleSource is created when enabled; is removed when disabled. Dashboard Modules page includes upload UI when source is present.
+**Expected:** The rendered manifest includes an `uploads` ModuleSource when `uploadModuleSource.enabled=true` and omits it when `false`. This is not verified live against kubelab's actual `uploads` ModuleSource.
 
-**Cleanup:** Helm upgrade with uploadModuleSource.enabled=false.
+**Cleanup:** none (no cluster resources touched); remove the two `/tmp/audit018-tpl-upload-*.yaml` scratch files once copied to evidence.
 
-**Automatable?** yes (bucket: api-mods; ModuleSource resource observation).
+**Automatable?** yes (bucket: api-mods; pure `helm template` rendering check, no cluster required — the live toggle itself is blocked per OD-021 item 5 and is not automated).
 
 ---
 
 ### packet-capture-sidecar
+
+**OD-021 item 17 (resolved):** `capture.enabled=true` is approved as a per-round Helm override (same family as INV-CRD-031..035 in `crd.md`, which need the same flag). Before step 1, snapshot cluster state and record the override in `rounds.md` under the current round's "Helm overrides vs baseline" field; after step 5's revert, snapshot again and run `snapshot-diff` against the pre-override snapshot to confirm nothing besides the capture toggle itself changed.
 
 **Preconditions:** None (capture is opt-in per GameServer; this test enables the cluster-wide feature).
 
 **Resources created:** none (sidecars are injected into GameServers at creation time, not pre-created).
 
 **Steps:**
+0. Snapshot before the override and record it in `rounds.md`:
+```sh
+mkdir -p ~/gameplane-audit-018/snapshot-capture-before
+bash ~/Gameplane/specs/018-v0-3-release-readiness/audit/tools/snapshot.sh ~/gameplane-audit-018/snapshot-capture-before
+```
+   Add a line to the current round's section in `rounds.md`: `**Helm overrides vs baseline**: capture.enabled=true (per-round override, OD-021 item 17, packet-capture-sidecar procedure; snapshot at ~/gameplane-audit-018/snapshot-capture-before)`.
 1. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'capture.enabled=true'` and wait for Helm to apply.
 2. Create a test GameServer with capture opt-in (using real line breaks below — the single-line form above would send a literal backslash-n string to the shell, not a heredoc):
 ```sh
@@ -445,10 +688,23 @@ EOF
 4. Login as audit018-admin (Login cost: 1) per conventions.md, then verify capture is accessible via the API — the real route is `POST /servers/{name}:capture-start` (not `/api/v1/gameservers/.../captures/start`, which does not exist): `curl -X POST -H "Content-Type: application/json" -d '{"maxDurationSeconds":30,"maxSizeBytes":1048576}' -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: <csrf>" "$GP/servers/audit018-capture-test:capture-start?namespace=gameplane-games" | jq '.captureId'` and expect a `captureId` in the response.
 5. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'capture.enabled=false'` and wait for Helm to apply.
 6. Create another test GameServer (e.g., `audit018-no-capture-test`) with capture opt-in and verify the sidecar is NOT injected (operator ignores capture requests when cluster feature is disabled).
+7. Delete both test GameServers, then snapshot after the revert and diff against the before-snapshot:
+```sh
+kubectl delete gameserver audit018-capture-test audit018-no-capture-test -n gameplane-games --wait=true
+mkdir -p ~/gameplane-audit-018/snapshot-capture-after
+bash ~/Gameplane/specs/018-v0-3-release-readiness/audit/tools/snapshot.sh ~/gameplane-audit-018/snapshot-capture-after
 
-**Expected:** Capture sidecar is injected into GameServers when cluster capture is enabled and GameServer requests it; is not injected when cluster feature is disabled. Capture API endpoints are available when enabled.
+mkdir -p ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-020
+bash ~/Gameplane/specs/018-v0-3-release-readiness/audit/tools/snapshot-diff.sh \
+  ~/gameplane-audit-018/snapshot-capture-before \
+  ~/gameplane-audit-018/snapshot-capture-after \
+  | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-020/snapshot-diff.txt
+```
+   Record the diff result (and, once cleaned up, that the override is fully reverted) in the round's `rounds.md` entry from step 0.
 
-**Cleanup:** Helm upgrade with capture.enabled=false; delete test GameServers.
+**Expected:** Capture sidecar is injected into GameServers when cluster capture is enabled and GameServer requests it; is not injected when cluster feature is disabled. Capture API endpoints are available when enabled. After revert and cleanup, `snapshot-diff` shows no mismatches versus the pre-override snapshot (both test GameServers are `audit018-` and excluded from the comparison; everything else must be identical).
+
+**Cleanup:** Helm upgrade with capture.enabled=false; delete test GameServers (done in step 7); the snapshot directories under `~/gameplane-audit-018/` are off-git and can be removed once the diff is recorded.
 
 **Automatable?** no (blocked candidate: requires GameServer creation and pod injection verification; alternative: verify operator code includes capture sidecar injection logic when feature is enabled).
 
@@ -456,23 +712,32 @@ EOF
 
 ### web-dashboard-ui
 
-**Preconditions:** None (web is enabled by default).
+**OD-021 item 7 (resolved):** `templates/web.yaml` gates the whole file (Deployment *and* Service `gameplane-web`) behind a single top-level `{{- if .Values.web.enabled }}` (`charts/gameplane/templates/web.yaml:1`), so `web.enabled=false` removes `svc/gameplane-web` entirely — the exact port-forward target (`kubectl port-forward -n gameplane-system svc/gameplane-web 18080:80`, conventions.md) every other procedure in every `.md` file depends on for `$GP`. This procedure therefore **runs last in the round, after `existing-storage-claim`** (see that procedure's ordering note — the two "runs at the end" claims are reconciled as: `existing-storage-claim` second-to-last and alone, `web-dashboard-ui` last), once every procedure that needs `$GP` has finished. It uses a temporary port-forward straight to `svc/gameplane-api` (which stays up throughout) instead of `svc/gameplane-web` to prove the API itself is unaffected while the dashboard is down.
+
+**Preconditions:** None (web is enabled by default). All other procedures in this round must already be complete — this is the last procedure run, immediately after `existing-storage-claim`.
 
 **Resources created:** none (web pod is already running if enabled).
 
 **Steps:**
-1. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'web.enabled=false'` and wait for web Deployment to terminate.
-2. Verify web pod is removed: `kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-web` (expect no results).
-3. Attempt to reach the dashboard at `$GP/` and expect failure (502 Bad Gateway or similar, depending on ingress configuration).
-4. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'web.enabled=true'` and wait for web pod to start.
-5. Verify web pod is running: `kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-web` (expect running pod).
-6. Attempt to reach the dashboard at `$GP/` and expect success (login page or main dashboard).
+1. Before disabling web, kill the standing `$GP` port-forward to `svc/gameplane-web` from conventions.md (it will fail once the Service is removed anyway) and start a temporary one to `svc/gameplane-api` on a different local port, so the API's own health can still be checked while web is down. `gameplane-api`'s Service exposes port `80` (`{ name: http, port: 80, targetPort: http }`, `charts/gameplane/templates/api.yaml:419`), not `8080`: `kubectl port-forward -n gameplane-system svc/gameplane-api 18081:80 &`.
+2. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'web.enabled=false'` and wait for web Deployment to terminate.
+3. Verify web pod is removed: `kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-web` (expect no results). Verify the Service is also gone (whole template is gated, not just the Deployment): `kubectl get svc gameplane-web -n gameplane-system` and save both checks as evidence:
+```sh
+mkdir -p ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-021
+kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-web 2>&1 | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-021/web-pod-removed.txt
+kubectl get svc gameplane-web -n gameplane-system 2>&1 | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-021/web-svc-removed.txt  # expect NotFound
+```
+4. Attempt to reach the dashboard through the (now-nonexistent) `svc/gameplane-web` path — `curl http://127.0.0.1:18080/` on the old port-forward — and expect connection refused/failure, since there is nothing left to forward to. Save the result: `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:18080/ 2>&1 | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-021/dashboard-unreachable.txt`.
+5. Confirm the API itself is still healthy via the temporary port-forward from step 1, using the unauthenticated `GET /healthz` route (`api/cmd/main.go:257`) — a cleaner health check than a GET on the POST-only `/auth/login`, which only proves the router is up, not that the handler is healthy: `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:18081/healthz | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-021/api-healthz.txt` and expect `200`, proving `gameplane-api` is unaffected by `web.enabled=false`.
+6. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'web.enabled=true'` and wait for web pod to start.
+7. Verify web pod is running: `kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-web` (expect running pod) and save it: `kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-web | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-021/web-pod-restored.txt`.
+8. Kill the temporary port-forward to `svc/gameplane-api` from step 1, restart the standard `$GP` port-forward to `svc/gameplane-web` per conventions.md, and confirm the dashboard is reachable again: `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:18080/ | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-021/dashboard-restored.txt` and expect success (login page or main dashboard HTML).
 
-**Expected:** Web pod (nginx serving the SPA) is deployed when web.enabled=true; is removed when false. Dashboard is accessible when web pod is running; returns error when removed.
+**Expected:** Web Deployment and Service are both deployed when web.enabled=true; both are removed when false. The dashboard (fronted by `svc/gameplane-web`) is unreachable while removed; `gameplane-api` stays healthy throughout via its own Service. `$GP` is restored to normal (pointing at `svc/gameplane-web` again) once this procedure — the last one in the round — completes.
 
-**Cleanup:** Helm upgrade with web.enabled=true.
+**Cleanup:** Helm upgrade with web.enabled=true; kill the temporary port-forward to `svc/gameplane-api`; restart the standard `$GP` port-forward to `svc/gameplane-web`.
 
-**Automatable?** yes (bucket: web e2e or integration; pod/svc observation and HTTP endpoint test).
+**Automatable?** yes (bucket: api-auth or api-mods; pod/svc observation and HTTP endpoint test — an automated run would need to run last in its bucket for the same port-forward-target reason).
 
 ---
 
@@ -500,11 +765,53 @@ EOF
 
 ### existing-storage-claim
 
-**Preconditions:** A pre-existing PersistentVolumeClaim (PVC) named `audit018-api-storage` must exist in the gameplane-system namespace with at least 2Gi capacity and RWO access mode.
+**OD-021 item 8 (resolved):** Setting `api.storage.existingClaim` swaps the live API database for an empty PVC for as long as the toggle is on — any write the API makes during that window goes to the empty volume, not the real database. This procedure therefore **runs second-to-last in the round, alone**, immediately before `web-dashboard-ui` (the last procedure — see that procedure's ordering note; the two "runs at the end" claims are reconciled this way), after every other procedure that needs a working, unchanged API database has finished (in particular after every login-costing procedure, since `audit018-admin`/`audit018-operator`/etc. sessions and any state they create must already be settled).
 
-**Resources created:** none (uses pre-existing PVC).
+A byte-for-byte SHA-256 of the whole `gameplane.db` file is **not** used: the check also spans windows where the API legitimately runs against the real database — after the step-0 scale-up, before step 2's swap, and after step 5's revert, before step 7's scale-down — and any normal write in those windows (new sessions, audit rows, the SQLite WAL checkpoint) would fail a byte-for-byte compare even though `existingClaim` behaved correctly. Instead this procedure dumps the **identity/config tables** that a correctly-behaved swap must never change — `users`, `roles`, `role_permissions`, `user_role_bindings`, `oidc_links`, `api_tokens`, `config`, `share_links`, `user_preferences` (`api/internal/db/migrations/001_init.sql`, `003_roles.sql`, `004_cluster_rbac.sql`, `006_share_links.sql`, `010_share_links_expiry_nullable.sql`, `011_user_theme_preferences.sql`) — before the swap and after the revert, and diffs those dumps. `sessions` and `audit_events` are excluded from the diff: they are expected to gain rows from ordinary API activity in the surrounding windows (new login sessions, audit log entries from the very procedures that ran earlier in the round), and a difference there is not evidence of a problem.
+
+The `kubectl scale deployment gameplane-api` calls in steps 0 and 7 are direct writes to the Helm-managed `gameplane-api` Deployment, a pre-existing object. This is covered by the OD-021 item 8 approval of this procedure (scaling the API down is intrinsic to taking a consistent snapshot of its live SQLite file) and needs no separate `rounds.md` override entry; the scale is reverted to `replicas: 1` within the same step each time.
+
+**Preconditions:** A pre-existing PersistentVolumeClaim (PVC) named `audit018-api-storage` must exist in the gameplane-system namespace with at least 2Gi capacity and RWO access mode. This procedure runs second-to-last in the round and alone (no other procedure runs concurrently against the API); `web-dashboard-ui` runs immediately after it, last.
+
+**Resources created:** `audit018-db-tool` Pod (ephemeral; created and deleted twice — once for the before-snapshot, once for the after-snapshot — same pattern as `upgrade.md`'s `restore-real-db`, since the API container has no `sqlite3` binary or shell to exec into).
 
 **Steps:**
+0. Snapshot the real database before touching `existingClaim`. Scale the API down first so the file isn't being written while copied:
+```sh
+kubectl scale deployment gameplane-api --replicas=0 -n gameplane-system
+kubectl wait --for=delete pod -l app.kubernetes.io/name=gameplane-api -n gameplane-system --timeout=60s || true
+
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: audit018-db-tool
+  namespace: gameplane-system
+  labels:
+    gameplane.io/audit: "018"
+spec:
+  restartPolicy: Never
+  containers:
+    - name: tool
+      image: alpine:3.20
+      command: ["sleep", "300"]
+      volumeMounts:
+        - { name: data, mountPath: /data }
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: gameplane-api-data
+EOF
+kubectl wait --for=condition=Ready pod/audit018-db-tool -n gameplane-system --timeout=60s
+mkdir -p ~/gameplane-audit-018/db-snapshots
+kubectl exec -n gameplane-system audit018-db-tool -- sh -c \
+  "apk add --no-cache sqlite >/dev/null && sqlite3 /data/gameplane.db '.dump users roles role_permissions user_role_bindings oidc_links api_tokens config share_links user_preferences'" \
+  > ~/gameplane-audit-018/db-snapshots/existing-claim-before.sql
+kubectl delete pod audit018-db-tool -n gameplane-system --wait=true
+
+kubectl scale deployment gameplane-api --replicas=1 -n gameplane-system
+kubectl rollout status deployment/gameplane-api -n gameplane-system --timeout=300s
+```
 1. Create a test PVC (omits `storageClassName` to use the cluster's default — kubelab-baseline.md and evidence/baseline/pvcs.json record no StorageClass named `standard`, and this is a k3s cluster, whose built-in default class is `local-path`):
 ```sh
 kubectl apply -f - <<'EOF'
@@ -529,12 +836,53 @@ and wait for it to bind (may be immediate if dynamic provisioning is available).
 4. Verify the original `gameplane-api-data` PVC still exists, kept (not deleted) by the annotation in step 2 — it should no longer be the API pod's mounted volume, but the object itself must remain: `kubectl get pvc -n gameplane-system gameplane-api-data audit018-api-storage` (expect both present).
 5. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'api.storage.existingClaim='` and wait for API pod to restart.
 6. Verify the API pod mounts `gameplane-api-data` again — the same PVC from step 2, re-adopted by Helm, not newly created: `kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-api -o jsonpath='{.items[0].spec.volumes[?(@.name=="data")].persistentVolumeClaim.claimName}'` (expect `gameplane-api-data`).
+7. Snapshot the real database again, immediately after the revert, and diff the identity/config table dumps against the before-snapshot from step 0 (same scale-down / ephemeral-pod pattern; `sessions` and `audit_events` are intentionally excluded — see the OD-021 item 8 note above):
+```sh
+kubectl scale deployment gameplane-api --replicas=0 -n gameplane-system
+kubectl wait --for=delete pod -l app.kubernetes.io/name=gameplane-api -n gameplane-system --timeout=60s || true
 
-**Expected:** When existingClaim is set, the API pod mounts that PVC, and the original `gameplane-api-data` PVC (kept via step 2's annotation) is not deleted. When reverted to empty, Helm re-adopts and mounts that same original PVC again — no new PVC is created, and its data survives the whole test.
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: audit018-db-tool
+  namespace: gameplane-system
+  labels:
+    gameplane.io/audit: "018"
+spec:
+  restartPolicy: Never
+  containers:
+    - name: tool
+      image: alpine:3.20
+      command: ["sleep", "300"]
+      volumeMounts:
+        - { name: data, mountPath: /data }
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: gameplane-api-data
+EOF
+kubectl wait --for=condition=Ready pod/audit018-db-tool -n gameplane-system --timeout=60s
+kubectl exec -n gameplane-system audit018-db-tool -- sh -c \
+  "apk add --no-cache sqlite >/dev/null && sqlite3 /data/gameplane.db '.dump users roles role_permissions user_role_bindings oidc_links api_tokens config share_links user_preferences'" \
+  > ~/gameplane-audit-018/db-snapshots/existing-claim-after.sql
+kubectl delete pod audit018-db-tool -n gameplane-system --wait=true
 
-**Cleanup:** Helm upgrade with existingClaim empty; delete the test PVC `audit018-api-storage`. Leave the `helm.sh/resource-policy: keep` annotation from step 2 in place — removing it re-exposes the live database PVC to accidental pruning on a future helm upgrade/uninstall.
+kubectl scale deployment gameplane-api --replicas=1 -n gameplane-system
+kubectl rollout status deployment/gameplane-api -n gameplane-system --timeout=300s
 
-**Automatable?** yes (bucket: operator or api-auth; PVC volume binding observation).
+mkdir -p ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-023
+diff ~/gameplane-audit-018/db-snapshots/existing-claim-before.sql \
+     ~/gameplane-audit-018/db-snapshots/existing-claim-after.sql \
+  | tee ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-023/db-diff.txt
+```
+   (the identity/config table dumps, not the raw `.db` file, are saved as evidence — `api_tokens` and `users` hold hashed secrets/password hashes, so redact any `password_hash`/`token_hash` column values in the saved dump before committing it, per conventions.md's no-secrets rule.) An empty `diff` output means the dumped tables are identical and the real database's identity/config data was untouched throughout the test.
+
+**Expected:** When existingClaim is set, the API pod mounts that PVC, and the original `gameplane-api-data` PVC (kept via step 2's annotation) is not deleted. When reverted to empty, Helm re-adopts and mounts that same original PVC again — no new PVC is created, and its data survives the whole test. The before/after dumps of `users`, `roles`, `role_permissions`, `user_role_bindings`, `oidc_links`, `api_tokens`, `config`, `share_links` and `user_preferences` are identical, proving no write reached those tables in the real database while `existingClaim` pointed at `audit018-api-storage`. (`sessions`/`audit_events` may differ; that is expected and acceptable.)
+
+**Cleanup:** Helm upgrade with existingClaim empty; delete the test PVC `audit018-api-storage`; delete `~/gameplane-audit-018/db-snapshots/existing-claim-{before,after}.sql` (off-git) once the diff is recorded and redacted. Leave the `helm.sh/resource-policy: keep` annotation from step 2 in place — removing it re-exposes the live database PVC to accidental pruning on a future helm upgrade/uninstall.
+
+**Automatable?** yes (bucket: operator or api-auth; PVC volume binding observation; must run alone, last in its bucket, for the same DB-swap reason as the manual run).
 
 ---
 

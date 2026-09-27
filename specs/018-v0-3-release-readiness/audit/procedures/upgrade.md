@@ -75,7 +75,7 @@ Otherwise this section only modifies the existing `gameplane` Helm release.
    If result is `006_share_links.sql` or earlier, go to step 4 (upgrade in place).
    If result is `007_*` or later, go to step 3 (reinstall).
 
-3. **Reinstall at beta.8** (if ahead). After `--keep-history`, the release's last revision is uninstalled, so a plain `helm upgrade` fails with `has no deployed releases`; reinstall with `helm install --replace` instead, using values captured just before the uninstall, since `helm install` has no `--reuse-values`. Helm client on this devbox is v3.19.0 (`helm version`), which supports `--replace` (Helm calls it "unsafe in production" — kubelab here is the audit's test cluster, not production):
+3. **Reinstall at beta.8** (if ahead). After `--keep-history`, the release's last revision has status `uninstalled`, not `deployed`. A plain `helm upgrade` fails on that with `has no deployed releases` (it only ever looks for a `deployed` revision). `helm upgrade --install` takes the install branch instead once it sees the last revision is `uninstalled`: it builds an install action, forces `Replace = true` (the old `--replace` behavior, now automatic) and runs the install — in both Helm 4 (`pkg/cmd/upgrade.go` lines 129-166, `main`) and Helm v3.19.0 (`cmd/helm/upgrade.go`). That install path only ever receives values from `-f`/`--set`; `--reuse-values` is a flag of the *upgrade* action and is never passed through to the install call, so it is silently ignored on this branch. The values captured below are therefore required — not an off-git fallback — and must be fed into the command with `-f`:
    ```sh
    helm get values gameplane -n gameplane-system -o yaml > ~/gameplane-audit-018/gameplane-values-before-uninstall.yaml
    
@@ -83,14 +83,15 @@ Otherwise this section only modifies the existing `gameplane` Helm release.
    # Wait for API pod to terminate
    kubectl wait --for=delete pod -l app.kubernetes.io/name=gameplane-api -n gameplane-system --timeout=60s || true
    
-   helm install gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
+   helm upgrade gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
      --version 0.2.0-beta.8 \
-     -n gameplane-system --replace \
+     -n gameplane-system --install \
      -f ~/gameplane-audit-018/gameplane-values-before-uninstall.yaml
    
    # Wait for API to be ready
    kubectl rollout status deployment/gameplane-api -n gameplane-system --timeout=300s
    ```
+   Note (F-214): kubelab is on a later build than beta.8, so the captured values file may carry keys (e.g. `capture`, `operator.gameDataStorage`) that the beta.8 chart doesn't recognize. The beta.8 chart ignores unknown keys, so this is harmless, but note it in `rounds.md` if `helm upgrade` prints any warnings about it.
    Record: reinstall path (a) used in `rounds.md`. Verify pre-existing GameServers are still running:
    ```sh
    kubectl get gameserver -A | grep -E "mc-fabric|soak-bogus-pool|soak-no-preference|soak-pool-west|squad"

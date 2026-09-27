@@ -892,13 +892,13 @@ yes (api-roles): same owner check as shares-create, and OD-015 no longer blocks 
 ### servers-collaborators-set
 
 **Preconditions**
-Authenticated as owner of audit018-server-from-template, which is audit018-operator (it created the server in servers-create). Run this before servers-transfer, which moves ownership to audit018-admin. Collaborator users exist.
+Authenticated as owner of audit018-server-from-template, which is audit018-operator (it created the server in servers-create). Run this before servers-transfer, which moves ownership to audit018-admin. Collaborator users exist: use audit018-collab's id. Per OD-021 item 15, round setup already gives audit018-collab a separate, persistent collaborator grant on one audit018- server. Rounds.md does not say which server holds that grant, and `PUT :collaborators` replaces the whole collaborator list rather than appending (`setCollaboratorsReq` in `api/internal/handlers/ownership.go`), so this step must not target the same server: if round setup's grant is on audit018-server-from-template, this PUT would overwrite it, and servers-delete would then delete the server holding it. Round setup must put that persistent grant on a server other than audit018-server-from-template (e.g., the audit018-games2 server from round setup item 2), so this procedure's PUT never overwrites it.
 
 **Resources created**
 none (collaborators annotation mutation)
 
 **Steps**
-1. Login cost: 0. Create request: `{"userIds":[<user-id>]}`
+1. Login cost: 0. Create request: `{"userIds":[<audit018-collab id>]}`
 2. Run: `curl -s -o /dev/null -w '%{http_code}\n' -X PUT -H "Content-Type: application/json" -d @request.json -b ~/gameplane-audit-018/session-operator.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/audit018-server-from-template:collaborators?namespace=gameplane-games"`
 3. Confirm: `curl -s -b ~/gameplane-audit-018/session-operator.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/audit018-server-from-template?namespace=gameplane-games" | jq '.metadata.annotations."gameplane.local/collaborators"'`
 
@@ -938,7 +938,7 @@ yes (api-roles): OD-015 is resolved and audit018-operator owns the server it cre
 ### servers-delete
 
 **Preconditions**
-Authenticated as audit018-operator. audit018-server-from-template exists. User has servers:write permission (or is owner). Run this after every other procedure that uses audit018-server-from-template (servers-get through servers-transfer), because it removes the server.
+Authenticated as audit018-operator. audit018-server-from-template exists. User has servers:write permission (or is owner). Run this after every other procedure that uses audit018-server-from-template, because it removes the server: servers-get through servers-transfer, and also public-shares-resolve and public-shares-start (both need the server and a live share link, and run before servers-create/shares-create earlier in this file's order).
 
 **Resources created**
 none
@@ -1094,16 +1094,16 @@ yes (api-auth)
 ### users-get
 
 **Preconditions**
-Authenticated as audit018-admin (users:read). audit018-collab exists (from round setup; `<collab-id>` is its id).
+Authenticated as audit018-admin (users:read). audit018-collab exists (from round setup). There is no `GET /users/{id}` route (only `GET /users`, `PATCH /{id}`, `DELETE /{id}`, `POST /{id}/reset-password` and the `/{id}/bindings` routes; see `api/internal/handlers/users.go`), so this procedure is retargeted to `GET /users` (OD-021 item 4) and filters client-side for audit018-collab instead of fetching it by id.
 
 **Resources created**
 none
 
 **Steps**
-1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." $GP/users/<collab-id> | jq '.username'`
+1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." $GP/users | jq '.[] | select(.username == "audit018-collab")'`
 
 **Expected**
-HTTP 200, JSON user object.
+HTTP 200, JSON array of user objects; exactly one entry has `username: audit018-collab`.
 
 **Cleanup**
 none
@@ -1116,7 +1116,7 @@ yes (api-auth)
 ### users-update
 
 **Preconditions**
-Authenticated as audit018-admin (users:manage). audit018-collab exists (from round setup). Before step 1, note its current `role` and `displayName`, which Cleanup restores: `curl -s -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." $GP/users/<collab-id> | jq '{role, displayName}'`
+Authenticated as audit018-admin (users:manage). audit018-collab exists (from round setup). Before step 1, note its current `role` and `displayName`, which Cleanup restores. There is no `GET /users/{id}` route (see users-get), so read it from the list instead: `curl -s -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." $GP/users | jq '.[] | select(.username == "audit018-collab") | {role, displayName}'`
 
 **Resources created**
 none (mutation)
