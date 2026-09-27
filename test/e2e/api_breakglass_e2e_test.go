@@ -32,13 +32,14 @@ func TestAPI_BootstrapAdminForceEndsExistingSessions(t *testing.T) {
 	// so this test's bootstrap-admin execs never overlap with it.
 	envInstance.BootstrapAdmin(t, adminUsername, adminPassword)
 
-	// Admin client for cleanup; it stays open until the cleanup below has
-	// deleted the throwaway account (defers run before t.Cleanup callbacks).
+	// Admin client used by the deferred cleanup below.
 	admin := envInstance.APIClient(t, adminUsername, adminPassword)
+	defer admin.Close()
 
-	// Register cleanup to delete the throwaway user.
-	t.Cleanup(func() {
-		defer admin.Close()
+	// Delete the throwaway account while the test context (and so the
+	// port-forward) is still live. A t.Cleanup callback would run after
+	// t.Context() is cancelled and fail with "connection refused".
+	defer func() {
 		// List users to find the throwaway account's ID.
 		resp, body, err := admin.Get("/users")
 		if err != nil {
@@ -78,7 +79,7 @@ func TestAPI_BootstrapAdminForceEndsExistingSessions(t *testing.T) {
 			t.Errorf("delete user %q: %v", username, err)
 			return
 		}
-	})
+	}()
 
 	bootstrap := func(password string) {
 		t.Helper()
