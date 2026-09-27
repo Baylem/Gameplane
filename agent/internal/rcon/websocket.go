@@ -222,6 +222,26 @@ func (c *WebSocket) Exec(cmd string) (string, error) {
 	}
 }
 
+// redactURLErr strips the path from the URL embedded in a *url.Error, since
+// the WebRcon URL carries the password as its path. It mutates the error in
+// place and returns err unchanged, so the *url.Error type (and its Timeout()
+// method used by net.Error checks) and the errors.Is/As chain are preserved.
+// A URL that fails to parse is replaced wholesale.
+func redactURLErr(err error) error {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		u, perr := url.Parse(ue.URL)
+		if perr != nil {
+			ue.URL = "<redacted>"
+			return err
+		}
+		u.Path = ""
+		u.RawPath = ""
+		ue.URL = u.String()
+	}
+	return err
+}
+
 // classifyExecErrLocked wraps a Write or Read failure from Exec, promoting
 // it to ErrAuth when this connection has never produced a single frame and
 // the failure looks like the close WebRcon uses to signal a bad password
@@ -241,9 +261,9 @@ func (c *WebSocket) classifyExecErrLocked(cmd string, err error) error {
 	c.dropLocked()
 	if !confirmed && isAuthCloseSignal(err) {
 		c.lastAuthFailure = time.Now()
-		return fmt.Errorf("websocket rcon exec %q: %w: %w", cmd, ErrAuth, err)
+		return fmt.Errorf("websocket rcon exec %q: %w: %w", cmd, ErrAuth, redactURLErr(err))
 	}
-	return fmt.Errorf("websocket rcon exec %q: %w", cmd, err)
+	return fmt.Errorf("websocket rcon exec %q: %w", cmd, redactURLErr(err))
 }
 
 // Close shuts down the underlying connection.
@@ -297,14 +317,13 @@ func (c *WebSocket) ensureLocked() error {
 	// netguard.IsAllowed (permissive, allows loopback and private addresses)
 	// rather than IsPublic (strict) because game servers legitimately run
 	// INSIDE the pod or cluster on loopback or RFC1918 addresses. IsAllowed
-	// still blocks the cloud metadata endpoint and other high-value SSRF
-	// targets (link-local, multicast, NAT64/6to4 prefixes).
+	// still blocks link-local, multicast and NAT64/6to4 prefixes.
 	httpClient := netguard.HTTPClient(dialTimeout, netguard.IsAllowed)
 	conn, resp, err := websocket.Dial(dialCtx, wsURL, &websocket.DialOptions{
 		HTTPClient: httpClient,
 	})
 	if err != nil {
-		return fmt.Errorf("websocket rcon: dial %s: %w", c.baseURL, err)
+		return fmt.Errorf("websocket rcon: dial %s: %w", c.baseURL, redactURLErr(err))
 	}
 	// coder/websocket hijacks the connection on successful dial, leaving
 	// resp.Body nil. Close only if the body exists (e.g., on a redirect or

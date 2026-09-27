@@ -26,6 +26,17 @@ import (
 // classification is enforced in one place.
 var errPathOutOfRoot = errors.New("path escapes root")
 
+// errDotfile rejects any path with a dot-prefixed component. Dotfiles in the
+// data root hold agent-managed state (e.g. the mods manifest) and are not
+// part of the file-browser surface. Like errPathOutOfRoot it is safe to echo.
+var errDotfile = errors.New("dotfile access denied")
+
+// hasDotComponent reports whether the slash-separated relative path rel
+// (already stripped of its leading slash) has a dot-prefixed component.
+func hasDotComponent(rel string) bool {
+	return strings.HasPrefix(rel, ".") || strings.Contains(rel, "/.")
+}
+
 type handler struct {
 	root string
 }
@@ -58,6 +69,9 @@ func (h *handler) resolve(rel string) (string, error) {
 	rel = strings.TrimPrefix(rel, "/")
 	if rel == "" {
 		return h.root, nil
+	}
+	if hasDotComponent(rel) {
+		return "", errDotfile
 	}
 	abs := filepath.Join(h.root, filepath.Clean("/"+rel))
 	if !strings.HasPrefix(abs, h.root+string(os.PathSeparator)) && abs != h.root {
@@ -110,6 +124,9 @@ func (h *handler) resolveForDelete(rel string) (string, error) {
 	if rel == "" {
 		return h.root, nil
 	}
+	if hasDotComponent(rel) {
+		return "", errDotfile
+	}
 	abs := filepath.Join(h.root, filepath.Clean("/"+rel))
 	if !strings.HasPrefix(abs, h.root+string(os.PathSeparator)) && abs != h.root {
 		return "", errPathOutOfRoot
@@ -132,12 +149,13 @@ func (h *handler) resolveForDelete(rel string) (string, error) {
 	return filepath.Join(resolvedParent, filepath.Base(abs)), nil
 }
 
-// badRequest writes a 400 with a client-safe message. errPathOutOfRoot is
-// the one class we echo verbatim — everything else (EvalSymlinks errors,
-// multipart parse details, etc.) is logged and replaced with a generic
-// "bad request" so filesystem/implementation details stay inside the pod.
+// badRequest writes a 400 with a client-safe message. errPathOutOfRoot and
+// errDotfile are the classes we echo verbatim — everything else
+// (EvalSymlinks errors, multipart parse details, etc.) is logged and
+// replaced with a generic "bad request" so filesystem/implementation
+// details stay inside the pod.
 func (h *handler) badRequest(w http.ResponseWriter, err error) {
-	if errors.Is(err, errPathOutOfRoot) {
+	if errors.Is(err, errPathOutOfRoot) || errors.Is(err, errDotfile) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -158,6 +176,10 @@ func (h *handler) list(w http.ResponseWriter, req *http.Request) {
 	}
 	out := make([]Entry, 0, len(ents))
 	for _, e := range ents {
+		// Skip dot-prefixed entries (dotfiles and dot-directories).
+		if strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
 		fi, err := e.Info()
 		if err != nil {
 			continue
@@ -330,7 +352,7 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 		saveErr := savePart(p, part.FileName(), part, maxUploadFileBytes)
 		_ = part.Close()
 		if saveErr != nil {
-			if errors.Is(saveErr, io.ErrUnexpectedEOF) {
+			if errors.Is(saveErr, io.ErrUnexpectedEOF) || errors.Is(saveErr, errDotfile) {
 				h.badRequest(w, saveErr)
 				return
 			}
@@ -357,6 +379,9 @@ func savePart(dir, filename string, src io.Reader, limit int64) error {
 	name := filepath.Base(filename)
 	if name == "." || name == ".." || name == string(os.PathSeparator) {
 		return errors.New("invalid filename")
+	}
+	if strings.HasPrefix(name, ".") {
+		return errDotfile
 	}
 	dstPath := filepath.Clean(filepath.Join(dir, name))
 	tmp, err := os.CreateTemp(dir, ".upload-*")

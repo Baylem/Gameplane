@@ -82,8 +82,11 @@ func TestConsole_RconError(t *testing.T) {
 	if err := wsjson.Read(ctx, conn, &got); err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	if got.Kind != "err" || got.Body != "rcon offline" {
-		t.Fatalf("got %+v", got)
+	// Error responses carry a generic message, not the upstream error details,
+	// to avoid leaking RCON secrets or connection information to the client.
+	// The detailed error is logged separately by the handler.
+	if got.Kind != "err" || got.Body != "upstream unavailable" {
+		t.Fatalf("got %+v, expected Body='upstream unavailable'", got)
 	}
 }
 

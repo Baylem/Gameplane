@@ -14,6 +14,7 @@ package console
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/coder/websocket"
@@ -66,7 +67,8 @@ func (h *handler) serve(w http.ResponseWriter, req *http.Request) {
 		out, err := h.rcon.Exec(in.Body)
 		env := Envelope{Kind: "out", Body: out}
 		if err != nil {
-			env = Envelope{Kind: "err", Body: err.Error()}
+			slog.Warn("console rcon", "err", err)
+			env = Envelope{Kind: "err", Body: "upstream unavailable"}
 		}
 		if err := wsjson.Write(ctx, conn, env); err != nil {
 			return
