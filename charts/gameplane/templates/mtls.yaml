@@ -2,8 +2,14 @@
   Agent mTLS material.
 
   Generated at install time via Helm's built-in crypto. On upgrade we
-  `lookup` the existing Secret and reuse it verbatim so the CA stays
-  stable (and the API doesn't roll its client cert on every upgrade).
+  `lookup` the existing CA Secret and reuse it verbatim so the CA stays
+  stable. The default-named client Secret (`gameplane-agent-client`) is
+  reused only while its `gameplane.local/ca-fingerprint` annotation
+  matches the sha256 of the active CA cert; otherwise (the CA changed, or
+  the Secret predates the annotation) the client cert is re-issued against
+  the active CA. A pre-annotation install therefore re-issues its client
+  cert once, signed by the same CA, on its first upgrade; after that the
+  API doesn't roll its client cert on every upgrade.
 
   Users who want to bring their own CA can pre-create a Secret by name via
   `api.agentMTLS.caSecretRef.name` (data keys `ca.crt` and `ca.key`) and
@@ -24,6 +30,11 @@
   {{- $caCrt = $ca.Cert -}}
   {{- $caKey = $ca.Key -}}
 {{- end }}
+{{- /* Fingerprint of the active CA cert. Stamped onto the client Secret so
+       that a later render can tell whether the client cert was signed by
+       the CA currently in effect (e.g. caSecretRef.name switched to a
+       different pre-created CA) and must be re-issued rather than reused. */ -}}
+{{- $caFingerprint := $caCrt | sha256sum -}}
 {{- /* Skip Secret generation when a custom name is configured */ -}}
 {{- if eq $caSecretName "gameplane-agent-ca" }}
 apiVersion: v1
@@ -42,7 +53,8 @@ data:
 {{- end }}
 {{- $clientSecretName := (.Values.api.agentMTLS.clientCertRef.name | default "gameplane-agent-client") -}}
 {{- $clientSecret := lookup "v1" "Secret" .Release.Namespace $clientSecretName -}}
-{{- $haveClient := and $clientSecret (hasKey ($clientSecret.data | default dict) "tls.crt") (hasKey ($clientSecret.data | default dict) "tls.key") -}}
+{{- $clientCAFingerprint := dig "gameplane.local/ca-fingerprint" "" (($clientSecret.metadata).annotations | default dict) -}}
+{{- $haveClient := and $clientSecret (hasKey ($clientSecret.data | default dict) "tls.crt") (hasKey ($clientSecret.data | default dict) "tls.key") (eq $clientCAFingerprint $caFingerprint) -}}
 {{- $clientCrt := "" -}}
 {{- $clientKey := "" -}}
 {{- if $haveClient -}}
@@ -68,6 +80,7 @@ metadata:
   labels: {{- include "gameplane.labels" . | nindent 4 }}
   annotations:
     gameplane.local/managed-by: helm
+    gameplane.local/ca-fingerprint: {{ $caFingerprint }}
 type: kubernetes.io/tls
 data:
   tls.crt: {{ $clientCrt | b64enc }}
