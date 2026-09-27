@@ -211,6 +211,7 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-260 | GameServer.Stopped and Restore.Resuming phases declared but never assigned | operator | review:operator | S4 | open | | | |
 | F-261 | Capture files deleted through the API keep counting against the sidecar volume budget until the pod restarts | capture-sidecar, api | review:#483 | S3 | fixed-unverified | #487 | | follow-up to F-187 (#483) |
 | F-262 | playit tunnel NetworkPolicy adds no egress ports although its comment says all ports are permitted | operator | review:#468 | S3 | fixed-unverified | #488 | | |
+| F-263 | Servers page lists only `gameplane-games`; servers in extra namespaces are hidden unless the viewer owns or collaborates on them | web, api | review:OD-021 item 14 | S3 | open | | | blocks procedures/web.md servers-filter-by-namespace |
 
 ## Details
 
@@ -3010,3 +3011,16 @@ elsewhere in the operator, but no reconciler ever sets either one.
 
 **Evidence:** opus review of #468 (spec-018 group 47); `docs/tunnels.md` now documents the actual behaviour.
 
+### F-263
+
+**Repro / observation**
+1. On a test install, add `team-a` to `GAMEPLANE_EXTRA_NAMESPACES` on the API Deployment and grant the API a matching RoleBinding. Create a GameServer `mc` in `team-a` that the admin does not own.
+2. Open `/servers` as admin. `Servers.list()` (`web/src/lib/endpoints.ts:109`) calls `GET /servers` with no `namespace` query, so `scope.Resolve` (`api/internal/scope/scope.go:48-57`) uses `gameplane-games` and `listHandler` (`api/internal/handlers/resources.go:120-146`) lists only that namespace.
+3. The namespace filter is built from that list alone (`distinctNamespaces`, `web/src/routes/Servers.tsx:110-116`), so it only ever offers `gameplane-games`.
+4. `mc` is not shown. A server in `team-a` appears only under "Shared with you", and only when the viewer owns or collaborates on it (`sharedServers`, `Servers.tsx:88-96`).
+
+**Expected:** The Servers page lists servers in every allowed namespace the viewer may read, and the namespace filter offers each of them.
+
+**Actual:** Servers outside `gameplane-games` are hidden from the main list, and the namespace filter cannot select another namespace.
+
+**Evidence:** code reading during the OD-021 item 14 procedure fix (2026-09-27); `procedures/web.md` `servers-filter-by-namespace` is blocked on it.
