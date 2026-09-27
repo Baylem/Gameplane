@@ -322,6 +322,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **capture-sidecar:** hardened TLS configuration defaults and capture size limits.
 - **audit-syslog-bridge:** hardened `APP-NAME`/`HOSTNAME` field validation.
 - **gameproto:** hardened handshake string-length and status-response validation.
+- **telemetry-receiver:** hardened ingest payload validation.
 
 ## [0.3.0-rc.2] — Unreleased
 
@@ -358,7 +359,6 @@ the Highlights below summarize what is new since rc.1.
   repository when NetworkPolicies are enabled (#432).
 - Further security hardening across the API, operator, agent and release
   pipeline (see Security hardening above).
-- **telemetry-receiver:** hardened ingest payload validation.
 
 ## [0.3.0-rc.1] — 2026-09-23
 
