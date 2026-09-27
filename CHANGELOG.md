@@ -173,11 +173,17 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **operator:** hardened module bundle integrity checks.
 - **web:** hardened the Admin Settings draft and managed-secret lifecycle.
 - **api:** hardened ownership checks on owner-only server operations.
+- **operator:** hardened network captures to apply the template-port default filter when none is given.
+- **api:** hardened account removal and share-link revocation.
+- **api:** hardened client IP derivation behind trusted proxies.
+- **api:** hardened OIDC role re-evaluation, role-assignment auditing for every OIDC provider, and the `bootstrap-admin` break-glass reset.
 - **api:** hardened role-edit guards and event-stream authorization.
 - **api:** hardened cluster registration removal.
 - **ci:** hardened the release signing order and the scope of the signing key.
 - **api:** hardened Prometheus metrics serving with a dedicated in-cluster listener.
 - **operator, api, web:** hardened the module "verified" badge to reflect a recorded signature check instead of a source's current policy.
+- **docs:** hardened the accuracy of the game-container posture and OIDC group-claim documentation.
+- **telemetry-receiver:** hardened ingest payload validation.
 
 ## [0.3.0-rc.1] — 2026-09-23
 
