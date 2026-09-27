@@ -93,6 +93,14 @@ Also: is DELETE / tail-truncation in scope for the live test, or UPDATE only?
 
 The items below are open. Work that doesn't depend on them carries on.
 
+### RC-TAG-2: publish `v0.3.0-rc.2` — PENDING
+
+T057 for rc.2. The maintainer chose (2026-09-27) to cut rc.2 only after the remaining held PRs have merged.
+
+- **Waiting on**: the held PRs; then the rc.2 CHANGELOG PR [#496](https://github.com/ValgulNecron/Gameplane/pull/496) (branch `chore/018-rc2-changelog`, draft) being finished, merged, and green on the merge commit; then your approval to tag (FR-019).
+- **SHA to tag**: the #496 merge commit (to be filled in).
+- **Command after approval**: `git tag -a v0.3.0-rc.2 <sha> -m "v0.3.0-rc.2" && git push origin v0.3.0-rc.2` (annotated, unsigned, per OD-013). Then verify as in T014 and deploy as in T015 under `## rc.2` in `audit/rounds.md`.
+
 ### RC-TAG-1: publish `v0.3.0-rc.1` — APPROVED and TAGGED 2026-09-24
 
 The maintainer approved tagging `c44cb179` (AskUserQuestion, 2026-09-24). `v0.3.0-rc.1` was created (`git tag -a`, OD-013) and pushed. T014 verification of `release.yaml` is recorded under `## rc.1` in `audit/rounds.md`.
