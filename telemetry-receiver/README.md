@@ -18,7 +18,7 @@ are never stored.
 
 | Route | Method | Response |
 |---|---|---|
-| `/ingest` | POST | `204` accepted · `400` malformed/unknown fields/negative counts · `401` bad or missing token (when `AUTH_TOKEN` is set) · `413` body over 16 KiB |
+| `/ingest` | POST | `204` accepted · `400` malformed, not a single JSON object, missing/unknown fields, negative counts · `401` bad or missing token (when `AUTH_TOKEN` is set) · `413` body over 16 KiB |
 | `/metrics` | GET | Prometheus text format |
 | `/healthz` | GET | `200 ok` |
 

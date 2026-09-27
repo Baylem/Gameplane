@@ -364,6 +364,10 @@ func TestGameServer_HeartbeatReachesRunning(t *testing.T) {
 //     carries the filter-matching TCP port, at least one such packet
 //     exists (guards against a silently-empty-but-valid file passing
 //     by coincidence), and zero packets carry the non-matching port.
+//   - Default filter (FR-003): a second capture started with no filter
+//     reaches Running, because the operator builds the filter from the
+//     template's advertised ports, and every packet in its file is on
+//     the advertised port. It reuses this test's API session.
 func TestGameServer_NetworkCaptureStartStopDownload(t *testing.T) {
 	t.Parallel()
 
@@ -528,64 +532,65 @@ func TestGameServer_NetworkCaptureStartStopDownload(t *testing.T) {
 			Delete(context.Background(), egressAllow.Name, metav1.DeleteOptions{})
 	})
 
-	// A helper pod sends TCP connections to both the filter-matching and
-	// non-matching ports. Neither port has a real listener behind it
-	// (busybox never accepts connections), but the SYN/RST exchange is
-	// captured at the network layer regardless of whether anything
-	// answers. Uses `nc -w <secs> <ip> <port> </dev/null` rather than
-	// `-zv`: busybox's nc applet only supports -z/-v when built with
-	// NC_110_COMPAT, which the common (e.g. Alpine) build does not
-	// enable — `-w` plus redirecting stdin from /dev/null is universally
-	// supported and behaves the same way (connect, then exit).
-	trafficPod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      trafficPodName,
-			Namespace: ns,
-			Labels:    trafficLabels,
-		},
-		Spec: corev1.PodSpec{
-			RestartPolicy: corev1.RestartPolicyNever,
-			Containers: []corev1.Container{
-				{
-					Name:  "traffic-gen",
-					Image: "busybox:1.36",
-					Command: []string{
-						"sh", "-c",
-						fmt.Sprintf(
-							"(nc -w 2 %s %d </dev/null 2>&1; echo done-match) & "+
-								"(nc -w 2 %s %d </dev/null 2>&1; echo done-nonmatch) & wait",
-							podIP, matchPort, podIP, nonMatchPort,
-						),
+	// A helper closure creates and waits for a traffic pod. The pod sends TCP
+	// connections to both filter-matching and non-matching ports. Neither port
+	// has a real listener (busybox never accepts connections), but the SYN/RST
+	// exchange is captured regardless. Uses `nc -w <secs> <ip> <port> </dev/null`
+	// rather than `-zv`: busybox's nc applet only supports -z/-v when built with
+	// NC_110_COMPAT; `-w` plus stdin redirect is universally supported.
+	createAndWaitTrafficPod := func(podName string) {
+		trafficPod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      podName,
+				Namespace: ns,
+				Labels:    trafficLabels,
+			},
+			Spec: corev1.PodSpec{
+				RestartPolicy: corev1.RestartPolicyNever,
+				Containers: []corev1.Container{
+					{
+						Name:  "traffic-gen",
+						Image: "busybox:1.36",
+						Command: []string{
+							"sh", "-c",
+							fmt.Sprintf(
+								"(nc -w 2 %s %d </dev/null 2>&1; echo done-match) & "+
+									"(nc -w 2 %s %d </dev/null 2>&1; echo done-nonmatch) & wait",
+								podIP, matchPort, podIP, nonMatchPort,
+							),
+						},
 					},
 				},
 			},
-		},
-	}
-	if _, err := envInstance.K8s.CoreV1().Pods(ns).Create(ctx, trafficPod, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("create traffic pod: %v", err)
-	}
-	t.Cleanup(func() {
-		_ = envInstance.K8s.CoreV1().Pods(ns).Delete(context.Background(), trafficPodName, metav1.DeleteOptions{})
-	})
-
-	// Poll for the traffic pod to finish rather than a bare sleep — a
-	// loaded CI runner can blow past a fixed sleep before scheduling
-	// even starts the pod.
-	envInstance.Eventually(t, 60*time.Second, func() (bool, string) {
-		p, err := envInstance.K8s.CoreV1().Pods(ns).Get(ctx, trafficPodName, metav1.GetOptions{})
-		if err != nil {
-			return false, "get traffic pod: " + err.Error()
 		}
-		if p.Status.Phase != corev1.PodSucceeded && p.Status.Phase != corev1.PodFailed {
-			return false, "traffic pod phase=" + string(p.Status.Phase)
+		if _, err := envInstance.K8s.CoreV1().Pods(ns).Create(ctx, trafficPod, metav1.CreateOptions{}); err != nil {
+			t.Fatalf("create traffic pod %s: %v", podName, err)
 		}
-		return true, ""
-	})
+		t.Cleanup(func() {
+			// Pass the test's ctx through; WithoutCancel keeps the delete
+			// running even if that context is cancelled by cleanup time.
+			_ = envInstance.K8s.CoreV1().Pods(ns).Delete(context.WithoutCancel(ctx), podName, metav1.DeleteOptions{})
+		})
 
-	// Log the traffic pod's output before any packet-count assertion —
-	// if the capture later comes back empty, this is what tells us
-	// whether the traffic generator actually ran (vs. a capture/CNI
-	// problem further down the chain).
+		// Poll for the traffic pod to finish rather than a bare sleep — a
+		// loaded CI runner can blow past a fixed sleep before scheduling
+		// even starts the pod.
+		envInstance.Eventually(t, 60*time.Second, func() (bool, string) {
+			p, err := envInstance.K8s.CoreV1().Pods(ns).Get(ctx, podName, metav1.GetOptions{})
+			if err != nil {
+				return false, "get traffic pod: " + err.Error()
+			}
+			if p.Status.Phase != corev1.PodSucceeded && p.Status.Phase != corev1.PodFailed {
+				return false, "traffic pod phase=" + string(p.Status.Phase)
+			}
+			return true, ""
+		})
+	}
+
+	// Create and run the first traffic pod for the filtered capture.
+	createAndWaitTrafficPod(trafficPodName)
+
+	// Log the first traffic pod's output for debugging.
 	if trafficLogs, err := envInstance.Kubectl(ctx, "logs", "-n", ns, trafficPodName); err != nil {
 		t.Logf("traffic pod logs: (failed to fetch: %v)", err)
 	} else {
@@ -675,6 +680,138 @@ func TestGameServer_NetworkCaptureStartStopDownload(t *testing.T) {
 	}
 	t.Logf("capture file size=%d bytes, packets=%d, all matched filter %q (SC-001+SC-008 verified)",
 		len(fileBody), matchedPackets, startReq["filter"])
+
+	// Default filter (FR-003). Wait until the operator has told the sidecar
+	// to stop the first capture (it holds one capture at a time), then start
+	// a second capture with no filter on the same session.
+	envInstance.Eventually(t, 60*time.Second, func() (bool, string) {
+		obj, err := envInstance.Dyn.Resource(networkCaptureGVR).Namespace(ns).
+			Get(ctx, captureID, metav1.GetOptions{})
+		if err != nil {
+			return false, "get networkcapture: " + err.Error()
+		}
+		conds, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+		for _, c := range conds {
+			m, ok := c.(map[string]any)
+			if ok && m["type"] == "SidecarStopped" && m["status"] == "True" {
+				return true, ""
+			}
+		}
+		return false, "first capture not yet stopped on the sidecar"
+	})
+
+	defaultReq := map[string]any{
+		"maxDurationSeconds":      300,
+		"maxSizeBytes":            testCaptureMaxSize,
+		"ttlSecondsAfterFinished": 86400,
+	}
+	var defaultCaptureID string
+	envInstance.Eventually(t, 60*time.Second, func() (bool, string) {
+		resp, body, err := cli.Post("/servers/"+gsName+":capture-start", defaultReq)
+		if err != nil {
+			return false, "start capture without filter: " + err.Error()
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode == http.StatusConflict {
+			return false, "previous capture still holds the server's capture lock"
+		}
+		if resp.StatusCode != http.StatusAccepted {
+			t.Fatalf("start capture without filter: status=%s body=%s", resp.Status, body)
+		}
+		var started struct {
+			CaptureID string `json:"captureId"`
+		}
+		if err := json.Unmarshal(body, &started); err != nil || started.CaptureID == "" {
+			t.Fatalf("parse capture-start response %q: %v", body, err)
+		}
+		defaultCaptureID = started.CaptureID
+		return true, ""
+	})
+	t.Cleanup(func() {
+		_ = envInstance.Dyn.Resource(networkCaptureGVR).Namespace(ns).
+			Delete(context.Background(), defaultCaptureID, metav1.DeleteOptions{})
+	})
+
+	envInstance.Eventually(t, 60*time.Second, func() (bool, string) {
+		obj, err := envInstance.Dyn.Resource(networkCaptureGVR).Namespace(ns).
+			Get(ctx, defaultCaptureID, metav1.GetOptions{})
+		if err != nil {
+			return false, "get networkcapture: " + err.Error()
+		}
+		phase, _, _ := unstructured.NestedString(obj.Object, "status", "phase")
+		if phase == "Failed" {
+			msg, _, _ := unstructured.NestedString(obj.Object, "status", "message")
+			t.Fatalf("capture without filter failed: %s", msg)
+		}
+		if phase != "Running" {
+			return false, "phase=" + phase
+		}
+		return true, ""
+	})
+
+	// Create and run a second traffic pod for the default-filtered capture.
+	// This ensures there is traffic to capture before the capture is stopped.
+	createAndWaitTrafficPod(trafficPodName + "-default")
+
+	stopDefaultResp, stopDefaultBody, err := cli.Post("/servers/"+gsName+":capture-stop", map[string]any{
+		"captureId": defaultCaptureID,
+	})
+	if err != nil {
+		t.Fatalf("stop capture without filter: %v", err)
+	}
+	defer func() { _ = stopDefaultResp.Body.Close() }()
+	if stopDefaultResp.StatusCode != http.StatusOK {
+		t.Fatalf("stop capture without filter: status=%s body=%s", stopDefaultResp.Status, stopDefaultBody)
+	}
+	envInstance.Eventually(t, 60*time.Second, func() (bool, string) {
+		obj, err := envInstance.Dyn.Resource(networkCaptureGVR).Namespace(ns).
+			Get(ctx, defaultCaptureID, metav1.GetOptions{})
+		if err != nil {
+			return false, "get networkcapture: " + err.Error()
+		}
+		phase, _, _ := unstructured.NestedString(obj.Object, "status", "phase")
+		if phase != "Completed" {
+			return false, "phase=" + phase
+		}
+		return true, ""
+	})
+
+	defaultFileResp, defaultFileBody, err := cli.Get("/servers/" + gsName + ":capture-file?id=" + defaultCaptureID)
+	if err != nil {
+		t.Fatalf("download capture file without filter: %v", err)
+	}
+	defer func() { _ = defaultFileResp.Body.Close() }()
+	if defaultFileResp.StatusCode != http.StatusOK {
+		t.Fatalf("download capture file without filter: status=%s", defaultFileResp.Status)
+	}
+	defaultReader, err := pcapgo.NewNgReader(bytes.NewReader(defaultFileBody), pcapgo.DefaultNgReaderOptions)
+	if err != nil {
+		t.Fatalf("capture file without filter is not valid PCAPNG: %v", err)
+	}
+	defaultPackets := 0
+	for {
+		data, _, err := defaultReader.ReadPacketData()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatalf("read packet from capture without filter: %v", err)
+		}
+		packet := gopacket.NewPacket(data, defaultReader.LinkType(), gopacket.Default)
+		tcp, ok := packet.Layer(layers.LayerTypeTCP).(*layers.TCP)
+		if !ok {
+			t.Fatalf("default-filter capture holds a non-TCP packet; the template advertises only TCP %d: %s", matchPort, packet.String())
+		}
+		if uint16(tcp.SrcPort) != matchPort && uint16(tcp.DstPort) != matchPort {
+			t.Errorf("default-filter capture holds a packet off the advertised port %d: src=%d dst=%d", matchPort, tcp.SrcPort, tcp.DstPort)
+		}
+		defaultPackets++
+	}
+	if defaultPackets == 0 {
+		t.Fatalf("capture without a filter recorded no packets; the default-filter port check did not run")
+	}
+	t.Logf("capture without filter reached Running; file size=%d bytes, packets=%d, all on the advertised port %d",
+		len(defaultFileBody), defaultPackets, matchPort)
 }
 
 // findContainerByName returns the container named `name` from cs, or nil.
