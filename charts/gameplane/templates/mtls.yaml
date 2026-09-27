@@ -5,11 +5,14 @@
   `lookup` the existing Secret and reuse it verbatim so the CA stays
   stable (and the API doesn't roll its client cert on every upgrade).
 
-  Users who want to bring their own CA can pre-create
-  `gameplane-agent-ca` and `gameplane-agent-client`; the lookup path then
-  reuses them and nothing is generated.
+  Users who want to bring their own CA can pre-create a Secret by name via
+  `api.agentMTLS.caSecretRef.name` (data keys `ca.crt` and `ca.key`) and
+  `api.agentMTLS.clientCertRef.name` (data keys `tls.crt` and `tls.key`);
+  the lookup path then reuses them and nothing is generated. The data key
+  names are fixed because the API and operator read those exact names.
 */}}
-{{- $caSecret := lookup "v1" "Secret" .Release.Namespace "gameplane-agent-ca" -}}
+{{- $caSecretName := (.Values.api.agentMTLS.caSecretRef.name | default "gameplane-agent-ca") -}}
+{{- $caSecret := lookup "v1" "Secret" .Release.Namespace $caSecretName -}}
 {{- $haveCA := and $caSecret (hasKey ($caSecret.data | default dict) "ca.crt") (hasKey ($caSecret.data | default dict) "ca.key") -}}
 {{- $caCrt := "" -}}
 {{- $caKey := "" -}}
@@ -21,6 +24,8 @@
   {{- $caCrt = $ca.Cert -}}
   {{- $caKey = $ca.Key -}}
 {{- end }}
+{{- /* Skip Secret generation when a custom name is configured */ -}}
+{{- if eq $caSecretName "gameplane-agent-ca" }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -34,7 +39,9 @@ data:
   ca.crt: {{ $caCrt | b64enc }}
   ca.key: {{ $caKey | b64enc }}
 ---
-{{- $clientSecret := lookup "v1" "Secret" .Release.Namespace "gameplane-agent-client" -}}
+{{- end }}
+{{- $clientSecretName := (.Values.api.agentMTLS.clientCertRef.name | default "gameplane-agent-client") -}}
+{{- $clientSecret := lookup "v1" "Secret" .Release.Namespace $clientSecretName -}}
 {{- $haveClient := and $clientSecret (hasKey ($clientSecret.data | default dict) "tls.crt") (hasKey ($clientSecret.data | default dict) "tls.key") -}}
 {{- $clientCrt := "" -}}
 {{- $clientKey := "" -}}
@@ -51,6 +58,8 @@ data:
   {{- $clientCrt = $signed.Cert -}}
   {{- $clientKey = $signed.Key -}}
 {{- end }}
+{{- /* Skip Secret generation when a custom name is configured */ -}}
+{{- if eq $clientSecretName "gameplane-agent-client" }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -63,3 +72,4 @@ type: kubernetes.io/tls
 data:
   tls.crt: {{ $clientCrt | b64enc }}
   tls.key: {{ $clientKey | b64enc }}
+{{- end }}

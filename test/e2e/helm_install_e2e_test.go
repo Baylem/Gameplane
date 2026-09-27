@@ -5,6 +5,8 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -257,6 +259,117 @@ func TestHelmInstall_MetricsNotOnPublicPort(t *testing.T) {
 	}
 	if strings.Contains(out, "public-body=metrics") {
 		t.Fatalf("the API's public port served /metrics:\n%s", out)
+	}
+}
+
+// TestHelmInstall_APIServerEgressPolicy_AllowsPrivateRanges — verifies that
+// the default allow-agent-to-apiserver NetworkPolicy renders with RFC1918 and
+// link-local ranges. This documents the current default scope: the policy
+// reaches all private-range addresses on 443/6443, not just the apiserver.
+// No login required.
+func TestHelmInstall_APIServerEgressPolicy_AllowsPrivateRanges(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	// Fetch the installed NetworkPolicy from the games namespace
+	np, err := envInstance.K8s.NetworkingV1().NetworkPolicies("gameplane-games").
+		Get(ctx, "allow-agent-to-apiserver", metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("failed to get allow-agent-to-apiserver NetworkPolicy: %v", err)
+	}
+
+	// Collect all configured CIDR blocks from the egress rules
+	wantRanges := map[string]bool{
+		"10.0.0.0/8":     true,
+		"172.16.0.0/12":  true,
+		"192.168.0.0/16": true,
+		"169.254.0.0/16": true, // link-local
+	}
+	foundRanges := make(map[string]bool)
+
+	for _, eg := range np.Spec.Egress {
+		for _, to := range eg.To {
+			if to.IPBlock != nil {
+				foundRanges[to.IPBlock.CIDR] = true
+			}
+		}
+	}
+
+	// Verify all expected ranges are present
+	for r := range wantRanges {
+		if !foundRanges[r] {
+			t.Errorf("expected CIDR %s not found in allow-agent-to-apiserver policy; found: %v",
+				r, foundRanges)
+		}
+	}
+
+	// Verify the policy allows TCP 443 and 6443
+	gotPorts := map[int32]bool{}
+	for _, eg := range np.Spec.Egress {
+		for _, port := range eg.Ports {
+			if port.Protocol != nil && *port.Protocol == "TCP" && port.Port != nil {
+				gotPorts[port.Port.IntVal] = true
+			}
+		}
+	}
+	for _, p := range []int32{443, 6443} {
+		if !gotPorts[p] {
+			t.Errorf("expected TCP port %d in allow-agent-to-apiserver policy; found %v", p, gotPorts)
+		}
+	}
+}
+
+// TestHelmInstall_BringYourOwnMTLSCA — verifies that when a custom Secret name
+// is configured via api.agentMTLS.caSecretRef.name, the chart does not generate
+// its own Secrets. Users setting custom Secret names should not get a
+// conflict with chart-generated Secrets.
+// No login required; renders the chart on the host with helm template.
+func TestHelmInstall_BringYourOwnMTLSCA(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	repoRoot, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatalf("resolve repo root: %v", err)
+	}
+
+	// Render the working-tree chart on the host with custom mTLS Secret names.
+	outBytes, err := exec.CommandContext(ctx, "helm", "template", "gameplane",
+		filepath.Join(repoRoot, "charts", "gameplane"),
+		"-n", "gameplane-system",
+		"--set", "api.agentMTLS.caSecretRef.name=my-custom-ca",
+		"--set", "api.agentMTLS.clientCertRef.name=my-custom-client",
+	).CombinedOutput()
+	out := string(outBytes)
+	if err != nil {
+		t.Fatalf("helm template render failed: %v\n%s", err, out)
+	}
+
+	// Verify that the chart-owned Secret objects (metadata.name) are not
+	// generated when custom names are configured. Scan Secret documents
+	// rather than matching a bare "name: <value>" substring, which also
+	// matches unrelated fields like container/env names.
+	for _, doc := range strings.Split(out, "\n---\n") {
+		if !strings.Contains(doc, "kind: Secret") {
+			continue
+		}
+		if strings.Contains(doc, "name: gameplane-agent-ca") {
+			t.Errorf("rendered chart generated the gameplane-agent-ca Secret when a custom name was configured:\n%s", doc)
+		}
+		if strings.Contains(doc, "name: gameplane-agent-client") {
+			t.Errorf("rendered chart generated the gameplane-agent-client Secret when a custom name was configured:\n%s", doc)
+		}
+	}
+
+	// Verify that the custom Secret names are wired into the consuming
+	// Deployments' volumes (showing the template actually read the
+	// configured values instead of ignoring them).
+	if !strings.Contains(out, "secretName: my-custom-ca") {
+		t.Error("rendered chart does not reference the configured custom CA Secret name (my-custom-ca) in any volume")
+	}
+	if !strings.Contains(out, "secretName: my-custom-client") {
+		t.Error("rendered chart does not reference the configured custom client Secret name (my-custom-client) in any volume")
 	}
 }
 
