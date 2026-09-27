@@ -68,7 +68,7 @@ are feature-complete for the v1 scope and stabilized for external testing.
 | Inbound connectivity (NAT traversal, relay) | Integrated frp, Tailscale, playit relay sidecars; playit mappings user-managed via playit.gg account. [optional; disabled by default] [G-c](docs/comparison-sources.md#gameplane-row-c) | No integrated relay sidecars; manual proxy/port forwarding configuration required. [P-c](docs/comparison-sources.md#pterodactyl-row-c) | not publicly documented (checked 2026-09-02) [C-c](docs/comparison-sources.md#cubecoders-row-c) | No relay or NAT traversal features documented. [A-c](docs/comparison-sources.md#agones-row-c) |
 | Backup and restore | Restic snapshots to S3-compatible storage; on-demand or cron-scheduled via BackupSchedule; one-click restore. [G-d](docs/comparison-sources.md#gameplane-row-d) | Wings (local, default) or S3-compatible backup drivers; cron scheduling and on-demand backups. [P-d](docs/comparison-sources.md#pterodactyl-row-d) | not publicly documented (checked 2026-09-02) [C-d](docs/comparison-sources.md#cubecoders-row-d) | not applicable (Agones is a Kubernetes operator library) [A-d](docs/comparison-sources.md#agones-row-d) |
 | Access control & authentication | Local argon2id + OIDC (Keycloak/Google/GitHub); three built-in roles (admin/operator/viewer); custom roles supported. [G-e](docs/comparison-sources.md#gameplane-row-e) | 2FA configurable per account or admin-only; subuser management via Artisan CLI. [P-e](docs/comparison-sources.md#pterodactyl-row-e) | Role-based access control; OIDC single-sign-on in Advanced Edition. [C-e](docs/comparison-sources.md#cubecoders-row-e) | not applicable (Agones is a Kubernetes operator library) [A-e](docs/comparison-sources.md#agones-row-e) |
-| Game template distribution | OCI bundles via ModuleSource (git/http/oci/local/upload); optional cosign signature verification per source. 16 ready-to-use templates shipped. [G-f](docs/comparison-sources.md#gameplane-row-f) | Community eggs repository (eggs.pterodactyl.io) with nests and custom egg creation support. [P-f](docs/comparison-sources.md#pterodactyl-row-f) | Customizable templates framework; community-contributed templates available via external repositories. [C-f](docs/comparison-sources.md#cubecoders-row-f) | not applicable (Agones is a Kubernetes operator library) [A-f](docs/comparison-sources.md#agones-row-f) |
+| Game template distribution | OCI bundles via ModuleSource (git/http/oci/local/upload); optional cosign signature verification per source. 30 ready-to-use templates shipped. [G-f](docs/comparison-sources.md#gameplane-row-f) | Community eggs repository (eggs.pterodactyl.io) with nests and custom egg creation support. [P-f](docs/comparison-sources.md#pterodactyl-row-f) | Customizable templates framework; community-contributed templates available via external repositories. [C-f](docs/comparison-sources.md#cubecoders-row-f) | not applicable (Agones is a Kubernetes operator library) [A-f](docs/comparison-sources.md#agones-row-f) |
 | Multi-tenancy & multi-cluster | Cluster CRD for remote registration/monitoring; console/log streaming local-cluster only. [local cluster only for streaming] [G-g](docs/comparison-sources.md#gameplane-row-g) | Single Panel managing multiple nodes; no documented remote cluster or cross-cluster streaming. [P-g](docs/comparison-sources.md#pterodactyl-row-g) | Multi-server management via controller architecture; multi-tenancy not supported in AMP 2 (planned for AMP 3). [C-g](docs/comparison-sources.md#cubecoders-row-g) | Multi-cluster allocation via GameServerAllocationPolicy; allocator service with mTLS authentication. [A-g](docs/comparison-sources.md#agones-row-g) |
 | Licensing | GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later). [G-h](docs/comparison-sources.md#gameplane-row-h) | MIT License (Panel and Wings). [P-h](docs/comparison-sources.md#pterodactyl-row-h) | Proprietary; per-instance tiers (Standard/Professional/Advanced/Enterprise). [C-h](docs/comparison-sources.md#cubecoders-row-h) | Apache License 2.0. [A-h](docs/comparison-sources.md#agones-row-h) |
 | Target operator scope (self-hosted vs. managed SaaS) | Self-hosted only; runs on Kubernetes (k3s, kubeadm, managed services); no managed SaaS offering. [G-i](docs/comparison-sources.md#gameplane-row-i) | Self-hosted only; requires Linux system capable of running Docker containers. [P-i](docs/comparison-sources.md#pterodactyl-row-i) | Self-installed on user hardware (Windows or Linux); no managed SaaS version. [C-i](docs/comparison-sources.md#cubecoders-row-i) | Self-hosted operator software; runs anywhere Kubernetes can run. [A-i](docs/comparison-sources.md#agones-row-i) |
@@ -82,7 +82,7 @@ are feature-complete for the v1 scope and stabilized for external testing.
 - **Web File Manager**: Browse, edit, upload, and download server files directly in the browser with an integrated Monaco code editor.
 - **Player Management**: View active players and issue kicks or bans for supported game protocols.
 - **S3 Backups & Restores**: Perform on-demand or cron-scheduled restic snapshots to S3-compatible storage, with one-click restoration into server volumes.
-- **OCI Game Modules**: 16 ready-to-use game templates packaged as OCI artifacts (Minecraft Java, Valheim, Terraria, Rust, Palworld, Factorio, CS2, etc.).
+- **OCI Game Modules**: 30 ready-to-use game templates packaged as OCI artifacts (Minecraft Java, Valheim, Terraria, Rust, Palworld, Factorio, CS2, etc.).
 - **Extensive Mod Support**: Browse and install mods across 10 registries (Modrinth, CurseForge, Steam Workshop, Thunderstore, SpigotMC, Hangar, etc.) with support for both direct file-drop and launch-parameter mod IDs.
 - **Authentication & RBAC**: Local user accounts plus OIDC SSO support (Keycloak, Google, GitHub) with fine-grained access permissions.
 - **Multi-Cluster Fleet Management**: Register, monitor, and manage game servers across multiple Kubernetes clusters from a single dashboard.
@@ -139,7 +139,7 @@ Gameplane integrates with **10 mod registries**: Modrinth, CurseForge, Thunderst
 | `capture-sidecar/` | Go | Network packet capture sidecar [optional], opt-in per server, admin-only. |
 | `tunnel/` | Go | Relay supervisor pod managing third-party tunnels (`frp`, `Tailscale`, `playit`) [optional]. |
 | `web/` | TS + React | Modern dashboard UI built with Vite, TanStack Query, xterm.js, and Monaco Editor. |
-| `modules/` | YAML | 16 pre-packaged game templates (Minecraft, Valheim, Terraria, Rust, etc.) as OCI bundles. |
+| `modules/` | YAML | 30 pre-packaged game templates (Minecraft, Valheim, Terraria, Rust, etc.) as OCI bundles. |
 | `charts/` | Helm | Official Helm deployment chart for operator, API gateway, ingress, and helper services. |
 | `gameproto/` | Go | Shared protocol library for parsing game handshakes (Minecraft, Terraria) in `sentinel`. |
 | `gameaction/` | Go | Security guard and command renderer for custom module admin actions. |
@@ -175,7 +175,7 @@ Gameplane extends Kubernetes using custom resources under `gameplane.local/v1alp
 ├── sentinel/             # Wake-on-connect daemon (Go)
 ├── tunnel/               # Relay client supervisor for frp/Tailscale/playit (Go)
 ├── web/                  # Dashboard frontend (React, Vite, Monaco, xterm.js)
-├── modules/              # Submodule: Game templates (16 games shipped)
+├── modules/              # Submodule: Game templates (30 games shipped)
 ├── website/              # Submodule: Public documentation site
 ├── gameproto/            # Wire-protocol parsing library (Minecraft, Terraria)
 ├── gameaction/           # Console injection guard & action command renderer
@@ -227,7 +227,7 @@ Ed25519 key and do not have transparency log entries — verify them with
 
 ## Quickstart (local dev)
 
-Requires: Go 1.25+, Node 20+, Docker, kind, kubectl, helm,
+Requires: Go 1.26+, Node 20+, Docker, kind, kubectl, helm,
 [oras](https://oras.land/docs/installation) (>= 1.2.0).
 
 The game modules live in the separate `gameplane-module` repo, wired in here
@@ -257,7 +257,7 @@ The `make dev-up` target:
    `kind-registry:5000`),
 2. loads every locally-built image (operator, api, web, agent, and every
    optional component's image),
-3. pushes every directory under `modules/` (16 games at last count — see
+3. pushes every directory under `modules/` (30 games at last count — see
    `modules/` for the current list) to the local registry as an OCI module
    bundle,
 4. installs the Helm chart from `charts/gameplane/` with a default

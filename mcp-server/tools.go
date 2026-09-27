@@ -103,7 +103,7 @@ func registerTools(s *mcp.Server, c *kube.Client) {
 type listResourcesInput struct {
 	Kind          string `json:"kind" jsonschema:"Gameplane CRD kind to list: GameServer, GameTemplate, Backup, BackupSchedule, Restore, Module, or ModuleSource."`
 	Namespace     string `json:"namespace,omitempty" jsonschema:"Namespace to list within. Ignored for cluster-scoped kinds (GameTemplate, Module, ModuleSource). Empty lists across all namespaces for namespaced kinds."`
-	LabelSelector string `json:"labelSelector,omitempty" jsonschema:"Optional Kubernetes label selector, e.g. 'gameplane.local/template=minecraft-java'."`
+	LabelSelector string `json:"labelSelector,omitempty" jsonschema:"Optional Kubernetes label selector. Most Gameplane CRD objects carry no labels; Backups created by a BackupSchedule are the exception, e.g. 'gameplane.local/backup-schedule=nightly'."`
 }
 
 func listResourcesHandler(c *kube.Client) mcp.ToolHandlerFor[listResourcesInput, any] {
@@ -146,7 +146,7 @@ func getResourceHandler(c *kube.Client) mcp.ToolHandlerFor[getResourceInput, any
 
 type listPodsInput struct {
 	Namespace     string `json:"namespace,omitempty" jsonschema:"Namespace to list within. Empty lists across all namespaces."`
-	LabelSelector string `json:"labelSelector,omitempty" jsonschema:"Optional Kubernetes label selector, e.g. 'gameplane.local/server=my-server'."`
+	LabelSelector string `json:"labelSelector,omitempty" jsonschema:"Optional Kubernetes label selector, e.g. 'app.kubernetes.io/instance=my-server' to match a GameServer's pod."`
 }
 
 func listPodsHandler(c *kube.Client) mcp.ToolHandlerFor[listPodsInput, any] {
@@ -199,7 +199,10 @@ func listEventsHandler(c *kube.Client) mcp.ToolHandlerFor[listEventsInput, any] 
 			return nil, nil, err
 		}
 		if in.LabelSelector != "" {
-			list = filterEventsByLabel(list, in.LabelSelector)
+			list, err = filterEventsByLabel(list, in.LabelSelector)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 		text, err := marshalIndent(list)
 		if err != nil {
@@ -215,10 +218,10 @@ func listEventsHandler(c *kube.Client) mcp.ToolHandlerFor[listEventsInput, any] 
 // here on the Event's own labels keeps the behavior honest about what
 // labelSelector actually matches, without pretending to filter by the
 // involved object's labels.
-func filterEventsByLabel(list *corev1.EventList, selector string) *corev1.EventList {
+func filterEventsByLabel(list *corev1.EventList, selector string) (*corev1.EventList, error) {
 	sel, err := labels.Parse(selector)
 	if err != nil {
-		return list
+		return nil, fmt.Errorf("parse label selector %q: %w", selector, err)
 	}
 	filtered := make([]corev1.Event, 0, len(list.Items))
 	for _, ev := range list.Items {
@@ -228,7 +231,7 @@ func filterEventsByLabel(list *corev1.EventList, selector string) *corev1.EventL
 	}
 	out := list.DeepCopy()
 	out.Items = filtered
-	return out
+	return out, nil
 }
 
 // --- get_pod_logs ---

@@ -76,7 +76,7 @@ func NewAFPacketSource(iface string, snaplen uint32, bpfFilter string) (*AFPacke
 	// Open an AF_PACKET TPacket socket bound to the specified interface.
 	// The interface is selected via afpacket.OptInterface at construction
 	// time; TPacket has no SetInterface/SetSnaplen setters (verified against
-	// github.com/gopacket/gopacket@v1.6.1/afpacket/{afpacket,options}.go:
+	// github.com/gopacket/gopacket@v1.7.2/afpacket/{afpacket,options}.go:
 	// NewTPacket at afpacket.go:261, OptInterface at options.go:80,
 	// OptPollTimeout at options.go:100).
 	// OptPollTimeout bounds each internal poll(2) call so ReadPacketData
@@ -178,7 +178,7 @@ func (a *AFPacketSource) Close() error {
 	a.closed = true
 
 	// (*afpacket.TPacket).Close returns no value (verified against
-	// github.com/gopacket/gopacket@v1.6.1/afpacket/afpacket.go:243); it just
+	// github.com/gopacket/gopacket@v1.7.2/afpacket/afpacket.go:243); it just
 	// munmaps the ring buffer and closes the fd.
 	a.handle.Close()
 	return nil

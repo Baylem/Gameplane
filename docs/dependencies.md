@@ -1,9 +1,12 @@
 # Dependency report
 
 This is a component-by-component inventory of Gameplane's third-party
-dependencies and why each one is there. It covers the 9 Go modules that
-share `go.work` (`netguard`, `gameaction`, `operator`, `api`, `agent`,
-`audit-syslog-bridge` [optional], `telemetry-receiver` [optional], `mcp-server` [optional], `test/e2e`), the
+dependencies and why each one is there. It covers all 15 Go modules that
+share `go.work` (`netguard`, `gameaction`, `gameproto`, `svcutil`,
+`operator`, `api`, `agent`, `audit-syslog-bridge` [optional],
+`telemetry-receiver` [optional], `sentinel` [optional],
+`capture-sidecar` [optional], `tunnel` [optional], `gp-module`,
+`mcp-server` [optional], `test/e2e`), the
 `web/` npm package, and the build/CI toolchain that isn't a code dependency
 but is invoked by `make`/GitHub Actions.
 
@@ -23,7 +26,9 @@ to find call sites (or `go mod why -m <path>` from inside the module). For
 Toolchain versions come from `Makefile`, `.github/workflows/*.yaml`, and
 `.devcontainer/post-create.sh`.
 
-Accurate as of **2026-09-02**, repo state `v0.2.0-beta.8`.
+Accurate as of **2026-09-02**, repo state `v0.2.0-beta.8`; the `gameproto`,
+`svcutil`, `sentinel`, `capture-sidecar`, `tunnel`, and `gp-module` sections
+were added and verified on **2026-09-26**.
 
 > **Note:** The dependency versions listed in the table below reflect the state at v0.2.0-beta.8. For the most current versions, refer to [CHANGELOG.md](../CHANGELOG.md).
 
@@ -33,11 +38,17 @@ Accurate as of **2026-09-02**, repo state `v0.2.0-beta.8`.
 |---|---|---|---|
 | `netguard/` | Go | 0 (stdlib only) | Shared SSRF dial-guard used by the operator and agent |
 | `gameaction/` | Go | 0 (stdlib only) | Shared console-injection guard + command-template renderer used by the agent and API |
+| `gameproto/` | Go | 0 (stdlib only) | Shared Minecraft/Terraria handshake classifier used by sentinel |
+| `svcutil/` | Go | 0 (stdlib only) | Shared env-parsing + graceful-shutdown helpers (no active importers yet) |
 | `operator/` | Go | 19 | controller-runtime reconciler for the 8 CRDs; module OCI pull/verify, git/OCI fetch, restic-backup scheduling |
 | `api/` | Go | 17 | chi REST + WebSocket gateway: auth (local + OIDC), RBAC, K8s client, SQLite/Postgres persistence, notifications |
 | `agent/` | Go | 6 | In-pod sidecar: RCON/WebRcon console, chi HTTP surface, heartbeat status patch, disk usage stats |
 | `audit-syslog-bridge/` | Go | 0 (stdlib only) | Standalone HTTP-JSON → syslog relay for the audit webhook sink |
 | `telemetry-receiver/` | Go | 1 | Standalone collector for the API's opt-in anonymous usage telemetry |
+| `sentinel/` | Go | 2 | Wake-on-connect listener holding ports for sleeping pods |
+| `capture-sidecar/` | Go | 3 | Ephemeral AF_PACKET packet capture sidecar with BPF filtering |
+| `tunnel/` | Go | 0 (stdlib only) | Relay client supervisor for frp/Tailscale/playit |
+| `gp-module/` | Go | 2 | Module authoring CLI: scaffold, offline validate, dry-run preview, OCI package |
 | `mcp-server/` | Go | 5 | Standalone, strictly read-only MCP server for AI-assisted cluster diagnostics |
 | `test/e2e/` | Go | 4 | kind + Helm + real-component end-to-end suite |
 | `web/` | TypeScript/React | 18 runtime + 26 dev | Dashboard: routing, data fetching, UI primitives, console/file editors, tests |
@@ -77,6 +88,33 @@ Imported by:
 Both importers call `Resolve` independently before rendering, since each
 is its own trust boundary (per the package doc comment). Also a local
 `replace` module; same Dockerfile `COPY` requirement as netguard.
+
+### gameproto
+
+`gameproto/go.mod` has **no `require` block at all** — it imports only the
+Go standard library (`bufio`, `bytes`, `encoding/binary`, `encoding/json`,
+`errors`, `fmt`, `io`, `strconv`, `strings`). It is a wire-protocol parser that
+classifies Minecraft (Java) and Terraria connection handshakes from the
+first bytes off the wire, so a proxy can decide whether a connection is a
+real client join before waking a sleeping pod.
+
+Imported by:
+- `sentinel/` — to hold a client's connection open while the sentinel wakes the target `GameServer`'s pod, replaying the buffered handshake once the pod is ready.
+
+Also a local `replace` module (`replace github.com/ValgulNecron/gameplane/gameproto => ../gameproto` in `sentinel/go.mod`); same Dockerfile `COPY` requirement as netguard.
+
+### svcutil
+
+`svcutil/go.mod` has **no `require` block at all** — stdlib only
+(`log/slog`, `os`, `net/http`, `context`, `errors`, `time`). It provides
+shared environment-variable parsing (`Or`, `OrInt`, `ParseLogLevel`) and a
+graceful HTTP shutdown helper (`RunHTTP`), meant to cut down on
+copy-pasted startup/shutdown boilerplate across the repo's standalone Go
+binaries.
+
+It has **no active importers yet** (see `svcutil/specs.md` for adoption
+status) — it ships as an available shared module ahead of the other
+services being migrated onto it.
 
 ## Services
 
@@ -134,7 +172,7 @@ chi-based REST + WebSocket gateway. Direct deps from `api/go.mod`
 | `sigs.k8s.io/controller-runtime` | v0.24.1 | `cmd/main.go` — only `ctrl.GetConfig()` is used, to load the kubeconfig/in-cluster `*rest.Config` at startup; not the manager/reconciler machinery (that's the operator's job — see rule "the operator is authoritative"). `envtest.Environment` in `internal/handlers/suite_envtest_test.go` is test-only | direct-runtime (minimal) | <!-- doc-versions: dependency -->
 | `sigs.k8s.io/yaml` | v1.6.0 | `internal/handlers/module_upload.go` — parses `module.yaml` metadata and `template.yaml` from uploaded module bundles | direct-runtime |
 | `github.com/minio/minio-go/v7` | v7.3.0 | `internal/audit/s3.go` — S3-compatible client (`minio.New`, `PutObject`) backing the S3 audit-log sink | direct-runtime |
-| `github.com/prometheus/client_golang` | v1.24.1 | `cmd/main.go` (`promhttp` handler at `/metrics`); `promauto` counters in `internal/notify/notify.go`, `internal/audit/s3.go`, `internal/audit/audit.go` | direct-runtime |
+| `github.com/prometheus/client_golang` | v1.24.1 | `cmd/metrics.go` (`promhttp` handler at `/metrics` on the separate metrics listener); `promauto` counters in `internal/notify/notify.go`, `internal/audit/s3.go`, `internal/audit/audit.go` | direct-runtime |
 | `modernc.org/sqlite` | v1.57.0 | `internal/db/db.go` — blank-imported to register the `"sqlite"` `database/sql` driver, the default persistence backend | direct-runtime |
 | `github.com/jackc/pgx/v5` | v5.10.0 | `internal/db/db_postgres.go` (behind `//go:build postgres`) — registers `pgx/v5/stdlib` as the `"pgx"` driver when built with `-tags postgres`; the alternative persistence backend | direct-runtime (opt-in build tag) |
 | `golang.org/x/mod` | v0.40.0 | `internal/handlers/semver.go` — `semver.Compare` orders module versions for the version-switch/update-detection UI | direct-runtime | <!-- doc-versions: dependency -->
@@ -218,6 +256,62 @@ reach a mutating verb even by mistake) and RBAC-backed (a
 `get`/`list`/`watch`-only ClusterRole) — the go-sdk itself has no bearing
 on that guarantee; it's purely the protocol transport.
 
+### sentinel
+
+Wake-on-connect proxy that holds a listener open for a sleeping
+`GameServer`'s port, classifies the first bytes of an inbound connection
+via `gameproto`, and triggers a pod wake before replaying the buffered
+handshake. Direct deps from `sentinel/go.mod` (excluding the local
+`gameproto` replace, covered above):
+
+| Dependency | Version | Why |
+|---|---|---|
+| `k8s.io/apimachinery` | v0.37.0 | `main.go` — typed/unstructured plumbing for reading the target `GameServer`'s status and idle/wake fields | <!-- doc-versions: dependency -->
+| `k8s.io/client-go` | v0.37.0 | `main.go` — in-cluster client used to read `GameServer` status and patch it to trigger a wake | <!-- doc-versions: dependency -->
+
+### capture-sidecar
+
+Ephemeral, on-demand AF_PACKET packet capture container that runs
+alongside a `GameServer` pod with `CAP_NET_RAW` (see
+[`docs/security.md`](security.md) for the capability/PodSecurity
+trade-off). Direct deps from `capture-sidecar/go.mod`:
+
+| Dependency | Version | Why |
+|---|---|---|
+| `github.com/gopacket/gopacket` | v1.7.2 | `internal/capture/writer.go`/`afpacket.go` — `AF_PACKET` socket capture via `gopacket/afpacket`, plus pcap-format frame writing via `pcapgo`/`layers` |
+| `github.com/packetcap/go-pcap` | v0.0.0-20260731105150-c86974bbfbcd | `internal/capture/filter.go` — compiles the tcpdump-style filter expression to BPF without requiring libpcap at runtime | <!-- doc-versions: dependency -->
+| `golang.org/x/net` | v0.59.0 | `internal/capture/filter.go`/`afpacket.go` — `x/net/bpf`: assembling the classic-BPF program attached to the AF_PACKET socket | <!-- doc-versions: dependency -->
+
+### tunnel
+
+`tunnel/go.mod` has **no `require` block at all** — stdlib only
+(`os/exec`, `encoding/json`, `net/http`, `context`, etc.). It's the relay
+client supervisor: it launches and monitors the `frp`, `tailscaled`, or
+`playitd` client binary as a subprocess, configured by env vars
+(`GAMESERVER_NAME`, `TUNNEL_TYPE`, etc.) that the operator renders from
+`spec.networking.tunnel`. For `playit`, `playit_reporter.go` polls
+`playitd`'s local Unix-socket IPC (newline-delimited JSON `get_state`
+frames) for the assigned public addresses, then PATCHes the `GameServer`
+resource's `status.tunnelEndpoints` directly against the Kubernetes API
+server (`https://kubernetes.default.svc`, using the pod's service-account
+token) with a stdlib `net/http` client — nothing is reported to the
+agent. The `frp` and Tailscale addresses are computed by the operator
+itself rather than polled by the supervisor. No third-party library is
+needed because process supervision, JSON/Unix-socket IPC, and HTTP status
+patching are all stdlib jobs.
+
+### gp-module
+
+Module authoring CLI (`init`, `validate`, `preview`, `package`) used by
+module authors to scaffold, offline-validate, dry-run preview, and OCI
+package a game module before publishing it. Direct deps from
+`gp-module/go.mod`:
+
+| Dependency | Version | Why |
+|---|---|---|
+| `gopkg.in/yaml.v3` | v3.0.1 | `internal/common/yaml_ast.go`, `internal/validator/`, `internal/scaffold/`, `internal/preview/`, `internal/packager/` — parses/round-trips `module.yaml`/`template.yaml` while preserving comments and key order for scaffold output |
+| `k8s.io/apimachinery` | v0.37.0 | `internal/preview/memory.go` — `resource.Quantity` parsing, to preview a template's resource requests/limits the same way the operator would | <!-- doc-versions: dependency -->
+
 ## Frontend
 
 ### web
@@ -296,7 +390,7 @@ These aren't code dependencies of any component; they're invoked by
 - **`github.com/vladopajic/go-test-coverage/v2@v2.18.9`** — pinned in `Makefile`'s `GO_TEST_COVERAGE_PKG`, run via `go run` (no install step) by `make cover-go-check` and CI's `go` job to enforce each module's `.testcoverage.yml` threshold.
 - **`github.com/wadey/gocovmerge@v0.0.0-20160331181800-b5bfa59ec0ad`** — pinned in `Makefile`'s `GOCOVMERGE_PKG`, merges each module's `unit.out` + `envtest.out` coverage profiles before the threshold gate. <!-- doc-versions: dependency -->
 - **`sigs.k8s.io/controller-runtime/tools/setup-envtest@release-0.19`** — installed by `make envtest-bin`; downloads the K8s 1.36.2 envtest binaries (`kube-apiserver`, `etcd`) that back `operator`'s and `api`'s `-tags=envtest` integration tests.
-- **`golangci-lint` v2.12.2** — pinned in `.devcontainer/post-create.sh` (built from source, not the release binary, because the release binary is built with an older Go than the repo's `go 1.25.0` toolchain wants). Configured by `.golangci.yml` (bodyclose, errcheck, gosec, govet, ineffassign, staticcheck, unused, misspell, gofmt, goimports, revive, unparam, nilerr, noctx, errorlint, contextcheck). **Not currently invoked by CI** — `ci.yaml`'s `go` job runs only `go vet`, not `golangci-lint run`; `make lint-go` exists for local/devcontainer use and is called out in `docs/contributing.md` as a pre-PR step, but nothing in `.github/workflows/` gates on it. Same for the web job: it runs `npm run build` and `npm run test:cover`, not `npm run lint` — ESLint isn't CI-gated either.
+- **`golangci-lint` v2.12.2** — pinned in `.devcontainer/post-create.sh` (built from source, not the release binary, because the release binary is built with an older Go than the repo's `go 1.26.0` toolchain wants). Configured by `.golangci.yml` (bodyclose, errcheck, gosec, govet, ineffassign, staticcheck, unused, misspell, gofmt, goimports, revive, unparam, nilerr, noctx, errorlint, contextcheck). **Not currently invoked by CI** — `ci.yaml`'s `go` job runs only `go vet`, not `golangci-lint run`; `make lint-go` exists for local/devcontainer use and is called out in `docs/contributing.md` as a pre-PR step, but nothing in `.github/workflows/` gates on it. Same for the web job: it runs `npm run build` and `npm run test:cover`, not `npm run lint` — ESLint isn't CI-gated either.
 - **`oras` CLI ≥ 1.2.0** (pinned `1.2.0` in the devcontainer; `oras-project/setup-oras@v2.0.1` action in `release.yaml`) — `modules/build.sh` pushes each `modules/<name>/` directory as an OCI module bundle (`make modules-push`); this is a *different* thing from `operator`'s `oras.land/oras-go/v2` **library** dependency, which is the operator's own pull-side client, not the CLI.
 - **`cosign` CLI v3.1.2** (`sigstore/cosign-installer@v4.1.2`) — used in `publish-edge.yaml`/`release.yaml` to sign published container images, the Helm chart, and module bundles against `COSIGN_PRIVATE_KEY`, recording each signature in the public Rekor transparency log, and to round-trip-verify against the derived public key before publishing. Signatures use the classic format (`--new-bundle-format=false --use-signing-config=false`), which is what keeps them readable by the operator's `sigstore/cosign/v2` library; cosign's newer Rekor v2 flow additionally requires an RFC3161 timestamp authority that keyed signing cannot satisfy. `modules/build.sh` gates the same behaviour behind its own `--tlog-upload` flag so local and air-gapped authoring stays offline. Distinct from `operator`'s `sigstore/cosign/v2` **library** dependency, which only ever *verifies* (never signs) at reconcile time.
 - **`kind`** v0.32.0 (devcontainer pin) / `helm/kind-action@v1.14.0` (`install_only: true` in CI) — spins up the ephemeral clusters for `make dev-up`, `make test-e2e`, and every `e2e-*` CI job. <!-- doc-versions: dependency -->

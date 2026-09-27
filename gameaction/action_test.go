@@ -33,6 +33,24 @@ func TestResolve_RequiredMissing(t *testing.T) {
 	}
 }
 
+func TestResolve_RequiredExplicitEmptyIgnoresDefault(t *testing.T) {
+	// A required param given an explicitly empty value must be rejected,
+	// not silently filled in with the declared default: the default only
+	// covers a *missing* value.
+	decls := []Param{{Name: "m", Type: "string", Required: true, Default: "hello"}}
+	if _, err := Resolve(decls, map[string]string{"m": ""}); err == nil {
+		t.Fatal("Resolve: want error for required param explicitly set to empty, even with a default")
+	}
+	// A missing value still falls back to the default and is accepted.
+	got, err := Resolve(decls, nil)
+	if err != nil {
+		t.Fatalf("Resolve: unexpected error for missing required param with a default: %v", err)
+	}
+	if got["m"] != "hello" {
+		t.Errorf("got[%q] = %q, want %q", "m", got["m"], "hello")
+	}
+}
+
 func TestResolve_RejectsControlChars(t *testing.T) {
 	decls := []Param{{Name: "message", Type: "string"}}
 	// The guard's whole job is to stop a param value chaining a second
@@ -84,6 +102,20 @@ func TestResolve_TooLong(t *testing.T) {
 	ok := strings.Repeat("a", 512)
 	if _, err := Resolve(decls, map[string]string{"message": ok}); err != nil {
 		t.Errorf("Resolve: unexpected error for a 512-char string param: %v", err)
+	}
+}
+
+func TestResolve_TooLongCountsRunesNotBytes(t *testing.T) {
+	// The cap is 512 characters (runes), not bytes: a multi-byte value at
+	// exactly 512 runes must pass even though it is well over 512 bytes.
+	decls := []Param{{Name: "message", Type: "string"}}
+	okRunes := strings.Repeat("中", 512) // 512 runes, 1536 bytes
+	if _, err := Resolve(decls, map[string]string{"message": okRunes}); err != nil {
+		t.Errorf("Resolve: unexpected error for a 512-rune multi-byte string param: %v", err)
+	}
+	tooManyRunes := strings.Repeat("中", 513) // 513 runes, 1539 bytes
+	if _, err := Resolve(decls, map[string]string{"message": tooManyRunes}); err == nil {
+		t.Fatal("Resolve: want error for a 513-rune multi-byte string param")
 	}
 }
 

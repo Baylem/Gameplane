@@ -382,7 +382,7 @@ func TestGameServer_StatusPatchPreservesAgentHeartbeat(t *testing.T) {
 	stale := seeded.DeepCopy()
 	stale.Status.Agent = nil
 	r := &GameServerReconciler{Client: k8sClient, APIReader: k8sClient, Scheme: scheme}
-	if _, err := r.reconcileStatus(ctx, stale, idleAwake, nil, tunnelPlan{}, tmpl, nil, ""); err != nil {
+	if _, err := r.reconcileStatus(ctx, stale, idleAwake, nil, nil, tunnelPlan{}, tmpl, nil, ""); err != nil {
 		t.Fatalf("reconcileStatus: %v", err)
 	}
 
@@ -2862,6 +2862,70 @@ func TestGameServer_TunnelCreatesDeploymentAndPolicy(t *testing.T) {
 		}
 		if len(np.Spec.Egress) == 0 {
 			return false, "tunnel policy has no egress rules"
+		}
+		return true, ""
+	})
+}
+
+// TestGameServer_TunnelPlayitPolicyAllowsAllPorts verifies that the tunnel
+// NetworkPolicy rendered for the playit provider actually grants the "all
+// ports" egress its comment promises (F-262): playit's control-plane and
+// relay endpoints aren't published on a fixed set of ports, so unlike frp
+// (ServerPort) and tailscale (443/41641) it gets a second egress rule with
+// no Ports (all ports/protocols) and no To (any destination), in addition
+// to -- not instead of -- the DNS/advertised-port rule every provider gets.
+func TestGameServer_TunnelPlayitPolicyAllowsAllPorts(t *testing.T) {
+	ns := newNamespace(t)
+	startMgr(t, ns, withGameServerReconciler(t, ns))
+
+	tmpl := buildGameTemplate(uniqueName("tunnel-playit-test"))
+	if err := k8sClient.Create(context.Background(), tmpl); err != nil {
+		t.Fatalf("create template: %v", err)
+	}
+	deleteCleanup(t, tmpl)
+
+	gs := buildGameServer(ns, "tunnel-playit-gs", tmpl.Name)
+	gs.Spec.Networking.Tunnel = &gameplanev1alpha1.GameServerTunnel{
+		Enabled:              true,
+		Provider:             "playit",
+		CredentialsSecretRef: &gameplanev1alpha1.SecretNameRef{Name: "tunnel-playit-gs-tunnel-creds"},
+		Playit:               &gameplanev1alpha1.PlayitTunnelSpec{},
+	}
+
+	if err := k8sClient.Create(context.Background(), gs); err != nil {
+		t.Fatalf("create gameserver: %v", err)
+	}
+
+	eventually(t, func() (bool, string) {
+		var np networkingv1.NetworkPolicy
+		if err := k8sClient.Get(context.Background(),
+			types.NamespacedName{Namespace: ns, Name: "tunnel-playit-gs-tunnel-egress"}, &np); err != nil {
+			return false, "tunnel network policy: " + err.Error()
+		}
+		if len(np.Spec.Egress) != 2 {
+			return false, fmt.Sprintf("egress rules = %d, want 2 (dns/advertised-ports + all-ports): %+v", len(np.Spec.Egress), np.Spec.Egress)
+		}
+
+		// The first rule (DNS + advertised ports) must be unchanged by the
+		// playit branch: no provider-specific ports leak into it.
+		first := np.Spec.Egress[0]
+		if len(first.Ports) == 0 {
+			return false, "first egress rule has no ports, want DNS ports at least"
+		}
+		if len(first.To) != 0 {
+			return false, fmt.Sprintf("first egress rule restricts To=%+v, want any destination", first.To)
+		}
+
+		// The second rule is playit's "all ports" grant: no Ports field
+		// (meaning all ports/protocols per NetworkPolicy semantics) and no
+		// To field (any destination), matching how frp/tailscale pick
+		// destinations.
+		second := np.Spec.Egress[1]
+		if len(second.Ports) != 0 {
+			return false, fmt.Sprintf("second egress rule has Ports=%+v, want none (all ports)", second.Ports)
+		}
+		if len(second.To) != 0 {
+			return false, fmt.Sprintf("second egress rule restricts To=%+v, want any destination", second.To)
 		}
 		return true, ""
 	})

@@ -7,9 +7,12 @@ spec:
   serverRef:
     name: smp-01
   schedule: "0 */6 * * *"
+  # See gameplane_v1alpha1_backup.yaml: repoRef.key is unused by the
+  # operator, which always reads the "repo"/"password" keys off the
+  # named Secret.
   repoRef:
     name: gameplane-backup-repo
-    key: url
+    key: repo
   strategy: restic-snapshot
   quiesce: true
   retention:

@@ -74,7 +74,7 @@ api/
 Two subcommands:
 
 1. **`serve` (default)** — starts the HTTP server
-   - **Core flags:** `--addr`, `--db-driver`, `--db-dsn`, `--log-level`
+   - **Core flags:** `--addr`, `--metrics-addr`, `--db-driver`, `--db-dsn`, `--log-level`
    - **OIDC flags** (install-time, Helm-seeded): `--oidc-issuer`, `--oidc-client-id`, `--oidc-client-secret`, `--oidc-redirect-url`, `--oidc-display-name` (login button label, no hostname — pre-auth surface), `--oidc-groups-claim` (configurable claim name, defaults to "groups"), `--oidc-default-role` (default for unmapped users: "", "viewer", "operator", "admin", or "deny"), `--oidc-role-mapping-admin` (comma-separated group names for admin role), `--oidc-role-mapping-operator`, `--oidc-role-mapping-viewer`. All have `GAMEPLANE_OIDC_*` env fallbacks (preferred over flags for credentials).
    - **Storage class (report-only):** `--game-data-storage-class` — echoed in `GET /admin/config`'s `installTimeSettings.gameDataStorageClass`, read-only, unaffected by overrides.
    - **Other flags:** `--audit-*`, `--agent-*`, `--namespace`, `--cluster-ops`, `--cluster-external-address` (node-routable API server address used in the join command and downloaded kubeconfig instead of the in-cluster ClusterIP; empty = in-cluster address), `--update-channel`, `--curseforge-api-key`, `--telemetry-*`, `--capture-enabled`, `--capture-default-max-duration` (only these two are CLI flags; default/max retention and default max size are `GAMEPLANE_CAPTURE_*`-env-only, no flag)
@@ -90,7 +90,7 @@ Two subcommands:
 
 ### REST surface (domain-level)
 
-The HTTP server listens on `:8000` (configurable) with these route groups:
+The HTTP server listens on `:8000` (configurable) with these route groups. Prometheus metrics are not on this listener: a separate metrics listener (`--metrics-addr`, env `GAMEPLANE_METRICS_ADDR`, default `:9090`, empty disables it; `cmd/metrics.go`) routes only `GET /metrics`, and the chart's ServiceMonitor scrapes it. `--metrics-addr` equal to `--addr` is rejected at startup.
 
 **Public (pre-auth):**
 - `/auth/providers` — GET: list enabled login methods (no version/host/count, login privacy)
@@ -101,7 +101,6 @@ The HTTP server listens on `:8000` (configurable) with these route groups:
 - `/auth/oidc/start` (legacy) — GET: single helm-provider start
 - `/auth/oidc/callback` (legacy) — GET: single helm-provider callback
 - `/healthz` — GET: liveness probe
-- `/metrics` — GET: Prometheus metrics (openmetrics format)
 
 **Protected (authenticated + RBAC):**
 - `/servers/{name}` — CRUD for GameServer CRDs; cluster-dispatch via `?cluster=`; multiplexed console/files
@@ -132,7 +131,7 @@ The HTTP server listens on `:8000` (configurable) with these route groups:
 - `/mod-ids/{name}` — PATCH: ID-managed mods (ARK CurseForge IDs, Project Zomboid MOD_IDs, Steam Workshop lists)
 - `/cluster`, `/cluster/info`, `/cluster/stats` — GET: version, nodes, storage, usage (read-only, viewer+)
 - `/cluster/nodes:join`, `/cluster/kubeconfig` — POST: credential-minting ops (admin only, `--cluster-ops` flag gated; 501 when disabled)
-- `/clusters` — multi-cluster: list remote Cluster CRDs; create/delete cluster registrations
+- `/clusters` — multi-cluster: list remote Cluster CRDs; create/delete cluster registrations. POST labels the kubeconfig Secret `gameplane.local/cluster-kubeconfig=true` and `gameplane.local/managed-by=gameplane-api`. DELETE removes the cluster's client from the registry at once, and deletes the referenced Secret only when it is the one POST generates for that cluster (cluster-<name>-kubeconfig) and carries `gameplane.local/cluster-kubeconfig=true` (Secrets created before managed-by labelling included); any other Secret, including one named for a different cluster, is left in place
 - `/events` — SSE: real-time K8s events (multiplexed per namespace + cluster)
 - `/pod-events` — SSE: pod-level events
 - `/users/me` — GET: own profile (embeds `preferences`, see below)
@@ -576,7 +575,7 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 ### Login privacy (rule 3)
 - `/auth/providers` omits version, cluster name, server count, hostnames
 - `/login` error is always "invalid credentials" (never "wrong password" vs "unknown user")
-- No internal metrics visible pre-auth
+- No internal metrics visible pre-auth; Prometheus metrics are served only on the separate metrics listener, never on the public port (tests: `cmd/metrics_test.go`, e2e `TestHelmInstall_MetricsNotOnPublicPort`)
 
 ## Testing & coverage
 
