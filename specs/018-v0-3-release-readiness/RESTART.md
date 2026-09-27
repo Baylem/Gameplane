@@ -102,7 +102,7 @@ All of these still apply.
 
 ### Open
 
-- Wave 5 is fully merged (#491–#494, 00:22 UTC 2026-09-27). Leftover: `docs/dependencies.md` still says "the 7 Gameplane CRDs" (follow-up PR).
+- Wave 5 is fully merged (#491–#494, 00:22 UTC 2026-09-27). Leftover: `docs/dependencies.md` still says "the 7 Gameplane CRDs"; fixed in #495 (also go-sdk and controller-runtime versions).
 - Wave 4 is fully merged (23:04 UTC). Record each merge with `scratchpad/rec.sh`.
 - The held fixes (#462, #463, #469, #471–#474) belong to the maintainer, on the devbox. The cloud session doesn't drive them.
 - The Dependabot PRs #272 (TypeScript 7) and #458 (ESLint 10) are blocked; see CLAUDE.md.
