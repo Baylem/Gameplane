@@ -7,7 +7,7 @@ One section per round (contracts/audit-records.md). Database snapshots are store
 Every round that runs `agent.md`/`api.md`/`modules.md`/`web.md`/`crd.md` rows needs some or all of these fixtures, per `procedures/conventions.md`. Record what was actually created/removed under that round's **Cleanup** field. Not every round needs every item — only create what that round's rows require.
 
 Setup (before running rows):
-1. `audit018-restic`: derive a Deployment + Service named `audit018-restic` from `test/e2e/fixtures/restic-server.yaml` (renamed from `gameplane-test-restic`, labeled `gameplane.io/audit: "018"`), then create the `audit018-restic` Secret in `gameplane-games` pointing `repo` at `rest:http://audit018-restic.gameplane-system.svc:8000/` (OD-021 items 9/16).
+1. `audit018-restic`: derive a Deployment + Service named `audit018-restic` from `test/e2e/fixtures/restic-server.yaml` (renamed from `gameplane-test-restic`, labeled `gameplane.io/audit: "018"`), then create the `audit018-restic` Secret in `gameplane-games` pointing `repo` at `rest:http://audit018-restic.gameplane-system.svc:8000/`, and an `audit018-restic` NetworkPolicy in `gameplane-games` (labeled `gameplane.io/audit: "018"`) allowing egress to pods labeled `app.kubernetes.io/name: audit018-restic` in `gameplane-system` on TCP 8000, since `default-deny-egress` (networkPolicies enabled) would otherwise block backup Job pods from reaching it (OD-021 items 9/16).
 2. `audit018-games2` namespace plus one small `audit018-` GameServer in it (item 14).
 3. `capture.enabled=true`: `helm upgrade` override, previous value recorded here (item 17).
 4. `audit018-registry` (in-cluster OCI registry) plus an `audit018-` OCI ModuleSource; push one signed and one unsigned bundle (items 6/21).
@@ -20,7 +20,7 @@ Teardown (after running rows, reverse order):
 3. Delete the `audit018-` OCI ModuleSource, then the `audit018-registry` Deployment/Service.
 4. Restore `capture.enabled` to its prior value (`helm upgrade --set capture.enabled=false`, or the round's recorded prior value); snapshot-diff the config it affects.
 5. Delete the `audit018-games2` GameServer, then the `audit018-games2` namespace.
-6. Delete the `audit018-restic` Secret, then the `audit018-restic` Deployment/Service.
+6. Delete the `audit018-restic` Secret, then the `audit018-restic` NetworkPolicy, then the `audit018-restic` Deployment/Service.
 
 ## rc.0
 

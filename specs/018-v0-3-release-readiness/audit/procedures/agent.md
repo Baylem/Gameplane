@@ -459,7 +459,7 @@ The baseline recorded the `nuclear-option` Module as `Failed`. Per OD-021 item 3
 
 - `audit018-operator` account exists
 - `nuclear-option` module is available and its Module CR reports `status.phase: Ready` as of this round (Step 1) — if still `Failed`, do not proceed with a substitute module (OD-021 item 3)
-- No pre-existing GameServer is required: this procedure creates its own `audit018-nuclear-api` GameServer from the `nuclear-option` template (Step 2), which defaults to `rcon.protocol: nuclearoption` (modules/nuclear-option/template.yaml:84-86) (OD-021 item 1)
+- No pre-existing GameServer is required: this procedure creates its own `audit018-nuclear-api` GameServer from the `nuclear-option` template (Step 3), which defaults to `rcon.protocol: nuclearoption` (modules/nuclear-option/template.yaml:84-86) (OD-021 item 1)
 - `GP=http://127.0.0.1:18080` environment variable is set
 - Session cookie and CSRF token are in `~/gameplane-audit-018/session-operator.txt`
 
@@ -618,7 +618,7 @@ The baseline recorded the `terraria` Module as `Failed`. Per OD-021 item 3, re-c
 
 - `audit018-operator` account exists
 - A game with `consoleMode: pty` is available (`terraria`), whose Module CR reports `status.phase: Ready` as of this round (Step 1) — if still `Failed`, do not proceed with a substitute module (OD-021 item 3)
-- No pre-existing GameServer is required: this procedure creates its own `audit018-terraria-pty` GameServer from the `terraria` template (Step 2), which defaults to `consoleMode: pty` (modules/terraria/template.yaml:63-65) (OD-021 item 1)
+- No pre-existing GameServer is required: this procedure creates its own `audit018-terraria-pty` GameServer from the `terraria` template (Step 3), which defaults to `consoleMode: pty` (modules/terraria/template.yaml:63-65) (OD-021 item 1)
 - `GP=http://127.0.0.1:18080` environment variable is set
 - Session cookie and CSRF token are in `~/gameplane-audit-018/session-operator.txt`
 
@@ -2908,10 +2908,9 @@ Verify the server reports metrics via Prometheus (heartbeat, player count, resou
    ```
    Poll `kubectl get gameserver audit018-agt-heartbeat -n gameplane-games -o jsonpath='{.status.phase}'` until `Running` (10m timeout — OD-021 item 24, cold first boot; record the actual boot time).
 
-3. Now that the pod exists, identify the agent pod and export `AGENT_POD` (the agent runs as a sidecar container inside the GameServer's own pod, which carries the label `app.kubernetes.io/name=gameplane-game`, not a separate "agent" pod — operator/internal/controller/gameserver_controller.go):
+3. Now that the pod exists, identify the agent pod and export `AGENT_POD` (the agent runs as a sidecar container inside the GameServer's own pod, which the operator labels `app.kubernetes.io/instance=<server-name>` alongside `app.kubernetes.io/name=gameplane-game` — operator/internal/controller/gameserver_controller.go:596-597):
    ```sh
-   kubectl get pod -n gameplane-games -l app.kubernetes.io/name=gameplane-game | grep audit018-agt-heartbeat
-   export AGENT_POD=<pod-name>
+   export AGENT_POD=$(kubectl get pod -n gameplane-games -l app.kubernetes.io/instance=audit018-agt-heartbeat -o jsonpath='{.items[0].metadata.name}')
    ```
 
 4. Port-forward to the agent metrics endpoint:
@@ -2939,11 +2938,11 @@ Verify the server reports metrics via Prometheus (heartbeat, player count, resou
 **Expected**
 
 - HTTP 200 response from the metrics endpoint
-- Metrics include:
-  - `gameplane_agent_info` (server name, template, game, version)
-  - `gameplane_players` (online player count)
-  - `gameplane_cpu_usage_percent` (CPU usage)
-  - `gameplane_memory_usage_bytes` (memory usage)
+- Metrics include (agent/internal/metrics/metrics.go:132-167), each labeled `server`, `namespace`, `template`, `game`:
+  - `gameplane_agent_cpu_millicores` / `gameplane_agent_cpu_limit_millicores` (CPU used / limit)
+  - `gameplane_agent_memory_bytes` / `gameplane_agent_memory_limit_bytes` (memory used / limit)
+  - `gameplane_agent_disk_used_bytes` / `gameplane_agent_disk_total_bytes` (disk used / total)
+  - `gameplane_agent_players_online` / `gameplane_agent_players_max` (player count / capacity)
 
 **Cleanup**
 

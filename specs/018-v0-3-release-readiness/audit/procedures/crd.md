@@ -586,7 +586,7 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 **Cleanup:** `kubectl delete module audit018-module-bad-sig`, then delete the `audit018-` ModuleSource.
 
-**Automatable?** no (requires external bundle management; defer to T026).
+**Automatable?** yes; bucket: `api-mods` (per OD-021 items 6/21: both the signed and unsigned bundles live in the in-cluster `audit018-registry` set up at round setup, pushed via `kubectl`/`oras`, not external bundle management).
 
 ---
 
@@ -671,13 +671,13 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 1. Note: registering a Cluster CR (`cluster_controller.go:31-170`) needs a target cluster's kubeconfig in a Secret (key `kubeconfig`, label `gameplane.local/cluster-kubeconfig=true`) distinct from kubelab itself.
 2. This is a blocked candidate on kubelab: no second cluster is available to the audit devbox.
 3. Alternative (recorded, not run here): the operator's Cluster reconciler and health-check loop (Unknown → Healthy/Unhealthy) have envtest coverage; this exercises only the live "no live remote cluster available" gap.
-4. Related, verified live (not a substitute test, but confirms the API's current cluster-scoping boundary independent of having a remote cluster registered): the `rejectRemoteCluster` guard defined in `api/internal/handlers/resources.go:104-110` (called from `mod_ids.go:73,93` and `mod_updates.go:119`) rejects a non-local `?cluster=` selector with `501` (`httperr.WriteRemoteClusterNotImplemented`), matching OD-021 item 19's resolution — confirm live with `curl -s -w '\nHTTP %{http_code}\n' -H "Cookie: gameplane_session=$SESS; gameplane_csrf=$CSRF" "$GP/servers/audit018-server-create/mods/ids?namespace=gameplane-games&cluster=audit018-nonexistent-cluster"` (expect HTTP 501, `RemoteClusterNotImplemented` body).
+4. Related, verified against this checkout's code (not a substitute test, but confirms the API's current cluster-scoping boundary independent of having a remote cluster registered): the `rejectRemoteCluster` guard defined in `api/internal/handlers/resources.go:102-108` (called from `mod_ids.go:73,93` and `mod_updates.go:119`) currently rejects a non-local `?cluster=` selector with `http.NotFound` — HTTP **404**, not 501; there is no `httperr.WriteRemoteClusterNotImplemented` function anywhere in this checkout, and `api/internal/handlers/cluster_guard_test.go:27,71` and `api/internal/ws/cluster_guard_test.go` both assert 404 for `?cluster=remote-1`. OD-021 item 19's resolution and `specs/018-v0-3-release-readiness/RESTART.md:41,67,129` say PR #430 (`fix/018-harden-api-cluster-scoping`) changed this to 501 with body `httperr.RemoteClusterNotImplemented` and was merged by 2026-09-26; this checkout does not contain that change (its `httperr.go`, `resources.go` and both `cluster_guard_test.go` files still show the pre-#430 404 shape). Re-verify against a checkout that actually has #430 before treating 501 as current — do not assume the RESTART.md merge note alone makes it so. Also note: `rejectRemoteCluster` only runs after `rbac.Middleware` (`api/internal/rbac/rbac.go:105-109`) has already resolved the `?cluster=` value via `scope.ResolveCluster` (`api/internal/scope/cluster.go:31-42`); a value that is not in `reg.IDs()` — like `audit018-nonexistent-cluster` below, which is never registered — never reaches the guard at all and is rejected first with HTTP 400 `cluster not permitted`. Confirm the 400 live with `curl -s -w '\nHTTP %{http_code}\n' -H "Cookie: gameplane_session=$SESS; gameplane_csrf=$CSRF" "$GP/servers/audit018-server-create/mods/ids?namespace=gameplane-games&cluster=audit018-nonexistent-cluster"` (expect HTTP 400, `cluster not permitted` body) — save the curl output (headers plus body) to `audit/evidence/INV-CRD-029/cluster-selector-400.txt`. Exercising the guard itself (the 404, or 501 once #430 is actually present) needs a *registered* remote cluster, which this audit does not have (the same blocker as this whole procedure).
 
-**Expected:** Cluster registration itself cannot be exercised live. The guard check in step 4 confirms the resolved 501 behavior for a remote cluster selector.
+**Expected:** Cluster registration itself cannot be exercised live. The live check in step 4 confirms only the RBAC allow-list's 400 for an unregistered cluster selector; it does not exercise `rejectRemoteCluster` (404 in this checkout) at all, since that guard is never reached for an unregistered cluster.
 
 **Cleanup:** none.
 
-**Automatable?** no (blocked: requires a second live cluster; the 501 guard check in step 4 is separately automatable in bucket `multicluster`).
+**Automatable?** no (blocked: requires a second live cluster; the 400 allow-list check in step 4 is separately automatable in bucket `multicluster`; automating a check of `rejectRemoteCluster` itself needs a registered remote cluster and is blocked for the same reason as this procedure).
 
 ---
 

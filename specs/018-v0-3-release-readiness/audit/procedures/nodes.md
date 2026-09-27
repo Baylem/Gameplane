@@ -124,28 +124,57 @@ None (audit018- pods already exist).
    done
    ```
 
-5. **Wait for eviction to complete**:
+5. **Wait for the old pod to be gone before checking placement** (the operator sets no `terminationGracePeriodSeconds` on the pod template — `gameserver_controller.go`'s StatefulSet build never sets `ss.Spec.Template.Spec.TerminationGracePeriodSeconds` — so Kubernetes applies its 30s default; a fixed 20s sleep is not enough to guarantee the old `$pod` (e.g. `audit018-x-0`) has finished Terminating before Step 6 checks its node, since the StatefulSet reuses the same pod name for the replacement):
    ```sh
-   # Verify old pods are gone or Terminating
-   kubectl get pod -n gameplane-games --field-selector spec.nodeName="$TARGET_NODE" -w &
-   WATCH_PID=$!
-   sleep 20
-   kill $WATCH_PID || true
-   
-   # Pods should either be gone or Terminating
+   # Wait for each old pod to be deleted (or, if the StatefulSet already
+   # recreated it under the same name, for its UID to change) before Step 6
+   # checks placement. Record the old UID first so a same-named replacement
+   # can be told apart from the pod that was just evicted.
+   for pod in $PODS; do
+     OLD_UID=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.metadata.uid}' 2>/dev/null || echo "")
+     echo "$pod=$OLD_UID" >> ~/gameplane-audit-018/scheduling/pre-drain-uids.txt
+   done
+
+   for pod in $PODS; do
+     OLD_UID=$(grep "^$pod=" ~/gameplane-audit-018/scheduling/pre-drain-uids.txt | cut -d= -f2)
+     echo "Waiting for $pod to be deleted or replaced (old UID: ${OLD_UID:-none})"
+     for i in $(seq 1 60); do
+       CUR_UID=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.metadata.uid}' 2>/dev/null || echo "")
+       if [ -z "$CUR_UID" ] || [ "$CUR_UID" != "$OLD_UID" ]; then
+         break
+       fi
+       sleep 5
+     done
+   done
+
+   # Pods should either be gone or Terminating/recreated
    for pod in $PODS; do
      kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.metadata.name}={.status.phase}{"\n"}' 2>/dev/null || echo "$pod=Gone"
    done
    ```
 
-6. **Wait for each pod to reach Running on another node while the target node is still cordoned** (OD-021 item 11 — this runs before Step 8's uncordon, so a cordoned target node rules out a same-node restart. OD-021 item 24 allows a cold boot up to 10 minutes, and Step 5 only sleeps 20s after the evictions, so the StatefulSet's replacement pod — same name, e.g. `audit018-x-0` — is often still `Pending` or `ContainerCreating` at this point; poll instead of checking once. The assertion never exits the shell on failure: it records FAIL and falls through to Step 8's uncordon, so a failed drain test never leaves the node cordoned):
+6. **Wait for each pod to reach Running on another node while the target node is still cordoned** (OD-021 item 11 — this runs before Step 8's uncordon, so a cordoned target node rules out a same-node restart. OD-021 item 24 allows a cold boot up to 10 minutes; Step 5 now waits for the old pod to be deleted/replaced rather than sleeping a fixed 20s, but the new pod can still take time to be scheduled, so poll for its existence and node before deciding it failed. The assertion never exits the shell on failure: it records FAIL and falls through to Step 8's uncordon, so a failed drain test never leaves the node cordoned):
    ```sh
-   RESULT=0
    for pod in $PODS; do
-     NEW_NODE=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.spec.nodeName}')
+     # Poll for the pod to exist with a node assignment before checking it,
+     # so a brief gap between deletion and recreation doesn't read as an
+     # empty NEW_NODE (which would otherwise make `kubectl wait` below fail
+     # immediately with NotFound instead of waiting up to 10m).
+     NEW_NODE=""
+     for i in $(seq 1 60); do
+       NEW_NODE=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.spec.nodeName}' 2>/dev/null || echo "")
+       if [ -n "$NEW_NODE" ]; then
+         break
+       fi
+       sleep 5
+     done
+
      if [ "$NEW_NODE" = "$TARGET_NODE" ]; then
        echo "FAIL: $pod -> node=$NEW_NODE phase=n/a (still scheduled on the cordoned node $TARGET_NODE)"
-       RESULT=1
+       continue
+     fi
+     if [ -z "$NEW_NODE" ]; then
+       echo "FAIL: $pod -> node=(none) phase=n/a (pod did not get a node assignment within 5m)"
        continue
      fi
 
@@ -159,9 +188,23 @@ None (audit018- pods already exist).
        PHASE=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.status.phase}' 2>/dev/null || echo Unknown)
        NEW_NODE=$(kubectl get pod "$pod" -n gameplane-games -o jsonpath='{.spec.nodeName}' 2>/dev/null || echo "$TARGET_NODE")
        echo "FAIL: $pod -> node=$NEW_NODE phase=$PHASE (did not reach Running/Ready within 10m)"
-       RESULT=1
      fi
-   done 2>&1 | tee ~/gameplane-audit-018/scheduling/drain-assert.txt
+   done > ~/gameplane-audit-018/scheduling/drain-assert.txt
+   cat ~/gameplane-audit-018/scheduling/drain-assert.txt
+
+   # Overall PASS/FAIL, computed from the evidence file rather than a
+   # $RESULT set inside the loop above: `for ... done | tee file` runs the
+   # loop in a subshell, so a `RESULT=1` set inside it would never reach the
+   # parent shell. Redirecting straight to a file (no pipe) avoids that
+   # subshell, and grepping the recorded lines afterwards is a second,
+   # independent way to get the correct overall result either way.
+   if grep -q '^FAIL' ~/gameplane-audit-018/scheduling/drain-assert.txt; then
+     RESULT=1
+     echo "OVERALL: FAIL" | tee -a ~/gameplane-audit-018/scheduling/drain-assert.txt
+   else
+     RESULT=0
+     echo "OVERALL: PASS" | tee -a ~/gameplane-audit-018/scheduling/drain-assert.txt
+   fi
 
    # Snapshot of final pod placement/phase, taken after the wait above (not
    # before it, so it reflects the pods this assertion actually checked).

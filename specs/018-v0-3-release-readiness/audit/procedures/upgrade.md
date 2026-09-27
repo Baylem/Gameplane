@@ -86,12 +86,18 @@ Otherwise this section only modifies the existing `gameplane` Helm release.
    helm upgrade gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
      --version 0.2.0-beta.8 \
      -n gameplane-system --install \
-     -f ~/gameplane-audit-018/gameplane-values-before-uninstall.yaml
+     -f ~/gameplane-audit-018/gameplane-values-before-uninstall.yaml \
+     --set image.registry=ghcr.io/valgulnecron/gameplane \
+     --set image.tag= \
+     --set operator.agentImage= \
+     --set operator.sentinelImage=
    
    # Wait for API to be ready
    kubectl rollout status deployment/gameplane-api -n gameplane-system --timeout=300s
    ```
    Note (F-214): kubelab is on a later build than beta.8, so the captured values file may carry keys (e.g. `capture`, `operator.gameDataStorage`) that the beta.8 chart doesn't recognize. The beta.8 chart ignores unknown keys, so this is harmless, but note it in `rounds.md` if `helm upgrade` prints any warnings about it.
+
+   The captured values file also carries kubelab's site-specific `image.registry: gameplane-test`, `image.tag: "016"`, `operator.agentImage: gameplane-test/agent:016` and `operator.sentinelImage: gameplane-test/sentinel:016` (`kubelab-baseline.md`). Unlike the unknown keys above, the beta.8 chart *does* recognize these: `gameplane.imageTag`/`gameplane.agentImage`/`gameplane.sentinelImage` (`charts/gameplane/templates/_helpers.tpl`) use `image.tag` when set and `operator.agentImage`/`operator.sentinelImage` override the default whenever non-empty (`values.yaml`). Passed through unmodified, the reinstall would come up labelled chart `0.2.0-beta.8` but still running the private `:016` API/operator/web/agent/sentinel images — the same images kubelab was already running — so the beta.8 baseline required by FR-015 and OD-005(b) would never actually be established (the API would just re-migrate the existing-version DB back to 011). The `--set` flags above clear those four keys so the chart falls back to its default `ghcr.io/valgulnecron/gameplane` images at the `0.2.0-beta.8` app version; `--set` on the command line is applied after `-f`, so it wins over the file.
    Record: reinstall path (a) used in `rounds.md`. Verify pre-existing GameServers are still running:
    ```sh
    kubectl get gameserver -A | grep -E "mc-fabric|soak-bogus-pool|soak-no-preference|soak-pool-west|squad"
@@ -110,8 +116,11 @@ Otherwise this section only modifies the existing `gameplane` Helm release.
 5. **Verify beta.8 is running**:
    ```sh
    helm list -n gameplane-system | grep gameplane
-   kubectl get deployment gameplane-api -n gameplane-system -o jsonpath='{.spec.template.spec.containers[0].image}'
+   API_IMAGE=$(kubectl get deployment gameplane-api -n gameplane-system -o jsonpath='{.spec.template.spec.containers[0].image}')
+   echo "$API_IMAGE"
+   [ "$API_IMAGE" = "ghcr.io/valgulnecron/gameplane/api:0.2.0-beta.8" ] && echo "OK: public beta.8 image" || echo "MISMATCH: not the public beta.8 image (see F-214 image-override note in step 3)"
    ```
+   Record the image string (and the OK/MISMATCH result) in `rounds.md`, not just the chart label from `helm list` — a chart labelled `0.2.0-beta.8` can still be running kubelab's private `:016` images if step 3's `--set` overrides were skipped or a later `-f`/`--set` reintroduces them.
 
 **Expected**
 
