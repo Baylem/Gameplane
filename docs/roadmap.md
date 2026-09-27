@@ -225,13 +225,20 @@ production-readiness hardening below — tracked items, not code gaps.
   provisions. What is missing is the human-facing runbook, not the test.
 - Resource-limit guidance sized from real workloads rather than defaults.
 
-### Postgres driver: make the store fully driver-portable (planned)
+### Postgres driver: production readiness (experimental)
 
-SQLite is the only production-tested driver. Postgres support (via build tag
-`-tags postgres`) is work-in-progress: the SQL written in migrations lacks
-portable placeholder rebinding (`?` → `$n`), and timestamp defaults are SQLite-specific.
-Making it production-ready requires: portable SQL migration syntax, adding Postgres
-to the CI coverage matrix, and e2e testing against a real Postgres instance.
+SQLite is the only production-tested driver. The Postgres driver (build tag
+`-tags postgres`) now works end to end (#518): migrations 001–011 have
+hand-written Postgres equivalents (`api/internal/db/migrations/postgres/`),
+every later migration is one portable file both drivers run
+(`migrations/common/`), the Postgres connection rewrites `?` placeholders to
+`$n`, and runtime timestamps are generated in Go. The `api (postgres)` CI job
+builds the api with the tag and runs `api/internal/db`'s tests against a real
+PostgreSQL server. It stays **experimental** until the rest lands: running the
+handler/auth/audit test suites and the kind e2e and upgrade suites against
+Postgres, a published image built with `-tags postgres`, and multi-replica
+safety (the user-management lock and the audit hash chain assume a single API
+process).
 
 ---
 
