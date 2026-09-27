@@ -206,8 +206,8 @@ func (h *roleHandler) update(w http.ResponseWriter, req *http.Request) {
 
 	if body.Description != nil {
 		if _, err := tx.ExecContext(req.Context(),
-			`UPDATE roles SET description = ?, updated_at = datetime('now') WHERE name = ?`,
-			*body.Description, name); err != nil {
+			`UPDATE roles SET description = ?, updated_at = ? WHERE name = ?`,
+			*body.Description, db.NowTimestamp(), name); err != nil {
 			httperr.Write(w, req, err)
 			return
 		}
@@ -223,7 +223,7 @@ func (h *roleHandler) update(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		if _, err := tx.ExecContext(req.Context(),
-			`UPDATE roles SET updated_at = datetime('now') WHERE name = ?`, name); err != nil {
+			`UPDATE roles SET updated_at = ? WHERE name = ?`, db.NowTimestamp(), name); err != nil {
 			httperr.Write(w, req, err)
 			return
 		}
