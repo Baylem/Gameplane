@@ -329,8 +329,9 @@ func TestIngestBodyLimitCoversWholeBody(t *testing.T) {
 // TestDecodePayloadKeepsTrailingDecodeError verifies that trailing malformed
 // JSON after a valid report is detected and that the root error is preserved.
 func TestDecodePayloadKeepsTrailingDecodeError(t *testing.T) {
-	// Valid report followed by malformed trailing text.
-	body := []byte(`{"version":"v","servers":1,"templates":1} {`)
+	// Valid report followed by trailing text that is not JSON (an unfinished
+	// value such as "{" would give io.ErrUnexpectedEOF, not a SyntaxError).
+	body := []byte(`{"version":"v","servers":1,"templates":1} x`)
 	_, err := decodePayload(body)
 	if !errors.Is(err, errInvalidPayload) {
 		t.Fatalf("error chain missing errInvalidPayload: %v", err)
@@ -353,6 +354,121 @@ func TestDecodePayloadKeepsTrailingDecodeError(t *testing.T) {
 	_, err = decodePayload(body)
 	if !errors.Is(err, errInvalidPayload) {
 		t.Fatalf("trailing empty object: error chain missing errInvalidPayload: %v", err)
+	}
+}
+
+// TestDecodePayloadRequiresExactKeys verifies that JSON object keys are
+// matched exactly (case-sensitive), duplicates are rejected, and all required
+// fields must be present with valid types.
+func TestDecodePayloadRequiresExactKeys(t *testing.T) {
+	cases := []struct {
+		name string
+		body []byte
+		want payload
+		err  bool
+	}{
+		{
+			name: "valid minimal",
+			body: []byte(`{"version":"1.0.0","servers":1,"templates":2}`),
+			want: payload{Version: "1.0.0", Servers: 1, Templates: 2},
+			err:  false,
+		},
+		{
+			name: "capitalized key Servers",
+			body: []byte(`{"version":"1.0.0","Servers":1,"templates":2}`),
+			err:  true,
+		},
+		{
+			name: "all-caps VERSION",
+			body: []byte(`{"VERSION":"1.0.0","servers":1,"templates":2}`),
+			err:  true,
+		},
+		{
+			name: "duplicate servers",
+			body: []byte(`{"version":"1.0.0","servers":1,"servers":2,"templates":3}`),
+			err:  true,
+		},
+		{
+			name: "duplicate version",
+			body: []byte(`{"version":"1.0.0","version":"2.0.0","servers":1,"templates":2}`),
+			err:  true,
+		},
+		{
+			name: "null version",
+			body: []byte(`{"version":null,"servers":1,"templates":2}`),
+			err:  true,
+		},
+		{
+			name: "null servers",
+			body: []byte(`{"version":"1.0.0","servers":null,"templates":2}`),
+			err:  true,
+		},
+		{
+			name: "null templates",
+			body: []byte(`{"version":"1.0.0","servers":1,"templates":null}`),
+			err:  true,
+		},
+		{
+			name: "servers as string",
+			body: []byte(`{"version":"1.0.0","servers":"1","templates":2}`),
+			err:  true,
+		},
+		{
+			name: "templates as string",
+			body: []byte(`{"version":"1.0.0","servers":1,"templates":"2"}`),
+			err:  true,
+		},
+		{
+			name: "version as integer",
+			body: []byte(`{"version":1,"servers":1,"templates":2}`),
+			err:  true,
+		},
+		{
+			name: "missing version",
+			body: []byte(`{"servers":1,"templates":2}`),
+			err:  true,
+		},
+		{
+			name: "missing servers",
+			body: []byte(`{"version":"1.0.0","templates":2}`),
+			err:  true,
+		},
+		{
+			name: "missing templates",
+			body: []byte(`{"version":"1.0.0","servers":1}`),
+			err:  true,
+		},
+		{
+			name: "unknown field hostname",
+			body: []byte(`{"version":"1.0.0","servers":1,"templates":2,"hostname":"prod"}`),
+			err:  true,
+		},
+		{
+			name: "unknown field at start",
+			body: []byte(`{"unknown":"field","version":"1.0.0","servers":1,"templates":2}`),
+			err:  true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := decodePayload(tc.body)
+			if tc.err {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if !errors.Is(err, errInvalidPayload) {
+					t.Fatalf("error chain missing errInvalidPayload: %v", err)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if got != tc.want {
+					t.Fatalf("got %+v, want %+v", got, tc.want)
+				}
+			}
+		})
 	}
 }
 

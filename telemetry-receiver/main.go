@@ -70,39 +70,114 @@ func envOr(key, fallback string) string {
 	return fallback
 }
 
-// payload mirrors api/internal/telemetry's report shape. Unknown fields
-// are rejected so the wire contract stays honest on both ends.
+// payload mirrors api/internal/telemetry's report shape.
 type payload struct {
-	Version   string `json:"version"`
-	Servers   int    `json:"servers"`
-	Templates int    `json:"templates"`
-}
-
-// wirePayload is what ingest decodes. Pointer fields tell an absent (or
-// null) field apart from a present zero, so every required field is checked.
-type wirePayload struct {
-	Version   *string `json:"version"`
-	Servers   *int    `json:"servers"`
-	Templates *int    `json:"templates"`
+	Version   string
+	Servers   int
+	Templates int
 }
 
 // errInvalidPayload is returned by decodePayload for any body that is not
-// exactly one JSON object carrying all three required fields.
+// exactly one JSON object carrying all three required fields with exact
+// case-sensitive key matching and no duplicates.
 var errInvalidPayload = errors.New("invalid payload")
 
 // decodePayload parses a body that has already been read in full. It accepts
 // exactly one JSON object with version, servers and templates present and no
-// other fields; anything after that object other than whitespace is rejected.
+// other fields; keys are matched case-sensitively and duplicates are rejected;
+// anything after that object other than whitespace is rejected.
 func decodePayload(body []byte) (payload, error) {
 	dec := json.NewDecoder(bytes.NewReader(body))
-	dec.DisallowUnknownFields()
-	var w wirePayload
-	if err := dec.Decode(&w); err != nil {
+
+	// Expect opening brace
+	tok, err := dec.Token()
+	if err != nil {
 		return payload{}, fmt.Errorf("%w: %w", errInvalidPayload, err)
 	}
-	if w.Version == nil || w.Servers == nil || w.Templates == nil {
+	if tok != json.Delim('{') {
+		return payload{}, fmt.Errorf("%w: expected JSON object", errInvalidPayload)
+	}
+
+	var p payload
+	seen := make(map[string]bool)
+	foundVersion, foundServers, foundTemplates := false, false, false
+
+	// Iterate through object key-value pairs
+	for dec.More() {
+		// Get the key
+		tok, err := dec.Token()
+		if err != nil {
+			return payload{}, fmt.Errorf("%w: %w", errInvalidPayload, err)
+		}
+
+		key, ok := tok.(string)
+		if !ok {
+			return payload{}, fmt.Errorf("%w: expected string key", errInvalidPayload)
+		}
+
+		// Check for duplicate keys
+		if seen[key] {
+			return payload{}, fmt.Errorf("%w: duplicate key %q", errInvalidPayload, key)
+		}
+		seen[key] = true
+
+		// Decode the value into a RawMessage to validate type carefully
+		var raw json.RawMessage
+		if err := dec.Decode(&raw); err != nil {
+			return payload{}, fmt.Errorf("%w: %w", errInvalidPayload, err)
+		}
+
+		// Reject null values
+		if bytes.Equal(raw, []byte("null")) {
+			return payload{}, fmt.Errorf("%w: null value for key %q", errInvalidPayload, key)
+		}
+
+		// Handle each key
+		switch key {
+		case "version":
+			foundVersion = true
+			var v string
+			if err := json.Unmarshal(raw, &v); err != nil {
+				return payload{}, fmt.Errorf("%w: version must be string: %w", errInvalidPayload, err)
+			}
+			p.Version = v
+
+		case "servers":
+			foundServers = true
+			var s int
+			if err := json.Unmarshal(raw, &s); err != nil {
+				return payload{}, fmt.Errorf("%w: servers must be integer: %w", errInvalidPayload, err)
+			}
+			p.Servers = s
+
+		case "templates":
+			foundTemplates = true
+			var t int
+			if err := json.Unmarshal(raw, &t); err != nil {
+				return payload{}, fmt.Errorf("%w: templates must be integer: %w", errInvalidPayload, err)
+			}
+			p.Templates = t
+
+		default:
+			return payload{}, fmt.Errorf("%w: unknown field %q", errInvalidPayload, key)
+		}
+	}
+
+	// Expect closing brace
+	tok, err = dec.Token()
+	if err != nil {
+		return payload{}, fmt.Errorf("%w: %w", errInvalidPayload, err)
+	}
+	if tok != json.Delim('}') {
+		return payload{}, fmt.Errorf("%w: expected closing brace", errInvalidPayload)
+	}
+
+	// Check that all required fields were present
+	if !foundVersion || !foundServers || !foundTemplates {
 		return payload{}, fmt.Errorf("%w: missing required field", errInvalidPayload)
 	}
+
+	// Check for trailing content
 	switch err := dec.Decode(&struct{}{}); {
 	case errors.Is(err, io.EOF):
 		// exactly one value
@@ -111,7 +186,8 @@ func decodePayload(body []byte) (payload, error) {
 	default:
 		return payload{}, fmt.Errorf("%w: trailing content after the report", errInvalidPayload)
 	}
-	return payload{Version: *w.Version, Servers: *w.Servers, Templates: *w.Templates}, nil
+
+	return p, nil
 }
 
 type server struct {

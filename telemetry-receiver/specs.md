@@ -11,7 +11,7 @@ Optional collector for the anonymous usage telemetry the API reports daily. Prov
 ## Responsibilities
 
 - **HTTP server**: three routes — `/ingest` (POST), `/metrics` (GET), `/healthz` (GET)
-- **Payload validation**: strict JSON schema (`{version, servers, templates}` only); rejects malformed JSON, exactly one JSON object required (trailing non-whitespace content rejected), missing or null required fields, unknown fields, negative counts, oversized bodies (>16 KiB)
+- **Payload validation**: strict JSON schema (`{version, servers, templates}` only); keys matched exactly (case-sensitive) with duplicates rejected; rejects malformed JSON, exactly one JSON object required (trailing non-whitespace content rejected), missing or null required fields, unknown fields, negative counts, oversized bodies (>16 KiB)
 - **Version sanitization**: version strings matching `^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$` are passed through; anything else is bucketed as `"invalid"` to prevent label cardinality explosion
 - **Authentication**: optional constant-time token validation when `AUTH_TOKEN` is set
 - **Metrics aggregation**: three in-memory Prometheus metrics — `gameplane_telemetry_reports_total` (counter by version), `gameplane_telemetry_servers` (histogram), `gameplane_telemetry_templates` (histogram)
@@ -53,7 +53,7 @@ telemetry-receiver/
 { "version": "0.2.0-beta.7", "servers": 3, "templates": 7 }
 ```
 
-The body must be exactly one JSON object with all three required fields and no trailing non-whitespace content. Missing or null required fields and unknown fields are rejected (16 KiB body cap applies to the entire request).
+The body must be exactly one JSON object with all three required fields and no trailing non-whitespace content. Keys are matched exactly, case-sensitively; duplicate keys are rejected. Missing or null required fields and unknown fields are rejected (16 KiB body cap applies to the entire request).
 
 - **version** (string, required): free-form version string; sanitized to `"invalid"` if it doesn't match `^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$` (printable ASCII, at most 32 chars)
 - **servers** (integer, required): GameServer count; must be ≥ 0
@@ -75,7 +75,7 @@ gameplane_telemetry_templates_count                        # histogram count
 
 - **No persistent storage**: all metrics are in-memory, ephemeral across restart
 - **Version label bounded**: hostile input (e.g., `<script>…</script>`, 200+ chars) becomes label `version="invalid"` — impossible for unvalidated input to explode label cardinality or leak into the metrics page
-- **Strict validation**: body must be exactly one JSON object with all three required fields (no extras, no renames); missing or null fields rejected; trailing non-whitespace content rejected; negative counts immediately rejected; body size capped at 16 KiB
+- **Strict validation**: body must be exactly one JSON object with all three required fields (no extras, no renames); keys matched exactly and case-sensitively with duplicates rejected; missing or null fields rejected; trailing non-whitespace content rejected; negative counts immediately rejected; body size capped at 16 KiB
 - **Request timing**: whole-request read is time-bounded (15 s read timeout, 10 s header timeout) to prevent clients holding connections open after sending a report
 - **Authentication is optional**: if `AUTH_TOKEN` is empty, `/ingest` is public; otherwise, the exact `Authorization` header must match (constant-time comparison defeats timing attacks)
 - **Anonymity by contract**: payload contains no names, namespaces, hostnames, cluster IDs, or pod IPs — privacy is enforced upstream (by the API's telemetry reporter), and this receiver has no way to add PII
@@ -87,7 +87,7 @@ None. In-memory Prometheus metrics only. On restart, all counters and histograms
 
 ## Security considerations
 
-- **Input boundary**: JSON decoder with `DisallowUnknownFields` + explicit length validation prevents injection or DoS via malformed payloads
+- **Input boundary**: strict JSON token-walking with exact case-sensitive key validation + explicit length validation prevents injection or DoS via malformed payloads (no silently-accepted case-insensitive renames, no duplicate-key silencing)
 - **Label safety**: version string sanitization with regex prevents arbitrary label values and protects the metrics endpoint (a common Prometheus DoS vector)
 - **Authentication**: constant-time token comparison (via `crypto/subtle.ConstantTimeCompare`) is timing-attack-resistant; token transmitted in plaintext (use TLS in production)
 - **Minimal dependencies**: only `prometheus/client_golang` — no database, no serialization frameworks, no dynamic code loading
