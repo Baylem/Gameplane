@@ -211,7 +211,7 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-260 | GameServer.Stopped and Restore.Resuming phases declared but never assigned | operator | review:operator | S4 | open | | | |
 | F-261 | Capture files deleted through the API keep counting against the sidecar volume budget until the pod restarts | capture-sidecar, api | review:#483 | S3 | fixed-unverified | #487 | | follow-up to F-187 (#483) |
 | F-262 | playit tunnel NetworkPolicy adds no egress ports although its comment says all ports are permitted | operator | review:#468 | S3 | fixed-unverified | #488 | | |
-| F-263 | Servers page lists only `gameplane-games`; servers in extra namespaces are hidden unless the viewer owns or collaborates on them | web, api | review:OD-021 item 14 | S3 | open | | | blocks procedures/web.md servers-filter-by-namespace |
+| F-263 | Servers page lists only `gameplane-games`; servers in extra namespaces are hidden unless the viewer owns or collaborates on them | web, api | review:OD-021 item 14 | S3 | fixed-unverified | #498 | | blocks procedures/web.md servers-filter-by-namespace |
 
 ## Details
 
