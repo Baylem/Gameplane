@@ -254,7 +254,7 @@ describe("DashboardPage", () => {
     server.use(http.get("/servers", () => HttpResponse.error()));
     renderWithQuery(<DashboardPage />);
     expect(await screen.findByText(/Server totals are partial/)).toBeInTheDocument();
-    expect(screen.getByText("server status unavailable")).toBeInTheDocument();
+    expect(await screen.findByText("server status unavailable")).toBeInTheDocument();
     expect(screen.getByText("player status unavailable")).toBeInTheDocument();
     expect(screen.queryByText(/Everything looks healthy/i)).not.toBeInTheDocument();
   });

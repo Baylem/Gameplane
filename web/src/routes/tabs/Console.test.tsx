@@ -1,3 +1,5 @@
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ResourceTargetProvider } from "@/lib/resourceTarget";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { http, HttpResponse } from "msw";
 import { screen, waitFor, act } from "@testing-library/react";
@@ -153,11 +155,17 @@ async function renderConsole(mode: "rcon" | "pty") {
 }
 
 describe("ConsoleTab", () => {
-  it("disposes the old terminal and opens a fresh session when clusters change", async () => {
-    const { term, unmount } = await renderConsole("pty");
+  it("keeps filters independent and disposes the old terminal when its resource route changes", async () => {
+    const { term, unmount, rerender, client } = await renderConsole("pty");
     const calls = mocks.wsCalls.length;
     act(() => setCurrentCluster("remote-1"));
+    expect(mocks.wsCalls).toHaveLength(calls);
+    expect(term.dispose).not.toHaveBeenCalled();
+    rerender(<QueryClientProvider client={client}><ResourceTargetProvider target={{ cluster: "remote-1", namespace: "games", name: "alpha", uid: "remote-instance" }}><ConsoleTab name="alpha" ns="games" /></ResourceTargetProvider></QueryClientProvider>);
     await waitFor(() => expect(mocks.wsCalls.length).toBeGreaterThan(calls));
+    const remote = new URL(mocks.wsCalls.at(-1)!.path, "http://test");
+    expect(remote.searchParams.get("cluster")).toBe("remote-1");
+    expect(remote.searchParams.get("namespace")).toBe("games");
     expect(term.dispose).toHaveBeenCalled();
     expect(mocks.wsHandle.close).toHaveBeenCalled();
     unmount();

@@ -7,7 +7,7 @@ import { ModpacksTab } from "./Modpacks";
 import type { GameTemplate, RegistryProject } from "@/types";
 
 const fetchMock = vi.fn();
-beforeEach(() => vi.stubGlobal("fetch", fetchMock));
+beforeEach(() => { scopedControl = true; vi.stubGlobal("fetch", fetchMock); });
 afterEach(() => {
   fetchMock.mockReset();
   vi.unstubAllGlobals();

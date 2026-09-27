@@ -1,3 +1,4 @@
+import { resourceKey } from "@/lib/resourceTarget";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ReactNode } from "react";
 import { http, HttpResponse } from "msw";
@@ -637,7 +638,7 @@ describe("ServerDetailPage failure states", () => {
     // The template query has no polling interval of its own (unlike the
     // server query's 5s refetchInterval), so nothing re-fetches it after
     // swapping handlers — invalidate it explicitly to simulate the refetch.
-    await client.invalidateQueries({ queryKey: ["template"] });
+    await client.invalidateQueries({ queryKey: resourceKey({ cluster: "local", namespace: "gameplane-games", name: "alpha" }, "template") });
 
     // Wait for template refetch and fallback to overview
     await waitFor(() =>

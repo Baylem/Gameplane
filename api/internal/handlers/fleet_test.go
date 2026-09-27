@@ -195,14 +195,15 @@ func TestFleetPaginationLimitsAndStaleProjection(t *testing.T) {
 			t.Fatalf("unbounded page: %+v", opts)
 		}
 		list := &unstructured.UnstructuredList{}
-		if opts.Continue == "" {
+		switch opts.Continue {
+		case "":
 			obj := fleetObject("GameServer", scope.DefaultNamespace, "a", "uid-a")
 			obj.Object["status"] = map[string]any{"agent": map[string]any{"lastHeartbeat": time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), "playersOnline": int64(20), "cpuMillicores": int64(500)}}
 			list.Items = []unstructured.Unstructured{*obj}
 			list.SetContinue("next")
-		} else if opts.Continue == "next" {
+		case "next":
 			list.Items = []unstructured.Unstructured{*fleetObject("GameServer", scope.DefaultNamespace, "b", "uid-b")}
-		} else {
+		default:
 			t.Fatalf("bad continuation: %q", opts.Continue)
 		}
 		return true, list, nil

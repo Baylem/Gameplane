@@ -51,8 +51,8 @@ describe("unified fleet pages", () => {
     const rows = screen.getAllByRole("row");
     const local = rows.find((row) => row.textContent?.includes("local / games"))!;
     const remote = rows.find((row) => row.textContent?.includes("remote / games"))!;
-    expect(within(local).getByTitle("Start")).toBeDisabled();
-    await userEvent.click(within(remote).getByTitle("Start"));
+    expect(within(local).getByRole("button", { name: "Start" })).toBeDisabled();
+    await userEvent.click(within(remote).getByRole("button", { name: "Start" }));
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0].searchParams.get("cluster")).toBe("remote");
     expect(requests[0].searchParams.get("namespace")).toBe("games");
@@ -70,10 +70,10 @@ describe("unified fleet pages", () => {
     }));
     renderWithQuery(<ServersPage />);
     await screen.findByText(/Server results are partial/);
-    await userEvent.click(screen.getByRole("button", { name: "Filter by location" }));
+    await userEvent.click(screen.getByRole("button", { name: /Filter by location/ }));
     await userEvent.click(await screen.findByRole("option", { name: "remote" }));
     await waitFor(() => expect(requested).toContain("remote"));
-    expect(await screen.findByRole("link", { name: "same" })).toHaveAttribute("href", "/servers/same?cluster=remote&ns=games");
+    await waitFor(() => expect(screen.getByRole("link", { name: "same" })).toHaveAttribute("href", "/servers/same?cluster=remote&ns=games"));
   });
 
   it("does not report an unavailable fleet as zero healthy servers", async () => {

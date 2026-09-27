@@ -207,7 +207,8 @@ describe("ServersPage", () => {
       http.get("/cluster/stats", () => HttpResponse.error()),
     );
     renderWithQuery(<ServersPage />);
-    await screen.findByText(/Servers/i);
+    await screen.findByRole("heading", { name: "Servers" });
+    expect(await screen.findByText(/Inventory are partial/)).toBeInTheDocument();
   });
 
   it("includes shared servers in the unified list", async () => {
@@ -362,7 +363,7 @@ describe("ServersPage", () => {
     );
     renderWithQuery(<ServersPage />);
     await screen.findByText("alpha");
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     expect(filterButton).toBeInTheDocument();
     // Badge should not contain a number when no facets are applied
     expect(within(filterButton).queryByText(/\d/)).not.toBeInTheDocument();
@@ -392,7 +393,7 @@ describe("ServersPage", () => {
     renderWithQuery(<ServersPage />);
     await screen.findByText("alpha");
 
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     await userEvent.click(filterButton);
 
     // HeroUI Popover contains checkboxes with the game and namespace names
@@ -423,7 +424,7 @@ describe("ServersPage", () => {
     await screen.findByText("alpha");
 
     // Open filter
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     await userEvent.click(filterButton);
 
     // Select minecraft-java
@@ -460,7 +461,7 @@ describe("ServersPage", () => {
     await screen.findByText("alpha");
 
     // Open filter
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     await userEvent.click(filterButton);
 
     // Select minecraft-java
@@ -496,7 +497,7 @@ describe("ServersPage", () => {
     await screen.findByText("alpha");
 
     // Open filter
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     await userEvent.click(filterButton);
 
     // Select one game
@@ -546,7 +547,7 @@ describe("ServersPage", () => {
     await screen.findByText("mc-running");
 
     // Apply game filter for minecraft-java
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     await userEvent.click(filterButton);
     const minecraftCheckbox = screen.getByRole("checkbox", { name: "minecraft-java" });
     await userEvent.click(minecraftCheckbox);
@@ -643,7 +644,7 @@ describe("ServersPage", () => {
       // second-wave query resolves — wait for it before opening the popover.
       await screen.findByText("extra-server");
 
-      const filterButton = screen.getByRole("button", { name: /Filter/i });
+      const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
       await userEvent.click(filterButton);
       expect(await screen.findByRole("checkbox", { name: "gameplane-games" })).toBeInTheDocument();
       expect(screen.getByRole("checkbox", { name: "extra-ns" })).toBeInTheDocument();

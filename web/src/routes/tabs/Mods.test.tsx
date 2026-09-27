@@ -18,6 +18,7 @@ import type {
 const fetchMock = vi.fn();
 
 beforeEach(() => {
+  scopedControl = true;
   vi.stubGlobal("fetch", fetchMock);
 });
 afterEach(() => {

@@ -894,7 +894,7 @@ export function buildScreenshotHandlers() {
       const name = String(params.name);
       const server = data.servers.find((s) => s.metadata.name === name);
       if (!server) {
-        return HttpResponse.json(makeServer({ metadata: { name } }));
+        return HttpResponse.json(makeServer({ metadata: { name, ...(name === "test-server-no-shares" ? { annotations: { "gameplane.local/owner-id": "1", "gameplane.local/owner": "admin" } } : {}) } }));
       }
       if (name === "mc-survival" && cookies.e2e_server_variant) {
         const variant = cookies.e2e_server_variant;

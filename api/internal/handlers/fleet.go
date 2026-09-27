@@ -195,12 +195,11 @@ func (h fleetHandler) candidates(ctx context.Context, filter string) ([]fleetClu
 		}
 		byID[id] = fleetCluster{id: id, name: name, k: k}
 	}
-	if filter == h.reg.DefaultID() {
-		// The local registration is intrinsic; its explicit filter does not
-		// depend on discovering unrelated remote registrations.
-	} else if home == nil || home.Dynamic == nil {
+	// The local registration is intrinsic; its explicit filter does not
+	// depend on discovering unrelated remote registrations.
+	if filter != h.reg.DefaultID() && (home == nil || home.Dynamic == nil) {
 		issues = append(issues, fleetIssue{Code: "unavailable", Message: "Cluster discovery is incomplete"})
-	} else {
+	} else if filter != h.reg.DefaultID() {
 		ctx, cancel := context.WithTimeout(ctx, fleetScopeTimeout)
 		defer cancel()
 		var list *unstructured.UnstructuredList

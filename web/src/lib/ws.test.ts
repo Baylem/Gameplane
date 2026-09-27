@@ -39,7 +39,7 @@ describe("openWS", () => {
   beforeEach(() => {
     FakeSocket.instances = [];
     vi.stubGlobal("WebSocket", FakeSocket);
-    vi.stubGlobal("location", { protocol: "https:", host: "example.com" });
+    vi.stubGlobal("location", { protocol: "https:", host: "example.com", origin: "https://example.com" });
     vi.useFakeTimers();
   });
   afterEach(() => {
@@ -53,7 +53,7 @@ describe("openWS", () => {
   });
 
   it("falls back to ws when page is http", () => {
-    vi.stubGlobal("location", { protocol: "http:", host: "h" });
+    vi.stubGlobal("location", { protocol: "http:", host: "h", origin: "http://h" });
     openWS("/ws/foo", { onMessage: () => {} });
     expect(FakeSocket.instances[0].url).toBe("ws://h/ws/foo");
   });

@@ -168,7 +168,7 @@ export function DashboardPage() {
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
             {countsUnavailable
               ? <ErrorCard message={"Couldn't load servers. Status and player totals are unavailable."} />
               : <FleetStatusCard complete={!fleet?.partial} groups={groups} gameCodes={gameCodes} byName={byName} />}
@@ -184,7 +184,7 @@ export function DashboardPage() {
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
             {canAudit && <div className="space-y-2"><p className="text-xs text-muted">Central Gameplane audit activity</p><RecentActivityCard events={audit ?? []} /></div>}
             {backupsError
               ? <ErrorCard message={"Couldn't load backups. Backup status is unavailable."} />
@@ -216,7 +216,7 @@ function FleetStatusCard({
   const attention = groups.attention.slice(0, 4);
 
   return (
-    <Card className="space-y-4 p-5">
+    <Card className="min-w-0 space-y-4 p-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Fleet status</h3>
         <span className="text-xs text-muted">{groups.total} {complete ? "servers" : "returned servers"}</span>
@@ -319,7 +319,7 @@ function ClusterResourcesCard({
   canViewCluster: boolean;
 }) {
   return (
-    <Card className="space-y-4 p-5">
+    <Card className="min-w-0 space-y-4 p-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Cluster resources</h3>
         {canViewCluster ? (
@@ -340,6 +340,7 @@ function ClusterResourcesCard({
           label="Storage"
           pct={storagePct}
           sub={storage.subText}
+          unknown={storage.valueText === "—"}
           accent={storage.overcommitted ? "warning" : "success"}
         />
       </div>
@@ -367,9 +368,9 @@ function NodeRow({ node }: { node: ClusterNode }) {
     .filter(Boolean)
     .join(" · ");
   return (
-    <div className="flex items-center gap-2 text-xs">
+    <div className="flex min-w-0 items-center gap-2 text-xs">
       <span className={cn("h-2 w-2 shrink-0 rounded-full", ready ? "bg-success" : "bg-danger")} />
-      <span className="flex-1 truncate font-mono text-foreground">{node.name}</span>
+      <span className="min-w-0 flex-1 break-all font-mono text-foreground">{node.name}</span>
       <span className="shrink-0 text-muted">{meta || "—"}</span>
     </div>
   );
@@ -377,7 +378,7 @@ function NodeRow({ node }: { node: ClusterNode }) {
 
 function RecentActivityCard({ events }: { events: AuditEvent[] }) {
   return (
-    <Card className="space-y-4 p-5">
+    <Card className="min-w-0 space-y-4 p-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Recent activity</h3>
         <Link to="/admin/audit" className="text-xs text-primary hover:underline">
@@ -429,7 +430,7 @@ function RecentBackupsCard({
   servers?: GameServer[];
 }) {
   return (
-    <Card className="space-y-4 p-5">
+    <Card className="min-w-0 space-y-4 p-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Recent backups</h3>
         <Link to="/backups" className="text-xs text-primary hover:underline">

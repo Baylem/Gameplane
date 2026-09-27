@@ -3,7 +3,7 @@ import type { FleetIssue, FleetItem, FleetResult } from "@/lib/fleet";
 import type { User } from "@/types";
 import { makeBackup, makeClusterStats, makeClusterView, makeRestore, makeSchedule, makeServer, makeTemplate } from "./factories";
 
-type Resource = { metadata: { name: string; namespace?: string; uid?: string } };
+type Resource = { metadata: { name: string; namespace?: string; uid?: string; annotations?: Record<string, string> } };
 
 // Adapt the existing single-site fixtures (including screenshot datasets and
 // per-test overrides) to the new response envelope. Cross-site regressions
@@ -27,8 +27,10 @@ export const fleetHandlers = [
     const user = await (await fixture(request, "/users/me")).json() as User;
     const permissions = [...(user.permissions?.["*"] ?? []), ...(user.permissions?.[namespace] ?? [])];
     const has = (perm: string) => permissions.includes("*") || permissions.includes(perm);
+    const isOwner = resource.metadata.annotations?.["gameplane.local/owner-id"] === String(user.id);
+    const isCollaborator = (resource.metadata.annotations?.["gameplane.local/collaborators"] ?? "").split(",").includes(String(user.id));
     return HttpResponse.json({ target: { cluster, namespace, name: String(params.name), uid: resource.metadata.uid }, permissions,
-      canWrite: has("servers:write"), canControl: has("servers:write"), canConsole: has("servers:console"), canDelete: has("servers:write"), isOwner: false, isCollaborator: false });
+      canWrite: has("servers:write"), canControl: isOwner || isCollaborator || has("servers:write"), canConsole: isOwner || isCollaborator || has("servers:console"), canDelete: isOwner || has("*"), isOwner, isCollaborator });
   }),
   http.get("/fleet/:kind", async ({ params, request, cookies }) => {
     const kind = String(params.kind);
@@ -46,11 +48,13 @@ export const fleetHandlers = [
     const permissions = (namespace: string) => [...new Set([...(user.permissions?.["*"] ?? []), ...(user.permissions?.[namespace] ?? [])])];
     const has = (perms: string[], perm: string) => perms.includes("*") || perms.includes(perm);
     if (cookies.e2e_multicluster === "1") {
-      const sites = ["local", "remote-demo"].filter((site) => !url.searchParams.has("cluster") || site === cluster);
+      const longNodes = cookies.e2e_long_node_names === "1";
+      const remoteSite = longNodes ? "remote-location-with-a-long-registered-cluster-identifier" : "remote-demo";
+      const sites = ["local", remoteSite].filter((site) => !url.searchParams.has("cluster") || site === cluster);
       const scopes = sites.map((site) => ({ cluster: site, namespace: "gameplane-games" }));
       const items = sites.map((site) => {
         if (kind === "inventory") return { cluster: site, name: site, stats: makeClusterStats(), view: makeClusterView({ name: site, ready: 1, total: 1,
-          nodes: [{ name: site === "local" ? "gp-demo-central-control-plane" : "gp-demo-remote-control-plane", status: "Ready", cpu: { used: site === "local" ? 1 : 3, capacity: 4 }, memory: { used: 1024, capacity: 4096 } }] }) };
+          nodes: [{ name: longNodes ? `${site}-control-plane-with-a-long-unique-node-identifier` : site === "local" ? "gp-demo-central-control-plane" : "gp-demo-remote-control-plane", status: "Ready", cpu: { used: site === "local" ? 1 : 3, capacity: 4 }, memory: { used: 1024, capacity: 4096 } }] }) };
         if (kind === "placements") return { cluster: site, namespace: "gameplane-games", templates: [makeTemplate()] };
         const target = { cluster: site, namespace: "gameplane-games", name: kind === "servers" ? "smoke-same" : `smoke-${kind}`, uid: `${site}-${kind}-uid` };
         const resource = kind === "backups" ? makeBackup({ metadata: { name: target.name, namespace: target.namespace }, spec: { serverRef: { name: "smoke-same" } } })
