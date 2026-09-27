@@ -1858,16 +1858,26 @@ func configInitImageOrDefault(image string) string {
 // data volume on every pod start — operator-rendered files always win
 // over in-place edits (e.g. via the dashboard Files tab). image is the
 // operator-configured config-init image; empty falls back to the pin.
+// When the template sets security.fsGroup, config-init runs as root but
+// makes the copied files group-writable so a non-root game sharing that
+// fsGroup can update its own config files.
 func buildConfigInitContainer(image string, tmpl *gameplanev1alpha1.GameTemplate) corev1.Container {
 	image = configInitImageOrDefault(image)
 	mountPath := effectiveMountPath(tmpl)
+	cpCmd := "cp -RL " + configFilesStagingPath + "/* '" + mountPath + "/'"
+
+	// If fsGroup is set, append a chmod step to make copied files group-writable.
+	if tmpl.Spec.Security != nil && tmpl.Spec.Security.FSGroup != nil {
+		cpCmd += " && cd " + configFilesStagingPath + " && for f in *; do chmod -R g+w '" + mountPath + "/'\"$f\"; done"
+	}
+
 	return corev1.Container{
 		Name:    "config-init",
 		Image:   image,
 		Command: []string{"/bin/sh", "-c"},
 		// -L dereferences the kubelet's per-key symlinks; the * glob
 		// skips the ..data/..<timestamp> dot-entries of the Secret mount.
-		Args: []string{"cp -RL " + configFilesStagingPath + "/* '" + mountPath + "/'"},
+		Args: []string{cpCmd},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: "config-files", MountPath: configFilesStagingPath, ReadOnly: true},
 			{Name: "data", MountPath: mountPath},
