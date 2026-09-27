@@ -88,7 +88,13 @@ func (s *SessionStore) StartGC(ctx context.Context, interval time.Duration) {
 // after a privilege change (role demotion, password reset, etc.) so
 // active sessions can't continue under the old trust boundary.
 func (s *SessionStore) DeleteForUser(ctx context.Context, userID int64) error {
-	_, err := s.db.DB.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ?`, userID)
+	return s.DeleteForUserWith(ctx, s.db.DB, userID)
+}
+
+// DeleteForUserWith deletes every session of userID through ex, so a caller
+// can end sessions inside its own transaction.
+func (s *SessionStore) DeleteForUserWith(ctx context.Context, ex db.Execer, userID int64) error {
+	_, err := ex.ExecContext(ctx, `DELETE FROM sessions WHERE user_id = ?`, userID)
 	return err
 }
 

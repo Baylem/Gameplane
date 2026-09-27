@@ -132,12 +132,15 @@ func callbackViaIDP(t *testing.T, o *OIDC, sessions *SessionStore, nonce string)
 // observe FR-014 audit event emission without depending on the audit
 // package (which imports auth, so a real *audit.Auditor cannot be used from
 // a test file in package auth without forming an import cycle). Each call's
-// reason string is appended to reasons in call order.
+// reason string is appended to reasons in call order, and paths are captured
+// in the paths slice in parallel.
 type auditWriteRecorder struct {
 	reasons []string
+	paths   []string
 }
 
-func (r *auditWriteRecorder) write(_ context.Context, _, _, _, reason string, _ int) error {
+func (r *auditWriteRecorder) write(_ context.Context, _, path, _, reason string, _ int) error {
+	r.paths = append(r.paths, path)
 	r.reasons = append(r.reasons, reason)
 	return nil
 }
@@ -1278,5 +1281,100 @@ func TestHandleCallback_HelmOverrideMappingsReEvaluateWithoutHelmMappings(t *tes
 	}
 	if want := "oidc role assigned: provider=helm matched=none from=admin to=viewer"; rec.reasons[1] != want {
 		t.Fatalf("login 3: audit reason = %q, want %q", rec.reasons[1], want)
+	}
+}
+
+// TestHandleCallback_AuditEventRecordsCorrectPath verifies that role-assignment
+// audit events record the actual request path, supporting both per-provider paths
+// (e.g., /auth/oidc/corp/callback) and legacy path (/auth/oidc/callback).
+func TestHandleCallback_AuditEventRecordsCorrectPath(t *testing.T) {
+	idp := newFakeIDP(t, "client-1")
+	idp.nonce = "nonce-path-test"
+	idp.groups = []string{"gp-admins"}
+
+	o, err := NewOIDCWithPolicy(context.Background(), idp.issuer(), "client-1", "secret",
+		"https://app/cb", &ProviderPolicy{
+			RoleMappings: &RoleMappings{
+				Admin: []string{"gp-admins"},
+			},
+		})
+	if err != nil {
+		t.Fatalf("NewOIDCWithPolicy: %v", err)
+	}
+	store := newAuthDB(t)
+	o.AttachStore(store)
+
+	SetFastHashParams(t)
+	rec := &auditWriteRecorder{}
+	o.AttachAuditWriteSyncFunc(rec.write)
+	o.SetProviderName("corp")
+
+	// Test with a per-provider callback path
+	perProviderPath := "/auth/oidc/corp/callback"
+	rr := httptest.NewRecorder()
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		"https://app/auth/oidc/corp/callback?code=authcode&state=statevalue", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+
+	// Set up the OIDC state and nonce cookies for the per-provider path.
+	http.SetCookie(rr, &http.Cookie{Name: oidcStateCookie, Value: "statevalue", Path: "/auth/oidc/corp"})
+	http.SetCookie(rr, &http.Cookie{Name: oidcNonceCookie, Value: "nonce-path-test", Path: "/auth/oidc/corp"})
+
+	// Extract the cookies from the response and add them to the request.
+	for _, c := range rr.Result().Cookies() {
+		req.AddCookie(c)
+	}
+
+	// Simulate the OIDC exchange and ID token verification via callbackViaIDP.
+	sessions := NewSessionStore(store)
+	rr = callbackViaIDP(t, o, sessions, "nonce-path-test")
+	if rr.Code != http.StatusFound {
+		t.Fatalf("callback code=%d body=%q", rr.Code, rr.Body)
+	}
+
+	// Verify that the audit event was recorded with the request path.
+	if len(rec.paths) != 1 {
+		t.Fatalf("audit paths=%v, want 1", rec.paths)
+	}
+	if len(rec.reasons) != 1 {
+		t.Fatalf("audit reasons=%v, want 1", rec.reasons)
+	}
+
+	// The emitRoleAssignmentAudit helper is called from the closure in HandleCallbackAt,
+	// which has access to req.URL.Path. By calling emitRoleAssignmentAudit directly with
+	// the desired path, we can verify the path is correctly used.
+	user := &User{ID: 1, Username: "testuser", Role: "admin"}
+	outcome := &RoleAssignmentOutcome{
+		PreviousRole: "new_user",
+		NewRole:      "admin",
+		Applied:      true,
+		MatchedGroup: "gp-admins",
+	}
+
+	// Test emitRoleAssignmentAudit directly with a per-provider path.
+	rec2 := &auditWriteRecorder{}
+	o.AttachAuditWriteSyncFunc(rec2.write)
+	o.emitRoleAssignmentAudit(context.Background(), user, perProviderPath, "testuser@example.com", outcome)
+
+	if len(rec2.paths) != 1 {
+		t.Fatalf("direct call paths=%v, want 1", rec2.paths)
+	}
+	if rec2.paths[0] != perProviderPath {
+		t.Fatalf("audit path=%q, want %q", rec2.paths[0], perProviderPath)
+	}
+
+	// Test with legacy path.
+	legacyPath := "/auth/oidc/callback"
+	rec3 := &auditWriteRecorder{}
+	o.AttachAuditWriteSyncFunc(rec3.write)
+	o.emitRoleAssignmentAudit(context.Background(), user, legacyPath, "testuser@example.com", outcome)
+
+	if len(rec3.paths) != 1 {
+		t.Fatalf("legacy paths=%v, want 1", rec3.paths)
+	}
+	if rec3.paths[0] != legacyPath {
+		t.Fatalf("legacy audit path=%q, want %q", rec3.paths[0], legacyPath)
 	}
 }

@@ -282,7 +282,7 @@ func getMatchedGroup(groups []string, pol *ProviderPolicy) string {
 //
 // A nil auditWriteSync func is a safe no-op — no event is emitted. An audit write
 // failure is logged but does not break the login flow.
-func (o *OIDC) emitRoleAssignmentAudit(ctx context.Context, user *User, target string, outcome *RoleAssignmentOutcome) {
+func (o *OIDC) emitRoleAssignmentAudit(ctx context.Context, user *User, path string, target string, outcome *RoleAssignmentOutcome) {
 	if o.auditWriteSync == nil {
 		return
 	}
@@ -318,7 +318,7 @@ func (o *OIDC) emitRoleAssignmentAudit(ctx context.Context, user *User, target s
 	// Call the audit write func. An audit write failure is logged by the underlying
 	// auditor itself (via slog.Warn), so we just call it without additional error
 	// handling — the login still succeeds.
-	_ = o.auditWriteSync(enrichedCtx, "POST", "/auth/oidc/callback", target, reason, http.StatusOK)
+	_ = o.auditWriteSync(enrichedCtx, "POST", path, target, reason, http.StatusOK)
 }
 
 // AttachStore attaches a database store to the OIDC handler.
@@ -486,7 +486,7 @@ func (o *OIDC) HandleCallbackAt(sessions *SessionStore, cookiePath string) http.
 		if auditTarget == "" {
 			auditTarget = claims.Sub
 		}
-		o.emitRoleAssignmentAudit(req.Context(), user, auditTarget, roleOutcome)
+		o.emitRoleAssignmentAudit(req.Context(), user, req.URL.Path, auditTarget, roleOutcome)
 
 		sess, csrf, err := sessions.Create(req.Context(), user.ID)
 		if err != nil {

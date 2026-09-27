@@ -406,3 +406,73 @@ func TestBootstrap_ForceEndsExistingSessions(t *testing.T) {
 		t.Fatalf("other account has %d sessions after --force, want 1 (left alone)", bobSessions)
 	}
 }
+
+// When a forced reset's session deletion fails inside the transaction, the
+// entire reset (password, role, and sessions) rolls back: the user's pw_hash
+// and role remain unchanged, and the session row still exists.
+func TestBootstrap_ForceResetIsAllOrNothing(t *testing.T) {
+	dsn := dsnIn(t)
+	auth.SetFastHashParams(t)
+	s := mustOpen(t, dsn)
+	ctx := context.Background()
+
+	// Seed a user with a known password hash and a session.
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	oldHash, _ := auth.HashPassword("original-password")
+	if _, err := s.DB.ExecContext(ctx,
+		`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?,?,?,?,?)`,
+		"admin", "Admin", "admin@example.com", "viewer", oldHash,
+	); err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	var userID int64
+	if err := s.DB.QueryRowContext(ctx, `SELECT id FROM users WHERE username='admin'`).Scan(&userID); err != nil {
+		t.Fatalf("select user id: %v", err)
+	}
+	if _, err := s.DB.ExecContext(ctx,
+		`INSERT INTO sessions(token, user_id, csrf_token, expires_at) VALUES (?, ?, ?, ?)`,
+		"tok-admin", userID, "csrf-token", "2999-01-01T00:00:00Z",
+	); err != nil {
+		t.Fatalf("seed session: %v", err)
+	}
+
+	// Create a trigger that blocks session deletion without mocks.
+	if _, err := s.DB.ExecContext(ctx,
+		`CREATE TRIGGER fail_session_delete BEFORE DELETE ON sessions BEGIN SELECT RAISE(ABORT, 'blocked'); END`,
+	); err != nil {
+		t.Fatalf("create trigger: %v", err)
+	}
+
+	// Run bootstrap --force; it should fail because the transaction cannot
+	// delete the session.
+	t.Setenv("GAMEPLANE_ADMIN_PASSWORD", "")
+	_, err := runBootstrap(t, dsn, "",
+		"--username=admin", "--password=new-password", "--force",
+	)
+	if err == nil {
+		t.Fatal("expected bootstrap --force to fail due to trigger block, but it succeeded")
+	}
+
+	// Verify that the transaction rolled back: pw_hash, role, and session
+	// must be unchanged.
+	var hash, role string
+	if err := s.DB.QueryRowContext(ctx, `SELECT pw_hash, role FROM users WHERE id=?`, userID).Scan(&hash, &role); err != nil {
+		t.Fatalf("select user state: %v", err)
+	}
+	if ok, _ := auth.VerifyPassword("original-password", hash); !ok {
+		t.Fatal("pw_hash was modified even though transaction should have rolled back")
+	}
+	if role != "viewer" {
+		t.Fatalf("role=%q want viewer (unchanged)", role)
+	}
+
+	var sessionCount int
+	if err := s.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM sessions WHERE user_id=?`, userID).Scan(&sessionCount); err != nil {
+		t.Fatalf("count sessions: %v", err)
+	}
+	if sessionCount != 1 {
+		t.Fatalf("session count=%d want 1 (unchanged)", sessionCount)
+	}
+}

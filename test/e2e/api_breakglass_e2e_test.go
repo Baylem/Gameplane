@@ -3,7 +3,11 @@
 package e2e
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
 	"net/http"
+	"strconv"
 	"testing"
 )
 
@@ -12,22 +16,69 @@ import (
 // existing sessions, the same way the dashboard password reset does.
 //
 // It uses its own throwaway account, never e2e-admin (resetting e2e-admin
-// would end the sessions other tests in the job hold). Budget: zero
-// e2e-admin logins; one local login as the throwaway account (a fresh
-// per-username bucket, one slot of the job's shared per-IP budget), plus
-// two kubectl exec calls.
+// would end the sessions other tests in the job hold). Budget: one
+// e2e-admin login (for cleanup) plus one local login as the throwaway
+// account (a fresh per-username bucket, one slot of the job's shared
+// per-IP budget), plus two kubectl exec calls.
 func TestAPI_BootstrapAdminForceEndsExistingSessions(t *testing.T) {
 	t.Parallel()
 
-	const (
-		username      = "e2e-breakglass-reset"
-		firstPassword = "e2e-breakglass-first-password-1"
-		resetPassword = "e2e-breakglass-reset-password-2"
-	)
+	// Generate random credentials with fixed prefixes.
+	username := randomUsername("e2e-breakglass-reset")
+	firstPassword := randomPassword("e2e-breakglass-first-password")
+	resetPassword := randomPassword("e2e-breakglass-reset-password")
 
 	// Let the shared e2e-admin bootstrap (once per process) finish first,
 	// so this test's bootstrap-admin execs never overlap with it.
 	envInstance.BootstrapAdmin(t, adminUsername, adminPassword)
+
+	// Admin client for cleanup; it stays open until the cleanup below has
+	// deleted the throwaway account (defers run before t.Cleanup callbacks).
+	admin := envInstance.APIClient(t, adminUsername, adminPassword)
+
+	// Register cleanup to delete the throwaway user.
+	t.Cleanup(func() {
+		defer admin.Close()
+		// List users to find the throwaway account's ID.
+		resp, body, err := admin.Get("/users")
+		if err != nil {
+			t.Errorf("list users for cleanup: %v", err)
+			return
+		}
+		resp.Body.Close()
+
+		var users []struct {
+			ID       int64  `json:"id"`
+			Username string `json:"username"`
+		}
+		if err := json.Unmarshal(body, &users); err != nil {
+			t.Errorf("decode users list for cleanup: %v", err)
+			return
+		}
+
+		// Find the throwaway user by username.
+		var userID int64
+		for _, u := range users {
+			if u.Username == username {
+				userID = u.ID
+				break
+			}
+		}
+		if userID == 0 {
+			t.Errorf("cleanup: throwaway user %q not found in user list", username)
+			return
+		}
+
+		// Delete the user.
+		delResp, _, err := admin.Delete("/users/" + strconv.FormatInt(userID, 10))
+		if delResp != nil {
+			delResp.Body.Close()
+		}
+		if err != nil {
+			t.Errorf("delete user %q: %v", username, err)
+			return
+		}
+	})
 
 	bootstrap := func(password string) {
 		t.Helper()
@@ -70,4 +121,25 @@ func TestAPI_BootstrapAdminForceEndsExistingSessions(t *testing.T) {
 		t.Fatalf("post-reset /users/me: status=%d body=%s, want 401 (session ended by the reset)",
 			resp.StatusCode, string(body))
 	}
+}
+
+// randomUsername generates a username with the given prefix followed by
+// 16 bytes of random hex (32 hex characters), respecting the identifier
+// regex constraint of max 64 characters total.
+func randomUsername(prefix string) string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	return prefix + "-" + hex.EncodeToString(b)
+}
+
+// randomPassword generates a password with the given prefix followed by
+// 16 bytes of random hex (32 hex characters).
+func randomPassword(prefix string) string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	return prefix + "-" + hex.EncodeToString(b)
 }

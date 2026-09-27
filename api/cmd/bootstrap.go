@@ -111,7 +111,17 @@ func bootstrapAdmin(ctx context.Context, args []string, stdin io.Reader, stderr 
 	if !bf.force {
 		return fmt.Errorf("user %q already exists; pass --force to overwrite password and promote to admin", bf.username)
 	}
-	if _, err := store.DB.ExecContext(ctx,
+
+	// Wrap password, role, and session eviction in a transaction so they
+	// commit together: no session outlives a reset that succeeded and
+	// nothing changes if any step fails.
+	tx, err := store.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin reset: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx,
 		`UPDATE users
 		   SET pw_hash = ?, role = 'admin', display_name = ?, email = ?, updated_at = datetime('now')
 		 WHERE id = ?`,
@@ -119,13 +129,15 @@ func bootstrapAdmin(ctx context.Context, args []string, stdin io.Reader, stderr 
 	); err != nil {
 		return fmt.Errorf("update user: %w", err)
 	}
-	if err := store.SetClusterRoleBinding(ctx, nil, existingID, scope.DefaultCluster, "admin"); err != nil {
+	if err := store.SetClusterRoleBinding(ctx, tx, existingID, scope.DefaultCluster, "admin"); err != nil {
 		return fmt.Errorf("bind admin role: %w", err)
 	}
-	// End the account's existing sessions so none outlives the reset — the
-	// same eviction the dashboard password reset performs.
-	if err := auth.NewSessionStore(store).DeleteForUser(ctx, existingID); err != nil {
+	if err := auth.NewSessionStore(store).DeleteForUserWith(ctx, tx, existingID); err != nil {
 		return fmt.Errorf("end existing sessions: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit reset: %w", err)
 	}
 	_, _ = fmt.Fprintf(stderr, "bootstrap-admin: updated user %q\n", bf.username)
 	return nil
