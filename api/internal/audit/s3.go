@@ -244,6 +244,9 @@ func (s *S3Sink) encodeNDJSON(events []Event) []byte {
 		if e.IP != "" {
 			p["ip"] = e.IP
 		}
+		if e.Reason != "" {
+			p["reason"] = e.Reason
+		}
 		_ = json.NewEncoder(&buf).Encode(p)
 	}
 	return buf.Bytes()

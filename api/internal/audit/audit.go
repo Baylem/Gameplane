@@ -182,7 +182,7 @@ func (s *WebhookSink) post(ctx context.Context, e Event) {
 	}
 	body, err := json.Marshal(webhookPayload{
 		TS: e.TS, Actor: e.Actor, Method: e.Method, Path: e.Path,
-		Target: e.Target, Status: e.Status, IP: e.IP,
+		Target: e.Target, Status: e.Status, IP: e.IP, Reason: e.Reason,
 	})
 	if err != nil {
 		webhookEvents.WithLabelValues("failed").Inc()
@@ -226,6 +226,7 @@ type webhookPayload struct {
 	Target string `json:"target,omitempty"`
 	Status int    `json:"status"`
 	IP     string `json:"ip,omitempty"`
+	Reason string `json:"reason,omitempty"`
 }
 
 // New returns an Auditor configured with options.

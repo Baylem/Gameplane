@@ -289,6 +289,104 @@ func TestS3Sink_NDJSONFormat(t *testing.T) {
 	}
 }
 
+// TestS3Sink_NDJSONIncludesReason verifies the reason field survives S3's
+// NDJSON serialization path (encodeNDJSON), mirroring the same regression
+// coverage as the webhook sink's TestWebhookSink_IncludesReason.
+func TestS3Sink_NDJSONIncludesReason(t *testing.T) {
+	received := make(chan []byte, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		recordFlush(received, b)
+		w.Header().Set("ETag", "test")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	cfg := S3Config{
+		Endpoint:  strings.TrimPrefix(srv.URL, "http://"),
+		Bucket:    "test-bucket",
+		Insecure:  true,
+		AccessKey: "test",
+		SecretKey: "test",
+	}
+	sink, err := NewS3Sink(cfg)
+	if err != nil {
+		t.Fatalf("new sink: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := startSink(ctx, sink)
+	defer func() {
+		cancel()
+		<-done
+	}()
+
+	sink.Enqueue(Event{
+		TS: "2026-06-30T00:00:00Z", Actor: "admin", Method: "POST",
+		Path: "/api/v1/servers", Status: 403, Reason: "rbac: missing role",
+	})
+	sink.Enqueue(Event{
+		TS: "2026-06-30T00:00:01Z", Actor: "user", Method: "DELETE",
+		Path: "/api/v1/servers/beta", Status: 204,
+	})
+
+	select {
+	case b := <-received:
+		lines := strings.Split(strings.TrimSpace(string(b)), "\n")
+		if len(lines) < 2 {
+			t.Fatalf("expected at least 2 lines, got %d", len(lines))
+		}
+		var e1, e2 map[string]any
+		if err := json.Unmarshal([]byte(lines[0]), &e1); err != nil {
+			t.Fatalf("decode line 0: %v", err)
+		}
+		if err := json.Unmarshal([]byte(lines[1]), &e2); err != nil {
+			t.Fatalf("decode line 1: %v", err)
+		}
+		if e1["reason"] != "rbac: missing role" {
+			t.Errorf("e1 reason = %v, want %q", e1["reason"], "rbac: missing role")
+		}
+		if _, has := e2["reason"]; has {
+			t.Errorf("e2 must not carry an empty reason key: %v", e2)
+		}
+	case <-time.After(7 * time.Second):
+		t.Fatal("flush not received")
+	}
+}
+
+// TestS3Sink_InsecureUsesPlainHTTP verifies the documented behavior:
+// S3Config.Insecure selects plain HTTP (minio-go Secure=false), not
+// HTTPS-with-verification-skipped. Insecure=false must still select HTTPS.
+func TestS3Sink_InsecureUsesPlainHTTP(t *testing.T) {
+	insecure, err := NewS3Sink(S3Config{
+		Endpoint:  "s3.example.internal",
+		Bucket:    "test-bucket",
+		Insecure:  true,
+		AccessKey: "test",
+		SecretKey: "test",
+	})
+	if err != nil {
+		t.Fatalf("new sink (insecure): %v", err)
+	}
+	if scheme := insecure.client.EndpointURL().Scheme; scheme != "http" {
+		t.Errorf("Insecure: true => endpoint scheme = %q, want %q (plain HTTP)", scheme, "http")
+	}
+
+	secure, err := NewS3Sink(S3Config{
+		Endpoint:  "s3.example.internal",
+		Bucket:    "test-bucket",
+		Insecure:  false,
+		AccessKey: "test",
+		SecretKey: "test",
+	})
+	if err != nil {
+		t.Fatalf("new sink (secure): %v", err)
+	}
+	if scheme := secure.client.EndpointURL().Scheme; scheme != "https" {
+		t.Errorf("Insecure: false => endpoint scheme = %q, want %q", scheme, "https")
+	}
+}
+
 // TestS3Sink_ObjectKeyFormat verifies the S3 object key structure.
 func TestS3Sink_ObjectKeyFormat(t *testing.T) {
 	received := make(chan string, 1)

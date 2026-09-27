@@ -384,8 +384,7 @@ a slow or down sink never blocks or fails a request.
     `gameplane-audit`; empty = root).
   - `api.audit.s3.region` — S3 region (e.g., `us-east-1`; empty defaults to
     `us-east-1`).
-  - `api.audit.s3.insecure` — `true` to skip TLS certificate verification
-    (for self-signed certs on dev/homelab clusters).
+  - `api.audit.s3.insecure` — `true` to use plain HTTP instead of HTTPS (no TLS at all; for local S3-compatible endpoints on dev/homelab clusters).
   - `api.audit.s3.credentialsSecretRef` — reference to a Secret holding S3
     credentials (see [security](security.md)); leave `name` empty to disable S3.
 

@@ -188,6 +188,77 @@ func TestWebhookSink_CountsNon2xx(t *testing.T) {
 	}
 }
 
+// TestWebhookSink_IncludesReason — the reason field must survive the webhook
+// serialization path (Event.Reason -> webhookPayload.Reason -> JSON body), not
+// just the DB write.
+func TestWebhookSink_IncludesReason(t *testing.T) {
+	got := make(chan captured, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		got <- captured{body: b}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	s := NewWebhookSink(srv.URL, "")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Start(ctx)
+
+	s.Enqueue(Event{
+		TS: "2026-06-30T00:00:00Z", Actor: "admin", Method: "POST",
+		Path: "/api/v1/servers", Target: "alpha", Status: 403, Reason: "rbac: missing role",
+	})
+
+	select {
+	case c := <-got:
+		var p map[string]any
+		if err := json.Unmarshal(c.body, &p); err != nil {
+			t.Fatalf("decode body: %v (%s)", err, c.body)
+		}
+		if p["reason"] != "rbac: missing role" {
+			t.Errorf("payload reason = %v, want %q", p["reason"], "rbac: missing role")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("webhook not received within deadline")
+	}
+}
+
+// TestWebhookSink_OmitsEmptyReason — when Reason is unset, the JSON body must
+// not carry an empty "reason" key (the field is `omitempty`).
+func TestWebhookSink_OmitsEmptyReason(t *testing.T) {
+	got := make(chan captured, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		got <- captured{body: b}
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer srv.Close()
+
+	s := NewWebhookSink(srv.URL, "")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Start(ctx)
+
+	s.Enqueue(Event{
+		TS: "2026-06-30T00:00:00Z", Actor: "admin", Method: "POST",
+		Path: "/api/v1/servers", Status: 201,
+	})
+
+	select {
+	case c := <-got:
+		var p map[string]any
+		if err := json.Unmarshal(c.body, &p); err != nil {
+			t.Fatalf("decode body: %v (%s)", err, c.body)
+		}
+		if _, has := p["reason"]; has {
+			t.Errorf("payload must not carry an empty reason key: %v", p)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("webhook not received within deadline")
+	}
+}
+
 // drain ships whatever is already buffered on shutdown.
 func TestWebhookSink_DrainDeliversBuffered(t *testing.T) {
 	got := make(chan struct{}, 3)
