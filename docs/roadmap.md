@@ -244,13 +244,14 @@ to the CI coverage matrix, and e2e testing against a real Postgres instance.
 
 ## Known gaps tracked for completion
 
-### Users page: OIDC provider and service account tabs (planned, v1.1)
+### Users page: service accounts and identity-provider tabs (planned, v1.1)
 
-The Users page has two placeholder tabs. **Identity providers**: OIDC providers
-are configured through Helm values (`api.oidc.*`), and the dashboard can't
-configure them yet. **Service accounts** (machine-to-machine API tokens) don't
-exist yet. Both tabs are tracked for
-v1.1 (`web/src/routes/Users.tsx`, `IdpTab` and `ServiceAccountsTab`).
+The Users page has two placeholder tabs (`web/src/routes/Users.tsx`,
+`ServiceAccountsTab` and `IdpTab`). **Service accounts** (machine-to-machine
+API tokens) don't exist yet and are tracked for v1.1. **Identity providers**
+has no controls of its own: OIDC providers are already managed under Admin
+Settings → Authentication (see [OIDC provider setup](oidc.md)), or through
+the `api.oidc.*` Helm values. The tab's own UI is tracked for v1.1.
 
 ### Game module template specifications (planned)
 
