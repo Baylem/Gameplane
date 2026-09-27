@@ -40,17 +40,13 @@ func listNamespacesHandler(reg *kube.Registry) http.HandlerFunc {
 		}
 		u := auth.UserFromContext(req.Context())
 		perm, ok := rbac.ReadPermission("servers")
+		if !ok {
+			// No rule covers GET /servers: nothing is readable anywhere.
+			writeJSON(w, namespacesResponse{Namespaces: []string{}})
+			return
+		}
 		allowed := make([]string, 0, len(scope.AllowedNamespaces))
 		for _, ns := range scope.AllowedNamespaces {
-			if !ok {
-				continue
-			}
-			if perm == "" {
-				if u != nil {
-					allowed = append(allowed, ns)
-				}
-				continue
-			}
 			if u.Can(perm, rbac.Namespaced(perm), cl, ns) {
 				allowed = append(allowed, ns)
 			}

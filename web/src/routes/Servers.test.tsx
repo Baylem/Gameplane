@@ -613,9 +613,12 @@ describe("ServersPage", () => {
         }),
       );
       renderWithQuery(<ServersPage />);
-      await screen.findByText("default-server");
+      // extra-ns only starts fetching after /namespaces resolves and the
+      // component re-renders, one MSW round trip behind the default
+      // namespace's query — wait for it explicitly rather than racing it.
+      await screen.findByText("extra-server");
       // Merged: both namespaces' servers show up in one list.
-      expect(screen.getByText("extra-server")).toBeInTheDocument();
+      expect(screen.getByText("default-server")).toBeInTheDocument();
     });
 
     it("builds the namespace filter from the merged, fanned-out list", async () => {
@@ -637,7 +640,9 @@ describe("ServersPage", () => {
         }),
       );
       renderWithQuery(<ServersPage />);
-      await screen.findByText("default-server");
+      // extra-ns's server (and thus its facet) only appears after the
+      // second-wave query resolves — wait for it before opening the popover.
+      await screen.findByText("extra-server");
 
       const filterButton = screen.getByRole("button", { name: /Filter/i });
       await userEvent.click(filterButton);
@@ -646,6 +651,7 @@ describe("ServersPage", () => {
     });
 
     it("does not blank the page when one namespace's request fails", async () => {
+      const brokenNsHandler = vi.fn(() => HttpResponse.error());
       server.use(
         http.get("/namespaces", () =>
           HttpResponse.json({ namespaces: ["gameplane-games", "broken-ns"] }),
@@ -654,7 +660,7 @@ describe("ServersPage", () => {
           const url = new URL(request.url);
           const ns = url.searchParams.get("namespace") ?? "gameplane-games";
           if (ns === "broken-ns") {
-            return HttpResponse.error();
+            return brokenNsHandler();
           }
           return HttpResponse.json({
             items: [makeServer({ metadata: { name: "healthy-server", namespace: "gameplane-games" } })],
@@ -664,19 +670,30 @@ describe("ServersPage", () => {
       renderWithQuery(<ServersPage />);
       // The failing namespace must not blank the whole page.
       await screen.findByText("healthy-server");
+      // ...and it must actually have been fanned out to, not silently
+      // skipped.
+      await waitFor(() => expect(brokenNsHandler).toHaveBeenCalled());
     });
 
     it("behaves like a single-namespace install when /namespaces returns one namespace", async () => {
+      const serversHandler = vi.fn(() =>
+        HttpResponse.json({
+          items: [makeServer({ metadata: { name: "solo-server", namespace: "gameplane-games" } })],
+        }),
+      );
       server.use(
         http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
-        http.get("/servers", () =>
-          HttpResponse.json({
-            items: [makeServer({ metadata: { name: "solo-server", namespace: "gameplane-games" } })],
-          }),
-        ),
+        http.get("/servers", ({ request }) => {
+          const url = new URL(request.url);
+          expect(url.searchParams.get("namespace")).toBe("gameplane-games");
+          return serversHandler();
+        }),
       );
       renderWithQuery(<ServersPage />);
       await screen.findByText("solo-server");
+      // Exactly one /servers request, for the default namespace — same
+      // shape as the pre-fan-out single-namespace behavior.
+      expect(serversHandler).toHaveBeenCalledTimes(1);
     });
   });
 

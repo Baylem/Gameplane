@@ -48,11 +48,16 @@ export function ServersPage() {
   // The namespaces the caller may read servers in (F-263). A failure here
   // (older API, transient error) falls back to just the default namespace,
   // reproducing pre-fan-out behavior instead of leaving the page empty.
-  const { data: namespacesData } = useQuery({
+  const { data: namespacesData, isLoading: namespacesLoading } = useQuery({
     queryKey: ["namespaces"],
     queryFn: () => Namespaces.list(),
     staleTime: 30_000,
-    retry: false,
+    // A transient error must not pin the page to the single-namespace
+    // fallback for the rest of the session — retry a couple of times, then
+    // let the 5s server refetch (below, once namespaces resolve) or the
+    // next mount pick it back up.
+    retry: 2,
+    refetchInterval: 30_000,
   });
   const namespaces = useMemo(() => {
     const ns = namespacesData?.namespaces;
@@ -64,18 +69,36 @@ export function ServersPage() {
   // cache entry independent, so one slow/failing namespace never blanks the
   // others — and a single-namespace install (namespaces === [default])
   // behaves exactly as the single pre-F-263 query did.
-  const serverQueries = useQueries({
+  //
+  // `combine` gives useQueries a stable merged result: without it (plain
+  // v5 useQueries with no `combine`) a new array is returned on every
+  // render regardless of whether any query actually changed, which defeats
+  // memoizing `servers`/`distinctNamespaces`/`sharedServers`/`counts` below
+  // and recomputes them every render.
+  const { items: serverItems, isLoading: serversLoading, failedNamespaces } = useQueries({
     queries: namespaces.map((ns) => ({
       queryKey: ["servers", ns],
       queryFn: () => Servers.list(ns),
       refetchInterval: 5_000,
     })),
+    combine: (results) => ({
+      items: results.flatMap((r) => r.data?.items ?? []),
+      // `some`, not `every`: with `every`, once the default namespace's
+      // query resolves but a second (still-pending) namespace hasn't,
+      // isLoading flips to false and the empty state flashes before that
+      // namespace's servers arrive. `some` keeps it true until every
+      // namespace's initial fetch has settled.
+      isLoading: results.length === 0 || results.some((r) => r.isLoading),
+      failedNamespaces: results
+        .map((r, i) => (r.isError ? namespaces[i] : undefined))
+        .filter((ns): ns is string => ns !== undefined),
+    }),
   });
-  const isLoading = serverQueries.length === 0 || serverQueries.every((q) => q.isLoading);
-  const data = useMemo(() => {
-    const items = serverQueries.flatMap((q) => q.data?.items ?? []);
-    return { items };
-  }, [serverQueries]);
+  // Loading covers both /namespaces resolving and the per-namespace fan-out:
+  // while /namespaces is still in flight only the default-namespace fallback
+  // has been queried, so treating serversLoading alone would flash the
+  // empty state before the real namespace list (and its servers) arrive.
+  const isLoading = namespacesLoading || serversLoading;
 
   const { templates, gameCodes, byName } = useGameCodes();
 
@@ -116,7 +139,7 @@ export function ServersPage() {
   const [draftGames, setDraftGames] = useState<Set<string>>(new Set());
   const [draftNamespaces, setDraftNamespaces] = useState<Set<string>>(new Set());
 
-  const servers = useMemo(() => data?.items ?? [], [data?.items]);
+  const servers = serverItems;
 
   // Compute shared servers (in my-servers but not in the main list)
   const sharedServers = useMemo(() => {
@@ -221,6 +244,16 @@ export function ServersPage() {
       )}
 
       {act.error && <ErrorBanner err={act.error} onDismiss={() => act.reset()} />}
+      {failedNamespaces.length > 0 && (
+        // Partial fan-out failure: the other namespaces still render, but
+        // silently — surface which ones didn't load. Note this also means
+        // any owned/collaborated servers in a failing namespace fall under
+        // "Shared with you" below until it recovers, since the dedupe set
+        // built from `servers` no longer contains them.
+        <ErrorBanner
+          err={`Couldn't load servers in: ${failedNamespaces.join(", ")}. Other namespaces are shown below.`}
+        />
+      )}
 
       {!isMobile && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
