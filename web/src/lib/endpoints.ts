@@ -106,7 +106,10 @@ function gameServerEnvelope(input: ServerCreate) {
 }
 
 export const Servers = {
-  list: () => api<List<GameServer>>("/servers"),
+  // A bare list() call defaults to the server's default namespace scope
+  // (scope.DefaultNamespace) exactly as before (F-263); pass ns to target
+  // one of the namespaces from Namespaces.list() explicitly.
+  list: (ns?: string) => api<List<GameServer>>(withNS("/servers", ns)),
   get: (name: string, ns?: string) => api<GameServer>(withNS(`/servers/${name}`, ns)),
   create: (body: ServerCreate) =>
     api<GameServer>("/servers", { method: "POST", body: gameServerEnvelope(body) }),
@@ -268,6 +271,18 @@ export const Servers = {
 export const Templates = {
   list: () => api<List<GameTemplate>>("/templates"),
   get: (name: string) => api<GameTemplate>(`/templates/${name}`),
+};
+
+export interface NamespacesResponse {
+  namespaces: string[];
+}
+
+// Namespaces the caller may read servers in (F-263): the /servers page
+// fans out per namespace instead of relying on scope.Resolve's single
+// default, so GAMEPLANE_EXTRA_NAMESPACES installs show every namespace the
+// viewer actually has servers:read on.
+export const Namespaces = {
+  list: () => api<NamespacesResponse>("/namespaces"),
 };
 
 export const Cluster = {

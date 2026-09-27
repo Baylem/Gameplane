@@ -133,6 +133,38 @@ func TestIngestMethodNotAllowed(t *testing.T) {
 	}
 }
 
+func TestMetricsMethodNotAllowed(t *testing.T) {
+	srv := testServer(t, config{})
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, srv.URL+"/metrics", nil)
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("post: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want 405", resp.StatusCode)
+	}
+}
+
+func TestHealthzMethodNotAllowed(t *testing.T) {
+	srv := testServer(t, config{})
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, srv.URL+"/healthz", nil)
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("post: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want 405", resp.StatusCode)
+	}
+}
+
 func TestIngestAuth(t *testing.T) {
 	srv := testServer(t, config{authToken: "Bearer s3cret"})
 	body := `{"version":"1.0.0","servers":1,"templates":1}`

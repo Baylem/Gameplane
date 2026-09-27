@@ -41,7 +41,8 @@ var gameplaneGroupVersion = schema.GroupVersion{Group: "gameplane.local", Versio
 // outside the fixed set of Gameplane CRDs this server knows how to read.
 var errUnknownKind = errors.New("unknown Gameplane resource kind")
 
-// CRDKind describes one of the 7 Gameplane CRDs this server can list/get.
+// CRDKind describes one of the 7 Gameplane CRDs (of 9 total; Cluster and
+// NetworkCapture are not exposed) this server can list/get.
 // Exported (along with CRDKinds below) so callers outside this package —
 // e.g. this module's own tests, which need to build a matching fake
 // dynamic client — can enumerate the registry without this package growing
@@ -92,7 +93,7 @@ const defaultTailLines = 200
 const maxTailLines = 5000
 
 // NewScheme builds a runtime.Scheme that knows the corev1 types (for the
-// typed Pod/Event reads) plus the 7 Gameplane CRD kinds, registered against
+// typed Pod/Event reads) plus the 7 exposed Gameplane CRD kinds, registered against
 // unstructured.Unstructured/UnstructuredList. Client's methods use the
 // dynamic client directly and don't strictly need a scheme to do so, but
 // building one here keeps the process's view of "what a Gameplane resource

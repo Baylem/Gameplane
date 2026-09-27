@@ -57,7 +57,7 @@ api/
 - **handlers:** 23+ route groups (Audit, AuthProviderSecrets, Capture, Cluster, ClusterActions, Clusters, Config, Destinations, Events, Lifecycle, ModIDs, ModSources, Modules, ModUpdates, Notifications, Ownership, PodEvents, Registry, RegistrySecrets, Resources, Roles, SystemLogs, Users, WebSocket Mount)
 - **auth:** SessionStore (CSRF + expiry), Local (argon2id password check), OIDC (provider registry + claim mapping), Registry (auth provider discovery per request)
 - **rbac:** Middleware (namespace/cluster-scoped permission check + owner/collaborator fallback), rule table (method/path -> permission), catalog (permission definitions)
-- **db:** driver-selectable (modernc.org/sqlite or pgx/v5 via postgres build tag), migrations (001-011), Store (query interface)
+- **db:** driver-selectable (modernc.org/sqlite or pgx/v5 via postgres build tag), migrations (001-012 per dialect in `migrations/sqlite/` and `migrations/postgres/`; 013+ shared and portable in `migrations/common/`), Store (query interface); queries use `?` placeholders, rebound to `$n` by the Postgres connection (`db.Rebind`)
 - **kube:** Client (K8s API wrapper), Registry (per-cluster clients from Cluster CRDs), watch (cluster-config sync)
 - **audit:** Auditor (insert to DB + distribute to sinks), webhook sink (POST JSON to URL), S3 sink (object storage), hash-chain (detect tampering)
 - **notify:** Notifier (watch GameServer/Backup/Restore status, format + deliver to sinks), sinks (Discord, Slack, SMTP, webhook)
@@ -85,7 +85,8 @@ Two subcommands:
 2. **`bootstrap-admin`** — seed or reset the initial admin user
    - Flags: `--db-driver`, `--db-dsn`, `--username`, `--password`, `--password-stdin`, `--email`, `--display-name`, `--force`, `--enable-local-login`
    - Runs schema migrations like the serve path; password hashed with argon2id
-   - Break-glass: `--enable-local-login` alone re-enables local auth in the config row (for OIDC-lockout recovery)
+   - Break-glass: `--enable-local-login` alone re-enables local auth in the config row (for OIDC-lockout recovery); every other key of the row (other providers, `helmOverride`) is written back unchanged
+   - `--force` on an existing user resets the password, promotes to admin, and deletes all of that user's sessions (same eviction as the dashboard password reset)
 
 ### REST surface (domain-level)
 
@@ -102,6 +103,7 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/healthz` — GET: liveness probe
 
 **Protected (authenticated + RBAC):**
+- `/namespaces` — GET: namespaces the caller may read servers in (scope.AllowedNamespaces filtered by servers:read on the resolved `?cluster=`); lets the dashboard fan out `/servers?namespace=` across every namespace it can see instead of only scope.Resolve's default (F-263)
 - `/servers/{name}` — CRUD for GameServer CRDs; cluster-dispatch via `?cluster=`; multiplexed console/files
 - `/servers/{name}/console` — WebSocket: RCON/exec; cluster-dispatch
 - `/servers/{name}:start`, `:stop`, `:restart` — actions (operator-handled)
@@ -130,16 +132,16 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/mod-ids/{name}` — PATCH: ID-managed mods (ARK CurseForge IDs, Project Zomboid MOD_IDs, Steam Workshop lists)
 - `/cluster`, `/cluster/info`, `/cluster/stats` — GET: version, nodes, storage, usage (read-only, viewer+)
 - `/cluster/nodes:join`, `/cluster/kubeconfig` — POST: credential-minting ops (admin only, `--cluster-ops` flag gated; 501 when disabled)
-- `/clusters` — multi-cluster: list remote Cluster CRDs; create/delete cluster registrations
-- `/events` — SSE: real-time K8s events (multiplexed per namespace + cluster)
+- `/clusters` — multi-cluster: list remote Cluster CRDs; create/delete cluster registrations. POST labels the kubeconfig Secret `gameplane.local/cluster-kubeconfig=true` and `gameplane.local/managed-by=gameplane-api`. DELETE removes the cluster's client from the registry at once, and deletes the referenced Secret only when it is the one POST generates for that cluster (cluster-<name>-kubeconfig) and carries `gameplane.local/cluster-kubeconfig=true` (Secrets created before managed-by labelling included); any other Secret, including one named for a different cluster, is left in place
+- `/events` — SSE: real-time K8s events (multiplexed per namespace + cluster). The route needs `servers:read`; the stream then carries only the kinds the caller may read in the resolved cluster and namespace, each gated by the permission its GET route needs (`rbac.ReadPermission`): servers → `servers:read`, templates → `templates:read`, backups and restores → `backups:read`, schedules → `schedules:read`. Tests: `TestEvents_StreamsOnlyReadableKinds` (`handlers/events_scope_test.go`); e2e `TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions` (bucket `operator`)
 - `/pod-events` — SSE: pod-level events
 - `/users/me` — GET: own profile (embeds `preferences`, see below)
 - `/users/me/servers` — GET: own GameServers (owner/collaborator)
 - `/users/me/preferences` — GET/PUT: own theme/styling preferences (feature 016)
 - `/users/me/preferences/reset` — POST: reset own theme preferences to defaults (feature 016)
-- `/users/{id}` — CRUD for users (admin only)
+- `/users/{id}` — CRUD for users (admin only). DELETE runs `db.Store.DeleteUser`: one transaction deletes the user's `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and role bindings, revokes the share links the user created (sets `revoked_at`), then deletes the `users` row. It does not rely on FK cascades (off on SQLite). An SSO subject whose user was deleted is provisioned as a new user on its next login
 - `/users/{id}/role-bindings` — PATCH: role assignments (per namespace + cluster)
-- `/roles` — GET catalog and custom roles; POST/PATCH/DELETE custom roles
+- `/roles` — GET catalog and custom roles; POST/PATCH/DELETE custom roles. A PATCH whose permission list drops `users:manage` from a role that grants it is refused (400) when that role is the caller's own primary role, or when every user who can manage users holds that role — the same lockout guards `PATCH /users/{id}` applies to a role change. Tests: `TestRoles_UpdateKeepsCallersOwnUserManagement`, `TestRoles_UpdateKeepsAtLeastOneUserManager`, `TestRoles_UpdateRemovesUserManagementWhenAnotherManagerRemains` (`handlers/roles_guard_test.go`); e2e `TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions` (bucket `operator`)
 - `/admin/audit` — GET: audit log (searchable, hash-chain verifiable)
 - `/admin/config` — GET/PATCH: global settings (OIDC, notifications, telemetry, module upload limits, etc.)
 - `/admin/notifications` — PATCH config + test-send to sinks
@@ -248,6 +250,8 @@ All cluster-dispatch routes accept `?cluster={name}` (validates against register
 - **Two safety guards:**
   1. Role assignment only applies when mappings are explicitly configured (when overrides exist or when Helm seeded them). No automatic role assignment from bare group names without explicit mapping.
   2. Demotion guard: A user who is the **only user able to manage users** (sole admin, or sole admin-equivalent) cannot be demoted or removed from the admin role by the login-time role assignment flow. This prevents accidental lockout: if a user is currently the only admin and a role remapping would remove their admin status, the remapping is skipped (logged as warn), leaving them as admin. The guard applies only on login re-evaluation; the override API (PATCH /admin/config/auth) does not enforce it (an explicit admin action).
+- **Re-evaluation trigger:** re-evaluation runs whenever the effective policy the role was computed from has role mappings — for the Helm provider that is the Helm seed merged with `helmOverride`, so an override alone (no Helm-seeded mappings) is enough.
+- **Audit (FR-014):** every applied role assignment (first login, or a re-evaluation that changes the role) is audited with reason `oidc role assigned: provider=<name> matched=<group> from=<old> to=<new>`, for the Helm provider (`provider=helm`) and for every dashboard-managed provider (`provider=<provider name>`). A demotion skipped by the guard is logged, not audited.
 
 **The helmOverride overlay:**
 - **Storage:** Lives in the "auth" config row as `helmOverride.roleMappings.{admin, operator, viewer}`. No separate table, no migration beyond the existing config table. The entire overlay is optional.
@@ -377,7 +381,7 @@ A submitted stylesheet is rejected with 400 and a message naming the offending r
 
 **Built-in roles:**
 - **admin:** wildcard permission `*`; full access to all resources and config
-- **operator:** read/write servers, backups, schedules, templates; read modules, destinations, cluster, roles (modules install/upgrade/uninstall requires `modules:manage`, seeded only to admin — see `api/internal/db/migrations/003_roles.sql`)
+- **operator:** read/write servers, backups, schedules, templates; read modules, destinations, cluster, roles (modules install/upgrade/uninstall requires `modules:manage`, seeded only to admin — see `api/internal/db/migrations/sqlite/003_roles.sql`)
 - **viewer:** read-only across servers, backups, schedules, templates, modules, destinations, cluster, roles
 
 **Permissions (granular, per resource and action):**
@@ -420,7 +424,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 2. **Every mutating request audited:** audit middleware logs actor, method, path, target, status, IP to database + external sinks
 3. **Three-role baseline RBAC:** admin/operator/viewer roles reproduce historical permission matrix exactly
 4. **Multi-dimensional RBAC:** namespace + cluster + owner/collaborator dimensions; cluster gating prevents cross-cluster privilege escalation
-5. **Append-only migrations:** database schema mutations are irreversible (migrations 001-011); no down-migrations
+5. **Append-only migrations:** database schema mutations are irreversible (migrations 001-012); no down-migrations
 6. **Login rate limiting:** `/auth/login` is per-IP (burst 10, 5/min, `LoginLimiter`) plus a per-username throttle layered on top (burst 6, 3/min, `LoginUserLimiter` in `auth/local.go`); the OIDC callback routes (`/auth/oidc/{provider}/callback`, legacy `/auth/oidc/callback`) are per-IP only (burst 10, 10/min via `OIDCCallbackLimiter`), no per-user dimension
 7. **Audit hash-chain:** each audit_events row includes hash of previous row (prev_hash) + its own content hash (hash); detects DB-level UPDATE/DELETE tampering
 8. **Audit pagination is bounded:** The `Auditor.Page(ctx, limit)` method clamps the untrusted `limit` parameter to a maximum of 500 entries (`MaxAuditPageSize`). Clamping occurs at both the API handler layer (api/internal/handlers/audit.go line 25) and the store layer (api/internal/audit/audit.go lines 820–822) so untrusted input is bounded at the earliest opportunity and again at use time. The allocated slice is always created with capacity within the bound (`make([]Event, 0, limit)` after clamping), guaranteeing that no untrusted client input can cause unbounded memory allocation regardless of how the limit value flows through the system.
@@ -444,7 +448,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 - `github.com/coder/websocket` v1.8.12 — WebSocket upgrade + streaming
 - `github.com/coreos/go-oidc/v3` v3.11.0 — OIDC provider discovery + token validation
 - `github.com/go-jose/go-jose/v4` v4.0.2 — OIDC JWT parsing (transitive via go-oidc)
-- `github.com/jackc/pgx/v5` v5.5.4 — PostgreSQL driver (build tag: postgres, experimental)
+- `github.com/jackc/pgx/v5` v5.11.0 — PostgreSQL driver (build tag: postgres, experimental)
 - `github.com/minio/minio-go/v7` v7.2.1 — S3-compatible client (audit sink)
 - `github.com/prometheus/client_golang` v1.23.2 — Prometheus metrics
 - `modernc.org/sqlite` v1.34.1 — SQLite driver (production, tested)
@@ -460,11 +464,13 @@ Verify from `/api/go.mod`.
 ### Database driver selection
 
 - **Production (default):** `modernc.org/sqlite` — file-based, WAL mode, tested
-- **Experimental:** PostgreSQL via `jackc/pgx/v5` — compile with `-tags=postgres`
+- **Experimental:** PostgreSQL via `jackc/pgx/v5` — compile with `-tags=postgres`. Works end to end; `api/internal/db`'s tests run against PostgreSQL in the `api (postgres)` CI job, but there is no Postgres e2e/upgrade coverage yet
 - Driver selected at startup via `--db-driver` (sqlite|postgres) + `--db-dsn`
-- Migrations run automatically on startup (`store.Migrate(ctx)`)
+- Migrations run automatically on startup (`store.Migrate(ctx)`): the driver's legacy set (`migrations/sqlite/` or `migrations/postgres/`, 001-012, same filenames and resulting schema) then the shared set (`migrations/common/`, 013+, one portable file per migration), in version order; a version present in both sets is a startup error. Versions are recorded in `schema_migrations` by bare filename, so SQLite installs see the same versions as before the split
+- Runtime SQL is written once with `?` placeholders; the Postgres connector rewrites them to `$n` (`db.Rebind`). Timestamps that used SQLite's `datetime('now')` are generated in Go (`db.NowTimestamp()`, same `YYYY-MM-DD HH:MM:SS` UTC text) and bound as parameters; inserted ids come from `RETURNING id` (pgx has no `LastInsertId`)
+- Postgres legacy migrations declare the text columns the API sorts or range-compares (`roles.name`, role-binding scope columns, `audit_events.ts`, `sessions.expires_at`, `share_links.created_at`/`expires_at`) `COLLATE "C"` so ordering matches SQLite's byte-wise collation
 
-### Schema (migrations 001-011)
+### Schema (migrations 001-012)
 
 **001_init.sql:**
 - `users` — username (unique), email, display_name, pw_hash (argon2id), role (legacy, now via role_bindings), created_at, updated_at
@@ -490,7 +496,9 @@ Verify from `/api/go.mod`.
 **006_share_links.sql:** (unauthenticated server access tokens)
 - Creates `share_links` table: signed, revocable tokens for unauthenticated access to a single GameServer's status and connection address, optionally with start capability
 - Token never stored; only SHA-256 hash persisted and indexed for O(1) lookup
+- Revocation (`DELETE /servers/{name}/shares/{id}`, `db.Store.RevokeShareLink`) matches the link's cluster, namespace, server name and id; no match returns `db.ErrShareLinkNotFound`, which the handler answers with 404
 - Pre-existing; not part of the Phase 2 Foundational feature scope
+- `created_by` has no foreign key on Postgres (the SQLite file's `ON DELETE CASCADE` never fires there), so a deleted user's links stay behind, revoked, on both drivers
 
 **007_audit_reason.sql:** (Phase 2 Foundational: capture operation auditing)
 - Adds nullable `reason TEXT` column to `audit_events`
@@ -516,7 +524,10 @@ Verify from `/api/go.mod`.
 - Backfills every pre-existing user with the legacy preset (`preset_id = 'legacy'`, dark-preserving upgrade per FR-003); accounts created later default to pink via column defaults + `db.DefaultUserPreferences()`
 - Retention rule (FR-012): the custom columns are nulled only by the reset endpoint, never by ordinary updates (see "User theme preferences" under External interface / contracts)
 
-All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); API layer is authoritative.
+**012_account_removal_cleanup.sql:** (account removal cleanup)
+- One-off pass that deletes `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and `user_role_bindings` rows whose user no longer exists, and revokes (sets `revoked_at`, RFC3339 UTC) active `share_links` whose creator no longer exists. Clears rows left by user deletes made before `db.Store.DeleteUser` removed them explicitly; forward-only, so a rollback needs the pre-upgrade DB snapshot
+
+Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); the API layer is authoritative and deletes dependent rows itself, so the Postgres cascades never change the outcome. The one exception is `share_links.created_by`: the Postgres schema declares it as a plain column with no foreign key, so deleting a user keeps that user's share links (revoked) in the audit trail on both drivers, instead of cascading them away.
 
 ## Security considerations
 
@@ -526,6 +537,7 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 - **Sessions:** cryptographically random token + paired CSRF token; DB-only persistence (no in-memory store), 12-hour TTL from creation, garbage-collected on an interval (`SessionStore.StartGC`)
 - **CSRF cookie is JS-readable by design:** unlike the session cookie (`HttpOnly`), the CSRF cookie is set `HttpOnly: false` so the SPA can read its value and echo it back as `X-Gameplane-CSRF` on mutating requests — the standard double-submit pattern (see `docs/security.md`). Logout's cookie-clear always sends `HttpOnly: true` regardless, since a MaxAge<0 delete carries no value and the browser matches it on Name/Domain/Path alone.
 - **Bootstrap:** `bootstrap-admin` subcommand hashes password same way as API
+- **Client IP:** `auth.ClientIPFromTrustedProxies` (`internal/auth/clientip.go`) records the client IP that the rate limiters and audit key on. A TCP peer outside `--trusted-proxies` is the client and its `X-Forwarded-For` is ignored. Behind a trusted peer the header is read right to left up to the first address outside the list, or to the leftmost address when every hop is trusted; an entry that isn't an IP address ends the walk at the last address reached. An empty list makes the peer the client. Tests: `internal/auth/clientip_test.go`.
 
 ### Authorization
 - **RBAC middleware:** intercepts all protected routes; namespace + cluster gating
@@ -553,7 +565,7 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 - **Synchronous writes (handler-direct):** Routes that need immediate audit writes before sending the response call `Auditor.WriteSync(ctx, method, path, target, reason, status)` directly, providing the reason
   - Method signature: `WriteSync(ctx context.Context, method, path, target, reason string, status int) error`
   - Extracts actor from context (set by auth middleware)
-  - Extracts client IP from context (set by ClientIPFromXFF middleware)
+  - Extracts client IP from context (set by the `auth.ClientIPFromTrustedProxies` middleware)
   - Generates RFC3339 timestamp
   - Returns error if DB write fails. Most synchronous callers treat this as **non-fatal** (log it, don't fail the request — e.g. `config.go`'s role-mapping override/reset audit). The network capture handlers are the deliberate exception (FR-006): they check the return value via `auditWriteOrFail` and bail with 500 without proceeding, so a failed audit write does fail those operations (see "Network capture endpoints" above and `WriteSync` at capture.go)
   - Fan-outs to external sinks (webhook, S3, stdout) with reason included
@@ -603,7 +615,7 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 
 Excluded:
 - `cmd/` (main.go + flag/signal wiring)
-- `internal/db/db_postgres.go` (Postgres driver, build-tag gated, needs Docker/testcontainers; excluded from the coverage gate — no CI workflow currently builds or runs it on any schedule)
+- `internal/db/db_postgres.go` (Postgres driver, build-tag gated; excluded from the coverage gate because coverage runs without `-tags postgres`. The `api (postgres)` CI job builds it and runs `internal/db`'s tests, including `db_postgres_test.go`, against a PostgreSQL service container)
 
 Final 20% gap concentrated in:
 - `ws/attach.go` handle() (SPDY exec proxy, exercised by e2e)

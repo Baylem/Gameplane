@@ -134,7 +134,7 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
 - **Dashboard screen:** design in `design.pen` + export to `design-export/` → `web/src/routes/<name>.tsx`, register in `web/src/router/tree.tsx` → data via `web/src/lib/api.ts` + TanStack Query → `web/src/routes/<name>.test.tsx`.
 - **Game module:** edit `modules/<name>/` (`module.yaml`, `template.yaml`, `README.md`) → `make modules-push` → commit in `gameplane-module` → `git add modules` + commit pointer bump in root.
 - **Website:** design in `website/website.pen` + export to `website/website-export/` → change `website/` per its own CLAUDE.md → commit/push/PR in `gameplane-website` (default branch `main`) → `git add website` + commit pointer bump in root.
-- **DB migration:** new sequential `api/internal/db/migrations/<NNN>_<name>.sql`; append-only, applied on API startup.
+- **DB migration:** new sequential `api/internal/db/migrations/common/<NNN>_<name>.sql` (013 onward) — portable SQL both SQLite and PostgreSQL run unchanged (no `datetime('now')`/`strftime`, `AUTOINCREMENT`, `INSERT OR …`, `COLLATE NOCASE`; bind timestamps from Go). `migrations/sqlite/` and `migrations/postgres/` hold the frozen per-dialect 001–012 sets; see `api/internal/db/migrations/README.md`. Append-only, applied on API startup.
 
 ## Reference docs
 

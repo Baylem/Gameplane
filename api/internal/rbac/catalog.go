@@ -19,7 +19,7 @@ type PermGroup struct {
 
 // Catalog is the single source of truth for which permissions exist.
 // The RBAC rule table (rbac.go) and the seeded built-in roles
-// (migrations/003_roles.sql) must only reference keys that appear here;
+// (migrations/sqlite/003_roles.sql and its postgres/ twin) must only reference keys that appear here;
 // the cross-checks in the tests enforce that.
 var Catalog = []PermGroup{
 	{Resource: "servers", Label: "Game servers", Permissions: []Permission{

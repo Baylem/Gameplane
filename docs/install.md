@@ -97,7 +97,7 @@ printf '%s' "$ADMIN_PASSWORD" | kubectl -n gameplane-system exec -i deploy/gamep
 ```
 
 If a user with that name already exists, pass `--force` to rotate the
-password and promote them to `admin`.
+password, promote them to `admin`, and end their existing sessions.
 
 Open `https://<ingress.host>` and log in.
 
@@ -124,7 +124,7 @@ Top-level knobs (see `values.yaml` for the full list):
   GameServer enters Pending with a `PVCProvisioningFailed` condition (visible in
   the dashboard); no pod starts until resolved. Example:
   `--set operator.gameDataStorage.storageClassName=fast-nvme`
-- `api.db.driver` — `sqlite` (default, production-tested) or `postgres` [experimental] (work-in-progress)
+- `api.db.driver` — `sqlite` (default, production-tested) or `postgres` [experimental] (requires an api image built with `-tags postgres`; not yet covered by e2e or upgrade tests)
 - `api.db.dsn` — connection string; SQLite default persists to a PVC
 - `api.storage.existingClaim` — pre-existing PVC to mount for the API's SQLite database instead of letting Helm create `gameplane-api-data` (default `""`). The chart annotates `gameplane-api-data` with `helm.sh/resource-policy: keep` so switching to an existing claim preserves the previous PVC.
 - `api.oidc.enabled` + the following settings — wire OIDC login from Helm (shows
@@ -528,6 +528,10 @@ The operator on the control-plane will reconcile the `Cluster` and
 update `status.phase` (Unknown → Healthy/Unhealthy). When `Healthy`,
 the API can dispatch requests to that cluster.
 
+Removing a cluster registered this way (from the dashboard or with
+`DELETE /clusters/{name}`) deletes the `Cluster` but leaves your Secret
+in place. Delete the Secret with kubectl when you no longer need it.
+
 ### Path 2: Dashboard API
 
 POST to `/clusters` with permission `cluster:manage` (admin-only):
@@ -545,7 +549,7 @@ curl -X POST https://<dashboard>/api/clusters \
 
 The API stores the kubeconfig as a labelled Secret and creates the
 `Cluster` CRD. The kubeconfig is never returned by the API and never
-logged.
+logged. Removing the cluster deletes both the `Cluster` and that Secret.
 
 ### Helm CRD caveat
 
@@ -664,4 +668,5 @@ This ensures no two API processes try to write the same SQLite database file
 SQLite-backed installs experience a few seconds of dashboard downtime during
 an upgrade — this is expected and deliberate. Postgres-backed installs (experimental)
 would use rolling updates with no downtime, since the database is external and
-shared, but full Postgres support remains a work-in-progress.
+shared, but Postgres remains experimental and the API should still run as a
+single replica (see `api.replicas` in `values.yaml`).

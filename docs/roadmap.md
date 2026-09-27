@@ -225,13 +225,20 @@ production-readiness hardening below — tracked items, not code gaps.
   provisions. What is missing is the human-facing runbook, not the test.
 - Resource-limit guidance sized from real workloads rather than defaults.
 
-### Postgres driver: make the store fully driver-portable (planned)
+### Postgres driver: production readiness (experimental)
 
-SQLite is the only production-tested driver. Postgres support (via build tag
-`-tags postgres`) is work-in-progress: the SQL written in migrations lacks
-portable placeholder rebinding (`?` → `$n`), and timestamp defaults are SQLite-specific.
-Making it production-ready requires: portable SQL migration syntax, adding Postgres
-to the CI coverage matrix, and e2e testing against a real Postgres instance.
+SQLite is the only production-tested driver. The Postgres driver (build tag
+`-tags postgres`) now works end to end (#518): migrations 001–012 have
+hand-written Postgres equivalents (`api/internal/db/migrations/postgres/`),
+every later migration is one portable file both drivers run
+(`migrations/common/`), the Postgres connection rewrites `?` placeholders to
+`$n`, and runtime timestamps are generated in Go. The `api (postgres)` CI job
+builds the api with the tag and runs `api/internal/db`'s tests against a real
+PostgreSQL server. It stays **experimental** until the rest lands: running the
+handler/auth/audit test suites and the kind e2e and upgrade suites against
+Postgres, a published image built with `-tags postgres`, and multi-replica
+safety (the user-management lock and the audit hash chain assume a single API
+process).
 
 ---
 
@@ -243,6 +250,15 @@ to the CI coverage matrix, and e2e testing against a real Postgres instance.
 ---
 
 ## Known gaps tracked for completion
+
+### Users page: service accounts and identity-provider tabs (planned, v1.1)
+
+The Users page has two placeholder tabs (`web/src/routes/Users.tsx`,
+`ServiceAccountsTab` and `IdpTab`). **Service accounts** (machine-to-machine
+API tokens) don't exist yet and are tracked for v1.1. **Identity providers**
+has no controls of its own: OIDC providers are already managed under Admin
+Settings → Authentication (see [OIDC provider setup](oidc.md)), or through
+the `api.oidc.*` Helm values. The tab's own UI is tracked for v1.1.
 
 ### Game module template specifications (planned)
 
@@ -263,7 +279,7 @@ status for its join-protocol E2E testing. See [`docs/game-coverage.md`](game-cov
 canonical per-module status:
 
 - **2 modules** have real join coverage in CI (`minecraft-java`, `terraria`).
-- **12 modules** are blocked on undocumented or partially-documented
+- **26 modules** are blocked on undocumented or partially-documented
   wire-protocol formats, each with a named unblocking artifact (packet capture,
   reverse-engineering session, or anti-cheat analysis). They are candidates for
   future protocol work once documentation becomes available.
