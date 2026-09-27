@@ -166,12 +166,12 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-200 | specs.md says Go 1.25 but go.mod is 1.26 | telemetry-receiver | review:telemetry-receiver | S4 | fixed-unverified | #486 | | |
 | F-201 | specs.md claims untested HTTP method guards | telemetry-receiver | review:telemetry-receiver | S4 | fixed-unverified | #492 | | |
 | F-204 | Pod logs truncation keeps old end instead of newest | mcp-server | review:mcp-server | S3 | fixed-unverified | #439 | | |
-| F-205 | Examples use nonexistent label keys | mcp-server | review:mcp-server | S4 | open | | | |
-| F-206 | Malformed labelSelector returns full list silently | mcp-server | review:mcp-server | S4 | open | | | |
-| F-207 | Docs claim 7 CRDs but 9 exist | mcp-server | review:mcp-server | S4 | open | | | |
-| F-208 | specs.md dependency versions stale | mcp-server | review:mcp-server | S4 | open | | | |
-| F-209 | Chart comment references nonexistent file path | mcp-server | review:mcp-server | S4 | open | | | |
-| F-210 | README example fails on typical Linux host | mcp-server | review:mcp-server | S4 | open | | | |
+| F-205 | Examples use nonexistent label keys | mcp-server | review:mcp-server | S4 | fixed-unverified | #493 | | |
+| F-206 | Malformed labelSelector returns full list silently | mcp-server | review:mcp-server | S4 | fixed-unverified | #493 | | |
+| F-207 | Docs claim 7 CRDs but 9 exist | mcp-server | review:mcp-server | S4 | fixed-unverified | #493 | | |
+| F-208 | specs.md dependency versions stale | mcp-server | review:mcp-server | S4 | fixed-unverified | #493 | | |
+| F-209 | Chart comment references nonexistent file path | mcp-server | review:mcp-server | S4 | fixed-unverified | #493 | | |
+| F-210 | README example fails on typical Linux host | mcp-server | review:mcp-server | S4 | fixed-unverified | #493 | | |
 | F-212 | Namespace deleted on helm uninstall, losing GameServers and volumes | charts/gameplane/ | review:charts/gameplane | S1 | fixed-unverified | #425 | | |
 | F-213 | Pre-upgrade hook fails for non-default release name | charts/gameplane/ | review:charts/gameplane | S3 | fixed-unverified | #443 | | |
 | F-214 | helm upgrade --reuse-values fails with nil-pointer errors on new keys | charts/gameplane/ | review:charts/gameplane | S3 | fixed-unverified | #443 | | |
