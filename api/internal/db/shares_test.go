@@ -793,7 +793,7 @@ func TestMigration010_ExpiresAtNullable(t *testing.T) {
 		"008_captures_rbac.sql", "009_share_links_cluster.sql",
 	}
 	for _, name := range names {
-		content, err := migrations.ReadFile("migrations/" + name)
+		content, err := migrations.ReadFile("migrations/sqlite/" + name)
 		if err != nil {
 			t.Fatalf("read %s: %v", name, err)
 		}
@@ -814,7 +814,7 @@ func TestMigration010_ExpiresAtNullable(t *testing.T) {
 	}
 
 	// Now apply 010.
-	content, err := migrations.ReadFile("migrations/010_share_links_expiry_nullable.sql")
+	content, err := migrations.ReadFile("migrations/sqlite/010_share_links_expiry_nullable.sql")
 	if err != nil {
 		t.Fatalf("read 010: %v", err)
 	}
