@@ -244,6 +244,15 @@ to the CI coverage matrix, and e2e testing against a real Postgres instance.
 
 ## Known gaps tracked for completion
 
+### Users page: service accounts and identity-provider tabs (planned, v1.1)
+
+The Users page has two placeholder tabs (`web/src/routes/Users.tsx`,
+`ServiceAccountsTab` and `IdpTab`). **Service accounts** (machine-to-machine
+API tokens) don't exist yet and are tracked for v1.1. **Identity providers**
+has no controls of its own: OIDC providers are already managed under Admin
+Settings → Authentication (see [OIDC provider setup](oidc.md)), or through
+the `api.oidc.*` Helm values. The tab's own UI is tracked for v1.1.
+
 ### Game module template specifications (planned)
 
 Constitution IV requires a `specs.md` file per game module documenting the

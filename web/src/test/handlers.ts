@@ -142,6 +142,10 @@ export const handlers = [
     }),
   ),
 
+  // Namespaces (F-263): default single-namespace install so existing
+  // /servers-only mocks keep behaving exactly as before the fan-out.
+  http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
+
   // Servers
   http.get("/servers", () =>
     HttpResponse.json({
@@ -800,6 +804,8 @@ const wsOrigin = typeof window !== "undefined" ? window.location.origin.replace(
 export function buildScreenshotHandlers() {
   const data = getScreenshotData();
   return [
+    // The Servers page asks which namespaces to list before listing servers.
+    http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
     // Auth: reuse default login/logout (screenshot demos don't test auth edge cases)
     http.get("/users/me", ({ cookies }) => {
       if (cookies.e2e_force_401 === "1") {

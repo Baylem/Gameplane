@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ServerActionsMenu } from "@/components/server/ServerActionsMenu";
 import {
   Activity,
@@ -31,18 +31,99 @@ import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { describeStorageProvisioned, formatBytes, cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/media";
 import type { ClusterStats, ClusterView, GameServer, GameServerPhase, GameTemplate } from "@/types";
-import { Cluster, Servers, type LifecycleVerb } from "@/lib/endpoints";
+import { Cluster, Namespaces, Servers, type LifecycleVerb } from "@/lib/endpoints";
 import { countByState } from "@/lib/servers";
 
 type FilterKey = "all" | "running" | "stopped";
 
+// DEFAULT_NAMESPACE mirrors the API's scope.DefaultNamespace: the namespace
+// a bare GET /servers (no ?namespace=) resolves to. Used as the fan-out
+// fallback only once /namespaces has errored, so the page's behavior there
+// is unchanged from before F-263.
+const DEFAULT_NAMESPACE = "gameplane-games";
+
 export function ServersPage() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
-    queryKey: ["servers"],
-    queryFn: () => Servers.list(),
-    refetchInterval: 5_000,
+
+  // The namespaces the caller may read servers in (F-263). `namespaces:
+  // []` is an authoritative, successful answer — servers:read in no
+  // namespace, the normal case for a user who only owns/collaborates on
+  // servers via the owner-fallback RBAC path — and must fan out over
+  // nothing, not the default namespace. The default-namespace fallback is
+  // only for the interval before /namespaces has resolved, or when it
+  // errors (older API, transient error), reproducing pre-fan-out behavior
+  // instead of leaving the page empty.
+  const { data: namespacesData, isLoading: namespacesLoading, isError: namespacesError } = useQuery({
+    queryKey: ["namespaces"],
+    queryFn: () => Namespaces.list(),
+    staleTime: 30_000,
+    // A transient error must not pin the page to the single-namespace
+    // fallback for the rest of the session — retry a couple of times, then
+    // let the 5s server refetch (below, once namespaces resolve) or the
+    // next mount pick it back up.
+    retry: 2,
+    refetchInterval: 30_000,
   });
+  // Gate the fan-out on /namespaces having settled: while it's still
+  // pending, fan out over nothing rather than guessing the default
+  // namespace, so a user with no role binding never sends a spurious
+  // GET /servers?namespace=gameplane-games that 403s and briefly flashes
+  // the "Couldn't load servers in" banner before /namespaces returns [].
+  // The default-namespace fallback applies only once /namespaces has
+  // actually errored, reproducing pre-fan-out behavior instead of leaving
+  // the page empty.
+  const namespaces = useMemo(() => {
+    if (namespacesData) return namespacesData.namespaces;
+    if (namespacesError) return [DEFAULT_NAMESPACE];
+    return [];
+  }, [namespacesData, namespacesError]);
+
+  // Fan out GET /servers?namespace=X across every allowed namespace and
+  // merge the results. Namespace-qualified query keys keep each namespace's
+  // cache entry independent, so one slow/failing namespace never blanks the
+  // others — and a single-namespace install (namespaces === [default])
+  // behaves exactly as the single pre-F-263 query did.
+  //
+  // `combine` is wrapped in useCallback, keyed on `namespaces`: a plain
+  // inline closure is a new reference every render, so TanStack v5's
+  // useQueries treats it as changed and recomputes `items` (and therefore
+  // every memo derived from `servers` below) on every render regardless of
+  // whether any query actually changed. useCallback keeps the same
+  // reference — and the same `items` array — across renders where
+  // `namespaces` hasn't changed.
+  const combine = useCallback(
+    (results: Array<{ data?: { items: GameServer[] }; isLoading: boolean; isError: boolean }>) => ({
+      items: results.flatMap((r) => r.data?.items ?? []),
+      // `some`, not `every`: with `every`, once the default namespace's
+      // query resolves but a second (still-pending) namespace hasn't,
+      // isLoading flips to false and the empty state flashes before that
+      // namespace's servers arrive. `some` keeps it true until every
+      // namespace's initial fetch has settled. An empty `results` array
+      // (namespaces resolved to an authoritative []) must NOT count as
+      // loading — `some` on an empty array is already `false`, which is
+      // what we want here.
+      isLoading: results.some((r) => r.isLoading),
+      failedNamespaces: results
+        .map((r, i) => (r.isError ? namespaces[i] : undefined))
+        .filter((ns): ns is string => ns !== undefined),
+    }),
+    [namespaces],
+  );
+  const { items: serverItems, isLoading: serversLoading, failedNamespaces } = useQueries({
+    queries: namespaces.map((ns) => ({
+      queryKey: ["servers", ns],
+      queryFn: () => Servers.list(ns),
+      refetchInterval: 5_000,
+    })),
+    combine,
+  });
+  // Loading covers both /namespaces resolving and the per-namespace fan-out.
+  // Gated on `!namespacesError`: once /namespaces has failed, the
+  // default-namespace fallback data has already arrived (or is in flight
+  // under serversLoading on its own), so waiting out /namespaces' retries
+  // (~3s) here would pin the page on "Loading…" long after there's
+  // something to show.
+  const isLoading = (namespacesLoading && !namespacesError) || serversLoading;
 
   const { templates, gameCodes, byName } = useGameCodes();
 
@@ -83,17 +164,19 @@ export function ServersPage() {
   const [draftGames, setDraftGames] = useState<Set<string>>(new Set());
   const [draftNamespaces, setDraftNamespaces] = useState<Set<string>>(new Set());
 
-  const servers = useMemo(() => data?.items ?? [], [data?.items]);
+  const servers = serverItems;
 
-  // Compute shared servers (in my-servers but not in the main list)
+  // Compute shared servers (in my-servers but not in the main list).
+  // Wait for the fanned-out main list: while it is still loading every
+  // owned server would look "shared" and the section would flash.
   const sharedServers = useMemo(() => {
-    if (!myServers?.items) return [];
+    if (isLoading || !myServers?.items) return [];
     const serverKeys = new Set(servers.map((s) => `${s.metadata.namespace ?? "gameplane-games"}/${s.metadata.name}`));
     return myServers.items.filter((s) => {
       const key = `${s.metadata.namespace ?? "gameplane-games"}/${s.metadata.name}`;
       return !serverKeys.has(key);
     });
-  }, [servers, myServers]);
+  }, [isLoading, servers, myServers]);
   const counts = useMemo(() => countByState(servers), [servers]);
   const vcpus = (clusterView?.nodes ?? []).reduce((s, n) => s + (n.cpu?.capacity ?? 0), 0);
   const storage = describeStorageProvisioned(cluster?.usedStorageBytes, cluster?.totalStorageBytes);
@@ -188,6 +271,16 @@ export function ServersPage() {
       )}
 
       {act.error && <ErrorBanner err={act.error} onDismiss={() => act.reset()} />}
+      {failedNamespaces.length > 0 && (
+        // Partial fan-out failure: the other namespaces still render, but
+        // silently — surface which ones didn't load. Note this also means
+        // any owned/collaborated servers in a failing namespace fall under
+        // "Shared with you" below until it recovers, since the dedupe set
+        // built from `servers` no longer contains them.
+        <ErrorBanner
+          err={`Couldn't load servers in: ${failedNamespaces.join(", ")}. Other namespaces are shown below.`}
+        />
+      )}
 
       {!isMobile && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">

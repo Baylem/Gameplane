@@ -282,7 +282,7 @@ func getMatchedGroup(groups []string, pol *ProviderPolicy) string {
 //
 // A nil auditWriteSync func is a safe no-op — no event is emitted. An audit write
 // failure is logged but does not break the login flow.
-func (o *OIDC) emitRoleAssignmentAudit(ctx context.Context, user *User, target string, outcome *RoleAssignmentOutcome) {
+func (o *OIDC) emitRoleAssignmentAudit(ctx context.Context, user *User, path string, target string, outcome *RoleAssignmentOutcome) {
 	if o.auditWriteSync == nil {
 		return
 	}
@@ -318,7 +318,7 @@ func (o *OIDC) emitRoleAssignmentAudit(ctx context.Context, user *User, target s
 	// Call the audit write func. An audit write failure is logged by the underlying
 	// auditor itself (via slog.Warn), so we just call it without additional error
 	// handling — the login still succeeds.
-	_ = o.auditWriteSync(enrichedCtx, "POST", "/auth/oidc/callback", target, reason, http.StatusOK)
+	_ = o.auditWriteSync(enrichedCtx, "POST", path, target, reason, http.StatusOK)
 }
 
 // AttachStore attaches a database store to the OIDC handler.
@@ -465,8 +465,10 @@ func (o *OIDC) HandleCallbackAt(sessions *SessionStore, cookiePath string) http.
 		// the merged role mappings, ensuring audit events report the correct matched group.
 		matchedGroup := getMatchedGroup(groups, resolvePolicy)
 
-		// Re-evaluation only runs when role mappings are configured.
-		syncRole := o.policy != nil && o.policy.RoleMappings != nil
+		// Re-evaluation runs whenever the effective policy — the one the role
+		// above was computed from, including any helmOverride merge — has role
+		// mappings.
+		syncRole := resolvePolicy != nil && resolvePolicy.RoleMappings != nil
 
 		user, roleOutcome, err := o.resolveOrLinkUser(req.Context(), idt.Issuer, claims.Sub, claims.Email, claims.Name, role, matchedGroup, syncRole)
 		if err != nil {
@@ -484,7 +486,7 @@ func (o *OIDC) HandleCallbackAt(sessions *SessionStore, cookiePath string) http.
 		if auditTarget == "" {
 			auditTarget = claims.Sub
 		}
-		o.emitRoleAssignmentAudit(req.Context(), user, auditTarget, roleOutcome)
+		o.emitRoleAssignmentAudit(req.Context(), user, req.URL.Path, auditTarget, roleOutcome)
 
 		sess, csrf, err := sessions.Create(req.Context(), user.ID)
 		if err != nil {
@@ -503,7 +505,7 @@ func (o *OIDC) HandleCallbackAt(sessions *SessionStore, cookiePath string) http.
 
 // resolveOrLinkUser returns the user linked to (issuer, subject) and a RoleAssignmentOutcome
 // describing the role assignment/re-evaluation that occurred, creating a new user with the given
-// role on first login. syncRole (true iff the provider has role mappings) makes the IdP
+// role on first login. syncRole (true iff the effective policy has role mappings) makes the IdP
 // authoritative: an existing user whose stored role differs is re-pointed at role. Without it a
 // manually-promoted user keeps their role.
 //
