@@ -92,8 +92,8 @@ function ClusterInventory({ clusterId }: { clusterId: string }) {
             : `Node inventory for selected cluster: ${clusterId}.`
         }
         actions={
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-2">
+          <div className="flex min-w-0 max-w-md flex-col items-start gap-2 sm:items-end">
+            <div className="flex max-w-full flex-wrap items-center gap-2 sm:justify-end">
               <div title={opsDisabled ? "Cluster operations are disabled on this install." : undefined}>
                 <Button
                   variant="outline"
@@ -113,7 +113,7 @@ function ClusterInventory({ clusterId }: { clusterId: string }) {
               </div>
             </div>
             {opsDisabled && (
-              <p className="text-xs text-muted">
+              <p className="text-xs text-muted sm:text-right">
                 {clusterId !== "local" ? "Node enrollment and kubeconfig downloads are managed at this remote cluster." : <>
                   Enable <code className="font-mono">clusterOps.enabled</code> in the Helm values
                   to mint node-join tokens and kubeconfigs.
@@ -238,19 +238,19 @@ function NodeCard({ node }: { node: ClusterNode }) {
   return (
     <Card>
       <CardContent className="p-4 space-y-4">
-        <div className="flex items-start justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-surface">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-surface">
               <ServerIcon className="h-4 w-4 text-muted" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="break-all font-mono text-sm font-semibold">{node.name}</div>
               <div className="pt-0.5 text-[11px] text-muted">
                 {node.roles?.join(", ") || "worker"}
               </div>
             </div>
           </div>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-mono uppercase ${
+          <span className={`shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-mono uppercase ${
             ready
               ? "bg-success/15 text-success"
               : "bg-danger/15 text-danger"

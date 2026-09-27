@@ -32,7 +32,7 @@ CI component and mock-browser coverage must establish:
 1. The overview lists both authorized registrations with clear cluster identity and health, distinguishing these entries from node cards; loading, error and empty registry states are explicit.
 2. Selecting a registration opens its node inventory, with the selected ID threaded to API reads. Local and remote fixtures have distinct node names and same-named servers with distinct identities.
 3. Switching during an outstanding local request cannot render its late response under a remote heading. Previous-site forms/results are discarded, and query caches do not share selected inventory or authorization data.
-4. The selector and overview remain usable at desktop and 375 px mobile widths with keyboard-accessible controls and no horizontal page overflow.
+4. The selector and overview remain usable at desktop and 375 px mobile widths with keyboard-accessible controls. On small screens the page heading sits above wrapping actions; long node names wrap beside a separate status badge. Neither the document nor the scrolling main region overflows horizontally, and the heading and node-operation buttons stay inside the viewport.
 5. Remote node-join/kubeconfig controls remain disabled before and after inventory loading or errors, and central storage configuration is absent remotely.
 6. A remote inventory failure is displayed as an error rather than empty/healthy local inventory. Unauthenticated screens reveal no registry information.
 

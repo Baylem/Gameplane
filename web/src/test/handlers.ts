@@ -132,7 +132,7 @@ export const handlers = [
       return HttpResponse.json(makeClusterView({
         name: remote ? "remote-demo" : "local",
         ready: 1, total: 1,
-        nodes: [{ name: remote ? "remote-node" : "local-node", status: "Ready" }],
+        nodes: [{ name: remote ? "gp-demo-remote-control-plane" : "gp-demo-central-control-plane", status: "Ready" }],
       }));
     }
     return HttpResponse.json(makeClusterView());
