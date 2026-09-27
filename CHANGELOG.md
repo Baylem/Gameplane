@@ -181,6 +181,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **api:** hardened cluster registration removal.
 - **ci:** hardened the release signing order and the scope of the signing key.
 - **api:** hardened Prometheus metrics serving with a dedicated in-cluster listener.
+- **docs:** hardened the accuracy of the game-container posture and OIDC group-claim documentation.
 - **telemetry-receiver:** hardened ingest payload validation.
 
 ## [0.3.0-rc.1] — 2026-09-23
