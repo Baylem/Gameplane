@@ -178,7 +178,9 @@ export const handlers = [
     } }));
   }),
   // Ownership fixtures are explicit in the tests that exercise owner/collaborator access.
-  http.get("/users/me/servers", () => HttpResponse.json({ items: [] })),
+  http.get("/users/me/servers", ({ cookies }) => HttpResponse.json({ items: cookies.e2e_shared_server === "1"
+    ? [makeServer({ metadata: { name: "team-a-shared", namespace: "team-a" } })]
+    : [] })),
   http.post("/servers", async ({ request }) => {
     const body = (await request.json().catch(() => null)) as {
       metadata?: { name?: string };
