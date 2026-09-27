@@ -332,6 +332,7 @@ func main() {
 		p.Use(rbac.Middleware(reg))
 
 		handlers.MountResources(p, reg)
+		handlers.MountFleet(p, reg, store)
 		handlers.MountNamespaces(p, reg)
 		handlers.MountPodEvents(p, reg)
 		handlers.MountLifecycle(p, reg)

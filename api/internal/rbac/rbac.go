@@ -179,6 +179,14 @@ type rule struct {
 }
 
 var rules = []rule{
+	// Fleet handlers filter every scope and object themselves, including
+	// owner/collaborator-only servers. No collection-wide grant is inferred.
+	{method: "GET", segment: "fleet", suffix: "/fleet/servers", perm: ""},
+	{method: "GET", segment: "fleet", suffix: "/fleet/backups", perm: ""},
+	{method: "GET", segment: "fleet", suffix: "/fleet/schedules", perm: ""},
+	{method: "GET", segment: "fleet", suffix: "/fleet/restores", perm: ""},
+	{method: "GET", segment: "fleet", suffix: "/fleet/inventory", perm: ""},
+	{method: "GET", segment: "fleet", suffix: "/fleet/placements", perm: ""},
 	// Own profile: every authenticated user reads /users/me and their own
 	// servers (/users/me/servers), and reads/writes/resets their own theme
 	// preferences (feature 016). The rest of /users is gated; must precede
