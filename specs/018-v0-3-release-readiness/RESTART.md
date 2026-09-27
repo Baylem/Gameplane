@@ -1,6 +1,6 @@
 # Restart Guide: spec 018 (v0.3 release readiness)
 
-Live hand-off, last updated during session 7 (a cloud session, 2026-09-26 ~23:10 UTC). **After every context compaction, re-read this file first**, then [tasks.md](tasks.md) and [OPEN-DECISIONS.md](OPEN-DECISIONS.md). Keep this file current before context runs out.
+Live hand-off, last updated during session 7 (a cloud session, 2026-09-27 ~05:00 UTC). **After every context compaction, re-read this file first**, then [tasks.md](tasks.md) and [OPEN-DECISIONS.md](OPEN-DECISIONS.md). Keep this file current before context runs out.
 
 ## 0. Setup
 
@@ -103,6 +103,7 @@ All of these still apply.
 ### Open
 
 - Wave 5 is fully merged (#491–#494, 00:22 UTC 2026-09-27). Leftover: `docs/dependencies.md` still says "the 7 Gameplane CRDs"; fixed by #495 (merged 01:09 UTC; also go-sdk and controller-runtime versions).
+- Open PRs of mine: #496 (rc.2 CHANGELOG, draft until the held PRs merge) and #497 (roadmap entry for OD-021 item 13). An hourly `send_later` check-in watches both.
 - Wave 4 is fully merged (23:04 UTC). Record each merge with `scratchpad/rec.sh`.
 - The held fixes (#462, #463, #469, #471–#474) belong to the maintainer, on the devbox. The cloud session doesn't drive them.
 - The Dependabot PRs #272 (TypeScript 7) and #458 (ESLint 10) are blocked; see CLAUDE.md.
@@ -153,11 +154,13 @@ The cloud container restarted three times; the third restart (session 6, 2026-09
    - wave 5 is merged: 38, 48, 44, 50 (#491–#494); 51 has an external blocker;
    - 28 is blocked on the module tag (T054), 32 is T063, and 19 may need design.
 4. The OD-021 follow-ups (see OPEN-DECISIONS.md OD-021):
-   - the new Go e2e bucket (item 12);
-   - fix the Failed nuclear-option, terraria and minecraft-java Modules (items 3 and 23a);
-   - the S4 finding for the unused phases (item 22);
-   - procedure edits for every item.
-5. rc.2 (T057): a CHANGELOG PR, then RC-TAG-2 approval, the tag, the release run (check it against contracts/rc-deploy.md §1) and a deploy to kubelab.
+   - procedure edits for every item: **done** (session 7, `f194357f`..`17d0ac40`: sonnet edit, opus review, two fix rounds, then a fact re-check against master after merging master into this branch at `70ca3e46`);
+   - item 12, the new Go e2e bucket: name `web-api` approved (2026-09-27); build it (buckets.sh entry plus CI job) when the first test for those procedures is written, because an empty bucket fails bucket coverage;
+   - item 13: roadmap citation via #497 (`docs/roadmap.md` § "Users page: service accounts and identity-provider tabs");
+   - item 14: `servers-filter-by-namespace` is blocked on **F-263** (S3, filed 2026-09-27: the Servers page lists only `gameplane-games`); add F-263 to the next fix wave;
+   - item 22's S4 finding already exists (F-260);
+   - fixing the Failed nuclear-option, terraria and minecraft-java Modules (items 3 and 23a) happens live, at the start of the round (devbox).
+5. rc.2 (T057): the CHANGELOG PR is **#496 (draft)**, and RC-TAG-2 is logged PENDING. The maintainer chose (2026-09-27) to cut rc.2 only after the remaining held PRs merge. Then add their neutral hardening lines and the date to #496, mark it ready, get it merged, get the RC-TAG-2 approval, tag, check the release run against contracts/rc-deploy.md §1, and deploy to kubelab.
 6. The devbox-only work:
    - held fixes H31a onward;
    - the T012 user list;

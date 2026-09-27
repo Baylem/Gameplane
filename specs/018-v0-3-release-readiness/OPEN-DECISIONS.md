@@ -291,6 +291,8 @@ The sonnet correctness pass (2026-09-24) fixed names, paths, headings, evidence 
     - (d) The devbox has no Minecraft ping tool. Use the repo's full Minecraft client (the e2e game bot) for wake-on-connect.
 24. A cold first boot must reach Running within 10 minutes. Record the actual boot time.
 
+**Follow-up decisions (maintainer, 2026-09-27):** item 12's new bucket is named `web-api`, and it gets built when the first test for those procedures is written. Item 13 cites a new `docs/roadmap.md` entry (#497). A code finding from item 14 was filed as F-263 (S3).
+
 Fixes that follow from the code and need no decision are queued as work, not questions: the `api.md` reset-password body (the handler requires a new password in the request), the order of `api.md` servers-delete relative to the procedures that still need that server, shares on an `audit018-` server instead of `mc-fabric`, the `helm.md` network-policies step that checks a label the chart never sets, `nodes.md` cleanup of the `kubectl debug` node pod, the `upgrade.md` reinstall command after `helm uninstall --keep-history` (checked against kubelab's Helm version before running), and `agent.md` evidence steps that print to the terminal instead of saving a file. The `crd.md` pass is re-running on opus (the sonnet pass was stopped by its safeguard).
 
 ### OD-022: coverage rows for `.github/actions/` and `images/` — RESOLVED 2026-09-24
