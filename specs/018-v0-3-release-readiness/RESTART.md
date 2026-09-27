@@ -100,7 +100,6 @@ All of these still apply.
 ### Open
 
 - **Wave 5** (workflow `wf_d0f7e3b9-7fa`, session 7) opened:
-  - #491: group 38, F-149, F-150, F-151 (gameaction). Behaviour change: a required parameter sent as an explicit empty string is now rejected (400) instead of taking its default.
   - #492: group 48, F-201 (telemetry-receiver method-guard tests).
   - #493: group 44, F-205..F-210 (mcp-server). Leftover nit: `docs/dependencies.md` still says "the 7 Gameplane CRDs" (it touches the same file as #494, so fix it after #494 lands).
   - #494: group 50, F-032..F-036, F-245 (docs). The review loop stalled on three stale `comparison-sources.md` citations; the main loop fixed them by hand after checking the source lines.
