@@ -132,6 +132,18 @@ Kubernetes version. The Gameplane version identifies the central API build.
 Node-join token creation and kubeconfig issuance remain local-only operations and
 are unavailable while viewing a remote cluster.
 
+Kubernetes credentials and dashboard-user grants are separate. Once the remote
+registration's client has loaded, create a custom role containing `cluster:read`
+in **Users & RBAC → Roles**. Edit the intended user, choose that remote cluster,
+select the reader role and **All namespaces**, then add the grant. This grants
+inventory access only to that cluster; the user's local primary role and existing
+game-namespace grants remain separate. Changing a user's grants revokes their
+sessions, so that user must sign in again.
+
+Remote all-namespace roles may contain only `cluster:read` and namespaced
+permissions. Wildcard or central-administration permissions are rejected, and a
+role cannot gain them later while it has remote all-namespace bindings.
+
 ## Private networking
 
 The gateway Service is **ClusterIP on TCP 8443**. Provide private routing or a

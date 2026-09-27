@@ -4,6 +4,8 @@
 
 The user authorized implementing this UI with the existing Gameplane/HeroUI components and documenting the design here because Pencil MCP is unavailable. This explicitly approved exception leaves `design.pen` and its exports untouched; it does not claim a new Pencil design or maintainer approval.
 
+The two existing visual scenarios changed by this work—Mod registries settings (`Wj0V4`) and Edit user (`t3IY3u`)—use [reviewed implementation references](../web/visual-references/multicluster/README.md) with original CI capture provenance and SHA256 hashes. The workflow overlays only those two files in a temporary reference directory. The comparator, thresholds, scale checks and all other Pencil references are unchanged. These references document accepted implementation changes under this exception; they are not replacement Pencil exports.
+
 One central login manages independent registered clusters. A cluster contains nodes and game servers; registering another cluster is distinct from adding a node to the selected cluster. The dashboard continues to summarize one selected cluster, rather than inventing fleet totals from incomplete inventory.
 
 ## Desktop and mobile screens

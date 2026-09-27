@@ -52,9 +52,11 @@ spec:
 
 The registration name must match the gateway's configured cluster ID. The URL is
 an HTTPS origin with no userinfo, path, query or fragment. Credentials are read
-only from the central API namespace and must carry the label above. Registration
-through the existing dashboard remains unchanged; configure the optional gateway
-field through Kubernetes until an explicit UI workflow is added.
+only from the central API namespace and must carry the label above. Register the
+cluster through the central registration API or its `Cluster` resource, and
+configure the optional gateway field through Kubernetes. The dashboard's
+**Clusters** overview selects existing registrations; enrollment remains an
+operator-managed step.
 
 ## Routing and identity
 
