@@ -4,7 +4,6 @@
 // document shape client-side, then maps to the PUT payload (the server
 // re-validates and applies FR-013 sanitization as the authoritative gate).
 
-import type { UserPreferencesUpdate } from "@/lib/endpoints";
 import type {
   AppearanceMode,
   CustomColorConfig,
@@ -217,25 +216,4 @@ export function validateThemeExport(raw: string): ValidateThemeExportResult {
       },
     },
   };
-}
-
-// themeExportToUpdate maps a validated export document to the PUT payload.
-// Per the endpoints.ts retention convention, absent/null customs are
-// omitted (never sent as null) so the server keeps stored values; FR-013
-// sanitization of customCss remains the server's job on the resulting PUT.
-export function themeExportToUpdate(exportDoc: ThemeExport): UserPreferencesUpdate {
-  const prefs = exportDoc.preferences;
-  const update: UserPreferencesUpdate = {
-    themeType: prefs.themeType,
-    presetId: prefs.presetId,
-    appearanceMode: prefs.appearanceMode,
-    customCssEnabled: prefs.customCssEnabled,
-  };
-  if (prefs.customColors != null) {
-    update.customColors = prefs.customColors;
-  }
-  if (prefs.customCss != null) {
-    update.customCss = prefs.customCss;
-  }
-  return update;
 }

@@ -2,7 +2,7 @@
 
 The **mcp-server** [optional] is a strictly **read-only** [Model Context Protocol](https://modelcontextprotocol.io/)
 (MCP) server for Gameplane clusters. It lets an AI assistant read cluster
-state — the 7 Gameplane CRDs, Pods, Events, and pod logs — and get a
+state — 7 of Gameplane's 9 CRDs (not Cluster or NetworkCapture), Pods, Events, and pod logs — and get a
 suggested fix as plain text (YAML and/or `kubectl` commands) for a human
 operator to review and run.
 
@@ -92,7 +92,7 @@ or TCP port. It has two subcommands:
 Set `mcpServer.enabled=true`. The chart deploys a Deployment (no Service —
 there is no network port to expose), a dedicated ServiceAccount, and a
 cluster-scoped, read-only ClusterRole/ClusterRoleBinding (`get`/`list`/
-`watch` only, on the 7 Gameplane CRDs plus core Pods/Events, and `get` on
+`watch` only, on 7 of Gameplane's 9 CRDs (not Cluster or NetworkCapture) plus core Pods/Events, and `get` on
 the `pods/log` subresource).
 
 ```yaml
@@ -108,6 +108,7 @@ mcpServer:
 
 ```sh
 KUBECONFIG=~/.kube/config docker run --rm -i \
+  --user "$(id -u):$(id -g)" --network host \
   -v ~/.kube/config:/kubeconfig:ro -e KUBECONFIG=/kubeconfig \
   ghcr.io/valgulnecron/gameplane/mcp-server:edge serve
 ```
@@ -115,4 +116,15 @@ KUBECONFIG=~/.kube/config docker run --rm -i \
 `serve` builds its Kubernetes client via `ctrl.GetConfig()`, so it works
 in-cluster (via the pod's ServiceAccount) or locally against `KUBECONFIG`/
 `~/.kube/config`, same as any other controller-runtime-based Gameplane
-component.
+component. Two flags matter for the standalone case above:
+
+- `--user "$(id -u):$(id -g)"` — the image runs as a fixed non-root UID
+  (65532), which normally can't read a kubeconfig with the usual `0600`
+  permissions owned by your own user. Running the container as your own
+  UID/GID lets it read the mounted file without loosening its permissions
+  or copying it elsewhere.
+- `--network host` — only needed when the kubeconfig's server address is a
+  loopback address (e.g. a local kind/k3d cluster at `https://127.0.0.1:<port>`).
+  Without it, `127.0.0.1` inside the container resolves to the container
+  itself, not the host, and every tool call fails with a connection error.
+  It's not needed against a real (non-loopback) API server address.

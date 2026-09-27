@@ -244,6 +244,15 @@ to the CI coverage matrix, and e2e testing against a real Postgres instance.
 
 ## Known gaps tracked for completion
 
+### Users page: service accounts and identity-provider tabs (planned, v1.1)
+
+The Users page has two placeholder tabs (`web/src/routes/Users.tsx`,
+`ServiceAccountsTab` and `IdpTab`). **Service accounts** (machine-to-machine
+API tokens) don't exist yet and are tracked for v1.1. **Identity providers**
+has no controls of its own: OIDC providers are already managed under Admin
+Settings → Authentication (see [OIDC provider setup](oidc.md)), or through
+the `api.oidc.*` Helm values. The tab's own UI is tracked for v1.1.
+
 ### Game module template specifications (planned)
 
 Constitution IV requires a `specs.md` file per game module documenting the
@@ -263,7 +272,7 @@ status for its join-protocol E2E testing. See [`docs/game-coverage.md`](game-cov
 canonical per-module status:
 
 - **2 modules** have real join coverage in CI (`minecraft-java`, `terraria`).
-- **12 modules** are blocked on undocumented or partially-documented
+- **26 modules** are blocked on undocumented or partially-documented
   wire-protocol formats, each with a named unblocking artifact (packet capture,
   reverse-engineering session, or anti-cheat analysis). They are candidates for
   future protocol work once documentation becomes available.

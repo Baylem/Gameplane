@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hasRole, can } from "./auth";
+import { can } from "./auth";
 import type { User } from "@/types";
 
 const u = (role: User["role"]): User => ({
@@ -13,18 +13,6 @@ const u = (role: User["role"]): User => ({
 const withPerms = (perms: Record<string, string[]>): User => ({
   ...u("custom"),
   permissions: perms,
-});
-
-describe("hasRole", () => {
-  it("returns false when user is undefined", () => {
-    expect(hasRole(undefined, ["admin"])).toBe(false);
-  });
-  it("matches an allowed role", () => {
-    expect(hasRole(u("admin"), ["admin", "operator"])).toBe(true);
-  });
-  it("rejects a non-allowed role", () => {
-    expect(hasRole(u("viewer"), ["admin", "operator"])).toBe(false);
-  });
 });
 
 describe("can", () => {

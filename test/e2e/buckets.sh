@@ -38,6 +38,7 @@ TestHelmInstall_AllPodsReady
 TestHelmInstall_AllCRDsPresent
 TestHelmInstall_CRDApplyHookSkippedOnFreshInstall
 TestHelmInstall_APIHealthz
+TestHelmInstall_MetricsNotOnPublicPort
 TestHelmInstall_APILogsClean
 TestHelmInstall_OperatorLogsClean
 TestCRD_Validation_GameServerWithoutTemplate
@@ -91,8 +92,13 @@ TestAddressPool_ChangePoolOnRunningServer
 TestAddressPool_RESTAPICarriesPool
 TestAddressPool_StatusVisibleInAddressAssignmentCondition
 TestAddressPool_ExplicitAddressRequest
+TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions
 EOF
 }
+
+# TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions sits in operator for
+# the login budget, not by subject: api-roles is at its ceiling and api-rbac is
+# over it. It costs +1 e2e-admin login plus one login as its own user.
 
 bucket_api_auth() { cat <<'EOF'
 TestAPI_BootstrapAndLogin
@@ -121,7 +127,8 @@ EOF
 # TestAPI_AuthConfig_RoleMappings belongs with auth by subject, but api-auth was
 # already at its admin-login ceiling (per-user burst 6, 3/min, one shared IP per
 # job) and a ninth login there made TestAPI_LogoutInvalidatesSession fail 429.
-# It lives here, in a bucket that spends 4.
+# It lives here, in a bucket that spent 4 admin logins before the tests below
+# were added (see the running tally further down).
 #
 # WARNING: Do NOT move any test that writes helmOverride.roleMappings into
 # api-auth — it overrides the Helm-seeded admin mapping at login time and
@@ -130,15 +137,21 @@ EOF
 # TestAPI_OIDCHelmOverride_EffectiveAtLoginTime writes helmOverride.roleMappings
 # and must not share an api-auth bucket with TestAPI_OIDCHelmSeeded_* tests
 # (separate CI job/cluster per bucket, so no conflict, but maintains login-budget discipline).
-# It costs +1 admin login, bringing api-roles to 5 (up from the previous 4).
+# It costs +1 admin login, bringing api-roles to 6 (up from the previous 5, after
+# TestAPI_AuthConfig_RoleMappings was added above).
 # Budget remains within the ~7 admin-logins-per-job ceiling.
 #
 # TestAPI_ThemePreferences (user theme preferences, contracts/user-preferences-api.md)
-# lands here because api-auth is at its admin-login ceiling and this bucket still
-# has headroom: it costs +1 e2e-admin login (to create its own viewer user) plus one
-# login under a fresh UnixNano username, bringing api-roles to 6. It writes only its
-# own user's preference rows — no auth config, no roleMappings — so it cannot
-# interfere with the OIDC/role-mapping tests above.
+# lands here because api-auth is at its admin-login ceiling and this bucket had
+# headroom when it was added (before the ceiling note below): it costs +1
+# e2e-admin login (to create its own viewer user) plus one login under a fresh
+# UnixNano username, bringing api-roles to 7. It writes only its own user's
+# preference rows — no auth config, no roleMappings — so it cannot interfere
+# with the OIDC/role-mapping tests above.
+#
+# api-roles is now at 7 admin logins — the documented ~7/job ceiling — with no
+# headroom left. A new admin-login test does not belong in this bucket; route
+# it elsewhere or add a new bucket instead.
 bucket_api_roles() { cat <<'EOF'
 TestAPI_CustomRole_Lifecycle
 TestAPI_BuiltinRole_Immutable
@@ -177,6 +190,10 @@ EOF
 # login budget, not by subject: api-roles is at its ceiling. It costs +1
 # e2e-admin login (bringing api-mods to 6) plus one login as its own
 # operator-role user.
+# TestAPI_BootstrapAdminForceEndsExistingSessions now costs +1 e2e-admin
+# login (for cleanup) plus one login as its own throwaway account (a fresh
+# per-username bucket, one slot of the job's shared per-IP budget). This
+# brings api-mods to 7.
 bucket_api_mods() { cat <<'EOF'
 TestAPI_ModManifestInstallUpgrade
 TestAPI_ModUpload
@@ -184,7 +201,7 @@ TestAPI_ModArchiveConfinement_PathTraversalRejected
 TestAPI_ModArchiveConfinement_SymlinkEscapeRejected
 TestAPI_ModArchiveConfinement_ValidArchiveExtracts
 TestAPI_OwnerOnlyServerOperations_RequireOwnerOrAdmin
-TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision
+TestAPI_BootstrapAdminForceEndsExistingSessions
 EOF
 }
 
@@ -193,6 +210,15 @@ TestAPI_LoginRateLimit
 EOF
 }
 
+# bot-fast is a DIFFERENT set from fastGameSet (gamebot_helpers_e2e_test.go).
+# fastGameSet is the default game scope for a manual/local
+# GAMEPLANE_E2E_GAME_BOT=1 run with GAMEPLANE_E2E_GAMES unset: minecraft-java,
+# terraria, factorio, garrys-mod, tmodloader, beammp (six games). bot-fast is
+# the narrower CI bucket below: only three of those six games (minecraft-java,
+# terraria, garrys-mod) plus the wake-on-connect tests.
+# factorio, tmodloader and beammp are in fastGameSet but are bucketed under
+# bot-heavy instead, mainly to stay within the GitHub runner's disk budget in
+# CI — see the bot-heavy comments below for the per-game rationale.
 bucket_bot_fast() { cat <<'EOF'
 TestGameServer_MinecraftJavaBot_Joined
 TestGameServer_TerrariaBot_Joined
@@ -287,7 +313,12 @@ EOF
 # RBAC), which none of the other buckets' single-cluster jobs provide — see
 # multicluster_e2e_test.go's package doc. Its own dedicated CI job
 # (e2e-multicluster) brings up both clusters before running it.
+# TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision lives here for
+# the login budget, not by subject: api-mods is at its ~7 e2e-admin-login
+# ceiling. It costs +1 e2e-admin login plus fake-OIDC sign-ins, and runs
+# against the primary cluster (every e2e.sh cluster deploys the fake IdP).
 bucket_multicluster() { cat <<'EOF'
+TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision
 TestMultiCluster_ClusterDispatchAndScopedRBAC
 EOF
 }

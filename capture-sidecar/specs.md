@@ -2,13 +2,13 @@
 
 **Status:** beta (v0.2.0-beta.8), Phase 2 Foundational (implementation complete)  
 **Module / command:** `github.com/ValgulNecron/gameplane/capture-sidecar`  
-**Dependencies (current):** stdlib + external libraries for packet capture and filtering (github.com/google/gopacket v1.1.19, github.com/packetcap/go-pcap, golang.org/x/net)
+**Dependencies (current):** stdlib + external libraries for packet capture and filtering (github.com/gopacket/gopacket v1.7.2, github.com/packetcap/go-pcap, golang.org/x/net)
 
 ## Purpose
 
 Optional packet capture sidecar injected into game pods to record network traffic for protocol reverse-engineering. The sidecar will use AF_PACKET live capture to collect packets matching a BPF filter expression, write them to a PCAPNG file on a pre-provisioned emptyDir volume, and expose a mTLS-authenticated HTTP control endpoint (`:9091`) for the operator and API to start/stop/monitor captures and download the resulting files.
 
-> **Current state (Phase 2 Foundational):** Full implementation with AF_PACKET socket handling, PCAPNG writing, BPF filter compilation, mTLS authentication, and HTTP control endpoint. Real dependencies (gopacket, go-pcap) are pinned in go.mod. Unit tests for capture, filter, writer, and handlers are co-located with their implementations. Phase 2 Implementation (T067+) will add TTL-based expiry reconciliation and dashboard UI.
+> **Current state:** Full implementation with AF_PACKET socket handling, PCAPNG writing, BPF filter compilation, mTLS authentication, and HTTP control endpoint. Real dependencies (gopacket, go-pcap) are pinned in go.mod. Unit tests for capture, filter, writer, and handlers are co-located with their implementations. TTL-based expiry reconciliation (`NetworkCaptureReconciler.expireCapture`, `operator/internal/controller/networkcapture_controller.go`) and the dashboard UI (`web/src/components/CaptureWidget.tsx`, `web/src/routes/tabs/settings/NetworkCapture.tsx`) are both implemented — see "Planned" below for the one remaining gap (F-190).
 
 ## Responsibilities (Design)
 
@@ -18,10 +18,13 @@ These are the design responsibilities for the completed sidecar (Phase 2+):
 2. Accept a compiled BPF filter expression and apply it at the packet-capture level (kernel-side filtering, not post-processing).
 3. Write captured packets to a PCAPNG file on `/tmp/captures` using standard `gopacket/pcapgo.NgWriter` format, readable by `tcpdump`, Wireshark, and other third-party tools.
 4. Enforce hard duration and size limits: stop capturing when `(now - startTime) >= maxDurationSeconds` or `bytesWritten >= maxSizeBytes`, whichever comes first.
-5. Serve an mTLS-authenticated HTTP control endpoint on `0.0.0.0:9091` with four operations: start a capture (POST `:start`), stop a capture (POST `:stop`), poll status (GET `/status`), and download the completed file (GET `/file`).
+5. Serve an mTLS-authenticated HTTP control endpoint on `0.0.0.0:9091` with six operations: start a capture (`POST /captures/{id}/start`), stop a capture (`POST /captures/{id}/stop`), poll status (`GET /captures/{id}/status`), download the completed file (`GET /captures/{id}/file`), delete a finished capture's file (`DELETE /captures/{id}`), and an unauthenticated-at-the-mux-level liveness check (`GET /healthz`, see Security Considerations #1 and F-193).
 6. Validate mTLS certificates against the cluster CA and reject unauthenticated requests.
 7. Prevent multiple simultaneous captures on the same sidecar instance (409 Conflict if a duplicate capture ID arrives while one is running).
 8. Monitor disk space and gracefully stop a capture if the emptyDir volume fills (`ENOSPC` handling).
+8a. Refuse to *start* a capture that would push the volume's retained (not-yet-expired) files plus the new capture's own `maxSizeBytes` past a configured budget (507 Insufficient Storage), so retained files alone can never accumulate past the emptyDir's `SizeLimit` and trigger a kubelet eviction of the pod (F-187).
+
+    **Deleting a capture through the API frees its budget (F-261).** `api/internal/handlers/capture.go`'s `captureDelete` calls the sidecar's `DELETE /captures/{id}` route directly (the same mTLS client and in-cluster host it already uses for downloads) before removing the `NetworkCapture` CRD, so the file stops counting against the volume-budget check in 8a as soon as the delete request succeeds, not only once the pod is eventually recreated. This call is best-effort: it is logged and swallowed, never returned to the caller, if the sidecar is unreachable (pod already gone, transient network error) or the request targets a non-local cluster (the direct sidecar path only exists for the home cluster today — see `newValidatedHost`/`isRemoteCluster` in `capture.go`). In those cases the pre-existing behavior applies: the orphaned file remains until the pod is recreated, and the 507 refusal in 8a is still correct (it still prevents an eviction) even though its `wait for retained captures to expire` message does not distinguish an orphaned file from a genuinely retained one.
 9. Hold no persistent state; each sidecar instance is independent and does not retry captures or maintain history across restarts.
 
 ## Non-goals / boundaries
@@ -50,12 +53,12 @@ capture-sidecar/
 │   │   ├── writer.go              # PCAPNG file writing via pcapgo.NgWriter; size/duration limit enforcement
 │   │   └── writer_test.go         # Unit tests for PCAPNG writing and limit enforcement
 │   ├── httpserver/
-│   │   ├── handlers.go            # HTTP handlers for POST :start, POST :stop, GET /status, GET /file
+│   │   ├── handlers.go            # HTTP handlers for start/stop/status/file/delete/healthz (see Endpoints below)
 │   │   └── handlers_test.go       # Unit tests for HTTP handlers and response shapes
 │   └── auth/
 │       ├── tls.go                 # mTLS certificate validation; TLS listener setup
 │       └── tls_test.go            # Unit tests for mTLS validation
-├── go.mod                         # Dependencies: gopacket/afpacket, gopacket/pcapgo, packetcap/go-pcap, svcutil
+├── go.mod                         # Dependencies: gopacket/afpacket, gopacket/pcapgo, packetcap/go-pcap
 ├── go.sum
 ├── Dockerfile                     # distroless/static:nonroot base; setcap cap_net_raw+ep on the built binary
 ├── .testcoverage.yml              # 70% coverage gate
@@ -70,9 +73,9 @@ Single Go module; packages organized by responsibility (capture, httpserver, aut
 
 **`internal/capture/filter.go`**: Compiles BPF filter expressions via github.com/packetcap/go-pcap/filter into bytecode instructions. Validates filter syntax before capture starts (defense-in-depth, complementing API-tier validation).
 
-**`internal/capture/writer.go`**: Writes captured packets to PCAPNG files via gopacket/pcapgo.NgWriter. Enforces hard size and duration limits (stops immediately when either is reached). Detects disk-full conditions (`ENOSPC`) and stops gracefully, deleting partial files. Produces valid PCAPNG files readable by `tcpdump`, Wireshark, and other third-party tools.
+**`internal/capture/writer.go`**: Writes captured packets to PCAPNG files via gopacket/pcapgo.NgWriter. Enforces hard size and duration limits (stops immediately when either is reached). Detects disk-full conditions (`ENOSPC`) and stops the capture, marking it `failed`/`disk_full` — the partial file is kept, not deleted, and stays downloadable (see "Edge Cases" below for the verified behavior; this line described intended, not implemented, behavior). Produces valid PCAPNG files readable by `tcpdump`, Wireshark, and other third-party tools.
 
-**`internal/httpserver/handlers.go`**: Implements four HTTP endpoints (POST `:start`, POST `:stop`, GET `/status`, GET `/file`) exposed on `:9091`. Validates requests, marshals capture state, and streams completed files to authenticated clients.
+**`internal/httpserver/handlers.go`**: Implements six HTTP endpoints exposed on `:9091`: `POST /captures/{id}/start`, `POST /captures/{id}/stop`, `GET /captures/{id}/status`, `GET /captures/{id}/file`, `DELETE /captures/{id}`, and `GET /healthz` (see Endpoints below for the full table). Validates requests, marshals capture state, and streams completed files to authenticated clients. `HandleStart` also enforces the volume budget (F-187): before opening a packet source, it sums the bytes of every retained `capture-*.pcapng` file already on `captureDataDir` (`retainedCaptureBytes`) and refuses the start with `507 Insufficient Storage` if that total plus the requested `maxSizeBytes` would exceed `Server.budgetBytes`. A file already deleted (expired, in this system, means deleted by the operator's retention reconciler, or removed by `HandleDelete` when the API deletes its CR — F-261) is simply absent from that sum. `budgetBytes` of `0` disables the check.
 
 **`internal/auth/tls.go`**: Validates mTLS certificates against the cluster CA certificate. Sets up TLS listener with enforced client certificate authentication.
 
@@ -82,10 +85,11 @@ Single Go module; packages organized by responsibility (capture, httpserver, aut
 
 The module declares the following external dependencies in `go.mod`:
 
-- `github.com/google/gopacket v1.1.19` — AF_PACKET socket setup (afpacket package) and PCAPNG file writing (pcapgo package)
+- `github.com/gopacket/gopacket v1.7.2` — AF_PACKET socket setup (afpacket package) and PCAPNG file writing (pcapgo package). This is the module `go.mod` actually requires; `github.com/google/gopacket` is a different module path and is not used here (F-191).
 - `github.com/packetcap/go-pcap v0.0.0-20260731105150-c86974bbfbcd` — BPF filter compilation and validation
 - `golang.org/x/net` — Networking utilities (bundled by gopacket)
-- `github.com/ValgulNecron/gameplane/svcutil v0.0.0` — Shared utility helpers (graceful shutdown, env parsing) via local replace directive
+
+This module does not depend on `svcutil`: its control server is served over mTLS via `ListenAndServeTLS` with client-certificate verification, and `RunHTTP` only serves plain HTTP (`ListenAndServe`) — a plaintext listener would remove the sidecar's only authentication boundary (see the comment at `cmd/main.go:80-86`).
 
 ## External Interface / Configuration (Phase 2 Design)
 
@@ -97,6 +101,8 @@ The module declares the following external dependencies in `go.mod`:
 
 All three paths are mounted from the pre-existing `agent-tls` Secret that every game pod carries (no new Secret is created for capture).
 
+- **`CAPTURE_VOLUME_BUDGET_BYTES`** (optional): Maximum total bytes of retained capture files plus a new capture's own `maxSizeBytes` that `HandleStart` will admit (F-187). Set by the operator's `buildCaptureEphemeralContainer` (`operator/internal/controller/gameserver_controller.go`), derived from the `captures` emptyDir's own `SizeLimit` with a 10% safety margin (`captureVolumeBudgetBytes`), so it can never drift from the volume the kubelet actually enforces. Unset or unparsable falls back to the same 1Gi-minus-10%-margin default hardcoded in `cmd/main.go` (matches `charts/gameplane/values.yaml`'s documented 1 GiB volume limit). `cmd/main.go` also exposes this as the `--capture-volume-budget-bytes` flag for standalone runs; `0` disables the check.
+
 ### HTTP Server Configuration
 
 **Listen Address**: `0.0.0.0:9091` (all pod network interfaces).
@@ -105,18 +111,20 @@ All three paths are mounted from the pre-existing `agent-tls` Secret that every 
 
 **Port**: The existing `<gs>-agent` Kubernetes Service exposes this port numerically as target port 9091 (alongside the existing agent port). No separate Service or port declaration is needed.
 
-### Endpoints (Phase 2)
+### Endpoints
 
-Per `contracts/capture-sidecar.md`:
+`contracts/capture-sidecar.md` (the original design contract) describes these routes with a `:start`/`:stop` colon-suffix form, matching the chi-style convention used elsewhere in this codebase. `net/http.ServeMux` (what `Routes` in `handlers.go` actually registers on) does not accept that form — a wildcard segment must be exactly `{name}` — so the routes below are the real, implemented paths (see the doc comment on `Server.Routes` for why this had to diverge from the contract):
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/captures/{id}:start` | POST | Start a capture with filter, duration/size limits |
-| `/captures/{id}:stop` | POST | Stop a running capture; finalize and close the file |
+| `/captures/{id}/start` | POST | Start a capture with filter, duration/size limits |
+| `/captures/{id}/stop` | POST | Stop a running capture; finalize and close the file |
 | `/captures/{id}/status` | GET | Poll capture status (running or completed) and stats |
 | `/captures/{id}/file` | GET | Download the completed PCAPNG file |
+| `/captures/{id}` | DELETE | Delete a finished capture's backing file (204 on success or if already absent, 409 if the capture is still running); called by the API's `captureDelete` handler (F-261) and by the operator's retention reconciler |
+| `/healthz` | GET | Liveness check; not wrapped in the mTLS middleware at the mux level, but unreachable without a client certificate regardless — see `HandleHealthz`'s doc comment (F-193). Nothing calls this route today, since ephemeral containers cannot be probed. |
 
-**Error responses** will be plain text (e.g., `invalid filter: <syntax error>`, `capture 'cap-...' not found`), matching the codebase convention in `api/internal/httperr/httperr.go`.
+**Error responses** are plain text (e.g., `invalid filter: <syntax error>`, `capture 'cap-...' not found`), matching the codebase convention in `api/internal/httperr/httperr.go`.
 
 ## Capture File Format and Guarantees (Phase 2 Design)
 
@@ -180,7 +188,7 @@ Per `contracts/capture-sidecar.md`:
 
 1. **Filter validation before capture**. The filter is compiled (via `go-pcap/filter.Compile`) before any AF_PACKET socket is opened. An invalid filter expression is rejected with HTTP 400 before any state is created. This is defense-in-depth; the API tier also validates filters before creating a NetworkCapture CRD.
 
-2. **Hard duration and size limits**. Both are enforced strictly: the capture stops immediately when either limit is reached, even if a packet is mid-arrival. There is no grace period, no "one more packet" tolerance. The PCAPNG file is valid and complete even on a limit-triggered stop.
+2. **Hard duration and size limits**. Both are enforced strictly: the capture stops as soon as either limit is reached and no further packets are accepted afterward. For the size limit specifically, the check runs *after* each packet is written (see "Edge Cases" → "Max-size auto-stop and on-disk accounting" below), so the single packet that crosses `maxSizeBytes` is included in the file — every packet after that one is rejected. The PCAPNG file is valid and complete even on a limit-triggered stop.
 
 3. **File capabilities grant it, not `securityContext.capabilities.add` alone**. Raw-packet access (`CAP_NET_RAW`) is granted via a file capability on the sidecar's own binary (`setcap cap_net_raw+ep`), not via Kubernetes' `securityContext.capabilities.add`. Kubernetes does not set ambient capabilities; under a non-root `runAsUser`, `add: ["NET_RAW"]` by itself grants nothing (the effective set is cleared on `execve`). The container's `securityContext.capabilities` does list `Drop: ["ALL"], Add: ["NET_RAW"]`, but the `Add` exists only to keep NET_RAW in the process's *bounding* set — `Drop: ["ALL"]` alone would empty the bounding set too, and the kernel refuses to grant a file capability at `execve` that isn't in the bounding set (EPERM). The process's effective set is still empty at start; the actual grant comes from the setcap'd binary at exec. The file capability is ignored under `no_new_privs`, which is set when `allowPrivilegeEscalation: false`; therefore, `allowPrivilegeEscalation: true` is mandatory for this container, trading off that one flag to preserve `runAsNonRoot: true`.
 
@@ -188,7 +196,7 @@ Per `contracts/capture-sidecar.md`:
 
 5. **Cannot be removed once injected**. Ephemeral containers, once injected into a running pod, cannot be removed via the Kubernetes API — the `pods/ephemeralcontainers` subresource does not support deletion. When capture is disabled on a GameServer, the sidecar container persists in `pod.status.ephemeralContainerStatuses` until the pod is next recreated (e.g., via a new StatefulSet rollout). This asymmetry is accepted and documented as a constraint.
 
-6. **One capture per sidecar instance**. Multiple simultaneous captures on the same sidecar are rejected with HTTP 409 (`capture '{id}' already in progress`). This is enforced in-memory; the authoritative per-GameServer concurrency lock lives in the operator's NetworkCaptureReconciler.
+6. **One capture per sidecar instance**. Multiple simultaneous captures on the same sidecar are rejected with HTTP 409 (`capture '{id}' already in progress`, naming the capture that is actually running, not the rejected request's id — F-192). This is enforced in-memory; the authoritative per-GameServer concurrency lock lives in the operator's NetworkCaptureReconciler.
 
 7. **Exact handshake byte preservation**. The sidecar does not modify or interpret captured packets beyond filtering. The PCAPNG file preserves the exact bytes received from the kernel.
 
@@ -204,7 +212,7 @@ The "Phase 2 Design" language above (in "Packet Processing", "Shutdown", and "Se
 
 ### ENOSPC / disk-full handling
 
-`pcapgo.NgWriter` buffers writes through an internal 4096-byte `bufio.Writer` (verified against `github.com/gopacket/gopacket@v1.6.1` `pcapgo/ngwrite.go`: `NewNgWriterInterface` calls `bufio.NewWriter(w)`). This means a full disk usually does **not** surface from `WritePacket` — small packets accumulate in that buffer, and a write to the real underlying file only happens once the buffer fills or `Flush`/`Close` runs. `Writer.Close` calls the PCAPNG writer's `Flush()`; if that fails with an error wrapping `syscall.ENOSPC` (checked with `errors.Is`, so it matches whether the error arrives bare or wrapped the way real file-write errors are, e.g. inside `*fs.PathError`), `Close` sets `limitReached = true` and `limitReason = LimitReasonDiskFull` (`"disk_full"`) before returning the error. `WritePacket`'s own write path performs the identical ENOSPC check, covering the case where a packet's write happens to trigger the bufio buffer's internal flush.
+`pcapgo.NgWriter` buffers writes through an internal 4096-byte `bufio.Writer` (verified against `github.com/gopacket/gopacket@v1.7.2` `pcapgo/ngwrite.go` — the version `go.mod` actually requires: `NewNgWriterInterface` calls `bufio.NewWriter(w)`). This means a full disk usually does **not** surface from `WritePacket` — small packets accumulate in that buffer, and a write to the real underlying file only happens once the buffer fills or `Flush`/`Close` runs. `Writer.Close` calls the PCAPNG writer's `Flush()`; if that fails with an error wrapping `syscall.ENOSPC` (checked with `errors.Is`, so it matches whether the error arrives bare or wrapped the way real file-write errors are, e.g. inside `*fs.PathError`), `Close` sets `limitReached = true` and `limitReason = LimitReasonDiskFull` (`"disk_full"`) before returning the error. `WritePacket`'s own write path performs the identical ENOSPC check, covering the case where a packet's write happens to trigger the bufio buffer's internal flush.
 
 **A disk-full capture is never reported as a clean "completed".** In `httpserver.Server.finish`, a non-nil error from `state.writer.Close()` always sets `status = statusFailed`, and if `errors.Is(err, syscall.ENOSPC)` it also sets `reason = reasonDiskFull` — regardless of what reason originally triggered the stop. So a duration- or size-triggered stop that *also* hits ENOSPC during its finalizing flush is still reported `failed` / `disk_full`, overriding the triggering reason.
 
@@ -244,17 +252,17 @@ Every capture that reaches a terminal state reports `status` (`completed` or `fa
 
 7. **Sensitive data in captures**: Captured packets may contain player IP addresses, network timing, game commands, and in-band credentials (session tokens, server passwords). Access control (mTLS + RBAC at the API tier) and time-limited retention (the operator's TTL reconciliation) are the primary mitigations, not redaction or sanitization.
 
-## Planned (Phase 2 Implementation and beyond)
+## Implemented since Phase 2 Foundational (F-190)
 
-Phase 2 Implementation and future phases will add the following:
+Both items previously listed here as "planned" are implemented; kept as a section (rather than deleted) so a reader following an older link still lands somewhere useful.
 
-### TTL-based Expiry (Phase 2 Implementation, T067+)
+### TTL-based Expiry
 
-The NetworkCaptureReconciler will implement automatic deletion of completed captures after `spec.ttlSecondsAfterFinished` seconds have elapsed. For Phase 2 Foundational, the API tier validates and clamps TTL at CRD creation time, but no auto-deletion reconciliation runs yet.
+`NetworkCaptureReconciler` (`operator/internal/controller/networkcapture_controller.go`) reconciles the full Pending → Running → Completed/Failed → Expired lifecycle, including retention: `expireCapture` deletes the sidecar's backing file (best-effort) and the CR once `spec.ttlSecondsAfterFinished` elapses after completion. The API tier still validates and clamps TTL at CRD creation time, as before.
 
-### Dashboard UI (Phase 2 Implementation, T067+)
+### Dashboard UI
 
-Web dashboard support for starting, stopping, browsing, and downloading network captures. Planned for Phase 2 Implementation after the sidecar and operator reconciliation are fully wired.
+`web/src/components/CaptureWidget.tsx` (a GameServer's Capture tab) and `web/src/routes/tabs/settings/NetworkCapture.tsx` (cluster-wide settings) implement starting, stopping, browsing, downloading, and deleting network captures.
 
 ### Testing & Coverage (Phase 2 Foundational, COMPLETE)
 
@@ -277,7 +285,7 @@ cd capture-sidecar && go test ./...    # Isolated run
 ### Key Test Cases (Phase 2)
 
 - **AF_PACKET**: socket setup, filter application, packet reception, MMap'd buffer semantics.
-- **Filter Compilation**: valid filter acceptance, invalid filter rejection with syntax error, empty filter fallback, default port-based filter.
+- **Filter Compilation**: valid filter acceptance, invalid filter rejection with syntax error. An empty filter is rejected with HTTP 400 (`filter is required: the control plane must supply the default port filter`) — the sidecar has no empty-filter fallback and never defaults to "no filter"; only the API tier materializes the default port-based filter before calling here (see "Packet Processing" note under Startup Flow and FR-003).
 - **PCAPNG Writer**: valid file creation and closure, size-limit auto-stop with clean finalization, duration-limit auto-stop, max-size enforcement (final file <= limit + one packet).
 - **mTLS**: valid certificate acceptance, invalid/expired certificate rejection, CA validation.
 - **HTTP Handlers**: start/stop/status/file happy paths, 400 on invalid filter, 409 on concurrent capture with same ID, 404 on nonexistent capture, file download with correct headers.

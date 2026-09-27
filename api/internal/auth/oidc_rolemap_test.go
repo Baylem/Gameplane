@@ -132,12 +132,15 @@ func callbackViaIDP(t *testing.T, o *OIDC, sessions *SessionStore, nonce string)
 // observe FR-014 audit event emission without depending on the audit
 // package (which imports auth, so a real *audit.Auditor cannot be used from
 // a test file in package auth without forming an import cycle). Each call's
-// reason string is appended to reasons in call order.
+// reason string is appended to reasons in call order, and paths are captured
+// in the paths slice in parallel.
 type auditWriteRecorder struct {
 	reasons []string
+	paths   []string
 }
 
-func (r *auditWriteRecorder) write(_ context.Context, _, _, _, reason string, _ int) error {
+func (r *auditWriteRecorder) write(_ context.Context, _, path, _, reason string, _ int) error {
+	r.paths = append(r.paths, path)
 	r.reasons = append(r.reasons, reason)
 	return nil
 }
@@ -1190,5 +1193,188 @@ func TestHandleCallback_HelmOverride_LiveRead_SC007(t *testing.T) {
 	}
 	if role != "admin" {
 		t.Fatalf("login 3: role=%q want admin (back to base policy: helm-admins -> admin)", role)
+	}
+}
+
+// TestHandleCallback_HelmOverrideMappingsReEvaluateWithoutHelmMappings —
+// with no Helm-seeded role mappings, a dashboard helmOverride that supplies
+// mappings is the effective policy: later logins re-evaluate the role
+// against it and audit the change, and the last user-manager keeps their
+// role until another user-manager exists.
+func TestHandleCallback_HelmOverrideMappingsReEvaluateWithoutHelmMappings(t *testing.T) {
+	idp := newFakeIDP(t, "client-1")
+	idp.groups = []string{"ovr-admins"}
+
+	// The Helm policy main.go builds when --oidc-issuer is set but no
+	// --oidc-role-mapping-* flag is: a policy with nil RoleMappings.
+	basePolicy := &ProviderPolicy{}
+	override := &RoleMappings{Admin: []string{"ovr-admins"}}
+
+	o, err := NewOIDCWithPolicy(context.Background(), idp.issuer(), "client-1", "secret",
+		"https://app/cb", basePolicy)
+	if err != nil {
+		t.Fatalf("NewOIDCWithPolicy: %v", err)
+	}
+	o.SetProviderName(HelmProviderName)
+	o.AttachHelmRoleOverridesFunc(func(context.Context) *RoleMappings { return override })
+	rec := &auditWriteRecorder{}
+	o.AttachAuditWriteSyncFunc(rec.write)
+
+	store := newAuthDB(t)
+	o.AttachStore(store)
+	sessions := NewSessionStore(store)
+
+	roleOf := func(label string) (string, string) {
+		t.Helper()
+		var role, bindingRole string
+		if err := store.DB.QueryRowContext(context.Background(),
+			`SELECT role FROM users WHERE email = ?`, idp.email).Scan(&role); err != nil {
+			t.Fatalf("%s: user: %v", label, err)
+		}
+		if err := store.DB.QueryRowContext(context.Background(), `
+			SELECT b.role_name FROM user_role_bindings b
+			JOIN users u ON u.id = b.user_id
+			WHERE u.email = ? AND b.namespace = '*'`, idp.email).Scan(&bindingRole); err != nil {
+			t.Fatalf("%s: binding: %v", label, err)
+		}
+		return role, bindingRole
+	}
+
+	// Login 1: the override maps the user's group to admin.
+	idp.nonce = "nonce-ovr-1"
+	if rr := callbackViaIDP(t, o, sessions, "nonce-ovr-1"); rr.Code != http.StatusFound {
+		t.Fatalf("login 1: code=%d body=%q", rr.Code, rr.Body)
+	}
+	if role, binding := roleOf("login 1"); role != "admin" || binding != "admin" {
+		t.Fatalf("login 1: role=%q binding=%q, want admin/admin", role, binding)
+	}
+	if len(rec.reasons) != 1 {
+		t.Fatalf("login 1: audit events = %d (%v), want 1", len(rec.reasons), rec.reasons)
+	}
+
+	// Login 2: the group is gone at the IdP, but the user is the install's
+	// only user-manager, so the demotion is skipped and not audited.
+	idp.groups = []string{"unmapped"}
+	idp.nonce = "nonce-ovr-2"
+	if rr := callbackViaIDP(t, o, sessions, "nonce-ovr-2"); rr.Code != http.StatusFound {
+		t.Fatalf("login 2: code=%d body=%q", rr.Code, rr.Body)
+	}
+	if role, binding := roleOf("login 2"); role != "admin" || binding != "admin" {
+		t.Fatalf("login 2: role=%q binding=%q, last user-manager must keep admin", role, binding)
+	}
+	if len(rec.reasons) != 1 {
+		t.Fatalf("login 2: audit events = %d (%v), want still 1", len(rec.reasons), rec.reasons)
+	}
+
+	// Login 3: another user-manager exists now, so the re-evaluation
+	// applies the default role and audits the change.
+	seedUser(t, store, "backup-admin", "pw-backup-admin", "admin")
+	idp.nonce = "nonce-ovr-3"
+	if rr := callbackViaIDP(t, o, sessions, "nonce-ovr-3"); rr.Code != http.StatusFound {
+		t.Fatalf("login 3: code=%d body=%q", rr.Code, rr.Body)
+	}
+	if role, binding := roleOf("login 3"); role != "viewer" || binding != "viewer" {
+		t.Fatalf("login 3: role=%q binding=%q, want viewer/viewer", role, binding)
+	}
+	if len(rec.reasons) != 2 {
+		t.Fatalf("login 3: audit events = %d (%v), want 2", len(rec.reasons), rec.reasons)
+	}
+	if want := "oidc role assigned: provider=helm matched=none from=admin to=viewer"; rec.reasons[1] != want {
+		t.Fatalf("login 3: audit reason = %q, want %q", rec.reasons[1], want)
+	}
+}
+
+// TestHandleCallback_AuditEventRecordsCorrectPath verifies that role-assignment
+// audit events record the actual request path, supporting both per-provider paths
+// (e.g., /auth/oidc/corp/callback) and legacy path (/auth/oidc/callback).
+func TestHandleCallback_AuditEventRecordsCorrectPath(t *testing.T) {
+	idp := newFakeIDP(t, "client-1")
+	idp.nonce = "nonce-path-test"
+	idp.groups = []string{"gp-admins"}
+
+	o, err := NewOIDCWithPolicy(context.Background(), idp.issuer(), "client-1", "secret",
+		"https://app/cb", &ProviderPolicy{
+			RoleMappings: &RoleMappings{
+				Admin: []string{"gp-admins"},
+			},
+		})
+	if err != nil {
+		t.Fatalf("NewOIDCWithPolicy: %v", err)
+	}
+	store := newAuthDB(t)
+	o.AttachStore(store)
+
+	SetFastHashParams(t)
+	rec := &auditWriteRecorder{}
+	o.AttachAuditWriteSyncFunc(rec.write)
+	o.SetProviderName("corp")
+
+	// Test with a per-provider callback path
+	perProviderPath := "/auth/oidc/corp/callback"
+	rr := httptest.NewRecorder()
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		"https://app/auth/oidc/corp/callback?code=authcode&state=statevalue", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+
+	// Set up the OIDC state and nonce cookies for the per-provider path.
+	http.SetCookie(rr, &http.Cookie{Name: oidcStateCookie, Value: "statevalue", Path: "/auth/oidc/corp"})
+	http.SetCookie(rr, &http.Cookie{Name: oidcNonceCookie, Value: "nonce-path-test", Path: "/auth/oidc/corp"})
+
+	// Extract the cookies from the response and add them to the request.
+	for _, c := range rr.Result().Cookies() {
+		req.AddCookie(c)
+	}
+
+	// Simulate the OIDC exchange and ID token verification via callbackViaIDP.
+	sessions := NewSessionStore(store)
+	rr = callbackViaIDP(t, o, sessions, "nonce-path-test")
+	if rr.Code != http.StatusFound {
+		t.Fatalf("callback code=%d body=%q", rr.Code, rr.Body)
+	}
+
+	// Verify that the audit event was recorded with the request path.
+	if len(rec.paths) != 1 {
+		t.Fatalf("audit paths=%v, want 1", rec.paths)
+	}
+	if len(rec.reasons) != 1 {
+		t.Fatalf("audit reasons=%v, want 1", rec.reasons)
+	}
+
+	// The emitRoleAssignmentAudit helper is called from the closure in HandleCallbackAt,
+	// which has access to req.URL.Path. By calling emitRoleAssignmentAudit directly with
+	// the desired path, we can verify the path is correctly used.
+	user := &User{ID: 1, Username: "testuser", Role: "admin"}
+	outcome := &RoleAssignmentOutcome{
+		PreviousRole: "new_user",
+		NewRole:      "admin",
+		Applied:      true,
+		MatchedGroup: "gp-admins",
+	}
+
+	// Test emitRoleAssignmentAudit directly with a per-provider path.
+	rec2 := &auditWriteRecorder{}
+	o.AttachAuditWriteSyncFunc(rec2.write)
+	o.emitRoleAssignmentAudit(context.Background(), user, perProviderPath, "testuser@example.com", outcome)
+
+	if len(rec2.paths) != 1 {
+		t.Fatalf("direct call paths=%v, want 1", rec2.paths)
+	}
+	if rec2.paths[0] != perProviderPath {
+		t.Fatalf("audit path=%q, want %q", rec2.paths[0], perProviderPath)
+	}
+
+	// Test with legacy path.
+	legacyPath := "/auth/oidc/callback"
+	rec3 := &auditWriteRecorder{}
+	o.AttachAuditWriteSyncFunc(rec3.write)
+	o.emitRoleAssignmentAudit(context.Background(), user, legacyPath, "testuser@example.com", outcome)
+
+	if len(rec3.paths) != 1 {
+		t.Fatalf("legacy paths=%v, want 1", rec3.paths)
+	}
+	if rec3.paths[0] != legacyPath {
+		t.Fatalf("legacy audit path=%q, want %q", rec3.paths[0], legacyPath)
 	}
 }

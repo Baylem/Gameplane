@@ -28,18 +28,18 @@ verified.
 ### Row (b): Scaling & auto-sleep
 
 **Source ID**: G-b  
-**Evidence**: operator/api/v1alpha1/gameserver_types.go:139, 146–160, 197–210; CLAUDE.md:368  
-**Checked on**: 2026-09-02  
-**What was verified**: GameServer CRD specifies IdleSpec (lines 139, 146–160) with configurable sleep windows, manual wake button, and WakeOnConnect boolean flag (line 205) for sentinel-based wake on join. Minecraft/Terraria protocol support documented in sentinel and gameproto modules.  
+**Evidence**: operator/api/v1alpha1/gameserver_types.go:152, 173–219 (`IdleSpec`); CLAUDE.md § Repository Map (`gameproto/`, `sentinel/`)  
+**Checked on**: 2026-09-26 (re-verified)  
+**What was verified**: GameServer CRD specifies `spec.idle` (line 152, `IdleSpec` at lines 173–219) with configurable wake windows, manual wake, and the WakeOnConnect boolean flag (line 218) for sentinel-based wake on join. Minecraft/Terraria protocol support documented in sentinel and gameproto modules.  
 **Last-known URL**: https://github.com/ValgulNecron/Gameplane/tree/master/operator/api/v1alpha1
 
 <a id="gameplane-row-c"></a>
 ### Row (c): Inbound connectivity (NAT traversal, relay)
 
 **Source ID**: G-c  
-**Evidence**: CLAUDE.md:372; charts/gameplane/values.yaml:58  
-**Checked on**: 2026-09-02  
-**What was verified**: Tunnel is documented in CLAUDE.md repo map as "optional relay client supervisor" configuring frp, Tailscale, playit. charts/gameplane/values.yaml line 58 shows tunnel.enabled configuration toggle.  
+**Evidence**: CLAUDE.md § Repository Map (`tunnel/`); operator/api/v1alpha1/gameserver_types.go:359–406  
+**Checked on**: 2026-09-26 (re-verified)  
+**What was verified**: Tunnel is documented in CLAUDE.md repo map as "Relay client supervisor (frp, Tailscale, playit)". Relay is configured per-GameServer via `spec.networking.tunnel.enabled` (GameServerTunnel), not a Helm value; the chart only carries `operator.tunnelImages` (charts/gameplane/values.yaml:88).  
 **Last-known URL**: https://github.com/ValgulNecron/Gameplane/tree/master/tunnel
 
 <a id="gameplane-row-d"></a>
@@ -64,9 +64,9 @@ verified.
 ### Row (f): Game template distribution
 
 **Source ID**: G-f  
-**Evidence**: docs/module-authoring.md:277–330; CLAUDE.md repo map (modules section)  
-**Checked on**: 2026-09-02  
-**What was verified**: OCI bundles via ModuleSource CRD supporting git/http/oci/local/upload sources; cosign signature verification documented at lines 277–330; 16 ready-to-use templates in gameplane-module repository.  
+**Evidence**: docs/module-authoring.md § Verifying and pinning bundles (lines 340–414); CLAUDE.md § Repository Map (`modules/`)  
+**Checked on**: 2026-09-26 (re-verified)  
+**What was verified**: OCI bundles via ModuleSource CRD supporting git/http/oci/local/upload sources; cosign signature verification documented at lines 340–414; 30 ready-to-use templates in gameplane-module repository.  
 **Last-known URL**: https://github.com/ValgulNecron/Gameplane/tree/master/modules
 
 <a id="gameplane-row-g"></a>
@@ -91,8 +91,8 @@ verified.
 ### Row (i): Target operator scope (self-hosted vs. managed SaaS)
 
 **Source ID**: G-i  
-**Evidence**: README.md:42–46; CLAUDE.md:9–20 (Repo map)  
-**Checked on**: 2026-09-02  
+**Evidence**: README.md § Why Gameplane? (line 50 onward); CLAUDE.md § Repository Map  
+**Checked on**: 2026-09-26 (re-verified)  
 **What was verified**: README "Why Gameplane?" section states self-hosted Kubernetes deployments (k3s, kubeadm, managed services); no managed SaaS offering documented.  
 **Last-known URL**: https://github.com/ValgulNecron/Gameplane
 
