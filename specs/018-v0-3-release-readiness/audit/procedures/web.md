@@ -351,8 +351,10 @@ unchecked.
 applied for the round, also revert it, with a snapshot-diff, per the item
 17-style convention.
 
-**Automatable?** blocked pending a web and/or API code change so the server
-list queries every allowed namespace (F-263, OD-021 item 14; a config-only
+**Automatable?** yes (web-api). Unblocked by #498, the F-263 fix: the Servers page
+now lists every allowed namespace via `GET /namespaces`. Run it on an rc that
+includes #498, with `audit018-games2` in `GAMEPLANE_EXTRA_NAMESPACES` for the round.
+(Before #498, F-263, OD-021 item 14; a config-only
 `GAMEPLANE_EXTRA_NAMESPACES`/RoleBinding override is not sufficient — cf.
 `web/src/lib/endpoints.ts:109`, `api/internal/scope/scope.go:48-57`,
 `api/internal/handlers/resources.go:120-146,133-137`,
