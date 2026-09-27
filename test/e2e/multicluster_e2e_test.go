@@ -238,9 +238,9 @@ func TestMultiCluster_ClusterDispatchAndScopedRBAC(t *testing.T) {
 
 	// The API's cluster watch (kube.WatchClusters) loads a client for the new
 	// Cluster CR asynchronously off an informer Add event; wait for it to
-	// show up in the registry (surfaced via GET /clusters) before dispatching
-	// anything to it, or the create below could race a registry that hasn't
-	// caught up yet.
+	// become healthy before dispatching anything to it. Discovery includes
+	// persisted registrations before a client loads, so presence alone no
+	// longer proves that the registry is ready.
 	envInstance.Eventually(t, 60*time.Second, func() (bool, string) {
 		resp, body, err := admin.Get("/clusters")
 		if err != nil {
@@ -250,10 +250,21 @@ func TestMultiCluster_ClusterDispatchAndScopedRBAC(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			return false, fmt.Sprintf("GET /clusters: status=%d body=%s", resp.StatusCode, string(body))
 		}
-		if strings.Contains(string(body), clusterID) {
-			return true, ""
+		var discovery struct {
+			Items []struct {
+				Name  string `json:"name"`
+				Phase string `json:"phase"`
+			} `json:"items"`
 		}
-		return false, "cluster not yet listed: " + string(body)
+		if err := json.Unmarshal(body, &discovery); err != nil {
+			return false, err.Error()
+		}
+		for _, item := range discovery.Items {
+			if item.Name == clusterID && item.Phase == "Healthy" {
+				return true, ""
+			}
+		}
+		return false, "cluster not yet healthy: " + string(body)
 	})
 
 	// --- Create a GameTemplate + GameServer directly on cluster B -----------

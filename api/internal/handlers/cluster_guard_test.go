@@ -273,7 +273,6 @@ func mountHomeClientRoutes(t *testing.T, r chi.Router, home *kube.Client, reg *k
 	store := newTestStore(t)
 	MountNotifications(r, notify.New(store, home, controlNS), home, controlNS)
 	MountAuthProviderSecrets(r, home, controlNS)
-	MountCluster(r, home, store, "test", true, "")
 	MountClusterActions(r, home, true, "")
 	MountClusters(r, reg, home, controlNS)
 	MountSystemLogs(r, home, controlNS)
@@ -290,7 +289,8 @@ func mountHomeClientRoutes(t *testing.T, r chi.Router, home *kube.Client, reg *k
 // permission check for that cluster and must answer 501 from the handler;
 // the other routes need a cluster-wide grant and answer 403. Registry-backed
 // Pod streams are mounted alongside them and must query only the remote
-// client. In every case the home-cluster client sees no API call.
+// client. Discovery may list central registration metadata; every other request
+// leaves the home-cluster client untouched.
 func TestHomeClientMounts_ServeHomeClusterOnly(t *testing.T) {
 	const remote = "remote-1"
 	home := fakeKubeClient()
@@ -303,6 +303,7 @@ func TestHomeClientMounts_ServeHomeClusterOnly(t *testing.T) {
 	r := chi.NewRouter()
 	r.Use(rbac.Middleware(reg))
 	mountHomeClientRoutes(t, r, home, reg)
+	MountCluster(r, reg, newTestStore(t), "test", true, "")
 	ws.Mount(r, reg, "", "", "")
 
 	remoteOnly := &auth.User{
@@ -318,6 +319,10 @@ func TestHomeClientMounts_ServeHomeClusterOnly(t *testing.T) {
 		routes++
 		path := routeParam.ReplaceAllString(route, "alpha")
 		want := http.StatusForbidden
+		discovery := method == http.MethodGet && strings.TrimSuffix(path, "/") == "/clusters"
+		if discovery {
+			want = http.StatusOK
+		}
 		if strings.HasPrefix(path, "/servers/") || strings.HasPrefix(path, "/ws/servers/") {
 			want = http.StatusNotImplemented
 		}
@@ -343,8 +348,19 @@ func TestHomeClientMounts_ServeHomeClusterOnly(t *testing.T) {
 		if want == http.StatusNotImplemented && !strings.Contains(rr.Body.String(), httperr.RemoteClusterNotImplemented) {
 			t.Errorf("%s %s?cluster=%s: body = %q, want it to contain %q", method, path, remote, rr.Body.String(), httperr.RemoteClusterNotImplemented)
 		}
-		if n := kubeClientCalls(t, home) - before; n != 0 {
-			t.Errorf("%s %s?cluster=%s: home client saw %d API calls, want 0", method, path, remote, n)
+		wantHomeCalls := 0
+		if discovery {
+			// Discovery may read central registration metadata, never inventory
+			// or credentials. Namespace grants still cannot read node inventory.
+			wantHomeCalls = 1
+			actions := home.Dynamic.(*dynamicfake.FakeDynamicClient).Actions()
+			last := actions[len(actions)-1]
+			if last.GetVerb() != "list" || last.GetResource() != kube.GVRCluster {
+				t.Errorf("discovery accessed %s %s, want only list clusters", last.GetVerb(), last.GetResource())
+			}
+		}
+		if n := kubeClientCalls(t, home) - before; n != wantHomeCalls {
+			t.Errorf("%s %s?cluster=%s: home client saw %d API calls, want %d", method, path, remote, n, wantHomeCalls)
 		}
 		if attach && kubeClientCalls(t, remoteClient) == remoteBefore {
 			t.Errorf("%s %s?cluster=%s: remote client saw no lookup", method, path, remote)

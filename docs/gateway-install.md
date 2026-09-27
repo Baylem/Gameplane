@@ -83,6 +83,55 @@ non-Helm pruning controllers may not honor Helm's retention annotation. Configur
 the actual deployment controller's retention mechanism before changing an
 existing installation. The profile does not migrate the database or its users.
 
+## Remote inventory permissions
+
+The central API reads node inventory and storage totals directly from the selected
+cluster's Kubernetes API. Bind these additional read permissions to the identity
+in that cluster's **registered kubeconfig**, alongside its existing game-resource
+permissions. The gateway ServiceAccount keeps its namespace-scoped GameServer and
+Service reads; it does not need the inventory grants.
+
+| API group | Resource or path | Verbs | Purpose |
+|---|---|---|---|
+| core | `nodes` | `list` | Node identities, readiness and capacity |
+| core | `persistentvolumes` | `list` | Capacity of bound volumes for provisioned-storage totals |
+| `metrics.k8s.io` | `nodes` | `list` | Optional current node CPU/memory usage |
+| non-resource | `/version`, `/version/` | `get` | Target Kubernetes version; already needed for registration health |
+
+For example, create this supplemental ClusterRole in the **remote cluster** and
+bind it only to the ServiceAccount used by the registered kubeconfig:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gameplane-central-inventory
+rules:
+  - apiGroups: [""]
+    resources: [nodes, persistentvolumes]
+    verbs: [list]
+  # Optional: omit this rule when node usage metrics are not required.
+  - apiGroups: [metrics.k8s.io]
+    resources: [nodes]
+    verbs: [list]
+  - nonResourceURLs: [/version, /version/]
+    verbs: [get]
+```
+
+Inventory does not require `watch`, namespace or StorageClass enumeration,
+Secret access, node proxy access, or cluster-admin. `/namespaces` uses the central
+API's configured game-namespace allowlist and the user's cluster/namespace grants;
+it does not discover every namespace in the target cluster. Provisioned storage
+is the sum of bound PV capacity, not measured disk usage.
+
+Without metrics-server or its optional permission, node capacity remains visible
+and current CPU/memory usage is unknown. A denied node/PV read is an inventory
+error; it must not be interpreted as an empty healthy cluster or retried against
+the central cluster. Remote inventory reports the selected cluster ID and its
+Kubernetes version. The Gameplane version identifies the central API build.
+Node-join token creation and kubeconfig issuance remain local-only operations and
+are unavailable while viewing a remote cluster.
+
 ## Private networking
 
 The gateway Service is **ClusterIP on TCP 8443**. Provide private routing or a

@@ -121,6 +121,30 @@ func (u *User) Can(perm string, namespaced bool, cluster, ns string) bool {
 	return false
 }
 
+// CanDiscoverCluster permits selecting a cluster without granting node inventory
+// access. A server reader in one namespace still needs to find that cluster.
+func (u *User) CanDiscoverCluster(cluster string) bool {
+	if u == nil {
+		return false
+	}
+	// Existing control-plane administrators need assignment/registration
+	// targets before a target-cluster grant exists. This is metadata only.
+	if u.Can("users:manage", false, "", "") || u.Can("cluster:manage", false, "", "") {
+		return true
+	}
+	if u.Can("cluster:read", true, cluster, "") {
+		return true
+	}
+	for _, ck := range []string{cluster, "*"} {
+		for _, perms := range u.Perms[ck] {
+			if permSetHas(perms, "*") || permSetHas(perms, "servers:read") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // permSetHas is nil-safe: indexing a nil map yields ok=false.
 func permSetHas(set map[string]struct{}, key string) bool {
 	_, ok := set[key]

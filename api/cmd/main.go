@@ -343,7 +343,7 @@ func main() {
 		handlers.MountConfig(p, store, auditor, oidcAuth != nil, cfg.gameDataStorageClass, helmPolicy)
 		handlers.MountNotifications(p, notifier, k8s, cfg.namespace)
 		handlers.MountAuthProviderSecrets(p, k8s, cfg.namespace)
-		handlers.MountCluster(p, k8s, store, Version, cfg.clusterOps, cfg.updateChannel)
+		handlers.MountCluster(p, reg, store, Version, cfg.clusterOps, cfg.updateChannel)
 		handlers.MountClusterActions(p, k8s, cfg.clusterOps, cfg.clusterExternalAddress)
 		handlers.MountClusters(p, reg, k8s, cfg.namespace)
 		handlers.MountEvents(p, reg)
