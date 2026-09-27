@@ -363,8 +363,14 @@ func savePart(root, dir, filename string, src io.Reader, limit int64) error {
 
 	// Confine the final destination: an existing symlink at this name must resolve inside root.
 	if info, err := os.Lstat(dstPath); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		// Compare against the root with its own symlinks resolved too, so a
+		// data root reached through a symlinked path still accepts in-root links.
+		realRoot, rootErr := filepath.EvalSymlinks(root)
+		if rootErr != nil {
+			return fmt.Errorf("resolve root: %w", rootErr)
+		}
 		resolved, evalErr := filepath.EvalSymlinks(dstPath)
-		if evalErr != nil || (!strings.HasPrefix(resolved, root+string(os.PathSeparator)) && resolved != root) {
+		if evalErr != nil || (!strings.HasPrefix(resolved, realRoot+string(os.PathSeparator)) && resolved != realRoot) {
 			return errPathOutOfRoot
 		}
 	}

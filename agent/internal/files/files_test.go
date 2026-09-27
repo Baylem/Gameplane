@@ -580,6 +580,78 @@ func TestUpload_RejectsOutOfRootSymlinkDestination(t *testing.T) {
 	}
 }
 
+// symlinkedRoot returns a data root reached through a symlink (the link
+// path) together with the real directory it points at.
+func symlinkedRoot(t *testing.T) (string, string) {
+	t.Helper()
+	realRoot := resolvedTempDir(t)
+	link := filepath.Join(resolvedTempDir(t), "data")
+	if err := os.Symlink(realRoot, link); err != nil {
+		t.Fatalf("symlink root: %v", err)
+	}
+	return link, realRoot
+}
+
+// TestUpload_SymlinkedRootAllowsInRootSymlinkDestination checks that when
+// the data root itself is reached through a symlink, uploading over an
+// existing symlink whose target is inside the root is accepted.
+func TestUpload_SymlinkedRootAllowsInRootSymlinkDestination(t *testing.T) {
+	linkRoot, realRoot := symlinkedRoot(t)
+	if err := os.Mkdir(filepath.Join(realRoot, "b"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	target := filepath.Join(realRoot, "b", "y")
+	if err := os.WriteFile(target, []byte("orig"), 0o600); err != nil {
+		t.Fatalf("write target: %v", err)
+	}
+	if err := os.Symlink(target, filepath.Join(realRoot, "x")); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	r := chi.NewRouter()
+	Mount(r, linkRoot)
+	srv := httptest.NewServer(r)
+	t.Cleanup(srv.Close)
+
+	buf, ct := multipartBody(t, map[string]string{"x": "new"})
+	resp, err := testPost(t, srv.URL+"/files/upload?path=/", ct, buf)
+	if err != nil {
+		t.Fatalf("post: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("status=%d body=%s", resp.StatusCode, readBody(resp))
+	}
+	got, err := os.ReadFile(filepath.Join(realRoot, "x"))
+	if err != nil || string(got) != "new" {
+		t.Fatalf("upload not stored: got %q err=%v", got, err)
+	}
+	got, err = os.ReadFile(target)
+	if err != nil || string(got) != "orig" {
+		t.Fatalf("linked file modified: got %q err=%v", got, err)
+	}
+}
+
+// TestSavePart_SymlinkedRootRejectsOutOfRootSymlinkDestination checks that
+// resolving the root's own symlinks does not loosen confinement.
+func TestSavePart_SymlinkedRootRejectsOutOfRootSymlinkDestination(t *testing.T) {
+	linkRoot, _ := symlinkedRoot(t)
+	target := filepath.Join(resolvedTempDir(t), "target.txt")
+	if err := os.WriteFile(target, []byte("orig"), 0o600); err != nil {
+		t.Fatalf("write target: %v", err)
+	}
+	if err := os.Symlink(target, filepath.Join(linkRoot, "esc-link")); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	err := savePart(linkRoot, linkRoot, "esc-link", strings.NewReader("x"), 1024)
+	if !errors.Is(err, errPathOutOfRoot) {
+		t.Fatalf("got %v, want %v", err, errPathOutOfRoot)
+	}
+	got, err := os.ReadFile(target)
+	if err != nil || string(got) != "orig" {
+		t.Fatalf("outside target modified: got %q err=%v", got, err)
+	}
+}
+
 func TestUpload_TooManyFiles(t *testing.T) {
 	srvURL, _ := newServer(t)
 	files := map[string]string{}
