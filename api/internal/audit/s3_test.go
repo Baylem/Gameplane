@@ -293,17 +293,12 @@ func TestS3Sink_NDJSONFormat(t *testing.T) {
 // NDJSON serialization path (encodeNDJSON), mirroring the same regression
 // coverage as the webhook sink's TestWebhookSink_IncludesReason.
 func TestS3Sink_NDJSONIncludesReason(t *testing.T) {
-	received := make(chan []byte, 1)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		b, _ := io.ReadAll(r.Body)
-		recordFlush(received, b)
-		w.Header().Set("ETag", "test")
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer srv.Close()
-
+	// Exercises encodeNDJSON directly rather than round-tripping through the
+	// worker's flush ticker: waiting on a live flush ties the test to
+	// s3FlushInterval wall-clock timing, which a loaded CI runner (or an
+	// HTTP round trip) can blow past even when encoding is correct.
 	cfg := S3Config{
-		Endpoint:  strings.TrimPrefix(srv.URL, "http://"),
+		Endpoint:  "s3.example.internal",
 		Bucket:    "test-bucket",
 		Insecure:  true,
 		AccessKey: "test",
@@ -314,43 +309,39 @@ func TestS3Sink_NDJSONIncludesReason(t *testing.T) {
 		t.Fatalf("new sink: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	done := startSink(ctx, sink)
-	defer func() {
-		cancel()
-		<-done
-	}()
-
-	sink.Enqueue(Event{
-		TS: "2026-06-30T00:00:00Z", Actor: "admin", Method: "POST",
-		Path: "/api/v1/servers", Status: 403, Reason: "rbac: missing role",
-	})
-	sink.Enqueue(Event{
-		TS: "2026-06-30T00:00:01Z", Actor: "user", Method: "DELETE",
-		Path: "/api/v1/servers/beta", Status: 204,
+	b := sink.encodeNDJSON([]Event{
+		{
+			TS: "2026-06-30T00:00:00Z", Actor: "admin", Method: "POST",
+			Path: "/api/v1/servers", Status: 403, Reason: "rbac: missing role",
+		},
+		{
+			TS: "2026-06-30T00:00:01Z", Actor: "user", Method: "DELETE",
+			Path: "/api/v1/servers/beta", Status: 204,
+		},
 	})
 
-	select {
-	case b := <-received:
-		lines := strings.Split(strings.TrimSpace(string(b)), "\n")
-		if len(lines) < 2 {
-			t.Fatalf("expected at least 2 lines, got %d", len(lines))
-		}
-		var e1, e2 map[string]any
-		if err := json.Unmarshal([]byte(lines[0]), &e1); err != nil {
-			t.Fatalf("decode line 0: %v", err)
-		}
-		if err := json.Unmarshal([]byte(lines[1]), &e2); err != nil {
-			t.Fatalf("decode line 1: %v", err)
-		}
-		if e1["reason"] != "rbac: missing role" {
-			t.Errorf("e1 reason = %v, want %q", e1["reason"], "rbac: missing role")
-		}
-		if _, has := e2["reason"]; has {
-			t.Errorf("e2 must not carry an empty reason key: %v", e2)
-		}
-	case <-time.After(7 * time.Second):
-		t.Fatal("flush not received")
+	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 lines, got %d", len(lines))
+	}
+	var e1, e2 map[string]any
+	if err := json.Unmarshal([]byte(lines[0]), &e1); err != nil {
+		t.Fatalf("decode line 0: %v", err)
+	}
+	if err := json.Unmarshal([]byte(lines[1]), &e2); err != nil {
+		t.Fatalf("decode line 1: %v", err)
+	}
+	if e1["reason"] != "rbac: missing role" {
+		t.Errorf("e1 reason = %v, want %q", e1["reason"], "rbac: missing role")
+	}
+	if e2["actor"] != "user" || e2["path"] != "/api/v1/servers/beta" {
+		t.Errorf("e2 = %v", e2)
+	}
+	if _, has := e2["reason"]; has {
+		t.Errorf("e2 must not carry an empty reason key: %v", e2)
+	}
+	if _, hasID := e1["id"]; hasID {
+		t.Errorf("payload must not carry db id")
 	}
 }
 
