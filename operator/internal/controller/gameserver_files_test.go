@@ -86,14 +86,19 @@ func TestBuildConfigInitContainer_GroupWritableWithFSGroup(t *testing.T) {
 	}
 
 	// Should contain the chmod step
-	if !strings.Contains(arg, "chmod -R g+w") {
-		t.Errorf("args should contain chmod -R g+w when fsGroup is set, got %q", arg)
+	if !strings.Contains(arg, "chmod g+w") {
+		t.Errorf("args should contain chmod g+w when fsGroup is set, got %q", arg)
+	}
+
+	// Should not contain recursive chmod
+	if strings.Contains(arg, "chmod -R") {
+		t.Errorf("args should not contain chmod -R, got %q", arg)
 	}
 
 	// The whole command must be valid shell: the mount path is single-quoted
-	// and closed before the loop variable, so $f still expands.
+	// and closed before the loop variable, so $p still expands.
 	want := "cp -RL " + configFilesStagingPath + "/* '/data/' && cd " + configFilesStagingPath +
-		" && for f in *; do chmod -R g+w '/data/'\"$f\"; done"
+		" && find * -follow -type f | while IFS= read -r p; do chmod g+w '/data/'\"$p\"; done"
 	if arg != want {
 		t.Errorf("config-init command =\n  %q\nwant\n  %q", arg, want)
 	}
