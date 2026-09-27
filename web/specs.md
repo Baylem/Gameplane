@@ -902,7 +902,7 @@ Visible tab set depends on server template + active version:
 
 Each UI gate uses the same permission and namespace as the API:
 
-- **Capture tab:** Hidden for users lacking `captures:manage` in the server's namespace. The `CaptureWidget` component also checks this permission on render and shows an access-denied card if the user lacks it (aligned with all capture endpoints in the API).
+- **Capture tab:** Hidden only once `/users/me` confirms the user lacks `captures:manage` in the server's namespace; while identity is loading or unavailable the tab stays visible (`CaptureWidget` keeps the capture controls closed). The `CaptureWidget` component also checks this permission on render and shows an access-denied card if the user lacks it (aligned with all capture endpoints in the API). While `/users/me` is still loading, the widget shows a neutral "Checking access…" state rather than the access-denied card, so an authorized caller never sees a false denial during the fetch (or its retries). If `/users/me` fails after its retries, the widget shows an identity-unavailable state with a retry action instead of the access-denied card.
 - **Mods/Modpacks tab controls:** Install/manage actions require `servers:write` in the server's namespace (aligned with mod endpoints in the API). The `can(me, "servers:write", namespace)` helper checks both cluster-wide (`*`) and namespace-scoped bindings.
 
 **Implementation:** The `can(me, permission, namespace?)` helper (`web/src/lib/auth.ts`) mirrors the server's RBAC logic: a cluster-wide (`*`) grant or a grant in the target namespace suffices. UI gates inform user visibility only; the API is always the real enforcer.

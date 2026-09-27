@@ -14,6 +14,7 @@ import {
   Download,
   Eye,
   Inbox,
+  Loader2,
   Lock,
   Trash2,
 } from "lucide-react";
@@ -53,6 +54,7 @@ import {
 import { APIError, Captures, CaptureStartBody } from "@/lib/api";
 import { captureListRefetchMs, isCaptureActive } from "@/lib/capturePolling";
 import { useMe, can } from "@/lib/auth";
+import { IdentityUnavailable } from "@/components/RequireRole";
 import { CaptureWarningBanner } from "@/components/ui/CaptureWarningBanner";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { Chip } from "@/components/ui/PhaseChip";
@@ -119,7 +121,7 @@ interface Props {
 
 export function CaptureWidget({ name, ns, gs }: Props) {
   const qc = useQueryClient();
-  const { data: me } = useMe();
+  const { data: me, isLoading: meLoading, error: meError, refetch: refetchMe } = useMe();
   const ns_resolved = ns ?? "gameplane-games";
   const canManage = can(me, "captures:manage", ns_resolved);
 
@@ -196,6 +198,26 @@ export function CaptureWidget({ name, ns, gs }: Props) {
       URL.revokeObjectURL(url);
     },
   });
+
+  if (meLoading) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+            <Loader2 className="h-7 w-7 animate-spin text-default-500" />
+            <p className="text-sm text-default-500">Checking access…</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // /users/me failed after its retries: the caller's permissions are
+  // unknown, not absent, so show the retryable identity-unavailable state
+  // (controls stay closed) rather than claiming access is denied.
+  if (!me) {
+    return <IdentityUnavailable error={meError} onRetry={() => void refetchMe()} />;
+  }
 
   if (!canManage) {
     return (

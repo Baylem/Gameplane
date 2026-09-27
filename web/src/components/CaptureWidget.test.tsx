@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
 import { renderWithQuery } from "@/test/render";
 import { makeServer, makeCapture } from "@/test/factories";
-import type { CaptureStartBody } from "@/lib/api";
+import { APIError, type CaptureStartBody } from "@/lib/api";
 import { CaptureWidget } from "./CaptureWidget";
 
 const useMeMock = vi.fn();
@@ -73,6 +73,42 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       expect(screen.getByText(/You don't have access to packet capture on this server/i)).toBeInTheDocument();
+    });
+
+    it("shows a loading state instead of access denied while identity is unresolved", () => {
+      useMeMock.mockReturnValue({
+        data: undefined,
+        error: null,
+        isLoading: true,
+      });
+      const gs = makeServer({
+        spec: { capture: { enabled: true } },
+      });
+      renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
+
+      expect(screen.getByText(/Checking access/i)).toBeInTheDocument();
+      expect(screen.queryByText(/You don't have access to packet capture on this server/i)).not.toBeInTheDocument();
+    });
+
+    it("offers a retry instead of access denied when the identity fetch failed", async () => {
+      const refetch = vi.fn();
+      useMeMock.mockReturnValue({
+        data: undefined,
+        error: new APIError(503, "unavailable"),
+        isLoading: false,
+        refetch,
+      });
+      const gs = makeServer({
+        spec: { capture: { enabled: true } },
+      });
+      renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
+
+      expect(screen.getByText("Can't reach the control plane")).toBeInTheDocument();
+      expect(screen.getByText(/HTTP 503/)).toBeInTheDocument();
+      expect(screen.queryByText(/You don't have access to packet capture on this server/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Start Capture" })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+      expect(refetch).toHaveBeenCalledTimes(1);
     });
 
     it("allows access when user has namespace-scoped captures:manage permission", () => {

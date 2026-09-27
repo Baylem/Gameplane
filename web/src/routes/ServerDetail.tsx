@@ -134,12 +134,16 @@ export function ServerDetailPage() {
   // (e.g. Paper), which can't load a Modrinth/Forge modpack.
   const modpacksAvailable = serverHasModpacks(tmpl, gs);
   const ns_resolved = ns ?? "gameplane-games";
-  const canManageCapture = can(me, "captures:manage", ns_resolved);
+  // Hide Capture only on a confirmed denial. While /users/me is loading or
+  // after it failed, permissions are unknown: keep the tab reachable so the
+  // widget can show its checking / identity-unavailable (retry) state, with
+  // the capture controls still closed.
+  const captureTabVisible = !me || can(me, "captures:manage", ns_resolved);
   const visibleTabs = tabs.filter((t) => {
     if (t.key === "console") return consoleAvailable;
     if (t.key === "mods") return modsAvailable;
     if (t.key === "modpacks") return modpacksAvailable;
-    if (t.key === "capture") return canManageCapture;
+    if (t.key === "capture") return captureTabVisible;
     return true;
   });
 
