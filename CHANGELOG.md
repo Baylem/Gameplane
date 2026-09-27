@@ -245,6 +245,36 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   the default version, it warns when `gameplaneMinVersion` is newer than the
   tool, and its docs match the CLI (F-159, F-160, F-161, F-162, F-163,
   F-164, F-165, F-166, F-167, F-168).
+- **web:** the dashboard's nginx now accepts request bodies up to 64 MiB,
+  matching the ingress and API, so file and mod uploads over 1 MiB are no
+  longer rejected with 413 (#426).
+- **chart, operator:** Backup and Restore Jobs can now reach their restic
+  repository when `networkPolicies.enabled` is `true`; a new
+  `networkPolicies.backupEgress` value (on by default, TCP 443 and 22) opens
+  that egress (#432).
+- **release:** Go component images are now cross-compiled instead of built
+  under emulation, so the multi-arch release build no longer times out
+  (#435).
+- **api, chart:** the Add node join command and the downloaded kubeconfig
+  can now use a node-routable API server address set with the new
+  `clusterOps.externalAddress` value, instead of the in-cluster ClusterIP
+  (#464).
+- **chart:** OIDC flags are now quoted, so issuer, client ID and role-mapping
+  group names containing YAML-special characters render correctly, and the
+  new `api.oidc.displayName` value sets the OIDC login button label (#485).
+- **web:** Admin Logs now shows the timestamp of log lines that use a `time`
+  field, the audit log labels module-source changes correctly, and the ban
+  confirmation reads "Banning…" (#480).
+- **operator:** an unparseable `spec.networking.address` now sets an
+  `InvalidAddress` reason, an unparseable wake window sets an
+  `IdleScheduleInvalid` condition whether or not the server is asleep, a
+  stale `TunnelHostnameIgnored` condition is cleared, and an expired capture
+  whose sidecar is unreachable is deleted after a bounded retry instead of
+  lingering (#490).
+- **mcp-server:** `list_events` now returns an error for an invalid label
+  selector instead of silently ignoring it, and the tool descriptions and
+  `propose_fix` backup advice use labels and names that actually exist
+  (#493).
 
 ### Changed
 
@@ -258,6 +288,11 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   #308, #309, #310, #311, #312, #317, #318, #320, #321, #323, #324, #328, #329,
   #334, #344, #354, #355, #356, #357, #358, #359, #379, #380, #381, #382, #387,
   #399, #400, #401, #402, #403, #404, #405, #406, #412).
+- **deps:** further web npm patch updates and a refreshed Alpine base image
+  digest for the tunnel images (#456, #457).
+- **docs:** corrected drift found by the pre-release audit across the API
+  reference (OpenAPI), agent, tunnel, svcutil, module-authoring, dependency
+  and security docs (#442, #465, #468, #481, #486, #494, #495).
 
 ### Security hardening
 
@@ -271,6 +306,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **agent:** hardened file write and delete handling in the files endpoints.
 - **capture-sidecar:** hardened TLS configuration defaults and capture size limits.
 - **audit-syslog-bridge:** hardened `APP-NAME`/`HOSTNAME` field validation.
+- **gameproto:** hardened handshake string-length and status-response validation.
 
 ## [0.3.0-rc.2] — Unreleased
 
@@ -301,6 +337,9 @@ under [Unreleased](#unreleased) above, together with the rc.1 changes.
   acknowledged (#436), and backup/restore quiesce-lifecycle fixes stop a
   server being left quiesced; a restore now also removes files created
   after the snapshot (#454).
+- **Uploads and backups:** dashboard file and mod uploads over 1 MiB are no
+  longer rejected (#426), and backup and restore Jobs can reach their
+  repository when NetworkPolicies are enabled (#432).
 - Further security hardening across the API, operator, agent and release
   pipeline (see Security hardening above).
 
