@@ -36,13 +36,16 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   don't own. Servers without a recorded owner (for example ones created with
   kubectl or GitOps) can be transferred, wiped or deleted only by an admin.
 - **Playit tunnel NetworkPolicy egress widened:** the operator-managed
-  NetworkPolicy for a GameServer using the `playit` tunnel provider now
-  allows unrestricted egress instead of the previous restrictive rule, so
-  playit tunnels can reach their relay after upgrading (F-262).
-- **Chart upgrade reliability:** `helm upgrade` now correctly handles renamed
-  releases, `--reuse-values`, and CRD reinstall; installs that previously
-  needed a manual workaround for one of these cases no longer do (F-213,
-  F-214, F-218).
+  NetworkPolicy for a GameServer using the `playit` tunnel provider now adds
+  an unrestricted egress rule (all ports and protocols, any destination)
+  alongside the DNS/advertised-ports rule every provider gets. Previously
+  playit got only that rule, so it could not reach its relay (F-262).
+- **Reinstalling over leftover CRDs runs the CRD-apply hook:** a
+  `helm install` onto Gameplane CRDs left behind by an uninstalled release
+  now also runs the `crds.autoApply` hook to bring them up to date, so
+  air-gapped clusters need `crds.autoApply.image` mirrored for that case
+  too. Under Helm 4, CRDs last applied by v0.2.0-beta.8 or earlier need a
+  one-time `helm install --force-conflicts` (F-218).
 
 ### Added
 
@@ -161,63 +164,87 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   receiving long lines (#409).
 - **operator:** migrated off the deprecated Fulcio certificate API (`fulcioroots.pb.go`),
   which was sunset by sigstore; image signing now uses the current `tlog.sigstore.dev` endpoint (#287).
-- **chart:** the games `Namespace` is now kept on `helm uninstall` instead of
-  being deleted along with it, so running GameServers aren't orphaned by an
-  accidental or partial uninstall (F-212).
-- **api:** corrected several error response status codes — for example, a
-  required parameter sent as an empty string now returns 400 instead of a
-  500 — and reconciled the affected docs (F-076, F-077, F-082, F-083, F-085,
+- **chart:** the games `Namespace` now carries `helm.sh/resource-policy:
+  keep`, so `helm uninstall` no longer deletes it together with every
+  GameServer, data PVC and per-server Secret inside it (F-212).
+- **chart:** `helm upgrade` now works for releases not named `gameplane`
+  (the pre-upgrade hook targeted the wrong API Deployment) and with
+  `--reuse-values` from a v0.2.0-beta.8 release (values keys added since
+  then no longer break rendering), and a `helm install` over CRDs left by an
+  uninstalled release now updates their schema (F-213, F-214, F-218).
+- **api:** hand-written validation errors in the destinations and modules
+  handlers now return 400 (bad input) or 409 (name clash) instead of 500, a
+  missing share link returns 404, `201 Created` responses carry a JSON
+  `Content-Type`, legacy preference timestamps are returned as RFC 3339, and
+  `api/specs.md` matches the handlers (F-076, F-077, F-082, F-083, F-085,
   F-086, F-087, F-088, F-089).
-- **api:** large file transfers (mod uploads/downloads, backups) now stream
-  past the 60 s request timeout and the 1 MiB body-size cap that previously
-  cut them off (F-074, F-075).
-- **operator:** a failed data-wipe on a server is now reported as failed
-  instead of being silently acknowledged as successful (F-054).
-- **operator:** fixed several backup/restore quiesce-lifecycle issues that
-  could leave a server quiesced or a backup/restore stuck (F-044, F-045,
-  F-048, F-049).
-- **operator:** stopped `Module` reconciles from flapping and fixed template
-  recreation after deletion (F-046, F-047, F-050).
+- **gameaction:** a required console-action parameter sent as an empty
+  string is now rejected (400) instead of silently taking its declared
+  default, and the 512-character cap now counts characters rather than
+  bytes (F-149, F-150, F-151).
+- **api:** file, log and capture downloads and `files/write` and
+  `mods/upload` uploads are now exempt from the 60 s request timeout and the
+  1 MiB body-size cap that cut them off (F-074, F-075).
+- **operator:** a data wipe that fails (for example on a permission error)
+  now fails its Job and sets a `DataWipe=False` condition on the GameServer
+  instead of being acknowledged as successful (F-054).
+- **operator:** fixed the backup/restore quiesce lifecycle: a failed
+  unquiesce is retried, scheduled backups quiesce by default again, deleting
+  a quiesced Backup waits (bounded) for the unquiesce, and a restore now
+  removes files created after the snapshot so `/data` matches it exactly
+  (F-044, F-045, F-048, F-049).
+- **operator:** a pinned `Module` no longer flaps between Pulling and Ready,
+  a managed `GameTemplate` deleted with kubectl is recreated, and a
+  GameServer's `spec.templateRef` is now immutable (the API returns 409)
+  instead of wedging the StatefulSet reconcile (F-046, F-047, F-050).
 - **operator:** `Module` resources in a `Failed` phase no longer rewrite
   their status on every reconcile (F-258).
-- **web:** namespace is now threaded through per-server detail-page API
-  calls, fixing cross-namespace/multi-cluster data mixups on the server
-  detail page (F-116, F-130).
+- **web:** the server detail page (mods, backups, schedules, restores, quick
+  actions, log download, clone) now passes the server's namespace, so
+  servers outside the default games namespace no longer 404 or hit a
+  same-named server there; "Shared with you" rows regain Start/Stop/Restart
+  (F-116, F-130).
 - **web:** errors on previously-silent mutations and unhandled promises are
   now surfaced to the user instead of failing quietly (F-126, F-137).
-- **web:** the pending WebSocket reconnect timer is now canceled when the
-  connection is closed, preventing a stray reconnect after navigating away
-  (F-121).
-- **web:** safe mode (`?safe-mode=1`) now stays active across in-app
-  navigation instead of resetting on each route change (F-125).
-- **agent:** unknown player counts are now reported as unknown rather than
-  0, so the dashboard no longer shows a game server as empty when its
-  player count can't be determined (F-105, F-106).
-- **agent:** the WebSocket and mods routes are exempt from the router's
-  request timeout, and the RCON reply cap was widened, fixing consoles that
-  previously dropped long-running sessions or truncated large RCON replies
-  (F-103, F-104).
-- **tunnel:** fixed a backoff-counter overflow and an frp UDP/port-mismatch
-  that could keep a tunnel from reconnecting (F-172, F-052).
-- **tunnel:** the playit-assigned address is now reported into the
-  GameServer's status instead of being dropped (F-174).
-- **sentinel:** handed-through sessions are now drained on shutdown instead
-  of dropped, and listener failures are surfaced instead of failing silently
-  (F-179, F-180).
+- **web:** closing a WebSocket now cancels a pending reconnect timer, so no
+  socket is reopened after the component unmounts (F-121).
+- **web:** URL safe mode (`?safe-mode=1`) now stays active across in-app
+  navigation; a full reload without the parameter still turns it off
+  (F-125).
+- **agent, web:** an undeterminable player count is now always reported as
+  unknown (previously sometimes 0) and shown as "—" instead of `-1`, and the
+  agent no longer reports the game id as the game version (F-105, F-106).
+- **agent:** console and log WebSockets and mod installs are no longer cut
+  off at 30 s by the router timeout, and the RCON reply cap was raised from
+  4096 to 16394 bytes so full multi-byte replies are accepted (F-103,
+  F-104).
+- **tunnel:** fixed a retry-counter overflow that made the supervisor retry
+  with no backoff, and frp now proxies to the Service's own port and
+  protocol, so UDP games and a remote port different from the Service port
+  work (F-172, F-052).
+- **tunnel:** the address playit assigns is now read from playitd and
+  reported into the GameServer's `status.endpoints`, which previously stayed
+  empty for playit tunnels (F-174).
+- **sentinel:** a connection handed through to the game pod is no longer cut
+  when the game pod becomes Ready and the sentinel shuts down; it drains
+  instead. A failed listener now exits the sentinel at once instead of
+  waiting for shutdown (F-179, F-180).
 - **mcp-server:** `get_pod_logs` now keeps the newest tail bytes when a log
-  is truncated and flags that truncation happened, instead of silently
-  returning stale output (F-204).
-- **api, operator:** a user-stopped network capture download now waits for
-  the capture sidecar to actually stop before the download proceeds,
-  avoiding a truncated capture file (F-259).
-- **capture-sidecar:** guarded the volume-budget check against integer
-  overflow and fixed the budget not being freed when a capture is deleted,
-  which could otherwise make captures unavailable on a long-running cluster
-  (F-187, F-192, F-261).
-- **gp-module:** the CLI and web builder now validate against the real CRD
-  shape and apply the default version in preview, instead of accepting
-  configurations the operator would later reject (F-159, F-160, F-161,
-  F-162, F-163, F-164, F-165, F-166, F-167, F-168).
+  is truncated and prefixes a truncation notice, instead of silently
+  returning the oldest part (F-204).
+- **api, operator:** downloading a user-stopped network capture now waits for
+  the sidecar to finalize it instead of failing with 409, and a stopped
+  capture that never reached a sidecar completes instead of staying Pending
+  and holding the capture lock (F-259).
+- **api, capture-sidecar:** deleting a capture now frees its file from the
+  capture volume budget immediately instead of at pod restart, and a
+  rejected concurrent start's 409 names the running capture (F-192, F-261).
+- **gp-module:** the validator used by the CLI and the dashboard's module
+  builder now checks the real CRD shape (`enum`, the `bool` type, required
+  `spec.displayName`, `spec.version` and `ports[].name`), `preview` applies
+  the default version, it warns when `gameplaneMinVersion` is newer than the
+  tool, and its docs match the CLI (F-159, F-160, F-161, F-162, F-163,
+  F-164, F-165, F-166, F-167, F-168).
 
 ### Changed
 
@@ -241,50 +268,41 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **api:** hardened cluster registration removal.
 - **ci:** hardened the release signing order and the scope of the signing key.
 - **api:** hardened Prometheus metrics serving with a dedicated in-cluster listener.
-- **agent:** hardened file write path handling in the mods and files endpoints.
-- **gameaction:** hardened console command parameter validation.
-- **capture-sidecar:** hardened TLS defaults and volume-budget accounting.
+- **agent:** hardened file write and delete handling in the files endpoints.
+- **capture-sidecar:** hardened TLS configuration defaults and capture size limits.
 - **audit-syslog-bridge:** hardened `APP-NAME`/`HOSTNAME` field validation.
 
 ## [0.3.0-rc.2] — Unreleased
 
-The second release candidate for v0.3.0. It contains every change since
-v0.3.0-rc.1: the fixes from the pre-release audit that landed after rc.1 was
-cut, plus a handful of chart, API, and dashboard corrections found during
-rc.1 testing. See [Unreleased](#unreleased) above for the full list.
+The second release candidate for v0.3.0. It adds the changes merged since
+v0.3.0-rc.1, mostly fixes from the v0.3 pre-release audit. They are listed
+under [Unreleased](#unreleased) above, together with the rc.1 changes.
 
 ### Highlights
 
 - **Agent Prometheus metrics move to a dedicated listener (port 9090):** the
   agent now serves `/metrics` on its own unauthenticated `:9090` listener
-  instead of sharing the mTLS control port; the operator adds a matching
-  `metrics` containerPort and the chart's `PodMonitor`/`ServiceMonitor`
-  scrape it by name — every agent scrape target was previously reported
-  "down" (#461, #476).
-- **Owner-only server operations now require the owner or an admin:**
-  transferring ownership, editing collaborators, wiping data, and deleting a
-  server can no longer be done by an operator-role user who isn't the
-  server's owner (#460).
-- **Helm chart upgrade reliability fixed:** `helm upgrade` now correctly
-  handles renamed releases, `--reuse-values`, and CRD reinstall (#443).
-- **Playit tunnel NetworkPolicy egress widened:** GameServers using the
-  `playit` tunnel provider get unrestricted egress instead of the previous
-  restrictive rule, so playit tunnels can reach their relay (#488).
-- **games Namespace kept on `helm uninstall`:** it's no longer deleted along
-  with the release, so running GameServers aren't orphaned (#425).
-- **API error status codes corrected:** for example, a required parameter
-  sent as an empty string now returns 400 instead of 500 (#477).
-- **API large-transfer streaming fixed:** mod/backup transfers now stream
-  past the previous 60 s timeout and 1 MiB body cap (#444).
-- **Data-wipe failures are now reported, not silently acknowledged (#436),**
-  and backup/restore quiesce-lifecycle issues that could leave a server
-  stuck were fixed (#454).
-- **Broad security hardening:** api multi-cluster request scoping, module
-  bundle integrity checks, Admin Settings draft/secret lifecycle, cluster
-  registration removal, release signing order/scope, agent file-write path
-  handling, gameaction parameter validation, capture-sidecar TLS defaults,
-  and audit-syslog-bridge field validation (#430, #427, #431, #463, #462,
-  #433, #491, #483, #487, #466).
+  instead of the mTLS control port, where every agent scrape target was
+  reported "down"; the chart's `PodMonitor` scrapes it by name (#476).
+- **Owner-only server operations now need the owner or an admin:** see
+  Upgrade Notes above.
+- **Helm chart fixes:** `helm upgrade` works for releases not named
+  `gameplane` and with `--reuse-values` from v0.2.0-beta.8, a reinstall over
+  leftover CRDs updates them (#443), and `helm uninstall` keeps the games
+  Namespace and the GameServers in it (#425).
+- **Playit tunnels:** the tunnel NetworkPolicy now lets playit reach its
+  relay (#488), and the playit-assigned address shows up in the
+  GameServer's status (#447).
+- **API fixes:** validation errors return 400/409 instead of 500 (#477), a
+  required console-action parameter sent empty is rejected instead of taking
+  its default (#491), and large file, log and capture transfers are no longer
+  cut off by the 60 s timeout and 1 MiB body cap (#444).
+- **Backup, restore and wipe:** a failed data wipe is reported instead of
+  acknowledged (#436), and backup/restore quiesce-lifecycle fixes stop a
+  server being left quiesced; a restore now also removes files created
+  after the snapshot (#454).
+- Further security hardening across the API, operator, agent and release
+  pipeline (see Security hardening above).
 
 ## [0.3.0-rc.1] — 2026-09-23
 
