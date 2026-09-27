@@ -419,7 +419,7 @@ type FrpTunnelSpec struct {
 	// ServerAddr is the hostname or IP of the frps server.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$|^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4})$`
+	// +kubebuilder:validation:Pattern=`^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.?$|^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4})$`
 	ServerAddr string `json:"serverAddr"`
 
 	// ServerPort is the frps listening port.
@@ -459,7 +459,16 @@ type TailscaleTunnelSpec struct {
 	// +optional
 	Hostname string `json:"hostname,omitempty"`
 
-	// Tags are Tailscale ACL tags applied at device registration.
+	// Tags are Tailscale ACL tags requested for the device when it
+	// registers, via `tailscale up --advertise-tags` (tailscaled's
+	// declarative config has no field for tags, and changing the tags of a
+	// registered node needs a fresh login). Each entry is "tag:<name>" or a bare
+	// name, which gets the "tag:" prefix. The tailnet ACL must grant
+	// tagOwners for these tags to the auth key's owner; if the request is
+	// refused, the tunnel pod logs the error and the tunnel runs untagged.
+	// If any entry is invalid, the whole list is logged and ignored and the
+	// device registers untagged. See
+	// tunnel/specs.md.
 	// +kubebuilder:validation:MaxItems=8
 	// +optional
 	Tags []string `json:"tags,omitempty"`

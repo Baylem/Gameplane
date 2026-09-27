@@ -182,8 +182,22 @@ spec:
 
 The pod joins your tailnet and is reachable via MagicDNS under the hostname you
 specify in `spec.networking.tunnel.tailscale.hostname` (or defaults to the
-GameServer name if left empty). The tags are Tailscale ACL tags applied at device
-registration. Port 25565 is available to devices on your tailnet.
+GameServer name if left empty). Port 25565 is available to devices on your
+tailnet.
+
+> **`tags` requires an ACL grant.** `spec.networking.tunnel.tailscale.tags`
+> is requested when the device registers with your tailnet: the tunnel pod
+> runs `tailscale up --advertise-tags=<tags>` once, over the local daemon's
+> socket. Tailscale's headless daemon config has no field for tags, and
+> changing the tags of a registered device needs a fresh login (see
+> `tunnel/specs.md`). The tailnet's ACL must grant `tagOwners` for the
+> requested tags to the auth key's owner. If it doesn't, Tailscale refuses
+> the request, the tunnel pod logs the error, and the tunnel registers and
+> runs untagged. Configure `tagOwners` in your tailnet's ACL before setting
+> `tags` here. Each tag is `tag:<name>` or a bare `<name>`, where the name
+> starts with a letter and holds only letters, digits and `-`. If any tag is
+> invalid, the whole list is logged and ignored and the device registers
+> untagged.
 
 > **Private only.** The server is not exposed to the public internet — only to
 > devices on your Tailscale network. This is suitable for playing with friends

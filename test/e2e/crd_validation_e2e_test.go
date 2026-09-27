@@ -122,7 +122,7 @@ spec:
       credentialsSecretRef:
         name: tunnel-creds
       frp:
-        serverAddr: 'invalid"server.com` + "\n" + `injection'
+        serverAddr: "invalid\"server.com\ninjection"
         remotePorts:
           - name: game
             remotePort: 30000
@@ -209,5 +209,33 @@ spec:
 		_, _ = envInstance.KubectlWithStdin(t.Context(), yaml, "delete", "-f", "-", "--ignore-not-found")
 	} else {
 		t.Fatalf("CRD schema rejected a valid IPv4 — the Pattern is too strict.\nyaml:\n%s\nkubectl output:\n%s", yaml, out)
+	}
+
+	// Test absolute FQDN (trailing dot) — a valid DNS name for resolution
+	// and for frpc's config, and must stay accepted.
+	yaml = `apiVersion: gameplane.local/v1alpha1
+kind: GameServer
+metadata:
+  name: e2e-validation-tunnel-fqdn-absolute
+  namespace: gameplane-games
+spec:
+  templateRef:
+    name: e2e-template-test
+  networking:
+    tunnel:
+      credentialsSecretRef:
+        name: tunnel-creds
+      frp:
+        serverAddr: frp.example.com.
+        remotePorts:
+          - name: game
+            remotePort: 30000
+`
+	out, err = envInstance.KubectlWithStdin(t.Context(), yaml, "apply", "-f", "-")
+	if err == nil {
+		// Best-effort delete
+		_, _ = envInstance.KubectlWithStdin(t.Context(), yaml, "delete", "-f", "-", "--ignore-not-found")
+	} else {
+		t.Fatalf("CRD schema rejected a valid absolute FQDN — the Pattern is too strict.\nyaml:\n%s\nkubectl output:\n%s", yaml, out)
 	}
 }
