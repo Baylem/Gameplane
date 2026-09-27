@@ -24,7 +24,11 @@ import (
 )
 
 // Mount attaches the WS/file proxy routes under /ws and /servers/:name/files.
-func Mount(r chi.Router, k *kube.Client, caBundle, clientCert, clientKey string) {
+func Mount(r chi.Router, reg *kube.Registry, caBundle, clientCert, clientKey string) {
+	var k *kube.Client
+	if reg != nil {
+		k = reg.Default()
+	}
 	tlsCfg, err := agentTLSConfig(caBundle, clientCert, clientKey)
 	if err != nil {
 		// Allow startup without mTLS in dev — every request 503s until
@@ -41,13 +45,13 @@ func Mount(r chi.Router, k *kube.Client, caBundle, clientCert, clientKey string)
 	r.Get("/ws/servers/{name}/logs", rejectRemoteCluster(p.wsProxy("/logs/tail")))
 	r.Get("/servers/{name}/logs/download", rejectRemoteCluster(p.httpProxy("/logs/download")))
 	// PTY console attaches via the Kubernetes API (not the agent), so it
-	// doesn't need mTLS material — it uses the API's existing in-cluster
+	// doesn't need agent mTLS material — it uses the selected cluster's
 	// kubeconfig. Mounted unconditionally.
-	mountAttach(r, k)
+	mountAttach(r, reg)
 	// Startup logs stream the game container's stdout via the pod-log API
 	// (also no agent mTLS needed), so download/config output is visible
 	// before the game's own log file exists. Mounted unconditionally.
-	mountPodLogs(r, k)
+	mountPodLogs(r, reg)
 	r.Route("/servers/{name}/files", func(r chi.Router) {
 		r.Get("/list", rejectRemoteCluster(p.httpProxy("/files/list")))
 		r.Get("/read", rejectRemoteCluster(p.httpProxy("/files/read")))
@@ -111,12 +115,9 @@ func isDNS1123Label(name string) bool {
 }
 
 // rejectRemoteCluster wraps a handler that can only ever act on the LOCAL
-// cluster. Every route in this package either proxies straight to the
-// agent sidecar (mTLS material is provisioned only for the home cluster)
-// or drives pod-attach/pod-log reads through the API's own in-cluster
-// kubeconfig (mountAttach, mountPodLogs) — neither path ever consults the
-// multi-cluster registry, unlike the cluster-dispatch-aware handlers in
-// api/internal/handlers (Resources, PodEvents, Lifecycle, …).
+// cluster. Agent routes still use home-cluster DNS and mTLS credentials.
+// Pod attach and pod-log routes instead resolve the selected cluster's
+// Kubernetes client and must not use this guard.
 //
 // Until a cross-cluster agent exists to serve these routes on a remote
 // cluster, a non-local selector is answered with 501 Not Implemented and a
@@ -127,7 +128,7 @@ func isDNS1123Label(name string) bool {
 // whatever `?cluster=` the caller supplies (api/internal/scope.ResolveCluster).
 // Without this guard, a user bound only to a registered REMOTE cluster could
 // pass `?cluster=<remote>` to satisfy that check while still reaching the
-// LOCAL cluster's same-named GameServer here — RCON/PTY console, file, and
+// LOCAL cluster's same-named GameServer here — RCON console, file, and
 // mod access on a server they have no rights to. See
 // handlers.rejectRemoteCluster for the REST-side twin of this guard.
 func rejectRemoteCluster(next http.HandlerFunc) http.HandlerFunc {

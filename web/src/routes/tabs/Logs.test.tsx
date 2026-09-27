@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // Each call to openWS pushes a new fake socket onto sockets[]; tests
@@ -42,9 +42,11 @@ vi.mock("@/lib/ws", () => ({
   ),
 }));
 
+import { setCurrentCluster } from "@/lib/cluster";
 import { LogsTab, parseLogLevel } from "./Logs";
 
 beforeEach(() => {
+  setCurrentCluster("local");
   sockets.length = 0;
 });
 
@@ -53,6 +55,19 @@ afterEach(() => {
 });
 
 describe("LogsTab", () => {
+  it("closes the old stream and clears its output when clusters change", async () => {
+    const { unmount } = render(<LogsTab name="alpha" />);
+    const old = sockets[0];
+    act(() => old.sendMsg("old cluster line"));
+    await waitFor(() => expect(screen.getByText(/1 lines/)).toBeInTheDocument());
+    act(() => setCurrentCluster("remote-1"));
+    await waitFor(() => expect(sockets).toHaveLength(2));
+    expect(old.close).toHaveBeenCalled();
+    expect(screen.queryByText(/1 lines/)).not.toBeInTheDocument();
+    unmount();
+    setCurrentCluster("local");
+  });
+
   it("counts incoming lines", async () => {
     // jsdom doesn't lay out the virtualized rows so we assert against
     // the line counter rather than the row text content. The rendering

@@ -1,9 +1,9 @@
 // Thin reconnecting WebSocket helper. Used by the console and logs tabs.
 //
-// NOTE: WebSocket streams are currently local-cluster-scoped. The cluster
-// selector threads ?cluster= through API fetches (REST), but WS paths
-// (console/RCON/log streams) remain bound to the local cluster. Cross-cluster
-// WebSocket support is a follow-up task. See docs/roadmap.md.
+// Kubernetes Pod logs and PTY attach dispatch to the selected cluster.
+// Agent-backed routes also carry the selector so unsupported remote calls
+// fail closed instead of connecting to a same-named local game server.
+import { getCurrentCluster, subscribeCluster } from "./cluster";
 
 // WebSocket.OPEN state constant. Defined locally to avoid relying on static
 // properties in test stubs that may not implement them.
@@ -39,6 +39,16 @@ export function openWS(path: string, opts: WSOptions) {
   // a tab switch during a backoff window leaves the timer armed, and it
   // later opens a socket into a component that already unmounted.
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  const cluster = getCurrentCluster();
+  const serverStream = path.startsWith("/ws/servers/");
+  const url = new URL(path, `${location.protocol}//${location.host}`);
+  if (serverStream && !url.searchParams.has("cluster") && cluster !== "local") {
+    url.searchParams.set("cluster", cluster);
+  }
+  const boundPath = url.pathname + url.search;
+  const unsubscribe = serverStream ? subscribeCluster(() => {
+    if (getCurrentCluster() !== cluster) close();
+  }) : () => {};
 
   // Queue for messages sent while the first connection is opening.
   // After the first successful open, messages sent while disconnected
@@ -54,8 +64,12 @@ export function openWS(path: string, opts: WSOptions) {
     if (closedByUser) return;
     opts.onStatus?.("connecting", { attempt });
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    sock = new WebSocket(`${proto}//${location.host}${path}`);
+    sock = new WebSocket(`${proto}//${location.host}${boundPath}`);
     sock.onopen = () => {
+      if (closedByUser) {
+        sock?.close();
+        return;
+      }
       attempt = 0;
 
       // Flush queued messages only on the first successful open.
@@ -76,10 +90,13 @@ export function openWS(path: string, opts: WSOptions) {
       opts.onOpen?.();
       opts.onStatus?.("open", { attempt: 0 });
     };
-    sock.onmessage = (ev) => opts.onMessage(ev.data);
+    sock.onmessage = (ev) => {
+      if (!closedByUser) opts.onMessage(ev.data);
+    };
     sock.onclose = () => {
       opts.onClose?.();
       if (closedByUser || !reconnect) {
+        unsubscribe();
         opts.onStatus?.("closed", { attempt });
         return;
       }
@@ -88,6 +105,16 @@ export function openWS(path: string, opts: WSOptions) {
       opts.onStatus?.("reconnecting", { attempt, nextRetryMs: delayMs });
       reconnectTimer = setTimeout(connect, delayMs);
     };
+  }
+  function close() {
+    closedByUser = true;
+    messageQueue = [];
+    if (reconnectTimer !== null) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    unsubscribe();
+    sock?.close();
   }
   connect();
 
@@ -111,14 +138,6 @@ export function openWS(path: string, opts: WSOptions) {
         sock.send(data);
       }
     },
-    close() {
-      closedByUser = true;
-      messageQueue = [];
-      if (reconnectTimer !== null) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = null;
-      }
-      sock?.close();
-    },
+    close,
   };
 }

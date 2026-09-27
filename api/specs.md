@@ -158,11 +158,18 @@ All cluster-dispatch routes accept `?cluster={name}` (validates against register
 ### WebSocket bridge
 
 - **`/ws/servers/{name}/console` (GET upgrade)** — RCON to game pod via agent; write-capable
-- **`/ws/servers/{name}/console-pty` (GET upgrade)** — PTY/exec to game pod; write-capable
+- **`/ws/servers/{name}/console-pty` (GET upgrade)** — PTY attach to the selected cluster's game pod; write-capable
 - **`/ws/servers/{name}/logs` (GET upgrade)** — game/agent log file stream via agent; read-only
-- **`/ws/servers/{name}/logs/pod` (GET upgrade)** — pod stdout stream via Kubernetes watch; read-only
-- All authenticate via session + mTLS to agent (for console routes)
-- Multiplexed per `?cluster=` + namespace
+- **`/ws/servers/{name}/logs/pod` (GET upgrade)** — selected cluster's init/game stdout via the Kubernetes Pod log API; read-only
+- All authenticate via session and cluster/namespace RBAC. Pod logs and PTY use
+  the selected registry client's Kubernetes credentials and verify the
+  GameServer → StatefulSet → Pod owner UID chain before opening streams.
+- Agent routes use local mTLS and reject non-local selectors. Pod logs and PTY
+  accept registered `?cluster=` targets without requiring agent mTLS.
+- A browser cluster switch closes old streams and cancels retries/queued input.
+  Pod log polling stops if a Pod is replaced; reconnects validate ownership again.
+- Kubernetes log/attach calls are name-addressed, without UID preconditions;
+  the owner checks do not make deletion/recreation atomic with stream startup.
 
 ### Agent transport boundary
 
@@ -176,7 +183,7 @@ material do not reach agents. Proxy body limits and JSON response limits remain 
 the caller boundary.
 
 This extraction preserves the local-only guards on agent operations. It does not
-register remote transports or enable remote console, files, players, mods, module
+register remote transports or enable remote RCON console, files, players, mods, module
 actions, or internal mod-update reads. Those require a cluster-aware target resolver
 and an authenticated remote gateway; a missing remote route must fail closed.
 
@@ -563,7 +570,7 @@ Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); th
   - the mod registry browser and modpack install (`MountRegistry`): GET `/servers/{name}/mods/registry/providers`, `/servers/{name}/mods/registry/search`, `/servers/{name}/mods/registry/projects/{project}/versions`, `/servers/{name}/mods/registry/projects/{project}/modpack`, and POST `/servers/{name}/modpack`
   - the mod update check (GET `/servers/{name}/mods/updates`) and the mod-id list (GET/PUT `/servers/{name}/mods/ids`)
   - the capture file download (GET `/servers/{name}:capture-file`), which also records the refusal in the audit log with reason "cluster_not_local"
-  - every agent and pod route in `api/internal/ws`: console, PTY console, logs, pod logs, log download, files, players, actions, status and mods
+  - agent-backed routes in `api/internal/ws`: RCON console, game log files, log download, files, players, actions, status and mods. Pod logs and PTY console attach use the selected registry client instead.
   - Tests: `TestHomeClientMounts_ServeHomeClusterOnly` (`handlers/cluster_guard_test.go`) calls every route of every mount that `cmd/main.go` builds with the home-cluster client, as a user whose only grant is on another cluster, and checks that the home-cluster client sees no call. `TestHomeClientMounts_MatchMain` (`cmd/mounts_test.go`) fails when `main.go` passes that client to a mount the first test doesn't cover. The multicluster e2e bucket (`TestMultiCluster_ClusterDispatchAndScopedRBAC`) checks the registry, modpack and capture download routes across two real clusters.
 
 ### Audit

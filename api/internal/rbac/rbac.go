@@ -132,6 +132,8 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 							if role != roleNone {
 								// Grant to owner, or to collaborator if not owner-only.
 								if role == roleOwner || !ownerOnlyOperation(req.Method, verb, isExact) {
+									identity := ServerIdentity{Cluster: cl, Namespace: ns, Name: name, UID: string(obj.GetUID())}
+									req = req.WithContext(context.WithValue(req.Context(), serverIdentityKey{}, identity))
 									next.ServeHTTP(w, req)
 									return
 								}

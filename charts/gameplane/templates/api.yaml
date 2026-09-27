@@ -80,6 +80,11 @@ rules:
   - apiGroups: ["gameplane.local"]
     resources: [gameservers/status, backups/status, backupschedules/status, restores/status, networkcaptures/status]
     verbs: [get, update, patch]
+  # Verify GameServer -> StatefulSet -> Pod controller ownership before
+  # serving pod logs or accepting terminal input.
+  - apiGroups: ["apps"]
+    resources: [statefulsets]
+    verbs: [get]
   # The PTY console (api/internal/ws/attach.go) attaches to the game
   # container via the pod-attach subresource. SPDY uses POST (create);
   # the websocket transport uses GET.

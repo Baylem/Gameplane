@@ -3,6 +3,7 @@ import "@xterm/xterm/css/xterm.css";
 
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { ErrorCard } from "@/components/ui/ErrorCard";
+import { useCurrentCluster } from "@/lib/cluster";
 import { api } from "@/lib/api";
 import { resolveConsoleMode } from "@/lib/capabilities";
 import type { GameServer, GameTemplate } from "@/types";
@@ -10,13 +11,14 @@ import { ConsoleShell } from "./ConsoleShell";
 import { useConsoleTerminal } from "./useConsoleTerminal";
 
 export function ConsoleTab({ name, ns }: { name: string; ns?: string }) {
+  const cluster = useCurrentCluster();
   const { data: gs } = useQuery({
-    queryKey: ["server", name, ns],
+    queryKey: ["server", name, ns, cluster],
     queryFn: () => api<GameServer>(`/servers/${name}${ns ? `?namespace=${encodeURIComponent(ns)}` : ""}`),
   });
   const templateName = gs?.spec.templateRef.name;
   const { data: tmpl } = useQuery({
-    queryKey: ["template", templateName],
+    queryKey: ["template", templateName, cluster],
     queryFn: () => api<GameTemplate>(`/templates/${templateName}`),
     enabled: !!templateName,
   });
@@ -39,7 +41,7 @@ export function ConsoleTab({ name, ns }: { name: string; ns?: string }) {
       </div>
     );
   }
-  return mode === "pty" ? <PtyConsole name={name} ns={ns} /> : <RconConsole name={name} ns={ns} />;
+  return mode === "pty" ? <PtyConsole key={cluster} name={name} ns={ns} /> : <RconConsole key={cluster} name={name} ns={ns} />;
 }
 
 // RconConsole speaks the existing line-based RCON protocol — text is
