@@ -174,7 +174,7 @@ chi-based REST + WebSocket gateway. Direct deps from `api/go.mod`
 | `github.com/minio/minio-go/v7` | v7.3.0 | `internal/audit/s3.go` — S3-compatible client (`minio.New`, `PutObject`) backing the S3 audit-log sink | direct-runtime |
 | `github.com/prometheus/client_golang` | v1.24.1 | `cmd/metrics.go` (`promhttp` handler at `/metrics` on the separate metrics listener); `promauto` counters in `internal/notify/notify.go`, `internal/audit/s3.go`, `internal/audit/audit.go` | direct-runtime |
 | `modernc.org/sqlite` | v1.57.0 | `internal/db/db.go` — blank-imported to register the `"sqlite"` `database/sql` driver, the default persistence backend | direct-runtime |
-| `github.com/jackc/pgx/v5` | v5.10.0 | `internal/db/db_postgres.go` (behind `//go:build postgres`) — registers `pgx/v5/stdlib` as the `"pgx"` driver when built with `-tags postgres`; the alternative persistence backend | direct-runtime (opt-in build tag) |
+| `github.com/jackc/pgx/v5` | v5.11.0 | `internal/db/db_postgres.go` (behind `//go:build postgres`) — wraps the `pgx/v5/stdlib` connector (rebinding `?` placeholders to `$n`) when built with `-tags postgres`; the alternative persistence backend | direct-runtime (opt-in build tag) |
 | `golang.org/x/mod` | v0.40.0 | `internal/handlers/semver.go` — `semver.Compare` orders module versions for the version-switch/update-detection UI | direct-runtime | <!-- doc-versions: dependency -->
 | `golang.org/x/sync` | v0.22.0 | `internal/registry/registry.go` — `singleflight.Group` collapses concurrent DB + live-Secret registry-credential lookups into one in-flight call | direct-runtime | <!-- doc-versions: dependency -->
 | `github.com/go-jose/go-jose/v4` | v4.0.2 | No non-test import found; used only in `internal/auth/oidc_issuer_test.go`/`oidc_more_test.go` to build fake JWKS/signed JWTs for testing the OIDC verifier | **test-only** |
@@ -250,10 +250,11 @@ diagnostics. Direct deps from `mcp-server/go.mod`:
 | `k8s.io/apimachinery` | v0.37.0 | `internal/kube/client.go` — `unstructured.Unstructured(List)`, `runtime.Scheme`, `schema.GroupVersionResource` back the dynamic-client reads of 7 of Gameplane's 9 CRDs (not Cluster or NetworkCapture) (redeclared GVK/GVR locally rather than importing the operator module's generated types, to stay standalone) | <!-- doc-versions: dependency -->
 | `sigs.k8s.io/controller-runtime` | v0.25.1 | `main.go` — only `ctrl.GetConfig()`, to load the kubeconfig (in-cluster, falling back to `KUBECONFIG`/`~/.kube/config`) that builds the `kube.Client` above | <!-- doc-versions: dependency -->
 
-The read-only guarantee is structural (only List/Get-shaped methods are
-exported from `internal/kube`, so `tools.go`'s handlers have no way to
-reach a mutating verb even by mistake) and RBAC-backed (a
-`get`/`list`/`watch`-only ClusterRole) — the go-sdk itself has no bearing
+The read-only guarantee has two layers: the handler boundary (only
+List/Get-shaped methods are exported from `internal/kube`, and
+`tools.go`'s handlers receive only that `*kube.Client`) and RBAC (a
+`get`/`list`/`watch`-only ClusterRole), which is the layer that stops
+mutation by any code in the process. The go-sdk itself has no bearing
 on that guarantee; it's purely the protocol transport.
 
 ### sentinel
