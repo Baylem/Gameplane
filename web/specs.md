@@ -15,7 +15,7 @@ The Gameplane dashboard is a React SPA providing a UI layer over the Gameplane A
 - Fetch and cache data via TanStack Query; invalidate caches on Kubernetes watch events (SSE)
 - Stream console input/output (WebSocket) and pod/game logs (WebSocket) to the Console and Logs tabs
 - Wrap the API client in three layers: thin fetch wrapper (`api<T>()`), typed endpoint namespaces (`Servers`, `Templates`, `Cluster`, etc.), and domain helpers (validations, RCON mode resolution, mod/modpack capability detection)
-- Thread multi-cluster context through all API requests via `?cluster=` query params (local cluster omitted for back-compat)
+- Present authorized resources from all locations by default, with optional filters; bind each resource operation to its explicit cluster and namespace rather than an ambient global selection
 - Enforce role-based access control (RBAC) on frontend routes via `<RequirePermission>` middleware
 - Validate form inputs against declared server/template schema before submit
 - Display real-time resource status (CPU, memory, uptime) and live action metrics from RCON/agent
@@ -28,7 +28,21 @@ The Gameplane dashboard is a React SPA providing a UI layer over the Gameplane A
 
 **Pre-auth privacy:** The login page and any unauthenticated screen must not leak internal state: no hostnames, cluster names, server counts, version strings, user lists, or "user not found" errors. See docs/security.md "pre-auth privacy" and CLAUDE.md rule 3.
 
-**Cluster-bound WebSocket:** Server streams carry the selected `?cluster=` and close on cluster switches. Pod logs and PTY console attach route through that cluster's Kubernetes client; agent-backed RCON and game log files still reject remote targets. See `docs/roadmap.md`.
+**Cluster-bound WebSocket:** Server streams carry the open server's explicit cluster and namespace. Reconnects retain that target; leaving the server view closes its streams. Changing an infrastructure selection cannot retarget a stream. Pod logs and PTY attach use the target Kubernetes client; remote agent streams use the configured authenticated gateway and fail closed when unavailable.
+
+## Unified location views — September 2026
+
+This contract supersedes earlier selected-cluster descriptions below. The approved existing-components design exception for this work is documented in [the unified dashboard design](../docs/unified-dashboard.md); `design.pen` and its exports remain unchanged.
+
+- Dashboard, Servers, Backups and global Search consume `/fleet/*` envelopes. Exact location/namespace filters request narrower backend results so they can recover resources omitted by the combined result limit. Authorized scope metadata keeps filter options available for empty or unavailable locations.
+- Each row retains `{cluster, namespace, name, uid}`, resource data and exact target permissions. Same-named resources in different locations remain distinct. Server routes carry `cluster` and `ns`; legacy routes without a cluster resolve local, independently of remembered infrastructure selection.
+- `createRequestClient`, `createResourceClient` and `ResourceTargetProvider` bind JSON requests, raw file/download paths, dialogs, chained mutations and WebSocket URLs to the original scope. Detail waits for matching resource/access identity before mounting actionable children. Instance query keys include UID; the current server-object lookup and namespace collections use stable scope keys so a replacement object can be detected and forms remounted.
+- Server controls consume `/servers/{name}/access` capabilities and exact named permissions. Owner/collaborator operations remain distinct from full-object writes, owner/admin management, strictly owner-only share links, backup permissions and capture management. The API remains authoritative.
+- Fleet totals visibly distinguish complete, partial, failed and truncated reads. CPU/memory percentages use summed measured usage divided by matching capacity; missing measurements are unknown. Storage reports provisioned capacity, not actual disk usage. Player totals indicate missing server readings.
+- Cluster registration and node selection remain in infrastructure administration; ordinary pages have no global cluster switcher. Accounts, roles, modules, audit and installation settings retain central ownership.
+- Creation uses eligible placements and templates supplied by `/fleet/placements`. An initial location is captured once, changing location resets the draft, and losing that location does not automatically choose another. All creation follow-ups and success navigation retain the captured target. This adds no cross-cluster scheduler or data migration.
+
+Coverage includes duplicate-name navigation, exact permission boundaries, asynchronous target retention, unavailable and capped responses, weighted metrics, and desktop/mobile filtering. Repository suites run in GitHub Actions; the disposable two-cluster preview supplies separate real-browser acceptance evidence.
 
 ## HeroUI Component Layer
 

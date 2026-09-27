@@ -12,12 +12,10 @@ import {
   Users,
 } from "lucide-react";
 import { APIError } from "@/lib/api";
-import { Cluster as ClusterAPI, Clusters, Auth } from "@/lib/endpoints";
+import { Clusters, Auth } from "@/lib/endpoints";
 import { useMe, can } from "@/lib/auth";
 import type { User } from "@/types";
 import { useEffect, useState } from "react";
-import { ClusterSelector } from "@/components/ClusterSelector";
-import { useCurrentCluster } from "@/lib/cluster";
 import { AppShell } from "@/components/ui/AppShell";
 import { Sidebar, type SidebarNavGroup } from "@/components/ui/Sidebar";
 import { TopBar } from "@/components/ui/TopBar";
@@ -90,22 +88,11 @@ function useAppearance(
   return [theme, setTheme, isCustomColorsActive];
 }
 
-function useClusterInfo() {
-  const clusterId = useCurrentCluster();
-  return useQuery({
-    queryKey: ["cluster-info", clusterId],
-    queryFn: ({ signal }) => ClusterAPI.info(clusterId, signal),
-    retry: false,
-    staleTime: 60_000,
-  });
-}
-
 export function AppLayout() {
-  const clusterId = useCurrentCluster();
   const { data: me, error, isLoading } = useMe();
-  const { data: cluster } = useClusterInfo();
   const { data: registry } = useQuery({ queryKey: ["clusters"], queryFn: () => Clusters.list() });
-  const canViewInventory = registry?.items.find((item) => item.name === clusterId)?.canViewInventory === true;
+  const canViewInventory = registry?.items.some((item) => item.canViewInventory === true) === true;
+  const canManageInfrastructure = can(me, "cluster:manage") || canViewInventory;
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [theme, setTheme, isCustomColorsActive] = useAppearance(me);
@@ -175,7 +162,6 @@ export function AppLayout() {
       label: "General",
       items: [
         { to: "/", label: "Dashboard", icon: LayoutDashboard },
-        { to: "/clusters", label: "Clusters", icon: Network },
         { to: "/servers", label: "Servers", icon: Server },
         { to: "/modules", label: "Modules", icon: Package },
         { to: "/backups", label: "Backups", icon: Archive },
@@ -184,6 +170,7 @@ export function AppLayout() {
     {
       label: "Admin",
       items: [
+        ...(canManageInfrastructure ? [{ to: "/clusters", label: "Clusters", icon: Network }] : []),
         ...(canViewInventory
           ? [{ to: "/cluster", label: "Cluster", icon: Server }]
           : []),
@@ -229,7 +216,7 @@ export function AppLayout() {
         sidebar={
           <Sidebar
             navItems={navItems}
-            clusterName={centralManagement ? "Central management" : cluster?.clusterName || clusterId}
+            clusterName={centralManagement ? "Central management" : "Gameplane"}
             user={me}
             variant="fixed"
             onLogout={onLogout}
@@ -242,9 +229,9 @@ export function AppLayout() {
         topBar={
           <TopBar
             breadcrumbs={<Breadcrumbs items={crumbs} />}
-            clusterSelector={<ClusterSelector />}
-            search={<GlobalSearch key={clusterId} />}
-            notifications={<NotificationsPanel key={clusterId} />}
+            clusterSelector={null}
+            search={<GlobalSearch />}
+            notifications={<NotificationsPanel />}
             mobileTitle={mobileTitle}
             user={me}
             onMenuClick={() => setDrawerOpen(true)}
@@ -254,11 +241,10 @@ export function AppLayout() {
         {centralManagement && (
           <div role="note" className="border-b border-border bg-surface px-4 py-3 text-sm text-muted sm:px-6">
             <strong className="font-medium text-foreground">Central management.</strong>{" "}
-            This catalog, account or installation setting belongs to the central Gameplane installation. The cluster selector applies to game servers and node inventory.
+            This catalog, account or installation setting belongs to the central Gameplane installation. Server actions use each server’s location.
           </div>
         )}
-        {/* Discard forms, confirmations and operation results from the previous cluster. */}
-        <div key={clusterId}><Outlet /></div>
+        <Outlet />
       </AppShell>
 
       {/* Mobile off-canvas drawer — rendered outside AppShell so it never
@@ -267,7 +253,7 @@ export function AppLayout() {
           confusing the accessibility tree in source order too. */}
       <Sidebar
         navItems={navItems}
-        clusterName={centralManagement ? "Central management" : cluster?.clusterName || clusterId}
+        clusterName={centralManagement ? "Central management" : "Gameplane"}
         user={me}
         variant="drawer"
         isOpen={drawerOpen}

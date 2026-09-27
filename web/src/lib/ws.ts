@@ -3,7 +3,7 @@
 // Kubernetes Pod logs and PTY attach dispatch to the selected cluster.
 // Agent-backed routes also carry the selector so unsupported remote calls
 // fail closed instead of connecting to a same-named local game server.
-import { getCurrentCluster, subscribeCluster } from "./cluster";
+
 
 // WebSocket.OPEN state constant. Defined locally to avoid relying on static
 // properties in test stubs that may not implement them.
@@ -39,16 +39,10 @@ export function openWS(path: string, opts: WSOptions) {
   // a tab switch during a backoff window leaves the timer armed, and it
   // later opens a socket into a component that already unmounted.
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  const cluster = getCurrentCluster();
-  const serverStream = path.startsWith("/ws/servers/");
-  const url = new URL(path, `${location.protocol}//${location.host}`);
-  if (serverStream && !url.searchParams.has("cluster") && cluster !== "local") {
-    url.searchParams.set("cluster", cluster);
-  }
+  const url = new URL(path, location.origin);
+  if (!path.startsWith("/") || path.startsWith("//") || url.origin !== location.origin) throw new Error("WebSocket path must be same-origin");
+  if (url.searchParams.getAll("cluster").length > 1 || url.searchParams.getAll("namespace").length > 1) throw new Error("Ambiguous WebSocket target");
   const boundPath = url.pathname + url.search;
-  const unsubscribe = serverStream ? subscribeCluster(() => {
-    if (getCurrentCluster() !== cluster) close();
-  }) : () => {};
 
   // Queue for messages sent while the first connection is opening.
   // After the first successful open, messages sent while disconnected
@@ -96,7 +90,6 @@ export function openWS(path: string, opts: WSOptions) {
     sock.onclose = () => {
       opts.onClose?.();
       if (closedByUser || !reconnect) {
-        unsubscribe();
         opts.onStatus?.("closed", { attempt });
         return;
       }
@@ -113,7 +106,6 @@ export function openWS(path: string, opts: WSOptions) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
-    unsubscribe();
     sock?.close();
   }
   connect();

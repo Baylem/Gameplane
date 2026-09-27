@@ -1,3 +1,4 @@
+import type { ResourceTarget } from "@/lib/resourceTarget";
 import type { ReactNode } from "react";
 import {
   Input,
@@ -14,7 +15,7 @@ interface Props {
   onServerChange: (v: string) => void;
   phase: string;
   onPhaseChange: (v: string) => void;
-  servers: GameServer[];
+  servers: (GameServer & { fleetTarget?: ResourceTarget })[];
   phases: string[];
   trailing?: ReactNode;
 }
@@ -44,8 +45,8 @@ export function BackupFilters({
             <ListBox aria-label="Server options">
               <ListBoxItem id="" textValue="All servers">All servers</ListBoxItem>
               {servers.map((s) => (
-                <ListBoxItem key={s.metadata.name} id={s.metadata.name} textValue={s.metadata.name}>
-                  {s.metadata.name}
+                <ListBoxItem key={serverOptionID(s)} id={serverOptionID(s)} textValue={serverOptionLabel(s)}>
+                  {serverOptionLabel(s)}
                 </ListBoxItem>
               ))}
             </ListBox>
@@ -71,4 +72,12 @@ export function BackupFilters({
       {trailing && <div className="text-xs text-muted">{trailing}</div>}
     </div>
   );
+}
+
+function serverOptionID(s: GameServer & { fleetTarget?: ResourceTarget }) {
+  const t = s.fleetTarget;
+  return t ? JSON.stringify([t.cluster, t.namespace, t.name, t.uid]) : s.metadata.name;
+}
+function serverOptionLabel(s: GameServer & { fleetTarget?: ResourceTarget }) {
+  return s.fleetTarget ? s.metadata.name + " · " + s.fleetTarget.cluster + " / " + s.fleetTarget.namespace : s.metadata.name;
 }

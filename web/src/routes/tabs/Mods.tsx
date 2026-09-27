@@ -1,3 +1,4 @@
+import { useResourceClient, useResourceTarget, resourceKey, useResourceAccess } from "@/lib/resourceTarget";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -26,11 +27,10 @@ import type {
   ModUpdate,
   RegistryProject,
 } from "@/types";
-import { Servers } from "@/lib/endpoints";
+
 import { APIError } from "@/lib/api";
 import { errorText } from "@/lib/errors";
 import { resolveModVolume } from "@/lib/capabilities";
-import { useMe, can } from "@/lib/auth";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { RegistryBrowser, RegistryIcon, compactNum, providerLabel } from "@/components/registry-browser";
 import { cn, formatBytes, formatRelative } from "@/lib/utils";
@@ -63,9 +63,12 @@ export function ModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTempl
 // ModsTab, unchanged): lists, installs by URL, browses a registry, and
 // uploads files into the resolved mods directory.
 function FileModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTemplate; gs?: GameServer; ns?: string }) {
+  const resourceTarget = useResourceTarget({ name, namespace: ns });
+  const resourceClient = useResourceClient(resourceTarget);
+  const { Servers } = resourceClient;
   const qc = useQueryClient();
-  const { data: me } = useMe();
-  const canManage = can(me, "servers:write");
+  const access = useResourceAccess();
+  const canManage = access?.canControl === true;
 
   const caps = tmpl?.spec.capabilities?.mods;
   // URL installs need the module's install (allowlist) block; uploads only
@@ -90,16 +93,16 @@ function FileModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTemplate
   const [banner, setBanner] = useState<Banner | null>(null);
 
   const { data: mods, isFetching, isError, error: listError, refetch } = useQuery({
-    queryKey: ["mods", name, ns],
-    queryFn: () => Servers.mods(name, ns),
+    queryKey: resourceKey(resourceTarget, "mods", name, ns),
+    queryFn: ({ signal }) => resourceClient.withSignal(signal).Servers.mods(name, ns),
   });
 
   // Update check is on demand (button), not on mount — it fans out to
   // external registries server-side, so the tab shouldn't trigger it on
   // every visit. Results stay cached for the session.
   const updates = useQuery({
-    queryKey: ["mod-updates", name, ns],
-    queryFn: () => Servers.modUpdates(name, ns),
+    queryKey: resourceKey(resourceTarget, "mod-updates", name, ns),
+    queryFn: ({ signal }) => resourceClient.withSignal(signal).Servers.modUpdates(name, ns),
     enabled: false,
   });
   const updateByName = useMemo(() => {
@@ -113,9 +116,10 @@ function FileModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTemplate
   const install = useMutation({
     mutationFn: (body: InstallBody) => Servers.installMod(name, body, ns),
     onSuccess: (mod, body) => {
+      void qc.invalidateQueries({ queryKey: ["fleet"] });
       setBanner({ kind: "ok", text: body.replaces ? `Updated to ${mod.name}` : `Installed ${mod.name}` });
       if (body.replaces && updates.data) void updates.refetch();
-      return qc.invalidateQueries({ queryKey: ["mods", name] });
+      return qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "mods", name) });
     },
     onError: (err) => setBanner({ kind: "err", text: errMsg(err) }),
   });
@@ -139,8 +143,9 @@ function FileModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTemplate
   const upload = useMutation({
     mutationFn: (file: File) => Servers.uploadMod(name, file, ns),
     onSuccess: (mod) => {
+      void qc.invalidateQueries({ queryKey: ["fleet"] });
       setBanner({ kind: "ok", text: `Uploaded ${mod.name}` });
-      return qc.invalidateQueries({ queryKey: ["mods", name] });
+      return qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "mods", name) });
     },
     onError: (err) => setBanner({ kind: "err", text: errMsg(err) }),
   });
@@ -155,23 +160,25 @@ function FileModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTemplate
       return updates.data?.updates.length ?? 0;
     },
     onSuccess: (n) => {
+      void qc.invalidateQueries({ queryKey: ["fleet"] });
       setBanner({ kind: "ok", text: `Updated ${n} mod${n === 1 ? "" : "s"}` });
       void updates.refetch();
-      return qc.invalidateQueries({ queryKey: ["mods", name] });
+      return qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "mods", name) });
     },
     onError: (err) => {
       setBanner({ kind: "err", text: errMsg(err) });
       void updates.refetch();
-      return qc.invalidateQueries({ queryKey: ["mods", name] });
+      return qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "mods", name) });
     },
   });
 
   const remove = useMutation({
     mutationFn: (mod: string) => Servers.removeMod(name, mod, ns),
     onSuccess: (_void, mod) => {
+      void qc.invalidateQueries({ queryKey: ["fleet"] });
       setConfirmRemove(null);
       setBanner({ kind: "ok", text: `Removed ${mod}` });
-      return qc.invalidateQueries({ queryKey: ["mods", name] });
+      return qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "mods", name) });
     },
     onError: (err) => {
       setConfirmRemove(null);
@@ -430,9 +437,12 @@ function ModsByIdTab({
   tmpl?: GameTemplate;
   ns?: string;
 }) {
+  const resourceTarget = useResourceTarget({ name, namespace: ns });
+  const resourceClient = useResourceClient(resourceTarget);
+  const { Servers } = resourceClient;
   const qc = useQueryClient();
-  const { data: me } = useMe();
-  const canManage = can(me, "servers:write");
+  const access = useResourceAccess();
+  const canManage = access?.canControl === true;
 
   const caps = tmpl?.spec.capabilities?.mods;
   // A registry provider (e.g. ARK declares curseforge) enables in-app
@@ -456,8 +466,8 @@ function ModsByIdTab({
   const lastSeenRef = useRef<ModID[] | undefined>(undefined);
 
   const { data: saved, isFetching, isError, error: listError, refetch } = useQuery({
-    queryKey: ["mod-ids", name, ns],
-    queryFn: () => Servers.modIDs(name, ns),
+    queryKey: resourceKey(resourceTarget, "mod-ids", name, ns),
+    queryFn: ({ signal }) => resourceClient.withSignal(signal).Servers.modIDs(name, ns),
   });
 
   const dirty = useMemo(() => rows.some((r) => r.state !== "kept"), [rows]);
@@ -483,6 +493,7 @@ function ModsByIdTab({
         ns,
       ),
     onSuccess: (updated) => {
+      void qc.invalidateQueries({ queryKey: ["fleet"] });
       savedRef.current = updated;
       lastSeenRef.current = updated;
       setRows(updated.map((m) => ({ ...m, state: "kept" as const })));
@@ -490,7 +501,7 @@ function ModsByIdTab({
         kind: "ok",
         text: `Saved — the server will restart to apply ${updated.length} mod${updated.length === 1 ? "" : "s"}.`,
       });
-      return qc.invalidateQueries({ queryKey: ["mod-ids", name] });
+      return qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "mod-ids", name) });
     },
     onError: (err) => setBanner({ kind: "err", text: errMsg(err) }),
   });
@@ -1151,11 +1162,13 @@ function ModCard({
   onInstall: (body: InstallBody) => void;
   onUseUrl: (url: string) => void;
 }) {
+  const resourceTarget = useResourceTarget({ name, namespace: ns });
+  const resourceClient = useResourceClient(resourceTarget);
   const [open, setOpen] = useState(false);
   const [selId, setSelId] = useState("");
   const versions = useQuery({
-    queryKey: ["mod-versions", name, provider, project.id, ns],
-    queryFn: () => Servers.modVersions(name, project.id, provider, ns),
+    queryKey: resourceKey(resourceTarget, "mod-versions", name, provider, project.id, ns),
+    queryFn: ({ signal }) => resourceClient.withSignal(signal).Servers.modVersions(name, project.id, provider, ns),
     enabled: open,
   });
   const list = versions.data ?? [];

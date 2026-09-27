@@ -16,7 +16,6 @@ import { useGameCodes } from "@/lib/useGameCodes";
 import { resolveCategories } from "@/lib/games";
 import type { EntryVerify } from "@/lib/verify";
 import type { CatalogEntry } from "@/types";
-import { useClusterSelection } from "@/lib/useClusterSelection";
 
 interface ModuleCardProps {
   entry: CatalogEntry;
@@ -49,11 +48,9 @@ export function ModuleCard({
   busy,
 }: ModuleCardProps) {
   const { gameCodes, byName } = useGameCodes("local");
-  const selectCluster = useClusterSelection();
   const navigate = useNavigate();
   const deployLocally = async () => {
-    await selectCluster("local");
-    await navigate({ to: "/servers/new", search: { template: entry.moduleName } });
+    await navigate({ to: "/servers/new", search: { template: entry.moduleName, cluster: "local" } });
   };
   const upgradeAvailable =
     entry.installed &&

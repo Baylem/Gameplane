@@ -80,7 +80,7 @@ describe("BackupsPage", () => {
     const dialog = await screen.findByRole("dialog");
     const serverButton = within(dialog).getByRole("button", { name: /Server/i });
     await userEvent.click(serverButton);
-    const option = await screen.findByRole("option", { name: "alpha" });
+    const option = await screen.findByRole("option", { name: /^alpha · local \/ gameplane-games$/ });
     await userEvent.click(option);
 
     // Enabled only once the destination auto-selects from the query.
@@ -137,7 +137,7 @@ describe("BackupsPage", () => {
     // forced-choice "Select a server…".
     const serverSelect = screen.getByRole("button", { name: /Filter by server/i });
     await userEvent.click(serverSelect);
-    const betaOption = await screen.findByRole("option", { name: "beta" });
+    const betaOption = await screen.findByRole("option", { name: /^beta · local \/ gameplane-games$/ });
     await userEvent.click(betaOption);
     // Only beta-1 should be visible
     expect(screen.getByText("beta-1")).toBeInTheDocument();
@@ -225,7 +225,7 @@ describe("BackupsPage", () => {
     // Filter to beta server (which has no backups)
     const serverSelect = screen.getByRole("button", { name: /Filter by server/i });
     await userEvent.click(serverSelect);
-    const betaOption = await screen.findByRole("option", { name: "beta" });
+    const betaOption = await screen.findByRole("option", { name: /^beta · local \/ gameplane-games$/ });
     await userEvent.click(betaOption);
     expect(screen.getByText(/No backups match the current filters/)).toBeInTheDocument();
   });
@@ -241,7 +241,7 @@ describe("BackupsPage", () => {
     const dialog = await screen.findByRole("dialog");
     const serverButton = within(dialog).getByRole("button", { name: /Server/i });
     await userEvent.click(serverButton);
-    const option = await screen.findByRole("option", { name: "alpha" });
+    const option = await screen.findByRole("option", { name: /^alpha · local \/ gameplane-games$/ });
     await userEvent.click(option);
     const run = within(dialog).getByRole("button", { name: /Run snapshot/i });
     await waitFor(() => expect(run).toBeEnabled());
@@ -378,7 +378,7 @@ describe("BackupsPage", () => {
     // same "All servers" default as the Backups tab's server filter).
     const serverSelect = screen.getByRole("button", { name: /Filter by server/i });
     await userEvent.click(serverSelect);
-    const alphaOption = await screen.findByRole("option", { name: "alpha" });
+    const alphaOption = await screen.findByRole("option", { name: /^alpha · local \/ gameplane-games$/ });
     await userEvent.click(alphaOption);
     expect(screen.getByText("restore-1")).toBeInTheDocument();
     expect(screen.queryByText("restore-2")).not.toBeInTheDocument();

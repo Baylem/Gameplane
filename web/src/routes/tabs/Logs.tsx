@@ -1,10 +1,11 @@
+import { useResourceClient, useResourceTarget } from "@/lib/resourceTarget";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle, Download, Loader2 } from "lucide-react";
 import { Button, Input, Tabs, Tab as TabComponent } from "@heroui/react";
 
-import { useCurrentCluster } from "@/lib/cluster";
-import { Logs } from "@/lib/endpoints";
+
+
 import { openWS } from "@/lib/ws";
 import { capitalize, cn } from "@/lib/utils";
 import type { GameServerPhase } from "@/types";
@@ -54,7 +55,10 @@ export function LogsTab({
   phase?: GameServerPhase;
   progressMessage?: string;
 }) {
-  const cluster = useCurrentCluster();
+  const resourceTarget = useResourceTarget({ name, namespace: ns });
+  const resourceClient = useResourceClient(resourceTarget);
+  const { Logs } = resourceClient;
+
   const [lines, setLines] = useState<string[]>([]);
   const [filter, setFilter] = useState("");
   const [level, setLevel] = useState<"all" | LogLevel>("all");
@@ -99,7 +103,7 @@ export function LogsTab({
         }),
     });
     return () => sock.close();
-  }, [name, ns, effectiveSource, cluster]);
+  }, [name, ns, effectiveSource, Logs]);
 
   // Parse each line's level once; derive counts + the filtered view from it.
   const parsed = useMemo(

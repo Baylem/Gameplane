@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ReactNode } from "react";
 import { http, HttpResponse } from "msw";
 import { screen, waitFor, within } from "@testing-library/react";
@@ -32,7 +32,55 @@ vi.mock("./tabs/Settings", () => ({ SettingsTab: () => <div>settings-tab</div> }
 
 import { ServerDetailPage } from "./ServerDetail";
 
+let targetCanWrite = true;
+beforeEach(() => {
+  searchParams = {};
+  targetCanWrite = true;
+  navigate.mockClear();
+  server.use(http.get("/servers/:name/access", ({ request, params }) => {
+    const url = new URL(request.url);
+    return HttpResponse.json({
+      target: { cluster: url.searchParams.get("cluster") ?? "local", namespace: url.searchParams.get("namespace") ?? "gameplane-games", name: params.name },
+      canWrite: targetCanWrite, canControl: targetCanWrite, canConsole: targetCanWrite,
+      canDelete: targetCanWrite, isOwner: false, isCollaborator: false,
+      permissions: targetCanWrite ? ["servers:read", "servers:write", "servers:console", "captures:manage"] : ["servers:read"],
+    });
+  }));
+});
+
 describe("ServerDetailPage lifecycle buttons", () => {
+  it("uses remote target permissions even when the central profile is an administrator", async () => {
+    searchParams = { cluster: "remote", ns: "team-b" };
+    targetCanWrite = false;
+    const writes = vi.fn(() => new HttpResponse(null, { status: 202 }));
+    server.use(
+      http.get("/users/me", () => HttpResponse.json(makeUser({ role: "admin" }))),
+      http.get("/servers/alpha", ({ request }) => {
+        const url = new URL(request.url);
+        expect(url.searchParams.get("cluster")).toBe("remote");
+        expect(url.searchParams.get("namespace")).toBe("team-b");
+        return HttpResponse.json(makeServer({ metadata: { namespace: "team-b" }, status: { phase: "Running" } }));
+      }),
+      http.post(/\/servers\/[^/]+:stop$/, writes),
+    );
+    renderWithQuery(<ServerDetailPage />);
+    const stop = await screen.findByRole("button", { name: /^Stop$/i });
+    expect(stop).toBeDisabled();
+    await userEvent.click(stop);
+    expect(writes).not.toHaveBeenCalled();
+  });
+
+  it("does not expose actions when the live permission response belongs to a replacement UID", async () => {
+    searchParams = { cluster: "remote", ns: "gameplane-games" };
+    server.use(
+      http.get("/servers/alpha", () => HttpResponse.json(makeServer({ metadata: { uid: "original" } }))),
+      http.get("/servers/alpha/access", () => HttpResponse.json({ target: { cluster: "remote", namespace: "gameplane-games", name: "alpha", uid: "replacement" }, canWrite: true, canControl: true, canConsole: true, canDelete: true, isOwner: false, isCollaborator: false, permissions: ["servers:write"] })),
+    );
+    renderWithQuery(<ServerDetailPage />);
+    expect(await screen.findByText(/This server changed while it was being loaded/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Stop$/i })).not.toBeInTheDocument();
+  });
+
   it("while Running: Stop/Restart enabled, Start hidden", async () => {
     server.use(
       http.get("/servers/alpha", () => HttpResponse.json(makeServer({ status: { phase: "Running" } }))),
@@ -283,18 +331,19 @@ describe("ServerDetailPage", () => {
     expect(requestUrl).toContain("namespace=other-ns");
   });
 
-  it("fetches server without namespace param when no ns search param is set", async () => {
-    let requestUrl = "";
+  it("resolves a legacy local link before recording its canonical namespace", async () => {
+    const requestURLs: string[] = [];
     server.use(
       http.get("/servers/:name", ({ request }) => {
-        requestUrl = request.url;
+        requestURLs.push(request.url);
         return HttpResponse.json(makeServer());
       }),
     );
     searchParams = {};
     renderWithQuery(<ServerDetailPage />);
     await screen.findByRole("heading", { level: 1, name: "alpha" });
-    expect(requestUrl).not.toContain("namespace=");
+    expect(requestURLs[0]).not.toContain("namespace=");
+    expect(navigate).toHaveBeenCalledWith({ to: "/servers/$name", params: { name: "alpha" }, search: { cluster: "local", ns: "gameplane-games" }, replace: true });
   });
 });
 
@@ -389,6 +438,7 @@ describe("ServerDetailPage clone action", () => {
   });
 
   it("disables Clone server for viewers", async () => {
+    targetCanWrite = false;
     server.use(
       http.get("/users/me", () => HttpResponse.json(makeUser({ role: "viewer" }))),
     );
@@ -424,7 +474,7 @@ describe("ServerDetailPage clone action", () => {
       expect(navigate).toHaveBeenCalledWith({
         to: "/servers/$name",
         params: { name: "alpha-copy" },
-        search: { ns: "gameplane-games" },
+        search: { cluster: "local", ns: "gameplane-games" },
       }),
     );
     expect(screen.queryByLabelText("New name")).not.toBeInTheDocument();

@@ -54,7 +54,7 @@ describe("BackupsPage flows", () => {
     await screen.findByText("alpha-2026-05-07"); // default backup row
     await userEvent.click(screen.getByRole("button", { name: /Back up now/i }));
     await userEvent.click(serverSelect());
-    const option = await screen.findByRole("option", { name: "alpha" });
+    const option = await screen.findByRole("option", { name: /^alpha · local \/ gameplane-games$/ });
     await userEvent.click(option);
     const run = screen.getByRole("button", { name: /Run snapshot/i });
     await waitFor(() => expect(run).toBeEnabled());
@@ -110,7 +110,7 @@ describe("BackupsPage flows", () => {
     await userEvent.click(screen.getByRole("tab", { name: /^Schedules$/i }));
     const select = serverSelect();
     await userEvent.click(select);
-    const alphaOption = await screen.findByRole("option", { name: "alpha" });
+    const alphaOption = await screen.findByRole("option", { name: /^alpha · local \/ gameplane-games$/ });
     await userEvent.click(alphaOption);
     expect(await screen.findByText(/Schedule \(cron\)/i)).toBeInTheDocument();
   });

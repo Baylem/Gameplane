@@ -1,6 +1,8 @@
+import { ResourceTargetProvider } from "@/lib/resourceTarget";
+import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { renderWithQuery } from "@/test/render";
+import { renderWithQuery as baseRenderWithQuery } from "@/test/render";
 import { ModsTab } from "./Mods";
 import type {
   GameServer,
@@ -43,6 +45,7 @@ interface Routes {
 }
 
 function route(r: Routes) {
+  scopedControl = r.role !== "viewer";
   const role = r.role ?? "operator";
   // Mods management is gated on servers:write; mirror that in the mocked
   // permission set so the role still drives what the UI offers.
@@ -1250,3 +1253,9 @@ describe("ModsTab — id-managed mods (capabilities.mods.idList)", () => {
     expect(await screen.findByText("ID mod-id")).toBeInTheDocument();
   });
 });
+
+let scopedControl = true;
+function renderWithQuery(ui: ReactElement, options?: Parameters<typeof baseRenderWithQuery>[1]) {
+  const props = ui.props as { name?: string; ns?: string };
+  return baseRenderWithQuery(<ResourceTargetProvider target={{ cluster: "local", name: props.name ?? "s1", namespace: props.ns }} access={{ canWrite: scopedControl, canControl: scopedControl, canConsole: scopedControl, canDelete: false, isOwner: false, isCollaborator: false, permissions: scopedControl ? ["servers:read", "servers:write"] : ["servers:read"] }}>{ui}</ResourceTargetProvider>, options);
+}

@@ -1,13 +1,23 @@
 import { afterEach, describe, it, expect, onTestFinished, vi } from "vitest";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { http, HttpResponse } from "msw";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
-import { renderWithQuery } from "@/test/render";
+import { renderWithQuery as renderQuery } from "@/test/render";
+import { ResourceTargetProvider } from "@/lib/resourceTarget";
 import { makeServer, makeCapture } from "@/test/factories";
 import type { CaptureStartBody } from "@/lib/api";
 import { CaptureWidget } from "./CaptureWidget";
+
+function renderWithQuery(ui: ReactElement, permissions = ["captures:manage"]) {
+  return renderQuery(
+    <ResourceTargetProvider target={{ cluster: "remote", namespace: "gameplane-games", name: "alpha" }}
+      access={{ canWrite: false, canControl: false, canConsole: false, canDelete: false, isOwner: false, isCollaborator: false, permissions }}>
+      {ui}
+    </ResourceTargetProvider>,
+  );
+}
 
 // Mock TanStack Router to avoid import errors in tests
 vi.mock("@tanstack/react-router", () => ({
@@ -21,6 +31,22 @@ afterEach(() => {
 });
 
 describe("CaptureWidget", () => {
+  it("requires an exact capture grant even when server controls are permitted", async () => {
+    const read = vi.fn(() => HttpResponse.json({ captures: [], total: 0, limit: 100, offset: 0 }));
+    server.use(http.get(/servers\/alpha:captures(\?.*)?$/, read));
+    renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={makeServer({ spec: { capture: { enabled: true } } })} />, ["servers:write"]);
+    expect(screen.getByRole("button", { name: /Start Capture/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Disable Capture/i })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: /Start Capture/i }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("does not infer capture management from a missing target context", () => {
+    renderQuery(<CaptureWidget name="alpha" gs={makeServer()} />);
+    expect(screen.getByRole("button", { name: /Enable Capture/i })).toBeDisabled();
+  });
+
   describe("disabled state", () => {
     it("shows the disabled banner when capture is not enabled on the server", () => {
       const gs = makeServer({
@@ -59,7 +85,10 @@ describe("CaptureWidget", () => {
         releaseEnable = resolve;
       });
       server.use(
-        http.post(/servers\/alpha:capture-enable(\?.*)?$/, async () => {
+        http.post(/servers\/alpha:capture-enable(\?.*)?$/, async ({ request }) => {
+          const url = new URL(request.url);
+          expect(url.searchParams.get("cluster")).toBe("remote");
+          expect(url.searchParams.get("namespace")).toBe("gameplane-games");
           await enableGate;
           return HttpResponse.json({ name: "alpha", status: { capture: { enabled: true } } });
         }),

@@ -187,19 +187,21 @@ test.describe("shell", () => {
     });
   });
 
-  test.describe("cluster selector", () => {
-    test("cluster selector button is visible in top bar", async ({ page }) => {
+  test.describe("infrastructure selector", () => {
+    test("cluster selector is confined to the inventory page", async ({ page }) => {
       await page.goto("/");
       await loginIfNeeded(page);
 
       await page.setViewportSize({ width: 1200, height: 800 });
-
-      const clusterSelector = page.getByRole("button", { name: /select cluster/i });
+      await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: /select cluster/i })).toHaveCount(0);
+      await page.goto("/cluster");
+      const clusterSelector = page.getByRole("main").getByRole("button", { name: /select cluster/i });
       await expect(clusterSelector).toBeVisible();
     });
 
     test("cluster selector opens dropdown menu", async ({ page }) => {
-      await page.goto("/");
+      await page.goto("/cluster");
       await loginIfNeeded(page);
 
       const clusterSelector = page.getByRole("button", { name: /select cluster/i });
@@ -216,7 +218,7 @@ test.describe("shell", () => {
     });
 
     test("cluster selector shows health indicator", async ({ page }) => {
-      await page.goto("/");
+      await page.goto("/cluster");
       await loginIfNeeded(page);
 
       const clusterSelector = page.getByRole("button", { name: /select cluster/i });
@@ -226,7 +228,7 @@ test.describe("shell", () => {
     });
 
     test("cluster dropdown opens the registered clusters overview", async ({ page }) => {
-      await page.goto("/");
+      await page.goto("/cluster");
       await loginIfNeeded(page);
 
       const clusterSelector = page.getByRole("button", { name: /select cluster/i });
