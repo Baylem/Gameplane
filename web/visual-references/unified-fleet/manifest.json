@@ -1,0 +1,25 @@
+{
+  "referenceKind": "reviewed-browser-implementation",
+  "designDecision": "docs/unified-dashboard.md",
+  "source": {
+    "repository": "Baylem/Gameplane",
+    "commit": "e23556d05654afe5c28d4a8b79b0921c33cd8196",
+    "workflow": ".github/workflows/visual-diff.yaml",
+    "runId": 36350860432,
+    "jobId": 108709143096,
+    "artifactId": 10941794645,
+    "artifactName": "browser-screenshot-captures",
+    "artifactUrl": "https://github.com/Baylem/Gameplane/actions/runs/36350860432/artifacts/10941794645",
+    "captureDirectory": "web/e2e/screenshots",
+    "transformation": "none; original artifact PNG bytes copied directly"
+  },
+  "screens": {
+    "DWztv": {
+      "file": "DWztv.png",
+      "width": 780,
+      "height": 1688,
+      "sha256": "35bc255c129f7909cd1cdc020e775496b7bdd8f350f73da947bfd7593ea34333",
+      "acceptedChange": "All locations filter and cluster/namespace labels distinguish servers in the unified mobile list. Their added vertical space is intentional; search, status badges and visible cards remain readable without overlap or horizontal clipping, and later cards remain available by vertical scrolling."
+    }
+  }
+}
