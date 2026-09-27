@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -413,6 +414,47 @@ func tunnelCredentialPatch(provider, activeProvider string, values map[string]st
 		patch["data"] = data
 	}
 	return patch
+}
+
+// pruneStaleTunnelProviderKeys removes every provider's credential key from
+// the GameServer's <name>-tunnel-auth Secret except newProvider's. Callers
+// use it once a switch of spec.networking.tunnel.provider is already
+// committed (unlike the credential PUT path above, which must keep the
+// still-active provider's key alive during the handoff). Callers pass the
+// new, non-empty provider; removing the tunnel is not a switch and must not
+// call this.
+//
+// It is a no-op, not an error, when the Secret doesn't exist or isn't the
+// one owned by this GameServer (isServerOwnedSecretObject): either means
+// there is nothing here for this endpoint to manage.
+func pruneStaleTunnelProviderKeys(ctx context.Context, k *kube.Client, ns, serverName string, gsUID types.UID, newProvider string) error {
+	secretName := serverName + "-tunnel-auth"
+	existing, err := k.Typed.CoreV1().Secrets(ns).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get tunnel-auth secret %s/%s: %w", ns, secretName, err)
+	}
+	if !isServerOwnedSecretObject(existing, serverName, gsUID) {
+		return nil
+	}
+
+	patch := tunnelCredentialPatch(newProvider, "", nil)
+	if data, _ := patch["data"].(map[string]any); len(data) == 0 {
+		// Nothing stale to remove.
+		return nil
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return fmt.Errorf("marshal tunnel-auth prune patch: %w", err)
+	}
+	if _, err := k.Typed.CoreV1().Secrets(ns).Patch(
+		ctx, secretName, types.MergePatchType, patchBytes, metav1.PatchOptions{},
+	); err != nil {
+		return fmt.Errorf("patch tunnel-auth secret %s/%s: %w", ns, secretName, err)
+	}
+	return nil
 }
 
 // tunnelKeysForSecret returns the credential keys of the provider whose keys

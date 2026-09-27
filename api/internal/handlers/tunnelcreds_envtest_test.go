@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -82,21 +83,42 @@ func TestTunnelCreds_Put_KeepsActiveProviderKeyDuringSwitch_Envtest(t *testing.T
 		t.Fatalf("stringData = %v, want empty (apiserver folds writes into data)", secret.StringData)
 	}
 
-	// Once the spec provider field actually switches to tailscale, saving
-	// credentials again must clean up the now-inactive frp key.
-	current, err := kubeC.Dynamic.Resource(gvrServers()).Namespace(scope.DefaultNamespace).
-		Get(context.Background(), name, metav1.GetOptions{})
-	if err != nil {
-		t.Fatalf("get gameserver: %v", err)
+	// Once the spec provider field actually switches to tailscale — via the
+	// generic /servers/{name} PUT the dashboard uses to save the spec, not a
+	// direct dynamic-client Update — the now-inactive frp key must be pruned
+	// as part of that same request (pruneTunnelProviderOnSpecChange in
+	// resources.go), without waiting on another credential PUT.
+	resp = doJSON(t, http.MethodGet, "/servers/"+name, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /servers/%s status = %d; body=%s", name, resp.StatusCode, readBody(t, resp))
 	}
-	if err := unstructured.SetNestedField(current.Object, "tailscale", "spec", "networking", "tunnel", "provider"); err != nil {
+	var current map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&current); err != nil {
+		t.Fatalf("decode gameserver: %v", err)
+	}
+	resp.Body.Close()
+	if err := unstructured.SetNestedField(current, "tailscale", "spec", "networking", "tunnel", "provider"); err != nil {
 		t.Fatalf("set provider: %v", err)
 	}
-	if _, err := kubeC.Dynamic.Resource(gvrServers()).Namespace(scope.DefaultNamespace).
-		Update(context.Background(), current, metav1.UpdateOptions{}); err != nil {
-		t.Fatalf("update gameserver spec provider: %v", err)
+	resp = doJSON(t, http.MethodPut, "/servers/"+name, current)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("PUT /servers/%s (provider switch) status = %d; body=%s", name, resp.StatusCode, readBody(t, resp))
 	}
 
+	secret, err = kubeC.Typed.CoreV1().Secrets(scope.DefaultNamespace).
+		Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get secret after spec switch: %v", err)
+	}
+	if _, ok := secret.Data["token"]; ok {
+		t.Fatal("frp key still present right after the spec provider switched away from frp")
+	}
+	if got := string(secret.Data["authKey"]); got != "ts-key" {
+		t.Fatalf("authKey = %q, want ts-key (kept across the spec switch)", got)
+	}
+
+	// A later credential re-save must still work normally on top of the
+	// already-pruned Secret.
 	resp = doJSON(t, http.MethodPut, path, putReq{
 		Provider: "tailscale",
 		Values:   map[string]string{"authKey": "ts-key-2"},
@@ -108,10 +130,10 @@ func TestTunnelCreds_Put_KeepsActiveProviderKeyDuringSwitch_Envtest(t *testing.T
 	secret, err = kubeC.Typed.CoreV1().Secrets(scope.DefaultNamespace).
 		Get(context.Background(), secretName, metav1.GetOptions{})
 	if err != nil {
-		t.Fatalf("get secret after spec switch: %v", err)
+		t.Fatalf("get secret after credential re-save: %v", err)
 	}
 	if _, ok := secret.Data["token"]; ok {
-		t.Fatal("frp key still present after the spec provider switched away from frp")
+		t.Fatal("frp key reappeared after credential re-save")
 	}
 	if got := string(secret.Data["authKey"]); got != "ts-key-2" {
 		t.Fatalf("authKey = %q, want ts-key-2", got)
