@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -32,8 +33,9 @@ func TestGameServer_UnownedNamesakeSurvives(t *testing.T) {
 
 	ctx := context.Background()
 	ns := "gameplane-games"
-	tmplName := "e2e-ownership-namesake-tmpl"
-	gsName := "e2e-ownership-namesake-gs"
+	suffix := time.Now().UnixNano()
+	tmplName := fmt.Sprintf("e2e-ownership-namesake-tmpl-%d", suffix)
+	gsName := fmt.Sprintf("e2e-ownership-namesake-gs-%d", suffix)
 
 	applyBusyboxTemplate(t, tmplName)
 

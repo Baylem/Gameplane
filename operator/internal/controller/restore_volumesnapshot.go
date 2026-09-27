@@ -11,7 +11,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -106,6 +105,17 @@ func (r *RestoreReconciler) reconcileVolumeSnapshotRestore(
 		Kind: "VolumeSnapshot",
 		Name: rs.Status.SnapshotID,
 	}
+	// Record StartTime before planning so the restore deadline also bounds
+	// the pre-Create path: a referenced object that stays missing requeues
+	// (it may just not be cached yet) and must not do so forever.
+	if rs.Status.StartTime == nil {
+		now := metav1.Now()
+		rs.Status.StartTime = &now
+		if err := r.Status().Update(ctx, rs); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Refuse before creating anything if the original server does not own
 	// every referenced Secret/ConfigMap. The copy names depend only on the
 	// restored server's name, so the references are rewritten in the spec
@@ -130,35 +140,36 @@ func (r *RestoreReconciler) reconcileVolumeSnapshotRestore(
 	if err := r.ensureOwnedRefCopies(ctx, &orig, created, copies); err != nil {
 		return r.failOrRequeue(ctx, rs, err)
 	}
-
-	if rs.Status.StartTime == nil {
-		now := metav1.Now()
-		rs.Status.StartTime = &now
-		if err := r.Status().Update(ctx, rs); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
 	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 }
 
 // awaitRestoredServer drives the Restore to a terminal phase based on the
-// newly-provisioned server: Running → Succeeded, Failed → Failed, otherwise
-// keep polling while it starts up (with a deadline).
+// newly-provisioned server: Running (with its references copied) →
+// Succeeded, Failed → Failed, otherwise keep polling while it starts up
+// (with a deadline).
 func (r *RestoreReconciler) awaitRestoredServer(
 	ctx context.Context, rs *gameplanev1alpha1.Restore, src *gameplanev1alpha1.Backup, gs *gameplanev1alpha1.GameServer,
 ) (ctrl.Result, error) {
 	// Re-ensure owned references are copied on every pass. The original
 	// server is named by the source Backup's ServerRef, not by
-	// rs.Spec.BackupRef.Name (the Backup CR's own name).
+	// rs.Spec.BackupRef.Name (the Backup CR's own name). An ownership
+	// refusal is terminal and returned immediately; any other error is
+	// transient and must NOT return early here, or a restore stuck on a
+	// retryable copy error would never reach the deadline check below and
+	// could run past the documented limit.
+	var refsErr error
 	orig := &gameplanev1alpha1.GameServer{}
 	if err := r.Get(ctx, types.NamespacedName{Name: src.Spec.ServerRef.Name, Namespace: rs.Namespace}, orig); err == nil {
-		if err := r.ensureRestoredRefs(ctx, orig, gs); err != nil {
-			return r.failOrRequeue(ctx, rs, err)
+		refsErr = r.ensureRestoredRefs(ctx, orig, gs)
+		if refsErr != nil && errors.Is(refsErr, errRefNotOwned) {
+			return r.fail(ctx, rs, refsErr.Error())
 		}
 	}
 
-	switch gs.Status.Phase {
-	case gameplanev1alpha1.GameServerPhaseRunning:
+	if gs.Status.Phase == gameplanev1alpha1.GameServerPhaseFailed {
+		return r.fail(ctx, rs, fmt.Sprintf("restored server %q failed to start", gs.Name))
+	}
+	if gs.Status.Phase == gameplanev1alpha1.GameServerPhaseRunning && refsErr == nil {
 		now := metav1.Now()
 		rs.Status.Phase = gameplanev1alpha1.RestorePhaseSucceeded
 		if rs.Status.CompletionTime == nil {
@@ -174,28 +185,31 @@ func (r *RestoreReconciler) awaitRestoredServer(
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
-	case gameplanev1alpha1.GameServerPhaseFailed:
-		return r.fail(ctx, rs, fmt.Sprintf("restored server %q failed to start", gs.Name))
-	default:
-		// Still starting: fail once the deadline has passed. Checked only
-		// here so a server that is already Running or Failed resolves to
-		// its terminal phase regardless of elapsed time. A pass that
-		// requeued between Create and recording StartTime records it here,
-		// so the deadline still applies.
-		if rs.Status.StartTime == nil {
-			now := metav1.Now()
-			rs.Status.StartTime = &now
-			if err := r.Status().Update(ctx, rs); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-		if time.Since(rs.Status.StartTime.Time) > VolumeSnapshotRestoreDeadline {
-			return r.fail(ctx, rs, fmt.Sprintf(
-				"restore did not complete within %v; restored server %q phase is %s",
-				VolumeSnapshotRestoreDeadline, gs.Name, gs.Status.Phase))
-		}
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
+
+	// Still starting (or Running with a transient copy error still
+	// unresolved): fail once the deadline has passed. Checked here
+	// regardless of refsErr so a restore stuck on retryable copy errors
+	// cannot run past the documented limit. StartTime is normally recorded
+	// before Create; a Restore whose server was created without it (for
+	// example by an older operator) records it here so the deadline still
+	// applies.
+	if rs.Status.StartTime == nil {
+		now := metav1.Now()
+		rs.Status.StartTime = &now
+		if err := r.Status().Update(ctx, rs); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+	if time.Since(rs.Status.StartTime.Time) > VolumeSnapshotRestoreDeadline {
+		return r.fail(ctx, rs, fmt.Sprintf(
+			"restore did not complete within %v; restored server %q phase is %s",
+			VolumeSnapshotRestoreDeadline, gs.Name, gs.Status.Phase))
+	}
+	if refsErr != nil {
+		return ctrl.Result{}, refsErr
+	}
+	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
 // refCopy describes a single reference to copy from the original server to the restored server.
@@ -303,7 +317,8 @@ func (r *RestoreReconciler) planOwnedRefCopies(
 
 // ensureOwnedRefCopies creates or updates the planned copies. Each copy is
 // created as a new Secret or ConfigMap, controller-owned by the restored server.
-// If an unowned object already exists under the copy name, the restore fails.
+// If an object that the restored server does not control (controller
+// OwnerReference) already exists under the copy name, the restore fails.
 func (r *RestoreReconciler) ensureOwnedRefCopies(
 	ctx context.Context, orig, restored *gameplanev1alpha1.GameServer, copies []refCopy,
 ) error {
@@ -314,15 +329,23 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 			if err := r.Get(ctx, types.NamespacedName{Name: cp.origName, Namespace: orig.Namespace}, src); err != nil {
 				return fmt.Errorf("read source Secret %q: %w", cp.origName, err)
 			}
+			// Re-verify ownership at copy time: planning may have run a
+			// pass ago, and the named Secret could have been replaced with
+			// an unowned object at the same name since.
+			if !isServerOwnedSecret(src, orig) {
+				return fmt.Errorf("source Secret %q is not owned by original server %q: %w", cp.origName, orig.Name, errRefNotOwned)
+			}
 
 			dst := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: cp.copyName, Namespace: restored.Namespace},
 			}
 			_, err := controllerutil.CreateOrUpdate(ctx, r.Client, dst, func() error {
 				if !dst.CreationTimestamp.IsZero() {
-					// Object exists. If not owned by restored server, fail.
-					if !isServerOwnedSecret(dst, restored) {
-						return fmt.Errorf("secret %q already exists and is not owned by restored server: %w", cp.copyName, errRefNotOwned)
+					// Object exists. It must be controlled by the restored
+					// server: a plain (non-controller) OwnerReference is not
+					// enough to trust its contents as the restored copy.
+					if !metav1.IsControlledBy(dst, restored) {
+						return fmt.Errorf("secret %q already exists and is not controlled by the restored server: %w", cp.copyName, errRefNotOwned)
 					}
 					// Owned copy exists, skip update.
 					return nil
@@ -341,21 +364,30 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 			if err := r.Get(ctx, types.NamespacedName{Name: cp.origName, Namespace: orig.Namespace}, src); err != nil {
 				return fmt.Errorf("read source ConfigMap %q: %w", cp.origName, err)
 			}
+			// Re-verify ownership at copy time: planning may have run a
+			// pass ago, and the named ConfigMap could have been replaced
+			// with an unowned object at the same name since.
+			if !isServerOwnedConfigMap(src, orig) {
+				return fmt.Errorf("source ConfigMap %q is not owned by original server %q: %w", cp.origName, orig.Name, errRefNotOwned)
+			}
 
 			dst := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{Name: cp.copyName, Namespace: restored.Namespace},
 			}
 			_, err := controllerutil.CreateOrUpdate(ctx, r.Client, dst, func() error {
 				if !dst.CreationTimestamp.IsZero() {
-					// Object exists. If not owned by restored server, fail.
-					if !isServerOwnedConfigMap(dst, restored) {
-						return fmt.Errorf("configmap %q already exists and is not owned by restored server: %w", cp.copyName, errRefNotOwned)
+					// Object exists. It must be controlled by the restored
+					// server: a plain (non-controller) OwnerReference is not
+					// enough to trust its contents as the restored copy.
+					if !metav1.IsControlledBy(dst, restored) {
+						return fmt.Errorf("configmap %q already exists and is not controlled by the restored server: %w", cp.copyName, errRefNotOwned)
 					}
 					// Owned copy exists, skip update.
 					return nil
 				}
 				// New copy: inherit data from source
 				dst.Data = src.Data
+				dst.BinaryData = src.BinaryData
 				return controllerutil.SetControllerReference(restored, dst, r.Scheme)
 			})
 			if err != nil {
@@ -409,19 +441,28 @@ func rewriteRefs(spec *gameplanev1alpha1.GameServerSpec, copies []refCopy) {
 	}
 }
 
-// failOrRequeue marks the Restore Failed only for an ownership refusal,
-// which no retry can fix. Any other error is returned so the controller
-// requeues the Restore with backoff.
+// failOrRequeue marks the Restore Failed for an ownership refusal, which no
+// retry can fix, and for any other error once the restore deadline (counted
+// from rs.Status.StartTime) has passed. Any other error is returned so the
+// controller requeues the Restore with backoff.
 func (r *RestoreReconciler) failOrRequeue(
 	ctx context.Context, rs *gameplanev1alpha1.Restore, err error,
 ) (ctrl.Result, error) {
 	if errors.Is(err, errRefNotOwned) {
 		return r.fail(ctx, rs, err.Error())
 	}
+	if rs.Status.StartTime != nil && time.Since(rs.Status.StartTime.Time) > VolumeSnapshotRestoreDeadline {
+		return r.fail(ctx, rs, fmt.Sprintf(
+			"restore did not complete within %v: %v", VolumeSnapshotRestoreDeadline, err))
+	}
 	return ctrl.Result{}, err
 }
 
-// ownershipOfRef checks whether the GameServer owns the named Secret or ConfigMap.
+// ownershipOfRef checks whether the GameServer owns the named Secret or
+// ConfigMap. A NotFound is returned as an error rather than treated as "not
+// owned": the object may simply not have reached the informer cache yet, and
+// collapsing that into "not owned" would make callers mark the Restore
+// permanently Failed on a transient cache miss instead of requeuing.
 func (r *RestoreReconciler) ownershipOfRef(
 	ctx context.Context, gs *gameplanev1alpha1.GameServer, kind, name, namespace string,
 ) (bool, error) {
@@ -429,13 +470,13 @@ func (r *RestoreReconciler) ownershipOfRef(
 	case secretRefKind:
 		sec := &corev1.Secret{}
 		if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, sec); err != nil {
-			return false, client.IgnoreNotFound(err)
+			return false, err
 		}
 		return isServerOwnedSecret(sec, gs), nil
 	case configMapRefKind:
 		cm := &corev1.ConfigMap{}
 		if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: namespace}, cm); err != nil {
-			return false, client.IgnoreNotFound(err)
+			return false, err
 		}
 		return isServerOwnedConfigMap(cm, gs), nil
 	default:

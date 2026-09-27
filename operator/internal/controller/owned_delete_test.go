@@ -7,7 +7,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
@@ -173,4 +175,46 @@ func TestDeleteIfControlledBy_RemovesOnlyObjectsTheServerControls(t *testing.T) 
 
 func boolPtr(b bool) *bool {
 	return &b
+}
+
+// TestDeleteIfControlledBy_DeleteIsUIDPreconditioned is a regression test:
+// the Delete call must carry a UID precondition matching the object read
+// during the ownership check, so a replacement object created at the same
+// name between that read and the Delete reaching the API server is refused
+// (a real API server rejects a UID-precondition mismatch) instead of being
+// deleted just because it shares the name.
+func TestDeleteIfControlledBy_DeleteIsUIDPreconditioned(t *testing.T) {
+	scheme := testScheme(t)
+	gs := &gameplanev1alpha1.GameServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "test-server", Namespace: "default", UID: "uid-1"},
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "secret-1", Namespace: "default", UID: "uid-secret-1"},
+	}
+	controllerutil.SetControllerReference(gs, secret, scheme)
+
+	var gotUID *types.UID
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gs, secret).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+				do := client.DeleteOptions{}
+				do.ApplyOptions(opts)
+				if do.Preconditions != nil {
+					gotUID = do.Preconditions.UID
+				}
+				return c.Delete(ctx, obj, opts...)
+			},
+		}).Build()
+
+	r := &GameServerReconciler{Client: cl, Scheme: scheme}
+
+	if err := r.deleteIfControlledBy(context.Background(), gs, secret); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotUID == nil {
+		t.Fatal("Delete was called without a UID precondition")
+	}
+	if *gotUID != secret.UID {
+		t.Errorf("Delete UID precondition = %q, want %q", *gotUID, secret.UID)
+	}
 }

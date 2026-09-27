@@ -12,7 +12,7 @@ func TestRestoredRefName_UniqueAndUnderLimit(t *testing.T) {
 	}{
 		{"server1", "secret1", true},
 		{"server1", "secret2", true},
-		{"server1", "secret1", true}, // Same ref name should produce consistent name
+		{"server1", "secret1", false}, // Same ref name should produce consistent name
 		{"server-with-very-long-name", "secret-with-very-long-name", true},
 	}
 

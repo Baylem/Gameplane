@@ -221,9 +221,10 @@ func TestVolumeSnapshotRestore_FailsAfterDeadline(t *testing.T) {
 	}
 	deleteCleanup(t, &gameplanev1alpha1.Restore{ObjectMeta: metav1.ObjectMeta{Name: "rs-3", Namespace: ns}})
 
-	// Wait for the restored server to be created (StartTime gets set on
-	// the same pass) — envtest runs no kubelet, so it never reaches
-	// Running and the Restore just keeps polling from here.
+	// Wait for StartTime to be recorded (it is set on the pass that creates
+	// the restored server, just before Create) — envtest runs no kubelet,
+	// so the server never reaches Running and the Restore just keeps
+	// polling from here.
 	eventually(t, func() (bool, string) {
 		r := getRestore(t, ns, "rs-3")
 		return r.Status.StartTime != nil, "waiting for restore StartTime to be recorded"

@@ -33,6 +33,11 @@ func (r *GameServerReconciler) deleteIfControlledBy(
 		return nil
 	}
 
-	// Delete it.
-	return client.IgnoreNotFound(r.Delete(ctx, obj))
+	// Delete it, preconditioned on the UID we just verified ownership of.
+	// Without this, an object deleted and replaced at the same name between
+	// the ownership check above and this Delete reaching the API server
+	// would still match on name and be deleted, even though this GameServer
+	// never controlled the replacement.
+	uid := obj.GetUID()
+	return client.IgnoreNotFound(r.Delete(ctx, obj, client.Preconditions{UID: &uid}))
 }
