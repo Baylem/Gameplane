@@ -327,7 +327,8 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 The second release candidate for v0.3.0. It adds the changes merged since
 v0.3.0-rc.1, mostly fixes from the v0.3 pre-release audit. They are listed
-under [Unreleased](#unreleased) above, together with the rc.1 changes.
+under [Unreleased](#unreleased) above, which also holds the rc.1 changes;
+the Highlights below summarize what is new since rc.1.
 
 ### Highlights
 
@@ -361,9 +362,11 @@ under [Unreleased](#unreleased) above, together with the rc.1 changes.
 ## [0.3.0-rc.1] — 2026-09-23
 
 The first release candidate for v0.3.0, the first Gameplane release without a
-beta suffix. This contains every change listed under Unreleased above, since
-v0.2.0-beta.8. Release candidates are for testing against diverse workloads
-and deployment topologies before the v1-ready v0.3.0 GA; pre-releases are
+beta suffix. It contains the changes made since v0.2.0-beta.8 up to
+2026-09-23; the entries under Unreleased above that come from later PRs
+(the pre-release audit fixes) are in 0.3.0-rc.2, not in this release.
+Release candidates are for testing against diverse workloads and deployment
+topologies before the v1-ready v0.3.0 GA; pre-releases are
 published and listed in the GitHub releases page.
 
 ### Highlights
