@@ -280,7 +280,6 @@ func mountHomeClientRoutes(t *testing.T, r chi.Router, home *kube.Client, reg *k
 	MountModules(r, home, controlNS)
 	MountRegistrySecrets(r, home, controlNS)
 	MountRegistry(r, home, fakeSet{p: &fakeProvider{}})
-	MountModUpdates(r, home, fakeSet{p: &fakeProvider{}}, &fakeModLister{})
 	MountModIDs(r, home)
 }
 

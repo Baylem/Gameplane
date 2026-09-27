@@ -21,7 +21,6 @@ var homeClientMounts = []string{
 	"handlers.MountClusterActions",
 	"handlers.MountClusters",
 	"handlers.MountModIDs",
-	"handlers.MountModUpdates",
 	"handlers.MountModules",
 	"handlers.MountNotifications",
 	"handlers.MountRegistry",

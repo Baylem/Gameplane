@@ -1,3 +1,10 @@
+{{- if not (eq (include "gameplane.apiEnabled" .) "true") }}
+{{- $livePVC := lookup "v1" "PersistentVolumeClaim" .Release.Namespace "gameplane-api-data" }}
+{{- if and $livePVC (ne (index ($livePVC.metadata.annotations | default dict) "helm.sh/resource-policy") "keep") }}
+{{- fail "Before disabling api.enabled on an existing install, annotate gameplane-api-data with helm.sh/resource-policy=keep to preserve the SQLite database" }}
+{{- end }}
+{{- end }}
+{{- if (eq (include "gameplane.apiEnabled" .) "true") }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -441,3 +448,5 @@ spec:
     # In-cluster scrape port for the ServiceMonitor. The Ingress and the web
     # front end route only to the http port.
     - { name: metrics, port: {{ .Values.api.metricsPort | default 9090 }}, targetPort: metrics }
+
+{{- end }}
