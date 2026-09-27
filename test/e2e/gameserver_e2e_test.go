@@ -567,7 +567,9 @@ func TestGameServer_NetworkCaptureStartStopDownload(t *testing.T) {
 			t.Fatalf("create traffic pod %s: %v", podName, err)
 		}
 		t.Cleanup(func() {
-			_ = envInstance.K8s.CoreV1().Pods(ns).Delete(context.Background(), podName, metav1.DeleteOptions{})
+			// Pass the test's ctx through; WithoutCancel keeps the delete
+			// running even if that context is cancelled by cleanup time.
+			_ = envInstance.K8s.CoreV1().Pods(ns).Delete(context.WithoutCancel(ctx), podName, metav1.DeleteOptions{})
 		})
 
 		// Poll for the traffic pod to finish rather than a bare sleep — a
