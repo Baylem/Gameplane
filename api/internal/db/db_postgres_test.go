@@ -337,11 +337,10 @@ func TestPostgres_ShareLinks(t *testing.T) {
 	}
 }
 
-// TestPostgres_DeleteUser checks DeleteUser's transaction on Postgres, where
-// the foreign keys are enforced: the account's rows go, and the ON DELETE
-// CASCADE on share_links.created_by removes its share links outright (on
-// SQLite, with foreign keys off, they stay behind revoked). Another
-// account's rows and links are untouched.
+// TestPostgres_DeleteUser checks DeleteUser's transaction on Postgres: the
+// account's rows go, and its share links stay behind, revoked, exactly as on
+// SQLite (share_links.created_by has no foreign key, so nothing cascades).
+// Another account's rows and links are untouched.
 func TestPostgres_DeleteUser(t *testing.T) {
 	s := newPostgresStore(t)
 	ctx := t.Context()
@@ -359,13 +358,12 @@ func TestPostgres_DeleteUser(t *testing.T) {
 	if _, err := s.LookupShareLink(ctx, goneToken); !errors.Is(err, ErrShareLinkInvalid) {
 		t.Errorf("deleted user's share link: got %v, want ErrShareLinkInvalid", err)
 	}
-	var links int
-	if err := s.DB.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM share_links WHERE created_by = ?`, gone).Scan(&links); err != nil {
-		t.Fatalf("count share links: %v", err)
+	links, err := s.ListShareLinks(ctx, "local", "default", "server-pg-leaving")
+	if err != nil {
+		t.Fatalf("list share links: %v", err)
 	}
-	if links != 0 {
-		t.Errorf("share links for deleted user = %d, want 0 (removed by ON DELETE CASCADE)", links)
+	if len(links) != 1 || links[0].CreatedBy != gone || links[0].RevokedAt == nil {
+		t.Errorf("deleted user's share link should be kept and revoked, got %+v", links)
 	}
 
 	if n := accountRowCount(t, s, kept); n != 6 {

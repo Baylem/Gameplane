@@ -30,6 +30,10 @@ number used in both the legacy set and `common/` is an error.
    - `INSERT OR IGNORE` / `INSERT OR REPLACE`: use `INSERT ... ON CONFLICT (...) DO NOTHING / DO UPDATE`.
    - `COLLATE NOCASE`: compare with `LOWER(...)` in the query instead.
    - `?` placeholders: migrations are run as plain DDL/DML with no parameters.
-3. Statements are split on `;` followed by a newline. Don't end a comment line
+3. Foreign keys are enforced on PostgreSQL but not on SQLite (the shipped
+   DSN leaves `foreign_keys` off). Delete dependent rows in Go rather than
+   relying on `ON DELETE`, and don't add a constraint Postgres would enforce
+   differently, such as a cascade onto rows SQLite keeps.
+4. Statements are split on `;` followed by a newline. Don't end a comment line
    with `;`, and don't use dollar-quoted function bodies.
-4. Migrations are append-only: never edit or renumber one that has shipped.
+5. Migrations are append-only: never edit or renumber one that has shipped.

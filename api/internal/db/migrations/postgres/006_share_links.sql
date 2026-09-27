@@ -3,6 +3,12 @@
 -- timestamp columns the API sorts/compares as text. can_start stays
 -- INTEGER (0/1) because the Go code reads and writes it as an int.
 --
+-- created_by is a plain column, with no REFERENCES users(id). The SQLite
+-- file declares ON DELETE CASCADE, but modernc-sqlite runs with foreign keys
+-- off, so there a deleted user's links stay behind, revoked by
+-- Store.DeleteUser, and remain in the audit trail. An enforced cascade here
+-- would delete them instead, and a plain FK would block the user delete.
+--
 -- Share links: signed, expiring, revocable tokens for unauthenticated access to
 -- a single GameServer's status and connection address, optionally with start capability.
 --
@@ -22,7 +28,7 @@ CREATE TABLE share_links (
     id           TEXT PRIMARY KEY,
     namespace    TEXT NOT NULL,
     server_name  TEXT NOT NULL,
-    created_by   BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_by   BIGINT NOT NULL,
     can_start    INTEGER NOT NULL DEFAULT 0,
     token_hash   TEXT NOT NULL UNIQUE,
     expires_at   TEXT COLLATE "C" NOT NULL,

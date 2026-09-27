@@ -4,8 +4,10 @@
 -- strftime('%Y-%m-%dT%H:%M:%SZ', 'now') writes and shares.go parses.
 --
 -- One-off cleanup of rows that belong to users who no longer exist. On
--- Postgres the ON DELETE CASCADE foreign keys already removed these rows when
--- the user was deleted, so every statement normally matches nothing here. The
+-- Postgres the ON DELETE CASCADE foreign keys already removed the account
+-- rows when the user was deleted, and share_links.created_by has no foreign
+-- key (see 006_share_links.sql), so its links are revoked, not deleted,
+-- exactly as on SQLite. Every statement normally matches nothing here. The
 -- file exists so both drivers record the same schema_migrations versions.
 DELETE FROM oidc_links WHERE user_id NOT IN (SELECT id FROM users);
 

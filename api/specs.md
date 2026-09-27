@@ -498,6 +498,7 @@ Verify from `/api/go.mod`.
 - Token never stored; only SHA-256 hash persisted and indexed for O(1) lookup
 - Revocation (`DELETE /servers/{name}/shares/{id}`, `db.Store.RevokeShareLink`) matches the link's cluster, namespace, server name and id; no match returns `db.ErrShareLinkNotFound`, which the handler answers with 404
 - Pre-existing; not part of the Phase 2 Foundational feature scope
+- `created_by` has no foreign key on Postgres (the SQLite file's `ON DELETE CASCADE` never fires there), so a deleted user's links stay behind, revoked, on both drivers
 
 **007_audit_reason.sql:** (Phase 2 Foundational: capture operation auditing)
 - Adds nullable `reason TEXT` column to `audit_events`
@@ -526,7 +527,7 @@ Verify from `/api/go.mod`.
 **012_account_removal_cleanup.sql:** (account removal cleanup)
 - One-off pass that deletes `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and `user_role_bindings` rows whose user no longer exists, and revokes (sets `revoked_at`, RFC3339 UTC) active `share_links` whose creator no longer exists. Clears rows left by user deletes made before `db.Store.DeleteUser` removed them explicitly; forward-only, so a rollback needs the pre-upgrade DB snapshot
 
-All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); API layer is authoritative.
+Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); the API layer is authoritative and deletes dependent rows itself, so the Postgres cascades never change the outcome. The one exception is `share_links.created_by`: the Postgres schema declares it as a plain column with no foreign key, so deleting a user keeps that user's share links (revoked) in the audit trail on both drivers, instead of cascading them away.
 
 ## Security considerations
 
