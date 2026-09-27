@@ -810,6 +810,7 @@ const wsOrigin = typeof window !== "undefined" ? window.location.origin.replace(
 export function buildScreenshotHandlers() {
   const data = getScreenshotData();
   return [
+    ...fleetHandlers,
     // The Servers page asks which namespaces to list before listing servers.
     http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
     // Auth: reuse default login/logout (screenshot demos don't test auth edge cases)
