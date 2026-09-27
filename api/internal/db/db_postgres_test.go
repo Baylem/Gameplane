@@ -323,14 +323,59 @@ func TestPostgres_ShareLinks(t *testing.T) {
 	if err != nil || len(list) != 2 {
 		t.Fatalf("list = %d links, %v", len(list), err)
 	}
-	if err := s.RevokeShareLink(ctx, "local", link.ID); err != nil {
+	if err := s.RevokeShareLink(ctx, "local", "default", "mc", link.ID); err != nil {
 		t.Fatalf("revoke: %v", err)
 	}
 	if _, err := s.LookupShareLink(ctx, raw); !errors.Is(err, ErrShareLinkInvalid) {
 		t.Fatalf("lookup after revoke = %v, want ErrShareLinkInvalid", err)
 	}
-	if err := s.RevokeShareLink(ctx, "other", link.ID); !errors.Is(err, ErrShareLinkNotFound) {
+	if err := s.RevokeShareLink(ctx, "other", "default", "mc", link.ID); !errors.Is(err, ErrShareLinkNotFound) {
 		t.Fatalf("revoke in another cluster = %v, want ErrShareLinkNotFound", err)
+	}
+	if err := s.RevokeShareLink(ctx, "local", "default", "other-server", link.ID); !errors.Is(err, ErrShareLinkNotFound) {
+		t.Fatalf("revoke on another server = %v, want ErrShareLinkNotFound", err)
+	}
+}
+
+// TestPostgres_DeleteUser checks DeleteUser's transaction on Postgres, where
+// the foreign keys are enforced: the account's rows go, and the ON DELETE
+// CASCADE on share_links.created_by removes its share links outright (on
+// SQLite, with foreign keys off, they stay behind revoked). Another
+// account's rows and links are untouched.
+func TestPostgres_DeleteUser(t *testing.T) {
+	s := newPostgresStore(t)
+	ctx := t.Context()
+	gone := pgInsertUser(t, s, "pg-leaving", "viewer")
+	kept := pgInsertUser(t, s, "pg-staying", "viewer")
+	goneToken := seedAccountRows(t, s, gone, "pg-leaving")
+	keptToken := seedAccountRows(t, s, kept, "pg-staying")
+
+	if err := s.DeleteUser(ctx, gone); err != nil {
+		t.Fatalf("DeleteUser: %v", err)
+	}
+	if n := accountRowCount(t, s, gone); n != 0 {
+		t.Errorf("deleted user still has %d account rows", n)
+	}
+	if _, err := s.LookupShareLink(ctx, goneToken); !errors.Is(err, ErrShareLinkInvalid) {
+		t.Errorf("deleted user's share link: got %v, want ErrShareLinkInvalid", err)
+	}
+	var links int
+	if err := s.DB.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM share_links WHERE created_by = ?`, gone).Scan(&links); err != nil {
+		t.Fatalf("count share links: %v", err)
+	}
+	if links != 0 {
+		t.Errorf("share links for deleted user = %d, want 0 (removed by ON DELETE CASCADE)", links)
+	}
+
+	if n := accountRowCount(t, s, kept); n != 6 {
+		t.Errorf("other user's account rows = %d, want 6", n)
+	}
+	if _, err := s.LookupShareLink(ctx, keptToken); err != nil {
+		t.Errorf("other user's share link no longer resolves: %v", err)
+	}
+	if err := s.DeleteUser(ctx, 424242); err != nil {
+		t.Fatalf("DeleteUser(unknown): %v", err)
 	}
 }
 

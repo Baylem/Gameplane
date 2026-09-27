@@ -228,7 +228,7 @@ production-readiness hardening below — tracked items, not code gaps.
 ### Postgres driver: production readiness (experimental)
 
 SQLite is the only production-tested driver. The Postgres driver (build tag
-`-tags postgres`) now works end to end (#518): migrations 001–011 have
+`-tags postgres`) now works end to end (#518): migrations 001–012 have
 hand-written Postgres equivalents (`api/internal/db/migrations/postgres/`),
 every later migration is one portable file both drivers run
 (`migrations/common/`), the Postgres connection rewrites `?` placeholders to

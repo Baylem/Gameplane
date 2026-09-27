@@ -264,6 +264,7 @@ func TestMigrate_SQLiteRecordsLegacyVersions(t *testing.T) {
 		"005_audit_chain.sql", "006_share_links.sql", "007_audit_reason.sql",
 		"008_captures_rbac.sql", "009_share_links_cluster.sql",
 		"010_share_links_expiry_nullable.sql", "011_user_theme_preferences.sql",
+		"012_account_removal_cleanup.sql",
 	}
 	shared, err := listSQL(migrations, sharedMigrationDir)
 	if err != nil {

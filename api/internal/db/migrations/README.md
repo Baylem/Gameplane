@@ -7,8 +7,8 @@ startup and records each one in `schema_migrations` under its bare filename
 
 | Directory | Holds | Applied on |
 |---|---|---|
-| `sqlite/` | Legacy migrations 001–011, SQLite dialect. **Frozen**: never edit these files. | SQLite |
-| `postgres/` | Hand-written PostgreSQL equivalents of 001–011, same filenames, same resulting schema. **Frozen.** | PostgreSQL |
+| `sqlite/` | Legacy migrations 001–012, SQLite dialect. **Frozen**: never edit these files. | SQLite |
+| `postgres/` | Hand-written PostgreSQL equivalents of 001–012, same filenames, same resulting schema. **Frozen.** | PostgreSQL |
 | `common/` | **Every new migration.** One portable file that both drivers run unchanged. | Both |
 
 For each driver, `Migrate` takes that driver's legacy set plus `common/`,
@@ -17,9 +17,9 @@ number used in both the legacy set and `common/` is an error.
 
 ## Adding a migration
 
-1. Create `common/<NNN>_<name>.sql` with the next free number. Version 012 is
-   reserved for the in-flight account-removal-cleanup change, which predates
-   this layout, so shared migrations start at 013.
+1. Create `common/<NNN>_<name>.sql` with the next free number. Version 012
+   (account-removal cleanup) predates this layout and is the last legacy
+   per-driver migration, so shared migrations start at 013.
 2. Write SQL that both SQLite and PostgreSQL accept. `TestSharedMigrationsArePortable`
    fails the build on these SQLite-only constructs:
    - `datetime(...)`, `strftime(...)`, `julianday(...)`: store timestamps as

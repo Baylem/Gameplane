@@ -3,7 +3,7 @@
 // is opt-in via --db-driver=postgres --db-dsn=...
 //
 // Schema migrations live alongside this package as plain .sql files,
-// applied in version order at startup: migrations 001-011 exist once per
+// applied in version order at startup: migrations 001-012 exist once per
 // dialect (migrations/sqlite, migrations/postgres); every later migration
 // is a single portable file in migrations/common that both drivers run.
 // Runtime queries are written with `?` placeholders; the Postgres
@@ -86,7 +86,7 @@ func (s *Store) LockUserManagement() (unlock func()) {
 }
 
 // Migrate applies every pending migration for s.Driver, in version order:
-// first the driver's legacy set (migrations/<driver>/, versions 001-011,
+// first the driver's legacy set (migrations/<driver>/, versions 001-012,
 // written per dialect), then the shared set (migrations/common/, 013
 // onward, portable SQL that both drivers run unchanged). See
 // migrations/README.md. Each file runs in a single transaction; failures
