@@ -53,7 +53,7 @@ npm view eslint-plugin-react@latest version peerDependencies.eslint
 
 ```
 .
-├── netguard/                 # SSRF dial-guard (Go) — operator & agent
+├── netguard/                 # SSRF dial-guard (Go) — `IsAllowed` for operator module sources, API notification sinks, agent loopback RCON; `IsPublic` for agent mod downloads, API Steam resolver
 ├── gameaction/               # Console-injection guard & command renderer (Go) — api & agent
 ├── gameproto/                # Minecraft & Terraria wire protocol handshake parser (Go) — sentinel
 ├── gp-module/                # Module authoring CLI: init, validate, preview, package (Go)
@@ -249,7 +249,7 @@ make tidy            # Runs `go mod tidy` across all workspace modules
 
 | Component | Language / Libs | Role |
 |---|---|---|
-| `netguard` | Go | Dial-time SSRF prevention (`IsAllowed` for operator, `IsPublic` for agent). |
+| `netguard` | Go | Dial-time SSRF prevention via `IsAllowed` (operator/API module sources & sinks, agent loopback RCON) and `IsPublic` (agent mod downloads, API Steam resolver). |
 | `gameaction` | Go | Validates console inputs against schemas; escapes injection attacks. |
 | `gameproto` | Go | Wire-protocol parser for Minecraft/Terraria connection filtering. |
 | `gp-module` | Go | Module authoring CLI: scaffold, offline validate, dry-run preview, OCI package. |
