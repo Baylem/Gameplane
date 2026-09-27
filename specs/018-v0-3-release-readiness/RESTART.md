@@ -102,8 +102,7 @@ All of these still apply.
 
 ### Open
 
-- **Wave 5** (workflow `wf_d0f7e3b9-7fa`, session 7) opened:
-  - #494: group 50, F-032..F-036, F-245 (docs). The review loop stalled on three stale `comparison-sources.md` citations; the main loop fixed them by hand after checking the source lines.
+- Wave 5 is fully merged (#491–#494, 00:22 UTC 2026-09-27). Leftover: `docs/dependencies.md` still says "the 7 Gameplane CRDs" (follow-up PR).
 - Wave 4 is fully merged (23:04 UTC). Record each merge with `scratchpad/rec.sh`.
 - The held fixes (#462, #463, #469, #471–#474) belong to the maintainer, on the devbox. The cloud session doesn't drive them.
 - The Dependabot PRs #272 (TypeScript 7) and #458 (ESLint 10) are blocked; see CLAUDE.md.
@@ -151,7 +150,7 @@ The cloud container restarted three times; the third restart (session 6, 2026-09
    - group 27 waits on a decision; wave 2 is partly done (see §3c);
    - wave 2 and wave 3 are done: 17, 25, 27, 33, 35, 37, 39, 40, 41, 43, 45, 46, 47, 49;
    - wave 4 is merged: 31, 34, 42 + F-261, 52, F-138, F-262 (#485–#490);
-   - wave 5 open as #491–#494 (38, 48, 44, 50); 51 has an external blocker;
+   - wave 5 is merged: 38, 48, 44, 50 (#491–#494); 51 has an external blocker;
    - 28 is blocked on the module tag (T054), 32 is T063, and 19 may need design.
 4. The OD-021 follow-ups (see OPEN-DECISIONS.md OD-021):
    - the new Go e2e bucket (item 12);
