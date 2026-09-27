@@ -88,14 +88,15 @@ func bootstrapAdmin(ctx context.Context, args []string, stdin io.Reader, stderr 
 	row := store.DB.QueryRowContext(ctx, `SELECT id FROM users WHERE username = ?`, bf.username)
 	switch err := row.Scan(&existingID); {
 	case errors.Is(err, sql.ErrNoRows):
-		res, err := store.DB.ExecContext(ctx,
-			`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?, ?, ?, 'admin', ?)`,
+		// RETURNING id instead of LastInsertId: pgx's database/sql driver
+		// has no LastInsertId, and both SQLite and Postgres support RETURNING.
+		var newID int64
+		if err := store.DB.QueryRowContext(ctx,
+			`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?, ?, ?, 'admin', ?) RETURNING id`,
 			bf.username, display, bf.email, hash,
-		)
-		if err != nil {
+		).Scan(&newID); err != nil {
 			return fmt.Errorf("insert user: %w", err)
 		}
-		newID, _ := res.LastInsertId()
 		// Mirror the admin role into a cluster-wide role binding so RBAC
 		// resolves the user's permissions (this runs after Migrate, so the
 		// migration's backfill never saw this row).
@@ -123,9 +124,9 @@ func bootstrapAdmin(ctx context.Context, args []string, stdin io.Reader, stderr 
 
 	if _, err := tx.ExecContext(ctx,
 		`UPDATE users
-		   SET pw_hash = ?, role = 'admin', display_name = ?, email = ?, updated_at = datetime('now')
+		   SET pw_hash = ?, role = 'admin', display_name = ?, email = ?, updated_at = ?
 		 WHERE id = ?`,
-		hash, display, bf.email, existingID,
+		hash, display, bf.email, db.NowTimestamp(), existingID,
 	); err != nil {
 		return fmt.Errorf("update user: %w", err)
 	}
@@ -221,11 +222,11 @@ func enableLocalLogin(ctx context.Context, store *db.Store, stderr io.Writer) er
 	}
 	if _, err := store.DB.ExecContext(ctx,
 		`INSERT INTO config(key, value, updated_at)
-		 VALUES ('auth', ?, datetime('now'))
+		 VALUES ('auth', ?, ?)
 		 ON CONFLICT(key) DO UPDATE SET
 		     value      = excluded.value,
 		     updated_at = excluded.updated_at`,
-		string(canon),
+		string(canon), db.NowTimestamp(),
 	); err != nil {
 		return fmt.Errorf("write auth config: %w", err)
 	}

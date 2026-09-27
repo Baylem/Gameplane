@@ -124,7 +124,7 @@ Top-level knobs (see `values.yaml` for the full list):
   GameServer enters Pending with a `PVCProvisioningFailed` condition (visible in
   the dashboard); no pod starts until resolved. Example:
   `--set operator.gameDataStorage.storageClassName=fast-nvme`
-- `api.db.driver` — `sqlite` (default, production-tested) or `postgres` [experimental] (work-in-progress)
+- `api.db.driver` — `sqlite` (default, production-tested) or `postgres` [experimental] (requires an api image built with `-tags postgres`; not yet covered by e2e or upgrade tests)
 - `api.db.dsn` — connection string; SQLite default persists to a PVC
 - `api.storage.existingClaim` — pre-existing PVC to mount for the API's SQLite database instead of letting Helm create `gameplane-api-data` (default `""`). The chart annotates `gameplane-api-data` with `helm.sh/resource-policy: keep` so switching to an existing claim preserves the previous PVC.
 - `api.oidc.enabled` + the following settings — wire OIDC login from Helm (shows
@@ -668,4 +668,5 @@ This ensures no two API processes try to write the same SQLite database file
 SQLite-backed installs experience a few seconds of dashboard downtime during
 an upgrade — this is expected and deliberate. Postgres-backed installs (experimental)
 would use rolling updates with no downtime, since the database is external and
-shared, but full Postgres support remains a work-in-progress.
+shared, but Postgres remains experimental and the API should still run as a
+single replica (see `api.replicas` in `values.yaml`).

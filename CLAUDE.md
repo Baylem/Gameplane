@@ -301,7 +301,7 @@ make tidy            # Runs `go mod tidy` across all workspace modules
 4. In the root repo, run `git add website` and commit the updated submodule pointer.
 
 ### Add a Database Migration
-1. Add sequentially numbered migration file: `api/internal/db/migrations/<NNN>_<name>.sql`.
+1. Add sequentially numbered migration file: `api/internal/db/migrations/common/<NNN>_<name>.sql` (013 onward). New migrations go in the shared `common/` dir and must be portable SQL that both SQLite and PostgreSQL run unchanged: no `datetime('now')`/`strftime`, `AUTOINCREMENT`, `INSERT OR ...` or `COLLATE NOCASE`; bind timestamps from Go. `migrations/sqlite/` and `migrations/postgres/` hold the frozen per-dialect 001–012 sets. See `api/internal/db/migrations/README.md`.
 2. Migrations are append-only and automatically execute on API startup.
 
 ---

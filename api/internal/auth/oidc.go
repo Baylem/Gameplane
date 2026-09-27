@@ -563,14 +563,15 @@ func (o *OIDC) resolveOrLinkUser(
 		return nil, nil, err
 	}
 
-	res, err := tx.ExecContext(ctx,
-		`INSERT INTO users(username, email, display_name, role) VALUES (?, ?, ?, ?)`,
+	// RETURNING id instead of LastInsertId: pgx's database/sql driver has
+	// no LastInsertId, and both SQLite and Postgres support RETURNING.
+	var uid int64
+	if err := tx.QueryRowContext(ctx,
+		`INSERT INTO users(username, email, display_name, role) VALUES (?, ?, ?, ?) RETURNING id`,
 		username, email, name, role,
-	)
-	if err != nil {
+	).Scan(&uid); err != nil {
 		return nil, nil, err
 	}
-	uid, _ := res.LastInsertId()
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO oidc_links(user_id, issuer, subject, email) VALUES (?, ?, ?, ?)`,
 		uid, issuer, sub, email,

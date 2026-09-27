@@ -57,7 +57,7 @@ api/
 - **handlers:** 23+ route groups (Audit, AuthProviderSecrets, Capture, Cluster, ClusterActions, Clusters, Config, Destinations, Events, Lifecycle, ModIDs, ModSources, Modules, ModUpdates, Notifications, Ownership, PodEvents, Registry, RegistrySecrets, Resources, Roles, SystemLogs, Users, WebSocket Mount)
 - **auth:** SessionStore (CSRF + expiry), Local (argon2id password check), OIDC (provider registry + claim mapping), Registry (auth provider discovery per request)
 - **rbac:** Middleware (namespace/cluster-scoped permission check + owner/collaborator fallback), rule table (method/path -> permission), catalog (permission definitions)
-- **db:** driver-selectable (modernc.org/sqlite or pgx/v5 via postgres build tag), migrations (001-011), Store (query interface)
+- **db:** driver-selectable (modernc.org/sqlite or pgx/v5 via postgres build tag), migrations (001-012 per dialect in `migrations/sqlite/` and `migrations/postgres/`; 013+ shared and portable in `migrations/common/`), Store (query interface); queries use `?` placeholders, rebound to `$n` by the Postgres connection (`db.Rebind`)
 - **kube:** Client (K8s API wrapper), Registry (per-cluster clients from Cluster CRDs), watch (cluster-config sync)
 - **audit:** Auditor (insert to DB + distribute to sinks), webhook sink (POST JSON to URL), S3 sink (object storage), hash-chain (detect tampering)
 - **notify:** Notifier (watch GameServer/Backup/Restore status, format + deliver to sinks), sinks (Discord, Slack, SMTP, webhook)
@@ -381,7 +381,7 @@ A submitted stylesheet is rejected with 400 and a message naming the offending r
 
 **Built-in roles:**
 - **admin:** wildcard permission `*`; full access to all resources and config
-- **operator:** read/write servers, backups, schedules, templates; read modules, destinations, cluster, roles (modules install/upgrade/uninstall requires `modules:manage`, seeded only to admin — see `api/internal/db/migrations/003_roles.sql`)
+- **operator:** read/write servers, backups, schedules, templates; read modules, destinations, cluster, roles (modules install/upgrade/uninstall requires `modules:manage`, seeded only to admin — see `api/internal/db/migrations/sqlite/003_roles.sql`)
 - **viewer:** read-only across servers, backups, schedules, templates, modules, destinations, cluster, roles
 
 **Permissions (granular, per resource and action):**
@@ -424,7 +424,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 2. **Every mutating request audited:** audit middleware logs actor, method, path, target, status, IP to database + external sinks
 3. **Three-role baseline RBAC:** admin/operator/viewer roles reproduce historical permission matrix exactly
 4. **Multi-dimensional RBAC:** namespace + cluster + owner/collaborator dimensions; cluster gating prevents cross-cluster privilege escalation
-5. **Append-only migrations:** database schema mutations are irreversible (migrations 001-011); no down-migrations
+5. **Append-only migrations:** database schema mutations are irreversible (migrations 001-012); no down-migrations
 6. **Login rate limiting:** `/auth/login` is per-IP (burst 10, 5/min, `LoginLimiter`) plus a per-username throttle layered on top (burst 6, 3/min, `LoginUserLimiter` in `auth/local.go`); the OIDC callback routes (`/auth/oidc/{provider}/callback`, legacy `/auth/oidc/callback`) are per-IP only (burst 10, 10/min via `OIDCCallbackLimiter`), no per-user dimension
 7. **Audit hash-chain:** each audit_events row includes hash of previous row (prev_hash) + its own content hash (hash); detects DB-level UPDATE/DELETE tampering
 8. **Audit pagination is bounded:** The `Auditor.Page(ctx, limit)` method clamps the untrusted `limit` parameter to a maximum of 500 entries (`MaxAuditPageSize`). Clamping occurs at both the API handler layer (api/internal/handlers/audit.go line 25) and the store layer (api/internal/audit/audit.go lines 820–822) so untrusted input is bounded at the earliest opportunity and again at use time. The allocated slice is always created with capacity within the bound (`make([]Event, 0, limit)` after clamping), guaranteeing that no untrusted client input can cause unbounded memory allocation regardless of how the limit value flows through the system.
@@ -448,7 +448,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 - `github.com/coder/websocket` v1.8.12 — WebSocket upgrade + streaming
 - `github.com/coreos/go-oidc/v3` v3.11.0 — OIDC provider discovery + token validation
 - `github.com/go-jose/go-jose/v4` v4.0.2 — OIDC JWT parsing (transitive via go-oidc)
-- `github.com/jackc/pgx/v5` v5.5.4 — PostgreSQL driver (build tag: postgres, experimental)
+- `github.com/jackc/pgx/v5` v5.11.0 — PostgreSQL driver (build tag: postgres, experimental)
 - `github.com/minio/minio-go/v7` v7.2.1 — S3-compatible client (audit sink)
 - `github.com/prometheus/client_golang` v1.23.2 — Prometheus metrics
 - `modernc.org/sqlite` v1.34.1 — SQLite driver (production, tested)
@@ -464,11 +464,13 @@ Verify from `/api/go.mod`.
 ### Database driver selection
 
 - **Production (default):** `modernc.org/sqlite` — file-based, WAL mode, tested
-- **Experimental:** PostgreSQL via `jackc/pgx/v5` — compile with `-tags=postgres`
+- **Experimental:** PostgreSQL via `jackc/pgx/v5` — compile with `-tags=postgres`. Works end to end; `api/internal/db`'s tests run against PostgreSQL in the `api (postgres)` CI job, but there is no Postgres e2e/upgrade coverage yet
 - Driver selected at startup via `--db-driver` (sqlite|postgres) + `--db-dsn`
-- Migrations run automatically on startup (`store.Migrate(ctx)`)
+- Migrations run automatically on startup (`store.Migrate(ctx)`): the driver's legacy set (`migrations/sqlite/` or `migrations/postgres/`, 001-012, same filenames and resulting schema) then the shared set (`migrations/common/`, 013+, one portable file per migration), in version order; a version present in both sets is a startup error. Versions are recorded in `schema_migrations` by bare filename, so SQLite installs see the same versions as before the split
+- Runtime SQL is written once with `?` placeholders; the Postgres connector rewrites them to `$n` (`db.Rebind`). Timestamps that used SQLite's `datetime('now')` are generated in Go (`db.NowTimestamp()`, same `YYYY-MM-DD HH:MM:SS` UTC text) and bound as parameters; inserted ids come from `RETURNING id` (pgx has no `LastInsertId`)
+- Postgres legacy migrations declare the text columns the API sorts or range-compares (`roles.name`, role-binding scope columns, `audit_events.ts`, `sessions.expires_at`, `share_links.created_at`/`expires_at`) `COLLATE "C"` so ordering matches SQLite's byte-wise collation
 
-### Schema (migrations 001-011)
+### Schema (migrations 001-012)
 
 **001_init.sql:**
 - `users` — username (unique), email, display_name, pw_hash (argon2id), role (legacy, now via role_bindings), created_at, updated_at
@@ -496,6 +498,7 @@ Verify from `/api/go.mod`.
 - Token never stored; only SHA-256 hash persisted and indexed for O(1) lookup
 - Revocation (`DELETE /servers/{name}/shares/{id}`, `db.Store.RevokeShareLink`) matches the link's cluster, namespace, server name and id; no match returns `db.ErrShareLinkNotFound`, which the handler answers with 404
 - Pre-existing; not part of the Phase 2 Foundational feature scope
+- `created_by` has no foreign key on Postgres (the SQLite file's `ON DELETE CASCADE` never fires there), so a deleted user's links stay behind, revoked, on both drivers
 
 **007_audit_reason.sql:** (Phase 2 Foundational: capture operation auditing)
 - Adds nullable `reason TEXT` column to `audit_events`
@@ -524,7 +527,7 @@ Verify from `/api/go.mod`.
 **012_account_removal_cleanup.sql:** (account removal cleanup)
 - One-off pass that deletes `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and `user_role_bindings` rows whose user no longer exists, and revokes (sets `revoked_at`, RFC3339 UTC) active `share_links` whose creator no longer exists. Clears rows left by user deletes made before `db.Store.DeleteUser` removed them explicitly; forward-only, so a rollback needs the pre-upgrade DB snapshot
 
-All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); API layer is authoritative.
+Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); the API layer is authoritative and deletes dependent rows itself, so the Postgres cascades never change the outcome. The one exception is `share_links.created_by`: the Postgres schema declares it as a plain column with no foreign key, so deleting a user keeps that user's share links (revoked) in the audit trail on both drivers, instead of cascading them away.
 
 ## Security considerations
 
@@ -612,7 +615,7 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 
 Excluded:
 - `cmd/` (main.go + flag/signal wiring)
-- `internal/db/db_postgres.go` (Postgres driver, build-tag gated, needs Docker/testcontainers; excluded from the coverage gate — no CI workflow currently builds or runs it on any schedule)
+- `internal/db/db_postgres.go` (Postgres driver, build-tag gated; excluded from the coverage gate because coverage runs without `-tags postgres`. The `api (postgres)` CI job builds it and runs `internal/db`'s tests, including `db_postgres_test.go`, against a PostgreSQL service container)
 
 Final 20% gap concentrated in:
 - `ws/attach.go` handle() (SPDY exec proxy, exercised by e2e)
