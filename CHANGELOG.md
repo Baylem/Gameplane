@@ -157,6 +157,10 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   exceptions (agent metrics port `9090` and the receiver's port) a
   Prometheus outside the release namespace needs to reach either target
   when `networkPolicies.enabled` is also `true` (F-217).
+- **web, api:** the Servers page now lists servers from every namespace the
+  viewer may read, not only `gameplane-games`, and the namespace filter
+  offers each of them. A new `GET /namespaces` route returns those
+  namespaces (#498).
 - **web:** catalog tag filters now intersect instead of union (AND logic), so
   selecting multiple tags shows only games matching all tags (#411).
 - **web:** vertical tab list no longer renders as an oval shape (#410).
