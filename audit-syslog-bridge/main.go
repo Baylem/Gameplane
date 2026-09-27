@@ -265,6 +265,11 @@ type forwarder struct {
 	useTLS      bool
 	dialTimeout time.Duration
 
+	// tlsConfig overrides the default client TLS config when set. Production
+	// code leaves it nil; tests use it to trust a self-signed test collector
+	// certificate instead of the system root pool.
+	tlsConfig *tls.Config
+
 	mu   sync.Mutex
 	conn net.Conn
 }
@@ -279,7 +284,11 @@ func (f *forwarder) dial(ctx context.Context) error {
 		err error
 	)
 	if f.useTLS && f.network == "tcp" {
-		d := &tls.Dialer{NetDialer: &net.Dialer{Timeout: f.dialTimeout}, Config: &tls.Config{MinVersion: tls.VersionTLS12}}
+		cfg := f.tlsConfig
+		if cfg == nil {
+			cfg = &tls.Config{MinVersion: tls.VersionTLS12}
+		}
+		d := &tls.Dialer{NetDialer: &net.Dialer{Timeout: f.dialTimeout}, Config: cfg}
 		c, err = d.DialContext(ctx, "tcp", f.addr)
 	} else {
 		d := &net.Dialer{Timeout: f.dialTimeout}
@@ -327,6 +336,10 @@ func (f *forwarder) send(ctx context.Context, frame []byte) error {
 // the socket, and a write would still succeed locally while the frame is lost.
 // A short read surfaces that close first, so send moves the frame to a fresh
 // connection. Datagram connections have no such state and are always reused.
+//
+// The probe is best-effort: a close that has not reached the socket within
+// livenessProbe goes unseen, and the next frame can be lost while send reports
+// success. Syslog framing has no ack, so no probe timeout closes this window.
 func (f *forwarder) alive() bool {
 	if f.network != "tcp" {
 		return true

@@ -2,8 +2,16 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +22,42 @@ import (
 	"testing"
 	"time"
 )
+
+// generateTestTLSCert returns a self-signed ECDSA certificate and key valid
+// for 127.0.0.1, usable as both the test collector's server certificate and
+// (via its DER bytes) the client's trusted root.
+func generateTestTLSCert(t *testing.T) tls.Certificate {
+	t.Helper()
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "127.0.0.1"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
+		IsCA:         true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &priv.PublicKey, priv)
+	if err != nil {
+		t.Fatalf("create certificate: %v", err)
+	}
+	keyDER, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		t.Fatalf("marshal key: %v", err)
+	}
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	cert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		t.Fatalf("build key pair: %v", err)
+	}
+	return cert
+}
 
 func TestBuildSyslog(t *testing.T) {
 	ts := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
@@ -671,6 +715,86 @@ func TestForwarder_RecordAfterCollectorCloseReachesNewConnection(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("the record sent after the collector closed its connection did not reach a new connection")
+	}
+}
+
+// The same reconnect-after-close path exercises the TLS dial branch, not just
+// plain TCP: a record sent after the collector closes a reused TLS connection
+// still reaches a fresh TLS connection rather than being silently lost.
+func TestForwarder_TLSRecordAfterCollectorCloseReachesNewConnection(t *testing.T) {
+	cert := generateTestTLSCert(t)
+	pool := x509.NewCertPool()
+	leaf, err := x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		t.Fatalf("parse leaf certificate: %v", err)
+	}
+	pool.AddCert(leaf)
+
+	lc := &net.ListenConfig{}
+	rawLn, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	ln := tls.NewListener(rawLn, &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12})
+	defer ln.Close()
+
+	firstClosed := make(chan struct{})
+	second := make(chan string, 1)
+	go func() {
+		// Connection 1: read one frame, then close it, as a collector that
+		// reaps idle connections does.
+		c1, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		buf := make([]byte, 256)
+		_, _ = c1.Read(buf)
+		_ = c1.Close()
+		close(firstClosed)
+
+		// Connection 2: accumulate everything read until "two" arrives.
+		c2, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer c2.Close()
+		var acc []byte
+		for {
+			n, err := c2.Read(buf)
+			acc = append(acc, buf[:n]...)
+			if strings.Contains(string(acc), "two") {
+				second <- string(acc)
+				return
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	f := newForwarder("tcp", rawLn.Addr().String(), true, time.Second)
+	f.tlsConfig = &tls.Config{RootCAs: pool, ServerName: "127.0.0.1", MinVersion: tls.VersionTLS12}
+	if err := f.send(context.Background(), []byte("one")); err != nil {
+		t.Fatalf("send one: %v", err)
+	}
+	select {
+	case <-firstClosed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("collector did not receive the first frame")
+	}
+	// Give the collector's close time to reach the forwarder's socket.
+	time.Sleep(50 * time.Millisecond)
+
+	if err := f.send(context.Background(), []byte("two")); err != nil {
+		t.Fatalf("send two: %v", err)
+	}
+	select {
+	case got := <-second:
+		if !strings.Contains(got, "two") {
+			t.Errorf("new connection received %q, want the second frame", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("the record sent after the collector closed its TLS connection did not reach a new connection")
 	}
 }
 
