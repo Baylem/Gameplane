@@ -1,12 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
-import type { ReactNode } from "react";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children, to, ...rest }: { children: ReactNode; to: string } & Record<string, unknown>) => (
-    <a href={to} {...rest}>{children}</a>
-  ),
+  useNavigate: () => vi.fn(),
 }));
 
 import { ModuleCard } from "./ModuleCard";
@@ -43,7 +40,7 @@ describe("ModuleCard", () => {
         {...handlers}
       />,
     );
-    expect(screen.getByRole("link", { name: /Deploy/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Deploy locally/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Uninstall/i })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Install$/ })).not.toBeInTheDocument();
   });

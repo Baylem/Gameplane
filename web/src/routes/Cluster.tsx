@@ -5,12 +5,14 @@ import { Button, Card, CardContent, Alert } from "@heroui/react";
 import { Meter } from "@/components/ui/Meter";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { formatBytes, formatUptime } from "@/lib/utils";
-import { APIError } from "@/lib/api";
-import type { ClusterInfo, ClusterNode, ClusterView, NodeJoinInfo } from "@/types";
+import { APIError, api } from "@/lib/api";
+import type { ClusterNode, NodeJoinInfo } from "@/types";
 import { Cluster } from "@/lib/endpoints";
 import { useMe, can } from "@/lib/auth";
 import type { AllConfig } from "@/lib/config";
-import { api } from "@/lib/api";
+import { useCurrentCluster } from "@/lib/cluster";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { LoadingCard } from "@/components/ui/LoadingCard";
 
 // opMessage turns a cluster-op error into user copy — 501 means the
 // operator hasn't enabled clusterOps.
@@ -23,17 +25,22 @@ function opMessage(e: unknown): string {
 }
 
 export function ClusterPage() {
-  const { data: me } = useMe();
-  const canReadConfig = can(me, "config:read");
+  const clusterId = useCurrentCluster();
+  return <ClusterInventory key={clusterId} clusterId={clusterId} />;
+}
 
-  const { data } = useQuery({
-    queryKey: ["cluster"],
-    queryFn: () => Cluster.view().catch(() => ({} as ClusterView)),
+function ClusterInventory({ clusterId }: { clusterId: string }) {
+  const { data: me } = useMe();
+  const canReadConfig = clusterId === "local" && can(me, "config:read");
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["cluster", clusterId],
+    queryFn: ({ signal }) => Cluster.view(clusterId, signal),
     refetchInterval: 15_000,
   });
   const { data: info } = useQuery({
-    queryKey: ["cluster-info"],
-    queryFn: () => Cluster.info().catch(() => ({} as ClusterInfo)),
+    queryKey: ["cluster-info", clusterId],
+    queryFn: ({ signal }) => Cluster.info(clusterId, signal),
   });
   const { data: config } = useQuery({
     queryKey: ["config"],
@@ -43,14 +50,14 @@ export function ClusterPage() {
   // Only an explicit false disables the buttons — an older API (or a
   // failed info fetch) leaves them active, and the 501 opMessage still
   // catches the disabled case as a backstop.
-  const opsDisabled = info?.clusterOps === false;
+  const opsDisabled = clusterId !== "local" || info?.clusterOps === false;
 
   const nodes = data?.nodes ?? [];
   const [joinInfo, setJoinInfo] = useState<NodeJoinInfo | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
 
   const addNode = useMutation({
-    mutationFn: () => Cluster.addNode(),
+    mutationFn: () => Cluster.addNode(clusterId),
     onSuccess: (info) => {
       setOpError(null);
       setJoinInfo(info);
@@ -61,7 +68,7 @@ export function ClusterPage() {
   async function downloadKubeconfig() {
     setOpError(null);
     try {
-      const blob = await Cluster.kubeconfig();
+      const blob = await Cluster.kubeconfig(clusterId);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -81,8 +88,8 @@ export function ClusterPage() {
         title="Cluster"
         description={
           data && (data.name || data.version || nodes.length > 0)
-            ? `${data.name || "—"} · ${data.version || "—"} · ${data.ready ?? nodes.filter(n => n.status === "Ready").length}/${data.total ?? nodes.length} nodes healthy`
-            : "Node inventory and health across the control plane."
+            ? `${data.name || clusterId} · ${data.version || "—"} · ${data.ready ?? nodes.filter(n => n.status === "Ready").length}/${data.total ?? nodes.length} nodes healthy`
+            : `Node inventory for selected cluster: ${clusterId}.`
         }
         actions={
           <div className="flex flex-col items-end gap-1">
@@ -107,8 +114,10 @@ export function ClusterPage() {
             </div>
             {opsDisabled && (
               <p className="text-xs text-muted">
-                Enable <code className="font-mono">clusterOps.enabled</code> in the Helm values
-                to mint node-join tokens and kubeconfigs.
+                {clusterId !== "local" ? "Node enrollment and kubeconfig downloads are managed at this remote cluster." : <>
+                  Enable <code className="font-mono">clusterOps.enabled</code> in the Helm values
+                  to mint node-join tokens and kubeconfigs.
+                </>}
               </p>
             )}
           </div>
@@ -156,7 +165,9 @@ export function ClusterPage() {
         </Card>
       )}
 
-      {nodes.length === 0 && (
+      {isLoading && <LoadingCard message={`Loading nodes for ${clusterId}…`} />}
+      {error && <ErrorCard message={`Couldn't load node inventory for ${clusterId}. Check your cluster access and connection.`} onRetry={() => void refetch()} />}
+      {!isLoading && !error && nodes.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-3 p-12 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -211,7 +222,7 @@ export function ClusterPage() {
       )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {nodes.map((n) => <NodeCard key={n.name} node={n} />)}
+        {!error && nodes.map((n) => <NodeCard key={n.name} node={n} />)}
       </div>
     </div>
   );
@@ -228,12 +239,12 @@ function NodeCard({ node }: { node: ClusterNode }) {
     <Card>
       <CardContent className="p-4 space-y-4">
         <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-surface">
               <ServerIcon className="h-4 w-4 text-muted" />
             </div>
-            <div>
-              <div className="font-mono text-sm font-semibold">{node.name}</div>
+            <div className="min-w-0">
+              <div className="break-all font-mono text-sm font-semibold">{node.name}</div>
               <div className="pt-0.5 text-[11px] text-muted">
                 {node.roles?.join(", ") || "worker"}
               </div>

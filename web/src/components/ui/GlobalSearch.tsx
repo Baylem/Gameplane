@@ -10,6 +10,7 @@ import {
 } from "@heroui/react";
 import { Servers } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
+import { useCurrentCluster } from "@/lib/cluster";
 
 /**
  * GlobalSearch provides a server search dropdown with keyboard navigation.
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
  * Design export: IdaU7
  */
 export function GlobalSearch(): JSX.Element {
+  const clusterId = useCurrentCluster();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -31,8 +33,8 @@ export function GlobalSearch(): JSX.Element {
   }, []);
 
   const { data } = useQuery({
-    queryKey: ["servers"],
-    queryFn: () => Servers.list(),
+    queryKey: ["servers", clusterId],
+    queryFn: ({ signal }) => Servers.list(undefined, clusterId, signal),
     staleTime: 10_000,
   });
 

@@ -119,13 +119,21 @@ export const handlers = [
     });
   }),
 
-  http.get("/cluster", ({ cookies }) => {
+  http.get("/cluster", ({ cookies, request }) => {
     // e2e affordance: errorHandling.spec.ts needs /cluster to return 500
     // to verify the error UI. MSW's Service Worker answers this route
     // itself, so a page.route() override can't inject the status — a
     // cookie the test sets forces the failure deterministically.
     if (cookies.e2e_cluster_500 === "1") {
       return new HttpResponse("boom\n", { status: 500 });
+    }
+    if (cookies.e2e_multicluster === "1") {
+      const remote = new URL(request.url).searchParams.get("cluster") === "remote-demo";
+      return HttpResponse.json(makeClusterView({
+        name: remote ? "remote-demo" : "local",
+        ready: 1, total: 1,
+        nodes: [{ name: remote ? "remote-node" : "local-node", status: "Ready" }],
+      }));
     }
     return HttpResponse.json(makeClusterView());
   }),
@@ -136,11 +144,12 @@ export const handlers = [
     }
     return HttpResponse.json(makeClusterStats());
   }),
-  http.get("/clusters", () =>
-    HttpResponse.json({
-      items: [{ name: "local", displayName: "local", phase: "Healthy" as const }],
-    }),
-  ),
+  http.get("/clusters", ({ cookies }) => HttpResponse.json({
+    items: [
+      { name: "local", displayName: "local", phase: "Healthy", canViewInventory: true },
+      ...(cookies.e2e_multicluster === "1" ? [{ name: "remote-demo", displayName: "Remote demo", phase: "Healthy", canViewInventory: true }] : []),
+    ],
+  })),
 
   // Namespaces (F-263): default single-namespace install so existing
   // /servers-only mocks keep behaving exactly as before the fan-out.
@@ -864,7 +873,7 @@ export function buildScreenshotHandlers() {
     http.get("/cluster/stats", () => HttpResponse.json(data.clusterStats())),
     http.get("/clusters", () =>
       HttpResponse.json({
-        items: [{ name: "local", displayName: "local", phase: "Healthy" as const }],
+        items: [{ name: "local", displayName: "local", phase: "Healthy" as const, canViewInventory: true }],
       }),
     ),
 

@@ -1,4 +1,4 @@
-import { APIError, api, csrfHeaders } from "@/lib/api";
+import { APIError, api, csrfHeaders, withClusterParam } from "@/lib/api";
 import { getCurrentCluster } from "@/lib/cluster";
 import type { KeyedRegistryProvider } from "@/lib/config";
 import type {
@@ -63,11 +63,8 @@ function withNS(path: string, ns?: string): string {
 
 // Helper to append cluster query param for multi-cluster support.
 // Only appends when the current cluster is non-local (preserves back-compat).
-export function withCluster(path: string): string {
-  const clusterId = getCurrentCluster();
-  if (clusterId === "local") return path;
-  const sep = path.includes("?") ? "&" : "?";
-  return `${path}${sep}cluster=${encodeURIComponent(clusterId)}`;
+export function withCluster(path: string, clusterId = getCurrentCluster()): string {
+  return withClusterParam(path, clusterId);
 }
 
 export interface ServerCreate {
@@ -109,16 +106,16 @@ export const Servers = {
   // A bare list() call defaults to the server's default namespace scope
   // (scope.DefaultNamespace) exactly as before (F-263); pass ns to target
   // one of the namespaces from Namespaces.list() explicitly.
-  list: (ns?: string) => api<List<GameServer>>(withNS("/servers", ns)),
-  get: (name: string, ns?: string) => api<GameServer>(withNS(`/servers/${name}`, ns)),
-  create: (body: ServerCreate) =>
-    api<GameServer>("/servers", { method: "POST", body: gameServerEnvelope(body) }),
+  list: (ns?: string, cluster?: string, signal?: AbortSignal) => api<List<GameServer>>(withNS("/servers", ns), { cluster, signal }),
+  get: (name: string, ns?: string, cluster?: string, signal?: AbortSignal) => api<GameServer>(withNS(`/servers/${name}`, ns), { cluster, signal }),
+  create: (body: ServerCreate, cluster?: string) =>
+    api<GameServer>("/servers", { method: "POST", body: gameServerEnvelope(body), cluster }),
   update: (name: string, body: GameServer, ns?: string) =>
     api<GameServer>(withNS(`/servers/${name}`, ns), { method: "PUT", body }),
   remove: (name: string, ns?: string) =>
     api<void>(withNS(`/servers/${name}`, ns), { method: "DELETE" }),
-  lifecycle: (name: string, verb: LifecycleVerb, ns?: string) =>
-    api<void>(withNS(`/servers/${name}:${verb}`, ns), { method: "POST" }),
+  lifecycle: (name: string, verb: LifecycleVerb, ns?: string, cluster?: string) =>
+    api<void>(withNS(`/servers/${name}:${verb}`, ns), { method: "POST", cluster }),
   clone: (name: string, newName: string, ns?: string) =>
     api<GameServer>(withNS(`/servers/${name}:clone`, ns), { method: "POST", body: { newName } }),
   // Suspends the server and asks the operator to wipe its data volume.
@@ -133,7 +130,7 @@ export const Servers = {
   setCollaborators: (name: string, ns: string, body: { userIds?: number[]; usernames?: string[] }) =>
     api<void>(withNS(`/servers/${name}:collaborators`, ns), { method: "PUT", body }),
   // Lists all servers where the caller is owner or collaborator (cluster-wide).
-  getMyServers: () => api<List<GameServer>>("/users/me/servers"),
+  getMyServers: (cluster?: string, signal?: AbortSignal) => api<List<GameServer>>("/users/me/servers", { cluster, signal }),
   // Live module-declared metrics for the Overview tab. The agent returns
   // [] when the game has no RCON, so the UI hides the panel.
   status: (name: string, ns?: string) => api<StatusReading[]>(withNS(`/servers/${name}/status`, ns)),
@@ -255,10 +252,12 @@ export const Servers = {
     provider: "frp" | "tailscale" | "playit",
     values: Record<string, string>,
     ns?: string,
+    cluster?: string,
   ) =>
     api<void>(withNS(`/servers/${name}:tunnel-credentials`, ns), {
       method: "PUT",
       body: { provider, values },
+      cluster,
     }),
   getTunnelCredentials: (name: string, ns?: string) =>
     api<{ configured: boolean; secretName: string; keys: string[] }>(
@@ -269,8 +268,8 @@ export const Servers = {
 };
 
 export const Templates = {
-  list: () => api<List<GameTemplate>>("/templates"),
-  get: (name: string) => api<GameTemplate>(`/templates/${name}`),
+  list: (cluster?: string, signal?: AbortSignal) => api<List<GameTemplate>>("/templates", { cluster, signal }),
+  get: (name: string, cluster?: string, signal?: AbortSignal) => api<GameTemplate>(`/templates/${name}`, { cluster, signal }),
 };
 
 export interface NamespacesResponse {
@@ -282,18 +281,18 @@ export interface NamespacesResponse {
 // default, so GAMEPLANE_EXTRA_NAMESPACES installs show every namespace the
 // viewer actually has servers:read on.
 export const Namespaces = {
-  list: () => api<NamespacesResponse>("/namespaces"),
+  list: (cluster?: string, signal?: AbortSignal) => api<NamespacesResponse>("/namespaces", { cluster, signal }),
 };
 
 export const Cluster = {
-  info: () => api<ClusterInfo>("/cluster/info"),
-  stats: () => api<ClusterStats>("/cluster/stats"),
-  view: () => api<ClusterView>("/cluster"),
+  info: (cluster?: string, signal?: AbortSignal) => api<ClusterInfo>("/cluster/info", { cluster, signal }),
+  stats: (cluster?: string, signal?: AbortSignal) => api<ClusterStats>("/cluster/stats", { cluster, signal }),
+  view: (cluster?: string, signal?: AbortSignal) => api<ClusterView>("/cluster", { cluster, signal }),
   // Credential-minting ops (admin-only; 501 unless clusterOps is enabled).
-  addNode: () => api<NodeJoinInfo>("/cluster/nodes:join", { method: "POST" }),
+  addNode: (cluster?: string) => api<NodeJoinInfo>("/cluster/nodes:join", { method: "POST", cluster }),
   // kubeconfig is a file download, so it bypasses api()'s JSON handling.
-  kubeconfig: async (): Promise<Blob> => {
-    const res = await fetch(withCluster("/cluster/kubeconfig"), {
+  kubeconfig: async (cluster?: string): Promise<Blob> => {
+    const res = await fetch(withCluster("/cluster/kubeconfig", cluster), {
       method: "POST",
       credentials: "include",
       headers: csrfHeaders(),
@@ -336,7 +335,7 @@ export interface BackupCreate {
 }
 
 export const Backups = {
-  list: (ns?: string) => api<List<Backup>>(withNS("/backups", ns)),
+  list: (ns?: string, cluster?: string, signal?: AbortSignal) => api<List<Backup>>(withNS("/backups", ns), { cluster, signal }),
   get: (name: string, ns?: string) => api<Backup>(withNS(`/backups/${name}`, ns)),
   create: (opts: BackupCreate, ns?: string) => {
     const { name, generateName, ...spec } = opts;
@@ -492,8 +491,8 @@ export const Users = {
   bindings: (id: number) => api<RoleBinding[]>(`/users/${id}/bindings`),
   addBinding: (id: number, body: RoleBinding) =>
     api<RoleBinding>(`/users/${id}/bindings`, { method: "POST", body }),
-  removeBinding: (id: number, roleName: string, namespace: string) =>
-    api<void>(`/users/${id}/bindings/${roleName}/${namespace}`, {
+  removeBinding: (id: number, roleName: string, namespace: string, cluster = "local") =>
+    api<void>(`/users/${id}/bindings/${encodeURIComponent(roleName)}/${encodeURIComponent(namespace)}?cluster=${encodeURIComponent(cluster)}`, {
       method: "DELETE",
     }),
   // Theme preferences (contracts/user-preferences-api.md §1.1–1.3): the

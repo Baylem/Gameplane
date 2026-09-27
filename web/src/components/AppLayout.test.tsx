@@ -70,7 +70,7 @@ describe("AppLayout", () => {
     );
     renderWithQuery(<AppLayout />);
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: /Cluster/i })).toBeInTheDocument(),
+      expect(screen.getByRole("link", { name: /^Cluster$/i })).toBeInTheDocument(),
     );
   });
 

@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import {
   ArrowUpCircle,
   Download,
@@ -10,12 +10,13 @@ import {
   ShieldQuestion,
   Trash2,
 } from "lucide-react";
-import { Button, buttonVariants, Card, CardHeader, CardContent, CardFooter, Chip } from "@heroui/react";
+import { Button, Card, CardHeader, CardContent, CardFooter, Chip } from "@heroui/react";
 import { GameIcon } from "@/components/ui/GameIcon";
 import { useGameCodes } from "@/lib/useGameCodes";
 import { resolveCategories } from "@/lib/games";
 import type { EntryVerify } from "@/lib/verify";
 import type { CatalogEntry } from "@/types";
+import { useClusterSelection } from "@/lib/useClusterSelection";
 
 interface ModuleCardProps {
   entry: CatalogEntry;
@@ -47,7 +48,13 @@ export function ModuleCard({
   onRemoveUpload,
   busy,
 }: ModuleCardProps) {
-  const { gameCodes, byName } = useGameCodes();
+  const { gameCodes, byName } = useGameCodes("local");
+  const selectCluster = useClusterSelection();
+  const navigate = useNavigate();
+  const deployLocally = async () => {
+    await selectCluster("local");
+    await navigate({ to: "/servers/new", search: { template: entry.moduleName } });
+  };
   const upgradeAvailable =
     entry.installed &&
     entry.installedVersion &&
@@ -163,13 +170,14 @@ export function ModuleCard({
         </span>
         <div className="flex items-center gap-1">
           {entry.installed && entry.phase === "Ready" && entry.moduleName && (
-            <Link
-              to="/servers/new"
-              search={{ template: entry.moduleName }}
-              className={buttonVariants({ size: "sm", variant: "outline" }) + " h-8"}
+            <Button
+              size="sm"
+              variant="outline"
+              onPress={() => void deployLocally()}
+              className="h-8"
             >
-              <ExternalLink className="h-3.5 w-3.5" /> Deploy
-            </Link>
+              <ExternalLink className="h-3.5 w-3.5" /> Deploy locally
+            </Button>
           )}
           {upgradeAvailable && entry.phase === "Ready" && (
             <Button

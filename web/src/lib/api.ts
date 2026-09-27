@@ -31,11 +31,18 @@ function withNS(path: string, ns?: string): string {
   return `${path}${sep}namespace=${encodeURIComponent(ns)}`;
 }
 
-// withClusterParam appends the ?cluster= query param for multi-cluster
-// support, the same rule api<T>() applies internally below. Used only
-// internally by Captures.download().
-function withClusterParam(path: string): string {
-  const clusterId = getCurrentCluster();
+// These APIs administer the central installation. The similarly named
+// /users/me/servers endpoint is a selected-cluster workload query.
+export function isCentralAPI(path: string): boolean {
+  const pathname = path.split("?")[0];
+  if (pathname === "/users/me/servers") return false;
+  return ["/auth", "/users", "/roles", "/admin", "/modules", "/clusters"].some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
+  );
+}
+
+export function withClusterParam(path: string, clusterId = getCurrentCluster()): string {
+  if (isCentralAPI(path)) return path;
   if (clusterId === "local") return path;
   const sep = path.includes("?") ? "&" : "?";
   return `${path}${sep}cluster=${encodeURIComponent(clusterId)}`;
@@ -63,6 +70,8 @@ export interface Options {
   body?: unknown;
   headers?: Record<string, string>;
   signal?: AbortSignal;
+  /** Capture the intended cluster when a query or operation is created. */
+  cluster?: string;
 }
 
 export async function api<T>(path: string, opts: Options = {}): Promise<T> {
@@ -77,12 +86,7 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
 
   // Thread cluster query param for multi-cluster support.
   // Only append when non-local to preserve back-compat (local = default, omit param).
-  const clusterId = getCurrentCluster();
-  let requestPath = path;
-  if (clusterId !== "local") {
-    const sep = path.includes("?") ? "&" : "?";
-    requestPath = `${path}${sep}cluster=${encodeURIComponent(clusterId)}`;
-  }
+  const requestPath = withClusterParam(path, opts.cluster ?? getCurrentCluster());
 
   const res = await fetch(requestPath, {
     method,
