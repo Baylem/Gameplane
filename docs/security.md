@@ -293,7 +293,7 @@ Pod Security Standards profile on the games namespace will reject any pod with
 games namespace, you have three options:
 
 1. **Disable capture** — leave the cluster's capture feature disabled via Helm
-   value `capture.enabled: false` (default is true). Captures are not required
+   value `capture.enabled: false` (default is false). Captures are not required
    for normal operation; this is the safest option if you cannot or prefer not to
    relax the `restricted` profile.
 2. **Exempt the games namespace** — remove or relax the Pod Security Standards
