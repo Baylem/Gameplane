@@ -149,6 +149,7 @@ func TestAPI_ModuleUpload_ExtractionStaysWithinBudget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DELETE upload: %v", err)
 	}
+	defer delResp.Body.Close()
 	if delResp.StatusCode != http.StatusNoContent {
 		t.Fatalf("DELETE upload: got %d body=%q, want 204", delResp.StatusCode, string(delBody))
 	}
