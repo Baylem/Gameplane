@@ -232,12 +232,55 @@ func TestToolsListAndGetHappyPath(t *testing.T) {
 		}
 	})
 
+	t.Run("list_events malformed labelSelector is a tool error", func(t *testing.T) {
+		res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{
+			Name:      "list_events",
+			Arguments: map[string]any{"namespace": "games", "labelSelector": "app in ("},
+		})
+		if err != nil {
+			t.Fatalf("CallTool: %v", err)
+		}
+		if !res.IsError {
+			t.Error("want IsError=true for a malformed labelSelector, like the sibling list tools")
+		}
+	})
+
 	t.Run("get_pod_logs", func(t *testing.T) {
 		text := callToolText(t, cs, "get_pod_logs", map[string]any{"namespace": "games", "pod": "my-server-0"})
 		if !strings.Contains(text, "fake logs") {
 			t.Errorf("want fake clientset log text, got %q", text)
 		}
 	})
+}
+
+// TestFilterEventsByLabel_MalformedSelector locks in F-206: a labelSelector
+// that labels.Parse rejects must surface as an error, not fall back to
+// returning the unfiltered list as if it had matched everything.
+func TestFilterEventsByLabel_MalformedSelector(t *testing.T) {
+	list := &corev1.EventList{Items: []corev1.Event{
+		{ObjectMeta: metav1.ObjectMeta{Name: "ev1"}},
+	}}
+	out, err := filterEventsByLabel(list, "app in (")
+	if err == nil {
+		t.Fatalf("want an error for a malformed selector, got list of %d items", len(out.Items))
+	}
+	if out != nil {
+		t.Errorf("want a nil list alongside the error, got %+v", out)
+	}
+}
+
+func TestFilterEventsByLabel_ValidSelector(t *testing.T) {
+	list := &corev1.EventList{Items: []corev1.Event{
+		{ObjectMeta: metav1.ObjectMeta{Name: "ev1", Labels: map[string]string{"app": "keep"}}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "ev2", Labels: map[string]string{"app": "drop"}}},
+	}}
+	out, err := filterEventsByLabel(list, "app=keep")
+	if err != nil {
+		t.Fatalf("filterEventsByLabel: %v", err)
+	}
+	if len(out.Items) != 1 || out.Items[0].Name != "ev1" {
+		t.Errorf("want only ev1, got %+v", out.Items)
+	}
 }
 
 func TestProposeFixTool(t *testing.T) {
