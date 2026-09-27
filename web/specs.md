@@ -749,6 +749,13 @@ package.json                # @gameplane/web v0.2.0-beta.8; dev: vite, npm scrip
    - List all GameServers in a table
    - Filter by namespace, phase (Running/Stopped/Pending/Failed), template
    - Create + clone + delete actions
+   - Namespace fan-out (F-263): fetches `Namespaces.list()` and issues one
+     `Servers.list(ns)` per namespace it returns, merging the results.
+     `namespaces: []` (servers:read in no namespace) fans out over nothing
+     rather than falling back to a default namespace, so a user who only
+     owns/collaborates on servers sees just "Shared with you" with no error.
+     The default namespace is used only while `/namespaces` is pending or
+     if it errors.
 
 4. **ServerDetail** (`/servers/$name`) → `ServerDetailPage`
    - Full server view with query param `?ns=<namespace>` support
@@ -938,9 +945,11 @@ api<T>(path: string, opts?: Options): Promise<T>
 
 Each namespace is an object of typed functions building and fetching URLs:
 
-- **Servers** — `list()`, `get(name, ns?)`, `create(body)`, `update(name, body, ns?)`, `remove(name, ns?)`, `lifecycle(name, verb, ns?)` (start/stop/restart), `clone(name, newName, ns?)`, `wipeData(name, confirm, ns?)`, `transfer(name, userId, ns?)`, `setCollaborators(name, ns, body)`, `getMyServers()`, `status(name, ns?)`, `events(name, ns?)`, `runAction(name, body, ns?)`, `mods(name, ns?)`, `installMod(name, body, ns?)`, `removeMod(name, mod, ns?)`, `modUpdates(name, ns?)`, `uploadMod(name, file, ns?)` (FormData), `registryProviders(name, ns?)`, `searchRegistry(name, opts?, ns?)`, `modVersions(name, project, provider?, ns?)`, `modpackDeps(name, project, provider?, ns?)`, `installModpack(name, body, provider?, ns?)`, `modIDs(name, ns?)`, `setModIDs(name, ids, ns?)`. **ServerCreate request shape:** `create(body)` accepts a `ServerCreate` object with optional `networking` sub-field carrying `expose`, `hostname`, `sourceRanges`, `portOverrides`, `addressPool` (load-balancer pool name), and `address` (requested IP); these are threaded into the `spec.networking` of the created GameServer. **Server response / GameServerEndpoint shape:** Each server's `status.endpoints` is an array of `GameServerEndpoint` objects, carrying: `name` (endpoint identifier), `host`, `port`, `protocol`, `private` (true for tailnet-only addresses), `tunnelProvider` (non-empty for tunnel-routed endpoints like frp/tailscale/playit), and `pool` (the load-balancer address pool the address was allocated from; set by the reconciler when a pool request is honored, absent for other address sources).
+- **Servers** — `list(ns?)`, `get(name, ns?)`, `create(body)`, `update(name, body, ns?)`, `remove(name, ns?)`, `lifecycle(name, verb, ns?)` (start/stop/restart), `clone(name, newName, ns?)`, `wipeData(name, confirm, ns?)`, `transfer(name, userId, ns?)`, `setCollaborators(name, ns, body)`, `getMyServers()`, `status(name, ns?)`, `events(name, ns?)`, `runAction(name, body, ns?)`, `mods(name, ns?)`, `installMod(name, body, ns?)`, `removeMod(name, mod, ns?)`, `modUpdates(name, ns?)`, `uploadMod(name, file, ns?)` (FormData), `registryProviders(name, ns?)`, `searchRegistry(name, opts?, ns?)`, `modVersions(name, project, provider?, ns?)`, `modpackDeps(name, project, provider?, ns?)`, `installModpack(name, body, provider?, ns?)`, `modIDs(name, ns?)`, `setModIDs(name, ids, ns?)`. **ServerCreate request shape:** `create(body)` accepts a `ServerCreate` object with optional `networking` sub-field carrying `expose`, `hostname`, `sourceRanges`, `portOverrides`, `addressPool` (load-balancer pool name), and `address` (requested IP); these are threaded into the `spec.networking` of the created GameServer. **Server response / GameServerEndpoint shape:** Each server's `status.endpoints` is an array of `GameServerEndpoint` objects, carrying: `name` (endpoint identifier), `host`, `port`, `protocol`, `private` (true for tailnet-only addresses), `tunnelProvider` (non-empty for tunnel-routed endpoints like frp/tailscale/playit), and `pool` (the load-balancer address pool the address was allocated from; set by the reconciler when a pool request is honored, absent for other address sources).
 
 - **Templates** — `list()`, `get(name)`
+
+- **Namespaces** (F-263) — `list()` → `{ namespaces: string[] }`, the namespaces the caller may read servers in; used by `ServersPage` to fan out `Servers.list(ns)` per namespace.
 
 - **Cluster** — `info()`, `stats()`, `view()`, `addNode()` (POST), `kubeconfig()` (blob download)
 
