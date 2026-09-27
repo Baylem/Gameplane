@@ -73,11 +73,11 @@ From `tools.go` `registeredToolNames`:
 
 ## Key invariants
 
-The read-only guarantee is enforced by **three independent layers**:
+The read-only guarantee rests on **two enforcing layers** (the handler boundary and RBAC) plus a test tripwire. Only RBAC stops mutation by any code in the process:
 
-### 1. Structural enforcement (package boundary)
+### 1. Handler boundary (`kube.Client`)
 
-**Source**: `mcp-server/internal/kube/client.go` lines 116–120, `mcp-server/main.go` comment lines 8–17.
+**Source**: `mcp-server/internal/kube/client.go` (the `Client` struct, `New`, `NewFrom`), `mcp-server/main.go` (package doc comment and `runServe`).
 
 - The `kube.Client` struct (in package `internal/kube`) holds two unexported fields:
   - `typed kubernetes.Interface` — typed clientset (supports all verbs)
@@ -88,7 +88,8 @@ The read-only guarantee is enforced by **three independent layers**:
   - `ListEvents` (Event reads)
   - `PodLogs` (log reads)
 - Every MCP tool handler lives in `package main` (`tools.go`, `fixadvice.go`) and receives `*kube.Client` as input.
-- **Package boundary enforcement**: code in `package main` cannot access unexported fields or call methods that don't exist on the exported `Client` API — therefore cannot call `Create`, `Update`, `Delete`, `Patch`, or `Apply` even if those methods existed on the underlying clientsets (which they do).
+- **What the boundary enforces**: a caller that holds only a `*kube.Client` cannot reach its unexported clientsets, so no tool handler can call `Create`, `Update`, `Delete`, `Patch`, or `Apply` through it.
+- **What it does not enforce**: the boundary is on the `*kube.Client`, not on `package main`. `runServe` loads the `*rest.Config` itself (`ctrl.GetConfig()`) and passes it to `kube.New`. Keeping every handler on the `*kube.Client`, and having no mutating call site anywhere in the module, is a code convention checked in review, not a compile-time guarantee. Layer 2 is what stops mutation.
 
 ### 2. RBAC backstop (authoritative)
 
@@ -111,7 +112,7 @@ rules:
 
 - **No create/update/patch/delete verbs anywhere**.
 - The ServiceAccount (`gameplane-mcp-server`) is bound to this role; any attempt to mutate (even if code somehow tried) is rejected by the API server with 403 Forbidden.
-- This is the **authoritative backstop**: it holds even if both Go-level checks were bypassed.
+- This is the **authoritative** layer and the only one that stops mutation by any code in the process: the API server rejects a write from this ServiceAccount whatever client makes it. It covers the in-cluster ServiceAccount; a standalone run against a kubeconfig has that kubeconfig user's permissions instead.
 
 ### 3. Test tripwire (visible guarantee)
 
@@ -128,7 +129,7 @@ Two tests catch regressions:
 
 This test catches accidental registration of a mutating tool before it ships.
 
-**Note**: These tests are **visible guarantees** (for auditing), not the primary enforcement — layer 1 (structural) and layer 2 (RBAC) are the real guards.
+**Note**: These tests are **visible guarantees** (for auditing), not enforcement. Layer 1 keeps tool handlers on read-only methods; layer 2 (RBAC) is the layer that stops mutation.
 
 ## Dependencies
 

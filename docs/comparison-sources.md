@@ -55,7 +55,7 @@ verified.
 ### Row (e): Access control & authentication
 
 **Source ID**: G-e  
-**Evidence**: api/internal/db/migrations/003_roles.sql:39–51  
+**Evidence**: api/internal/db/migrations/sqlite/003_roles.sql:39–51  
 **Checked on**: 2026-09-02  
 **What was verified**: Three built-in roles defined: admin (full access), operator (servers/backups/templates), viewer (read-only). Local argon2id authentication and OIDC support documented in api module.  
 **Last-known URL**: https://github.com/ValgulNecron/Gameplane/tree/master/api/internal/auth

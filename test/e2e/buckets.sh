@@ -193,6 +193,10 @@ EOF
 # login budget, not by subject: api-roles is at its ceiling. It costs +1
 # e2e-admin login (bringing api-mods to 6) plus one login as its own
 # operator-role user.
+# TestAPI_BootstrapAdminForceEndsExistingSessions now costs +1 e2e-admin
+# login (for cleanup) plus one login as its own throwaway account (a fresh
+# per-username bucket, one slot of the job's shared per-IP budget). This
+# brings api-mods to 7.
 bucket_api_mods() { cat <<'EOF'
 TestAPI_ModManifestInstallUpgrade
 TestAPI_ModUpload
@@ -200,6 +204,7 @@ TestAPI_ModArchiveConfinement_PathTraversalRejected
 TestAPI_ModArchiveConfinement_SymlinkEscapeRejected
 TestAPI_ModArchiveConfinement_ValidArchiveExtracts
 TestAPI_OwnerOnlyServerOperations_RequireOwnerOrAdmin
+TestAPI_BootstrapAdminForceEndsExistingSessions
 EOF
 }
 
@@ -311,7 +316,12 @@ EOF
 # RBAC), which none of the other buckets' single-cluster jobs provide — see
 # multicluster_e2e_test.go's package doc. Its own dedicated CI job
 # (e2e-multicluster) brings up both clusters before running it.
+# TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision lives here for
+# the login budget, not by subject: api-mods is at its ~7 e2e-admin-login
+# ceiling. It costs +1 e2e-admin login plus fake-OIDC sign-ins, and runs
+# against the primary cluster (every e2e.sh cluster deploys the fake IdP).
 bucket_multicluster() { cat <<'EOF'
+TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision
 TestMultiCluster_ClusterDispatchAndScopedRBAC
 EOF
 }
