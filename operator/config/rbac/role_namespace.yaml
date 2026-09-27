@@ -20,7 +20,15 @@ rules:
       - gameservers
       - backups
       - backupschedules
+      - networkcaptures
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Finalizers: mirrors charts/gameplane/templates/operator.yaml's
+  # namespace-scoped Role, which grants these alongside gameservers'.
+  - apiGroups: ["gameplane.local"]
+    resources:
+      - backupschedules/finalizers
+      - restores/finalizers
+    verbs: ["update"]
   - apiGroups: ["apps"]
     resources: ["statefulsets"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

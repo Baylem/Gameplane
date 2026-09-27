@@ -12,6 +12,7 @@ rules:
   - pods
   - pods/log
   - secrets
+  - serviceaccounts
   - services
   verbs:
   - get
@@ -32,17 +33,6 @@ rules:
   resources:
   - pods/ephemeralcontainers
   verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts
-  verbs:
-  - create
   - get
   - list
   - patch
@@ -81,15 +71,14 @@ rules:
   resources:
   - backups
   - backupschedules
-  - gametemplates
+  - clusters
+  - gameservers
+  - modulesources
   - networkcaptures
+  - restores
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - gameplane.local
@@ -118,21 +107,10 @@ rules:
 - apiGroups:
   - gameplane.local
   resources:
-  - clusters
-  - modules
-  - restores
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - gameplane.local
-  resources:
-  - gameservers
+  - gametemplates
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -141,10 +119,12 @@ rules:
 - apiGroups:
   - gameplane.local
   resources:
-  - modulesources
+  - modules
   verbs:
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - metallb.io
@@ -182,21 +162,10 @@ rules:
   - snapshot.storage.k8s.io
   resources:
   - volumesnapshotcontents
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - snapshot.storage.k8s.io
-  resources:
   - volumesnapshots
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - storage.k8s.io

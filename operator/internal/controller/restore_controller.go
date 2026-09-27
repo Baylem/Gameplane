@@ -31,9 +31,9 @@ type RestoreReconciler struct {
 	ResticImage string
 }
 
-// +kubebuilder:rbac:groups=gameplane.local,resources=restores,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=gameplane.local,resources=restores,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gameplane.local,resources=restores/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=gameplane.local,resources=gameservers,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=gameplane.local,resources=gameservers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gameplane.local,resources=backups,verbs=get;list;watch
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 
