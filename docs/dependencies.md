@@ -1,9 +1,12 @@
 # Dependency report
 
 This is a component-by-component inventory of Gameplane's third-party
-dependencies and why each one is there. It covers the 9 Go modules that
-share `go.work` (`netguard`, `gameaction`, `operator`, `api`, `agent`,
-`audit-syslog-bridge` [optional], `telemetry-receiver` [optional], `mcp-server` [optional], `test/e2e`), the
+dependencies and why each one is there. It covers all 15 Go modules that
+share `go.work` (`netguard`, `gameaction`, `gameproto`, `svcutil`,
+`operator`, `api`, `agent`, `audit-syslog-bridge` [optional],
+`telemetry-receiver` [optional], `sentinel` [optional],
+`capture-sidecar` [optional], `tunnel` [optional], `gp-module`,
+`mcp-server` [optional], `test/e2e`), the
 `web/` npm package, and the build/CI toolchain that isn't a code dependency
 but is invoked by `make`/GitHub Actions.
 
@@ -23,7 +26,9 @@ to find call sites (or `go mod why -m <path>` from inside the module). For
 Toolchain versions come from `Makefile`, `.github/workflows/*.yaml`, and
 `.devcontainer/post-create.sh`.
 
-Accurate as of **2026-09-02**, repo state `v0.2.0-beta.8`.
+Accurate as of **2026-09-02**, repo state `v0.2.0-beta.8`; the `gameproto`,
+`svcutil`, `sentinel`, `capture-sidecar`, `tunnel`, and `gp-module` sections
+were added and verified on **2026-09-26**.
 
 > **Note:** The dependency versions listed in the table below reflect the state at v0.2.0-beta.8. For the most current versions, refer to [CHANGELOG.md](../CHANGELOG.md).
 
@@ -33,11 +38,17 @@ Accurate as of **2026-09-02**, repo state `v0.2.0-beta.8`.
 |---|---|---|---|
 | `netguard/` | Go | 0 (stdlib only) | Shared SSRF dial-guard used by the operator and agent |
 | `gameaction/` | Go | 0 (stdlib only) | Shared console-injection guard + command-template renderer used by the agent and API |
+| `gameproto/` | Go | 0 (stdlib only) | Shared Minecraft/Terraria handshake classifier used by sentinel |
+| `svcutil/` | Go | 0 (stdlib only) | Shared env-parsing + graceful-shutdown helpers (no active importers yet) |
 | `operator/` | Go | 19 | controller-runtime reconciler for the 8 CRDs; module OCI pull/verify, git/OCI fetch, restic-backup scheduling |
 | `api/` | Go | 17 | chi REST + WebSocket gateway: auth (local + OIDC), RBAC, K8s client, SQLite/Postgres persistence, notifications |
 | `agent/` | Go | 6 | In-pod sidecar: RCON/WebRcon console, chi HTTP surface, heartbeat status patch, disk usage stats |
 | `audit-syslog-bridge/` | Go | 0 (stdlib only) | Standalone HTTP-JSON → syslog relay for the audit webhook sink |
 | `telemetry-receiver/` | Go | 1 | Standalone collector for the API's opt-in anonymous usage telemetry |
+| `sentinel/` | Go | 2 | Wake-on-connect listener holding ports for sleeping pods |
+| `capture-sidecar/` | Go | 3 | Ephemeral AF_PACKET packet capture sidecar with BPF filtering |
+| `tunnel/` | Go | 0 (stdlib only) | Relay client supervisor for frp/Tailscale/playit |
+| `gp-module/` | Go | 2 | Module authoring CLI: scaffold, offline validate, dry-run preview, OCI package |
 | `mcp-server/` | Go | 5 | Standalone, strictly read-only MCP server for AI-assisted cluster diagnostics |
 | `test/e2e/` | Go | 4 | kind + Helm + real-component end-to-end suite |
 | `web/` | TypeScript/React | 18 runtime + 26 dev | Dashboard: routing, data fetching, UI primitives, console/file editors, tests |
@@ -77,6 +88,33 @@ Imported by:
 Both importers call `Resolve` independently before rendering, since each
 is its own trust boundary (per the package doc comment). Also a local
 `replace` module; same Dockerfile `COPY` requirement as netguard.
+
+### gameproto
+
+`gameproto/go.mod` has **no `require` block at all** — it imports only the
+Go standard library (`bufio`, `bytes`, `encoding/binary`, `encoding/json`,
+`errors`, `fmt`, `io`, `strconv`, `strings`). It is a wire-protocol parser that
+classifies Minecraft (Java) and Terraria connection handshakes from the
+first bytes off the wire, so a proxy can decide whether a connection is a
+real client join before waking a sleeping pod.
+
+Imported by:
+- `sentinel/` — to hold a client's connection open while the sentinel wakes the target `GameServer`'s pod, replaying the buffered handshake once the pod is ready.
+
+Also a local `replace` module (`replace github.com/ValgulNecron/gameplane/gameproto => ../gameproto` in `sentinel/go.mod`); same Dockerfile `COPY` requirement as netguard.
+
+### svcutil
+
+`svcutil/go.mod` has **no `require` block at all** — stdlib only
+(`log/slog`, `os`, `net/http`, `context`, `errors`, `time`). It provides
+shared environment-variable parsing (`Or`, `OrInt`, `ParseLogLevel`) and a
+graceful HTTP shutdown helper (`RunHTTP`), meant to cut down on
+copy-pasted startup/shutdown boilerplate across the repo's standalone Go
+binaries.
+
+It has **no active importers yet** (see `svcutil/specs.md` for adoption
+status) — it ships as an available shared module ahead of the other
+services being migrated onto it.
 
 ## Services
 
@@ -217,6 +255,62 @@ exported from `internal/kube`, so `tools.go`'s handlers have no way to
 reach a mutating verb even by mistake) and RBAC-backed (a
 `get`/`list`/`watch`-only ClusterRole) — the go-sdk itself has no bearing
 on that guarantee; it's purely the protocol transport.
+
+### sentinel
+
+Wake-on-connect proxy that holds a listener open for a sleeping
+`GameServer`'s port, classifies the first bytes of an inbound connection
+via `gameproto`, and triggers a pod wake before replaying the buffered
+handshake. Direct deps from `sentinel/go.mod` (excluding the local
+`gameproto` replace, covered above):
+
+| Dependency | Version | Why |
+|---|---|---|
+| `k8s.io/apimachinery` | v0.37.0 | `main.go` — typed/unstructured plumbing for reading the target `GameServer`'s status and idle/wake fields | <!-- doc-versions: dependency -->
+| `k8s.io/client-go` | v0.37.0 | `main.go` — in-cluster client used to read `GameServer` status and patch it to trigger a wake | <!-- doc-versions: dependency -->
+
+### capture-sidecar
+
+Ephemeral, on-demand AF_PACKET packet capture container that runs
+alongside a `GameServer` pod with `CAP_NET_RAW` (see
+[`docs/security.md`](security.md) for the capability/PodSecurity
+trade-off). Direct deps from `capture-sidecar/go.mod`:
+
+| Dependency | Version | Why |
+|---|---|---|
+| `github.com/gopacket/gopacket` | v1.7.2 | `internal/capture/writer.go`/`afpacket.go` — `AF_PACKET` socket capture via `gopacket/afpacket`, plus pcap-format frame writing via `pcapgo`/`layers` |
+| `github.com/packetcap/go-pcap` | v0.0.0-20260731105150-c86974bbfbcd | `internal/capture/filter.go` — compiles the tcpdump-style filter expression to BPF without requiring libpcap at runtime | <!-- doc-versions: dependency -->
+| `golang.org/x/net` | v0.59.0 | `internal/capture/filter.go`/`afpacket.go` — `x/net/bpf`: assembling the classic-BPF program attached to the AF_PACKET socket | <!-- doc-versions: dependency -->
+
+### tunnel
+
+`tunnel/go.mod` has **no `require` block at all** — stdlib only
+(`os/exec`, `encoding/json`, `net/http`, `context`, etc.). It's the relay
+client supervisor: it launches and monitors the `frp`, `tailscaled`, or
+`playitd` client binary as a subprocess, configured by env vars
+(`GAMESERVER_NAME`, `TUNNEL_TYPE`, etc.) that the operator renders from
+`spec.networking.tunnel`. For `playit`, `playit_reporter.go` polls
+`playitd`'s local Unix-socket IPC (newline-delimited JSON `get_state`
+frames) for the assigned public addresses, then PATCHes the `GameServer`
+resource's `status.tunnelEndpoints` directly against the Kubernetes API
+server (`https://kubernetes.default.svc`, using the pod's service-account
+token) with a stdlib `net/http` client — nothing is reported to the
+agent. The `frp` and Tailscale addresses are computed by the operator
+itself rather than polled by the supervisor. No third-party library is
+needed because process supervision, JSON/Unix-socket IPC, and HTTP status
+patching are all stdlib jobs.
+
+### gp-module
+
+Module authoring CLI (`init`, `validate`, `preview`, `package`) used by
+module authors to scaffold, offline-validate, dry-run preview, and OCI
+package a game module before publishing it. Direct deps from
+`gp-module/go.mod`:
+
+| Dependency | Version | Why |
+|---|---|---|
+| `gopkg.in/yaml.v3` | v3.0.1 | `internal/common/yaml_ast.go`, `internal/validator/`, `internal/scaffold/`, `internal/preview/`, `internal/packager/` — parses/round-trips `module.yaml`/`template.yaml` while preserving comments and key order for scaffold output |
+| `k8s.io/apimachinery` | v0.37.0 | `internal/preview/memory.go` — `resource.Quantity` parsing, to preview a template's resource requests/limits the same way the operator would | <!-- doc-versions: dependency -->
 
 ## Frontend
 

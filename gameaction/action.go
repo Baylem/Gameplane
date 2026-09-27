@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"unicode/utf8"
 )
 
 // Param is a declared action input. Mirrors the CRD's ActionParamSpec and
@@ -26,12 +27,18 @@ type Param struct {
 
 // Resolve validates raw user values against the declared params and returns
 // the sanitized map. It rejects control characters in string params (the
-// console-injection guard), enforces types, the 512-char cap, enum
+// console-injection guard), enforces types, the 512-character cap, enum
 // membership, and required-ness.
 func Resolve(decls []Param, got map[string]string) (map[string]string, error) {
 	out := make(map[string]string, len(decls))
 	for _, p := range decls {
 		val, ok := got[p.Name]
+		// A required param that was explicitly given an empty value is
+		// rejected outright: the default only fills in a *missing* value,
+		// it never overrides one the caller supplied as empty.
+		if p.Required && ok && val == "" {
+			return nil, fmt.Errorf("parameter %q is required", p.Name)
+		}
 		if !ok || val == "" {
 			val = p.Default
 		}
@@ -75,8 +82,8 @@ func validateParam(p Param, val string) (string, error) {
 		if hasControl(val) {
 			return "", fmt.Errorf("parameter %q must not contain control characters", p.Name)
 		}
-		if len(val) > 512 {
-			return "", fmt.Errorf("parameter %q is too long (max 512)", p.Name)
+		if utf8.RuneCountInString(val) > 512 {
+			return "", fmt.Errorf("parameter %q is too long (max 512 characters)", p.Name)
 		}
 		return val, nil
 	}

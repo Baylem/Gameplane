@@ -299,7 +299,7 @@ Pod Security Standards profile on the games namespace will reject any pod with
 games namespace, you have three options:
 
 1. **Disable capture** — leave the cluster's capture feature disabled via Helm
-   value `capture.enabled: false` (default is true). Captures are not required
+   value `capture.enabled: false` (default is false). Captures are not required
    for normal operation; this is the safest option if you cannot or prefer not to
    relax the `restricted` profile.
 2. **Exempt the games namespace** — remove or relax the Pod Security Standards
@@ -641,6 +641,14 @@ by several layers:
   via the dashboard or API. This prevents a user from pointing at an
   arbitrary control-plane Secret (e.g., the OIDC client secret or
   backup credentials) and using it as a kubeconfig.
+- **Delete guard.** `DELETE /clusters/{name}` drops the cluster's client at
+  once and deletes the referenced Secret only when it is the one POST generates
+  for that cluster (cluster-<name>-kubeconfig) and carries
+  `gameplane.local/cluster-kubeconfig=true` (Secrets created before the
+  managed-by label was added are also cleaned up). Any other Secret, including
+  one named for a different cluster or one without the kubeconfig label, is
+  left in place. A kubeconfig Secret you create with kubectl or GitOps under
+  another name is never deleted over HTTP.
 - **Never logged or returned.** The kubeconfig is never logged by the
   API, never echoed in responses, never visible in audit trails. It
   exists only to bootstrap the Kubernetes client for that cluster.

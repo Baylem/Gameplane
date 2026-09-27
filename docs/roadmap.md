@@ -263,7 +263,7 @@ status for its join-protocol E2E testing. See [`docs/game-coverage.md`](game-cov
 canonical per-module status:
 
 - **2 modules** have real join coverage in CI (`minecraft-java`, `terraria`).
-- **12 modules** are blocked on undocumented or partially-documented
+- **26 modules** are blocked on undocumented or partially-documented
   wire-protocol formats, each with a named unblocking artifact (packet capture,
   reverse-engineering session, or anti-cheat analysis). They are candidates for
   future protocol work once documentation becomes available.
