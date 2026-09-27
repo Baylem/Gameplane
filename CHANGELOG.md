@@ -35,6 +35,14 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   permissions, but can no longer run these four operations on servers they
   don't own. Servers without a recorded owner (for example ones created with
   kubectl or GitOps) can be transferred, wiped or deleted only by an admin.
+- **Playit tunnel NetworkPolicy egress widened:** the operator-managed
+  NetworkPolicy for a GameServer using the `playit` tunnel provider now
+  allows unrestricted egress instead of the previous restrictive rule, so
+  playit tunnels can reach their relay after upgrading (F-262).
+- **Chart upgrade reliability:** `helm upgrade` now correctly handles renamed
+  releases, `--reuse-values`, and CRD reinstall; installs that previously
+  needed a manual workaround for one of these cases no longer do (F-213,
+  F-214, F-218).
 
 ### Added
 
@@ -153,6 +161,63 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   receiving long lines (#409).
 - **operator:** migrated off the deprecated Fulcio certificate API (`fulcioroots.pb.go`),
   which was sunset by sigstore; image signing now uses the current `tlog.sigstore.dev` endpoint (#287).
+- **chart:** the games `Namespace` is now kept on `helm uninstall` instead of
+  being deleted along with it, so running GameServers aren't orphaned by an
+  accidental or partial uninstall (F-212).
+- **api:** corrected several error response status codes — for example, a
+  required parameter sent as an empty string now returns 400 instead of a
+  500 — and reconciled the affected docs (F-076, F-077, F-082, F-083, F-085,
+  F-086, F-087, F-088, F-089).
+- **api:** large file transfers (mod uploads/downloads, backups) now stream
+  past the 60 s request timeout and the 1 MiB body-size cap that previously
+  cut them off (F-074, F-075).
+- **operator:** a failed data-wipe on a server is now reported as failed
+  instead of being silently acknowledged as successful (F-054).
+- **operator:** fixed several backup/restore quiesce-lifecycle issues that
+  could leave a server quiesced or a backup/restore stuck (F-044, F-045,
+  F-048, F-049).
+- **operator:** stopped `Module` reconciles from flapping and fixed template
+  recreation after deletion (F-046, F-047, F-050).
+- **operator:** `Module` resources in a `Failed` phase no longer rewrite
+  their status on every reconcile (F-258).
+- **web:** namespace is now threaded through per-server detail-page API
+  calls, fixing cross-namespace/multi-cluster data mixups on the server
+  detail page (F-116, F-130).
+- **web:** errors on previously-silent mutations and unhandled promises are
+  now surfaced to the user instead of failing quietly (F-126, F-137).
+- **web:** the pending WebSocket reconnect timer is now canceled when the
+  connection is closed, preventing a stray reconnect after navigating away
+  (F-121).
+- **web:** safe mode (`?safe-mode=1`) now stays active across in-app
+  navigation instead of resetting on each route change (F-125).
+- **agent:** unknown player counts are now reported as unknown rather than
+  0, so the dashboard no longer shows a game server as empty when its
+  player count can't be determined (F-105, F-106).
+- **agent:** the WebSocket and mods routes are exempt from the router's
+  request timeout, and the RCON reply cap was widened, fixing consoles that
+  previously dropped long-running sessions or truncated large RCON replies
+  (F-103, F-104).
+- **tunnel:** fixed a backoff-counter overflow and an frp UDP/port-mismatch
+  that could keep a tunnel from reconnecting (F-172, F-052).
+- **tunnel:** the playit-assigned address is now reported into the
+  GameServer's status instead of being dropped (F-174).
+- **sentinel:** handed-through sessions are now drained on shutdown instead
+  of dropped, and listener failures are surfaced instead of failing silently
+  (F-179, F-180).
+- **mcp-server:** `get_pod_logs` now keeps the newest tail bytes when a log
+  is truncated and flags that truncation happened, instead of silently
+  returning stale output (F-204).
+- **api, operator:** a user-stopped network capture download now waits for
+  the capture sidecar to actually stop before the download proceeds,
+  avoiding a truncated capture file (F-259).
+- **capture-sidecar:** guarded the volume-budget check against integer
+  overflow and fixed the budget not being freed when a capture is deleted,
+  which could otherwise make captures unavailable on a long-running cluster
+  (F-187, F-192, F-261).
+- **gp-module:** the CLI and web builder now validate against the real CRD
+  shape and apply the default version in preview, instead of accepting
+  configurations the operator would later reject (F-159, F-160, F-161,
+  F-162, F-163, F-164, F-165, F-166, F-167, F-168).
 
 ### Changed
 
@@ -176,6 +241,50 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **api:** hardened cluster registration removal.
 - **ci:** hardened the release signing order and the scope of the signing key.
 - **api:** hardened Prometheus metrics serving with a dedicated in-cluster listener.
+- **agent:** hardened file write path handling in the mods and files endpoints.
+- **gameaction:** hardened console command parameter validation.
+- **capture-sidecar:** hardened TLS defaults and volume-budget accounting.
+- **audit-syslog-bridge:** hardened `APP-NAME`/`HOSTNAME` field validation.
+
+## [0.3.0-rc.2] — Unreleased
+
+The second release candidate for v0.3.0. It contains every change since
+v0.3.0-rc.1: the fixes from the pre-release audit that landed after rc.1 was
+cut, plus a handful of chart, API, and dashboard corrections found during
+rc.1 testing. See [Unreleased](#unreleased) above for the full list.
+
+### Highlights
+
+- **Agent Prometheus metrics move to a dedicated listener (port 9090):** the
+  agent now serves `/metrics` on its own unauthenticated `:9090` listener
+  instead of sharing the mTLS control port; the operator adds a matching
+  `metrics` containerPort and the chart's `PodMonitor`/`ServiceMonitor`
+  scrape it by name — every agent scrape target was previously reported
+  "down" (#461, #476).
+- **Owner-only server operations now require the owner or an admin:**
+  transferring ownership, editing collaborators, wiping data, and deleting a
+  server can no longer be done by an operator-role user who isn't the
+  server's owner (#460).
+- **Helm chart upgrade reliability fixed:** `helm upgrade` now correctly
+  handles renamed releases, `--reuse-values`, and CRD reinstall (#443).
+- **Playit tunnel NetworkPolicy egress widened:** GameServers using the
+  `playit` tunnel provider get unrestricted egress instead of the previous
+  restrictive rule, so playit tunnels can reach their relay (#488).
+- **games Namespace kept on `helm uninstall`:** it's no longer deleted along
+  with the release, so running GameServers aren't orphaned (#425).
+- **API error status codes corrected:** for example, a required parameter
+  sent as an empty string now returns 400 instead of 500 (#477).
+- **API large-transfer streaming fixed:** mod/backup transfers now stream
+  past the previous 60 s timeout and 1 MiB body cap (#444).
+- **Data-wipe failures are now reported, not silently acknowledged (#436),**
+  and backup/restore quiesce-lifecycle issues that could leave a server
+  stuck were fixed (#454).
+- **Broad security hardening:** api multi-cluster request scoping, module
+  bundle integrity checks, Admin Settings draft/secret lifecycle, cluster
+  registration removal, release signing order/scope, agent file-write path
+  handling, gameaction parameter validation, capture-sidecar TLS defaults,
+  and audit-syslog-bridge field validation (#430, #427, #431, #463, #462,
+  #433, #491, #483, #487, #466).
 
 ## [0.3.0-rc.1] — 2026-09-23
 
@@ -867,6 +976,7 @@ testing. Not yet recommended for unattended production workloads — see
   API e2e failures.
 
 [Unreleased]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.8...HEAD
+[0.3.0-rc.2]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0-rc.1...HEAD
 [0.3.0-rc.1]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.8...v0.3.0-rc.1
 [0.2.0-beta.8]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.7...v0.2.0-beta.8
 [0.2.0-beta.7]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.6...v0.2.0-beta.7
