@@ -94,12 +94,16 @@ func TestVolumeSnapshotRestore_RefsCopiedWithNewNamesAndOwned(t *testing.T) {
 	})
 
 	// The copy must exist, carry the original data, and be owned by the
-	// restored server (not the original).
+	// restored server (not the original). The copy is made after the
+	// restored server is created (it needs that server's UID), so wait for it.
 	var copySecret corev1.Secret
-	if err := k8sClient.Get(context.Background(),
-		types.NamespacedName{Namespace: ns, Name: copyName}, &copySecret); err != nil {
-		t.Fatalf("get copied secret %s: %v", copyName, err)
-	}
+	eventually(t, func() (bool, string) {
+		if err := k8sClient.Get(context.Background(),
+			types.NamespacedName{Namespace: ns, Name: copyName}, &copySecret); err != nil {
+			return false, "copied secret " + copyName + " not yet created: " + err.Error()
+		}
+		return true, ""
+	})
 	if string(copySecret.Data["key"]) != "orig-value" {
 		t.Errorf("copied secret data = %q, want %q", copySecret.Data["key"], "orig-value")
 	}
