@@ -2,15 +2,14 @@
 // Gameplane MCP server. Client exposes only List/Get-shaped methods
 // (ListCRD, GetCRD, ListPods, GetPod, ListEvents, PodLogs); the typed and
 // dynamic clientsets backing those methods are unexported fields on Client.
-// That is what makes the read-only guarantee structurally real rather than
-// just a naming convention: every MCP tool handler lives in package main
-// (see ../../tools.go), and package main has no way to reach a mutating
-// verb (Create/Update/Delete/Patch/Apply) — those methods exist on the
-// underlying kubernetes.Interface/dynamic.Interface, but package main never
-// holds a reference to either, only to a *Client. See main.go's package doc
-// comment (in the parent module) for the other half of the guarantee: the
-// get/list/watch-only RBAC ClusterRole the Helm chart installs, which is
-// the authoritative backstop even if a future Client method were miswired.
+// A caller that holds only a *Client therefore cannot reach a mutating
+// verb (Create/Update/Delete/Patch/Apply) through it, and every MCP tool
+// handler in package main (see ../../tools.go) receives only a *Client.
+// This bounds what the handlers can do with their input; it does not bound
+// package main as a whole, which loads the *rest.Config that New takes.
+// See main.go's package doc comment (in the parent module) for the other
+// layer: the get/list/watch-only RBAC ClusterRole the Helm chart installs,
+// which is the only layer that stops mutation by any code in the process.
 package kube
 
 import (
