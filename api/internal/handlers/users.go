@@ -141,15 +141,16 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 		}
 		hash = h2
 	}
-	res, err := h.db.DB.ExecContext(req.Context(),
-		`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?, ?, ?, ?, ?)`,
+	// RETURNING id instead of LastInsertId: pgx's database/sql driver has
+	// no LastInsertId, and both SQLite and Postgres support RETURNING.
+	var id int64
+	if err := h.db.DB.QueryRowContext(req.Context(),
+		`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?, ?, ?, ?, ?) RETURNING id`,
 		body.Username, body.DisplayName, body.Email, body.Role, nullable(hash),
-	)
-	if err != nil {
+	).Scan(&id); err != nil {
 		httperr.Write(w, req, err)
 		return
 	}
-	id, _ := res.LastInsertId()
 	// Mirror the primary role into a cluster-wide ("*") role binding so
 	// RBAC resolves the new user's permissions. Without this the user has
 	// no effective permissions at all.
@@ -464,13 +465,12 @@ func (h *userHandler) del(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	if _, err := h.db.DB.ExecContext(req.Context(), `DELETE FROM users WHERE id = ?`, id); err != nil {
+	// One transaction removes the account and every row tied to it (SSO
+	// links, preferences, sessions, bindings) and revokes its share links:
+	// sqlite runs without FK cascade, so nothing else would.
+	if err := h.db.DeleteUser(req.Context(), id); err != nil {
 		httperr.Write(w, req, err)
 		return
-	}
-	// sqlite runs without FK cascade, so clear the user's bindings too.
-	if err := h.db.DeleteUserBindings(req.Context(), nil, id); err != nil {
-		slog.Warn("delete user bindings", "err", err, "user", id)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -557,24 +557,24 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 
 	if body.DisplayName != nil {
 		if _, err := tx.ExecContext(req.Context(),
-			`UPDATE users SET display_name = ?, updated_at = datetime('now') WHERE id = ?`,
-			*body.DisplayName, id); err != nil {
+			`UPDATE users SET display_name = ?, updated_at = ? WHERE id = ?`,
+			*body.DisplayName, db.NowTimestamp(), id); err != nil {
 			httperr.Write(w, req, err)
 			return
 		}
 	}
 	if body.Email != nil {
 		if _, err := tx.ExecContext(req.Context(),
-			`UPDATE users SET email = ?, updated_at = datetime('now') WHERE id = ?`,
-			*body.Email, id); err != nil {
+			`UPDATE users SET email = ?, updated_at = ? WHERE id = ?`,
+			*body.Email, db.NowTimestamp(), id); err != nil {
 			httperr.Write(w, req, err)
 			return
 		}
 	}
 	if body.Role != nil {
 		res, err := tx.ExecContext(req.Context(),
-			`UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`,
-			*body.Role, id)
+			`UPDATE users SET role = ?, updated_at = ? WHERE id = ?`,
+			*body.Role, db.NowTimestamp(), id)
 		if err != nil {
 			httperr.Write(w, req, err)
 			return
@@ -643,8 +643,8 @@ func (h *userHandler) resetPassword(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	res, err := h.db.DB.ExecContext(req.Context(),
-		`UPDATE users SET pw_hash = ?, updated_at = datetime('now') WHERE id = ?`,
-		hash, id)
+		`UPDATE users SET pw_hash = ?, updated_at = ? WHERE id = ?`,
+		hash, db.NowTimestamp(), id)
 	if err != nil {
 		httperr.Write(w, req, err)
 		return
