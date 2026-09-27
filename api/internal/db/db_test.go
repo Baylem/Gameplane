@@ -412,6 +412,84 @@ func TestAdoptLegacySQLite_EmptyDSN(t *testing.T) {
 	}
 }
 
+// TestWithSQLiteBusyTimeout tests DSN transformation for busy_timeout pragma.
+func TestWithSQLiteBusyTimeout(t *testing.T) {
+	tests := []struct {
+		name string
+		dsn  string
+		want string
+	}{
+		{
+			name: "DSN with existing pragma, no query string",
+			dsn:  "file:/data/g.db?_pragma=journal_mode(WAL)",
+			want: "file:/data/g.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "bare path, no query string",
+			dsn:  "/data/g.db",
+			want: "/data/g.db?_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "DSN already containing busy_timeout (lowercase)",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout(1000)",
+			want: "file:/data/g.db?_pragma=busy_timeout(1000)",
+		},
+		{
+			name: "DSN with BUSY_TIMEOUT (uppercase, case-insensitive check)",
+			dsn:  "file:/data/g.db?_pragma=BUSY_TIMEOUT(1000)",
+			want: "file:/data/g.db?_pragma=BUSY_TIMEOUT(1000)",
+		},
+		{
+			name: "DSN with Busy_Timeout (mixed case)",
+			dsn:  "file:/data/g.db?_pragma=Busy_Timeout(500)",
+			want: "file:/data/g.db?_pragma=Busy_Timeout(500)",
+		},
+		{
+			name: "memory database",
+			dsn:  ":memory:",
+			want: ":memory:?_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "file:memory: database",
+			dsn:  "file::memory:",
+			want: "file::memory:?_pragma=busy_timeout(5000)",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := withSQLiteBusyTimeout(tc.dsn)
+			if got != tc.want {
+				t.Errorf("withSQLiteBusyTimeout(%q) = %q, want %q", tc.dsn, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestOpen_SQLiteAppliesBusyTimeout verifies that Open applies busy_timeout
+// to the DSN and that PRAGMA busy_timeout returns the configured value.
+func TestOpen_SQLiteAppliesBusyTimeout(t *testing.T) {
+	tmpdir := t.TempDir()
+	dbPath := filepath.Join(tmpdir, "test.db")
+	dsn := "file:" + dbPath
+
+	// Open the database; Open should add busy_timeout.
+	store, err := Open(t.Context(), "sqlite", dsn)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+
+	// Query the PRAGMA to verify it was applied.
+	var timeout int
+	if err := store.DB.QueryRowContext(t.Context(), `PRAGMA busy_timeout`).Scan(&timeout); err != nil {
+		t.Fatalf("PRAGMA query: %v", err)
+	}
+
+	if timeout != 5000 {
+		t.Errorf("PRAGMA busy_timeout = %d, want 5000", timeout)
+	}
+}
+
 // TestMigrate_AddsAuditChainColumns verifies migration 005 adds prev_hash and
 // hash columns to audit_events (used by the audit-log tamper-evidence hash
 // chain in api/internal/audit), and applies cleanly on top of 001-004.

@@ -54,6 +54,10 @@ func Open(ctx context.Context, driver, dsn string) (*Store, error) {
 			return nil, err
 		}
 
+		// Add a busy timeout to the DSN if not already present, so concurrent
+		// processes (e.g., API and bootstrap-admin) waiting for locks don't fail immediately.
+		dsn = withSQLiteBusyTimeout(dsn)
+
 		db, err := sql.Open("sqlite", dsn)
 		if err != nil {
 			return nil, err
@@ -294,6 +298,28 @@ func sqlitePath(dsn string) string {
 	}
 
 	return dsn
+}
+
+// withSQLiteBusyTimeout appends a busy_timeout pragma to the DSN if one is not
+// already present. This allows multiple processes (e.g., the API server and
+// bootstrap-admin both accessing the same SQLite file) to wait for locks instead
+// of failing immediately with SQLITE_BUSY. The timeout is set to 5000 milliseconds.
+// DSNs that already contain busy_timeout (case-insensitive) are returned unchanged.
+func withSQLiteBusyTimeout(dsn string) string {
+	// Detect if busy_timeout is already present (case-insensitive).
+	if strings.Contains(strings.ToLower(dsn), "busy_timeout") {
+		return dsn
+	}
+
+	// Find the query string separator.
+	idx := strings.IndexByte(dsn, '?')
+	if idx == -1 {
+		// No query string; add one.
+		return dsn + "?_pragma=busy_timeout(5000)"
+	}
+
+	// Query string exists; append to it with &.
+	return dsn + "&_pragma=busy_timeout(5000)"
 }
 
 // adoptLegacySQLite renames kestrel.db to the target DSN path if the target
