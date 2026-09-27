@@ -80,6 +80,13 @@ The API applies these rules in order (`api/internal/auth/clientip.go`):
    already reached. With no `X-Forwarded-For` header that is the peer.
 5. With `api.trustedProxies` empty, the peer is always the client.
 
+**IPv4-mapped IPv6 prefixes.** Prefixes must be standard IPv4 (e.g., `10.42.0.0/16`)
+or IPv6 (e.g., `fc00::/7`). IPv4-mapped IPv6 prefixes (e.g., `::ffff:10.42.0.0/112`)
+are automatically normalized: they are converted to their unmapped IPv4 form and must
+be at least `/96` bits to be valid (`::ffff:10.42.0.0/96` becomes `10.42.0.0/0`,
+`::ffff:10.42.0.0/112` becomes `10.42.0.0/16`). Prefixes shorter than `/96` are
+rejected at startup.
+
 **In a normal Kubernetes install** (ingress controller, then the web
 front end, then the API), the default works out of the box: the proxies
 run in pod and node ranges the default covers, and a client on the public

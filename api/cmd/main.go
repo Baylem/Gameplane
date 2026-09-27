@@ -34,6 +34,27 @@ import (
 
 var Version = "dev"
 
+// parseTrustedProxyPrefix parses a CIDR string and normalizes IPv4-mapped IPv6
+// prefixes. If a prefix is IPv4-mapped (e.g., ::ffff:10.0.0.0/112):
+// - If Bits() < 96: returns an error (IPv4-mapped prefix too short to contain full IPv4)
+// - If Bits() >= 96: returns the unmapped IPv4 prefix (e.g., 10.0.0.0/16 for ::ffff:10.0.0.0/112)
+// Plain IPv4 and IPv6 prefixes are returned unchanged.
+func parseTrustedProxyPrefix(cidr string) (netip.Prefix, error) {
+	prefix, err := netip.ParsePrefix(cidr)
+	if err != nil {
+		return netip.Prefix{}, err
+	}
+
+	if prefix.Addr().Is4In6() {
+		if prefix.Bits() < 96 {
+			return netip.Prefix{}, fmt.Errorf("IPv4-mapped prefix %q has less than 96 bits; unmapped IPv4 range would be incomplete", cidr)
+		}
+		return netip.PrefixFrom(prefix.Addr().Unmap(), prefix.Bits()-96), nil
+	}
+
+	return prefix, nil
+}
+
 func main() {
 	// Level from the environment first so the subcommand dispatch and
 	// bootstrap-admin honor it; the serve path rebuilds the logger from
@@ -116,7 +137,7 @@ func main() {
 		if p == "" {
 			continue
 		}
-		prefix, perr := netip.ParsePrefix(p)
+		prefix, perr := parseTrustedProxyPrefix(p)
 		if perr != nil {
 			logger.Error("invalid trusted proxy CIDR", "cidr", p, "err", perr)
 			os.Exit(1)
