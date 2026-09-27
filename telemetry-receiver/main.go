@@ -38,6 +38,14 @@ var Version = "dev"
 // kilobyte; this just stops a misdirected client from streaming at us.
 const maxBody = 16 << 10
 
+// HTTP server timeouts: the whole-body read is bounded so a client can't
+// hold /ingest open after sending a report.
+const (
+	readHeaderTimeout = 10 * time.Second
+	readTimeout       = 15 * time.Second
+	idleTimeout       = 120 * time.Second
+)
+
 // versionRE bounds what lands in the reports_total version label —
 // free-form input must not be able to explode label cardinality with
 // garbage. Anything else is counted under "invalid".
@@ -95,7 +103,12 @@ func decodePayload(body []byte) (payload, error) {
 	if w.Version == nil || w.Servers == nil || w.Templates == nil {
 		return payload{}, fmt.Errorf("%w: missing required field", errInvalidPayload)
 	}
-	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+	switch err := dec.Decode(&struct{}{}); {
+	case errors.Is(err, io.EOF):
+		// exactly one value
+	case err != nil:
+		return payload{}, fmt.Errorf("%w: trailing content after the report: %w", errInvalidPayload, err)
+	default:
 		return payload{}, fmt.Errorf("%w: trailing content after the report", errInvalidPayload)
 	}
 	return payload{Version: *w.Version, Servers: *w.Servers, Templates: *w.Templates}, nil
@@ -188,6 +201,16 @@ func (s *server) ingest(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func newHTTPServer(addr string, h http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           h,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		IdleTimeout:       idleTimeout,
+	}
+}
+
 func run(cfg config) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -196,11 +219,7 @@ func run(cfg config) error {
 
 func serve(ctx context.Context, cfg config) error {
 	s := newServer(cfg)
-	srv := &http.Server{
-		Addr:              cfg.listen,
-		Handler:           s.routes(),
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	srv := newHTTPServer(cfg.listen, s.routes())
 	errCh := make(chan error, 1)
 	go func() {
 		slog.Info("telemetry-receiver listening", "addr", cfg.listen, "version", Version, "auth", cfg.authToken != "")

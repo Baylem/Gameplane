@@ -11,11 +11,12 @@ Optional collector for the anonymous usage telemetry the API reports daily. Prov
 ## Responsibilities
 
 - **HTTP server**: three routes — `/ingest` (POST), `/metrics` (GET), `/healthz` (GET)
-- **Payload validation**: strict JSON schema (`{version, servers, templates}` only); rejects unknown fields, malformed JSON, oversized bodies (>16 KiB), and negative counts
+- **Payload validation**: strict JSON schema (`{version, servers, templates}` only); rejects malformed JSON, exactly one JSON object required (trailing non-whitespace content rejected), missing or null required fields, unknown fields, negative counts, oversized bodies (>16 KiB)
 - **Version sanitization**: version strings matching `^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$` are passed through; anything else is bucketed as `"invalid"` to prevent label cardinality explosion
 - **Authentication**: optional constant-time token validation when `AUTH_TOKEN` is set
 - **Metrics aggregation**: three in-memory Prometheus metrics — `gameplane_telemetry_reports_total` (counter by version), `gameplane_telemetry_servers` (histogram), `gameplane_telemetry_templates` (histogram)
 - **Structured logging**: logs each accepted report via `log/slog` with version/servers/templates fields
+- **Request timeouts**: whole request read is time-bounded (15 s read timeout, 10 s header timeout) to prevent clients holding connections open after sending a report
 
 ## Non-goals / boundaries
 
@@ -42,7 +43,7 @@ telemetry-receiver/
 
 | Route | Method | Success response | Failures |
 |-------|--------|------------------|----------|
-| `/ingest` | POST | `204 No Content` | `400` malformed JSON / unknown fields / negative counts; `401` missing/wrong Authorization (when `AUTH_TOKEN` set); `413` body >16 KiB |
+| `/ingest` | POST | `204 No Content` | `400` malformed JSON / not exactly one JSON object / missing or null required fields / unknown fields / negative counts; `401` missing/wrong Authorization (when `AUTH_TOKEN` set); `413` body >16 KiB |
 | `/metrics` | GET | Prometheus text format | Never errors |
 | `/healthz` | GET | `200 OK`, body `"ok"` | Never errors |
 
@@ -52,10 +53,11 @@ telemetry-receiver/
 { "version": "0.2.0-beta.7", "servers": 3, "templates": 7 }
 ```
 
+The body must be exactly one JSON object with all three required fields and no trailing non-whitespace content. Missing or null required fields and unknown fields are rejected (16 KiB body cap applies to the entire request).
+
 - **version** (string, required): free-form version string; sanitized to `"invalid"` if it doesn't match `^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$` (printable ASCII, at most 32 chars)
 - **servers** (integer, required): GameServer count; must be ≥ 0
 - **templates** (integer, required): GameTemplate count; must be ≥ 0
-- Unknown fields cause rejection
 
 ### Prometheus metrics
 
@@ -73,7 +75,8 @@ gameplane_telemetry_templates_count                        # histogram count
 
 - **No persistent storage**: all metrics are in-memory, ephemeral across restart
 - **Version label bounded**: hostile input (e.g., `<script>…</script>`, 200+ chars) becomes label `version="invalid"` — impossible for unvalidated input to explode label cardinality or leak into the metrics page
-- **Strict validation**: JSON decoder enforces exact field list (no extras, no renames); negative counts immediately rejected; body size capped at 16 KiB
+- **Strict validation**: body must be exactly one JSON object with all three required fields (no extras, no renames); missing or null fields rejected; trailing non-whitespace content rejected; negative counts immediately rejected; body size capped at 16 KiB
+- **Request timing**: whole-request read is time-bounded (15 s read timeout, 10 s header timeout) to prevent clients holding connections open after sending a report
 - **Authentication is optional**: if `AUTH_TOKEN` is empty, `/ingest` is public; otherwise, the exact `Authorization` header must match (constant-time comparison defeats timing attacks)
 - **Anonymity by contract**: payload contains no names, namespaces, hostnames, cluster IDs, or pod IPs — privacy is enforced upstream (by the API's telemetry reporter), and this receiver has no way to add PII
 - **Graceful shutdown**: catches SIGINT/SIGTERM, shuts down HTTP server with 5s context timeout

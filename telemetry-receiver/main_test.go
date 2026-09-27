@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -321,5 +323,56 @@ func TestIngestBodyLimitCoversWholeBody(t *testing.T) {
 	}
 	if m := metrics(t, srv); !strings.Contains(m, `gameplane_telemetry_reports_total{version="1.0.0"} 1`) {
 		t.Fatalf("expected only the at-limit report to be counted:\n%s", m)
+	}
+}
+
+// TestDecodePayloadKeepsTrailingDecodeError verifies that trailing malformed
+// JSON after a valid report is detected and that the root error is preserved.
+func TestDecodePayloadKeepsTrailingDecodeError(t *testing.T) {
+	// Valid report followed by malformed trailing text.
+	body := []byte(`{"version":"v","servers":1,"templates":1} {`)
+	_, err := decodePayload(body)
+	if !errors.Is(err, errInvalidPayload) {
+		t.Fatalf("error chain missing errInvalidPayload: %v", err)
+	}
+	// Verify that the root error is a json.SyntaxError.
+	var syntaxErr *json.SyntaxError
+	if !errors.As(err, &syntaxErr) {
+		t.Fatalf("error chain missing json.SyntaxError: %v", err)
+	}
+
+	// Valid report followed by a second valid object.
+	body = []byte(`{"version":"v","servers":1,"templates":1}{"version":"v2","servers":2,"templates":2}`)
+	_, err = decodePayload(body)
+	if !errors.Is(err, errInvalidPayload) {
+		t.Fatalf("second object: error chain missing errInvalidPayload: %v", err)
+	}
+
+	// Valid report followed by a second value that decodes cleanly.
+	body = []byte(`{"version":"v","servers":1,"templates":1} {}`)
+	_, err = decodePayload(body)
+	if !errors.Is(err, errInvalidPayload) {
+		t.Fatalf("trailing empty object: error chain missing errInvalidPayload: %v", err)
+	}
+}
+
+// TestNewHTTPServer_BoundsEveryPhase verifies that newHTTPServer sets all three
+// timeouts correctly.
+func TestNewHTTPServer_BoundsEveryPhase(t *testing.T) {
+	srv := newHTTPServer("127.0.0.1:0", http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+
+	if srv.ReadHeaderTimeout != readHeaderTimeout {
+		t.Errorf("ReadHeaderTimeout = %v, want %v", srv.ReadHeaderTimeout, readHeaderTimeout)
+	}
+	if srv.ReadTimeout != readTimeout {
+		t.Errorf("ReadTimeout = %v, want %v", srv.ReadTimeout, readTimeout)
+	}
+	if srv.IdleTimeout != idleTimeout {
+		t.Errorf("IdleTimeout = %v, want %v", srv.IdleTimeout, idleTimeout)
+	}
+
+	// Verify all are non-zero.
+	if srv.ReadHeaderTimeout == 0 || srv.ReadTimeout == 0 || srv.IdleTimeout == 0 {
+		t.Error("one or more timeouts are zero")
 	}
 }
