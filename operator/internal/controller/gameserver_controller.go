@@ -1858,19 +1858,19 @@ func configInitImageOrDefault(image string) string {
 // data volume on every pod start — operator-rendered files always win
 // over in-place edits (e.g. via the dashboard Files tab). image is the
 // operator-configured config-init image; empty falls back to the pin.
-// When the template sets security.fsGroup, config-init runs as root but
-// makes each file it copied group-writable (and nothing else already on
-// the volume) so a non-root game sharing that fsGroup can update its own
-// config files.
+// When the template sets security.fsGroup, config-init makes each file
+// and directory it copied group-writable so a non-root game sharing that
+// fsGroup can update them.
 func buildConfigInitContainer(image string, tmpl *gameplanev1alpha1.GameTemplate) corev1.Container {
 	image = configInitImageOrDefault(image)
 	mountPath := effectiveMountPath(tmpl)
 	cpCmd := "cp -RL " + configFilesStagingPath + "/* '" + mountPath + "/'"
 
-	// If fsGroup is set, append a chmod step to make the files config-init copied
-	// group-writable (not directories or other files already on the volume).
+	// If fsGroup is set, append a chmod step to make each file and directory
+	// config-init copied group-writable (entries that came from the staging tree;
+	// other files already on the volume keep their modes).
 	if tmpl.Spec.Security != nil && tmpl.Spec.Security.FSGroup != nil {
-		cpCmd += " && cd " + configFilesStagingPath + " && find * -follow -type f | while IFS= read -r p; do chmod g+w '" + mountPath + "/'\"$p\"; done"
+		cpCmd += " && cd " + configFilesStagingPath + " && find ./* -follow \\( -type f -o -type d \\) | while IFS= read -r p; do chmod g+w '" + mountPath + "/'\"$p\"; done"
 	}
 
 	return corev1.Container{

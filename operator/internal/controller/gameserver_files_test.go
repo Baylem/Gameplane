@@ -98,9 +98,14 @@ func TestBuildConfigInitContainer_GroupWritableWithFSGroup(t *testing.T) {
 	// The whole command must be valid shell: the mount path is single-quoted
 	// and closed before the loop variable, so $p still expands.
 	want := "cp -RL " + configFilesStagingPath + "/* '/data/' && cd " + configFilesStagingPath +
-		" && find * -follow -type f | while IFS= read -r p; do chmod g+w '/data/'\"$p\"; done"
+		" && find ./* -follow \\( -type f -o -type d \\) | while IFS= read -r p; do chmod g+w '/data/'\"$p\"; done"
 	if arg != want {
 		t.Errorf("config-init command =\n  %q\nwant\n  %q", arg, want)
+	}
+
+	// Verify the command contains "find ./*"
+	if !strings.Contains(arg, "find ./*") {
+		t.Errorf("args should contain 'find ./*' to handle entries starting with '-', got %q", arg)
 	}
 }
 
