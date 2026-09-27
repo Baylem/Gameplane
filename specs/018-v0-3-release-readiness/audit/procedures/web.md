@@ -1906,20 +1906,14 @@ list queries every allowed namespace (OD-021 item 14 follow-up; a config-only
 (`ServiceAccountsTab`, `web/src/routes/Users.tsx:751-756`): it renders the
 static text "Service accounts (machine-to-machine API tokens) are tracked for
 v1.1." and has no create/list/delete flow. No route in `api/internal/handlers/`
-serves service accounts. `docs/roadmap.md` does not carry a matching "v1.1" or
-service-account line to cite — the only verifiable source for the "tracked for
-v1.1" wording is the placeholder component itself. Item 13's resolution asks
-for a `docs/roadmap.md` citation, and none exists to give; this row stays
-`n/a` on the code evidence above, but the citation part of item 13 cannot be
-applied as resolved and needs a maintainer follow-up (a new OPEN-DECISIONS
-entry or an actual `docs/roadmap.md` v1.1 entry) rather than resting on this
-inline note.
+serves service accounts. The roadmap tracks it for v1.1: `docs/roadmap.md` § "Users page: service accounts
+and identity-provider tabs" (added in #497 for OD-021 item 13).
 
 **Expected:** n/a
 
 **Cleanup:** None needed.
 
-**Automatable?** n/a — feature not implemented (OD-021 item 13; cf. `web/src/routes/Users.tsx:751-756`; roadmap citation still outstanding, needs maintainer follow-up)
+**Automatable?** n/a — feature not implemented (OD-021 item 13; cf. `web/src/routes/Users.tsx:751-756`; `docs/roadmap.md` § Users page tabs, #497)
 
 ---
 
@@ -1936,17 +1930,14 @@ configuration is tracked for v1.1." and has no add/edit/save flow from this
 tab. (Runtime OIDC provider management does exist, but under Admin Settings —
 see `web/src/routes/AdminSettings.tsx` and `docs/oidc.md:3` — not under
 $GP/users, so this procedure as specified still does not apply.)
-`docs/roadmap.md` does not carry a matching "v1.1" or OIDC-providers-tab line
-to cite. As with users-manage-service-accounts, item 13's citation
-requirement cannot be applied as resolved from the code alone; it needs a
-maintainer follow-up (a new OPEN-DECISIONS entry or an actual
-`docs/roadmap.md` v1.1 entry), not just this inline note.
+The roadmap tracks the tab for v1.1: `docs/roadmap.md` § "Users page: service
+accounts and identity-provider tabs" (added in #497 for OD-021 item 13).
 
 **Expected:** n/a
 
 **Cleanup:** None needed.
 
-**Automatable?** n/a — feature not implemented under this tab (OD-021 item 13; cf. `web/src/routes/Users.tsx:742-747`; roadmap citation still outstanding, needs maintainer follow-up)
+**Automatable?** n/a — feature not implemented under this tab (OD-021 item 13; cf. `web/src/routes/Users.tsx:742-747`; `docs/roadmap.md` § Users page tabs, #497)
 
 ---
 
