@@ -14,6 +14,7 @@ import {
   Download,
   Eye,
   Inbox,
+  Lock,
   Trash2,
 } from "lucide-react";
 import {
@@ -51,6 +52,7 @@ import {
 } from "@heroui/react";
 import { APIError, Captures, CaptureStartBody } from "@/lib/api";
 import { captureListRefetchMs, isCaptureActive } from "@/lib/capturePolling";
+import { useMe, can } from "@/lib/auth";
 import { CaptureWarningBanner } from "@/components/ui/CaptureWarningBanner";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { Chip } from "@/components/ui/PhaseChip";
@@ -117,6 +119,10 @@ interface Props {
 
 export function CaptureWidget({ name, ns, gs }: Props) {
   const qc = useQueryClient();
+  const { data: me } = useMe();
+  const ns_resolved = ns ?? "gameplane-games";
+  const canManage = can(me, "captures:manage", ns_resolved);
+
   const enabled = gs?.spec.capture?.enabled === true;
   const retentionSeconds = gs?.spec.capture?.retentionSeconds ?? DEFAULT_RETENTION_SECONDS;
   const retentionHours = Math.max(1, Math.round(retentionSeconds / 3600));
@@ -131,10 +137,17 @@ export function CaptureWidget({ name, ns, gs }: Props) {
   // see captureListRefetchMs.
   const [stoppingId, setStoppingId] = useState<string | null>(null);
 
+  // All hooks above this point must run unconditionally on every render —
+  // useMe() resolves from `undefined` to a real user after mount, which
+  // would otherwise flip this early return between renders and violate the
+  // Rules of Hooks (mount-time "fewer hooks than previous render" crash) for
+  // every legitimately-authorized user. Only the JSX below this point may
+  // branch on canManage. Mirrors NetworkCaptureSection's shape (calls every
+  // hook first, gates only the returned JSX).
   const { data: captures } = useQuery({
     queryKey: ["captures", name, ns],
     queryFn: () => Captures.list(name, ns),
-    enabled,
+    enabled: enabled && canManage,
     refetchInterval: (query) => captureListRefetchMs(query.state.data, stoppingId),
   });
 
@@ -142,7 +155,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
   const { data: activeCaptureDetails } = useQuery({
     queryKey: ["capture", name, activeCapture?.captureId, ns],
     queryFn: () => Captures.get(name, activeCapture!.captureId, ns),
-    enabled: !!activeCapture,
+    enabled: !!activeCapture && canManage,
   });
 
   const enableMut = useMutation({
@@ -183,6 +196,24 @@ export function CaptureWidget({ name, ns, gs }: Props) {
       URL.revokeObjectURL(url);
     },
   });
+
+  if (!canManage) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-default-100">
+              <Lock className="h-7 w-7 text-default-500" />
+            </div>
+            <p className="text-sm font-medium">You don't have access to packet capture on this server.</p>
+            <p className="max-w-md text-xs text-default-500">
+              Viewing, starting and downloading captures requires capture access for this server. Ask an administrator if you need it.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!enabled) {
     return (

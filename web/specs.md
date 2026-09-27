@@ -898,6 +898,15 @@ Visible tab set depends on server template + active version:
 10. **Capture** — a `CaptureWidget` component driving start/stop of packet captures and a table of past captures for this server, gated on the `captures:manage` permission. Sits between the Backups and Settings tabs per `design-export/json` node `O08uaD`/`b4eaUf` (start-capture modal) and `m5kOm4` (capture list). `CaptureWidget.tsx` with `Captures` client namespace (`web/src/lib/api.ts:127-175`) and router/tab wiring (`ServerDetail.tsx:278`) are implemented in `web/src`.
 11. **Settings** — Grouped form with sub-sections (below); changes are draft-until-save; conflict detection on reload
 
+### Permission Gates (Tab Visibility & Control Access)
+
+Each UI gate uses the same permission and namespace as the API:
+
+- **Capture tab:** Hidden for users lacking `captures:manage` in the server's namespace. The `CaptureWidget` component also checks this permission on render and shows an access-denied card if the user lacks it (aligned with all capture endpoints in the API).
+- **Mods/Modpacks tab controls:** Install/manage actions require `servers:write` in the server's namespace (aligned with mod endpoints in the API). The `can(me, "servers:write", namespace)` helper checks both cluster-wide (`*`) and namespace-scoped bindings.
+
+**Implementation:** The `can(me, permission, namespace?)` helper (`web/src/lib/auth.ts`) mirrors the server's RBAC logic: a cluster-wide (`*`) grant or a grant in the target namespace suffices. UI gates inform user visibility only; the API is always the real enforcer.
+
 ## ServerDetail Settings Sub-sections
 
 Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sections in a left sidebar (`SECTIONS` array):

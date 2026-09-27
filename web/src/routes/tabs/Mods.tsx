@@ -65,7 +65,8 @@ export function ModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTempl
 function FileModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTemplate; gs?: GameServer; ns?: string }) {
   const qc = useQueryClient();
   const { data: me } = useMe();
-  const canManage = can(me, "servers:write");
+  const ns_resolved = ns ?? "gameplane-games";
+  const canManage = can(me, "servers:write", ns_resolved);
 
   const caps = tmpl?.spec.capabilities?.mods;
   // URL installs need the module's install (allowlist) block; uploads only
@@ -432,7 +433,8 @@ function ModsByIdTab({
 }) {
   const qc = useQueryClient();
   const { data: me } = useMe();
-  const canManage = can(me, "servers:write");
+  const ns_resolved = ns ?? "gameplane-games";
+  const canManage = can(me, "servers:write", ns_resolved);
 
   const caps = tmpl?.spec.capabilities?.mods;
   // A registry provider (e.g. ARK declares curseforge) enables in-app

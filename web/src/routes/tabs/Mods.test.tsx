@@ -1249,4 +1249,73 @@ describe("ModsTab — id-managed mods (capabilities.mods.idList)", () => {
     expect(await screen.findByText("Mod Display Name")).toBeInTheDocument();
     expect(await screen.findByText("ID mod-id")).toBeInTheDocument();
   });
+
+  it("respects namespace-scoped servers:write permission", async () => {
+    // User has servers:write only in test-ns, not in gameplane-games (the
+    // namespace this component renders in, since no ns prop is passed).
+    fetchMock.mockImplementation((url: string) => {
+      if (url.endsWith("/users/me")) {
+        return Promise.resolve(jsonRes({
+          id: 1,
+          username: "operator",
+          displayName: "Op",
+          email: "",
+          role: "operator",
+          permissions: { "test-ns": ["servers:read", "servers:write"] },
+        }));
+      }
+      if (url.includes("/mods")) {
+        return Promise.resolve(jsonRes([]));
+      }
+      return Promise.resolve(jsonRes({}));
+    });
+    // Render in gameplane-games namespace (no permission there).
+    renderWithQuery(<ModsTab name="s1" tmpl={tmpl(withInstall)} />);
+
+    expect(await screen.findByText("0 installed")).toBeInTheDocument();
+
+    // "Install mod" stays visible but is disabled because the user's
+    // servers:write grant doesn't cover this server's namespace.
+    const installBtn = screen.getByRole("button", { name: /install mod/i });
+    expect(installBtn).toBeDisabled();
+  });
+
+  it("allows mods operations when user has namespace-scoped servers:write permission", async () => {
+    // User has servers:write scoped to gameplane-games, the namespace this
+    // server is rendered in.
+    fetchMock.mockImplementation((url: string) => {
+      if (url.endsWith("/users/me")) {
+        return Promise.resolve(jsonRes({
+          id: 1,
+          username: "operator",
+          displayName: "Op",
+          email: "",
+          role: "operator",
+          permissions: { "gameplane-games": ["servers:read", "servers:write"] },
+        }));
+      }
+      if (url.includes("/mods/registry/providers")) {
+        return Promise.resolve(jsonRes([{ provider: "modrinth", available: true, modpacks: false }]));
+      }
+      if (url.includes("/mods")) {
+        return Promise.resolve(jsonRes([]));
+      }
+      return Promise.resolve(jsonRes({}));
+    });
+    renderWithQuery(<ModsTab name="s1" tmpl={tmpl(withBrowse)} ns="gameplane-games" />);
+
+    expect(await screen.findByText("0 installed")).toBeInTheDocument();
+
+    // "Install mod" is enabled because the namespace-scoped grant matches
+    // this server's namespace; a cluster-wide-only check (the pre-fix
+    // behavior) would leave it disabled here.
+    const installBtn = screen.getByRole("button", { name: /install mod/i });
+    await waitFor(() => expect(installBtn).not.toBeDisabled());
+    fireEvent.click(installBtn);
+
+    // withBrowse declares a registry, so the install page defaults to
+    // browse mode and shows its "Browse registry" toggle.
+    const browseBtn = await screen.findByRole("button", { name: /browse registry/i });
+    expect(browseBtn).toBeInTheDocument();
+  });
 });

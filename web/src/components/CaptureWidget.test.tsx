@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect, onTestFinished, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, onTestFinished, vi } from "vitest";
 import type { ReactNode } from "react";
 import { http, HttpResponse } from "msw";
 import { screen, waitFor, within } from "@testing-library/react";
@@ -9,6 +9,13 @@ import { makeServer, makeCapture } from "@/test/factories";
 import type { CaptureStartBody } from "@/lib/api";
 import { CaptureWidget } from "./CaptureWidget";
 
+const useMeMock = vi.fn();
+// Keep the real can(); only stub useMe.
+vi.mock("@/lib/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/auth")>()),
+  useMe: () => useMeMock(),
+}));
+
 // Mock TanStack Router to avoid import errors in tests
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to, ...rest }: { children: ReactNode; to: string } & Record<string, unknown>) => (
@@ -16,11 +23,80 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+beforeEach(() => {
+  // Default: user has captures:manage permission
+  useMeMock.mockReturnValue({
+    data: { id: 1, username: "admin", role: "admin", permissions: { "*": ["captures:manage"] } },
+    error: null,
+    isLoading: false,
+  });
+});
+
 afterEach(() => {
   server.resetHandlers();
+  useMeMock.mockReset();
 });
 
 describe("CaptureWidget", () => {
+  describe("permission gating", () => {
+    it("shows access denied card when user lacks captures:manage permission", () => {
+      useMeMock.mockReturnValue({
+        data: { id: 1, username: "viewer", role: "viewer", permissions: { "*": ["servers:read"] } },
+        error: null,
+        isLoading: false,
+      });
+      const gs = makeServer({
+        spec: { capture: { enabled: true } },
+      });
+      renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
+
+      expect(screen.getByText(/You don't have access to packet capture on this server/i)).toBeInTheDocument();
+      expect(screen.getByText(/Viewing, starting and downloading captures requires capture access/i)).toBeInTheDocument();
+    });
+
+    it("respects namespace binding", () => {
+      // User has captures:manage only in test-ns, not in gameplane-games
+      useMeMock.mockReturnValue({
+        data: {
+          id: 1,
+          username: "operator",
+          role: "operator",
+          permissions: { "test-ns": ["captures:manage"] },
+        },
+        error: null,
+        isLoading: false,
+      });
+      const gs = makeServer({
+        spec: { capture: { enabled: true } },
+      });
+      // Render with gameplane-games namespace (default)
+      renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
+
+      expect(screen.getByText(/You don't have access to packet capture on this server/i)).toBeInTheDocument();
+    });
+
+    it("allows access when user has namespace-scoped captures:manage permission", () => {
+      useMeMock.mockReturnValue({
+        data: {
+          id: 1,
+          username: "operator",
+          role: "operator",
+          permissions: { "gameplane-games": ["captures:manage"] },
+        },
+        error: null,
+        isLoading: false,
+      });
+      const gs = makeServer({
+        spec: { capture: { enabled: false } },
+      });
+      renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
+
+      // Should show the disabled state (not the permission denied state)
+      expect(screen.getByText(/Capture is not enabled on this server/i)).toBeInTheDocument();
+      expect(screen.queryByText(/You don't have access to packet capture on this server/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe("disabled state", () => {
     it("shows the disabled banner when capture is not enabled on the server", () => {
       const gs = makeServer({
