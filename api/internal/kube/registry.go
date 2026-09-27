@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // Registry holds a pool of Kubernetes clients keyed by cluster ID, so the API
@@ -17,12 +18,17 @@ import (
 type Registry struct {
 	mu        sync.RWMutex
 	clients   map[string]*Client
+	uids      map[string]types.UID
 	defaultID string
 }
 
 // NewRegistry returns an empty Registry whose default cluster is defaultID.
 func NewRegistry(defaultID string) *Registry {
-	return &Registry{clients: map[string]*Client{}, defaultID: defaultID}
+	return &Registry{
+		clients:   map[string]*Client{},
+		uids:      map[string]types.UID{},
+		defaultID: defaultID,
+	}
 }
 
 // Get returns the client for cluster id and true, or (nil, false) if the
@@ -47,18 +53,60 @@ func (r *Registry) DefaultID() string {
 	return r.defaultID
 }
 
-// Set registers (or replaces) the client for cluster id.
+// Set registers (or replaces) the client for cluster id and clears the stored UID.
 func (r *Registry) Set(id string, c *Client) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.clients[id] = c
+	delete(r.uids, id)
 }
 
-// Remove deletes the client for cluster id, if present.
+// Remove deletes the client for cluster id, if present, and clears the stored UID.
 func (r *Registry) Remove(id string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.clients, id)
+	delete(r.uids, id)
+}
+
+// SetWithUID registers (or replaces) the client for cluster id and stores its UID.
+func (r *Registry) SetWithUID(id string, uid types.UID, c *Client) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.clients[id] = c
+	r.uids[id] = uid
+}
+
+// RemoveIfUID removes the entry (and its UID) when uid is empty, when the stored
+// UID is empty, or when they are equal; otherwise it leaves the entry (a newer
+// registration with the same name).
+func (r *Registry) RemoveIfUID(id string, uid types.UID) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Remove if the argument uid is empty.
+	if uid == "" {
+		delete(r.clients, id)
+		delete(r.uids, id)
+		return
+	}
+
+	// Remove if the stored uid is empty.
+	storedUID, ok := r.uids[id]
+	if !ok || storedUID == "" {
+		delete(r.clients, id)
+		delete(r.uids, id)
+		return
+	}
+
+	// Remove if the stored uid matches the argument.
+	if storedUID == uid {
+		delete(r.clients, id)
+		delete(r.uids, id)
+		return
+	}
+
+	// Otherwise, leave the entry (a newer registration with the same name).
 }
 
 // IDs returns the registered cluster IDs in sorted order.

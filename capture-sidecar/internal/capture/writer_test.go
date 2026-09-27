@@ -611,7 +611,7 @@ func (enospcWriter) Write(_ []byte) (int, error) {
 
 // TestWriter_ENOSPCDuringFlushReportsDiskFull simulates a disk that fills up
 // mid-capture. pcapgo.NgWriter buffers through a 4096-byte bufio.Writer (see
-// github.com/gopacket/gopacket@v1.6.1/pcapgo/ngwrite.go, NewNgWriterInterface
+// github.com/gopacket/gopacket@v1.7.2/pcapgo/ngwrite.go, NewNgWriterInterface
 // -> bufio.NewWriter), so a handful of small packets sit in that buffer
 // without ever reaching the underlying writer: WritePacket must keep
 // succeeding right up until a flush actually hits the full disk, which here

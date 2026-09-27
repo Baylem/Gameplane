@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/ValgulNecron/gameplane/api/internal/auth"
@@ -232,4 +233,49 @@ func TestUsers_Bindings_Branches(t *testing.T) {
 			t.Fatalf("status=%d want 400", status)
 		}
 	})
+}
+
+// Last user manager survives concurrent demotion requests that both try to
+// remove user-management access; without serialization, both requests would
+// pass the guard before either writes.
+func TestUsers_LastUserManagerSurvivesConcurrentDemotions(t *testing.T) {
+	// The caller exists only in the request context (no stored row), so A
+	// and B are the only stored user managers; both are demoted at once.
+	srv, store, _ := newUsersServer(t, &auth.User{ID: 999, Username: "admin-caller", Role: "admin"})
+	a := seedUser(t, store, "um-user-a", "admin", "")
+	b := seedUser(t, store, "um-user-b", "admin", "")
+	// Two stored managers: A and B.
+
+	var wg sync.WaitGroup
+	var statusA, statusB int
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		s, _ := doReq(t, "PATCH", srv.URL+"/users/"+strconv.FormatInt(a, 10), map[string]any{
+			"role": "viewer",
+		})
+		statusA = s
+	}()
+	go func() {
+		defer wg.Done()
+		s, _ := doReq(t, "PATCH", srv.URL+"/users/"+strconv.FormatInt(b, 10), map[string]any{
+			"role": "viewer",
+		})
+		statusB = s
+	}()
+	wg.Wait()
+
+	// At least one request must be refused (400) to preserve a manager.
+	if statusA != http.StatusBadRequest && statusB != http.StatusBadRequest {
+		t.Fatalf("concurrent demotions of last managers: want ≥1 request 400, got statusA=%d statusB=%d", statusA, statusB)
+	}
+
+	// Verify at least one manager remains.
+	count, err := store.UserManagerCount(t.Context())
+	if err != nil {
+		t.Fatalf("UserManagerCount: %v", err)
+	}
+	if count < 1 {
+		t.Fatalf("no user managers left; want ≥1")
+	}
 }

@@ -8,6 +8,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 )
@@ -55,17 +56,7 @@ func WatchClusters(ctx context.Context, home *Client, reg *Registry, ns string) 
 			}
 		},
 		DeleteFunc: func(obj any) {
-			u, ok := obj.(*unstructured.Unstructured)
-			if !ok {
-				return
-			}
-			name := u.GetName()
-			// Never remove the default cluster.
-			if name == reg.DefaultID() {
-				return
-			}
-			reg.Remove(name)
-			slog.Debug("cluster watch: removed cluster", "cluster", name)
+			removeDeletedCluster(reg, obj)
 		},
 	}); err != nil {
 		slog.Warn("cluster watch: register handler failed", "err", err)
@@ -81,12 +72,49 @@ func WatchClusters(ctx context.Context, home *Client, reg *Registry, ns string) 
 	slog.Debug("cluster watch: started")
 }
 
+// removeDeletedCluster drops a deleted Cluster's client from the registry.
+// The informer hands over either the Cluster object or, when the watch
+// missed its final state, a cache.DeletedFinalStateUnknown tombstone; both
+// attempt removal. A delete for an older Cluster does not remove a newer
+// registration with the same name. The default cluster is never removed.
+func removeDeletedCluster(reg *Registry, obj any) {
+	name := ""
+	uid := ""
+	switch v := obj.(type) {
+	case *unstructured.Unstructured:
+		name = v.GetName()
+		uid = string(v.GetUID())
+	case cache.DeletedFinalStateUnknown:
+		if u, ok := v.Obj.(*unstructured.Unstructured); ok {
+			name = u.GetName()
+			uid = string(u.GetUID())
+		} else {
+			// Cluster is cluster-scoped, so the tombstone key is its name.
+			// Without the object, we have no UID.
+			name = v.Key
+		}
+	}
+	if name == "" || name == reg.DefaultID() {
+		return
+	}
+	reg.RemoveIfUID(name, types.UID(uid))
+	slog.Debug("cluster watch: removed cluster", "cluster", name)
+}
+
 // loadCluster reads a Cluster CRD, extracts the kubeconfig Secret reference,
 // loads the secret, creates a client, and registers it in the registry.
+// If the Cluster is being deleted, it is removed from the registry instead.
 func loadCluster(ctx context.Context, home *Client, reg *Registry, ns, name string) error {
 	u, err := home.Dynamic.Resource(GVRCluster).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("get cluster CRD: %w", err)
+	}
+
+	// If the cluster is being deleted, remove it from the registry.
+	if u.GetDeletionTimestamp() != nil {
+		reg.RemoveIfUID(name, u.GetUID())
+		slog.Debug("cluster watch: cluster is being deleted; not registering", "cluster", name)
+		return nil
 	}
 
 	// Extract spec.kubeconfigSecret from the unstructured Cluster.
@@ -116,7 +144,7 @@ func loadCluster(ctx context.Context, home *Client, reg *Registry, ns, name stri
 		return fmt.Errorf("load client from secret: %w", err)
 	}
 
-	reg.Set(name, c)
+	reg.SetWithUID(name, u.GetUID(), c)
 	slog.Debug("cluster watch: loaded cluster", "cluster", name)
 	return nil
 }

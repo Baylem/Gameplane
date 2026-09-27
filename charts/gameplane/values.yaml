@@ -115,6 +115,11 @@ operator:
 api:
   replicas: 1        # SQLite driver is single-writer on a RWO volume; only values >1 are safe with db.driver=postgres
   logLevel: info     # API log verbosity (debug|info|warn|error), passed as GAMEPLANE_LOG_LEVEL
+  # Port of the API's Prometheus metrics listener. It is separate from the
+  # public API port (the one the ingress and the web front end route to), so
+  # metrics are reachable only in-cluster; the ServiceMonitor scrapes it.
+  # Templates fall back to 9090 when this key is absent (helm --reuse-values).
+  metricsPort: 9090
   resources:
     requests: { cpu: 100m, memory: 64Mi }
     limits:   { cpu: 500m, memory: 256Mi }
@@ -209,7 +214,7 @@ api:
       endpoint: ""        # S3-compatible endpoint host:port (e.g., "minio:9000" or "s3.amazonaws.com")
       bucket: ""          # S3 bucket name (required when endpoint is set)
       prefix: ""          # object key prefix, e.g. "gameplane-audit" (empty = root)
-      region: ""          # S3 region, e.g. "us-east-1" (empty = path-style requests)
+      region: ""          # S3 region, e.g. "us-east-1" (empty defaults to "us-east-1")
       insecure: false     # disable TLS certificate verification (for self-signed certs)
       # S3 credentials sourced from a Secret (never passed as flags). Leave
       # credentialsSecretRef.name empty to disable the S3 sink entirely.
@@ -251,6 +256,9 @@ api:
       name: gameplane-oidc
       key:  clientSecret
     redirectURL: ""
+    # Label for the OIDC login button (no hostname — shown pre-auth). Default
+    # is "Single sign-on" when unset, matching the API's own flag default.
+    displayName: ""
     # OIDC claim name containing group/role memberships. Default: "groups"
     # if empty or omitted. Examples: "groups", "roles", "membership",
     # "department".
@@ -422,8 +430,9 @@ clusterOps:
   externalAddress: ""
 
 # Optional, strictly read-only MCP (Model Context Protocol) server: lets an
-# AI assistant read cluster state (the 7 Gameplane CRDs, Pods, Events, pod
-# logs) and propose fixes as text, over stdio JSON-RPC only — never a
+# AI assistant read cluster state (7 of Gameplane's 9 CRDs — not Cluster or
+# NetworkCapture — plus Pods, Events, pod logs) and propose fixes as text,
+# over stdio JSON-RPC only — never a
 # network port, and never a create/update/patch/delete tool. Off by default.
 # See mcp-server/README.md for how to connect (kubectl exec -i ... -- serve).
 mcpServer:
@@ -583,6 +592,18 @@ capture:
   # automatically when the file reaches this size. This default is clamped below the
   # capture emptyDir sizeLimit (1 GiB, hardcoded in the operator) to prevent pod
   # eviction; raising this requires operator code changes to increase the volume limit.
+  # As of F-187, this alone is not sufficient: the sidecar also refuses to *start*
+  # a capture whose maxSizeBytes plus already-retained (not-yet-expired) capture
+  # files would exceed a volume budget the operator derives from that same 1 GiB
+  # emptyDir sizeLimit (captureVolumeBudgetBytes in gameserver_controller.go, passed
+  # to the sidecar via the CAPTURE_VOLUME_BUDGET_BYTES env var), so retained files
+  # can never accumulate past the emptyDir's real limit and trigger a pod eviction.
+  # Practical effect of the default values below: a 900 MiB capture plus any other
+  # retained capture over ~21.6 MiB already exceeds the ~921.6 MiB budget (1 GiB
+  # minus the operator's 10% safety margin), so in practice only one default-size
+  # capture is admitted per capture's retention window (spec.ttlSecondsAfterFinished,
+  # commonly 24h) on a given pod; a second capture must wait for the first to expire
+  # (or use a smaller maxSizeBytes).
   defaultMaxSizeBytes: 943718400   # 900 MiB (safely under the 1 GiB emptyDir limit)
   # Capture sidecar container image. Defaults to {image.registry}/capture-sidecar:{image.tag}
   # if unset (the pattern matched by other component images like sentinel).

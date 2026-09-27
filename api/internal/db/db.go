@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	// Pure-Go SQLite driver; registered as "sqlite" via database/sql.
 	_ "modernc.org/sqlite"
@@ -29,8 +30,9 @@ var migrations embed.FS
 // Store wraps the database connection and driver name, providing methods
 // for migrations and access to user/session/audit data.
 type Store struct {
-	DB     *sql.DB
-	Driver string
+	DB         *sql.DB
+	Driver     string
+	userMgmtMu sync.Mutex // Serializes changes that can remove a user's user-management access.
 }
 
 // Open connects to a database using the specified driver and DSN.
@@ -64,6 +66,16 @@ func Open(ctx context.Context, driver, dsn string) (*Store, error) {
 
 // Close closes the database connection.
 func (s *Store) Close() error { return s.DB.Close() }
+
+// LockUserManagement serializes changes that can remove a user's
+// user-management access (role permission edits, primary-role changes,
+// user deletion). Hold it from the last-user-manager check through the
+// commit of the change so two requests can't both pass the check. It
+// covers one API process; the SQLite install runs a single API replica.
+func (s *Store) LockUserManagement() (unlock func()) {
+	s.userMgmtMu.Lock()
+	return s.userMgmtMu.Unlock
+}
 
 // Migrate applies every .sql file under migrations/ in order. Each
 // file is run in a single transaction; failures are fatal.

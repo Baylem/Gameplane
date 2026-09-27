@@ -144,7 +144,13 @@ named set of permissions, and a user is bound to roles **per namespace**.
   the same Role vs ClusterRole split Kubernetes uses. Unmatched routes fail
   closed.
 - **Lockout guards.** The API refuses to demote or delete the last user who
-  can manage users, and refuses self-demotion below `users:manage`.
+  can manage users, and refuses self-demotion below `users:manage`. Role
+  edits follow the same rules: a change that removes `users:manage` from the
+  caller's own primary role, or from the role every user manager holds, is
+  refused.
+- **Event stream.** `GET /events` carries only the resource kinds the caller
+  may read in the resolved cluster and namespace, using the same read
+  permission as each kind's list route.
 
 ### Per-GameServer access (owner + collaborators)
 
@@ -318,7 +324,7 @@ Pod Security Standards profile on the games namespace will reject any pod with
 games namespace, you have three options:
 
 1. **Disable capture** — leave the cluster's capture feature disabled via Helm
-   value `capture.enabled: false` (default is true). Captures are not required
+   value `capture.enabled: false` (default is false). Captures are not required
    for normal operation; this is the safest option if you cannot or prefer not to
    relax the `restricted` profile.
 2. **Exempt the games namespace** — remove or relax the Pod Security Standards
@@ -326,10 +332,14 @@ games namespace, you have three options:
    `privileged` instead. The games namespace remains an untrusted environment
    (game code can run arbitrary containers), but the admission level permits the
    capture sidecar to be injected when needed.
-3. **Disable `restricted` cluster-wide** — if the games namespace is managed by
-   your deployment and you accept the operational trade-off, set `podSecurity.enforceRestricted=false`
-   in the Helm values. Captures will work, and other pods are not forced into
-   `restricted` mode (they can still opt in per-pod via labels).
+3. **Leave the games-namespace label off** — the chart only adds the
+   `pod-security.kubernetes.io/enforce: restricted` label to the games namespace
+   when `podSecurity.enforceRestricted=true`; that value defaults to `false`.
+   A default install therefore already leaves the label off, and captures work
+   without any change. If you previously set `podSecurity.enforceRestricted=true`
+   and accept the operational trade-off, set it back to `false` in the Helm
+   values to drop the label. This setting only affects the games `Namespace`
+   object; it has no cluster-wide effect and there is no per-pod opt-in.
 
 **Data sensitivity**: Captures contain binary game protocols, player IP addresses,
 and may include sensitive data like in-game chat or credentials. An admin with
@@ -656,6 +666,14 @@ by several layers:
   via the dashboard or API. This prevents a user from pointing at an
   arbitrary control-plane Secret (e.g., the OIDC client secret or
   backup credentials) and using it as a kubeconfig.
+- **Delete guard.** `DELETE /clusters/{name}` drops the cluster's client at
+  once and deletes the referenced Secret only when it is the one POST generates
+  for that cluster (cluster-<name>-kubeconfig) and carries
+  `gameplane.local/cluster-kubeconfig=true` (Secrets created before the
+  managed-by label was added are also cleaned up). Any other Secret, including
+  one named for a different cluster or one without the kubeconfig label, is
+  left in place. A kubeconfig Secret you create with kubectl or GitOps under
+  another name is never deleted over HTTP.
 - **Never logged or returned.** The kubeconfig is never logged by the
   API, never echoed in responses, never visible in audit trails. It
   exists only to bootstrap the Kubernetes client for that cluster.
@@ -827,3 +845,9 @@ gated by access controls on the cluster itself (e.g., who can run Helm in produc
 No internal infrastructure metrics are displayed on the login page or
 any other unauthenticated surface. This is a hard requirement — see
 `web/src/routes/Login.tsx` for the enforcement.
+
+The API's Prometheus metrics follow the same rule. They are served on a
+dedicated listener (`--metrics-addr`, chart value `api.metricsPort`,
+default `9090`), never on the public API port that the Ingress and the web
+front end route to, so `/metrics` on the dashboard host answers 404. The
+chart's ServiceMonitor scrapes the metrics port from inside the cluster.
