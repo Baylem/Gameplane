@@ -504,10 +504,13 @@ func (r *ModuleReconciler) verifierFor(ctx context.Context, src *gameplanev1alph
 }
 
 // moduleVerifyMode classifies a source's verify policy for status recording,
-// mirroring verify.Build's own key/keyless precedence (and the web client's
-// verifyMode in web/src/lib/verify.ts). Empty means the source declares no
-// policy, so verifierFor returns the always-succeeding Nop verifier — no
-// real signature check happened, and nothing should be recorded as verified.
+// mirroring the web client's verifyMode (web/src/lib/verify.ts), which
+// prefers keyless over keyed. This checks keyless before keyed, the reverse
+// of verify.Build's key-before-keyless switch; the two never disagree in
+// practice because the CRD's XValidation rule requires exactly one of
+// Key/Keyless. Empty means the source declares no policy, so verifierFor
+// returns the always-succeeding Nop verifier — no real signature check
+// happened, and nothing should be recorded as verified.
 func moduleVerifyMode(spec *gameplanev1alpha1.VerifySpec) string {
 	if spec == nil {
 		return ""

@@ -37,8 +37,23 @@ describe("verifyForEntry", () => {
       installedFrom: "upstream",
       sources: [{ name: "upstream", type: "oci" }],
       verifiedDigest: "sha256:abc",
+      verifyPolicy: "keyless",
     });
     expect(verifyForEntry(entry, [keylessSrc, plainSrc])).toEqual({ mode: "keyless", enforced: true, mixed: false });
+  });
+
+  it("uses the recorded verifyPolicy, not the source's current policy, once a verification is enforced", () => {
+    // The module was verified under the keyed policy in effect at install
+    // time; the source has since switched to keyless. The badge must still
+    // describe what was actually checked (keyed), not the live policy.
+    const entry = makeCatalog({
+      installed: true,
+      installedFrom: "upstream",
+      sources: [{ name: "upstream", type: "oci" }],
+      verifiedDigest: "sha256:abc",
+      verifyPolicy: "keyed",
+    });
+    expect(verifyForEntry(entry, [keylessSrc, plainSrc])).toEqual({ mode: "keyed", enforced: true, mixed: false });
   });
 
   it("does NOT claim enforced for an installed module with no recorded verification, even though its source now declares a policy", () => {

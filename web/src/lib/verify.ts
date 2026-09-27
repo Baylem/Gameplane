@@ -44,14 +44,24 @@ export function verifyForEntry(
   }
 
   if (entry.installed && entry.installedFrom) {
-    const mode = verifyMode(byName.get(entry.installedFrom)?.spec.verify);
+    const enforced = !!entry.verifiedDigest;
     // enforced reflects a recorded verification (the operator actually ran
     // cosign.Verify at install time), not the source's current policy: a
     // policy added after install must not retroactively claim bytes that
-    // were never checked. mode still comes from the live source, so an
-    // unenforced-but-declared policy still renders the softer "policy" chip
-    // instead of no badge.
-    return { mode, enforced: !!entry.verifiedDigest, mixed: false };
+    // were never checked. When enforced, mode must come from the *recorded*
+    // verifyPolicy too — the source's current policy can have changed since
+    // (e.g. keyed -> keyless), which would otherwise mislabel what was
+    // actually checked. Only the unenforced, declared-but-unchecked badge
+    // reads the live source policy.
+    // The recorded policy is narrowed rather than cast: an unexpected value
+    // falls back to "none" (no badge) instead of rendering a verified chip.
+    const recorded = entry.verifyPolicy;
+    const mode: VerifyMode = enforced
+      ? recorded === "keyless" || recorded === "keyed"
+        ? recorded
+        : "none"
+      : verifyMode(byName.get(entry.installedFrom)?.spec.verify);
+    return { mode, enforced, mixed: false };
   }
 
   const modes = (entry.sources ?? []).map((ref) =>
