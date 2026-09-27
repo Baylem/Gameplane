@@ -227,7 +227,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-default-100">
               <Lock className="h-7 w-7 text-default-500" />
             </div>
-            <p className="text-sm font-medium">You don't have access to packet capture on this server.</p>
+            <p className="text-sm font-medium">{"You don't have access to packet capture on this server."}</p>
             <p className="max-w-md text-xs text-default-500">
               Viewing, starting and downloading captures requires capture access for this server. Ask an administrator if you need it.
             </p>
