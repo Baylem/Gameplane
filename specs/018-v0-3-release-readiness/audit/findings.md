@@ -117,9 +117,9 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-139 | specs.md contradicts implemented features | web | review:web | S4 | open | | | |
 | F-140 | specs.md lists unimplemented UI | web | review:web | S4 | open | | | |
 | F-141 | Component version claims drift from reality | web | review:web | S4 | fixed-unverified | #480 | | #480 fixes the React/TS/Vite version facts only; web/specs.md still has stale line refs into api.ts/ServerDetail.tsx/Login.tsx and the "nine sub-views"/"11 sections" counts |
-| F-149 | Parameter length cap is bytes, not characters | gameaction/ | review:gameaction | S4 | open | | | |
-| F-150 | Required parameter with default accepts empty value | gameaction/ | review:gameaction | S4 | open | | | |
-| F-151 | Template spec claims non-deterministic function exists | gameaction/ | review:gameaction | S4 | open | | | |
+| F-149 | Parameter length cap is bytes, not characters | gameaction/ | review:gameaction | S4 | fixed-unverified | #491 | | |
+| F-150 | Required parameter with default accepts empty value | gameaction/ | review:gameaction | S4 | fixed-unverified | #491 | | |
+| F-151 | Template spec claims non-deterministic function exists | gameaction/ | review:gameaction | S4 | fixed-unverified | #491 | | |
 | F-152 | gameaction specs.md says Go 1.25, module is 1.26 | gameaction/ | review:gameaction | S4 | fixed-unverified | #486 | | |
 | F-153 | Classify error returns differ from spec promise | gameproto/ | review:gameproto | S4 | fixed-unverified | #470 | | |
 | F-154 | Terraria version string exceeds documented 32 KB cap | gameproto/ | review:gameproto | S4 | fixed-unverified | #470 | | |
