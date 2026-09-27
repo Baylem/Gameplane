@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -114,5 +115,52 @@ func TestRoles_UpdateRemovesUserManagementWhenAnotherManagerRemains(t *testing.T
 	}
 	if roleHasPermission(t, store, "um-shared", "users:manage") {
 		t.Fatal("users:manage still on the role after an accepted edit")
+	}
+}
+
+// Last user manager survives concurrent role edits that both try to drop
+// users:manage from their respective roles (each granting it); without
+// serialization, both requests would pass the guard before either writes.
+func TestRoles_LastUserManagerSurvivesConcurrentRoleEdits(t *testing.T) {
+	caller := &auth.User{ID: 9999, Username: "roles-editor", Role: "admin"}
+	srv, store := newRolesServerAs(t, caller)
+	// Two custom roles, each granting users:manage, each held by one user
+	// (the only two managers).
+	seedRole(t, store, "um-a", "users:manage")
+	seedRole(t, store, "um-b", "users:manage")
+	seedUser(t, store, "um-user-a", "um-a", "")
+	seedUser(t, store, "um-user-b", "um-b", "")
+
+	var wg sync.WaitGroup
+	var statusA, statusB int
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		s, _ := doReq(t, "PATCH", srv.URL+"/roles/um-a", map[string]any{
+			"permissions": []string{"servers:read"},
+		})
+		statusA = s
+	}()
+	go func() {
+		defer wg.Done()
+		s, _ := doReq(t, "PATCH", srv.URL+"/roles/um-b", map[string]any{
+			"permissions": []string{"servers:read"},
+		})
+		statusB = s
+	}()
+	wg.Wait()
+
+	// At least one request must be refused (400) to preserve a manager.
+	if statusA != http.StatusBadRequest && statusB != http.StatusBadRequest {
+		t.Fatalf("concurrent edits removing last manager: want ≥1 request 400, got statusA=%d statusB=%d", statusA, statusB)
+	}
+
+	// Verify at least one manager remains.
+	count, err := store.UserManagerCount(t.Context())
+	if err != nil {
+		t.Fatalf("UserManagerCount: %v", err)
+	}
+	if count < 1 {
+		t.Fatalf("no user managers left; want ≥1")
 	}
 }

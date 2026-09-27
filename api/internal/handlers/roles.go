@@ -185,6 +185,9 @@ func (h *roleHandler) update(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, msg, http.StatusBadRequest)
 			return
 		}
+		// Lock to serialize with writes so the last-user-manager check can't race.
+		unlock := h.db.LockUserManagement()
+		defer unlock()
 		if msg, err := h.userManagementGuard(req, name, *body.Permissions); err != nil {
 			httperr.Write(w, req, err)
 			return

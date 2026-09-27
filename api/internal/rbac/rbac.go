@@ -433,11 +433,12 @@ func allow(u *auth.User, method, path, cluster, ns string) bool {
 
 // ReadPermission returns the permission the rule table requires for a GET
 // of /<segment> (for example "servers" → "servers:read", "restores" →
-// "backups:read"). ok is false when no rule matches. The events stream uses
-// it to send each resource kind only to callers who may read that kind.
+// "backups:read"). ok is false when no explicit rule covers the segment;
+// the catch-all rules do not count. The events stream uses it to send each
+// resource kind only to callers who may read that kind.
 func ReadPermission(segment string) (perm string, ok bool) {
 	r, ok := match(http.MethodGet, "/"+segment)
-	if !ok {
+	if !ok || r.segment == "" {
 		return "", false
 	}
 	return r.perm, true

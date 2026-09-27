@@ -338,3 +338,28 @@ func TestCaptures_RuleOrdering(t *testing.T) {
 			captureRuleIndex, serversWriteIndex)
 	}
 }
+
+// TestReadPermission verifies that ReadPermission returns the correct
+// permission for each resource kind and fails-closed (ok=false) for
+// unlisted kinds (falling back to the catch-all does not count).
+func TestReadPermission(t *testing.T) {
+	cases := []struct {
+		segment  string
+		wantPerm string
+		wantOk   bool
+	}{
+		{"servers", "servers:read", true},
+		{"templates", "templates:read", true},
+		{"backups", "backups:read", true},
+		{"schedules", "schedules:read", true},
+		{"restores", "backups:read", true},
+		{"not-a-kind", "", false},
+	}
+	for _, tc := range cases {
+		perm, ok := ReadPermission(tc.segment)
+		if perm != tc.wantPerm || ok != tc.wantOk {
+			t.Errorf("ReadPermission(%q) = (%q, %v), want (%q, %v)",
+				tc.segment, perm, ok, tc.wantPerm, tc.wantOk)
+		}
+	}
+}
