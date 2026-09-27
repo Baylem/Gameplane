@@ -673,6 +673,34 @@ describe("ServersPage", () => {
       // ...and it must actually have been fanned out to, not silently
       // skipped.
       await waitFor(() => expect(brokenNsHandler).toHaveBeenCalled());
+      // ...and the partial failure must surface, naming the broken namespace.
+      expect(await screen.findByText(/Couldn't load servers in: broken-ns/i)).toBeInTheDocument();
+    });
+
+    // Review finding (F-263 follow-up): {"namespaces": []} is an
+    // authoritative "servers:read in no namespace" answer, the normal case
+    // for a user with no role binding who only owns/collaborates on
+    // servers — not an error. The page must fan out over nothing (no
+    // /servers request at all) and show only the Shared with you list, with
+    // no error banner and no stuck "Loading…" state.
+    it("shows only Shared with you, with no error, when /namespaces returns an empty list", async () => {
+      const serversHandler = vi.fn(() => HttpResponse.json({ items: [] }));
+      server.use(
+        http.get("/namespaces", () => HttpResponse.json({ namespaces: [] })),
+        http.get("/servers", serversHandler),
+        http.get("/users/me/servers", () =>
+          HttpResponse.json({
+            items: [makeServer({ metadata: { name: "shared-only" }, status: { phase: "Running" } })],
+          }),
+        ),
+      );
+      renderWithQuery(<ServersPage />);
+      await screen.findByText("shared-only");
+      expect(screen.getByText(/Shared with you/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Couldn't load servers in/i)).not.toBeInTheDocument();
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+      // Empty namespace list fans out over nothing — no /servers call at all.
+      expect(serversHandler).not.toHaveBeenCalled();
     });
 
     it("behaves like a single-namespace install when /namespaces returns one namespace", async () => {

@@ -166,6 +166,11 @@ func TestNamespaces_BindingOnAnotherClusterDoesNotLeak(t *testing.T) {
 	}
 }
 
+// TestNamespaces_NoUserReturnsEmpty exercises the handler directly with no
+// user in context, a path rbac.Middleware makes unreachable in production
+// (it 401s before the handler runs). The handler itself has no
+// authentication of its own and relies on that middleware for it — this
+// test only pins the handler's own no-user behavior in isolation.
 func TestNamespaces_NoUserReturnsEmpty(t *testing.T) {
 	withAllowedNamespaces(t, []string{scope.DefaultNamespace})
 	k := fakeKubeClient()
