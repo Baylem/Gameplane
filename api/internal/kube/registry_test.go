@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 )
 
@@ -172,4 +173,76 @@ func TestRegistryConcurrency(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+}
+
+func TestRegistry_RemoveIfUID(t *testing.T) {
+	cases := []struct {
+		name       string
+		setup      func(*Registry)
+		id         string
+		uid        types.UID
+		wantExists bool
+	}{
+		{
+			name: "matching uid removes",
+			setup: func(r *Registry) {
+				r.SetWithUID("remote", "uid-123", &Client{})
+			},
+			id:         "remote",
+			uid:        "uid-123",
+			wantExists: false,
+		},
+		{
+			name: "different uid keeps",
+			setup: func(r *Registry) {
+				r.SetWithUID("remote", "uid-new", &Client{})
+			},
+			id:         "remote",
+			uid:        "uid-old",
+			wantExists: true,
+		},
+		{
+			name: "empty uid argument removes",
+			setup: func(r *Registry) {
+				r.SetWithUID("remote", "uid-123", &Client{})
+			},
+			id:         "remote",
+			uid:        "",
+			wantExists: false,
+		},
+		{
+			name: "entry stored via Set (no uid) is removed",
+			setup: func(r *Registry) {
+				r.Set("remote", &Client{})
+			},
+			id:         "remote",
+			uid:        "uid-old",
+			wantExists: false,
+		},
+		{
+			name: "Remove clears so later SetWithUID/RemoveIfUID behaves",
+			setup: func(r *Registry) {
+				r.SetWithUID("remote", "uid-old", &Client{})
+				r.Remove("remote")
+				r.SetWithUID("remote", "uid-new", &Client{})
+			},
+			id:         "remote",
+			uid:        "uid-old",
+			wantExists: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewRegistry("local")
+			tc.setup(r)
+
+			r.RemoveIfUID(tc.id, tc.uid)
+
+			_, ok := r.Get(tc.id)
+			if ok != tc.wantExists {
+				t.Errorf("Get(%q) returned ok=%v, want %v", tc.id, ok, tc.wantExists)
+			}
+		})
+	}
 }
