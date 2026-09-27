@@ -834,7 +834,7 @@ func TestURLErrorRedaction_Unparseable(t *testing.T) {
 // TestWebSocketDialErrorNoSecretLeak verifies that WebSocket dial errors
 // don't leak the password, raw or path-escaped, into error messages.
 func TestWebSocketDialErrorNoSecretLeak(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
@@ -862,5 +862,68 @@ func TestWebSocketDialErrorNoSecretLeak(t *testing.T) {
 	}
 	if !strings.Contains(errMsg, "dial") {
 		t.Errorf("error message should still describe the dial failure: %v", errMsg)
+	}
+}
+
+// TestErrorLeaksSecret verifies the errorLeaksSecret helper function correctly
+// detects password leaks in error messages, including URL-escaped variants.
+func TestErrorLeaksSecret(t *testing.T) {
+	tests := []struct {
+		name     string
+		msg      string
+		pw       string
+		expected bool
+	}{
+		{
+			name:     "empty password should never leak",
+			msg:      "connection failed",
+			pw:       "",
+			expected: false,
+		},
+		{
+			name:     "empty password and empty message",
+			msg:      "",
+			pw:       "",
+			expected: false, // strings.Contains("", "") is true; the helper must still say no leak
+		},
+		{
+			name:     "password present raw",
+			msg:      "websocket dial failed: invalid password 's3cr#t'",
+			pw:       "s3cr#t",
+			expected: true,
+		},
+		{
+			name:     "password present path-escaped",
+			msg:      "websocket dial failed: invalid password " + url.PathEscape("s3cr#t"),
+			pw:       "s3cr#t",
+			expected: true,
+		},
+		{
+			name:     "password present query-escaped",
+			msg:      "websocket dial failed: invalid password " + url.QueryEscape("s3cr#t"),
+			pw:       "s3cr#t",
+			expected: true,
+		},
+		{
+			name:     "password absent",
+			msg:      "connection refused",
+			pw:       "s3cr#t",
+			expected: false,
+		},
+		{
+			name:     "partial password match should not leak",
+			msg:      "connection refused at s3cr",
+			pw:       "s3cr#t",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := errorLeaksSecret(tt.msg, tt.pw)
+			if got != tt.expected {
+				t.Errorf("errorLeaksSecret(%q, %q) = %v, want %v", tt.msg, tt.pw, got, tt.expected)
+			}
+		})
 	}
 }

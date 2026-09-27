@@ -42,6 +42,7 @@ import (
 	"io"
 	"net"
 	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -242,6 +243,16 @@ func redactURLErr(err error) error {
 	return err
 }
 
+// errorLeaksSecret reports whether msg contains the password in any form
+// (raw, path-escaped, or query-escaped). It returns false if pw is empty
+// or if only checked to ensure secrets aren't exposed in error messages.
+func errorLeaksSecret(msg, pw string) bool {
+	if pw == "" {
+		return false
+	}
+	return strings.Contains(msg, pw) || strings.Contains(msg, url.PathEscape(pw)) || strings.Contains(msg, url.QueryEscape(pw))
+}
+
 // classifyExecErrLocked wraps a Write or Read failure from Exec, promoting
 // it to ErrAuth when this connection has never produced a single frame and
 // the failure looks like the close WebRcon uses to signal a bad password
@@ -259,9 +270,24 @@ func (c *WebSocket) classifyExecErrLocked(cmd string, err error) error {
 	// connection — as a rejected password.
 	confirmed := c.authConfirmed
 	c.dropLocked()
+
+	// Check if the error message contains the password in any form.
+	// Only treat it as leaking if the password resolved successfully and is non-empty.
+	pw, pwErr := c.passFn()
+	errMsg := err.Error()
+	errContainsSecret := pwErr == nil && errorLeaksSecret(errMsg, pw)
+
 	if !confirmed && isAuthCloseSignal(err) {
 		c.lastAuthFailure = time.Now()
+		// If the error message leaks the password, don't wrap it with %w
+		if errContainsSecret {
+			return fmt.Errorf("websocket rcon exec %q: %w: %w", cmd, ErrAuth, errors.New("connection failed"))
+		}
 		return fmt.Errorf("websocket rcon exec %q: %w: %w", cmd, ErrAuth, redactURLErr(err))
+	}
+	// If the error message leaks the password, don't wrap it with %w
+	if errContainsSecret {
+		return fmt.Errorf("websocket rcon exec %q: %w", cmd, errors.New("connection failed"))
 	}
 	return fmt.Errorf("websocket rcon exec %q: %w", cmd, redactURLErr(err))
 }
@@ -323,6 +349,14 @@ func (c *WebSocket) ensureLocked() error {
 		HTTPClient: httpClient,
 	})
 	if err != nil {
+		// Check if the error message contains the password in any form.
+		// Only treat it as leaking if the password resolved successfully and is non-empty.
+		// If it does leak, don't wrap with %w as that would expose the secret.
+		// Instead, return an error with only the host:port information.
+		errMsg := err.Error()
+		if errorLeaksSecret(errMsg, pw) {
+			return fmt.Errorf("websocket rcon: dial %s: connection failed", c.baseURL)
+		}
 		return fmt.Errorf("websocket rcon: dial %s: %w", c.baseURL, redactURLErr(err))
 	}
 	// coder/websocket hijacks the connection on successful dial, leaving
