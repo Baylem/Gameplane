@@ -97,6 +97,7 @@ All of these still apply.
 - #491: group 38, gameaction validation (explicit empty required param now 400) (merged 2026-09-27; findings `fixed-unverified`).
 - #492: group 48, telemetry-receiver method-guard tests (merged 2026-09-27; findings `fixed-unverified`).
 - #493: group 44, mcp-server fixes (leftover: docs/dependencies.md still says 7 CRDs) (merged 2026-09-27; findings `fixed-unverified`).
+- #494: group 50, docs drift (merged 2026-09-27; findings `fixed-unverified`).
 - #427: held H02 (merged 2026-09-25 11:05 UTC). Update `held/findings.md` on the devbox.
 
 ### Open

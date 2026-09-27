@@ -37,11 +37,11 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-029 | CI upgrade baseline still `0.2.0-beta.5` across `deploy/kind/upgrade.sh`, `.github/workflows/ci.yaml`, `.claude/agents/ci-triager.md` | deploy/ | review:deploy | S3 | fixed-unverified | #422 | | |
 | F-030 | CLAUDE.md repository map says "14 Go modules" and omits `gp-module/` | root docs | review:root-docs | S4 | fixed-unverified | #421 | | |
 | F-031 | GameServer examples in tunnels.md use spec.template instead of templateRef.name | docs/ | review:docs | S4 | fixed-unverified | #468 | | all three examples fail kubectl apply |
-| F-032 | README, roadmap and comparison cite 16 game modules but repo has 30 | docs/ | review:docs | S4 | open | | | module count drift since v0.2.0-beta.8 |
-| F-033 | security.md misstates capture feature default as "true" when it is "false" | docs/ | review:docs | S4 | open | | | contradicts install.md and architecture.md |
-| F-034 | comparison-sources.md evidence citations no longer match CLAUDE.md line numbers | docs/ | review:docs | S4 | open | | | lines drifted after CLAUDE.md trim; also one nonexistent values.yaml key |
-| F-035 | dependencies.md lacks 6 Go modules: capture-sidecar, gameproto, gp-module, sentinel, svcutil, tunnel | docs/ | review:docs | S4 | open | | | six missing from coverage statement and per-module sections |
-| F-036 | contributing.md per-component test list omits 6 Go modules (same list as F-035) | docs/ | review:docs | S4 | open | | | aggregate make test covers them, but per-component list is incomplete |
+| F-032 | README, roadmap and comparison cite 16 game modules but repo has 30 | docs/ | review:docs | S4 | fixed-unverified | #494 | | module count drift since v0.2.0-beta.8 |
+| F-033 | security.md misstates capture feature default as "true" when it is "false" | docs/ | review:docs | S4 | fixed-unverified | #494 | | contradicts install.md and architecture.md |
+| F-034 | comparison-sources.md evidence citations no longer match CLAUDE.md line numbers | docs/ | review:docs | S4 | fixed-unverified | #494 | | lines drifted after CLAUDE.md trim; also one nonexistent values.yaml key |
+| F-035 | dependencies.md lacks 6 Go modules: capture-sidecar, gameproto, gp-module, sentinel, svcutil, tunnel | docs/ | review:docs | S4 | fixed-unverified | #494 | | six missing from coverage statement and per-module sections |
+| F-036 | contributing.md per-component test list omits 6 Go modules (same list as F-035) | docs/ | review:docs | S4 | fixed-unverified | #494 | | aggregate make test covers them, but per-component list is incomplete |
 | F-037 | website games page lists 16 games but 30 now shipped | website/ | review:website | S4 | open | | | fix with v0.3 catalog, same change as F-028/T054 |
 | F-038 | website comparison.mdx says "16 official modules" but 30 now shipped | website/ | review:website | S4 | open | | | fix with v0.3 catalog, same change as F-028/T054 |
 | F-039 | website VERSION constant still beta.7; beta.8 published 2026-08-22 | website/ | review:website | S4 | open | | | affects homepage install cmd, hero badge, footer, FAQ, roadmap; also changelog.mdx |
@@ -199,7 +199,7 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-242 | ratelimit bucket missing from report bucketSet | .github/workflows/ | review:github-workflows | S4 | fixed-unverified | #450 | | |
 | F-243 | coverage report posts hard-coded success | .github/workflows/ | review:github-workflows | S4 | fixed-unverified | #450 | | |
 | F-244 | gp-module missing from dependabot gomod | .github/workflows/ | review:github-workflows | S3 | fixed-unverified | #450 | | |
-| F-245 | actionlint doc command uses wrong extension glob | .github/workflows/ | review:github-workflows | S4 | open | | | |
+| F-245 | actionlint doc command uses wrong extension glob | .github/workflows/ | review:github-workflows | S4 | fixed-unverified | #494 | | |
 | F-251 | nginx.conf.template missing client_max_body_size | web/ | review:web | S2 | fixed-unverified | #426 | | |
 | F-252 | docs/oidc.md gives clientSecretRef as plain string | charts/gameplane/ | review:charts/gameplane | S3 | fixed-unverified | #485 | | |
 | F-253 | README.md / plan.md say "Go 1.25" vs go.mod's 1.26 requirement | root docs | review:root-docs | S4 | fixed-unverified | #486 | | |
