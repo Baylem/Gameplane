@@ -667,9 +667,12 @@ function NamespaceGrants({ userId, roles }: { userId: number; roles: Role[] }) {
   const namespacedPermissions = new Set(
     catalog?.groups.flatMap((group) => group.permissions.filter((p) => p.namespaced).map((p) => p.key)) ?? [],
   );
-  const role = roles.find((r) => r.name === roleName);
-  const allNamespacesAllowed = cluster !== "local" && cluster !== "*" && !!role && !!catalog &&
-    role.permissions.every((p) => p === "cluster:read" || namespacedPermissions.has(p));
+  const allowsRemoteWideGrant = (name: string) => {
+    const role = roles.find((r) => r.name === name);
+    return !!role && !!catalog &&
+      role.permissions.every((p) => p === "cluster:read" || namespacedPermissions.has(p));
+  };
+  const allNamespacesAllowed = cluster !== "local" && cluster !== "*" && allowsRemoteWideGrant(roleName);
   const scopeError = namespace.trim() === "*" && !allNamespacesAllowed
     ? cluster === "local"
       ? "The local primary role is managed above. Choose a namespace for an additional local grant."
@@ -702,7 +705,8 @@ function NamespaceGrants({ userId, roles }: { userId: number; roles: Role[] }) {
           {bindings.map((b) => {
             const bindingCluster = b.cluster ?? "local";
             const primary = bindingCluster === "local" && b.namespace === "*";
-            const managed = primary || bindingCluster === "*";
+            const managed = primary || bindingCluster === "*" ||
+              (b.namespace === "*" && !allowsRemoteWideGrant(b.roleName));
             return (
               <li key={`${bindingCluster}/${b.roleName}/${b.namespace}`} className="flex flex-wrap items-center gap-2 text-xs">
                 <span className="font-mono">{b.roleName}</span>

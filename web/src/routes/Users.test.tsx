@@ -936,6 +936,9 @@ describe("Cluster grants", () => {
   });
 
   it("shows and revokes a remote cluster-wide grant without touching the local primary role", async () => {
+    rolesList.mockResolvedValue([...ROLE_DEFS, {
+      name: "cluster-reader", description: "Read inventory.", builtin: false, permissions: ["cluster:read"],
+    }]);
     bindings.mockResolvedValue([
       { roleName: "operator", namespace: "*", cluster: "local" },
       { roleName: "cluster-reader", namespace: "*", cluster: "remote-1" },
@@ -953,6 +956,14 @@ describe("Cluster grants", () => {
     expect(within(remoteRow as HTMLElement).getByText("remote-1")).toBeInTheDocument();
     await user.click(revoke);
     await waitFor(() => expect(removeBinding).toHaveBeenCalledWith(2, "cluster-reader", "*", "remote-1"));
+  });
+
+  it("preserves legacy remote cluster-wide control-plane bindings", async () => {
+    bindings.mockResolvedValue([{ roleName: "admin", namespace: "*", cluster: "remote-1" }]);
+    await openGrantEditor();
+    expect(await screen.findByText("Managed outside this editor")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Remove admin in * on remote-1")).not.toBeInTheDocument();
+    expect(removeBinding).not.toHaveBeenCalled();
   });
 
   it("protects a legacy local primary binding and rejects local wildcard grants", async () => {
