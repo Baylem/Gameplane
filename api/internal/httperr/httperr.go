@@ -14,8 +14,25 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/ValgulNecron/gameplane/api/internal/db"
 	"github.com/ValgulNecron/gameplane/api/internal/scope"
 )
+
+// RemoteClusterNotImplemented is the response body for a home-cluster-only
+// route called with a `?cluster=` selector naming another cluster. There is
+// no cross-cluster agent yet to serve such a request on the remote cluster.
+const RemoteClusterNotImplemented = "not implemented: no cross-cluster agent yet; this route only serves the home cluster"
+
+// WriteRemoteClusterNotImplemented answers 501 Not Implemented with
+// RemoteClusterNotImplemented as the body. It deliberately bypasses
+// WriteCode's >=500 masking (which replaces the body with the generic
+// http.StatusText): that masking exists to keep unvetted upstream error
+// text away from the caller, whereas this message is a fixed, caller-safe
+// constant with no upstream error in it, and the reason is what tells the
+// caller why the route declined.
+func WriteRemoteClusterNotImplemented(w http.ResponseWriter) {
+	http.Error(w, RemoteClusterNotImplemented, http.StatusNotImplemented)
+}
 
 // WriteCode writes a specific HTTP status with the supplied (safe)
 // message. Use this when the handler has already classified the
@@ -71,6 +88,8 @@ func classify(err error) (int, string) {
 		// that mirrors rbac.Middleware's direct 400 for the same error.
 		return http.StatusBadRequest, "cluster not permitted"
 	case apierrors.IsNotFound(err):
+		return http.StatusNotFound, "not found"
+	case errors.Is(err, db.ErrShareLinkNotFound):
 		return http.StatusNotFound, "not found"
 	case apierrors.IsAlreadyExists(err):
 		return http.StatusConflict, "already exists"

@@ -17,7 +17,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/ValgulNecron/gameplane/api/internal/audit"
@@ -257,7 +256,8 @@ func main() {
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})
-	r.Handle("/metrics", promhttp.Handler())
+	// Prometheus metrics are served by the separate metrics listener below,
+	// never on this public router.
 
 	// Public auth routes
 	r.Route("/auth", func(r chi.Router) {
@@ -309,7 +309,7 @@ func main() {
 		handlers.MountNotifications(p, notifier, k8s, cfg.namespace)
 		handlers.MountAuthProviderSecrets(p, k8s, cfg.namespace)
 		handlers.MountCluster(p, k8s, store, Version, cfg.clusterOps, cfg.updateChannel)
-		handlers.MountClusterActions(p, k8s, cfg.clusterOps)
+		handlers.MountClusterActions(p, k8s, cfg.clusterOps, cfg.clusterExternalAddress)
 		handlers.MountClusters(p, reg, k8s, cfg.namespace)
 		handlers.MountEvents(p, reg)
 		handlers.MountDestinations(p, reg)
@@ -378,10 +378,32 @@ func main() {
 		}
 	}()
 
+	// Prometheus metrics get their own listener, so the public API port
+	// (the one the ingress and the web front end route to) never serves
+	// them. The chart's ServiceMonitor scrapes this port in-cluster.
+	var metricsSrv *http.Server
+	if cfg.metricsAddr != "" {
+		if cfg.metricsAddr == cfg.addr {
+			logger.Error("--metrics-addr must differ from --addr", "addr", cfg.addr)
+			os.Exit(1)
+		}
+		metricsSrv = newMetricsServer(cfg.metricsAddr)
+		go func() {
+			logger.Info("metrics listening", "addr", cfg.metricsAddr)
+			if err := metricsSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Error("metrics listen", "err", err)
+				os.Exit(1)
+			}
+		}()
+	}
+
 	<-ctx.Done()
 	shutCtx, shutCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutCancel()
 	_ = srv.Shutdown(shutCtx)
+	if metricsSrv != nil {
+		_ = metricsSrv.Shutdown(shutCtx)
+	}
 	// The webhook worker flushes its buffered audit events once ctx is
 	// cancelled; wait for that drain (bounded) so a rolling restart doesn't cut
 	// off the final events instead of letting them reach the external sink.
@@ -403,10 +425,11 @@ func main() {
 }
 
 type config struct {
-	addr     string
-	dbDriver string
-	dbDSN    string
-	logLevel string
+	addr        string
+	metricsAddr string
+	dbDriver    string
+	dbDSN       string
+	logLevel    string
 
 	oidcIssuer                    string
 	oidcClientID                  string
@@ -422,22 +445,23 @@ type config struct {
 	oidcRoleMappingOperatorParsed []string
 	oidcRoleMappingViewerParsed   []string
 
-	telemetryEndpoint  string
-	telemetryAuth      string
-	clusterOps         bool
-	updateChannel      string
-	curseforgeAPIKey   string
-	auditRetentionDays int
-	auditStdout        bool
-	auditWebhookURL    string
-	auditWebhookAuth   string
-	auditS3Endpoint    string
-	auditS3Bucket      string
-	auditS3Prefix      string
-	auditS3Region      string
-	auditS3Insecure    bool
-	auditS3AccessKey   string
-	auditS3SecretKey   string
+	telemetryEndpoint      string
+	telemetryAuth          string
+	clusterOps             bool
+	clusterExternalAddress string
+	updateChannel          string
+	curseforgeAPIKey       string
+	auditRetentionDays     int
+	auditStdout            bool
+	auditWebhookURL        string
+	auditWebhookAuth       string
+	auditS3Endpoint        string
+	auditS3Bucket          string
+	auditS3Prefix          string
+	auditS3Region          string
+	auditS3Insecure        bool
+	auditS3AccessKey       string
+	auditS3SecretKey       string
 
 	agentCABundle   string
 	agentClientCert string
@@ -457,6 +481,8 @@ type config struct {
 
 func (c *config) bindFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.addr, "addr", ":8000", "HTTP listen address")
+	fs.StringVar(&c.metricsAddr, "metrics-addr", envOr("GAMEPLANE_METRICS_ADDR", ":9090"),
+		"listen address for the Prometheus metrics endpoint, separate from --addr (empty = metrics not served)")
 	fs.StringVar(&c.logLevel, "log-level", envOr("GAMEPLANE_LOG_LEVEL", "info"),
 		"log verbosity: debug, info, warn, or error")
 	fs.StringVar(&c.dbDriver, "db-driver", envOr("GAMEPLANE_DB_DRIVER", "sqlite"), "sqlite or postgres")
@@ -482,6 +508,8 @@ func (c *config) bindFlags(fs *flag.FlagSet) {
 	// never a flag.
 	c.telemetryAuth = envOr("GAMEPLANE_TELEMETRY_AUTH", "")
 	fs.BoolVar(&c.clusterOps, "cluster-ops", envOr("GAMEPLANE_CLUSTER_OPS", "") == "true", "enable credential-minting cluster ops (Add node, Download kubeconfig)")
+	fs.StringVar(&c.clusterExternalAddress, "cluster-external-address", envOr("GAMEPLANE_CLUSTER_EXTERNAL_ADDRESS", ""),
+		"external (node-routable) API server address, e.g. \"1.2.3.4:6443\" or \"https://k8s.example.com:6443\", used in the join command and downloaded kubeconfig instead of the in-cluster ClusterIP; empty = use the in-cluster address (may be unreachable from outside the cluster)")
 	fs.StringVar(&c.updateChannel, "update-channel", envOr("GAMEPLANE_UPDATE_CHANNEL", ""), "informational release-channel label shown in the dashboard (mirrors the chart's updates.channel; Gameplane upgrades happen via Helm)")
 	fs.StringVar(&c.curseforgeAPIKey, "curseforge-api-key", envOr("GAMEPLANE_CURSEFORGE_API_KEY", ""), "CurseForge API key (enables the CurseForge mod-registry provider; empty = hidden)")
 	fs.IntVar(&c.auditRetentionDays, "audit-retention-days", envOrInt("GAMEPLANE_AUDIT_RETENTION_DAYS", 0), "delete audit events older than this many days (0 = keep forever)")
@@ -617,9 +645,20 @@ func bodyLimit(maxBytes int64) func(http.Handler) http.Handler {
 
 // isUploadPath matches the routes that legitimately accept large bodies.
 // Keep the list tight — anything else should be capped by bodyLimit.
+// files/write and mods/upload must be exempt too: bodyLimit's
+// MaxBytesReader is authoritative (main.go's bodyLimit doc comment), so
+// leaving them capped at 1 MiB here makes the proxy's own 64 MiB
+// (httpProxy default, files/write) and 512 MiB (mods/upload) ceilings
+// dead code — see F-075.
 func isUploadPath(path string) bool {
-	// /servers/{name}/files/upload
-	return strings.HasSuffix(path, "/files/upload") && strings.HasPrefix(path, "/servers/")
+	if !strings.HasPrefix(path, "/servers/") {
+		return false
+	}
+	// /servers/{name}/files/upload, /servers/{name}/files/write,
+	// /servers/{name}/mods/upload
+	return strings.HasSuffix(path, "/files/upload") ||
+		strings.HasSuffix(path, "/files/write") ||
+		strings.HasSuffix(path, "/mods/upload")
 }
 
 // secureHeaders sets hardening response headers on every API reply. The
@@ -660,19 +699,21 @@ func mutationRateLimit(next http.Handler) http.Handler {
 }
 
 // requestTimeout wraps chi's middleware.Timeout(d) but exempts streaming
-// requests from the deadline. chi.Timeout races the handler against a
-// timer and, on expiry, unconditionally calls w.WriteHeader(504) in a
-// deferred func — fine for a normal request/response route (real DoS
-// protection), but wrong for a connection that's *supposed* to stay open
-// past d: the WebSocket routes (ws.Mount) and the /events SSE feed
-// (handlers.MountEvents) both stream off req.Context() indefinitely, so
+// and large-transfer requests from the deadline. chi.Timeout races the
+// handler against a timer and, on expiry, unconditionally calls
+// w.WriteHeader(504) in a deferred func — fine for a normal
+// request/response route (real DoS protection), but wrong for a
+// connection that's *supposed* to stay open past d: the WebSocket routes
+// (ws.Mount), the /events SSE feed (handlers.MountEvents), and the
+// file/log/capture download and upload proxies (isLargeTransferPath) all
+// stream off req.Context() for as long as the transfer takes, so
 // chi.Timeout would force-close every one of them at d regardless of
-// whether they're still actively serving data, and then log a
+// whether they're still actively serving data (F-074), and then log a
 // "superfluous response.WriteHeader call" once the real handler's next
 // write lands after the deadline already fired. nginx in front of this
-// already gives SSE/WS a much longer read timeout, so the app-layer cap
-// is simply the wrong layer for these routes — they get no deadline here
-// at all, same as before chi.Timeout was ever wired in.
+// already gives these routes a much longer read timeout, so the
+// app-layer cap is simply the wrong layer for them — they get no
+// deadline here at all, same as before chi.Timeout was ever wired in.
 func requestTimeout(d time.Duration) func(http.Handler) http.Handler {
 	timeoutMW := middleware.Timeout(d)
 	return func(next http.Handler) http.Handler {
@@ -696,5 +737,39 @@ func isStreamingRequest(req *http.Request) bool {
 	if strings.EqualFold(req.Header.Get("Upgrade"), "websocket") {
 		return true
 	}
-	return req.Method == http.MethodGet && req.URL.Path == "/events"
+	if req.Method == http.MethodGet && req.URL.Path == "/events" {
+		return true
+	}
+	return isLargeTransferPath(req.Method, req.URL.Path)
+}
+
+// isLargeTransferPath reports whether req is one of the file/log/capture
+// download or upload proxies, or the audit export — routes whose
+// duration is bounded by client bandwidth, not app logic, so the 60s
+// app-wide DoS timeout is the wrong layer for them (see F-074). These
+// share req.Context() with the agent-proxy io.Copy in ws/dialer.go and
+// the capture/audit download paths, so cutting the context here
+// truncates an in-flight transfer instead of just refusing a slow
+// request up front.
+func isLargeTransferPath(method, path string) bool {
+	if method == http.MethodGet {
+		if path == "/admin/audit/export" {
+			return true
+		}
+		if !strings.HasPrefix(path, "/servers/") {
+			return false
+		}
+		return strings.HasSuffix(path, "/files/download") ||
+			strings.HasSuffix(path, "/logs/download") ||
+			strings.HasSuffix(path, ":capture-file")
+	}
+	if method == http.MethodPost && strings.HasPrefix(path, "/servers/") {
+		// Same set isUploadPath exempts from bodyLimit: every route that
+		// accepts a large body also streams it to the agent on
+		// req.Context(), so it must outlive the 60s timeout too.
+		return strings.HasSuffix(path, "/files/upload") ||
+			strings.HasSuffix(path, "/files/write") ||
+			strings.HasSuffix(path, "/mods/upload")
+	}
+	return false
 }

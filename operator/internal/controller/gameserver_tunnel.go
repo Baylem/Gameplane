@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -127,7 +128,9 @@ func (r *GameServerReconciler) planTunnel(
 		if tunnel.Playit == nil {
 			return tunnelPlan{}
 		}
-		// TODO(tunnel): playit endpoint arrives via the gameservers/status subresource
+		// The tunnel pod polls playitd's IPC socket for the assigned address
+		// and patches it into status.tunnelEndpoints (tunnel/playit_reporter.go);
+		// reconcileStatus validates and merges those into status.endpoints.
 	}
 
 	return tunnelPlan{
@@ -246,7 +249,7 @@ func (r *GameServerReconciler) reconcileTunnel(
 				{Name: "FRP_SERVER_ADDR", Value: tunnel.Frp.ServerAddr},
 				{Name: "FRP_SERVER_PORT", Value: fmt.Sprintf("%d", serverPort)},
 				{Name: "BACKING_SERVICE_DNS", Value: backingServiceDNS},
-				{Name: "BACKING_SERVICE_PORT", Value: buildFrpRemotePortsConfig(tunnel.Frp)},
+				{Name: "BACKING_SERVICE_PORT", Value: buildFrpRemotePortsConfig(tunnel.Frp, tmpl)},
 			}
 
 		case "tailscale":
@@ -451,15 +454,16 @@ func (r *GameServerReconciler) reconcileTunnelNetworkPolicy(
 				)
 
 			case "playit":
-				// playit: relies on TCP and UDP to its relay endpoints.
-				// Since playit does not publish a fixed set of relay endpoints,
-				// we permit all ports. The tunnel pod's egress is still constrained
-				// to these two protocols and the backing Service DNS.
-				// Note: this allows any outbound TCP/UDP, but DNS is already granted,
-				// and the tunnel pod can only reach the backing Service DNS by name,
-				// so concrete egress is still limited to the tunnel relay destinations.
-				// A more restrictive approach would require knowing playit's relay IPs,
-				// which are not discoverable statically.
+				// playit does not publish a fixed set of relay endpoints or ports:
+				// the playit agent dials its control plane and relay nodes on
+				// varying TCP and UDP ports that are not known ahead of time.
+				// A per-port allow list (like frp's ServerPort or tailscale's
+				// 443/41641) can't express that, so playit gets its own egress
+				// rule below with no Ports field at all -- which, per the K8s
+				// NetworkPolicy semantics, means all ports/protocols -- to any
+				// destination, matching how the frp/tailscale rule above omits
+				// "To" to allow any destination. The DNS and advertised-port
+				// rule built here is left untouched for playit.
 			}
 		}
 
@@ -481,10 +485,18 @@ func (r *GameServerReconciler) reconcileTunnelNetworkPolicy(
 
 		// Egress with no "To" means "to any destination".
 		np.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeEgress}
-		np.Spec.Egress = []networkingv1.NetworkPolicyEgressRule{{
+		egressRules := []networkingv1.NetworkPolicyEgressRule{{
 			Ports: egressPorts,
 			// Empty To = allow to any destination
 		}}
+		if tunnel != nil && tunnel.Provider == "playit" {
+			// playit's relay/control-plane ports aren't statically known, so
+			// grant it a separate rule with no Ports (= all ports/protocols)
+			// and no To (= any destination), on top of the DNS/advertised-port
+			// rule above.
+			egressRules = append(egressRules, networkingv1.NetworkPolicyEgressRule{})
+		}
+		np.Spec.Egress = egressRules
 
 		return controllerutil.SetControllerReference(gs, np, r.Scheme)
 	})
@@ -519,15 +531,34 @@ func (r *GameServerReconciler) deleteTunnel(ctx context.Context, namespace, gsNa
 	return client.IgnoreNotFound(r.Delete(ctx, dep, &client.DeleteOptions{PropagationPolicy: &policy}))
 }
 
-// buildFrpRemotePortsConfig constructs the BACKING_SERVICE_PORT env var for frp.
-// Format: "port_name:remote_port,..." e.g. "java:25565,bedrock:19133"
-func buildFrpRemotePortsConfig(frp *gameplanev1alpha1.FrpTunnelSpec) string {
-	if frp == nil {
+// buildFrpRemotePortsConfig constructs the BACKING_SERVICE_PORT env var for
+// frp. Format: "port_name:local_port:remote_port:protocol,..." e.g.
+// "game:34197:30000:udp". local_port and protocol come from the matching
+// GameTemplate port (the backing Service's own port and protocol);
+// remote_port is the public frps-side port the user picked in
+// spec.networking.tunnel.frp.remotePorts. The two ports are independent, so
+// this always carries both rather than assuming remotePort also names the
+// Service port and the port is always TCP -- the old format let frp work
+// only when a user's remotePort happened to equal the Service port and the
+// game used TCP (F-052). A RemotePorts mapping whose Name has no matching
+// advertised template port is skipped, same as before.
+func buildFrpRemotePortsConfig(frp *gameplanev1alpha1.FrpTunnelSpec, tmpl *gameplanev1alpha1.GameTemplate) string {
+	if frp == nil || tmpl == nil {
 		return ""
 	}
 	var entries []string
 	for _, mapping := range frp.RemotePorts {
-		entries = append(entries, fmt.Sprintf("%s:%d", mapping.Name, mapping.RemotePort))
+		for _, p := range tmpl.Spec.Ports {
+			if p.Name != mapping.Name {
+				continue
+			}
+			protocol := strings.ToLower(string(p.Protocol))
+			if protocol == "" {
+				protocol = "tcp"
+			}
+			entries = append(entries, fmt.Sprintf("%s:%d:%d:%s", mapping.Name, p.ContainerPort, mapping.RemotePort, protocol))
+			break
+		}
 	}
 	if len(entries) == 0 {
 		return ""

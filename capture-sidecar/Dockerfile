@@ -1,10 +1,6 @@
-FROM golang:1.27-alpine AS build
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS build
 WORKDIR /src
 
-# svcutil is an in-repo module the sidecar depends on via a local replace
-# (../svcutil); copy it first so `go mod download` and the build resolve
-# it. Mirrors sentinel/Dockerfile and agent/Dockerfile for the same reason.
-COPY svcutil/ ./svcutil/
 COPY capture-sidecar/go.mod capture-sidecar/go.sum* ./capture-sidecar/
 WORKDIR /src/capture-sidecar
 RUN go mod download
@@ -16,7 +12,11 @@ WORKDIR /src/capture-sidecar
 RUN apk add --no-cache libcap
 
 ARG VERSION=dev
-RUN CGO_ENABLED=0 GOOS=linux go build \
+# Cross-compile on the build host ($BUILDPLATFORM above) rather than under
+# QEMU emulation: multi-arch release builds of the arm64 image were slow
+# enough to hit the release job timeout.
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
     -trimpath \
     -ldflags="-s -w -X main.Version=${VERSION}" \
     -o /out/capture-sidecar ./cmd

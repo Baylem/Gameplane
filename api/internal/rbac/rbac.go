@@ -11,8 +11,11 @@
 // Owner and collaborator access is an additional fallback: when a
 // namespace permission is denied and the request targets a specific
 // GameServer, the middleware fetches the server and grants access if
-// the caller is the owner or a collaborator (except for :transfer and
-// :collaborators endpoints, which are owner-only).
+// the caller is the owner or a collaborator. The owner-only operations
+// (:transfer, :collaborators, :wipe-data and DELETE of the server) are
+// never granted to collaborators, and they need the server's owner or an
+// admin ("*" in the resolved cluster and namespace) even when the caller
+// holds the namespace permission.
 package rbac
 
 import (
@@ -58,7 +61,9 @@ const (
 // extractable from the path, it fetches the server and allows the
 // request if the caller is owner or collaborator. Owner-only operations
 // (verb :transfer, :collaborators, :wipe-data, or DELETE on bare /servers/{name})
-// are denied to collaborators. Invalid paths (trailing segments after a verb,
+// are denied to collaborators, and when the permission check passes they
+// still need the server's owner or an admin ("*" in the resolved cluster
+// and namespace). Invalid paths (trailing segments after a verb,
 // e.g. /servers/a:transfer/extra) fail closed — the fallback does not apply.
 // No matching rule means deny (fail-closed).
 //
@@ -125,12 +130,8 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 						if err == nil && obj != nil {
 							role := ownershipRole(obj, u.ID)
 							if role != roleNone {
-								// Owner-only operations: :transfer, :collaborators, :wipe-data, or DELETE on exact server object.
-								isOwnerOnly := verb == "transfer" || verb == "collaborators" || verb == "wipe-data" ||
-									(req.Method == "DELETE" && isExact)
-
 								// Grant to owner, or to collaborator if not owner-only.
-								if role == roleOwner || !isOwnerOnly {
+								if role == roleOwner || !ownerOnlyOperation(req.Method, verb, isExact) {
 									next.ServeHTTP(w, req)
 									return
 								}
@@ -140,6 +141,17 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 				}
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
+			}
+			// Owner-only server operations need the server's owner or an
+			// admin ("*" in the resolved cluster and namespace), even when
+			// the caller holds the route's namespace permission.
+			if Namespaced(r.perm) && !u.Can("*", true, cl, ns) {
+				if name, verb, isExact, ok := parseServerPath(req.URL.Path); ok && ownerOnlyOperation(req.Method, verb, isExact) {
+					if !ownsServer(req.Context(), fetch, cl, ns, name, u.ID) {
+						http.Error(w, "forbidden", http.StatusForbidden)
+						return
+					}
+				}
 			}
 			next.ServeHTTP(w, req)
 		})
@@ -239,7 +251,9 @@ var rules = []rule{
 	{method: "GET", segment: "clusters", perm: "cluster:read"},
 	{segment: "clusters", perm: "cluster:manage"},
 
-	// Events SSE is a namespaced, multiplexed read.
+	// Events SSE is a namespaced, multiplexed read. The route needs
+	// servers:read; the handler then streams each kind only to callers who
+	// hold that kind's own read permission (see ReadPermission).
 	{method: "GET", segment: "events", perm: "servers:read"},
 
 	// WebSocket console runs RCON/PTY commands (write-capable, despite the
@@ -346,6 +360,28 @@ func parseServerPath(path string) (string, string, bool, bool) {
 	return name, "", false, true
 }
 
+// ownerOnlyOperation reports whether a server request is one of the
+// owner-only operations: ownership transfer, collaborator edits, data
+// wipe, or DELETE of the server object itself.
+func ownerOnlyOperation(method, verb string, isExact bool) bool {
+	return verb == "transfer" || verb == "collaborators" || verb == "wipe-data" ||
+		(method == http.MethodDelete && isExact)
+}
+
+// ownsServer reports whether userID is the recorded owner of the named
+// GameServer. A nil fetcher, a fetch error or a missing server count as
+// not owned, so the caller fails closed.
+func ownsServer(ctx context.Context, fetch ServerFetcher, cluster, ns, name string, userID int64) bool {
+	if fetch == nil {
+		return false
+	}
+	obj, err := fetch.GetServer(ctx, cluster, ns, name)
+	if err != nil || obj == nil {
+		return false
+	}
+	return ownershipRole(obj, userID) == roleOwner
+}
+
 // ownershipRole returns the ownership role of a user in the server:
 // owner (annotation gameplane.local/owner-id matches), collaborator
 // (user ID in comma-separated gameplane.local/collaborators), or none.
@@ -393,4 +429,17 @@ func allow(u *auth.User, method, path, cluster, ns string) bool {
 		return true
 	}
 	return u.Can(r.perm, Namespaced(r.perm), cluster, ns)
+}
+
+// ReadPermission returns the permission the rule table requires for a GET
+// of /<segment> (for example "servers" → "servers:read", "restores" →
+// "backups:read"). ok is false when no explicit rule covers the segment;
+// the catch-all rules do not count. The events stream uses it to send each
+// resource kind only to callers who may read that kind.
+func ReadPermission(segment string) (perm string, ok bool) {
+	r, ok := match(http.MethodGet, "/"+segment)
+	if !ok || r.segment == "" {
+		return "", false
+	}
+	return r.perm, true
 }

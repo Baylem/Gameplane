@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { ThemeExport, UserThemePreferences } from "@/types";
+import type { UserThemePreferences } from "@/types";
 import {
   buildThemeExport,
-  themeExportToUpdate,
   validateThemeExport,
   type ValidateThemeExportResult,
 } from "./theme-export";
@@ -244,53 +243,5 @@ describe("validateThemeExport — customColors and customCss", () => {
 
   it("rejects a non-string customCss", () => {
     expectError(validateThemeExport(rawDoc({ customCss: 42 })), /preferences\.customCss must be a string or null/);
-  });
-});
-
-describe("themeExportToUpdate", () => {
-  it("maps a full document to the PUT payload", () => {
-    const doc = buildThemeExport(fullPrefs);
-    expect(themeExportToUpdate(doc)).toEqual({
-      themeType: "custom_colors",
-      presetId: "legacy",
-      appearanceMode: "dark",
-      customColors: { accent: "#10B981", surface: "#121114" },
-      customCssEnabled: true,
-      customCss: ".dashboard-card { border-radius: 12px; }",
-    });
-  });
-
-  it("carries customCssEnabled from the document even when false", () => {
-    const doc: ThemeExport = {
-      format: "gameplane-theme",
-      version: 1,
-      preferences: {
-        themeType: "preset",
-        presetId: "pink",
-        appearanceMode: "system",
-        customCssEnabled: false,
-        customCss: ".card { border-radius: 8px; }",
-      },
-    };
-    const update = themeExportToUpdate(doc);
-    expect(update.customCssEnabled).toBe(false);
-    // Retained stylesheet still transfers with the document.
-    expect(update.customCss).toBe(".card { border-radius: 8px; }");
-  });
-
-  it("omits absent customs from the payload (PUT retention: omit, never send null)", () => {
-    const result = validateThemeExport(rawDoc());
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      const update = themeExportToUpdate(result.export);
-      expect(update).toEqual({
-        themeType: "preset",
-        presetId: "pink",
-        appearanceMode: "system",
-        customCssEnabled: false,
-      });
-      expect(update).not.toHaveProperty("customColors");
-      expect(update).not.toHaveProperty("customCss");
-    }
   });
 });

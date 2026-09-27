@@ -20,13 +20,20 @@ helm upgrade --install gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
   --set ingress.host=gameplane.your-domain.test
 ```
 
-The chart's `appVersion` pins matching component images
-(`ghcr.io/valgulnecron/gameplane/{operator,api,agent}:<version>`), so no image
-overrides are needed for a released version.
+The chart's `appVersion` pins matching component images under
+`ghcr.io/valgulnecron/gameplane/<name>:<version>`, so no image overrides are
+needed for a released version. A default install pulls four of them:
+`operator`, `api`, `web`, and `agent` (the last is pulled per-GameServer, on
+demand). The remaining eight — `audit-syslog-bridge`, `telemetry-receiver`,
+`sentinel`, `tunnel-frp`, `tunnel-tailscale`, `tunnel-playit`, `mcp-server`,
+and `capture-sidecar` — are only pulled when the optional component they
+belong to is enabled (and, for `sentinel` and `capture-sidecar`, only for
+GameServers that opt in). See each component's values block for its enable
+flag.
 
 ### Edge channel (latest beta)
 
-Every push to `main` publishes rolling `:edge` images. To track them, install
+Every push to `master` publishes rolling `:edge` images. To track them, install
 the chart and point images at the edge tag:
 
 ```sh
@@ -161,7 +168,11 @@ Top-level knobs (see `values.yaml` for the full list):
     - `gameEgress.enabled` — toggle public-egress allowance (default `true`)
     - `gameEgress.ports` — TCP ports for downloads (default 80, 443)
     - `gameEgress.privateCIDRs` — exclude private ranges from public-egress (anti-SSRF)
+  - `networkPolicies.backupEgress` — control egress from Backup/Restore restic Job pods to their configured repository
+    - `backupEgress.enabled` — toggle backup/restore-egress allowance (default `true`)
+    - `backupEgress.ports` — TCP ports for repository connections (default 443, 22); unlike `gameEgress` there is no private-range exclusion, since the destination is an admin-configured repository Secret rather than an attacker-influenced URL, and is often itself private
 - `clusterOps.enabled` — credential-minting cluster operations (Add node, Download kubeconfig) in the dashboard's Cluster page (default off; grants powerful kube-system + CSR-approval RBAC)
+  - `clusterOps.externalAddress` — external (node-routable) API server address, e.g. `1.2.3.4:6443` or `https://k8s.example.com:6443`, used in the join command and downloaded kubeconfig instead of the in-cluster ClusterIP; leave empty only when the in-cluster address is itself reachable from outside the cluster
 - `mcpServer.enabled` — optional strictly read-only MCP (Model Context Protocol) server [optional] for AI assistants to read cluster state and propose fixes (default off); see [mcp-server/README.md](../mcp-server/README.md)
   - `mcpServer.replicas` — MCP server replicas (default 1)
 - `updates.channel` — informational release-channel label (e.g., `stable`, `edge`) shown read-only in the dashboard's Admin Settings → Updates section; purely informational (Gameplane upgrades via Helm, not auto-update)
@@ -177,7 +188,7 @@ Top-level knobs (see `values.yaml` for the full list):
     - `git.subPath` — module subdirectory within the repository (default `""`, empty means root)
   - `defaultModuleSource.oci.*` — OCI registry configuration (when `type: oci`)
     - `oci.url` — OCI registry URL (e.g., `ghcr.io/valgulnecron/gameplane-modules`)
-    - `oci.insecure` — skip TLS verification for plain-HTTP registries (e.g., local development)
+    - `oci.insecure` — use plain HTTP (no TLS) for local registries such as kind/k3d; TLS verification is never skipped
     - `oci.modules` — which modules to pull from the registry
     - `oci.pullSecretName` — optional kubernetes.io/dockerconfigjson Secret for private registries
     - `oci.verify.enabled` — enable cosign signature verification for official bundles (default off)
@@ -226,19 +237,36 @@ Top-level knobs (see `values.yaml` for the full list):
   - `capture.defaultMaxDurationSeconds` — default maximum runtime per capture in seconds
     (default `300` = 5 minutes); captures stop automatically when the duration is reached.
   - `capture.defaultMaxSizeBytes` — default maximum file size per capture in bytes
-    (default `5368709120` = 5 GiB); captures stop automatically when the size limit is reached.
+    (default `943718400` = 900 MiB, kept under the 1 GiB `emptyDir` limit backing
+    the capture volume); captures stop automatically when the size limit is reached.
   - `capture.image` — sidecar container image (defaults to `{image.registry}/capture-sidecar:{image.tag}`).
 
 ## Observability
 
 The operator, API, and in-pod agent sidecars expose Prometheus metrics on
-`/metrics` (operator `:8080`, API `:8000`, agent `:8090`). Three
-**off-by-default** chart toggles wire them into a Prometheus-Operator stack
-(e.g. kube-prometheus-stack):
+`/metrics` (operator `:8080`, API `:9090`). The API serves metrics on a
+dedicated listener (`api.metricsPort`, default `9090`), not on its public
+port (`:8000`), so only in-cluster scrapers reach them. The agent's control
+port (`:8090`) requires an mTLS client cert for every route it serves, so its
+`/metrics` lives on a separate, unauthenticated listener instead
+(`:9090`, `agent/cmd/main.go`'s `--metrics-addr`) — a Prometheus scraper
+never needs, and never gets, the client cert that unlocks console/files/RCON
+on `:8090`. Three **off-by-default** chart toggles wire these into a
+Prometheus-Operator stack (e.g. kube-prometheus-stack):
 
 - `serviceMonitors.enabled` — `ServiceMonitor`s so Prometheus scrapes the
-  operator and API, plus a `PodMonitor` that scrapes per-GameServer agent
-  metrics from game pods in `gamesNamespace`.
+  operator, API, and telemetry-receiver (when deployed), plus a `PodMonitor`
+  that scrapes per-GameServer agent metrics from game pods in
+  `gamesNamespace` on their plain, named `metrics` containerPort (`9090`,
+  declared by the operator's `buildAgentContainer`; no TLS, no client cert —
+  the mTLS control port `8090` is never scraped).
+- `serviceMonitors.scrapeNamespaceSelector` — set this to your Prometheus's
+  namespace (e.g. `{matchLabels: {kubernetes.io/metadata.name: monitoring}}`)
+  whenever `networkPolicies.enabled` is also `true`. Without it, both the
+  games-namespace default-deny policy (agent metrics port `9090` is not
+  admitted from any namespace by default) and the telemetry-receiver's
+  `NetworkPolicy` (admitted only from the API pod) leave the `PodMonitor`
+  and `ServiceMonitor` targets unreachable even though they render.
 - `prometheusRules.enabled` — a `PrometheusRule` of operator alerts.
 - `grafanaDashboards.enabled` — a Grafana dashboard `ConfigMap` the Grafana
   sidecar auto-imports (relabel via `grafanaDashboards.labels` if your sidecar
@@ -260,7 +288,7 @@ Every phase is always present (0 when empty). With 2+ operator replicas each
 replica reports the same cache-derived counts, so aggregate with
 `max by (phase) (...)` (the bundled dashboard and alerts already do).
 
-**Agent per-server metrics** (scraped from port 8090 in each game pod when
+**Agent per-server metrics** (scraped over plain HTTP from the named `metrics` port, 9090, in each game pod when
 `serviceMonitors.enabled: true`):
 
 | Metric | Labels | Meaning |
@@ -354,8 +382,8 @@ a slow or down sink never blocks or fails a request.
   - `api.audit.s3.bucket` — bucket name (required when endpoint is set).
   - `api.audit.s3.prefix` — optional object key prefix (e.g.,
     `gameplane-audit`; empty = root).
-  - `api.audit.s3.region` — S3 region (e.g., `us-east-1`; empty = path-style
-    requests).
+  - `api.audit.s3.region` — S3 region (e.g., `us-east-1`; empty defaults to
+    `us-east-1`).
   - `api.audit.s3.insecure` — `true` to skip TLS certificate verification
     (for self-signed certs on dev/homelab clusters).
   - `api.audit.s3.credentialsSecretRef` — reference to a Secret holding S3
@@ -500,6 +528,10 @@ The operator on the control-plane will reconcile the `Cluster` and
 update `status.phase` (Unknown → Healthy/Unhealthy). When `Healthy`,
 the API can dispatch requests to that cluster.
 
+Removing a cluster registered this way (from the dashboard or with
+`DELETE /clusters/{name}`) deletes the `Cluster` but leaves your Secret
+in place. Delete the Secret with kubectl when you no longer need it.
+
 ### Path 2: Dashboard API
 
 POST to `/clusters` with permission `cluster:manage` (admin-only):
@@ -517,7 +549,7 @@ curl -X POST https://<dashboard>/api/clusters \
 
 The API stores the kubeconfig as a labelled Secret and creates the
 `Cluster` CRD. The kubeconfig is never returned by the API and never
-logged.
+logged. Removing the cluster deletes both the `Cluster` and that Secret.
 
 ### Helm CRD caveat
 
@@ -526,10 +558,11 @@ not a Gameplane one: files under a chart's `crds/` directory are installed on
 first install and ignored on every upgrade thereafter.
 
 The chart works around this for you. `crds.autoApply` (enabled by default)
-ships a **pre-upgrade hook** that runs `kubectl apply --server-side` over the
-current CRDs on every `helm upgrade`, so the `Cluster` CRD — and every other
-Gameplane CRD — stays in step with the chart automatically. **No manual
-`kubectl apply` step is needed.**
+ships a **pre-install/pre-upgrade hook** that runs `kubectl apply
+--server-side` over the current CRDs on every `helm upgrade`, and also on a
+`helm install` that lands on top of CRDs an earlier, uninstalled release left
+behind, so the `Cluster` CRD — and every other Gameplane CRD — stays in step
+with the chart automatically. **No manual `kubectl apply` step is needed.**
 
 You only need to apply CRDs by hand if you have deliberately disabled the
 hook:
@@ -539,11 +572,33 @@ hook:
 kubectl apply --server-side -f charts/gameplane/crds/
 ```
 
-The hook is pre-upgrade *only*. A fresh install gets its CRDs from Helm's
-native `crds/` handling, which needs no pod — so first installs, including
-air-gapped ones, never depend on pulling the hook's `kubectl` image. CRDs are
+The hook fires on pre-upgrade always. On `helm install` it fires only when
+the cluster already holds Gameplane CRDs from a different chart version, i.e.
+ones an earlier, uninstalled release left behind (Helm's `crds/` install
+silently skips existing CRDs). It tells those apart by content: `make
+manifests` stamps every chart CRD with a `gameplane.local/crd-bundle-sha256`
+annotation, a hash over the whole CRD set, and the hook compares the live
+`gameservers.gameplane.local` CRD's stamp with the chart's. On a genuinely
+fresh cluster, Helm's `crds/` step creates the CRDs, carrying this chart's
+stamp, before the hook is evaluated, so the stamps match and the hook does
+not run. A fresh install therefore never depends on pulling the hook's
+`kubectl` image; an install over leftover CRDs does, so mirror
+`crds.autoApply.image` if you reinstall on an air-gapped cluster. CRDs are
 never owned or deleted by Helm here, so `helm uninstall` leaves your
 GameServers intact.
+
+**Helm 4** installs `crds/` with a server-side apply under the field manager
+`helm` instead of skipping existing CRDs, so a `helm install` over leftover
+CRDs updates them itself (stamp included) and the hook stays pre-upgrade
+only. The hook applies under the same `helm` field manager so that apply
+never conflicts with it. Releases up to `0.2.0-beta.8` applied under
+kubectl's default manager (`kubectl`); if CRDs such a release upgraded were
+left behind, a Helm 4 `helm install` stops with `conflict with "kubectl" …
+.spec.versions`. Re-run it with `--force-conflicts` to take them over:
+
+```sh
+helm install gameplane charts/gameplane -n gameplane-system --create-namespace --force-conflicts
+```
 
 ### RBAC and permissions
 
@@ -591,13 +646,6 @@ See `test/e2e/upgrade_e2e_test.go`. What this does **not** yet cover: upgrades
 that skip several releases at once, and Postgres (still an experimental
 driver — see [`roadmap.md`](roadmap.md)). Take a backup before upgrading
 production either way.
-
-CRDs are installed once by Helm and not updated on upgrade (by design).
-For CRD schema changes, run:
-
-```sh
-kubectl apply -f charts/gameplane/crds/
-```
 
 ### SQLite database adoption (Kestrel → Gameplane)
 

@@ -99,7 +99,7 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard
           label="Online"
-          value={data ? (data.max >= 0 ? `${data.online} / ${data.max}` : `${data.online}`) : "—"}
+          value={data && data.online >= 0 ? (data.max >= 0 ? `${data.online} / ${data.max}` : `${data.online}`) : "—"}
           accent="success"
         />
         {caps?.whitelist && (
@@ -112,7 +112,13 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
 
       <header className="flex items-center justify-between">
         <h2 className="text-sm text-muted">
-          {data ? (data.max >= 0 ? `${data.online} / ${data.max} online` : `${data.online} online`) : "Loading…"}
+          {data
+            ? data.online < 0
+              ? "Player count unknown"
+              : data.max >= 0
+                ? `${data.online} / ${data.max} online`
+                : `${data.online} online`
+            : "Loading…"}
         </h2>
         <Button
           isIconOnly
@@ -346,6 +352,7 @@ function ConfirmAction({
   submitting: boolean;
 }) {
   const verb = action === "kick" ? "Kick" : "Ban";
+  const verbing = action === "kick" ? "Kicking" : "Banning";
   return (
     <div className="rounded border border-border bg-surface/50 p-4">
       <p className="text-sm text-foreground">
@@ -374,7 +381,7 @@ function ConfirmAction({
           onClick={onConfirm}
           isDisabled={submitting}
         >
-          {submitting ? `${verb}ing…` : verb}
+          {submitting ? `${verbing}…` : verb}
         </Button>
       </div>
     </div>

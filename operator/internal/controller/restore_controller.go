@@ -139,6 +139,7 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "restore-" + rs.Name, Namespace: rs.Namespace}}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
 		if job.CreationTimestamp.IsZero() {
+			job.Spec.Template.Labels = map[string]string{backupRestoreJobLabel: backupRestoreJobValue}
 			job.Spec.Template.Spec = r.buildRestorePodSpec(&rs, &src)
 			job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
 		}
@@ -246,7 +247,20 @@ func (r *RestoreReconciler) buildRestorePodSpec(
 			// absolute path. The companion backup runs `restic backup
 			// /data`, so the snapshot tree is rooted at /data/...; with
 			// --target /data the path doubles to /data/data/marker.txt.
-			Args: []string{"restore", rs.Status.SnapshotID, "--target", "/"},
+			//
+			// --delete removes files under the restored paths that aren't
+			// present in the snapshot. Without it, files created after the
+			// snapshot (e.g. newer save files) survive the restore and the
+			// server ends up loading data the snapshot never contained
+			// (F-049) — the volume must match the snapshot exactly.
+			// restic refuses to combine --delete with --target unless
+			// --include or --exclude is also given ("this ensures that
+			// you cannot accidentally delete the whole system"), since
+			// otherwise the deletion walk isn't scoped and could touch
+			// anything under --target. --include /data pins that scope
+			// to the same subtree the companion backup captures, so the
+			// restore both lands and prunes only inside /data.
+			Args: []string{"restore", rs.Status.SnapshotID, "--target", "/", "--delete", "--include", "/data"},
 			Env: []corev1.EnvVar{
 				{Name: "RESTIC_REPOSITORY", ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{

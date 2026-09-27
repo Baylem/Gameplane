@@ -100,6 +100,33 @@ spec:
               app.kubernetes.io/name: gameplane-operator
       ports:
         - { protocol: TCP, port: 8090 }
+{{- with .Values.serviceMonitors.scrapeNamespaceSelector }}
+{{- if $.Values.serviceMonitors.enabled }}
+---
+# F-216: opens only the agent's plain-HTTP metrics port 9090, never the
+# mTLS control port 8090; rationale in agent/specs.md's /metrics section.
+# Rendered only once an operator opts in via
+# serviceMonitors.scrapeNamespaceSelector; left empty, this stays exactly
+# as restrictive as before.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-to-agent
+  namespace: {{ $.Values.gamesNamespace }}
+  labels: {{- include "gameplane.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: gameplane-game
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+      ports:
+        - { protocol: TCP, port: 9090 }
+{{- end }}
+{{- end }}
 ---
 # Allow probe traffic from kubelet. Source IP depends on the CNI; by
 # default we scope to RFC1918 + link-local, which covers most single-
@@ -164,6 +191,43 @@ spec:
               {{- end }}
       ports:
         {{- range .Values.networkPolicies.gameEgress.ports }}
+        - { protocol: {{ .protocol }}, port: {{ .port }} }
+        {{- end }}
+{{- end }}
+{{- /* `helm upgrade --reuse-values` from a release older than this key
+       (F-214) carries no networkPolicies.backupEgress; fall back to the
+       values.yaml defaults so upgraded clusters keep backup egress. */ -}}
+{{- $backupEgress := .Values.networkPolicies.backupEgress | default (dict "enabled" true "ports" (list (dict "protocol" "TCP" "port" 443) (dict "protocol" "TCP" "port" 22))) }}
+{{- if $backupEgress.enabled }}
+---
+# Allow Backup/Restore restic Job pods to reach their configured
+# repository (F-215). Job pods carry no chart-managed label of their
+# own (only the Job controller's batch.kubernetes.io/job-name) until
+# the operator's Backup/Restore reconcilers stamp them with
+# app.kubernetes.io/name=gameplane-backup-restore — this policy
+# selects that label. The destination is whatever an admin's repo
+# Destination Secret points at (s3/b2/rest/sftp/swift/azure/gcs,
+# in-cluster or public), so, unlike allow-game-public-egress, no
+# private-range exception is applied here: the destination is
+# operator-configured, not attacker-influenced, and restic
+# repositories are at least as often private (an in-cluster or LAN
+# store, like this chart's own e2e fixture) as they are public.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backup-restore-egress
+  namespace: {{ .Values.gamesNamespace }}
+  labels: {{- include "gameplane.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: gameplane-backup-restore
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock: { cidr: 0.0.0.0/0 }
+      ports:
+        {{- range $backupEgress.ports }}
         - { protocol: {{ .protocol }}, port: {{ .port }} }
         {{- end }}
 {{- end }}

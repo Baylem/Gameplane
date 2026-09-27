@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/netip"
 	"path"
 	"sort"
 	"strconv"
@@ -147,30 +148,6 @@ type GameServerReconciler struct {
 	// default false. When false, the capture capability cannot be enabled
 	// per-GameServer; when true, it can be toggled on/off per server.
 	CaptureEnabled bool
-
-	// CaptureDefaultRetention is the default retention period for completed
-	// network captures, in seconds. Set from the --capture-default-retention-seconds
-	// operator flag, default 86400 (24 hours). Used when a GameServer's
-	// spec.capture.retentionSeconds is not set.
-	CaptureDefaultRetention int64
-
-	// CaptureMaxRetention is the maximum retention period for network captures,
-	// in seconds. Set from the --capture-max-retention-seconds operator flag,
-	// default 604800 (7 days). Any requested retention higher than this is
-	// clamped to this value.
-	CaptureMaxRetention int64
-
-	// CaptureDefaultMaxDurationSeconds is the default maximum duration for a single
-	// network capture, in seconds. Set from the --capture-default-max-duration-seconds
-	// operator flag, default 300 (5 minutes). Used when a capture request does not
-	// provide an explicit maxDuration.
-	CaptureDefaultMaxDurationSeconds int64
-
-	// CaptureDefaultMaxSizeBytes is the default maximum file size for a single
-	// network capture, in bytes. Set from the --capture-default-max-size-bytes
-	// operator flag, default 5368709120 (5 GiB). Used when a capture request does not
-	// provide an explicit maxSize.
-	CaptureDefaultMaxSizeBytes int64
 
 	// CaptureSidecarImage is the container image for the network capture sidecar
 	// injected when capture is enabled on a GameServer. Set from the
@@ -343,7 +320,7 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// decided this pass is already reflected in the count below. It writes
 	// only annotations; its status read model is folded into reconcileStatus'
 	// single status patch further down.
-	idle, idleStatus, idleRequeue, err := r.reconcileIdle(ctx, &gs)
+	idle, idleStatus, idleRequeue, idleScheduleErr, err := r.reconcileIdle(ctx, &gs)
 	if err != nil {
 		logger.Error(err, "reconcile idle")
 		return ctrl.Result{}, err
@@ -439,7 +416,7 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	requeue, err := r.reconcileStatus(ctx, &gs, idle, idleStatus, tunnelPlan, &tmpl, svcEvents, conflictingServer)
+	requeue, err := r.reconcileStatus(ctx, &gs, idle, idleStatus, idleScheduleErr, tunnelPlan, &tmpl, svcEvents, conflictingServer)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -833,6 +810,13 @@ const (
 	addressPlanTranslated                 addressPlanOutcome = "Translated"
 	addressPlanIgnoredForExposureMode     addressPlanOutcome = "IgnoredForExposureMode"
 	addressPlanNoAddressManagerConfigured addressPlanOutcome = "NoAddressManagerConfigured"
+	// addressPlanInvalidAddress: spec.networking.address was set but is not a
+	// parseable IP address (netip.ParseAddr). The CRD accepts any non-empty
+	// string, so this is caught here rather than left to the address manager,
+	// which would otherwise pass the raw value straight through to a
+	// MetalLB/Cilium annotation and report a generic pending reason instead
+	// of a clear format error.
+	addressPlanInvalidAddress addressPlanOutcome = "InvalidAddress"
 )
 
 // addressPlan is the decision reconcileService reached about a GameServer's
@@ -881,6 +865,11 @@ func planAddressPreference(gs *gameplanev1alpha1.GameServer, manager string) add
 	switch {
 	case gs.Spec.Networking.Expose != "LoadBalancer":
 		p.Outcome = addressPlanIgnoredForExposureMode
+	case p.Address != "" && !isValidAddress(p.Address):
+		// Caught before the manager-flavor branch so an invalid address is
+		// reported the same way regardless of which address manager (or
+		// none) is configured.
+		p.Outcome = addressPlanInvalidAddress
 	case manager == addressManagerMetalLB, manager == addressManagerCilium:
 		p.Outcome = addressPlanTranslated
 	default:
@@ -891,6 +880,15 @@ func planAddressPreference(gs *gameplanev1alpha1.GameServer, manager string) add
 		p.Outcome = addressPlanNoAddressManagerConfigured
 	}
 	return p
+}
+
+// isValidAddress reports whether addr parses as an IP address (v4 or v6).
+// spec.networking.address is a free-form string at the CRD level, so this is
+// the operator's own format check before handing the value to an address
+// manager (F-056).
+func isValidAddress(addr string) bool {
+	_, err := netip.ParseAddr(addr)
+	return err == nil
 }
 
 // addressPlanFor plans this reconciler's configured flavor against gs.
@@ -1414,28 +1412,7 @@ func (r *GameServerReconciler) reconcileStatefulSet(
 					},
 				},
 			},
-			{
-				// Pre-provisioned capture emptyDir volume, added UNCONDITIONALLY
-				// to every game pod regardless of spec.capture.enabled. This is
-				// required because ephemeral containers cannot add a volume via
-				// pods/ephemeralcontainers, and pod.spec.volumes is immutable on
-				// a running pod — the volume must already exist in the StatefulSet
-				// pod template before the capture sidecar can be injected
-				// restart-free. This volume is mounted ONLY on the capture
-				// sidecar ephemeral container when capture is enabled; it is
-				// never mounted on the agent or game container (see
-				// agentVolumeMounts' doc comment for why agents cannot have
-				// multiple roots). As a consequence, every existing game pod will
-				// roll once on the release that ships this feature, regardless
-				// of whether capture is ever used — this is documented in the
-				// release upgrade notes.
-				Name: "captures",
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{
-						SizeLimit: resource.NewQuantity(1*1024*1024*1024, resource.BinarySI), // 1Gi
-					},
-				},
-			},
+			captureVolume(),
 		}
 		// Extra volumes (spec.storage.extra / template's), one PVC each,
 		// mounted only on the game container (see buildGameContainer) — not
@@ -1552,6 +1529,54 @@ const DefaultSentinelImage = "ghcr.io/valgulnecron/gameplane/sentinel:dev"
 // Overridable via the operator's --capture-sidecar-image flag for air-gapped installs.
 const DefaultCaptureSidecarImage = "ghcr.io/valgulnecron/gameplane/capture-sidecar:dev"
 
+// captureVolumeSizeLimitBytes is the "captures" emptyDir's kubelet-enforced
+// SizeLimit (see the "captures" Volume above). It is the single source of
+// truth for that number: buildCaptureEphemeralContainer derives
+// captureVolumeBudgetBytes from it below, so the sidecar's own
+// admission-time budget check (F-187) can never drift from the volume the
+// kubelet is actually watching. Matches the 1Gi documented in
+// charts/gameplane/values.yaml's capture.defaultMaxSizeBytes comment.
+const captureVolumeSizeLimitBytes int64 = 1 * 1024 * 1024 * 1024
+
+// captureVolume returns the pre-provisioned "captures" emptyDir Volume added
+// UNCONDITIONALLY to every game pod's StatefulSet template by
+// reconcileStatefulSet, regardless of spec.capture.enabled. This is required
+// because ephemeral containers cannot add a volume via
+// pods/ephemeralcontainers, and pod.spec.volumes is immutable on a running
+// pod — the volume must already exist in the StatefulSet pod template before
+// the capture sidecar can be injected restart-free. This volume is mounted
+// ONLY on the capture sidecar ephemeral container when capture is enabled;
+// it is never mounted on the agent or game container (see
+// agentVolumeMounts' doc comment for why agents cannot have multiple
+// roots). As a consequence, every existing game pod will roll once on the
+// release that ships this feature, regardless of whether capture is ever
+// used — this is documented in the release upgrade notes.
+//
+// Extracted to its own function (rather than an inline literal in
+// reconcileStatefulSet) so a unit test can assert its SizeLimit against
+// captureVolumeSizeLimitBytes without exercising the full reconcile path.
+func captureVolume() corev1.Volume {
+	return corev1.Volume{
+		Name: "captures",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				SizeLimit: resource.NewQuantity(captureVolumeSizeLimitBytes, resource.BinarySI), // 1Gi
+			},
+		},
+	}
+}
+
+// captureVolumeBudgetBytes is the total bytes of retained (not-yet-deleted)
+// capture files plus one new capture's own maxSizeBytes that the sidecar
+// will allow on the "captures" volume, passed to it via the
+// CAPTURE_VOLUME_BUDGET_BYTES env var below. It reserves a 10% margin under
+// captureVolumeSizeLimitBytes: the kubelet's eviction check and the
+// sidecar's own accounting (a directory scan taken at admission time, not a
+// live byte counter) are not perfectly synchronized, so a start admitted
+// right at the hard limit could still tip the kubelet into eviction before
+// the new capture writes its first byte.
+const captureVolumeBudgetBytes = captureVolumeSizeLimitBytes - captureVolumeSizeLimitBytes/10
+
 // captureContainerName is the capture sidecar's fixed ephemeral-container
 // name on every game pod. Both GameServerReconciler's eager injection (on
 // spec.capture.enabled) and NetworkCaptureReconciler's idempotent fallback
@@ -1628,6 +1653,12 @@ func buildCaptureEphemeralContainer(image string) corev1.EphemeralContainer {
 				{Name: "TLS_CERT_FILE", Value: "/etc/tls/tls.crt"},
 				{Name: "TLS_KEY_FILE", Value: "/etc/tls/tls.key"},
 				{Name: "TLS_CA_FILE", Value: "/etc/tls/ca.crt"},
+				// See captureVolumeBudgetBytes' doc comment: derived from the
+				// "captures" emptyDir's own SizeLimit, with a safety margin,
+				// so HandleStart (capture-sidecar/internal/httpserver) can
+				// refuse a start that would push retained files plus the new
+				// capture past the volume's real limit (F-187).
+				{Name: "CAPTURE_VOLUME_BUDGET_BYTES", Value: strconv.FormatInt(captureVolumeBudgetBytes, 10)},
 			},
 		},
 		// Targets the game container for a shared pid/network/ipc namespace.
@@ -1756,18 +1787,24 @@ func (r *GameServerReconciler) reconcileCapture(ctx context.Context, gs *gamepla
 	return r.patchCaptureStatus(ctx, gs, base)
 }
 
-// stopActiveCaptures transitions every NetworkCapture owned by gs that is
-// still Pending or Running to a terminal phase, and clears
-// gs.Status.Capture.ActiveCapture in memory (folded into the caller's single
-// status patch) — used when spec.capture.enabled transitions to false, per
-// US2 acceptance scenario 4: "any active capture is stopped immediately."
+// stopActiveCaptures asks every NetworkCapture owned by gs that is still
+// Pending or Running to stop, and clears gs.Status.Capture.ActiveCapture in
+// memory (folded into the caller's single status patch) — used when
+// spec.capture.enabled transitions to false, per US2 acceptance scenario 4:
+// "any active capture is stopped immediately."
 //
-// A Running capture is set to Completed with the exact userStoppedMessage
-// networkcapture_controller.go's Reconcile already watches for: that guard
-// then tells the sidecar to actually stop capturing over its :9091 control
-// endpoint, the same path a user-initiated POST :capture-stop takes. A
-// Pending capture (never reached the sidecar) is failed directly — there is
-// nothing running on the sidecar to stop.
+// It never writes a capture's phase itself (F-259). Writing Completed or
+// Failed here, before the sidecar was stopped, raced the
+// NetworkCaptureReconciler: a capture it was just starting would conflict
+// on its status write, then be seen as terminal, and the sidecar kept
+// capturing. Instead each non-terminal capture gets the same
+// stopRequestedAnnotation the API's :capture-stop sets, and
+// NetworkCaptureReconciler.completeRequestedStop stops the sidecar first
+// and only then marks the capture Completed. The annotation is only added
+// when absent, so repeated reconciles (and an earlier user stop) are
+// no-ops; LastCaptureTime is likewise only touched the reconcile that adds
+// the annotation, so replaying an already-stopped capture on every
+// reconcile can't keep bumping it and churning the status patch forever.
 func (r *GameServerReconciler) stopActiveCaptures(ctx context.Context, gs *gameplanev1alpha1.GameServer) error {
 	var captures gameplanev1alpha1.NetworkCaptureList
 	if err := r.List(ctx, &captures, client.InNamespace(gs.Namespace)); err != nil {
@@ -1777,36 +1814,20 @@ func (r *GameServerReconciler) stopActiveCaptures(ctx context.Context, gs *gamep
 	now := metav1.Now()
 	for i := range captures.Items {
 		nc := &captures.Items[i]
-		if nc.Spec.ServerRef.Name != gs.Name {
+		if nc.Spec.ServerRef.Name != gs.Name || isTerminalCapturePhase(nc.Status.Phase) {
 			continue
 		}
-
-		switch nc.Status.Phase {
-		case gameplanev1alpha1.CapturePhaseRunning:
-			nc.Status.Phase = gameplanev1alpha1.CapturePhaseCompleted
-			nc.Status.CompletionTime = &now
-			nc.Status.Message = userStoppedMessage
-		case gameplanev1alpha1.CapturePhasePending:
-			nc.Status.Phase = gameplanev1alpha1.CapturePhaseFailed
-			nc.Status.CompletionTime = &now
-			nc.Status.Message = "capture disabled on gameserver before it started"
-			meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
-				Type:               "Failed",
-				Status:             metav1.ConditionTrue,
-				ObservedGeneration: nc.Generation,
-				Reason:             "capture_disabled",
-				Message:            nc.Status.Message,
-				LastTransitionTime: now,
-			})
-		default:
-			// Already terminal (Completed/Failed/Expired); nothing to do.
-			continue
+		if _, requested := nc.Annotations[stopRequestedAnnotation]; !requested {
+			base := nc.DeepCopy()
+			if nc.Annotations == nil {
+				nc.Annotations = map[string]string{}
+			}
+			nc.Annotations[stopRequestedAnnotation] = now.UTC().Format(time.RFC3339)
+			if err := r.Patch(ctx, nc, client.MergeFrom(base)); err != nil {
+				return fmt.Errorf("request stop of capture %s: %w", nc.Name, err)
+			}
+			gs.Status.Capture.LastCaptureTime = &now
 		}
-
-		if err := r.Status().Update(ctx, nc); err != nil {
-			return fmt.Errorf("stop active capture %s: %w", nc.Name, err)
-		}
-		gs.Status.Capture.LastCaptureTime = &now
 	}
 
 	gs.Status.Capture.ActiveCapture = nil
@@ -2177,8 +2198,17 @@ func buildAgentContainer(
 		Args:         args,
 		Env:          env,
 		VolumeMounts: agentVolumeMounts(gs, tmpl, ver, mountPath),
-		Ports:        []corev1.ContainerPort{{Name: "agent", ContainerPort: 8090}},
-		Resources:    res,
+		// "agent" (8090) is the mTLS control port. "metrics" (9090) is the
+		// separate plain-HTTP Prometheus listener (agent/cmd/main.go's
+		// --metrics-addr); declaring it as a named containerPort lets the
+		// chart's agent PodMonitor target it by name (podMetricsEndpoints[].port)
+		// instead of a bare portNumber, which needs a recent
+		// Prometheus-Operator CRD version to exist at all.
+		Ports: []corev1.ContainerPort{
+			{Name: "agent", ContainerPort: 8090},
+			{Name: "metrics", ContainerPort: 9090},
+		},
+		Resources: res,
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot:             &nonRoot,
 			RunAsUser:                &uid,
@@ -2221,6 +2251,13 @@ func (r *GameServerReconciler) reconcileBackupSchedule(
 		bs.Spec.RepoRef = &gs.Spec.BackupPolicy.RepoRef
 		bs.Spec.Retention = gs.Spec.BackupPolicy.Retention
 		bs.Spec.Suspend = gs.Spec.BackupPolicy.Suspend
+		// InlineBackupPolicy exposes no quiesce field, so this is the only
+		// place that sets it. bs.Spec.Quiesce has no `omitempty` (see its
+		// doc comment), so leaving it unset here would send an explicit
+		// `false` on every Create/Update via the typed client and defeat
+		// the CRD's `default: true` (F-045) — always send the true the CRD
+		// documents as the default.
+		bs.Spec.Quiesce = true
 		return controllerutil.SetControllerReference(gs, bs, r.Scheme)
 	})
 	return err

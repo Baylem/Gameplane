@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ValgulNecron/gameplane/api/internal/auth"
 	"github.com/ValgulNecron/gameplane/api/internal/db"
 	"github.com/ValgulNecron/gameplane/api/internal/httperr"
 	"github.com/ValgulNecron/gameplane/api/internal/rbac"
@@ -148,8 +149,7 @@ func (h *roleHandler) create(w http.ResponseWriter, req *http.Request) {
 		httperr.Write(w, req, err)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-	writeJSON(w, roleDTO{Name: body.Name, Description: body.Description, Permissions: dedupSorted(body.Permissions)})
+	writeJSONCreated(w, roleDTO{Name: body.Name, Description: body.Description, Permissions: dedupSorted(body.Permissions)})
 }
 
 type roleUpdateReq struct {
@@ -182,6 +182,16 @@ func (h *roleHandler) update(w http.ResponseWriter, req *http.Request) {
 	}
 	if body.Permissions != nil {
 		if msg, ok := validatePermissions(*body.Permissions); !ok {
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+		// Lock to serialize with writes so the last-user-manager check can't race.
+		unlock := h.db.LockUserManagement()
+		defer unlock()
+		if msg, err := h.userManagementGuard(req, name, *body.Permissions); err != nil {
+			httperr.Write(w, req, err)
+			return
+		} else if msg != "" {
 			http.Error(w, msg, http.StatusBadRequest)
 			return
 		}
@@ -309,6 +319,52 @@ func validatePermissions(perms []string) (string, bool) {
 		}
 	}
 	return "", true
+}
+
+// userManagementGuard applies the user-administration lockout guards
+// (the same ones users.update applies to a primary-role change) to a
+// permission change on role. It returns a refusal message when the new
+// permissions drop users:manage from a role that grants it today and
+// either the role is the caller's own primary role, or every user who can
+// manage users holds that role. An empty message means the change may
+// proceed.
+func (h *roleHandler) userManagementGuard(req *http.Request, role string, perms []string) (string, error) {
+	if permsGrantUserManagement(perms) {
+		return "", nil
+	}
+	grantsNow, err := h.db.RoleGrantsUserManagement(req.Context(), role)
+	if err != nil {
+		return "", err
+	}
+	if !grantsNow {
+		return "", nil
+	}
+	if caller := auth.UserFromContext(req.Context()); caller != nil && caller.Role == role {
+		return "cannot remove your own user-management access", nil
+	}
+	total, err := h.db.UserManagerCount(req.Context())
+	if err != nil {
+		return "", err
+	}
+	others, err := h.db.UserManagerCountExcludingRole(req.Context(), role)
+	if err != nil {
+		return "", err
+	}
+	if total > 0 && others == 0 {
+		return "cannot remove user management from the role every user manager holds", nil
+	}
+	return "", nil
+}
+
+// permsGrantUserManagement reports whether a permission list includes
+// users:manage or the "*" wildcard.
+func permsGrantUserManagement(perms []string) bool {
+	for _, p := range perms {
+		if p == "users:manage" || p == "*" {
+			return true
+		}
+	}
+	return false
 }
 
 func insertPermissions(req *http.Request, tx *sql.Tx, role string, perms []string) error {

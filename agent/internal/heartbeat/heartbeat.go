@@ -1,8 +1,12 @@
 // Package heartbeat periodically patches the owning GameServer's
 // status.agent.{lastHeartbeat, playersOnline, playersMax, gameVersion} —
-// plus the agent's own cpu/memory/disk usage — so the control plane can
-// distinguish "pod ready" from "game actually up" and surface live
-// resource usage without a cluster metrics pipeline.
+// plus resource usage — so the control plane can distinguish "pod ready"
+// from "game actually up" and surface live resource usage without a
+// cluster metrics pipeline. In proc mode (the production default) the
+// reported cpu/memory/disk usage is the game process(es)' own usage, read
+// from /proc with the agent's own process subtree and the pause process
+// excluded — not the agent's usage. Cgroup mode, a fallback for older
+// clusters, reports the whole pod's usage instead.
 //
 // The agent uses its in-pod ServiceAccount to authenticate to the
 // Kubernetes API directly; no traffic flows through the Gameplane API
@@ -126,7 +130,13 @@ func sendOnce(ctx context.Context, dyn dynamic.Interface, cfg Config) error {
 	agent := map[string]any{
 		"lastHeartbeat": metav1.Now().UTC().Format(time.RFC3339),
 		"version":       cfg.Version,
-		"gameVersion":   cfg.Game,
+		// gameVersion: the agent has no source for the game's actual
+		// running version. cfg.Game is the template's game identifier
+		// (e.g. "minecraft-java", "palworld"), not a version string, and
+		// must not be reported as one (spec 018 F-105). Patch null so a
+		// merge patch clears any stale value from before this fix, same
+		// as the unknown-is-null contract used below for players/usage.
+		"gameVersion": nil,
 	}
 
 	// Prepare the metrics snapshot. Will be updated below as we gather data.

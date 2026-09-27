@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
 )
@@ -110,6 +112,56 @@ func TestModule_DigestPinMismatch(t *testing.T) {
 	expectModulePhase(t, modName, gameplanev1alpha1.ModulePhaseFailed, "pinned digest")
 }
 
+// TestModule_FailedDigestPinSettles — F-258: a Module that stays Failed for
+// the same cause at the same generation must stop writing status (each write
+// re-queued it through its own watch, so it hot-looped and every other writer
+// conflicted). A plain Get+Update then succeeds without conflict retries, and
+// fixing the pin still takes the Module to Ready.
+func TestModule_FailedDigestPinSettles(t *testing.T) {
+	_ = newNamespace(t)
+	fake := newFakeOCI()
+	startMgr(t, "gameplane-system", withModuleReconciler(fake))
+
+	srcName, _ := seedMC(t, fake)
+	modName := uniqueName("mod-settle")
+	createModule(t, modName, srcName, func(m *gameplanev1alpha1.Module) {
+		m.Spec.Digest = "sha256:wrong"
+	})
+	expectModulePhase(t, modName, gameplanev1alpha1.ModulePhaseFailed, "pinned digest")
+
+	// Wait for the resourceVersion to hold still across a quiet window. With
+	// the churn, the status rewrites never stop and this times out.
+	var settledRV string
+	eventually(t, func() (bool, string) {
+		rv := getModule(t, modName).ResourceVersion
+		time.Sleep(time.Second)
+		after := getModule(t, modName)
+		if after.ResourceVersion != rv {
+			return false, fmt.Sprintf("resourceVersion moved %s -> %s (phase %s)",
+				rv, after.ResourceVersion, after.Status.Phase)
+		}
+		settledRV = rv
+		return true, ""
+	})
+	time.Sleep(2 * time.Second)
+	if got := getModule(t, modName); got.ResourceVersion != settledRV {
+		t.Fatalf("Failed Module kept rewriting: resourceVersion %s -> %s", settledRV, got.ResourceVersion)
+	}
+
+	// A single Get+Update (no conflict retry) must win now that nothing
+	// else is writing the Module.
+	var mod gameplanev1alpha1.Module
+	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: modName}, &mod); err != nil {
+		t.Fatalf("get module: %v", err)
+	}
+	mod.Spec.Digest = "sha256:mc-1.0.0" // fixtureBundle's digest
+	if err := k8sClient.Update(context.Background(), &mod); err != nil {
+		t.Fatalf("update settled Failed module: %v", err)
+	}
+
+	expectModulePhase(t, modName, gameplanev1alpha1.ModulePhaseReady, "")
+}
+
 // TestModule_DigestPinMatch — a correct spec.digest installs cleanly.
 func TestModule_DigestPinMatch(t *testing.T) {
 	_ = newNamespace(t)
@@ -123,5 +175,67 @@ func TestModule_DigestPinMatch(t *testing.T) {
 		m.Spec.Digest = "sha256:mc-1.0.0"
 	})
 
+	expectModulePhase(t, modName, gameplanev1alpha1.ModulePhaseReady, "")
+}
+
+// patchModuleDigest sets a Module's spec.digest with a JSON merge patch.
+// The patch carries no resourceVersion, so it applies regardless of the
+// status writes the reconciler keeps making while the Module is Failed
+// (each retry flips it through Pulling and back to Failed), which a
+// Get+Update cycle can keep losing even under RetryOnConflict.
+func patchModuleDigest(t *testing.T, name, digest string) {
+	t.Helper()
+	var mod gameplanev1alpha1.Module
+	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: name}, &mod); err != nil {
+		t.Fatalf("get module %s: %v", name, err)
+	}
+	base := mod.DeepCopy()
+	mod.Spec.Digest = digest
+	if err := k8sClient.Patch(context.Background(), &mod, client.MergeFrom(base)); err != nil {
+		t.Fatalf("patch module digest: %v", err)
+	}
+}
+
+// TestModule_DigestPinCheckedOnReadyModule — a spec.digest changed on a
+// Ready Module is checked against the applied bundle, and restoring the
+// matching pin brings the Module back to Ready.
+func TestModule_DigestPinCheckedOnReadyModule(t *testing.T) {
+	_ = newNamespace(t)
+	fake := newFakeOCI()
+	startMgr(t, "gameplane-system", withModuleReconciler(fake))
+
+	srcName, _ := seedMC(t, fake)
+	modName := uniqueName("mod-repin")
+	createModule(t, modName, srcName, func(m *gameplanev1alpha1.Module) {
+		// fixtureBundle stamps digest "sha256:<name>-<version>".
+		m.Spec.Digest = "sha256:mc-1.0.0"
+	})
+	expectModulePhase(t, modName, gameplanev1alpha1.ModulePhaseReady, "")
+
+	// Same version, different pin: the Module must leave Ready and
+	// report the pin check's reason for the new generation.
+	patchModuleDigest(t, modName, "sha256:other")
+	eventually(t, func() (bool, string) {
+		got := getModule(t, modName)
+		if got.Status.Phase != gameplanev1alpha1.ModulePhaseFailed {
+			return false, "phase=" + got.Status.Phase
+		}
+		if got.Status.ObservedGeneration != got.Generation {
+			return false, fmt.Sprintf("observedGeneration=%d generation=%d",
+				got.Status.ObservedGeneration, got.Generation)
+		}
+		for _, c := range got.Status.Conditions {
+			if c.Type == gameplanev1alpha1.ModuleConditionReady {
+				if c.Reason != "DigestMismatch" {
+					return false, "Ready reason=" + c.Reason
+				}
+				return true, ""
+			}
+		}
+		return false, "no Ready condition"
+	})
+
+	// Restoring the matching pin reconciles back to Ready.
+	patchModuleDigest(t, modName, "sha256:mc-1.0.0")
 	expectModulePhase(t, modName, gameplanev1alpha1.ModulePhaseReady, "")
 }

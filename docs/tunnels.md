@@ -122,7 +122,8 @@ metadata:
   name: minecraft-tunneled
   namespace: gameplane-games
 spec:
-  template: minecraft-java
+  templateRef:
+    name: minecraft-java
   networking:
     expose: ClusterIP
     tunnel:
@@ -163,7 +164,8 @@ metadata:
   name: minecraft-tailnet
   namespace: gameplane-games
 spec:
-  template: minecraft-java
+  templateRef:
+    name: minecraft-java
   networking:
     expose: ClusterIP
     tunnel:
@@ -210,7 +212,8 @@ metadata:
   name: minecraft-playit
   namespace: gameplane-games
 spec:
-  template: minecraft-java
+  templateRef:
+    name: minecraft-java
   networking:
     expose: ClusterIP
     tunnel:
@@ -224,6 +227,19 @@ Wait for the pod to reach `Running` state. Once the tunnel pod connects and
 reports the assigned address, it appears in `status.endpoints`. The address
 changes if the pod restarts; playit does not guarantee address stability on free
 tier.
+
+How the address gets there: the tunnel pod polls `playitd`'s local control
+socket for the tunnels on your playit account and their assigned addresses. It
+patches them into the GameServer's `status.tunnelEndpoints`, and the operator
+validates them and copies them into `status.endpoints`. playit doesn't say which
+tunnel belongs to which game port, so the pod matches each playit tunnel to a
+game port by the **local port** the tunnel forwards to. Set each tunnel's local
+port in the playit dashboard to the game's container port (for example `25565`
+for Minecraft Java). If the template advertises a single port and the account
+has a single enabled tunnel, the pod pairs them even when the ports differ. If a
+playit address has no port (a `*.joinmc.link` name served through a DNS SRV
+record), it's shown with the game's port. The pod re-checks every 30 seconds, so
+a changed address shows up without a restart.
 
 > **Free tier limits.** By default, playit assigns 8 hours/day per secret. Upgrade
 > to a paid plan for 24/7 access.
@@ -301,7 +317,7 @@ If you want to avoid reconnects on wake, consider:
 
 1. **Check the tunnel pod is running:**
    ```bash
-   kubectl -n gameplane-games get pods -l gameplane.local/tunnel=<server-name>
+   kubectl -n gameplane-games get pods -l app.kubernetes.io/name=gameplane-tunnel,app.kubernetes.io/instance=<server-name>
    ```
    Look for a pod in `Running` or `Ready 1/1`.
 
@@ -320,12 +336,20 @@ If you want to avoid reconnects on wake, consider:
 
 4. **Check NetworkPolicy.**
    By default, `networkPolicies.enabled=true` applies a default-deny-egress
-   policy to the games namespace. The tunnel pod must have egress to your relay.
-   
-   > **Planned:** Gameplane will automatically create a NetworkPolicy rule
-   > granting the tunnel pod egress to the relay's address (for frp and playit;
-   > Tailscale traffic is handled differently). For now, manually add a
-   > NetworkPolicy if needed.
+   policy to the games namespace. The operator automatically creates a
+   `<server-name>-tunnel-egress` NetworkPolicy that admits the tunnel pod's
+   egress to DNS and the template's advertised container ports, plus
+   provider-specific relay ports:
+   - **frp:** the frp server's `ServerAddr:ServerPort` (default TCP 7000).
+   - **tailscale:** the control plane on TCP 443 and DERP relays on UDP 41641.
+   - **playit:** an unrestricted egress rule (all ports, all protocols, any
+     destination), in addition to the DNS/advertised-ports rule every
+     provider gets. playit does not publish a fixed set of relay endpoints
+     or ports, so a per-port allow list can't be expressed the way it can
+     for frp and tailscale.
+
+   For frp, tailscale, and playit, no manual NetworkPolicy is needed for a
+   standard setup.
    
    If the tunnel pod cannot reach the relay:
    ```bash

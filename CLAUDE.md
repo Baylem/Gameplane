@@ -56,6 +56,7 @@ npm view eslint-plugin-react@latest version peerDependencies.eslint
 ├── netguard/                 # SSRF dial-guard (Go) — operator & agent
 ├── gameaction/               # Console-injection guard & command renderer (Go) — api & agent
 ├── gameproto/                # Minecraft & Terraria wire protocol handshake parser (Go) — sentinel
+├── gp-module/                # Module authoring CLI: init, validate, preview, package (Go)
 ├── operator/                 # controller-runtime operator (Go)
 │   ├── api/v1alpha1/         # CRD Go types (edit here; run `make generate manifests`)
 │   │   └── zz_generated.deepcopy.go  # GENERATED - do not hand-edit
@@ -75,7 +76,7 @@ npm view eslint-plugin-react@latest version peerDependencies.eslint
 ├── mcp-server/               # Read-only Model Context Protocol server (Go)
 ├── svcutil/                  # Shared environment parsing & graceful shutdown helpers (Go)
 ├── tunnel/                   # Relay client supervisor (frp, Tailscale, playit) (Go)
-├── web/                      # React 18 + TS strict + Vite dashboard
+├── web/                      # React 19 + TS strict + Vite dashboard
 │   └── src/{routes,components,lib,router,styles,test}/
 ├── modules/                  # SUBMODULE -> gameplane-module (OCI game templates)
 ├── website/                  # SUBMODULE -> gameplane-website (Astro docs/marketing)
@@ -85,7 +86,7 @@ npm view eslint-plugin-react@latest version peerDependencies.eslint
 ├── docs/                     # Documentation (architecture, security, modules)
 ├── design.pen                # Canonical Pencil UI design source (JSON)
 ├── cosign.pub                # Public key for image & module signature verification
-├── go.work                   # Go workspace linking all 14 Go modules
+├── go.work                   # Go workspace linking all 15 Go modules (incl. test/e2e)
 └── Makefile                  # Canonical task runner
 ```
 
@@ -101,7 +102,7 @@ Always invoke commands via `Makefile`.
 ```sh
 make dev-up        # Start Kind cluster + local OCI registry (:5001) + deploy Helm chart
 make web-dev       # Start Vite dev server with proxy to in-cluster API
-make dev-load      # Rebuild and reload local images into Kind
+make dev-load      # Load already-built local images into Kind (run `make images` first to rebuild)
 make dev-install   # Re-run Helm upgrade against local cluster
 make dev-down      # Destroy Kind cluster and local registry
 ```
@@ -109,7 +110,7 @@ make dev-down      # Destroy Kind cluster and local registry
 ### Build
 ```sh
 make build         # Compile all Go modules and build web assets
-make build-go      # Compile all 14 Go workspace modules
+make build-go      # Compile the 14 Go modules in GO_MODULES (all but test/e2e)
 make build-web     # Build web/dist via `npm ci && npm run build`
 make images        # Build all container images locally
 ```
@@ -139,6 +140,7 @@ make test-e2e-bucket     # Specific CI bucket: BUCKET=(operator|api-auth|api-rol
 | `netguard` | 91% | Dial hook SSRF validation |
 | `gameaction` | 91% | Command injection template engine |
 | `gameproto` | 90% | Protocol parser |
+| `gp-module` | 80% | Module authoring CLI |
 | `operator` | 72% | Controller runtime reconcilers |
 | `api` | 80% | HTTP/WS endpoints and auth |
 | `agent` | 90% | Pod sidecar operations |
@@ -250,6 +252,7 @@ make tidy            # Runs `go mod tidy` across all workspace modules
 | `netguard` | Go | Dial-time SSRF prevention (`IsAllowed` for operator, `IsPublic` for agent). |
 | `gameaction` | Go | Validates console inputs against schemas; escapes injection attacks. |
 | `gameproto` | Go | Wire-protocol parser for Minecraft/Terraria connection filtering. |
+| `gp-module` | Go | Module authoring CLI: scaffold, offline validate, dry-run preview, OCI package. |
 | `svcutil` | Go | Stdlib-only helpers for env vars and graceful server shutdown (`RunHTTP`). |
 | `operator` | Go, controller-runtime | Authoritative reconciler for 9 CRDs (`GameServer`, `GameTemplate`, etc.). |
 | `api` | Go, chi | REST/WebSocket UX gateway; supports SQLite and experimental PostgreSQL. |
@@ -259,7 +262,7 @@ make tidy            # Runs `go mod tidy` across all workspace modules
 | `sentinel` | Go | Wake-on-connect listener that holds ports and triggers pod wakeups. |
 | `capture-sidecar` | Go | Ephemeral packet capture container with BPF filtering. |
 | `mcp-server` | Go | Read-only MCP daemon for cluster debugging via stdio. |
-| `web` | React 18, Vite, TS | Dashboard (TanStack Router & Query, Tailwind, HeroUI v3). |
+| `web` | React 19, Vite, TS | Dashboard (TanStack Router & Query, Tailwind, HeroUI v3). |
 | `modules/` | OCI / oras | Submodule with game templates (Minecraft, Terraria, Valheim). |
 
 ---

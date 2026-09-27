@@ -321,15 +321,15 @@ export interface BackupCreate {
 }
 
 export const Backups = {
-  list: () => api<List<Backup>>("/backups"),
-  get: (name: string) => api<Backup>(`/backups/${name}`),
-  create: (opts: BackupCreate) => {
+  list: (ns?: string) => api<List<Backup>>(withNS("/backups", ns)),
+  get: (name: string, ns?: string) => api<Backup>(withNS(`/backups/${name}`, ns)),
+  create: (opts: BackupCreate, ns?: string) => {
     const { name, generateName, ...spec } = opts;
     const ident = name ? { name } : { generateName: generateName ?? `${spec.serverRef.name}-manual-` };
-    return api<Backup>("/backups", { method: "POST", body: envelope("Backup", ident, spec) });
+    return api<Backup>(withNS("/backups", ns), { method: "POST", body: envelope("Backup", ident, spec) });
   },
-  remove: (name: string) =>
-    api<void>(`/backups/${name}`, { method: "DELETE" }),
+  remove: (name: string, ns?: string) =>
+    api<void>(withNS(`/backups/${name}`, ns), { method: "DELETE" }),
 };
 
 export interface ScheduleCreate {
@@ -345,25 +345,24 @@ export interface ScheduleCreate {
 }
 
 export const Schedules = {
-  list: () => api<List<BackupSchedule>>("/schedules"),
-  get: (name: string) => api<BackupSchedule>(`/schedules/${name}`),
-  create: (opts: ScheduleCreate) => {
+  list: (ns?: string) => api<List<BackupSchedule>>(withNS("/schedules", ns)),
+  create: (opts: ScheduleCreate, ns?: string) => {
     const { name, generateName, ...spec } = opts;
     const ident = name ? { name } : { generateName: generateName ?? `${spec.serverRef.name}-sched-` };
-    return api<BackupSchedule>("/schedules", {
+    return api<BackupSchedule>(withNS("/schedules", ns), {
       method: "POST",
       body: envelope("BackupSchedule", ident, spec),
     });
   },
   // Read-modify-write: fetches the current object, applies changes to its
   // spec, and PUTs the merged result. Used for the suspend toggle.
-  patchSpec: async (name: string, patch: Partial<BackupSchedule["spec"]>) => {
-    const current = await api<BackupSchedule>(`/schedules/${name}`);
+  patchSpec: async (name: string, patch: Partial<BackupSchedule["spec"]>, ns?: string) => {
+    const current = await api<BackupSchedule>(withNS(`/schedules/${name}`, ns));
     const next = { ...current, spec: { ...current.spec, ...patch } };
-    return api<BackupSchedule>(`/schedules/${name}`, { method: "PUT", body: next });
+    return api<BackupSchedule>(withNS(`/schedules/${name}`, ns), { method: "PUT", body: next });
   },
-  remove: (name: string) =>
-    api<void>(`/schedules/${name}`, { method: "DELETE" }),
+  remove: (name: string, ns?: string) =>
+    api<void>(withNS(`/schedules/${name}`, ns), { method: "DELETE" }),
 };
 
 export interface RestoreCreate {
@@ -374,14 +373,12 @@ export interface RestoreCreate {
 }
 
 export const Restores = {
-  list: () => api<List<Restore>>("/restores"),
-  create: (opts: RestoreCreate) => {
+  list: (ns?: string) => api<List<Restore>>(withNS("/restores", ns)),
+  create: (opts: RestoreCreate, ns?: string) => {
     const { name, generateName, ...spec } = opts;
     const ident = name ? { name } : { generateName: generateName ?? "restore-" };
-    return api<Restore>("/restores", { method: "POST", body: envelope("Restore", ident, spec) });
+    return api<Restore>(withNS("/restores", ns), { method: "POST", body: envelope("Restore", ident, spec) });
   },
-  remove: (name: string) =>
-    api<void>(`/restores/${name}`, { method: "DELETE" }),
 };
 
 export interface BackupDestinationCreate {
@@ -392,8 +389,6 @@ export interface BackupDestinationCreate {
 
 export const BackupDestinations = {
   list: () => api<List<BackupDestination>>("/backup-destinations"),
-  get: (name: string) =>
-    api<BackupDestination>(`/backup-destinations/${name}`),
   // POST is also used to rotate the password of an existing destination —
   // the server treats {name} as the upsert key.
   upsert: (body: BackupDestinationCreate) =>
@@ -486,11 +481,11 @@ export const Users = {
     api<void>(`/users/${id}/bindings/${roleName}/${namespace}`, {
       method: "DELETE",
     }),
-  // Theme preferences (contracts/user-preferences-api.md §1.1–1.3): GET
-  // returns the effective preferences (pink/system defaults when the user
-  // has no stored row); PUT applies an update without clearing stored
-  // customs; POST reset is the only operation that deletes them (FR-012).
-  getPreferences: () => api<UserThemePreferences>("/users/me/preferences"),
+  // Theme preferences (contracts/user-preferences-api.md §1.1–1.3): the
+  // effective preferences (pink/system defaults when the user has no stored
+  // row) arrive on the user profile itself; PUT applies an update without
+  // clearing stored customs; POST reset is the only operation that deletes
+  // them (FR-012).
   updatePreferences: (body: UserPreferencesUpdate) =>
     api<UserThemePreferences>("/users/me/preferences", { method: "PUT", body }),
   resetPreferences: (body?: UserPreferencesReset) =>
@@ -748,7 +743,6 @@ export interface InstallRequest {
 export const Modules = {
   catalog: () => api<List<CatalogEntry>>("/modules/catalog"),
   list: () => api<List<Module>>("/modules"),
-  get: (name: string) => api<Module>(`/modules/${name}`),
   install: (body: InstallRequest) =>
     api<Module>("/modules", { method: "POST", body }),
   upgrade: (name: string, version: string) =>
@@ -804,22 +798,8 @@ export const ModuleSources = {
     api<void>(`/modules/sources/${source}/upload/${module}`, { method: "DELETE" }),
 };
 
-// Share link endpoint paths for authenticated (create, list, revoke) and public
-// (resolve, start) operations. Paths are returned without automatic cluster param;
-// the api functions in api.ts apply clustering and auth headers as needed.
-export const Shares = {
-  // POST /servers/{name}:shares (authenticated, owner-only).
-  create: (server: string) => `/servers/${encodeURIComponent(server)}:shares`,
-  // GET /servers/{name}:shares (authenticated, owner-only).
-  list: (server: string) => `/servers/${encodeURIComponent(server)}:shares`,
-  // DELETE /servers/{name}/shares/{id} (authenticated, owner-only).
-  revoke: (server: string, id: string) =>
-    `/servers/${encodeURIComponent(server)}/shares/${encodeURIComponent(id)}`,
-  // GET /shares/{token} (public, no auth, rate-limited).
-  resolve: (token: string) => `/shares/${encodeURIComponent(token)}`,
-  // POST /shares/{token}/start (public, no auth, rate-limited, only if canStart).
-  start: (token: string) => `/shares/${encodeURIComponent(token)}/start`,
-};
+// Share link operations live in api.ts as `Shares` (it needs the api
+// functions' clustering and auth-header handling), not here.
 
 // Module Builder visual authoring, validation, preview, and export surface.
 

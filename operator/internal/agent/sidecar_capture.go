@@ -30,6 +30,12 @@ func NewCaptureClient(agent *Client) *CaptureClient {
 	}
 }
 
+// ErrCaptureClientDisabled is returned by GetCaptureStatus when no mTLS
+// material was configured, so the client cannot reach any sidecar. Nothing
+// can have been started through such a client either, which lets callers
+// tell it apart from a transient failure with errors.Is.
+var ErrCaptureClientDisabled = errors.New("capture sidecar client disabled")
+
 // HTTPError records a non-2xx HTTP status returned by the capture sidecar.
 type HTTPError struct {
 	Op         string
@@ -48,13 +54,19 @@ func (e *HTTPError) Error() string {
 // IsTransientError reports whether err indicates a temporary failure communicating
 // with the capture sidecar (such as a network dial error, timeout, connection refusal,
 // or 5xx server error) that is worth retrying. 4xx HTTP client errors (e.g. 400 Bad Request
-// or 409 Conflict) are considered permanent.
+// or 409 Conflict) are considered permanent, and so is 507 Insufficient Storage: the
+// capture sidecar returns it when a start would push the volume past its retention
+// budget (F-187), a condition that will not resolve within a single reconcile's retry
+// window, so retrying it just repeats a directory scan for no benefit.
 func IsTransientError(err error) bool {
 	if err == nil {
 		return false
 	}
 	var httpErr *HTTPError
 	if errors.As(err, &httpErr) {
+		if httpErr.StatusCode == http.StatusInsufficientStorage {
+			return false
+		}
 		return httpErr.StatusCode >= 500 || httpErr.StatusCode == http.StatusTooManyRequests
 	}
 	return true
@@ -193,7 +205,7 @@ func (c *CaptureClient) GetCaptureStatus(
 	namespace, server, captureID string,
 ) (string, int64, int64, string, error) {
 	if c.Disabled {
-		return "unknown", 0, 0, "", fmt.Errorf("capture sidecar client disabled")
+		return "unknown", 0, 0, "", ErrCaptureClientDisabled
 	}
 
 	url := sidecarURL(namespace, server, fmt.Sprintf("/captures/%s/status", captureID))

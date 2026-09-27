@@ -3,9 +3,11 @@
 //
 // Many game protocols are different, but "list online players via RCON
 // list" works for all Minecraft variants (vanilla/paper/spigot/forge)
-// and Source-engine servers. Moderation commands (kick/ban/unban) vary
-// per game and are dispatched through a small commander strategy keyed
-// off the agent's --game flag.
+// and Source-engine servers. Moderation commands (kick/ban/unban/
+// whitelist) are dispatched through a single template-driven commander
+// that renders each command from the module's declared
+// capabilities.players templates; a template declaring no capabilities
+// yields a commander that reports everything unsupported.
 package players
 
 import (
@@ -367,7 +369,14 @@ func ParseCounts(raw string) (online, maxPlayers int, ok bool) {
 func parseList(raw string) Snapshot {
 	m := matchList(raw)
 	if m == nil {
-		return Snapshot{Players: []string{}}
+		// No known player-list response format matched — e.g. a game with
+		// RCON enabled but no capabilities.players declared. This is
+		// "unknown", not "zero players": a zero-value Online/Max here is
+		// indistinguishable from a real empty server. Use the same -1/-1
+		// sentinel already returned when RCON is disabled entirely (see
+		// h.serve's rcon.ErrDisabled branch above) so both unknown cases
+		// share one representation (spec 018 F-106).
+		return Snapshot{Online: -1, Max: -1, Players: []string{}}
 	}
 	online, _ := strconv.Atoi(m[1])
 	maxN, _ := strconv.Atoi(m[2])
@@ -387,11 +396,11 @@ func parseList(raw string) Snapshot {
 // whole match. Each match is one player.
 func (h *handler) parseListWithRegex(raw string) Snapshot {
 	if h.listRE == nil {
-		return Snapshot{Players: []string{}}
+		return Snapshot{Max: -1, Players: []string{}}
 	}
 	matches := h.listRE.FindAllStringSubmatch(raw, -1)
 	if len(matches) == 0 {
-		return Snapshot{Players: []string{}}
+		return Snapshot{Max: -1, Players: []string{}}
 	}
 	names := []string{}
 	for _, m := range matches {

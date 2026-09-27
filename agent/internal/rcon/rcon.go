@@ -13,7 +13,17 @@
 //
 // An authentication failure responds with id=-1. Large command
 // responses are split across multiple RESPONSE_VALUE packets; we
-// assemble them with the Valve-documented "empty-cmd sentinel" trick.
+// assemble them with a short grace-window read loop instead of the
+// Valve-documented "empty-cmd sentinel" trick, which Minecraft's RCON
+// doesn't tolerate (see the comment on Exec's read loop).
+//
+// Every client in this package dials the address configured by
+// --rcon-host/--rcon-port, which the game module declares and which is
+// expected to stay pod-local (typically 127.0.0.1, the sidecar's own
+// pod). The WebSocket and Satisfactory clients additionally enforce
+// this: WebSocket routes its dial through netguard.IsAllowed, and
+// Satisfactory only relaxes TLS verification when the configured host
+// actually resolves to loopback.
 package rcon
 
 import (
@@ -36,6 +46,16 @@ const (
 	typeExecCmd      = 2
 	typeAuthResponse = 2
 	typeRespValue    = 0
+
+	// minPacketSize / maxPacketSize bound the wire size field of an
+	// incoming reply packet (id + type + body + 2 trailing nulls).
+	// Minecraft chunks a long reply at up to 4096 *characters* (size up
+	// to 4106); multi-byte UTF-8 text (accents, CJK, emoji in player or
+	// ban-reason strings) can inflate a chunk to up to 4 bytes/character,
+	// so the bound allows a full 4096-character chunk at its worst-case
+	// byte length (F-104).
+	minPacketSize = 10
+	maxPacketSize = 4*4096 + 10 // 16394
 )
 
 // PassFn resolves the RCON password on demand (allowing rotation without restart).
@@ -297,7 +317,7 @@ func (c *Client) readPacket() (id, kind uint32, body string, err error) {
 		return
 	}
 	size := binary.LittleEndian.Uint32(hdr[:])
-	if size < 10 || size > 4096 {
+	if size < minPacketSize || size > maxPacketSize {
 		err = fmt.Errorf("rcon: malformed packet size %d", size)
 		return
 	}

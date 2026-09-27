@@ -382,7 +382,7 @@ func TestGameServer_StatusPatchPreservesAgentHeartbeat(t *testing.T) {
 	stale := seeded.DeepCopy()
 	stale.Status.Agent = nil
 	r := &GameServerReconciler{Client: k8sClient, APIReader: k8sClient, Scheme: scheme}
-	if _, err := r.reconcileStatus(ctx, stale, idleAwake, nil, tunnelPlan{}, tmpl, nil, ""); err != nil {
+	if _, err := r.reconcileStatus(ctx, stale, idleAwake, nil, nil, tunnelPlan{}, tmpl, nil, ""); err != nil {
 		t.Fatalf("reconcileStatus: %v", err)
 	}
 
@@ -688,6 +688,43 @@ func TestGameServer_BackupPolicyMaterializesSchedule(t *testing.T) {
 		}
 		if !ok {
 			return false, "schedule not owned by GameServer"
+		}
+		return true, ""
+	})
+}
+
+// TestGameServer_BackupPolicyMaterializesQuiescedSchedule covers F-045:
+// InlineBackupPolicy exposes no quiesce field, so the materialized
+// BackupSchedule must still get the CRD's documented default (true) rather
+// than the Go zero value the typed client would otherwise send explicitly on
+// the wire (defeating the apiserver's own `default: true`).
+func TestGameServer_BackupPolicyMaterializesQuiescedSchedule(t *testing.T) {
+	ns := newNamespace(t)
+	startMgr(t, ns, withGameServerReconciler(t, ns))
+
+	tmpl := buildGameTemplate(uniqueName("minecraft"))
+	if err := k8sClient.Create(context.Background(), tmpl); err != nil {
+		t.Fatalf("create template: %v", err)
+	}
+	deleteCleanup(t, tmpl)
+
+	gs := buildGameServer(ns, "smp", tmpl.Name)
+	gs.Spec.BackupPolicy = &gameplanev1alpha1.InlineBackupPolicy{
+		Schedule: "0 */6 * * *",
+		RepoRef:  gameplanev1alpha1.SecretKeySelector{Name: "repo", Key: "url"},
+	}
+	if err := k8sClient.Create(context.Background(), gs); err != nil {
+		t.Fatalf("create gameserver: %v", err)
+	}
+
+	eventually(t, func() (bool, string) {
+		var bs gameplanev1alpha1.BackupSchedule
+		if err := k8sClient.Get(context.Background(),
+			types.NamespacedName{Namespace: ns, Name: "smp-auto"}, &bs); err != nil {
+			return false, "get schedule: " + err.Error()
+		}
+		if !bs.Spec.Quiesce {
+			return false, "schedule.spec.quiesce = false, want true (CRD default)"
 		}
 		return true, ""
 	})
@@ -2827,6 +2864,126 @@ func TestGameServer_TunnelCreatesDeploymentAndPolicy(t *testing.T) {
 			return false, "tunnel policy has no egress rules"
 		}
 		return true, ""
+	})
+}
+
+// TestGameServer_TunnelPlayitPolicyAllowsAllPorts verifies that the tunnel
+// NetworkPolicy rendered for the playit provider actually grants the "all
+// ports" egress its comment promises (F-262): playit's control-plane and
+// relay endpoints aren't published on a fixed set of ports, so unlike frp
+// (ServerPort) and tailscale (443/41641) it gets a second egress rule with
+// no Ports (all ports/protocols) and no To (any destination), in addition
+// to -- not instead of -- the DNS/advertised-port rule every provider gets.
+func TestGameServer_TunnelPlayitPolicyAllowsAllPorts(t *testing.T) {
+	ns := newNamespace(t)
+	startMgr(t, ns, withGameServerReconciler(t, ns))
+
+	tmpl := buildGameTemplate(uniqueName("tunnel-playit-test"))
+	if err := k8sClient.Create(context.Background(), tmpl); err != nil {
+		t.Fatalf("create template: %v", err)
+	}
+	deleteCleanup(t, tmpl)
+
+	gs := buildGameServer(ns, "tunnel-playit-gs", tmpl.Name)
+	gs.Spec.Networking.Tunnel = &gameplanev1alpha1.GameServerTunnel{
+		Enabled:              true,
+		Provider:             "playit",
+		CredentialsSecretRef: &gameplanev1alpha1.SecretNameRef{Name: "tunnel-playit-gs-tunnel-creds"},
+		Playit:               &gameplanev1alpha1.PlayitTunnelSpec{},
+	}
+
+	if err := k8sClient.Create(context.Background(), gs); err != nil {
+		t.Fatalf("create gameserver: %v", err)
+	}
+
+	eventually(t, func() (bool, string) {
+		var np networkingv1.NetworkPolicy
+		if err := k8sClient.Get(context.Background(),
+			types.NamespacedName{Namespace: ns, Name: "tunnel-playit-gs-tunnel-egress"}, &np); err != nil {
+			return false, "tunnel network policy: " + err.Error()
+		}
+		if len(np.Spec.Egress) != 2 {
+			return false, fmt.Sprintf("egress rules = %d, want 2 (dns/advertised-ports + all-ports): %+v", len(np.Spec.Egress), np.Spec.Egress)
+		}
+
+		// The first rule (DNS + advertised ports) must be unchanged by the
+		// playit branch: no provider-specific ports leak into it.
+		first := np.Spec.Egress[0]
+		if len(first.Ports) == 0 {
+			return false, "first egress rule has no ports, want DNS ports at least"
+		}
+		if len(first.To) != 0 {
+			return false, fmt.Sprintf("first egress rule restricts To=%+v, want any destination", first.To)
+		}
+
+		// The second rule is playit's "all ports" grant: no Ports field
+		// (meaning all ports/protocols per NetworkPolicy semantics) and no
+		// To field (any destination), matching how frp/tailscale pick
+		// destinations.
+		second := np.Spec.Egress[1]
+		if len(second.Ports) != 0 {
+			return false, fmt.Sprintf("second egress rule has Ports=%+v, want none (all ports)", second.Ports)
+		}
+		if len(second.To) != 0 {
+			return false, fmt.Sprintf("second egress rule restricts To=%+v, want any destination", second.To)
+		}
+		return true, ""
+	})
+}
+
+// TestGameServer_TunnelFrpPortCarriesLocalPortAndProtocol verifies the
+// BACKING_SERVICE_PORT env var reaching the tunnel Deployment carries the
+// template port's own containerPort and protocol, not just the
+// operator-chosen public remotePort (F-052). Uses a UDP port with a
+// remotePort that deliberately differs from the Service port, the exact
+// combination that silently broke before the fix.
+func TestGameServer_TunnelFrpPortCarriesLocalPortAndProtocol(t *testing.T) {
+	ns := newNamespace(t)
+	startMgr(t, ns, withGameServerReconciler(t, ns))
+
+	tmpl := buildGameTemplate(uniqueName("tunnel-udp-test"))
+	tmpl.Spec.Ports[0].ContainerPort = 34197
+	tmpl.Spec.Ports[0].Protocol = corev1.ProtocolUDP
+	if err := k8sClient.Create(context.Background(), tmpl); err != nil {
+		t.Fatalf("create template: %v", err)
+	}
+	deleteCleanup(t, tmpl)
+
+	gs := buildGameServer(ns, "tunnel-udp-gs", tmpl.Name)
+	gs.Spec.Networking.Tunnel = &gameplanev1alpha1.GameServerTunnel{
+		Enabled:              true,
+		Provider:             "frp",
+		CredentialsSecretRef: &gameplanev1alpha1.SecretNameRef{Name: "tunnel-udp-gs-tunnel-creds"},
+		Frp: &gameplanev1alpha1.FrpTunnelSpec{
+			ServerAddr:  "tunnel.example.com",
+			ServerPort:  7000,
+			RemotePorts: []gameplanev1alpha1.RemotePortMapping{{Name: "game", RemotePort: 30000}},
+		},
+	}
+
+	if err := k8sClient.Create(context.Background(), gs); err != nil {
+		t.Fatalf("create gameserver: %v", err)
+	}
+
+	eventually(t, func() (bool, string) {
+		var dep appsv1.Deployment
+		if err := k8sClient.Get(context.Background(),
+			types.NamespacedName{Namespace: ns, Name: "tunnel-udp-gs-tunnel"}, &dep); err != nil {
+			return false, "tunnel deployment: " + err.Error()
+		}
+		if len(dep.Spec.Template.Spec.Containers) == 0 {
+			return false, "tunnel deployment has no containers"
+		}
+		for _, e := range dep.Spec.Template.Spec.Containers[0].Env {
+			if e.Name == "BACKING_SERVICE_PORT" {
+				want := "game:34197:30000:udp"
+				if e.Value != want {
+					return false, "BACKING_SERVICE_PORT = " + e.Value + ", want " + want
+				}
+				return true, ""
+			}
+		}
+		return false, "no BACKING_SERVICE_PORT env var on tunnel container"
 	})
 }
 

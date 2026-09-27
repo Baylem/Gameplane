@@ -430,9 +430,10 @@ func (h *captureHandler) captureDisable(w http.ResponseWriter, req *http.Request
 		return
 	}
 
-	// Stop every capture still Pending/Running before clearing the
-	// capability, reusing kube.StopNetworkCapture (kube/capture.go)
-	// rather than duplicating its status-patch logic.
+	// Request a stop of every capture still Pending/Running before
+	// clearing the capability, reusing kube.StopNetworkCapture
+	// (kube/capture.go). That only sets the stop-requested annotation; the
+	// operator stops the sidecar and completes each capture (F-259).
 	if err := h.stopActiveCaptures(req.Context(), k, ns, name); err != nil {
 		if !h.auditWriteOrFail(w, req, http.MethodPost, auditPath, name, "stop_failed", http.StatusInternalServerError) {
 			return
@@ -469,11 +470,13 @@ func (h *captureHandler) captureDisable(w http.ResponseWriter, req *http.Request
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
-// stopActiveCaptures stops every Pending/Running NetworkCapture for the
-// named server. It scans live captures rather than trusting
-// status.capture.activeCapture alone, for the same eventual-consistency
-// reason hasActiveCapture does below: that status field is maintained by
-// the operator's reconciler and can lag behind the true CR state.
+// stopActiveCaptures requests a stop (kube.StopNetworkCapture's
+// stop-requested annotation) of every Pending/Running NetworkCapture for
+// the named server; the operator completes them asynchronously. It scans
+// live captures rather than trusting status.capture.activeCapture alone,
+// for the same eventual-consistency reason hasActiveCapture does below:
+// that status field is maintained by the operator's reconciler and can
+// lag behind the true CR state.
 func (h *captureHandler) stopActiveCaptures(ctx context.Context, k *kube.Client, ns, name string) error {
 	captures, err := k.ListNetworkCaptures(ctx, ns, name)
 	if err != nil {
@@ -570,7 +573,8 @@ type captureStopResp struct {
 	PacketsWritten int64  `json:"packetsWritten"`
 }
 
-// captureStop stops a running capture.
+// captureStop requests that a running capture be stopped (the operator
+// completes it once the sidecar has stopped; see kube.StopNetworkCapture).
 // POST /servers/{name}:capture-stop
 func (h *captureHandler) captureStop(w http.ResponseWriter, req *http.Request) {
 	k, ok := resolveCluster(w, req, h.reg)
@@ -623,6 +627,10 @@ func (h *captureHandler) captureStop(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Requests the stop only (F-259): the operator stops the sidecar and
+	// then sets phase=Completed, so the response normally still reports
+	// Pending/Running. A repeat stop while the operator has not caught up
+	// yet is an idempotent no-op that returns 200 again.
 	stopped, err := k.StopNetworkCapture(req.Context(), ns, body.CaptureID)
 	if err != nil {
 		if !h.auditWriteOrFail(w, req, http.MethodPost, auditPath, target, "stop_failed", http.StatusInternalServerError) {
@@ -837,15 +845,19 @@ type captureDeleteResp struct {
 	CaptureID string `json:"captureId"`
 }
 
-// captureDelete deletes a NetworkCapture CR. It only ever removes the CR
-// itself (rule 10 — the operator is authoritative): there is no sidecar
-// endpoint to delete an individual capture file (capture-sidecar/specs.md's
-// endpoint table lists only :start/:stop/status/file) and no operator-side
-// finalizer or reconciler that removes /tmp/captures/<id>.pcapng from the
-// ephemeral container's emptyDir on CR deletion today. Capture file
-// lifecycle beyond the CR is therefore unmanaged by this handler; it is
-// left for the retention/TTL mechanism referenced in research.md
-// (Decision 5, T011) rather than invented here.
+// captureDelete deletes a NetworkCapture CR and, best-effort, the sidecar's
+// backing capture file. The CR itself remains the source of truth (rule 10 —
+// the operator is authoritative) and its deletion below is what the response
+// and audit trail report: k.DeleteNetworkCapture is the operation that can
+// fail the request. Removing the sidecar file is a courtesy alongside it —
+// deleteSidecarCaptureFile calls the sidecar's DELETE /captures/{id} route
+// directly (the same newValidatedHost + h.tlsClient path captureDownload
+// already uses for the home cluster), so the file stops counting against
+// the sidecar's volume budget (F-187) as soon as the CR is gone, instead of
+// only at the next pod restart (F-261). It is deliberately best-effort: a
+// pod that is already gone, or a remote cluster with no equivalent path
+// today, has no file left to remove (or no way to reach it), and neither
+// case should block deleting the CR.
 // DELETE /servers/{name}:capture?id={id}
 func (h *captureHandler) captureDelete(w http.ResponseWriter, req *http.Request) {
 	k, ok := resolveCluster(w, req, h.reg)
@@ -869,7 +881,8 @@ func (h *captureHandler) captureDelete(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	if _, err := k.GetGameServer(req.Context(), ns, name); err != nil {
+	gs, err := k.GetGameServer(req.Context(), ns, name)
+	if err != nil {
 		if apierrors.IsNotFound(err) {
 			if !h.auditWriteOrFail(w, req, http.MethodDelete, auditPath, target, "server_not_found", http.StatusNotFound) {
 				return
@@ -912,6 +925,14 @@ func (h *captureHandler) captureDelete(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
+	// Best-effort, before the CR is gone: see deleteSidecarCaptureFile's doc
+	// comment. Only reaches the sidecar for the home cluster, matching
+	// captureDownload's isRemoteCluster gate — a remote cluster's agent has
+	// no equivalent direct path today.
+	if !isRemoteCluster(req) {
+		h.deleteSidecarCaptureFile(req.Context(), gs.Name, gs.Namespace, captureID)
+	}
+
 	if err := k.DeleteNetworkCapture(req.Context(), ns, captureID); err != nil {
 		if !h.auditWriteOrFail(w, req, http.MethodDelete, auditPath, target, "delete_failed", http.StatusInternalServerError) {
 			return
@@ -939,6 +960,13 @@ func (h *captureHandler) captureDelete(w http.ResponseWriter, req *http.Request)
 
 // captureDownload downloads the capture file from the sidecar.
 // GET /servers/{name}:capture-file?id={id}
+//
+// Unlike the other capture routes, which act on NetworkCapture objects
+// through the cluster registry, the download streams from the sidecar's
+// in-cluster Service using the home cluster's mTLS material, so it is
+// served for the home cluster only. Until a cross-cluster agent exists, a
+// non-local `?cluster=` answers 501 Not Implemented with a readable reason
+// (audited with reason "cluster_not_local"), as rejectRemoteCluster does.
 func (h *captureHandler) captureDownload(w http.ResponseWriter, req *http.Request) {
 	k, ok := resolveCluster(w, req, h.reg)
 	if !ok {
@@ -952,6 +980,14 @@ func (h *captureHandler) captureDownload(w http.ResponseWriter, req *http.Reques
 	captureID := req.URL.Query().Get("id")
 	auditPath := fmt.Sprintf("/servers/%s:capture-file", name)
 	target := fmt.Sprintf("%s:%s", name, captureID)
+
+	if isRemoteCluster(req) {
+		if !h.auditWriteOrFail(w, req, http.MethodGet, auditPath, target, "cluster_not_local", http.StatusNotImplemented) {
+			return
+		}
+		httperr.WriteRemoteClusterNotImplemented(w)
+		return
+	}
 
 	if captureID == "" {
 		if !h.auditWriteOrFail(w, req, http.MethodGet, auditPath, target, "missing_id", http.StatusBadRequest) {
@@ -1128,6 +1164,58 @@ func (h *captureHandler) proxyFileDownload(w http.ResponseWriter, req *http.Requ
 	w.WriteHeader(resp.StatusCode)
 	_, _ = io.Copy(w, resp.Body)
 	return resp.StatusCode
+}
+
+// deleteSidecarCaptureFile calls the capture sidecar's DELETE /captures/{id}
+// route directly, using the same newValidatedHost + h.tlsClient pattern
+// proxyFileDownload uses for downloads, rather than routing the cleanup
+// through the operator. It is called from captureDelete so that removing a
+// NetworkCapture through the API also frees the bytes it occupies against
+// the sidecar's volume budget immediately (F-187, F-261), instead of only
+// once the pod is eventually recreated.
+//
+// It never reports failure to the caller: h.tlsClient being unset (agent
+// mTLS not configured), an invalid host, an unreachable sidecar, or any
+// non-2xx/404 response are all logged and swallowed. The CR is the
+// authoritative record of what captures exist; losing this cleanup step
+// only reproduces the pre-existing "file lingers until pod restart"
+// staleness (still documented as a residual case in
+// capture-sidecar/specs.md §8a), not data loss or an inconsistent CR.
+// The sidecar's own DELETE handler already treats "file already absent" as
+// success (204/404), so this call is safe to retry or to run twice for the
+// same id.
+func (h *captureHandler) deleteSidecarCaptureFile(ctx context.Context, serverName, namespace, captureID string) {
+	if h.tlsClient == nil {
+		return
+	}
+	host, ok := newValidatedHost(serverName, namespace)
+	if !ok {
+		slog.Warn("capture delete: invalid server/namespace for sidecar cleanup", "server", serverName, "namespace", namespace, "capture", captureID)
+		return
+	}
+
+	u := &url.URL{
+		Scheme: "https",
+		Host:   string(host),
+		Path:   fmt.Sprintf("/captures/%s", captureID),
+	}
+	upReq, err := http.NewRequestWithContext(ctx, http.MethodDelete, u.String(), nil)
+	if err != nil {
+		slog.Error("capture delete: build sidecar cleanup request failed", "capture", captureID, "err", err)
+		return
+	}
+
+	resp, err := h.tlsClient.Do(upReq)
+	if err != nil {
+		slog.Warn("capture delete: sidecar unreachable; file will remain until pod restart", "capture", captureID, "err", err)
+		return
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<10))
+		slog.Warn("capture delete: sidecar refused file cleanup", "capture", captureID, "status", resp.StatusCode, "body", string(body))
+	}
 }
 
 // writeUpstreamError maps transport-level failures to gateway statuses and

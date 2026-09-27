@@ -27,6 +27,7 @@ import { FilterPopover } from "@/components/ui/FilterPopover";
 import { GameIcon } from "@/components/ui/GameIcon";
 import { useGameCodes } from "@/lib/useGameCodes";
 import { PageHeader } from "@/components/PageHeader";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { describeStorageProvisioned, formatBytes, cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/media";
 import type { ClusterStats, ClusterView, GameServer, GameServerPhase, GameTemplate } from "@/types";
@@ -63,8 +64,8 @@ export function ServersPage() {
   });
 
   const act = useMutation({
-    mutationFn: (args: { name: string; verb: LifecycleVerb }) =>
-      Servers.lifecycle(args.name, args.verb),
+    mutationFn: (args: { name: string; verb: LifecycleVerb; ns?: string }) =>
+      Servers.lifecycle(args.name, args.verb, args.ns),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["servers"] }),
   });
 
@@ -185,6 +186,8 @@ export function ServersPage() {
           }
         />
       )}
+
+      {act.error && <ErrorBanner err={act.error} onDismiss={() => act.reset()} />}
 
       {!isMobile && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -345,7 +348,6 @@ export function ServersPage() {
             <ServerCard
               key={`${gs.metadata.namespace ?? "gameplane-games"}/${gs.metadata.name}`}
               gs={gs}
-              onAct={act.mutate}
               templates={templates}
               gameCodes={gameCodes}
             />
@@ -361,7 +363,6 @@ export function ServersPage() {
                 <ServerCard
                   key={`shared-${gs.metadata.namespace ?? ""}-${gs.metadata.name}`}
                   gs={gs}
-                  onAct={act.mutate}
                   templates={templates}
                   gameCodes={gameCodes}
                 />
@@ -449,8 +450,8 @@ export function ServersPage() {
                   </Table.Cell>
                   <Table.Cell className="text-right">
                     {(() => {
-                      const { isSharedNonDefault, phase, asleep } = serverRowData(gs);
-                      return !isSharedNonDefault ? <ServerLifecycleActions gs={gs} phase={phase} asleep={asleep} onAct={act.mutate} /> : null;
+                      const { phase, asleep } = serverRowData(gs);
+                      return <ServerLifecycleActions gs={gs} phase={phase} asleep={asleep} onAct={act.mutate} />;
                     })()}
                   </Table.Cell>
                 </Table.Row>
@@ -524,8 +525,8 @@ export function ServersPage() {
                       </Table.Cell>
                       <Table.Cell className="text-right">
                         {(() => {
-                          const { isSharedNonDefault, phase, asleep } = serverRowData(gs);
-                          return !isSharedNonDefault ? <ServerLifecycleActions gs={gs} phase={phase} asleep={asleep} onAct={act.mutate} /> : null;
+                          const { phase, asleep } = serverRowData(gs);
+                          return <ServerLifecycleActions gs={gs} phase={phase} asleep={asleep} onAct={act.mutate} />;
                         })()}
                       </Table.Cell>
                     </Table.Row>
@@ -557,8 +558,10 @@ function serverRowData(gs: GameServer) {
   const players = agent?.playersOnline;
   const maxPlayers = agent?.playersMax;
   const node = gs.metadata.annotations?.["gameplane.local/node"];
-  // Shared rows with non-default namespace are read-only (detail route and
-  // lifecycle calls are namespace-blind).
+  // Non-default-namespace rows need `?ns=` on the mobile ServerCard's
+  // detail link (the desktop table computes the same thing inline at each
+  // Link's `search` prop). Lifecycle actions no longer skip these rows —
+  // `act`'s mutationFn now carries the row's own namespace (F-130).
   const isSharedNonDefault =
     !!gs.metadata.namespace && gs.metadata.namespace !== "gameplane-games";
 
@@ -606,7 +609,7 @@ function ServerLifecycleActions({
   gs: GameServer;
   phase?: GameServerPhase;
   asleep?: boolean;
-  onAct: (args: { name: string; verb: LifecycleVerb }) => void;
+  onAct: (args: { name: string; verb: LifecycleVerb; ns?: string }) => void;
 }) {
   const qc = useQueryClient();
   const invalidate = () => {
@@ -618,7 +621,7 @@ function ServerLifecycleActions({
       {asleep ? (
         <ActionButton
           title="Wake"
-          onClick={() => onAct({ name: gs.metadata.name, verb: "wake" })}
+          onClick={() => onAct({ name: gs.metadata.name, verb: "wake", ns: gs.metadata.namespace })}
         >
           <Sunrise className="h-4 w-4" />
         </ActionButton>
@@ -626,7 +629,7 @@ function ServerLifecycleActions({
         <ActionButton
           title="Start"
           disabled={phase === "Running" || phase === "Starting"}
-          onClick={() => onAct({ name: gs.metadata.name, verb: "start" })}
+          onClick={() => onAct({ name: gs.metadata.name, verb: "start", ns: gs.metadata.namespace })}
         >
           <Play className="h-4 w-4" />
         </ActionButton>
@@ -638,13 +641,13 @@ function ServerLifecycleActions({
         // honors immediately, distinct from an idle sleep a wake window
         // would otherwise resurrect.
         disabled={!asleep && (phase === "Stopped" || phase === "Suspended")}
-        onClick={() => onAct({ name: gs.metadata.name, verb: "stop" })}
+        onClick={() => onAct({ name: gs.metadata.name, verb: "stop", ns: gs.metadata.namespace })}
       >
         <Square className="h-4 w-4" />
       </ActionButton>
       <ActionButton
         title="Restart"
-        onClick={() => onAct({ name: gs.metadata.name, verb: "restart" })}
+        onClick={() => onAct({ name: gs.metadata.name, verb: "restart", ns: gs.metadata.namespace })}
       >
         <RotateCw className="h-4 w-4" />
       </ActionButton>
@@ -658,12 +661,10 @@ function ServerLifecycleActions({
 // with name, address, game, status pill, and players/memory chips.
 function ServerCard({
   gs,
-  onAct: _onAct,
   templates,
   gameCodes,
 }: {
   gs: GameServer;
-  onAct: (args: { name: string; verb: LifecycleVerb }) => void;
   templates?: GameTemplate[];
   gameCodes: Map<string, string>;
 }) {

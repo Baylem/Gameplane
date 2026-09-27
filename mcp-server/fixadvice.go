@@ -70,9 +70,10 @@ var fixRules = []fixRule{
 		advice: "For a failed Backup: check the backup Job's pod logs (restic errors " +
 			"surface there, not on the Backup CR itself), and confirm the restic " +
 			"repository secret/PVC referenced by the BackupSchedule still exists. " +
-			"Suggested commands:\n" +
-			"  kubectl get jobs -n <namespace> -l gameplane.local/backup=<name>\n" +
-			"  kubectl logs -n <namespace> job/<backup-job-name>",
+			"Suggested commands (the backup Job is named after the Backup, not " +
+			"labeled):\n" +
+			"  kubectl get job <backup-name> -n <namespace>\n" +
+			"  kubectl logs -n <namespace> job/<backup-name>",
 	},
 	{
 		keywords: []string{"restore"},

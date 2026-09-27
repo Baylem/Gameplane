@@ -18,7 +18,7 @@ import {
   validateConfig,
 } from "@/lib/validation";
 import { parseCpuQuantity, cpuCores, parseMemQuantity, memBytes } from "@/lib/quantity";
-import { cn } from "@/lib/utils";
+import { cn, ignoreRejection } from "@/lib/utils";
 import { resolveCategories, categoryFilters, matchesCategory } from "@/lib/games";
 import type { GameTemplate, PortOverride, GameServerTunnel } from "@/types";
 
@@ -167,10 +167,10 @@ function buildCreateBody(state: WizardState): ServerCreate {
         ...(state.playitTunnelName ? { tunnelName: state.playitTunnelName } : {}),
       };
     }
-    // Only include tunnel if it has meaningful config (not just enabled: true).
-    if (Object.keys(tunnelBase).length > 1 || state.tunnelCredentialsSecretName) {
-      tunnel = tunnelBase;
-    }
+    // tunnelBase always carries `provider` alongside `enabled`, so it is
+    // never just `{ enabled: true }` — include it whenever the wizard step
+    // is enabled.
+    tunnel = tunnelBase;
   }
 
   return {
@@ -324,6 +324,10 @@ export function CreateServerWizard() {
   const [state, setState] = useState<WizardState>(initial);
   const nav = useNavigate();
   const qc = useQueryClient();
+  // Cancel/Close just leave the wizard; a rejected navigation (e.g. the
+  // route change was interrupted) has nothing useful to show, but must not
+  // become an unhandled promise rejection.
+  const closeWizard = () => ignoreRejection(nav({ to: "/servers" }));
 
   // When arriving from the Modules catalog "Deploy" action
   // (/servers/new?template=<name>), pre-select that template once the list
@@ -415,7 +419,7 @@ export function CreateServerWizard() {
           <Button
             isIconOnly
             variant="ghost"
-            onPress={() => nav({ to: "/servers" })}
+            onPress={closeWizard}
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -458,7 +462,7 @@ export function CreateServerWizard() {
               </span>
             )}
             {stepIndex === 0 ? (
-              <Button variant="ghost" onPress={() => nav({ to: "/servers" })}>
+              <Button variant="ghost" onPress={closeWizard}>
                 Cancel
               </Button>
             ) : (

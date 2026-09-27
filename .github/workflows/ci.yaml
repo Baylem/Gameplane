@@ -27,6 +27,10 @@ on:
       - "audit-syslog-bridge/README.md"
       - "mcp-server/README.md"
       - "telemetry-receiver/README.md"
+      - "CHANGELOG.md"
+      - "CLAUDE.md"
+      - "LICENSE"
+      - "specs/**/outreach.md"
   pull_request:
     paths:
       - "**"
@@ -42,6 +46,10 @@ on:
       - "audit-syslog-bridge/README.md"
       - "mcp-server/README.md"
       - "telemetry-receiver/README.md"
+      - "CHANGELOG.md"
+      - "CLAUDE.md"
+      - "LICENSE"
+      - "specs/**/outreach.md"
 # Cancel superseded runs so rapid pushes to the same ref don't waste
 # runner minutes on stale commits.
 concurrency:
@@ -127,6 +135,10 @@ jobs:
               # The chart embeds a copy of the root signing key; the drift
               # check in `chart render` has to run when either side moves.
               - 'cosign.pub'
+              # The CRD bundle-hash stamp check regenerates the chart CRDs
+              # from these; an edit to either must re-run it.
+              - 'operator/config/crd/**'
+              - 'hack/sync-chart-crds.sh'
             e2etree:
               - 'test/e2e/**'
               - 'deploy/kind/**'
@@ -142,14 +154,29 @@ jobs:
               - 'go.work'
               - 'go.work.sum'
               - 'test/e2e/buckets.sh'
+              # golangci-lint walks up from `working-directory` to find this
+              # config, so every `lint (…)` leg picks up an edit here even
+              # though none of them declare it as an input. Force the lint
+              # job on so a config change is tested against real code
+              # instead of silently taking effect on the next unrelated PR.
+              - '.golangci.yml'
             github:
               - '.github/workflows/**'
               - '.github/actions/**'
               - '.github/zizmor.yml'
               - '.github/dependabot.yml'
+              - 'hack/check-ci-report-coverage.sh'
+              - 'hack/test-check-ci-report-coverage.sh'
+              - 'hack/testdata/check-ci-report-coverage/**'
+              - 'hack/check-publish-edge-paths.sh'
+              - 'hack/test-check-publish-edge-paths.sh'
+              - 'hack/testdata/check-publish-edge-paths/**'
             specs:
               - '**/specs.md'
               - 'hack/check-specs.sh'
+              - 'hack/check-dev-load-images.sh'
+              - 'hack/test-up-registry.sh'
+              - 'deploy/kind/up.sh'
             docs:
               - 'README.md'
               - 'docs/architecture.md'
@@ -171,6 +198,29 @@ jobs:
               - 'docs/comparison-sources.md'
               - 'hack/check-links.sh'
               - 'hack/check-doc-versions.sh'
+              - 'hack/test-check-doc-versions.sh'
+              - 'hack/testdata/check-doc-versions/**'
+              # `docs/**` broadly: check-links resolves relative links from
+              # the 18 audited files against ANY file under docs/ (e.g.
+              # docs/architecture.md -> docs/agent-architecture.md), not
+              # just the other audited files, so renaming a non-audited doc
+              # must still run the gate.
+              - 'docs/**'
+              # appVersion source for check-doc-versions.sh; a bump here
+              # changes what every audited file is checked against.
+              - 'charts/gameplane/Chart.yaml'
+              # Non-docs/ link targets referenced from the audited files
+              # (docs/dependencies.md -> CHANGELOG.md, docs/contributing.md
+              # -> CLAUDE.md and specs/012-.../outreach.md, README.md ->
+              # LICENSE/cosign.pub, docs/key-rotation.md -> the legacy key
+              # files) — renaming or moving any of these must run check-links.
+              - 'CHANGELOG.md'
+              - 'CLAUDE.md'
+              - 'LICENSE'
+              - 'cosign.pub'
+              - 'cosign-legacy.pub'
+              - 'cosign.pub.legacy-sig'
+              - 'specs/**/outreach.md'
       - id: combine
         # Fold the raw filters into single-token booleans so every downstream
         # `if:` is one expression (fewer chances to get wrong when the only way
@@ -400,10 +450,24 @@ jobs:
       - name: check documentation versions
         if: matrix.module == 'netguard'
         run: make check-doc-versions
+      # Fixture tests for the doc-version checker (spec 018 OD-012); gated like the checker itself.
+      - name: test documentation version checker
+        if: matrix.module == 'netguard'
+        run: make test-doc-versions
       # Repository-wide check; gated to one matrix entry so it runs once per lint run (ruling D5).
       - name: check specs compliance
         if: matrix.module == 'netguard'
         run: make check-specs
+      # Repository-wide check that `dev-load` loads every image `images` builds
+      # (F-255); gated to one matrix entry like check-specs (ruling D5).
+      - name: check dev-load image coverage
+        if: matrix.module == 'netguard'
+        run: make check-dev-load-images
+      # Fixture tests for deploy/kind/up.sh's registry bootstrap (F-234) and
+      # kubectl context pinning (F-232); gated like check-specs (ruling D5).
+      - name: test up.sh registry/context bootstrap
+        if: matrix.module == 'netguard'
+        run: make test-up-registry
       - uses: ./.github/actions/go-cache
         with:
           key-suffix: lint-${{ matrix.module }}
@@ -558,13 +622,29 @@ jobs:
     defaults: { run: { working-directory: web } }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: nginx client_max_body_size matches ingress proxy-body-size
+        working-directory: .
+        run: |
+          set -eu
+          ingress_size=$(grep -oP 'proxy-body-size:\s*"\K[0-9]+(?=m")' charts/gameplane/values.yaml)
+          nginx_size=$(grep -oP 'client_max_body_size\s+\K[0-9]+(?=m;)' web/nginx.conf.template || true)
+          if [ -z "$nginx_size" ]; then
+            echo "client_max_body_size not set in web/nginx.conf.template" >&2
+            exit 1
+          fi
+          if [ "$nginx_size" -lt "$ingress_size" ]; then
+            echo "web/nginx.conf.template client_max_body_size (${nginx_size}m) is below the ingress proxy-body-size (${ingress_size}m)" >&2
+            exit 1
+          fi
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with: { node-version: "24", cache: "npm", cache-dependency-path: web/package-lock.json }
       - run: npm ci
       - name: eslint
         run: npm run lint
       - run: npm run build
-      - run: npm run test:cover
+      - name: unit tests + coverage
+        id: cover
+        run: npm run test:cover
       - name: report coverage (commit status)
         if: always()
         continue-on-error: true
@@ -574,14 +654,22 @@ jobs:
           REPO: ${{ github.repository }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           RUN_SHA: ${{ github.sha }}
+          # steps.cover.outcome ignores this step's own continue-on-error
+          # (it has none) and reflects whether `npm run test:cover` — the
+          # vitest coverage-threshold gate — actually passed, so a
+          # below-threshold run posts "failure" instead of a hard-coded
+          # "success" that contradicts the red `web` job next to it.
+          COVER_OUTCOME: ${{ steps.cover.outcome }}
         run: |
           set +e
           [ -f coverage/coverage-summary.json ] || exit 0
           DESC=$(node -e "const t=require('./coverage/coverage-summary.json').total;console.log('L'+t.lines.pct+' S'+t.statements.pct+' B'+t.branches.pct+' F'+t.functions.pct)")
           SHA="$HEAD_SHA"; [ -z "$SHA" ] && SHA="$RUN_SHA"
+          STATE="success"
+          [ "$COVER_OUTCOME" = "success" ] || STATE="failure"
           curl -sS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/json" \
             "$API_URL/repos/$REPO/statuses/$SHA" \
-            -d "{\"context\":\"coverage/web\",\"state\":\"success\",\"description\":\"$DESC\"}" >/dev/null || true
+            -d "{\"context\":\"coverage/web\",\"state\":\"$STATE\",\"description\":\"$DESC\"}" >/dev/null || true
       - name: upload web coverage
         if: always()
         continue-on-error: true
@@ -655,11 +743,138 @@ jobs:
           grep -q 'kind: Deployment' /tmp/rendered.yaml
           grep -q 'kind: ClusterRole' /tmp/rendered.yaml
           grep -q 'kind: NetworkPolicy' /tmp/rendered.yaml
+      - name: backup/restore Job egress policy renders (F-215)
+        run: |
+          helm template gameplane charts/gameplane \
+            --show-only templates/networkpolicies.yaml > /tmp/netpol.yaml
+          grep -q 'name: allow-backup-restore-egress' /tmp/netpol.yaml
+          awk '/name: allow-backup-restore-egress/,/^---$/' /tmp/netpol.yaml \
+            | grep -q 'app.kubernetes.io/name: gameplane-backup-restore'
+      - name: observability scrape TLS/reachability render correctly (F-216, F-217)
+        # F-216 rationale: agent/specs.md's /metrics section. F-217: the
+        # telemetry-receiver needs its own ServiceMonitor, and both it and
+        # the agent PodMonitor need a NetworkPolicy exception for the
+        # configured Prometheus namespace once one is set via
+        # serviceMonitors.scrapeNamespaceSelector.
+        run: |
+          scrape_ns='serviceMonitors.scrapeNamespaceSelector={"matchLabels":{"kubernetes.io/metadata.name":"monitoring"}}'
+          helm template gameplane charts/gameplane \
+            --set serviceMonitors.enabled=true \
+            --set api.telemetry.receiver.enabled=true \
+            --set-json "$scrape_ns" \
+            --show-only templates/servicemonitors.yaml > /tmp/servicemonitors.yaml
+          awk '/kind: PodMonitor/,0' /tmp/servicemonitors.yaml | grep -q 'port: metrics'
+          if awk '/kind: PodMonitor/,0' /tmp/servicemonitors.yaml | grep -q 'scheme: https'; then
+            echo "::error::agent PodMonitor must not scrape over https"
+            exit 1
+          fi
+          if awk '/kind: PodMonitor/,0' /tmp/servicemonitors.yaml | grep -q 'tlsConfig'; then
+            echo "::error::agent PodMonitor must not carry a client-cert tlsConfig"
+            exit 1
+          fi
+          grep -q 'name: gameplane-telemetry-receiver' /tmp/servicemonitors.yaml
+          helm template gameplane charts/gameplane \
+            --set serviceMonitors.enabled=true \
+            --set-json "$scrape_ns" \
+            --show-only templates/networkpolicies.yaml > /tmp/netpol-scrape.yaml
+          awk '/name: allow-prometheus-to-agent/,/^---$/' /tmp/netpol-scrape.yaml \
+            | grep -q 'port: 9090'
+          helm template gameplane charts/gameplane \
+            --set serviceMonitors.enabled=true \
+            --set api.telemetry.receiver.enabled=true \
+            --set-json "$scrape_ns" \
+            --show-only templates/telemetry-receiver.yaml > /tmp/telemetry-receiver-scrape.yaml
+          awk '/kind: NetworkPolicy/,0' /tmp/telemetry-receiver-scrape.yaml \
+            | grep -q 'kubernetes.io/metadata.name: monitoring'
+          awk '/kind: Service/,/^---$/' /tmp/telemetry-receiver-scrape.yaml \
+            | grep -q 'app.kubernetes.io/name: gameplane-telemetry-receiver'
+          # scrapeNamespaceSelector unset (the chart default): neither
+          # exception renders, matching the pre-fix behavior.
+          helm template gameplane charts/gameplane \
+            --set serviceMonitors.enabled=true \
+            --show-only templates/networkpolicies.yaml > /tmp/netpol-default.yaml
+          if grep -q 'allow-prometheus-to-agent' /tmp/netpol-default.yaml; then
+            echo "::error::allow-prometheus-to-agent rendered without serviceMonitors.scrapeNamespaceSelector set"
+            exit 1
+          fi
+      - name: games Namespace carries the keep policy
+        # F-212: `helm uninstall` used to delete the games Namespace and
+        # every GameServer/StatefulSet/PVC in it. Assert the Namespace is
+        # excluded from Helm's ownership via the keep resource-policy,
+        # scoped to the Namespace document specifically (a plain grep over
+        # the whole render would also match the unrelated API PVC's own
+        # keep annotation and pass even if the Namespace fix regressed).
+        run: |
+          python3 - <<'PY'
+          import sys, yaml
+          docs = list(yaml.safe_load_all(open('/tmp/rendered.yaml')))
+          ns = [d for d in docs if d and d.get('kind') == 'Namespace'
+                and d.get('metadata', {}).get('name') == 'gameplane-games']
+          if not ns:
+              sys.exit("::error::no games Namespace rendered")
+          policy = (ns[0].get('metadata', {}).get('annotations') or {}).get(
+              'helm.sh/resource-policy')
+          if policy != 'keep':
+              sys.exit(
+                  "::error::games Namespace missing "
+                  "helm.sh/resource-policy: keep (F-212)")
+          print("games Namespace carries helm.sh/resource-policy: keep")
+          PY
+      - name: pre-upgrade hook targets the rendered API Deployment name (F-213)
+        # A release installed under a non-default name used to render a hook
+        # Role whose resourceNames named a Deployment
+        # ({{ .Release.Name }}-api) the chart never actually creates — the
+        # API Deployment is always named "gameplane-api" literally
+        # (api.yaml), unlike the surrounding Role/RoleBinding names. Any such
+        # release could install but never upgrade.
+        run: |
+          helm template gp charts/gameplane --namespace gpns --is-upgrade > /tmp/rendered-gp.yaml
+          python3 - <<'PY'
+          import sys, yaml
+          docs = list(yaml.safe_load_all(open('/tmp/rendered-gp.yaml')))
+          deploy_names = {d['metadata']['name'] for d in docs
+                           if d and d.get('kind') == 'Deployment'}
+          roles = [d for d in docs if d and d.get('kind') == 'Role'
+                   and d.get('metadata', {}).get('name', '').endswith('-strategy-migrate')]
+          if not roles:
+              sys.exit("::error::no strategy-migrate Role rendered with --is-upgrade "
+                        "(api.db.driver=sqlite is the chart default)")
+          resource_names = {n for rule in roles[0].get('rules', [])
+                             for n in rule.get('resourceNames', [])}
+          if not resource_names & deploy_names:
+              sys.exit(f"::error::pre-upgrade hook Role resourceNames {resource_names} "
+                        f"does not match any rendered Deployment name {deploy_names} (F-213)")
+          print(f"hook Role resourceNames {resource_names} matches a rendered Deployment")
+          PY
+      - name: chart renders after helm upgrade --reuse-values from v0.2.0-beta.8 (F-214)
+        # `helm upgrade --reuse-values` swaps the new chart's own default
+        # values.yaml for the old release's fully-resolved values before
+        # rendering (helm pkg/action/upgrade.go reuseValues: chart.Values =
+        # oldVals), so any value key introduced since the user's last upgrade
+        # is completely absent, not just unset. Simulate that exactly: stand
+        # beta.8's values.yaml in for the chart's OWN values.yaml (a plain -f
+        # merge would NOT reproduce this, since -f still merges onto the new
+        # chart's own defaults).
+        run: |
+          trap 'cp /tmp/values.yaml.orig charts/gameplane/values.yaml' EXIT
+          cp charts/gameplane/values.yaml /tmp/values.yaml.orig
+          cp charts/gameplane/testdata/upgrade-from-v0.2.0-beta.8-values.yaml charts/gameplane/values.yaml
+          helm template gameplane charts/gameplane > /tmp/rendered-reuse-values.yaml
       - name: crd-manifests in sync with crds
         # The CRD-apply hook serves CRDs from crd-manifests/ (crds/ isn't
         # readable by Helm .Files). make manifests keeps both in sync; guard
         # against a drift that would apply stale CRDs on upgrade.
         run: diff -r charts/gameplane/crds charts/gameplane/crd-manifests
+      - name: chart CRDs carry the current bundle-hash stamp (F-218)
+        # crd-apply-hook.yaml fires on pre-install only when the live CRDs'
+        # gameplane.local/crd-bundle-sha256 differs from the chart's. A stale
+        # stamp (CRDs hand-copied without `make manifests`) would make a fresh
+        # install skip the hook over CRDs that are actually out of date, so
+        # regenerate the chart copies from operator/config/crd and fail on any
+        # difference.
+        run: |
+          hack/sync-chart-crds.sh
+          git diff --exit-code -- charts/gameplane/crds charts/gameplane/crd-manifests
       - name: chart cosign key matches root cosign.pub
         # values.yaml embeds a copy of the signing public key so the operator
         # can verify official module bundles. Nothing regenerates it, so a key
@@ -686,6 +901,27 @@ jobs:
             exit 1
           fi
           echo "chart cosign key matches root cosign.pub"
+      - name: docs/oidc.md example values render (F-252)
+        # docs/oidc.md's Keycloak "Or in values.yaml" example is meant to be
+        # copy-pasteable. Render it as a real -f values file (with
+        # api.oidc.enabled: true, since the doc's own example turns it on)
+        # and fail if the object-shaped clientSecretRef the chart schema
+        # expects ever regresses to the bare string the doc used to show.
+        run: |
+          python3 - <<'PY' > /tmp/oidc-example-values.yaml
+          import re
+          text = open('docs/oidc.md').read()
+          m = re.search(r"Or in `values\.yaml`:\n```yaml\n(.*?)\n```", text, re.S)
+          if not m:
+              raise SystemExit("could not find the Keycloak 'Or in values.yaml' example in docs/oidc.md")
+          print(m.group(1))
+          PY
+          helm template gameplane charts/gameplane \
+            -f /tmp/oidc-example-values.yaml \
+            --show-only templates/api.yaml > /tmp/rendered-oidc.yaml
+          grep -q 'GAMEPLANE_OIDC_CLIENT_SECRET' /tmp/rendered-oidc.yaml
+          grep -q 'name: keycloak-oidc-secret' /tmp/rendered-oidc.yaml
+          grep -qE 'key: +clientSecret' /tmp/rendered-oidc.yaml
 
   workflow-lint:
     name: workflow lint
@@ -713,6 +949,14 @@ jobs:
           # so run it from the checkout root.
           cd "$GITHUB_WORKSPACE"
           "$tmp/actionlint"
+      - name: ci report job coverage (F-238)
+        run: ./hack/check-ci-report-coverage.sh
+      - name: test ci report job coverage checker
+        run: ./hack/test-check-ci-report-coverage.sh
+      - name: publish-edge.yaml path coverage (F-239)
+        run: ./hack/check-publish-edge-paths.sh
+      - name: test publish-edge.yaml path coverage checker
+        run: ./hack/test-check-publish-edge-paths.sh
       # This gate makes SC-001 ("100% SHA-pinned") mechanically true by failing on
       # unpinned uses and ref-version mismatches. The four deferred rules and their
       # tracking are defined in .github/zizmor.yml.
@@ -964,10 +1208,8 @@ jobs:
       CLUSTER: gameplane-upgrade
       CTX: kind-gameplane-upgrade
       # The release to upgrade FROM. Bump at release time to the previous
-      # published version. deploy/kind/upgrade.sh carries the same default and
-      # documents why it is beta.5 rather than beta.6 (beta.6 was tagged but
-      # never published — its chart and images 404 on GHCR).
-      GAMEPLANE_UPGRADE_FROM: 0.2.0-beta.5
+      # published version. deploy/kind/upgrade.sh carries the same default.
+      GAMEPLANE_UPGRADE_FROM: 0.2.0-beta.8
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/go-cache
@@ -1245,7 +1487,8 @@ jobs:
             const files = readJSON('/tmp/files.json', []);
 
             const NEEDS_ORDER = [
-              'changes', 'build-images', 'build-images-arm64', 'lint', 'go',
+              'changes', 'build-images', 'build-images-arm64',
+              'capture-sidecar-setcap-proof', 'lint', 'go',
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
               'e2e-buckets', 'e2e-go', 'e2e-multicluster', 'e2e-upgrade',
               'e2e-web-live', 'e2e-game-bot',
@@ -1258,6 +1501,7 @@ jobs:
               changes: (n) => n === 'detect changes',
               'build-images': (n) => n === 'build e2e images',
               'build-images-arm64': (n) => n === 'build e2e images (arm64)',
+              'capture-sidecar-setcap-proof': (n) => n === 'capture-sidecar CAP_NET_RAW survival',
               lint: (n) => n.startsWith('lint ('),
               go: (n) => n.startsWith('go (') && n !== 'go (test/e2e)',
               web: (n) => n === 'web',
@@ -1414,6 +1658,16 @@ jobs:
               if (m) bucketSet.add(m[1]);
               if (/^e2e multicluster \//.test(n)) bucketSet.add('multicluster');
               if (/^e2e upgrade \//.test(n)) bucketSet.add('upgrade');
+              // The ratelimit bucket runs as a trailing step inside the
+              // api-auth job leg (deliberately, so it drains the shared
+              // login buckets last), not as its own job — so it never
+              // matches a job-name regex. Read the step-level conclusion:
+              // the step is skipped (not "success") when the api-auth
+              // bucket step itself failed first.
+              if (/^e2e api-auth \//.test(n) && Array.isArray(j.steps)) {
+                const tail = j.steps.find((s) => s.name === 'run go e2e (ratelimit tail)');
+                if (tail && tail.conclusion === 'success') bucketSet.add('ratelimit');
+              }
             }
             const gameBot = needs['e2e-game-bot'];
             if (gameBot && gameBot.result && gameBot.result !== 'skipped') bucketSet.add('bot-fast');

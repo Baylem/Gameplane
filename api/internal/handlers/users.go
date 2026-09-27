@@ -446,6 +446,9 @@ func (h *userHandler) del(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "cannot delete self", http.StatusBadRequest)
 		return
 	}
+	// Lock to serialize with writes so the last-user-manager check can't race.
+	unlock := h.db.LockUserManagement()
+	defer unlock()
 	// Don't delete the last user who can manage users.
 	if managesNow, err := h.db.UserManagesUsers(req.Context(), id); err != nil {
 		httperr.Write(w, req, err)
@@ -509,6 +512,9 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 	}
 	caller := auth.UserFromContext(req.Context())
 	if body.Role != nil {
+		// Lock to serialize with writes so the last-user-manager check can't race.
+		unlock := h.db.LockUserManagement()
+		defer unlock()
 		newGrantsManage, err := h.db.RoleGrantsUserManagement(req.Context(), *body.Role)
 		if err != nil {
 			httperr.Write(w, req, err)
@@ -769,8 +775,7 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	h.invalidateSessions(req, id, "role binding added")
-	w.WriteHeader(http.StatusCreated)
-	writeJSON(w, bindingDTO(body))
+	writeJSONCreated(w, bindingDTO(body))
 }
 
 func (h *userHandler) deleteBinding(w http.ResponseWriter, req *http.Request) {

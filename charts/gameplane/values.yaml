@@ -16,7 +16,7 @@ image:
   # mirror or fork.
   registry: ghcr.io/valgulnecron/gameplane
   # Empty tag => the chart's appVersion (so chart vX pulls images vX). Set to a
-  # channel like "edge" to track the rolling images published on every main push.
+  # channel like "edge" to track the rolling images published on every master push.
   tag: ""
   pullPolicy: IfNotPresent
   pullSecrets: []
@@ -26,15 +26,19 @@ image:
 # hook closes that gap: a pre-UPGRADE Job runs `kubectl apply --server-side`
 # over the CRDs, so a plain `helm upgrade` always brings the CRD schema up to
 # date. First installs get the CRDs from Helm's native crds/ (no pod), so the
-# hook only runs on upgrades — air-gapped first installs need no extra image.
-# It never deletes CRDs, so `helm uninstall` still leaves your GameServers
-# intact.
+# hook normally runs only on upgrades — air-gapped first installs need no
+# extra image. The exception: a `helm install` onto CRDs an earlier,
+# uninstalled release left behind (crds/ skips existing CRDs), detected by the
+# bundle-hash annotation `make manifests` stamps on every CRD; the hook then
+# also runs on that install (F-218). It never deletes CRDs, so
+# `helm uninstall` still leaves your GameServers intact.
 crds:
   autoApply:
     enabled: true
     # kubectl image the apply Job runs. Any image with kubectl on PATH works;
-    # retag to a private mirror for air-gapped installs (only needed at upgrade
-    # time — first installs don't run the hook).
+    # retag to a private mirror for air-gapped installs (needed at upgrade
+    # time, and also on an install over CRDs an earlier, uninstalled release
+    # left behind — a genuinely fresh first install doesn't run the hook).
     image: registry.k8s.io/kubectl:v1.36.3
     # Pull policy for the kubectl image above. Kept separate from image.pullPolicy
     # so tracking :edge components (image.pullPolicy=Always) doesn't force a
@@ -111,6 +115,11 @@ operator:
 api:
   replicas: 1        # SQLite driver is single-writer on a RWO volume; only values >1 are safe with db.driver=postgres
   logLevel: info     # API log verbosity (debug|info|warn|error), passed as GAMEPLANE_LOG_LEVEL
+  # Port of the API's Prometheus metrics listener. It is separate from the
+  # public API port (the one the ingress and the web front end route to), so
+  # metrics are reachable only in-cluster; the ServiceMonitor scrapes it.
+  # Templates fall back to 9090 when this key is absent (helm --reuse-values).
+  metricsPort: 9090
   resources:
     requests: { cpu: 100m, memory: 64Mi }
     limits:   { cpu: 500m, memory: 256Mi }
@@ -202,7 +211,7 @@ api:
       endpoint: ""        # S3-compatible endpoint host:port (e.g., "minio:9000" or "s3.amazonaws.com")
       bucket: ""          # S3 bucket name (required when endpoint is set)
       prefix: ""          # object key prefix, e.g. "gameplane-audit" (empty = root)
-      region: ""          # S3 region, e.g. "us-east-1" (empty = path-style requests)
+      region: ""          # S3 region, e.g. "us-east-1" (empty defaults to "us-east-1")
       insecure: false     # disable TLS certificate verification (for self-signed certs)
       # S3 credentials sourced from a Secret (never passed as flags). Leave
       # credentialsSecretRef.name empty to disable the S3 sink entirely.
@@ -244,6 +253,9 @@ api:
       name: gameplane-oidc
       key:  clientSecret
     redirectURL: ""
+    # Label for the OIDC login button (no hostname — shown pre-auth). Default
+    # is "Single sign-on" when unset, matching the API's own flag default.
+    displayName: ""
     # OIDC claim name containing group/role memberships. Default: "groups"
     # if empty or omitted. Examples: "groups", "roles", "membership",
     # "department".
@@ -353,6 +365,23 @@ networkPolicies:
       - 172.16.0.0/12
       - 192.168.0.0/16
       - 169.254.0.0/16
+  # Egress allowance for Backup/Restore restic Job pods to reach their
+  # configured repository (F-215). Without this the default-deny egress
+  # policy blocks the connection and the backup/restore Job fails after
+  # its backoffLimit. Unlike gameEgress there is no privateCIDRs
+  # exception: the destination comes from an admin-created repo
+  # Destination Secret, not an attacker-influenced game download URL,
+  # and restic repositories are commonly private (an in-cluster or LAN
+  # store) as well as public.
+  backupEgress:
+    enabled: true
+    # Ports opened for restic repository connections. Defaults cover
+    # HTTPS-based backends (S3, B2, REST-over-TLS, Swift, Azure, GCS)
+    # and SFTP. Add your repository's port if it uses neither, e.g. a
+    # plain-HTTP REST server on a non-standard port.
+    ports:
+      - { protocol: TCP, port: 443 }
+      - { protocol: TCP, port: 22 }
   # Ingress allowance for the game port(s) themselves. The operator
   # reconciles one NetworkPolicy per GameServer, opening only that game's
   # `Advertise: true` container ports (read from its GameTemplate) — this
@@ -390,10 +419,17 @@ networkPolicies:
 # the group "gameplane:dashboard", bound to the read-only "view" ClusterRole.
 clusterOps:
   enabled: false
+  # External (node-routable) API server address handed out in the join
+  # command and downloaded kubeconfig, e.g. "1.2.3.4:6443" or
+  # "https://k8s.example.com:6443". Leave empty to use the in-cluster
+  # address the API pod itself connects through (typically the apiserver's
+  # ClusterIP), which a joining node or an off-cluster kubectl cannot reach.
+  externalAddress: ""
 
 # Optional, strictly read-only MCP (Model Context Protocol) server: lets an
-# AI assistant read cluster state (the 7 Gameplane CRDs, Pods, Events, pod
-# logs) and propose fixes as text, over stdio JSON-RPC only — never a
+# AI assistant read cluster state (7 of Gameplane's 9 CRDs — not Cluster or
+# NetworkCapture — plus Pods, Events, pod logs) and propose fixes as text,
+# over stdio JSON-RPC only — never a
 # network port, and never a create/update/patch/delete tool. Off by default.
 # See mcp-server/README.md for how to connect (kubectl exec -i ... -- serve).
 mcpServer:
@@ -415,8 +451,19 @@ updates:
   channel: ""
 
 serviceMonitors:
-  enabled: false   # when true, creates ServiceMonitors for operator/api and a PodMonitor for agent sidecars on port 8090
+  enabled: false   # when true, creates ServiceMonitors for operator/api/telemetry-receiver and a PodMonitor for agent sidecars on their separate plain metrics port 9090 (the control port 8090 stays mTLS-only)
   labels: {}       # additional labels applied to ServiceMonitor/PodMonitor objects for Prometheus selector matching
+  # Namespace selector (standard Kubernetes namespaceSelector label match
+  # expressions/labels) identifying the namespace your Prometheus runs in.
+  # Only used, when non-empty, to open NetworkPolicy exceptions so that
+  # Prometheus can reach the agent's metrics port 9090 (F-216; rationale in
+  # agent/specs.md) and the telemetry-receiver's /metrics on its normal
+  # port (F-217) when networkPolicies.enabled is also true. Required
+  # alongside enabled: true whenever networkPolicies.enabled is also true;
+  # left empty, both stay unreachable to Prometheus even though their
+  # ServiceMonitor/PodMonitor objects are rendered. Example:
+  # `{matchLabels: {kubernetes.io/metadata.name: monitoring}}`.
+  scrapeNamespaceSelector: {}
 
 # PrometheusRule (alerts) for the operator, off by default like serviceMonitors.
 # Alerts use only the operator's own metrics — controller-runtime internals plus
@@ -542,6 +589,18 @@ capture:
   # automatically when the file reaches this size. This default is clamped below the
   # capture emptyDir sizeLimit (1 GiB, hardcoded in the operator) to prevent pod
   # eviction; raising this requires operator code changes to increase the volume limit.
+  # As of F-187, this alone is not sufficient: the sidecar also refuses to *start*
+  # a capture whose maxSizeBytes plus already-retained (not-yet-expired) capture
+  # files would exceed a volume budget the operator derives from that same 1 GiB
+  # emptyDir sizeLimit (captureVolumeBudgetBytes in gameserver_controller.go, passed
+  # to the sidecar via the CAPTURE_VOLUME_BUDGET_BYTES env var), so retained files
+  # can never accumulate past the emptyDir's real limit and trigger a pod eviction.
+  # Practical effect of the default values below: a 900 MiB capture plus any other
+  # retained capture over ~21.6 MiB already exceeds the ~921.6 MiB budget (1 GiB
+  # minus the operator's 10% safety margin), so in practice only one default-size
+  # capture is admitted per capture's retention window (spec.ttlSecondsAfterFinished,
+  # commonly 24h) on a given pod; a second capture must wait for the first to expire
+  # (or use a smaller maxSizeBytes).
   defaultMaxSizeBytes: 943718400   # 900 MiB (safely under the 1 GiB emptyDir limit)
   # Capture sidecar container image. Defaults to {image.registry}/capture-sidecar:{image.tag}
   # if unset (the pattern matched by other component images like sentinel).
