@@ -57,9 +57,7 @@ func TestGameServer_FixedNameChildrenDeletedOnlyWhenControlled(t *testing.T) {
 	}
 	deleteCleanup(t, unownedConfig)
 
-	otherGS := &gameplanev1alpha1.GameServer{
-		ObjectMeta: metav1.ObjectMeta{Name: "not-" + gsName, Namespace: ns},
-	}
+	otherGS := buildGameServer(ns, "not-"+gsName, tmpl.Name)
 	if err := k8sClient.Create(context.Background(), otherGS); err != nil {
 		t.Fatalf("create other gameserver: %v", err)
 	}

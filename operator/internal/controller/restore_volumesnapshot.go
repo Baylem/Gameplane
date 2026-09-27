@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"strings"
 	"time"
 
@@ -507,12 +508,10 @@ func restoredRefName(restoredServerName, origRefName string) string {
 	return strings.ToLower(candidate)
 }
 
-// hashString returns a simple hash of a string for use in name generation.
+// hashString returns a FNV-1a hash of a string for use in name generation.
 // It's not cryptographic, just for deterministic uniqueness.
 func hashString(s string) uint64 {
-	h := uint64(5381)
-	for _, c := range s {
-		h = ((h << 5) + h) + uint64(c)
-	}
-	return h
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(s))
+	return h.Sum64()
 }
