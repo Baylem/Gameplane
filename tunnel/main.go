@@ -296,7 +296,7 @@ func renderConfig(cfg Config, credential string) (string, error) {
 	case "frp":
 		return renderFrpConfig(cfg, credential)
 	case "tailscale":
-		return renderTailscaleConfig(cfg.TailscaleHostname, credential)
+		return renderTailscaleConfig(cfg.TailscaleHostname, credential, cfg.TailscaleTags)
 	case "playit":
 		return renderPlayitConfig(credential)
 	default:
@@ -314,7 +314,7 @@ serverAddr = "%s"
 serverPort = %d
 auth.method = "token"
 auth.token = "%s"
-`, cfg.FrpServerAddr, cfg.FrpServerPort, escapeTomlString(token))
+`, escapeTomlString(cfg.FrpServerAddr), cfg.FrpServerPort, escapeTomlString(token))
 
 	// Parse BACKING_SERVICE_PORT format:
 	// "name:localPort:remotePort:protocol,name:localPort:remotePort:protocol,...".
@@ -351,7 +351,7 @@ type = "%s"
 localIP = "%s"
 localPort = %s
 remotePort = %s
-`, name, protocol, cfg.BackingServiceDNS, localPort, remotePort)
+`, escapeTomlString(name), protocol, cfg.BackingServiceDNS, localPort, remotePort)
 	}
 
 	if err := os.WriteFile(frpConfigPath, []byte(config), 0o600); err != nil {
@@ -375,16 +375,17 @@ remotePort = %s
 // were both no-ops (the latter would have made tailscaled reject the flag
 // and exit immediately).
 type tailscaledConfig struct {
-	Version  string `json:"version"`
-	AuthKey  string `json:"authKey,omitempty"`
-	Hostname string `json:"hostname,omitempty"`
+	Version  string   `json:"version"`
+	AuthKey  string   `json:"authKey,omitempty"`
+	Hostname string   `json:"hostname,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
 }
 
 // renderTailscaleConfig generates tailscaled's declarative config file (see
 // tailscaledConfig for the shape) at the fixed tailscaleConfigPath (see the
 // const block near the top of the file for why the path is fixed rather
 // than a random os.CreateTemp name), containing the auth key and, if set,
-// the hostname.
+// the hostname and tags.
 //
 // The JSON is built from a map rather than by marshaling the tailscaledConfig
 // struct directly: gosec's G117 rule flags any exported struct field whose
@@ -397,13 +398,21 @@ type tailscaledConfig struct {
 // false positive structurally instead of suppressing it. tailscaledConfig
 // itself is kept as the documented shape and is what tests decode the
 // written file back into (see TestRenderTailscaleConfig).
-func renderTailscaleConfig(hostname, authKey string) (string, error) {
-	fields := map[string]string{"version": "alpha0"}
+func renderTailscaleConfig(hostname, authKey, tagsStr string) (string, error) {
+	fields := map[string]any{"version": "alpha0"}
 	if authKey != "" {
 		fields["authKey"] = authKey
 	}
 	if hostname != "" {
 		fields["hostname"] = hostname
+	}
+	if tagsStr != "" {
+		tags := strings.Split(tagsStr, ",")
+		// Trim whitespace from each tag
+		for i := range tags {
+			tags[i] = strings.TrimSpace(tags[i])
+		}
+		fields["tags"] = tags
 	}
 
 	data, err := json.Marshal(fields)

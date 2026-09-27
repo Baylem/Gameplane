@@ -416,7 +416,7 @@ func TestRenderFrpConfigInvalidProtocol(t *testing.T) {
 }
 
 func TestRenderTailscaleConfig(t *testing.T) {
-	path, err := renderTailscaleConfig("my-game", "test-auth-key")
+	path, err := renderTailscaleConfig("my-game", "test-auth-key", "")
 	if err != nil {
 		t.Fatalf("renderTailscaleConfig() error = %v", err)
 	}
@@ -431,14 +431,22 @@ func TestRenderTailscaleConfig(t *testing.T) {
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("tailscaled config file is not valid JSON: %v (content: %s)", err, data)
 	}
-	want := tailscaledConfig{Version: "alpha0", AuthKey: "test-auth-key", Hostname: "my-game"}
-	if got != want {
-		t.Errorf("tailscaled config = %+v, want %+v", got, want)
+	if got.Version != "alpha0" {
+		t.Errorf("Version = %q, want %q", got.Version, "alpha0")
+	}
+	if got.AuthKey != "test-auth-key" {
+		t.Errorf("AuthKey = %q, want %q", got.AuthKey, "test-auth-key")
+	}
+	if got.Hostname != "my-game" {
+		t.Errorf("Hostname = %q, want %q", got.Hostname, "my-game")
+	}
+	if len(got.Tags) > 0 {
+		t.Errorf("Tags = %v, want empty", got.Tags)
 	}
 }
 
 func TestRenderTailscaleConfigNoHostname(t *testing.T) {
-	path, err := renderTailscaleConfig("", "test-auth-key")
+	path, err := renderTailscaleConfig("", "test-auth-key", "")
 	if err != nil {
 		t.Fatalf("renderTailscaleConfig() error = %v", err)
 	}
@@ -458,6 +466,137 @@ func TestRenderTailscaleConfigNoHostname(t *testing.T) {
 	}
 	if got.AuthKey != "test-auth-key" {
 		t.Errorf("AuthKey = %q, want %q", got.AuthKey, "test-auth-key")
+	}
+}
+
+func TestRenderTailscaleConfigWithTags(t *testing.T) {
+	path, err := renderTailscaleConfig("my-game", "test-auth-key", "tag:gameplane,tag:game")
+	if err != nil {
+		t.Fatalf("renderTailscaleConfig() error = %v", err)
+	}
+	defer os.Remove(path)
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read config file: %v", err)
+	}
+
+	var got tailscaledConfig
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("tailscaled config is not valid JSON: %v", err)
+	}
+
+	if len(got.Tags) != 2 {
+		t.Errorf("Tags length = %d, want 2", len(got.Tags))
+	}
+	if len(got.Tags) >= 2 {
+		if got.Tags[0] != "tag:gameplane" {
+			t.Errorf("Tags[0] = %q, want %q", got.Tags[0], "tag:gameplane")
+		}
+		if got.Tags[1] != "tag:game" {
+			t.Errorf("Tags[1] = %q, want %q", got.Tags[1], "tag:game")
+		}
+	}
+}
+
+func TestRenderTailscaleConfigNoTags(t *testing.T) {
+	path, err := renderTailscaleConfig("my-game", "test-auth-key", "")
+	if err != nil {
+		t.Fatalf("renderTailscaleConfig() error = %v", err)
+	}
+	defer os.Remove(path)
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read config file: %v", err)
+	}
+
+	var got tailscaledConfig
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatalf("tailscaled config is not valid JSON: %v", err)
+	}
+
+	if len(got.Tags) > 0 {
+		t.Errorf("Tags = %v, want empty", got.Tags)
+	}
+}
+
+func TestRenderFrpConfigServerAddrEscaped(t *testing.T) {
+	cfg := Config{
+		FrpServerAddr:      `server.example.com"` + "\n" + `extra = "value`,
+		FrpServerPort:      7000,
+		BackingServiceDNS:  "my-server.games.svc",
+		BackingServicePort: "game:25565:30000:tcp",
+	}
+	path, err := renderFrpConfig(cfg, "test-token")
+	if err != nil {
+		t.Fatalf("renderFrpConfig() error = %v", err)
+	}
+	defer os.Remove(path)
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+
+	config := string(data)
+	// escapeTomlString backslash-escapes both the embedded quote and the
+	// embedded newline, so the whole malicious value collapses onto a
+	// single serverAddr line rather than the newline terminating that
+	// line and "extra" starting a real new TOML key. Assert the exact
+	// rendered line rather than a substring shape, since the escaped
+	// quote is not immediately followed by the line's closing quote.
+	wantLine := `serverAddr = "server.example.com\"\nextra = \"value"`
+	foundServerAddr := false
+	for _, line := range strings.Split(config, "\n") {
+		if strings.HasPrefix(line, "serverAddr = ") {
+			foundServerAddr = true
+			if line != wantLine {
+				t.Errorf("serverAddr line = %q, want %q", line, wantLine)
+			}
+		}
+		// A real (unescaped) "extra = ..." line would mean the newline
+		// broke out of the serverAddr string and injected a new key.
+		if strings.TrimSpace(line) == `extra = "value` {
+			t.Errorf("TOML injection detected: found injected line %q in:\n%s", line, config)
+		}
+	}
+	if !foundServerAddr {
+		t.Errorf("serverAddr line not found in:\n%s", config)
+	}
+	// Verify the file parses as valid TOML (basic check: no parse error)
+	// We'd use encoding/toml but we want to avoid external imports for simple checks
+	if !strings.Contains(config, "auth.token") {
+		t.Errorf("rendered TOML missing auth.token")
+	}
+}
+
+func TestRenderFrpConfigProxyNameEscaped(t *testing.T) {
+	cfg := Config{
+		FrpServerAddr:      "frp.example.com",
+		FrpServerPort:      7000,
+		BackingServiceDNS:  "my-server.games.svc",
+		BackingServicePort: `bad"name:25565:30000:tcp`,
+	}
+	path, err := renderFrpConfig(cfg, "test-token")
+	if err != nil {
+		t.Fatalf("renderFrpConfig() error = %v", err)
+	}
+	defer os.Remove(path)
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+
+	config := string(data)
+	// Verify the proxy name is properly escaped
+	if !strings.Contains(config, `name = "bad\"name"`) {
+		t.Errorf("proxy name not properly escaped, got:\n%s", config)
+	}
+	// Verify no TOML injection
+	if strings.Count(config, "[[proxies]]") != 1 {
+		t.Errorf("TOML injection detected in proxy name escaping, got:\n%s", config)
 	}
 }
 

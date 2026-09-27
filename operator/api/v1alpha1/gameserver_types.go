@@ -419,6 +419,7 @@ type FrpTunnelSpec struct {
 	// ServerAddr is the hostname or IP of the frps server.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$|^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4})$`
 	ServerAddr string `json:"serverAddr"`
 
 	// ServerPort is the frps listening port.
@@ -439,6 +440,7 @@ type RemotePortMapping struct {
 	// Name is the advertised port name from the GameTemplate.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$`
 	Name string `json:"name"`
 
 	// RemotePort is the port on the frps host.
