@@ -109,11 +109,11 @@ func IsAllowed(ip net.IP) bool {
 	if ip == nil {
 		return false
 	}
-	if ip.IsUnspecified() || ip.IsMulticast() || ip.IsInterfaceLocalMulticast() ||
-		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+	norm := normalize(ip)
+	if norm.IsUnspecified() || norm.IsMulticast() || norm.IsInterfaceLocalMulticast() ||
+		norm.IsLinkLocalUnicast() || norm.IsLinkLocalMulticast() {
 		return false
 	}
-	norm := normalize(ip)
 	for _, m := range metadataAddrs {
 		if norm.Equal(m) {
 			return false
@@ -136,11 +136,13 @@ func IsPublic(ip net.IP) bool {
 	if ip == nil {
 		return false
 	}
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() ||
-		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() {
+	norm := normalize(ip)
+	// ip.IsLoopback() keeps ::1 blocked on its own merit: normalize turns it
+	// into 0.0.0.1, which is otherwise refused only by the 0.0.0.0/8 entry.
+	if ip.IsLoopback() || norm.IsLoopback() || norm.IsPrivate() || norm.IsUnspecified() ||
+		norm.IsLinkLocalUnicast() || norm.IsLinkLocalMulticast() || norm.IsMulticast() {
 		return false
 	}
-	norm := normalize(ip)
 	for _, blk := range reservedBlocks {
 		if blk.Contains(norm) {
 			return false

@@ -31,7 +31,9 @@ func TestIsAllowed(t *testing.T) {
 		{"224.0.0.1", false},              // multicast
 		{"ff02::1", false},                // link-local multicast v6
 		{"::ffff:169.254.169.254", false}, // IPv4-mapped link-local
+		{"::a9fe:a9fe", false},            // IPv4-compatible 169.254.169.254
 		{"64:ff9b::a9fe:a9fe", false},     // NAT64-wrapped 169.254.169.254
+		{"64:ff9b:1::a9fe:a9fe", false},   // local-use NAT64-wrapped 169.254.169.254
 		{"fd00:ec2::254", false},          // AWS IPv6 EC2 IMDS — BLOCKED
 		{"100.100.100.200", false},        // Alibaba Cloud IMDS — BLOCKED
 	}
