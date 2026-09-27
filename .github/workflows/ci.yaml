@@ -993,6 +993,66 @@ jobs:
         working-directory: test/e2e
         run: go test ./...
 
+  # The api's PostgreSQL backend (--db-driver=postgres) is compiled only
+  # with -tags postgres, so the `go` matrix and `lint` never build it. This
+  # job builds and vets api with the tag and runs api/internal/db's tests
+  # against a real PostgreSQL service; the db_postgres_test.go tests skip
+  # unless GAMEPLANE_TEST_POSTGRES_DSN is set. The server keeps the image's
+  # default (non-C) locale on purpose: TestPostgres_TextOrderingIsByteWise
+  # checks the migrations' COLLATE "C" columns sort byte-wise regardless.
+  # The name must not start with "go (" or the report's `go` matcher would
+  # absorb it.
+  api-postgres:
+    name: api (postgres)
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+        env:
+          # Throwaway CI-only server reachable only from this job's runner.
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: gameplane_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gameplane_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/go-cache
+        with:
+          key-suffix: api-postgres
+      - name: go mod download
+        working-directory: api
+        # Same transient-proxy retry as the `go` job; see the comment there.
+        env:
+          GOSUMDB: "off"
+        run: |
+          for attempt in 1 2 3 4; do
+            if go mod download; then exit 0; fi
+            echo "go mod download failed (attempt ${attempt}/5) — retrying in $((attempt * 30))s"
+            sleep $((attempt * 30))
+          done
+          go mod download
+      - name: go build -tags postgres
+        working-directory: api
+        run: go build -tags postgres ./...
+      - name: go vet -tags postgres
+        working-directory: api
+        run: go vet -tags postgres ./...
+      - name: test api/internal/db against PostgreSQL
+        working-directory: api
+        env:
+          GAMEPLANE_TEST_POSTGRES_DSN: postgres://postgres@localhost:5432/gameplane_test?sslmode=disable
+        run: go test -tags postgres -count=1 ./internal/db/...
+
   # ---------------------------------------------------------------------
   # kind e2e — one job per suite, each with its own throwaway cluster on
   # its own VM. No `needs` edges: a broken unit test doesn't gate e2e
@@ -1392,6 +1452,7 @@ jobs:
         chart-template,
         workflow-lint,
         go-e2e-unit,
+        api-postgres,
         e2e-buckets,
         e2e-go,
         e2e-multicluster,
@@ -1490,6 +1551,7 @@ jobs:
               'changes', 'build-images', 'build-images-arm64',
               'capture-sidecar-setcap-proof', 'lint', 'go',
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
+              'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-multicluster', 'e2e-upgrade',
               'e2e-web-live', 'e2e-game-bot',
             ];
@@ -1510,6 +1572,7 @@ jobs:
               'chart-template': (n) => n === 'chart render',
               'workflow-lint': (n) => n === 'workflow lint',
               'go-e2e-unit': (n) => n === 'go (test/e2e)',
+              'api-postgres': (n) => n === 'api (postgres)',
               'e2e-buckets': (n) => n === 'e2e bucket coverage',
               'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods) \//.test(n),
               'e2e-multicluster': (n) => n.startsWith('e2e multicluster /'),

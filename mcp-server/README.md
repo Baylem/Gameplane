@@ -7,28 +7,31 @@ suggested fix as plain text (YAML and/or `kubectl` commands) for a human
 operator to review and run.
 
 It **never** creates, updates, patches, deletes, or applies anything. That
-is a hard invariant, enforced two ways:
+is a hard invariant, held by two layers:
 
-1. **Structurally, by package boundary**: every MCP tool handler
-   (`tools.go`, `fixadvice.go`) lives in `package main` and takes a
-   `*kube.Client` (`internal/kube/client.go`). That type's only exported
-   methods are List/Get-shaped (`ListCRD`, `GetCRD`, `ListPods`, `GetPod`,
+1. **The handler boundary**: every MCP tool handler (`tools.go`,
+   `fixadvice.go`) lives in `package main` and takes a `*kube.Client`
+   (`internal/kube/client.go`). That type's only exported methods are
+   List/Get-shaped (`ListCRD`, `GetCRD`, `ListPods`, `GetPod`,
    `ListEvents`, `PodLogs`); the typed and dynamic Kubernetes clientsets
-   that could mutate anything are **unexported fields** on `Client`, defined
-   in `internal/kube`. Code in `package main` — where every handler lives —
-   has no way to reach those fields, so it has no way to call
-   `Create`/`Update`/`Delete`/`Patch`/`Apply` even by mistake, regardless of
-   what methods `Client` happens to have. `main_test.go`'s
-   `TestClientHasNoMutatingMethods` is a lint-level tripwire on top of that
-   (it reflects over `kube.Client`'s method set so a future mutating method
-   added to `internal/kube` fails a test immediately) — it is not itself the
-   guarantee.
+   behind it are **unexported fields** on `Client`, defined in
+   `internal/kube`. A handler that holds only the `*kube.Client` therefore
+   cannot call `Create`/`Update`/`Delete`/`Patch`/`Apply` through it. The
+   boundary is on the `*kube.Client`, not on `package main`: `runServe`
+   loads the `*rest.Config` itself, so keeping handlers on the
+   `*kube.Client` (and having no mutating call site anywhere in the
+   module) is a code convention, not a compile-time guarantee.
+   `main_test.go`'s `TestClientHasNoMutatingMethods` is a tripwire on top
+   of that (it reflects over `kube.Client`'s method set so a future
+   mutating method added to `internal/kube` fails a test immediately).
 2. **By RBAC**: the Kubernetes ClusterRole the chart's `mcpServer.enabled`
    toggle installs grants only `get`/`list`/`watch` (plus `get` on
    `pods/log`) — there is no `create`/`update`/`patch`/`delete` verb in it.
-   This is the **authoritative** backstop: even a hypothetical bug in (1)
-   would still be rejected by the API server, because the ServiceAccount
-   this pod runs as is not authorized to do anything else.
+   This is the **authoritative** layer and the only one that stops
+   mutation by any code in the process: the API server rejects a write
+   from the ServiceAccount this pod runs as, whatever client makes it. A
+   standalone run against a kubeconfig (see below) has that kubeconfig
+   user's permissions instead, so point it at a read-only identity.
 
 A third, cosmetic layer: every tool this server installs (`tools.go`)
 carries the MCP spec's `readOnlyHint: true` annotation, and `main_test.go`'s
