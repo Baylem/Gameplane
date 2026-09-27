@@ -613,12 +613,11 @@ describe("ServersPage", () => {
         }),
       );
       renderWithQuery(<ServersPage />);
-      // extra-ns only starts fetching after /namespaces resolves and the
-      // component re-renders, one MSW round trip behind the default
-      // namespace's query — wait for it explicitly rather than racing it.
+      // Both namespace queries start once /namespaces resolves; wait for
+      // each rather than relying on the order MSW answers them in.
       await screen.findByText("extra-server");
       // Merged: both namespaces' servers show up in one list.
-      expect(screen.getByText("default-server")).toBeInTheDocument();
+      expect(await screen.findByText("default-server")).toBeInTheDocument();
     });
 
     it("builds the namespace filter from the merged, fanned-out list", async () => {
@@ -737,10 +736,12 @@ describe("ServersPage", () => {
         http.get("/servers", serversHandler),
       );
       renderWithQuery(<ServersPage />);
-      await screen.findByText("fallback-server");
+      // The /namespaces query retries twice (1s + 2s backoff) before
+      // isError, so allow well past the default 5s find timeout.
+      await screen.findByText("fallback-server", {}, { timeout: 8000 });
       expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
       expect(serversHandler).toHaveBeenCalledTimes(1);
-    });
+    }, 10_000);
   });
 
   // C1: an asleep server is phase Suspended, but :stop is still a real

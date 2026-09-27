@@ -166,15 +166,17 @@ export function ServersPage() {
 
   const servers = serverItems;
 
-  // Compute shared servers (in my-servers but not in the main list)
+  // Compute shared servers (in my-servers but not in the main list).
+  // Wait for the fanned-out main list: while it is still loading every
+  // owned server would look "shared" and the section would flash.
   const sharedServers = useMemo(() => {
-    if (!myServers?.items) return [];
+    if (isLoading || !myServers?.items) return [];
     const serverKeys = new Set(servers.map((s) => `${s.metadata.namespace ?? "gameplane-games"}/${s.metadata.name}`));
     return myServers.items.filter((s) => {
       const key = `${s.metadata.namespace ?? "gameplane-games"}/${s.metadata.name}`;
       return !serverKeys.has(key);
     });
-  }, [servers, myServers]);
+  }, [isLoading, servers, myServers]);
   const counts = useMemo(() => countByState(servers), [servers]);
   const vcpus = (clusterView?.nodes ?? []).reduce((s, n) => s + (n.cpu?.capacity ?? 0), 0);
   const storage = describeStorageProvisioned(cluster?.usedStorageBytes, cluster?.totalStorageBytes);
