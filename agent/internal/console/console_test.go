@@ -1,8 +1,11 @@
 package console
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -87,6 +90,56 @@ func TestConsole_RconError(t *testing.T) {
 	// The detailed error is logged separately by the handler.
 	if got.Kind != "err" || got.Body != "upstream unavailable" {
 		t.Fatalf("got %+v, expected Body='upstream unavailable'", got)
+	}
+}
+
+// TestConsole_RconErrorLogOmitsCommand confirms the warning logged for a
+// failed Exec does not contain the submitted command, since RCON clients
+// embed the command in their errors and it may carry a secret.
+func TestConsole_RconErrorLogOmitsCommand(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	const cmd = `setpassword "hunter2"`
+	rc := &fakeRcon{err: fmt.Errorf("websocket rcon exec %q: %w", cmd, errors.New("broken pipe"))}
+	_, wsURL := newServer(t, rc)
+	conn, ctx, _ := dial(t, wsURL)
+
+	if err := wsjson.Write(ctx, conn, Envelope{Kind: "cmd", Body: cmd}); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	var got Envelope
+	if err := wsjson.Read(ctx, conn, &got); err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if got.Kind != "err" || got.Body != "upstream unavailable" {
+		t.Fatalf("got %+v", got)
+	}
+	logged := buf.String()
+	if strings.Contains(logged, "hunter2") {
+		t.Fatalf("log contains the submitted command: %q", logged)
+	}
+	if !strings.Contains(logged, "broken pipe") {
+		t.Fatalf("log lost the underlying error: %q", logged)
+	}
+}
+
+func TestRedactCommand(t *testing.T) {
+	cases := []struct {
+		msg, cmd, want string
+	}{
+		{`rcon exec "say hi": eof`, "say hi", `rcon exec "<redacted>": eof`},
+		{`rcon exec "a \"b\"": eof`, `a "b"`, `rcon exec "<redacted>": eof`},
+		{"unknown command say hi", "say hi", "unknown command <redacted>"},
+		{"dial failed", "say hi", "dial failed"},
+		{"dial failed", "", "dial failed"},
+	}
+	for _, c := range cases {
+		if got := redactCommand(c.msg, c.cmd); got != c.want {
+			t.Errorf("redactCommand(%q, %q) = %q, want %q", c.msg, c.cmd, got, c.want)
+		}
 	}
 }
 

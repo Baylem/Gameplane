@@ -37,6 +37,22 @@ func hasDotComponent(rel string) bool {
 	return strings.HasPrefix(rel, ".") || strings.Contains(rel, "/.")
 }
 
+// resolvedHasDotComponent reports whether the symlink-resolved absolute path
+// resolved (already confirmed to be under h.root) has a dot-prefixed
+// component below the root. hasDotComponent only sees the requested path,
+// so a plain-named symlink pointing at a dotfile or into a dot-directory
+// would otherwise pass.
+func (h *handler) resolvedHasDotComponent(resolved string) bool {
+	rel, err := filepath.Rel(h.root, resolved)
+	if err != nil {
+		return true
+	}
+	if rel == "." {
+		return false
+	}
+	return hasDotComponent(filepath.ToSlash(rel))
+}
+
 type handler struct {
 	root string
 }
@@ -86,6 +102,9 @@ func (h *handler) resolve(rel string) (string, error) {
 		if !strings.HasPrefix(resolved, h.root+string(os.PathSeparator)) && resolved != h.root {
 			return "", errPathOutOfRoot
 		}
+		if h.resolvedHasDotComponent(resolved) {
+			return "", errDotfile
+		}
 		return resolved, nil
 	} else if !os.IsNotExist(err) {
 		return "", err
@@ -102,6 +121,9 @@ func (h *handler) resolve(rel string) (string, error) {
 		if err == nil {
 			if !strings.HasPrefix(resolvedParent, h.root+string(os.PathSeparator)) && resolvedParent != h.root {
 				return "", errPathOutOfRoot
+			}
+			if h.resolvedHasDotComponent(resolvedParent) {
+				return "", errDotfile
 			}
 			return abs, nil
 		}
@@ -138,6 +160,9 @@ func (h *handler) resolveForDelete(rel string) (string, error) {
 	}
 	if !strings.HasPrefix(resolvedParent, h.root+string(os.PathSeparator)) && resolvedParent != h.root {
 		return "", errPathOutOfRoot
+	}
+	if h.resolvedHasDotComponent(resolvedParent) {
+		return "", errDotfile
 	}
 	fi, err := os.Stat(resolvedParent)
 	if err != nil {

@@ -16,6 +16,8 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -45,6 +47,18 @@ type Envelope struct {
 	Body string `json:"body"`
 }
 
+// redactCommand removes every occurrence of cmd (both its Go-quoted form and
+// its raw form) from msg. RCON clients embed the submitted command in their
+// Exec errors, and a console command may carry a secret (e.g. a password
+// argument), so the command text must never reach the agent's logs.
+func redactCommand(msg, cmd string) string {
+	if cmd == "" {
+		return msg
+	}
+	msg = strings.ReplaceAll(msg, strconv.Quote(cmd), `"<redacted>"`)
+	return strings.ReplaceAll(msg, cmd, "<redacted>")
+}
+
 func (h *handler) serve(w http.ResponseWriter, req *http.Request) {
 	conn, err := websocket.Accept(w, req, nil)
 	if err != nil {
@@ -67,7 +81,7 @@ func (h *handler) serve(w http.ResponseWriter, req *http.Request) {
 		out, err := h.rcon.Exec(in.Body)
 		env := Envelope{Kind: "out", Body: out}
 		if err != nil {
-			slog.Warn("console rcon", "err", err)
+			slog.Warn("console rcon", "err", redactCommand(err.Error(), in.Body))
 			env = Envelope{Kind: "err", Body: "upstream unavailable"}
 		}
 		if err := wsjson.Write(ctx, conn, env); err != nil {

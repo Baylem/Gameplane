@@ -773,6 +773,70 @@ func TestUpload_DotfileRejected(t *testing.T) {
 	}
 }
 
+// TestResolve_SymlinkToDotfileRejected confirms a plain-named symlink cannot
+// be used to reach a dotfile or a dot-directory inside the root: the dotfile
+// check is applied to the symlink-resolved path as well as the requested one.
+func TestResolve_SymlinkToDotfileRejected(t *testing.T) {
+	root := t.TempDir()
+	resolved, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatalf("eval root: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(resolved, ".gameplane-mods.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if err := os.Mkdir(filepath.Join(resolved, ".state"), 0o750); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(resolved, ".gameplane-mods.json"), filepath.Join(resolved, "manifest")); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(resolved, ".state"), filepath.Join(resolved, "state")); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	h := &handler{root: resolved}
+
+	// Existing target reached through a link to a dotfile.
+	if _, err := h.resolve("/manifest"); !errors.Is(err, errDotfile) {
+		t.Fatalf("resolve(/manifest) err=%v, want errDotfile", err)
+	}
+	// New file whose existing ancestor is a link to a dot-directory.
+	if _, err := h.resolve("/state/new.txt"); !errors.Is(err, errDotfile) {
+		t.Fatalf("resolve(/state/new.txt) err=%v, want errDotfile", err)
+	}
+	// Delete of an entry inside a dot-directory reached through a link.
+	if _, err := h.resolveForDelete("/state/x"); !errors.Is(err, errDotfile) {
+		t.Fatalf("resolveForDelete(/state/x) err=%v, want errDotfile", err)
+	}
+	// Deleting the link itself stays allowed: it removes the link, not the
+	// dotfile it points to.
+	want := filepath.Join(resolved, "manifest")
+	if got, err := h.resolveForDelete("/manifest"); err != nil || got != want {
+		t.Fatalf("resolveForDelete(/manifest) = %q, %v; want %q", got, err, want)
+	}
+}
+
+// TestRead_SymlinkToDotfileRejected confirms the read endpoint refuses a
+// symlink that points at a dotfile and does not serve its contents.
+func TestRead_SymlinkToDotfileRejected(t *testing.T) {
+	srvURL, root := newServer(t)
+	if err := os.WriteFile(filepath.Join(root, ".gameplane-mods.json"), []byte("secret-manifest"), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(root, ".gameplane-mods.json"), filepath.Join(root, "manifest")); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	resp := get(t, srvURL, "/files/read", url.Values{"path": []string{"/manifest"}})
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status=%d, want 400", resp.StatusCode)
+	}
+	body := readBody(resp)
+	if body != "dotfile access denied\n" {
+		t.Fatalf("body=%q, want %q", body, "dotfile access denied\n")
+	}
+}
+
 // helpers
 
 func multipartBody(t *testing.T, files map[string]string) (*bytes.Buffer, string) {
