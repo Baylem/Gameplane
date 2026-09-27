@@ -119,6 +119,7 @@ spec:
     name: e2e-template-test
   networking:
     tunnel:
+      provider: frp
       credentialsSecretRef:
         name: tunnel-creds
       frp:
@@ -127,7 +128,7 @@ spec:
           - name: game
             remotePort: 30000
 `
-	expectAdmissionRejection(t, yaml, []string{"serverAddr", "Pattern", "validation"})
+	expectAdmissionRejection(t, yaml, []string{"frp.serverAddr"})
 }
 
 func TestCRD_Validation_TunnelProxyNameInvalid(t *testing.T) {
@@ -143,6 +144,7 @@ spec:
     name: e2e-template-test
   networking:
     tunnel:
+      provider: frp
       credentialsSecretRef:
         name: tunnel-creds
       frp:
@@ -151,7 +153,7 @@ spec:
           - name: INVALID-PORT-NAME
             remotePort: 30000
 `
-	expectAdmissionRejection(t, yaml, []string{"name", "Pattern", "validation"})
+	expectAdmissionRejection(t, yaml, []string{"remotePorts[0].name"})
 }
 
 func TestCRD_Validation_TunnelServerAddrValid(t *testing.T) {
@@ -168,6 +170,7 @@ spec:
     name: e2e-template-test
   networking:
     tunnel:
+      provider: frp
       credentialsSecretRef:
         name: tunnel-creds
       frp:
@@ -195,6 +198,7 @@ spec:
     name: e2e-template-test
   networking:
     tunnel:
+      provider: frp
       credentialsSecretRef:
         name: tunnel-creds
       frp:
@@ -223,6 +227,7 @@ spec:
     name: e2e-template-test
   networking:
     tunnel:
+      provider: frp
       credentialsSecretRef:
         name: tunnel-creds
       frp:
