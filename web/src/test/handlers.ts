@@ -142,6 +142,10 @@ export const handlers = [
     }),
   ),
 
+  // Namespaces (F-263): default single-namespace install so existing
+  // /servers-only mocks keep behaving exactly as before the fan-out.
+  http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
+
   // Servers
   http.get("/servers", () =>
     HttpResponse.json({

@@ -592,6 +592,94 @@ describe("ServersPage", () => {
     await waitFor(() => expect(wakeHandler).toHaveBeenCalled());
   });
 
+  // F-263: /servers page fans out per allowed namespace and merges results.
+  describe("namespace fan-out (F-263)", () => {
+    it("fans out /servers per namespace from /namespaces and merges the results", async () => {
+      server.use(
+        http.get("/namespaces", () =>
+          HttpResponse.json({ namespaces: ["gameplane-games", "extra-ns"] }),
+        ),
+        http.get("/servers", ({ request }) => {
+          const url = new URL(request.url);
+          const ns = url.searchParams.get("namespace") ?? "gameplane-games";
+          if (ns === "extra-ns") {
+            return HttpResponse.json({
+              items: [makeServer({ metadata: { name: "extra-server", namespace: "extra-ns" } })],
+            });
+          }
+          return HttpResponse.json({
+            items: [makeServer({ metadata: { name: "default-server", namespace: "gameplane-games" } })],
+          });
+        }),
+      );
+      renderWithQuery(<ServersPage />);
+      await screen.findByText("default-server");
+      // Merged: both namespaces' servers show up in one list.
+      expect(screen.getByText("extra-server")).toBeInTheDocument();
+    });
+
+    it("builds the namespace filter from the merged, fanned-out list", async () => {
+      server.use(
+        http.get("/namespaces", () =>
+          HttpResponse.json({ namespaces: ["gameplane-games", "extra-ns"] }),
+        ),
+        http.get("/servers", ({ request }) => {
+          const url = new URL(request.url);
+          const ns = url.searchParams.get("namespace") ?? "gameplane-games";
+          if (ns === "extra-ns") {
+            return HttpResponse.json({
+              items: [makeServer({ metadata: { name: "extra-server", namespace: "extra-ns" } })],
+            });
+          }
+          return HttpResponse.json({
+            items: [makeServer({ metadata: { name: "default-server", namespace: "gameplane-games" } })],
+          });
+        }),
+      );
+      renderWithQuery(<ServersPage />);
+      await screen.findByText("default-server");
+
+      const filterButton = screen.getByRole("button", { name: /Filter/i });
+      await userEvent.click(filterButton);
+      expect(await screen.findByRole("checkbox", { name: "gameplane-games" })).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "extra-ns" })).toBeInTheDocument();
+    });
+
+    it("does not blank the page when one namespace's request fails", async () => {
+      server.use(
+        http.get("/namespaces", () =>
+          HttpResponse.json({ namespaces: ["gameplane-games", "broken-ns"] }),
+        ),
+        http.get("/servers", ({ request }) => {
+          const url = new URL(request.url);
+          const ns = url.searchParams.get("namespace") ?? "gameplane-games";
+          if (ns === "broken-ns") {
+            return HttpResponse.error();
+          }
+          return HttpResponse.json({
+            items: [makeServer({ metadata: { name: "healthy-server", namespace: "gameplane-games" } })],
+          });
+        }),
+      );
+      renderWithQuery(<ServersPage />);
+      // The failing namespace must not blank the whole page.
+      await screen.findByText("healthy-server");
+    });
+
+    it("behaves like a single-namespace install when /namespaces returns one namespace", async () => {
+      server.use(
+        http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
+        http.get("/servers", () =>
+          HttpResponse.json({
+            items: [makeServer({ metadata: { name: "solo-server", namespace: "gameplane-games" } })],
+          }),
+        ),
+      );
+      renderWithQuery(<ServersPage />);
+      await screen.findByText("solo-server");
+    });
+  });
+
   // C1: an asleep server is phase Suspended, but :stop is still a real
   // action (it patches spec.suspend=true) — Stop must not be dead here.
   it("keeps Stop enabled for an asleep server", async () => {

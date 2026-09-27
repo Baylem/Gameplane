@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ServerActionsMenu } from "@/components/server/ServerActionsMenu";
 import {
   Activity,
@@ -31,18 +31,51 @@ import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { describeStorageProvisioned, formatBytes, cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/media";
 import type { ClusterStats, ClusterView, GameServer, GameServerPhase, GameTemplate } from "@/types";
-import { Cluster, Servers, type LifecycleVerb } from "@/lib/endpoints";
+import { Cluster, Namespaces, Servers, type LifecycleVerb } from "@/lib/endpoints";
 import { countByState } from "@/lib/servers";
 
 type FilterKey = "all" | "running" | "stopped";
 
+// DEFAULT_NAMESPACE mirrors the API's scope.DefaultNamespace: the namespace
+// a bare GET /servers (no ?namespace=) resolves to. Used as the fan-out
+// fallback for a single-namespace install (or while /namespaces hasn't
+// resolved yet), so the page's behavior there is unchanged from before F-263.
+const DEFAULT_NAMESPACE = "gameplane-games";
+
 export function ServersPage() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
-    queryKey: ["servers"],
-    queryFn: () => Servers.list(),
-    refetchInterval: 5_000,
+
+  // The namespaces the caller may read servers in (F-263). A failure here
+  // (older API, transient error) falls back to just the default namespace,
+  // reproducing pre-fan-out behavior instead of leaving the page empty.
+  const { data: namespacesData } = useQuery({
+    queryKey: ["namespaces"],
+    queryFn: () => Namespaces.list(),
+    staleTime: 30_000,
+    retry: false,
   });
+  const namespaces = useMemo(() => {
+    const ns = namespacesData?.namespaces;
+    return ns && ns.length > 0 ? ns : [DEFAULT_NAMESPACE];
+  }, [namespacesData]);
+
+  // Fan out GET /servers?namespace=X across every allowed namespace and
+  // merge the results. Namespace-qualified query keys keep each namespace's
+  // cache entry independent, so one slow/failing namespace never blanks the
+  // others — and a single-namespace install (namespaces === [default])
+  // behaves exactly as the single pre-F-263 query did.
+  const serverQueries = useQueries({
+    queries: namespaces.map((ns) => ({
+      queryKey: ["servers", ns],
+      queryFn: () => Servers.list(ns),
+      refetchInterval: 5_000,
+    })),
+  });
+  const isLoading = serverQueries.length === 0 || serverQueries.every((q) => q.isLoading);
+  const data = useMemo(() => {
+    const items = serverQueries.flatMap((q) => q.data?.items ?? []);
+    return { items };
+  }, [serverQueries]);
 
   const { templates, gameCodes, byName } = useGameCodes();
 

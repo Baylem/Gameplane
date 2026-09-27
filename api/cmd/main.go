@@ -298,6 +298,7 @@ func main() {
 		p.Use(rbac.Middleware(reg))
 
 		handlers.MountResources(p, reg)
+		handlers.MountNamespaces(p, reg)
 		handlers.MountPodEvents(p, reg)
 		handlers.MountLifecycle(p, reg)
 		handlers.MountShareLinks(p, reg, store)
