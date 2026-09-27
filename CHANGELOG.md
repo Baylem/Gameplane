@@ -157,6 +157,12 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   exceptions (agent metrics port `9090` and the receiver's port) a
   Prometheus outside the release namespace needs to reach either target
   when `networkPolicies.enabled` is also `true` (F-217).
+- **api:** the experimental PostgreSQL backend (`db.driver=postgres`, an api
+  image built with `-tags postgres`) now works end to end. It has its own
+  migration set, queries are rebound to Postgres placeholders, and a CI job
+  runs the database tests against PostgreSQL. SQLite installs are unchanged.
+  New migrations must now be portable SQL that runs on both databases
+  (#519, closes #518).
 - **web, api:** the Servers page now lists servers from every namespace the
   viewer may read, not only `gameplane-games`, and the namespace filter
   offers each of them. A new `GET /namespaces` route returns those
