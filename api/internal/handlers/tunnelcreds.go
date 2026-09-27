@@ -138,9 +138,19 @@ func (h *tunnelCredsHandler) put(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Patch it instead to preserve extra fields. The same patch removes
-		// the keys of every other tunnel provider, so the Secret only ever
-		// holds the credential of the provider just set.
-		patchBytes, mErr := json.Marshal(tunnelCredentialPatch(body.Provider, body.Values))
+		// the keys of every stale tunnel provider, so the Secret only ever
+		// holds the credential of the provider just set plus the credential
+		// of the provider the GameServer spec still names as active — the
+		// dashboard saves credentials and spec.networking.tunnel.provider in
+		// separate requests, so an in-flight pod for the still-active
+		// provider must keep being able to read its key until reconciliation
+		// completes the switch.
+		activeProvider, _, apErr := getNestedString(gs.Object, "spec", "networking", "tunnel", "provider")
+		if apErr != nil {
+			httperr.Write(w, req, apErr)
+			return
+		}
+		patchBytes, mErr := json.Marshal(tunnelCredentialPatch(body.Provider, activeProvider, body.Values))
 		if mErr != nil {
 			httperr.Write(w, req, mErr)
 			return
@@ -371,17 +381,23 @@ func hasKeys(m map[string][]byte, keys []string) bool {
 
 // tunnelCredentialPatch builds the JSON merge patch that rotates an existing
 // tunnel credential Secret to provider's values. Every key that belongs to a
-// different provider is set to null, which a merge patch treats as a delete,
-// in both data and stringData. Keys that no provider uses (for example
-// fields an admin added with kubectl) are left untouched.
-func tunnelCredentialPatch(provider string, values map[string]string) map[string]any {
+// stale provider — one that is neither provider nor activeProvider — is set
+// to null, which a merge patch treats as a delete, in both data and
+// stringData. activeProvider is the provider currently named in the
+// GameServer spec: its key is kept even when provider differs, because the
+// dashboard saves credentials and switches the spec's provider in separate
+// requests, and a pod still running the active provider must be able to keep
+// reading its credential until reconciliation completes the handoff. Keys
+// that no provider uses (for example fields an admin added with kubectl) are
+// left untouched.
+func tunnelCredentialPatch(provider, activeProvider string, values map[string]string) map[string]any {
 	stringData := make(map[string]any, len(values))
 	for key, val := range values {
 		stringData[key] = val
 	}
 	data := map[string]any{}
 	for _, other := range tunnelProviderOrder {
-		if other == provider {
+		if other == provider || other == activeProvider {
 			continue
 		}
 		for _, key := range tunnelProviderKeys[other] {

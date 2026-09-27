@@ -813,6 +813,102 @@ func TestTunnelCreds_ProviderSwitchLeavesOnlyNewProviderKey(t *testing.T) {
 	}
 }
 
+// TestTunnelCreds_Put_KeepsActiveProviderKeyDuringSwitch checks that saving
+// a new provider's credentials does not delete the key of the provider the
+// GameServer spec still names as active. The dashboard saves credentials and
+// switches spec.networking.tunnel.provider in separate requests, so a pod
+// still running the active provider must keep being able to read its
+// credential until the spec provider field actually changes.
+func TestTunnelCreds_Put_KeepsActiveProviderKeyDuringSwitch(t *testing.T) {
+	const ns, name, secretName = "gameplane-games", "test-server", "test-server-tunnel-auth"
+	gs := &unstructured.Unstructured{
+		Object: map[string]any{
+			"apiVersion": "gameplane.local/v1alpha1",
+			"kind":       "GameServer",
+			"metadata": map[string]any{
+				"name":      name,
+				"namespace": ns,
+				"uid":       "test-uid-12345",
+			},
+			"spec": map[string]any{
+				"template": "minecraft-java",
+				"networking": map[string]any{
+					"expose": "ClusterIP",
+					"tunnel": map[string]any{
+						"enabled":  true,
+						"provider": "frp",
+					},
+				},
+			},
+		},
+	}
+	k := fakeKubeClient(gs)
+	router := newTunnelCredsRouter(k)
+	path := "/servers/" + name + ":tunnel-credentials"
+
+	// The frp tunnel is already running with a saved token.
+	status, respBody := doTunnelReq(t, router, "PUT", path, putReq{
+		Provider: "frp",
+		Values:   map[string]string{"token": "frp-token"},
+	})
+	if status != http.StatusNoContent {
+		t.Fatalf("frp PUT status = %d, want 204; body=%s", status, respBody)
+	}
+	syncSecretData(t, k, ns, secretName)
+
+	// The dashboard saves tailscale credentials before the GameServer spec's
+	// provider field is switched away from frp: the fake object above still
+	// names "frp" as spec.networking.tunnel.provider.
+	status, respBody = doTunnelReq(t, router, "PUT", path, putReq{
+		Provider: "tailscale",
+		Values:   map[string]string{"authKey": "ts-key"},
+	})
+	if status != http.StatusNoContent {
+		t.Fatalf("tailscale PUT status = %d, want 204; body=%s", status, respBody)
+	}
+	syncSecretData(t, k, ns, secretName)
+
+	secret, err := k.Typed.CoreV1().Secrets(ns).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get secret: %v", err)
+	}
+	if got := string(secret.Data["token"]); got != "frp-token" {
+		t.Fatalf("token = %q, want frp-token (active provider key must survive an in-flight switch)", got)
+	}
+	if got := string(secret.Data["authKey"]); got != "ts-key" {
+		t.Fatalf("authKey = %q, want ts-key", got)
+	}
+
+	// Once the spec provider field actually switches to tailscale, saving
+	// credentials again must clean up the now-inactive frp key.
+	gs.Object["spec"].(map[string]any)["networking"].(map[string]any)["tunnel"].(map[string]any)["provider"] = "tailscale"
+	if _, err := k.Dynamic.Resource(kube.GVRs["servers"]).Namespace(ns).Update(
+		context.Background(), gs, metav1.UpdateOptions{},
+	); err != nil {
+		t.Fatalf("update gameserver spec provider: %v", err)
+	}
+
+	status, respBody = doTunnelReq(t, router, "PUT", path, putReq{
+		Provider: "tailscale",
+		Values:   map[string]string{"authKey": "ts-key-2"},
+	})
+	if status != http.StatusNoContent {
+		t.Fatalf("tailscale re-save PUT status = %d, want 204; body=%s", status, respBody)
+	}
+	syncSecretData(t, k, ns, secretName)
+
+	secret, err = k.Typed.CoreV1().Secrets(ns).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("get secret after spec switch: %v", err)
+	}
+	if _, ok := secret.Data["token"]; ok {
+		t.Fatal("frp key still present after the spec provider switched away from frp")
+	}
+	if got := string(secret.Data["authKey"]); got != "ts-key-2" {
+		t.Fatalf("authKey = %q, want ts-key-2", got)
+	}
+}
+
 // TestTunnelCreds_GetReportsKeysDeterministically checks that GET reports the
 // GameServer's own provider when a Secret holds keys for several providers,
 // and falls back to a fixed provider order when the spec names none.
