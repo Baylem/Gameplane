@@ -10,7 +10,7 @@ Execute a command on a game server via source RCON protocol (Minecraft, Valve ga
 
 - `audit018-operator` or `audit018-admin` account exists
 - `minecraft-java` module is deployed in the cluster
-- No pre-existing GameServer is required: this procedure creates its own `audit018-mc-source` GameServer from the `minecraft-java` template (Step 2), which defaults to `consoleMode: rcon` / `rcon.protocol: source` (modules/minecraft-java/template.yaml:83-85) (OD-021 item 1)
+- No pre-existing GameServer is required: this procedure creates its own `audit018-mc-source` GameServer from the `minecraft-java` template (Step 2), which sets `rcon.protocol: source` (modules/minecraft-java/template.yaml:83-85) and so defaults implicitly to `consoleMode: rcon` (operator/api/v1alpha1/gametemplate_types.go:115-116) (OD-021 item 1)
 - `GP=http://127.0.0.1:18080` environment variable is set
 - Session cookie and CSRF token for the operator account are saved in `~/gameplane-audit-018/session-operator.txt`
 
@@ -2084,7 +2084,7 @@ The API gateway does not proxy `/quiesce` or `/unquiesce` (agent/internal/quiesc
 
 - `audit018-operator` or `audit018-admin` account exists
 - No pre-existing GameServer is required: this procedure creates its own `audit018-agt-quiesce-p` GameServer from the `minecraft-java` template (Step 2) (OD-021 item 1)
-- The `audit018-restic` restic-server Deployment and the per-round `audit018-restic` repo Secret exist in `gameplane-games` (OD-021 items 9/16, set up by the modules.md/crd.md backup procedures for this round)
+- The `audit018-restic` restic-server Deployment/Service exist in `gameplane-system`, and the per-round `audit018-restic` repo Secret exists in `gameplane-games` (OD-021 items 9/16, set up by the modules.md/crd.md backup procedures for this round)
 - `minecraft-java`'s GameTemplate declares `capabilities.quiesce.quiesce: ["save-off", "save-all flush"]` (modules/minecraft-java/template.yaml:329-332), so the pause sequence is these two RCON commands, in order
 
 **Resources created**
@@ -2113,7 +2113,7 @@ The API gateway does not proxy `/quiesce` or `/unquiesce` (agent/internal/quiesc
    ```
    Poll `kubectl get gameserver audit018-agt-quiesce-p -n gameplane-games -o jsonpath='{.status.phase}'` until `Running` (10m timeout — OD-021 item 24, cold first boot; record the actual boot time).
 
-3. Create the Backup CR with `quiesce: true` (the CRD default; setting it explicitly documents intent — operator/api/v1alpha1/backup_types.go:59):
+3. Create the Backup CR with `quiesce: true` (the CRD default; setting it explicitly documents intent — operator/api/v1alpha1/backup_types.go:64, field at :66):
    ```sh
    kubectl apply -f - <<'YAML'
    apiVersion: gameplane.local/v1alpha1
@@ -2189,7 +2189,7 @@ Like quiesce-pause, this is tested through a Backup CR (`spec.quiesce: true`) ag
 
 - `audit018-operator` or `audit018-admin` account exists
 - No pre-existing GameServer is required: this procedure creates its own `audit018-agt-quiesce-r` GameServer from the `minecraft-java` template (Step 2) (OD-021 item 1)
-- The `audit018-restic` restic-server Deployment and the per-round `audit018-restic` repo Secret exist in `gameplane-games` (OD-021 items 9/16)
+- The `audit018-restic` restic-server Deployment/Service exist in `gameplane-system`, and the per-round `audit018-restic` repo Secret exists in `gameplane-games` (OD-021 items 9/16)
 - `minecraft-java`'s GameTemplate declares `capabilities.quiesce.unquiesce: ["save-on"]` (modules/minecraft-java/template.yaml:329-332)
 
 **Resources created**
@@ -2908,14 +2908,14 @@ Verify the server reports metrics via Prometheus (heartbeat, player count, resou
    ```
    Poll `kubectl get gameserver audit018-agt-heartbeat -n gameplane-games -o jsonpath='{.status.phase}'` until `Running` (10m timeout — OD-021 item 24, cold first boot; record the actual boot time).
 
-3. Now that the pod exists, identify the agent pod and export `AGENT_POD` (the agent runs as a sidecar container inside the GameServer's own pod, which the operator labels `app.kubernetes.io/instance=<server-name>` alongside `app.kubernetes.io/name=gameplane-game` — operator/internal/controller/gameserver_controller.go:596-597):
+3. Now that the pod exists, identify the agent pod and export `AGENT_POD` (the agent runs as a sidecar container inside the GameServer's own pod, which the operator labels `app.kubernetes.io/instance=<server-name>` alongside `app.kubernetes.io/name=gameplane-game` in the StatefulSet pod template — operator/internal/controller/gameserver_controller.go:1371-1373, applied at :1379; the game Service selector carries the same pair at :572-575):
    ```sh
    export AGENT_POD=$(kubectl get pod -n gameplane-games -l app.kubernetes.io/instance=audit018-agt-heartbeat -o jsonpath='{.items[0].metadata.name}')
    ```
 
-4. Port-forward to the agent metrics endpoint:
+4. Port-forward to the agent's plain-HTTP metrics listener (agent/cmd/main.go:64, separate from the mTLS control listener on :8090 at :63):
    ```sh
-   kubectl port-forward -n gameplane-games "$AGENT_POD" 18090:8090 &
+   kubectl port-forward -n gameplane-games "$AGENT_POD" 18090:9090 &
    sleep 2
    ```
 

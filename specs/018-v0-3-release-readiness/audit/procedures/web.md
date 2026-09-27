@@ -300,42 +300,63 @@ entirely), which the operator will still reconcile; it does not depend on
 Even so, step 4/5 cannot pass as written: the dashboard's server list never
 learns `audit018-games2` exists. `Servers.list()` calls `Servers` route's
 `/servers` with no namespace parameter (`web/src/lib/endpoints.ts:109`), and
-the handler behind it lists only the resolved namespace — `gameplane-games`
-by default — via `resolveNS`/`scope.Resolve` (`api/internal/handlers/resources.go:110-127`,
-`api/internal/scope/scope.go:41-57`), which never returns a namespace outside
-`AllowedNamespaces`. The namespace filter facet in `web/src/routes/Servers.tsx:110-114`
-is built only from the namespaces present in that already-namespace-scoped
-list, so `audit018-games2` cannot appear as a checkbox to toggle. Making it
-appear would require adding `audit018-games2` to `GAMEPLANE_EXTRA_NAMESPACES`
-on the API Deployment *and* a matching RoleBinding
-(`charts/gameplane/templates/api.yaml:66-74`, whose comment states both are
-required) — a per-round Helm/env override to a pre-existing Deployment, the
-same category of change as the item 17 `capture.enabled` override, which
-needed the maintainer's explicit OK before being written into a procedure.
+`scope.Resolve` returns `DefaultNamespace` (`gameplane-games`) whenever the
+`namespace` query param is absent (`api/internal/scope/scope.go:48-52`).
+`listHandler` (`api/internal/handlers/resources.go:120-146`) then lists only
+that one namespace via `resolveNS`/`scope.Resolve` and
+`.Namespace(ns).List(...)` (`resources.go:65-72` for `resolveNS`,
+`resources.go:133-137` for the namespace-scoped list call). The namespace
+filter facet in `web/src/routes/Servers.tsx:110-116` is built only from the
+namespaces present in that already-namespace-scoped list, so
+`audit018-games2` cannot appear as a checkbox to toggle.
+
+Adding `audit018-games2` to `GAMEPLANE_EXTRA_NAMESPACES` (plus a matching
+RoleBinding) on its own does **not** fix this: extending `AllowedNamespaces`
+only lets an explicit `?namespace=audit018-games2` request through
+`scope.Resolve` — and the dashboard's server-list request never sends a
+`?namespace=` param at all (`endpoints.ts:109`), so `listHandler` keeps
+resolving to `gameplane-games` regardless of the override. The Helm/env
+override is also, on its own, unnecessary for *reads*: cluster-wide
+`get`/`list`/`watch` on `gameservers` already comes from the `api-read`
+ClusterRole and its ClusterRoleBinding
+(`charts/gameplane/templates/api.yaml:17-19, 54-60`), which is not
+namespace-scoped. The namespaced Role at `api.yaml:66-79` (whose comment at
+lines 66-69 talks about expanding write access) governs mutating verbs on
+the games namespace(s); it is not what stands between `audit018-games2` and
+the dashboard's read path. What is actually missing is a web and/or API code
+change so the dashboard's server list queries every namespace in
+`AllowedNamespaces` (or the API aggregates them server-side) instead of only
+the single resolved namespace — extending `GAMEPLANE_EXTRA_NAMESPACES` alone
+still leaves `audit018-games2` out of `distinctNamespaces`
+(`web/src/routes/Servers.tsx:110-116`).
+
 Item 14's resolution ("create an `audit018-games2` namespace with one small
 server per round") does not by itself make the namespace filterable in the
 UI with the code as it stands today; this procedure cannot be run as
-originally resolved without that further maintainer decision.
+originally resolved without a code change (not just a config override).
 
-**Expected:** With only the GameServer created via `kubectl apply` (no
-`GAMEPLANE_EXTRA_NAMESPACES`/RoleBinding change), `audit018-games2` does not
-appear in the namespace filter list at all, and `audit018-ns2-mc` never shows
-in $GP/servers — this is expected given the code above, not a defect to
-chase during the round. If the maintainer separately approves the
-`GAMEPLANE_EXTRA_NAMESPACES` + RoleBinding override for this round, then:
+**Expected:** With only the GameServer created via `kubectl apply` (no code
+change to the web/API list path), `audit018-games2` does not appear in the
+namespace filter list at all, and `audit018-ns2-mc` never shows in
+$GP/servers — this is expected given the code above, not a defect to chase
+during the round. If the maintainer separately approves and ships a web
+and/or API change that queries every namespace in `AllowedNamespaces` (with
+`audit018-games2` added to `GAMEPLANE_EXTRA_NAMESPACES` for the round), then:
 list shows only servers in selected namespaces, including
 `audit018-ns2-mc` when `audit018-games2` is checked and excluding it when
 unchecked.
 
 **Cleanup:** Clear and reapply filter, then delete `audit018-ns2-mc` and the
-`audit018-games2` namespace. If the Helm override was approved and applied,
-also revert `GAMEPLANE_EXTRA_NAMESPACES` and the RoleBinding, with a
-snapshot-diff, per the item 17-style convention.
+`audit018-games2` namespace. If a `GAMEPLANE_EXTRA_NAMESPACES` override was
+applied for the round, also revert it, with a snapshot-diff, per the item
+17-style convention.
 
-**Automatable?** blocked pending maintainer decision on the
-`GAMEPLANE_EXTRA_NAMESPACES`/RoleBinding override (OD-021 item 14 follow-up;
-cf. `api/internal/scope/scope.go:27-57`, `charts/gameplane/templates/api.yaml:66-74`,
-`web/src/lib/endpoints.ts:109`, `web/src/routes/Servers.tsx:110-114`)
+**Automatable?** blocked pending a web and/or API code change so the server
+list queries every allowed namespace (OD-021 item 14 follow-up; a config-only
+`GAMEPLANE_EXTRA_NAMESPACES`/RoleBinding override is not sufficient — cf.
+`web/src/lib/endpoints.ts:109`, `api/internal/scope/scope.go:48-57`,
+`api/internal/handlers/resources.go:120-146,133-137`,
+`web/src/routes/Servers.tsx:110-116`, `charts/gameplane/templates/api.yaml:17-19,54-60`)
 
 ---
 

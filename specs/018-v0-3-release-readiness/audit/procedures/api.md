@@ -1094,7 +1094,7 @@ yes (api-auth)
 ### users-get
 
 **Preconditions**
-Authenticated as audit018-admin (users:read). audit018-collab exists (from round setup). There is no `GET /users/{id}` route (only `GET /users`, `PATCH /{id}`, `DELETE /{id}`, `POST /{id}/reset-password` and the `/{id}/bindings` routes; see `api/internal/handlers/users.go`), so this procedure is retargeted to `GET /users` (OD-021 item 4) and filters client-side for audit018-collab instead of fetching it by id.
+Authenticated as audit018-admin (users:read). audit018-collab exists (from round setup). There is no `GET /users/{id}` route (the `/{id}` routes are only `PATCH /{id}`, `DELETE /{id}`, `POST /{id}/reset-password` and the `/{id}/bindings` routes; see `api/internal/handlers/users.go`), so this procedure is retargeted to `GET /users` (OD-021 item 4) and filters client-side for audit018-collab instead of fetching it by id.
 
 **Resources created**
 none
