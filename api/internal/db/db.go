@@ -3,7 +3,11 @@
 // is opt-in via --db-driver=postgres --db-dsn=...
 //
 // Schema migrations live alongside this package as plain .sql files,
-// applied in filename order at startup.
+// applied in version order at startup: migrations 001-012 exist once per
+// dialect (migrations/sqlite, migrations/postgres); every later migration
+// is a single portable file in migrations/common that both drivers run.
+// Runtime queries are written with `?` placeholders; the Postgres
+// connection rewrites them to $n (see Rebind).
 package db
 
 import (
@@ -19,12 +23,16 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	// Pure-Go SQLite driver; registered as "sqlite" via database/sql.
 	_ "modernc.org/sqlite"
 )
 
-//go:embed migrations/*.sql
+// migrations holds the per-driver legacy sets and the shared portable set;
+// see migrations/README.md for which directory a new migration goes in.
+//
+//go:embed migrations/sqlite/*.sql migrations/postgres/*.sql migrations/common
 var migrations embed.FS
 
 // Store wraps the database connection and driver name, providing methods
@@ -77,44 +85,121 @@ func (s *Store) LockUserManagement() (unlock func()) {
 	return s.userMgmtMu.Unlock
 }
 
-// Migrate applies every .sql file under migrations/ in order. Each
-// file is run in a single transaction; failures are fatal.
+// Migrate applies every pending migration for s.Driver, in version order:
+// first the driver's legacy set (migrations/<driver>/, versions 001-012,
+// written per dialect), then the shared set (migrations/common/, 013
+// onward, portable SQL that both drivers run unchanged). See
+// migrations/README.md. Each file runs in a single transaction; failures
+// are fatal.
 func (s *Store) Migrate(ctx context.Context) error {
 	if _, err := s.DB.ExecContext(ctx,
 		`CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)`,
 	); err != nil {
-		return err
+		return fmt.Errorf("create schema_migrations: %w", err)
 	}
 
-	entries, err := fs.ReadDir(migrations, "migrations")
+	files, err := migrationFiles(migrations, s.Driver)
 	if err != nil {
 		return err
 	}
-	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
-			names = append(names, e.Name())
-		}
-	}
-	sort.Strings(names)
 
-	for _, name := range names {
-		applied, err := s.migrationApplied(ctx, name)
+	for _, f := range files {
+		applied, err := s.migrationApplied(ctx, f.name)
 		if err != nil {
-			return err
+			return fmt.Errorf("migration %s: %w", f.name, err)
 		}
 		if applied {
 			continue
 		}
-		content, err := migrations.ReadFile("migrations/" + name)
+		content, err := fs.ReadFile(migrations, f.path)
 		if err != nil {
-			return err
+			return fmt.Errorf("read migration %s: %w", f.path, err)
 		}
-		if err := s.runMigration(ctx, name, string(content)); err != nil {
-			return fmt.Errorf("migration %s: %w", name, err)
+		if err := s.runMigration(ctx, f.name, string(content)); err != nil {
+			return fmt.Errorf("migration %s: %w", f.name, err)
 		}
 	}
 	return nil
+}
+
+// Migration directories inside the embedded FS. legacyMigrationDirs maps a
+// driver to its per-dialect set; sharedMigrationDir holds the portable set.
+const sharedMigrationDir = "migrations/common"
+
+var legacyMigrationDirs = map[string]string{
+	"sqlite":   "migrations/sqlite",
+	"postgres": "migrations/postgres",
+}
+
+// migrationFile is one migration to apply. name is the bare filename, which
+// is also the version recorded in schema_migrations; path is where it lives
+// in the embedded FS.
+type migrationFile struct {
+	name string
+	path string
+}
+
+// migrationFiles lists the migrations for driver: its legacy set followed
+// by the shared set, sorted by filename (the numeric version prefix). It
+// rejects a version number that appears in both sets.
+func migrationFiles(fsys fs.FS, driver string) ([]migrationFile, error) {
+	legacyDir, ok := legacyMigrationDirs[driver]
+	if !ok {
+		return nil, fmt.Errorf("no migrations for db driver %q", driver)
+	}
+	legacy, err := listSQL(fsys, legacyDir)
+	if err != nil {
+		return nil, err
+	}
+	shared, err := listSQL(fsys, sharedMigrationDir)
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]string, len(legacy)+len(shared))
+	all := make([]migrationFile, 0, len(legacy)+len(shared))
+	for _, f := range append(legacy, shared...) {
+		v := migrationVersion(f.name)
+		if prev, dup := seen[v]; dup {
+			return nil, fmt.Errorf("migration version %s is used by both %s and %s", v, prev, f.path)
+		}
+		seen[v] = f.path
+		all = append(all, f)
+	}
+	sort.SliceStable(all, func(i, j int) bool { return all[i].name < all[j].name })
+	return all, nil
+}
+
+// listSQL returns the .sql files directly under dir. A missing directory
+// is treated as empty.
+func listSQL(fsys fs.FS, dir string) ([]migrationFile, error) {
+	entries, err := fs.ReadDir(fsys, dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("list migrations in %s: %w", dir, err)
+	}
+	out := make([]migrationFile, 0, len(entries))
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
+			out = append(out, migrationFile{name: e.Name(), path: dir + "/" + e.Name()})
+		}
+	}
+	return out, nil
+}
+
+// migrationVersion is the leading run of digits in a migration filename
+// ("013" for "013_add_foo.sql"); the whole name when it has none.
+func migrationVersion(name string) string {
+	i := 0
+	for i < len(name) && name[i] >= '0' && name[i] <= '9' {
+		i++
+	}
+	if i == 0 {
+		return name
+	}
+	return name[:i]
 }
 
 func (s *Store) migrationApplied(ctx context.Context, name string) (bool, error) {
@@ -126,6 +211,20 @@ func (s *Store) migrationApplied(ctx context.Context, name string) (bool, error)
 	return err == nil, err
 }
 
+// sqliteTimestampLayout is the text format SQLite's datetime('now')
+// produces ("YYYY-MM-DD HH:MM:SS", UTC). Timestamps that columns used to
+// get from datetime('now') are now generated in Go with this layout and
+// bound as parameters, so the stored values are unchanged on SQLite and
+// identical on Postgres.
+const sqliteTimestampLayout = "2006-01-02 15:04:05"
+
+// NowTimestamp returns the current UTC time in sqliteTimestampLayout, for
+// the columns (users.updated_at, roles.updated_at, config.updated_at,
+// schema_migrations.applied_at) that have always stored that format.
+func NowTimestamp() string {
+	return time.Now().UTC().Format(sqliteTimestampLayout)
+}
+
 func (s *Store) runMigration(ctx context.Context, name, sqlText string) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
@@ -134,7 +233,7 @@ func (s *Store) runMigration(ctx context.Context, name, sqlText string) error {
 	defer func() { _ = tx.Rollback() }()
 
 	for _, stmt := range splitStatements(sqlText) {
-		if strings.TrimSpace(stmt) == "" {
+		if isCommentOnly(stmt) {
 			continue
 		}
 		if _, err := tx.ExecContext(ctx, stmt); err != nil {
@@ -142,11 +241,23 @@ func (s *Store) runMigration(ctx context.Context, name, sqlText string) error {
 		}
 	}
 	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO schema_migrations(version, applied_at) VALUES (?, datetime('now'))`, name,
+		`INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)`, name, NowTimestamp(),
 	); err != nil {
 		return err
 	}
 	return tx.Commit()
+}
+
+// isCommentOnly reports whether stmt holds nothing but blank lines and
+// `--` comments (e.g. 008_captures_rbac.sql), so there is nothing to run.
+func isCommentOnly(stmt string) bool {
+	for line := range strings.SplitSeq(stmt, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "--") {
+			return false
+		}
+	}
+	return true
 }
 
 // splitStatements is a quick-and-dirty splitter that breaks on ";\n".

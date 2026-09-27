@@ -54,6 +54,7 @@ gh pr view <pr-number>
 **Workflow metadata**:
 - `workflow-lint` → actionlint + zizmor (SHA-pin gate, deferred rules in `.github/zizmor.yml`)
 - `go-e2e-unit` → probe protocol unit tests in test/e2e (untagged, no coverage gate)
+- `api-postgres` (`api (postgres)`) → builds/vets api with `-tags postgres` and runs api/internal/db tests against a PostgreSQL service container (no coverage gate)
 
 **E2E integration** (all boot kind cluster, load e2e-images artifact, install chart):
 - `e2e-buckets` → verifies test/e2e/buckets.sh is disjoint + exhaustive (fails if any test is unbucketed)

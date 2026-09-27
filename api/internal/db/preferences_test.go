@@ -34,7 +34,7 @@ func TestUserThemePreferencesMigration(t *testing.T) {
 		"010_share_links_expiry_nullable.sql",
 	}
 	for _, name := range names {
-		content, err := migrations.ReadFile("migrations/" + name)
+		content, err := migrations.ReadFile("migrations/sqlite/" + name)
 		if err != nil {
 			t.Fatalf("read %s: %v", name, err)
 		}
@@ -48,7 +48,7 @@ func TestUserThemePreferencesMigration(t *testing.T) {
 	preB := insertTestUser(t, s, "pre-migration-b")
 
 	// Apply 011.
-	content, err := migrations.ReadFile("migrations/011_user_theme_preferences.sql")
+	content, err := migrations.ReadFile("migrations/sqlite/011_user_theme_preferences.sql")
 	if err != nil {
 		t.Fatalf("read 011: %v", err)
 	}
