@@ -115,6 +115,13 @@ const (
 // research.md's proposed interval, aligned with BackupSchedule's cadence.
 const retentionPollInterval = 60 * time.Second
 
+// captureFileCleanupBudget bounds how long expireCapture retries a failing
+// sidecar file deletion before giving up on the file and deleting the CR
+// anyway (FR-007 / specs.md:293 — cleanup is best-effort and must never
+// block the CR delete indefinitely, e.g. when the pod restarted and its
+// -agent sidecar has no endpoints yet).
+const captureFileCleanupBudget = 5 * time.Minute
+
 // NetworkCaptureReconciler drives a NetworkCapture's lifecycle: Pending → Running → Completed/Failed.
 // It injects the capture sidecar as an ephemeral container, calls the sidecar's control endpoint
 // over mTLS through the <gs>-agent Service, and monitors completion.
@@ -908,10 +915,12 @@ func (r *NetworkCaptureReconciler) expireStuckRunningCapture(
 // expireCapture transitions nc to Expired (persisting first if it isn't
 // already), best-effort deletes its backing file via the sidecar, then
 // deletes the CR itself. File deletion is best-effort: the pod (and its
-// emptyDir) may already be gone by the time retention fires. On failure, the
-// Expired CR is requeued with backoff so cleanup is retried rather than the
-// file being abandoned past its retention window; no logging is recorded and
-// the CR is never deleted until cleanup succeeds or a bounded budget expires.
+// emptyDir) may already be gone by the time retention fires, or the sidecar
+// may be temporarily unreachable (e.g. the GameServer is suspended and its
+// pod has no endpoints). On failure, cleanup is retried with backoff up to
+// captureFileCleanupBudget from the first failure; once that budget is
+// exhausted the file is abandoned and the CR is deleted anyway (FR-007 /
+// specs.md:293 — cleanup must never block the CR delete indefinitely).
 func (r *NetworkCaptureReconciler) expireCapture(ctx context.Context, nc *gameplanev1alpha1.NetworkCapture) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
@@ -926,6 +935,24 @@ func (r *NetworkCaptureReconciler) expireCapture(ctx context.Context, nc *gamepl
 	}
 
 	if err := r.SidecarClient.DeleteCaptureFile(ctx, nc.Namespace, nc.Spec.ServerRef.Name, nc.Name); err != nil {
+		firstFailure := metav1.Now()
+		if existing := meta.FindStatusCondition(nc.Status.Conditions, "FileCleanupFailed"); existing != nil {
+			firstFailure = existing.LastTransitionTime
+		}
+
+		if time.Since(firstFailure.Time) >= captureFileCleanupBudget {
+			// Cleanup budget exhausted: stop retrying and give up on the
+			// file rather than holding the CR (and its retention-poll
+			// requeue loop) open forever on an unreachable sidecar.
+			log.Error(err, "capture file cleanup budget exhausted; abandoning file and deleting CR",
+				"capture", nc.Name, "namespace", nc.Namespace, "server", nc.Spec.ServerRef.Name,
+				"budget", captureFileCleanupBudget)
+			if delErr := r.Delete(ctx, nc); delErr != nil && !apierrors.IsNotFound(delErr) {
+				return ctrl.Result{}, fmt.Errorf("delete expired capture %s after cleanup budget exhausted: %w", nc.Name, delErr)
+			}
+			return ctrl.Result{}, nil
+		}
+
 		log.Error(err, "capture file cleanup failed; file may persist past retention",
 			"capture", nc.Name, "namespace", nc.Namespace, "server", nc.Spec.ServerRef.Name)
 
@@ -935,13 +962,13 @@ func (r *NetworkCaptureReconciler) expireCapture(ctx context.Context, nc *gamepl
 			ObservedGeneration: nc.Generation,
 			Reason:             "delete_failed",
 			Message:            err.Error(),
-			LastTransitionTime: metav1.Now(),
+			LastTransitionTime: firstFailure,
 		})
 		if err := r.Status().Update(ctx, nc); err != nil {
 			return ctrl.Result{}, fmt.Errorf("record file cleanup failure for capture %s: %w", nc.Name, err)
 		}
 
-		// Requeue with backoff to retry cleanup rather than abandoning the file.
+		// Requeue with backoff to retry cleanup rather than abandoning the file immediately.
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 

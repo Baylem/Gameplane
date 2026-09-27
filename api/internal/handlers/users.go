@@ -446,6 +446,9 @@ func (h *userHandler) del(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "cannot delete self", http.StatusBadRequest)
 		return
 	}
+	// Lock to serialize with writes so the last-user-manager check can't race.
+	unlock := h.db.LockUserManagement()
+	defer unlock()
 	// Don't delete the last user who can manage users.
 	if managesNow, err := h.db.UserManagesUsers(req.Context(), id); err != nil {
 		httperr.Write(w, req, err)
@@ -461,13 +464,12 @@ func (h *userHandler) del(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	if _, err := h.db.DB.ExecContext(req.Context(), `DELETE FROM users WHERE id = ?`, id); err != nil {
+	// One transaction removes the account and every row tied to it (SSO
+	// links, preferences, sessions, bindings) and revokes its share links:
+	// sqlite runs without FK cascade, so nothing else would.
+	if err := h.db.DeleteUser(req.Context(), id); err != nil {
 		httperr.Write(w, req, err)
 		return
-	}
-	// sqlite runs without FK cascade, so clear the user's bindings too.
-	if err := h.db.DeleteUserBindings(req.Context(), nil, id); err != nil {
-		slog.Warn("delete user bindings", "err", err, "user", id)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -509,6 +511,9 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 	}
 	caller := auth.UserFromContext(req.Context())
 	if body.Role != nil {
+		// Lock to serialize with writes so the last-user-manager check can't race.
+		unlock := h.db.LockUserManagement()
+		defer unlock()
 		newGrantsManage, err := h.db.RoleGrantsUserManagement(req.Context(), *body.Role)
 		if err != nil {
 			httperr.Write(w, req, err)

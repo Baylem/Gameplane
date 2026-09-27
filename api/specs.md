@@ -74,7 +74,7 @@ api/
 Two subcommands:
 
 1. **`serve` (default)** — starts the HTTP server
-   - **Core flags:** `--addr`, `--db-driver`, `--db-dsn`, `--log-level`
+   - **Core flags:** `--addr`, `--metrics-addr`, `--db-driver`, `--db-dsn`, `--log-level`
    - **OIDC flags** (install-time, Helm-seeded): `--oidc-issuer`, `--oidc-client-id`, `--oidc-client-secret`, `--oidc-redirect-url`, `--oidc-display-name` (login button label, no hostname — pre-auth surface), `--oidc-groups-claim` (configurable claim name, defaults to "groups"), `--oidc-default-role` (default for unmapped users: "", "viewer", "operator", "admin", or "deny"), `--oidc-role-mapping-admin` (comma-separated group names for admin role), `--oidc-role-mapping-operator`, `--oidc-role-mapping-viewer`. All have `GAMEPLANE_OIDC_*` env fallbacks (preferred over flags for credentials).
    - **Storage class (report-only):** `--game-data-storage-class` — echoed in `GET /admin/config`'s `installTimeSettings.gameDataStorageClass`, read-only, unaffected by overrides.
    - **Other flags:** `--audit-*`, `--agent-*`, `--namespace`, `--cluster-ops`, `--cluster-external-address` (node-routable API server address used in the join command and downloaded kubeconfig instead of the in-cluster ClusterIP; empty = in-cluster address), `--update-channel`, `--curseforge-api-key`, `--telemetry-*`, `--capture-enabled`, `--capture-default-max-duration` (only these two are CLI flags; default/max retention and default max size are `GAMEPLANE_CAPTURE_*`-env-only, no flag)
@@ -85,11 +85,12 @@ Two subcommands:
 2. **`bootstrap-admin`** — seed or reset the initial admin user
    - Flags: `--db-driver`, `--db-dsn`, `--username`, `--password`, `--password-stdin`, `--email`, `--display-name`, `--force`, `--enable-local-login`
    - Runs schema migrations like the serve path; password hashed with argon2id
-   - Break-glass: `--enable-local-login` alone re-enables local auth in the config row (for OIDC-lockout recovery)
+   - Break-glass: `--enable-local-login` alone re-enables local auth in the config row (for OIDC-lockout recovery); every other key of the row (other providers, `helmOverride`) is written back unchanged
+   - `--force` on an existing user resets the password, promotes to admin, and deletes all of that user's sessions (same eviction as the dashboard password reset)
 
 ### REST surface (domain-level)
 
-The HTTP server listens on `:8000` (configurable) with these route groups:
+The HTTP server listens on `:8000` (configurable) with these route groups. Prometheus metrics are not on this listener: a separate metrics listener (`--metrics-addr`, env `GAMEPLANE_METRICS_ADDR`, default `:9090`, empty disables it; `cmd/metrics.go`) routes only `GET /metrics`, and the chart's ServiceMonitor scrapes it. `--metrics-addr` equal to `--addr` is rejected at startup.
 
 **Public (pre-auth):**
 - `/auth/providers` — GET: list enabled login methods (no version/host/count, login privacy)
@@ -100,9 +101,9 @@ The HTTP server listens on `:8000` (configurable) with these route groups:
 - `/auth/oidc/start` (legacy) — GET: single helm-provider start
 - `/auth/oidc/callback` (legacy) — GET: single helm-provider callback
 - `/healthz` — GET: liveness probe
-- `/metrics` — GET: Prometheus metrics (openmetrics format)
 
 **Protected (authenticated + RBAC):**
+- `/namespaces` — GET: namespaces the caller may read servers in (scope.AllowedNamespaces filtered by servers:read on the resolved `?cluster=`); lets the dashboard fan out `/servers?namespace=` across every namespace it can see instead of only scope.Resolve's default (F-263)
 - `/servers/{name}` — CRUD for GameServer CRDs; cluster-dispatch via `?cluster=`; multiplexed console/files
 - `/servers/{name}/console` — WebSocket: RCON/exec; cluster-dispatch
 - `/servers/{name}:start`, `:stop`, `:restart` — actions (operator-handled)
@@ -131,16 +132,16 @@ The HTTP server listens on `:8000` (configurable) with these route groups:
 - `/mod-ids/{name}` — PATCH: ID-managed mods (ARK CurseForge IDs, Project Zomboid MOD_IDs, Steam Workshop lists)
 - `/cluster`, `/cluster/info`, `/cluster/stats` — GET: version, nodes, storage, usage (read-only, viewer+)
 - `/cluster/nodes:join`, `/cluster/kubeconfig` — POST: credential-minting ops (admin only, `--cluster-ops` flag gated; 501 when disabled)
-- `/clusters` — multi-cluster: list remote Cluster CRDs; create/delete cluster registrations
-- `/events` — SSE: real-time K8s events (multiplexed per namespace + cluster)
+- `/clusters` — multi-cluster: list remote Cluster CRDs; create/delete cluster registrations. POST labels the kubeconfig Secret `gameplane.local/cluster-kubeconfig=true` and `gameplane.local/managed-by=gameplane-api`. DELETE removes the cluster's client from the registry at once, and deletes the referenced Secret only when it is the one POST generates for that cluster (cluster-<name>-kubeconfig) and carries `gameplane.local/cluster-kubeconfig=true` (Secrets created before managed-by labelling included); any other Secret, including one named for a different cluster, is left in place
+- `/events` — SSE: real-time K8s events (multiplexed per namespace + cluster). The route needs `servers:read`; the stream then carries only the kinds the caller may read in the resolved cluster and namespace, each gated by the permission its GET route needs (`rbac.ReadPermission`): servers → `servers:read`, templates → `templates:read`, backups and restores → `backups:read`, schedules → `schedules:read`. Tests: `TestEvents_StreamsOnlyReadableKinds` (`handlers/events_scope_test.go`); e2e `TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions` (bucket `operator`)
 - `/pod-events` — SSE: pod-level events
 - `/users/me` — GET: own profile (embeds `preferences`, see below)
 - `/users/me/servers` — GET: own GameServers (owner/collaborator)
 - `/users/me/preferences` — GET/PUT: own theme/styling preferences (feature 016)
 - `/users/me/preferences/reset` — POST: reset own theme preferences to defaults (feature 016)
-- `/users/{id}` — CRUD for users (admin only)
+- `/users/{id}` — CRUD for users (admin only). DELETE runs `db.Store.DeleteUser`: one transaction deletes the user's `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and role bindings, revokes the share links the user created (sets `revoked_at`), then deletes the `users` row. It does not rely on FK cascades (off on SQLite). An SSO subject whose user was deleted is provisioned as a new user on its next login
 - `/users/{id}/role-bindings` — PATCH: role assignments (per namespace + cluster)
-- `/roles` — GET catalog and custom roles; POST/PATCH/DELETE custom roles
+- `/roles` — GET catalog and custom roles; POST/PATCH/DELETE custom roles. A PATCH whose permission list drops `users:manage` from a role that grants it is refused (400) when that role is the caller's own primary role, or when every user who can manage users holds that role — the same lockout guards `PATCH /users/{id}` applies to a role change. Tests: `TestRoles_UpdateKeepsCallersOwnUserManagement`, `TestRoles_UpdateKeepsAtLeastOneUserManager`, `TestRoles_UpdateRemovesUserManagementWhenAnotherManagerRemains` (`handlers/roles_guard_test.go`); e2e `TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions` (bucket `operator`)
 - `/admin/audit` — GET: audit log (searchable, hash-chain verifiable)
 - `/admin/config` — GET/PATCH: global settings (OIDC, notifications, telemetry, module upload limits, etc.)
 - `/admin/notifications` — PATCH config + test-send to sinks
@@ -249,6 +250,8 @@ All cluster-dispatch routes accept `?cluster={name}` (validates against register
 - **Two safety guards:**
   1. Role assignment only applies when mappings are explicitly configured (when overrides exist or when Helm seeded them). No automatic role assignment from bare group names without explicit mapping.
   2. Demotion guard: A user who is the **only user able to manage users** (sole admin, or sole admin-equivalent) cannot be demoted or removed from the admin role by the login-time role assignment flow. This prevents accidental lockout: if a user is currently the only admin and a role remapping would remove their admin status, the remapping is skipped (logged as warn), leaving them as admin. The guard applies only on login re-evaluation; the override API (PATCH /admin/config/auth) does not enforce it (an explicit admin action).
+- **Re-evaluation trigger:** re-evaluation runs whenever the effective policy the role was computed from has role mappings — for the Helm provider that is the Helm seed merged with `helmOverride`, so an override alone (no Helm-seeded mappings) is enough.
+- **Audit (FR-014):** every applied role assignment (first login, or a re-evaluation that changes the role) is audited with reason `oidc role assigned: provider=<name> matched=<group> from=<old> to=<new>`, for the Helm provider (`provider=helm`) and for every dashboard-managed provider (`provider=<provider name>`). A demotion skipped by the guard is logged, not audited.
 
 **The helmOverride overlay:**
 - **Storage:** Lives in the "auth" config row as `helmOverride.roleMappings.{admin, operator, viewer}`. No separate table, no migration beyond the existing config table. The entire overlay is optional.
@@ -491,6 +494,7 @@ Verify from `/api/go.mod`.
 **006_share_links.sql:** (unauthenticated server access tokens)
 - Creates `share_links` table: signed, revocable tokens for unauthenticated access to a single GameServer's status and connection address, optionally with start capability
 - Token never stored; only SHA-256 hash persisted and indexed for O(1) lookup
+- Revocation (`DELETE /servers/{name}/shares/{id}`, `db.Store.RevokeShareLink`) matches the link's cluster, namespace, server name and id; no match returns `db.ErrShareLinkNotFound`, which the handler answers with 404
 - Pre-existing; not part of the Phase 2 Foundational feature scope
 
 **007_audit_reason.sql:** (Phase 2 Foundational: capture operation auditing)
@@ -517,6 +521,9 @@ Verify from `/api/go.mod`.
 - Backfills every pre-existing user with the legacy preset (`preset_id = 'legacy'`, dark-preserving upgrade per FR-003); accounts created later default to pink via column defaults + `db.DefaultUserPreferences()`
 - Retention rule (FR-012): the custom columns are nulled only by the reset endpoint, never by ordinary updates (see "User theme preferences" under External interface / contracts)
 
+**012_account_removal_cleanup.sql:** (account removal cleanup)
+- One-off pass that deletes `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and `user_role_bindings` rows whose user no longer exists, and revokes (sets `revoked_at`, RFC3339 UTC) active `share_links` whose creator no longer exists. Clears rows left by user deletes made before `db.Store.DeleteUser` removed them explicitly; forward-only, so a rollback needs the pre-upgrade DB snapshot
+
 All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); API layer is authoritative.
 
 ## Security considerations
@@ -527,6 +534,7 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 - **Sessions:** cryptographically random token + paired CSRF token; DB-only persistence (no in-memory store), 12-hour TTL from creation, garbage-collected on an interval (`SessionStore.StartGC`)
 - **CSRF cookie is JS-readable by design:** unlike the session cookie (`HttpOnly`), the CSRF cookie is set `HttpOnly: false` so the SPA can read its value and echo it back as `X-Gameplane-CSRF` on mutating requests — the standard double-submit pattern (see `docs/security.md`). Logout's cookie-clear always sends `HttpOnly: true` regardless, since a MaxAge<0 delete carries no value and the browser matches it on Name/Domain/Path alone.
 - **Bootstrap:** `bootstrap-admin` subcommand hashes password same way as API
+- **Client IP:** `auth.ClientIPFromTrustedProxies` (`internal/auth/clientip.go`) records the client IP that the rate limiters and audit key on. A TCP peer outside `--trusted-proxies` is the client and its `X-Forwarded-For` is ignored. Behind a trusted peer the header is read right to left up to the first address outside the list, or to the leftmost address when every hop is trusted; an entry that isn't an IP address ends the walk at the last address reached. An empty list makes the peer the client. Tests: `internal/auth/clientip_test.go`.
 
 ### Authorization
 - **RBAC middleware:** intercepts all protected routes; namespace + cluster gating
@@ -554,7 +562,7 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 - **Synchronous writes (handler-direct):** Routes that need immediate audit writes before sending the response call `Auditor.WriteSync(ctx, method, path, target, reason, status)` directly, providing the reason
   - Method signature: `WriteSync(ctx context.Context, method, path, target, reason string, status int) error`
   - Extracts actor from context (set by auth middleware)
-  - Extracts client IP from context (set by ClientIPFromXFF middleware)
+  - Extracts client IP from context (set by the `auth.ClientIPFromTrustedProxies` middleware)
   - Generates RFC3339 timestamp
   - Returns error if DB write fails. Most synchronous callers treat this as **non-fatal** (log it, don't fail the request — e.g. `config.go`'s role-mapping override/reset audit). The network capture handlers are the deliberate exception (FR-006): they check the return value via `auditWriteOrFail` and bail with 500 without proceeding, so a failed audit write does fail those operations (see "Network capture endpoints" above and `WriteSync` at capture.go)
   - Fan-outs to external sinks (webhook, S3, stdout) with reason included
@@ -573,7 +581,7 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 ### Login privacy (rule 3)
 - `/auth/providers` omits version, cluster name, server count, hostnames
 - `/login` error is always "invalid credentials" (never "wrong password" vs "unknown user")
-- No internal metrics visible pre-auth
+- No internal metrics visible pre-auth; Prometheus metrics are served only on the separate metrics listener, never on the public port (tests: `cmd/metrics_test.go`, e2e `TestHelmInstall_MetricsNotOnPublicPort`)
 
 ## Testing & coverage
 

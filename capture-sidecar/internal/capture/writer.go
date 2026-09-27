@@ -52,7 +52,7 @@ const MaxCaptureDurationSeconds int64 = 604800
 // Block excluding the packet data and its 4-byte alignment padding: a 28-byte
 // header (block type, block length, interface id, timestamp high/low, captured
 // length, original length) plus the 4-byte trailing block-length field.
-// Verified against github.com/gopacket/gopacket@v1.6.1/pcapgo/ngwrite.go
+// Verified against github.com/gopacket/gopacket@v1.7.2/pcapgo/ngwrite.go
 // (*NgWriter).WritePacketWithOptions, which writes w.buf[:28], the data, the
 // padding, then a 4-byte trailer.
 const epbFixedOverheadBytes int64 = 32
@@ -154,7 +154,7 @@ func NewWriter(filePath string, maxDurationSeconds int64, maxSizeBytes int64, sn
 	// interface of its own and any AddInterface call would then append a
 	// *second* block that no packet references, so the descriptive form is
 	// the only correct one here (verified against
-	// github.com/gopacket/gopacket@v1.6.1/pcapgo/ngwrite.go: NewNgWriter
+	// github.com/gopacket/gopacket@v1.7.2/pcapgo/ngwrite.go: NewNgWriter
 	// delegates to NewNgWriterInterface, which writes the section header and
 	// then adds the interface it is given).
 	counter := &countingWriter{w: file}

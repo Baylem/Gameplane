@@ -55,32 +55,70 @@ kubectl -n gameplane-system exec deploy/gameplane-api -- \
   /api bootstrap-admin --enable-local-login
 ```
 
-It force-enables the local provider in the auth config row (preserving
-everything else) and takes effect on the next login attempt.
+It force-enables the local provider in the auth config row, keeping
+everything else in that row as it was (the other providers and the
+`helmOverride` role-mapping overlay), and takes effect on the next login
+attempt.
+
+`bootstrap-admin --username <name> --force` resets that account's password,
+promotes it to `admin`, and ends every existing session of the account, the
+same way a dashboard password reset does.
 
 ### Client IP extraction from forwarded headers
 
-The API determines the real client IP from the `X-Forwarded-For` header
-to power login rate limiting and audit records. This is configurable via
-`api.trustedProxies` (default: private/loopback ranges `127.0.0.0/8`,
-`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`,
-`::1/128`, `fc00::/7`, `fe80::/10`).
+The API records a client IP for every request. Login rate limiting
+(per-IP caps) and audit records key on it. The IP comes from the TCP peer
+and, only when that peer is a trusted proxy, from the `X-Forwarded-For`
+header. Trusted proxies are set by `api.trustedProxies` (default:
+loopback and private ranges `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`,
+`192.168.0.0/16`, `169.254.0.0/16`, `::1/128`, `fc00::/7`, `fe80::/10`).
 
-**In a normal Kubernetes install** (API behind nginx-ingress, ALB, etc.),
-the default works out-of-the-box: the ingress sits in one of the default
-ranges and sets `X-Forwarded-For` unconditionally, so the API extracts the
-true client IP safely. The API **only** trusts `X-Forwarded-For` from
-requests originating within the configured CIDR blocks, defeating IP
-spoofing.
+The API applies these rules in order (`api/internal/auth/clientip.go`):
 
-**When the API is directly exposed** (no proxy), the default is correct:
-`X-Forwarded-For` is ignored, and rate limiting uses the TCP peer's
-address as the true client IP — which is already authoritative. If you
-place a proxy in front of the API, add that proxy's address(es) to
-`api.trustedProxies` so the API can extract the real client IP from
-`X-Forwarded-For`.
+1. A TCP peer outside `api.trustedProxies` is the client. Any
+   `X-Forwarded-For` header on its request is ignored.
+2. When the peer is a trusted proxy, the API reads `X-Forwarded-For` from
+   right to left and takes the first address outside `api.trustedProxies`
+   as the client.
+3. When every address in the chain is inside `api.trustedProxies`, the
+   leftmost address is the client.
+4. An entry that isn't an IP address ends the walk at the last address
+   already reached. With no `X-Forwarded-For` header that is the peer.
+5. With `api.trustedProxies` empty, the peer is always the client.
 
-Example for direct exposure behind a specific proxy at `203.0.113.1`:
+**IPv4-mapped IPv6 prefixes.** Prefixes must be standard IPv4 (e.g., `10.42.0.0/16`)
+or IPv6 (e.g., `fc00::/7`). IPv4-mapped IPv6 prefixes (e.g., `::ffff:10.42.0.0/112`)
+are automatically normalized: they are converted to their unmapped IPv4 form and must
+be at least `/96` bits to be valid (`::ffff:10.42.0.0/96` becomes `10.42.0.0/0`,
+`::ffff:10.42.0.0/112` becomes `10.42.0.0/16`). Prefixes shorter than `/96` are
+rejected at startup.
+
+**In a normal Kubernetes install** (ingress controller, then the web
+front end, then the API), the default works out of the box: the proxies
+run in pod and node ranges the default covers, and a client on the public
+internet is recorded by its own address.
+
+**Clients on a private network.** The default treats every private-range
+address as a possible proxy, so for clients that connect from a private
+range the recorded IP depends on the forwarded chain those addresses
+present (rule 3). If dashboard users reach Gameplane from a private
+network and you rely on per-client limits for them, narrow
+`api.trustedProxies` to the ranges your proxies actually run in, usually
+the cluster's pod CIDR plus any load balancer in front of the ingress:
+
+```yaml
+api:
+  trustedProxies: "10.42.0.0/16"   # k3s default pod CIDR; use your cluster's
+```
+
+**When the API is directly exposed** (no proxy), set
+`api.trustedProxies` to `""`: the TCP peer is then always the client. If
+you place a proxy in front of the API, list that proxy's addresses so the
+API reads `X-Forwarded-For` from it. A proxy outside the list is recorded
+as the client itself, so every user behind it shares one rate-limit
+bucket.
+
+Example for a single proxy at `203.0.113.1`:
 
 ```yaml
 api:
@@ -88,9 +126,9 @@ api:
 ```
 
 The client IP is used for login rate limiting (per-IP caps) and audit
-records, so misconfigurating this can either hide the real attacker's IP
-in logs or prevent legitimate users from logging in if they're grouped
-behind a proxy the API doesn't trust.
+records, so misconfiguring this can either record a proxy instead of the
+client in audit logs or group legitimate users behind one proxy address
+in a single rate-limit bucket.
 
 ## Authorization
 
@@ -119,7 +157,19 @@ named set of permissions, and a user is bound to roles **per namespace**.
   the same Role vs ClusterRole split Kubernetes uses. Unmatched routes fail
   closed.
 - **Lockout guards.** The API refuses to demote or delete the last user who
-  can manage users, and refuses self-demotion below `users:manage`.
+  can manage users, and refuses self-demotion below `users:manage`. Role
+  edits follow the same rules: a change that removes `users:manage` from the
+  caller's own primary role, or from the role every user manager holds, is
+  refused.
+- **Event stream.** `GET /events` carries only the resource kinds the caller
+  may read in the resolved cluster and namespace, using the same read
+  permission as each kind's list route.
+- **Account removal.** `DELETE /users/{id}` removes the account and every row
+  tied to it in one transaction (SSO links, preferences, sessions, API
+  tokens, role bindings) and revokes the share links the account created.
+  The API does this itself rather than relying on foreign-key cascades,
+  which the shipped SQLite DSN leaves off. An SSO user who is deleted and
+  signs in again is provisioned as a new user.
 
 ### Per-GameServer access (owner + collaborators)
 
@@ -160,7 +210,7 @@ Share links (`api/internal/db/shares.go`, schema in `api/internal/db/migrations/
 
 **Expiry.** Every share link either has an expiry timestamp or is explicitly created with no expiry (owner's choice; see `specs/done_017-share-link-expiry/`). There is no platform-enforced maximum lifetime: a non-expiring or long-lived link is exactly as hard to guess on any given day as a short-lived one, because guessing difficulty comes from the token's entropy, not from its age. The tradeoff of a long-lived or non-expiring link is operational — a forgotten link stays live until the owner revokes it — not cryptographic, which is why the create-link UI warns the owner explicitly ("This link works until you revoke it." for no expiry; a long-lived-token warning for a custom date a year or more out) rather than the system silently capping the choice.
 
-**Revocation.** Revocation sets `revoked_at` (never a delete, preserving the audit trail) and is checked independently of, and prior to, any expiry check, so it applies uniformly regardless of whether the link expires, expires far in the future, or never expires.
+**Revocation.** Revocation sets `revoked_at` (never a delete, preserving the audit trail) and is checked independently of, and prior to, any expiry check, so it applies uniformly regardless of whether the link expires, expires far in the future, or never expires. `DELETE /servers/{name}/shares/{id}` revokes a link only when it belongs to that server (cluster, namespace and name); any other id answers 404. Deleting a user revokes every share link that user created.
 
 **Rate limiting.** The public resolve/start endpoints are rate-limited (`auth.ShareLimiter`) specifically because tokens are guessable-by-brute-force in principle (just computationally infeasible in practice); the rate limit is defense in depth against automated probing, not a substitute for token entropy.
 
@@ -293,7 +343,7 @@ Pod Security Standards profile on the games namespace will reject any pod with
 games namespace, you have three options:
 
 1. **Disable capture** — leave the cluster's capture feature disabled via Helm
-   value `capture.enabled: false` (default is true). Captures are not required
+   value `capture.enabled: false` (default is false). Captures are not required
    for normal operation; this is the safest option if you cannot or prefer not to
    relax the `restricted` profile.
 2. **Exempt the games namespace** — remove or relax the Pod Security Standards
@@ -301,10 +351,14 @@ games namespace, you have three options:
    `privileged` instead. The games namespace remains an untrusted environment
    (game code can run arbitrary containers), but the admission level permits the
    capture sidecar to be injected when needed.
-3. **Disable `restricted` cluster-wide** — if the games namespace is managed by
-   your deployment and you accept the operational trade-off, set `podSecurity.enforceRestricted=false`
-   in the Helm values. Captures will work, and other pods are not forced into
-   `restricted` mode (they can still opt in per-pod via labels).
+3. **Leave the games-namespace label off** — the chart only adds the
+   `pod-security.kubernetes.io/enforce: restricted` label to the games namespace
+   when `podSecurity.enforceRestricted=true`; that value defaults to `false`.
+   A default install therefore already leaves the label off, and captures work
+   without any change. If you previously set `podSecurity.enforceRestricted=true`
+   and accept the operational trade-off, set it back to `false` in the Helm
+   values to drop the label. This setting only affects the games `Namespace`
+   object; it has no cluster-wide effect and there is no per-pod opt-in.
 
 **Data sensitivity**: Captures contain binary game protocols, player IP addresses,
 and may include sensitive data like in-game chat or credentials. An admin with
@@ -631,6 +685,14 @@ by several layers:
   via the dashboard or API. This prevents a user from pointing at an
   arbitrary control-plane Secret (e.g., the OIDC client secret or
   backup credentials) and using it as a kubeconfig.
+- **Delete guard.** `DELETE /clusters/{name}` drops the cluster's client at
+  once and deletes the referenced Secret only when it is the one POST generates
+  for that cluster (cluster-<name>-kubeconfig) and carries
+  `gameplane.local/cluster-kubeconfig=true` (Secrets created before the
+  managed-by label was added are also cleaned up). Any other Secret, including
+  one named for a different cluster or one without the kubeconfig label, is
+  left in place. A kubeconfig Secret you create with kubectl or GitOps under
+  another name is never deleted over HTTP.
 - **Never logged or returned.** The kubeconfig is never logged by the
   API, never echoed in responses, never visible in audit trails. It
   exists only to bootstrap the Kubernetes client for that cluster.
@@ -718,10 +780,12 @@ On each OIDC login, Gameplane:
 4. If no role matches, assigns the default role (configured via `api.oidc.defaultRole`;
    defaults to `viewer`; can be set to `deny` to reject login).
 
-This re-evaluation runs only when Helm OIDC role mappings are configured
-(i.e., `api.oidc.roleMappings` has at least one non-empty role array). If role
-mappings are not configured, new OIDC users receive the fixed `viewer` role and
-existing users' roles are never re-evaluated.
+This re-evaluation runs whenever the effective role mappings exist: Helm-seeded
+`api.oidc.roleMappings` (at least one non-empty role array), a dashboard
+`helmOverride.roleMappings` overlay (which counts even when the Helm values set
+no mappings), or the mappings of a dashboard-managed provider. If none is
+configured, new OIDC users receive the fixed `viewer` role and existing users'
+roles are never re-evaluated.
 
 Two guards prevent lockout during re-evaluation:
 
@@ -759,7 +823,7 @@ is recorded in `audit_events` with the matched group name and role transition:
 - **Action**: OIDC login with role assignment
 - **Target**: the user (subject of the OIDC token)
 - **Details recorded**:
-  - Which OIDC provider performed the assignment (always `"helm"` for Helm-seeded mappings)
+  - Which OIDC provider performed the assignment (`"helm"` for the Helm-seeded provider, otherwise the dashboard-managed provider's name)
   - Which group matched a mapping rule (or `"none"` if no mapping matched)
   - The user's old role (`"new_user"` on first login, or the previous role)
   - The assigned role (`"viewer"`, `"operator"`, `"admin"`, or `"denied"` if rejected)
@@ -802,3 +866,9 @@ gated by access controls on the cluster itself (e.g., who can run Helm in produc
 No internal infrastructure metrics are displayed on the login page or
 any other unauthenticated surface. This is a hard requirement — see
 `web/src/routes/Login.tsx` for the enforcement.
+
+The API's Prometheus metrics follow the same rule. They are served on a
+dedicated listener (`--metrics-addr`, chart value `api.metricsPort`,
+default `9090`), never on the public API port that the Ingress and the web
+front end route to, so `/metrics` on the dashboard host answers 404. The
+chart's ServiceMonitor scrapes the metrics port from inside the cluster.
