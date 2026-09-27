@@ -5,22 +5,26 @@
 // kubectl commands for a human operator to review
 // and run. It never creates, updates, patches, deletes, or applies anything.
 //
-// That is a hard invariant, enforced two ways:
-//  1. Structurally: every tool handler in this package (tools.go,
+// That is a hard invariant, held by two layers:
+//  1. The handler boundary: every tool handler in this package (tools.go,
 //     fixadvice.go) takes a *kube.Client (internal/kube/client.go), whose
 //     only exported methods are List/Get-shaped (ListCRD, GetCRD, ListPods,
 //     GetPod, ListEvents, PodLogs). The typed and dynamic Kubernetes
-//     clientsets that could mutate anything are unexported fields on that
-//     type, in a different package — code here has no way to reach them,
-//     so it has no way to call Create/Update/Delete/Patch/Apply even by
-//     mistake. main_test.go's TestClientHasNoMutatingMethods is a
-//     lint-level tripwire on kube.Client's exported method set, not the
-//     guarantee itself; the guarantee is the package boundary above.
+//     clientsets behind it are unexported fields in a different package,
+//     so a handler that holds only the *kube.Client cannot call
+//     Create/Update/Delete/Patch/Apply through it. The boundary is on the
+//     *kube.Client, not on this package: runServe loads the *rest.Config
+//     itself, so keeping handlers on the *kube.Client (and having no
+//     mutating call site anywhere in this module) is a code convention,
+//     not a compile-time guarantee. main_test.go's
+//     TestClientHasNoMutatingMethods is a tripwire on kube.Client's
+//     exported method set.
 //  2. By RBAC: the Helm chart's mcpServer.enabled ClusterRole grants only
 //     get/list/watch (plus get on pods/log) — see
 //     charts/gameplane/templates/mcp-server.yaml. This is the authoritative
-//     backstop: even a future bug in (1) would still be rejected by the
-//     API server.
+//     layer and the only one that stops mutation by any code in the
+//     process: the API server rejects a write from this ServiceAccount
+//     whatever client makes it.
 //
 // A third, cosmetic layer: every tool this server installs (tools.go)
 // carries ReadOnlyHint: true, and main_test.go's
