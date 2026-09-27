@@ -161,7 +161,7 @@ The cloud container restarted three times; the third restart (session 6, 2026-09
    - item 14: `servers-filter-by-namespace` is blocked on **F-263** (S3, filed 2026-09-27: the Servers page lists only `gameplane-games`); F-263 fixed by #498 (merged 2026-09-27);
    - item 22's S4 finding already exists (F-260);
    - fixing the Failed nuclear-option, terraria and minecraft-java Modules (items 3 and 23a) happens live, at the start of the round (devbox).
-5. rc.2 (T057): the CHANGELOG PR is **#496 (draft)**, and RC-TAG-2 is logged PENDING. The maintainer chose (2026-09-27) to cut rc.2 only after the remaining held PRs merge. Then add their neutral hardening lines and the date to #496, mark it ready, get it merged, get the RC-TAG-2 approval, tag, check the release run against contracts/rc-deploy.md §1, and deploy to kubelab.
+5. rc.2 (T057): the CHANGELOG PR is **#496 (draft)**, and RC-TAG-2 is logged PENDING. The maintainer chose (2026-09-27) to cut rc.2 only after the held PRs merge: #471–#474 are in, and rc.2 also waits for #502–#517. Merge master into #496 as each lands; the CHANGELOG union merge driver (#484) can drop a new line at the end of the rc.2 Highlights, so check that every new line lands in the right Unreleased section. Then add their neutral hardening lines and the date to #496, mark it ready, get it merged, get the RC-TAG-2 approval, tag, check the release run against contracts/rc-deploy.md §1, and deploy to kubelab.
 6. The devbox-only work:
    - held fixes H31a onward;
    - the T012 user list;

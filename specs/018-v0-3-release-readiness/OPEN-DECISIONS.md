@@ -95,7 +95,7 @@ The items below are open. Work that doesn't depend on them carries on.
 
 ### RC-TAG-2: publish `v0.3.0-rc.2` — PENDING
 
-T057 for rc.2. The maintainer chose (2026-09-27) to cut rc.2 only after the remaining held PRs have merged.
+T057 for rc.2. The maintainer chose (2026-09-27) to cut rc.2 only after the remaining held PRs have merged. #471–#474 are in; the maintainer then chose (2026-09-27 ~20:05 UTC) to also wait for the second batch of fix PRs, #502–#517.
 
 - **Waiting on**: the held PRs; then the rc.2 CHANGELOG PR [#496](https://github.com/ValgulNecron/Gameplane/pull/496) (branch `chore/018-rc2-changelog`, draft) being finished, merged, and green on the merge commit; then your approval to tag (FR-019).
 - **SHA to tag**: the #496 merge commit (to be filled in).
