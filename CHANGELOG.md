@@ -358,6 +358,7 @@ the Highlights below summarize what is new since rc.1.
   repository when NetworkPolicies are enabled (#432).
 - Further security hardening across the API, operator, agent and release
   pipeline (see Security hardening above).
+- **telemetry-receiver:** hardened ingest payload validation.
 
 ## [0.3.0-rc.1] — 2026-09-23
 
