@@ -14,10 +14,7 @@ import (
 // server-side (e.g. the mod update check reads the installed-mod manifest)
 // instead of proxying a browser request through.
 type AgentClient struct {
-	http *http.Client
-	// hostFn resolves the agent address; a field so tests can point it at
-	// an httptest server.
-	hostFn func(name, namespace string) string
+	transport agentTransport
 }
 
 // NewAgentClient builds a client from the agent mTLS flags. It fails when
@@ -29,11 +26,7 @@ func NewAgentClient(caBundle, clientCert, clientKey string) (*AgentClient, error
 		return nil, err
 	}
 	return &AgentClient{
-		http: &http.Client{
-			Timeout:   15 * time.Second,
-			Transport: &http.Transport{TLSClientConfig: tlsCfg},
-		},
-		hostFn: agentHostFor,
+		transport: newDirectAgentTransport(tlsCfg, 15*time.Second),
 	}, nil
 }
 
@@ -43,13 +36,11 @@ const agentRespCap = 8 << 20 // 8 MiB
 
 // GetJSON fetches an agent endpoint and decodes its JSON body into out.
 func (c *AgentClient) GetJSON(ctx context.Context, name, namespace, path string, out any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		"https://"+c.hostFn(name, namespace)+path, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Accept", "application/json")
-	resp, err := c.http.Do(req)
+	resp, err := c.transport.Do(ctx, agentRequest{
+		target: agentTarget{name: name, namespace: namespace},
+		method: http.MethodGet, path: path,
+		header: http.Header{"Accept": {"application/json"}},
+	})
 	if err != nil {
 		return fmt.Errorf("agent GET %s: %w", path, err)
 	}
