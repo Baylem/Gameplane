@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,6 +24,11 @@ var tunnelProviderKeys = map[string][]string{
 	"tailscale": {"authKey"},
 	"playit":    {"secretKey"},
 }
+
+// tunnelProviderOrder fixes the order in which providers are matched
+// against a Secret's keys, so reads never depend on map iteration order.
+// It must list every key of tunnelProviderKeys.
+var tunnelProviderOrder = []string{"frp", "tailscale", "playit"}
 
 // MountTunnelCredentials wires tunnel credential management endpoints.
 // Routes use the :tunnel-credentials verb so parseServerPath correctly
@@ -132,11 +138,24 @@ func (h *tunnelCredsHandler) put(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		// Patch it instead to preserve extra fields.
-		patch := map[string]any{
-			"stringData": body.Values,
+		// Patch it instead to preserve extra fields. The same patch removes
+		// the keys of every stale tunnel provider, so the Secret only ever
+		// holds the credential of the provider just set plus the credential
+		// of the provider the GameServer spec still names as active — the
+		// dashboard saves credentials and spec.networking.tunnel.provider in
+		// separate requests, so an in-flight pod for the still-active
+		// provider must keep being able to read its key until reconciliation
+		// completes the switch.
+		activeProvider, _, apErr := getNestedString(gs.Object, "spec", "networking", "tunnel", "provider")
+		if apErr != nil {
+			httperr.Write(w, req, apErr)
+			return
 		}
-		patchBytes, _ := json.Marshal(patch)
+		patchBytes, mErr := json.Marshal(tunnelCredentialPatch(body.Provider, activeProvider, body.Values))
+		if mErr != nil {
+			httperr.Write(w, req, mErr)
+			return
+		}
 		_, err = k.Typed.CoreV1().Secrets(ns).Patch(
 			req.Context(), secretName, types.MergePatchType, patchBytes, metav1.PatchOptions{},
 		)
@@ -221,14 +240,16 @@ func (h *tunnelCredsHandler) get(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Determine the provider and expected keys from the Secret's keys.
-	var expectedKeys []string
-	for _, keys := range tunnelProviderKeys {
-		if hasKeys(secret.Data, keys) {
-			expectedKeys = keys
-			break
-		}
+	// Determine the provider and expected keys from the Secret's keys. The
+	// provider named in the GameServer spec wins when its keys are present;
+	// otherwise providers are matched in tunnelProviderOrder, so the answer
+	// never depends on map iteration order.
+	specProvider, _, err := getNestedString(gs.Object, "spec", "networking", "tunnel", "provider")
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
 	}
+	expectedKeys := tunnelKeysForSecret(secret.Data, specProvider)
 
 	writeJSON(w, getResp{
 		Configured: true,
@@ -357,6 +378,98 @@ func hasKeys(m map[string][]byte, keys []string) bool {
 		}
 	}
 	return true
+}
+
+// tunnelCredentialPatch builds the JSON merge patch that rotates an existing
+// tunnel credential Secret to provider's values. Every key that belongs to a
+// stale provider — one that is neither provider nor activeProvider — is set
+// to null, which a merge patch treats as a delete, in both data and
+// stringData. activeProvider is the provider currently named in the
+// GameServer spec: its key is kept even when provider differs, because the
+// dashboard saves credentials and switches the spec's provider in separate
+// requests, and a pod still running the active provider must be able to keep
+// reading its credential until reconciliation completes the handoff. Keys
+// that no provider uses (for example fields an admin added with kubectl) are
+// left untouched.
+func tunnelCredentialPatch(provider, activeProvider string, values map[string]string) map[string]any {
+	stringData := make(map[string]any, len(values))
+	for key, val := range values {
+		stringData[key] = val
+	}
+	data := map[string]any{}
+	for _, other := range tunnelProviderOrder {
+		if other == provider || other == activeProvider {
+			continue
+		}
+		for _, key := range tunnelProviderKeys[other] {
+			if _, keep := values[key]; keep {
+				continue
+			}
+			data[key] = nil
+			stringData[key] = nil
+		}
+	}
+	patch := map[string]any{"stringData": stringData}
+	if len(data) > 0 {
+		patch["data"] = data
+	}
+	return patch
+}
+
+// pruneStaleTunnelProviderKeys removes every provider's credential key from
+// the GameServer's <name>-tunnel-auth Secret except newProvider's. Callers
+// use it once a switch of spec.networking.tunnel.provider is already
+// committed (unlike the credential PUT path above, which must keep the
+// still-active provider's key alive during the handoff). Callers pass the
+// new, non-empty provider; removing the tunnel is not a switch and must not
+// call this.
+//
+// It is a no-op, not an error, when the Secret doesn't exist or isn't the
+// one owned by this GameServer (isServerOwnedSecretObject): either means
+// there is nothing here for this endpoint to manage.
+func pruneStaleTunnelProviderKeys(ctx context.Context, k *kube.Client, ns, serverName string, gsUID types.UID, newProvider string) error {
+	secretName := serverName + "-tunnel-auth"
+	existing, err := k.Typed.CoreV1().Secrets(ns).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get tunnel-auth secret %s/%s: %w", ns, secretName, err)
+	}
+	if !isServerOwnedSecretObject(existing, serverName, gsUID) {
+		return nil
+	}
+
+	patch := tunnelCredentialPatch(newProvider, "", nil)
+	if data, _ := patch["data"].(map[string]any); len(data) == 0 {
+		// Nothing stale to remove.
+		return nil
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		return fmt.Errorf("marshal tunnel-auth prune patch: %w", err)
+	}
+	if _, err := k.Typed.CoreV1().Secrets(ns).Patch(
+		ctx, secretName, types.MergePatchType, patchBytes, metav1.PatchOptions{},
+	); err != nil {
+		return fmt.Errorf("patch tunnel-auth secret %s/%s: %w", ns, secretName, err)
+	}
+	return nil
+}
+
+// tunnelKeysForSecret returns the credential keys of the provider whose keys
+// are all present in data: preferred (the GameServer's spec provider) first,
+// then each provider in tunnelProviderOrder. It returns nil when none match.
+func tunnelKeysForSecret(data map[string][]byte, preferred string) []string {
+	if keys, ok := tunnelProviderKeys[preferred]; ok && hasKeys(data, keys) {
+		return keys
+	}
+	for _, p := range tunnelProviderOrder {
+		if keys := tunnelProviderKeys[p]; hasKeys(data, keys) {
+			return keys
+		}
+	}
+	return nil
 }
 
 // getNestedString retrieves a string value from a nested map using a path of keys.
