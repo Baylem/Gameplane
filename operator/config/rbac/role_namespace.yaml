@@ -22,6 +22,14 @@ rules:
       - backupschedules
       - networkcaptures
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["gameplane.local"]
+    resources:
+      - gameservers/status
+      - backups/status
+      - backupschedules/status
+      - restores/status
+      - networkcaptures/status
+    verbs: ["get", "update", "patch"]
   # Finalizers: mirrors charts/gameplane/templates/operator.yaml's
   # namespace-scoped Role. Only the cluster-scoped Module's finalizer is
   # granted by the ClusterRole.

@@ -70,15 +70,10 @@ rules:
 - apiGroups:
   - gameplane.local
   resources:
-  - backups/status
-  - backupschedules/status
   - clusters/status
-  - gameservers/status
   - gametemplates/status
   - modules/status
   - modulesources/status
-  - networkcaptures/status
-  - restores/status
   verbs:
   - get
   - patch
