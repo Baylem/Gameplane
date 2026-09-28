@@ -106,12 +106,22 @@ auth.additionalScopes = ["api"]
 auth.token = "your-secure-token-here"
 ```
 
-#### 2. Create a Secret with the token
+#### 2. Provide the credential
 
-```bash
-kubectl -n gameplane-games create secret generic frp-creds \
-  --from-literal=token=your-secure-token-here
-```
+The operator only mounts a credentials Secret that carries an `ownerReference`
+to the GameServer — a plain `kubectl create secret generic` Secret has none, so
+the operator refuses it and the GameServer's `TunnelReady` status condition
+reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
+its contents). Use one of these instead:
+
+- **Dashboard:** open the server's Networking tab and enter the credential
+  there — it creates the Secret with the correct ownerReference for you.
+- **API:** `PUT /servers/{name}:tunnel-credentials` with body
+  `{"provider": "frp", "values": {"token": "your-secure-token-here"}}`.
+- **kubectl, with an explicit ownerReference:** if you must create the Secret
+  directly, set `metadata.ownerReferences` to point at the GameServer
+  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
+  and `uid`) so the operator accepts it.
 
 #### 3. Create a GameServer with frp tunnel
 
@@ -148,12 +158,22 @@ Players connect to `frp.example.com:25565`.
 Log into [login.tailscale.com](https://login.tailscale.com), go to **Settings →
 Keys**, and create a **Reusable key**. Copy it.
 
-#### 2. Create a Secret with the auth key
+#### 2. Provide the credential
 
-```bash
-kubectl -n gameplane-games create secret generic tailscale-creds \
-  --from-literal=authKey=tskey-client-xxxxx
-```
+The operator only mounts a credentials Secret that carries an `ownerReference`
+to the GameServer — a plain `kubectl create secret generic` Secret has none, so
+the operator refuses it and the GameServer's `TunnelReady` status condition
+reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
+its contents). Use one of these instead:
+
+- **Dashboard:** open the server's Networking tab and enter the credential
+  there — it creates the Secret with the correct ownerReference for you.
+- **API:** `PUT /servers/{name}:tunnel-credentials` with body
+  `{"provider": "tailscale", "values": {"authKey": "tskey-client-xxxxx"}}`.
+- **kubectl, with an explicit ownerReference:** if you must create the Secret
+  directly, set `metadata.ownerReferences` to point at the GameServer
+  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
+  and `uid`) so the operator accepts it.
 
 #### 3. Create a GameServer with Tailscale tunnel
 
@@ -196,12 +216,22 @@ registration. Port 25565 is available to devices on your tailnet.
 Visit [playit.gg](https://playit.gg), sign up, and create an account. Your
 **Secret Key** appears in **Settings**. Copy it.
 
-#### 2. Create a Secret with the secret key
+#### 2. Provide the credential
 
-```bash
-kubectl -n gameplane-games create secret generic playit-creds \
-  --from-literal=secretKey=<your-secret-key>
-```
+The operator only mounts a credentials Secret that carries an `ownerReference`
+to the GameServer — a plain `kubectl create secret generic` Secret has none, so
+the operator refuses it and the GameServer's `TunnelReady` status condition
+reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
+its contents). Use one of these instead:
+
+- **Dashboard:** open the server's Networking tab and enter the credential
+  there — it creates the Secret with the correct ownerReference for you.
+- **API:** `PUT /servers/{name}:tunnel-credentials` with body
+  `{"provider": "playit", "values": {"secretKey": "<your-secret-key>"}}`.
+- **kubectl, with an explicit ownerReference:** if you must create the Secret
+  directly, set `metadata.ownerReferences` to point at the GameServer
+  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
+  and `uid`) so the operator accepts it.
 
 #### 3. Create a GameServer with playit tunnel
 
@@ -332,7 +362,10 @@ If you want to avoid reconnects on wake, consider:
    kubectl -n gameplane-games get secret <secret-name> -o yaml
    ```
    Ensure the keys match the provider's requirements (`token` for frp, `authKey`
-   for Tailscale, `secretKey` for playit).
+   for Tailscale, `secretKey` for playit). If the Secret lacks an ownerReference
+   to this GameServer, the operator refuses it — check `kubectl get gameserver
+   <name> -o jsonpath='{.status.conditions}'` for a `TunnelReady=False/TunnelCredentialRefused`
+   entry naming the Secret.
 
 4. **Check NetworkPolicy.**
    By default, `networkPolicies.enabled=true` applies a default-deny-egress

@@ -322,6 +322,9 @@ func (r *GameServerReconciler) reconcileTunnel(
 			err := r.Get(ctx, types.NamespacedName{Namespace: gs.Namespace, Name: secName}, &sec)
 			if err == nil {
 				if !isServerOwnedSecret(&sec, gs) {
+					if condErr := r.setTunnelCredentialRefused(ctx, gs, secName); condErr != nil {
+						return fmt.Errorf("tunnel credentials secret %q is not owned by GameServer %s/%s (status update failed: %w)", secName, gs.Namespace, gs.Name, condErr)
+					}
 					return fmt.Errorf("tunnel credentials secret %q is not owned by GameServer %s/%s", secName, gs.Namespace, gs.Name)
 				}
 				volumes = append(volumes, corev1.Volume{
@@ -360,6 +363,34 @@ func (r *GameServerReconciler) reconcileTunnel(
 		return controllerutil.SetControllerReference(gs, dep, r.Scheme)
 	})
 	return err
+}
+
+// setTunnelCredentialRefused upserts a TunnelReady=False/TunnelCredentialRefused
+// condition on gs so a credential Secret the operator refuses to mount (e.g. one
+// with no ownerReference to this GameServer) is visible on status instead of only
+// in the operator log. This must be written BEFORE reconcileTunnel returns its
+// error: Reconcile (gameserver_controller.go) returns immediately on that error,
+// so reconcileStatus's own TunnelReady computation (computeTunnelConditions,
+// gameserver_status.go) never runs this pass — this is the only place the
+// condition gets written for a refused pass.
+//
+// It clears/flips itself the ordinary way: once the credential becomes
+// acceptable, reconcileTunnel no longer errors, Reconcile reaches
+// reconcileStatus, and computeTunnelConditions overwrites this TunnelReady
+// entry with the deployment's real readiness (Ready, DeploymentNotReady, etc).
+func (r *GameServerReconciler) setTunnelCredentialRefused(ctx context.Context, gs *gameplanev1alpha1.GameServer, secretName string) error {
+	base := gs.DeepCopy()
+	gs.Status.Conditions = upsertCondition(gs.Status.Conditions, metav1.Condition{
+		Type:               "TunnelReady",
+		Status:             metav1.ConditionFalse,
+		Reason:             "TunnelCredentialRefused",
+		Message:            fmt.Sprintf("tunnel credentials secret %q has no ownerReference to this GameServer; create it via the dashboard, the PUT /servers/{name}:tunnel-credentials API, or with an ownerReference to this GameServer", secretName),
+		ObservedGeneration: gs.Generation,
+	})
+	if err := r.Status().Patch(ctx, gs, client.MergeFrom(base)); err != nil {
+		return fmt.Errorf("patch TunnelReady condition for %s/%s: %w", gs.Namespace, gs.Name, err)
+	}
+	return nil
 }
 
 // reconcileTunnelNetworkPolicy maintains a per-server NetworkPolicy admitting

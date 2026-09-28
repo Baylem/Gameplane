@@ -159,7 +159,7 @@ The operator's `reconcileTunnel` reconciler materializes these fields into the t
 - Replicas: 1 (fixed; never zero even during sleep)
 - Container name: `tunnel`
 - Security context: uid 65532 (nonroot), runAsNonRoot=true, allowPrivilegeEscalation=false, ALL capabilities dropped
-- Mounts: read-only Secret at `/etc/gameplane/tunnel-auth` (if credentialsSecretRef is set)
+- Mounts: read-only Secret at `/etc/gameplane/tunnel-auth` (if credentialsSecretRef is set; the operator refuses to mount a Secret with no `ownerReference` to the GameServer — see operator/specs.md's TunnelReady condition)
 
 **RBAC** (playit provider only):
 - ServiceAccount: `<gameserver-name>-tunnel`
