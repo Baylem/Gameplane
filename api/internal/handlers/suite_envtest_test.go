@@ -123,6 +123,7 @@ func TestMain(m *testing.M) {
 	mountedR = chi.NewRouter()
 	MountResources(mountedR, reg)
 	MountLifecycle(mountedR, reg)
+	MountTunnelCredentials(mountedR, reg)
 	MountDestinations(mountedR, reg)
 	MountEvents(mountedR, reg)
 	MountModules(mountedR, kubeC, "default")
