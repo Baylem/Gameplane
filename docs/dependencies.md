@@ -127,9 +127,9 @@ BackupSchedule, Restore, Module, and ModuleSource. Direct deps from
 | Dependency | Version | Why | Status |
 |---|---|---|---|
 | `sigs.k8s.io/controller-runtime` | v0.24.1 | Core reconciler framework — every controller in `internal/controller/*` embeds `client.Client`; `cmd/main.go` builds the manager via `ctrl.NewManager` | direct-runtime | <!-- doc-versions: dependency -->
-| `k8s.io/api` | v0.37.0 | Core/apps/batch typed API objects used across `api/v1alpha1/*_types.go` and controllers to build Pod/PVC/Job/Service/RBAC objects | direct-runtime | <!-- doc-versions: dependency -->
-| `k8s.io/apimachinery` | v0.37.0 | `metav1.ObjectMeta`, `runtime.Scheme`, `types.NamespacedName`, etc. — pervasive across CRD types and controllers | direct-runtime | <!-- doc-versions: dependency -->
-| `k8s.io/client-go` | v0.37.0 | `internal/controller/cluster_controller.go`, `gameserver_stop_attach.go` (pod exec/attach via `kubernetes.Clientset`), `cmd/main.go` scheme/clientset setup | direct-runtime | <!-- doc-versions: dependency -->
+| `k8s.io/api` | v0.37.1 | Core/apps/batch typed API objects used across `api/v1alpha1/*_types.go` and controllers to build Pod/PVC/Job/Service/RBAC objects | direct-runtime | <!-- doc-versions: dependency -->
+| `k8s.io/apimachinery` | v0.37.1 | `metav1.ObjectMeta`, `runtime.Scheme`, `types.NamespacedName`, etc. — pervasive across CRD types and controllers | direct-runtime | <!-- doc-versions: dependency -->
+| `k8s.io/client-go` | v0.37.1 | `internal/controller/cluster_controller.go`, `gameserver_stop_attach.go` (pod exec/attach via `kubernetes.Clientset`), `cmd/main.go` scheme/clientset setup | direct-runtime | <!-- doc-versions: dependency -->
 | `github.com/go-git/go-git/v5` | v5.19.2 | `internal/modsrc/git.go` — clones a ModuleSource's git repo/ref (HTTP or SSH) in-memory to discover module directories | direct-runtime |
 | `github.com/go-git/go-billy/v5` | v5.9.1 | `internal/modsrc/git.go` — in-memory filesystem (`memfs`) backing the git clone above, avoiding disk writes for an admin-configured but externally-controlled fetch | direct-runtime |
 | `golang.org/x/crypto` | v0.55.0 | `internal/modsrc/git.go` — SSH key/host-key handling for git-over-SSH ModuleSource cloning, alongside `go-git`'s SSH transport | direct-runtime | <!-- doc-versions: dependency -->
@@ -205,11 +205,10 @@ and quiesce. Direct deps from `agent/go.mod` (excluding the local
 | `golang.org/x/sys` | v0.47.0 | `internal/usage/usage.go` — `unix.Statfs`/`unix.Statfs_t` to report the game data volume's disk usage over heartbeat. **Not** used for a PTY: `internal/console/console.go`'s doc comment states the agent's console is RCON-only by design ("no real PTY"); a `GameTemplate.spec.consoleMode: "pty"` game is bridged instead through `api/internal/ws/attach.go` against the Kubernetes pod-attach API, with no agent involvement at all | direct-runtime | <!-- doc-versions: dependency -->
 
 Note `k8s.io/apimachinery`/`k8s.io/client-go` are pinned at v0.37.0 here <!-- doc-versions: dependency -->
-across `operator`/`api`/`agent`/`mcp-server` — each Go module in the
-workspace resolves its own client-go version independently (there's no
-shared root `go.mod`), but they currently share the same versions.
-The versions aren't lockstepped structurally across the workspace, but
-happen to align today.
+and in `api`/`mcp-server`; `operator` is one patch ahead at v0.37.1. <!-- doc-versions: dependency -->
+Each Go module in the workspace resolves its own client-go version
+independently (there's no shared root `go.mod`), so patch versions can
+drift between modules as Dependabot bumps them one module at a time.
 
 ### audit-syslog-bridge
 
@@ -377,10 +376,10 @@ cluster/kubelab via `GAMEPLANE_E2E_REUSE_CLUSTER`. Direct deps from
 | `k8s.io/apimachinery` | v0.37.0 | 28 files reference it — `metav1`, `types`, `runtime` types used throughout the assertions and helper builders (`env.go`, `test_helpers_e2e_test.go`) | <!-- doc-versions: dependency -->
 | `k8s.io/api` | v0.37.0 | Core/apps typed objects used to construct and inspect Pods/Deployments/etc. during the e2e flows | <!-- doc-versions: dependency -->
 
-The `k8s.io/*` trio here is now aligned (v0.37.0) with the rest of the <!-- doc-versions: dependency -->
-workspace; each module in the workspace resolves its own client-go version
-independently (there's no shared root `go.mod`), so versions can drift,
-but they currently align.
+The `k8s.io/*` trio here is on v0.37.0, like most of the workspace <!-- doc-versions: dependency -->
+(`operator` is on v0.37.1); each module in the workspace resolves its own <!-- doc-versions: dependency -->
+client-go version independently (there's no shared root `go.mod`), so
+patch versions can drift between modules.
 
 ## Toolchain / build-time
 
