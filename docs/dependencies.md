@@ -199,13 +199,13 @@ and quiesce. Direct deps from `agent/go.mod` (excluding the local
 |---|---|---|---|
 | `github.com/go-chi/chi/v5` | v5.3.2 | `cmd/main.go` — router for the agent's whole HTTP surface; every feature package (console, logs, files, players, status, actions, quiesce, lifecycle, mods) exposes `Mount(r chi.Router, ...)` onto it | direct-runtime |
 | `github.com/coder/websocket` | v1.8.15 | Dual role: server-side WS upgrade for `internal/console/console.go` (RCON console stream) and `internal/logs/logs.go` (live log tail); client-side outbound dial in `internal/rcon/websocket.go` implementing the Rust dedicated server's WebRcon protocol | direct-runtime |
-| `k8s.io/apimachinery` | v0.37.0 | `internal/heartbeat/heartbeat.go` only — `metav1.Now()`/`PatchOptions{}`, `types.MergePatchType` to build the JSON merge-patch that updates `status.agent` | direct-runtime | <!-- doc-versions: dependency -->
-| `k8s.io/client-go` | v0.37.0 | `internal/heartbeat/heartbeat.go` only — `rest.InClusterConfig()` then `dynamic.NewForConfig(...).Resource(gvr).Namespace(...).Patch(...)` to patch the owning GameServer's status every tick; only the `dynamic` + `rest` subpackages are used, no typed clientset | direct-runtime | <!-- doc-versions: dependency -->
+| `k8s.io/apimachinery` | v0.37.1 | `internal/heartbeat/heartbeat.go` only — `metav1.Now()`/`PatchOptions{}`, `types.MergePatchType` to build the JSON merge-patch that updates `status.agent` | direct-runtime | <!-- doc-versions: dependency -->
+| `k8s.io/client-go` | v0.37.1 | `internal/heartbeat/heartbeat.go` only — `rest.InClusterConfig()` then `dynamic.NewForConfig(...).Resource(gvr).Namespace(...).Patch(...)` to patch the owning GameServer's status every tick; only the `dynamic` + `rest` subpackages are used, no typed clientset | direct-runtime | <!-- doc-versions: dependency -->
 | `github.com/prometheus/client_golang` | v1.24.1 | `cmd/main.go` — serves `promhttp.Handler()` at `/metrics`; only the `promhttp` subpackage, no custom collectors | direct-runtime |
 | `golang.org/x/sys` | v0.47.0 | `internal/usage/usage.go` — `unix.Statfs`/`unix.Statfs_t` to report the game data volume's disk usage over heartbeat. **Not** used for a PTY: `internal/console/console.go`'s doc comment states the agent's console is RCON-only by design ("no real PTY"); a `GameTemplate.spec.consoleMode: "pty"` game is bridged instead through `api/internal/ws/attach.go` against the Kubernetes pod-attach API, with no agent involvement at all | direct-runtime | <!-- doc-versions: dependency -->
 
-Note `k8s.io/apimachinery`/`k8s.io/client-go` are pinned at v0.37.0 here <!-- doc-versions: dependency -->
-and in `api`/`mcp-server`; `operator` is one patch ahead at v0.37.1. <!-- doc-versions: dependency -->
+Note `k8s.io/apimachinery`/`k8s.io/client-go` are at v0.37.1 here, as in <!-- doc-versions: dependency -->
+`operator` and `sentinel`; `api`, `mcp-server` and `test/e2e` are still on v0.37.0. <!-- doc-versions: dependency -->
 Each Go module in the workspace resolves its own client-go version
 independently (there's no shared root `go.mod`), so patch versions can
 drift between modules as Dependabot bumps them one module at a time.
@@ -266,8 +266,8 @@ handshake. Direct deps from `sentinel/go.mod` (excluding the local
 
 | Dependency | Version | Why |
 |---|---|---|
-| `k8s.io/apimachinery` | v0.37.0 | `main.go` — typed/unstructured plumbing for reading the target `GameServer`'s status and idle/wake fields | <!-- doc-versions: dependency -->
-| `k8s.io/client-go` | v0.37.0 | `main.go` — in-cluster client used to read `GameServer` status and patch it to trigger a wake | <!-- doc-versions: dependency -->
+| `k8s.io/apimachinery` | v0.37.1 | `main.go` — typed/unstructured plumbing for reading the target `GameServer`'s status and idle/wake fields | <!-- doc-versions: dependency -->
+| `k8s.io/client-go` | v0.37.1 | `main.go` — in-cluster client used to read `GameServer` status and patch it to trigger a wake | <!-- doc-versions: dependency -->
 
 ### capture-sidecar
 
@@ -376,8 +376,8 @@ cluster/kubelab via `GAMEPLANE_E2E_REUSE_CLUSTER`. Direct deps from
 | `k8s.io/apimachinery` | v0.37.0 | 28 files reference it — `metav1`, `types`, `runtime` types used throughout the assertions and helper builders (`env.go`, `test_helpers_e2e_test.go`) | <!-- doc-versions: dependency -->
 | `k8s.io/api` | v0.37.0 | Core/apps typed objects used to construct and inspect Pods/Deployments/etc. during the e2e flows | <!-- doc-versions: dependency -->
 
-The `k8s.io/*` trio here is on v0.37.0, like most of the workspace <!-- doc-versions: dependency -->
-(`operator` is on v0.37.1); each module in the workspace resolves its own <!-- doc-versions: dependency -->
+The `k8s.io/*` trio here is on v0.37.0, like `api` and `mcp-server` <!-- doc-versions: dependency -->
+(`operator`, `agent` and `sentinel` are on v0.37.1); each module in the workspace resolves its own <!-- doc-versions: dependency -->
 client-go version independently (there's no shared root `go.mod`), so
 patch versions can drift between modules.
 
@@ -453,8 +453,8 @@ The Helm chart itself (`charts/gameplane/Chart.yaml`) declares **no chart
   `go vet` (Go) and `npm run build`/`test:cover` (web) are CI-gated. Lint
   is a devcontainer/local (`make lint`) and `docs/contributing.md`
   pre-PR-checklist step today, not an automated CI gate.
-- **Workspace-wide `k8s.io/*` versions.** All six client-go consumers
-  (`operator`, `api`, `agent`, `mcp-server`, `sentinel`, `test/e2e`) are
-  aligned at `k8s.io/api|apimachinery|client-go v0.37.0`. <!-- doc-versions: dependency --> Because `go.work`
-  links independent modules rather than a single root `go.mod`, versions
-  could drift across the workspace, but they currently align.
+- **Workspace-wide `k8s.io/*` versions.** The six client-go consumers
+  are one patch apart: `operator`, `agent` and `sentinel` are on
+  `k8s.io/*` v0.37.1, `api`, `mcp-server` and `test/e2e` on v0.37.0. <!-- doc-versions: dependency --> Because `go.work`
+  links independent modules rather than a single root `go.mod`, Dependabot
+  bumps them one module at a time and patch versions drift between bumps.
