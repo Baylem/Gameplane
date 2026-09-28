@@ -148,6 +148,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - `gameserver_status.go`: phase computation from StatefulSet/Pod state + agent heartbeat, AddressAssignment condition.
   - `gameserver_stop_attach.go`: pod exec attachment for graceful stop commands.
   - `gameserver_extravolumes.go`: user-supplied additional volume mounts.
+  - `gameserver_tunnel.go`: provision tunnel relay Deployment (frp, Tailscale, Playit providers), mount only the active provider's credential key (items projection with Optional:true) to prevent exposure of stale keys during a direct spec provider switch.
 - **Capture configuration:**
   - **Spec fields (spec.capture):**
     - `Enabled bool`: Optional flag to enable/disable the capture sidecar injection on this GameServer. When false or omitted, no sidecar is injected and the server is unchanged. When true, the operator injects the capture sidecar as an ephemeral container into the running game pod, live and without restarting the game container.
