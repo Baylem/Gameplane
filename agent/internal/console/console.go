@@ -16,12 +16,12 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 	"github.com/go-chi/chi/v5"
+
+	"github.com/ValgulNecron/gameplane/agent/internal/rcon"
 )
 
 // Rcon is the interface to the game's remote console.
@@ -47,16 +47,16 @@ type Envelope struct {
 	Body string `json:"body"`
 }
 
-// redactCommand removes every occurrence of cmd (both its Go-quoted form and
-// its raw form) from msg. RCON clients embed the submitted command in their
-// Exec errors, and a console command may carry a secret (e.g. a password
-// argument), so the command text must never reach the agent's logs.
-func redactCommand(msg, cmd string) string {
-	if cmd == "" {
-		return msg
-	}
-	msg = strings.ReplaceAll(msg, strconv.Quote(cmd), `"<redacted>"`)
-	return strings.ReplaceAll(msg, cmd, "<redacted>")
+// shouldLogRconError reports whether err is safe to log without exposing
+// command arguments. RCON clients embed the submitted command in their Exec
+// errors, and a console command may carry secrets (e.g., password arguments
+// or values that appear in error text). Rather than attempt imperfect
+// redaction of partial arguments, we log only a stable error classification.
+func shouldLogRconError(err error) bool {
+	// Log only specific classified errors; everything else is treated as
+	// potentially containing unclassified secrets (e.g., argument-only
+	// substrings in server error text).
+	return errors.Is(err, rcon.ErrDisabled) || errors.Is(err, rcon.ErrAuth)
 }
 
 func (h *handler) serve(w http.ResponseWriter, req *http.Request) {
@@ -81,8 +81,15 @@ func (h *handler) serve(w http.ResponseWriter, req *http.Request) {
 		out, err := h.rcon.Exec(in.Body)
 		env := Envelope{Kind: "out", Body: out}
 		if err != nil {
-			slog.Warn("console rcon", "err", redactCommand(err.Error(), in.Body))
-			env = Envelope{Kind: "err", Body: "upstream unavailable"}
+			errBody := "upstream unavailable"
+			if errors.Is(err, rcon.ErrDisabled) {
+				errBody = "rcon disabled"
+			} else if errors.Is(err, rcon.ErrAuth) {
+				errBody = "rcon authentication failed"
+			} else {
+				slog.Warn("console rcon", "err", "unclassified error (redacted)")
+			}
+			env = Envelope{Kind: "err", Body: errBody}
 		}
 		if err := wsjson.Write(ctx, conn, env); err != nil {
 			return

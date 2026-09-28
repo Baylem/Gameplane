@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -93,17 +92,18 @@ func TestConsole_RconError(t *testing.T) {
 	}
 }
 
-// TestConsole_RconErrorLogOmitsCommand confirms the warning logged for a
-// failed Exec does not contain the submitted command, since RCON clients
-// embed the command in their errors and it may carry a secret.
-func TestConsole_RconErrorLogOmitsCommand(t *testing.T) {
+// TestConsole_UnclassifiedErrorOmitsSecret confirms the warning logged for an
+// unclassified Exec failure does not contain the submitted command or error
+// details, since the command may carry a secret and error text from RCON
+// servers sometimes contains arguments or other unclassified data.
+func TestConsole_UnclassifiedErrorOmitsSecret(t *testing.T) {
 	var buf bytes.Buffer
 	prev := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
 	t.Cleanup(func() { slog.SetDefault(prev) })
 
 	const cmd = `setpassword "hunter2"`
-	rc := &fakeRcon{err: fmt.Errorf("websocket rcon exec %q: %w", cmd, errors.New("broken pipe"))}
+	rc := &fakeRcon{err: errors.New("connection dropped with arg hunter2")}
 	_, wsURL := newServer(t, rc)
 	conn, ctx, _ := dial(t, wsURL)
 
@@ -119,27 +119,13 @@ func TestConsole_RconErrorLogOmitsCommand(t *testing.T) {
 	}
 	logged := buf.String()
 	if strings.Contains(logged, "hunter2") {
-		t.Fatalf("log contains the submitted command: %q", logged)
+		t.Fatalf("log contains the command password: %q", logged)
 	}
-	if !strings.Contains(logged, "broken pipe") {
-		t.Fatalf("log lost the underlying error: %q", logged)
+	if strings.Contains(logged, "connection dropped") {
+		t.Fatalf("log contains unclassified error details: %q", logged)
 	}
-}
-
-func TestRedactCommand(t *testing.T) {
-	cases := []struct {
-		msg, cmd, want string
-	}{
-		{`rcon exec "say hi": eof`, "say hi", `rcon exec "<redacted>": eof`},
-		{`rcon exec "a \"b\"": eof`, `a "b"`, `rcon exec "<redacted>": eof`},
-		{"unknown command say hi", "say hi", "unknown command <redacted>"},
-		{"dial failed", "say hi", "dial failed"},
-		{"dial failed", "", "dial failed"},
-	}
-	for _, c := range cases {
-		if got := redactCommand(c.msg, c.cmd); got != c.want {
-			t.Errorf("redactCommand(%q, %q) = %q, want %q", c.msg, c.cmd, got, c.want)
-		}
+	if !strings.Contains(logged, "unclassified error") {
+		t.Fatalf("log should indicate redaction: %q", logged)
 	}
 }
 

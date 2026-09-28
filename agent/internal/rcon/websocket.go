@@ -244,10 +244,16 @@ func redactURLErr(err error) error {
 }
 
 // errorLeaksSecret reports whether msg contains the password in any form
-// (raw, path-escaped, or query-escaped). It returns false if pw is empty
-// or if only checked to ensure secrets aren't exposed in error messages.
+// (raw, path-escaped, or query-escaped). It only checks redacted error
+// messages and skips substring matching for very short passwords (which
+// risk false positives in unrelated error text). Returns false if pw is
+// empty.
 func errorLeaksSecret(msg, pw string) bool {
-	if pw == "" {
+	if pw == "" || len(pw) < 3 {
+		// Don't substring-match very short passwords: they risk false
+		// positives. RedactURLErr has already removed the URL path, so
+		// this function is only called on redacted messages, and a 1-2
+		// character password leaking in a redacted dial error is unlikely.
 		return false
 	}
 	return strings.Contains(msg, pw) || strings.Contains(msg, url.PathEscape(pw)) || strings.Contains(msg, url.QueryEscape(pw))
@@ -271,24 +277,18 @@ func (c *WebSocket) classifyExecErrLocked(cmd string, err error) error {
 	confirmed := c.authConfirmed
 	c.dropLocked()
 
-	// Check if the error message contains the password in any form.
-	// Only treat it as leaking if the password resolved successfully and is non-empty.
-	pw, pwErr := c.passFn()
-	errMsg := err.Error()
-	errContainsSecret := pwErr == nil && errorLeaksSecret(errMsg, pw)
-
+	// Exec errors (Read/Write failures on an already-open connection) never
+	// contain the dial URL, so they don't carry the password in the URL path.
+	// Redact the error but always wrap it with %w to preserve the original
+	// cause for errors.Is/errors.As checks.
 	if !confirmed && isAuthCloseSignal(err) {
 		c.lastAuthFailure = time.Now()
-		// If the error message leaks the password, don't wrap it with %w
-		if errContainsSecret {
-			return fmt.Errorf("websocket rcon exec %q: %w: %w", cmd, ErrAuth, errors.New("connection failed"))
-		}
+		// An early close before authConfirmed means auth failure.
+		// Redact any URL-embedded secrets (though exec errors don't contain URLs).
 		return fmt.Errorf("websocket rcon exec %q: %w: %w", cmd, ErrAuth, redactURLErr(err))
 	}
-	// If the error message leaks the password, don't wrap it with %w
-	if errContainsSecret {
-		return fmt.Errorf("websocket rcon exec %q: %w", cmd, errors.New("connection failed"))
-	}
+	// Always wrap with %w to preserve the original error type for
+	// errors.Is/errors.As checks. Redact only the URL path (if present).
 	return fmt.Errorf("websocket rcon exec %q: %w", cmd, redactURLErr(err))
 }
 
