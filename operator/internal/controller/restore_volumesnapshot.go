@@ -174,6 +174,9 @@ func (r *RestoreReconciler) awaitRestoredServer(
 		// Original server was deleted (legitimate): verify that every Secret/ConfigMap
 		// referenced by the RESTORED server's spec exists and is owned by the restored server.
 		// Read-only check: do not create copies, just validate references exist and are owned.
+		// Stop at the first bad reference so a later transient error cannot
+		// overwrite an errRefNotOwned result.
+	refsLoop:
 		for _, ref := range extractSpecRefs(&gs.Spec) {
 			switch ref.kind {
 			case secretRefKind:
@@ -184,10 +187,11 @@ func (r *RestoreReconciler) awaitRestoredServer(
 					} else {
 						refsErr = fmt.Errorf("check referenced Secret %q: %w", ref.name, err)
 					}
-					continue
+					break refsLoop
 				}
 				if !isServerOwnedSecret(sec, gs) {
 					refsErr = fmt.Errorf("referenced Secret %q not owned by restored server: %w", ref.name, errRefNotOwned)
+					break refsLoop
 				}
 			case configMapRefKind:
 				cm := &corev1.ConfigMap{}
@@ -197,10 +201,11 @@ func (r *RestoreReconciler) awaitRestoredServer(
 					} else {
 						refsErr = fmt.Errorf("check referenced ConfigMap %q: %w", ref.name, err)
 					}
-					continue
+					break refsLoop
 				}
 				if !isServerOwnedConfigMap(cm, gs) {
 					refsErr = fmt.Errorf("referenced ConfigMap %q not owned by restored server: %w", ref.name, errRefNotOwned)
+					break refsLoop
 				}
 			}
 		}
