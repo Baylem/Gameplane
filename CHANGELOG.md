@@ -322,6 +322,8 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **capture-sidecar:** hardened TLS configuration defaults and capture size limits.
 - **audit-syslog-bridge:** hardened `APP-NAME`/`HOSTNAME` field validation.
 - **gameproto:** hardened handshake string-length and status-response validation.
+- **deploy:** hardened the kind dev cluster bootstrap by pinning the ingress-nginx manifest to a release tag.
+- **gp-module:** hardened the steamcmd preset so scaffolded templates run the game as a non-root user.
 - **docs:** hardened the accuracy of the game-container posture and OIDC group-claim documentation.
 - **telemetry-receiver:** hardened ingest payload validation.
 
