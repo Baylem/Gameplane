@@ -132,7 +132,10 @@ func (r *RestoreReconciler) reconcileVolumeSnapshotRestore(
 			// Lost a create race; the next pass finds it via the annotation.
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, err
+		// Route non-AlreadyExists errors through the same deadline-aware path
+		// used for reference-copy failures. This ensures transient errors do not
+		// cause indefinite requeuing past the deadline.
+		return r.failOrRequeue(ctx, rs, err)
 	}
 
 	// Make the copies now that the restored server has a UID. A transient
@@ -160,11 +163,28 @@ func (r *RestoreReconciler) awaitRestoredServer(
 	// could run past the documented limit.
 	var refsErr error
 	orig := &gameplanev1alpha1.GameServer{}
-	if err := r.Get(ctx, types.NamespacedName{Name: src.Spec.ServerRef.Name, Namespace: rs.Namespace}, orig); err == nil {
+	err := r.Get(ctx, types.NamespacedName{Name: src.Spec.ServerRef.Name, Namespace: rs.Namespace}, orig)
+	if err == nil {
+		// Original server exists: use the current reference-checking logic.
 		refsErr = r.ensureRestoredRefs(ctx, orig, gs)
 		if refsErr != nil && errors.Is(refsErr, errRefNotOwned) {
 			return r.fail(ctx, rs, refsErr.Error())
 		}
+	} else if apierrors.IsNotFound(err) {
+		// Original server was deleted (legitimate): verify that every Secret/ConfigMap
+		// referenced by the RESTORED server's spec exists and is owned by the restored server.
+		copies, copyErr := r.planOwnedRefCopies(ctx, gs, gs)
+		if copyErr != nil {
+			refsErr = copyErr
+		} else if copyErr := r.ensureOwnedRefCopies(ctx, gs, gs, copies); copyErr != nil {
+			refsErr = copyErr
+		}
+	} else {
+		// Any other Get error is transient: set refsErr but do not return early.
+		refsErr = fmt.Errorf("get original GameServer %s: %w", src.Spec.ServerRef.Name, err)
+	}
+	if refsErr != nil && errors.Is(refsErr, errRefNotOwned) {
+		return r.fail(ctx, rs, refsErr.Error())
 	}
 
 	if gs.Status.Phase == gameplanev1alpha1.GameServerPhaseFailed {

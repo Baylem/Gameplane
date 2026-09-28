@@ -9,7 +9,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -49,7 +48,7 @@ func TestGameServer_UnownedNamesakeSurvives(t *testing.T) {
 		Data: map[string][]byte{"marker": []byte("unowned-config")},
 	}
 	if _, err := envInstance.K8s.CoreV1().Secrets(ns).
-		Create(ctx, unownedConfigSecret, metav1.CreateOptions{}); err != nil && !apierrors.IsAlreadyExists(err) {
+		Create(ctx, unownedConfigSecret, metav1.CreateOptions{}); err != nil {
 		t.Fatalf("create unowned config secret: %v", err)
 	}
 	t.Cleanup(func() {
@@ -73,7 +72,7 @@ func TestGameServer_UnownedNamesakeSurvives(t *testing.T) {
 		},
 	}}
 	if _, err := envInstance.Dyn.Resource(backupScheduleGVR).Namespace(ns).
-		Create(ctx, unownedBackupSchedule, metav1.CreateOptions{}); err != nil && !apierrors.IsAlreadyExists(err) {
+		Create(ctx, unownedBackupSchedule, metav1.CreateOptions{}); err != nil {
 		t.Fatalf("create unowned backupschedule: %v", err)
 	}
 	t.Cleanup(func() {
