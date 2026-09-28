@@ -47,18 +47,6 @@ type Envelope struct {
 	Body string `json:"body"`
 }
 
-// shouldLogRconError reports whether err is safe to log without exposing
-// command arguments. RCON clients embed the submitted command in their Exec
-// errors, and a console command may carry secrets (e.g., password arguments
-// or values that appear in error text). Rather than attempt imperfect
-// redaction of partial arguments, we log only a stable error classification.
-func shouldLogRconError(err error) bool {
-	// Log only specific classified errors; everything else is treated as
-	// potentially containing unclassified secrets (e.g., argument-only
-	// substrings in server error text).
-	return errors.Is(err, rcon.ErrDisabled) || errors.Is(err, rcon.ErrAuth)
-}
-
 func (h *handler) serve(w http.ResponseWriter, req *http.Request) {
 	conn, err := websocket.Accept(w, req, nil)
 	if err != nil {
