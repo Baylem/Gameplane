@@ -106,6 +106,7 @@ func (s *S3Sink) Start(ctx context.Context) {
 
 	var buffer []Event
 	var bufferBytes int64
+	var scratch bytes.Buffer // reused to size each event via its exact NDJSON encoding, not a raw-length estimate
 
 	flush := func() {
 		if len(buffer) == 0 {
@@ -123,7 +124,16 @@ func (s *S3Sink) Start(ctx context.Context) {
 			return
 		case e := <-s.ch:
 			buffer = append(buffer, e)
-			bufferBytes += int64(len(e.TS) + len(e.Actor) + len(e.Method) + len(e.Path) + len(e.Target) + len(e.IP) + len(e.Reason)*6/5 + 60) // rough estimate; +60 for JSON overhead; Reason*6/5 accounts for 20% JSON escaping expansion
+			// Size the event exactly as it will be uploaded: encoding/json's
+			// default SetEscapeHTML(true) can expand a single byte (e.g. '<')
+			// up to 6x, so a raw len()-based estimate (even with a fudge
+			// factor) can undercount badly. Encoding each event the same way
+			// encodeNDJSON does and summing the results is exact, because
+			// NDJSON is just independently-encoded lines concatenated —
+			// there's no cross-event interaction to approximate.
+			scratch.Reset()
+			encodeEvent(&scratch, e)
+			bufferBytes += int64(scratch.Len())
 			if len(buffer) >= s3FlushCountSize || bufferBytes >= s3FlushByteSize {
 				flush()
 			}
@@ -226,28 +236,39 @@ func (s *S3Sink) pushBatch(parentCtx context.Context, events []Event) {
 		"bucket", s.bucket, "key", key, "events", len(events))
 }
 
+// encodeEvent JSON-encodes a single event as one NDJSON line (the database id
+// is excluded, same payload as the webhook sink) and appends it to buf,
+// including the trailing newline json.Encoder.Encode always writes. It is the
+// sole place that defines the wire encoding, so both the upload body
+// (encodeNDJSON) and the buffered-byte size tracked in Start stay in sync —
+// summing encodeEvent's output per event is exact, not an estimate, since
+// NDJSON lines are encoded independently with no cross-event interaction.
+func encodeEvent(buf *bytes.Buffer, e Event) {
+	p := map[string]any{
+		"ts":     e.TS,
+		"actor":  e.Actor,
+		"method": e.Method,
+		"path":   e.Path,
+		"status": e.Status,
+	}
+	if e.Target != "" {
+		p["target"] = e.Target
+	}
+	if e.IP != "" {
+		p["ip"] = e.IP
+	}
+	if e.Reason != "" {
+		p["reason"] = e.Reason
+	}
+	_ = json.NewEncoder(buf).Encode(p)
+}
+
 // encodeNDJSON encodes events as NDJSON (one JSON object per line),
 // excluding the database id (same payload as the webhook sink).
 func (s *S3Sink) encodeNDJSON(events []Event) []byte {
 	var buf bytes.Buffer
 	for _, e := range events {
-		p := map[string]any{
-			"ts":     e.TS,
-			"actor":  e.Actor,
-			"method": e.Method,
-			"path":   e.Path,
-			"status": e.Status,
-		}
-		if e.Target != "" {
-			p["target"] = e.Target
-		}
-		if e.IP != "" {
-			p["ip"] = e.IP
-		}
-		if e.Reason != "" {
-			p["reason"] = e.Reason
-		}
-		_ = json.NewEncoder(&buf).Encode(p)
+		encodeEvent(&buf, e)
 	}
 	return buf.Bytes()
 }

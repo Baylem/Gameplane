@@ -143,6 +143,7 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/users/{id}/role-bindings` — PATCH: role assignments (per namespace + cluster)
 - `/roles` — GET catalog and custom roles; POST/PATCH/DELETE custom roles. A PATCH whose permission list drops `users:manage` from a role that grants it is refused (400) when that role is the caller's own primary role, or when every user who can manage users holds that role — the same lockout guards `PATCH /users/{id}` applies to a role change. Tests: `TestRoles_UpdateKeepsCallersOwnUserManagement`, `TestRoles_UpdateKeepsAtLeastOneUserManager`, `TestRoles_UpdateRemovesUserManagementWhenAnotherManagerRemains` (`handlers/roles_guard_test.go`); e2e `TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions` (bucket `operator`)
 - `/admin/audit` — GET: audit log (searchable, hash-chain verifiable)
+- `/admin/audit/export` — GET: streams the full matching audit trail as a download, `?format=csv` (default) or `?format=json`; accepts the same actor/method/status filters as `/admin/audit`. CSV header, in column order: `id, ts, actor, method, path, target, status, ip, reason`. JSON is a top-level array of the same `audit.Event` objects `/admin/audit` returns.
 - `/admin/config` — GET/PATCH: global settings (OIDC, notifications, telemetry, module upload limits, etc.)
 - `/admin/notifications` — PATCH config + test-send to sinks
 - `/admin/auth` — PATCH identity-provider secrets

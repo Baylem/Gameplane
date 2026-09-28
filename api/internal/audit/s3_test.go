@@ -177,8 +177,16 @@ func TestS3Sink_FlushOnByteThreshold(t *testing.T) {
 	}
 }
 
-// TestS3Sink_FlushOnByteThreshold_WithReason flushes when buffer exceeds 1 MiB
-// with large Reason field, verifying the buffer estimate includes len(e.Reason).
+// TestS3Sink_FlushOnByteThreshold_WithReason flushes when the buffered NDJSON
+// byte count — not a raw string length estimate — reaches s3FlushByteSize.
+// The Reason is built from characters that expand heavily under Go's default
+// JSON encoding (encoding/json's SetEscapeHTML(true) turns '<' into the
+// 6-byte "\u003c" escape; a raw newline becomes the 2-byte "\n" escape), the
+// exact scenario the raw len()-based estimate this replaced got wrong. This
+// asserts the flush is byte-triggered (not count-triggered) AND that the
+// uploaded batch doesn't overshoot the threshold by more than one event's
+// worth of encoded bytes — i.e. the size tracking is exact, not just a bigger
+// fudge factor.
 func TestS3Sink_FlushOnByteThreshold_WithReason(t *testing.T) {
 	received := make(chan []byte, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -208,27 +216,38 @@ func TestS3Sink_FlushOnByteThreshold_WithReason(t *testing.T) {
 		<-done
 	}()
 
-	// Use 20,000-char Reason with escaped characters (newlines) to ensure byte
-	// threshold is crossed while accounting for JSON escaping expansion (~2.4x).
-	// This verifies the flush was byte-triggered and the buffer estimate includes
-	// proper escaping accounting for the reason field.
-	largeReason := strings.Repeat("x\n", 10000) // 10,000 x's + 10,000 newlines = ~2.4x expansion when JSON-encoded
+	// "<\n" repeated: '<' expands 6x ("\u003c") and the newline expands 2x
+	// ("\n"), so the raw 6,000-char Reason encodes to ~24,000 bytes per event
+	// — an expansion a fixed or proportional fudge factor would need to be
+	// re-tuned for, but exact per-event encoding tracks automatically.
+	event := Event{
+		TS: "2026-06-30T00:00:00Z", Actor: "admin", Method: "POST",
+		Path: "/api/v1/servers", Status: 201, Reason: strings.Repeat("<\n", 3000),
+	}
+
+	// The exact encoded size of one event, via the same helper Start uses to
+	// track bufferBytes — this bounds how far a single triggering event can
+	// push the batch past the threshold.
+	var oneEventBuf bytes.Buffer
+	encodeEvent(&oneEventBuf, event)
+	oneEventSize := int64(oneEventBuf.Len())
+
 	deadline := time.Now().Add(2 * time.Second)
 	for i := 0; i < s3FlushCountSize; i++ {
 		if time.Now().After(deadline) {
 			t.Fatal("timeout while enqueuing events")
 		}
-		sink.Enqueue(Event{
-			TS: "2026-06-30T00:00:00Z", Actor: "admin", Method: "POST",
-			Path: "/api/v1/servers", Status: 201, Reason: largeReason,
-		})
+		sink.Enqueue(event)
 	}
 
 	select {
 	case b := <-received:
 		eventCount := bytes.Count(b, []byte("\n"))
 		if int64(len(b)) < s3FlushByteSize {
-			t.Errorf("batch size = %d, expected >= %d", len(b), s3FlushByteSize)
+			t.Errorf("batch size = %d, expected >= %d (byte threshold)", len(b), s3FlushByteSize)
+		}
+		if overshootLimit := s3FlushByteSize + oneEventSize; int64(len(b)) >= overshootLimit {
+			t.Errorf("batch size = %d, expected < %d (no more than one event's overshoot past the threshold)", len(b), overshootLimit)
 		}
 		if eventCount >= s3FlushCountSize {
 			t.Errorf("flush event count = %d, expected < %d (byte threshold should trigger first)", eventCount, s3FlushCountSize)
