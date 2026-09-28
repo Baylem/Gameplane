@@ -337,9 +337,10 @@ func (f *forwarder) send(ctx context.Context, frame []byte) error {
 // A short read surfaces that close first, so send moves the frame to a fresh
 // connection. Datagram connections have no such state and are always reused.
 //
-// The probe is best-effort: a close that has not reached the socket within
-// livenessProbe goes unseen, and the next frame can be lost while send reports
-// success. Syslog framing has no ack, so no probe timeout closes this window.
+// The probe is best-effort, not a delivery guarantee: a close that has not
+// reached the socket within livenessProbe goes unseen, and the next frame can
+// be lost while send reports success (204). Syslog framing has no ack, so this
+// window cannot be closed without a different transport protocol.
 func (f *forwarder) alive() bool {
 	if f.network != "tcp" {
 		return true

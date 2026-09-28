@@ -26,9 +26,9 @@ deadline (so a hung collector can't wedge the relay), and reconnects once on a
 write error. Before it reuses a TCP connection it checks that the collector
 hasn't closed it, and opens a fresh one if it has. This check is best-effort: it
 waits only a few milliseconds for the collector's close, so a close that
-arrives later can still lose one record while the bridge returns `204`. Syslog
-has no application-level acknowledgement, so this window can be narrowed but
-not closed.
+arrives later can still lose one record while the bridge returns `204` (written
+to connection). Syslog has no application-level acknowledgement, so this window
+can be narrowed but not closed.
 
 Each inbound request must arrive in full (headers and body) within 15 s, and
 idle keep-alive connections close after 120 s.
@@ -45,13 +45,15 @@ idle keep-alive connections close after 120 s.
   intake limit can exceed the single-datagram ceiling and be dropped; TCP
   streams it fine.
 - **TCP (and TLS) can still lose one record after a collector-side close.**
-  If the collector closes a reused connection and its FIN/RST reaches the
-  bridge only after the short liveness probe, the close goes unnoticed: one
-  record is written into the dead connection and the bridge returns `204`.
-  The following write then fails, and the bridge reconnects and delivers
-  that later record on a fresh connection.
-  Syslog framing has no acknowledgement, so this window cannot be closed
-  without a different transport (for example one with per-record acks).
+  A 204 means the record was written to the collector connection (best effort;
+  the connection may close concurrently and the record be lost). If the
+  collector closes a reused connection and its FIN/RST reaches the bridge only
+  after the short liveness probe, the close goes unnoticed: one record is
+  written into the dead connection and the bridge returns `204`. The following
+  write then fails (502), and the bridge reconnects and delivers that later
+  record on a fresh connection. Syslog framing has no acknowledgement, so this
+  window cannot be closed without a different transport (for example one with
+  per-record acks).
 
 `AUTH_HEADER` gates who may inject records — set it (the chart wires it from the
 same Secret as the API's webhook token). Without it the relay accepts any POST.

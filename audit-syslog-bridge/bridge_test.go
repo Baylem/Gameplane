@@ -883,8 +883,8 @@ func TestIntake_BodyReadIsTimeBounded(t *testing.T) {
 	if _, err := io.ReadAll(conn); err != nil {
 		t.Fatalf("server did not close the connection within the read bound: %v", err)
 	}
-	if elapsed := time.Since(start); elapsed > 3*time.Second {
-		t.Fatalf("connection closed after %v, want well under 3s", elapsed)
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("connection closed after %v, want within 1s of the 300ms read timeout", elapsed)
 	}
 }
 

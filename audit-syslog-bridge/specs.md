@@ -30,7 +30,7 @@ Single flat package (`main`): `main.go` (relay + config + server logic), `bridge
 **HTTP endpoints:**
 - `POST /` — forward JSON body as syslog record
   - Request: any Content-Type, JSON body up to 64 KiB
-  - Response: `204 No Content` on success; `400 Bad Request` if body empty/unreadable; `401 Unauthorized` if `AUTH_HEADER` is set and does not match; `405 Method Not Allowed` for GET/other; `502 Bad Gateway` if forward to collector fails
+  - Response: `204 No Content` (record written to collector connection; best effort, may be lost if collector closes concurrently); `400 Bad Request` if body empty/unreadable; `401 Unauthorized` if `AUTH_HEADER` is set and does not match; `405 Method Not Allowed` for GET/other; `502 Bad Gateway` if forward to collector fails
 - `GET /healthz` — Kubernetes probe
   - Response: `200 OK` with body "ok"
 
@@ -46,7 +46,7 @@ Single flat package (`main`): `main.go` (relay + config + server logic), `bridge
 
 - Forwards the received JSON body verbatim (schema-agnostic; does not parse, validate, or understand audit events)
 - Prefers TCP over UDP for audit/compliance trails (UDP has no delivery confirmation; TCP surfaces a dead collector as a 502)
-- Connection reuse: lazily dials once, then reuses; before each TCP write a short read probe (5 ms) checks whether the collector has closed the connection, and the bridge redials if it has; on write error, closes and reconnects once before surfacing the error. The probe is best-effort, not a delivery guarantee: a collector close whose FIN/RST lands after the probe goes unnoticed, and one record may then be written into the dead connection (reported as `204`) before the next write fails and reconnects. Syslog framing has no acknowledgement, so this cannot be closed without a different transport
+- Connection reuse: lazily dials once, then reuses; before each TCP write a short read probe (5 ms) checks whether the collector has closed the connection, and the bridge redials if it has; on write error, closes and reconnects once before surfacing the error. The probe is best-effort, not a delivery guarantee: a collector close whose FIN/RST lands after the probe goes unnoticed, and one record may then be written into the dead connection (reported as `204`: written to connection, best effort) before the next write fails (502) and reconnects. Syslog framing has no acknowledgement, so this cannot be closed without a different transport
 - Write deadline per frame (5s default) prevents a collector that accepts but does not drain from blocking indefinitely and wedging the handler behind the connection mutex
 - RFC 5424 compliance: formats message as `<PRI>1 TIMESTAMP HOSTNAME APP-NAME PROCID MSGID STRUCTURED-DATA MSG`; collapses embedded newlines/CRs to spaces so each syslog record is one line; PROCID, MSGID, STRUCTURED-DATA are "-"
 - `APP_NAME` and `SYSLOG_HOSTNAME` are validated at startup the same way `FACILITY`/`SEVERITY` are: each must be 1*max PRINTUSASCII (RFC 5424 %d33-126, no spaces or control bytes), APP-NAME capped at 48 bytes and HOSTNAME at 255 bytes, or `newServer` rejects the config before the process starts serving. An empty value is accepted and rendered as the RFC 5424 nil value `-`; when `SYSLOG_HOSTNAME` is empty the OS hostname is used instead, and an OS hostname that fails the same check (or can't be read) falls back to `-`
