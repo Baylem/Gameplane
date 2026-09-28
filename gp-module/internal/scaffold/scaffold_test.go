@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ValgulNecron/gameplane/gp-module/internal/archetypes"
+	"gopkg.in/yaml.v3"
 )
 
 func TestScaffoldArchetypes(t *testing.T) {
@@ -198,5 +199,50 @@ func TestGenerateFiles_ArchetypeSummariesAndReadme(t *testing.T) {
 	}
 	if !strings.Contains(files.ReadmeMD, "MAX_MEMORY") {
 		t.Errorf("expected MAX_MEMORY in README.md, got:\n%s", files.ReadmeMD)
+	}
+}
+
+// The steamcmd preset scaffolds a template whose game container runs as a
+// non-root user, with the data volume group-owned by that user's group. The
+// block stays when the author supplies their own image.
+func TestGenerateFiles_SteamcmdTemplateRunsNonRoot(t *testing.T) {
+	for _, opts := range []Options{
+		{Name: "steam-game", Archetype: "steamcmd"},
+		{Name: "steam-custom", Archetype: "steamcmd", Image: "ghcr.io/example/game:1.0@sha256:" + strings.Repeat("a", 64)},
+	} {
+		t.Run(opts.Name, func(t *testing.T) {
+			files, err := GenerateFiles(opts)
+			if err != nil {
+				t.Fatalf("GenerateFiles failed: %v", err)
+			}
+			var doc struct {
+				Spec struct {
+					Security *struct {
+						RunAsUser  *int64 `yaml:"runAsUser"`
+						RunAsGroup *int64 `yaml:"runAsGroup"`
+						FSGroup    *int64 `yaml:"fsGroup"`
+					} `yaml:"security"`
+				} `yaml:"spec"`
+			}
+			if err := yaml.Unmarshal([]byte(files.TemplateYAML), &doc); err != nil {
+				t.Fatalf("template.yaml does not parse: %v", err)
+			}
+			sec := doc.Spec.Security
+			if sec == nil {
+				t.Fatalf("template.yaml has no spec.security block:\n%s", files.TemplateYAML)
+			}
+			if sec.RunAsUser == nil || *sec.RunAsUser == 0 {
+				t.Errorf("spec.security.runAsUser must be a non-root uid:\n%s", files.TemplateYAML)
+			}
+			if sec.RunAsGroup == nil || *sec.RunAsGroup == 0 {
+				t.Errorf("spec.security.runAsGroup must be a non-root gid:\n%s", files.TemplateYAML)
+			}
+			if sec.FSGroup == nil || sec.RunAsGroup == nil || *sec.FSGroup != *sec.RunAsGroup {
+				t.Errorf("spec.security.fsGroup must match runAsGroup:\n%s", files.TemplateYAML)
+			}
+			if !strings.Contains(files.ReadmeMD, "## Container User") {
+				t.Errorf("README.md does not describe the container user:\n%s", files.ReadmeMD)
+			}
+		})
 	}
 }

@@ -75,6 +75,7 @@ TestModuleSource_RejectsSSRFTarget
 TestModuleSourceAndModule
 TestModuleSourceUpload
 TestModule_ScaffoldAndPackage
+TestModule_SteamcmdScaffoldKeepsNonRootSecurity
 TestBackup_OperatorMaterializesJob
 TestBackup_FailsOnMissingPVC
 TestBackup_FailsOnBadCredentials
@@ -314,12 +315,16 @@ EOF
 # RBAC), which none of the other buckets' single-cluster jobs provide — see
 # multicluster_e2e_test.go's package doc. Its own dedicated CI job
 # (e2e-multicluster) brings up both clusters before running it.
-# TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision lives here for
-# the login budget, not by subject: api-mods is at its ~7 e2e-admin-login
-# ceiling. It costs +1 e2e-admin login plus fake-OIDC sign-ins, and runs
-# against the primary cluster (every e2e.sh cluster deploys the fake IdP).
+#
+# TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision and
+# TestAPI_ModuleUpload_ExtractionStaysWithinBudget live here for the login
+# budget, not by subject: api-mods is at its ~7 e2e-admin-login ceiling. Each
+# costs +1 e2e-admin login (account removal also uses fake-OIDC sign-ins,
+# which every e2e.sh cluster deploys), bringing this job to 3; both run
+# against the primary cluster.
 bucket_multicluster() { cat <<'EOF'
 TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision
+TestAPI_ModuleUpload_ExtractionStaysWithinBudget
 TestMultiCluster_ClusterDispatchAndScopedRBAC
 EOF
 }
