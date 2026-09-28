@@ -208,10 +208,11 @@ func TestS3Sink_FlushOnByteThreshold_WithReason(t *testing.T) {
 		<-done
 	}()
 
-	// Use 20,000-char Reason to ensure byte threshold is crossed with ~52 events
-	// (well before the 100-event count threshold), so we can verify the flush was
-	// byte-triggered and the buffer estimate includes the reason field.
-	largeReason := strings.Repeat("x", 20000)
+	// Use 20,000-char Reason with escaped characters (newlines) to ensure byte
+	// threshold is crossed while accounting for JSON escaping expansion (~2.4x).
+	// This verifies the flush was byte-triggered and the buffer estimate includes
+	// proper escaping accounting for the reason field.
+	largeReason := strings.Repeat("x\n", 10000) // 10,000 x's + 10,000 newlines = ~2.4x expansion when JSON-encoded
 	deadline := time.Now().Add(2 * time.Second)
 	for i := 0; i < s3FlushCountSize; i++ {
 		if time.Now().After(deadline) {
