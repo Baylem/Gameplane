@@ -75,7 +75,7 @@ func TestEffectiveConsoleMode(t *testing.T) {
 	}
 }
 
-// boolPtr returns a pointer to a bool value, used in Kubernetes OwnerReference tests.
-func boolPtr(b bool) *bool {
+// ownerBoolPtr returns a pointer to a bool value, used in Kubernetes OwnerReference tests.
+func ownerBoolPtr(b bool) *bool {
 	return &b
 }

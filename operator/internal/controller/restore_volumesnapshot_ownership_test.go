@@ -115,7 +115,7 @@ func TestEnsureOwnedRefCopies_ConfigMapCopiesBinaryData(t *testing.T) {
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: gameplanev1alpha1.GroupVersion.String(),
 				Kind:       "GameServer", Name: orig.Name, UID: orig.UID,
-				Controller: boolPtr(true),
+				Controller: ownerBoolPtr(true),
 			}},
 		},
 		Data:       map[string]string{"text.txt": "hello"},
@@ -159,7 +159,7 @@ func TestEnsureOwnedRefCopies_ExistingCopyMustBeControlledByRestored(t *testing.
 		return []metav1.OwnerReference{{
 			APIVersion: gameplanev1alpha1.GroupVersion.String(),
 			Kind:       "GameServer", Name: gs.Name, UID: gs.UID,
-			Controller: boolPtr(controller),
+			Controller: ownerBoolPtr(controller),
 		}}
 	}
 	// A non-zero CreationTimestamp marks the destination as pre-existing
