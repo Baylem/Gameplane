@@ -469,7 +469,8 @@ func (r *GameServerReconciler) clearTunnelCredentialRefused(ctx context.Context,
 	}
 	base := gs.DeepCopy()
 	gs.Status.Conditions = removeCondition(gs.Status.Conditions, "TunnelReady")
-	if err := r.Status().Patch(ctx, gs, client.MergeFrom(base)); err != nil {
+	// A GameServer that no longer exists has no status left to clear.
+	if err := r.Status().Patch(ctx, gs, client.MergeFrom(base)); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("clear TunnelCredentialRefused condition for %s/%s: %w", gs.Namespace, gs.Name, err)
 	}
 	return nil
