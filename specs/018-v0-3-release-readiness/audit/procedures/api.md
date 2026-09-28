@@ -33,7 +33,7 @@ None; unauthenticated public endpoint. Prometheus endpoint, may be behind separa
 none
 
 **Steps**
-1. Login cost: 0. Port-forward the metrics server: `kubectl port-forward -n gameplane-system svc/gameplane-api 8009:8009 &`, then query: `curl -s http://localhost:8009/metrics | head -20`
+1. Login cost: 0. Port-forward the metrics server: `kubectl port-forward -n gameplane-system svc/gameplane-api 9090:9090 &`, then query: `curl -s http://localhost:9090/metrics | head -20`
 
 **Expected**
 HTTP 200 (via port-forward), response begins with Prometheus-format lines (HELP, TYPE, metrics).
@@ -231,7 +231,7 @@ yes (api-rbac)
 ### servers-create
 
 **Preconditions**
-Authenticated as audit018-operator or higher. GameTemplate exists (e.g., `mc-fabric`, which is pre-existing). Namespace is `gameplane-games` or audit018-namespace.
+Authenticated as audit018-operator or higher. GameTemplate exists (e.g., `minecraft-java`, which is pre-existing). Namespace is `gameplane-games` or audit018-namespace.
 
 **Resources created**
 audit018-server-from-template (GameServer in gameplane-games namespace).

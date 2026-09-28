@@ -64,13 +64,11 @@ done
 
 # Capture PVCs from both namespaces
 pvcs_file="$OUT_DIR/pvcs.json"
-games_pvc=$(kubectl get pvc -n "$GAMES_NS" -o json 2>/dev/null)
-if [[ $? -ne 0 ]]; then
+if ! games_pvc=$(kubectl get pvc -n "$GAMES_NS" -o json 2>/dev/null); then
   echo "ERROR: Failed to query PVCs in $GAMES_NS namespace" >&2
   exit 2
 fi
-api_pvc=$(kubectl get pvc -n "$API_NS" -o json 2>/dev/null)
-if [[ $? -ne 0 ]]; then
+if ! api_pvc=$(kubectl get pvc -n "$API_NS" -o json 2>/dev/null); then
   echo "ERROR: Failed to query PVCs in $API_NS namespace" >&2
   exit 2
 fi

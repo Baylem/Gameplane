@@ -42,10 +42,10 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
      -H "X-Gameplane-CSRF: $(echo $COOKIE | grep -o 'gameplane_csrf=[^;]*' | cut -d= -f2)"
    ```
 
-3. **Protocol join.** Run the e2e probe (test/e2e/internal/garrys-mod/app.go) against the in-pod port 27015 via kubectl port-forward or via the agent's console API.
+3. **Protocol join.** Run test/e2e/internal/garrys-mod/app.go (e2e-probe:steam-a2s-udp) against service IP:27015. `kubectl port-forward` cannot carry the advertised UDP `game` port (`modules/garrys-mod/template.yaml`), and this category has no console to route through instead (`rcon.protocol: none`, `consoleMode` unset), so the probe has to run in-cluster and dial the Service directly — the same way `test/e2e/gameprobe_job.go`'s `RunGameProbe` runs every A2S-family probe as an in-cluster Job, never through port-forward.
    ```bash
    kubectl get svc -n gameplane-games audit018-garrys-mod -o jsonpath='{.spec.clusterIP}'
-   # Use the service IP:27015 to run the probe
+   # Run the probe from inside the cluster (e.g. a short-lived Job/Pod) against <clusterIP>:27015 — not via kubectl port-forward.
    ```
 
 4. **Console command (none family).** This category has consoleMode=none, so no console is available. Skip this step.
@@ -125,7 +125,15 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 3. **Protocol join.** Run test/e2e/internal/farming-simulator-25/app.go (e2e-probe:http-rest) against the service IP:8080.
 
-4. **Console command (none/rest family).** Use REST API console endpoint to query server status (endpoint pattern: POST /servers/{name}/actions/run with action type depending on game).
+4. **Console command (none/rest family).** `consoleMode` is `none`, so there is no free-form console; `farming-simulator-25`'s only declared action is `save-world` (`modules/farming-simulator-25/template.yaml`'s `capabilities.actions` — `/servers/{name}/actions/run` rejects any other `id` as `unknown action`, `api/internal/ws/actions.go`). Run that action and check its effect rather than querying a status action that doesn't exist:
+   ```bash
+   curl -X POST "$GP/servers/audit018-farming-simulator-25/actions/run" \
+     -H "Cookie: $COOKIE" \
+     -H "X-Gameplane-CSRF: $(echo $COOKIE | grep -o 'gameplane_csrf=[^;]*' | cut -d= -f2)" \
+     -H "Content-Type: application/json" \
+     -d '{"id":"save-world"}'
+   ```
+   Expect `{"ok":true,...}`; confirm the save actually happened (a new/updated save file under the server's storage, or the action's `raw` response).
 
 5. **Backup.**
    ```bash
@@ -169,7 +177,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
      -H "X-Gameplane-CSRF: $(echo $COOKIE | grep -o 'gameplane_csrf=[^;]*' | cut -d= -f2)"
    ```
 
-**Expected:** Server created, started, HTTP probe succeeds, REST API query succeeds, backup and restore complete, deletion removes resource.
+**Expected:** Server created, started, HTTP probe succeeds, `save-world` action returns `ok: true` and the save file updates, backup and restore complete, deletion removes resource.
 
 **Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-farming-simulator-25; kubectl delete backup,restore -n gameplane-games audit018-farming-simulator-25-bk audit018-farming-simulator-25-rs`.
 

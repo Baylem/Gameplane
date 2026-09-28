@@ -92,7 +92,7 @@ description: "Task list for the v0.3 release readiness audit"
 
   Record the results under `## rc.1` in `audit/rounds.md`. Any deviation becomes a finding
 - [ ] T015 Deploy rc.1 to kubelab (contracts/rc-deploy.md §2):
-  1. Take a DB snapshot of `sqlite3 .backup` inside the API pod, then `kubectl cp` it to `~/gameplane-audit-018/db-snapshots/rc1-pre.db`.
+  1. Take a DB snapshot through the temporary `audit018-db-tool` pod, not `kubectl exec` into the API pod — the API image is `gcr.io/distroless/static:nonroot` with no shell and no `sqlite3` binary (same fact `audit/procedures/upgrade.md`'s baseline-beta8 step 1 documents and works around): scale `gameplane-api` to 0, apply a throwaway pod that mounts the `gameplane-api-data` PVC, `apk add --no-cache sqlite`, run `sqlite3 /data/gameplane.db ".backup /tmp/rc1-pre.db"`, `kubectl cp` it out to `~/gameplane-audit-018/db-snapshots/rc1-pre.db`, delete the pod, then scale `gameplane-api` back to 1.
   2. Run `helm upgrade <release> oci://ghcr.io/valgulnecron/charts/gameplane --version 0.3.0-rc.1 -n <ns> --reuse-values` with only the image registry and tag overrides needed to leave the private tag.
   3. Record each override key under `## rc.1` in `audit/rounds.md`.
   4. Check that `helm get values` minus those overrides equals `audit/kubelab-baseline.md`.

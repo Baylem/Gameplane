@@ -208,7 +208,6 @@ if [[ -f "$BEFORE_DIR/helm-values.json" ]] && [[ -f "$AFTER_DIR/helm-values.json
   )
 
   # Create jq filter to extract only allowlisted keys
-  local filter="{$(printf '"%s": .%s' "${ALLOWED_HELM_CHANGES[@]/#/}" "${ALLOWED_HELM_CHANGES[@]}" | tr ' ' ',')}"
   filter="{$(for key in "${ALLOWED_HELM_CHANGES[@]}"; do echo "\"$key\": .$key"; done | paste -sd, -)}"
 
   # Extract only allowlisted paths and compare

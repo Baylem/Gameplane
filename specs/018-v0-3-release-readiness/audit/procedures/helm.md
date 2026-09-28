@@ -247,7 +247,7 @@ Shared conventions: [conventions.md](conventions.md).
 **Resources created:** none (policies are defined in chart; test may create audit018-game-egress-test GameServer).
 
 **Steps:**
-0. Record the current gameEgress.enabled setting: `kubectl get helm release gameplane -n gameplane-system -o jsonpath='{.config.networkPolicies.gameEgress.enabled}' > /tmp/audit018-gameegressenabled-before.txt || echo true > /tmp/audit018-gameegressenabled-before.txt` (default is true if not explicitly set).
+0. Record the current gameEgress.enabled setting: `helm get values gameplane -n gameplane-system -o json | jq -r '.networkPolicies.gameEgress.enabled // "true"' > /tmp/audit018-gameegressenabled-before.txt` (default is true if not explicitly set).
 1. Ensure networkPolicies.enabled=true (run network-policies-enforcement first if needed).
 2. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'networkPolicies.gameEgress.enabled=true'` and wait for Helm to apply.
 3. Verify NetworkPolicy for game egress exists: `kubectl get networkpolicies -n gameplane-games | grep -i egress` or inspect the policy YAML to confirm it allows only TCP 80/443 and blocks RFC1918 ranges.
@@ -257,7 +257,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Expected:** Game pods are restricted to TCP 80/443 egress to non-RFC1918 ranges when enabled; are unrestricted when disabled.
 
-**Cleanup:** Helm upgrade with gameEgress.enabled=false; delete test GameServer.
+**Cleanup:** Restore `networkPolicies.gameEgress.enabled` to the value recorded in step 0 — do **not** set it to `false`; see step 5. Delete test GameServer.
 
 **Automatable?** no (blocked candidate: requires actual game pod startup and network testing; alternative: verify NetworkPolicy object definition matches expected egress rules).
 
@@ -270,17 +270,18 @@ Shared conventions: [conventions.md](conventions.md).
 **Resources created:** none (test may create audit018-game-ingress-test GameServer).
 
 **Steps:**
+0. Record the current gameIngress.enabled setting: `helm get values gameplane -n gameplane-system -o json | jq -r '.networkPolicies.gameIngress.enabled // "true"' > /tmp/audit018-gameingressenabled-before.txt` (default is true if not explicitly set).
 1. Ensure networkPolicies.enabled=true.
 2. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'networkPolicies.gameIngress.enabled=true'` and wait for Helm to apply.
 3. Verify NetworkPolicy for game ingress exists: `kubectl get networkpolicies -n gameplane-games | grep game-ingress`.
 4. Create a test GameServer with a game pod that listens on port 25565 (Minecraft default), advertises it (Advertise: true in template), and verify the operator creates a per-server NetworkPolicy allowing ingress from 0.0.0.0/0 on that port.
 5. Attempt to connect to the game server port from an external client (e.g., from the audit devbox); expect success if policy is enabled.
-6. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'networkPolicies.gameIngress.enabled=false'`.
-7. Verify the per-server NetworkPolicy is removed by the operator on the next reconciliation.
+6. Revert: restore the pre-test value recorded in step 0: `GAMEINGRESS_VAL=$(cat /tmp/audit018-gameingressenabled-before.txt) && helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set "networkPolicies.gameIngress.enabled=$GAMEINGRESS_VAL"`.
+7. Verify the per-server NetworkPolicy reflects the restored setting: removed if the pre-test value was `false`, still present if it was `true` (as recorded in step 0).
 
 **Expected:** Per-GameServer ingress NetworkPolicy allows advertised ports from configured CIDRs when enabled; is removed when disabled.
 
-**Cleanup:** Helm upgrade with gameIngress.enabled=false; delete test GameServer.
+**Cleanup:** Restore `networkPolicies.gameIngress.enabled` to the value recorded in step 0 — do **not** set it to `false`; see step 6. Delete test GameServer.
 
 **Automatable?** no (blocked candidate: requires game pod startup and external connectivity test; alternative: verify NetworkPolicy object definition).
 
@@ -379,7 +380,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Preconditions:** None beyond cluster access. No Helm change and no interaction with the `default` or `uploads` ModuleSources.
 
-**Resources created:** `audit018-registry` (Deployment + Service, in-cluster plain-HTTP OCI registry, modeled on `test/e2e/fixtures/oci-registry.yaml`); `audit018-module-bundle` (ConfigMap holding the test module's `module.yaml`/`template.yaml`, modeled on `test/e2e/fixtures/oras-push-job.yaml`); `audit018-cosign-signer` (ServiceAccount + Role + RoleBinding, scoped to Secret CRUD in `gameplane-system`, modeled on `test/e2e/fixtures/cosign-sign-job.yaml:28-63`); `audit018-oras-push-unsigned` and `audit018-oras-push-signed` (one-shot oras push Jobs, pushing tags `0.1.0` and `0.2.0` of module `audit018-test-game` — the operator's OCI client only keeps semver tags, `semver.IsValid("v"+t)` in `operator/internal/oci/client.go:79-83`, so tags must be valid semver, not the literal strings `unsigned`/`signed`); `audit018-cosign-keypair` (Secret holding a cosign keypair generated in-cluster, modeled on `test/e2e/fixtures/cosign-sign-job.yaml`); `audit018-cosign-sign` (one-shot Job, running as the `audit018-cosign-signer` ServiceAccount, that signs only the `0.2.0` tag); `audit018-verify-source` (ModuleSource, `type: oci`, `spec.verify.key.name: audit018-cosign-keypair`); `audit018-verify-unsigned` (Module CR installing version `0.1.0`, unsigned) and `audit018-verify-signed` (Module CR installing version `0.2.0`, signed).
+**Resources created:** `audit018-registry` (Deployment + Service, in-cluster plain-HTTP OCI registry, modeled on `test/e2e/fixtures/oci-registry.yaml`); `audit018-module-bundle-unsigned` and `audit018-module-bundle-signed` (ConfigMaps holding the test module's `module.yaml`/`template.yaml` for the `0.1.0` and `0.2.0` tags respectively — each manifest's `version:` field matches the OCI tag it is pushed under, modeled on `test/e2e/fixtures/oras-push-job.yaml`); `audit018-cosign-signer` (ServiceAccount + Role + RoleBinding, scoped to Secret CRUD in `gameplane-system`, modeled on `test/e2e/fixtures/cosign-sign-job.yaml:28-63`); `audit018-oras-push-unsigned` and `audit018-oras-push-signed` (one-shot oras push Jobs, pushing tags `0.1.0` and `0.2.0` of module `audit018-test-game` — the operator's OCI client only keeps semver tags, `semver.IsValid("v"+t)` in `operator/internal/oci/client.go:79-83`, so tags must be valid semver, not the literal strings `unsigned`/`signed`); `audit018-cosign-keypair` (Secret holding a cosign keypair generated in-cluster, modeled on `test/e2e/fixtures/cosign-sign-job.yaml`); `audit018-cosign-sign` (one-shot Job, running as the `audit018-cosign-signer` ServiceAccount, that signs only the `0.2.0` tag); `audit018-verify-source` (ModuleSource, `type: oci`, `spec.verify.key.name: audit018-cosign-keypair`); `audit018-verify-unsigned` (Module CR installing version `0.1.0`, unsigned) and `audit018-verify-signed` (Module CR installing version `0.2.0`, signed).
 
 **Steps:**
 1. Deploy the in-cluster registry:
@@ -419,13 +420,13 @@ spec:
 EOF
 kubectl wait --for=condition=available deployment/audit018-registry -n gameplane-system --timeout=90s
 ```
-2. Create the test bundle ConfigMap (module name `audit018-test-game`, same two-file layout `modules/build.sh` produces) and push it under two semver tags with `oras`, unsigned. Tags must be valid semver — the operator's OCI client keeps only semver tags and drops everything else (`ListTags`, `operator/internal/oci/client.go:79-83`, `semver.IsValid("v"+t)`); the literal tags `unsigned`/`signed` are not semver and are silently filtered out, which leaves `ListTags` empty, `indexModule` failing with `"no semver tags found"` (`operator/internal/modsrc/oci.go:76-77`), and — because a single-module source treats any one module error as total failure (`operator/internal/modsrc/oci.go:58-59`, "all N module(s) failed to index") — `status.modules` on `audit018-verify-source` never populates at all, so step 4's wait times out before either Module in steps 5-6 can even resolve a version. Use `0.1.0` for the unsigned tag and `0.2.0` for the signed tag instead (the bundle's own `version:` field inside `module.yaml` is not checked against the OCI tag by the operator, so the same file content can be pushed under both tags):
+2. Create two test bundle ConfigMaps (module name `audit018-test-game`, same two-file layout `modules/build.sh` produces) and push each under its own semver tag with `oras`, unsigned. Tags must be valid semver — the operator's OCI client keeps only semver tags and drops everything else (`ListTags`, `operator/internal/oci/client.go:79-83`, `semver.IsValid("v"+t)`); the literal tags `unsigned`/`signed` are not semver and are silently filtered out, which leaves `ListTags` empty, `indexModule` failing with `"no semver tags found"` (`operator/internal/modsrc/oci.go:76-77`), and — because a single-module source treats any one module error as total failure (`operator/internal/modsrc/oci.go:58-59`, "all N module(s) failed to index") — `status.modules` on `audit018-verify-source` never populates at all, so step 4's wait times out before either Module in steps 5-6 can even resolve a version. Use `0.1.0` for the unsigned tag and `0.2.0` for the signed tag. Each bundle's own `module.yaml`/`template.yaml` `version:` field must match the OCI tag it is pushed under — `modules/build.sh` derives its push tag from that same field (`push_one()`, `modules/build.sh`), so a bundle whose manifest version disagreed with its tag could never be produced by the real build pipeline and would be an invalid test fixture:
 ```sh
 kubectl apply -f - <<'EOF'
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: audit018-module-bundle
+  name: audit018-module-bundle-unsigned
   namespace: gameplane-system
   labels: { gameplane.io/audit: "018" }
 data:
@@ -453,9 +454,42 @@ data:
       ports:
         - { name: noop, containerPort: 12345, advertise: true, protocol: TCP }
 EOF
-for pair in "audit018-oras-push-unsigned:0.1.0" "audit018-oras-push-signed:0.2.0"; do
-  jobname="${pair%%:*}"
-  tag="${pair##*:}"
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: audit018-module-bundle-signed
+  namespace: gameplane-system
+  labels: { gameplane.io/audit: "018" }
+data:
+  module.yaml: |
+    apiVersion: gameplane.local/module/v1
+    name: audit018-test-game
+    displayName: Audit018 Test Game
+    version: "0.2.0"
+    game: audit018-test-game
+    summary: Audit-only test module
+    license: MIT
+    gameplaneMinVersion: 0.1.0
+  template.yaml: |
+    apiVersion: gameplane.local/v1alpha1
+    kind: GameTemplate
+    metadata:
+      name: audit018-test-game
+      labels: { gameplane.local/module: audit018-test-game, gameplane.io/audit: "018" }
+    spec:
+      displayName: Audit018 Test Game
+      game: audit018-test-game
+      version: "0.2.0"
+      image: busybox:1.37.0
+      command: ["sh", "-c", "sleep 100000"]
+      ports:
+        - { name: noop, containerPort: 12345, advertise: true, protocol: TCP }
+EOF
+for pair in "audit018-oras-push-unsigned:0.1.0:audit018-module-bundle-unsigned" "audit018-oras-push-signed:0.2.0:audit018-module-bundle-signed"; do
+  jobname="$(cut -d: -f1 <<<"$pair")"
+  tag="$(cut -d: -f2 <<<"$pair")"
+  bundle="$(cut -d: -f3 <<<"$pair")"
   kubectl apply -f - <<EOF
 apiVersion: batch/v1
 kind: Job
@@ -483,7 +517,7 @@ spec:
           workingDir: /workspace
           volumeMounts: [{ name: bundle, mountPath: /workspace }]
       volumes:
-        - { name: bundle, configMap: { name: audit018-module-bundle } }
+        - { name: bundle, configMap: { name: $bundle } }
 EOF
   kubectl wait --for=condition=complete job/$jobname -n gameplane-system --timeout=90s
 done
@@ -625,7 +659,7 @@ kubectl get gametemplate audit018-verify-signed | tee ~/Gameplane/specs/018-v0-3
 
 **Expected:** The unsigned bundle drives `Module.status.phase=Failed` with a `cosign verify` error in `status.lastError`, and materializes no GameTemplate. The signed bundle reaches `Ready` and materializes its GameTemplate. `kubelab`'s real `default` (git) ModuleSource is untouched throughout.
 
-**Cleanup:** `kubectl delete module audit018-verify-unsigned audit018-verify-signed; kubectl delete modulesource audit018-verify-source; kubectl delete job audit018-oras-push-unsigned audit018-oras-push-signed audit018-cosign-sign -n gameplane-system; kubectl delete secret audit018-cosign-keypair -n gameplane-system; kubectl delete configmap audit018-module-bundle -n gameplane-system; kubectl delete deployment,service audit018-registry -n gameplane-system; kubectl delete serviceaccount,role,rolebinding audit018-cosign-signer -n gameplane-system` (the ServiceAccount/Role/RoleBinding created in step 3).
+**Cleanup:** `kubectl delete module audit018-verify-unsigned audit018-verify-signed; kubectl delete modulesource audit018-verify-source; kubectl delete job audit018-oras-push-unsigned audit018-oras-push-signed audit018-cosign-sign -n gameplane-system; kubectl delete secret audit018-cosign-keypair -n gameplane-system; kubectl delete configmap audit018-module-bundle-unsigned audit018-module-bundle-signed -n gameplane-system; kubectl delete deployment,service audit018-registry -n gameplane-system; kubectl delete serviceaccount,role,rolebinding audit018-cosign-signer -n gameplane-system` (the ServiceAccount/Role/RoleBinding created in step 3).
 
 **Automatable?** yes (bucket: api-mods; this is exactly what `test/e2e/module_verify_e2e_test.go` and `test/e2e/module_verify_signed_e2e_test.go` already cover in CI — this manual run is a spot-check, not new coverage).
 
@@ -749,7 +783,7 @@ kubectl get svc gameplane-web -n gameplane-system 2>&1 | tee ~/Gameplane/specs/0
 **Resources created:** none (toggles the chart's fixed-name `gameplane` Ingress object, not an audit018-named object).
 
 **Steps:**
-0. Record the current ingress.enabled setting: `kubectl get helm release gameplane -n gameplane-system -o jsonpath='{.config.ingress.enabled}' > /tmp/audit018-ingress-enabled-before.txt || echo true > /tmp/audit018-ingress-enabled-before.txt` (default is true).
+0. Record the current ingress.enabled setting: `helm get values gameplane -n gameplane-system -o json | jq -r '.ingress.enabled // "true"' > /tmp/audit018-ingress-enabled-before.txt` (default is true).
 1. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'ingress.enabled=true'` and wait for Helm to apply.
 2. Verify Ingress object is created: `kubectl get ingress -n gameplane-system gameplane` (fixed object name; the Ingress carries no `app` label at all).
 3. Verify ingress routing rules: `kubectl get ingress -n gameplane-system -o yaml | grep -A5 'host: gameplane.local'` (or your configured host).
@@ -759,7 +793,7 @@ kubectl get svc gameplane-web -n gameplane-system 2>&1 | tee ~/Gameplane/specs/0
 
 **Expected:** Ingress object is created when enabled; is removed when disabled. Routes are active and reachable when ingress is enabled (if ingress controller is present).
 
-**Cleanup:** Helm upgrade with ingress.enabled=false.
+**Cleanup:** Restore `ingress.enabled` to the value recorded in step 0 — do **not** set it to `false`; see step 5.
 
 **Automatable?** yes (bucket: api-auth or web e2e; Ingress object observation and HTTP request test).
 
@@ -876,7 +910,7 @@ kubectl rollout status deployment/gameplane-api -n gameplane-system --timeout=30
 mkdir -p ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-023
 diff ~/gameplane-audit-018/db-snapshots/existing-claim-before.sql \
      ~/gameplane-audit-018/db-snapshots/existing-claim-after.sql \
-  > ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-023/db-diff-raw.txt
+  > ~/gameplane-audit-018/db-snapshots/db-diff-raw.txt
 # WARNING: sqlite3 `.dump` emits positional `INSERT INTO t VALUES(...)` rows, never
 # `col = 'val'` assignments, so a `col = '...'` sed pattern can never match a dump
 # line and must not be used here (it would silently redact nothing). The real
@@ -888,18 +922,22 @@ diff ~/gameplane-audit-018/db-snapshots/existing-claim-before.sql \
 # `INSERT INTO <table> VALUES(...)` rows (position depends on each table's
 # column order in its CREATE TABLE / current schema), e.g. with a per-table
 # awk/sed pass, or open the raw diff and hand-redact any changed
-# `users`/`api_tokens`/`share_links` row before it is committed. Do not commit
-# db-diff-raw.txt itself if it contains any such row in the clear; write the
-# redacted result to db-diff.txt instead:
-cp ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-023/db-diff-raw.txt \
+# `users`/`api_tokens`/`share_links` row. db-diff-raw.txt itself stays under
+# ~/gameplane-audit-018/ (off-git, per conventions.md) and must never be copied
+# into the evidence tree unredacted — only the hand-redacted result below is
+# written there, as db-diff.txt:
+cp ~/gameplane-audit-018/db-snapshots/db-diff-raw.txt \
    ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-023/db-diff.txt
+# Now open db-diff.txt and hand-redact (by column position, per the warning
+# above) any changed `users`/`api_tokens`/`share_links` row before committing —
+# do not skip this step if the diff is non-empty.
 cat ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-023/db-diff.txt
 ```
    (the identity/config table dumps, not the raw `.db` file, are saved as evidence — `users.pw_hash`, `api_tokens.token`, and `share_links.token_hash` are secret-bearing columns, so any changed row touching one of those three tables must be hand-redacted, per conventions.md's no-secrets rule, before `db-diff.txt` is committed; see the warning above — no single find/replace pattern can safely do this against real `.dump` output.) An empty diff (ignoring any hand-redaction) means the dumped tables are identical and the real database's identity/config data was untouched throughout the test.
 
 **Expected:** When existingClaim is set, the API pod mounts that PVC, and the original `gameplane-api-data` PVC (kept via step 2's annotation) is not deleted. When reverted to empty, Helm re-adopts and mounts that same original PVC again — no new PVC is created, and its data survives the whole test. The before/after dumps of `users`, `roles`, `role_permissions`, `user_role_bindings`, `oidc_links`, `api_tokens`, `config`, `share_links` and `user_preferences` are identical, proving no write reached those tables in the real database while `existingClaim` pointed at `audit018-api-storage`. (`sessions`/`audit_events` may differ; that is expected and acceptable.)
 
-**Cleanup:** Helm upgrade with existingClaim empty; delete the test PVC `audit018-api-storage`; delete `~/gameplane-audit-018/db-snapshots/existing-claim-{before,after}.sql` (off-git) once the diff is recorded and redacted. Leave the `helm.sh/resource-policy: keep` annotation from step 2 in place — removing it re-exposes the live database PVC to accidental pruning on a future helm upgrade/uninstall.
+**Cleanup:** Helm upgrade with existingClaim empty; delete the test PVC `audit018-api-storage`; delete `~/gameplane-audit-018/db-snapshots/existing-claim-{before,after}.sql` and `~/gameplane-audit-018/db-snapshots/db-diff-raw.txt` (off-git) once the diff is recorded and redacted. Leave the `helm.sh/resource-policy: keep` annotation from step 2 in place — removing it re-exposes the live database PVC to accidental pruning on a future helm upgrade/uninstall.
 
 **Automatable?** yes (bucket: operator or api-auth; PVC volume binding observation; must run alone, last in its bucket, for the same DB-swap reason as the manual run).
 

@@ -19,12 +19,13 @@ leftovers_found=0
 echo "Checking for remaining audit018- resources..."
 
 # Get all the resource types from the spec
-# gameservers, backups, restores, backupschedules, networkcaptures, modulesources, modules (all with .gameplane.local),
-# pvcs (no group), deployments, services, secrets (no group)
+# gameservers, gametemplates, backups, restores, backupschedules, networkcaptures, modulesources, modules (all with .gameplane.local),
+# pvcs (no group), deployments, services, secrets, pods, networkpolicies (no group)
 
 # Construct fully qualified names
 declare -a GAMEPLANE_KINDS=(
   "gameservers.gameplane.local"
+  "gametemplates.gameplane.local"
   "backups.gameplane.local"
   "restores.gameplane.local"
   "backupschedules.gameplane.local"
@@ -38,6 +39,8 @@ declare -a NON_GROUPED_KINDS=(
   "deployments"
   "services"
   "secrets"
+  "pods"
+  "networkpolicies"
 )
 
 # Check Gameplane CRD objects
