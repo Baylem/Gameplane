@@ -1499,9 +1499,12 @@ jobs:
           kubectl --context "$CTX" apply -f \
             "https://raw.githubusercontent.com/kubernetes/ingress-nginx/${INGRESS_NGINX_VERSION}/deploy/static/provider/kind/deploy.yaml"
       - name: wait for ingress-nginx-controller to become Available
+        # rollout status, not `wait --for=condition=Available`: the manifest
+        # sets maxUnavailable: 1 on a one-replica Deployment, so its
+        # Available condition is True before any controller pod is ready.
         run: |
-          kubectl --context "$CTX" wait --namespace ingress-nginx \
-            --for=condition=Available deployment/ingress-nginx-controller --timeout=180s
+          kubectl --context "$CTX" rollout status --namespace ingress-nginx \
+            deployment/ingress-nginx-controller --timeout=180s
       - name: dump cluster state on failure (e2e-kind-ingress-smoke)
         if: failure()
         uses: ./.github/actions/dump-cluster-state

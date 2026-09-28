@@ -119,7 +119,8 @@ is now blocking rather than advisory.
 The `ingress-nginx smoke (kind)` CI job is separate from the buckets above: it
 boots a Kind cluster on the same node config `make dev-up` uses and applies
 the dev ingress-nginx manifest pinned in `deploy/kind/up.sh`
-(`INGRESS_NGINX_VERSION`), waiting for the controller to become `Available`.
+(`INGRESS_NGINX_VERSION`), waiting for the controller Deployment's rollout
+to finish (its replica available).
 It only runs when `deploy/kind/**` or the CI workflow file itself changes.
 
 ## AI-assisted development
