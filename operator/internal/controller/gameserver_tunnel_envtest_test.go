@@ -87,6 +87,12 @@ func TestTunnelReconciliation_CredentialKeyProjection(t *testing.T) {
 		if err := k8sClient.Create(ctx, gs); err != nil {
 			t.Fatalf("create gameserver: %v", err)
 		}
+		// The operator only mounts a Secret owned by this GameServer's UID,
+		// which exists only after the GameServer is created.
+		sec.OwnerReferences[0].UID = gs.UID
+		if err := k8sClient.Update(ctx, sec); err != nil {
+			t.Fatalf("set secret owner uid: %v", err)
+		}
 
 		// Reconcile the tunnel
 		r := &GameServerReconciler{Client: k8sClient, APIReader: k8sClient, Scheme: scheme}
@@ -210,6 +216,12 @@ func TestTunnelReconciliation_CredentialKeyProjection(t *testing.T) {
 		if err := k8sClient.Create(ctx, gs); err != nil {
 			t.Fatalf("create gameserver: %v", err)
 		}
+		// The operator only mounts a Secret owned by this GameServer's UID,
+		// which exists only after the GameServer is created.
+		sec.OwnerReferences[0].UID = gs.UID
+		if err := k8sClient.Update(ctx, sec); err != nil {
+			t.Fatalf("set secret owner uid: %v", err)
+		}
 
 		// Reconcile the tunnel
 		r := &GameServerReconciler{Client: k8sClient, APIReader: k8sClient, Scheme: scheme}
@@ -323,6 +335,12 @@ func TestTunnelReconciliation_CredentialKeyProjection(t *testing.T) {
 		}
 		if err := k8sClient.Create(ctx, gs); err != nil {
 			t.Fatalf("create gameserver: %v", err)
+		}
+		// The operator only mounts a Secret owned by this GameServer's UID,
+		// which exists only after the GameServer is created.
+		sec.OwnerReferences[0].UID = gs.UID
+		if err := k8sClient.Update(ctx, sec); err != nil {
+			t.Fatalf("set secret owner uid: %v", err)
 		}
 
 		// Reconcile the tunnel
