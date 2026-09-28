@@ -103,4 +103,5 @@ Single package; no subdirectories or internal structure.
 - **`agent/internal/mods/mods.go`** — mod downloads via `IsPublic`.
 - **`api/internal/notify/{notify,deliver}.go`** — admin-configured notification sinks via `IsAllowed`.
 - **`api/internal/steam/resolver.go`** — Steam name resolution via `IsPublic`.
+- **`api/internal/registry/registry.go`** — module registry queries (Modrinth, Thunderstore, etc.) via `IsPublic`.
 - **`go.work`** — workspace linking netguard to operator, agent, and other Go modules.

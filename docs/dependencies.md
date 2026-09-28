@@ -428,7 +428,7 @@ The Helm chart itself (`charts/gameplane/Chart.yaml`) declares **no chart
 - **netguard's two policies, three importers.** Both `IsAllowed` (permissive,
   for admin-configured infrastructure) and `IsPublic` (strict, for user-supplied
   targets) are used by operator (module sources), API gateway
-  (notification sinks via `IsAllowed`; Steam resolver via `IsPublic`), and agent
+  (notification sinks via `IsAllowed`; Steam resolver and module registry via `IsPublic`), and agent
   (mod downloads via `IsPublic`; loopback WebSocket RCON via `IsAllowed`). The
   split prevents private-registry access from being re-opened (if strict rules
   apply to the operator) or agent SSRF from being introduced (if permissive rules
