@@ -440,7 +440,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 ## Dependencies
 
 **Internal (same workspace via go.work):**
-- `github.com/ValgulNecron/gameplane/netguard` — SSRF dial-guard for outbound HTTP (module registry fetches)
+- `github.com/ValgulNecron/gameplane/netguard` — dial-time address guard for outbound HTTP: mod-registry browse/search and the Steam name resolver use `IsPublic`; notification sinks use `IsAllowed`
 - `github.com/ValgulNecron/gameplane/gameaction` — console-injection guard + command-template renderer
 
 **External (go.mod):**
@@ -572,9 +572,12 @@ Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); th
 - **Hash-chain boundary (backward compatibility):** The `reason` field is included in the canonical hash **only when non-empty**. This preserves the hash computation of pre-migration rows (which have NULL/empty reason) bit-for-bit identical. A post-migration row with a non-empty reason hashes differently, providing integrity protection. Rows differing only in reason will hash differently; Verify still walks the chain correctly across both pre- and post-migration rows.
 
 ### Outbound safety
-- **netguard SSRF guard:** on module registry fetches (HTTP/HTTPS); permissive allowlist (modular, self-hosted registries on loopback OK)
+- **netguard dial guard:** mod-registry browse/search (`api/internal/registry`) shares one client built with `netguard.HTTPClient(…, netguard.IsPublic)`, so every registry fetch, redirects included, connects only to a globally routable address and never through a proxy from the pod environment. Notification sinks use the permissive `netguard.IsAllowed` policy, so self-hosted endpoints on private addresses stay reachable.
 - **mTLS to agent:** client cert + key validate console operations
 - **Agent proxy URL construction:** `api/internal/ws/dialer.go`'s ws and http proxy handlers build the upstream agent URL from the namespace and pod name taken off the request path. In both handlers the namespace and pod name are validated as DNS-1123 labels via `isDNS1123Label` first, and a request with an invalid namespace or pod name is rejected with `400 Bad Request` before any URL is built. Only after that validation do the two paths diverge in how they construct the URL: the HTTP proxy path assembles it with `url.URL`, while the WebSocket proxy path concatenates the already-validated host onto a fixed `wss://` scheme and the fixed agent path (`upstream := "wss://" + host + agentPath`). The load-bearing safety property — validation strictly precedes URL construction — holds for both paths regardless of which one then uses string concatenation.
+
+### Upload limits
+- **Module bundle upload** (`POST /modules/sources/{name}/upload`): the compressed body is capped at 900 KiB (413 above it). Extraction caps each member at 900 KiB, the archive at 256 distinct paths, the running total of extracted bytes at 4 MiB (`maxUploadExtractedBytes`, repeated member names included), and the whole decompressed tar stream (including headers and entries extraction skips) at 5 MiB (`maxUploadDecompressedBytes`, covering tar framing). Extraction stops at the first member that crosses a limit, and the request gets 400. The four kept bundle files must together stay under 900 KiB.
 
 ### Error handling
 - **httperr package:** internal errors (K8s 404, DB constraint, FS path) mapped to safe HTTP status + generic message
