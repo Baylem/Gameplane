@@ -35,6 +35,10 @@ kubectl() { command kubectl --context "${KCTX}" "$@"; }
 # implementation.
 METALLB_VERSION="v0.14.9"
 
+# ingress-nginx manifest pin: a controller release tag, never a branch. Same
+# rule as MetalLB — bumping it is a deliberate edit.
+INGRESS_NGINX_VERSION="controller-v1.15.1"
+
 # kind ships no LoadBalancer implementation, so without MetalLB every
 # LoadBalancer Service sits at <pending> forever and a GameServer's
 # spec.networking.addressPool preference has nothing to act on.
@@ -237,8 +241,9 @@ kubectl cluster-info --context "kind-${CLUSTER}" >/dev/null
 # ingress-nginx — the Gameplane dashboard is reached through the ingress
 # mapped to host ports 8080/8443 by cluster.yaml.
 if ! kubectl get ns ingress-nginx >/dev/null 2>&1; then
-    echo "installing ingress-nginx"
-    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+    echo "installing ingress-nginx ${INGRESS_NGINX_VERSION}"
+    kubectl apply -f \
+        "https://raw.githubusercontent.com/kubernetes/ingress-nginx/${INGRESS_NGINX_VERSION}/deploy/static/provider/kind/deploy.yaml"
     kubectl wait --namespace ingress-nginx \
         --for=condition=Ready pod \
         --selector=app.kubernetes.io/component=controller \
