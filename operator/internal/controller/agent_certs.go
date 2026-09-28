@@ -83,7 +83,7 @@ func (r *GameServerReconciler) reconcileAgentTLS(
 	if getErr == nil {
 		// Check cert freshness AND that it was signed by the current CA.
 		// If the CA changed, reissue even if the existing cert is still valid.
-		existingCAFingerprint := string(existing.Data["gameplane.local/ca-fingerprint"])
+		existingCAFingerprint := existing.Annotations["gameplane.local/ca-fingerprint"]
 		if certValidFor(existing.Data["tls.crt"], agentCertRenewalThreshold, agentDNSNames(gs)) &&
 			existingCAFingerprint == caFingerprint {
 			return nil
@@ -103,10 +103,9 @@ func (r *GameServerReconciler) reconcileAgentTLS(
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, sec, func() error {
 		sec.Type = corev1.SecretTypeTLS
 		sec.Data = map[string][]byte{
-			corev1.TLSCertKey:                certPEM,
-			corev1.TLSPrivateKeyKey:          keyPEM,
-			"ca.crt":                         caCertPEM,
-			"gameplane.local/ca-fingerprint": []byte(caFingerprint),
+			corev1.TLSCertKey:       certPEM,
+			corev1.TLSPrivateKeyKey: keyPEM,
+			"ca.crt":                caCertPEM,
 		}
 		if sec.Annotations == nil {
 			sec.Annotations = make(map[string]string)
