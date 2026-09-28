@@ -454,6 +454,21 @@ func TestWithSQLiteBusyTimeout(t *testing.T) {
 			dsn:  "file::memory:",
 			want: "file::memory:?_pragma=busy_timeout(5000)",
 		},
+		{
+			name: "path containing busy_timeout without pragma query parameter",
+			dsn:  "/data/busy_timeout.db?_pragma=journal_mode(WAL)",
+			want: "/data/busy_timeout.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "DSN with another pragma (foreign_keys) should add busy_timeout",
+			dsn:  "file:/data/g.db?_pragma=foreign_keys(1)",
+			want: "file:/data/g.db?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "DSN with _pragma=busy_timeout using equals format",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout=5000",
+			want: "file:/data/g.db?_pragma=busy_timeout=5000",
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

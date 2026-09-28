@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -304,21 +305,40 @@ func sqlitePath(dsn string) string {
 // already present. This allows multiple processes (e.g., the API server and
 // bootstrap-admin both accessing the same SQLite file) to wait for locks instead
 // of failing immediately with SQLITE_BUSY. The timeout is set to 5000 milliseconds.
-// DSNs that already contain busy_timeout (case-insensitive) are returned unchanged.
+// Only DSNs that already contain a _pragma parameter value starting with busy_timeout
+// (case-insensitive) are returned unchanged; file paths containing "busy_timeout" do not
+// prevent pragma addition.
 func withSQLiteBusyTimeout(dsn string) string {
-	// Detect if busy_timeout is already present (case-insensitive).
-	if strings.Contains(strings.ToLower(dsn), "busy_timeout") {
-		return dsn
-	}
-
 	// Find the query string separator.
 	idx := strings.IndexByte(dsn, '?')
+	var queryStr string
+
 	if idx == -1 {
 		// No query string; add one.
 		return dsn + "?_pragma=busy_timeout(5000)"
 	}
 
-	// Query string exists; append to it with &.
+	// Extract the query part (everything after the ?).
+	queryStr = dsn[idx+1:]
+
+	// Parse the query parameters.
+	params, err := url.ParseQuery(queryStr)
+	if err != nil {
+		// If parsing fails, append the pragma (safer than skipping).
+		return dsn + "&_pragma=busy_timeout(5000)"
+	}
+
+	// Check if a _pragma parameter value starts with "busy_timeout" (case-insensitive).
+	for _, values := range params {
+		for _, val := range values {
+			if strings.HasPrefix(strings.ToLower(val), "busy_timeout") {
+				// Already present; return unchanged.
+				return dsn
+			}
+		}
+	}
+
+	// busy_timeout not found in pragmas; append it.
 	return dsn + "&_pragma=busy_timeout(5000)"
 }
 
