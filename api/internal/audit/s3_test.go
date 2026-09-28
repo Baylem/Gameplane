@@ -180,10 +180,10 @@ func TestS3Sink_FlushOnByteThreshold(t *testing.T) {
 // TestS3Sink_FlushOnByteThreshold_WithReason flushes when buffer exceeds 1 MiB
 // with large Reason field, verifying the buffer estimate includes len(e.Reason).
 func TestS3Sink_FlushOnByteThreshold_WithReason(t *testing.T) {
-	received := make(chan int, 1)
+	received := make(chan []byte, 1)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := io.ReadAll(r.Body)
-		recordFlush(received, len(b))
+		recordFlush(received, b)
 		w.Header().Set("ETag", "test")
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -208,8 +208,15 @@ func TestS3Sink_FlushOnByteThreshold_WithReason(t *testing.T) {
 		<-done
 	}()
 
-	largeReason := strings.Repeat("x", 10000)
-	for i := 0; i < 120; i++ {
+	// Use 20,000-char Reason to ensure byte threshold is crossed with ~52 events
+	// (well before the 100-event count threshold), so we can verify the flush was
+	// byte-triggered and the buffer estimate includes the reason field.
+	largeReason := strings.Repeat("x", 20000)
+	deadline := time.Now().Add(2 * time.Second)
+	for i := 0; i < s3FlushCountSize; i++ {
+		if time.Now().After(deadline) {
+			t.Fatal("timeout while enqueuing events")
+		}
 		sink.Enqueue(Event{
 			TS: "2026-06-30T00:00:00Z", Actor: "admin", Method: "POST",
 			Path: "/api/v1/servers", Status: 201, Reason: largeReason,
@@ -217,9 +224,13 @@ func TestS3Sink_FlushOnByteThreshold_WithReason(t *testing.T) {
 	}
 
 	select {
-	case size := <-received:
-		if size < s3FlushByteSize {
-			t.Errorf("batch size = %d, expected > %d", size, s3FlushByteSize)
+	case b := <-received:
+		eventCount := bytes.Count(b, []byte("\n"))
+		if int64(len(b)) < s3FlushByteSize {
+			t.Errorf("batch size = %d, expected >= %d", len(b), s3FlushByteSize)
+		}
+		if eventCount >= s3FlushCountSize {
+			t.Errorf("flush event count = %d, expected < %d (byte threshold should trigger first)", eventCount, s3FlushCountSize)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("flush not received")
