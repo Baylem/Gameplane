@@ -1491,7 +1491,7 @@ jobs:
         # e2e.sh's single-node config — the ingress-ready node label and the
         # host port mappings it carries are exactly what this job is meant
         # to exercise.
-        run: kind create cluster --config deploy/kind/cluster.yaml
+        run: kind create cluster --name "$CLUSTER" --config deploy/kind/cluster.yaml
       - name: install ingress-nginx at the pinned version
         env:
           INGRESS_NGINX_VERSION: ${{ steps.pin.outputs.version }}
