@@ -123,7 +123,7 @@ func (s *S3Sink) Start(ctx context.Context) {
 			return
 		case e := <-s.ch:
 			buffer = append(buffer, e)
-			bufferBytes += int64(len(e.TS) + len(e.Actor) + len(e.Method) + len(e.Path) + len(e.Target) + len(e.IP) + 50) // rough estimate
+			bufferBytes += int64(len(e.TS) + len(e.Actor) + len(e.Method) + len(e.Path) + len(e.Target) + len(e.IP) + len(e.Reason) + 60) // rough estimate; +60 accounts for JSON field names, quotes, punctuation, and newline
 			if len(buffer) >= s3FlushCountSize || bufferBytes >= s3FlushByteSize {
 				flush()
 			}

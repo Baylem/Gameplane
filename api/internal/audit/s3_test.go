@@ -177,6 +177,55 @@ func TestS3Sink_FlushOnByteThreshold(t *testing.T) {
 	}
 }
 
+// TestS3Sink_FlushOnByteThreshold_WithReason flushes when buffer exceeds 1 MiB
+// with large Reason field, verifying the buffer estimate includes len(e.Reason).
+func TestS3Sink_FlushOnByteThreshold_WithReason(t *testing.T) {
+	received := make(chan int, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		recordFlush(received, len(b))
+		w.Header().Set("ETag", "test")
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	cfg := S3Config{
+		Endpoint:  strings.TrimPrefix(srv.URL, "http://"),
+		Bucket:    "test-bucket",
+		Insecure:  true,
+		AccessKey: "test",
+		SecretKey: "test",
+	}
+	sink, err := NewS3Sink(cfg)
+	if err != nil {
+		t.Fatalf("new sink: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := startSink(ctx, sink)
+	defer func() {
+		cancel()
+		<-done
+	}()
+
+	largeReason := strings.Repeat("x", 10000)
+	for i := 0; i < 120; i++ {
+		sink.Enqueue(Event{
+			TS: "2026-06-30T00:00:00Z", Actor: "admin", Method: "POST",
+			Path: "/api/v1/servers", Status: 201, Reason: largeReason,
+		})
+	}
+
+	select {
+	case size := <-received:
+		if size < s3FlushByteSize {
+			t.Errorf("batch size = %d, expected > %d", size, s3FlushByteSize)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("flush not received")
+	}
+}
+
 // TestS3Sink_FlushOnInterval flushes after 5 seconds even with few events.
 func TestS3Sink_FlushOnInterval(t *testing.T) {
 	received := make(chan struct{}, 1)
