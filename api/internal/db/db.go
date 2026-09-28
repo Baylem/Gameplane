@@ -329,8 +329,8 @@ func withSQLiteBusyTimeout(dsn string) string {
 	}
 
 	// Check if a _pragma parameter value starts with "busy_timeout" (case-insensitive).
-	for _, values := range params {
-		for _, val := range values {
+	if pragmaValues, ok := params["_pragma"]; ok {
+		for _, val := range pragmaValues {
 			if strings.HasPrefix(strings.ToLower(val), "busy_timeout") {
 				// Already present; return unchanged.
 				return dsn
