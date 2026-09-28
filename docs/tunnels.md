@@ -136,9 +136,7 @@ The `credentialsSecretRef.name` is the name that the dashboard or API write afte
 
 #### 3. Provide the credential
 
-The operator only mounts a credentials Secret that carries an `ownerReference`
-to the GameServer — a plain `kubectl create secret generic` Secret has none, so
-the operator refuses it and the GameServer's `TunnelReady` status condition
+The operator only mounts a credentials Secret whose `ownerReference` matches this GameServer's name **and UID** — a plain `kubectl create secret generic` Secret has none, and a Secret left over from a deleted same-name GameServer has a stale UID, so the operator refuses it and the GameServer's `TunnelReady` status condition
 reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
 its contents). The tunnel pod starts without credentials until the credential is
 provided (the Secret does not exist yet). Use one of these instead:
@@ -200,9 +198,7 @@ The `credentialsSecretRef.name` is the name that the dashboard or API write afte
 
 #### 3. Provide the credential
 
-The operator only mounts a credentials Secret that carries an `ownerReference`
-to the GameServer — a plain `kubectl create secret generic` Secret has none, so
-the operator refuses it and the GameServer's `TunnelReady` status condition
+The operator only mounts a credentials Secret whose `ownerReference` matches this GameServer's name **and UID** — a plain `kubectl create secret generic` Secret has none, and a Secret left over from a deleted same-name GameServer has a stale UID, so the operator refuses it and the GameServer's `TunnelReady` status condition
 reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
 its contents). The tunnel pod starts without credentials until the credential is
 provided (the Secret does not exist yet). Use one of these instead:
@@ -248,9 +244,7 @@ The `credentialsSecretRef.name` is the name that the dashboard or API write afte
 
 #### 3. Provide the credential
 
-The operator only mounts a credentials Secret that carries an `ownerReference`
-to the GameServer — a plain `kubectl create secret generic` Secret has none, so
-the operator refuses it and the GameServer's `TunnelReady` status condition
+The operator only mounts a credentials Secret whose `ownerReference` matches this GameServer's name **and UID** — a plain `kubectl create secret generic` Secret has none, and a Secret left over from a deleted same-name GameServer has a stale UID, so the operator refuses it and the GameServer's `TunnelReady` status condition
 reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
 its contents). The tunnel pod starts without credentials until the credential is
 provided (the Secret does not exist yet). Use one of these instead:
