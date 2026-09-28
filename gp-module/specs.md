@@ -81,3 +81,4 @@ gp-module/
 2. **Zero Code Duplication with Web UI.** Core scaffolding, validation, and preview engines are exported via `pkg/` as pure Go libraries directly imported by `api/internal/handlers/modules_builder.go`.
 3. **Deterministic Memory Arithmetic.** Memory calculations derived from `autoFromMemoryLimit` use identical integer arithmetic and rounding to the Gameplane operator.
 4. **Non-destructive Directory Creation.** Scaffolding refuses to overwrite an existing directory unless `--overwrite` is explicitly specified.
+5. **Non-root Preset Defaults.** The `steamcmd` archetype renders a `spec.security` block (`runAsUser`, `runAsGroup` and `fsGroup` set to `1000`, the image's `steam` user), so a scaffolded template runs its game container as a non-root user. The block stays when the author supplies another image, and the generated README says to adjust it for that image.
