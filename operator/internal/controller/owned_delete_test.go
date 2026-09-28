@@ -173,10 +173,6 @@ func TestDeleteIfControlledBy_RemovesOnlyObjectsTheServerControls(t *testing.T) 
 	})
 }
 
-func boolPtr(b bool) *bool {
-	return &b
-}
-
 // TestDeleteIfControlledBy_DeleteIsUIDPreconditioned is a regression test:
 // the Delete call must carry a UID precondition matching the object read
 // during the ownership check, so a replacement object created at the same
