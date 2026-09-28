@@ -32,7 +32,7 @@ func TestReconcileTunnel_CredentialSecretWithoutOwnerRefRefused(t *testing.T) {
 	secName := "unowned-tunnel-creds"
 	sec := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: secName, Namespace: ns},
-		StringData: map[string]string{"token": "fake"},
+		StringData: map[string]string{"token": "tok-3f9c1e-never-in-status"},
 	}
 	if err := k8sClient.Create(ctx, sec); err != nil {
 		t.Fatalf("create secret: %v", err)
@@ -94,8 +94,8 @@ func TestReconcileTunnel_CredentialSecretWithoutOwnerRefRefused(t *testing.T) {
 		t.Fatalf("re-fetch gameserver: %v", err)
 	}
 	for _, cond := range c.Status.Conditions {
-		if cond.Type == "TunnelReady" && !strings.Contains(cond.Message, "fake") {
-			t.Fatalf("TunnelReady message must not contain 'fake': %s", cond.Message)
+		if cond.Type == "TunnelReady" && strings.Contains(cond.Message, "tok-3f9c1e-never-in-status") {
+			t.Fatalf("TunnelReady message must not contain the Secret data: %s", cond.Message)
 		}
 	}
 
