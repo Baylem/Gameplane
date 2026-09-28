@@ -85,6 +85,16 @@ const (
 	idleTimeout        = 120 * time.Second
 )
 
+// peekState values returned by peek().
+type peekState int
+
+const (
+	peekUnknown peekState = iota
+	peekEmpty
+	peekClosed
+	peekPending
+)
+
 // livenessProbe is how long send waits for a pending close from the collector
 // before it reuses a stream connection. Collectors never write to a syslog
 // stream, so a read that times out means the connection is still open.
@@ -341,10 +351,27 @@ func (f *forwarder) send(ctx context.Context, frame []byte) error {
 // reached the socket within livenessProbe goes unseen, and the next frame can
 // be lost while send reports success (204). Syslog framing has no ack, so this
 // window cannot be closed without a different transport protocol.
+//
+// On Linux, alive first attempts a zero-wait peek to avoid the 5ms blocking
+// read on every healthy reused connection; only if the peek is inconclusive
+// does it fall back to the timed read.
 func (f *forwarder) alive() bool {
 	if f.network != "tcp" {
 		return true
 	}
+
+	// Fast path on Linux: non-blocking peek avoids the 5ms blocking read.
+	switch peek(f.conn) {
+	case peekEmpty:
+		return true
+	case peekClosed:
+		return false
+	case peekPending:
+		// Data is queued; connection is open.
+		return true
+	}
+
+	// Inconclusive or non-Linux: fall back to timed read.
 	var one [1]byte
 	_ = f.conn.SetReadDeadline(time.Now().Add(livenessProbe))
 	_, err := f.conn.Read(one[:])

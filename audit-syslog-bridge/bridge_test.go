@@ -59,6 +59,26 @@ func generateTestTLSCert(t *testing.T) tls.Certificate {
 	return cert
 }
 
+// waitForwarderSeesClose polls the forwarder's alive() status for up to 2 seconds,
+// returning true if it detects a closed connection within that time.
+// This replaces fixed sleeps when waiting for a collector close to reach the socket.
+func waitForwarderSeesClose(t *testing.T, f *forwarder) bool {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		f.mu.Lock()
+		ok := f.alive()
+		f.mu.Unlock()
+		if !ok {
+			return true // Close detected
+		}
+		if time.Now().After(deadline) {
+			return false // Timeout
+		}
+		time.Sleep(time.Millisecond) // Small poll interval
+	}
+}
+
 func TestBuildSyslog(t *testing.T) {
 	ts := time.Date(2026, 6, 30, 12, 0, 0, 0, time.UTC)
 	got := buildSyslog(16*8+6, ts, "host1", "gameplane-audit", `{"actor":"alice"}`)
@@ -702,8 +722,10 @@ func TestForwarder_RecordAfterCollectorCloseReachesNewConnection(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("collector did not receive the first frame")
 	}
-	// Give the collector's close time to reach the forwarder's socket.
-	time.Sleep(50 * time.Millisecond)
+	// Wait for the collector's close to reach the forwarder's socket.
+	if !waitForwarderSeesClose(t, f) {
+		t.Fatal("collector close did not reach the forwarder within 2s")
+	}
 
 	if err := f.send(context.Background(), []byte("two")); err != nil {
 		t.Fatalf("send two: %v", err)
@@ -782,8 +804,10 @@ func TestForwarder_TLSRecordAfterCollectorCloseReachesNewConnection(t *testing.T
 	case <-time.After(2 * time.Second):
 		t.Fatal("collector did not receive the first frame")
 	}
-	// Give the collector's close time to reach the forwarder's socket.
-	time.Sleep(50 * time.Millisecond)
+	// Wait for the collector's close to reach the forwarder's socket.
+	if !waitForwarderSeesClose(t, f) {
+		t.Fatal("collector close did not reach the forwarder within 2s")
+	}
 
 	if err := f.send(context.Background(), []byte("two")); err != nil {
 		t.Fatalf("send two: %v", err)
@@ -844,8 +868,10 @@ func TestHandle_CollectorGoneAfterCloseIs502(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("collector did not receive the first record")
 	}
-	// Give the collector's close time to reach the forwarder's socket.
-	time.Sleep(50 * time.Millisecond)
+	// Wait for the collector's close to reach the forwarder's socket.
+	if !waitForwarderSeesClose(t, s.fwd) {
+		t.Fatal("collector close did not reach the forwarder within 2s")
+	}
 
 	if code := post(); code != http.StatusBadGateway {
 		t.Fatalf("POST after the collector went away: status = %d, want 502", code)
@@ -885,6 +911,54 @@ func TestIntake_BodyReadIsTimeBounded(t *testing.T) {
 	}
 	if elapsed := time.Since(start); elapsed > time.Second {
 		t.Fatalf("connection closed after %v, want within 1s of the 300ms read timeout", elapsed)
+	}
+}
+
+// TestForwarder_ManyHealthyReusedConnSends verifies that repeated sends over
+// a single healthy reused connection complete quickly (verifying the fast path
+// eliminates the 5ms penalty). With the old timed-read-only alive(), 1000 sends
+// would need at least 5 seconds; with the fast path, it should complete in a
+// fraction of a second.
+func TestForwarder_ManyHealthyReusedConnSends(t *testing.T) {
+	lc := &net.ListenConfig{}
+	ln, err := lc.Listen(context.Background(), "tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer ln.Close()
+
+	// Collector that drains all sends without closing.
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func(c net.Conn) {
+				defer c.Close()
+				buf := make([]byte, 4096)
+				for {
+					if _, err := c.Read(buf); err != nil {
+						return
+					}
+				}
+			}(c)
+		}
+	}()
+
+	f := newForwarder("tcp", ln.Addr().String(), false, time.Second)
+	start := time.Now()
+	for i := 0; i < 1000; i++ {
+		if err := f.send(context.Background(), []byte("x")); err != nil {
+			t.Fatalf("send %d: %v", i, err)
+		}
+	}
+	elapsed := time.Since(start)
+
+	// With the old code (5ms per send * 1000), this would be >= 5s.
+	// With the fast path, it should be well under 1s.
+	if elapsed > 2*time.Second {
+		t.Errorf("1000 sends took %v, expected < 2s (old code would need >= 5s)", elapsed)
 	}
 }
 

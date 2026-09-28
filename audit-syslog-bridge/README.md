@@ -50,10 +50,11 @@ idle keep-alive connections close after 120 s.
   collector closes a reused connection and its FIN/RST reaches the bridge only
   after the short liveness probe, the close goes unnoticed: one record is
   written into the dead connection and the bridge returns `204`. The following
-  write then fails (502), and the bridge reconnects and delivers that later
-  record on a fresh connection. Syslog framing has no acknowledgement, so this
-  window cannot be closed without a different transport (for example one with
-  per-record acks).
+  write detects the close, reconnects, and retries. If the retry succeeds, the
+  bridge returns `204` and the record is delivered; if the retry fails, the
+  bridge returns `502` and that record is not delivered. Syslog framing has no
+  acknowledgement, so this window cannot be closed without a different transport
+  (for example one with per-record acks).
 
 `AUTH_HEADER` gates who may inject records — set it (the chart wires it from the
 same Secret as the API's webhook token). Without it the relay accepts any POST.
