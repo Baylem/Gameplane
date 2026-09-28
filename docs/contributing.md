@@ -116,6 +116,12 @@ group so only the game-bot job pays to build it, and `deploy/kind/e2e.sh`
 side-loads it into the cluster when present. The `e2e game bot (kind)` CI job
 is now blocking rather than advisory.
 
+The `ingress-nginx smoke (kind)` CI job is separate from the buckets above: it
+boots a Kind cluster on the same node config `make dev-up` uses and applies
+the dev ingress-nginx manifest pinned in `deploy/kind/up.sh`
+(`INGRESS_NGINX_VERSION`), waiting for the controller to become `Available`.
+It only runs when `deploy/kind/**` or the CI workflow file itself changes.
+
 ## AI-assisted development
 
 Much of this codebase is developed with AI coding assistants (Claude
