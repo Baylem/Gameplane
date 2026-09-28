@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash/fnv"
@@ -12,6 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -144,7 +146,55 @@ func (r *RestoreReconciler) reconcileVolumeSnapshotRestore(
 	if err := r.ensureOwnedRefCopies(ctx, &orig, created, copies); err != nil {
 		return r.failOrRequeue(ctx, rs, err)
 	}
+
+	// After ensuring copies at line 144, update Restore status with the copy plan.
+	copiesJSON, err := json.Marshal(copies)
+	if err != nil {
+		return r.failOrRequeue(ctx, rs, fmt.Errorf("marshal copy plan: %w", err))
+	}
+	if rs.Annotations == nil {
+		rs.Annotations = make(map[string]string)
+	}
+	rs.Annotations["restore.gameplane.local/copy-plan"] = string(copiesJSON)
+	if err := r.Patch(ctx, rs, client.MergeFrom(rs)); err != nil {
+		return r.failOrRequeue(ctx, rs, fmt.Errorf("update restore copy plan: %w", err))
+	}
+
 	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+}
+
+// ensureRestoredRefsFromSpec validates that every Secret/ConfigMap referenced
+// by the restored server's spec still exists and is owned, without creating new copies.
+func (r *RestoreReconciler) ensureRestoredRefsFromSpec(
+	ctx context.Context, orig, restored *gameplanev1alpha1.GameServer,
+) error {
+	for _, ref := range extractSpecRefs(&restored.Spec) {
+		switch ref.kind {
+		case secretRefKind:
+			sec := &corev1.Secret{}
+			if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: restored.Namespace}, sec); err != nil {
+				if apierrors.IsNotFound(err) {
+					return fmt.Errorf("referenced Secret %q not found: %w", ref.name, errRefNotOwned)
+				}
+				return fmt.Errorf("check referenced Secret %q: %w", ref.name, err)
+			}
+			if !isServerOwnedSecret(sec, restored) {
+				return fmt.Errorf("referenced Secret %q not owned by restored server: %w", ref.name, errRefNotOwned)
+			}
+		case configMapRefKind:
+			cm := &corev1.ConfigMap{}
+			if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: restored.Namespace}, cm); err != nil {
+				if apierrors.IsNotFound(err) {
+					return fmt.Errorf("referenced ConfigMap %q not found: %w", ref.name, errRefNotOwned)
+				}
+				return fmt.Errorf("check referenced ConfigMap %q: %w", ref.name, err)
+			}
+			if !isServerOwnedConfigMap(cm, restored) {
+				return fmt.Errorf("referenced ConfigMap %q not owned by restored server: %w", ref.name, errRefNotOwned)
+			}
+		}
+	}
+	return nil
 }
 
 // awaitRestoredServer drives the Restore to a terminal phase based on the
@@ -165,8 +215,19 @@ func (r *RestoreReconciler) awaitRestoredServer(
 	orig := &gameplanev1alpha1.GameServer{}
 	err := r.Get(ctx, types.NamespacedName{Name: src.Spec.ServerRef.Name, Namespace: rs.Namespace}, orig)
 	if err == nil {
-		// Original server exists: use the current reference-checking logic.
-		refsErr = r.ensureRestoredRefs(ctx, orig, gs)
+		// Original server exists: re-ensure only the persisted copy plan,
+		// not the original's current spec (which may have changed).
+		// A missing or replaced copy is recreated only if its source still exists
+		// and is owned; a changed or no-longer-matching source is treated as transient.
+		var plannedCopies []refCopy
+		if planJSON := rs.Annotations["restore.gameplane.local/copy-plan"]; planJSON != "" {
+			if err := json.Unmarshal([]byte(planJSON), &plannedCopies); err == nil {
+				refsErr = r.ensureOwnedRefCopies(ctx, orig, gs, plannedCopies)
+			}
+		} else {
+			// Fallback if plan was not persisted: use restored server's own spec
+			refsErr = r.ensureRestoredRefsFromSpec(ctx, orig, gs)
+		}
 		if refsErr != nil && errors.Is(refsErr, errRefNotOwned) {
 			return r.fail(ctx, rs, refsErr.Error())
 		}
@@ -220,42 +281,82 @@ func (r *RestoreReconciler) awaitRestoredServer(
 	if gs.Status.Phase == gameplanev1alpha1.GameServerPhaseFailed {
 		return r.fail(ctx, rs, fmt.Sprintf("restored server %q failed to start", gs.Name))
 	}
-	if gs.Status.Phase == gameplanev1alpha1.GameServerPhaseRunning && refsErr == nil {
-		now := metav1.Now()
-		rs.Status.Phase = gameplanev1alpha1.RestorePhaseSucceeded
-		if rs.Status.CompletionTime == nil {
-			rs.Status.CompletionTime = &now
+	if gs.Status.Phase == gameplanev1alpha1.GameServerPhaseRunning {
+		// Always check the restored server's own references, regardless of original state.
+		// (Original's spec may have changed, so we validate only what the restored server actually uses.)
+		var finalRefsErr error
+		for _, ref := range extractSpecRefs(&gs.Spec) {
+			switch ref.kind {
+			case secretRefKind:
+				sec := &corev1.Secret{}
+				if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, sec); err != nil {
+					if apierrors.IsNotFound(err) {
+						finalRefsErr = fmt.Errorf("referenced Secret %q not found: %w", ref.name, errRefNotOwned)
+					} else {
+						finalRefsErr = fmt.Errorf("check referenced Secret %q: %w", ref.name, err)
+					}
+					break
+				}
+				if !isServerOwnedSecret(sec, gs) {
+					finalRefsErr = fmt.Errorf("referenced Secret %q not owned by restored server: %w", ref.name, errRefNotOwned)
+					break
+				}
+			case configMapRefKind:
+				cm := &corev1.ConfigMap{}
+				if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, cm); err != nil {
+					if apierrors.IsNotFound(err) {
+						finalRefsErr = fmt.Errorf("referenced ConfigMap %q not found: %w", ref.name, errRefNotOwned)
+					} else {
+						finalRefsErr = fmt.Errorf("check referenced ConfigMap %q: %w", ref.name, err)
+					}
+					break
+				}
+				if !isServerOwnedConfigMap(cm, gs) {
+					finalRefsErr = fmt.Errorf("referenced ConfigMap %q not owned by restored server: %w", ref.name, errRefNotOwned)
+					break
+				}
+			}
+			if finalRefsErr != nil {
+				break
+			}
 		}
-		rs.Status.Conditions = upsertCondition(rs.Status.Conditions, metav1.Condition{
-			Type:               "Completed",
-			Status:             metav1.ConditionTrue,
-			Reason:             "Succeeded",
-			ObservedGeneration: rs.Generation,
-		})
-		if err := r.Status().Update(ctx, rs); err != nil {
-			return ctrl.Result{}, err
+		if finalRefsErr != nil && errors.Is(finalRefsErr, errRefNotOwned) {
+			return r.fail(ctx, rs, finalRefsErr.Error())
 		}
-		return ctrl.Result{}, nil
+		if finalRefsErr == nil && refsErr == nil {
+			now := metav1.Now()
+			rs.Status.Phase = gameplanev1alpha1.RestorePhaseSucceeded
+			if rs.Status.CompletionTime == nil {
+				rs.Status.CompletionTime = &now
+			}
+			rs.Status.Conditions = upsertCondition(rs.Status.Conditions, metav1.Condition{
+				Type:               "Completed",
+				Status:             metav1.ConditionTrue,
+				Reason:             "Succeeded",
+				ObservedGeneration: rs.Generation,
+			})
+			if err := r.Status().Update(ctx, rs); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
 	}
 
-	// Still starting (or Running with a transient copy error still
-	// unresolved): fail once the deadline has passed. Checked here
-	// regardless of refsErr so a restore stuck on retryable copy errors
-	// cannot run past the documented limit. StartTime is normally recorded
-	// before Create; a Restore whose server was created without it (for
-	// example by an older operator) records it here so the deadline still
-	// applies.
-	if rs.Status.StartTime == nil {
-		now := metav1.Now()
-		rs.Status.StartTime = &now
-		if err := r.Status().Update(ctx, rs); err != nil {
-			return ctrl.Result{}, err
+	// Fail once the deadline has passed, but only while the server is still starting.
+	// A Running server with transient copy errors should not be failed by deadline.
+	if gs.Status.Phase != gameplanev1alpha1.GameServerPhaseRunning {
+		if rs.Status.StartTime == nil {
+			now := metav1.Now()
+			rs.Status.StartTime = &now
+			if err := r.Status().Update(ctx, rs); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
-	}
-	if time.Since(rs.Status.StartTime.Time) > VolumeSnapshotRestoreDeadline {
-		return r.fail(ctx, rs, fmt.Sprintf(
-			"restore did not complete within %v; restored server %q phase is %s",
-			VolumeSnapshotRestoreDeadline, gs.Name, gs.Status.Phase))
+		if time.Since(rs.Status.StartTime.Time) > VolumeSnapshotRestoreDeadline {
+			return r.fail(ctx, rs, fmt.Sprintf(
+				"restore did not complete within %v; restored server %q phase is %s",
+				VolumeSnapshotRestoreDeadline, gs.Name, gs.Status.Phase))
+		}
 	}
 	if refsErr != nil {
 		return ctrl.Result{}, refsErr
@@ -363,6 +464,29 @@ func (r *RestoreReconciler) planOwnedRefCopies(
 		}
 	}
 
+	// Traverse spec.backupPolicy.repoRef
+	if orig.Spec.BackupPolicy != nil && orig.Spec.BackupPolicy.RepoRef.Name != "" {
+		ref := &orig.Spec.BackupPolicy.RepoRef
+		key := "Secret/" + ref.Name
+		if !seen[key] {
+			owned, err := r.ownershipOfRef(ctx, orig, secretRefKind, ref.Name, orig.Namespace)
+			if err != nil {
+				return nil, fmt.Errorf("check ownership of Secret %q: %w", ref.Name, err)
+			}
+			if !owned {
+				return nil, fmt.Errorf("original server does not own Secret %q: %w", ref.Name, errRefNotOwned)
+			}
+
+			copyName := restoredRefName(restored.Name, ref.Name)
+			copies = append(copies, refCopy{
+				kind:     secretRefKind,
+				origName: ref.Name,
+				copyName: copyName,
+			})
+			seen[key] = true
+		}
+	}
+
 	return copies, nil
 }
 
@@ -392,13 +516,17 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 			}
 			_, err := controllerutil.CreateOrUpdate(ctx, r.Client, dst, func() error {
 				if !dst.CreationTimestamp.IsZero() {
-					// Object exists. It must be controlled by the restored
-					// server: a plain (non-controller) OwnerReference is not
-					// enough to trust its contents as the restored copy.
-					if !metav1.IsControlledBy(dst, restored) {
-						return fmt.Errorf("secret %q already exists and is not controlled by the restored server: %w", cp.copyName, errRefNotOwned)
+					// Object exists. Verify the live API-server object is controlled by the restored server.
+					// Re-fetch to catch any object that replaced a controlled copy between cache read and here.
+					live := &corev1.Secret{}
+					if err := r.Client.Get(ctx, types.NamespacedName{Name: cp.copyName, Namespace: restored.Namespace}, live); err != nil {
+						return fmt.Errorf("re-verify live Secret %q: %w", cp.copyName, err)
 					}
-					// Owned copy exists, skip update.
+					// Compare UIDs: the live object must be the same one the cache saw, and it must be controlled.
+					if live.UID != dst.UID || !metav1.IsControlledBy(live, restored) {
+						return fmt.Errorf("secret %q is not controlled by the restored server or was replaced: %w", cp.copyName, errRefNotOwned)
+					}
+					// Owned copy exists and verified live, skip update.
 					return nil
 				}
 				// New copy: inherit data from source
@@ -427,13 +555,17 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 			}
 			_, err := controllerutil.CreateOrUpdate(ctx, r.Client, dst, func() error {
 				if !dst.CreationTimestamp.IsZero() {
-					// Object exists. It must be controlled by the restored
-					// server: a plain (non-controller) OwnerReference is not
-					// enough to trust its contents as the restored copy.
-					if !metav1.IsControlledBy(dst, restored) {
-						return fmt.Errorf("configmap %q already exists and is not controlled by the restored server: %w", cp.copyName, errRefNotOwned)
+					// Object exists. Verify the live API-server object is controlled by the restored server.
+					// Re-fetch to catch any object that replaced a controlled copy between cache read and here.
+					live := &corev1.ConfigMap{}
+					if err := r.Client.Get(ctx, types.NamespacedName{Name: cp.copyName, Namespace: restored.Namespace}, live); err != nil {
+						return fmt.Errorf("re-verify live ConfigMap %q: %w", cp.copyName, err)
 					}
-					// Owned copy exists, skip update.
+					// Compare UIDs: the live object must be the same one the cache saw, and it must be controlled.
+					if live.UID != dst.UID || !metav1.IsControlledBy(live, restored) {
+						return fmt.Errorf("configmap %q is not controlled by the restored server or was replaced: %w", cp.copyName, errRefNotOwned)
+					}
+					// Owned copy exists and verified live, skip update.
 					return nil
 				}
 				// New copy: inherit data from source
@@ -490,6 +622,14 @@ func rewriteRefs(spec *gameplanev1alpha1.GameServerSpec, copies []refCopy) {
 			}
 		}
 	}
+	if spec.BackupPolicy != nil && spec.BackupPolicy.RepoRef.Name != "" {
+		ref := &spec.BackupPolicy.RepoRef
+		for _, cp := range copies {
+			if cp.kind == secretRefKind && ref.Name == cp.origName {
+				ref.Name = cp.copyName
+			}
+		}
+	}
 }
 
 // failOrRequeue marks the Restore Failed for an ownership refusal, which no
@@ -537,23 +677,22 @@ func (r *RestoreReconciler) ownershipOfRef(
 
 // restoredRefName generates a new name for a copied reference, unique to the restored server.
 func restoredRefName(restoredServerName, origRefName string) string {
-	// Use the format: <restored-server>-<digest-of-original>
+	// Use the format: <truncated-server>-<digest-of-server-and-original>
 	// to ensure uniqueness and keep the name under the 253-character limit.
-	// "%012x" zero-pads so the string is always >= 12 hex chars before the
-	// slice below — "%x" alone drops leading zero nibbles and panics on
-	// slice-out-of-range for small hash values (deterministically so for
-	// origRefName == "").
-	hash := fmt.Sprintf("%012x", hashString(origRefName))[:12]
-	candidate := fmt.Sprintf("%s-ref-%s", restoredServerName, hash)
+	// Hash both the server name and original ref name to avoid collisions
+	// when two servers share an identical prefix and reference the same source.
+	combinedHash := fmt.Sprintf("%012x", hashString(restoredServerName+"/"+origRefName))[:12]
+	candidate := fmt.Sprintf("%s-ref-%s", restoredServerName, combinedHash)
 	if len(candidate) > maxObjectNameLength {
-		// Truncate the server name if needed
+		// Truncate the server name if needed, but keep the hash independent
+		// of the truncated length to avoid collisions across different truncations.
 		available := maxObjectNameLength - len("-ref-") - 12
 		if available < 1 {
 			available = 1
 		}
 		candidate = fmt.Sprintf("%s-ref-%s",
 			restoredServerName[:available],
-			hash)
+			combinedHash)
 	}
 	return strings.ToLower(candidate)
 }
@@ -613,6 +752,19 @@ func extractSpecRefs(spec *gameplanev1alpha1.GameServerSpec) []refItem {
 	if spec.Networking.Tunnel != nil &&
 		spec.Networking.Tunnel.CredentialsSecretRef != nil {
 		ref := spec.Networking.Tunnel.CredentialsSecretRef
+		key := "Secret/" + ref.Name
+		if !seen[key] {
+			seen[key] = true
+			refs = append(refs, refItem{
+				kind: secretRefKind,
+				name: ref.Name,
+			})
+		}
+	}
+
+	// Traverse spec.backupPolicy.repoRef
+	if spec.BackupPolicy != nil && spec.BackupPolicy.RepoRef.Name != "" {
+		ref := &spec.BackupPolicy.RepoRef
 		key := "Secret/" + ref.Name
 		if !seen[key] {
 			seen[key] = true

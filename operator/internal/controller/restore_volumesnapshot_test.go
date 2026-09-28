@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -82,6 +83,25 @@ func TestRestoredRefName_NoPanicOnSmallHash(t *testing.T) {
 				t.Errorf("restoredRefName(%q, %q) returned empty name", "server", refName)
 			}
 		}()
+	}
+}
+
+// TestRestoredRefNameCollisionAvoidance verifies that two long names with
+// identical first 236 chars and same source ref get different copy names.
+func TestRestoredRefNameCollisionAvoidance(t *testing.T) {
+	// Two long names with identical first 240 chars and same source ref must get different copy names.
+	server1 := strings.Repeat("a", 240) + "-unique-tail-1"
+	server2 := strings.Repeat("a", 240) + "-unique-tail-2"
+	origRef := "shared-source"
+
+	name1 := restoredRefName(server1, origRef)
+	name2 := restoredRefName(server2, origRef)
+
+	if name1 == name2 {
+		t.Fatalf("collision: both servers produced %q", name1)
+	}
+	if len(name1) > 253 || len(name2) > 253 {
+		t.Fatalf("name too long: %q (%d) or %q (%d)", name1, len(name1), name2, len(name2))
 	}
 }
 
