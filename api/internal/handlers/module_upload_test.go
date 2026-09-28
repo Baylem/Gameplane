@@ -7,6 +7,9 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -248,4 +251,162 @@ func TestDeleteUpload(t *testing.T) {
 			t.Fatalf("got %d %s", rr.Code, rr.Body)
 		}
 	})
+}
+
+// overBudgetPadding returns archive members that are each under the
+// per-member cap but together exceed maxUploadExtractedBytes.
+func overBudgetPadding(prefix string) map[string]string {
+	pad := strings.Repeat("\x00", maxUploadBundleBytes-1024)
+	files := map[string]string{}
+	for i := range maxUploadExtractedBytes/len(pad) + 2 {
+		files[fmt.Sprintf("%s%02d.bin", prefix, i)] = pad
+	}
+	return files
+}
+
+// TestExtractUploadArchive_EnforcesTotalExtractedBudget checks that
+// extraction stops once the members together pass the total budget, even
+// though each member stays under the per-member cap and the compressed
+// body fits the request cap.
+func TestExtractUploadArchive_EnforcesTotalExtractedBudget(t *testing.T) {
+	files := overBudgetPadding("pad/")
+	for format, build := range map[string]func(*testing.T, map[string]string) []byte{
+		"tar.gz": bundleTarGz,
+		"zip":    bundleZip,
+	} {
+		body := build(t, files)
+		if len(body) > maxUploadBundleBytes {
+			t.Fatalf("%s fixture compressed to %d bytes; it must fit the request cap", format, len(body))
+		}
+		if _, err := extractUploadArchive(body); err == nil || !strings.Contains(err.Error(), "total limit") {
+			t.Fatalf("%s: err = %v, want the total extracted-size limit error", format, err)
+		}
+	}
+}
+
+// TestExtractUploadArchive_RepeatedMemberNamesCountTowardBudget checks that
+// every member read counts toward the total budget, including members that
+// reuse a name already extracted.
+func TestExtractUploadArchive_RepeatedMemberNamesCountTowardBudget(t *testing.T) {
+	member := bytes.Repeat([]byte{0}, maxUploadBundleBytes-1024)
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	for range maxUploadExtractedBytes/len(member) + 2 {
+		if err := tw.WriteHeader(&tar.Header{
+			Name: "pad.bin", Mode: 0o644, Size: int64(len(member)), Typeflag: tar.TypeReg,
+		}); err != nil {
+			t.Fatalf("tar header: %v", err)
+		}
+		if _, err := tw.Write(member); err != nil {
+			t.Fatalf("tar write: %v", err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatalf("tar close: %v", err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatalf("gzip close: %v", err)
+	}
+	if buf.Len() > maxUploadBundleBytes {
+		t.Fatalf("fixture compressed to %d bytes; it must fit the request cap", buf.Len())
+	}
+	if _, err := extractUploadArchive(buf.Bytes()); err == nil || !strings.Contains(err.Error(), "total limit") {
+		t.Fatalf("err = %v, want the total extracted-size limit error", err)
+	}
+}
+
+// TestExtractUploadArchive_SkippedTarEntriesCountTowardBudget checks that
+// tar entries skipped by extraction (directories, symlinks, etc.) still count
+// toward the decompression budget, so a small compressed bundle with many
+// headers can exceed the budget.
+func TestExtractUploadArchive_SkippedTarEntriesCountTowardBudget(t *testing.T) {
+	// Each tar header is 512 bytes. We need enough to exceed maxUploadDecompressedBytes.
+	headerCount := maxUploadDecompressedBytes/512 + 64
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gz)
+	for i := range headerCount {
+		dirName := fmt.Sprintf("d/%06d/", i)
+		if err := tw.WriteHeader(&tar.Header{
+			Name: dirName, Mode: 0o755, Typeflag: tar.TypeDir,
+		}); err != nil {
+			t.Fatalf("tar header: %v", err)
+		}
+	}
+	if err := tw.Close(); err != nil {
+		t.Fatalf("tar close: %v", err)
+	}
+	if err := gz.Close(); err != nil {
+		t.Fatalf("gzip close: %v", err)
+	}
+	if buf.Len() > maxUploadBundleBytes {
+		t.Fatalf("fixture compressed to %d bytes; it must fit the request cap", buf.Len())
+	}
+	if _, err := extractUploadArchive(buf.Bytes()); err == nil || !strings.Contains(err.Error(), "total limit") {
+		t.Fatalf("err = %v, want the total decompressed-size limit error", err)
+	}
+}
+
+// TestUploadBundle_RejectsArchiveOverTotalExtractedBudget checks that an
+// otherwise valid bundle whose archive expands past the total budget is
+// refused with 400 and nothing is stored.
+func TestUploadBundle_RejectsArchiveOverTotalExtractedBudget(t *testing.T) {
+	k := fakeKubeClient(newUploadSource("uploads"))
+	r := mountModulesRouter(k)
+
+	files := validBundleFiles()
+	for name, content := range overBudgetPadding("factorio/extra/") {
+		files[name] = content
+	}
+	body := bundleTarGz(t, files)
+	if len(body) > maxUploadBundleBytes {
+		t.Fatalf("fixture compressed to %d bytes; it must fit the request cap", len(body))
+	}
+
+	rr := doBytes(t, r, "POST", "/modules/sources/uploads/upload", body)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("got %d %s, want 400", rr.Code, rr.Body)
+	}
+	cms, err := k.Typed.CoreV1().ConfigMaps("gameplane-system").List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		t.Fatalf("list configmaps: %v", err)
+	}
+	if len(cms.Items) != 0 {
+		t.Fatalf("rejected upload stored %d configmaps", len(cms.Items))
+	}
+}
+
+// TestBudgetReader_ExactLimitEndsInEOF checks that a stream of exactly the
+// limit reads through to its own io.EOF, even in small chunks.
+func TestBudgetReader_ExactLimitEndsInEOF(t *testing.T) {
+	br := newBudgetReader(bytes.NewReader(make([]byte, 10)), 10)
+	buf := make([]byte, 4)
+	total := 0
+	for {
+		n, err := br.Read(buf)
+		total += n
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatalf("read after %d bytes: %v", total, err)
+		}
+	}
+	if total != 10 {
+		t.Fatalf("read %d bytes, want 10", total)
+	}
+}
+
+// TestBudgetReader_OverLimitFails checks that one byte past the limit is
+// refused with the budget error, and stays refused.
+func TestBudgetReader_OverLimitFails(t *testing.T) {
+	br := newBudgetReader(bytes.NewReader(make([]byte, 11)), 10)
+	_, err := io.ReadAll(br)
+	if !errors.Is(err, errUploadTooLarge) || !strings.Contains(err.Error(), "total limit") {
+		t.Fatalf("err = %v, want the total limit budget error", err)
+	}
+	if _, err := br.Read(make([]byte, 1)); !errors.Is(err, errUploadTooLarge) {
+		t.Fatalf("read after the limit: err = %v, want the budget error", err)
+	}
 }

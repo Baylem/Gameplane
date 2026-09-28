@@ -9,10 +9,12 @@
 // token before calling Search/Versions. Installing a chosen mod is NOT done
 // here — the dashboard hands the returned File.DownloadURL to the existing
 // agent install path, which re-checks the host allowlist and SSRF guard.
-// Search itself only ever GETs fixed, admin-trusted hostnames
+// Search itself only ever GETs fixed provider hostnames
 // (api.modrinth.com, thunderstore.io, api.steampowered.com,
-// api.nexusmods.com, api.spiget.org, api.github.com, umod.org), so it
-// carries no per-request SSRF guard of its own.
+// api.nexusmods.com, api.spiget.org, api.github.com, umod.org). Every
+// engine shares one HTTP client that dials through netguard.IsPublic, so a
+// fetch, redirects included, only ever connects to a globally routable
+// address and never goes through a proxy from the pod environment.
 //
 // Two providers (steam, nexus) never populate Version.Files: Steam Workshop
 // content is fetched by steamcmd running inside the game container (there is
@@ -36,6 +38,8 @@ import (
 	"time"
 
 	"golang.org/x/sync/singleflight"
+
+	"github.com/ValgulNecron/gameplane/netguard"
 )
 
 // Project is one search hit, normalized across providers.
@@ -205,8 +209,12 @@ type Set struct {
 // (Modrinth asks callers to identify themselves). keyFunc provides API keys
 // for providers that need them (curseforge, steam, nexus all require their
 // own key). Keys are resolved lazily per request and cached with a TTL.
+//
+// Every engine, keyed or keyless, shares one client that dials through
+// netguard.IsPublic: a loopback, private, link-local or other non-public
+// destination is refused at dial time with netguard.ErrBlockedAddr.
 func NewSet(version string, keyFunc KeyFunc) *Set {
-	client := &http.Client{Timeout: 15 * time.Second}
+	client := netguard.HTTPClient(15*time.Second, netguard.IsPublic)
 	ua := "gameplane/" + version + " (+https://github.com/ValgulNecron/gameplane)"
 	return &Set{
 		modrinth:     newModrinth(client, ua),
@@ -427,7 +435,8 @@ const (
 )
 
 // httpGetJSON GETs rawURL and decodes a JSON body into v, capping the body
-// at maxBytes. Hosts are fixed/trusted, so there is no SSRF check here.
+// at maxBytes. The destination address is checked at dial time by the
+// client's netguard policy (see NewSet).
 func httpGetJSON(ctx context.Context, client *http.Client, userAgent, rawURL string, v any, maxBytes int64) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
