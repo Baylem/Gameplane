@@ -479,6 +479,7 @@ func (r *RestoreReconciler) planOwnedRefCopies(
 				OrigName: ref.Name,
 				CopyName: copyName,
 			})
+			seen[key] = true
 		}
 	}
 
@@ -518,17 +519,6 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 	for _, cp := range copies {
 		switch cp.Kind {
 		case secretRefKind:
-			src := &corev1.Secret{}
-			if err := r.Get(ctx, types.NamespacedName{Name: cp.OrigName, Namespace: orig.Namespace}, src); err != nil {
-				return fmt.Errorf("read source Secret %q: %w", cp.OrigName, err)
-			}
-			// Re-verify ownership at copy time: planning may have run a
-			// pass ago, and the named Secret could have been replaced with
-			// an unowned object at the same name since.
-			if !isServerOwnedSecret(src, orig) {
-				return fmt.Errorf("source Secret %q is not owned by original server %q: %w", cp.OrigName, orig.Name, errRefNotOwned)
-			}
-
 			dst := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: cp.CopyName, Namespace: restored.Namespace},
 			}
@@ -552,7 +542,21 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 					// Owned copy exists and verified live, skip update.
 					return nil
 				}
-				// New copy: inherit data from source
+				// New copy only: read the source now. An existing copy that
+				// passed the live check above is accepted without consulting
+				// the source, so a later edit, deletion or replacement of the
+				// original's Secret cannot stall or fail a restore whose copy
+				// is already made.
+				src := &corev1.Secret{}
+				if err := r.Get(ctx, types.NamespacedName{Name: cp.OrigName, Namespace: orig.Namespace}, src); err != nil {
+					return fmt.Errorf("read source Secret %q: %w", cp.OrigName, err)
+				}
+				// Re-verify ownership at copy time: planning may have run a
+				// pass ago, and the named Secret could have been replaced with
+				// an unowned object at the same name since.
+				if !isServerOwnedSecret(src, orig) {
+					return fmt.Errorf("source Secret %q is not owned by original server %q: %w", cp.OrigName, orig.Name, errRefNotOwned)
+				}
 				dst.Type = src.Type
 				dst.Data = src.Data
 				return controllerutil.SetControllerReference(restored, dst, r.Scheme)
@@ -562,17 +566,6 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 			}
 
 		case configMapRefKind:
-			src := &corev1.ConfigMap{}
-			if err := r.Get(ctx, types.NamespacedName{Name: cp.OrigName, Namespace: orig.Namespace}, src); err != nil {
-				return fmt.Errorf("read source ConfigMap %q: %w", cp.OrigName, err)
-			}
-			// Re-verify ownership at copy time: planning may have run a
-			// pass ago, and the named ConfigMap could have been replaced
-			// with an unowned object at the same name since.
-			if !isServerOwnedConfigMap(src, orig) {
-				return fmt.Errorf("source ConfigMap %q is not owned by original server %q: %w", cp.OrigName, orig.Name, errRefNotOwned)
-			}
-
 			dst := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{Name: cp.CopyName, Namespace: restored.Namespace},
 			}
@@ -596,7 +589,17 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 					// Owned copy exists and verified live, skip update.
 					return nil
 				}
-				// New copy: inherit data from source
+				// New copy only: read the source now (see the Secret case).
+				src := &corev1.ConfigMap{}
+				if err := r.Get(ctx, types.NamespacedName{Name: cp.OrigName, Namespace: orig.Namespace}, src); err != nil {
+					return fmt.Errorf("read source ConfigMap %q: %w", cp.OrigName, err)
+				}
+				// Re-verify ownership at copy time: planning may have run a
+				// pass ago, and the named ConfigMap could have been replaced
+				// with an unowned object at the same name since.
+				if !isServerOwnedConfigMap(src, orig) {
+					return fmt.Errorf("source ConfigMap %q is not owned by original server %q: %w", cp.OrigName, orig.Name, errRefNotOwned)
+				}
 				dst.Data = src.Data
 				dst.BinaryData = src.BinaryData
 				return controllerutil.SetControllerReference(restored, dst, r.Scheme)
@@ -608,21 +611,6 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 	}
 
 	return nil
-}
-
-// ensureRestoredRefs is called on every reconcile pass when the restored server
-// exists. It re-plans and creates any missing reference copies. It never
-// writes the restored GameServer itself: its references were rewritten
-// before Create (rewriteRefs), so a stale cache read of the just-created
-// server cannot turn into a failed Restore.
-func (r *RestoreReconciler) ensureRestoredRefs(
-	ctx context.Context, orig, restored *gameplanev1alpha1.GameServer,
-) error {
-	copies, err := r.planOwnedRefCopies(ctx, orig, restored)
-	if err != nil {
-		return err
-	}
-	return r.ensureOwnedRefCopies(ctx, orig, restored, copies)
 }
 
 // rewriteRefs points the spec's env Secret/ConfigMap references and the
