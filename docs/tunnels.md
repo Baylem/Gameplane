@@ -151,6 +151,13 @@ provided (the Secret does not exist yet). Use one of these instead:
   (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
   and `uid`) so the operator accepts it.
 
+To repair a Secret that is already refused: the dashboard and API always write
+`<server>-tunnel-auth`, so they fix a refused Secret with any other name by
+creating an owned one and pointing `credentialsSecretRef` at it. If the refused
+Secret is itself named `<server>-tunnel-auth`, they answer `409 Conflict`
+instead — add the ownerReference to it, or delete it and save the credential
+again.
+
 Players connect to `frp.example.com:25565`.
 
 ### Tailscale
@@ -213,6 +220,13 @@ provided (the Secret does not exist yet). Use one of these instead:
   (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
   and `uid`) so the operator accepts it.
 
+To repair a Secret that is already refused: the dashboard and API always write
+`<server>-tunnel-auth`, so they fix a refused Secret with any other name by
+creating an owned one and pointing `credentialsSecretRef` at it. If the refused
+Secret is itself named `<server>-tunnel-auth`, they answer `409 Conflict`
+instead — add the ownerReference to it, or delete it and save the credential
+again.
+
 ### playit.gg
 
 #### 1. Sign up and get a secret key
@@ -258,6 +272,13 @@ provided (the Secret does not exist yet). Use one of these instead:
   then set `metadata.ownerReferences` to point at the GameServer
   (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
   and `uid`) so the operator accepts it.
+
+To repair a Secret that is already refused: the dashboard and API always write
+`<server>-tunnel-auth`, so they fix a refused Secret with any other name by
+creating an owned one and pointing `credentialsSecretRef` at it. If the refused
+Secret is itself named `<server>-tunnel-auth`, they answer `409 Conflict`
+instead — add the ownerReference to it, or delete it and save the credential
+again.
 
 Wait for the pod to reach `Running` state. Once the tunnel pod connects and
 reports the assigned address, it appears in `status.endpoints`. The address
@@ -372,7 +393,11 @@ If you want to avoid reconnects on wake, consider:
    to this GameServer, the operator refuses it — check `kubectl get gameserver
    <name> -o jsonpath='{.status.conditions}'` for a `TunnelReady=False/TunnelCredentialRefused`
    entry naming the Secret. While the Secret is refused, the tunnel Deployment
-   is scaled to zero with no credential mounted.
+   is scaled to zero with no credential mounted. A refused pass stops the
+   reconcile early, so the condition's own `observedGeneration` is current
+   while `status.observedGeneration` may still lag: automation should read
+   this condition's `observedGeneration` rather than wait for the top-level
+   one to catch up.
 
 4. **Check NetworkPolicy.**
    By default, `networkPolicies.enabled=true` applies a default-deny-egress

@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -170,12 +171,15 @@ func (r *GameServerReconciler) reconcileTunnel(
 	want bool,
 ) error {
 	if !want {
-		return r.deleteTunnel(ctx, gs.Namespace, gs.Name)
+		if err := r.deleteTunnel(ctx, gs.Namespace, gs.Name); err != nil {
+			return err
+		}
+		return r.clearTunnelCredentialRefused(ctx, gs)
 	}
 
 	tunnel := gs.Spec.Networking.Tunnel
 	if tunnel == nil {
-		return nil
+		return r.clearTunnelCredentialRefused(ctx, gs)
 	}
 
 	// Create or update the tunnel Deployment.
@@ -402,7 +406,10 @@ func (r *GameServerReconciler) reconcileTunnel(
 		return controllerutil.SetControllerReference(gs, dep, r.Scheme)
 	})
 	if refusedSecret == "" {
-		return err
+		if err != nil {
+			return err
+		}
+		return r.clearTunnelCredentialRefused(ctx, gs)
 	}
 	refusal := fmt.Errorf("tunnel credentials secret %q is not owned by GameServer %s/%s", refusedSecret, gs.Namespace, gs.Name)
 	if err != nil {
@@ -423,21 +430,47 @@ func (r *GameServerReconciler) reconcileTunnel(
 // gameserver_status.go) never runs this pass — this is the only place the
 // condition gets written for a refused pass.
 //
-// It clears/flips itself the ordinary way: once the credential becomes
-// acceptable, reconcileTunnel no longer errors, Reconcile reaches
-// reconcileStatus, and computeTunnelConditions overwrites this TunnelReady
-// entry with the deployment's real readiness (Ready, DeploymentNotReady, etc).
+// Once the credential becomes acceptable (or the tunnel is no longer wanted),
+// reconcileTunnel removes this condition itself via clearTunnelCredentialRefused
+// before returning success, so it cannot outlive the refusal when a later step
+// (NetworkPolicy, Service, StatefulSet) fails before reconcileStatus runs;
+// reconcileStatus's computeTunnelConditions then writes the real TunnelReady.
 func (r *GameServerReconciler) setTunnelCredentialRefused(ctx context.Context, gs *gameplanev1alpha1.GameServer, secretName string) error {
+	// The dashboard and the credentials API always write <server>-tunnel-auth
+	// and answer 409 when a Secret of that name exists without this
+	// GameServer's ownerReference, so for that name they cannot repair the
+	// refusal until the Secret is fixed or deleted.
+	remedy := "save the credential via the dashboard or the PUT /servers/{name}:tunnel-credentials API, or add an ownerReference to this GameServer to the Secret"
+	if secretName == gs.Name+"-tunnel-auth" {
+		remedy = "add an ownerReference to this GameServer to the Secret, or delete the Secret and save the credential again via the dashboard or the PUT /servers/{name}:tunnel-credentials API"
+	}
 	base := gs.DeepCopy()
 	gs.Status.Conditions = upsertCondition(gs.Status.Conditions, metav1.Condition{
 		Type:               "TunnelReady",
 		Status:             metav1.ConditionFalse,
 		Reason:             "TunnelCredentialRefused",
-		Message:            fmt.Sprintf("tunnel credentials secret %q is not owned by this GameServer (no ownerReference matching its name and UID); create it via the dashboard, the PUT /servers/{name}:tunnel-credentials API, or with an ownerReference to this GameServer", secretName),
+		Message:            fmt.Sprintf("tunnel credentials secret %q is not owned by this GameServer (no ownerReference matching its name and UID); %s", secretName, remedy),
 		ObservedGeneration: gs.Generation,
 	})
 	if err := r.Status().Patch(ctx, gs, client.MergeFrom(base)); err != nil {
 		return fmt.Errorf("patch TunnelReady condition for %s/%s: %w", gs.Namespace, gs.Name, err)
+	}
+	return nil
+}
+
+// clearTunnelCredentialRefused removes a TunnelReady condition left by
+// setTunnelCredentialRefused, and is a no-op otherwise. reconcileTunnel calls
+// it on every successful pass so the refusal does not linger on status when a
+// later reconcile step fails before reconcileStatus recomputes TunnelReady.
+func (r *GameServerReconciler) clearTunnelCredentialRefused(ctx context.Context, gs *gameplanev1alpha1.GameServer) error {
+	c := meta.FindStatusCondition(gs.Status.Conditions, "TunnelReady")
+	if c == nil || c.Reason != "TunnelCredentialRefused" {
+		return nil
+	}
+	base := gs.DeepCopy()
+	gs.Status.Conditions = removeCondition(gs.Status.Conditions, "TunnelReady")
+	if err := r.Status().Patch(ctx, gs, client.MergeFrom(base)); err != nil {
+		return fmt.Errorf("clear TunnelCredentialRefused condition for %s/%s: %w", gs.Namespace, gs.Name, err)
 	}
 	return nil
 }

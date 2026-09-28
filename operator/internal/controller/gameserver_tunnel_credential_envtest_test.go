@@ -132,6 +132,13 @@ func TestReconcileTunnel_CredentialSecretWithoutOwnerRefRefused(t *testing.T) {
 	if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&c), &cfinal); err != nil {
 		t.Fatalf("final fetch: %v", err)
 	}
+	// reconcileTunnel itself must drop the persisted refusal, so it cannot
+	// outlive the fix when a later step fails before reconcileStatus runs.
+	for _, cond := range cfinal.Status.Conditions {
+		if cond.Type == "TunnelReady" && cond.Reason == "TunnelCredentialRefused" {
+			t.Fatalf("persisted TunnelReady still TunnelCredentialRefused after credential fix: %s", cond.Message)
+		}
+	}
 	conds := computeTunnelConditions(&cfinal, tunnelPlan{wantTunnel: true}, nil)
 	var found bool
 	for _, cond := range conds {
