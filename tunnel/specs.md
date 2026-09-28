@@ -19,7 +19,7 @@ Relay client supervisor that configures and supervises a third-party tunnel proc
 7. On unrecoverable failure (exit code 126/127 or "permission denied" error), exit immediately.
 8. Forward SIGTERM for graceful shutdown, waiting up to 10 seconds before SIGKILL.
 9. (Playit only) Poll playitd's IPC control socket for the assigned relay addresses and patch them into the GameServer's `status.tunnelEndpoints`, which the operator validates and merges into `status.endpoints` (see "Playit Address Reporting").
-10. (Tailscale only, when `TAILSCALE_TAGS` holds valid tags) Register the device once with `tailscale up --advertise-tags` over tailscaled's socket, requesting the tags at registration. If the tailnet refuses them, log the error and register untagged (see "Tailscale Tag Application").
+10. (Tailscale only, when `TAILSCALE_TAGS` holds valid tags) Register the device once with `tailscale up --advertise-tags` over tailscaled's socket, requesting the tags at registration. If the tailnet refuses them, log the error; only if the backend is not `Running` afterwards, attempt one untagged registration, which can also fail and is then logged (see "Tailscale Tag Application").
 
 ## Non-goals / boundaries
 

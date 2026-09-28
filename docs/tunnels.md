@@ -192,8 +192,10 @@ tailnet.
 > changing the tags of a registered device needs a fresh login (see
 > `tunnel/specs.md`). The tailnet's ACL must grant `tagOwners` for the
 > requested tags to the auth key's owner. If it doesn't, Tailscale refuses
-> the request, the tunnel pod logs the error, and the tunnel registers and
-> runs untagged. Configure `tagOwners` in your tailnet's ACL before setting
+> the request and the tunnel pod logs the error. If the device is not
+> running afterwards, the pod tries once more without tags. That untagged
+> attempt can fail too (for example with a single-use auth key), in which
+> case the error is logged and the device stays logged out. Configure `tagOwners` in your tailnet's ACL before setting
 > `tags` here. Each tag is `tag:<name>` or a bare `<name>`, where the name
 > starts with a letter and holds only letters, digits and `-`. If any tag is
 > invalid, the whole list is logged and ignored and the device registers
