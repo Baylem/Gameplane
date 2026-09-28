@@ -2,6 +2,8 @@
 # Purpose: Compare two cluster snapshots and report changes
 # Usage: snapshot-diff.sh <before-dir> <after-dir>
 # Exit codes: 0 = no mismatches, 1 = mismatches found, 2 = usage error, missing files, or incomplete snapshots
+# Env: HELM_ALLOWED_PATHS = space-separated dotted Helm value paths excluded from the
+#      helm-values.json comparison (default: image.registry image.tag operator.agentImage operator.sentinelImage)
 set -euo pipefail
 
 : "${KUBECONFIG:=$HOME/kubelab.yaml}"; export KUBECONFIG
@@ -29,7 +31,7 @@ fi
 
 mismatch_found=0
 
-# Files to compare (excluding images.json, helm-list.json, helm-values.json)
+# Files to compare (images.json and helm-list.json are skipped; helm-values.json is compared minus HELM_ALLOWED_PATHS below)
 declare -a CRD_KINDS=("gameservers" "gametemplates" "backups" "backupschedules" "restores" "modules" "modulesources" "networkcaptures" "clusters")
 
 compare_crd() {
@@ -132,6 +134,9 @@ if [[ -f "$BEFORE_DIR/pvcs.json" ]] && [[ -f "$AFTER_DIR/pvcs.json" ]]; then
       if [[ "$before_uid" != "$after_uid" ]]; then
         echo "PVC UID MISMATCH: $key ($before_uid → $after_uid)"
         mismatch_found=1
+      elif [[ "$before_line" != "$after_line" ]]; then
+        echo "PVC STATE MISMATCH: $before_line → $after_line"
+        mismatch_found=1
       fi
     fi
   done <<< "$pvcs_before"
@@ -145,6 +150,9 @@ if [[ -f "$BEFORE_DIR/pvcs.json" ]] && [[ -f "$AFTER_DIR/pvcs.json" ]]; then
       mismatch_found=1
     fi
   done <<< "$pvcs_after"
+else
+  echo "ERROR: pvcs.json missing from before-dir or after-dir (incomplete snapshot)" >&2
+  exit 2
 fi
 
 # Compare nodes
@@ -175,6 +183,9 @@ if [[ -f "$BEFORE_DIR/nodes.json" ]] && [[ -f "$AFTER_DIR/nodes.json" ]]; then
       if [[ "$before_uid" != "$after_uid" ]]; then
         echo "NODE UID MISMATCH: $name ($before_uid → $after_uid)"
         mismatch_found=1
+      elif [[ "$before_line" != "$after_line" ]]; then
+        echo "NODE STATE MISMATCH: $before_line → $after_line"
+        mismatch_found=1
       fi
     fi
   done <<< "$nodes_before"
@@ -188,6 +199,9 @@ if [[ -f "$BEFORE_DIR/nodes.json" ]] && [[ -f "$AFTER_DIR/nodes.json" ]]; then
       mismatch_found=1
     fi
   done <<< "$nodes_after"
+else
+  echo "ERROR: nodes.json missing from before-dir or after-dir (incomplete snapshot)" >&2
+  exit 2
 fi
 
 # Skip images.json
@@ -196,64 +210,31 @@ echo "NOTE: images.json skipped (Gameplane Deployments/StatefulSets/DaemonSets c
 # Skip helm-list.json
 echo "NOTE: helm-list.json skipped (Gameplane release changes on purpose)"
 
-# Compare helm-values.json with allowlist of permitted changes
-if [[ -f "$BEFORE_DIR/helm-values.json" ]] && [[ -f "$AFTER_DIR/helm-values.json" ]]; then
-  # Allowlist of keys that are permitted to change during procedures
-  # These are the only Helm values that procedures are documented to modify
-  declare -a ALLOWED_HELM_CHANGES=(
-    "ingress"
-    "networkPolicies"
-    "agent"
-    "api"
-  )
-
-  # Create jq filter to extract only allowlisted keys
-  filter="{$(for key in "${ALLOWED_HELM_CHANGES[@]}"; do echo "\"$key\": .$key"; done | paste -sd, -)}"
-
-  # Extract only allowlisted paths and compare
-  helm_before=$(jq "$filter" "$BEFORE_DIR/helm-values.json" 2>/dev/null || echo "{}")
-  helm_after=$(jq "$filter" "$AFTER_DIR/helm-values.json" 2>/dev/null || echo "{}")
-
-  # Simple diff: if the allowlisted values differ, flag it
-  if [[ "$helm_before" != "$helm_after" ]]; then
-    # Check if any NON-allowlisted keys differ
-    all_before=$(jq '.' "$BEFORE_DIR/helm-values.json")
-    all_after=$(jq '.' "$AFTER_DIR/helm-values.json")
-
-    # Extract keys that are NOT in the allowlist
-    other_keys=$(jq -r 'keys | .[]' <<< "$all_before" | while read key; do
-      skip=0
-      for allowed in "${ALLOWED_HELM_CHANGES[@]}"; do
-        if [[ "$key" == "$allowed" ]]; then
-          skip=1
-          break
-        fi
-      done
-      if [[ $skip -eq 0 ]]; then
-        echo "$key"
-      fi
-    done)
-
-    # Check if non-allowlisted keys changed
-    unexpected_change=0
-    while IFS= read -r key; do
-      [[ -z "$key" ]] && continue
-      before_val=$(jq ".\"$key\"" <<< "$all_before" 2>/dev/null)
-      after_val=$(jq ".\"$key\"" <<< "$all_after" 2>/dev/null)
-      if [[ "$before_val" != "$after_val" ]]; then
-        echo "HELM VALUE MISMATCH: $key changed unexpectedly"
-        mismatch_found=1
-        unexpected_change=1
-      fi
-    done <<< "$other_keys"
-
-    if [[ $unexpected_change -eq 0 ]]; then
-      # Only allowlisted keys changed, which is acceptable
-      echo "NOTE: helm-values.json changed only in permitted keys (ingress, networkPolicies, agent, api)"
-    fi
-  fi
+# Compare helm-values.json (user-supplied values, secrets already redacted by
+# snapshot.sh). Every value must match except the dotted paths in
+# HELM_ALLOWED_PATHS: the round's explicitly intended overrides, recorded in
+# rounds.md (contracts/rc-deploy.md §2: "helm get values minus the listed
+# overrides must equal the baseline"). The default is the image overrides of
+# the move from the private side-loaded tag to public GHCR; add any other
+# override the round records (e.g. capture.enabled, OD-021 item 17). A toggle
+# that --set a key back to its chart default still shows up here, because
+# user-supplied values keep the key; list it only after confirming with
+# `helm get values -a` that its effective value equals the baseline's.
+if [[ ! -f "$BEFORE_DIR/helm-values.json" ]] || [[ ! -f "$AFTER_DIR/helm-values.json" ]]; then
+  echo "ERROR: helm-values.json missing from before-dir or after-dir (incomplete snapshot)" >&2
+  exit 2
+fi
+HELM_ALLOWED_PATHS="${HELM_ALLOWED_PATHS:-image.registry image.tag operator.agentImage operator.sentinelImage}"
+read -r -a allowed_paths <<< "$HELM_ALLOWED_PATHS"
+del_paths=$(printf '%s\n' "${allowed_paths[@]}" | jq -R 'select(length > 0) | split(".")' | jq -s -c '.')
+helm_before=$(jq -S --argjson p "$del_paths" 'delpaths($p)' "$BEFORE_DIR/helm-values.json")
+helm_after=$(jq -S --argjson p "$del_paths" 'delpaths($p)' "$AFTER_DIR/helm-values.json")
+if [[ "$helm_before" != "$helm_after" ]]; then
+  echo "HELM VALUES MISMATCH (outside HELM_ALLOWED_PATHS: $HELM_ALLOWED_PATHS):"
+  diff <(echo "$helm_before") <(echo "$helm_after") || true
+  mismatch_found=1
 else
-  echo "NOTE: helm-values.json skipped (one or both files missing)"
+  echo "NOTE: helm-values.json matches outside HELM_ALLOWED_PATHS ($HELM_ALLOWED_PATHS)"
 fi
 
 if [[ $mismatch_found -eq 1 ]]; then

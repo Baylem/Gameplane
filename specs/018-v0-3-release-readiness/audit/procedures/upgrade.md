@@ -75,14 +75,15 @@ Otherwise this section only modifies the existing `gameplane` Helm release.
    If result is `006_share_links.sql` or earlier, go to step 4 (upgrade in place).
    If result is `007_*` or later, go to step 3 (reinstall).
 
-3. **Reinstall at beta.8** (if ahead). After `--keep-history`, the release's last revision has status `uninstalled`, not `deployed`. A plain `helm upgrade` fails on that with `has no deployed releases` (it only ever looks for a `deployed` revision). `helm upgrade --install` takes the install branch instead once it sees the last revision is `uninstalled`: it builds an install action, forces `Replace = true` (the old `--replace` behavior, now automatic) and runs the install — in both Helm 4 (`pkg/cmd/upgrade.go` lines 129-166, `main`) and Helm v3.19.0 (`cmd/helm/upgrade.go`). That install path only ever receives values from `-f`/`--set`; `--reuse-values` is a flag of the *upgrade* action and is never passed through to the install call, so it is silently ignored on this branch. The values captured below are therefore required — not an off-git fallback — and must be fed into the command with `-f`. **Note (F-213):** Before uninstalling, delete the `gameplane-api-data` PVC so the reinstall starts from a genuinely fresh beta.8 database (or annotate it `helm.sh/resource-policy: keep` and rename it out of the way if the pre-upgrade data must be preserved for later inspection):
+3. **Reinstall at beta.8** (if ahead). After `--keep-history`, the release's last revision has status `uninstalled`, not `deployed`. A plain `helm upgrade` fails on that with `has no deployed releases` (it only ever looks for a `deployed` revision). `helm upgrade --install` takes the install branch instead once it sees the last revision is `uninstalled`: it builds an install action, forces `Replace = true` (the old `--replace` behavior, now automatic) and runs the install — in both Helm 4 (`pkg/cmd/upgrade.go` lines 129-166, `main`) and Helm v3.19.0 (`cmd/helm/upgrade.go`). That install path only ever receives values from `-f`/`--set`; `--reuse-values` is a flag of the *upgrade* action and is never passed through to the install call, so it is silently ignored on this branch. The values captured below are therefore required — not an off-git fallback — and must be fed into the command with `-f`. **Note (F-213):** The chart annotates `gameplane-api-data` with `helm.sh/resource-policy: keep` (`charts/gameplane/templates/api.yaml`), so `helm uninstall` leaves it behind and the reinstall would mount the old 011-level database. Delete it after the uninstall, once the API pod is gone. Deleting it earlier, while the pod still mounts it, blocks on the `kubernetes.io/pvc-protection` finalizer. The real data is already saved off-git as `upg-real.db` (step 1), which restore-real-db puts back:
    ```sh
-   kubectl delete pvc -n gameplane-system gameplane-api-data
    helm get values gameplane -n gameplane-system -o yaml > ~/gameplane-audit-018/gameplane-values-before-uninstall.yaml
    
    helm uninstall gameplane -n gameplane-system --keep-history
    # Wait for API pod to terminate
    kubectl wait --for=delete pod -l app.kubernetes.io/name=gameplane-api -n gameplane-system --timeout=60s || true
+   # F-213: the kept PVC still holds the old database; delete it now that no pod mounts it
+   kubectl delete pvc -n gameplane-system gameplane-api-data --timeout=120s
    
    helm upgrade gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
      --version 0.2.0-beta.8 \
@@ -606,7 +607,7 @@ Restores the pre-upgrade snapshot that was taken at the beginning of baseline-be
 
 **Cleanup**
 
-- Database snapshot can now be deleted: `rm ~/gameplane-audit-018/db-snapshots/upg-real.db`
+- Database snapshots can now be deleted: `rm ~/gameplane-audit-018/db-snapshots/upg-real.db ~/gameplane-audit-018/db-snapshots/upg-seeded.db`
 - `audit018-upg` GameServer and admin account are cleaned up by the next test round or by audit cleanup
 
 **Automatable?**

@@ -1,6 +1,6 @@
 # Procedures: HELM
 
-Shared conventions: [conventions.md](conventions.md).
+Shared conventions: [conventions.md](conventions.md). Every live `helm upgrade gameplane charts/gameplane …` below follows its **Chart source for live Helm toggles (FR-018)** rule: once an RC is deployed, `charts/gameplane` means the pulled RC chart, never this checkout's `0.2.0-beta.8` chart.
 
 ### oidc-authentication
 
@@ -247,15 +247,15 @@ Shared conventions: [conventions.md](conventions.md).
 **Resources created:** none (policies are defined in chart; test may create audit018-game-egress-test GameServer).
 
 **Steps:**
-0. Record the current gameEgress.enabled setting: `helm get values gameplane -n gameplane-system -o json | jq -r '.networkPolicies.gameEgress.enabled // "true"' > /tmp/audit018-gameegressenabled-before.txt` (default is true if not explicitly set).
+0. Record the current gameEgress.enabled setting: `helm get values gameplane -n gameplane-system -a -o json | jq -r '.networkPolicies.gameEgress.enabled' > /tmp/audit018-gameegressenabled-before.txt`. `-a` returns the computed values, chart defaults included, so this is the effective value even when the release never overrode it (`true` on kubelab). Do not add jq's `// "true"` fallback: `//` also replaces an explicit `false`.
 1. Ensure networkPolicies.enabled=true (run network-policies-enforcement first if needed).
 2. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'networkPolicies.gameEgress.enabled=true'` and wait for Helm to apply.
 3. Verify NetworkPolicy for game egress exists: `kubectl get networkpolicies -n gameplane-games | grep -i egress` or inspect the policy YAML to confirm it allows only TCP 80/443 and blocks RFC1918 ranges.
 4. Create a test GameServer in gameplane-games and start it, then attempt to download an asset from the public internet (should succeed) and from an internal service (should fail): simulate by running a curl command inside the game pod.
 5. Revert: restore the pre-test value recorded in step 0: `EGRESS_VAL=$(cat /tmp/audit018-gameegressenabled-before.txt) && helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set "networkPolicies.gameEgress.enabled=$EGRESS_VAL"`.
-6. Verify game pod can now reach internal services.
+6. Verify the egress policy matches the restored setting. With kubelab's recorded `true`, `kubectl get networkpolicy allow-game-public-egress -n gameplane-games` still succeeds and the game pod still cannot reach internal services. Only a recorded `false` removes `allow-game-public-egress`, and that does not unrestrict the pod: `default-deny-egress` still applies.
 
-**Expected:** Game pods are restricted to TCP 80/443 egress to non-RFC1918 ranges when enabled; are unrestricted when disabled.
+**Expected:** Game pods are restricted to TCP 80/443 egress to non-RFC1918 ranges when enabled. When disabled, `allow-game-public-egress` is removed while `default-deny-egress` stays, so public downloads are blocked too (the `networkPolicies.gameEgress` comment in `charts/gameplane/values.yaml`); disabling never unrestricts game pods.
 
 **Cleanup:** Restore `networkPolicies.gameEgress.enabled` to the value recorded in step 0 — do **not** set it to `false`; see step 5. Delete test GameServer.
 
@@ -270,7 +270,7 @@ Shared conventions: [conventions.md](conventions.md).
 **Resources created:** none (test may create audit018-game-ingress-test GameServer).
 
 **Steps:**
-0. Record the current gameIngress.enabled setting: `helm get values gameplane -n gameplane-system -o json | jq -r '.networkPolicies.gameIngress.enabled // "true"' > /tmp/audit018-gameingressenabled-before.txt` (default is true if not explicitly set).
+0. Record the current gameIngress.enabled setting: `helm get values gameplane -n gameplane-system -a -o json | jq -r '.networkPolicies.gameIngress.enabled' > /tmp/audit018-gameingressenabled-before.txt`. `-a` includes chart defaults, so this is the effective value (`true` on kubelab). Do not add jq's `// "true"` fallback: `//` also replaces an explicit `false`.
 1. Ensure networkPolicies.enabled=true.
 2. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'networkPolicies.gameIngress.enabled=true'` and wait for Helm to apply.
 3. Verify NetworkPolicy for game ingress exists: `kubectl get networkpolicies -n gameplane-games | grep game-ingress`.
@@ -783,13 +783,13 @@ kubectl get svc gameplane-web -n gameplane-system 2>&1 | tee ~/Gameplane/specs/0
 **Resources created:** none (toggles the chart's fixed-name `gameplane` Ingress object, not an audit018-named object).
 
 **Steps:**
-0. Record the current ingress.enabled setting: `helm get values gameplane -n gameplane-system -o json | jq -r '.ingress.enabled // "true"' > /tmp/audit018-ingress-enabled-before.txt` (default is true).
+0. Record the current ingress.enabled setting: `helm get values gameplane -n gameplane-system -a -o json | jq -r '.ingress.enabled' > /tmp/audit018-ingress-enabled-before.txt`. `-a` includes chart defaults, so this is the effective value (`true` on kubelab). Do not add jq's `// "true"` fallback: `//` also replaces an explicit `false`.
 1. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'ingress.enabled=true'` and wait for Helm to apply.
 2. Verify Ingress object is created: `kubectl get ingress -n gameplane-system gameplane` (fixed object name; the Ingress carries no `app` label at all).
 3. Verify ingress routing rules: `kubectl get ingress -n gameplane-system -o yaml | grep -A5 'host: gameplane.local'` (or your configured host).
 4. Attempt to reach the dashboard via the configured host (e.g., `https://gameplane.local/`); expect success if ingress controller is present and routes are working.
 5. Revert: restore the pre-test value recorded in step 0: `INGRESS_VAL=$(cat /tmp/audit018-ingress-enabled-before.txt) && helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set "ingress.enabled=$INGRESS_VAL"` and verify Ingress state.
-6. Attempt to reach the dashboard via the same host; expect failure (no route, or 404).
+6. Attempt to reach the dashboard via the same host; expect the result to match the value restored in step 5. It is still reachable for kubelab's recorded `true`. Only a recorded `false` removes the `gameplane` Ingress and gives no route or 404.
 
 **Expected:** Ingress object is created when enabled; is removed when disabled. Routes are active and reachable when ingress is enabled (if ingress controller is present).
 
@@ -924,20 +924,24 @@ diff ~/gameplane-audit-018/db-snapshots/existing-claim-before.sql \
 # awk/sed pass, or open the raw diff and hand-redact any changed
 # `users`/`api_tokens`/`share_links` row. db-diff-raw.txt itself stays under
 # ~/gameplane-audit-018/ (off-git, per conventions.md) and must never be copied
-# into the evidence tree unredacted — only the hand-redacted result below is
-# written there, as db-diff.txt:
+# into the evidence tree unredacted. Redact an off-git copy first:
 cp ~/gameplane-audit-018/db-snapshots/db-diff-raw.txt \
+   ~/gameplane-audit-018/db-snapshots/db-diff-redacted.txt
+chmod 600 ~/gameplane-audit-018/db-snapshots/db-diff-raw.txt \
+   ~/gameplane-audit-018/db-snapshots/db-diff-redacted.txt
+# Now open ~/gameplane-audit-018/db-snapshots/db-diff-redacted.txt and
+# hand-redact (by column position, per the warning above) every changed
+# `users`/`api_tokens`/`share_links` row. Do not skip this if the diff is
+# non-empty. Only the reviewed, redacted copy enters the evidence tree:
+cp ~/gameplane-audit-018/db-snapshots/db-diff-redacted.txt \
    ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-023/db-diff.txt
-# Now open db-diff.txt and hand-redact (by column position, per the warning
-# above) any changed `users`/`api_tokens`/`share_links` row before committing —
-# do not skip this step if the diff is non-empty.
 cat ~/Gameplane/specs/018-v0-3-release-readiness/audit/evidence/INV-HELM-023/db-diff.txt
 ```
    (the identity/config table dumps, not the raw `.db` file, are saved as evidence — `users.pw_hash`, `api_tokens.token`, and `share_links.token_hash` are secret-bearing columns, so any changed row touching one of those three tables must be hand-redacted, per conventions.md's no-secrets rule, before `db-diff.txt` is committed; see the warning above — no single find/replace pattern can safely do this against real `.dump` output.) An empty diff (ignoring any hand-redaction) means the dumped tables are identical and the real database's identity/config data was untouched throughout the test.
 
 **Expected:** When existingClaim is set, the API pod mounts that PVC, and the original `gameplane-api-data` PVC (kept via step 2's annotation) is not deleted. When reverted to empty, Helm re-adopts and mounts that same original PVC again — no new PVC is created, and its data survives the whole test. The before/after dumps of `users`, `roles`, `role_permissions`, `user_role_bindings`, `oidc_links`, `api_tokens`, `config`, `share_links` and `user_preferences` are identical, proving no write reached those tables in the real database while `existingClaim` pointed at `audit018-api-storage`. (`sessions`/`audit_events` may differ; that is expected and acceptable.)
 
-**Cleanup:** Helm upgrade with existingClaim empty; delete the test PVC `audit018-api-storage`; delete `~/gameplane-audit-018/db-snapshots/existing-claim-{before,after}.sql` and `~/gameplane-audit-018/db-snapshots/db-diff-raw.txt` (off-git) once the diff is recorded and redacted. Leave the `helm.sh/resource-policy: keep` annotation from step 2 in place — removing it re-exposes the live database PVC to accidental pruning on a future helm upgrade/uninstall.
+**Cleanup:** Helm upgrade with existingClaim empty; delete the test PVC `audit018-api-storage`; delete `~/gameplane-audit-018/db-snapshots/existing-claim-{before,after}.sql`, `~/gameplane-audit-018/db-snapshots/db-diff-raw.txt` and `~/gameplane-audit-018/db-snapshots/db-diff-redacted.txt` (off-git) once the redacted diff is recorded. Leave the `helm.sh/resource-policy: keep` annotation from step 2 in place — removing it re-exposes the live database PVC to accidental pruning on a future helm upgrade/uninstall.
 
 **Automatable?** yes (bucket: operator or api-auth; PVC volume binding observation; must run alone, last in its bucket, for the same DB-swap reason as the manual run).
 
@@ -1008,14 +1012,15 @@ EOF
 **Resources created:** none (only changes image references in deployments).
 
 **Steps:**
+0. Record the current image registry before the test: `helm get values gameplane -n gameplane-system -a -o json | jq -r '.image.registry' > /tmp/audit018-imageregistry-before.txt`. `-a` includes the chart default, so this is the effective registry: `gameplane-test` on the pre-audit baseline, `ghcr.io/valgulnecron/gameplane` once an RC is deployed.
 1. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'image.registry=my-private-registry.example.com/gameplane'` and wait for pods to restart with the new image.
 2. Verify operator pod is running with the new image: `kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-operator -o jsonpath='{.items[0].spec.containers[0].image}'` (expect `my-private-registry.example.com/gameplane/operator:...`).
 3. Verify API pod is running with the new image: `kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-api -o jsonpath='{.items[0].spec.containers[0].image}'` (expect `my-private-registry.example.com/gameplane/api:...`).
-4. Revert to this cluster's baseline registry, not the chart's own default (kubelab-baseline.md: this install overrides `image.registry`): `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'image.registry=gameplane-test'` and wait for pods to restart.
+4. Revert to the registry recorded in step 0, not a hardcoded value: `REG=$(cat /tmp/audit018-imageregistry-before.txt) && helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set "image.registry=$REG"` and wait for pods to restart. Restoring the pre-audit `gameplane-test` during an RC round would put kubelab back on the private side-loaded images.
 
 **Expected:** Pods are pulled from the specified registry when image.registry is set. Pulling fails if the registry is not accessible (blocked candidate).
 
-**Cleanup:** Helm upgrade with `image.registry=gameplane-test` (this cluster's baseline; see kubelab-baseline.md, not the chart default).
+**Cleanup:** Restore `image.registry` to the value recorded in step 0 (step 4). Do **not** hardcode `gameplane-test` (kubelab-baseline.md's pre-audit value): once an RC is deployed, the recorded value is the RC's registry.
 
 **Automatable?** no (blocked candidate: requires access to alternative registry; alternative: verify Deployment image field is updated correctly in the generated manifests without actually pulling).
 
@@ -1037,7 +1042,7 @@ EOF
 
 **Expected:** Pods are pulled with the specified tag. Image pulling may fail if the tag does not exist in the registry.
 
-**Cleanup:** Helm upgrade with `image.tag=016` (this cluster's baseline; see kubelab-baseline.md, not the chart's appVersion).
+**Cleanup:** Restore `image.tag` to the value recorded in step 0 (step 5). Do **not** hardcode `016` (kubelab-baseline.md's pre-audit private tag): once an RC is deployed, the recorded value is the RC's tag.
 
 **Automatable?** yes (bucket: api-auth or web e2e; Deployment image field observation; does not require actual pulling if image already exists locally).
 

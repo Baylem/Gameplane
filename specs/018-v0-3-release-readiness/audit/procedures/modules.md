@@ -45,7 +45,9 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 3. **Protocol join.** Run test/e2e/internal/garrys-mod/app.go (e2e-probe:steam-a2s-udp) against service IP:27015. `kubectl port-forward` cannot carry the advertised UDP `game` port (`modules/garrys-mod/template.yaml`), and this category has no console to route through instead (`rcon.protocol: none`, `consoleMode` unset), so the probe has to run in-cluster and dial the Service directly — the same way `test/e2e/gameprobe_job.go`'s `RunGameProbe` runs every A2S-family probe as an in-cluster Job, never through port-forward.
    ```bash
    kubectl get svc -n gameplane-games audit018-garrys-mod -o jsonpath='{.spec.clusterIP}'
-   # Run the probe from inside the cluster (e.g. a short-lived Job/Pod) against <clusterIP>:27015 — not via kubectl port-forward.
+   # Run the probe from inside the cluster (a short-lived audit018- Job/Pod, deleted afterwards) against <clusterIP>:27015, not via kubectl port-forward.
+   # Run it outside gameplane-games (RunGameProbe uses the `default` namespace, test/e2e/gameprobe_job.go):
+   # the chart's default-deny-egress policy in gameplane-games allows only DNS egress to kube-system, so a probe pod there cannot reach UDP 27015.
    ```
 
 4. **Console command (none family).** This category has consoleMode=none, so no console is available. Skip this step.

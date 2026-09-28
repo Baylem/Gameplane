@@ -312,7 +312,7 @@ yes (api-rbac)
 ### templates-list
 
 **Preconditions**
-Authenticated as audit018-viewer. At least one template exists (e.g., `mc-fabric` is pre-existing and cluster-scoped).
+Authenticated as audit018-viewer. At least one template exists (e.g., `minecraft-java` is pre-existing and cluster-scoped; `mc-fabric` is a GameServer, not a template).
 
 **Resources created**
 none
@@ -321,7 +321,7 @@ none
 1. Login cost: 0 (reuse session). Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." $GP/templates | jq '.items | map(.metadata.name)'`
 
 **Expected**
-HTTP 200, JSON array of cluster-scoped GameTemplate objects.
+HTTP 200, JSON object with an `.items` field (array of cluster-scoped GameTemplate objects).
 
 **Cleanup**
 none
@@ -334,16 +334,16 @@ yes (api-rbac)
 ### templates-get
 
 **Preconditions**
-Authenticated as audit018-viewer. Template `mc-fabric` exists.
+Authenticated as audit018-viewer. Template `minecraft-java` exists (pre-existing; `mc-fabric` is a GameServer, not a template).
 
 **Resources created**
 none
 
 **Steps**
-1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." $GP/templates/mc-fabric | jq '.metadata.name'`
+1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." $GP/templates/minecraft-java | jq '.metadata.name'`
 
 **Expected**
-HTTP 200, GameTemplate object with name=`mc-fabric`.
+HTTP 200, GameTemplate object with name=`minecraft-java`.
 
 **Cleanup**
 none
@@ -365,7 +365,7 @@ none
 1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." "$GP/backups?namespace=gameplane-games" | jq '.items | length'`
 
 **Expected**
-HTTP 200, JSON array of GameBackup objects (may be empty).
+HTTP 200, JSON object with an `.items` field (array of Backup objects, may be empty).
 
 **Cleanup**
 none
@@ -387,7 +387,7 @@ none
 1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." "$GP/schedules?namespace=gameplane-games" | jq '.items | length'`
 
 **Expected**
-HTTP 200, JSON array (may be empty).
+HTTP 200, JSON object with an `.items` field (array of BackupSchedule objects, may be empty).
 
 **Cleanup**
 none
@@ -409,7 +409,7 @@ none
 1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." "$GP/restores?namespace=gameplane-games" | jq '.items | length'`
 
 **Expected**
-HTTP 200, JSON array (may be empty).
+HTTP 200, JSON object with an `.items` field (array of Restore objects, may be empty).
 
 **Cleanup**
 none
@@ -668,17 +668,17 @@ yes (api-auth)
 Authenticated as audit018-admin (captures:manage). Isolated audit server exists (`audit018-capture-test`, created from `minecraft-java` template). Network capture feature is enabled (--capture-enabled).
 
 **Resources created**
-Annotation on server; sidecar injection by operator.
+`audit018-capture-test` (GameServer in gameplane-games, if not pre-created); annotation on it; sidecar injection by operator.
 
 **Steps**
-1. Login cost: 0. Create audit server (if not pre-created): `kubectl apply -f - <<'EOF'` with `metadata.name: audit018-capture-test`, `spec.templateRef.name: minecraft-java`, then start it with `POST /servers/audit018-capture-test:start`.
+1. Login cost: 0. Create audit server (if not pre-created): `kubectl apply -f - <<'EOF'` with `metadata.name: audit018-capture-test`, `metadata.namespace: gameplane-games`, label `gameplane.io/audit: "018"`, `spec.templateRef.name: minecraft-java`, then start it with `POST /servers/audit018-capture-test:start`.
 2. Enable capture: `curl -X POST -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/audit018-capture-test:capture-enable?namespace=gameplane-games" | jq '.phase'`
 
 **Expected**
 HTTP 200, JSON response indicates capture feature is enabled on the server.
 
 **Cleanup**
-POST /servers/audit018-capture-test:capture-disable; then DELETE /servers/audit018-capture-test.
+After capture-start and capture-list have run against it: POST /servers/audit018-capture-test:capture-disable; then DELETE /servers/audit018-capture-test.
 
 **Automatable?**
 yes (api-rbac) if capture feature is enabled; else 501 Not Implemented.
@@ -688,20 +688,20 @@ yes (api-rbac) if capture feature is enabled; else 501 Not Implemented.
 ### capture-start
 
 **Preconditions**
-Authenticated as audit018-admin (captures:manage). Server is running and capture is enabled.
+Authenticated as audit018-admin (captures:manage). `audit018-capture-test` (from capture-enable) is running with capture enabled. Never target a pre-existing server such as `mc-fabric` (conventions.md: pre-existing objects are never written to).
 
 **Resources created**
-PacketCapture CRD in server's namespace; BPF sidecar container deployed.
+NetworkCapture object in the server's namespace (`networkcaptures.gameplane.local`); BPF sidecar container deployed.
 
 **Steps**
 1. Login cost: 0. Create request: `{"filter":"","maxDurationSeconds":60,"maxSizeBytes":104857600,"ttlSecondsAfterFinished":3600}`
-2. Run: `curl -X POST -H "Content-Type: application/json" -d @request.json -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/mc-fabric:capture-start?namespace=gameplane-games" | jq '.captureId'`
+2. Run: `curl -X POST -H "Content-Type: application/json" -d @request.json -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/audit018-capture-test:capture-start?namespace=gameplane-games" | jq '.captureId'`
 
 **Expected**
 HTTP 200, JSON with `captureId`, `phase`, `createdAt`. Capture begins collecting packets.
 
 **Cleanup**
-POST /servers/mc-fabric:capture-stop (to stop early) or wait for TTL.
+POST /servers/audit018-capture-test:capture-stop (to stop early) or wait for TTL.
 
 **Automatable?**
 deferred to T031 (network capture is optional, requires feature flag and operator support)
@@ -711,13 +711,13 @@ deferred to T031 (network capture is optional, requires feature flag and operato
 ### capture-list
 
 **Preconditions**
-Authenticated as audit018-admin (captures:manage). At least one capture exists for the server.
+Authenticated as audit018-admin (captures:manage). At least one capture exists for `audit018-capture-test` (from capture-start).
 
 **Resources created**
 none
 
 **Steps**
-1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/mc-fabric:captures?namespace=gameplane-games" | jq '.captures | length'`
+1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/audit018-capture-test:captures?namespace=gameplane-games" | jq '.captures | length'`
 
 **Expected**
 HTTP 200, JSON object with a `captures` array (plus `total`, `limit`, `offset`), not a bare `items` list.
@@ -1402,7 +1402,7 @@ none
 1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." $GP/clusters | jq '.items | length'`
 
 **Expected**
-HTTP 200, JSON array (may be empty or have local cluster info in single-cluster setup).
+HTTP 200, JSON object with an `.items` field (array; may be empty or hold the local cluster in a single-cluster setup).
 
 **Cleanup**
 none
@@ -1424,7 +1424,7 @@ none
 1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." $GP/modules | jq '.items | length'`
 
 **Expected**
-HTTP 200, JSON array of installed Module CRs.
+HTTP 200, JSON object with an `.items` field (array of installed Module CRs).
 
 **Cleanup**
 none
@@ -1446,7 +1446,7 @@ none
 1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." $GP/modules/sources | jq '.items | length'`
 
 **Expected**
-HTTP 200, JSON array of ModuleSource objects.
+HTTP 200, JSON object with an `.items` field (array of ModuleSource objects).
 
 **Cleanup**
 none
@@ -1468,7 +1468,7 @@ none
 1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." $GP/modules/catalog | jq '.items | length'`
 
 **Expected**
-HTTP 200, JSON array of available modules (merged across all sources).
+HTTP 200, JSON object with an `.items` field (array of available modules, merged across all sources).
 
 **Cleanup**
 none
@@ -1490,7 +1490,7 @@ none
 1. Login cost: 0. Run: `curl -s -b ~/gameplane-audit-018/session-viewer.txt -H "X-Gameplane-CSRF: ..." $GP/backup-destinations | jq '.items | length'`
 
 **Expected**
-HTTP 200, JSON array of restic backup destination Secrets (URL, hasPassword flag, no credentials).
+HTTP 200, JSON object with an `.items` field (array of restic backup destinations: URL, hasPassword flag, no credentials).
 
 **Cleanup**
 none
@@ -1613,20 +1613,20 @@ yes (api-rbac)
 ### files-upload
 
 **Preconditions**
-Authenticated as audit018-operator (servers:write, or owner). Server has agent.
+Authenticated as audit018-operator (servers:write, or owner). `audit018-server-from-template` exists and its agent is up. Never upload into a pre-existing server's data volume.
 
 **Resources created**
 Uploaded file in server's game data directory.
 
 **Steps**
 1. Login cost: 0. Create a test file: `echo 'test content' > /tmp/test-upload.txt`
-2. Run: `curl -s -o /dev/null -w '%{http_code}\n' -F "file=@/tmp/test-upload.txt" -b ~/gameplane-audit-018/session-operator.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/mc-fabric/files/upload?path=/uploads/"`
+2. Run: `curl -s -o /dev/null -w '%{http_code}\n' -F "file=@/tmp/test-upload.txt" -b ~/gameplane-audit-018/session-operator.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/audit018-server-from-template/files/upload?path=/uploads/"`
 
 **Expected**
 HTTP 204 (No Content), empty body — confirm the file landed via files-list on `/uploads/`.
 
 **Cleanup**
-DELETE /servers/mc-fabric/files/delete?path=/uploads/test-upload.txt
+DELETE /servers/audit018-server-from-template/files/delete?path=/uploads/test-upload.txt
 
 **Automatable?**
 yes (api-rbac)
@@ -1658,14 +1658,14 @@ yes (api-rbac)
 ### players-kick
 
 **Preconditions**
-Authenticated as audit018-operator (servers:write). Server running, player logged in (e.g., "Steve").
+Authenticated as audit018-operator (servers:write). `audit018-server-from-template` running with a player logged in (e.g., "Steve"). Never kick from a pre-existing server.
 
 **Resources created**
 none (player booted)
 
 **Steps**
 1. Login cost: 0. Create request: `{"name":"Steve","reason":"Test kick"}`
-2. Run: `curl -X POST -H "Content-Type: application/json" -d @request.json -b ~/gameplane-audit-018/session-operator.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/mc-fabric/players/kick" | jq`
+2. Run: `curl -X POST -H "Content-Type: application/json" -d @request.json -b ~/gameplane-audit-018/session-operator.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/audit018-server-from-template/players/kick" | jq`
 
 **Expected**
 HTTP 200, JSON response confirms kick.

@@ -20,7 +20,8 @@ echo "Checking for remaining audit018- resources..."
 
 # Get all the resource types from the spec
 # gameservers, gametemplates, backups, restores, backupschedules, networkcaptures, modulesources, modules (all with .gameplane.local),
-# pvcs (no group), deployments, services, secrets, pods, networkpolicies (no group)
+# pvcs (no group), deployments, services, secrets, pods, networkpolicies, configmaps, jobs,
+# serviceaccounts, roles, rolebindings (no group)
 
 # Construct fully qualified names
 declare -a GAMEPLANE_KINDS=(
@@ -41,6 +42,11 @@ declare -a NON_GROUPED_KINDS=(
   "secrets"
   "pods"
   "networkpolicies"
+  "configmaps"
+  "jobs"
+  "serviceaccounts"
+  "roles"
+  "rolebindings"
 )
 
 # Check Gameplane CRD objects
@@ -59,7 +65,7 @@ for kind in "${GAMEPLANE_KINDS[@]}"; do
   fi
 done
 
-# Check non-grouped resource types (deployments, services, secrets)
+# Check non-grouped resource types (NON_GROUPED_KINDS above)
 for kind in "${NON_GROUPED_KINDS[@]}"; do
   lines=$(kubectl get "$kind" -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.name | startswith("audit018-")) | "\(.metadata.namespace)/\(.kind)/\(.metadata.name)"')
   if [[ -n "$lines" ]]; then

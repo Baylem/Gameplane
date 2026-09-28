@@ -83,7 +83,7 @@ description: "Task list for the v0.3 release readiness audit"
   1. On branch `chore/018-rc1-changelog` off `master`, add a `## [0.3.0-rc.1]` section to `CHANGELOG.md` that summarises the unreleased entries.
   2. Open a PR with labels `type: chore` and `area: specs`.
   3. Log `RC-TAG-1: pending` in `specs/018-v0-3-release-readiness/OPEN-DECISIONS.md`, with the commit SHA to tag once the PR is merged and CI is green.
-- [ ] T014 ⛔ approval. After approval, run `git tag -s v0.3.0-rc.1 <sha> -m "v0.3.0-rc.1" && git push origin v0.3.0-rc.1`. Then check the `release.yaml` run against contracts/rc-deploy.md §1:
+- [ ] T014 ⛔ approval. After approval, run `git tag -a v0.3.0-rc.1 <sha> -m "v0.3.0-rc.1" && git push origin v0.3.0-rc.1` (annotated, unsigned, per OD-013). Then check the `release.yaml` run against contracts/rc-deploy.md §1:
   - it is green
   - images `ghcr.io/valgulnecron/gameplane/<component>:v0.3.0-rc.1` exist and pass `cosign verify --key cosign.pub`
   - chart `oci://ghcr.io/valgulnecron/charts/gameplane:0.3.0-rc.1` exists and is signed
@@ -305,7 +305,7 @@ description: "Task list for the v0.3 release readiness audit"
 
   Re-run the contract's re-check command and confirm every remaining hit is on the allow-list
 - [ ] T072 Add a `## [0.3.0]` section to `CHANGELOG.md` in the same branch, moving the relevant "Unreleased" entries into it. Open a PR labelled `type: chore` and `area: shared` and wait for CI green and human approval
-- [ ] T073 ⛔ approval. After merge, tag `v0.3.0` (`git tag -s v0.3.0 <sha>`). Check `release.yaml` is green, the images and chart are signed, the GitHub release is **not** marked prerelease, the notes come from the `## [0.3.0]` section, and the `0.3` image tag now exists. Record the results under `## v0.3.0` in `audit/rounds.md`
+- [ ] T073 ⛔ approval. After merge, tag `v0.3.0` (`git tag -a v0.3.0 <sha> -m "v0.3.0"`, annotated, unsigned, per OD-013). Check `release.yaml` is green, the images and chart are signed, the GitHub release is **not** marked prerelease, the notes come from the `## [0.3.0]` section, and the `0.3` image tag now exists. Record the results under `## v0.3.0` in `audit/rounds.md`
 - [ ] T074 ⛔ approval. Ask the maintainer whether kubelab stays on public `v0.3.0` or goes back to the baseline values (contracts/rc-deploy.md §4). Apply the answer, then run a final `audit/tools/cleanup-check.sh` and `audit/tools/snapshot-diff.sh audit/evidence/baseline <final>`, and record the result in `audit/rounds.md` (SC-006)
 - [ ] T075 Run the final validation greps from `quickstart.md` § Final validation and record the output in `audit/evidence/final-validation.txt`
 - [ ] T076 Mark every task in this file `[X]`, or withdrawn with a citation. Once this feature's PR is merged into `master`, `git mv specs/018-v0-3-release-readiness specs/done_018-v0-3-release-readiness` and update every in-repo reference in the same `docs:` commit (Constitution IV, CLAUDE.md 16)
