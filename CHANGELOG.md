@@ -182,6 +182,8 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **ci:** hardened the release signing order and the scope of the signing key.
 - **api:** hardened Prometheus metrics serving with a dedicated in-cluster listener.
 - **web:** hardened dashboard permission gates for capture and mod controls.
+- **api:** hardened tunnel credential storage when the tunnel provider changes.
+- **api:** hardened module archive extraction limits and mod-registry outbound connections.
 - **deploy:** hardened the kind dev cluster bootstrap by pinning the ingress-nginx manifest to a release tag.
 - **gp-module:** hardened the steamcmd preset so scaffolded templates run the game as a non-root user.
 - **docs:** hardened the accuracy of the game-container posture and OIDC group-claim documentation.

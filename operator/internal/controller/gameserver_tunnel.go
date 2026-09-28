@@ -25,6 +25,23 @@ const (
 	tunnelAuthMountDir = "/etc/gameplane/tunnel-auth"
 )
 
+// tunnelCredentialKey returns the Secret key name for a given tunnel provider.
+// Must match the keys in tunnel/main.go allowedCredentialKeys and
+// api/internal/handlers/tunnelcreds.go credentialKeysByProvider.
+// Returns (key, true) for known providers, ("", false) for unknown/empty providers.
+func tunnelCredentialKey(provider string) (string, bool) {
+	switch provider {
+	case "frp":
+		return "token", true
+	case "tailscale":
+		return "authKey", true
+	case "playit":
+		return "secretKey", true
+	default:
+		return "", false
+	}
+}
+
 // tunnelPlan is one reconcile pass's decision about the tunnel pod:
 // whether it should exist, and what endpoints to advertise once it does.
 type tunnelPlan struct {
@@ -318,27 +335,42 @@ func (r *GameServerReconciler) reconcileTunnel(
 
 		if tunnel.CredentialsSecretRef != nil && tunnel.CredentialsSecretRef.Name != "" {
 			secName := tunnel.CredentialsSecretRef.Name
-			var sec corev1.Secret
-			err := r.Get(ctx, types.NamespacedName{Namespace: gs.Namespace, Name: secName}, &sec)
-			if err == nil {
-				if !isServerOwnedSecret(&sec, gs) {
-					return fmt.Errorf("tunnel credentials secret %q is not owned by GameServer %s/%s", secName, gs.Namespace, gs.Name)
-				}
-				volumes = append(volumes, corev1.Volume{
-					Name: tunnelAuthVolume,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: secName,
+			credKey, credKeyKnown := tunnelCredentialKey(tunnel.Provider)
+
+			// Only mount Secret if the provider is known (has a valid credential key).
+			if credKeyKnown {
+				var sec corev1.Secret
+				err := r.Get(ctx, types.NamespacedName{Namespace: gs.Namespace, Name: secName}, &sec)
+				if err == nil {
+					if !isServerOwnedSecret(&sec, gs) {
+						return fmt.Errorf("tunnel credentials secret %q is not owned by GameServer %s/%s", secName, gs.Namespace, gs.Name)
+					}
+					// Mount only the active provider's credential key to avoid exposing
+					// stale keys from a previous provider (e.g., "token" still in the Secret
+					// after switching from frp to tailscale). Items projection selects only
+					// the active key; Optional:true allows the mount to succeed even if the
+					// new key isn't yet in the Secret during a provider switch.
+					optional := true
+					volumes = append(volumes, corev1.Volume{
+						Name: tunnelAuthVolume,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: secName,
+								Items: []corev1.KeyToPath{
+									{Key: credKey, Path: credKey},
+								},
+								Optional: &optional,
+							},
 						},
-					},
-				})
-				volumeMounts = append(volumeMounts, corev1.VolumeMount{
-					Name:      tunnelAuthVolume,
-					MountPath: tunnelAuthMountDir,
-					ReadOnly:  true,
-				})
-			} else if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("tunnel credentials secret %q: %w", secName, err)
+					})
+					volumeMounts = append(volumeMounts, corev1.VolumeMount{
+						Name:      tunnelAuthVolume,
+						MountPath: tunnelAuthMountDir,
+						ReadOnly:  true,
+					})
+				} else if !apierrors.IsNotFound(err) {
+					return fmt.Errorf("tunnel credentials secret %q: %w", secName, err)
+				}
 			}
 		}
 
