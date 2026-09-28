@@ -1480,8 +1480,8 @@ jobs:
         # this job smoke-tests whatever `make dev-up` actually installs.
         run: |
           VERSION="$(sed -n 's/^INGRESS_NGINX_VERSION="\(.*\)"$/\1/p' deploy/kind/up.sh)"
-          if [ -z "$VERSION" ]; then
-            echo "::error::could not read INGRESS_NGINX_VERSION from deploy/kind/up.sh" >&2
+          if [ -z "$VERSION" ] || [ "$(printf '%s\n' "$VERSION" | wc -l)" -ne 1 ]; then
+            echo "::error::expected exactly one INGRESS_NGINX_VERSION=\"...\" line in deploy/kind/up.sh" >&2
             exit 1
           fi
           echo "found INGRESS_NGINX_VERSION=${VERSION} in deploy/kind/up.sh"
@@ -1493,9 +1493,11 @@ jobs:
         # to exercise.
         run: kind create cluster --config deploy/kind/cluster.yaml
       - name: install ingress-nginx at the pinned version
+        env:
+          INGRESS_NGINX_VERSION: ${{ steps.pin.outputs.version }}
         run: |
           kubectl --context "$CTX" apply -f \
-            "https://raw.githubusercontent.com/kubernetes/ingress-nginx/${{ steps.pin.outputs.version }}/deploy/static/provider/kind/deploy.yaml"
+            "https://raw.githubusercontent.com/kubernetes/ingress-nginx/${INGRESS_NGINX_VERSION}/deploy/static/provider/kind/deploy.yaml"
       - name: wait for ingress-nginx-controller to become Available
         run: |
           kubectl --context "$CTX" wait --namespace ingress-nginx \
