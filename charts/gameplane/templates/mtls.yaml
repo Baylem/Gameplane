@@ -35,7 +35,7 @@
        the CA currently in effect (e.g. caSecretRef.name switched to a
        different pre-created CA) and must be re-issued rather than reused. */ -}}
 {{- $caFingerprint := $caCrt | sha256sum -}}
-{{- /* Skip Secret generation when a custom name is configured */ -}}
+{{- /* Validate or generate CA Secret */ -}}
 {{- if eq $caSecretName "gameplane-agent-ca" }}
 apiVersion: v1
 kind: Secret
@@ -50,14 +50,29 @@ data:
   ca.crt: {{ $caCrt | b64enc }}
   ca.key: {{ $caKey | b64enc }}
 ---
+{{- else if not $haveCA }}
+  {{- fail (printf "api.agentMTLS.caSecretRef.name=%q: Secret not found or missing required keys (ca.crt, ca.key)" $caSecretName) }}
 {{- end }}
 {{- $clientSecretName := (.Values.api.agentMTLS.clientCertRef.name | default "gameplane-agent-client") -}}
 {{- $clientSecret := lookup "v1" "Secret" .Release.Namespace $clientSecretName -}}
+{{- /* For default-named Secret: reuse if present and well-formed, UNLESS it's chart-managed AND CA changed. For custom-named: reuse only if CA fingerprint matches. */ -}}
+{{- $isManagedByHelm := eq (dig "gameplane.local/managed-by" "" (($clientSecret.metadata).annotations | default dict)) "helm" -}}
 {{- $clientCAFingerprint := dig "gameplane.local/ca-fingerprint" "" (($clientSecret.metadata).annotations | default dict) -}}
-{{- $haveClient := and $clientSecret (hasKey ($clientSecret.data | default dict) "tls.crt") (hasKey ($clientSecret.data | default dict) "tls.key") (eq $clientCAFingerprint $caFingerprint) -}}
+{{- $haveClientCreds := and $clientSecret (hasKey ($clientSecret.data | default dict) "tls.crt") (hasKey ($clientSecret.data | default dict) "tls.key") -}}
+{{- $caFingerprintMatches := eq $clientCAFingerprint $caFingerprint -}}
+{{- $reuseClient := false -}}
+{{- if and $haveClientCreds (eq $clientSecretName "gameplane-agent-client") -}}
+  {{- /* Default-name Secret: reuse if present (chart-managed OR pre-created), unless chart-managed AND CA changed */ -}}
+  {{- if or (not $isManagedByHelm) $caFingerprintMatches -}}
+    {{- $reuseClient = true -}}
+  {{- end -}}
+{{- else if and $haveClientCreds (ne $clientSecretName "gameplane-agent-client") $caFingerprintMatches -}}
+  {{- /* Custom-name Secret: reuse only if CA fingerprint matches */ -}}
+  {{- $reuseClient = true -}}
+{{- end -}}
 {{- $clientCrt := "" -}}
 {{- $clientKey := "" -}}
-{{- if $haveClient -}}
+{{- if $reuseClient -}}
   {{- $clientCrt = (index $clientSecret.data "tls.crt" | b64dec) -}}
   {{- $clientKey = (index $clientSecret.data "tls.key" | b64dec) -}}
 {{- else -}}
@@ -70,7 +85,7 @@ data:
   {{- $clientCrt = $signed.Cert -}}
   {{- $clientKey = $signed.Key -}}
 {{- end }}
-{{- /* Skip Secret generation when a custom name is configured */ -}}
+{{- /* Validate or generate client Secret */ -}}
 {{- if eq $clientSecretName "gameplane-agent-client" }}
 apiVersion: v1
 kind: Secret
@@ -85,4 +100,8 @@ type: kubernetes.io/tls
 data:
   tls.crt: {{ $clientCrt | b64enc }}
   tls.key: {{ $clientKey | b64enc }}
+{{- else if ne $clientSecretName "gameplane-agent-client" }}
+  {{- if not (and $clientSecret (hasKey ($clientSecret.data | default dict) "tls.crt") (hasKey ($clientSecret.data | default dict) "tls.key")) }}
+    {{- fail (printf "api.agentMTLS.clientCertRef.name=%q: Secret not found or missing required keys (tls.crt, tls.key)" $clientSecretName) }}
+  {{- end }}
 {{- end }}
