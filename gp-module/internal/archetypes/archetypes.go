@@ -60,6 +60,14 @@ type LifecycleDef struct {
 	Stop []string `json:"stop,omitempty" yaml:"stop,omitempty"`
 }
 
+// SecurityDef is the uid/gid the game container runs as and the gid the data
+// volume is group-owned by. It renders as the template's spec.security block.
+type SecurityDef struct {
+	RunAsUser  int64 `json:"runAsUser" yaml:"runAsUser"`
+	RunAsGroup int64 `json:"runAsGroup" yaml:"runAsGroup"`
+	FSGroup    int64 `json:"fsGroup" yaml:"fsGroup"`
+}
+
 // ArchetypeDefinition represents a starter template archetype.
 type ArchetypeDefinition struct {
 	ID                string           `json:"id"`
@@ -72,6 +80,9 @@ type ArchetypeDefinition struct {
 	ConfigSchema      []ConfigFieldDef `json:"configSchema"`
 	Capabilities      CapabilitiesDef  `json:"capabilities"`
 	DefaultCategories []string         `json:"defaultCategories"`
+	// DefaultSecurity, when set, is emitted as the scaffolded template's
+	// spec.security block.
+	DefaultSecurity *SecurityDef `json:"defaultSecurity,omitempty"`
 }
 
 var (
@@ -108,6 +119,10 @@ func PlaceholderIconBytes() []byte {
 	copy(cp, iconBytes)
 	return cp
 }
+
+// steamUID is the unprivileged "steam" user (and its primary group) that the
+// cm2network/steamcmd images create and install SteamCMD as.
+const steamUID int64 = 1000
 
 // AllArchetypes returns the map of supported archetypes.
 func AllArchetypes() map[string]ArchetypeDefinition {
@@ -156,6 +171,13 @@ func AllArchetypes() map[string]ArchetypeDefinition {
 				},
 			},
 			DefaultCategories: []string{"Survival", "Co-op"},
+			// The image's default user is root; the template runs the game as
+			// the image's non-root steam user and gives that group the volume.
+			DefaultSecurity: &SecurityDef{
+				RunAsUser:  steamUID,
+				RunAsGroup: steamUID,
+				FSGroup:    steamUID,
+			},
 		},
 		"java": {
 			ID:           "java",
