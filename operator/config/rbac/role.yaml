@@ -74,7 +74,6 @@ rules:
   - gametemplates/status
   - modules/status
   - modulesources/status
-  - networkcaptures/status
   verbs:
   - get
   - patch
