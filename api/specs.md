@@ -683,8 +683,8 @@ Final 20% gap concentrated in:
 <!-- REMOVED: PUT /modules/{name} — removed in commit 1749bb6396d7d4d53f8fc57ad6214164eee299b8 Mon Sep 21 00:16:43 2026 +0200 -->
 <!-- REMOVED: PUT /users/{id} — removed in commit 1749bb6396d7d4d53f8fc57ad6214164eee299b8 Mon Sep 21 00:16:43 2026 +0200 -->
 
-### Auto-Discovered Endpoints (Drift Detected)
 
+### Auto-Discovered Endpoints (Drift Detected)
 ### Removed Endpoints
 <!-- REMOVED: /modules/sources — DELETE removed in commit <sha> 2026-09-28 -->
 <!-- REMOVED: /roles — DELETE removed in commit <sha> 2026-09-28 -->
