@@ -164,6 +164,9 @@ func GenerateFiles(opts Options) (*GeneratedFiles, error) {
 	if len(arch.Capabilities.Lifecycle.Stop) > 0 {
 		specDoc["capabilities"] = arch.Capabilities
 	}
+	if arch.DefaultSecurity != nil {
+		specDoc["security"] = arch.DefaultSecurity
+	}
 
 	templateDoc := map[string]any{
 		"apiVersion": "gameplane.local/v1alpha1",
@@ -206,6 +209,12 @@ func GenerateFiles(opts Options) (*GeneratedFiles, error) {
 		for _, e := range arch.DefaultEnv {
 			fmt.Fprintf(&readmeBuf, "- `%s`: default `%s`\n", e.Name, e.Value)
 		}
+	}
+	if sec := arch.DefaultSecurity; sec != nil {
+		readmeBuf.WriteString("\n## Container User\n\n")
+		fmt.Fprintf(&readmeBuf, "- The game runs as uid `%d`, gid `%d`; the data volume is group-owned by gid `%d` (`spec.security`).\n",
+			sec.RunAsUser, sec.RunAsGroup, sec.FSGroup)
+		readmeBuf.WriteString("- If you change the image, set `spec.security` to a non-root user that image provides.\n")
 	}
 	if len(arch.ConfigSchema) > 0 {
 		readmeBuf.WriteString("\n## Configuration Parameters\n\n")
