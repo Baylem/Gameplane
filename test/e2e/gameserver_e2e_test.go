@@ -1730,9 +1730,12 @@ func TestGameServer_TunnelCredentialRefusalSurfaced(t *testing.T) {
 
 	ctx := context.Background()
 	ns := "gameplane-games"
-	tmpl := "e2e-tunnel-cred-refused-tmpl"
-	gsName := "e2e-tunnel-cred-refused-gs"
-	secName := "e2e-tunnel-cred-refused-secret"
+	// Unique per run: a leftover owned Secret or GameServer from an earlier
+	// run must not let this test pass without exercising the refusal path.
+	suffix := time.Now().UnixNano()
+	tmpl := fmt.Sprintf("e2e-tunnel-cred-refused-tmpl-%d", suffix)
+	gsName := fmt.Sprintf("e2e-tunnel-cred-refused-gs-%d", suffix)
+	secName := fmt.Sprintf("e2e-tunnel-cred-refused-secret-%d", suffix)
 
 	applyBusyboxTemplate(t, tmpl)
 
@@ -1742,7 +1745,7 @@ func TestGameServer_TunnelCredentialRefusalSurfaced(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: secName, Namespace: ns},
 		StringData: map[string]string{"token": "e2e-fake-token"},
 	}
-	if _, err := envInstance.K8s.CoreV1().Secrets(ns).Create(ctx, sec, metav1.CreateOptions{}); err != nil && !apierrors.IsAlreadyExists(err) {
+	if _, err := envInstance.K8s.CoreV1().Secrets(ns).Create(ctx, sec, metav1.CreateOptions{}); err != nil {
 		t.Fatalf("create secret: %v", err)
 	}
 	t.Cleanup(func() {
@@ -1772,7 +1775,7 @@ func TestGameServer_TunnelCredentialRefusalSurfaced(t *testing.T) {
 		"spec":       gsSpec,
 	}}
 	if _, err := envInstance.Dyn.Resource(gameServerGVR).Namespace(ns).
-		Create(ctx, gsObj, metav1.CreateOptions{}); err != nil && !apierrors.IsAlreadyExists(err) {
+		Create(ctx, gsObj, metav1.CreateOptions{}); err != nil {
 		t.Fatalf("create gameserver: %v", err)
 	}
 	t.Cleanup(func() {
