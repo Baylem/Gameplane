@@ -106,24 +106,7 @@ auth.additionalScopes = ["api"]
 auth.token = "your-secure-token-here"
 ```
 
-#### 2. Provide the credential
-
-The operator only mounts a credentials Secret that carries an `ownerReference`
-to the GameServer — a plain `kubectl create secret generic` Secret has none, so
-the operator refuses it and the GameServer's `TunnelReady` status condition
-reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
-its contents). Use one of these instead:
-
-- **Dashboard:** open the server's Networking tab and enter the credential
-  there — it creates the Secret with the correct ownerReference for you.
-- **API:** `PUT /servers/{name}:tunnel-credentials` with body
-  `{"provider": "frp", "values": {"token": "your-secure-token-here"}}`.
-- **kubectl, with an explicit ownerReference:** if you must create the Secret
-  directly, set `metadata.ownerReferences` to point at the GameServer
-  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
-  and `uid`) so the operator accepts it.
-
-#### 3. Create a GameServer with frp tunnel
+#### 2. Create a GameServer with frp tunnel
 
 ```yaml
 apiVersion: gameplane.local/v1alpha1
@@ -140,7 +123,7 @@ spec:
       enabled: true
       provider: frp
       credentialsSecretRef:
-        name: frp-creds
+        name: minecraft-tunneled-tunnel-auth
       frp:
         serverAddr: frp.example.com
         serverPort: 7000
@@ -148,6 +131,27 @@ spec:
           - name: game
             remotePort: 25565
 ```
+
+The `credentialsSecretRef.name` is the name that the dashboard or API write after you provide the credential.
+
+#### 3. Provide the credential
+
+The operator only mounts a credentials Secret that carries an `ownerReference`
+to the GameServer — a plain `kubectl create secret generic` Secret has none, so
+the operator refuses it and the GameServer's `TunnelReady` status condition
+reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
+its contents). The tunnel pod starts without credentials until the credential is
+provided (the Secret does not exist yet). Use one of these instead:
+
+- **Dashboard:** open the server's Networking tab and enter the credential
+  there — it creates the Secret with the correct ownerReference for you.
+- **API:** `PUT /servers/{name}:tunnel-credentials` with body
+  `{"provider": "frp", "values": {"token": "your-secure-token-here"}}`.
+- **kubectl, with an explicit ownerReference:** if you must create the Secret
+  directly, get the GameServer's UID with `kubectl -n gameplane-games get gameserver minecraft-tunneled -o jsonpath='{.metadata.uid}'`,
+  then set `metadata.ownerReferences` to point at the GameServer
+  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
+  and `uid`) so the operator accepts it.
 
 Players connect to `frp.example.com:25565`.
 
@@ -158,24 +162,7 @@ Players connect to `frp.example.com:25565`.
 Log into [login.tailscale.com](https://login.tailscale.com), go to **Settings →
 Keys**, and create a **Reusable key**. Copy it.
 
-#### 2. Provide the credential
-
-The operator only mounts a credentials Secret that carries an `ownerReference`
-to the GameServer — a plain `kubectl create secret generic` Secret has none, so
-the operator refuses it and the GameServer's `TunnelReady` status condition
-reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
-its contents). Use one of these instead:
-
-- **Dashboard:** open the server's Networking tab and enter the credential
-  there — it creates the Secret with the correct ownerReference for you.
-- **API:** `PUT /servers/{name}:tunnel-credentials` with body
-  `{"provider": "tailscale", "values": {"authKey": "tskey-client-xxxxx"}}`.
-- **kubectl, with an explicit ownerReference:** if you must create the Secret
-  directly, set `metadata.ownerReferences` to point at the GameServer
-  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
-  and `uid`) so the operator accepts it.
-
-#### 3. Create a GameServer with Tailscale tunnel
+#### 2. Create a GameServer with Tailscale tunnel
 
 ```yaml
 apiVersion: gameplane.local/v1alpha1
@@ -192,7 +179,7 @@ spec:
       enabled: true
       provider: tailscale
       credentialsSecretRef:
-        name: tailscale-creds
+        name: minecraft-tailnet-tunnel-auth
       tailscale:
         hostname: my-minecraft-server
         tags:
@@ -205,9 +192,30 @@ specify in `spec.networking.tunnel.tailscale.hostname` (or defaults to the
 GameServer name if left empty). The tags are Tailscale ACL tags applied at device
 registration. Port 25565 is available to devices on your tailnet.
 
+The `credentialsSecretRef.name` is the name that the dashboard or API write after you provide the credential.
+
 > **Private only.** The server is not exposed to the public internet — only to
 > devices on your Tailscale network. This is suitable for playing with friends
 > or family who are all on your tailnet.
+
+#### 3. Provide the credential
+
+The operator only mounts a credentials Secret that carries an `ownerReference`
+to the GameServer — a plain `kubectl create secret generic` Secret has none, so
+the operator refuses it and the GameServer's `TunnelReady` status condition
+reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
+its contents). The tunnel pod starts without credentials until the credential is
+provided (the Secret does not exist yet). Use one of these instead:
+
+- **Dashboard:** open the server's Networking tab and enter the credential
+  there — it creates the Secret with the correct ownerReference for you.
+- **API:** `PUT /servers/{name}:tunnel-credentials` with body
+  `{"provider": "tailscale", "values": {"authKey": "tskey-client-xxxxx"}}`.
+- **kubectl, with an explicit ownerReference:** if you must create the Secret
+  directly, get the GameServer's UID with `kubectl -n gameplane-games get gameserver minecraft-tailnet -o jsonpath='{.metadata.uid}'`,
+  then set `metadata.ownerReferences` to point at the GameServer
+  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
+  and `uid`) so the operator accepts it.
 
 ### playit.gg
 
@@ -216,24 +224,7 @@ registration. Port 25565 is available to devices on your tailnet.
 Visit [playit.gg](https://playit.gg), sign up, and create an account. Your
 **Secret Key** appears in **Settings**. Copy it.
 
-#### 2. Provide the credential
-
-The operator only mounts a credentials Secret that carries an `ownerReference`
-to the GameServer — a plain `kubectl create secret generic` Secret has none, so
-the operator refuses it and the GameServer's `TunnelReady` status condition
-reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
-its contents). Use one of these instead:
-
-- **Dashboard:** open the server's Networking tab and enter the credential
-  there — it creates the Secret with the correct ownerReference for you.
-- **API:** `PUT /servers/{name}:tunnel-credentials` with body
-  `{"provider": "playit", "values": {"secretKey": "<your-secret-key>"}}`.
-- **kubectl, with an explicit ownerReference:** if you must create the Secret
-  directly, set `metadata.ownerReferences` to point at the GameServer
-  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
-  and `uid`) so the operator accepts it.
-
-#### 3. Create a GameServer with playit tunnel
+#### 2. Create a GameServer with playit tunnel
 
 ```yaml
 apiVersion: gameplane.local/v1alpha1
@@ -250,8 +241,29 @@ spec:
       enabled: true
       provider: playit
       credentialsSecretRef:
-        name: playit-creds
+        name: minecraft-playit-tunnel-auth
 ```
+
+The `credentialsSecretRef.name` is the name that the dashboard or API write after you provide the credential.
+
+#### 3. Provide the credential
+
+The operator only mounts a credentials Secret that carries an `ownerReference`
+to the GameServer — a plain `kubectl create secret generic` Secret has none, so
+the operator refuses it and the GameServer's `TunnelReady` status condition
+reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
+its contents). The tunnel pod starts without credentials until the credential is
+provided (the Secret does not exist yet). Use one of these instead:
+
+- **Dashboard:** open the server's Networking tab and enter the credential
+  there — it creates the Secret with the correct ownerReference for you.
+- **API:** `PUT /servers/{name}:tunnel-credentials` with body
+  `{"provider": "playit", "values": {"secretKey": "<your-secret-key>"}}`.
+- **kubectl, with an explicit ownerReference:** if you must create the Secret
+  directly, get the GameServer's UID with `kubectl -n gameplane-games get gameserver minecraft-playit -o jsonpath='{.metadata.uid}'`,
+  then set `metadata.ownerReferences` to point at the GameServer
+  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
+  and `uid`) so the operator accepts it.
 
 Wait for the pod to reach `Running` state. Once the tunnel pod connects and
 reports the assigned address, it appears in `status.endpoints`. The address

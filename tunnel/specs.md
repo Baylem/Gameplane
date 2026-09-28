@@ -171,7 +171,7 @@ The playit provider alone needs RBAC because it must patch the GameServer's stat
 **NetworkPolicy** (all providers):
 - A per-server egress policy (`<gameserver-name>-tunnel-egress`) admits outbound traffic from the tunnel pod to:
   - DNS (UDP/TCP port 53, all destinations)
-  - Relay control plane ports (provider-specific: TCP 7000 for frp, TCP 443 + UDP 41641 for tailscale, TCP/UDP any for playit)
+  - Relay control plane ports (provider-specific: TCP 7000 for frp, TCP 443 + UDP 41641 for tailscale, playit: unrestricted egress (all ports, all protocols, any destination))
   - Container advertised ports (inbound relay traffic forwarded to the game)
 
 Without this policy, the default-deny egress rule in the games namespace would silently drop relay connections.

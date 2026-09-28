@@ -60,8 +60,8 @@ func TestReconcileTunnel_CredentialSecretWithoutOwnerRefRefused(t *testing.T) {
 	}
 
 	r := &GameServerReconciler{Client: k8sClient, APIReader: k8sClient, Scheme: scheme}
-	if err := r.reconcileTunnel(ctx, gs, tmpl, true); err == nil {
-		t.Fatal("reconcileTunnel: want error for unowned credentials secret, got nil")
+	if err := r.reconcileTunnel(ctx, gs, tmpl, true); err == nil || !strings.Contains(err.Error(), "is not owned by GameServer") {
+		t.Fatalf("reconcileTunnel: want ownership refusal, got %v", err)
 	}
 
 	eventually(t, func() (bool, string) {
@@ -86,4 +86,63 @@ func TestReconcileTunnel_CredentialSecretWithoutOwnerRefRefused(t *testing.T) {
 		}
 		return false, "no TunnelReady condition yet"
 	})
+
+	// Recovery: verify that once the Secret is owned, reconcileTunnel succeeds
+	// and the condition clears to DeploymentNotReady.
+	var c gameplanev1alpha1.GameServer
+	if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(gs), &c); err != nil {
+		t.Fatalf("re-fetch gameserver: %v", err)
+	}
+	for _, cond := range c.Status.Conditions {
+		if cond.Type == "TunnelReady" && !strings.Contains(cond.Message, "fake") {
+			t.Fatalf("TunnelReady message must not contain 'fake': %s", cond.Message)
+		}
+	}
+
+	// Patch the Secret with OwnerReferences matching the GameServer
+	secFetched := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secName, Namespace: ns}}
+	if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(secFetched), secFetched); err != nil {
+		t.Fatalf("get secret: %v", err)
+	}
+	secFetched.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: "gameplane.local/v1alpha1",
+		Kind:       "GameServer",
+		Name:       c.Name,
+		UID:        c.UID,
+	}}
+	if err := k8sClient.Update(ctx, secFetched); err != nil {
+		t.Fatalf("patch secret with ownerReference: %v", err)
+	}
+
+	// Now reconcileTunnel should succeed
+	eventually(t, func() (bool, string) {
+		var gs2 gameplanev1alpha1.GameServer
+		if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&c), &gs2); err != nil {
+			return false, "re-fetch: " + err.Error()
+		}
+		if err := r.reconcileTunnel(ctx, &gs2, tmpl, true); err != nil {
+			return false, "reconcileTunnel after fix: " + err.Error()
+		}
+		return true, ""
+	})
+
+	// Verify the condition now reports DeploymentNotReady instead of TunnelCredentialRefused
+	var cfinal gameplanev1alpha1.GameServer
+	if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(&c), &cfinal); err != nil {
+		t.Fatalf("final fetch: %v", err)
+	}
+	conds := computeTunnelConditions(&cfinal, tunnelPlan{wantTunnel: true}, nil)
+	var found bool
+	for _, cond := range conds {
+		if cond.Type == "TunnelReady" {
+			if cond.Reason != "DeploymentNotReady" {
+				t.Fatalf("after credential fix, want TunnelReady reason=DeploymentNotReady, got %s", cond.Reason)
+			}
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("TunnelReady condition not found after credential fix")
+	}
 }

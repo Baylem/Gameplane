@@ -384,7 +384,7 @@ func (r *GameServerReconciler) setTunnelCredentialRefused(ctx context.Context, g
 		Type:               "TunnelReady",
 		Status:             metav1.ConditionFalse,
 		Reason:             "TunnelCredentialRefused",
-		Message:            fmt.Sprintf("tunnel credentials secret %q has no ownerReference to this GameServer; create it via the dashboard, the PUT /servers/{name}:tunnel-credentials API, or with an ownerReference to this GameServer", secretName),
+		Message:            fmt.Sprintf("tunnel credentials secret %q is not owned by this GameServer (no ownerReference matching its name and UID); create it via the dashboard, the PUT /servers/{name}:tunnel-credentials API, or with an ownerReference to this GameServer", secretName),
 		ObservedGeneration: gs.Generation,
 	})
 	if err := r.Status().Patch(ctx, gs, client.MergeFrom(base)); err != nil {
