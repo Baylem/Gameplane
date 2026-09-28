@@ -173,11 +173,36 @@ func (r *RestoreReconciler) awaitRestoredServer(
 	} else if apierrors.IsNotFound(err) {
 		// Original server was deleted (legitimate): verify that every Secret/ConfigMap
 		// referenced by the RESTORED server's spec exists and is owned by the restored server.
-		copies, copyErr := r.planOwnedRefCopies(ctx, gs, gs)
-		if copyErr != nil {
-			refsErr = copyErr
-		} else if copyErr := r.ensureOwnedRefCopies(ctx, gs, gs, copies); copyErr != nil {
-			refsErr = copyErr
+		// Read-only check: do not create copies, just validate references exist and are owned.
+		for _, ref := range extractSpecRefs(&gs.Spec) {
+			switch ref.kind {
+			case secretRefKind:
+				sec := &corev1.Secret{}
+				if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, sec); err != nil {
+					if apierrors.IsNotFound(err) {
+						refsErr = fmt.Errorf("referenced Secret %q not found (transient)", ref.name)
+					} else {
+						refsErr = fmt.Errorf("check referenced Secret %q: %w", ref.name, err)
+					}
+					continue
+				}
+				if !isServerOwnedSecret(sec, gs) {
+					refsErr = fmt.Errorf("referenced Secret %q not owned by restored server: %w", ref.name, errRefNotOwned)
+				}
+			case configMapRefKind:
+				cm := &corev1.ConfigMap{}
+				if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, cm); err != nil {
+					if apierrors.IsNotFound(err) {
+						refsErr = fmt.Errorf("referenced ConfigMap %q not found (transient)", ref.name)
+					} else {
+						refsErr = fmt.Errorf("check referenced ConfigMap %q: %w", ref.name, err)
+					}
+					continue
+				}
+				if !isServerOwnedConfigMap(cm, gs) {
+					refsErr = fmt.Errorf("referenced ConfigMap %q not owned by restored server: %w", ref.name, errRefNotOwned)
+				}
+			}
 		}
 	} else {
 		// Any other Get error is transient: set refsErr but do not return early.
@@ -534,4 +559,64 @@ func hashString(s string) uint64 {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte(s))
 	return h.Sum64()
+}
+
+// refItem describes a single Secret or ConfigMap reference in a spec.
+type refItem struct {
+	kind string // "Secret" or "ConfigMap"
+	name string
+}
+
+// extractSpecRefs returns all Secret/ConfigMap references in the spec,
+// deduplicating by kind and name. Used by ref-walking logic to enumerate refs.
+func extractSpecRefs(spec *gameplanev1alpha1.GameServerSpec) []refItem {
+	var refs []refItem
+	seen := make(map[string]bool)
+
+	// Traverse spec.env for value references (Secret/ConfigMap in ValueFrom)
+	for _, env := range spec.Env {
+		if env.ValueFrom == nil {
+			continue
+		}
+
+		// Check for SecretKeyRef
+		if env.ValueFrom.SecretKeyRef != nil {
+			key := secretRefKind + "/" + env.ValueFrom.SecretKeyRef.Name
+			if !seen[key] {
+				seen[key] = true
+				refs = append(refs, refItem{
+					kind: secretRefKind,
+					name: env.ValueFrom.SecretKeyRef.Name,
+				})
+			}
+		}
+
+		// Check for ConfigMapKeyRef
+		if env.ValueFrom.ConfigMapKeyRef != nil {
+			key := configMapRefKind + "/" + env.ValueFrom.ConfigMapKeyRef.Name
+			if !seen[key] {
+				seen[key] = true
+				refs = append(refs, refItem{
+					kind: configMapRefKind,
+					name: env.ValueFrom.ConfigMapKeyRef.Name,
+				})
+			}
+		}
+	}
+
+	// Traverse spec.networking.tunnel.credentialsSecretRef
+	if spec.Networking.Tunnel != nil &&
+		spec.Networking.Tunnel.CredentialsSecretRef != nil {
+		ref := spec.Networking.Tunnel.CredentialsSecretRef
+		key := "Secret/" + ref.Name
+		if !seen[key] {
+			seen[key] = true
+			refs = append(refs, refItem{
+				kind: secretRefKind,
+				name: ref.Name,
+			})
+		}
+	}
+
+	return refs
 }
