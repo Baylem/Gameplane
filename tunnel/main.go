@@ -268,14 +268,13 @@ func run(ctx context.Context, cfg Config) error {
 	}
 
 	// tailscale with tags: renderTailscaleConfig left the auth key out of
-	// tailscaled's config, so register the device once, requesting the
-	// tags, via `tailscale up` over tailscaled's socket (see
-	// registerTailscaleOnce). This runs once per supervisor lifetime, not
-	// once per relay restart below: the login and the granted tags persist
-	// in tailscaled's local state file (/tmp/tailscale.state, --state in
-	// buildCommand) across a tailscaled restart that reuses it. Without
-	// tags, tailscaled logs in from its config by itself and nothing runs
-	// here.
+	// tailscaled's config, so register the device via `tailscale up` over
+	// tailscaled's socket (see registerTailscaleOnce). This keeps retrying
+	// until tailscaled settles and registration succeeds, or until ctx is
+	// cancelled: the login and the granted tags persist in tailscaled's
+	// local state file (/tmp/tailscale.state, --state in buildCommand)
+	// across a tailscaled restart that reuses it. Without tags, tailscaled
+	// logs in from its config by itself and nothing runs here.
 	if cfg.TunnelType == "tailscale" {
 		if tags, err := parseTailscaleTags(cfg.TailscaleTags); err == nil && len(tags) > 0 {
 			regCtx, stopRegistrar := context.WithCancel(ctx)
@@ -539,6 +538,7 @@ func tailscaleTagNameChar(b byte) bool {
 // a leading, trailing or doubled comma) into fully qualified tags. Each
 // entry is trimmed, empty entries are dropped, and a bare name gets the
 // "tag:" prefix, as `tailscale up` itself does for a name with no colon.
+// Duplicate tags are skipped, preserving order of first appearance.
 // Every resulting tag must pass the same rule as tailscale's
 // tailcfg.CheckTag: "tag:" followed by an ASCII letter, then only ASCII
 // letters, digits or '-'. The first tag that fails is returned as an error
@@ -547,6 +547,7 @@ func tailscaleTagNameChar(b byte) bool {
 // non-empty entry remains.
 func parseTailscaleTags(tagsStr string) ([]string, error) {
 	var tags []string
+	seen := make(map[string]bool)
 	for _, tag := range strings.Split(tagsStr, ",") {
 		tag = strings.TrimSpace(tag)
 		if tag == "" {
@@ -567,6 +568,10 @@ func parseTailscaleTags(tagsStr string) ([]string, error) {
 				return nil, fmt.Errorf("invalid tag %q: the name may only contain letters, digits or '-'", tag)
 			}
 		}
+		if seen[tag] {
+			continue
+		}
+		seen[tag] = true
 		tags = append(tags, tag)
 	}
 	return tags, nil
@@ -661,16 +666,24 @@ type tailscaleStatus struct {
 }
 
 // hasExactTags reports whether the node is Running and its granted tags
-// are exactly want, in any order.
+// are exactly want, in any order, as a set. Both granted and requested
+// tags are deduplicated for comparison.
 func (st tailscaleStatus) hasExactTags(want []string) bool {
-	if st.BackendState != "Running" || st.Self == nil || len(st.Self.Tags) != len(want) {
+	if st.BackendState != "Running" || st.Self == nil {
 		return false
 	}
-	have := make(map[string]bool, len(st.Self.Tags))
+	have := make(map[string]bool)
 	for _, tag := range st.Self.Tags {
 		have[tag] = true
 	}
+	wantSet := make(map[string]bool)
 	for _, tag := range want {
+		wantSet[tag] = true
+	}
+	if len(have) != len(wantSet) {
+		return false
+	}
+	for tag := range wantSet {
 		if !have[tag] {
 			return false
 		}
@@ -753,7 +766,7 @@ func runTailscaleUp(ctx context.Context, hostname string, tags []string) error {
 // until this runs.
 //
 //  1. Wait for tailscaled's socket to answer with a settled state
-//     (waitForTailscaled).
+//     (waitForTailscaled), retrying on timeout.
 //  2. If the node is already Running with exactly these tags (a state file
 //     reused across a restart), do nothing.
 //  3. Otherwise run `tailscale up ... --advertise-tags=<tags>` once.
@@ -766,12 +779,24 @@ func runTailscaleUp(ctx context.Context, hostname string, tags []string) error {
 // relay process, so an ACL problem only the tailnet admin can fix never
 // turns into a crash loop.
 func registerTailscaleOnce(ctx context.Context, hostname string, tags []string) {
-	st, err := waitForTailscaled(ctx)
-	if err != nil {
-		if ctx.Err() == nil {
-			log.Printf("tailscale tunnel: not registering the device: %v", err)
+	var st tailscaleStatus
+	var err error
+	for {
+		st, err = waitForTailscaled(ctx)
+		if err == nil {
+			break
 		}
-		return
+		if ctx.Err() != nil {
+			return
+		}
+		log.Printf("tailscale tunnel: still waiting for tailscaled to settle: %v", err)
+		// Retry after a brief delay without spinning
+		select {
+		case <-time.After(5 * time.Second):
+			continue
+		case <-ctx.Done():
+			return
+		}
 	}
 
 	joined := strings.Join(tags, ",")
@@ -788,9 +813,15 @@ func registerTailscaleOnce(ctx context.Context, hostname string, tags []string) 
 	if ctx.Err() != nil {
 		return
 	}
-	log.Printf("tailscale tunnel: `tailscale up --advertise-tags=%s` failed: %v; the tailnet ACL must grant tagOwners for these tags to the auth key's owner. The tunnel continues untagged.", joined, err)
+	log.Printf("tailscale tunnel: `tailscale up --advertise-tags=%s` failed: %v; the tailnet ACL must grant tagOwners for these tags to the auth key's owner.", joined, err)
 
 	if st, err := queryTailscaleStatus(ctx); err == nil && st.BackendState == "Running" {
+		if len(st.Self.Tags) > 0 {
+			oldTags := strings.Join(st.Self.Tags, ",")
+			log.Printf("tailscale tunnel: device is still running with previous tags %s; they remain granted until the tailnet ACL is fixed or they are removed in the tailnet admin console", oldTags)
+			return
+		}
+		log.Printf("tailscale tunnel: device is still running without tags")
 		return
 	}
 	if err := runTailscaleUp(ctx, hostname, nil); err != nil {

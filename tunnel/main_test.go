@@ -694,6 +694,33 @@ func TestParseTailscaleTags(t *testing.T) {
 	}
 }
 
+// TestParseTailscaleTagsDeduplicate asserts that duplicate tags are skipped.
+func TestParseTailscaleTagsDeduplicate(t *testing.T) {
+	tags, err := parseTailscaleTags("a,tag:a,b")
+	if err != nil {
+		t.Fatalf("parseTailscaleTags() error = %v", err)
+	}
+	if len(tags) != 2 || tags[0] != "tag:a" || tags[1] != "tag:b" {
+		t.Errorf("parseTailscaleTags(\"a,tag:a,b\") = %v, want [tag:a tag:b]", tags)
+	}
+}
+
+// TestHasExactTagsRejectsDuplicateWant asserts that duplicate requested tags
+// do not fool the exact-set check when the granted set differs.
+func TestHasExactTagsRejectsDuplicateWant(t *testing.T) {
+	st := tailscaleStatus{
+		BackendState: "Running",
+		Self: &struct {
+			Tags []string `json:"Tags"`
+		}{
+			Tags: []string{"tag:a", "tag:b"},
+		},
+	}
+	if st.hasExactTags([]string{"tag:a", "tag:a"}) {
+		t.Error("hasExactTags([tag:a tag:a]) = true, want false when granted [tag:a tag:b]")
+	}
+}
+
 func TestTailscaleUpArgs(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -917,6 +944,27 @@ func TestRegisterTailscaleOnceNoFallbackWhenStillRunning(t *testing.T) {
 
 	if len(fake.upCalls) != 1 {
 		t.Errorf("tailscale up calls = %v, want only the tagged attempt", fake.upCalls)
+	}
+}
+
+// TestRegisterTailscaleOnceRunningWithOldTagsNoFallback asserts that when a
+// running node retains old tags after a failed tagged attempt, no untagged
+// up runs and the log explicitly surfaces the retained tags.
+func TestRegisterTailscaleOnceRunningWithOldTagsNoFallback(t *testing.T) {
+	fake := &fakeTailscale{
+		statuses: []string{`{"BackendState":"Running","Self":{"Tags":["tag:old"]}}`, `{"BackendState":"Running","Self":{"Tags":["tag:old"]}}`},
+		upErrs:   []error{errors.New("not permitted")},
+	}
+	stubTailscaleCLI(t, fake.run)
+	buf := captureLog(t)
+
+	registerTailscaleOnce(context.Background(), "my-game", []string{"tag:new"})
+
+	if len(fake.upCalls) != 1 {
+		t.Errorf("tailscale up calls = %v, want only the tagged attempt", fake.upCalls)
+	}
+	if !strings.Contains(buf.String(), "still running with previous tags") {
+		t.Errorf("log does not mention retained tags; output:\n%s", buf.String())
 	}
 }
 
