@@ -210,7 +210,6 @@ const (
 // in this list.
 //
 // +kubebuilder:rbac:groups=gameplane.local,resources=gameservers,verbs=get;list;watch
-// +kubebuilder:rbac:groups=gameplane.local,resources=gameservers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=gameplane.local,resources=gametemplates,verbs=get;list;watch
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
@@ -219,7 +218,6 @@ const (
 // +kubebuilder:rbac:groups=core,resources=pods;pods/log,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods/ephemeralcontainers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gameplane.local,resources=networkcaptures,verbs=get;list;watch
-// +kubebuilder:rbac:groups=gameplane.local,resources=networkcaptures/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch

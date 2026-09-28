@@ -194,7 +194,6 @@ func resticImageOrDefault(image string) string {
 }
 
 // +kubebuilder:rbac:groups=gameplane.local,resources=backups,verbs=get;list;watch
-// +kubebuilder:rbac:groups=gameplane.local,resources=backups/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods/log,verbs=get

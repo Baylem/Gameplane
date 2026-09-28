@@ -153,9 +153,7 @@ type NetworkCaptureReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=gameplane.local,resources=networkcaptures,verbs=get;list;watch
-// +kubebuilder:rbac:groups=gameplane.local,resources=networkcaptures/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=gameplane.local,resources=gameservers,verbs=get;list;watch
-// +kubebuilder:rbac:groups=gameplane.local,resources=gameservers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods/ephemeralcontainers,verbs=get;list;watch
 
