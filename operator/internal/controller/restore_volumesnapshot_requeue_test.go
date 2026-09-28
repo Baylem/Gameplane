@@ -2,8 +2,10 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -232,9 +234,9 @@ func TestRewriteRefs_PointsEnvAndTunnelAtCopies(t *testing.T) {
 		CredentialsSecretRef: &gameplanev1alpha1.SecretNameRef{Name: "tun"},
 	}
 	rewriteRefs(&spec, []refCopy{
-		{kind: secretRefKind, origName: "sec", copyName: "sec-copy"},
-		{kind: configMapRefKind, origName: "cm", copyName: "cm-copy"},
-		{kind: secretRefKind, origName: "tun", copyName: "tun-copy"},
+		{Kind: secretRefKind, OrigName: "sec", CopyName: "sec-copy"},
+		{Kind: configMapRefKind, OrigName: "cm", CopyName: "cm-copy"},
+		{Kind: secretRefKind, OrigName: "tun", CopyName: "tun-copy"},
 	})
 	if got := spec.Env[0].ValueFrom.SecretKeyRef.Name; got != "sec-copy" {
 		t.Errorf("env secret ref = %q, want sec-copy", got)
@@ -247,5 +249,106 @@ func TestRewriteRefs_PointsEnvAndTunnelAtCopies(t *testing.T) {
 	}
 	if got := spec.Networking.Tunnel.CredentialsSecretRef.Name; got != "tun-copy" {
 		t.Errorf("tunnel credentials ref = %q, want tun-copy", got)
+	}
+}
+
+// TestReconcileVolumeSnapshotRestore_PersistsCopyPlan is a regression test
+// for the "restore.gameplane.local/copy-plan" annotation: a successful
+// create pass must actually write it to the live Restore (client.MergeFrom
+// snapshots its argument by reference, so taking that snapshot after the
+// annotation is already set silently computes an empty patch and never
+// writes anything), and the persisted JSON must round-trip through
+// refCopy's exported fields back into the same plan.
+func TestReconcileVolumeSnapshotRestore_PersistsCopyPlan(t *testing.T) {
+	ctx := context.Background()
+	s := scrapeScheme(t)
+
+	const (
+		ns           = "ns"
+		origName     = "orig"
+		restoredName = "restored"
+		secretName   = "owned-secret"
+	)
+
+	orig := &gameplanev1alpha1.GameServer{
+		ObjectMeta: metav1.ObjectMeta{Name: origName, Namespace: ns, UID: "uid-orig"},
+		Spec: gameplanev1alpha1.GameServerSpec{
+			TemplateRef: gameplanev1alpha1.GameTemplateRef{Name: "tmpl"},
+			Env: []corev1.EnvVar{{
+				Name: "V",
+				ValueFrom: &corev1.EnvVarSource{SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
+					Key:                  "key",
+				}},
+			}},
+		},
+	}
+	isController := true
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: secretName, Namespace: ns,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: gameplanev1alpha1.GroupVersion.String(),
+				Kind:       "GameServer",
+				Name:       origName,
+				UID:        orig.UID,
+				Controller: &isController,
+			}},
+		},
+		Data: map[string][]byte{"key": []byte("v")},
+	}
+	backup := &gameplanev1alpha1.Backup{
+		ObjectMeta: metav1.ObjectMeta{Name: "b", Namespace: ns},
+		Spec: gameplanev1alpha1.BackupSpec{
+			ServerRef: gameplanev1alpha1.LocalObjectRef{Name: origName},
+			Strategy:  "volume-snapshot",
+		},
+		Status: gameplanev1alpha1.BackupStatus{
+			SnapshotID:                "snap-1",
+			VolumeSnapshotContentName: "snapcontent-b",
+		},
+	}
+	restore := &gameplanev1alpha1.Restore{
+		ObjectMeta: metav1.ObjectMeta{Name: "rs", Namespace: ns},
+		Spec: gameplanev1alpha1.RestoreSpec{
+			BackupRef: gameplanev1alpha1.LocalObjectRef{Name: "b"},
+			ServerRef: gameplanev1alpha1.LocalObjectRef{Name: restoredName},
+		},
+		Status: gameplanev1alpha1.RestoreStatus{SnapshotID: "snap-1"},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(s).
+		WithObjects(orig, secret, backup, restore).
+		WithStatusSubresource(&gameplanev1alpha1.Restore{}, &gameplanev1alpha1.Backup{}).
+		Build()
+	r := &RestoreReconciler{Client: cl, Scheme: s}
+
+	var rs gameplanev1alpha1.Restore
+	if err := cl.Get(ctx, types.NamespacedName{Namespace: ns, Name: "rs"}, &rs); err != nil {
+		t.Fatalf("get restore: %v", err)
+	}
+	var b gameplanev1alpha1.Backup
+	if err := cl.Get(ctx, types.NamespacedName{Namespace: ns, Name: "b"}, &b); err != nil {
+		t.Fatalf("get backup: %v", err)
+	}
+	if _, err := r.reconcileVolumeSnapshotRestore(ctx, &rs, &b); err != nil {
+		t.Fatalf("reconcileVolumeSnapshotRestore: %v", err)
+	}
+
+	var after gameplanev1alpha1.Restore
+	if err := cl.Get(ctx, types.NamespacedName{Namespace: ns, Name: "rs"}, &after); err != nil {
+		t.Fatalf("get restore after pass: %v", err)
+	}
+	planJSON := after.Annotations["restore.gameplane.local/copy-plan"]
+	if planJSON == "" {
+		t.Fatal("copy-plan annotation was not persisted on the live Restore")
+	}
+	var plan []refCopy
+	if err := json.Unmarshal([]byte(planJSON), &plan); err != nil {
+		t.Fatalf("unmarshal persisted copy plan: %v", err)
+	}
+	want := []refCopy{{Kind: secretRefKind, OrigName: secretName, CopyName: restoredRefName(restoredName, secretName)}}
+	if !reflect.DeepEqual(plan, want) {
+		t.Errorf("persisted copy plan = %+v, want %+v", plan, want)
 	}
 }

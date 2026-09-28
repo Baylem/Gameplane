@@ -129,6 +129,31 @@ func (r *RestoreReconciler) reconcileVolumeSnapshotRestore(
 		return r.failOrRequeue(ctx, rs, err)
 	}
 	rewriteRefs(&created.Spec, copies)
+
+	// Persist the copy plan on the Restore now, before creating anything.
+	// ensureOwnedRefCopies below can fail transiently (e.g. a write
+	// conflict), and awaitRestoredServer's later passes must be able to
+	// re-ensure exactly this plan (ensureOwnedRefCopies) instead of
+	// falling back to a read-only check that can never recreate a missing
+	// copy — persisting only after ensureOwnedRefCopies succeeds would
+	// leave that fallback as the only path on a restore whose very first
+	// copy attempt failed transiently.
+	copiesJSON, err := json.Marshal(copies)
+	if err != nil {
+		return r.failOrRequeue(ctx, rs, fmt.Errorf("marshal copy plan: %w", err))
+	}
+	// client.MergeFrom snapshots its argument by reference, not by value,
+	// so the "before" snapshot must be taken before rs is mutated below —
+	// otherwise the computed merge patch is empty and the write is a no-op.
+	rsBeforePatch := rs.DeepCopy()
+	if rs.Annotations == nil {
+		rs.Annotations = make(map[string]string)
+	}
+	rs.Annotations["restore.gameplane.local/copy-plan"] = string(copiesJSON)
+	if err := r.Patch(ctx, rs, client.MergeFrom(rsBeforePatch)); err != nil {
+		return r.failOrRequeue(ctx, rs, fmt.Errorf("update restore copy plan: %w", err))
+	}
+
 	if err := r.Create(ctx, created); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			// Lost a create race; the next pass finds it via the annotation.
@@ -142,22 +167,9 @@ func (r *RestoreReconciler) reconcileVolumeSnapshotRestore(
 
 	// Make the copies now that the restored server has a UID. A transient
 	// error here requeues; the next pass finds the server via the
-	// annotation and re-ensures the copies in awaitRestoredServer.
+	// annotation and re-ensures the persisted plan in awaitRestoredServer.
 	if err := r.ensureOwnedRefCopies(ctx, &orig, created, copies); err != nil {
 		return r.failOrRequeue(ctx, rs, err)
-	}
-
-	// After ensuring copies at line 144, update Restore status with the copy plan.
-	copiesJSON, err := json.Marshal(copies)
-	if err != nil {
-		return r.failOrRequeue(ctx, rs, fmt.Errorf("marshal copy plan: %w", err))
-	}
-	if rs.Annotations == nil {
-		rs.Annotations = make(map[string]string)
-	}
-	rs.Annotations["restore.gameplane.local/copy-plan"] = string(copiesJSON)
-	if err := r.Patch(ctx, rs, client.MergeFrom(rs)); err != nil {
-		return r.failOrRequeue(ctx, rs, fmt.Errorf("update restore copy plan: %w", err))
 	}
 
 	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
@@ -166,7 +178,7 @@ func (r *RestoreReconciler) reconcileVolumeSnapshotRestore(
 // ensureRestoredRefsFromSpec validates that every Secret/ConfigMap referenced
 // by the restored server's spec still exists and is owned, without creating new copies.
 func (r *RestoreReconciler) ensureRestoredRefsFromSpec(
-	ctx context.Context, orig, restored *gameplanev1alpha1.GameServer,
+	ctx context.Context, restored *gameplanev1alpha1.GameServer,
 ) error {
 	for _, ref := range extractSpecRefs(&restored.Spec) {
 		switch ref.kind {
@@ -226,7 +238,7 @@ func (r *RestoreReconciler) awaitRestoredServer(
 			}
 		} else {
 			// Fallback if plan was not persisted: use restored server's own spec
-			refsErr = r.ensureRestoredRefsFromSpec(ctx, orig, gs)
+			refsErr = r.ensureRestoredRefsFromSpec(ctx, gs)
 		}
 		if refsErr != nil && errors.Is(refsErr, errRefNotOwned) {
 			return r.fail(ctx, rs, refsErr.Error())
@@ -364,11 +376,17 @@ func (r *RestoreReconciler) awaitRestoredServer(
 	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
-// refCopy describes a single reference to copy from the original server to the restored server.
+// refCopy describes a single reference to copy from the original server to
+// the restored server. Its fields are exported (with json tags) because a
+// []refCopy is round-tripped through JSON: it's marshaled into the Restore's
+// "restore.gameplane.local/copy-plan" annotation and unmarshaled back out of
+// it on later reconcile passes (see reconcileVolumeSnapshotRestore and
+// awaitRestoredServer). encoding/json only sees exported fields, so
+// unexported fields here would silently round-trip as zero values.
 type refCopy struct {
-	kind     string // "Secret" or "ConfigMap"
-	origName string
-	copyName string
+	Kind     string `json:"kind"` // "Secret" or "ConfigMap"
+	OrigName string `json:"origName"`
+	CopyName string `json:"copyName"`
 }
 
 // planOwnedRefCopies traverses the original server's spec and returns a list of
@@ -407,9 +425,9 @@ func (r *RestoreReconciler) planOwnedRefCopies(
 			// Plan the copy with a new name
 			copyName := restoredRefName(restored.Name, refName)
 			copies = append(copies, refCopy{
-				kind:     secretRefKind,
-				origName: refName,
-				copyName: copyName,
+				Kind:     secretRefKind,
+				OrigName: refName,
+				CopyName: copyName,
 			})
 		}
 
@@ -434,9 +452,9 @@ func (r *RestoreReconciler) planOwnedRefCopies(
 			// Plan the copy with a new name
 			copyName := restoredRefName(restored.Name, refName)
 			copies = append(copies, refCopy{
-				kind:     configMapRefKind,
-				origName: refName,
-				copyName: copyName,
+				Kind:     configMapRefKind,
+				OrigName: refName,
+				CopyName: copyName,
 			})
 		}
 	}
@@ -457,9 +475,9 @@ func (r *RestoreReconciler) planOwnedRefCopies(
 
 			copyName := restoredRefName(restored.Name, ref.Name)
 			copies = append(copies, refCopy{
-				kind:     secretRefKind,
-				origName: ref.Name,
-				copyName: copyName,
+				Kind:     secretRefKind,
+				OrigName: ref.Name,
+				CopyName: copyName,
 			})
 		}
 	}
@@ -479,9 +497,9 @@ func (r *RestoreReconciler) planOwnedRefCopies(
 
 			copyName := restoredRefName(restored.Name, ref.Name)
 			copies = append(copies, refCopy{
-				kind:     secretRefKind,
-				origName: ref.Name,
-				copyName: copyName,
+				Kind:     secretRefKind,
+				OrigName: ref.Name,
+				CopyName: copyName,
 			})
 			seen[key] = true
 		}
@@ -498,33 +516,38 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 	ctx context.Context, orig, restored *gameplanev1alpha1.GameServer, copies []refCopy,
 ) error {
 	for _, cp := range copies {
-		switch cp.kind {
+		switch cp.Kind {
 		case secretRefKind:
 			src := &corev1.Secret{}
-			if err := r.Get(ctx, types.NamespacedName{Name: cp.origName, Namespace: orig.Namespace}, src); err != nil {
-				return fmt.Errorf("read source Secret %q: %w", cp.origName, err)
+			if err := r.Get(ctx, types.NamespacedName{Name: cp.OrigName, Namespace: orig.Namespace}, src); err != nil {
+				return fmt.Errorf("read source Secret %q: %w", cp.OrigName, err)
 			}
 			// Re-verify ownership at copy time: planning may have run a
 			// pass ago, and the named Secret could have been replaced with
 			// an unowned object at the same name since.
 			if !isServerOwnedSecret(src, orig) {
-				return fmt.Errorf("source Secret %q is not owned by original server %q: %w", cp.origName, orig.Name, errRefNotOwned)
+				return fmt.Errorf("source Secret %q is not owned by original server %q: %w", cp.OrigName, orig.Name, errRefNotOwned)
 			}
 
 			dst := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: cp.copyName, Namespace: restored.Namespace},
+				ObjectMeta: metav1.ObjectMeta{Name: cp.CopyName, Namespace: restored.Namespace},
 			}
 			_, err := controllerutil.CreateOrUpdate(ctx, r.Client, dst, func() error {
 				if !dst.CreationTimestamp.IsZero() {
 					// Object exists. Verify the live API-server object is controlled by the restored server.
-					// Re-fetch to catch any object that replaced a controlled copy between cache read and here.
+					// Re-fetch through the uncached APIReader: dst above was
+					// populated by CreateOrUpdate's own cache-backed Get, so
+					// re-reading through r.Client here would just observe the
+					// same stale cache entry and could never catch a copy
+					// that was deleted and replaced before the informer
+					// cache caught up.
 					live := &corev1.Secret{}
-					if err := r.Client.Get(ctx, types.NamespacedName{Name: cp.copyName, Namespace: restored.Namespace}, live); err != nil {
-						return fmt.Errorf("re-verify live Secret %q: %w", cp.copyName, err)
+					if err := r.apiReader().Get(ctx, types.NamespacedName{Name: cp.CopyName, Namespace: restored.Namespace}, live); err != nil {
+						return fmt.Errorf("re-verify live Secret %q: %w", cp.CopyName, err)
 					}
 					// Compare UIDs: the live object must be the same one the cache saw, and it must be controlled.
 					if live.UID != dst.UID || !metav1.IsControlledBy(live, restored) {
-						return fmt.Errorf("secret %q is not controlled by the restored server or was replaced: %w", cp.copyName, errRefNotOwned)
+						return fmt.Errorf("secret %q is not controlled by the restored server or was replaced: %w", cp.CopyName, errRefNotOwned)
 					}
 					// Owned copy exists and verified live, skip update.
 					return nil
@@ -535,35 +558,40 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 				return controllerutil.SetControllerReference(restored, dst, r.Scheme)
 			})
 			if err != nil {
-				return fmt.Errorf("ensure copy Secret %q: %w", cp.copyName, err)
+				return fmt.Errorf("ensure copy Secret %q: %w", cp.CopyName, err)
 			}
 
 		case configMapRefKind:
 			src := &corev1.ConfigMap{}
-			if err := r.Get(ctx, types.NamespacedName{Name: cp.origName, Namespace: orig.Namespace}, src); err != nil {
-				return fmt.Errorf("read source ConfigMap %q: %w", cp.origName, err)
+			if err := r.Get(ctx, types.NamespacedName{Name: cp.OrigName, Namespace: orig.Namespace}, src); err != nil {
+				return fmt.Errorf("read source ConfigMap %q: %w", cp.OrigName, err)
 			}
 			// Re-verify ownership at copy time: planning may have run a
 			// pass ago, and the named ConfigMap could have been replaced
 			// with an unowned object at the same name since.
 			if !isServerOwnedConfigMap(src, orig) {
-				return fmt.Errorf("source ConfigMap %q is not owned by original server %q: %w", cp.origName, orig.Name, errRefNotOwned)
+				return fmt.Errorf("source ConfigMap %q is not owned by original server %q: %w", cp.OrigName, orig.Name, errRefNotOwned)
 			}
 
 			dst := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{Name: cp.copyName, Namespace: restored.Namespace},
+				ObjectMeta: metav1.ObjectMeta{Name: cp.CopyName, Namespace: restored.Namespace},
 			}
 			_, err := controllerutil.CreateOrUpdate(ctx, r.Client, dst, func() error {
 				if !dst.CreationTimestamp.IsZero() {
 					// Object exists. Verify the live API-server object is controlled by the restored server.
-					// Re-fetch to catch any object that replaced a controlled copy between cache read and here.
+					// Re-fetch through the uncached APIReader: dst above was
+					// populated by CreateOrUpdate's own cache-backed Get, so
+					// re-reading through r.Client here would just observe the
+					// same stale cache entry and could never catch a copy
+					// that was deleted and replaced before the informer
+					// cache caught up.
 					live := &corev1.ConfigMap{}
-					if err := r.Client.Get(ctx, types.NamespacedName{Name: cp.copyName, Namespace: restored.Namespace}, live); err != nil {
-						return fmt.Errorf("re-verify live ConfigMap %q: %w", cp.copyName, err)
+					if err := r.apiReader().Get(ctx, types.NamespacedName{Name: cp.CopyName, Namespace: restored.Namespace}, live); err != nil {
+						return fmt.Errorf("re-verify live ConfigMap %q: %w", cp.CopyName, err)
 					}
 					// Compare UIDs: the live object must be the same one the cache saw, and it must be controlled.
 					if live.UID != dst.UID || !metav1.IsControlledBy(live, restored) {
-						return fmt.Errorf("configmap %q is not controlled by the restored server or was replaced: %w", cp.copyName, errRefNotOwned)
+						return fmt.Errorf("configmap %q is not controlled by the restored server or was replaced: %w", cp.CopyName, errRefNotOwned)
 					}
 					// Owned copy exists and verified live, skip update.
 					return nil
@@ -574,7 +602,7 @@ func (r *RestoreReconciler) ensureOwnedRefCopies(
 				return controllerutil.SetControllerReference(restored, dst, r.Scheme)
 			})
 			if err != nil {
-				return fmt.Errorf("ensure copy ConfigMap %q: %w", cp.copyName, err)
+				return fmt.Errorf("ensure copy ConfigMap %q: %w", cp.CopyName, err)
 			}
 		}
 	}
@@ -606,27 +634,27 @@ func rewriteRefs(spec *gameplanev1alpha1.GameServerSpec, copies []refCopy) {
 			continue
 		}
 		for _, cp := range copies {
-			if cp.kind == secretRefKind && vf.SecretKeyRef != nil && vf.SecretKeyRef.Name == cp.origName {
-				vf.SecretKeyRef.Name = cp.copyName
+			if cp.Kind == secretRefKind && vf.SecretKeyRef != nil && vf.SecretKeyRef.Name == cp.OrigName {
+				vf.SecretKeyRef.Name = cp.CopyName
 			}
-			if cp.kind == configMapRefKind && vf.ConfigMapKeyRef != nil && vf.ConfigMapKeyRef.Name == cp.origName {
-				vf.ConfigMapKeyRef.Name = cp.copyName
+			if cp.Kind == configMapRefKind && vf.ConfigMapKeyRef != nil && vf.ConfigMapKeyRef.Name == cp.OrigName {
+				vf.ConfigMapKeyRef.Name = cp.CopyName
 			}
 		}
 	}
 	if spec.Networking.Tunnel != nil && spec.Networking.Tunnel.CredentialsSecretRef != nil {
 		ref := spec.Networking.Tunnel.CredentialsSecretRef
 		for _, cp := range copies {
-			if cp.kind == secretRefKind && ref.Name == cp.origName {
-				ref.Name = cp.copyName
+			if cp.Kind == secretRefKind && ref.Name == cp.OrigName {
+				ref.Name = cp.CopyName
 			}
 		}
 	}
 	if spec.BackupPolicy != nil && spec.BackupPolicy.RepoRef.Name != "" {
 		ref := &spec.BackupPolicy.RepoRef
 		for _, cp := range copies {
-			if cp.kind == secretRefKind && ref.Name == cp.origName {
-				ref.Name = cp.copyName
+			if cp.Kind == secretRefKind && ref.Name == cp.OrigName {
+				ref.Name = cp.CopyName
 			}
 		}
 	}

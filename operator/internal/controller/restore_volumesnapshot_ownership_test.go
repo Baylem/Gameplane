@@ -80,7 +80,7 @@ func TestEnsureOwnedRefCopies_RejectsSourceReplacedSinceOwnershipCheck(t *testin
 	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(orig, restored, unownedSecret).Build()
 	r := &RestoreReconciler{Client: cl, Scheme: s}
 
-	copies := []refCopy{{kind: secretRefKind, origName: "replaced-secret", copyName: "restored-ref-copy"}}
+	copies := []refCopy{{Kind: secretRefKind, OrigName: "replaced-secret", CopyName: "restored-ref-copy"}}
 	err := r.ensureOwnedRefCopies(ctx, orig, restored, copies)
 	if err == nil {
 		t.Fatal("want an error copying an unowned replacement, got nil")
@@ -125,7 +125,7 @@ func TestEnsureOwnedRefCopies_ConfigMapCopiesBinaryData(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(orig, restored, src).Build()
 	r := &RestoreReconciler{Client: cl, Scheme: s}
 
-	copies := []refCopy{{kind: configMapRefKind, origName: "src-cm", copyName: "dst-cm"}}
+	copies := []refCopy{{Kind: configMapRefKind, OrigName: "src-cm", CopyName: "dst-cm"}}
 	if err := r.ensureOwnedRefCopies(ctx, orig, restored, copies); err != nil {
 		t.Fatalf("ensureOwnedRefCopies: %v", err)
 	}
@@ -197,16 +197,16 @@ func TestEnsureOwnedRefCopies_ExistingCopyMustBeControlledByRestored(t *testing.
 			r := &RestoreReconciler{Client: cl, Scheme: s}
 
 			for _, cp := range []refCopy{
-				{kind: secretRefKind, origName: "src-sec", copyName: "dst-sec"},
-				{kind: configMapRefKind, origName: "src-cm", copyName: "dst-cm"},
+				{Kind: secretRefKind, OrigName: "src-sec", CopyName: "dst-sec"},
+				{Kind: configMapRefKind, OrigName: "src-cm", CopyName: "dst-cm"},
 			} {
 				err := r.ensureOwnedRefCopies(ctx, orig, restored, []refCopy{cp})
 				if controller {
 					if err != nil {
-						t.Errorf("%s %q: a copy controlled by the restored server must be accepted, got %v", cp.kind, cp.copyName, err)
+						t.Errorf("%s %q: a copy controlled by the restored server must be accepted, got %v", cp.Kind, cp.CopyName, err)
 					}
 				} else if !errors.Is(err, errRefNotOwned) {
-					t.Errorf("%s %q: want errRefNotOwned for a copy with only a non-controller OwnerReference, got %v", cp.kind, cp.copyName, err)
+					t.Errorf("%s %q: want errRefNotOwned for a copy with only a non-controller OwnerReference, got %v", cp.Kind, cp.CopyName, err)
 				}
 			}
 
