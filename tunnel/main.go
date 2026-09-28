@@ -816,7 +816,7 @@ func registerTailscaleOnce(ctx context.Context, hostname string, tags []string) 
 	log.Printf("tailscale tunnel: `tailscale up --advertise-tags=%s` failed: %v; the tailnet ACL must grant tagOwners for these tags to the auth key's owner.", joined, err)
 
 	if st, err := queryTailscaleStatus(ctx); err == nil && st.BackendState == "Running" {
-		if len(st.Self.Tags) > 0 {
+		if st.Self != nil && len(st.Self.Tags) > 0 {
 			oldTags := strings.Join(st.Self.Tags, ",")
 			log.Printf("tailscale tunnel: device is still running with previous tags %s; they remain granted until the tailnet ACL is fixed or they are removed in the tailnet admin console", oldTags)
 			return
