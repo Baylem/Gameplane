@@ -23,8 +23,8 @@ Execute a command on a game server via source RCON protocol (Minecraft, Valve ga
 1. Launch the operator session and set environment variables:
    ```sh
    export GP=http://127.0.0.1:18080
-   export SESSION=$(grep gameplane_session ~/gameplane-audit-018/session-operator.txt | cut -d= -f2)
-   export CSRF=$(grep gameplane_csrf ~/gameplane-audit-018/session-operator.txt | cut -d= -f2)
+   export SESSION=$(grep gameplane_session ~/gameplane-audit-018/session-operator.txt | cut -d= -f2 | cut -d';' -f1)
+   export CSRF=$(grep gameplane_csrf ~/gameplane-audit-018/session-operator.txt | cut -d= -f2 | cut -d';' -f1)
    ```
 
 2. Create and start the test GameServer from the `minecraft-java` template (OD-021 item 1: each agent procedure creates and deletes its own `audit018-` server instead of addressing the template name as a server):

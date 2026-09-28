@@ -32,6 +32,7 @@ The response sets `gameplane_session` and `gameplane_csrf` cookies (both `HttpOn
 grep -i "^set-cookie:" headers.txt | grep gameplane_session > ~/gameplane-audit-018/session-<role>.txt
 grep -i "^set-cookie:" headers.txt | grep gameplane_csrf >> ~/gameplane-audit-018/session-<role>.txt
 chmod 600 ~/gameplane-audit-018/session-<role>.txt
+rm headers.txt
 ```
 
 Over plain HTTP, `curl` drops `Secure` cookies. Instead, extract and send them back:

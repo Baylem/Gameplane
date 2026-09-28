@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Purpose: Compare two cluster snapshots and report changes
 # Usage: snapshot-diff.sh <before-dir> <after-dir>
-# Exit codes: 0 = no mismatches, 1 = mismatches found, 2 = usage error or missing files
+# Exit codes: 0 = no mismatches, 1 = mismatches found, 2 = usage error, missing files, or incomplete snapshots
 set -euo pipefail
 
 : "${KUBECONFIG:=$HOME/kubelab.yaml}"; export KUBECONFIG
@@ -39,8 +39,8 @@ compare_crd() {
   local after_file="$AFTER_DIR/$filename"
 
   if [[ ! -f "$before_file" ]]; then
-    echo "WARNING: $filename not found in before-dir" >&2
-    return
+    echo "ERROR: $filename not found in before-dir (incomplete baseline)" >&2
+    exit 2
   fi
 
   if [[ ! -f "$after_file" ]]; then
@@ -106,8 +106,8 @@ done
 
 # Compare PVCs
 if [[ -f "$BEFORE_DIR/pvcs.json" ]] && [[ -f "$AFTER_DIR/pvcs.json" ]]; then
-  pvcs_before=$(jq -r '.[] | select(.name | startswith("audit018-") | not) | "\(.namespace)/\(.name) uid=\(.uid)"' "$BEFORE_DIR/pvcs.json" | sort)
-  pvcs_after=$(jq -r '.[] | select(.name | startswith("audit018-") | not) | "\(.namespace)/\(.name) uid=\(.uid)"' "$AFTER_DIR/pvcs.json" | sort)
+  pvcs_before=$(jq -r '.[] | select(.name | startswith("audit018-") | not) | "\(.namespace)/\(.name) uid=\(.uid) volumeName=\(.volumeName)"' "$BEFORE_DIR/pvcs.json" | sort)
+  pvcs_after=$(jq -r '.[] | select(.name | startswith("audit018-") | not) | "\(.namespace)/\(.name) uid=\(.uid) volumeName=\(.volumeName)"' "$AFTER_DIR/pvcs.json" | sort)
 
   # Check for MISSING
   while IFS= read -r line; do
@@ -149,8 +149,8 @@ fi
 
 # Compare nodes
 if [[ -f "$BEFORE_DIR/nodes.json" ]] && [[ -f "$AFTER_DIR/nodes.json" ]]; then
-  nodes_before=$(jq -r '.[] | "\(.name) uid=\(.uid)"' "$BEFORE_DIR/nodes.json" | sort)
-  nodes_after=$(jq -r '.[] | "\(.name) uid=\(.uid)"' "$AFTER_DIR/nodes.json" | sort)
+  nodes_before=$(jq -r '.[] | "\(.name) uid=\(.uid) schedulable=\(.schedulable) roles=\(.roles | join(",")) kubeletVersion=\(.kubeletVersion)"' "$BEFORE_DIR/nodes.json" | sort)
+  nodes_after=$(jq -r '.[] | "\(.name) uid=\(.uid) schedulable=\(.schedulable) roles=\(.roles | join(",")) kubeletVersion=\(.kubeletVersion)"' "$AFTER_DIR/nodes.json" | sort)
 
   # Check for MISSING nodes
   while IFS= read -r line; do
@@ -193,8 +193,69 @@ fi
 # Skip images.json
 echo "NOTE: images.json skipped (Gameplane Deployments/StatefulSets/DaemonSets change on purpose during RC upgrades)"
 
-# Skip helm-list.json and helm-values.json
-echo "NOTE: helm-list.json and helm-values.json skipped (Gameplane release changes on purpose)"
+# Skip helm-list.json
+echo "NOTE: helm-list.json skipped (Gameplane release changes on purpose)"
+
+# Compare helm-values.json with allowlist of permitted changes
+if [[ -f "$BEFORE_DIR/helm-values.json" ]] && [[ -f "$AFTER_DIR/helm-values.json" ]]; then
+  # Allowlist of keys that are permitted to change during procedures
+  # These are the only Helm values that procedures are documented to modify
+  declare -a ALLOWED_HELM_CHANGES=(
+    "ingress"
+    "networkPolicies"
+    "agent"
+    "api"
+  )
+
+  # Create jq filter to extract only allowlisted keys
+  local filter="{$(printf '"%s": .%s' "${ALLOWED_HELM_CHANGES[@]/#/}" "${ALLOWED_HELM_CHANGES[@]}" | tr ' ' ',')}"
+  filter="{$(for key in "${ALLOWED_HELM_CHANGES[@]}"; do echo "\"$key\": .$key"; done | paste -sd, -)}"
+
+  # Extract only allowlisted paths and compare
+  helm_before=$(jq "$filter" "$BEFORE_DIR/helm-values.json" 2>/dev/null || echo "{}")
+  helm_after=$(jq "$filter" "$AFTER_DIR/helm-values.json" 2>/dev/null || echo "{}")
+
+  # Simple diff: if the allowlisted values differ, flag it
+  if [[ "$helm_before" != "$helm_after" ]]; then
+    # Check if any NON-allowlisted keys differ
+    all_before=$(jq '.' "$BEFORE_DIR/helm-values.json")
+    all_after=$(jq '.' "$AFTER_DIR/helm-values.json")
+
+    # Extract keys that are NOT in the allowlist
+    other_keys=$(jq -r 'keys | .[]' <<< "$all_before" | while read key; do
+      skip=0
+      for allowed in "${ALLOWED_HELM_CHANGES[@]}"; do
+        if [[ "$key" == "$allowed" ]]; then
+          skip=1
+          break
+        fi
+      done
+      if [[ $skip -eq 0 ]]; then
+        echo "$key"
+      fi
+    done)
+
+    # Check if non-allowlisted keys changed
+    unexpected_change=0
+    while IFS= read -r key; do
+      [[ -z "$key" ]] && continue
+      before_val=$(jq ".\"$key\"" <<< "$all_before" 2>/dev/null)
+      after_val=$(jq ".\"$key\"" <<< "$all_after" 2>/dev/null)
+      if [[ "$before_val" != "$after_val" ]]; then
+        echo "HELM VALUE MISMATCH: $key changed unexpectedly"
+        mismatch_found=1
+        unexpected_change=1
+      fi
+    done <<< "$other_keys"
+
+    if [[ $unexpected_change -eq 0 ]]; then
+      # Only allowlisted keys changed, which is acceptable
+      echo "NOTE: helm-values.json changed only in permitted keys (ingress, networkPolicies, agent, api)"
+    fi
+  fi
+else
+  echo "NOTE: helm-values.json skipped (one or both files missing)"
+fi
 
 if [[ $mismatch_found -eq 1 ]]; then
   exit 1

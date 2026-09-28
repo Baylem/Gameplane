@@ -33,10 +33,10 @@ None; unauthenticated public endpoint. Prometheus endpoint, may be behind separa
 none
 
 **Steps**
-1. Login cost: 0. Run: `curl -s $GP/metrics | head -20`
+1. Login cost: 0. Port-forward the metrics server: `kubectl port-forward -n gameplane-system svc/gameplane-api 8009:8009 &`, then query: `curl -s http://localhost:8009/metrics | head -20`
 
 **Expected**
-HTTP 200, response begins with Prometheus-format lines (HELP, TYPE, metrics).
+HTTP 200 (via port-forward), response begins with Prometheus-format lines (HELP, TYPE, metrics).
 
 **Cleanup**
 none
@@ -218,7 +218,7 @@ none
 1. Login cost: 1. Run: `curl -s -H "Cookie: gameplane_session=...; gameplane_csrf=..." -H "X-Gameplane-CSRF: ..." -b ~/gameplane-audit-018/session-viewer.txt $GP/servers | jq '.items | length'`
 
 **Expected**
-HTTP 200, JSON array of GameServer objects. Can filter by `?namespace=...` or `?cluster=...`.
+HTTP 200, JSON object with `.items` field (array of GameServer objects). Can filter by `?namespace=...` or `?cluster=...`.
 
 **Cleanup**
 none
@@ -244,7 +244,7 @@ audit018-server-from-template (GameServer in gameplane-games namespace).
      "kind": "GameServer",
      "metadata": {"name": "audit018-server-from-template", "namespace": "gameplane-games"},
      "spec": {
-       "templateRef": {"name": "mc-fabric"},
+       "templateRef": {"name": "minecraft-java"},
        "suspend": false,
        "storage": {"size": "5Gi"}
      }
@@ -665,19 +665,20 @@ yes (api-auth)
 ### capture-enable
 
 **Preconditions**
-Authenticated as audit018-admin (captures:manage). Server exists (e.g., mc-fabric). Network capture feature is enabled (--capture-enabled).
+Authenticated as audit018-admin (captures:manage). Isolated audit server exists (`audit018-capture-test`, created from `minecraft-java` template). Network capture feature is enabled (--capture-enabled).
 
 **Resources created**
-none (annotation on server, sidecar injection by operator)
+Annotation on server; sidecar injection by operator.
 
 **Steps**
-1. Login cost: 0. Run: `curl -X POST -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/mc-fabric:capture-enable?namespace=gameplane-games" | jq '.phase'`
+1. Login cost: 0. Create audit server (if not pre-created): `kubectl apply -f - <<'EOF'` with `metadata.name: audit018-capture-test`, `spec.templateRef.name: minecraft-java`, then start it with `POST /servers/audit018-capture-test:start`.
+2. Enable capture: `curl -X POST -b ~/gameplane-audit-018/session-admin.txt -H "X-Gameplane-CSRF: ..." "$GP/servers/audit018-capture-test:capture-enable?namespace=gameplane-games" | jq '.phase'`
 
 **Expected**
 HTTP 200, JSON response indicates capture feature is enabled on the server.
 
 **Cleanup**
-POST /servers/mc-fabric:capture-disable
+POST /servers/audit018-capture-test:capture-disable; then DELETE /servers/audit018-capture-test.
 
 **Automatable?**
 yes (api-rbac) if capture feature is enabled; else 501 Not Implemented.

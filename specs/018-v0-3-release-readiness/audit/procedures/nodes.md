@@ -317,10 +317,10 @@ None.
    ```
 
 5. **Restart k3s-agent on the worker**:
+   SSH into the affected kubelab worker and restart the agent:
    ```sh
-   kubectl debug node/"$TARGET_WORKER" -it --image=busybox -- \
-     nsenter -t 1 -m -u -i -n systemctl start k3s-agent
-   
+   ssh "$TARGET_WORKER" sudo systemctl start k3s-agent
+
    # Wait for node to return to Ready
    kubectl wait --for=condition=Ready node/"$TARGET_WORKER" --timeout=300s
    kubectl get nodes | grep "$TARGET_WORKER"

@@ -94,7 +94,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, probe reaches QUERY depth (server is visible and queryable), backup succeeds with phase=Succeeded, restore completes, deletion removes the resource.
 
-**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-garrys-mod; kubectl delete backup,restore -n gameplane-games -l audit018-garrys-mod` (if backups/restores were created).
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-garrys-mod; kubectl delete backup,restore -n gameplane-games audit018-garrys-mod-bk audit018-garrys-mod-rs` (if backups/restores were created).
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -171,7 +171,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, HTTP probe succeeds, REST API query succeeds, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-farming-simulator-25`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-farming-simulator-25; kubectl delete backup,restore -n gameplane-games audit018-farming-simulator-25-bk audit018-farming-simulator-25-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -248,7 +248,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, TCP probe succeeds, PTY console accessible, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-beammp`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-beammp; kubectl delete backup,restore -n gameplane-games audit018-beammp-bk audit018-beammp-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -325,7 +325,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, HTTP probe succeeds, PTY console accessible, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-valheim`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-valheim; kubectl delete backup,restore -n gameplane-games audit018-valheim-bk audit018-valheim-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -402,7 +402,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, A2S probe succeeds, PTY console accessible, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-dont-starve-together`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-dont-starve-together; kubectl delete backup,restore -n gameplane-games audit018-dont-starve-together-bk audit018-dont-starve-together-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -479,7 +479,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, Terraria TCP probe succeeds, PTY console accessible, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-tmodloader`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-tmodloader; kubectl delete backup,restore -n gameplane-games audit018-tmodloader-bk audit018-tmodloader-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -556,7 +556,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, gameproto Terraria handshake succeeds, PTY console accessible, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-terraria`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-terraria; kubectl delete backup,restore -n gameplane-games audit018-terraria-bk audit018-terraria-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -633,7 +633,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, TCP probe succeeds, PTY + RCON console accessible, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-factorio`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-factorio; kubectl delete backup,restore -n gameplane-games audit018-factorio-bk audit018-factorio-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -712,7 +712,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, A2S probe succeeds, BattlEye RCON responds, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-dayz`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-dayz; kubectl delete backup,restore -n gameplane-games audit018-dayz-bk audit018-dayz-rs`.
 
 **Automatable?** Yes (if memory available). Propose bucket: `api-mods`.
 
@@ -791,7 +791,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, port verified open on pod, RCON responds, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-nuclear-option`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-nuclear-option; kubectl delete backup,restore -n gameplane-games audit018-nuclear-option-bk audit018-nuclear-option-rs`.
 
 **Automatable?** Yes (OD-021 item 10). Propose bucket: `bot-heavy` (not `api-mods`; the client join, step 3, stays manual).
 
@@ -868,7 +868,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, A2S probe succeeds, REST API RCON responds, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-palworld`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-palworld; kubectl delete backup,restore -n gameplane-games audit018-palworld-bk audit018-palworld-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -945,7 +945,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, HTTP probe succeeds, REST API RCON responds, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-fivem`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-fivem; kubectl delete backup,restore -n gameplane-games audit018-fivem-bk audit018-fivem-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -1024,7 +1024,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, HTTP probe succeeds, satisfactory RCON responds, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-satisfactory`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-satisfactory; kubectl delete backup,restore -n gameplane-games audit018-satisfactory-bk audit018-satisfactory-rs`.
 
 **Automatable?** Yes (if memory available). Propose bucket: `api-mods`.
 
@@ -1103,7 +1103,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, TCP probe succeeds, Source RCON responds, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-ark-survival-ascended`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-ark-survival-ascended; kubectl delete backup,restore -n gameplane-games audit018-ark-survival-ascended-bk audit018-ark-survival-ascended-rs`.
 
 **Automatable?** Yes (if memory available). Propose bucket: `api-mods`.
 
@@ -1180,7 +1180,7 @@ Every `repoRef.name` below is `audit018-restic`, not the e2e fixture's `e2e-rest
 
 **Expected:** Server created, started, A2S probe succeeds, Source RCON responds, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-cs2`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-cs2; kubectl delete backup,restore -n gameplane-games audit018-cs2-bk audit018-cs2-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -1261,7 +1261,7 @@ If the watched output does not match F-258's flapping signature, this is a real 
 
 **Expected:** Server created, reaches Running within 10 minutes (actual boot time recorded), gameproto Minecraft Java handshake succeeds, Source RCON responds, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-minecraft-java`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-minecraft-java; kubectl delete backup,restore -n gameplane-games audit018-minecraft-java-bk audit018-minecraft-java-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.
 
@@ -1338,6 +1338,6 @@ If the watched output does not match F-258's flapping signature, this is a real 
 
 **Expected:** Server created, started, A2S probe succeeds, WebSocket RCON responds, backup and restore complete, deletion removes resource.
 
-**Cleanup:** `kubectl delete gameserver,backup,restore -n gameplane-games audit018-rust`.
+**Cleanup:** `kubectl delete gameserver -n gameplane-games audit018-rust; kubectl delete backup,restore -n gameplane-games audit018-rust-bk audit018-rust-rs`.
 
 **Automatable?** Yes. Propose bucket: `api-mods`.

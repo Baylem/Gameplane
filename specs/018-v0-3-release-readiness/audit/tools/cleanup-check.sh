@@ -20,7 +20,7 @@ echo "Checking for remaining audit018- resources..."
 
 # Get all the resource types from the spec
 # gameservers, backups, restores, backupschedules, networkcaptures, modulesources, modules (all with .gameplane.local),
-# and pvcs (no group)
+# pvcs (no group), deployments, services, secrets (no group)
 
 # Construct fully qualified names
 declare -a GAMEPLANE_KINDS=(
@@ -33,13 +33,32 @@ declare -a GAMEPLANE_KINDS=(
   "modules.gameplane.local"
 )
 
+# Resource types without group suffix
+declare -a NON_GROUPED_KINDS=(
+  "deployments"
+  "services"
+  "secrets"
+)
+
 # Check Gameplane CRD objects
 # Note: results are captured into a variable and iterated via a here-string
 # (not piped into `while read`) so that leftovers_found, set inside the loop,
 # is visible to the exit-code check below (a piped `while` runs in a subshell
 # in bash and would silently discard the assignment).
 for kind in "${GAMEPLANE_KINDS[@]}"; do
-  lines=$(kubectl get "$kind" -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.name | startswith("audit018-")) | "\(.metadata.namespace)/\(.kind)/\(.metadata.name)"') || true
+  lines=$(kubectl get "$kind" -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.name | startswith("audit018-")) | "\(.metadata.namespace)/\(.kind)/\(.metadata.name)"')
+  if [[ -n "$lines" ]]; then
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      echo "  $line"
+      leftovers_found=1
+    done <<< "$lines"
+  fi
+done
+
+# Check non-grouped resource types (deployments, services, secrets)
+for kind in "${NON_GROUPED_KINDS[@]}"; do
+  lines=$(kubectl get "$kind" -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.name | startswith("audit018-")) | "\(.metadata.namespace)/\(.kind)/\(.metadata.name)"')
   if [[ -n "$lines" ]]; then
     while IFS= read -r line; do
       [[ -z "$line" ]] && continue
@@ -50,13 +69,23 @@ for kind in "${GAMEPLANE_KINDS[@]}"; do
 done
 
 # Check PVCs
-pvc_lines=$(kubectl get pvc -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.name | startswith("audit018-")) | "\(.metadata.namespace)/PersistentVolumeClaim/\(.metadata.name)"') || true
+pvc_lines=$(kubectl get pvc -A -o json 2>/dev/null | jq -r '.items[] | select(.metadata.name | startswith("audit018-")) | "\(.metadata.namespace)/PersistentVolumeClaim/\(.metadata.name)"')
 if [[ -n "$pvc_lines" ]]; then
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     echo "  $line"
     leftovers_found=1
   done <<< "$pvc_lines"
+fi
+
+# Check Namespaces
+namespace_lines=$(kubectl get namespaces -o json 2>/dev/null | jq -r '.items[] | select(.metadata.name | startswith("audit018-")) | "\(.metadata.namespace // "cluster")/Namespace/\(.metadata.name)"')
+if [[ -n "$namespace_lines" ]]; then
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    echo "  $line"
+    leftovers_found=1
+  done <<< "$namespace_lines"
 fi
 
 if [[ $leftovers_found -eq 1 ]]; then

@@ -10,7 +10,7 @@ Shared conventions: [conventions.md](conventions.md).
 
 **Steps:**
 1. Login as audit018-admin to the dashboard. (Login cost: 1)
-2. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set api.oidc.enabled=true --set api.oidc.issuer=<issuer> --set api.oidc.clientID=<clientID> --set api.oidc.redirectURL=<redirectURL>` and wait for rollout.
+2. Run: `CURRENT_TAG=$(kubectl get deployment gameplane-api -n gameplane-system -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -o '[^:]*$') && helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set api.oidc.enabled=true --set api.oidc.issuer=<issuer> --set api.oidc.clientID=<clientID> --set api.oidc.redirectURL=<redirectURL> --set image.tag=$CURRENT_TAG` and wait for rollout.
 3. Visit `$GP/login` in a new incognito browser tab and observe OIDC provider link on login page.
 4. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set api.oidc.enabled=false` and wait for API pod restart.
 
@@ -247,11 +247,12 @@ Shared conventions: [conventions.md](conventions.md).
 **Resources created:** none (policies are defined in chart; test may create audit018-game-egress-test GameServer).
 
 **Steps:**
+0. Record the current gameEgress.enabled setting: `kubectl get helm release gameplane -n gameplane-system -o jsonpath='{.config.networkPolicies.gameEgress.enabled}' > /tmp/audit018-gameegressenabled-before.txt || echo true > /tmp/audit018-gameegressenabled-before.txt` (default is true if not explicitly set).
 1. Ensure networkPolicies.enabled=true (run network-policies-enforcement first if needed).
 2. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'networkPolicies.gameEgress.enabled=true'` and wait for Helm to apply.
 3. Verify NetworkPolicy for game egress exists: `kubectl get networkpolicies -n gameplane-games | grep -i egress` or inspect the policy YAML to confirm it allows only TCP 80/443 and blocks RFC1918 ranges.
 4. Create a test GameServer in gameplane-games and start it, then attempt to download an asset from the public internet (should succeed) and from an internal service (should fail): simulate by running a curl command inside the game pod.
-5. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'networkPolicies.gameEgress.enabled=false'`.
+5. Revert: restore the pre-test value recorded in step 0: `EGRESS_VAL=$(cat /tmp/audit018-gameegressenabled-before.txt) && helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set "networkPolicies.gameEgress.enabled=$EGRESS_VAL"`.
 6. Verify game pod can now reach internal services.
 
 **Expected:** Game pods are restricted to TCP 80/443 egress to non-RFC1918 ranges when enabled; are unrestricted when disabled.
@@ -748,11 +749,12 @@ kubectl get svc gameplane-web -n gameplane-system 2>&1 | tee ~/Gameplane/specs/0
 **Resources created:** none (toggles the chart's fixed-name `gameplane` Ingress object, not an audit018-named object).
 
 **Steps:**
+0. Record the current ingress.enabled setting: `kubectl get helm release gameplane -n gameplane-system -o jsonpath='{.config.ingress.enabled}' > /tmp/audit018-ingress-enabled-before.txt || echo true > /tmp/audit018-ingress-enabled-before.txt` (default is true).
 1. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'ingress.enabled=true'` and wait for Helm to apply.
 2. Verify Ingress object is created: `kubectl get ingress -n gameplane-system gameplane` (fixed object name; the Ingress carries no `app` label at all).
 3. Verify ingress routing rules: `kubectl get ingress -n gameplane-system -o yaml | grep -A5 'host: gameplane.local'` (or your configured host).
 4. Attempt to reach the dashboard via the configured host (e.g., `https://gameplane.local/`); expect success if ingress controller is present and routes are working.
-5. Revert: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'ingress.enabled=false'` and verify Ingress object is removed.
+5. Revert: restore the pre-test value recorded in step 0: `INGRESS_VAL=$(cat /tmp/audit018-ingress-enabled-before.txt) && helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set "ingress.enabled=$INGRESS_VAL"` and verify Ingress state.
 6. Attempt to reach the dashboard via the same host; expect failure (no route, or 404).
 
 **Expected:** Ingress object is created when enabled; is removed when disabled. Routes are active and reachable when ingress is enabled (if ingress controller is present).
@@ -988,11 +990,12 @@ EOF
 **Resources created:** none (only changes image references).
 
 **Steps:**
+0. Record the current image tag before the test: `kubectl get deployment -n gameplane-system gameplane-operator -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -o '[^:]*$' > /tmp/audit018-imagetag-before.txt`.
 1. Get the current image tag: `kubectl get deployment -n gameplane-system gameplane-operator -o jsonpath='{.spec.template.spec.containers[0].image}' | grep -o '[^:]*$'` (extract tag from image reference).
 2. Run: `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'image.tag=latest'` and wait for pods to restart.
 3. Verify operator pod is running with the new tag: `kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-operator -o jsonpath='{.items[0].spec.containers[0].image}'` (expect tag `latest`).
 4. Verify API pod is running with the new tag: `kubectl get pod -n gameplane-system -l app.kubernetes.io/name=gameplane-api -o jsonpath='{.items[0].spec.containers[0].image}'` (expect tag `latest`).
-5. Revert to this cluster's baseline tag, not the chart's appVersion (kubelab-baseline.md: this install overrides `image.tag`): `helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set 'image.tag=016'` and wait for pods to restart.
+5. Revert to the pre-test image tag recorded in step 0: `TAG=$(cat /tmp/audit018-imagetag-before.txt) && helm upgrade gameplane charts/gameplane -n gameplane-system --reuse-values --set "image.tag=$TAG"` and wait for pods to restart.
 
 **Expected:** Pods are pulled with the specified tag. Image pulling may fail if the tag does not exist in the registry.
 

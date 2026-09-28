@@ -11,7 +11,7 @@ Preconditions:
 
 After the maintainer approves (and only then):
 ```sh
-git tag -s v0.3.0-rc.N <sha> -m "v0.3.0-rc.N"
+git tag -a v0.3.0-rc.N <sha> -m "v0.3.0-rc.N"
 git push origin v0.3.0-rc.N
 ```
 

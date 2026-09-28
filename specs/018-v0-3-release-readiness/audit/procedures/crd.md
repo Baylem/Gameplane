@@ -820,11 +820,12 @@ Evidence: save the final `kubectl get … -o yaml` of every object a procedure c
 
 ### backup-volumesnapshot-strategy
 
-**Preconditions:** GameServer `audit018-server-create` running. k3s local-path has no CSI snapshot support out of the box (`github.com/kubernetes-csi/external-snapshotter/client/v8`, `docs/dependencies.md`), so this and `restore-volumesnapshot-strategy` (INV-CRD-036/037) need `csi-driver-host-path` plus the external-snapshotter's snapshot controller and CRDs installed on kubelab for the round (OD-021 item 20; the manifests/Helm release used are recorded in `rounds.md`, and both are uninstalled at round teardown). Confirm the install with `kubectl get volumesnapshotclass` (expect a default VolumeSnapshotClass, or one named via `spec.volumeSnapshotClassName` below).
+**Preconditions:** GameServer `audit018-server-create` running on a CSI StorageClass (e.g., `csi-hostpath-sc` from `csi-driver-host-path`). k3s local-path has no CSI snapshot support out of the box (`github.com/kubernetes-csi/external-snapshotter/client/v8`, `docs/dependencies.md`), so this and `restore-volumesnapshot-strategy` (INV-CRD-036/037) need `csi-driver-host-path` plus the external-snapshotter's snapshot controller and CRDs installed on kubelab for the round (OD-021 item 20; the manifests/Helm release used are recorded in `rounds.md`, and both are uninstalled at round teardown). Confirm the install with `kubectl get volumesnapshotclass` (expect a default VolumeSnapshotClass, or one named via `spec.volumeSnapshotClassName` below).
 
 **Resources created:** Backup named `audit018-backup-vs` with `spec.strategy: volume-snapshot` (no `repoRef`).
 
 **Steps:**
+0. Ensure audit server is on CSI storage by recreating it with `storageClassName: csi-hostpath-sc` in the PVC template, or annotate the existing server's PVC.
 1. Create Backup: `kubectl apply -f audit018-backup-vs.yaml` with `metadata.name: audit018-backup-vs`, `metadata.namespace: gameplane-games`, label `gameplane.io/audit: "018"`, `spec.serverRef.name: audit018-server-create`, `spec.strategy: volume-snapshot`, `spec.repoRef` omitted.
 2. Watch phase: `kubectl get backup audit018-backup-vs -n gameplane-games -w -o jsonpath='{.status.phase}{"\n"}'`.
 3. Confirm a VolumeSnapshot is created: `kubectl get volumesnapshot -n gameplane-games | grep audit018-backup-vs`.

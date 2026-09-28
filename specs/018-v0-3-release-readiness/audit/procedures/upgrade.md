@@ -75,7 +75,7 @@ Otherwise this section only modifies the existing `gameplane` Helm release.
    If result is `006_share_links.sql` or earlier, go to step 4 (upgrade in place).
    If result is `007_*` or later, go to step 3 (reinstall).
 
-3. **Reinstall at beta.8** (if ahead). After `--keep-history`, the release's last revision has status `uninstalled`, not `deployed`. A plain `helm upgrade` fails on that with `has no deployed releases` (it only ever looks for a `deployed` revision). `helm upgrade --install` takes the install branch instead once it sees the last revision is `uninstalled`: it builds an install action, forces `Replace = true` (the old `--replace` behavior, now automatic) and runs the install — in both Helm 4 (`pkg/cmd/upgrade.go` lines 129-166, `main`) and Helm v3.19.0 (`cmd/helm/upgrade.go`). That install path only ever receives values from `-f`/`--set`; `--reuse-values` is a flag of the *upgrade* action and is never passed through to the install call, so it is silently ignored on this branch. The values captured below are therefore required — not an off-git fallback — and must be fed into the command with `-f`:
+3. **Reinstall at beta.8** (if ahead). After `--keep-history`, the release's last revision has status `uninstalled`, not `deployed`. A plain `helm upgrade` fails on that with `has no deployed releases` (it only ever looks for a `deployed` revision). `helm upgrade --install` takes the install branch instead once it sees the last revision is `uninstalled`: it builds an install action, forces `Replace = true` (the old `--replace` behavior, now automatic) and runs the install — in both Helm 4 (`pkg/cmd/upgrade.go` lines 129-166, `main`) and Helm v3.19.0 (`cmd/helm/upgrade.go`). That install path only ever receives values from `-f`/`--set`; `--reuse-values` is a flag of the *upgrade* action and is never passed through to the install call, so it is silently ignored on this branch. The values captured below are therefore required — not an off-git fallback — and must be fed into the command with `-f`. **Note (F-213):** Before uninstalling, delete or annotate the `gameplane-api-data` PVC to avoid reusing the old database during reinstall:
    ```sh
    helm get values gameplane -n gameplane-system -o yaml > ~/gameplane-audit-018/gameplane-values-before-uninstall.yaml
    
@@ -168,6 +168,20 @@ Creates an `audit018-upg` GameServer with a marker file to verify persistence th
    ```
    The API's entrypoint binary is `/api` (`api/Dockerfile`), not `gameplane-api`, and the image has no shell, so the password goes over stdin (`kubectl exec -i`, `--password-stdin`) rather than a shell env-var trick.
    Record: admin password location in `rounds.md`.
+
+1.5. **Snapshot the seeded database for rollback testing**:
+   ```sh
+   # Snapshot the seeded database for rollback testing
+   kubectl scale deployment gameplane-api --replicas=0 -n gameplane-system
+   kubectl wait --for=delete pod -l app.kubernetes.io/name=gameplane-api -n gameplane-system --timeout=60s || true
+   kubectl apply -f /tmp/audit018-db-tool.yaml  # reuse definition from baseline-beta8
+   kubectl wait --for=condition=Ready pod/audit018-db-tool -n gameplane-system --timeout=60s
+   kubectl exec -n gameplane-system audit018-db-tool -- sqlite3 /data/gameplane.db ".backup /tmp/upg-seeded.db"
+   kubectl cp gameplane-system/audit018-db-tool:/tmp/upg-seeded.db ~/gameplane-audit-018/db-snapshots/upg-seeded.db
+   kubectl delete pod audit018-db-tool -n gameplane-system --wait=true
+   kubectl scale deployment gameplane-api --replicas=1 -n gameplane-system
+   kubectl rollout status deployment/gameplane-api -n gameplane-system --timeout=300s
+   ```
 
 2. **Log in as admin**:
    ```sh
@@ -430,7 +444,7 @@ Rolls back the Gameplane Helm release from the RC to `v0.2.0-beta.8`. Verifies t
 
    # Drop stale WAL/SHM files so they don't shadow the restored file
    kubectl exec -n gameplane-system audit018-db-tool -- sh -c "rm -f /data/gameplane.db-wal /data/gameplane.db-shm"
-   kubectl cp ~/gameplane-audit-018/db-snapshots/upg-real.db gameplane-system/audit018-db-tool:/data/gameplane.db
+   kubectl cp ~/gameplane-audit-018/db-snapshots/upg-seeded.db gameplane-system/audit018-db-tool:/data/gameplane.db
 
    kubectl delete pod audit018-db-tool -n gameplane-system --wait=true
    ```
