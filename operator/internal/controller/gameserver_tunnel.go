@@ -186,7 +186,13 @@ func (r *GameServerReconciler) reconcileTunnel(
 		},
 	}
 
+	// refusedSecret is set when the credentials Secret is refused. The
+	// Deployment is still written (with no credential volume and zero
+	// replicas) so an already-running tunnel stops using the refused Secret;
+	// the refusal is returned after CreateOrUpdate.
+	var refusedSecret string
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, dep, func() error {
+		refusedSecret = ""
 		replicas := int32(1)
 		dep.Spec.Replicas = &replicas
 		dep.Spec.Selector = &metav1.LabelSelector{
@@ -341,13 +347,14 @@ func (r *GameServerReconciler) reconcileTunnel(
 			if credKeyKnown {
 				var sec corev1.Secret
 				err := r.Get(ctx, types.NamespacedName{Namespace: gs.Namespace, Name: secName}, &sec)
-				if err == nil {
-					if !isServerOwnedSecret(&sec, gs) {
-						if condErr := r.setTunnelCredentialRefused(ctx, gs, secName); condErr != nil {
-							return fmt.Errorf("tunnel credentials secret %q is not owned by GameServer %s/%s (status update failed: %w)", secName, gs.Namespace, gs.Name, condErr)
-						}
-						return fmt.Errorf("tunnel credentials secret %q is not owned by GameServer %s/%s", secName, gs.Namespace, gs.Name)
-					}
+				switch {
+				case err == nil && !isServerOwnedSecret(&sec, gs):
+					// Refused: mount nothing and scale to zero, so a tunnel
+					// that already runs with this Secret mounted stops.
+					refusedSecret = secName
+					zero := int32(0)
+					dep.Spec.Replicas = &zero
+				case err == nil:
 					// Mount only the active provider's credential key to avoid exposing
 					// stale keys from a previous provider (e.g., "token" still in the Secret
 					// after switching from frp to tailscale). Items projection selects only
@@ -371,7 +378,7 @@ func (r *GameServerReconciler) reconcileTunnel(
 						MountPath: tunnelAuthMountDir,
 						ReadOnly:  true,
 					})
-				} else if !apierrors.IsNotFound(err) {
+				case !apierrors.IsNotFound(err):
 					return fmt.Errorf("tunnel credentials secret %q: %w", secName, err)
 				}
 			}
@@ -394,7 +401,17 @@ func (r *GameServerReconciler) reconcileTunnel(
 
 		return controllerutil.SetControllerReference(gs, dep, r.Scheme)
 	})
-	return err
+	if refusedSecret == "" {
+		return err
+	}
+	refusal := fmt.Errorf("tunnel credentials secret %q is not owned by GameServer %s/%s", refusedSecret, gs.Namespace, gs.Name)
+	if err != nil {
+		return fmt.Errorf("%w (writing the credential-free tunnel deployment failed: %w)", refusal, err)
+	}
+	if condErr := r.setTunnelCredentialRefused(ctx, gs, refusedSecret); condErr != nil {
+		return fmt.Errorf("%w (status update failed: %w)", refusal, condErr)
+	}
+	return refusal
 }
 
 // setTunnelCredentialRefused upserts a TunnelReady=False/TunnelCredentialRefused

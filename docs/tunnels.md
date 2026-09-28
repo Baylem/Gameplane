@@ -371,7 +371,8 @@ If you want to avoid reconnects on wake, consider:
    for Tailscale, `secretKey` for playit). If the Secret lacks an ownerReference
    to this GameServer, the operator refuses it — check `kubectl get gameserver
    <name> -o jsonpath='{.status.conditions}'` for a `TunnelReady=False/TunnelCredentialRefused`
-   entry naming the Secret.
+   entry naming the Secret. While the Secret is refused, the tunnel Deployment
+   is scaled to zero with no credential mounted.
 
 4. **Check NetworkPolicy.**
    By default, `networkPolicies.enabled=true` applies a default-deny-egress
