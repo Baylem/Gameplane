@@ -644,6 +644,24 @@ func validateAndProtectGameServer(
 		}
 	}
 
+	// Validate tunnel config fields: serverAddr/name are escaped at render time, but pattern validation
+	// ensures they parse as valid before reaching the pod (defense in depth).
+	if tunnelFrp, ok, _ := unstructured.NestedMap(desired.Object, "spec", "networking", "tunnel", "frp"); ok && tunnelFrp != nil {
+		// CRD Pattern already enforces these; defensive double-check.
+		if serverAddr, ok := tunnelFrp["serverAddr"].(string); ok && serverAddr == "" {
+			return fmt.Errorf("spec.networking.tunnel.frp.serverAddr must not be empty")
+		}
+		if remotePorts, ok := tunnelFrp["remotePorts"].([]interface{}); ok {
+			for i, port := range remotePorts {
+				if portMap, ok := port.(map[string]interface{}); ok {
+					if portName, ok := portMap["name"].(string); ok && portName == "" {
+						return fmt.Errorf("spec.networking.tunnel.frp.remotePorts[%d].name must not be empty", i)
+					}
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
