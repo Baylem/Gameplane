@@ -368,8 +368,8 @@ func TestAPI_AgentFilesRoundTrip(t *testing.T) {
 	}
 	escBody, _ := io.ReadAll(escResp.Body)
 	_ = escResp.Body.Close()
-	if escResp.StatusCode/100 != 4 {
-		t.Fatalf("upload onto out-of-root symlink expected 4xx, got %d body=%q", escResp.StatusCode, string(escBody))
+	if escResp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("upload onto out-of-root symlink expected %d, got %d body=%q", http.StatusBadRequest, escResp.StatusCode, string(escBody))
 	}
 	if out, err := envInstance.KubectlExec(t, ns, "pod/"+gs+"-0",
 		"test", "-L", escLinkPath); err != nil {
