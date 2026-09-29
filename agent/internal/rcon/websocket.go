@@ -349,15 +349,16 @@ func (c *WebSocket) ensureLocked() error {
 		HTTPClient: httpClient,
 	})
 	if err != nil {
-		// Check if the error message contains the password in any form.
-		// Only treat it as leaking if the password resolved successfully and is non-empty.
-		// If it does leak, don't wrap with %w as that would expose the secret.
-		// Instead, return an error with only the host:port information.
-		errMsg := err.Error()
+		// Redact the URL (which carries the password as its path) before checking
+		// for password leaks. This ensures we only reject the error chain if the
+		// redacted message still contains the password—an unlikely edge case.
+		// Otherwise, wrap with %w to preserve errors.Is/errors.As information.
+		redactedErr := redactURLErr(err)
+		errMsg := redactedErr.Error()
 		if errorLeaksSecret(errMsg, pw) {
 			return fmt.Errorf("websocket rcon: dial %s: connection failed", c.baseURL)
 		}
-		return fmt.Errorf("websocket rcon: dial %s: %w", c.baseURL, redactURLErr(err))
+		return fmt.Errorf("websocket rcon: dial %s: %w", c.baseURL, redactedErr)
 	}
 	// coder/websocket hijacks the connection on successful dial, leaving
 	// resp.Body nil. Close only if the body exists (e.g., on a redirect or

@@ -460,6 +460,13 @@ func (h *handler) del(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	recursive := req.URL.Query().Get("recursive") == "true"
+	if recursive {
+		// Before recursively deleting, ensure the tree contains no dot-prefixed entries.
+		if err := h.hasDotFileRecursive(p); err != nil {
+			h.badRequest(w, err)
+			return
+		}
+	}
 	var rerr error
 	if recursive {
 		rerr = os.RemoveAll(p)
@@ -471,6 +478,27 @@ func (h *handler) del(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// hasDotFileRecursive walks the directory tree rooted at path and returns
+// errDotfile if any dot-prefixed entry is found. Used to guard recursive
+// deletion operations.
+func (h *handler) hasDotFileRecursive(path string) error {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".") {
+			return errDotfile
+		}
+		if e.IsDir() {
+			if err := h.hasDotFileRecursive(filepath.Join(path, e.Name())); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func httpErr(w http.ResponseWriter, err error) {
