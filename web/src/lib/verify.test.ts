@@ -31,9 +31,42 @@ describe("verifyMode", () => {
 });
 
 describe("verifyForEntry", () => {
-  it("reports the policy of the source an installed module was pulled from", () => {
-    const entry = makeCatalog({ installed: true, installedFrom: "upstream", sources: [{ name: "upstream", type: "oci" }] });
+  it("reports the policy of the source an installed module was pulled from, enforced once a verification is recorded", () => {
+    const entry = makeCatalog({
+      installed: true,
+      installedFrom: "upstream",
+      sources: [{ name: "upstream", type: "oci" }],
+      verifiedDigest: "sha256:abc",
+      verifyPolicy: "keyless",
+    });
     expect(verifyForEntry(entry, [keylessSrc, plainSrc])).toEqual({ mode: "keyless", enforced: true, mixed: false });
+  });
+
+  it("uses the recorded verifyPolicy, not the source's current policy, once a verification is enforced", () => {
+    // The module was verified under the keyed policy in effect at install
+    // time; the source has since switched to keyless. The badge must still
+    // describe what was actually checked (keyed), not the live policy.
+    const entry = makeCatalog({
+      installed: true,
+      installedFrom: "upstream",
+      sources: [{ name: "upstream", type: "oci" }],
+      verifiedDigest: "sha256:abc",
+      verifyPolicy: "keyed",
+    });
+    expect(verifyForEntry(entry, [keylessSrc, plainSrc])).toEqual({ mode: "keyed", enforced: true, mixed: false });
+  });
+
+  it("does NOT claim enforced for an installed module with no recorded verification, even though its source now declares a policy", () => {
+    // The badge must not over-claim: a policy added to the source AFTER
+    // this module was installed doesn't retroactively mean the running
+    // bytes were checked. The declared policy still surfaces as `mode`, so
+    // the UI can show the softer "policy" chip instead of nothing.
+    const entry = makeCatalog({
+      installed: true,
+      installedFrom: "upstream",
+      sources: [{ name: "upstream", type: "oci" }],
+    });
+    expect(verifyForEntry(entry, [keylessSrc, plainSrc])).toEqual({ mode: "keyless", enforced: false, mixed: false });
   });
 
   it("does NOT claim enforced when installed from an unverified source, even if a sibling source verifies", () => {

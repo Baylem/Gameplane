@@ -167,4 +167,21 @@ func TestModule_VerifySignedBundleInstalls(t *testing.T) {
 	if image, _, _ := unstructured.NestedString(tmpl.Object, "spec", "image"); image != "busybox:1.36" {
 		t.Errorf("template.spec.image=%q want busybox:1.36", image)
 	}
+
+	// The verification that gated this install must be recorded on the
+	// Module, not just implied by the source's current policy — this is
+	// what the "verified" badge in the UI keys off.
+	finalMod, err := envInstance.Dyn.Resource(moduleGVR).Get(ctx, moduleCR, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("re-get module: %v", err)
+	}
+	appliedDigest, _, _ := unstructured.NestedString(finalMod.Object, "status", "appliedDigest")
+	verifiedDigest, _, _ := unstructured.NestedString(finalMod.Object, "status", "verifiedDigest")
+	if verifiedDigest == "" || verifiedDigest != appliedDigest {
+		t.Errorf("status.verifiedDigest=%q appliedDigest=%q, want the two equal and non-empty",
+			verifiedDigest, appliedDigest)
+	}
+	if verifyPolicy, _, _ := unstructured.NestedString(finalMod.Object, "status", "verifyPolicy"); verifyPolicy != "keyed" {
+		t.Errorf("status.verifyPolicy=%q, want %q", verifyPolicy, "keyed")
+	}
 }

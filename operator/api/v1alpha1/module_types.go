@@ -59,6 +59,22 @@ type ModuleStatus struct {
 	// +optional
 	AppliedDigest string `json:"appliedDigest,omitempty"`
 
+	// VerifiedDigest is the bundle digest that was actually
+	// signature-checked by cosign.Verify, recorded at install time. Empty
+	// when the source declared no verify policy (nothing to check) or when
+	// the Module was installed before this field existed. The UI shows its
+	// solid "verified" badge only when this is set — never from the
+	// source's current policy alone, which could have been added after
+	// this Module was installed.
+	// +optional
+	VerifiedDigest string `json:"verifiedDigest,omitempty"`
+
+	// VerifyPolicy is the verification mode ("keyed" or "keyless") that
+	// produced VerifiedDigest. Empty whenever VerifiedDigest is empty.
+	// +kubebuilder:validation:Enum=keyed;keyless
+	// +optional
+	VerifyPolicy string `json:"verifyPolicy,omitempty"`
+
 	// AppliedTemplate is the name of the GameTemplate this Module owns.
 	// Equal to Module.metadata.name on success.
 	// +optional
@@ -94,6 +110,13 @@ const (
 	ModulePhasePulling = "Pulling"
 	ModulePhaseReady   = "Ready"
 	ModulePhaseFailed  = "Failed"
+)
+
+// Module verify-policy modes, recorded to status.verifyPolicy. Mirrors the
+// two branches VerifySpec allows (exactly one of key/keyless).
+const (
+	ModuleVerifyModeKeyed   = "keyed"
+	ModuleVerifyModeKeyless = "keyless"
 )
 
 // Module condition types.
