@@ -8,9 +8,11 @@ import { LoadingCard } from "@/components/ui/LoadingCard";
 import { Clusters } from "@/lib/endpoints";
 import { useCurrentCluster } from "@/lib/cluster";
 import { useClusterSelection } from "@/lib/useClusterSelection";
+import { useMe, can } from "@/lib/auth";
 import { cn, formatRelative } from "@/lib/utils";
 
 export function ClustersPage() {
+  const { data: me } = useMe();
   const currentCluster = useCurrentCluster();
   const selectCluster = useClusterSelection();
   const navigate = useNavigate();
@@ -21,14 +23,17 @@ export function ClustersPage() {
   });
   const clusters = data?.items ?? [];
   const openCluster = async (id: string, destination: "/servers" | "/cluster") => {
+    if (destination === "/servers") { await navigate({ to: "/servers", search: { cluster: id } }); return; }
     await selectCluster(id);
     await navigate({ to: destination });
   };
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <PageHeader title="Clusters" description="Choose a cluster to manage its game servers. Each cluster has its own nodes and storage." />
-      {isLoading ? (
+      <PageHeader title="Clusters" description="Administration of registered locations, connectivity and node inventory." />
+      {!isLoading && !error && !can(me, "cluster:manage") && !clusters.some((item) => item.canViewInventory) ? (
+        <ErrorCard message="Cluster administration requires inventory or cluster-management access." />
+      ) : isLoading ? (
         <LoadingCard message="Loading clusters…" />
       ) : error ? (
         <ErrorCard message="Couldn't load registered clusters. Try again." onRetry={() => void refetch()} />

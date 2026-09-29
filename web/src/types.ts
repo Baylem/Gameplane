@@ -3,6 +3,7 @@
 
 export interface ObjectMeta {
   name: string;
+  uid?: string;
   namespace?: string;
   creationTimestamp?: string;
   labels?: Record<string, string>;

@@ -4,7 +4,6 @@
 //   - uniform error throwing so TanStack Query .error works consistently
 //   - cluster query param threading for multi-cluster support
 
-import { getCurrentCluster } from "./cluster";
 import type {
   CaptureStatus,
   NetworkCapture,
@@ -36,13 +35,15 @@ function withNS(path: string, ns?: string): string {
 export function isCentralAPI(path: string): boolean {
   const pathname = path.split("?")[0];
   if (pathname === "/users/me/servers") return false;
-  return ["/auth", "/users", "/roles", "/admin", "/modules", "/clusters"].some(
+  return ["/auth", "/users", "/roles", "/admin", "/modules", "/clusters", "/fleet", "/shares"].some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
   );
 }
 
-export function withClusterParam(path: string, clusterId = getCurrentCluster()): string {
+export function withClusterParam(path: string, clusterId = "local"): string {
   if (isCentralAPI(path)) return path;
+  // Explicit resource URLs are already scoped; never append a second selector.
+  if (new URL(path, "http://gameplane.invalid").searchParams.has("cluster")) return path;
   if (clusterId === "local") return path;
   const sep = path.includes("?") ? "&" : "?";
   return `${path}${sep}cluster=${encodeURIComponent(clusterId)}`;
@@ -86,7 +87,7 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
 
   // Thread cluster query param for multi-cluster support.
   // Only append when non-local to preserve back-compat (local = default, omit param).
-  const requestPath = withClusterParam(path, opts.cluster ?? getCurrentCluster());
+  const requestPath = withClusterParam(path, opts.cluster ?? "local");
 
   const res = await fetch(requestPath, {
     method,
@@ -144,7 +145,10 @@ export interface CaptureDeleteResponse {
   captureId: string;
 }
 
-export const Captures = {
+function makeCaptures(request: typeof api, scopedURL: (path: string) => string, raw: (path: string, init?: RequestInit) => Promise<Response> = (path, init) => fetch(path, init)) {
+  const api = request;
+  const withClusterParam = scopedURL;
+  return {
   // POST /servers/{name}:capture-enable
   enable: (name: string, ns?: string) =>
     api<CaptureToggleResponse>(withNS(`/servers/${name}:capture-enable`, ns), { method: "POST" }),
@@ -185,7 +189,7 @@ export const Captures = {
     const path = withClusterParam(
       withNS(`/servers/${name}:capture-file?id=${encodeURIComponent(id)}`, ns),
     );
-    const res = await fetch(path, { method: "GET", credentials: "include" });
+    const res = await raw(path, { method: "GET", credentials: "include" });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       throw new APIError(res.status, text);
@@ -193,6 +197,9 @@ export const Captures = {
     return res.blob();
   },
 };
+}
+
+export const Captures = makeCaptures(api, (path) => withClusterParam(path));
 
 // ConfigUpdateResponse mirrors the envelope returned by PUT /admin/config/{section}
 // and DELETE /admin/config/auth/role-mappings/{role}, containing the updated section
@@ -232,7 +239,9 @@ export type ShareLinkCreateBody = { canStart: boolean } & (
 // an active session and server ownership; public operations (resolve, start) are
 // rate-limited but require no auth. All operations map rate-limit and invalid-link
 // errors to neutral responses per FR-005 (privacy: no error detail).
-export const Shares = {
+function makeShares(request: typeof api) {
+  const api = request;
+  return {
   // POST /servers/{name}:shares (authenticated, owner-only).
   // Creates a new share link with an absolute expiry, no expiry, or (deprecated
   // for one release) a relative expiry, plus the start permission.
@@ -294,3 +303,51 @@ export const Shares = {
     }
   },
 };
+}
+
+export const Shares = makeShares(api);
+
+
+export interface ResourceScope {
+  readonly cluster: string;
+  readonly namespace?: string;
+}
+
+/** Immutable request scope for a resource, independent of list filters and storage. */
+export function createRequestClient(input: ResourceScope, signal?: AbortSignal) {
+  const scope = Object.freeze({ cluster: input.cluster, namespace: input.namespace });
+  if (!scope.cluster) throw new Error("A resource cluster is required.");
+  const url = (path: string): string => {
+    if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Expected an API path.");
+    if (isCentralAPI(path)) return path;
+    const parsed = new URL(path, "http://gameplane.invalid");
+    const clusters = parsed.searchParams.getAll("cluster");
+    if (clusters.length > 1 || (clusters.length === 1 && clusters[0] !== scope.cluster)) {
+      throw new Error("The request cluster does not match its resource.");
+    }
+    const namespaced = ["/servers", "/backups", "/schedules", "/restores", "/backup-destinations", "/ws/servers"].some(
+      (prefix) => parsed.pathname === prefix || parsed.pathname.startsWith(prefix + "/"),
+    );
+    if (namespaced && scope.namespace) {
+      const namespaces = parsed.searchParams.getAll("namespace");
+      if (namespaces.length > 1 || (namespaces.length === 1 && namespaces[0] !== scope.namespace)) {
+        throw new Error("The request namespace does not match its resource.");
+      }
+      parsed.searchParams.set("namespace", scope.namespace);
+    }
+    if (scope.cluster !== "local") parsed.searchParams.set("cluster", scope.cluster);
+    return parsed.pathname + parsed.search;
+  };
+  const request = <T>(path: string, options: Options = {}): Promise<T> => {
+    if (!isCentralAPI(path) && options.cluster && options.cluster !== scope.cluster) {
+      throw new Error("The request cluster does not match its resource.");
+    }
+    const requestSignal = signal && options.signal ? AbortSignal.any([signal, options.signal]) : options.signal ?? signal;
+    return api<T>(url(path), { ...options, cluster: scope.cluster, signal: requestSignal });
+  };
+  const raw = (path: string, init: RequestInit = {}): Promise<Response> => {
+    const requestSignal = signal && init.signal ? AbortSignal.any([signal, init.signal]) : init.signal ?? signal;
+    return fetch(url(path), { credentials: "include", cache: "no-store", ...init, signal: requestSignal });
+  };
+  return { scope, api: request, url, raw, Captures: makeCaptures(request, url, raw), Shares: makeShares(request) };
+}

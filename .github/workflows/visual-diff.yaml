@@ -63,13 +63,16 @@ jobs:
         if: always()
         run: |
           (cd visual-references/multicluster && sha256sum --check SHA256SUMS)
+          (cd visual-references/unified-fleet && sha256sum --check SHA256SUMS)
           reference_dir="${RUNNER_TEMP}/gameplane-visual-references"
           mkdir -p "${reference_dir}"
           cp ../design-export/screenshots/*.png "${reference_dir}/"
           # Only these reviewed implementation references replace Pencil PNGs
           # in the temporary set. Thresholds, masks and all other refs stay intact.
           cp visual-references/multicluster/Wj0V4.png visual-references/multicluster/t3IY3u.png "${reference_dir}/"
+          cp visual-references/unified-fleet/DWztv.png "${reference_dir}/"
           cat visual-references/multicluster/manifest.json
+          cat visual-references/unified-fleet/manifest.json
           npm run diff:screenshots -- --check-expected "--ref-dir=${reference_dir}"
 
       - name: upload visual diff artifacts

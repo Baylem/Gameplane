@@ -39,7 +39,7 @@ describe("openWS", () => {
   beforeEach(() => {
     FakeSocket.instances = [];
     vi.stubGlobal("WebSocket", FakeSocket);
-    vi.stubGlobal("location", { protocol: "https:", host: "example.com" });
+    vi.stubGlobal("location", { protocol: "https:", host: "example.com", origin: "https://example.com" });
     vi.useFakeTimers();
   });
   afterEach(() => {
@@ -53,7 +53,7 @@ describe("openWS", () => {
   });
 
   it("falls back to ws when page is http", () => {
-    vi.stubGlobal("location", { protocol: "http:", host: "h" });
+    vi.stubGlobal("location", { protocol: "http:", host: "h", origin: "http://h" });
     openWS("/ws/foo", { onMessage: () => {} });
     expect(FakeSocket.instances[0].url).toBe("ws://h/ws/foo");
   });
@@ -212,10 +212,10 @@ describe("openWS", () => {
     FakeSocket.instances[0].triggerClose();
     expect(seen[seen.length - 1]).toBe("closed");
   });
-  it("binds remote Pod and PTY streams to the selected cluster", () => {
+  it("binds remote Pod and PTY streams to the explicit URL", () => {
     setCurrentCluster("remote-1");
     for (const route of ["logs/pod?from=start&namespace=games", "console-pty"]) {
-      const handle = openWS(`/ws/servers/alpha/${route}`, { onMessage: () => {} });
+      const handle = openWS(`/ws/servers/alpha/${route}${route.includes("?") ? "&" : "?"}cluster=remote-1`, { onMessage: () => {} });
       const url = new URL(FakeSocket.instances.at(-1)!.url);
       expect(url.searchParams.get("cluster")).toBe("remote-1");
       if (route.startsWith("logs")) {
@@ -229,19 +229,20 @@ describe("openWS", () => {
 
   it("passes remote selectors to guarded agent routes instead of falling back locally", () => {
     setCurrentCluster("remote-1");
-    const handle = openWS("/ws/servers/alpha/console", { onMessage: () => {} });
+    const handle = openWS("/ws/servers/alpha/console?cluster=remote-1", { onMessage: () => {} });
     expect(FakeSocket.instances[0].url).toContain("cluster=remote-1");
     handle.close();
     setCurrentCluster("local");
   });
 
-  it("closes a stream and discards queued input when the selected cluster changes", () => {
+  it("closes a route-owned stream and discards queued input on teardown", () => {
     setCurrentCluster("remote-1");
-    const handle = openWS("/ws/servers/alpha/console-pty", { onMessage: () => {} });
+    const handle = openWS("/ws/servers/alpha/console-pty?cluster=remote-1", { onMessage: () => {} });
     const old = FakeSocket.instances[0];
     handle.send("old command");
     old.triggerClose();
     setCurrentCluster("remote-2");
+    handle.close();
     vi.advanceTimersByTime(60_000);
     expect(FakeSocket.instances).toHaveLength(1);
     old.triggerOpen();

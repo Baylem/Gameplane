@@ -1,3 +1,4 @@
+import { useResourceClient, useResourceTarget, resourceKey, useResourcePermissions, resourceCan } from "@/lib/resourceTarget";
 // Network-capture surface for a GameServer's "Capture" tab. Mirrors the
 // Backups tab's structure (own TanStack Query calls, own mutations, plain
 // <table> for the list) per CLAUDE.md's "Add a new dashboard page" recipe.
@@ -49,7 +50,7 @@ import {
   AlertDialogBody,
   AlertDialogFooter,
 } from "@heroui/react";
-import { APIError, Captures, CaptureStartBody } from "@/lib/api";
+import { APIError, CaptureStartBody } from "@/lib/api";
 import { captureListRefetchMs, isCaptureActive } from "@/lib/capturePolling";
 import { CaptureWarningBanner } from "@/components/ui/CaptureWarningBanner";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
@@ -116,6 +117,12 @@ interface Props {
 }
 
 export function CaptureWidget({ name, ns, gs }: Props) {
+  const permissions = useResourcePermissions();
+  const canManage = resourceCan(permissions, "captures:manage");
+  const canRead = canManage;
+  const resourceTarget = useResourceTarget({ name, namespace: ns });
+  const resourceClient = useResourceClient(resourceTarget);
+  const { Captures } = resourceClient;
   const qc = useQueryClient();
   const enabled = gs?.spec.capture?.enabled === true;
   const retentionSeconds = gs?.spec.capture?.retentionSeconds ?? DEFAULT_RETENTION_SECONDS;
@@ -132,47 +139,51 @@ export function CaptureWidget({ name, ns, gs }: Props) {
   const [stoppingId, setStoppingId] = useState<string | null>(null);
 
   const { data: captures } = useQuery({
-    queryKey: ["captures", name, ns],
-    queryFn: () => Captures.list(name, ns),
-    enabled,
+    queryKey: resourceKey(resourceTarget, "captures", name, ns),
+    queryFn: ({ signal }) => resourceClient.withSignal(signal).Captures.list(name, ns),
+    enabled: enabled && canRead,
     refetchInterval: (query) => captureListRefetchMs(query.state.data, stoppingId),
   });
 
   const activeCapture = (captures?.captures ?? []).find(isCaptureActive);
   const { data: activeCaptureDetails } = useQuery({
-    queryKey: ["capture", name, activeCapture?.captureId, ns],
-    queryFn: () => Captures.get(name, activeCapture!.captureId, ns),
+    queryKey: resourceKey(resourceTarget, "capture", name, activeCapture?.captureId, ns),
+    queryFn: ({ signal }) => resourceClient.withSignal(signal).Captures.get(name, activeCapture!.captureId, ns),
     enabled: !!activeCapture,
   });
 
   const enableMut = useMutation({
     mutationFn: () => Captures.enable(name, ns),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["server", name, ns] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "server", name, ns) }),
   });
   const disableMut = useMutation({
     mutationFn: () => Captures.disable(name, ns),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["server", name, ns] });
-      void qc.invalidateQueries({ queryKey: ["captures", name, ns] });
+      void qc.invalidateQueries({ queryKey: ["fleet"] });
+      void qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "server", name, ns) });
+      void qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "captures", name, ns) });
     },
   });
   const stopMut = useMutation({
     mutationFn: (captureId: string) => Captures.stop(name, captureId, ns),
     onSuccess: (_stopped, captureId) => {
+      void qc.invalidateQueries({ queryKey: ["fleet"] });
       setStoppingId(captureId);
-      return qc.invalidateQueries({ queryKey: ["captures", name, ns] });
+      return qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "captures", name, ns) });
     },
   });
   const deleteMut = useMutation({
     mutationFn: (captureId: string) => Captures.remove(name, captureId, ns),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["captures", name, ns] });
+      void qc.invalidateQueries({ queryKey: ["fleet"] });
+      void qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "captures", name, ns) });
       setDeleteTarget(null);
     },
   });
   const fileMut = useMutation({
     mutationFn: (captureId: string) => Captures.download(name, captureId, ns),
     onSuccess: (blob, captureId) => {
+      void qc.invalidateQueries({ queryKey: ["fleet"] });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -201,7 +212,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
             <Button
               variant="primary"
               onPress={() => enableMut.mutate()}
-              isDisabled={enableMut.isPending}
+              isDisabled={!canManage || enableMut.isPending}
             >
               {enableMut.isPending ? "Enabling…" : "Enable Capture"}
             </Button>
@@ -236,14 +247,14 @@ export function CaptureWidget({ name, ns, gs }: Props) {
               variant="outline"
               size="sm"
               onPress={() => disableMut.mutate()}
-              isDisabled={disableMut.isPending}
+              isDisabled={!canManage || disableMut.isPending}
             >
               Disable Capture
             </Button>
             <Button
               variant="primary"
               size="sm"
-              onPress={() => setShowStartModal(true)}
+              isDisabled={!canManage} onPress={() => setShowStartModal(true)}
             >
               Start Capture
             </Button>
@@ -272,7 +283,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
                 size="sm"
                 variant="outline"
                 onPress={() => stopMut.mutate(activeCapture.captureId)}
-                isDisabled={stopMut.isPending}
+                isDisabled={!canManage || stopMut.isPending}
               >
                 Stop Capture
               </Button>
@@ -394,7 +405,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
                                 size="sm"
                                 variant="ghost"
                                 aria-label={`Download capture ${c.captureId}`}
-                                isDisabled={!downloadable || fileMut.isPending}
+                                isDisabled={!canRead || !downloadable || fileMut.isPending}
                                 onPress={() => fileMut.mutate(c.captureId)}
                               >
                                 <Download className="h-4 w-4" />
@@ -415,7 +426,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
                                 variant="ghost"
                                 aria-label={`Delete capture ${c.captureId}`}
                                 className="text-danger"
-                                onPress={() => setDeleteTarget(c)}
+                                isDisabled={!canManage} onPress={() => setDeleteTarget(c)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -455,7 +466,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
         onStart={(body) => Captures.start(name, body, ns)}
         onStarted={() => {
           setShowStartModal(false);
-          void qc.invalidateQueries({ queryKey: ["captures", name, ns] });
+          void qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "captures", name, ns) });
         }}
       />
 
@@ -488,7 +499,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
                 </Button>
                 <Button
                   variant="danger"
-                  isDisabled={deleteMut.isPending}
+                  isDisabled={!canManage || deleteMut.isPending}
                   onPress={() => deleteTarget && deleteMut.mutate(deleteTarget.captureId)}
                 >
                   {deleteMut.isPending ? "Working…" : "Delete capture"}
@@ -517,6 +528,8 @@ function StartCaptureModal({
   onStart: (body: CaptureStartBody) => Promise<NetworkCapture>;
   onStarted: () => void;
 }) {
+  const permissions = useResourcePermissions();
+  const canManage = resourceCan(permissions, "captures:manage");
   const [filter, setFilter] = useState("");
   const [durationValue, setDurationValue] = useState(300);
   const [durationUnit, setDurationUnit] = useState<"seconds" | "minutes">("seconds");
@@ -567,7 +580,7 @@ function StartCaptureModal({
                 className="space-y-4"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  start.mutate();
+                  if (canManage) start.mutate();
                 }}
               >
                 <div className="space-y-2">
@@ -719,7 +732,7 @@ function StartCaptureModal({
               <Button
                 variant="primary"
                 isPending={start.isPending}
-                isDisabled={!!filterError || durationValue < 1 || sizeValue < 1}
+                isDisabled={!canManage || start.isPending || !!filterError || durationValue < 1 || sizeValue < 1}
                 onPress={() => start.mutate()}
               >
                 {start.isPending ? "Starting…" : "Start Capture"}

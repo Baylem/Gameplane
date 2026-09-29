@@ -3,6 +3,7 @@
 // every endpoint. Tests override individual routes via `server.use(...)`.
 
 import { http, HttpResponse, ws } from "msw";
+import { fleetHandlers } from "./fleetHandlers";
 import {
   makeAudit,
   makeBackup,
@@ -38,6 +39,7 @@ import {
 export const INVALID_BPF_FILTER_FIXTURE = "tcp prot 8080 foo";
 
 export const handlers = [
+  ...fleetHandlers,
   // Auth
   http.get("/users/me", ({ cookies }) => {
     // e2e affordance: a 401 on /users/me must bounce the SPA to /login,
@@ -168,22 +170,17 @@ export const handlers = [
   // URL (e.g. `alpha:capture`) meant for one of the regex handlers below — a
   // dead/misordered colon-action handler should 404 as unhandled, not silently
   // return a plausible-looking server here.
-  http.get("/servers/:name([^:/]+)", ({ params }) =>
-    HttpResponse.json(makeServer({ metadata: { name: String(params.name) } })),
-  ),
-  // Same two servers as GET /servers, plus one in a non-default namespace
-  // that ISN'T in /servers — Servers.tsx computes the delta as "shared with
-  // you" (ServersPage.tsx: sharedServers = myServers minus servers by
-  // namespace/name key). Exercises F-130's shared-row Actions cell.
-  http.get("/users/me/servers", () =>
-    HttpResponse.json({
-      items: [
-        makeServer(),
-        makeServer({ metadata: { name: "beta", namespace: "gameplane-games" } }),
-        makeServer({ metadata: { name: "team-a-shared", namespace: "team-a" } }),
-      ],
-    }),
-  ),
+  http.get("/servers/:name([^:/]+)", ({ params, request, cookies }) => {
+    const cluster = new URL(request.url).searchParams.get("cluster") || "local";
+    const namespace = new URL(request.url).searchParams.get("namespace") || "gameplane-games";
+    return HttpResponse.json(makeServer({ metadata: { name: String(params.name), namespace,
+      ...(cookies.e2e_multicluster === "1" ? { uid: `${cluster}-servers-uid` } : {}),
+    } }));
+  }),
+  // Ownership fixtures are explicit in the tests that exercise owner/collaborator access.
+  http.get("/users/me/servers", ({ cookies }) => HttpResponse.json({ items: cookies.e2e_shared_server === "1"
+    ? [makeServer({ metadata: { name: "team-a-shared", namespace: "team-a" } })]
+    : [] })),
   http.post("/servers", async ({ request }) => {
     const body = (await request.json().catch(() => null)) as {
       metadata?: { name?: string };
@@ -813,6 +810,7 @@ const wsOrigin = typeof window !== "undefined" ? window.location.origin.replace(
 export function buildScreenshotHandlers() {
   const data = getScreenshotData();
   return [
+    ...fleetHandlers,
     // The Servers page asks which namespaces to list before listing servers.
     http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
     // Auth: reuse default login/logout (screenshot demos don't test auth edge cases)
@@ -899,7 +897,7 @@ export function buildScreenshotHandlers() {
       const name = String(params.name);
       const server = data.servers.find((s) => s.metadata.name === name);
       if (!server) {
-        return HttpResponse.json(makeServer({ metadata: { name } }));
+        return HttpResponse.json(makeServer({ metadata: { name, ...(name === "test-server-no-shares" ? { annotations: { "gameplane.local/owner-id": "1", "gameplane.local/owner": "admin" } } : {}) } }));
       }
       if (name === "mc-survival" && cookies.e2e_server_variant) {
         const variant = cookies.e2e_server_variant;

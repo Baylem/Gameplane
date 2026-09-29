@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, Tab, Tabs } from "@heroui/react";
@@ -11,7 +11,7 @@ import {
   Sunrise,
   Terminal,
 } from "lucide-react";
-import { Servers, Templates, type LifecycleVerb } from "@/lib/endpoints";
+import { createResourceClient, type LifecycleVerb } from "@/lib/endpoints";
 import { useGameCodes } from "@/lib/useGameCodes";
 import { resolveConsoleMode, serverHasMods, serverHasModpacks } from "@/lib/capabilities";
 import { PhaseChip } from "@/components/ui/PhaseChip";
@@ -20,7 +20,10 @@ import { capitalize, formatUptime, ignoreRejection } from "@/lib/utils";
 import { ServerActionsMenu } from "@/components/server/ServerActionsMenu";
 import { CaptureWidget } from "@/components/CaptureWidget";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
-import { useCurrentCluster } from "@/lib/cluster";
+import { ResourceTargetProvider, useResourceClient, useResourceTarget, useResourceAccess, resourceKey, serverLink, type ResourceTarget, type ServerAccessResponse } from "@/lib/resourceTarget";
+import { createRequestClient } from "@/lib/api";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { LoadingCard } from "@/components/ui/LoadingCard";
 
 import { OverviewTab } from "./tabs/Overview";
 import { EventsTab } from "./tabs/Events";
@@ -57,32 +60,78 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 ];
 
 export function ServerDetailPage() {
-  const clusterId = useCurrentCluster();
   const { name } = useParams({ from: "/app-layout/servers/$name" });
-  const { ns } = useSearch({ from: "/app-layout/servers/$name" });
+  const { ns, cluster = "local" } = useSearch({ from: "/app-layout/servers/$name" });
+  return <ResolveServerDetail key={JSON.stringify([cluster, ns, name])} target={{ cluster, namespace: ns, name }} />;
+}
+
+function ResolveServerDetail({ target }: { target: ResourceTarget }) {
+  const navigate = useNavigate();
+  const server = useQuery({
+    queryKey: resourceKey(target, "server"),
+    queryFn: ({ signal }) => createResourceClient(target, signal).Servers.get(target.name, target.namespace),
+  });
+  const resolved = { ...target, namespace: server.data?.metadata.namespace ?? target.namespace, uid: server.data?.metadata.uid };
+  const access = useQuery({
+    queryKey: resourceKey(resolved, "access"),
+    queryFn: ({ signal }) => createRequestClient(resolved, signal).api<ServerAccessResponse>(
+      `/servers/${encodeURIComponent(target.name)}/access`,
+    ),
+    enabled: !!server.data,
+  });
+  useEffect(() => {
+    if (!target.namespace && server.data?.metadata.namespace) {
+      void navigate({ ...serverLink({ cluster: target.cluster, name: target.name, namespace: server.data.metadata.namespace }), replace: true });
+    }
+  }, [target.cluster, target.namespace, target.name, server.data?.metadata.namespace, navigate]);
+  const retry = () => { void server.refetch(); void access.refetch(); };
+  if (server.error || access.error) return <div className="p-6"><ErrorCard message="This server could not be loaded at its recorded location. Check your access and the site's connection." onRetry={retry} /></div>;
+  if (!server.data || !access.data) return <div className="p-6"><LoadingCard message="Loading server…" /></div>;
+  const authorized = access.data.target;
+  if (authorized.cluster !== resolved.cluster || authorized.namespace !== resolved.namespace || authorized.name !== resolved.name || (resolved.uid && authorized.uid !== resolved.uid)) {
+    return <div className="p-6"><ErrorCard message="This server changed while it was being loaded. Reload its current identity before continuing." onRetry={retry} /></div>;
+  }
+  return (
+    <ResourceTargetProvider target={resolved} access={access.data}>
+      <ServerDetailView key={JSON.stringify(resourceKey(resolved))} lookupTarget={target} />
+    </ResourceTargetProvider>
+  );
+}
+
+function ServerDetailView({ lookupTarget }: { lookupTarget: ResourceTarget }) {
+  const target = useResourceTarget(lookupTarget);
+  const clusterId = target.cluster;
+  const name = target.name;
+  const ns = target.namespace;
+  const client = useResourceClient();
+  const { Servers } = client;
+  const access = useResourceAccess();
   const [tab, setTab] = useState<TabKey>("overview");
   const [settingsDirty, setSettingsDirty] = useState(false);
   const qc = useQueryClient();
   const nav = useNavigate();
 
   const { data: gs } = useQuery({
-    queryKey: ["server", name, ns, clusterId],
-    queryFn: ({ signal }) => Servers.get(name, ns, clusterId, signal),
+    queryKey: resourceKey(lookupTarget, "server"),
+    queryFn: ({ signal }) => client.withSignal(signal).Servers.get(name, ns),
     refetchInterval: settingsDirty ? false : 5_000,
   });
 
   const templateName = gs?.spec.templateRef.name;
   const { data: tmpl } = useQuery({
-    queryKey: ["template", templateName, clusterId],
-    queryFn: ({ signal }) => Templates.get(templateName as string, clusterId, signal),
+    queryKey: resourceKey(target, "template", templateName),
+    queryFn: ({ signal }) => client.withSignal(signal).Templates.get(templateName as string),
     enabled: !!templateName,
   });
 
-  const { gameCodes } = useGameCodes();
+  const { gameCodes } = useGameCodes(clusterId);
 
   const act = useMutation({
     mutationFn: (verb: LifecycleVerb) => Servers.lifecycle(name, verb, ns, clusterId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["server", name, ns] }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: resourceKey(lookupTarget, "server") });
+      await qc.invalidateQueries({ queryKey: ["fleet"] });
+    },
   });
 
   const phase = gs?.status?.phase;
@@ -124,7 +173,7 @@ export function ServerDetailPage() {
   // output) via the pod-log API, which needs no logPath; the configured
   // game-log file is just an extra source the tab offers when logPath is
   // set. While the template is still loading we show everything.
-  const consoleAvailable = !tmpl || resolveConsoleMode(tmpl) !== "none";
+  const consoleAvailable = !!access?.canConsole && (!tmpl || resolveConsoleMode(tmpl) !== "none");
   // Mods only appears when this server actually has a mod directory — the
   // template declares the capability AND (for the per-loader model) the
   // active version's loader maps to one. Hidden for e.g. vanilla servers.
@@ -193,6 +242,7 @@ export function ServerDetailPage() {
                 </div>
               )}
               <div className="pt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                <span>site: {target.cluster}</span><Dot />
                 {gs?.spec.templateRef.name && <span>{gs.spec.templateRef.name}</span>}
                 {version && <Dot />}{version && <span>{version}</span>}
                 {gs?.metadata.namespace && <><Dot /><span>ns: {gs.metadata.namespace}</span></>}
@@ -205,7 +255,7 @@ export function ServerDetailPage() {
               variant="outline"
               className="rounded-full"
               onPress={() => act.mutate("restart")}
-              isDisabled={!running || act.isPending}
+              isDisabled={!access?.canControl || !running || act.isPending}
             >
               <RotateCw className="h-4 w-4" /> Restart
             </Button>
@@ -213,7 +263,7 @@ export function ServerDetailPage() {
               variant="outline"
               className="rounded-full"
               onPress={() => act.mutate("stop")}
-              isDisabled={(!running && !asleep) || act.isPending}
+              isDisabled={!access?.canControl || (!running && !asleep) || act.isPending}
             >
               <Square className="h-4 w-4" /> Stop
             </Button>
@@ -222,7 +272,7 @@ export function ServerDetailPage() {
                 variant="primary"
                 className="rounded-full"
                 onPress={() => act.mutate("wake")}
-                isDisabled={act.isPending}
+                isDisabled={!access?.canControl || act.isPending}
               >
                 <Sunrise className="h-4 w-4" /> Wake
               </Button>

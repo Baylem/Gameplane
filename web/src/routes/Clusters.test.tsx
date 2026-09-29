@@ -3,7 +3,7 @@ import { http, HttpResponse } from "msw";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
-import { renderWithQuery } from "@/test/render";
+import { makeClient, renderWithQuery } from "@/test/render";
 import { getCurrentCluster, setCurrentCluster } from "@/lib/cluster";
 
 const navigate = vi.hoisted(() => vi.fn());
@@ -30,14 +30,17 @@ describe("ClustersPage", () => {
     expect(screen.getByText(/Kubernetes API connectivity/)).toBeInTheDocument();
   });
 
-  it("changes context before opening the selected cluster's servers", async () => {
+  it("opens a server-list filter without changing the infrastructure selection or resource cache", async () => {
     server.use(http.get("/clusters", () => HttpResponse.json({ items: registrations })));
-    const { client } = renderWithQuery(<ClustersPage />);
-    client.setQueryData(["server", "same-name"], { uid: "old-local-uid" });
+    const client = makeClient();
+    client.setQueryDefaults(["resource"], { gcTime: Infinity });
+    renderWithQuery(<ClustersPage />, { client });
+    const key = ["resource", "local", "gameplane-games", "same-name", "local-uid", "server"];
+    client.setQueryData(key, { uid: "local-uid" });
     await userEvent.click(await screen.findByRole("button", { name: "View servers in East" }));
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/servers" }));
-    expect(getCurrentCluster()).toBe("east");
-    expect(client.getQueryData(["server", "same-name"])).toBeUndefined();
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/servers", search: { cluster: "east" } }));
+    expect(getCurrentCluster()).toBe("local");
+    expect(client.getQueryData(key)).toEqual({ uid: "local-uid" });
   });
 
   it("opens inventory only for an explicitly capable registration", async () => {

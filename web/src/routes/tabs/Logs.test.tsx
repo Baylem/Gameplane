@@ -1,3 +1,4 @@
+import { ResourceTargetProvider } from "@/lib/resourceTarget";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -55,13 +56,19 @@ afterEach(() => {
 });
 
 describe("LogsTab", () => {
-  it("closes the old stream and clears its output when clusters change", async () => {
-    const { unmount } = render(<LogsTab name="alpha" />);
+  it("keeps filters independent and clears output when its resource route changes", async () => {
+    const { unmount, rerender } = render(<LogsTab name="alpha" />);
     const old = sockets[0];
     act(() => old.sendMsg("old cluster line"));
     await waitFor(() => expect(screen.getByText(/1 lines/)).toBeInTheDocument());
     act(() => setCurrentCluster("remote-1"));
+    expect(sockets).toHaveLength(1);
+    expect(old.close).not.toHaveBeenCalled();
+    rerender(<ResourceTargetProvider target={{ cluster: "remote-1", namespace: "games", name: "alpha", uid: "remote-instance" }}><LogsTab name="alpha" ns="games" /></ResourceTargetProvider>);
     await waitFor(() => expect(sockets).toHaveLength(2));
+    const remote = new URL(sockets[1].path, "http://test");
+    expect(remote.searchParams.get("cluster")).toBe("remote-1");
+    expect(remote.searchParams.get("namespace")).toBe("games");
     expect(old.close).toHaveBeenCalled();
     expect(screen.queryByText(/1 lines/)).not.toBeInTheDocument();
     unmount();

@@ -11,6 +11,7 @@ import { Cluster } from "@/lib/endpoints";
 import { useMe, can } from "@/lib/auth";
 import type { AllConfig } from "@/lib/config";
 import { useCurrentCluster } from "@/lib/cluster";
+import { ClusterSelector } from "@/components/ClusterSelector";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 
@@ -26,7 +27,7 @@ function opMessage(e: unknown): string {
 
 export function ClusterPage() {
   const clusterId = useCurrentCluster();
-  return <ClusterInventory key={clusterId} clusterId={clusterId} />;
+  return <><div className="px-6 pt-6"><ClusterSelector /></div><ClusterInventory key={clusterId} clusterId={clusterId} /></>;
 }
 
 function ClusterInventory({ clusterId }: { clusterId: string }) {
