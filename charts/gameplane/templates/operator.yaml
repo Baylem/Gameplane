@@ -247,7 +247,7 @@ spec:
         app.kubernetes.io/name: gameplane-operator
         {{- include "gameplane.labels" . | nindent 8 }}
       annotations:
-        checksum/mtls: {{ include (print $.Template.BasePath "/mtls.yaml") . | sha256sum }}
+        checksum/mtls: {{ include "gameplane.mtlsChecksum" . }}
     spec:
       serviceAccountName: gameplane-operator
       securityContext:

@@ -428,7 +428,7 @@ func TestHelmInstall_MTLSClientCertReissuedOnCAChange(t *testing.T) {
 	// cert signed by CA A, installed under the default Secret names (as a
 	// previous `helm install` would have generated), plus CA B pre-created
 	// under a custom name (as if a user brought their own CA).
-	ns := "e2e-mtls-scratch-namespace"
+	ns := fmt.Sprintf("e2e-mtls-scratch-%d", time.Now().UnixNano())
 	if out, err := envInstance.Kubectl(ctx, "create", "namespace", ns); err != nil {
 		t.Fatalf("create scratch namespace: %v\n%s", err, out)
 	}

@@ -15,10 +15,13 @@
   `api.agentMTLS.caSecretRef.name` (data keys `ca.crt` and `ca.key`) and
   `api.agentMTLS.clientCertRef.name` (data keys `tls.crt` and `tls.key`);
   the lookup path then reuses them and nothing is generated. The data key
-  names are fixed because the API and operator read those exact names.
+  names are fixed because the API and operator read those exact names. On a
+  live install or upgrade a referenced Secret that does not exist fails the
+  release.
 */}}
 {{- $caSecretName := (.Values.api.agentMTLS.caSecretRef.name | default "gameplane-agent-ca") -}}
 {{- $caSecret := lookup "v1" "Secret" .Release.Namespace $caSecretName -}}
+{{- $live := eq (include "gameplane.liveCluster" .) "true" -}}
 {{- $haveCA := and $caSecret (hasKey ($caSecret.data | default dict) "ca.crt") (hasKey ($caSecret.data | default dict) "ca.key") -}}
 {{- $caCrt := "" -}}
 {{- $caKey := "" -}}
@@ -50,8 +53,8 @@ data:
   ca.crt: {{ $caCrt | b64enc }}
   ca.key: {{ $caKey | b64enc }}
 ---
-{{- else if and $caSecret (not $haveCA) }}
-  {{- /* Only fail when lookup found the Secret but it lacks keys; an empty lookup (client-side template, dry-run) renders without failing. */ -}}
+{{- else if and (not $haveCA) (or $caSecret $live) }}
+  {{- /* A custom CA Secret must exist with ca.crt and ca.key. Offline renders (helm template, client dry-run) always see an empty lookup, so there only a found-but-incomplete Secret fails; against a live cluster a missing Secret fails too, instead of issuing the client cert from a CA that is never persisted. */ -}}
   {{- fail (printf "api.agentMTLS.caSecretRef.name=%q: Secret not found or missing required keys (ca.crt, ca.key)" $caSecretName) }}
 {{- end }}
 {{- $clientSecretName := (.Values.api.agentMTLS.clientCertRef.name | default "gameplane-agent-client") -}}
@@ -101,7 +104,8 @@ data:
   tls.crt: {{ $clientCrt | b64enc }}
   tls.key: {{ $clientKey | b64enc }}
 {{- else if ne $clientSecretName "gameplane-agent-client" }}
-  {{- if and $clientSecret (not $haveClientCreds) }}
+  {{- if and (not $haveClientCreds) (or $clientSecret $live) }}
+    {{- /* A custom client Secret must exist with tls.crt and tls.key. Offline renders (helm template, client dry-run) always see an empty lookup, so there only a found-but-incomplete Secret fails; against a live cluster a missing Secret fails too. */ -}}
     {{- fail (printf "api.agentMTLS.clientCertRef.name=%q: Secret not found or missing required keys (tls.crt, tls.key)" $clientSecretName) }}
   {{- end }}
 {{- end }}
