@@ -198,6 +198,19 @@ func (r *ModuleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	mod.Status.AppliedVersion = desiredVersion
 	mod.Status.AppliedDigest = bundle.Digest
 	mod.Status.AppliedTemplate = mod.Name
+	// Record the verification that actually ran, not just that Verify()
+	// returned nil — verifierFor returns a Nop verifier (always nil) when
+	// the source declares no policy, so gate the record on the policy
+	// itself. Otherwise a source that later gains a verify policy would
+	// make every module already installed from it look "verified" even
+	// though nothing was ever signature-checked.
+	if mode := moduleVerifyMode(src.Spec.Verify); mode != "" {
+		mod.Status.VerifiedDigest = bundle.Digest
+		mod.Status.VerifyPolicy = mode
+	} else {
+		mod.Status.VerifiedDigest = ""
+		mod.Status.VerifyPolicy = ""
+	}
 	mod.Status.LastError = ""
 	mod.Status.ObservedGeneration = mod.Generation
 	mod.Status.Conditions = upsertCondition(mod.Status.Conditions, metav1.Condition{
@@ -488,6 +501,27 @@ func (r *ModuleReconciler) verifierFor(ctx context.Context, src *gameplanev1alph
 		return r.NewVerifier(ctx, src)
 	}
 	return verify.Build(ctx, r.Client, r.Namespace, src)
+}
+
+// moduleVerifyMode classifies a source's verify policy for status recording,
+// mirroring the web client's verifyMode (web/src/lib/verify.ts), which
+// prefers keyless over keyed. This checks keyless before keyed, the reverse
+// of verify.Build's key-before-keyless switch; the two never disagree in
+// practice because the CRD's XValidation rule requires exactly one of
+// Key/Keyless. Empty means the source declares no policy, so verifierFor
+// returns the always-succeeding Nop verifier — no real signature check
+// happened, and nothing should be recorded as verified.
+func moduleVerifyMode(spec *gameplanev1alpha1.VerifySpec) string {
+	if spec == nil {
+		return ""
+	}
+	if spec.Keyless != nil {
+		return gameplanev1alpha1.ModuleVerifyModeKeyless
+	}
+	if spec.Key != nil {
+		return gameplanev1alpha1.ModuleVerifyModeKeyed
+	}
+	return ""
 }
 
 // operatorTooOld reports whether minVersion (a bundle's gameplaneMinVersion)

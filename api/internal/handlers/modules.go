@@ -103,6 +103,13 @@ type CatalogEntry struct {
 	// AppliedDigest is the bundle digest backing the installed version,
 	// for auditability. Mirrors Module.status.appliedDigest.
 	AppliedDigest string `json:"appliedDigest,omitempty"`
+	// VerifiedDigest and VerifyPolicy mirror Module.status: the digest that
+	// was actually signature-checked and under which policy, empty when no
+	// verification ran. The web client uses VerifiedDigest (not the
+	// source's current policy) to decide whether the solid "verified"
+	// badge is warranted.
+	VerifiedDigest string `json:"verifiedDigest,omitempty"`
+	VerifyPolicy   string `json:"verifyPolicy,omitempty"`
 	// PreviousVersion and PreviousDigest record the last-known-good the
 	// operator rolls back to (Module.status). Surfaced read-only so the
 	// UI can show a rollback target; the operator owns the rollback itself.
@@ -378,6 +385,8 @@ func (h modulesHandler) catalog(w http.ResponseWriter, req *http.Request) {
 		phase, _, _ := unstructured.NestedString(mod.Object, "status", "phase")
 		lastError, _, _ := unstructured.NestedString(mod.Object, "status", "lastError")
 		appliedDigest, _, _ := unstructured.NestedString(mod.Object, "status", "appliedDigest")
+		verifiedDigest, _, _ := unstructured.NestedString(mod.Object, "status", "verifiedDigest")
+		verifyPolicy, _, _ := unstructured.NestedString(mod.Object, "status", "verifyPolicy")
 		previousVersion, _, _ := unstructured.NestedString(mod.Object, "status", "previousVersion")
 		previousDigest, _, _ := unstructured.NestedString(mod.Object, "status", "previousDigest")
 		pinnedVersion, _, _ := unstructured.NestedString(mod.Object, "spec", "version")
@@ -401,6 +410,8 @@ func (h modulesHandler) catalog(w http.ResponseWriter, req *http.Request) {
 		e.Phase = phase
 		e.LastError = lastError
 		e.AppliedDigest = appliedDigest
+		e.VerifiedDigest = verifiedDigest
+		e.VerifyPolicy = verifyPolicy
 		e.PreviousVersion = previousVersion
 		e.PreviousDigest = previousDigest
 		e.PinnedVersion = pinnedVersion
