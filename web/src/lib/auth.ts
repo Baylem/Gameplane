@@ -28,6 +28,8 @@ export function useMe() {
  *
  * When permissionsByCluster is absent (older API), falls back to the flat
  * permissions structure (cluster-agnostic).
+ *
+ * Pass the current cluster (useCurrentCluster()) for namespaced checks; omit both ns and cluster for control-plane permissions.
  */
 export function can(
   me: User | undefined,
@@ -57,7 +59,10 @@ export function can(
     return nsPerms.includes("*") || nsPerms.includes(perm);
   };
 
-  if (!ns || ns === "*") {
+  // A namespace or a cluster argument marks the check as namespaced (the
+  // backend's namespaced flag); control-plane checks pass neither.
+  const namespaced = ns !== undefined || cluster !== undefined;
+  if (!namespaced) {
     // Control-plane perm (no namespace): any cluster's cluster-wide binding
     // grants it.
     for (const ck of Object.keys(perms)) {
@@ -70,14 +75,14 @@ export function can(
 
   // Namespaced perm: gated by target cluster (or "*" wildcard cluster).
   // Iterate through target cluster first, then wildcard, to match backend order.
-  const targetClusters = cluster ? [cluster, "*"] : ["*"];
+  const targetClusters = cluster !== undefined ? [cluster, "*"] : ["*"];
   for (const ck of targetClusters) {
     if (cwHolds(ck)) {
       return true;
     }
     const clusterPerms = perms[ck];
     if (!clusterPerms) continue;
-    const nsPerms = clusterPerms[ns];
+    const nsPerms = ns && ns !== "*" ? clusterPerms[ns] : undefined;
     if (!nsPerms) continue;
     if (nsPerms.includes("*") || nsPerms.includes(perm)) {
       return true;

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"slices"
 	"testing"
 )
 
@@ -214,10 +215,10 @@ func TestPermsByClusterToJSON_PreservesClusterDimension(t *testing.T) {
 	if result["local"] == nil {
 		t.Fatal("local cluster not in result")
 	}
-	if !containsSliceEq(result["local"]["*"], []string{"servers:read", "servers:write"}) {
+	if !slices.Equal(result["local"]["*"], []string{"servers:read", "servers:write"}) {
 		t.Errorf("local/* got %v, want sorted perms", result["local"]["*"])
 	}
-	if !containsSliceEq(result["local"]["team-a"], []string{"servers:write"}) {
+	if !slices.Equal(result["local"]["team-a"], []string{"servers:write"}) {
 		t.Errorf("local/team-a got %v, want servers:write", result["local"]["team-a"])
 	}
 
@@ -225,7 +226,7 @@ func TestPermsByClusterToJSON_PreservesClusterDimension(t *testing.T) {
 	if result["prod"] == nil {
 		t.Fatal("prod cluster not in result")
 	}
-	if !containsSliceEq(result["prod"]["*"], []string{"captures:manage"}) {
+	if !slices.Equal(result["prod"]["*"], []string{"captures:manage"}) {
 		t.Errorf("prod/* got %v, want captures:manage", result["prod"]["*"])
 	}
 
@@ -233,7 +234,7 @@ func TestPermsByClusterToJSON_PreservesClusterDimension(t *testing.T) {
 	if result["*"] == nil {
 		t.Fatal("wildcard cluster not in result")
 	}
-	if !containsSliceEq(result["*"]["*"], []string{"users:manage"}) {
+	if !slices.Equal(result["*"]["*"], []string{"users:manage"}) {
 		t.Errorf("*/* got %v, want users:manage", result["*"]["*"])
 	}
 
@@ -249,17 +250,4 @@ func TestPermsByClusterToJSON_EmptyReturnsNil(t *testing.T) {
 	if result != nil {
 		t.Errorf("empty perms should return nil, got %v", result)
 	}
-}
-
-// containsSliceEq checks if two string slices are equal (order-sensitive).
-func containsSliceEq(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }

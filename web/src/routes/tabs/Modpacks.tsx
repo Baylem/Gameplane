@@ -8,6 +8,7 @@ import { Servers } from "@/lib/endpoints";
 import { APIError } from "@/lib/api";
 import { errorText } from "@/lib/errors";
 import { useMe, can } from "@/lib/auth";
+import { useCurrentCluster } from "@/lib/cluster";
 import { RegistryBrowser, RegistryIcon, compactNum } from "@/components/registry-browser";
 
 type Banner = { kind: "ok" | "err"; text: string };
@@ -37,7 +38,8 @@ export function ModpacksTab({
 }) {
   const qc = useQueryClient();
   const { data: me } = useMe();
-  const canManage = can(me, "servers:write");
+  const cluster = useCurrentCluster();
+  const canManage = can(me, "servers:write", ns ?? "gameplane-games", cluster);
 
   const providers = tmpl?.spec.capabilities?.mods?.registry?.providers ?? [];
   const declFor = (p: string) => providers.find((x) => x.provider === p);

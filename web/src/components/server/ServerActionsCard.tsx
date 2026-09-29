@@ -61,6 +61,7 @@ import { rconAvailable } from "@/lib/capabilities";
 import { APIError } from "@/lib/api";
 import { errorText } from "@/lib/errors";
 import { useMe, can } from "@/lib/auth";
+import { useCurrentCluster } from "@/lib/cluster";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 
 // Curated icon map for the lucide names modules declare. Unknown names
@@ -137,7 +138,8 @@ export function ServerActionsCard({
 }) {
   const qc = useQueryClient();
   const { data: me } = useMe();
-  const canRun = can(me, "servers:write");
+  const cluster = useCurrentCluster();
+  const canRun = can(me, "servers:write", ns ?? "gameplane-games", cluster);
   const [active, setActive] = useState<ServerActionDecl | null>(null);
   const [status, setStatus] = useState<RunStatus | null>(null);
 

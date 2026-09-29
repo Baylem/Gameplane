@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strconv"
 	"sync"
 	"testing"
@@ -132,23 +133,18 @@ func TestUsers_Me(t *testing.T) {
 		}
 
 		// Verify capture:manage only appears under local/team-a, not under prod.
-		if containsString(u.PermissionsByCluster["prod"]["*"], "captures:manage") {
+		if slices.Contains(u.PermissionsByCluster["prod"]["*"], "captures:manage") {
 			t.Fatalf("captures:manage should not appear in prod cluster: %v", u.PermissionsByCluster["prod"]["*"])
 		}
-		if !containsString(u.PermissionsByCluster["local"]["team-a"], "captures:manage") {
+		if !slices.Contains(u.PermissionsByCluster["local"]["team-a"], "captures:manage") {
 			t.Fatalf("captures:manage should appear in local/team-a: %v", u.PermissionsByCluster["local"]["team-a"])
 		}
-	})
-}
 
-// Helper to check if a string slice contains a string.
-func containsString(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
+		// Verify the legacy flattened "permissions" field is still present in the response.
+		if u.Permissions == nil || len(u.Permissions) == 0 {
+			t.Fatal("legacy permissions field should be present in response")
 		}
-	}
-	return false
+	})
 }
 
 func TestUsers_Delete_SuccessCleansBindings(t *testing.T) {

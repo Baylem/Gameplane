@@ -117,4 +117,55 @@ describe("can", () => {
     expect(can(user, "servers:write")).toBe(true);
     expect(can(user, "captures:manage", "team-a")).toBe(true);
   });
+
+  it("denies a control-plane perm that no cluster grants cluster-wide", () => {
+    expect(
+      can(
+        withPermsByCluster({ b: { "team-a": ["users:manage"] } }),
+        "users:manage"
+      )
+    ).toBe(false);
+  });
+
+  it("grants a control-plane perm from any cluster's cluster-wide binding", () => {
+    expect(
+      can(
+        withPermsByCluster({ b: { "*": ["users:manage"] } }),
+        "users:manage"
+      )
+    ).toBe(true);
+  });
+
+  it("does not let a wildcard or missing namespace leak across clusters", () => {
+    const user = withPermsByCluster({ b: { "*": ["servers:write"] } });
+    expect(can(user, "servers:write", undefined, "a")).toBe(false);
+    expect(can(user, "servers:write", "*", "a")).toBe(false);
+    expect(can(user, "servers:write", "*", "b")).toBe(true);
+  });
+
+  it("matches a namespace grant only on its own cluster", () => {
+    const user = withPermsByCluster({
+      b: { "team-a": ["servers:write"] },
+    });
+    expect(can(user, "servers:write", "team-a", "a")).toBe(false);
+    expect(can(user, "servers:write", "team-a", "b")).toBe(true);
+    expect(can(user, "servers:write", "*", "b")).toBe(false);
+  });
+
+  it("checks only the wildcard cluster for a namespace without a cluster", () => {
+    expect(
+      can(
+        withPermsByCluster({ b: { "team-a": ["servers:write"] } }),
+        "servers:write",
+        "team-a"
+      )
+    ).toBe(false);
+    expect(
+      can(
+        withPermsByCluster({ "*": { "team-a": ["servers:write"] } }),
+        "servers:write",
+        "team-a"
+      )
+    ).toBe(true);
+  });
 });
