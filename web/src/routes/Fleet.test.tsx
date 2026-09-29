@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTestLocation, navigateTestSearch, resetTestSearch } from "@/test/routerSearch";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { screen, waitFor, within } from "@testing-library/react";
@@ -13,7 +14,9 @@ import type { GameServer } from "@/types";
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, to, params, search }: { children: ReactNode; to: string; params?: { name: string }; search?: Record<string, string> }) =>
     <a href={`${params ? to.replace("$name", params.name) : to}${search ? `?${new URLSearchParams(search)}` : ""}`}>{children}</a>,
-  useNavigate: () => vi.fn(), useSearch: () => ({}), useParams: () => ({}),
+  useLocation: () => useTestLocation(),
+  useNavigate: () => navigateTestSearch,
+  useSearch: () => ({}), useParams: () => ({}),
 }));
 
 import { ServersPage } from "./Servers";
@@ -33,7 +36,7 @@ function result<T>(items: T[], extra: Partial<FleetResult<T>> = {}): FleetResult
   return { items, partial: false, issues: [], totalReturned: items.length, ...extra };
 }
 
-afterEach(() => { setCurrentCluster("local"); window.history.replaceState(null, "", "/"); });
+afterEach(() => { resetTestSearch(); setCurrentCluster("local"); window.history.replaceState(null, "", "/"); });
 
 describe("unified fleet pages", () => {
   it("keeps duplicate names distinct and binds row actions to their originating site", async () => {

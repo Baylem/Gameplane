@@ -19,6 +19,7 @@ import {
 // DOM contract for what we assert.
 const mockNavigate = vi.fn();
 vi.mock("@tanstack/react-router", () => ({
+  useLocation: () => ({ search: {} }),
   Link: ({ children, to, ...rest }: { children: ReactNode; to: string } & Record<string, unknown>) => (
     <a href={to} {...rest}>
       {children}

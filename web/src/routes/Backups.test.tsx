@@ -1,3 +1,4 @@
+import { useTestLocation, navigateTestSearch, resetTestSearch } from "@/test/routerSearch";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ReactNode } from "react";
 import { http, HttpResponse } from "msw";
@@ -8,6 +9,8 @@ import { renderWithQuery } from "@/test/render";
 import { makeBackup, makeSchedule, makeRestore } from "@/test/factories";
 
 vi.mock("@tanstack/react-router", () => ({
+  useLocation: () => useTestLocation(),
+  useNavigate: () => navigateTestSearch,
   Link: ({ children, to, ...rest }: { children: ReactNode; to: string } & Record<string, unknown>) => (
     <a href={to} {...rest}>{children}</a>
   ),
@@ -16,14 +19,10 @@ vi.mock("@tanstack/react-router", () => ({
 import { BackupsPage } from "./Backups";
 
 describe("BackupsPage", () => {
-  // BackupsPage reads its initial tab from the URL (readTab()) and pushes
-  // the active tab into it via history.replaceState. jsdom's window is
-  // shared across tests in this file, so a prior test that switched tabs
-  // (e.g. "switches to the Restores tab") otherwise leaks its ?tab= param
-  // into the next test's initial render, silently mounting the wrong
-  // panel and starving that test's own MSW handlers.
+  // Each test starts with the default Backups route search.
   beforeEach(() => {
     window.history.replaceState(null, "", "/");
+    resetTestSearch();
   });
 
   it("renders the Backups tab and loads rows", async () => {

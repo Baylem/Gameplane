@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { api } from "@/lib/api";
 import { Templates } from "@/lib/endpoints";
 import { assignGameCodesForTemplates } from "@/lib/gameIcon";
@@ -54,24 +55,17 @@ export interface FleetPlacement { cluster: string; namespace: string; templates:
 
 export interface FleetFilter { cluster?: string; namespace?: string }
 
-function readFleetLocation(): string {
-  return typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("cluster") ?? "";
-}
-
 export function useFleetLocation(): readonly [string, (value: string) => void] {
-  const [location, setLocation] = useState(readFleetLocation);
-  useEffect(() => {
-    const onHistory = () => setLocation(readFleetLocation());
-    window.addEventListener("popstate", onHistory);
-    return () => window.removeEventListener("popstate", onHistory);
-  }, []);
+  const search = useLocation().search;
+  const navigate = useNavigate();
+  const location = typeof search.cluster === "string" ? search.cluster : "";
   const choose = useCallback((value: string) => {
-    setLocation(value);
-    const url = new URL(window.location.href);
-    if (value) url.searchParams.set("cluster", value);
-    else url.searchParams.delete("cluster");
-    window.history.replaceState(window.history.state, "", url);
-  }, []);
+    void navigate({
+      to: ".",
+      replace: true,
+      search: (previous) => ({ ...previous, cluster: value || undefined }),
+    });
+  }, [navigate]);
   return [location, choose];
 }
 

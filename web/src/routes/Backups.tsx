@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { createResourceClient } from "@/lib/endpoints";
 import { useFleetLocation, Fleet, located, targetKey, targetLabel, type Located } from "@/lib/fleet";
@@ -46,13 +46,13 @@ const TABS: { id: TabKey; label: string }[] = [
 const BACKUP_PHASES = ["Pending", "Running", "Succeeded", "Failed"];
 const RESTORE_PHASES = ["Pending", "Suspending", "Running", "Resuming", "Succeeded", "Failed"];
 
-function readTab(): TabKey {
-  const v = new URLSearchParams(window.location.search).get("tab");
-  return v === "schedules" || v === "restores" ? v : "backups";
-}
-
 export function BackupsPage() {
-  const [tab, setTab] = useState<TabKey>(() => readTab());
+  const search = useLocation().search;
+  const navigate = useNavigate();
+  const tab: TabKey = search.tab === "schedules" || search.tab === "restores" ? search.tab : "backups";
+  const setTab = (next: TabKey) => {
+    void navigate({ to: "/backups", replace: true, search: (previous) => ({ ...previous, tab: next === "backups" ? undefined : next }) });
+  };
   const [backupNow, setBackupNow] = useState(false);
   const [location, setLocation] = useFleetLocation();
   const { data: serverScopes } = useQuery({ queryKey: ["fleet", "servers", "", ""], queryFn: ({ signal }) => Fleet.servers({}, signal) });
@@ -60,12 +60,6 @@ export function BackupsPage() {
     queryKey: ["fleet", kind, ""], queryFn: ({ signal }: { signal: AbortSignal }) => Fleet[kind]({}, signal),
   })) });
   const locations = [...(serverScopes?.scopes ?? []).map((scope) => scope.cluster), ...(serverScopes?.items ?? []).map((item) => item.target.cluster), ...backupScopes.flatMap((query) => [...(query.data?.scopes ?? []).map((scope) => scope.cluster), ...(query.data?.items ?? []).map((item) => item.target.cluster)])];
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    if (tab === "backups") url.searchParams.delete("tab");
-    else url.searchParams.set("tab", tab);
-    window.history.replaceState(null, "", url);
-  }, [tab]);
 
   return (
     <div className="space-y-5 p-6">

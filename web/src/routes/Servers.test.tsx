@@ -11,6 +11,7 @@ import { makeServer, makeClusterStats } from "@/test/factories";
 // Replace it with a plain anchor — same DOM contract for what we assert.
 // Extract search params and build the full href so route-parameter assertions work.
 vi.mock("@tanstack/react-router", () => ({
+  useLocation: () => ({ search: {} }),
   Link: ({ children, to, search, ...rest }: { children: ReactNode; to: string; search?: Record<string, unknown> } & Record<string, unknown>) => {
     let href = to;
     if (search && Object.keys(search).length > 0) {
