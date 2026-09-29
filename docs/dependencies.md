@@ -250,10 +250,11 @@ diagnostics. Direct deps from `mcp-server/go.mod`:
 | `k8s.io/apimachinery` | v0.37.0 | `internal/kube/client.go` — `unstructured.Unstructured(List)`, `runtime.Scheme`, `schema.GroupVersionResource` back the dynamic-client reads of 7 of Gameplane's 9 CRDs (not Cluster or NetworkCapture) (redeclared GVK/GVR locally rather than importing the operator module's generated types, to stay standalone) | <!-- doc-versions: dependency -->
 | `sigs.k8s.io/controller-runtime` | v0.25.1 | `main.go` — only `ctrl.GetConfig()`, to load the kubeconfig (in-cluster, falling back to `KUBECONFIG`/`~/.kube/config`) that builds the `kube.Client` above | <!-- doc-versions: dependency -->
 
-The read-only guarantee is structural (only List/Get-shaped methods are
-exported from `internal/kube`, so `tools.go`'s handlers have no way to
-reach a mutating verb even by mistake) and RBAC-backed (a
-`get`/`list`/`watch`-only ClusterRole) — the go-sdk itself has no bearing
+The read-only guarantee has two layers: the handler boundary (only
+List/Get-shaped methods are exported from `internal/kube`, and
+`tools.go`'s handlers receive only that `*kube.Client`) and RBAC (a
+`get`/`list`/`watch`-only ClusterRole), which is the layer that stops
+mutation by any code in the process. The go-sdk itself has no bearing
 on that guarantee; it's purely the protocol transport.
 
 ### sentinel

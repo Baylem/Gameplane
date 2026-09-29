@@ -1,315 +1,143 @@
-# Gameplane — Guidance for AI Coding Assistants
+# Gameplane — AI assistant guide
 
-This file provides architectural context, commands, and non-negotiable operational rules for AI agents. Humans should refer to [`README.md`](README.md) and [`docs/contributing.md`](docs/contributing.md).
+Architecture, commands, and binding rules for AI agents. Humans: [`README.md`](README.md), [`docs/contributing.md`](docs/contributing.md).
 
-**Project:** Gameplane — Kubernetes-native game server control panel (CubeCoders AMP alternative). Operates identically on single-node k3s and multi-node clusters.  
-**Status:** Beta (`v0.2.0-beta.8`). Core components feature-complete for v1 scope; stabilization phase.
+**Gameplane:** Kubernetes-native game server control panel (CubeCoders AMP alternative); identical on single-node k3s and multi-node clusters. **Status:** beta `v0.2.0-beta.8`; v1 scope feature-complete, stabilizing.
 
----
+## ⏳ Session start: blocked dependency upgrades (delete an entry once unblocked)
 
-## ⏳ Start-of-Session Check: Blocked Dependency Upgrades (delete each entry when unblocked)
+Run every session.
 
-Execute at the start of every session.
+**TypeScript 7** — `npm view @typescript-eslint/parser@latest version peerDependencies.typescript` and same for `@canary`.
+- Blocked while the peer range ends `<7` (e.g. `<6.1.0`): Dependabot #272 fails `npm ci` (`ERESOLVE`). No workarounds/overrides/code fixes; don't close #272.
+- Unblocked (a release accepts TS 7): do T055/T056 in `specs/009-remediate-security-dependabot/tasks.md` — bump `typescript` + `@typescript-eslint/*` in `web/package.json`, fix real type errors (no `@ts-ignore`), merge #272, mark tasks `[X]`, delete this entry.
 
-### TypeScript 7
+**ESLint 10** — `npm view eslint-plugin-react@latest version peerDependencies.eslint`.
+- Blocked while the range lacks `^10`: Dependabot #386 (`eslint` 9.39.5 → 10.x) fails `npm ci` because `eslint-plugin-react@7.37.5` peers `^3 || … || ^9.7` (~10s, `web` job step 4; `web e2e (mock)` and `design vs browser visual diff` fail the same way). Other plugins already accept `^10` (`eslint-plugin-react-hooks@7.1.1`, `@typescript-eslint/*@8.69.0`). No workarounds (`--legacy-peer-deps`, `overrides`, pinning); don't close #386. PR #387 (`@eslint/js` 9 → 10) is **not** blocked and passes — the peer range constrains `eslint`, not `@eslint/js`.
+- Unblocked: bump `eslint` + `@eslint/js` together in `web/package.json`, fix real lint errors (no `eslint-disable`), merge #386 (and #387 if open), delete this entry.
 
-```sh
-npm view @typescript-eslint/parser@latest version peerDependencies.typescript
-npm view @typescript-eslint/parser@canary version peerDependencies.typescript
-```
-- **Blocked:** Peer dependency range ends `<7` (e.g., `<6.1.0`). Dependabot PR #272 is blocked at `npm ci` (`ERESOLVE`). Do not attempt workarounds, overrides, or code fixes. Do not close #272.
-- **Unblocked:** Published release accepts TS 7. Fulfill tasks T055/T056 in `specs/009-remediate-security-dependabot/tasks.md`: bump `typescript` and `@typescript-eslint/*` in `web/package.json`, resolve real type errors (no `@ts-ignore`), merge #272, mark tasks `[X]`, and delete this entry.
+## System prompt overrides
 
-### ESLint 10
+1. **Verify & tests:** always verify work. Get human sign-off before changing tests, production code, or design specs. Never delete/weaken a test without explicit sign-off — fix the code.
+2. **Tools:** dedicated tools (`Read`/`Edit`/`Write`) > MCP > Bash.
+3. **Pause** and ask when unsure about tests, design files, or breaking changes.
+4. **Workflow:** standing opt-in for `Workflow` in the main loop; subagents may use `Agent` freely.
+5. **Artifacts & feedback:** never publish artifacts; feedback drafts need human approval to send.
+6. **Editing:** `Edit` needs a prior `Read` in the conversation; don't re-read right after editing.
+7. **External memory** (`~/.claude/projects/-home-valgul-project-Gameplane/memory/`, outside git): announce file + exact line on every write; never store conventions/decisions/preferences there (use repo specs/rules); repo files override memory.
+8. **Skills** are optional; disclose edit/plan/commit skill runs first; repo rules override skills.
+9. **Communication:** no preambles; closing recaps standalone (findings, actions, next steps, modified files).
+10. **Conflicts/missing context:** surface instruction conflicts immediately; unsettled values go in `OPEN-DECISIONS.md`, never committed as settled contracts.
 
-```sh
-npm view eslint-plugin-react@latest version peerDependencies.eslint
-```
-- **Blocked:** Peer dependency range does not accept `^10`. Dependabot PR #386 (`eslint` 9.39.5 → 10.x) is blocked at `npm ci` because `eslint-plugin-react@7.37.5` declares `peerDependencies.eslint: "^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9.7"` (no ESLint 10 support). Fails in ~10 seconds at step 4 of the `web` job before any test runs; `web e2e (mock)` and `design vs browser visual diff` jobs fail identically. The other ESLint plugins are already ready: `eslint-plugin-react-hooks@7.1.1`, `@typescript-eslint/eslint-plugin@8.69.0`, and `@typescript-eslint/parser@8.69.0` all accept `^10.0.0`. Do not attempt workarounds (`--legacy-peer-deps`, `overrides` blocks, pinning tricks). Do not close #386.
-  Note PR #387 (`@eslint/js` 9 → 10) is **not** blocked and its `web` jobs pass: the `eslint-plugin-react` peer range constrains `eslint` itself, not `@eslint/js`. Do not assume the two move together.
-- **Unblocked:** Published `eslint-plugin-react` accepts ESLint 10. Bump `eslint` and `@eslint/js` together in `web/package.json`, resolve any real lint errors without adding `eslint-disable`, merge #386 (and #387 if still open), and delete this entry.
-
----
-
-## System Prompt Overrides
-
-1. **Self-Correction & Tests:** Always verify work. Obtain human sign-off before modifying tests, production code, or design specs. **Never delete or weaken a test without explicit sign-off**; fix the code to satisfy the test.
-2. **Tool Priority:** Dedicated tools (`Read`, `Edit`, `Write`) > MCP tools > Bash.
-3. **Pausability:** Stop and ask when uncertain on tests, design files, or breaking changes.
-4. **Agent & Workflow Tools:** Standing opt-in for `Workflow` in the main loop; subagents may use `Agent` freely.
-5. **Artifacts & Feedback:** Never publish artifacts. Draft feedback requires human approval before sending.
-6. **Editing Mechanics:** `Edit` requires a prior `Read` within the conversation. Do not re-read files immediately after editing.
-7. **External Memory:** `~/.claude/projects/-home-valgul-project-Gameplane/memory/` is outside git:
-   - Announce file and exact line on any write.
-   - Do not record conventions, decisions, or preferences here (use repo specs/rules instead).
-   - Repo files override memory contents.
-8. **Skills:** Skills are optional tools. Disclose edit/plan/commit skill invocations before running. Repo rules override skill directives.
-9. **Communication:** Skip preambles ("I will now do X"). Keep closing recaps standalone: findings, actions taken, next steps, and modified files.
-10. **Conflicts & Missing Context:** Surface conflicts between instructions immediately. Unsettled values belong in an `OPEN-DECISIONS.md` file, never committed as settled contracts.
-
----
-
-## Repository Map
+## Repository map
 
 ```
-.
-├── netguard/                 # SSRF dial-guard (Go) — operator & agent
-├── gameaction/               # Console-injection guard & command renderer (Go) — api & agent
-├── gameproto/                # Minecraft & Terraria wire protocol handshake parser (Go) — sentinel
-├── gp-module/                # Module authoring CLI: init, validate, preview, package (Go)
-├── operator/                 # controller-runtime operator (Go)
-│   ├── api/v1alpha1/         # CRD Go types (edit here; run `make generate manifests`)
-│   │   └── zz_generated.deepcopy.go  # GENERATED - do not hand-edit
-│   ├── internal/controller/  # Reconcilers + envtest test suites
-│   ├── cmd/main.go           # Operator entrypoint
-│   └── config/{crd,rbac}/    # GENERATED CRD/RBAC YAML - do not hand-edit
-├── api/                      # REST & WebSocket gateway (Go, chi)
-│   ├── cmd/main.go           # Subcommands: `serve`, `bootstrap-admin`
-│   └── internal/{handlers,auth,db,kube,notify,rbac,ws}/
-├── agent/                    # In-pod sidecar (Go)
-│   ├── cmd/main.go
-│   └── internal/{auth,console,files,heartbeat,logs,players,rcon,quiesce}/
-├── audit-syslog-bridge/      # RFC 5424 HTTP-to-syslog forwarder (Go)
-├── telemetry-receiver/       # Usage telemetry ingest service (Go)
-├── sentinel/                 # Wake-on-connect proxy for sleeping pods (Go)
-├── capture-sidecar/          # AF_PACKET BPF packet capture sidecar (Go)
-├── mcp-server/               # Read-only Model Context Protocol server (Go)
-├── svcutil/                  # Shared environment parsing & graceful shutdown helpers (Go)
-├── tunnel/                   # Relay client supervisor (frp, Tailscale, playit) (Go)
-├── web/                      # React 19 + TS strict + Vite dashboard
-│   └── src/{routes,components,lib,router,styles,test}/
-├── modules/                  # SUBMODULE -> gameplane-module (OCI game templates)
-├── website/                  # SUBMODULE -> gameplane-website (Astro docs/marketing)
-├── charts/gameplane/         # Helm chart (includes crd-manifests/ and hooks)
-├── deploy/kind/              # Local Kind cluster scripts
-├── test/e2e/                 # Kind E2E test suite (`//go:build e2e`)
-├── docs/                     # Documentation (architecture, security, modules)
-├── design.pen                # Canonical Pencil UI design source (JSON)
-├── cosign.pub                # Public key for image & module signature verification
-├── go.work                   # Go workspace linking all 15 Go modules (incl. test/e2e)
-└── Makefile                  # Canonical task runner
+netguard/            SSRF dial-guard (operator, agent)
+gameaction/          console-injection guard + command renderer (api, agent)
+gameproto/           Minecraft/Terraria handshake parser (sentinel)
+gp-module/           module authoring CLI: init/validate/preview/package
+operator/            controller-runtime operator
+  api/v1alpha1/      CRD types (edit here, then `make generate manifests`); zz_generated.deepcopy.go GENERATED
+  internal/controller/  reconcilers + envtest suites
+  cmd/main.go        entrypoint;  config/{crd,rbac}/ GENERATED
+api/                 REST + WebSocket gateway (chi); cmd/main.go: `serve`, `bootstrap-admin`
+  internal/{handlers,auth,db,kube,notify,rbac,ws}/
+agent/               in-pod sidecar; internal/{auth,console,files,heartbeat,logs,players,rcon,quiesce}/
+audit-syslog-bridge/ RFC 5424 HTTP→syslog forwarder
+telemetry-receiver/  usage telemetry ingest
+sentinel/            wake-on-connect proxy for sleeping pods
+capture-sidecar/     AF_PACKET BPF capture sidecar
+mcp-server/          read-only MCP server
+svcutil/             env parsing + graceful shutdown helpers
+tunnel/              relay client supervisor (frp, Tailscale, playit)
+web/                 React 19 + strict TS + Vite dashboard; src/{routes,components,lib,router,styles,test}/
+modules/             SUBMODULE gameplane-module (OCI game templates)
+website/             SUBMODULE gameplane-website (Astro docs/marketing; has its own CLAUDE.md)
+charts/gameplane/    Helm chart (crd-manifests/, hooks)
+deploy/kind/         local Kind scripts
+test/e2e/            Kind E2E suite (//go:build e2e)
+docs/                architecture, security, modules
+design.pen           canonical Pencil dashboard design
+cosign.pub           image + module signature key
+go.work              links all 15 Go modules (incl. test/e2e)
+Makefile             canonical task runner
 ```
 
-*Note:* Run `git submodule update --init` after cloning to populate `modules/` (required for `make dev-up`). `website/` is optional for local development.
+After cloning: `git submodule update --init` (`modules/` required for `make dev-up`; `website/` optional).
 
----
+## Commands (always via Makefile)
 
-## Canonical Commands
+- **Dev:** `make dev-up` (Kind + OCI registry :5001 + Helm), `make web-dev` (Vite, proxies in-cluster API), `make dev-load` (load built images; run `make images` first), `make dev-install` (Helm upgrade), `make dev-down`.
+- **Build:** `make build` (all Go + web), `make build-go` (14 modules in GO_MODULES, all but test/e2e), `make build-web` (`npm ci && npm run build`), `make images`.
+- **Codegen:** `make generate` (deepcopy), `make manifests` (CRD/RBAC YAML, synced to `charts/gameplane/crds/`), `make modules-push`, `make tidy`.
+- **Tests (CI only — never run locally, see Rule 8):** `make test`, `make test-integration` (envtest operator+api), `make test-e2e` (~10–20 min), `make test-e2e-bucket BUCKET=(operator|api-auth|api-roles|api-rbac|api-agent|api-mods|ratelimit|bot-fast|bot-heavy|multicluster|upgrade)`.
+- **E2E conventions:** register new tests in `test/e2e/buckets.sh`; `t.Parallel()` + unique names; guard shared resources (`ociPushMu` for module pushes, `ensureResticRepo(t)` for shared backup repos). Rate limits per cluster: IP burst 10 (5/min), user burst 6 (3/min) — cap an API bucket at ~7 admin logins.
+- **Lint:** `make lint` = gofmt, go vet, golangci-lint, ESLint, `check-specs`, `check-doc-versions`, `check-links`.
 
-Always invoke commands via `Makefile`.
+**Coverage minimums:** netguard 91, gameaction 91, gameproto 90, gp-module 80, operator 72, api 80, agent 90, svcutil 90; audit-syslog-bridge, telemetry-receiver, sentinel, capture-sidecar, mcp-server, tunnel 70; web 92 lines / 76 functions / 82 branches / 92 statements.
 
-### Local Development
-```sh
-make dev-up        # Start Kind cluster + local OCI registry (:5001) + deploy Helm chart
-make web-dev       # Start Vite dev server with proxy to in-cluster API
-make dev-load      # Load already-built local images into Kind (run `make images` first to rebuild)
-make dev-install   # Re-run Helm upgrade against local cluster
-make dev-down      # Destroy Kind cluster and local registry
-```
+## Core rules
 
-### Build
-```sh
-make build         # Compile all Go modules and build web assets
-make build-go      # Compile the 14 Go modules in GO_MODULES (all but test/e2e)
-make build-web     # Build web/dist via `npm ci && npm run build`
-make images        # Build all container images locally
-```
+1. **Design-first UI:** dashboard changes are designed in `design.pen` via Pencil MCP before React code; website changes start in `website/website.pen`. After every Pencil update export touched nodes to `design-export/json/<id>.json` (`mcp__pencil__execute` `Get`) and `design-export/screenshots/<id>.png` (`mcp__pencil__export_nodes`); website → `website/website-export/`.
+2. **Never hand-edit `.pen` files:** no edit/delete/`Read`/`Grep`/`cat`/`sed` (multi-MB JSON, easily corrupted). Use Pencil MCP; ask the user to save in the UI after changes; inspect diffs only via `git diff --stat`.
+3. **Login privacy:** `/login` and unauthenticated views never expose cluster names, versions, server counts, or account-existence errors — generic messages ("invalid credentials").
+4. **Fix, don't silence:** no `//nolint`, `eslint-disable`, or loosened configs. Allowed: `_test.go` exempt from `errcheck`/`gosec`/`unparam`; `operator/internal/controller/` exempt from revive `exported:`.
+5. **TypeScript:** strict; no unjustified `any` (explain in a comment if unavoidable); every promise `await`ed or `void`-prefixed.
+6. **Go errors:** wrap with `%w`.
+7. **CRD sync:** after editing `operator/api/v1alpha1/*_types.go` run `make generate && make manifests`; commit deepcopy, `operator/config/{crd,rbac}/*.yaml`, `charts/gameplane/crds/*.yaml`/`crd-manifests/` in the same changeset.
+8. **Verification:** locally only compile checks (`go build ./...`, `npx tsc --noEmit`); never test/lint suites (`make test|lint|cover`, `go test`, `npm test`, envtest, E2E). Push a feature branch; CI is the sole verification authority.
+9. **Kubernetes primitives first** (StatefulSet, Service, PVC, Job, ConfigMap, Secret, CRDs) before custom abstractions.
+10. **Operator authority:** business logic lives in reconcilers (`operator/internal/controller/`); the API is a UX gateway and never bypasses reconciliation.
+11. **Commits:** commit each completed logical unit (`feat:`/`fix:`/`chore:`…), signed (`git commit -s`); never amend pushed commits or use `--no-verify`; keep trailers `Co-Authored-By: <current model>` and `Claude-Session: <session-url>`.
+12. **Branches:** one per unit of work; delete remote + local branch right after merge. `master` is protected by ruleset `18692396` ("protect main"): 1 human approval, no self-approval, no direct pushes, approvals dismissed on push — agents cannot merge PRs. Check: `gh api repos/ValgulNecron/Gameplane/rules/branches/master`.
+13. **Multi-agent delegation:** main loop orchestrates/reviews; implementation goes through `Workflow` scripts (`parallel()`/`pipeline()`).
+    - Start at `haiku`; escalate only on functional failure `haiku` → `sonnet` → `opus` → `fable`. `fable` needs explicit human permission.
+    - Set `model:` on every `agent()` call (default is session Opus); check with `grep -c "model:"`.
+    - Review one tier up (haiku→sonnet, sonnet→opus, opus→fable); fixes go to small agents in a new workflow.
+    - Review diffs, not items: one reviewer per batch checks `git diff` against the brief (facts are verified once, in the brief) — never one reviewer per page/file.
+    - Scripts over fan-out: rule-shaped changes (token swaps, version strings, frontmatter, renames) are a deterministic script run by one agent, not many agents.
+    - UI changes: browser smoke test via Chrome MCP at `sonnet`, parallel with reviews.
+14. **PR labels (REST only — `gh pr edit` is broken by the Projects-classic deprecation):** ≥1 `type:` (`feature|fix|refactor|test|ci|chore|docs|security`) and ≥1 `area:` (`operator|api|agent|web|modules|chart|e2e|specs|shared|optional-components`); `breaking` when applicable.
+    ```sh
+    gh api -X POST repos/ValgulNecron/Gameplane/issues/<pr>/labels -f "labels[]=type: fix" -f "labels[]=area: api"
+    gh api -X PATCH repos/ValgulNecron/Gameplane/pulls/<pr> --input <payload_with_body.json>
+    ```
+15. **Specs:** a feature's spec is its whole `specs/<feature>/` folder (`data-model.md`, `contracts/`, `OPEN-DECISIONS.md`, …) — check it for explicit exemptions before flagging violations. Mark obsolete tasks withdrawn in `tasks.md` with citations; never delete them.
+16. **Archival:** once every task is complete/withdrawn and the PR is merged into `master`, `git mv specs/<NNN>-<slug> specs/done_<NNN>-<slug>` and update in-repo references in the same commit.
+17. **Mechanical design waves** (token re-skins): scripted, blind updates at `haiku`. Precompute change lists with `grep`/`jq` on `design-export/json/<id>.json`; `haiku` applies `Update(id, {prop: value})`. Verify by screenshot comparison (`export_nodes` vs snapshot PNG), not JSON dumps; avoid `Get(id, {depth: 10+})`.
+18. **Scout once, brief many:** one scout reads code/docs/failures and writes a factual brief (exact `file:line`, before/after code, justification). Fix agents get only the brief and edit blind at `haiku` — never tell them to re-read files, test suites, or `CLAUDE.md`. Reviewers check git diffs against the brief.
 
-### Testing & CI Rules
-> **Rule 8:** **NEVER run test or lint suites locally** (`make test`, `make lint`, `make cover`, `go test`, `npm test`, envtest, or E2E). Only lightweight compilation checks are permitted (`go build ./...`, `npx tsc --noEmit`). CI on GitHub Actions is the sole verification authority.
+## Architecture
 
-```sh
-# Targeted compilation / unit test references (for CI or isolated debugging):
-make test                # Full unit test run across all modules
-make test-integration    # K8s envtest suite (operator + api)
-make test-e2e            # End-to-end suite on Kind (~10–20 min)
-make test-e2e-bucket     # Specific CI bucket: BUCKET=(operator|api-auth|api-roles|api-rbac|api-agent|api-mods|ratelimit|bot-fast|bot-heavy|multicluster|upgrade)
-```
-
-**E2E Conventions:**
-- New E2E tests must be added to a bucket in `test/e2e/buckets.sh`.
-- Use `t.Parallel()` with unique resource names.
-- Protect shared resources with appropriate mutexes: `ociPushMu` for module push jobs, `ensureResticRepo(t)` for shared backup repositories.
-- Rate limits per cluster: IP burst 10 (5/min), user burst 6 (3/min). Cap API bucket runs at ~7 admin logins.
-
-### Linters & Coverage Thresholds
-`make lint` runs `gofmt`, `go vet`, `golangci-lint`, ESLint, `make check-specs`, `make check-doc-versions`, and `make check-links`.
-
-| Module | Minimum Coverage | Notes |
+| Component | Stack | Role |
 |---|---|---|
-| `netguard` | 91% | Dial hook SSRF validation |
-| `gameaction` | 91% | Command injection template engine |
-| `gameproto` | 90% | Protocol parser |
-| `gp-module` | 80% | Module authoring CLI |
-| `operator` | 72% | Controller runtime reconcilers |
-| `api` | 80% | HTTP/WS endpoints and auth |
-| `agent` | 90% | Pod sidecar operations |
-| `audit-syslog-bridge` | 70% | Syslog forwarder |
-| `telemetry-receiver` | 70% | Metrics aggregator |
-| `sentinel` | 70% | Wake-on-connect daemon |
-| `capture-sidecar` | 70% | Packet capture agent |
-| `mcp-server` | 70% | Read-only MCP daemon |
-| `svcutil` | 90% | Environment and shutdown runtime |
-| `tunnel` | 70% | Relay process supervisor |
-| `web` | 92% L / 76% F / 82% B / 92% S | Lines / Functions / Branches / Statements |
+| netguard | Go | dial-time SSRF prevention (`IsAllowed` operator, `IsPublic` agent) |
+| gameaction | Go | validates console input against schemas; escapes injection |
+| gameproto | Go | Minecraft/Terraria wire parser for connection filtering |
+| gp-module | Go | module CLI: scaffold, offline validate, dry-run preview, OCI package |
+| svcutil | Go | stdlib-only env + graceful shutdown (`RunHTTP`) |
+| operator | Go, controller-runtime | authoritative reconciler for 9 CRDs (`GameServer`, `GameTemplate`, …) |
+| api | Go, chi | REST/WS UX gateway; SQLite, experimental PostgreSQL |
+| agent | Go | pod sidecar: console (PTY/RCON), files, logs, heartbeats |
+| audit-syslog-bridge | Go | webhook audit events → RFC 5424 syslog |
+| telemetry-receiver | Go | opt-in anonymous usage stats |
+| sentinel | Go | holds ports while asleep, wakes pods on connect |
+| capture-sidecar | Go | ephemeral BPF packet capture |
+| mcp-server | Go | read-only MCP daemon (stdio) for cluster debugging |
+| web | React 19, Vite, TS | dashboard (TanStack Router/Query, Tailwind, HeroUI v3) |
+| modules/ | OCI / oras | game templates (Minecraft, Terraria, Valheim, …) |
 
-### Code Generation & Modules
-```sh
-make generate        # Generates operator/api/v1alpha1/zz_generated.deepcopy.go
-make manifests       # Generates CRD/RBAC YAML and syncs to charts/gameplane/crds/
-make modules-push    # Pushes modules/* OCI artifacts to registry
-make tidy            # Runs `go mod tidy` across all workspace modules
-```
+## Common workflows
 
----
+- **CRD field:** edit `operator/api/v1alpha1/<kind>_types.go` → `make generate && make manifests` → reconciler `operator/internal/controller/<kind>_controller.go` → mirror in `web/src/types.ts` + affected `web/src/routes/` → envtest `<kind>_envtest_test.go`.
+- **API route:** handler in `api/internal/handlers/` → mount in `api/cmd/main.go` with RBAC middleware (`api/internal/rbac/`) → `api/internal/handlers/<name>_envtest_test.go` → client method in `web/src/lib/api.ts`.
+- **Dashboard screen:** design in `design.pen` + export to `design-export/` → `web/src/routes/<name>.tsx`, register in `web/src/router/tree.tsx` → data via `web/src/lib/api.ts` + TanStack Query → `web/src/routes/<name>.test.tsx`.
+- **Game module:** edit `modules/<name>/` (`module.yaml`, `template.yaml`, `README.md`) → `make modules-push` → commit in `gameplane-module` → `git add modules` + commit pointer bump in root.
+- **Website:** design in `website/website.pen` + export to `website/website-export/` → change `website/` per its own CLAUDE.md → commit/push/PR in `gameplane-website` (default branch `main`) → `git add website` + commit pointer bump in root.
+- **DB migration:** new sequential `api/internal/db/migrations/common/<NNN>_<name>.sql` (013 onward) — portable SQL both SQLite and PostgreSQL run unchanged (no `datetime('now')`/`strftime`, `AUTOINCREMENT`, `INSERT OR …`, `COLLATE NOCASE`; bind timestamps from Go). `migrations/sqlite/` and `migrations/postgres/` hold the frozen per-dialect 001–012 sets; see `api/internal/db/migrations/README.md`. Append-only, applied on API startup.
 
-## Core Operational Rules
+## Reference docs
 
-### 1. Design-First UI
-- Dashboard UI changes must be designed in `design.pen` via the Pencil MCP before writing React code. Website UI changes start in `website/website.pen`.
-- **Export requirement:** Every Pencil update must immediately export touched nodes to `design-export/json/<id>.json` (`mcp__pencil__execute` using `Get`) and `design-export/screenshots/<id>.png` (`mcp__pencil__export_nodes`). (Mirrored in `website/website-export/` for website changes).
-
-### 2. Never Hand-Edit `.pen` Files
-- Do not edit, delete, `Read`, `Grep`, `cat`, or `sed` `.pen` files directly (they are multi-megabyte JSON files prone to corruption).
-- Use Pencil MCP for inspection and modifications. Ask user to save via UI after modifications. Inspect diffs via file metadata only (`git diff --stat`).
-
-### 3. Login Privacy
-- `/login` and unauthenticated views must not expose internal data: cluster names, versions, active server counts, or specific account-existence errors. Use generic error messages ("invalid credentials").
-
-### 4. Fix, Don't Silence
-- Never bypass linter errors (`//nolint`, `eslint-disable`, loosening configs).
-- *Allowed defaults:* `_test.go` files are exempt from `errcheck`, `gosec`, `unparam`; `operator/internal/controller/` is exempt from revive's `exported:` checks.
-
-### 5. TypeScript Strictness
-- Strict type checking required: no unjustified `any` (add an explicit explanatory comment if unavoidable).
-- Handle all promises: `await` or prefix with `void`.
-
-### 6. Error Handling
-- Wrap Go errors using `%w` to preserve root causes for `errors.Is`/`errors.As`.
-
-### 7. CRD Synchronization
-- When editing `operator/api/v1alpha1/*_types.go`, run `make generate && make manifests`.
-- Commit updated CRDs in the same changeset: `zz_generated.deepcopy.go`, `operator/config/crd/*.yaml`, `operator/config/rbac/*.yaml`, and `charts/gameplane/crds/*.yaml` / `crd-manifests/`.
-
-### 8. Verification Strategy
-- Run compilation checks locally (`go build ./...`, `npx tsc --noEmit`). **Never execute full test/lint suites locally.** Push to a feature branch and let CI validate.
-
-### 9. Kubernetes Primitives First
-- Use standard K8s primitives (StatefulSet, Service, PVC, Job, ConfigMap, Secret) and CRDs before creating custom abstractions.
-
-### 10. Operator Authority
-- Business logic lives in reconcilers (`operator/internal/controller/`). The API layer is purely a UX gateway and must not bypass operator reconciliation.
-
-### 11. Git Commits
-- Commit every completed logical unit of work (`feat:`, `fix:`, `chore:`, etc.).
-- Sign all commits (`git commit -s`). Never amend pushed commits. Never use `--no-verify`.
-- Preserve commit trailers: `Co-Authored-By: <current-running-model>` and `Claude-Session: <session-url>`.
-
-### 12. Branch Management & Protected Master
-- One branch per unit of work; delete remote and local branches immediately upon merge.
-- Branch `master` is protected by ruleset ID `18692396` (`protect main`): requires 1 human approval, disallows self-approval by PR author, rejects direct pushes, and dismisses approvals on new pushes. PRs cannot be merged autonomously by agents.
-- Verify status using `gh api repos/ValgulNecron/Gameplane/rules/branches/master`.
-
-### 13. Workflow-Driven Multi-Agent Delegation
-- The main loop acts strictly as orchestrator/reviewer; delegate all implementation via `Workflow` scripts (`parallel()` / `pipeline()`).
-- **Tier escalation:** Start tasks at `haiku`. Escalate only on functional failure: `haiku` → `sonnet` → `opus` → `fable`.
-- **Model parameter required:** Explicitly define `model:` on every single `agent()` invocation (omitting it defaults to session Opus). Verify via `grep -c "model:"`.
-- `fable` invocations require explicit human permission.
-- **Review at Tier + 1:** Review work one tier higher than the implementing agent (Haiku work reviewed by Sonnet; Sonnet by Opus; Opus by Fable). Fixes are executed by small agents in a new workflow.
-- Execute browser smoke tests via Chrome MCP on `sonnet` in parallel with reviews when UI surfaces are touched.
-
-### 14. PR Labeling via REST API
-- Every PR requires at least one `type:` (`feature`, `fix`, `refactor`, `test`, `ci`, `chore`, `docs`, `security`) and one `area:` (`operator`, `api`, `agent`, `web`, `modules`, `chart`, `e2e`, `specs`, `shared`, `optional-components`). Breaking changes require `breaking`.
-- `gh pr edit` is broken on this repo due to GitHub Projects (classic) deprecation. Use REST APIs:
-  ```sh
-  gh api -X POST repos/ValgulNecron/Gameplane/issues/<pr_number>/labels -f "labels[]=type: fix" -f "labels[]=area: api"
-  gh api -X PATCH repos/ValgulNecron/Gameplane/pulls/<pr_number> --input <payload_with_body.json>
-  ```
-
-### 15. Feature Specifications
-- A feature's specification encompasses its entire folder (`specs/<feature>/`), including `data-model.md`, `contracts/`, and `OPEN-DECISIONS.md`. Check these for explicit requirement exemptions before flagging spec violations.
-- Mark obsolete tasks as withdrawn in `tasks.md` with citations; do not delete them.
-
-### 16. Feature Completion Archival
-- When all tasks in `tasks.md` are complete/withdrawn and the PR is merged into `master`, rename the folder: `git mv specs/<NNN>-<slug> specs/done_<NNN>-<slug>`. Update all in-repo references within the same commit.
-
-### 17. Mechanical Design Waves
-- Perform design token re-skins via scripted, blind updates at `haiku`.
-- Precompute change lists using `grep`/`jq` on `design-export/json/<id>.json`. Have `haiku` apply `Update(id, {prop: value})` calls directly.
-- Verify via screenshot comparison (`export_nodes` vs snapshot PNG), not full JSON tree dumps. Avoid `Get(id, {depth: 10+})`.
-
-### 18. Scout Once, Brief Many
-- For multi-agent waves: launch one scout agent to read code, docs, and failures.
-- Scout generates a factual brief containing exact `file:line`, before/after code blocks, and justification.
-- Fix agents receive only the brief and instructions to edit blind at `haiku`. Do not instruct fix agents to re-read files, test suites, or `CLAUDE.md`. Reviewers check git diffs against the brief.
-
----
-
-## Architecture Summary
-
-| Component | Language / Libs | Role |
-|---|---|---|
-| `netguard` | Go | Dial-time SSRF prevention (`IsAllowed` for operator, `IsPublic` for agent). |
-| `gameaction` | Go | Validates console inputs against schemas; escapes injection attacks. |
-| `gameproto` | Go | Wire-protocol parser for Minecraft/Terraria connection filtering. |
-| `gp-module` | Go | Module authoring CLI: scaffold, offline validate, dry-run preview, OCI package. |
-| `svcutil` | Go | Stdlib-only helpers for env vars and graceful server shutdown (`RunHTTP`). |
-| `operator` | Go, controller-runtime | Authoritative reconciler for 9 CRDs (`GameServer`, `GameTemplate`, etc.). |
-| `api` | Go, chi | REST/WebSocket UX gateway; supports SQLite and experimental PostgreSQL. |
-| `agent` | Go | Pod sidecar managing console (PTY/RCON), files, logs, and heartbeats. |
-| `audit-syslog-bridge` | Go | Forwards webhook audit events to RFC 5424 syslog endpoints. |
-| `telemetry-receiver` | Go | Collects opt-in anonymous cluster usage statistics. |
-| `sentinel` | Go | Wake-on-connect listener that holds ports and triggers pod wakeups. |
-| `capture-sidecar` | Go | Ephemeral packet capture container with BPF filtering. |
-| `mcp-server` | Go | Read-only MCP daemon for cluster debugging via stdio. |
-| `web` | React 19, Vite, TS | Dashboard (TanStack Router & Query, Tailwind, HeroUI v3). |
-| `modules/` | OCI / oras | Submodule with game templates (Minecraft, Terraria, Valheim). |
-
----
-
-## Common Workflows
-
-### Add a CRD Field
-1. Edit `operator/api/v1alpha1/<kind>_types.go`.
-2. Run `make generate && make manifests`.
-3. Update the reconciler in `operator/internal/controller/<kind>_controller.go`.
-4. Mirror types in `web/src/types.ts` and update affected UI components in `web/src/routes/`.
-5. Add envtest coverage in `operator/internal/controller/<kind>_envtest_test.go`.
-
-### Add an API Route
-1. Implement handler in `api/internal/handlers/`.
-2. Mount route in `api/cmd/main.go` with RBAC middleware from `api/internal/rbac/`.
-3. Add integration test in `api/internal/handlers/<name>_envtest_test.go`.
-4. Add API client method in `web/src/lib/api.ts`.
-
-### Add a Dashboard Screen
-1. Update `design.pen` using Pencil MCP and export JSON/screenshots to `design-export/`.
-2. Add route in `web/src/routes/<name>.tsx` and register in `web/src/router/tree.tsx`.
-3. Implement data fetching via `web/src/lib/api.ts` with TanStack Query.
-4. Add component test in `web/src/routes/<name>.test.tsx`.
-
-### Add or Update a Game Module
-1. Create or edit directory in `modules/<name>/` (`module.yaml`, `template.yaml`, `README.md`).
-2. Run `make modules-push` to publish to the local OCI registry.
-3. Commit inside the `gameplane-module` repository.
-4. In the root repo, run `git add modules` and commit the submodule pointer bump.
-
-### Update Public Website
-1. Update website designs under **Group/Public Website** in `design.pen` via Pencil MCP.
-2. Make changes in `website/` submodule adhering to its local guidelines.
-3. Commit and push in the `gameplane-website` repository.
-4. In the root repo, run `git add website` and commit the updated submodule pointer.
-
-### Add a Database Migration
-1. Add sequentially numbered migration file: `api/internal/db/migrations/common/<NNN>_<name>.sql` (013 onward). New migrations go in the shared `common/` dir and must be portable SQL that both SQLite and PostgreSQL run unchanged: no `datetime('now')`/`strftime`, `AUTOINCREMENT`, `INSERT OR ...` or `COLLATE NOCASE`; bind timestamps from Go. `migrations/sqlite/` and `migrations/postgres/` hold the frozen per-dialect 001–012 sets. See `api/internal/db/migrations/README.md`.
-2. Migrations are append-only and automatically execute on API startup.
-
----
-
-## Key Reference Documents
-- Agent Architecture Index: `docs/agent-architecture.md` — read before editing code; maps tasks and features to the docs that cover them, instead of repo-wide greps.
-- Architecture & Threat Model: `docs/architecture.md`, `docs/security.md`
-- Module Authoring Spec: `docs/module-authoring.md`
-- MCP Server Usage: `mcp-server/README.md`
-- Syslog Relay Configuration: `audit-syslog-bridge/README.md`
-- Coding & Linter Configs: `.golangci.yml`, `web/eslint.config.js`, `.editorconfig`
+- `docs/agent-architecture.md` — read before editing code; maps tasks/features to docs (use instead of repo-wide greps).
+- `docs/architecture.md`, `docs/security.md` (threat model); `docs/module-authoring.md`; `mcp-server/README.md`; `audit-syslog-bridge/README.md`.
+- Configs: `.golangci.yml`, `web/eslint.config.js`, `.editorconfig`.

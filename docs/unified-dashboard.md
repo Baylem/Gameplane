@@ -2,7 +2,7 @@
 
 ## Design decision — September 27, 2026
 
-The user requested one dashboard and server list across independent backend clusters, with optional filters and infrastructure configured by administrators. This supersedes the selected-cluster default described in [the first multicluster UI slice](multicluster-ui.md). The existing-components design exception remains in effect: use the established Gameplane/HeroUI components and document the layout here; leave `design.pen` and its exports unchanged.
+This design presents one dashboard and server list across independent backend clusters, with optional filters and administrator-managed infrastructure. It supersedes the selected-cluster presentation described in [the first multicluster UI slice](multicluster-ui.md). The implementation uses existing Gameplane/HeroUI components and leaves `design.pen` and its exports unchanged. The documented exception for reviewed browser references remains subject to upstream maintainer approval.
 
 One central login/API presents the resources each user can access. Clusters remain independent execution and storage boundaries. Their Kubernetes APIs, operators and authenticated agent gateways continue to route operations; combining their presentation does not introduce cross-site scheduling, shared storage, game migration or a second user database.
 
@@ -24,7 +24,7 @@ Servers keeps Location inside its existing right-hand Filter popover, alongside 
 
 All popovers stage selections until Apply. Clear resets the draft, Apply commits it, and closing without applying discards changes. The trigger counts applied filters, including Location. Search stays visible, and the layout wraps at mobile widths. Route-driven location state remains the authority so sidebar navigation and Back/Forward restore the correct applied location.
 
-The existing design exception remains in effect. Pencil MCP review used the shared Filter Popover (`FyV6E`), Servers controls (`gciHD`) and existing Backups filter row (`wKe4F`); `design.pen` and exports are unchanged.
+The proposed design exception remains subject to upstream review. Pencil MCP review used the shared Filter Popover (`FyV6E`), Servers controls (`gciHD`) and existing Backups filter row (`wKe4F`); `design.pen` and exports are unchanged.
 
 ## Data and authorization contract
 
@@ -38,12 +38,12 @@ Existing per-target mutation and stream APIs remain in use. Every client operati
 
 ## Acceptance
 
-1. The default dashboard, server list, backups and search include both permitted demo sites without changing a global selector; filters narrow their results consistently.
+1. The default dashboard, server list, backups and search include both permitted test clusters without changing a global selector; filters narrow their results consistently.
 2. Same names in different clusters and namespaces remain independently addressable. Direct links and fresh browser tabs ignore unrelated stored cluster selections.
 3. Row actions, files, streams and delayed follow-up mutations reach the originating target. Switching filters or opening another server cannot retarget them.
 4. Per-row actions use target-scoped capabilities. Namespace-only and owner/collaborator users see only their permitted resources; they do not gain inventory or backup permissions.
 5. A disconnected site or bounded-list limit produces a visible partial-data state. Aggregates remain mathematically meaningful, with unknown metrics displayed as unknown.
 6. Desktop and narrow mobile layouts retain usable filters, distinct identity labels and reachable actions without horizontal clipping.
-7. The Docker Desktop preview preserves accounts and GameServer/PVC identities. Meaningful real two-site checks and CI validate the change; no Home/Chicago deployment or merge is part of this work.
+7. A disposable two-cluster preview preserves existing accounts and GameServer/PVC identities. Meaningful two-site checks and CI validate the implementation; the preview does not establish production readiness.
 
-Compile checks may run locally. Repository test and lint suites run in GitHub Actions. Visual references may be reviewed under the existing design exception with original-capture provenance; comparison thresholds and Pencil exports remain unchanged.
+Compile checks may run locally. Repository test and lint suites run in GitHub Actions. Visual references may be reviewed under the proposed design exception with original-capture provenance; comparison thresholds and Pencil exports remain unchanged.

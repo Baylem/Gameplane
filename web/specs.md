@@ -541,6 +541,7 @@ Every file in slice 2b imports **only** from `@heroui/react` and `@/components/u
 - Version badge (current, latest available)
 - Install button (if not installed) → opens InstallDialog
 - Manage button (if installed) → opens version picker or uninstall confirmation
+- Verify badge (`lib/verify.ts` `verifyForEntry`/`VerifyBadge`): a solid "verified" chip only when an installed entry's `CatalogEntry.verifiedDigest` is set — i.e. the operator actually ran cosign verification for that install (`Module.status.verifiedDigest`/`status.verifyPolicy`). A source's current `spec.verify` policy alone never sets this; it only supplies the outline "policy" chip's mode, so a policy added after install shows as declared-but-unchecked, not "verified". Mixed or absent policy across candidate sources suppresses the badge entirely.
 
 **InstallDialog.tsx:**
 - Modal with source/namespace pickers (destination cluster and namespace for module installation)
