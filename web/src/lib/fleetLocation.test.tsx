@@ -111,19 +111,25 @@ describe("fleet location follows router navigation", () => {
       expect(screen.getByRole("tab", { name: "Backups" })).toHaveAttribute("aria-selected", "true");
       await userEvent.click(screen.getByRole("button", { name: /^Filter$/ }));
       expect(screen.getByRole("button", { name: /Filter by location/ })).toHaveTextContent("All locations");
+      screen.getByRole("button", { name: "Clear" }).focus();
       await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("button", { name: /Filter by location/ })).not.toBeInTheDocument();
 
       act(() => history.back());
       await waitFor(() => expect(screen.getByRole("tab", { name: "Schedules" })).toHaveAttribute("aria-selected", "true"));
-      await userEvent.click(screen.getByRole("button", { name: /^Filter 1$/ }));
+      await userEvent.click(screen.getByRole("button", { name: /^Filter\s*1$/ }));
       expect(screen.getByRole("button", { name: /Filter by location/ })).toHaveTextContent("remote");
+      screen.getByRole("button", { name: "Clear" }).focus();
       await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("button", { name: /Filter by location/ })).not.toBeInTheDocument();
       expect(router.state.location.search).toMatchObject({ tab: "schedules", cluster: "remote" });
       act(() => history.forward());
       await waitFor(() => expect(screen.getByRole("tab", { name: "Backups" })).toHaveAttribute("aria-selected", "true"));
       await userEvent.click(screen.getByRole("button", { name: /^Filter$/ }));
       expect(screen.getByRole("button", { name: /Filter by location/ })).toHaveTextContent("All locations");
+      screen.getByRole("button", { name: "Clear" }).focus();
       await userEvent.keyboard("{Escape}");
+      expect(screen.queryByRole("button", { name: /Filter by location/ })).not.toBeInTheDocument();
     } finally {
       unmount();
       history.destroy();

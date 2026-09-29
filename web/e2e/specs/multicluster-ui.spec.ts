@@ -61,7 +61,7 @@ test.describe("multicluster administration", () => {
       await expect(main.getByText("remote-demo / gameplane-games", { exact: true })).toBeVisible();
 
       await expect(main.getByRole("button", { name: /Filter by location/ })).toHaveCount(0);
-      const filter = main.getByRole("button", { name: /^Filter(?:\s+\d+)?$/ });
+      const filter = main.getByRole("button", { name: /^Filter(?:\s*\d+)?$/ });
       await filter.click();
       await page.getByRole("button", { name: /Filter by location/ }).click();
       await page.getByRole("option", { name: "remote-demo", exact: true }).click();

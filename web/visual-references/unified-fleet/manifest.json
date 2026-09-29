@@ -3,13 +3,13 @@
   "designDecision": "docs/unified-dashboard.md",
   "source": {
     "repository": "Baylem/Gameplane",
-    "commit": "e23556d05654afe5c28d4a8b79b0921c33cd8196",
+    "commit": "d9857825cf2e90062e4561b59aa6c280de75e4ac",
     "workflow": ".github/workflows/visual-diff.yaml",
-    "runId": 36350860432,
-    "jobId": 108709143096,
-    "artifactId": 10941794645,
+    "runId": 36633131649,
+    "jobId": 109627045633,
+    "artifactId": 11063752829,
     "artifactName": "browser-screenshot-captures",
-    "artifactUrl": "https://github.com/Baylem/Gameplane/actions/runs/36350860432/artifacts/10941794645",
+    "artifactUrl": "https://github.com/Baylem/Gameplane/actions/runs/36633131649/artifacts/11063752829",
     "captureDirectory": "web/e2e/screenshots",
     "transformation": "none; original artifact PNG bytes copied directly"
   },
@@ -18,8 +18,8 @@
       "file": "DWztv.png",
       "width": 780,
       "height": 1688,
-      "sha256": "35bc255c129f7909cd1cdc020e775496b7bdd8f350f73da947bfd7593ea34333",
-      "acceptedChange": "All locations filter and cluster/namespace labels distinguish servers in the unified mobile list. Their added vertical space is intentional; search, status badges and visible cards remain readable without overlap or horizontal clipping, and later cards remain available by vertical scrolling."
+      "sha256": "f6d46f9b2646ac380b317e276277f52b549212f286d8d2e0a4cea65ef4f51b8d",
+      "acceptedChange": "Location moved into the existing Filter popover as requested. The separate location row is removed, bringing Search and server cards upward. Cluster/namespace identity labels remain visible; cards and controls are readable without overlap or horizontal clipping, with later cards reachable by vertical scrolling."
     }
   }
 }

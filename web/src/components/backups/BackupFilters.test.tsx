@@ -73,7 +73,10 @@ describe("BackupFilters", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Filter$/ }));
     await userEvent.click(screen.getByRole("button", { name: /Filter by location/ }));
     await userEvent.click(screen.getByRole("option", { name: "remote" }));
+    // Dismiss the outer filter menu, not the nested Select trigger.
+    screen.getByRole("button", { name: "Clear" }).focus();
     await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("button", { name: /Filter by location/ })).not.toBeInTheDocument();
     expect(onLocationChange).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: /^Filter$/ }));
     expect(screen.getByRole("button", { name: /Filter by location/ })).toHaveTextContent("All locations");
@@ -89,7 +92,7 @@ describe("BackupFilters", () => {
     const onPhaseChange = vi.fn();
     render(<BackupFilters {...baseProps} server="alpha" phase="Succeeded"
       onLocationChange={onLocationChange} onServerChange={onServerChange} onPhaseChange={onPhaseChange} />);
-    await userEvent.click(screen.getByRole("button", { name: /^Filter 2$/ }));
+    await userEvent.click(screen.getByRole("button", { name: /^Filter\s*2$/ }));
     await userEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(onLocationChange).not.toHaveBeenCalled();
     expect(onServerChange).not.toHaveBeenCalled();

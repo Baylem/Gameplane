@@ -1,8 +1,8 @@
 # Unified fleet implementation reference
 
-`DWztv.png` is the reviewed original browser capture of the light mobile server list. It records the location filter and the cluster/namespace line on each server card described in [the unified dashboard design](../../../docs/unified-dashboard.md), under the approved existing-components design exception.
+`DWztv.png` is the reviewed original browser capture of the light mobile server list. It records the compact Filter trigger and the cluster/namespace line on each server card described in [the unified dashboard design](../../../docs/unified-dashboard.md), under the approved existing-components design exception.
 
-The filter and identity lines intentionally increase the vertical space. Search, status badges and visible server cards remain readable without overlap or horizontal clipping. Further cards remain reachable by normal vertical scrolling. The desktop and narrow mobile browser checks separately verify overflow and resource identity.
+Location now belongs inside the Filter popover, so the separate location row is removed and Search and the server cards move upward. The identity lines remain visible. Search, status badges and visible server cards remain readable without overlap or horizontal clipping. Further cards remain reachable by normal vertical scrolling. The desktop and narrow mobile browser checks separately verify overflow and resource identity.
 
 This is a browser implementation reference, not a Pencil export. Its source commit, workflow run, artifact and SHA256 are recorded in `manifest.json`. The original PNG bytes are copied directly from the CI artifact without resizing, cropping or retouching. `design.pen` and `design-export/` remain unchanged.
 
