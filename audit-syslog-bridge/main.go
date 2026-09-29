@@ -74,6 +74,32 @@ func validateRFC5424Field(name, value string, maxLen int) error {
 	return nil
 }
 
+// Intake time bounds. defaultReadTimeout caps how long one request (headers and
+// body) may take to arrive; headerReadTimeout caps the header phase on its own;
+// idleTimeout closes keep-alive connections that sit unused between requests.
+// idleTimeout is longer than Go's default client idle timeout (90s), so a Go
+// sender such as the API retires an idle connection before the bridge does.
+const (
+	defaultReadTimeout = 15 * time.Second
+	headerReadTimeout  = 10 * time.Second
+	idleTimeout        = 120 * time.Second
+)
+
+// peekState values returned by peek().
+type peekState int
+
+const (
+	peekUnknown peekState = iota
+	peekEmpty
+	peekClosed
+	peekPending
+)
+
+// livenessProbe is how long send waits for a pending close from the collector
+// before it reuses a stream connection. Collectors never write to a syslog
+// stream, so a read that times out means the connection is still open.
+const livenessProbe = 5 * time.Millisecond
+
 type config struct {
 	listen      string
 	syslogAddr  string
@@ -85,6 +111,7 @@ type config struct {
 	hostname    string
 	authHeader  string
 	dialTimeout time.Duration
+	readTimeout time.Duration
 }
 
 func loadConfig() config {
@@ -99,6 +126,7 @@ func loadConfig() config {
 		hostname:    envOr("SYSLOG_HOSTNAME", ""),
 		authHeader:  envOr("AUTH_HEADER", ""),
 		dialTimeout: 5 * time.Second,
+		readTimeout: defaultReadTimeout,
 	}
 }
 
@@ -247,6 +275,11 @@ type forwarder struct {
 	useTLS      bool
 	dialTimeout time.Duration
 
+	// tlsConfig overrides the default client TLS config when set. Production
+	// code leaves it nil; tests use it to trust a self-signed test collector
+	// certificate instead of the system root pool.
+	tlsConfig *tls.Config
+
 	mu   sync.Mutex
 	conn net.Conn
 }
@@ -261,7 +294,11 @@ func (f *forwarder) dial(ctx context.Context) error {
 		err error
 	)
 	if f.useTLS && f.network == "tcp" {
-		d := &tls.Dialer{NetDialer: &net.Dialer{Timeout: f.dialTimeout}, Config: &tls.Config{MinVersion: tls.VersionTLS12}}
+		cfg := f.tlsConfig
+		if cfg == nil {
+			cfg = &tls.Config{MinVersion: tls.VersionTLS12}
+		}
+		d := &tls.Dialer{NetDialer: &net.Dialer{Timeout: f.dialTimeout}, Config: cfg}
 		c, err = d.DialContext(ctx, "tcp", f.addr)
 	} else {
 		d := &net.Dialer{Timeout: f.dialTimeout}
@@ -277,6 +314,12 @@ func (f *forwarder) dial(ctx context.Context) error {
 func (f *forwarder) send(ctx context.Context, frame []byte) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.conn != nil && !f.alive() {
+		slog.Info("syslog collector closed the connection; reconnecting",
+			"network", f.network, "addr", f.addr)
+		_ = f.conn.Close()
+		f.conn = nil
+	}
 	if f.conn == nil {
 		if err := f.dial(ctx); err != nil {
 			return err
@@ -296,6 +339,52 @@ func (f *forwarder) send(ctx context.Context, frame []byte) error {
 		}
 	}
 	return nil
+}
+
+// alive reports whether a reused stream connection is still open. When a
+// collector closes an idle connection, its FIN (or RST) is already queued on
+// the socket, and a write would still succeed locally while the frame is lost.
+// A short read surfaces that close first, so send moves the frame to a fresh
+// connection. Datagram connections have no such state and are always reused.
+//
+// The probe is best-effort, not a delivery guarantee: a close that has not
+// reached the socket within livenessProbe goes unseen, and the next frame can
+// be lost while send reports success (204). Syslog framing has no ack, so this
+// window cannot be closed without a different transport protocol.
+//
+// On Linux, alive first attempts a zero-wait peek to avoid the 5ms blocking
+// read on every healthy reused connection; only if the peek is inconclusive
+// does it fall back to the timed read.
+//
+// Pending data (peekPending) is deliberately not treated as proof the
+// connection is open: on TLS a collector close first queues a close_notify
+// alert record ahead of the FIN, so the raw socket looks readable. Falling
+// through to the timed read on f.conn lets crypto/tls consume the alert and
+// return io.EOF, which reports the connection as closed.
+func (f *forwarder) alive() bool {
+	if f.network != "tcp" {
+		return true
+	}
+
+	// Fast path on Linux: non-blocking peek avoids the 5ms blocking read.
+	switch peek(f.conn) {
+	case peekEmpty:
+		return true
+	case peekClosed:
+		return false
+	}
+
+	// Inconclusive or non-Linux: fall back to timed read.
+	var one [1]byte
+	_ = f.conn.SetReadDeadline(time.Now().Add(livenessProbe))
+	_, err := f.conn.Read(one[:])
+	_ = f.conn.SetReadDeadline(time.Time{})
+	if err == nil {
+		// The collector sent something unexpected; the connection is open.
+		return true
+	}
+	var ne net.Error
+	return errors.As(err, &ne) && ne.Timeout()
 }
 
 // write bounds a single frame write with a deadline. Without it, a collector
@@ -323,11 +412,7 @@ func serve(ctx context.Context, cfg config) error {
 	if err != nil {
 		return err
 	}
-	srv := &http.Server{
-		Addr:              cfg.listen,
-		Handler:           s.routes(),
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	srv := newHTTPServer(cfg, s.routes())
 	slog.Info("audit-syslog-bridge listening",
 		"version", Version, "listen", cfg.listen, "syslog", cfg.syslogAddr,
 		"network", cfg.network, "tls", cfg.useTLS, "app", cfg.appName)
@@ -347,6 +432,23 @@ func serve(ctx context.Context, cfg config) error {
 		shutCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
 		return srv.Shutdown(shutCtx)
+	}
+}
+
+// newHTTPServer builds the intake server with every phase of a request bounded
+// in time: headers, the whole request (headers plus body), and keep-alive idle.
+// A zero cfg.readTimeout falls back to defaultReadTimeout.
+func newHTTPServer(cfg config, h http.Handler) *http.Server {
+	readTimeout := cfg.readTimeout
+	if readTimeout <= 0 {
+		readTimeout = defaultReadTimeout
+	}
+	return &http.Server{
+		Addr:              cfg.listen,
+		Handler:           h,
+		ReadHeaderTimeout: min(headerReadTimeout, readTimeout),
+		ReadTimeout:       readTimeout,
+		IdleTimeout:       idleTimeout,
 	}
 }
 

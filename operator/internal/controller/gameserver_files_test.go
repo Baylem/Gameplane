@@ -60,3 +60,73 @@ func TestBuildConfigInitContainer_HonorsImageOverride(t *testing.T) {
 		t.Errorf("image = %q, want override %q", c.Image, override)
 	}
 }
+
+func TestBuildConfigInitContainer_GroupWritableWithFSGroup(t *testing.T) {
+	fsGroup := int64(1000)
+	tmpl := &gameplanev1alpha1.GameTemplate{
+		Spec: gameplanev1alpha1.GameTemplateSpec{
+			Security: &gameplanev1alpha1.GameSecuritySpec{
+				FSGroup: &fsGroup,
+			},
+		},
+	}
+	c := buildConfigInitContainer("", tmpl)
+
+	if len(c.Args) != 1 {
+		t.Fatalf("expected 1 arg, got %d", len(c.Args))
+	}
+	arg := c.Args[0]
+
+	// Should still contain the original cp command
+	if !strings.Contains(arg, "cp -RL "+configFilesStagingPath+"/*") {
+		t.Errorf("args should contain cp from staging, got %q", arg)
+	}
+	if !strings.Contains(arg, "'/data/'") {
+		t.Errorf("args should contain copy into default mount path, got %q", arg)
+	}
+
+	// Should contain the chmod step
+	if !strings.Contains(arg, "chmod g+w") {
+		t.Errorf("args should contain chmod g+w when fsGroup is set, got %q", arg)
+	}
+
+	// Should not contain recursive chmod
+	if strings.Contains(arg, "chmod -R") {
+		t.Errorf("args should not contain chmod -R, got %q", arg)
+	}
+
+	// The whole command must be valid shell: the mount path is single-quoted
+	// and closed before the loop variable, so $p still expands.
+	want := "cp -RL " + configFilesStagingPath + "/* '/data/' && cd " + configFilesStagingPath +
+		" && find ./* -follow \\( -type f -o -type d \\) | while IFS= read -r p; do chmod g+w '/data/'\"$p\"; done"
+	if arg != want {
+		t.Errorf("config-init command =\n  %q\nwant\n  %q", arg, want)
+	}
+
+	// Verify the command contains "find ./*"
+	if !strings.Contains(arg, "find ./*") {
+		t.Errorf("args should contain 'find ./*' to handle entries starting with '-', got %q", arg)
+	}
+}
+
+func TestBuildConfigInitContainer_NoChmodWithoutFSGroup(t *testing.T) {
+	// Test 1: no Security block at all
+	tmpl1 := &gameplanev1alpha1.GameTemplate{}
+	c1 := buildConfigInitContainer("", tmpl1)
+	if strings.Contains(c1.Args[0], "chmod") {
+		t.Errorf("args should not contain chmod when no Security block, got %q", c1.Args[0])
+	}
+
+	// Test 2: Security block exists but FSGroup is nil
+	tmpl2 := &gameplanev1alpha1.GameTemplate{
+		Spec: gameplanev1alpha1.GameTemplateSpec{
+			Security: &gameplanev1alpha1.GameSecuritySpec{
+				// RunAsUser/RunAsGroup may be set, but not FSGroup
+			},
+		},
+	}
+	c2 := buildConfigInitContainer("", tmpl2)
+	if strings.Contains(c2.Args[0], "chmod") {
+		t.Errorf("args should not contain chmod when FSGroup is nil, got %q", c2.Args[0])
+	}
+}
