@@ -30,8 +30,8 @@ func peek(c net.Conn) peekState {
 	}
 
 	var (
-		buf [1]byte
-		n   int
+		buf  [1]byte
+		n    int
 		err2 error
 	)
 	rerr := rc.Read(func(fd uintptr) bool {

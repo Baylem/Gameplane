@@ -355,6 +355,12 @@ func (f *forwarder) send(ctx context.Context, frame []byte) error {
 // On Linux, alive first attempts a zero-wait peek to avoid the 5ms blocking
 // read on every healthy reused connection; only if the peek is inconclusive
 // does it fall back to the timed read.
+//
+// Pending data (peekPending) is deliberately not treated as proof the
+// connection is open: on TLS a collector close first queues a close_notify
+// alert record ahead of the FIN, so the raw socket looks readable. Falling
+// through to the timed read on f.conn lets crypto/tls consume the alert and
+// return io.EOF, which reports the connection as closed.
 func (f *forwarder) alive() bool {
 	if f.network != "tcp" {
 		return true
@@ -366,9 +372,6 @@ func (f *forwarder) alive() bool {
 		return true
 	case peekClosed:
 		return false
-	case peekPending:
-		// Data is queued; connection is open.
-		return true
 	}
 
 	// Inconclusive or non-Linux: fall back to timed read.
