@@ -330,7 +330,7 @@ func TestAPI_AgentFilesRoundTrip(t *testing.T) {
 	})
 
 	// Upload confinement: an upload whose destination name is an existing
-	// symlink pointing outside the data root must be refused with a 4xx,
+	// symlink pointing outside the data root must be refused with 400 Bad Request (errPathOutOfRoot),
 	// leaving the symlink in place.
 	const escLinkName = "esc-link"
 	const escLinkPath = "/data/" + escLinkName
