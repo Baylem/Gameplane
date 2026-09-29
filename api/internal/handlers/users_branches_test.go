@@ -141,7 +141,7 @@ func TestUsers_Me(t *testing.T) {
 		}
 
 		// Verify the legacy flattened "permissions" field is still present in the response.
-		if u.Permissions == nil || len(u.Permissions) == 0 {
+		if len(u.Permissions) == 0 {
 			t.Fatal("legacy permissions field should be present in response")
 		}
 	})

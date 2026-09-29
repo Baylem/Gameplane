@@ -19,6 +19,7 @@ interface Props {
 export function AccessSection({ gs }: Props) {
   const qc = useQueryClient();
   const { data: me } = useMe();
+  const cluster = useCurrentCluster();
   const [addInput, setAddInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -54,7 +55,6 @@ export function AccessSection({ gs }: Props) {
 
   // Permission check: owner or servers:write
   const namespace = gs.metadata.namespace ?? "gameplane-games";
-  const cluster = useCurrentCluster();
   const canManage = ownerID === String(me?.id) || can(me, "servers:write", namespace, cluster);
 
   // Misalignment guard: if the parsed collaborators and collaborator-names
