@@ -1030,6 +1030,13 @@ export interface CatalogEntry {
   phase?: ModulePhase;
   lastError?: string;
   appliedDigest?: string;    // digest of the installed bundle
+  // verifiedDigest is set only when the operator actually ran cosign
+  // verification for this install (Module.status.verifiedDigest); empty if
+  // the source had no verify policy at install time, or the module predates
+  // this field. verifyPolicy is the mode ("keyed"/"keyless") that produced
+  // it, empty whenever verifiedDigest is.
+  verifiedDigest?: string;
+  verifyPolicy?: string;
   previousVersion?: string;  // rollback target (operator-owned)
   previousDigest?: string;
   // pinnedVersion is the Module's desired spec.version (what it's pinned to);
