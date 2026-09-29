@@ -133,6 +133,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 ### Fixed
 
+- **api:** SQLite DSN now automatically includes a `_pragma=busy_timeout(5000)` pragma if one is not already specified, allowing concurrent processes (API and bootstrap-admin) sharing the same database file to wait for locks instead of failing with SQLITE_BUSY immediately.
 - **agent, chart:** the agent now serves Prometheus metrics on a separate,
   unauthenticated listener (`:9090`, `--metrics-addr`) instead of the mTLS
   control port (`:8090`) it used to share `/metrics` with — every agent
