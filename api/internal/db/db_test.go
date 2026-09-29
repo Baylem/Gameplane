@@ -474,6 +474,16 @@ func TestWithSQLiteBusyTimeout(t *testing.T) {
 			dsn:  "file:/data/g.db?foo=busy_timeout(1)",
 			want: "file:/data/g.db?foo=busy_timeout(1)&_pragma=busy_timeout(5000)",
 		},
+		{
+			name: "bare pragma without assignment should add timeout",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout",
+			want: "file:/data/g.db?_pragma=busy_timeout&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "near-match pragma should add timeout",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout_extra(1)",
+			want: "file:/data/g.db?_pragma=busy_timeout_extra(1)&_pragma=busy_timeout(5000)",
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
