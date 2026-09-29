@@ -307,11 +307,8 @@ func (r *RestoreReconciler) awaitRestoredServer(
 					} else {
 						finalRefsErr = fmt.Errorf("check referenced Secret %q: %w", ref.name, err)
 					}
-					break
-				}
-				if !isServerOwnedSecret(sec, gs) {
+				} else if !isServerOwnedSecret(sec, gs) {
 					finalRefsErr = fmt.Errorf("referenced Secret %q not owned by restored server: %w", ref.name, errRefNotOwned)
-					break
 				}
 			case configMapRefKind:
 				cm := &corev1.ConfigMap{}
@@ -321,11 +318,8 @@ func (r *RestoreReconciler) awaitRestoredServer(
 					} else {
 						finalRefsErr = fmt.Errorf("check referenced ConfigMap %q: %w", ref.name, err)
 					}
-					break
-				}
-				if !isServerOwnedConfigMap(cm, gs) {
+				} else if !isServerOwnedConfigMap(cm, gs) {
 					finalRefsErr = fmt.Errorf("referenced ConfigMap %q not owned by restored server: %w", ref.name, errRefNotOwned)
-					break
 				}
 			}
 			if finalRefsErr != nil {
