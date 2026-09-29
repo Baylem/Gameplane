@@ -305,9 +305,10 @@ func sqlitePath(dsn string) string {
 // already present. This allows multiple processes (e.g., the API server and
 // bootstrap-admin both accessing the same SQLite file) to wait for locks instead
 // of failing immediately with SQLITE_BUSY. The timeout is set to 5000 milliseconds.
-// Only DSNs that already contain a _pragma parameter value starting with busy_timeout
-// (case-insensitive) are returned unchanged; file paths containing "busy_timeout" do not
-// prevent pragma addition.
+// Only DSNs that already contain a _pragma parameter value assigning busy_timeout
+// (busy_timeout(N) or busy_timeout=N, case-insensitive) are returned unchanged; bare
+// reads, near-match names and file paths containing "busy_timeout" do not prevent
+// pragma addition.
 func withSQLiteBusyTimeout(dsn string) string {
 	// Find the query string separator.
 	idx := strings.IndexByte(dsn, '?')
@@ -332,8 +333,11 @@ func withSQLiteBusyTimeout(dsn string) string {
 	// Only match assignments with values: busy_timeout(...) or busy_timeout=...
 	if pragmaValues, ok := params["_pragma"]; ok {
 		for _, val := range pragmaValues {
-			lower := strings.ToLower(val)
-			if strings.HasPrefix(lower, "busy_timeout(") || strings.HasPrefix(lower, "busy_timeout=") {
+			lower := strings.ToLower(strings.TrimSpace(val))
+			rest, found := strings.CutPrefix(lower, "busy_timeout")
+			rest = strings.TrimSpace(rest)
+			if found && (strings.HasPrefix(rest, "=") || strings.HasPrefix(rest, "(")) &&
+				strings.Trim(rest, "=() ") != "" {
 				// Already present; return unchanged.
 				return dsn
 			}

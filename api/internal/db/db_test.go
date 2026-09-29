@@ -484,6 +484,16 @@ func TestWithSQLiteBusyTimeout(t *testing.T) {
 			dsn:  "file:/data/g.db?_pragma=busy_timeout_extra(1)",
 			want: "file:/data/g.db?_pragma=busy_timeout_extra(1)&_pragma=busy_timeout(5000)",
 		},
+		{
+			name: "empty assignment should add timeout",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout()",
+			want: "file:/data/g.db?_pragma=busy_timeout()&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "spaced assignment is unchanged",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout%20=%2010000",
+			want: "file:/data/g.db?_pragma=busy_timeout%20=%2010000",
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
