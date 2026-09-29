@@ -27,7 +27,6 @@ var homeClientMounts = []string{
 	"handlers.MountRegistry",
 	"handlers.MountRegistrySecrets",
 	"handlers.MountSystemLogs",
-	"ws.Mount",
 }
 
 // TestHomeClientMounts_MatchMain parses main.go and checks that the mounts

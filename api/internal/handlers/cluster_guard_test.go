@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 
 	"github.com/ValgulNecron/gameplane/api/internal/audit"
 	"github.com/ValgulNecron/gameplane/api/internal/auth"
@@ -281,7 +282,6 @@ func mountHomeClientRoutes(t *testing.T, r chi.Router, home *kube.Client, reg *k
 	MountRegistry(r, home, fakeSet{p: &fakeProvider{}})
 	MountModUpdates(r, home, fakeSet{p: &fakeProvider{}}, &fakeModLister{})
 	MountModIDs(r, home)
-	ws.Mount(r, home, "", "", "")
 }
 
 // TestHomeClientMounts_ServeHomeClusterOnly calls every route of the
@@ -289,18 +289,22 @@ func mountHomeClientRoutes(t *testing.T, r chi.Router, home *kube.Client, reg *k
 // as a user whose only grant is on a registered non-local cluster, with
 // ?cluster= naming that cluster. Server-scoped routes pass the namespaced
 // permission check for that cluster and must answer 501 from the handler;
-// the other routes need a cluster-wide grant and answer 403. In every case
-// the home-cluster client sees no API call.
+// the other routes need a cluster-wide grant and answer 403. Registry-backed
+// Pod streams are mounted alongside them and must query only the remote
+// client. In every case the home-cluster client sees no API call.
 func TestHomeClientMounts_ServeHomeClusterOnly(t *testing.T) {
 	const remote = "remote-1"
 	home := fakeKubeClient()
 	reg := kube.NewRegistry(scope.DefaultCluster)
 	reg.Set(scope.DefaultCluster, home)
-	reg.Set(remote, fakeKubeClient())
+	remoteClient := fakeKubeClient()
+	remoteClient.Config = &rest.Config{}
+	reg.Set(remote, remoteClient)
 
 	r := chi.NewRouter()
 	r.Use(rbac.Middleware(reg))
 	mountHomeClientRoutes(t, r, home, reg)
+	ws.Mount(r, reg, "", "", "")
 
 	remoteOnly := &auth.User{
 		ID:       42,
@@ -318,7 +322,17 @@ func TestHomeClientMounts_ServeHomeClusterOnly(t *testing.T) {
 		if strings.HasPrefix(path, "/servers/") || strings.HasPrefix(path, "/ws/servers/") {
 			want = http.StatusNotImplemented
 		}
+		attach := path == "/ws/servers/alpha/console-pty"
+		if attach {
+			// The registered remote cluster has no alpha GameServer.
+			want = http.StatusNotFound
+		} else if path == "/ws/servers/alpha/logs/pod" {
+			// Pod logs preserve their upgrade-before-lookup retry protocol.
+			// Full remote streaming is covered in ws/multicluster_test.go.
+			want = http.StatusUpgradeRequired
+		}
 		before := kubeClientCalls(t, home)
+		remoteBefore := kubeClientCalls(t, remoteClient)
 
 		req := httptest.NewRequestWithContext(auth.WithUser(t.Context(), remoteOnly), method, path+"?cluster="+remote, nil)
 		rr := httptest.NewRecorder()
@@ -332,6 +346,9 @@ func TestHomeClientMounts_ServeHomeClusterOnly(t *testing.T) {
 		}
 		if n := kubeClientCalls(t, home) - before; n != 0 {
 			t.Errorf("%s %s?cluster=%s: home client saw %d API calls, want 0", method, path, remote, n)
+		}
+		if attach && kubeClientCalls(t, remoteClient) == remoteBefore {
+			t.Errorf("%s %s?cluster=%s: remote client saw no lookup", method, path, remote)
 		}
 		return nil
 	})

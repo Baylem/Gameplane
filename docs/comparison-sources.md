@@ -75,7 +75,7 @@ verified.
 **Source ID**: G-g  
 **Evidence**: operator/api/v1alpha1/cluster_types.go:8; docs/architecture.md  
 **Checked on**: 2026-09-02  
-**What was verified**: Cluster CRD for remote cluster registration/monitoring; console and log streaming documented as local-cluster-only due to mTLS and architecture constraints.  
+**What was verified**: Cluster CRD for remote cluster registration/monitoring; Pod logs and PTY attach dispatch through registered Kubernetes clients. Agent-backed RCON, file logs and file/player/mod operations remain local-cluster-only.
 **Last-known URL**: https://github.com/ValgulNecron/Gameplane/tree/master/operator/api/v1alpha1
 
 <a id="gameplane-row-h"></a>

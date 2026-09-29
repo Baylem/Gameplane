@@ -28,7 +28,7 @@ The Gameplane dashboard is a React SPA providing a UI layer over the Gameplane A
 
 **Pre-auth privacy:** The login page and any unauthenticated screen must not leak internal state: no hostnames, cluster names, server counts, version strings, user lists, or "user not found" errors. See docs/security.md "pre-auth privacy" and CLAUDE.md rule 3.
 
-**Local-cluster WebSocket:** Console and Logs streams currently route only to the local cluster (`?cluster=` param is not threaded through WebSocket paths). Cross-cluster WebSocket support is deferred; see `docs/roadmap.md`.
+**Cluster-bound WebSocket:** Server streams carry the selected `?cluster=` and close on cluster switches. Pod logs and PTY console attach route through that cluster's Kubernetes client; agent-backed RCON and game log files still reject remote targets. See `docs/roadmap.md`.
 
 ## HeroUI Component Layer
 
@@ -1029,7 +1029,7 @@ openWS(path: string, opts: WSOptions)
 - Console tab: streams RCON/stdin input/output (bidirectional)
 - Logs tab: streams container stdout and/or game log file (read-only)
 
-**Local-cluster limitation:** WebSocket paths (`/ws/servers/{name}/logs`, `/ws/servers/{name}/logs/pod?from=start`) do not thread `?cluster=` param; multi-cluster WebSocket support is deferred.
+**Cluster routing:** WebSocket paths carry `?cluster=`. Pod startup/stdout logs use the selected cluster; agent-backed game log files remain local-only. A cluster switch closes the old stream and clears its displayed lines before opening the new stream.
 
 ### Server-Sent Events (`lib/sse.ts`)
 
