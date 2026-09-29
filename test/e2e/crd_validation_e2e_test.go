@@ -105,3 +105,142 @@ func expectAdmissionRejection(t *testing.T, yaml string, matchAny []string) {
 	}
 	t.Fatalf("admission rejection did not mention any of %v\nkubectl output:\n%s", matchAny, out)
 }
+
+func TestCRD_Validation_TunnelServerAddrInvalid(t *testing.T) {
+	t.Parallel()
+
+	yaml := `apiVersion: gameplane.local/v1alpha1
+kind: GameServer
+metadata:
+  name: e2e-validation-tunnel-bad-serveraddr
+  namespace: gameplane-games
+spec:
+  templateRef:
+    name: e2e-template-test
+  networking:
+    tunnel:
+      provider: frp
+      credentialsSecretRef:
+        name: tunnel-creds
+      frp:
+        serverAddr: "invalid\"server.com\ninjection"
+        remotePorts:
+          - name: game
+            remotePort: 30000
+`
+	expectAdmissionRejection(t, yaml, []string{"frp.serverAddr"})
+}
+
+func TestCRD_Validation_TunnelProxyNameInvalid(t *testing.T) {
+	t.Parallel()
+
+	yaml := `apiVersion: gameplane.local/v1alpha1
+kind: GameServer
+metadata:
+  name: e2e-validation-tunnel-bad-name
+  namespace: gameplane-games
+spec:
+  templateRef:
+    name: e2e-template-test
+  networking:
+    tunnel:
+      provider: frp
+      credentialsSecretRef:
+        name: tunnel-creds
+      frp:
+        serverAddr: frp.example.com
+        remotePorts:
+          - name: INVALID-PORT-NAME
+            remotePort: 30000
+`
+	expectAdmissionRejection(t, yaml, []string{"remotePorts[0].name"})
+}
+
+func TestCRD_Validation_TunnelServerAddrValid(t *testing.T) {
+	t.Parallel()
+
+	// Test FQDN
+	yaml := `apiVersion: gameplane.local/v1alpha1
+kind: GameServer
+metadata:
+  name: e2e-validation-tunnel-fqdn
+  namespace: gameplane-games
+spec:
+  templateRef:
+    name: e2e-template-test
+  networking:
+    tunnel:
+      provider: frp
+      credentialsSecretRef:
+        name: tunnel-creds
+      frp:
+        serverAddr: frp.example.com
+        remotePorts:
+          - name: game
+            remotePort: 30000
+`
+	out, err := envInstance.KubectlWithStdin(t.Context(), yaml, "apply", "-f", "-")
+	if err == nil {
+		// Best-effort delete to keep the cluster clean
+		_, _ = envInstance.KubectlWithStdin(t.Context(), yaml, "delete", "-f", "-", "--ignore-not-found")
+	} else {
+		t.Fatalf("CRD schema rejected a valid FQDN — the Pattern is too strict.\nyaml:\n%s\nkubectl output:\n%s", yaml, out)
+	}
+
+	// Test IPv4
+	yaml = `apiVersion: gameplane.local/v1alpha1
+kind: GameServer
+metadata:
+  name: e2e-validation-tunnel-ipv4
+  namespace: gameplane-games
+spec:
+  templateRef:
+    name: e2e-template-test
+  networking:
+    tunnel:
+      provider: frp
+      credentialsSecretRef:
+        name: tunnel-creds
+      frp:
+        serverAddr: 192.0.2.1
+        remotePorts:
+          - name: game
+            remotePort: 30000
+`
+	out, err = envInstance.KubectlWithStdin(t.Context(), yaml, "apply", "-f", "-")
+	if err == nil {
+		// Best-effort delete
+		_, _ = envInstance.KubectlWithStdin(t.Context(), yaml, "delete", "-f", "-", "--ignore-not-found")
+	} else {
+		t.Fatalf("CRD schema rejected a valid IPv4 — the Pattern is too strict.\nyaml:\n%s\nkubectl output:\n%s", yaml, out)
+	}
+
+	// Test absolute FQDN (trailing dot) — a valid DNS name for resolution
+	// and for frpc's config, and must stay accepted.
+	yaml = `apiVersion: gameplane.local/v1alpha1
+kind: GameServer
+metadata:
+  name: e2e-validation-tunnel-fqdn-absolute
+  namespace: gameplane-games
+spec:
+  templateRef:
+    name: e2e-template-test
+  networking:
+    tunnel:
+      provider: frp
+      credentialsSecretRef:
+        name: tunnel-creds
+      frp:
+        serverAddr: frp.example.com.
+        remotePorts:
+          - name: game
+            remotePort: 30000
+`
+	out, err = envInstance.KubectlWithStdin(t.Context(), yaml, "apply", "-f", "-")
+	if err == nil {
+		// Best-effort delete
+		_, _ = envInstance.KubectlWithStdin(t.Context(), yaml, "delete", "-f", "-", "--ignore-not-found")
+	} else {
+		t.Fatalf("CRD schema rejected a valid absolute FQDN — the Pattern is too strict.\nyaml:\n%s\nkubectl output:\n%s", yaml, out)
+	}
+}
