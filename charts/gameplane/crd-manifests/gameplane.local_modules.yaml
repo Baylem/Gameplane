@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    gameplane.local/crd-bundle-sha256: 8cbd33a128199a39129851c0c3b1a2b1ed6cadc1cd60997e95d7eb376cae50fc
+    gameplane.local/crd-bundle-sha256: 0d3925c36232cb34592cdf91578925a4cafdefb8f7dda6302d93700b9aaa6d53
     controller-gen.kubebuilder.io/version: v0.20.1
   name: modules.gameplane.local
 spec:
@@ -210,6 +210,24 @@ spec:
                   re-pinning spec.version) and is updated only when AppliedVersion
                   actually changes. A failed upgrade leaves AppliedVersion — and so the
                   running GameTemplate — untouched, so this is not overwritten then.
+                type: string
+              verifiedDigest:
+                description: |-
+                  VerifiedDigest is the bundle digest that was actually
+                  signature-checked by cosign.Verify, recorded at install time. Empty
+                  when the source declared no verify policy (nothing to check) or when
+                  the Module was installed before this field existed. The UI shows its
+                  solid "verified" badge only when this is set — never from the
+                  source's current policy alone, which could have been added after
+                  this Module was installed.
+                type: string
+              verifyPolicy:
+                description: |-
+                  VerifyPolicy is the verification mode ("keyed" or "keyless") that
+                  produced VerifiedDigest. Empty whenever VerifiedDigest is empty.
+                enum:
+                - keyed
+                - keyless
                 type: string
             type: object
         type: object

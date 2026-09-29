@@ -245,6 +245,47 @@ func TestMountAudit_ExportCSV(t *testing.T) {
 	}
 }
 
+// TestMountAudit_ExportCSV_IncludesReason — the CSV export must carry the
+// audit reason field: a "reason" header column and the row value for events
+// that were denied/failed with a reason attached.
+func TestMountAudit_ExportCSV_IncludesReason(t *testing.T) {
+	store := newTestStore(t)
+	if _, err := store.DB.ExecContext(t.Context(), `INSERT INTO audit_events(ts, actor, method, path, target, status, ip, reason)
+		VALUES (?, 'admin', 'POST', '/servers', 'mc-1', 403, '10.0.0.1', 'rbac: missing role')`,
+		"2026-01-01T00:00:00Z"); err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+	r := chi.NewRouter()
+	MountAudit(r, audit.New(store))
+	srv := httptest.NewServer(r)
+	t.Cleanup(srv.Close)
+
+	resp := auditGet(t, srv.URL+"/admin/audit/export")
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d", resp.StatusCode)
+	}
+	recs, err := csv.NewReader(resp.Body).ReadAll()
+	if err != nil {
+		t.Fatalf("read csv: %v", err)
+	}
+	if len(recs) != 2 { // header + 1 row
+		t.Fatalf("rows=%d, want 2", len(recs))
+	}
+	reasonCol := -1
+	for i, h := range recs[0] {
+		if h == "reason" {
+			reasonCol = i
+		}
+	}
+	if reasonCol == -1 {
+		t.Fatalf("header=%v, want a %q column", recs[0], "reason")
+	}
+	if recs[1][reasonCol] != "rbac: missing role" {
+		t.Fatalf("reason column = %q, want %q", recs[1][reasonCol], "rbac: missing role")
+	}
+}
+
 func TestMountAudit_ExportJSON(t *testing.T) {
 	store := newTestStore(t)
 	for i := 0; i < 2; i++ {

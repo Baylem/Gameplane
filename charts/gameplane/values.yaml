@@ -216,7 +216,7 @@ api:
       bucket: ""          # S3 bucket name (required when endpoint is set)
       prefix: ""          # object key prefix, e.g. "gameplane-audit" (empty = root)
       region: ""          # S3 region, e.g. "us-east-1" (empty defaults to "us-east-1")
-      insecure: false     # disable TLS certificate verification (for self-signed certs)
+      insecure: false     # use plain HTTP (no TLS); TLS verification is never skipped
       # S3 credentials sourced from a Secret (never passed as flags). Leave
       # credentialsSecretRef.name empty to disable the S3 sink entirely.
       credentialsSecretRef:
