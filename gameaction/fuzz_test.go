@@ -18,7 +18,7 @@ func FuzzResolve(f *testing.F) {
 	f.Add(strings.Repeat("a", 600), "string", "", "")
 	f.Add("enumVal", "enum", "default", "enumVal")
 
-	f.Fuzz(func(t *testing.T, val string, paramType string, defaultVal string, expectedVal string) {
+	f.Fuzz(func(t *testing.T, val string, paramType string, defaultVal string, _ string) {
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("panic on input %q (type: %q, default: %q): %v", val, paramType, defaultVal, r)

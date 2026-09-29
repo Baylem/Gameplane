@@ -49,7 +49,7 @@ func FuzzReadMinecraftVarInt(f *testing.F) {
 func FuzzReadMinecraftString(f *testing.F) {
 	// Seed corpus
 	f.Add([]byte{0x04, 0x74, 0x65, 0x73, 0x74}) // "test"
-	f.Add([]byte{0x00}) // empty string
+	f.Add([]byte{0x00})                         // empty string
 	f.Add([]byte{0xFF, 0xFF, 0xFF, 0xFF})
 	f.Add([]byte{})
 	f.Add(make([]byte, 65536))
