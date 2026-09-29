@@ -419,6 +419,7 @@ type FrpTunnelSpec struct {
 	// ServerAddr is the hostname or IP of the frps server.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.?$|^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(:[0-9a-fA-F]{1,4}){1,6}|:((:[0-9a-fA-F]{1,4}){1,7}|:)|([0-9a-fA-F]{1,4}:){6}((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|([0-9a-fA-F]{1,4}:){1,5}:((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|::([0-9a-fA-F]{1,4}:){0,5}((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$`
 	ServerAddr string `json:"serverAddr"`
 
 	// ServerPort is the frps listening port.
@@ -439,6 +440,7 @@ type RemotePortMapping struct {
 	// Name is the advertised port name from the GameTemplate.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$`
 	Name string `json:"name"`
 
 	// RemotePort is the port on the frps host.
@@ -457,7 +459,16 @@ type TailscaleTunnelSpec struct {
 	// +optional
 	Hostname string `json:"hostname,omitempty"`
 
-	// Tags are Tailscale ACL tags applied at device registration.
+	// Tags are Tailscale ACL tags requested for the device when it
+	// registers, via `tailscale up --advertise-tags` (tailscaled's
+	// declarative config has no field for tags, and changing the tags of a
+	// registered node needs a fresh login). Each entry is "tag:<name>" or a bare
+	// name, which gets the "tag:" prefix. The tailnet ACL must grant
+	// tagOwners for these tags to the auth key's owner; if the request is
+	// refused, the tunnel pod logs the error and the tunnel runs untagged.
+	// If any entry is invalid, the whole list is logged and ignored and the
+	// device registers untagged. See
+	// tunnel/specs.md.
 	// +kubebuilder:validation:MaxItems=8
 	// +optional
 	Tags []string `json:"tags,omitempty"`
