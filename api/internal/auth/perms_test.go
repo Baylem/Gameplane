@@ -192,3 +192,74 @@ func TestUserCan(t *testing.T) {
 		})
 	}
 }
+
+func TestPermsByClusterToJSON_PreservesClusterDimension(t *testing.T) {
+	// Two clusters, wildcard cluster, and wildcard namespace.
+	perms := map[string]map[string]map[string]struct{}{
+		"local": {
+			"*":      {"servers:read": {}, "servers:write": {}},
+			"team-a": {"servers:write": {}},
+		},
+		"prod": {
+			"*": {"captures:manage": {}},
+		},
+		"*": {
+			"*": {"users:manage": {}},
+		},
+	}
+
+	result := PermsByClusterToJSON(perms)
+
+	// Verify local cluster structure.
+	if result["local"] == nil {
+		t.Fatal("local cluster not in result")
+	}
+	if !containsSliceEq(result["local"]["*"], []string{"servers:read", "servers:write"}) {
+		t.Errorf("local/* got %v, want sorted perms", result["local"]["*"])
+	}
+	if !containsSliceEq(result["local"]["team-a"], []string{"servers:write"}) {
+		t.Errorf("local/team-a got %v, want servers:write", result["local"]["team-a"])
+	}
+
+	// Verify prod cluster structure.
+	if result["prod"] == nil {
+		t.Fatal("prod cluster not in result")
+	}
+	if !containsSliceEq(result["prod"]["*"], []string{"captures:manage"}) {
+		t.Errorf("prod/* got %v, want captures:manage", result["prod"]["*"])
+	}
+
+	// Verify wildcard cluster.
+	if result["*"] == nil {
+		t.Fatal("wildcard cluster not in result")
+	}
+	if !containsSliceEq(result["*"]["*"], []string{"users:manage"}) {
+		t.Errorf("*/* got %v, want users:manage", result["*"]["*"])
+	}
+
+	// Verify that prod does not have team-a binding.
+	if _, ok := result["prod"]["team-a"]; ok {
+		t.Errorf("prod should not have team-a binding, got %v", result["prod"])
+	}
+}
+
+func TestPermsByClusterToJSON_EmptyReturnsNil(t *testing.T) {
+	perms := map[string]map[string]map[string]struct{}{}
+	result := PermsByClusterToJSON(perms)
+	if result != nil {
+		t.Errorf("empty perms should return nil, got %v", result)
+	}
+}
+
+// containsSliceEq checks if two string slices are equal (order-sensitive).
+func containsSliceEq(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}

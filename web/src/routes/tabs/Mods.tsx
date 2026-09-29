@@ -31,6 +31,7 @@ import { APIError } from "@/lib/api";
 import { errorText } from "@/lib/errors";
 import { resolveModVolume } from "@/lib/capabilities";
 import { useMe, can } from "@/lib/auth";
+import { useCurrentCluster } from "@/lib/cluster";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { RegistryBrowser, RegistryIcon, compactNum, providerLabel } from "@/components/registry-browser";
 import { cn, formatBytes, formatRelative } from "@/lib/utils";
@@ -66,7 +67,8 @@ function FileModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTemplate
   const qc = useQueryClient();
   const { data: me } = useMe();
   const ns_resolved = ns ?? "gameplane-games";
-  const canManage = can(me, "servers:write", ns_resolved);
+  const cluster = useCurrentCluster();
+  const canManage = can(me, "servers:write", ns_resolved, cluster);
 
   const caps = tmpl?.spec.capabilities?.mods;
   // URL installs need the module's install (allowlist) block; uploads only
@@ -434,7 +436,8 @@ function ModsByIdTab({
   const qc = useQueryClient();
   const { data: me } = useMe();
   const ns_resolved = ns ?? "gameplane-games";
-  const canManage = can(me, "servers:write", ns_resolved);
+  const cluster = useCurrentCluster();
+  const canManage = can(me, "servers:write", ns_resolved, cluster);
 
   const caps = tmpl?.spec.capabilities?.mods;
   // A registry provider (e.g. ARK declares curseforge) enables in-app

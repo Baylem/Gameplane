@@ -54,6 +54,7 @@ import {
 import { APIError, Captures, CaptureStartBody } from "@/lib/api";
 import { captureListRefetchMs, isCaptureActive } from "@/lib/capturePolling";
 import { useMe, can } from "@/lib/auth";
+import { useCurrentCluster } from "@/lib/cluster";
 import { IdentityUnavailable } from "@/components/RequireRole";
 import { CaptureWarningBanner } from "@/components/ui/CaptureWarningBanner";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
@@ -123,7 +124,8 @@ export function CaptureWidget({ name, ns, gs }: Props) {
   const qc = useQueryClient();
   const { data: me, isLoading: meLoading, error: meError, refetch: refetchMe } = useMe();
   const ns_resolved = ns ?? "gameplane-games";
-  const canManage = can(me, "captures:manage", ns_resolved);
+  const cluster = useCurrentCluster();
+  const canManage = can(me, "captures:manage", ns_resolved, cluster);
 
   const enabled = gs?.spec.capture?.enabled === true;
   const retentionSeconds = gs?.spec.capture?.retentionSeconds ?? DEFAULT_RETENTION_SECONDS;

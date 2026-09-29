@@ -75,6 +75,31 @@ func PermsToJSON(perms map[string]map[string]map[string]struct{}) map[string][]s
 	return out
 }
 
+// PermsByClusterToJSON preserves the cluster dimension of the permission set,
+// returning cluster→namespace→permissions. Unlike PermsToJSON (which merges
+// across clusters for backward compatibility), this structure allows the
+// frontend to exactly mirror the server's User.Can() logic and determine
+// cluster-specific access without triggering 403 errors. It returns nil for
+// an empty set so callers can omitempty.
+func PermsByClusterToJSON(perms map[string]map[string]map[string]struct{}) map[string]map[string][]string {
+	if len(perms) == 0 {
+		return nil
+	}
+	out := make(map[string]map[string][]string, len(perms))
+	for cluster, clusterPerms := range perms {
+		out[cluster] = make(map[string][]string, len(clusterPerms))
+		for ns, permSet := range clusterPerms {
+			keys := make([]string, 0, len(permSet))
+			for p := range permSet {
+				keys = append(keys, p)
+			}
+			sort.Strings(keys)
+			out[cluster][ns] = keys
+		}
+	}
+	return out
+}
+
 // Can reports whether the user holds perm. namespaced indicates whether the
 // permission is scoped to a namespace+cluster (servers, backups, …) or is
 // cluster-scoped control-plane state (users, roles, config, …).
