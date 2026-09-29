@@ -239,3 +239,80 @@ func TestModule_DigestPinCheckedOnReadyModule(t *testing.T) {
 	patchModuleDigest(t, modName, "sha256:mc-1.0.0")
 	expectModulePhase(t, modName, gameplanev1alpha1.ModulePhaseReady, "")
 }
+
+// setSourceVerify gives an already-created ModuleSource a verify policy.
+func setSourceVerify(t *testing.T, name string, verify *gameplanev1alpha1.VerifySpec) {
+	t.Helper()
+	var src gameplanev1alpha1.ModuleSource
+	if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: name}, &src); err != nil {
+		t.Fatalf("get modulesource %s: %v", name, err)
+	}
+	src.Spec.Verify = verify
+	if err := k8sClient.Update(context.Background(), &src); err != nil {
+		t.Fatalf("set modulesource verify policy: %v", err)
+	}
+}
+
+// TestModule_VerificationRecordedOnSuccess — a successful install from a
+// source with a keyed verify policy records which digest was checked and
+// under which policy, so the badge can tell an actually-verified install
+// apart from one that merely has a signed sibling source.
+func TestModule_VerificationRecordedOnSuccess(t *testing.T) {
+	_ = newNamespace(t)
+	fake := newFakeOCI()
+	c := startMgr(t, "gameplane-system", withModuleReconcilerVerifier(fake, fakeVerifier{}))
+
+	srcName, _ := seedMC(t, fake)
+	setSourceVerify(t, srcName, &gameplanev1alpha1.VerifySpec{
+		Key: &corev1.LocalObjectReference{Name: "cosign-pub"},
+	})
+
+	// Poll for the source's verify policy to be cached before creating the
+	// module, so the reconciler's informer cache reflects the update.
+	eventually(t, func() (bool, string) {
+		var src gameplanev1alpha1.ModuleSource
+		if err := c.Get(context.Background(), types.NamespacedName{Name: srcName}, &src); err != nil {
+			return false, fmt.Sprintf("get source: %v", err)
+		}
+		if src.Spec.Verify == nil {
+			return false, "Spec.Verify is still nil"
+		}
+		return true, ""
+	})
+
+	modName := uniqueName("mod-verify-recorded")
+	createModule(t, modName, srcName, nil)
+	expectModulePhase(t, modName, gameplanev1alpha1.ModulePhaseReady, "")
+
+	got := getModule(t, modName)
+	if got.Status.VerifiedDigest == "" || got.Status.VerifiedDigest != got.Status.AppliedDigest {
+		t.Fatalf("verifiedDigest=%q appliedDigest=%q, want the two equal and non-empty",
+			got.Status.VerifiedDigest, got.Status.AppliedDigest)
+	}
+	if got.Status.VerifyPolicy != gameplanev1alpha1.ModuleVerifyModeKeyed {
+		t.Fatalf("verifyPolicy=%q, want %q", got.Status.VerifyPolicy, gameplanev1alpha1.ModuleVerifyModeKeyed)
+	}
+}
+
+// TestModule_VerificationNotRecordedWithoutPolicy — a source with no verify
+// policy installs successfully (the Nop verifier always passes) but must not
+// record a verification: nothing was actually signature-checked, so the
+// badge must not claim otherwise even if the source later gains a policy.
+func TestModule_VerificationNotRecordedWithoutPolicy(t *testing.T) {
+	_ = newNamespace(t)
+	fake := newFakeOCI()
+	startMgr(t, "gameplane-system", withModuleReconciler(fake))
+
+	srcName, _ := seedMC(t, fake)
+	modName := uniqueName("mod-verify-unset")
+	createModule(t, modName, srcName, nil)
+	expectModulePhase(t, modName, gameplanev1alpha1.ModulePhaseReady, "")
+
+	got := getModule(t, modName)
+	if got.Status.VerifiedDigest != "" {
+		t.Fatalf("verifiedDigest=%q, want empty when the source declares no verify policy", got.Status.VerifiedDigest)
+	}
+	if got.Status.VerifyPolicy != "" {
+		t.Fatalf("verifyPolicy=%q, want empty", got.Status.VerifyPolicy)
+	}
+}

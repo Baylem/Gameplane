@@ -210,6 +210,24 @@ spec:
                   actually changes. A failed upgrade leaves AppliedVersion — and so the
                   running GameTemplate — untouched, so this is not overwritten then.
                 type: string
+              verifiedDigest:
+                description: |-
+                  VerifiedDigest is the bundle digest that was actually
+                  signature-checked by cosign.Verify, recorded at install time. Empty
+                  when the source declared no verify policy (nothing to check) or when
+                  the Module was installed before this field existed. The UI shows its
+                  solid "verified" badge only when this is set — never from the
+                  source's current policy alone, which could have been added after
+                  this Module was installed.
+                type: string
+              verifyPolicy:
+                description: |-
+                  VerifyPolicy is the verification mode ("keyed" or "keyless") that
+                  produced VerifiedDigest. Empty whenever VerifiedDigest is empty.
+                enum:
+                - keyed
+                - keyless
+                type: string
             type: object
         type: object
     served: true
