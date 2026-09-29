@@ -1478,6 +1478,7 @@ spec:
                                     the GameTemplate.
                                   maxLength: 63
                                   minLength: 1
+                                  pattern: ^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$
                                   type: string
                                 remotePort:
                                   description: RemotePort is the port on the frps
@@ -1498,6 +1499,7 @@ spec:
                               server.
                             maxLength: 253
                             minLength: 1
+                            pattern: ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.?$|^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(:[0-9a-fA-F]{1,4}){1,6}|:((:[0-9a-fA-F]{1,4}){1,7}|:)|([0-9a-fA-F]{1,4}:){6}((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|([0-9a-fA-F]{1,4}:){1,5}:((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|::([0-9a-fA-F]{1,4}:){0,5}((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$
                             type: string
                           serverPort:
                             default: 7000
@@ -1541,8 +1543,17 @@ spec:
                             pattern: ^([a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)?$
                             type: string
                           tags:
-                            description: Tags are Tailscale ACL tags applied at device
-                              registration.
+                            description: |-
+                              Tags are Tailscale ACL tags requested for the device when it
+                              registers, via `tailscale up --advertise-tags` (tailscaled's
+                              declarative config has no field for tags, and changing the tags of a
+                              registered node needs a fresh login). Each entry is "tag:<name>" or a bare
+                              name, which gets the "tag:" prefix. The tailnet ACL must grant
+                              tagOwners for these tags to the auth key's owner; if the request is
+                              refused, the tunnel pod logs the error and the tunnel runs untagged.
+                              If any entry is invalid, the whole list is logged and ignored and the
+                              device registers untagged. See
+                              tunnel/specs.md.
                             items:
                               type: string
                             maxItems: 8
