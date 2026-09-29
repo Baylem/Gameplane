@@ -461,10 +461,13 @@ func (h *handler) del(w http.ResponseWriter, req *http.Request) {
 	}
 	recursive := req.URL.Query().Get("recursive") == "true"
 	if recursive {
-		// Before recursively deleting, ensure the tree contains no dot-prefixed entries.
-		if err := h.hasDotFileRecursive(p); err != nil {
-			h.badRequest(w, err)
-			return
+		// A direct request for a dot-prefixed path is denied, so a recursive
+		// delete must not remove protected descendants either.
+		if fi, lerr := os.Lstat(p); lerr == nil && fi.IsDir() {
+			if derr := checkNoDotDescendants(p); derr != nil {
+				h.badRequest(w, derr)
+				return
+			}
 		}
 	}
 	var rerr error
@@ -480,20 +483,20 @@ func (h *handler) del(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// hasDotFileRecursive walks the directory tree rooted at path and returns
-// errDotfile if any dot-prefixed entry is found. Used to guard recursive
-// deletion operations.
-func (h *handler) hasDotFileRecursive(path string) error {
-	entries, err := os.ReadDir(path)
+// checkNoDotDescendants walks the directory tree rooted at dir and returns
+// errDotfile if any dot-prefixed entry is found. Symlinks are not followed
+// (os.RemoveAll does not follow them either).
+func checkNoDotDescendants(dir string) error {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return err
+		return fmt.Errorf("read %s: %w", dir, err)
 	}
 	for _, e := range entries {
 		if strings.HasPrefix(e.Name(), ".") {
 			return errDotfile
 		}
 		if e.IsDir() {
-			if err := h.hasDotFileRecursive(filepath.Join(path, e.Name())); err != nil {
+			if err := checkNoDotDescendants(filepath.Join(dir, e.Name())); err != nil {
 				return err
 			}
 		}

@@ -583,6 +583,42 @@ func TestDelete(t *testing.T) {
 		}
 	})
 
+	t.Run("recursive refuses tree containing dotfile", func(t *testing.T) {
+		if err := os.MkdirAll(filepath.Join(root, "w", "sub"), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(root, "w", "sub", ".state"), []byte("x"), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodDelete, srvURL+"/files/delete?path=/w&recursive=true", nil)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("delete: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("status=%d", resp.StatusCode)
+		}
+		if _, err := os.Stat(filepath.Join(root, "w", "sub", ".state")); err != nil {
+			t.Fatalf("dotfile removed: %v", err)
+		}
+	})
+
+	t.Run("recursive on a plain file removes it", func(t *testing.T) {
+		if err := os.WriteFile(filepath.Join(root, "pf"), []byte("x"), 0o600); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodDelete, srvURL+"/files/delete?path=/pf&recursive=true", nil)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("delete: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusNoContent {
+			t.Fatalf("status=%d", resp.StatusCode)
+		}
+	})
+
 	t.Run("refuses to delete root", func(t *testing.T) {
 		req, _ := http.NewRequestWithContext(t.Context(), http.MethodDelete, srvURL+"/files/delete?path=/&recursive=true", nil)
 		resp, err := http.DefaultClient.Do(req)
