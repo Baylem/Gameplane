@@ -101,6 +101,7 @@ jobs:
       github: ${{ steps.combine.outputs.github }}
       specs: ${{ steps.combine.outputs.specs }}
       docs: ${{ steps.combine.outputs.docs }}
+      kindsmoke: ${{ steps.combine.outputs.kindsmoke }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
@@ -143,6 +144,16 @@ jobs:
               - 'test/e2e/**'
               - 'deploy/kind/**'
               - 'docker-bake.hcl'
+            # Narrower than e2etree on purpose: this backs a job that only
+            # smoke-tests deploy/kind/**'s pinned dev ingress-nginx manifest
+            # on a real Kind cluster, and must NOT run on every e2e-affecting
+            # change (a Go or chart edit does not touch that manifest pin).
+            # No `ci` fail-safe either — the workflow file itself is listed
+            # directly below, which is what "or the workflow file itself
+            # changes" means for this gate.
+            kindsmoke:
+              - 'deploy/kind/**'
+              - '.github/workflows/ci.yaml'
             gamecoverage:
               - 'modules'
               - 'modules/**'
@@ -237,6 +248,7 @@ jobs:
           GITHUB: ${{ steps.filter.outputs.github }}
           SPECS: ${{ steps.filter.outputs.specs }}
           DOCS: ${{ steps.filter.outputs.docs }}
+          KINDSMOKE: ${{ steps.filter.outputs.kindsmoke }}
         run: |
           gov=false;  { [ "$GO" = true ]     || [ "$CI" = true ]; } && gov=true
           webv=false; { [ "$WEB" = true ]    || [ "$CI" = true ]; } && webv=true
@@ -246,6 +258,11 @@ jobs:
           ghv=false;  { [ "$GITHUB" = true ] || [ "$CI" = true ]; } && ghv=true
           specsv=false; { [ "$SPECS" = true ] || [ "$CI" = true ]; } && specsv=true
           docsv=false; { [ "$DOCS" = true ] || [ "$CI" = true ]; } && docsv=true
+          # Deliberately NOT ORed with `ci`: this gate is meant to stay
+          # narrow (see the `kindsmoke` filter comment above), so a change
+          # to unrelated CI config (Makefile, go.work, .golangci.yml, ...)
+          # must not pull in a Kind cluster boot for it.
+          ksv=false; [ "$KINDSMOKE" = true ] && ksv=true
           {
             echo "go=$gov"
             echo "web=$webv"
@@ -256,6 +273,7 @@ jobs:
             echo "github=$ghv"
             echo "specs=$specsv"
             echo "docs=$docsv"
+            echo "kindsmoke=$ksv"
           } >> "$GITHUB_OUTPUT"
 
   # Build the operator/api/agent (+ gameprobe) images ONCE and publish them as
@@ -1424,6 +1442,81 @@ jobs:
           context: ${{ env.CTX }}
           namespaces: "gameplane-system,gameplane-games"
 
+  # Smoke-tests the dev ingress-nginx manifest pin (deploy/kind/up.sh,
+  # INGRESS_NGINX_VERSION) on the same Kind node config `make dev-up` uses
+  # (deploy/kind/cluster.yaml — the ingress-ready control-plane node label
+  # and the 8080/8443/30565 extraPortMappings the ingress-nginx Kind
+  # manifest's controller Service depends on). Nothing else in CI applies
+  # this manifest (deploy/kind/e2e.sh deliberately skips ingress-nginx — see
+  # its header comment), so a pin bump whose kind manifest moved, or whose
+  # controller no longer reaches Available on the runner's Kind node image,
+  # was previously only caught by a developer running `make dev-up` (#521).
+  #
+  # Gated on `kindsmoke` (deploy/kind/** or this workflow file), not the
+  # broad `e2e` gate: a Go/chart/test-tree change doesn't touch the pinned
+  # manifest or the cluster config this job exercises, so it stays out of
+  # every other PR's critical path.
+  e2e-kind-ingress-smoke:
+    name: ingress-nginx smoke (kind)
+    needs: [changes]
+    if: needs.changes.outputs.kindsmoke == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      CLUSTER: gameplane-dev
+      CTX: kind-gameplane-dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: install kind
+        uses: helm/kind-action@06c1ae10762d3b9c1644e7fe69596ae519e015a2 # v1.15.0
+        with:
+          install_only: true
+      - name: read ingress-nginx version pin from up.sh
+        id: pin
+        # Single source of truth: deploy/kind/up.sh's INGRESS_NGINX_VERSION=
+        # line. Never duplicate the version here — read it back instead, so
+        # this job smoke-tests whatever `make dev-up` actually installs.
+        run: |
+          VERSION="$(sed -n 's/^INGRESS_NGINX_VERSION="\(.*\)"$/\1/p' deploy/kind/up.sh)"
+          if [ -z "$VERSION" ] || [ "$(printf '%s\n' "$VERSION" | wc -l)" -ne 1 ]; then
+            echo "::error::expected exactly one INGRESS_NGINX_VERSION=\"...\" line in deploy/kind/up.sh" >&2
+            exit 1
+          fi
+          echo "found INGRESS_NGINX_VERSION=${VERSION} in deploy/kind/up.sh"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+      - name: create kind cluster (dev config)
+        # Same node config make dev-up uses (deploy/kind/cluster.yaml), not
+        # e2e.sh's single-node config — the ingress-ready node label and the
+        # host port mappings it carries are exactly what this job is meant
+        # to exercise.
+        run: kind create cluster --name "$CLUSTER" --config deploy/kind/cluster.yaml
+      - name: install ingress-nginx at the pinned version
+        env:
+          INGRESS_NGINX_VERSION: ${{ steps.pin.outputs.version }}
+        run: |
+          kubectl --context "$CTX" apply -f \
+            "https://raw.githubusercontent.com/kubernetes/ingress-nginx/${INGRESS_NGINX_VERSION}/deploy/static/provider/kind/deploy.yaml"
+      - name: wait for ingress-nginx-controller to become Available
+        # rollout status, not `wait --for=condition=Available`: the manifest
+        # sets maxUnavailable: 1 on a one-replica Deployment, so its
+        # Available condition is True before any controller pod is ready.
+        run: |
+          kubectl --context "$CTX" rollout status --namespace ingress-nginx \
+            deployment/ingress-nginx-controller --timeout=180s
+      - name: dump cluster state on failure (e2e-kind-ingress-smoke)
+        if: failure()
+        uses: ./.github/actions/dump-cluster-state
+        with:
+          context: ${{ env.CTX }}
+          namespaces: "ingress-nginx"
+          include-operator-logs: "false"
+          include-api-logs: "false"
+      - name: delete kind cluster
+        if: always()
+        run: kind delete cluster --name "$CLUSTER" || true
+
   # Runs after every other job and publishes one build report: which jobs
   # failed and where, measured coverage against each gate, changed files by
   # area (PRs only), the slowest job legs, and which e2e buckets actually
@@ -1459,6 +1552,7 @@ jobs:
         e2e-upgrade,
         e2e-web-live,
         e2e-game-bot,
+        e2e-kind-ingress-smoke,
       ]
     if: always()
     runs-on: ubuntu-latest
@@ -1553,7 +1647,7 @@ jobs:
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-multicluster', 'e2e-upgrade',
-              'e2e-web-live', 'e2e-game-bot',
+              'e2e-web-live', 'e2e-game-bot', 'e2e-kind-ingress-smoke',
             ];
 
             // Maps each workflow job id to how its `name:` field (as reported by
@@ -1579,6 +1673,7 @@ jobs:
               'e2e-upgrade': (n) => n.startsWith('e2e upgrade /'),
               'e2e-web-live': (n) => n.startsWith('e2e web live /'),
               'e2e-game-bot': (n) => n === 'e2e game bot (kind)',
+              'e2e-kind-ingress-smoke': (n) => n === 'ingress-nginx smoke (kind)',
             };
 
             let passed = 0, failed = 0, skipped = 0, cancelled = 0;
