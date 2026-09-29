@@ -50,20 +50,20 @@ data:
   ca.crt: {{ $caCrt | b64enc }}
   ca.key: {{ $caKey | b64enc }}
 ---
-{{- else if not $haveCA }}
+{{- else if and $caSecret (not $haveCA) }}
+  {{- /* Only fail when lookup found the Secret but it lacks keys; an empty lookup (client-side template, dry-run) renders without failing. */ -}}
   {{- fail (printf "api.agentMTLS.caSecretRef.name=%q: Secret not found or missing required keys (ca.crt, ca.key)" $caSecretName) }}
 {{- end }}
 {{- $clientSecretName := (.Values.api.agentMTLS.clientCertRef.name | default "gameplane-agent-client") -}}
 {{- $clientSecret := lookup "v1" "Secret" .Release.Namespace $clientSecretName -}}
-{{- /* For default-named Secret: reuse if present and well-formed, UNLESS it's chart-managed AND CA changed. For custom-named: reuse only if CA fingerprint matches. */ -}}
-{{- $isManagedByHelm := eq (dig "gameplane.local/managed-by" "" (($clientSecret.metadata).annotations | default dict)) "helm" -}}
+{{- /* Reuse an existing client Secret only if well-formed AND its CA fingerprint annotation matches the active CA. */ -}}
 {{- $clientCAFingerprint := dig "gameplane.local/ca-fingerprint" "" (($clientSecret.metadata).annotations | default dict) -}}
 {{- $haveClientCreds := and $clientSecret (hasKey ($clientSecret.data | default dict) "tls.crt") (hasKey ($clientSecret.data | default dict) "tls.key") -}}
 {{- $caFingerprintMatches := eq $clientCAFingerprint $caFingerprint -}}
 {{- $reuseClient := false -}}
 {{- if and $haveClientCreds (eq $clientSecretName "gameplane-agent-client") -}}
-  {{- /* Default-name Secret: reuse if present (chart-managed OR pre-created), unless chart-managed AND CA changed */ -}}
-  {{- if or (not $isManagedByHelm) $caFingerprintMatches -}}
+  {{- /* Default-name Secret: reuse only while the CA fingerprint matches; an unannotated Secret is re-issued once */ -}}
+  {{- if $caFingerprintMatches -}}
     {{- $reuseClient = true -}}
   {{- end -}}
 {{- else if and $haveClientCreds (ne $clientSecretName "gameplane-agent-client") $caFingerprintMatches -}}
@@ -101,7 +101,7 @@ data:
   tls.crt: {{ $clientCrt | b64enc }}
   tls.key: {{ $clientKey | b64enc }}
 {{- else if ne $clientSecretName "gameplane-agent-client" }}
-  {{- if not (and $clientSecret (hasKey ($clientSecret.data | default dict) "tls.crt") (hasKey ($clientSecret.data | default dict) "tls.key")) }}
+  {{- if and $clientSecret (not $haveClientCreds) }}
     {{- fail (printf "api.agentMTLS.clientCertRef.name=%q: Secret not found or missing required keys (tls.crt, tls.key)" $clientSecretName) }}
   {{- end }}
 {{- end }}
