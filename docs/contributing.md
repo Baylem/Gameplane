@@ -116,6 +116,13 @@ group so only the game-bot job pays to build it, and `deploy/kind/e2e.sh`
 side-loads it into the cluster when present. The `e2e game bot (kind)` CI job
 is now blocking rather than advisory.
 
+The `ingress-nginx smoke (kind)` CI job is separate from the buckets above: it
+boots a Kind cluster on the same node config `make dev-up` uses and applies
+the dev ingress-nginx manifest pinned in `deploy/kind/up.sh`
+(`INGRESS_NGINX_VERSION`), waiting for the controller Deployment's rollout
+to finish (its replica available).
+It only runs when `deploy/kind/**` or the CI workflow file itself changes.
+
 ## AI-assisted development
 
 Much of this codebase is developed with AI coding assistants (Claude
@@ -137,6 +144,12 @@ the same review, lint, and test gates below.
 Game-module changes (`modules/`) belong in the separate **`gameplane-module`**
 repo, which this repo vendors as a submodule. Open the module PR there; once it
 merges, bump the submodule pointer here (`git add modules`) in a follow-up PR.
+
+`.gitmodules` points both submodules (`modules/`, `website/`) at the upstream
+GitHub URLs, so a fork of this repo clones them without forking them too. To
+work on your own fork of a submodule, repoint it locally:
+`git submodule set-url modules https://github.com/<you>/gameplane-module.git`
+(don't commit that change).
 
 ## Code review
 

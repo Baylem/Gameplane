@@ -44,3 +44,21 @@ func TestPlaceholderIconBytes(t *testing.T) {
 		t.Errorf("expected 256x256 image, got %dx%d", bounds.Dx(), bounds.Dy())
 	}
 }
+
+// The steamcmd preset carries a non-root default for the game container.
+func TestSteamcmdArchetypeDefaultsToNonRoot(t *testing.T) {
+	arch, err := GetArchetype("steamcmd")
+	if err != nil {
+		t.Fatalf("GetArchetype(steamcmd) failed: %v", err)
+	}
+	sec := arch.DefaultSecurity
+	if sec == nil {
+		t.Fatal("steamcmd archetype has no DefaultSecurity")
+	}
+	if sec.RunAsUser <= 0 || sec.RunAsGroup <= 0 {
+		t.Errorf("steamcmd DefaultSecurity runs as uid %d gid %d, want a non-root uid and gid", sec.RunAsUser, sec.RunAsGroup)
+	}
+	if sec.FSGroup != sec.RunAsGroup {
+		t.Errorf("steamcmd DefaultSecurity fsGroup = %d, want the run group %d", sec.FSGroup, sec.RunAsGroup)
+	}
+}

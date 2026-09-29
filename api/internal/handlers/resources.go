@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"reflect"
 	"strings"
@@ -242,15 +243,20 @@ func updateHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 		}
 		// For GameServers, preserve ownership annotations from the live object
 		// so clients can't mutate them via PUT, and validate sensitive spec fields.
+		// live is also consulted after a successful Update below, to detect a
+		// spec.networking.tunnel.provider switch and prune the superseded
+		// provider's credential — so it is declared outside this block.
+		var live *unstructured.Unstructured
 		if gvr.Resource == "gameservers" {
 			ns, ok := resolveNS(w, req)
 			if !ok {
 				return
 			}
-			live, err := k.Dynamic.Resource(gvr).Namespace(ns).
+			var getErr error
+			live, getErr = k.Dynamic.Resource(gvr).Namespace(ns).
 				Get(req.Context(), name, metav1.GetOptions{})
-			if err != nil && !apierrors.IsNotFound(err) {
-				httperr.Write(w, req, err)
+			if getErr != nil && !apierrors.IsNotFound(getErr) {
+				httperr.Write(w, req, getErr)
 				return
 			}
 			if live != nil {
@@ -297,8 +303,47 @@ func updateHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 			}
 			obj.SetNamespace(ns)
 			updated, err = k.Dynamic.Resource(gvr).Namespace(ns).Update(req.Context(), obj, metav1.UpdateOptions{})
+			if err == nil && gvr.Resource == "gameservers" {
+				pruneTunnelProviderOnSpecChange(req.Context(), k, ns, name, live, updated)
+			}
 		}
 		writeOrErr(w, req, updated, err)
+	}
+}
+
+// pruneTunnelProviderOnSpecChange is called by updateHandler once a GameServer
+// PUT has succeeded. The dashboard (web/src/routes/tabs/settings/Networking.tsx)
+// saves a tunnel credential and a spec.networking.tunnel.provider switch as
+// separate requests: tunnelCredsHandler.put keeps the still-active provider's
+// key alive for an in-flight pod while the new credential is written, but
+// nothing then prunes that superseded key once the spec switch itself lands
+// here. This closes that gap: when live and updated disagree on the tunnel
+// provider, every other provider's key is removed from the GameServer's
+// <name>-tunnel-auth Secret via pruneStaleTunnelProviderKeys (tunnelcreds.go),
+// which shares tunnelCredentialPatch with the credential PUT path.
+//
+// A prune failure never fails the spec update, which has already committed:
+// it is logged, and the next credential PUT cleans up any leftover key too.
+func pruneTunnelProviderOnSpecChange(ctx context.Context, k *kube.Client, ns, name string, live, updated *unstructured.Unstructured) {
+	if live == nil || updated == nil {
+		return
+	}
+	oldProvider, _, oldErr := getNestedString(live.Object, "spec", "networking", "tunnel", "provider")
+	newProvider, _, newErr := getNestedString(updated.Object, "spec", "networking", "tunnel", "provider")
+	if oldErr != nil || newErr != nil {
+		slog.Warn("tunnel provider switch: could not read provider from spec; skipping stale credential prune",
+			"server", name, "namespace", ns, "oldErr", oldErr, "newErr", newErr)
+		return
+	}
+	// Removing or clearing the tunnel is not a provider switch: no tunnel pod
+	// mounts the Secret then, and the credential DELETE endpoint is the
+	// explicit way to remove a stored credential.
+	if oldProvider == newProvider || newProvider == "" {
+		return
+	}
+	if err := pruneStaleTunnelProviderKeys(ctx, k, ns, name, updated.GetUID(), newProvider); err != nil {
+		slog.Warn("tunnel provider switch: stale credential prune failed; a subsequent credential PUT will retry it",
+			"server", name, "namespace", ns, "oldProvider", oldProvider, "newProvider", newProvider, "err", err)
 	}
 }
 
@@ -596,6 +641,24 @@ func validateAndProtectGameServer(
 		}
 		if !isServerOwnedSecret(ctx, k, ns, name, gsUID, tunnelSecName) {
 			return fmt.Errorf("tunnel credentials secret reference %q is not permitted: not a server-owned secret", tunnelSecName)
+		}
+	}
+
+	// Validate tunnel config fields: serverAddr/name are escaped at render time, but pattern validation
+	// ensures they parse as valid before reaching the pod (defense in depth).
+	if tunnelFrp, ok, _ := unstructured.NestedMap(desired.Object, "spec", "networking", "tunnel", "frp"); ok && tunnelFrp != nil {
+		// CRD Pattern already enforces these; defensive double-check.
+		if serverAddr, ok := tunnelFrp["serverAddr"].(string); ok && serverAddr == "" {
+			return fmt.Errorf("spec.networking.tunnel.frp.serverAddr must not be empty")
+		}
+		if remotePorts, ok := tunnelFrp["remotePorts"].([]interface{}); ok {
+			for i, port := range remotePorts {
+				if portMap, ok := port.(map[string]interface{}); ok {
+					if portName, ok := portMap["name"].(string); ok && portName == "" {
+						return fmt.Errorf("spec.networking.tunnel.frp.remotePorts[%d].name must not be empty", i)
+					}
+				}
+			}
 		}
 	}
 

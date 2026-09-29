@@ -89,12 +89,16 @@ func validateParam(p Param, val string) (string, error) {
 	}
 }
 
-// hasControl reports whether s contains an ASCII control character.
-// Rejecting these (notably CR/LF) stops a parameter value from chaining a
-// second console command into the rendered line.
+// hasControl reports whether s contains an ASCII control character or a
+// shell/RCON metacharacter. Rejecting these stops a parameter value from
+// chaining a second console command into the rendered line.
 func hasControl(s string) bool {
 	for _, r := range s {
 		if r < 0x20 || r == 0x7f {
+			return true
+		}
+		// Reject shell/RCON metacharacters
+		if r == ';' || r == '&' || r == '|' || r == '$' || r == '`' || r == '\\' || r == '"' || r == '\'' {
 			return true
 		}
 	}
