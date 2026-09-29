@@ -60,14 +60,17 @@ test.describe("multicluster administration", () => {
       await expect(main.getByText("local / gameplane-games", { exact: true })).toBeVisible();
       await expect(main.getByText("remote-demo / gameplane-games", { exact: true })).toBeVisible();
 
-      const filter = main.getByRole("button", { name: /Filter by location/ });
+      await expect(main.getByRole("button", { name: /Filter by location/ })).toHaveCount(0);
+      const filter = main.getByRole("button", { name: /^Filter(?:\s+\d+)?$/ });
       await filter.click();
+      await page.getByRole("button", { name: /Filter by location/ }).click();
+      await page.getByRole("option", { name: "remote-demo", exact: true }).click();
       await Promise.all([
         page.waitForRequest((request) => {
           const url = new URL(request.url());
           return url.pathname === "/fleet/servers" && url.searchParams.get("cluster") === "remote-demo";
         }),
-        page.getByRole("option", { name: "remote-demo", exact: true }).click(),
+        page.getByRole("button", { name: "Apply", exact: true }).click(),
       ]);
       await expect(links).toHaveCount(1);
       await expect(links).toHaveAttribute("href", /cluster=remote-demo/);
@@ -75,7 +78,9 @@ test.describe("multicluster administration", () => {
       expect(await page.evaluate(() => localStorage.getItem("gameplane.cluster"))).toBe("remote-demo");
 
       await filter.click();
+      await page.getByRole("button", { name: /Filter by location/ }).click();
       await page.getByRole("option", { name: "All locations", exact: true }).click();
+      await page.getByRole("button", { name: "Apply", exact: true }).click();
       await expect(links).toHaveCount(2);
       expect(await main.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

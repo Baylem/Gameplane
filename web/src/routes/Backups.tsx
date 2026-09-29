@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { createResourceClient } from "@/lib/endpoints";
 import { useFleetLocation, Fleet, located, targetKey, targetLabel, type Located } from "@/lib/fleet";
-import { FleetCoverage, FleetScopeFilter } from "@/components/FleetScope";
+import { FleetCoverage } from "@/components/FleetScope";
 import {
   Button,
   Card,
@@ -72,7 +72,6 @@ export function BackupsPage() {
           </Button>
         }
       />
-      <FleetScopeFilter value={location} onChange={setLocation} clusters={locations} />
       {backupNow && <BackupNowDialog onClose={() => setBackupNow(false)} />}
       <Tabs selectedKey={tab} onSelectionChange={(key) => setTab(key as TabKey)}>
         <Tabs.List>
@@ -83,14 +82,16 @@ export function BackupsPage() {
           ))}
         </Tabs.List>
       </Tabs>
-      {tab === "backups" && <BackupsTabPanel location={location} />}
-      {tab === "schedules" && <SchedulesTabPanel location={location} />}
-      {tab === "restores" && <RestoresTabPanel location={location} />}
+      {tab === "backups" && <BackupsTabPanel location={location} onLocationChange={setLocation} locations={locations} />}
+      {tab === "schedules" && <SchedulesTabPanel location={location} onLocationChange={setLocation} locations={locations} />}
+      {tab === "restores" && <RestoresTabPanel location={location} onLocationChange={setLocation} locations={locations} />}
     </div>
   );
 }
 
-function BackupsTabPanel({ location }: { location: string }) {
+type LocationFilterProps = { location: string; onLocationChange: (location: string) => void; locations: string[] };
+
+function BackupsTabPanel({ location, onLocationChange, locations }: LocationFilterProps) {
   const [search, setSearch] = useState("");
   const [server, setServer] = useState("");
   const [phase, setPhase] = useState("");
@@ -128,6 +129,9 @@ function BackupsTabPanel({ location }: { location: string }) {
       <FleetCoverage partial={backupsFleet?.partial} issues={backupsFleet?.issues} error={fleetError} label="Backups" />
       {fleetLoading && <p className="text-sm text-muted">Loading backups…</p>}
       <BackupFilters
+        location={location}
+        onLocationChange={onLocationChange}
+        locations={locations}
         search={search}
         onSearchChange={setSearch}
         server={server}
@@ -332,7 +336,9 @@ function BackupNowDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
-function SchedulesTabPanel({ location }: { location: string }) {
+function SchedulesTabPanel({ location, onLocationChange, locations }: LocationFilterProps) {
+  const [search, setSearch] = useState("");
+  const [server, setServer] = useState("");
   const qc = useQueryClient();
   const [creatingFor, setCreatingFor] = useState<string>("");
   const [deleting, setDeleting] = useState<Located<BackupSchedule> | null>(null);
@@ -350,6 +356,11 @@ function SchedulesTabPanel({ location }: { location: string }) {
   const serversList = { items: (serversFleet?.items ?? []).map(located) };
 
   const items = schedules?.items ?? [];
+  const filtered = items.filter((item) => {
+    if (server && !matchesServer(item, server, serversList.items)) return false;
+    const q = search.trim().toLowerCase();
+    return !q || `${item.metadata.name} ${item.spec.serverRef.name}`.toLowerCase().includes(q);
+  });
   const selectedServer = serversList.items.find((item) => targetKey(item.fleetTarget) === creatingFor);
 
   const toggleSuspend = useMutation({
@@ -370,6 +381,17 @@ function SchedulesTabPanel({ location }: { location: string }) {
     <div className="space-y-4">
       <FleetCoverage partial={schedulesFleet?.partial} issues={schedulesFleet?.issues} error={fleetError} label="Schedules" />
       {fleetLoading && <p className="text-sm text-muted">Loading schedules…</p>}
+      <BackupFilters
+        location={location}
+        onLocationChange={onLocationChange}
+        locations={locations}
+        search={search}
+        onSearchChange={setSearch}
+        server={server}
+        onServerChange={setServer}
+        servers={serversList.items}
+        trailing={`${filtered.length} of ${items.length} ${items.length === 1 ? "schedule" : "schedules"}`}
+      />
       <Card className="p-4">
         <div className="flex items-end gap-2">
           <div className="flex-1">
@@ -420,8 +442,8 @@ function SchedulesTabPanel({ location }: { location: string }) {
                 <Table.Column key="active">Active</Table.Column>
                 <Table.Column key="actions" className="text-end" />
               </Table.Header>
-              <Table.Body renderEmptyState={() => <>{schedulesFleet?.partial || fleetError ? "No schedule data available." : "No schedules configured yet."}</>}>
-                {items.map((s) => (
+              <Table.Body renderEmptyState={() => <>{items.length > 0 ? "No schedules match the current filters." : schedulesFleet?.partial || fleetError ? "No schedule data available." : "No schedules configured yet."}</>}>
+                {filtered.map((s) => (
                   <Table.Row key={targetKey(s.fleetTarget)}>
                     <Table.Cell>
                       <span className="font-mono text-xs">{s.metadata.name}</span><div className="text-xs text-muted">{targetLabel(s.fleetTarget)}</div>
@@ -497,7 +519,7 @@ function SchedulesTabPanel({ location }: { location: string }) {
   );
 }
 
-function RestoresTabPanel({ location }: { location: string }) {
+function RestoresTabPanel({ location, onLocationChange, locations }: LocationFilterProps) {
   const [server, setServer] = useState("");
   const [phase, setPhase] = useState("");
   const [search, setSearch] = useState("");
@@ -533,6 +555,9 @@ function RestoresTabPanel({ location }: { location: string }) {
       <FleetCoverage partial={restoresFleet?.partial} issues={restoresFleet?.issues} error={fleetError} label="Restores" />
       {fleetLoading && <p className="text-sm text-muted">Loading restores…</p>}
       <BackupFilters
+        location={location}
+        onLocationChange={onLocationChange}
+        locations={locations}
         search={search}
         onSearchChange={setSearch}
         server={server}
@@ -599,7 +624,7 @@ function hasPermission(permissions: string[] | undefined, permission: string): b
   return permissions?.includes(permission) === true || permissions?.includes("*") === true;
 }
 
-function matchesServer(resource: Located<Backup> | Located<import("@/types").Restore>, key: string, servers: Located<import("@/types").GameServer>[]): boolean {
+function matchesServer(resource: Located<Backup> | Located<BackupSchedule> | Located<import("@/types").Restore>, key: string, servers: Located<import("@/types").GameServer>[]): boolean {
   const server = servers.find((item) => targetKey(item.fleetTarget) === key);
   return !!server && resource.fleetTarget.cluster === server.fleetTarget.cluster && resource.fleetTarget.namespace === server.fleetTarget.namespace && resource.spec.serverRef.name === server.metadata.name;
 }

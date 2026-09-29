@@ -46,6 +46,7 @@ export function ServersPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [appliedGames, setAppliedGames] = useState<Set<string>>(new Set());
   const [appliedNamespaces, setAppliedNamespaces] = useState<Set<string>>(new Set());
+  const [draftLocation, setDraftLocation] = useState(location);
   const [draftGames, setDraftGames] = useState<Set<string>>(new Set());
   const [draftNamespaces, setDraftNamespaces] = useState<Set<string>>(new Set());
 
@@ -96,7 +97,12 @@ export function ServersPage() {
     return [...namespaces].sort();
   }, [scopes, servers, appliedNamespaces, draftNamespaces]);
 
-  const appliedFacetCount = appliedGames.size + appliedNamespaces.size;
+  const appliedFacetCount = appliedGames.size + appliedNamespaces.size + (location ? 1 : 0);
+  const locationChoices = [...(scopes?.scopes ?? []).map((scope) => scope.cluster), ...(scopes?.items ?? []).map((item) => item.target.cluster), ...(scopes?.issues ?? []).map((issue) => issue.cluster)];
+  const locationField = <div className="space-y-1">
+    <div className="text-xs font-semibold text-muted">Location</div>
+    <FleetScopeFilter value={draftLocation} onChange={setDraftLocation} clusters={locationChoices} />
+  </div>;
 
   const filterServer = (gs: GameServer) => {
     if (query && !gs.metadata.name.toLowerCase().includes(query.toLowerCase())) return false;
@@ -115,6 +121,7 @@ export function ServersPage() {
   const handleOpenFilterChange = (open: boolean) => {
     setIsFilterOpen(open);
     if (open) {
+      setDraftLocation(location);
       setDraftGames(new Set(appliedGames));
       setDraftNamespaces(new Set(appliedNamespaces));
     }
@@ -141,12 +148,14 @@ export function ServersPage() {
   };
 
   const handleApplyFilter = () => {
+    setLocation(draftLocation);
     setAppliedGames(new Set(draftGames));
     setAppliedNamespaces(new Set(draftNamespaces));
     setIsFilterOpen(false);
   };
 
   const handleClearFilter = () => {
+    setDraftLocation("");
     setDraftGames(new Set());
     setDraftNamespaces(new Set());
   };
@@ -168,7 +177,6 @@ export function ServersPage() {
       )}
 
       {act.error && <ErrorBanner err={act.error} onDismiss={() => act.reset()} />}
-      <FleetScopeFilter value={location} onChange={setLocation} clusters={[...(scopes?.scopes ?? []).map((scope) => scope.cluster), ...(scopes?.items ?? []).map((item) => item.target.cluster), ...(scopes?.issues ?? []).map((issue) => issue.cluster)]} />
       <FleetCoverage partial={fleet?.partial} issues={fleet?.issues} error={error} label="Server results" />
       <FleetCoverage partial={inventory?.partial} issues={inventory?.issues} error={inventoryError} label="Inventory" />
 
@@ -258,6 +266,7 @@ export function ServersPage() {
               />
             </div>
             <FilterPopover
+              fields={locationField}
               games={distinctGames}
               selectedGames={draftGames}
               onToggleGame={handleToggleDraftGame}
@@ -296,6 +305,7 @@ export function ServersPage() {
             />
           </div>
           <FilterPopover
+            fields={locationField}
             games={distinctGames}
             selectedGames={draftGames}
             onToggleGame={handleToggleDraftGame}
@@ -307,14 +317,11 @@ export function ServersPage() {
             isOpen={isFilterOpen}
             onOpenChange={handleOpenFilterChange}
           >
-            <Button
-              isIconOnly
-              variant="ghost"
-              className="filter-trigger w-10 h-10 rounded-xl border border-default-300 bg-default-100 hover:bg-default-200"
-              aria-label="Filter"
-            >
+            <div className="filter-trigger relative inline-flex items-center justify-center w-10 h-10 rounded-xl border border-default-300 bg-default-100 hover:bg-default-200 cursor-pointer">
+              <span className="sr-only">Filter</span>
               <SlidersHorizontal className="h-[18px] w-[18px]" />
-            </Button>
+              {appliedFacetCount > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-accent px-1 text-[10px] text-accent-foreground">{appliedFacetCount}</span>}
+            </div>
           </FilterPopover>
         </div>
       )}

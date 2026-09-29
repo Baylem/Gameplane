@@ -96,8 +96,11 @@ describe("fleet location follows router navigation", () => {
     try {
       await userEvent.click(await screen.findByRole("tab", { name: "Schedules" }));
       await waitFor(() => expect(router.state.location.search.tab).toBe("schedules"));
+      await userEvent.click(screen.getByRole("button", { name: /^Filter$/ }));
+      expect(screen.queryByRole("button", { name: /Filter by phase/ })).not.toBeInTheDocument();
       await userEvent.click(screen.getByRole("button", { name: /Filter by location/ }));
       await userEvent.click(await screen.findByRole("option", { name: "remote" }));
+      await userEvent.click(screen.getByRole("button", { name: "Apply" }));
       await waitFor(() => expect(scheduleScopes).toContain("remote"));
       expect(screen.getByRole("tab", { name: "Schedules" })).toHaveAttribute("aria-selected", "true");
       expect(router.state.location.search).toMatchObject({ tab: "schedules", cluster: "remote" });
@@ -106,15 +109,21 @@ describe("fleet location follows router navigation", () => {
       await userEvent.click(screen.getByRole("link", { name: "Backups navigation" }));
       await waitFor(() => expect(router.state.location.search).toEqual({}));
       expect(screen.getByRole("tab", { name: "Backups" })).toHaveAttribute("aria-selected", "true");
+      await userEvent.click(screen.getByRole("button", { name: /^Filter$/ }));
       expect(screen.getByRole("button", { name: /Filter by location/ })).toHaveTextContent("All locations");
+      await userEvent.keyboard("{Escape}");
 
       act(() => history.back());
       await waitFor(() => expect(screen.getByRole("tab", { name: "Schedules" })).toHaveAttribute("aria-selected", "true"));
+      await userEvent.click(screen.getByRole("button", { name: /^Filter 1$/ }));
       expect(screen.getByRole("button", { name: /Filter by location/ })).toHaveTextContent("remote");
+      await userEvent.keyboard("{Escape}");
       expect(router.state.location.search).toMatchObject({ tab: "schedules", cluster: "remote" });
       act(() => history.forward());
       await waitFor(() => expect(screen.getByRole("tab", { name: "Backups" })).toHaveAttribute("aria-selected", "true"));
+      await userEvent.click(screen.getByRole("button", { name: /^Filter$/ }));
       expect(screen.getByRole("button", { name: /Filter by location/ })).toHaveTextContent("All locations");
+      await userEvent.keyboard("{Escape}");
     } finally {
       unmount();
       history.destroy();

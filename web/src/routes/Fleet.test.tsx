@@ -73,8 +73,12 @@ describe("unified fleet pages", () => {
     }));
     renderWithQuery(<ServersPage />);
     await screen.findByText(/Server results are partial/);
+    expect(screen.queryByRole("button", { name: /Filter by location/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^Filter$/ }));
     await userEvent.click(screen.getByRole("button", { name: /Filter by location/ }));
     await userEvent.click(await screen.findByRole("option", { name: "remote" }));
+    expect(requested).not.toContain("remote");
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() => expect(requested).toContain("remote"));
     await waitFor(() => expect(screen.getByRole("link", { name: "same" })).toHaveAttribute("href", "/servers/same?cluster=remote&ns=games"));
   });

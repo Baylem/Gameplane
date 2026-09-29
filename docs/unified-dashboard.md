@@ -18,6 +18,14 @@ One central login/API presents the resources each user can access. Clusters rema
 
 Use existing page headers, cards, tables, menus, filters, alerts and responsive layouts. The single-site experience should remain familiar. A cluster filter changes the list being viewed, not an already-open server's identity or an outstanding operation.
 
+## Filter layout — September 29, 2026
+
+Servers keeps Location inside its existing right-hand Filter popover, alongside Game and Namespace. There is no separate location selector above the statistics. Backups uses the same popover shell on the right of its search row: Location, Server and the current tab's Phase choices are grouped together. Schedules offers Location and Server without a phase field. Server choices retain their full target and narrow to the draft location; switching location clears an incompatible server choice.
+
+All popovers stage selections until Apply. Clear resets the draft, Apply commits it, and closing without applying discards changes. The trigger counts applied filters, including Location. Search stays visible, and the layout wraps at mobile widths. Route-driven location state remains the authority so sidebar navigation and Back/Forward restore the correct applied location.
+
+The existing design exception remains in effect. Pencil MCP review used the shared Filter Popover (`FyV6E`), Servers controls (`gciHD`) and existing Backups filter row (`wKe4F`); `design.pen` and exports are unchanged.
+
 ## Data and authorization contract
 
 Authenticated fleet reads return items with explicit `{cluster, namespace, name, uid}` targets, a resource payload, applicable target-scoped action capabilities, and separate completeness information. Namespace/cluster permissions and existing owner/collaborator rules remain the authorization authority; a global union of permission names cannot authorize a row in another cluster. Backup permissions remain independent of server ownership.
