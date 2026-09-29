@@ -38,6 +38,37 @@ function jsonRes(status: number, body: unknown): Response {
 }
 
 describe("api()", () => {
+  it("pins a captured workload target even after the global selection changes", async () => {
+    const { getCurrentCluster } = await import("./cluster");
+    vi.mocked(getCurrentCluster).mockReturnValue("other-cluster");
+    fetchMock.mockResolvedValue(jsonRes(200, { ok: true }));
+    await api("/cluster", { cluster: "intended-cluster" });
+    expect(fetchMock.mock.calls[0][0]).toBe("/cluster?cluster=intended-cluster");
+    fetchMock.mockResolvedValueOnce(jsonRes(200, { ok: true }));
+    await api("/servers/same:tunnel-credentials", { method: "PUT", cluster: "local", body: { provider: "frp", values: {} } });
+    expect(fetchMock.mock.calls[1][0]).toBe("/servers/same:tunnel-credentials");
+  });
+
+  it("keeps central management requests independent of the workload selector", async () => {
+    const { getCurrentCluster } = await import("./cluster");
+    vi.mocked(getCurrentCluster).mockReturnValue("remote-prod");
+    const paths = ["/auth/login", "/users/me", "/roles", "/admin/config", "/modules/catalog", "/clusters"];
+    for (const path of paths) {
+      fetchMock.mockResolvedValueOnce(jsonRes(200, {}));
+      await api(path);
+      expect(fetchMock.mock.lastCall?.[0]).toBe(path);
+    }
+    fetchMock.mockResolvedValueOnce(jsonRes(200, {}));
+    await api("/users/2/bindings/reader/*?cluster=assigned-site", { method: "DELETE", cluster: "local" });
+    expect(fetchMock.mock.lastCall?.[0]).toBe("/users/2/bindings/reader/*?cluster=assigned-site");
+    fetchMock.mockResolvedValueOnce(jsonRes(200, {}));
+    await api("/users/me/servers");
+    expect(fetchMock.mock.lastCall?.[0]).toBe("/users/me/servers?cluster=remote-prod");
+    fetchMock.mockResolvedValueOnce(jsonRes(200, {}));
+    await api("/modules-extra");
+    expect(fetchMock.mock.lastCall?.[0]).toBe("/modules-extra?cluster=remote-prod");
+  });
+
   it("does not send a CSRF header on GET", async () => {
     fetchMock.mockResolvedValueOnce(jsonRes(200, { ok: true }));
     await api("/users/me");

@@ -72,6 +72,12 @@ func main() {
 		switch args[0] {
 		case "serve":
 			args = args[1:]
+		case "gateway":
+			if err := runGateway(ctx, args[1:]); err != nil {
+				logger.Error("gateway", "err", err)
+				os.Exit(1)
+			}
+			return
 		case "bootstrap-admin":
 			if err := bootstrapAdmin(ctx, args[1:], os.Stdin, os.Stderr); err != nil {
 				logger.Error("bootstrap-admin", "err", err)
@@ -337,7 +343,7 @@ func main() {
 		handlers.MountConfig(p, store, auditor, oidcAuth != nil, cfg.gameDataStorageClass, helmPolicy)
 		handlers.MountNotifications(p, notifier, k8s, cfg.namespace)
 		handlers.MountAuthProviderSecrets(p, k8s, cfg.namespace)
-		handlers.MountCluster(p, k8s, store, Version, cfg.clusterOps, cfg.updateChannel)
+		handlers.MountCluster(p, reg, store, Version, cfg.clusterOps, cfg.updateChannel)
 		handlers.MountClusterActions(p, k8s, cfg.clusterOps, cfg.clusterExternalAddress)
 		handlers.MountClusters(p, reg, k8s, cfg.namespace)
 		handlers.MountEvents(p, reg)
@@ -358,14 +364,10 @@ func main() {
 			registry.StaticKeys(map[string]string{"curseforge": cfg.curseforgeAPIKey}),
 		))
 		handlers.MountRegistry(p, k8s, regSet)
-		// The update check reads the agent's mod manifest server-side over
-		// the same mTLS material as the proxy. Missing material degrades
-		// the endpoint to 503 (nil lister), matching the proxied routes.
-		var agentLister handlers.AgentModLister
-		if ac, err := ws.NewAgentClient(cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey); err == nil {
-			agentLister = ac
-		}
-		handlers.MountModUpdates(p, k8s, regSet, agentLister)
+		// Internal reads use the same selected cluster and credentials as
+		// browser-facing agent routes, including remote-only management installs.
+		agentLister := ws.NewClusterAgentClient(reg, cfg.namespace, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
+		handlers.MountModUpdatesWithRegistry(p, reg, regSet, agentLister)
 		// ID-managed mods (ARK CurseForge ids, Project Zomboid MOD_IDS,
 		// Steam Workshop lists): the API only writes GameServer.spec.mods.ids;
 		// the operator projects it into the game's env (rule 10).
@@ -377,7 +379,7 @@ func main() {
 			DefaultMaxDurationSecs:  cfg.captureDefaultMaxDurationS,
 			DefaultMaxSizeBytes:     cfg.captureDefaultMaxSizeBytes,
 		}, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
-		ws.Mount(p, reg, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
+		ws.Mount(p, reg, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey, ws.AgentGatewayOptions{Namespace: cfg.namespace})
 	})
 
 	// Opt-in, off-by-default anonymous usage telemetry. No-op unless an

@@ -59,9 +59,18 @@ jobs:
       - name: capture browser screenshots
         run: npm run screenshots:design
 
-      - name: compare design baseline vs browser captures
+      - name: compare reviewed references vs browser captures
         if: always()
-        run: npm run diff:screenshots -- --check-expected
+        run: |
+          (cd visual-references/multicluster && sha256sum --check SHA256SUMS)
+          reference_dir="${RUNNER_TEMP}/gameplane-visual-references"
+          mkdir -p "${reference_dir}"
+          cp ../design-export/screenshots/*.png "${reference_dir}/"
+          # Only these reviewed implementation references replace Pencil PNGs
+          # in the temporary set. Thresholds, masks and all other refs stay intact.
+          cp visual-references/multicluster/Wj0V4.png visual-references/multicluster/t3IY3u.png "${reference_dir}/"
+          cat visual-references/multicluster/manifest.json
+          npm run diff:screenshots -- --check-expected "--ref-dir=${reference_dir}"
 
       - name: upload visual diff artifacts
         if: always()
@@ -69,5 +78,14 @@ jobs:
         with:
           name: visual-diff-report
           path: web/test-results/visual-diff
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: upload original browser captures
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-screenshot-captures
+          path: web/e2e/screenshots/*.png
           retention-days: 14
           if-no-files-found: warn

@@ -73,9 +73,11 @@ verified.
 ### Row (g): Multi-tenancy & multi-cluster
 
 **Source ID**: G-g  
-**Evidence**: operator/api/v1alpha1/cluster_types.go:8; docs/architecture.md  
-**Checked on**: 2026-09-02  
-**What was verified**: Cluster CRD for remote cluster registration/monitoring; Pod logs and PTY attach dispatch through registered Kubernetes clients. Agent-backed RCON, file logs and file/player/mod operations remain local-cluster-only.
+**Evidence**: operator/api/v1alpha1/cluster_types.go; api/internal/gatewayprotocol/protocol.go; api/internal/gateway/server.go; docs/architecture.md
+
+**Checked on**: 2026-09-23 (source review)
+
+**What was verified**: Cluster CRD for remote registration/monitoring; Pod logs and PTY attach use registered Kubernetes clients. An optional private gateway routes supported agent operations to upgraded UID-aware agents. Direct Kubernetes connectivity remains required; capture-file downloads and ID-list mod configuration remain gated remotely. This source review does not establish complete multicluster parity or gateway health reporting.
 **Last-known URL**: https://github.com/ValgulNecron/Gameplane/tree/master/operator/api/v1alpha1
 
 <a id="gameplane-row-h"></a>

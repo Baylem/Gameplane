@@ -25,6 +25,8 @@ import { Meter } from "@/components/ui/Meter";
 import { PhaseChip } from "@/components/ui/PhaseChip";
 import { GameIcon } from "@/components/ui/GameIcon";
 import { LoadingCard } from "@/components/ui/LoadingCard";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { useCurrentCluster } from "@/lib/cluster";
 import { PageHeader } from "@/components/PageHeader";
 import { useGameCodes } from "@/lib/useGameCodes";
 import {
@@ -36,44 +38,46 @@ import {
   type StorageReading,
 } from "@/lib/utils";
 import { useMe, can } from "@/lib/auth";
-import { Audit, Backups, Cluster, Servers } from "@/lib/endpoints";
+import { Audit, Backups, Cluster, Clusters, Servers } from "@/lib/endpoints";
 import { countByState, phaseGroups, type PhaseGroups } from "@/lib/servers";
 import type {
   AuditEvent,
   Backup,
   ClusterNode,
-  ClusterStats,
-  ClusterView,
   GameServer,
   GameTemplate,
 } from "@/types";
 
 export function DashboardPage() {
+  const clusterId = useCurrentCluster();
   const navigate = useNavigate();
   const { data: me } = useMe();
   const canAudit = can(me, "audit:read");
-  const canCluster = can(me, "servers:write");
+  const { data: registry } = useQuery({ queryKey: ["clusters"], queryFn: () => Clusters.list() });
+  const canCluster = registry?.items.find((item) => item.name === clusterId)?.canViewInventory === true;
 
   const { gameCodes, byName } = useGameCodes();
 
-  const { data: serversData, isLoading: serversLoading } = useQuery({
-    queryKey: ["servers"],
-    queryFn: () => Servers.list(),
+  const { data: serversData, isLoading: serversLoading, error: serversError } = useQuery({
+    queryKey: ["servers", clusterId],
+    queryFn: ({ signal }) => Servers.list(undefined, clusterId, signal),
     refetchInterval: 5_000,
   });
-  const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ["cluster-stats"],
-    queryFn: () => Cluster.stats().catch(() => ({}) as ClusterStats),
+  const { data: statsData, isLoading: statsLoading, error: statsError } = useQuery({
+    queryKey: ["cluster-stats", clusterId],
+    queryFn: ({ signal }) => Cluster.stats(clusterId, signal),
+    enabled: canCluster,
     staleTime: 30_000,
   });
-  const { data: clusterView, isLoading: clusterLoading } = useQuery({
-    queryKey: ["cluster"],
-    queryFn: () => Cluster.view().catch(() => ({}) as ClusterView),
+  const { data: clusterView, isLoading: clusterLoading, error: clusterError } = useQuery({
+    queryKey: ["cluster", clusterId],
+    queryFn: ({ signal }) => Cluster.view(clusterId, signal),
+    enabled: canCluster,
     staleTime: 30_000,
   });
-  const { data: backupsData, isLoading: backupsLoading } = useQuery({
-    queryKey: ["backups"],
-    queryFn: () => Backups.list().catch(() => ({ items: [] as Backup[] })),
+  const { data: backupsData, isLoading: backupsLoading, error: backupsError } = useQuery({
+    queryKey: ["backups", clusterId],
+    queryFn: ({ signal }) => Backups.list(undefined, clusterId, signal),
     staleTime: 30_000,
   });
   const { data: audit, isLoading: auditLoading } = useQuery({
@@ -91,9 +95,10 @@ export function DashboardPage() {
     [backupsData?.items],
   );
 
-  const nodes = clusterView?.nodes ?? [];
-  const nodesReady = clusterView?.ready ?? nodes.filter((n) => n.status === "Ready").length;
-  const nodesTotal = clusterView?.total ?? stats?.nodes ?? nodes.length;
+  const stats = statsError ? undefined : statsData;
+  const nodes = clusterError ? [] : clusterView?.nodes ?? [];
+  const nodesReady = clusterError ? 0 : clusterView?.ready ?? nodes.filter((n) => n.status === "Ready").length;
+  const nodesTotal = clusterError ? 0 : clusterView?.total ?? stats?.nodes ?? nodes.length;
   const cpu = sumUsage(nodes, "cpu");
   const mem = sumUsage(nodes, "memory");
   const vcpus = nodes.reduce((sum, n) => sum + (n.cpu?.capacity ?? 0), 0);
@@ -109,7 +114,7 @@ export function DashboardPage() {
     <div className="space-y-6 p-6">
       <PageHeader
         title="Dashboard"
-        subtitle="At-a-glance health of your Gameplane cluster."
+        subtitle={`Game servers and resources in the selected cluster: ${clusterId}.`}
         actions={
           <Button
             variant="primary"
@@ -121,6 +126,9 @@ export function DashboardPage() {
         }
       />
 
+      <Link to="/clusters" className="inline-block text-sm text-primary hover:underline">View all clusters</Link>
+      {(clusterError || statsError) && <ErrorCard message={`Some inventory for ${clusterId} is unavailable. Check your cluster access and connection; this is not a fleet total.`} />}
+
       {isLoading ? (
         <LoadingCard message="Loading dashboard…" />
       ) : (
@@ -129,15 +137,15 @@ export function DashboardPage() {
             <StatCard
               label="Running"
               icon={<Activity className="h-4 w-4" />}
-              value={counts.running}
-              sub={`of ${groups.total} total`}
+              value={serversError ? "—" : counts.running}
+              sub={serversError ? "server status unavailable" : `of ${groups.total} total`}
               accent="success"
             />
             <StatCard
               label="Players online"
               icon={<UsersIcon className="h-4 w-4" />}
-              value={counts.players}
-              sub={`peak ${counts.playersMax}`}
+              value={serversError ? "—" : counts.players}
+              sub={serversError ? "player status unavailable" : `peak ${counts.playersMax}`}
               accent="primary"
             />
             <StatCard
@@ -157,9 +165,11 @@ export function DashboardPage() {
             <StatCard
               label="Nodes ready"
               icon={<ServerIcon className="h-4 w-4" />}
-              value={nodesTotal > 0 ? `${nodesReady}/${nodesTotal}` : "—"}
+              value={!clusterError && nodesTotal > 0 ? `${nodesReady}/${nodesTotal}` : "—"}
               sub={
-                nodesTotal === 0
+                clusterError
+                  ? "inventory unavailable"
+                  : nodesTotal === 0
                   ? "no node data"
                   : nodesReady === nodesTotal
                     ? "all healthy"
@@ -170,7 +180,9 @@ export function DashboardPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <FleetStatusCard groups={groups} gameCodes={gameCodes} byName={byName} />
+            {serversError
+              ? <ErrorCard message={`Couldn't load servers for ${clusterId}. Status and player totals are unavailable.`} />
+              : <FleetStatusCard groups={groups} gameCodes={gameCodes} byName={byName} />}
             <ClusterResourcesCard
               cpu={cpu}
               mem={mem}
@@ -184,8 +196,10 @@ export function DashboardPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            {canAudit && <RecentActivityCard events={audit ?? []} />}
-            <RecentBackupsCard backups={recentBackups} gameCodes={gameCodes} byName={byName} servers={serversData?.items} />
+            {canAudit && <div className="space-y-2"><p className="text-xs text-muted">Central Gameplane audit activity</p><RecentActivityCard events={audit ?? []} /></div>}
+            {backupsError
+              ? <ErrorCard message={`Couldn't load backups for ${clusterId}. Backup status is unavailable.`} />
+              : <RecentBackupsCard backups={recentBackups} gameCodes={gameCodes} byName={byName} servers={serversData?.items} />}
           </div>
         </>
       )}

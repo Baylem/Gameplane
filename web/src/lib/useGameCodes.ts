@@ -3,11 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Templates } from "@/lib/endpoints";
 import { assignGameCodesForTemplates } from "@/lib/gameIcon";
 import type { GameTemplate } from "@/types";
+import { useCurrentCluster } from "@/lib/cluster";
 
-export function useGameCodes() {
+export function useGameCodes(targetCluster?: string) {
+  const selectedCluster = useCurrentCluster();
+  const clusterId = targetCluster ?? selectedCluster;
   const { data: templates } = useQuery({
-    queryKey: ["templates"],
-    queryFn: () => Templates.list(),
+    queryKey: ["templates", clusterId],
+    queryFn: ({ signal }) => Templates.list(clusterId, signal),
   });
 
   const gameCodes = useMemo(

@@ -772,6 +772,8 @@ export interface PermissionGroup {
 export interface RoleBinding {
   roleName: string;
   namespace: string;
+  /** Omitted by older API responses for local bindings. */
+  cluster?: string;
 }
 
 export type ExtendedUser = User;
@@ -829,6 +831,8 @@ export interface ClusterRegistry {
   message?: string;
   serverVersion?: string;
   lastCheckTime?: string;
+  /** Explicit selected-cluster inventory capability; absent on older APIs. */
+  canViewInventory?: boolean;
 }
 
 export interface LoginProvider {

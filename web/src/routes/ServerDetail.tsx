@@ -20,6 +20,7 @@ import { capitalize, formatUptime, ignoreRejection } from "@/lib/utils";
 import { ServerActionsMenu } from "@/components/server/ServerActionsMenu";
 import { CaptureWidget } from "@/components/CaptureWidget";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { useCurrentCluster } from "@/lib/cluster";
 
 import { OverviewTab } from "./tabs/Overview";
 import { EventsTab } from "./tabs/Events";
@@ -56,6 +57,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 ];
 
 export function ServerDetailPage() {
+  const clusterId = useCurrentCluster();
   const { name } = useParams({ from: "/app-layout/servers/$name" });
   const { ns } = useSearch({ from: "/app-layout/servers/$name" });
   const [tab, setTab] = useState<TabKey>("overview");
@@ -64,22 +66,22 @@ export function ServerDetailPage() {
   const nav = useNavigate();
 
   const { data: gs } = useQuery({
-    queryKey: ["server", name, ns],
-    queryFn: () => Servers.get(name, ns),
+    queryKey: ["server", name, ns, clusterId],
+    queryFn: ({ signal }) => Servers.get(name, ns, clusterId, signal),
     refetchInterval: settingsDirty ? false : 5_000,
   });
 
   const templateName = gs?.spec.templateRef.name;
   const { data: tmpl } = useQuery({
-    queryKey: ["template", templateName],
-    queryFn: () => Templates.get(templateName as string),
+    queryKey: ["template", templateName, clusterId],
+    queryFn: ({ signal }) => Templates.get(templateName as string, clusterId, signal),
     enabled: !!templateName,
   });
 
   const { gameCodes } = useGameCodes();
 
   const act = useMutation({
-    mutationFn: (verb: LifecycleVerb) => Servers.lifecycle(name, verb, ns),
+    mutationFn: (verb: LifecycleVerb) => Servers.lifecycle(name, verb, ns, clusterId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["server", name, ns] }),
   });
 

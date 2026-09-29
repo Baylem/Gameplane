@@ -138,8 +138,8 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/registry/{provider}/search`, `/{id}` — live mod registry queries (CurseForge, Modrinth, Spigot, etc.)
 - `/mod-updates/{name}` — GET: available updates for a mod
 - `/mod-ids/{name}` — PATCH: ID-managed mods (ARK CurseForge IDs, Project Zomboid MOD_IDs, Steam Workshop lists)
-- `/cluster`, `/cluster/info`, `/cluster/stats` — GET: version, nodes, storage, usage (read-only, viewer+)
-- `/cluster/nodes:join`, `/cluster/kubeconfig` — POST: credential-minting ops (admin only, `--cluster-ops` flag gated; 501 when disabled)
+- `/cluster`, `/cluster/info`, `/cluster/stats` — GET: selected-cluster version, nodes, storage and optional usage. Require cluster-wide `cluster:read` on the selected cluster (or wildcard cluster); namespace grants cannot read node inventory. Remote requests use only that registry client's nodes, PVs, metrics and version, never home-cluster inventory. A registered cluster whose client is unavailable returns 503; an authorized unknown selector returns 400. Kubernetes denials retain their status with generic messages. Metrics-server absence remains optional and omits usage rather than reporting zero. Remote info returns the registration ID as its name, `clusterOps: false`, no local update channel, and the central API's `gameplaneVersion`.
+- `/cluster/nodes:join`, `/cluster/kubeconfig` — POST: credential-minting ops (admin only, `--cluster-ops` flag gated; 501 when disabled or a remote cluster is selected, before credential operations)
 - `/clusters` — multi-cluster: list remote Cluster CRDs; create/delete cluster registrations. POST labels the kubeconfig Secret `gameplane.local/cluster-kubeconfig=true` and `gameplane.local/managed-by=gameplane-api`. DELETE removes the cluster's client from the registry at once, and deletes the referenced Secret only when it is the one POST generates for that cluster (cluster-<name>-kubeconfig) and carries `gameplane.local/cluster-kubeconfig=true` (Secrets created before managed-by labelling included); any other Secret, including one named for a different cluster, is left in place
 - `/events` — SSE: real-time K8s events (multiplexed per namespace + cluster). The route needs `servers:read`; the stream then carries only the kinds the caller may read in the resolved cluster and namespace, each gated by the permission its GET route needs (`rbac.ReadPermission`): servers → `servers:read`, templates → `templates:read`, backups and restores → `backups:read`, schedules → `schedules:read`. Tests: `TestEvents_StreamsOnlyReadableKinds` (`handlers/events_scope_test.go`); e2e `TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions` (bucket `operator`)
 - `/pod-events` — SSE: pod-level events
@@ -148,9 +148,10 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/users/me/preferences` — GET/PUT: own theme/styling preferences (feature 016)
 - `/users/me/preferences/reset` — POST: reset own theme preferences to defaults (feature 016)
 - `/users` — GET, POST: list and create users
-- `/users/{id}` — GET, PATCH, DELETE: manage users (admin only). DELETE runs `db.Store.DeleteUser`: one transaction deletes the user's `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and role bindings, revokes the share links the user created (sets `revoked_at`), then deletes the `users` row. It does not rely on FK cascades (off on SQLite). An SSO subject whose user was deleted is provisioned as a new user on its next login
-- `/users/{id}/role-bindings` — PATCH: role assignments (per namespace + cluster)
+- `/users/{id}` — PATCH, DELETE: manage users (admin only). DELETE runs `db.Store.DeleteUser`: one transaction deletes the user's `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and role bindings, revokes the share links the user created (sets `revoked_at`), then deletes the `users` row. It does not rely on FK cascades (off on SQLite). An SSO subject whose user was deleted is provisioned as a new user on its next login
+- `/users/{id}/bindings` — GET/POST supplemental role assignments; DELETE `/users/{id}/bindings/{role}/{namespace}?cluster={id}` removes an exact assignment. Namespace `*` remains protected for the local primary role. An explicit registered remote cluster may receive a supplemental `*` namespace binding only when every role permission is `cluster:read` or a catalogued namespaced permission; wildcard/global administration permissions are rejected. Cluster `*` is never accepted for supplemental grants. Binding changes revoke the target user's sessions, and permissions are resolved from bindings on every request.
 - `/roles` — GET catalog and custom roles; POST/PATCH/DELETE custom roles. A PATCH whose permission list drops `users:manage` from a role that grants it is refused (400) when that role is the caller's own primary role, or when every user who can manage users holds that role — the same lockout guards `PATCH /users/{id}` applies to a role change. Tests: `TestRoles_UpdateKeepsCallersOwnUserManagement`, `TestRoles_UpdateKeepsAtLeastOneUserManager`, `TestRoles_UpdateRemovesUserManagementWhenAnotherManagerRemains` (`handlers/roles_guard_test.go`); e2e `TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions` (bucket `operator`)
+  - A role used by any remote-wide binding cannot gain global/control-plane permissions until those bindings are removed; safe permission removal still takes effect on the next request. Safe remote binding validation/insertion, role permission edits, and the role deletion in-use check share the existing user-management lock. This prevents a concurrent edit or delete/recreate from widening a supplemental remote grant. Existing externally provisioned global remote-wide bindings retain their prior removal protection. Tests: `TestRemoteBindings_*` (`handlers/remote_bindings_test.go`).
 - `/admin/audit` — GET: audit log (searchable, hash-chain verifiable)
 - `/admin/audit/export` — GET: streams the full matching audit trail as a download, `?format=csv` (default) or `?format=json`; optional filters `since`/`until` (RFC3339 timestamps, inclusive), `actor` (case-insensitive substring), `method` (`GET`/`POST`/`PUT`/`PATCH`/`DELETE`), and `status` (class `2xx`/`4xx`/`5xx`); an unrecognised `format`, `method`, or `status` value returns 400. CSV header, in column order: `id, ts, actor, method, path, target, status, ip, reason`. JSON is a top-level array of the same `audit.Event` objects `/admin/audit` returns.
 - `/admin/config` — GET/PATCH: global settings (OIDC, notifications, telemetry, module upload limits, etc.)
@@ -192,10 +193,16 @@ headers retain the existing allowlist, so browser cookies, authorization and CSR
 material do not reach agents. Proxy body limits and JSON response limits remain at
 the caller boundary.
 
-This extraction preserves the local-only guards on agent operations. It does not
-register remote transports or enable remote RCON console, files, players, mods, module
-actions, or internal mod-update reads. Those require a cluster-aware target resolver
-and an authenticated remote gateway; a missing remote route must fail closed.
+Registered clusters may additionally configure `spec.agentGateway.url` and a
+labeled `tlsSecretRef` in the central API namespace. Each remote request resolves
+its Kubernetes client, GameServer UID and gateway mTLS credentials independently;
+unknown/missing routes never fall back locally. HTTP/WebSocket agent operations,
+RCON module actions and internal mod-update reads use the versioned gateway
+protocol. Stdin actions use the selected Kubernetes client with workload ownership
+preflight. Existing installations retain their direct local adapter.
+
+See [remote agent access](../docs/multicluster-agent-gateway.md) for registration,
+trust assumptions, rotation behavior and surfaces outside this protocol.
 
 ### Network capture endpoints
 
@@ -577,12 +584,13 @@ Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); th
 - **RBAC middleware:** intercepts all protected routes; namespace + cluster gating
 - **Owner/collaborator fallback:** fallback only when RBAC denies AND GameServer is explicitly named; fail-closed on malformed paths
 - **Cluster dispatch validation:** `?cluster=` against registry; unknown cluster is a 400 (malformed request, not 403 forbidden)
+- **Inventory authorization and discovery:** inventory routes authorize the selected cluster before looking up its registration, so an unauthorized selection returns 403 without probing Kubernetes. GET `/clusters` accepts authenticated callers and filters persisted registrations: cluster-wide inventory readers and namespace server readers discover their own targets; existing user/cluster managers can discover registration metadata for administration. Each entry reports `canViewInventory` from the selected-cluster grant, independently of discovery permission. Detailed version/health text is omitted for discovery-only callers, and disconnected registrations remain visible with an unavailable status. No discovery path grants inventory or server permissions.
 - **Home-cluster-only routes:** some server-scoped handlers are built on the API's own (home) cluster client instead of the cluster registry, or reach agent and sidecar Services that resolve only in the home cluster. They serve the home cluster only: a `?cluster=` naming any other registered cluster answers 501 not implemented (no cross-cluster agent yet) before the handler reads or writes anything (`rejectRemoteCluster` and `isRemoteCluster` in `handlers/resources.go`, `rejectRemoteCluster` in `ws/dialer.go`), so a permission is only ever applied to the cluster it was granted on. The routes are:
   - the mod registry browser and modpack install (`MountRegistry`): GET `/servers/{name}/mods/registry/providers`, `/servers/{name}/mods/registry/search`, `/servers/{name}/mods/registry/projects/{project}/versions`, `/servers/{name}/mods/registry/projects/{project}/modpack`, and POST `/servers/{name}/modpack`
   - the mod update check (GET `/servers/{name}/mods/updates`) and the mod-id list (GET/PUT `/servers/{name}/mods/ids`)
   - the capture file download (GET `/servers/{name}:capture-file`), which also records the refusal in the audit log with reason "cluster_not_local"
   - agent-backed routes in `api/internal/ws`: RCON console, game log files, log download, files, players, actions, status and mods. Pod logs and PTY console attach use the selected registry client instead.
-  - Tests: `TestHomeClientMounts_ServeHomeClusterOnly` (`handlers/cluster_guard_test.go`) calls every route of every mount that `cmd/main.go` builds with the home-cluster client, as a user whose only grant is on another cluster, and checks that the home-cluster client sees no call. `TestHomeClientMounts_MatchMain` (`cmd/mounts_test.go`) fails when `main.go` passes that client to a mount the first test doesn't cover. The multicluster e2e bucket (`TestMultiCluster_ClusterDispatchAndScopedRBAC`) checks the registry, modpack and capture download routes across two real clusters.
+  - Tests: `TestHomeClientMounts_ServeHomeClusterOnly` (`handlers/cluster_guard_test.go`) calls every route of every mount that `cmd/main.go` builds with the home-cluster client, as a user whose only grant is on another cluster, and checks that the home-cluster client sees no call except the registration metadata list used for discovery. `TestHomeClientMounts_MatchMain` (`cmd/mounts_test.go`) fails when `main.go` passes that client to a mount the first test doesn't cover. `TestClusterInventory_*`, `TestClusterDiscovery_*` and `TestClusterActions_RejectRemoteBeforeCredentialOperations` cover selected inventory, discovery filtering, failure isolation and local-only credentials. The multicluster e2e bucket (`TestMultiCluster_ClusterDispatchAndScopedRBAC`) checks the registry, modpack and capture download routes across two real clusters.
 
 ### Audit
 - **Scope:** every mutating request (POST/PATCH/DELETE); reads excluded
@@ -751,3 +759,32 @@ Final 20% gap concentrated in:
 <!-- REMOVED: /modules/sources — PUT removed in commit <sha> 2026-09-28 -->
 <!-- REMOVED: /modules/{name} — PUT removed in commit <sha> 2026-09-28 -->
 <!-- REMOVED: /users/{id} — PUT removed in commit <sha> 2026-09-28 -->
+
+## Optional private agent gateway
+
+The `gateway` subcommand starts an mTLS-only listener without the application
+database, browser sessions, or administrative API routes. It defaults to
+`127.0.0.1:8443` and requires an explicit registered cluster ID, namespace
+allowlist, dedicated central-client CA, and exact allowed central URI SAN.
+The central API remains the user-authorization authority.
+
+`gatewayprotocol` defines versioned target routes and the shared exact
+method/path allowlist. `gateway` validates the addressed GameServer UID and
+controller-owned agent Service, then forwards to the fixed cluster-local
+port-8090 agent using `/v1/targets/{uid}`. Final agent UID enforcement prevents
+a name-reuse race from reaching a replacement server. The gateway never falls
+back to unversioned routes, and does not route optional capture sidecar traffic.
+
+Mounted gateway trust is reloaded on each TLS handshake and revalidated on
+every request, including reused connections. Invalid/removed trust rejects
+new requests; TLS session resumption is disabled. Agent credentials reload on
+every operation. Streams and requests end after at most five minutes or the
+central peer certificate's expiry, whichever comes first. Existing streams
+may remain active within that bound following trust or permission removal.
+No ambiguous mutation is automatically retried.
+
+Kubernetes operations still use the central API's independently scoped remote
+Kubernetes clients. Gateway loss does not inherently disable those clients.
+The protocol does not provide storage replication, workload migration, or
+central database availability. Deployment guidance is in
+[`docs/gateway-install.md`](../docs/gateway-install.md).

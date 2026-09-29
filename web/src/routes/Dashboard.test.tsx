@@ -244,24 +244,37 @@ describe("DashboardPage", () => {
     );
     renderWithQuery(<DashboardPage />);
     await screen.findByText("Dashboard");
-    // The .catch() fallbacks leave no nodes/backups and an empty fleet.
+    // A successful empty server response remains distinct from failed inventory/backups.
     expect(await screen.findByText(/Everything looks healthy/i)).toBeInTheDocument();
-    expect(screen.getByText("No backups yet.")).toBeInTheDocument();
+    expect(await screen.findByText(/Couldn't load backups for local/)).toBeInTheDocument();
+    expect(screen.queryByText("No backups yet.")).not.toBeInTheDocument();
+  });
+
+  it("does not turn a failed server request into a healthy empty cluster", async () => {
+    server.use(http.get("/servers", () => HttpResponse.error()));
+    renderWithQuery(<DashboardPage />);
+    expect(await screen.findByText(/Couldn't load servers for local/)).toBeInTheDocument();
+    expect(screen.getByText("server status unavailable")).toBeInTheDocument();
+    expect(screen.getByText("player status unavailable")).toBeInTheDocument();
+    expect(screen.queryByText(/Everything looks healthy/i)).not.toBeInTheDocument();
   });
 
   it("hides recent activity from users without audit:read", async () => {
-    server.use(http.get("/users/me", () => HttpResponse.json(makeUser({ role: "viewer" }))));
+    server.use(
+      http.get("/users/me", () => HttpResponse.json(makeUser({ role: "viewer" }))),
+      http.get("/clusters", () => HttpResponse.json({ items: [{ name: "local", displayName: "local", phase: "Healthy", canViewInventory: false }] })),
+    );
     const { client } = renderWithQuery(<DashboardPage />);
     // Wait until the viewer identity has actually loaded before asserting
     // the audit-gated card is absent (otherwise we'd pass during loading).
     await waitFor(() => expect(client.getQueryData(["me"])).toBeTruthy());
     await screen.findByText("Recent backups");
     expect(screen.queryByText("Recent activity")).not.toBeInTheDocument();
-    // Viewer lacks servers:write → no "View cluster" link either.
+    // The registry explicitly denies node inventory for this server-only viewer.
     expect(screen.queryByRole("link", { name: /view cluster/i })).not.toBeInTheDocument();
   });
 
-  it("shows the View cluster link to users with servers:write permission", async () => {
+  it("shows the View cluster link with the registry's inventory capability", async () => {
     server.use(http.get("/users/me", () => HttpResponse.json(makeUser({ role: "operator" }))));
     const { client } = renderWithQuery(<DashboardPage />);
     await waitFor(() => expect(client.getQueryData(["me"])).toBeTruthy());

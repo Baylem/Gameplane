@@ -30,9 +30,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { describeStorageProvisioned, formatBytes, cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/media";
-import type { ClusterStats, ClusterView, GameServer, GameServerPhase, GameTemplate } from "@/types";
+import type { GameServer, GameServerPhase, GameTemplate } from "@/types";
 import { Cluster, Namespaces, Servers, type LifecycleVerb } from "@/lib/endpoints";
 import { countByState } from "@/lib/servers";
+import { useCurrentCluster } from "@/lib/cluster";
 
 type FilterKey = "all" | "running" | "stopped";
 
@@ -43,6 +44,7 @@ type FilterKey = "all" | "running" | "stopped";
 const DEFAULT_NAMESPACE = "gameplane-games";
 
 export function ServersPage() {
+  const clusterId = useCurrentCluster();
   const qc = useQueryClient();
 
   // The namespaces the caller may read servers in (F-263). `namespaces:
@@ -54,8 +56,8 @@ export function ServersPage() {
   // errors (older API, transient error), reproducing pre-fan-out behavior
   // instead of leaving the page empty.
   const { data: namespacesData, isLoading: namespacesLoading, isError: namespacesError } = useQuery({
-    queryKey: ["namespaces"],
-    queryFn: () => Namespaces.list(),
+    queryKey: ["namespaces", clusterId],
+    queryFn: ({ signal }) => Namespaces.list(clusterId, signal),
     staleTime: 30_000,
     // A transient error must not pin the page to the single-namespace
     // fallback for the rest of the session — retry a couple of times, then
@@ -111,8 +113,8 @@ export function ServersPage() {
   );
   const { items: serverItems, isLoading: serversLoading, failedNamespaces } = useQueries({
     queries: namespaces.map((ns) => ({
-      queryKey: ["servers", ns],
-      queryFn: () => Servers.list(ns),
+      queryKey: ["servers", clusterId, ns],
+      queryFn: ({ signal }) => Servers.list(ns, clusterId, signal),
       refetchInterval: 5_000,
     })),
     combine,
@@ -128,25 +130,25 @@ export function ServersPage() {
   const { templates, gameCodes, byName } = useGameCodes();
 
   const { data: cluster } = useQuery({
-    queryKey: ["cluster-stats"],
-    queryFn: () => Cluster.stats().catch(() => ({} as ClusterStats)),
+    queryKey: ["cluster-stats", clusterId],
+    queryFn: ({ signal }) => Cluster.stats(clusterId, signal),
     staleTime: 30_000,
   });
   const { data: clusterView } = useQuery({
-    queryKey: ["cluster"],
-    queryFn: () => Cluster.view().catch(() => ({} as ClusterView)),
+    queryKey: ["cluster", clusterId],
+    queryFn: ({ signal }) => Cluster.view(clusterId, signal),
     staleTime: 30_000,
   });
 
   const { data: myServers } = useQuery({
-    queryKey: ["my-servers"],
-    queryFn: () => Servers.getMyServers(),
+    queryKey: ["my-servers", clusterId],
+    queryFn: ({ signal }) => Servers.getMyServers(clusterId, signal),
     refetchInterval: 5_000,
   });
 
   const act = useMutation({
     mutationFn: (args: { name: string; verb: LifecycleVerb; ns?: string }) =>
-      Servers.lifecycle(args.name, args.verb, args.ns),
+      Servers.lifecycle(args.name, args.verb, args.ns, clusterId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["servers"] }),
   });
 

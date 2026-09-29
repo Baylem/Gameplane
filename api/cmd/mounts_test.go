@@ -17,11 +17,9 @@ import (
 // through any of its routes.
 var homeClientMounts = []string{
 	"handlers.MountAuthProviderSecrets",
-	"handlers.MountCluster",
 	"handlers.MountClusterActions",
 	"handlers.MountClusters",
 	"handlers.MountModIDs",
-	"handlers.MountModUpdates",
 	"handlers.MountModules",
 	"handlers.MountNotifications",
 	"handlers.MountRegistry",

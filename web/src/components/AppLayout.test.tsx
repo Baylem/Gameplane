@@ -70,7 +70,7 @@ describe("AppLayout", () => {
     );
     renderWithQuery(<AppLayout />);
     await waitFor(() =>
-      expect(screen.getByRole("link", { name: /Cluster/i })).toBeInTheDocument(),
+      expect(screen.getByRole("link", { name: /^Cluster$/i })).toBeInTheDocument(),
     );
   });
 
@@ -212,16 +212,13 @@ describe("AppLayout", () => {
     expect(await screen.findByText("prod-us-east")).toBeInTheDocument();
   });
 
-  it("shows dash when cluster name is unavailable", async () => {
+  it("keeps the selected cluster ID in the sidebar when its name is unavailable", async () => {
     server.use(
       http.get("/users/me", () => HttpResponse.json(makeUser())),
       http.get("/cluster/info", () => new HttpResponse(null, { status: 500 })),
     );
     renderWithQuery(<AppLayout />);
-    // Cluster name fallback in sidebar
-    await waitFor(() => {
-      expect(screen.getByText("—")).toBeInTheDocument();
-    });
+    expect((await sidebarRoot()).getByText("local", { exact: true })).toBeInTheDocument();
   });
 
   it("shows role in profile footer", async () => {

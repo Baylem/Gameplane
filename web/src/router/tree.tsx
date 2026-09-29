@@ -10,6 +10,7 @@ import { ServersPage } from "@/routes/Servers";
 import { ServerDetailPage } from "@/routes/ServerDetail";
 import { ModulesPage } from "@/routes/Modules";
 import { ClusterPage } from "@/routes/Cluster";
+import { ClustersPage } from "@/routes/Clusters";
 import { UsersPage } from "@/routes/Users";
 import { AdminSettingsPage } from "@/routes/AdminSettings";
 import { ThemeSettingsPage } from "@/routes/ThemeSettings";
@@ -80,10 +81,16 @@ const clusterRoute = new Route({
   getParentRoute: () => appLayoutRoute,
   path: "/cluster",
   component: () => (
-    <RequirePermission perm="servers:write">
+    <RequirePermission perm="cluster:read">
       <ClusterPage />
     </RequirePermission>
   ),
+});
+
+const clustersRoute = new Route({
+  getParentRoute: () => appLayoutRoute,
+  path: "/clusters",
+  component: ClustersPage,
 });
 
 const usersRoute = new Route({
@@ -158,6 +165,7 @@ export const routeTree = rootRoute.addChildren([
     serverDetailRoute,
     modulesRoute,
     clusterRoute,
+    clustersRoute,
     usersRoute,
     adminRoute,
     themeSettingsRoute,

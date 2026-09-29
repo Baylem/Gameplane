@@ -21,6 +21,7 @@ import { parseCpuQuantity, cpuCores, parseMemQuantity, memBytes } from "@/lib/qu
 import { cn, ignoreRejection } from "@/lib/utils";
 import { resolveCategories, categoryFilters, matchesCategory } from "@/lib/games";
 import type { GameTemplate, PortOverride, GameServerTunnel } from "@/types";
+import { getCurrentCluster, useCurrentCluster } from "@/lib/cluster";
 
 // Wizard steps are derived per-template: the "version" step only appears when
 // the template declares a version catalog (spec.versions). Templates without
@@ -320,6 +321,7 @@ function errorMessage(err: unknown, name: string): { title: string; body: string
 }
 
 export function CreateServerWizard() {
+  const clusterId = useCurrentCluster();
   const [stepIndex, setStepIndex] = useState(0);
   const [state, setState] = useState<WizardState>(initial);
   const nav = useNavigate();
@@ -333,7 +335,7 @@ export function CreateServerWizard() {
   // (/servers/new?template=<name>), pre-select that template once the list
   // loads. One-shot, so manual changes afterwards aren't clobbered.
   const search = useSearch({ from: "/app-layout/servers/new" });
-  const { data: templates } = useQuery({ queryKey: ["templates"], queryFn: () => Templates.list() });
+  const { data: templates } = useQuery({ queryKey: ["templates", clusterId], queryFn: ({ signal }) => Templates.list(clusterId, signal) });
   const { gameCodes, byName } = useGameCodes();
   const [presetApplied, setPresetApplied] = useState(false);
   // Adjusted directly during render (not in an effect): re-checks on every
@@ -351,7 +353,7 @@ export function CreateServerWizard() {
 
   const create = useMutation({
     mutationFn: async () => {
-      const server = await Servers.create(buildCreateBody(state));
+      const server = await Servers.create(buildCreateBody(state), clusterId);
 
       // If tunnel is enabled and credential value was provided, save credentials after server creation.
       if (state.tunnelEnabled && state.tunnelCredentialsValue.trim() && !state.tunnelCredentialsSecretName.trim()) {
@@ -362,7 +364,7 @@ export function CreateServerWizard() {
               ? "authKey"
               : "secretKey";
         try {
-          await Servers.setTunnelCredentials(state.name, state.tunnelProvider, { [key]: state.tunnelCredentialsValue });
+          await Servers.setTunnelCredentials(state.name, state.tunnelProvider, { [key]: state.tunnelCredentialsValue }, undefined, clusterId);
         } catch (err) {
           // Server was created with tunnel enabled and a ref to the secret, but the credential
           // save (Secret creation) failed. Tell the user the server exists and how to retry.
@@ -378,7 +380,8 @@ export function CreateServerWizard() {
       return server;
     },
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["servers"] });
+      if (getCurrentCluster() !== clusterId) return;
+      await qc.invalidateQueries({ queryKey: ["servers", clusterId] });
       await nav({ to: "/servers/$name", params: { name: state.name } });
     },
   });
@@ -388,8 +391,8 @@ export function CreateServerWizard() {
   const isLast = stepIndex === steps.length - 1;
   // Resource ceilings from the cluster, for the Configure step's cap.
   const { data: clusterView } = useQuery({
-    queryKey: ["cluster-view"],
-    queryFn: () => Cluster.view(),
+    queryKey: ["cluster-view", clusterId],
+    queryFn: ({ signal }) => Cluster.view(clusterId, signal),
     staleTime: 30_000,
   });
   const caps = nodeCaps(clusterView?.nodes ?? []);
@@ -553,9 +556,10 @@ function PickTemplate({
   gameCodes: Map<string, string>;
   byName: Map<string, GameTemplate>;
 }) {
+  const clusterId = useCurrentCluster();
   const { data } = useQuery({
-    queryKey: ["templates"],
-    queryFn: () => Templates.list(),
+    queryKey: ["templates", clusterId],
+    queryFn: ({ signal }) => Templates.list(clusterId, signal),
   });
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string>("all");
@@ -687,13 +691,14 @@ function PickVersion({ state, setState }: { state: WizardState; setState: (s: Wi
 }
 
 function Configure({ state, setState }: { state: WizardState; setState: (s: WizardState) => void }) {
+  const clusterId = useCurrentCluster();
   const fields = state.template?.spec.configSchema ?? [];
   // Cap CPU/memory at the largest single node's capacity — the scheduler
   // can never place a pod that requests more than one node provides, so
   // let the user know the ceiling and clamp their input to it.
   const { data: cluster } = useQuery({
-    queryKey: ["cluster-view"],
-    queryFn: () => Cluster.view(),
+    queryKey: ["cluster-view", clusterId],
+    queryFn: ({ signal }) => Cluster.view(clusterId, signal),
     staleTime: 30_000,
   });
   const { maxCpu, maxMemGi } = nodeCaps(cluster?.nodes ?? []);

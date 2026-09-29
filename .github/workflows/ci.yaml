@@ -756,6 +756,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
       - run: helm template gameplane charts/gameplane > /tmp/rendered.yaml
+      - name: gateway isolation and API-disabled chart renders
+        run: python3 charts/tests/check_gateway.py
       - name: sanity-check rendered manifests
         run: |
           grep -q 'kind: Deployment' /tmp/rendered.yaml
@@ -878,6 +880,15 @@ jobs:
           cp charts/gameplane/values.yaml /tmp/values.yaml.orig
           cp charts/gameplane/testdata/upgrade-from-v0.2.0-beta.8-values.yaml charts/gameplane/values.yaml
           helm template gameplane charts/gameplane > /tmp/rendered-reuse-values.yaml
+          python3 - <<'PY'
+          import yaml
+          docs = [d for d in yaml.safe_load_all(open('/tmp/rendered-reuse-values.yaml')) if d]
+          resources = {(d['kind'], d['metadata']['name']) for d in docs}
+          required = {('Deployment', 'gameplane-api'), ('Deployment', 'gameplane-web'),
+                      ('PersistentVolumeClaim', 'gameplane-api-data')}
+          assert required <= resources, f"reuse-values removed existing resources: {required - resources}"
+          assert ('Deployment', 'gameplane-gateway') not in resources
+          PY
       - name: crd-manifests in sync with crds
         # The CRD-apply hook serves CRDs from crd-manifests/ (crds/ isn't
         # readable by Helm .Files). make manifests keeps both in sync; guard
