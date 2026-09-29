@@ -224,10 +224,12 @@ Decision (maintainer, 2026-09-24): "every security finding remain[s] unpushed un
 
 How it's applied:
 - A finding is a **security finding** when it concerns a security boundary or control: authentication, authorization/RBAC, login privacy, SSRF guard, console-injection guard, audit-chain integrity, secret handling, network exposure, privilege, or supply chain. This includes the `SECURITY_AUDIT.md` items not yet remediated, security candidates from code reviews, and any `INV-SEC-*` boundary that doesn't hold.
-- Its row, its `### F-NNN` subsection, and its evidence live in `audit/held/` (git-ignored via the root `.gitignore`): `audit/held/findings.md` and `audit/held/evidence/<ID>/`. Review agents write security candidates to `audit/held/review-<component>.md`, never to `evidence/review-*/notes.md`.
+- Its row, its `### F-NNN` subsection, and its evidence live in `audit/held/` (git-ignored via the root `.gitignore` until the 2026-09-29 update below): `audit/held/findings.md` and `audit/held/evidence/<ID>/`. Review agents write security candidates to `audit/held/review-<component>.md`, never to `evidence/review-*/notes.md`.
 - IDs come from the same `F-NNN` sequence, so a held finding leaves a gap in `audit/findings.md`. When its fix PR merges, the row and subsection move into `audit/findings.md` unchanged.
 - Fix PRs for held findings are titled and described as hardening, without reproduction steps, until merged.
 - Fixed items (for example merged security-fix PRs imported in T009) are not held.
+
+Update (maintainer, 2026-09-29): once every held finding had an open or merged fix PR, the maintainer asked for the held records to be published. `audit/held/` was committed to this branch in 8249db80, and a `!specs/018-v0-3-release-readiness/audit/held` negation now follows the `**/held` rule in the root `.gitignore`; the `**/held` rule stays for future audits.
 
 ### OD-020: verification tier for the opus component reviews (T045) — RESOLVED 2026-09-24
 
