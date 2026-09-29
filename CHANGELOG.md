@@ -322,6 +322,8 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **capture-sidecar:** hardened TLS configuration defaults and capture size limits.
 - **audit-syslog-bridge:** hardened `APP-NAME`/`HOSTNAME` field validation.
 - **gameproto:** hardened handshake string-length and status-response validation.
+- **tunnel:** hardened relay config rendering with escaping and validation.
+- **audit-syslog-bridge:** hardened collector delivery reporting and intake time bounds.
 - **api:** hardened tunnel credential storage when the tunnel provider changes.
 - **api:** hardened module archive extraction limits and mod-registry outbound connections.
 - **deploy:** hardened the kind dev cluster bootstrap by pinning the ingress-nginx manifest to a release tag.
