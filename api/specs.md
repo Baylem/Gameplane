@@ -104,7 +104,8 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 
 **Protected (authenticated + RBAC):**
 - `/namespaces` — GET: namespaces the caller may read servers in (scope.AllowedNamespaces filtered by servers:read on the resolved `?cluster=`); lets the dashboard fan out `/servers?namespace=` across every namespace it can see instead of only scope.Resolve's default (F-263)
-- `/servers/{name}` — CRUD for GameServer CRDs; cluster-dispatch via `?cluster=`; multiplexed console/files
+- `/servers` — GET, POST: list and create GameServer CRDs
+- `/servers/{name}` — GET, PUT, DELETE: manage GameServer CRDs; cluster-dispatch via `?cluster=`; multiplexed console/files
 - `/servers/{name}/console` — WebSocket: RCON/exec; cluster-dispatch
 - `/servers/{name}:start`, `:stop`, `:restart` — actions (operator-handled)
 - `/servers/{name}:collaborators`, `:transfer` — GameServer owner/collaborator management
@@ -116,15 +117,21 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/servers/{name}:captures` — GET: list all NetworkCaptures (active and historical) for a server, excluding Expired captures
 - `/servers/{name}:capture` — GET: fetch a single capture's metadata and status; query param `id={captureId}`; 404 if not found or Expired
 - `/servers/{name}:capture-file` — GET: download completed PCAPNG file from the capture sidecar; query param `id={captureId}` (proxied to sidecar over mTLS; 409 if still running)
-- `/templates/{name}` — CRUD for GameTemplate (cluster-scoped)
-- `/backups/{name}` — CRUD for Backup (namespaced, cluster-dispatch)
-- `/schedules/{name}` — CRUD for BackupSchedule (namespaced, cluster-dispatch)
-- `/restores/{name}` — CRUD for Restore (namespaced, cluster-dispatch)
-- `/backup-destinations/{name}` — CRUD for restic repo Secrets (namespaced, cluster-dispatch)
-- `/modules` — GET: list installed Module CRDs; POST: upload/install
-- `/modules/{name}` — CRUD (cluster-scoped)
+- `/templates` — GET, POST: list and create GameTemplate CRDs
+- `/templates/{name}` — GET, PUT, DELETE: manage GameTemplate CRDs (cluster-scoped)
+- `/backups` — GET, POST: list and create Backup CRDs
+- `/backups/{name}` — GET, PUT, DELETE: manage Backup CRDs (namespaced, cluster-dispatch)
+- `/schedules` — GET, POST: list and create BackupSchedule CRDs
+- `/schedules/{name}` — GET, PUT, DELETE: manage BackupSchedule CRDs (namespaced, cluster-dispatch)
+- `/restores` — GET, POST: list and create Restore CRDs
+- `/restores/{name}` — GET, PUT, DELETE: manage Restore CRDs (namespaced, cluster-dispatch)
+- `/backup-destinations` — GET, POST: list and create restic repo Secrets
+- `/backup-destinations/{name}` — GET, PUT, DELETE: manage restic repo Secrets (namespaced, cluster-dispatch)
+- `/modules` — GET, POST: list and install Module CRDs
+- `/modules/{name}` — GET, PATCH, DELETE: manage Module CRDs (cluster-scoped)
 - `/modules/{name}:uninstall` — action
-- `/modules/sources` — CRUD for ModuleSource (cluster-scoped)
+- `/modules/sources` — GET, POST: list and create ModuleSource CRDs
+- `/modules/sources/{name}` — GET, PUT, DELETE: manage ModuleSource CRDs (cluster-scoped)
 - `/modules/sources/{name}/upload`, `/modules/sources/{name}/upload/{module}` — bundle upload/delete
 - `/modules/catalog` — GET: merged catalog across sources, with installation state
 - `/modules/builder/{archetypes,scaffold,validate,preview,export}` — module builder workflow
@@ -140,7 +147,8 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/users/me/servers` — GET: own GameServers (owner/collaborator)
 - `/users/me/preferences` — GET/PUT: own theme/styling preferences (feature 016)
 - `/users/me/preferences/reset` — POST: reset own theme preferences to defaults (feature 016)
-- `/users/{id}` — CRUD for users (admin only). DELETE runs `db.Store.DeleteUser`: one transaction deletes the user's `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and role bindings, revokes the share links the user created (sets `revoked_at`), then deletes the `users` row. It does not rely on FK cascades (off on SQLite). An SSO subject whose user was deleted is provisioned as a new user on its next login
+- `/users` — GET, POST: list and create users
+- `/users/{id}` — GET, PATCH, DELETE: manage users (admin only). DELETE runs `db.Store.DeleteUser`: one transaction deletes the user's `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and role bindings, revokes the share links the user created (sets `revoked_at`), then deletes the `users` row. It does not rely on FK cascades (off on SQLite). An SSO subject whose user was deleted is provisioned as a new user on its next login
 - `/users/{id}/role-bindings` — PATCH: role assignments (per namespace + cluster)
 - `/roles` — GET catalog and custom roles; POST/PATCH/DELETE custom roles. A PATCH whose permission list drops `users:manage` from a role that grants it is refused (400) when that role is the caller's own primary role, or when every user who can manage users holds that role — the same lockout guards `PATCH /users/{id}` applies to a role change. Tests: `TestRoles_UpdateKeepsCallersOwnUserManagement`, `TestRoles_UpdateKeepsAtLeastOneUserManager`, `TestRoles_UpdateRemovesUserManagementWhenAnotherManagerRemains` (`handlers/roles_guard_test.go`); e2e `TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions` (bucket `operator`)
 - `/admin/audit` — GET: audit log (searchable, hash-chain verifiable)
@@ -679,101 +687,42 @@ Final 20% gap concentrated in:
 <!-- REMOVED: PUT /modules/{name} — removed in commit 1749bb6396d7d4d53f8fc57ad6214164eee299b8 Mon Sep 21 00:16:43 2026 +0200 -->
 <!-- REMOVED: PUT /users/{id} — removed in commit 1749bb6396d7d4d53f8fc57ad6214164eee299b8 Mon Sep 21 00:16:43 2026 +0200 -->
 
+
 ### Auto-Discovered Endpoints (Drift Detected)
-- `/admin/auth/providers/{name}/secret` — DELETE
-- `/admin/config/auth/role-mappings/{role}` — DELETE
-- `/admin/notifications/sinks/{name}/secret` — DELETE
-- `/admin/registries/{provider}/secret` — DELETE
-- `/clusters/{name}` — DELETE
-- `/modules/sources/{name}` — DELETE
-- `/modules/sources/{name}/upload/{module}` — DELETE
-- `/roles/{name}` — DELETE
-- `/servers/{name}/files/delete` — DELETE
-- `/servers/{name}/mods` — DELETE
-- `/servers/{name}:capture` — DELETE
-- `/servers/{name}:shares/servers/{name}/shares/{id}` — DELETE
-- `/servers/{name}:tunnel-credentials` — DELETE
-- `/users/{id}/bindings/{role}/{namespace}` — DELETE
-- `/admin/audit/export` — GET
-- `/admin/audit/verify` — GET
-- `/admin/system-logs/{component}` — GET
-- `/backup-destinations` — GET
-- `/backups` — GET
-- `/cluster/info` — GET
-- `/cluster/stats` — GET
-- `/modules/catalog` — GET
-- `/modules/sources` — GET
-- `/restores` — GET
-- `/roles/permissions` — GET
-- `/schedules` — GET
-- `/servers` — GET
-- `/servers/{name}/events` — GET
-- `/servers/{name}/files/download` — GET
-- `/servers/{name}/files/list` — GET
-- `/servers/{name}/files/read` — GET
-- `/servers/{name}/logs/download` — GET
-- `/servers/{name}/mods` — GET
-- `/servers/{name}/mods/ids` — GET
-- `/servers/{name}/mods/registry/projects/{project}/modpack` — GET
-- `/servers/{name}/mods/registry/projects/{project}/versions` — GET
-- `/servers/{name}/mods/registry/providers` — GET
-- `/servers/{name}/mods/registry/search` — GET
-- `/servers/{name}/mods/updates` — GET
-- `/servers/{name}/players` — GET
-- `/servers/{name}/players/banned` — GET
-- `/servers/{name}/players/whitelist` — GET
-- `/servers/{name}/status` — GET
-- `/servers/{name}:tunnel-credentials` — GET
-- `/shares/{token}` — GET
-- `/templates` — GET
-- `/users` — GET
-- `/users/{id}/bindings` — GET
-- `/modules/{name}` — PATCH
-- `/roles/{name}` — PATCH
-- `/users/{id}` — PATCH
-- `/admin/notifications/sinks/{name}/test` — POST
-- `/backup-destinations` — POST
-- `/backups` — POST
-- `/cluster/kubeconfig` — POST
-- `/cluster/nodes:join` — POST
-- `/clusters` — POST
-- `/modules/sources` — POST
-- `/modules/sources/{name}/upload` — POST
-- `/restores` — POST
-- `/schedules` — POST
-- `/servers` — POST
-- `/servers/{name}/actions/run` — POST
-- `/servers/{name}/files/mkdir` — POST
-- `/servers/{name}/files/upload` — POST
-- `/servers/{name}/files/write` — POST
-- `/servers/{name}/modpack` — POST
-- `/servers/{name}/mods/install` — POST
-- `/servers/{name}/mods/upload` — POST
-- `/servers/{name}/players/ban` — POST
-- `/servers/{name}/players/kick` — POST
-- `/servers/{name}/players/unban` — POST
-- `/servers/{name}/players/whitelist/add` — POST
-- `/servers/{name}/players/whitelist/remove` — POST
-- `/servers/{name}:capture-disable` — POST
-- `/servers/{name}:capture-enable` — POST
-- `/servers/{name}:clone` — POST
-- `/servers/{name}:restart` — POST
-- `/servers/{name}:start` — POST
-- `/servers/{name}:stop` — POST
-- `/servers/{name}:transfer` — POST
-- `/servers/{name}:wake` — POST
-- `/servers/{name}:wipe-data` — POST
-- `/shares/{token}` — POST
-- `/shares/{token}/start` — POST
-- `/templates` — POST
-- `/users` — POST
-- `/users/{id}/bindings` — POST
-- `/users/{id}/reset-password` — POST
-- `/admin/auth/providers/{name}/secret` — PUT
-- `/admin/config/{section}` — PUT
-- `/admin/notifications/sinks/{name}/secret` — PUT
-- `/admin/registries/{provider}/secret` — PUT
-- `/modules/sources/{name}` — PUT
-- `/servers/{name}/mods/ids` — PUT
-- `/servers/{name}:collaborators` — PUT
-- `/servers/{name}:tunnel-credentials` — PUT
+### Removed Endpoints
+<!-- REMOVED: /modules/sources — DELETE removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /roles — DELETE removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/system-logs — GET removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /auth/oidc/callback — GET removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /auth/oidc/{provider}/callback — GET removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /mod-updates/{name} — GET removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /users/{id} — GET removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/auth — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/config — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/notifications — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/registries/{provider}/secret — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /backup-destinations/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /backups/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /mod-ids/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /modules/sources — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /restores/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /roles — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /schedules/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /servers/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /templates/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /users/{id}/role-bindings — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/notifications/sinks/{name}/test — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /auth/login — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /backup-destinations/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /backups/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /modules/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /restores/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /schedules/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /servers/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /shares/{token} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /templates/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /users/{id} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /backup-destinations/{name} — PUT removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /modules/sources — PUT removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /modules/{name} — PUT removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /users/{id} — PUT removed in commit <sha> 2026-09-28 -->

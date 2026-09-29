@@ -145,6 +145,12 @@ Game-module changes (`modules/`) belong in the separate **`gameplane-module`**
 repo, which this repo vendors as a submodule. Open the module PR there; once it
 merges, bump the submodule pointer here (`git add modules`) in a follow-up PR.
 
+`.gitmodules` points both submodules (`modules/`, `website/`) at the upstream
+GitHub URLs, so a fork of this repo clones them without forking them too. To
+work on your own fork of a submodule, repoint it locally:
+`git submodule set-url modules https://github.com/<you>/gameplane-module.git`
+(don't commit that change).
+
 ## Code review
 
 PRs receive an automated advisory review from the CodeRabbit GitHub App, configured by `.coderabbit.yaml`. CodeRabbit's rules encode the repo's style guide and house rules — wrapping errors with `%w`, no unjustified `any`, fix rather than silence linter warnings, etc. Its feedback does not block merges. If you think a rule is wrong, raise it with the maintainers rather than working around it — this keeps the rules canonical and consistent across the codebase.
