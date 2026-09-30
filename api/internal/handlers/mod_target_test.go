@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -183,6 +184,35 @@ func TestUpdateModTargetDoesNotRetryOtherFailures(t *testing.T) {
 			}
 			if !reflect.DeepEqual(original.Object, snapshot.Object) {
 				t.Fatal("attempt mutated the original authorization/configuration snapshot")
+			}
+		})
+	}
+}
+
+func TestUpdateModTargetPreservesAlreadyInterruptedContext(t *testing.T) {
+	for _, expired := range []bool{false, true} {
+		name := "canceled"
+		if expired {
+			name = "deadline exceeded"
+		}
+		t.Run(name, func(t *testing.T) {
+			remote := modClusterFixture("remote")
+			client := remote.Dynamic.(*dynamicfake.FakeDynamicClient)
+			obj, err := client.Tracker().Get(kube.GVRs["servers"], scope.DefaultNamespace, "alpha")
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithCancel(t.Context())
+			cancel()
+			if expired {
+				ctx, cancel = context.WithDeadline(t.Context(), time.Now().Add(-time.Second))
+				defer cancel()
+			}
+			updated, err := updateModTarget(ctx, &modTarget{k: remote, namespace: scope.DefaultNamespace, server: obj.(*unstructured.Unstructured)}, func(*unstructured.Unstructured) {
+				t.Fatal("interrupted request reached mutation")
+			})
+			if updated != nil || !errors.Is(err, ctx.Err()) || len(client.Actions()) != 0 {
+				t.Fatalf("interrupted request lost its error or called Kubernetes: updated=%v err=%v actions=%v", updated, err, client.Actions())
 			}
 		})
 	}

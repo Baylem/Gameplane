@@ -68,8 +68,13 @@ func updateModTarget(ctx context.Context, target *modTarget, apply func(*unstruc
 		}
 		return err == nil, err
 	})
-	if errors.Is(err, wait.ErrWaitTimeout) {
-		err = lastConflict
+	if wait.Interrupted(err) {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return nil, ctxErr
+		}
+		if lastConflict != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+			err = lastConflict
+		}
 	}
 	if err != nil {
 		return nil, err
