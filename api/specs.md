@@ -225,6 +225,7 @@ trust assumptions, rotation behavior and surfaces outside this protocol.
 **Implemented endpoints (cluster-dispatch via `?cluster=`, all require `captures:manage` RBAC permission, all authenticate via session, audit all writes synchronously before response):**
 
 - **POST `/servers/{name}:capture-start`** — Create a NetworkCapture CR and transition to Pending; request body: `{filter?: string, maxDurationSeconds: int, maxSizeBytes: int64, ttlSecondsAfterFinished?: int64}`; response: `{captureId, phase, serverName, filter, maxDurationSeconds, maxSizeBytes, ttlSecondsAfterFinished, createdAt, startedAt?, completedAt?, bytesWritten, packetsWritten}` (HTTP 202 Accepted)
+  - The selected Kubernetes identity needs `create` on `networkcaptures` and `update` on `networkcaptures/status` for the initial Pending phase. A status-write denial can follow a successful CR create; callers must inspect existing captures instead of blindly repeating start.
   - Verifies server exists and `spec.capture.enabled = true`; returns 400 if capture not enabled on server
   - Validates pcap-filter expression before CRD creation (FR-003; character whitelist + length check, no full BPF compile); returns 400 on invalid filter (e.g., control chars, >1024 chars)
   - Enforces maximum one Pending/Running capture per server (rejects with 409 Conflict if one exists); checks both `status.capture.activeCapture` and scans all NetworkCaptures as a guard against eventual consistency lag

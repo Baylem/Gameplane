@@ -66,6 +66,12 @@ are wanted; the gateway advertises this cluster's capture settings to the centra
 API. Upgrade the operator and capture-sidecar together so new capture files carry
 their server and capture UID bindings.
 
+With both `capture.enabled` and `networkPolicies.enabled`, the chart separately
+allows TCP 9091 from this release's operator and enabled API pods in the system
+namespace. The operator uses this port to start, stop and poll captures; the local
+API uses it for files. Narrowing kubelet probe ports does not remove this allowance.
+Externally managed policies must permit the same control traffic.
+
 ```sh
 helm upgrade --install gameplane ./charts/gameplane \
   --namespace gameplane-system --create-namespace \
@@ -93,8 +99,23 @@ The central API reads node inventory and storage totals directly from the select
 cluster's Kubernetes API. Bind these additional read permissions to the identity
 in that cluster's **registered kubeconfig**, alongside its existing game-resource
 permissions. Remote capture management additionally requires `get`, `list`,
-`create`, `patch` and `delete` on `networkcaptures.gameplane.local` in each managed
-game namespace. The gateway ServiceAccount keeps its namespace-scoped GameServer,
+`create`, `patch` and `delete` on `networkcaptures.gameplane.local`, plus `update`
+on its `status` subresource, in each managed game namespace. Add these separate
+rules to the registered identity's namespace-scoped Role:
+
+```yaml
+- apiGroups: [gameplane.local]
+  resources: [networkcaptures]
+  verbs: [get, list, create, patch, delete]
+- apiGroups: [gameplane.local]
+  resources: [networkcaptures/status]
+  verbs: [update]
+```
+
+The API initializes Pending through the status subresource after creating the CR.
+Without its status permission, start can return 403 after the capture was created;
+inspect the capture list before submitting another start request.
+The gateway ServiceAccount keeps its namespace-scoped GameServer,
 NetworkCapture and Service reads; it does not need the inventory grants or write
 access to capture resources.
 

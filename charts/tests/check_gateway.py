@@ -9,12 +9,12 @@ ROOT = Path(__file__).resolve().parents[2]
 CHART = ROOT / "charts" / "gameplane"
 
 
-def render(values=None, failure=None, upgrade=False):
+def render(values=None, failure=None, upgrade=False, namespace="gameplane-system", release="gameplane"):
     with tempfile.TemporaryDirectory() as directory:
         values_path = Path(directory) / "values.yaml"
         values_path.write_text(yaml.safe_dump(values or {}), encoding="utf-8")
         result = subprocess.run(
-            ["helm", "template", "gameplane", str(CHART), "--namespace", "gameplane-system", "--values", str(values_path)]
+            ["helm", "template", release, str(CHART), "--namespace", namespace, "--values", str(values_path)]
             + (["--is-upgrade"] if upgrade else []),
             capture_output=True, text=True, check=False,
         )
@@ -40,11 +40,33 @@ def settings():
     }
 
 
+def capture_control_policy(objects, api_enabled=True, namespace="gameplane-system", games_namespace="gameplane-games", release="gameplane"):
+    policy = one(objects, "NetworkPolicy", "allow-api-to-capture")
+    assert policy["metadata"]["namespace"] == games_namespace
+    sources = ["gameplane-api", "gameplane-operator"] if api_enabled else ["gameplane-operator"]
+    peers = []
+    for name in sources:
+        labels = {"app.kubernetes.io/name": name, "app.kubernetes.io/instance": release}
+        # Exact selectors must also select the actual chart-managed control pods.
+        pod_labels = one(objects, "Deployment", name)["spec"]["template"]["metadata"]["labels"]
+        assert labels.items() <= pod_labels.items()
+        peers.append({"namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": namespace}},
+                      "podSelector": {"matchLabels": labels}})
+    assert policy["spec"] == {
+        "podSelector": {"matchLabels": {"app.kubernetes.io/name": "gameplane-game"}},
+        "policyTypes": ["Ingress"],
+        "ingress": [{"from": peers, "ports": [{"protocol": "TCP", "port": 9091}]}],
+    }
+    agent = one(objects, "NetworkPolicy", "allow-api-to-agent")["spec"]
+    assert agent["ingress"][0]["ports"] == [{"protocol": "TCP", "port": 8090}]
+
+
 def main():
     defaults = render()
     assert not any(obj["metadata"]["name"] == "gameplane-gateway" for obj in defaults)
     one(defaults, "Deployment", "gameplane-api")
     one(defaults, "PersistentVolumeClaim", "gameplane-api-data")
+    assert not any(obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "allow-api-to-capture" for obj in defaults)
 
     gateway = settings()
     gateway["namespaces"] = ["games-one", "games-two"]
@@ -92,7 +114,11 @@ def main():
     for ingress in [obj for obj in objects if obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "gameplane-gateway-to-agent"]:
         assert {port["port"] for port in ingress["spec"]["ingress"][0]["ports"]} == {8090, 9091}
     assert "--capture-enabled=false" in container["args"]
-    enabled = render({"gateway": settings(), "capture": {"enabled": True, "defaultRetentionSeconds": 120, "maxRetentionSeconds": 3600, "defaultMaxDurationSeconds": 90, "defaultMaxSizeBytes": 1048576}})
+    enabled = render({"gateway": settings(), "capture": {"enabled": True, "defaultRetentionSeconds": 120, "maxRetentionSeconds": 3600, "defaultMaxDurationSeconds": 90, "defaultMaxSizeBytes": 1048576},
+                      "networkPolicies": {"probePorts": [{"protocol": "TCP", "port": 8090}]}})
+    capture_control_policy(enabled)
+    probes = one(enabled, "NetworkPolicy", "allow-kubelet-probes")["spec"]
+    assert probes["ingress"][0]["ports"] == [{"protocol": "TCP", "port": 8090}]
     capture_args = one(enabled, "Deployment", "gameplane-gateway")["spec"]["template"]["spec"]["containers"][0]["args"]
     assert "--capture-enabled=true" in capture_args
     assert "--capture-default-retention=120" in capture_args
@@ -101,17 +127,26 @@ def main():
     assert "--capture-default-max-size=1048576" in capture_args
     assert len([obj for obj in objects if obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "gameplane-gateway-to-agent"]) == 2
 
+    remote_capture = render({"api": {"enabled": False}, "capture": {"enabled": True}, "gamesNamespace": "remote-games"},
+                            namespace="remote-system", release="remote-plane")
+    capture_control_policy(remote_capture, api_enabled=False, namespace="remote-system", games_namespace="remote-games", release="remote-plane")
+    # Helm removes a default key overridden with null. This represents legacy
+    # --reuse-values releases without api.enabled: both API and peer stay enabled.
+    legacy_capture = render({"api": {"enabled": None}, "capture": {"enabled": True}}, upgrade=True)
+    capture_control_policy(legacy_capture)
+
     selector_gateway = settings()
     selector_gateway["networkPolicy"]["peerCIDRs"] = []
     selector_gateway["networkPolicy"]["peerSelectors"] = [{
         "namespaceSelector": {"matchLabels": {"kubernetes.io/metadata.name": "relay"}},
         "podSelector": {"matchLabels": {"app": "private-relay"}},
     }]
-    selector_objects = render({"gateway": selector_gateway, "networkPolicies": {"enabled": False}})
+    selector_objects = render({"gateway": selector_gateway, "networkPolicies": {"enabled": False}, "capture": {"enabled": True}})
     selector_policy = one(selector_objects, "NetworkPolicy", "gameplane-gateway")["spec"]
     assert selector_policy["ingress"][0]["from"] == selector_gateway["networkPolicy"]["peerSelectors"]
     one(selector_objects, "Role", "gameplane-gateway-read")  # defaults to gamesNamespace
     assert not any(obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "gameplane-gateway-to-agent" for obj in selector_objects)
+    assert not any(obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "allow-api-to-capture" for obj in selector_objects)
 
     for field, message in [("clusterID", "gateway.clusterID"), ("peerURI", "gateway.peerURI"), ("serverTLSSecret", "gateway.serverTLSSecret"), ("centralClientCASecret", "gateway.centralClientCASecret")]:
         invalid = settings()
