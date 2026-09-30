@@ -1053,6 +1053,9 @@ func (p *gatewayParity) rotation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if secret.Labels == nil {
+		secret.Labels = make(map[string]string)
+	}
 	secret.Labels["gameplane.local/agent-gateway-credentials"] = "true"
 	if _, err := secrets.Update(t.Context(), secret, metav1.UpdateOptions{}); err != nil {
 		t.Fatal(err)
