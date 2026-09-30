@@ -6,6 +6,7 @@ import { Button, Input, Label, Chip, Card, CardContent } from "@heroui/react";
 import { Servers } from "@/lib/endpoints";
 import { errorText } from "@/lib/errors";
 import { useMe, can } from "@/lib/auth";
+import { useCurrentCluster } from "@/lib/cluster";
 import { OWNER_ID_ANNOTATION, OWNER_ANNOTATION } from "@/lib/annotations";
 
 const COLLABORATORS_ANNOTATION = "gameplane.local/collaborators";
@@ -18,6 +19,7 @@ interface Props {
 export function AccessSection({ gs }: Props) {
   const qc = useQueryClient();
   const { data: me } = useMe();
+  const cluster = useCurrentCluster();
   const [addInput, setAddInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +55,7 @@ export function AccessSection({ gs }: Props) {
 
   // Permission check: owner or servers:write
   const namespace = gs.metadata.namespace ?? "gameplane-games";
-  const canManage = ownerID === String(me?.id) || can(me, "servers:write", namespace);
+  const canManage = ownerID === String(me?.id) || can(me, "servers:write", namespace, cluster);
 
   // Misalignment guard: if the parsed collaborators and collaborator-names
   // have different lengths, the annotations were modified outside the dashboard.

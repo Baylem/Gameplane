@@ -14,6 +14,8 @@ import {
 import { Servers, Templates, type LifecycleVerb } from "@/lib/endpoints";
 import { useGameCodes } from "@/lib/useGameCodes";
 import { resolveConsoleMode, serverHasMods, serverHasModpacks } from "@/lib/capabilities";
+import { useMe, can } from "@/lib/auth";
+import { useCurrentCluster } from "@/lib/cluster";
 import { PhaseChip } from "@/components/ui/PhaseChip";
 import { GameIcon } from "@/components/ui/GameIcon";
 import { capitalize, formatUptime, ignoreRejection } from "@/lib/utils";
@@ -62,6 +64,7 @@ export function ServerDetailPage() {
   const [settingsDirty, setSettingsDirty] = useState(false);
   const qc = useQueryClient();
   const nav = useNavigate();
+  const { data: me } = useMe();
 
   const { data: gs } = useQuery({
     queryKey: ["server", name, ns],
@@ -131,10 +134,18 @@ export function ServerDetailPage() {
   // version's loader can run one — hidden for vanilla and plugin loaders
   // (e.g. Paper), which can't load a Modrinth/Forge modpack.
   const modpacksAvailable = serverHasModpacks(tmpl, gs);
+  const ns_resolved = ns ?? "gameplane-games";
+  const cluster = useCurrentCluster();
+  // Hide Capture only on a confirmed denial. While /users/me is loading or
+  // after it failed, permissions are unknown: keep the tab reachable so the
+  // widget can show its checking / identity-unavailable (retry) state, with
+  // the capture controls still closed.
+  const captureTabVisible = !me || can(me, "captures:manage", ns_resolved, cluster);
   const visibleTabs = tabs.filter((t) => {
     if (t.key === "console") return consoleAvailable;
     if (t.key === "mods") return modsAvailable;
     if (t.key === "modpacks") return modpacksAvailable;
+    if (t.key === "capture") return captureTabVisible;
     return true;
   });
 

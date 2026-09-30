@@ -11,6 +11,7 @@ import {
   Switch,
 } from "@heroui/react";
 import { useMe, can } from "@/lib/auth";
+import { useCurrentCluster } from "@/lib/cluster";
 import type { CaptureConfiguration } from "@/types";
 import type { SectionProps } from "./types";
 
@@ -50,7 +51,8 @@ function bestUnit(seconds: number): RetentionUnit {
 export function NetworkCaptureSection({ draft, onChange, onValidityChange }: SectionProps) {
   const { data: me, isLoading: meLoading } = useMe();
   const namespace = draft.metadata.namespace ?? "gameplane-games";
-  const canManage = can(me, "captures:manage", namespace);
+  const cluster = useCurrentCluster();
+  const canManage = can(me, "captures:manage", namespace, cluster);
 
   const capture = draft.spec.capture;
   const enabled = capture?.enabled ?? false;

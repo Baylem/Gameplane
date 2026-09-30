@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/DropdownMenu";
 import { useMe, can } from "@/lib/auth";
+import { useCurrentCluster } from "@/lib/cluster";
 import { OWNER_ID_ANNOTATION } from "@/lib/annotations";
 import { CloneServerDialog } from "./CloneServerDialog";
 import { DeleteServerDialog } from "./DeleteServerDialog";
@@ -33,10 +34,11 @@ export function ServerActionsMenu({ gs, onDeleted, onTransferred }: Props) {
   const ns = gs.metadata.namespace;
   const ann = gs.metadata.annotations ?? {};
   const ownerID = ann[OWNER_ID_ANNOTATION];
+  const cluster = useCurrentCluster();
 
-  const canClone = can(me, "servers:write", ns ?? "gameplane-games");
+  const canClone = can(me, "servers:write", ns ?? "gameplane-games", cluster);
   const canManage =
-    ownerID === String(me?.id) || can(me, "servers:write", ns ?? "gameplane-games");
+    ownerID === String(me?.id) || can(me, "servers:write", ns ?? "gameplane-games", cluster);
 
   const [cloneOpen, setCloneOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
