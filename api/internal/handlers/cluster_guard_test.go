@@ -325,7 +325,11 @@ func TestHomeClientMounts_ServeHomeClusterOnly(t *testing.T) {
 			want = http.StatusNotImplemented
 		}
 		attach := path == "/ws/servers/alpha/console-pty"
-		selectedModRoute := strings.HasPrefix(path, "/servers/alpha/mods/") || path == "/servers/alpha/modpack"
+		// Only the registry and ID-list handlers above use the selected client.
+		// ws.Mount has no gateway options here, so install/upload keep their
+		// legacy 501 guard rather than performing a remote target lookup.
+		selectedModRoute := strings.HasPrefix(path, "/servers/alpha/mods/registry/") ||
+			path == "/servers/alpha/mods/ids" || path == "/servers/alpha/modpack"
 		if attach || selectedModRoute {
 			// The registered remote cluster has no alpha GameServer.
 			want = http.StatusNotFound

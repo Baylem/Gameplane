@@ -236,7 +236,11 @@ func (p *gatewayParity) install(t *testing.T) {
 	p.controlAddress = fmt.Sprintf("127.0.0.1:%d", port)
 	client := p.directClient(t, p.clientLeaf, p.nodeIP, p.controlAddress)
 	defer client.CloseIdleConnections()
-	resp, err := client.Get(p.endpoint + "/v1/capabilities")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, p.endpoint+"/v1/capabilities", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("actual gateway chart TLS listener: %v", err)
 	}
@@ -295,7 +299,12 @@ func (p *gatewayParity) register(t *testing.T) {
 	t.Cleanup(p.admin.Close)
 	p.expect(t, p.admin, http.MethodPost, "/clusters", map[string]string{"name": p.cluster,
 		"displayName": "Gateway parity test", "kubeconfig": string(podReachableKubeconfig(t, clusterBKindName()))}, http.StatusCreated)
-	t.Cleanup(func() { _, _, _ = p.admin.Delete("/clusters/" + p.cluster) })
+	t.Cleanup(func() {
+		response, _, _ := p.admin.Delete("/clusters/" + p.cluster)
+		if response != nil {
+			response.Body.Close()
+		}
+	})
 	gatewaySecret(t, envInstance, p.clientSecret, p.credentials(p.clientLeaf), true)
 	patch, _ := json.Marshal(map[string]any{"spec": map[string]any{"agentGateway": map[string]any{
 		"url": p.endpoint, "tlsSecretRef": map[string]string{"name": p.clientSecret}}}})
@@ -311,7 +320,12 @@ func (p *gatewayParity) register(t *testing.T) {
 		return phase == "Healthy", "remote Kubernetes phase=" + phase
 	})
 	user, password, id := envInstance.CreateUser(t, p.admin, "viewer", "e2e-gateway-writer")
-	t.Cleanup(func() { _, _, _ = p.admin.Delete("/users/" + id) })
+	t.Cleanup(func() {
+		response, _, _ := p.admin.Delete("/users/" + id)
+		if response != nil {
+			response.Body.Close()
+		}
+	})
 	p.expect(t, p.admin, http.MethodPost, "/users/"+id+"/bindings", map[string]string{
 		"roleName": "admin", "cluster": p.cluster, "namespace": "gameplane-games"}, http.StatusCreated)
 	p.client = envInstance.APIClient(t, user, password)
@@ -336,6 +350,7 @@ func (p *gatewayParity) expect(t *testing.T, client *APIClient, method, path str
 	if err != nil {
 		t.Fatalf("%s %s: %v", method, path, err)
 	}
+	defer response.Body.Close()
 	if response.StatusCode != want {
 		t.Fatalf("%s %s: status=%d want=%d body=%s", method, path, response.StatusCode, want, raw)
 	}
@@ -407,6 +422,7 @@ func (p *gatewayParity) ready(t *testing.T, name string, timeout time.Duration) 
 		if err != nil {
 			return false, err.Error()
 		}
+		defer response.Body.Close()
 		return response.StatusCode == http.StatusOK, fmt.Sprintf("agent readiness status=%d body=%s", response.StatusCode, body)
 	})
 }
@@ -858,7 +874,11 @@ func (p *gatewayParity) denials(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			client := p.directClient(t, tc.leaf, tc.serverName, p.controlAddress)
 			defer client.CloseIdleConnections()
-			response, err := client.Get(p.endpoint + "/v1/capabilities")
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, p.endpoint+"/v1/capabilities", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			response, err := client.Do(req)
 			if response != nil {
 				response.Body.Close()
 			}
@@ -901,7 +921,11 @@ func (p *gatewayParity) rotation(t *testing.T) {
 	}
 	gatewaySecret(t, p.remote, p.serverSecret, map[string][]byte{"tls.crt": server.cert, "tls.key": server.key}, false)
 	p.remote.Eventually(t, 3*time.Minute, func() (bool, string) {
-		response, err := oldClient.Get(p.endpoint + "/v1/capabilities")
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, p.endpoint+"/v1/capabilities", nil)
+		if err != nil {
+			return false, err.Error()
+		}
+		response, err := oldClient.Do(req)
 		if err != nil {
 			return false, err.Error()
 		}
@@ -916,7 +940,11 @@ func (p *gatewayParity) rotation(t *testing.T) {
 	overlap := append(append([]byte{}, p.clientCA.pem...), newCA.pem...)
 	gatewaySecret(t, p.remote, p.trustSecret, map[string][]byte{"ca.crt": overlap}, false)
 	p.remote.Eventually(t, 3*time.Minute, func() (bool, string) {
-		response, err := newClient.Get(p.endpoint + "/v1/capabilities")
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, p.endpoint+"/v1/capabilities", nil)
+		if err != nil {
+			return false, err.Error()
+		}
+		response, err := newClient.Do(req)
 		if err != nil {
 			return false, err.Error()
 		}
@@ -928,7 +956,11 @@ func (p *gatewayParity) rotation(t *testing.T) {
 	checkOperation()
 	gatewaySecret(t, p.remote, p.trustSecret, map[string][]byte{"ca.crt": newCA.pem}, false)
 	p.remote.Eventually(t, 3*time.Minute, func() (bool, string) {
-		fresh, err := newClient.Get(p.endpoint + "/v1/capabilities")
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, p.endpoint+"/v1/capabilities", nil)
+		if err != nil {
+			return false, err.Error()
+		}
+		fresh, err := newClient.Do(req)
 		if err != nil {
 			return false, "new identity failed: " + err.Error()
 		}
@@ -936,7 +968,11 @@ func (p *gatewayParity) rotation(t *testing.T) {
 		if fresh.StatusCode != http.StatusOK {
 			return false, "new identity no longer authorized"
 		}
-		old, err := oldClient.Get(p.endpoint + "/v1/capabilities")
+		oldRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, p.endpoint+"/v1/capabilities", nil)
+		if err != nil {
+			return false, err.Error()
+		}
+		old, err := oldClient.Do(oldRequest)
 		if old != nil {
 			old.Body.Close()
 		}
@@ -961,6 +997,7 @@ func (p *gatewayParity) rotation(t *testing.T) {
 		if err != nil {
 			return false, err.Error()
 		}
+		defer response.Body.Close()
 		return response.StatusCode == http.StatusOK && string(body) == "SITE:remote\n", fmt.Sprintf("replacement endpoint status=%d", response.StatusCode)
 	})
 	// Credential enrollment revocation must be observed on the very next

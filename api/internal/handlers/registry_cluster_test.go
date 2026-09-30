@@ -261,7 +261,7 @@ func TestClusterModRoutesNeverFallBackWhenTargetUnavailable(t *testing.T) {
 			outage      bool
 		}{
 			{"unknown cluster", "?cluster=unknown", http.StatusBadRequest, false, false},
-			{"forbidden namespace", "?cluster=remote&namespace=forbidden", http.StatusForbidden, false, false},
+			{"disallowed namespace", "?cluster=remote&namespace=forbidden", http.StatusBadRequest, false, false},
 			{"missing remote server", "?cluster=remote", http.StatusNotFound, true, false},
 			{"remote outage", "?cluster=remote", http.StatusInternalServerError, false, true},
 		} {

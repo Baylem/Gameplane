@@ -137,10 +137,10 @@ spec:
             - --agent-ca=/tls/agent-ca/ca.crt
             - {{ printf "--max-request-duration=%s" $gateway.maxRequestDuration | quote }}
             - {{ printf "--capture-enabled=%t" (.Values.capture.enabled | default false) | quote }}
-            - {{ printf "--capture-default-retention=%v" .Values.capture.defaultRetentionSeconds | quote }}
-            - {{ printf "--capture-max-retention=%v" .Values.capture.maxRetentionSeconds | quote }}
-            - {{ printf "--capture-default-max-duration=%v" .Values.capture.defaultMaxDurationSeconds | quote }}
-            - {{ printf "--capture-default-max-size=%v" .Values.capture.defaultMaxSizeBytes | quote }}
+            - {{ printf "--capture-default-retention=%d" (.Values.capture.defaultRetentionSeconds | int64) | quote }}
+            - {{ printf "--capture-max-retention=%d" (.Values.capture.maxRetentionSeconds | int64) | quote }}
+            - {{ printf "--capture-default-max-duration=%d" (.Values.capture.defaultMaxDurationSeconds | int64) | quote }}
+            - {{ printf "--capture-default-max-size=%d" (.Values.capture.defaultMaxSizeBytes | int64) | quote }}
           ports:
             - { name: mtls, containerPort: 8443 }
           # The listener requires mTLS on every request; no unauthenticated

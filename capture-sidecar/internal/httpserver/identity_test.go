@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -104,8 +105,8 @@ func TestCaptureStartIdentityAndAuthenticatedBoundRoutes(t *testing.T) {
 		}
 	}
 	seedBoundCapture(t, s, "cap-auth")
-	wrapped := s.Routes(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Error(w, "unauthorized", http.StatusUnauthorized) })
+	wrapped := s.Routes(func(_ http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { http.Error(w, "unauthorized", http.StatusUnauthorized) })
 	})
 	for _, method := range []string{http.MethodGet, http.MethodDelete} {
 		rr := httptest.NewRecorder()
@@ -178,5 +179,26 @@ func TestCaptureTombstoneRetentionAndFinalization(t *testing.T) {
 	s.Routes(nil).ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/v1/targets/server-uid/captures/cap-one/uids/capture-uid/file", nil))
 	if rr.Code != 404 {
 		t.Fatalf("stale UID after reuse: %d", rr.Code)
+	}
+}
+
+func TestCaptureFileOpenCannotEscapeRoot(t *testing.T) {
+	s, _ := newTestServer(t)
+	for _, name := range []string{"../outside", filepath.Join(t.TempDir(), "outside")} {
+		if file, err := s.openCaptureRegular(name); err == nil {
+			_ = file.Close()
+			t.Fatalf("accepted outside path %q", name)
+		}
+	}
+	outside := filepath.Join(t.TempDir(), "private")
+	if err := os.WriteFile(outside, []byte("outside"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(s.captureDataDir, "capture-link.pcapng")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	if file, err := s.openCaptureRegular("capture-link.pcapng"); err == nil {
+		_ = file.Close()
+		t.Fatal("followed capture symlink")
 	}
 }

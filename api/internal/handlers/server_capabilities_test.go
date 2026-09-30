@@ -76,7 +76,7 @@ func TestServerCapabilities_DeniedOrMissingTargetNeverProbesGateway(t *testing.T
 		status            int
 	}{
 		{"wrong cluster grant", "local", "/servers/same/capabilities?cluster=remote", http.StatusForbidden},
-		{"wrong namespace", "remote", "/servers/same/capabilities?cluster=remote&namespace=outside", http.StatusForbidden},
+		{"namespace outside installation allowlist", "remote", "/servers/same/capabilities?cluster=remote&namespace=outside", http.StatusBadRequest},
 		{"missing server", "remote", "/servers/missing/capabilities?cluster=remote", http.StatusNotFound},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

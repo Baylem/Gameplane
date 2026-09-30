@@ -82,16 +82,25 @@ func (s *Server) prepareCaptureBinding(id string, req startRequest) (bool, error
 	return true, nil
 }
 
-// openCaptureRegular rejects symlinks and replacement between Lstat and Open.
-func openCaptureRegular(path string) (*os.File, error) {
-	before, err := os.Lstat(path)
+// openCaptureRegular anchors access to the capture directory, rejecting symlinks
+// and replacement between Lstat and Open. Callers supply a validated basename.
+func (s *Server) openCaptureRegular(name string) (*os.File, error) {
+	if name != filepath.Base(name) {
+		return nil, fs.ErrInvalid
+	}
+	root, err := os.OpenRoot(s.captureDataDir)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = root.Close() }()
+	before, err := root.Lstat(name)
 	if err != nil {
 		return nil, err
 	}
 	if !before.Mode().IsRegular() {
 		return nil, fs.ErrInvalid
 	}
-	file, err := os.Open(path)
+	file, err := root.Open(name)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +119,7 @@ func (s *Server) matchCaptureIdentity(r *http.Request) bool {
 	if !validCaptureID(id) || !captureUIDPattern.MatchString(serverUID) || !captureUIDPattern.MatchString(captureUID) || serverUID != s.serverUID || r.URL.RawQuery != "" || r.URL.RawPath != "" {
 		return false
 	}
-	file, err := openCaptureRegular(s.captureIdentityPath(id))
+	file, err := s.openCaptureRegular("capture-" + id + ".identity.json")
 	if err != nil {
 		return false
 	}
@@ -138,7 +147,7 @@ func (s *Server) HandleBoundDownload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "capture is still running", http.StatusConflict)
 		return
 	}
-	file, err := openCaptureRegular(s.captureFilePath(id))
+	file, err := s.openCaptureRegular("capture-" + id + ".pcapng")
 	s.mu.Unlock()
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
