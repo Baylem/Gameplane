@@ -173,10 +173,10 @@ The operator's `reconcileTunnel` reconciler materializes these fields into the t
 
 **Deployment Structure** (per GameServer):
 - Name: `<gameserver-name>-tunnel`
-- Replicas: 1 (fixed; never zero even during sleep)
+- Replicas: 1 (never zero during sleep); 0 while the operator refuses the credentials Secret (`TunnelReady=False`, reason `TunnelCredentialRefused`), so a tunnel already running with it stops
 - Container name: `tunnel`
 - Security context: uid 65532 (nonroot), runAsNonRoot=true, allowPrivilegeEscalation=false, ALL capabilities dropped
-- Mounts: read-only Secret at `/etc/gameplane/tunnel-auth` (if credentialsSecretRef is set)
+- Mounts: read-only Secret at `/etc/gameplane/tunnel-auth` (if credentialsSecretRef is set; the operator refuses to mount a Secret with no `ownerReference` to the GameServer — see operator/specs.md's TunnelReady condition)
 
 **RBAC** (playit provider only):
 - ServiceAccount: `<gameserver-name>-tunnel`
@@ -188,7 +188,7 @@ The playit provider alone needs RBAC because it must patch the GameServer's stat
 **NetworkPolicy** (all providers):
 - A per-server egress policy (`<gameserver-name>-tunnel-egress`) admits outbound traffic from the tunnel pod to:
   - DNS (UDP/TCP port 53, all destinations)
-  - Relay control plane ports (provider-specific: TCP 7000 for frp, TCP 443 + UDP 41641 for tailscale, TCP/UDP any for playit)
+  - Relay control plane ports (provider-specific: TCP 7000 for frp, TCP 443 + UDP 41641 for tailscale, playit: unrestricted egress (all ports, all protocols, any destination))
   - Container advertised ports (inbound relay traffic forwarded to the game)
 
 Without this policy, the default-deny egress rule in the games namespace would silently drop relay connections.
