@@ -258,7 +258,7 @@ function ServerDetailView({ lookupTarget }: { lookupTarget: ResourceTarget }) {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               className="rounded-full"
@@ -315,7 +315,7 @@ function ServerDetailView({ lookupTarget }: { lookupTarget: ResourceTarget }) {
           </div>
         )}
 
-        <nav className="scrollbar-thin">
+        <nav className="overflow-x-auto scrollbar-thin">
           <Tabs
             selectedKey={tab}
             onSelectionChange={(key) => setTab(key as TabKey)}
