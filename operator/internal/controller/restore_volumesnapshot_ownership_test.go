@@ -343,12 +343,17 @@ func TestAwaitRestoredServer_DeadlineAppliesDespiteRecurringCopyError(t *testing
 			Strategy:  "volume-snapshot",
 		},
 	}
-	// missing-secret does not exist: ownershipOfRef returns a real (not
-	// swallowed) NotFound error, so ensureRestoredRefs keeps failing
-	// transiently on every pass, exactly like a source object that never
-	// shows up in the cache.
+	// missing-secret does not exist and the persisted copy plan names it, so
+	// ensureOwnedRefCopies fails transiently (a NotFound reading the source,
+	// not an ownership refusal) on every pass, exactly like a source object
+	// that never shows up in the cache.
 	restore := &gameplanev1alpha1.Restore{
-		ObjectMeta: metav1.ObjectMeta{Name: "rs", Namespace: "ns"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "rs", Namespace: "ns",
+			Annotations: map[string]string{
+				"restore.gameplane.local/copy-plan": `[{"kind":"Secret","origName":"missing-secret","copyName":"restored-ref-x"}]`,
+			},
+		},
 		Status: gameplanev1alpha1.RestoreStatus{
 			StartTime: &metav1.Time{Time: time.Now().Add(-(VolumeSnapshotRestoreDeadline + time.Minute))},
 		},
@@ -359,6 +364,13 @@ func TestAwaitRestoredServer_DeadlineAppliesDespiteRecurringCopyError(t *testing
 		WithStatusSubresource(&gameplanev1alpha1.Restore{}).
 		Build()
 	r := &RestoreReconciler{Client: cl, Scheme: s}
+
+	// The pass under test must hit a transient copy error, not an ownership
+	// refusal, or the deadline path below is never exercised.
+	plan := []refCopy{{Kind: secretRefKind, OrigName: "missing-secret", CopyName: "restored-ref-x"}}
+	if cerr := r.ensureOwnedRefCopies(ctx, orig, restored, plan); cerr == nil || errors.Is(cerr, errRefNotOwned) {
+		t.Fatalf("ensureOwnedRefCopies: want a transient (non-ownership) error for the missing source, got %v", cerr)
+	}
 
 	_, err := r.awaitRestoredServer(ctx, restore, backup, restored)
 	if err != nil {

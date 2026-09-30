@@ -177,6 +177,8 @@ func (r *RestoreReconciler) reconcileVolumeSnapshotRestore(
 
 // ensureRestoredRefsFromSpec validates that every Secret/ConfigMap referenced
 // by the restored server's spec still exists and is owned, without creating new copies.
+// It reads through the uncached APIReader, so a NotFound means the object is
+// really gone rather than not yet in the informer cache.
 func (r *RestoreReconciler) ensureRestoredRefsFromSpec(
 	ctx context.Context, restored *gameplanev1alpha1.GameServer,
 ) error {
@@ -184,7 +186,7 @@ func (r *RestoreReconciler) ensureRestoredRefsFromSpec(
 		switch ref.kind {
 		case secretRefKind:
 			sec := &corev1.Secret{}
-			if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: restored.Namespace}, sec); err != nil {
+			if err := r.apiReader().Get(ctx, types.NamespacedName{Name: ref.name, Namespace: restored.Namespace}, sec); err != nil {
 				if apierrors.IsNotFound(err) {
 					return fmt.Errorf("referenced Secret %q not found: %w", ref.name, errRefNotOwned)
 				}
@@ -195,7 +197,7 @@ func (r *RestoreReconciler) ensureRestoredRefsFromSpec(
 			}
 		case configMapRefKind:
 			cm := &corev1.ConfigMap{}
-			if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: restored.Namespace}, cm); err != nil {
+			if err := r.apiReader().Get(ctx, types.NamespacedName{Name: ref.name, Namespace: restored.Namespace}, cm); err != nil {
 				if apierrors.IsNotFound(err) {
 					return fmt.Errorf("referenced ConfigMap %q not found: %w", ref.name, errRefNotOwned)
 				}
@@ -254,9 +256,9 @@ func (r *RestoreReconciler) awaitRestoredServer(
 			switch ref.kind {
 			case secretRefKind:
 				sec := &corev1.Secret{}
-				if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, sec); err != nil {
+				if err := r.apiReader().Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, sec); err != nil {
 					if apierrors.IsNotFound(err) {
-						refsErr = fmt.Errorf("referenced Secret %q not found (transient)", ref.name)
+						refsErr = fmt.Errorf("referenced Secret %q not found (transient): %w", ref.name, err)
 					} else {
 						refsErr = fmt.Errorf("check referenced Secret %q: %w", ref.name, err)
 					}
@@ -268,9 +270,9 @@ func (r *RestoreReconciler) awaitRestoredServer(
 				}
 			case configMapRefKind:
 				cm := &corev1.ConfigMap{}
-				if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, cm); err != nil {
+				if err := r.apiReader().Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, cm); err != nil {
 					if apierrors.IsNotFound(err) {
-						refsErr = fmt.Errorf("referenced ConfigMap %q not found (transient)", ref.name)
+						refsErr = fmt.Errorf("referenced ConfigMap %q not found (transient): %w", ref.name, err)
 					} else {
 						refsErr = fmt.Errorf("check referenced ConfigMap %q: %w", ref.name, err)
 					}
@@ -296,12 +298,15 @@ func (r *RestoreReconciler) awaitRestoredServer(
 	if gs.Status.Phase == gameplanev1alpha1.GameServerPhaseRunning {
 		// Always check the restored server's own references, regardless of original state.
 		// (Original's spec may have changed, so we validate only what the restored server actually uses.)
+		// Read through the uncached APIReader: ensureOwnedRefCopies may have
+		// just recreated a copy the informer cache has not seen yet, and a
+		// cached NotFound here would fail the Restore permanently.
 		var finalRefsErr error
 		for _, ref := range extractSpecRefs(&gs.Spec) {
 			switch ref.kind {
 			case secretRefKind:
 				sec := &corev1.Secret{}
-				if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, sec); err != nil {
+				if err := r.apiReader().Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, sec); err != nil {
 					if apierrors.IsNotFound(err) {
 						finalRefsErr = fmt.Errorf("referenced Secret %q not found: %w", ref.name, errRefNotOwned)
 					} else {
@@ -312,7 +317,7 @@ func (r *RestoreReconciler) awaitRestoredServer(
 				}
 			case configMapRefKind:
 				cm := &corev1.ConfigMap{}
-				if err := r.Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, cm); err != nil {
+				if err := r.apiReader().Get(ctx, types.NamespacedName{Name: ref.name, Namespace: gs.Namespace}, cm); err != nil {
 					if apierrors.IsNotFound(err) {
 						finalRefsErr = fmt.Errorf("referenced ConfigMap %q not found: %w", ref.name, errRefNotOwned)
 					} else {
