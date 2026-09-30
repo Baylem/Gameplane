@@ -772,8 +772,19 @@ func gatewayDirect(t *testing.T, client *http.Client, method, endpoint string, w
 
 func (p *gatewayParity) minecraft(t *testing.T) {
 	// Match the existing Minecraft gamebot's small vanilla 1.21.4 fixture.
-	// The server image and Mojang download are the only external dependency;
-	// mod uploads, registry declarations, and all control traffic stay local.
+	// Seed the offline profile cache so whitelist commands need no external
+	// player-profile lookup. The whitelist itself must start empty.
+	const player = "gatewaye2ebot"
+	// Java UUID.nameUUIDFromBytes("OfflinePlayer:gatewaye2ebot".getBytes(UTF_8)).
+	const offlineUUID = "47180571-e953-377d-aed7-699234c8bd40"
+	const cacheTimeFormat = "2006-01-02 15:04:05 -0700"
+	userCache, err := json.Marshal([]map[string]string{{
+		"name": player, "uuid": offlineUUID,
+		"expiresOn": time.Now().UTC().Add(24 * time.Hour).Format(cacheTimeFormat),
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
 	name, template := p.name+"-mc", p.template+"-mc"
 	vars := map[string]string{"EULA": "TRUE", "TYPE": "VANILLA", "VERSION": "1.21.4", "ONLINE_MODE": "FALSE",
 		"INIT_MEMORY": "512M", "MAX_MEMORY": "1G", "USE_AIKAR_FLAGS": "false", "LEVEL_TYPE": "FLAT",
@@ -789,17 +800,35 @@ func (p *gatewayParity) minecraft(t *testing.T) {
 	}
 	spec := map[string]any{"displayName": "Remote gateway Minecraft", "game": "minecraft-java", "version": "1", "image": "itzg/minecraft-server:java21",
 		"env": envs, "storage": map[string]any{"size": "2Gi", "mountPath": "/data"},
-		"resources": map[string]any{"requests": map[string]any{"cpu": "250m", "memory": "1Gi"}, "limits": map[string]any{"cpu": "2", "memory": "1536Mi"}},
-		"ports":     []any{map[string]any{"name": "game", "containerPort": int64(25565), "protocol": "TCP", "advertise": true}, map[string]any{"name": "rcon", "containerPort": int64(25575), "protocol": "TCP", "advertise": false}},
-		"probes":    map[string]any{"readiness": map[string]any{"exec": map[string]any{"command": []any{"mc-health"}}, "initialDelaySeconds": int64(30), "periodSeconds": int64(10), "failureThreshold": int64(60)}},
-		"rcon":      map[string]any{"protocol": "source", "port": int64(25575), "passwordEnv": "RCON_PASSWORD"},
+		"configFiles": []any{map[string]any{"path": "usercache.json", "template": string(userCache)}},
+		"resources":   map[string]any{"requests": map[string]any{"cpu": "250m", "memory": "1Gi"}, "limits": map[string]any{"cpu": "2", "memory": "1536Mi"}},
+		"ports":       []any{map[string]any{"name": "game", "containerPort": int64(25565), "protocol": "TCP", "advertise": true}, map[string]any{"name": "rcon", "containerPort": int64(25575), "protocol": "TCP", "advertise": false}},
+		"probes":      map[string]any{"readiness": map[string]any{"exec": map[string]any{"command": []any{"mc-health"}}, "initialDelaySeconds": int64(30), "periodSeconds": int64(10), "failureThreshold": int64(60)}},
+		"rcon":        map[string]any{"protocol": "source", "port": int64(25575), "passwordEnv": "RCON_PASSWORD"},
 		"capabilities": map[string]any{"actions": []any{map[string]any{"id": "save-world", "displayName": "Save world", "command": "save-all flush"}},
 			"status":  map[string]any{"metrics": []any{map[string]any{"id": "online", "displayName": "Online players", "command": "list", "regex": `There are (?P<value>\d+) of a max`}}},
 			"players": map[string]any{"whitelist": map[string]any{"list": "whitelist list", "add": "whitelist add {{.Player}}", "remove": "whitelist remove {{.Player}}", "listRegex": `:\s*(?P<names>.*)`}}}}
 	p.createFixture(t, p.remote, name, template, spec)
+	// Cleanup is LIFO: classify failures while the fixture's agent still exists.
+	t.Cleanup(func() {
+		if t.Failed() {
+			p.minecraftFailureCategories(t, name)
+		}
+	})
 	p.ready(t, name, 10*time.Minute)
 	route := func(path string) string {
 		return "/servers/" + name + path + "?cluster=" + p.cluster + "&namespace=gameplane-games"
+	}
+	var cached []struct{ Name, UUID, ExpiresOn string }
+	if err := json.Unmarshal(p.expect(t, p.client, http.MethodGet, route("/files/read")+"&path=/usercache.json", nil, http.StatusOK), &cached); err != nil {
+		t.Fatal(err)
+	}
+	if len(cached) != 1 || cached[0].Name != player || cached[0].UUID != offlineUUID {
+		t.Fatal("seeded offline profile is missing or has an unexpected identity")
+	}
+	expires, err := time.Parse(cacheTimeFormat, cached[0].ExpiresOn)
+	if err != nil || !expires.After(time.Now()) {
+		t.Fatal("seeded offline profile does not have a valid future expiry")
 	}
 	var players struct {
 		Online  int      `json:"online"`
@@ -830,9 +859,14 @@ func (p *gatewayParity) minecraft(t *testing.T) {
 		t.Fatalf("actual Minecraft action response: %+v", action)
 	}
 	// A player-list mutation traverses the same remote gateway and RCON path.
-	const player = "gatewaye2ebot"
-	p.expect(t, p.client, http.MethodPost, route("/players/whitelist/add"), map[string]string{"name": player}, http.StatusOK)
 	var listed []string
+	if err := json.Unmarshal(p.expect(t, p.client, http.MethodGet, route("/players/whitelist"), nil, http.StatusOK), &listed); err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 0 {
+		t.Fatalf("remote whitelist must start empty: %v", listed)
+	}
+	p.expect(t, p.client, http.MethodPost, route("/players/whitelist/add"), map[string]string{"name": player}, http.StatusOK)
 	if err := json.Unmarshal(p.expect(t, p.client, http.MethodGet, route("/players/whitelist"), nil, http.StatusOK), &listed); err != nil {
 		t.Fatal(err)
 	}
@@ -878,6 +912,50 @@ func (p *gatewayParity) minecraft(t *testing.T) {
 			break
 		}
 	}
+}
+
+func (p *gatewayParity) minecraftFailureCategories(t *testing.T, name string) {
+	t.Helper()
+	// t.Context is canceled before cleanup. Bound both retrieval time and bytes.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	tail, limit := int64(100), int64(32<<10)
+	stream, err := p.remote.K8s.CoreV1().Pods("gameplane-games").GetLogs(name+"-0", &corev1.PodLogOptions{
+		Container: "agent", TailLines: &tail, LimitBytes: &limit,
+	}).Stream(ctx)
+	if err != nil {
+		t.Log("Minecraft moderation diagnostics: agent log unavailable")
+		return
+	}
+	defer stream.Close()
+	raw, err := io.ReadAll(io.LimitReader(stream, limit))
+	if err != nil {
+		t.Log("Minecraft moderation diagnostics: agent log unreadable")
+		return
+	}
+	// Only fixed categories and counts may reach CI output. Never emit the raw
+	// log, command, error, or any other log-supplied string, even after redaction.
+	var timeout, eof, reset, auth, other int
+	for _, line := range bytes.Split(raw, []byte{'\n'}) {
+		var entry struct{ Msg, Err string }
+		if json.Unmarshal(line, &entry) != nil || entry.Msg != "players moderation rcon" {
+			continue
+		}
+		detail := strings.ToLower(entry.Err)
+		switch {
+		case strings.Contains(detail, "timeout"), strings.Contains(detail, "deadline exceeded"):
+			timeout++
+		case strings.Contains(detail, "eof"):
+			eof++
+		case strings.Contains(detail, "connection reset"), strings.Contains(detail, "broken pipe"):
+			reset++
+		case strings.Contains(detail, "authentication failed"):
+			auth++
+		default:
+			other++
+		}
+	}
+	t.Logf("Minecraft moderation diagnostics: timeout=%d eof=%d reset=%d auth=%d other=%d", timeout, eof, reset, auth, other)
 }
 
 func (p *gatewayParity) privatePath(uid, operation string) string {
