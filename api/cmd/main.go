@@ -364,7 +364,7 @@ func main() {
 			registry.DBKeyFunc(store, registry.NewK8sSecretReader(k8s, cfg.namespace)),
 			registry.StaticKeys(map[string]string{"curseforge": cfg.curseforgeAPIKey}),
 		))
-		handlers.MountRegistry(p, k8s, regSet)
+		handlers.MountRegistryWithRegistry(p, reg, regSet)
 		// Internal reads use the same selected cluster and credentials as
 		// browser-facing agent routes, including remote-only management installs.
 		agentLister := ws.NewClusterAgentClient(reg, cfg.namespace, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
@@ -372,14 +372,17 @@ func main() {
 		// ID-managed mods (ARK CurseForge ids, Project Zomboid MOD_IDS,
 		// Steam Workshop lists): the API only writes GameServer.spec.mods.ids;
 		// the operator projects it into the game's env (rule 10).
-		handlers.MountModIDs(p, k8s)
-		handlers.MountCapture(p, reg, auditor, handlers.CaptureConfig{
+		handlers.MountModIDsWithRegistry(p, reg)
+		captureConfig := handlers.CaptureConfig{
 			FeatureEnabled:          cfg.captureFeatureEnabled,
+			GatewayNamespace:        cfg.namespace,
 			DefaultRetentionSeconds: cfg.captureDefaultRetentionSecs,
 			MaxRetentionSeconds:     cfg.captureMaxRetentionSecs,
 			DefaultMaxDurationSecs:  cfg.captureDefaultMaxDurationS,
 			DefaultMaxSizeBytes:     cfg.captureDefaultMaxSizeBytes,
-		}, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
+		}
+		handlers.MountServerCapabilities(p, reg, ws.NewCaptureGatewayClient(reg, cfg.namespace), captureConfig)
+		handlers.MountCapture(p, reg, auditor, captureConfig, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
 		ws.Mount(p, reg, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey, ws.AgentGatewayOptions{Namespace: cfg.namespace})
 	})
 

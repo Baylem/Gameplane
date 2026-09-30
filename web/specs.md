@@ -1165,6 +1165,19 @@ openEventStream(opts: EventStreamOptions)
 
 ## References
 
+### Remote server feature parity
+
+The existing Mods, Modpacks and Capture screens use their immutable resource
+target for both local and remote servers. ID-list editing stays disabled until
+the target's current list has loaded successfully. Capture controls query
+GET `/servers/{name}/capabilities` and verify the returned target identity.
+Loading, unavailable or unsupported transport states cannot enable actions from
+stale successful data. Capture enable/start and file download capabilities are
+separate: disabling new captures at a site does not hide retained downloads.
+Permission checks remain independent, and an already-open start dialog respects
+subsequent capability loss. Existing Pencil layouts/components are reused under
+the documented design exception in `docs/remote-parity.md`.
+
 - **docs/architecture.md** — component overview, data flow, security boundaries, "operator is authoritative" rationale
 - **docs/security.md** — auth model, RBAC, threat model, pod security, pre-auth privacy rule
 - **docs/installing.md** — Helm values, K8s prerequisites, OIDC setup (for deployment contexts)

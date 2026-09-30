@@ -82,13 +82,23 @@ def main():
     assert {obj["metadata"]["namespace"] for obj in roles} == {"games-one", "games-two"}
     for role in roles:
         assert role["rules"] == [
-            {"apiGroups": ["gameplane.local"], "resources": ["gameservers"], "verbs": ["get"]},
+            {"apiGroups": ["gameplane.local"], "resources": ["gameservers", "networkcaptures"], "verbs": ["get"]},
             {"apiGroups": [""], "resources": ["services"], "verbs": ["get"]},
         ]
     policy = one(objects, "NetworkPolicy", "gameplane-gateway")["spec"]
     assert policy["policyTypes"] == ["Ingress", "Egress"]
     assert policy["ingress"] == [{"from": [{"ipBlock": {"cidr": "10.20.30.40/32"}}], "ports": [{"protocol": "TCP", "port": 8443}]}]
-    assert {port["port"] for rule in policy["egress"] for port in rule["ports"]} == {53, 443, 6443, 8090}
+    assert {port["port"] for rule in policy["egress"] for port in rule["ports"]} == {53, 443, 6443, 8090, 9091}
+    for ingress in [obj for obj in objects if obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "gameplane-gateway-to-agent"]:
+        assert {port["port"] for port in ingress["spec"]["ingress"][0]["ports"]} == {8090, 9091}
+    assert "--capture-enabled=false" in container["args"]
+    enabled = render({"gateway": settings(), "capture": {"enabled": True, "defaultRetentionSeconds": 120, "maxRetentionSeconds": 3600, "defaultMaxDurationSeconds": 90, "defaultMaxSizeBytes": 1048576}})
+    capture_args = one(enabled, "Deployment", "gameplane-gateway")["spec"]["template"]["spec"]["containers"][0]["args"]
+    assert "--capture-enabled=true" in capture_args
+    assert "--capture-default-retention=120" in capture_args
+    assert "--capture-max-retention=3600" in capture_args
+    assert "--capture-default-max-duration=90" in capture_args
+    assert "--capture-default-max-size=1048576" in capture_args
     assert len([obj for obj in objects if obj["kind"] == "NetworkPolicy" and obj["metadata"]["name"] == "gameplane-gateway-to-agent"]) == 2
 
     selector_gateway = settings()

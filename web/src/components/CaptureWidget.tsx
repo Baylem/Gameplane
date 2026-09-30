@@ -1,4 +1,5 @@
 import { useResourceClient, useResourceTarget, resourceKey, useResourcePermissions, resourceCan } from "@/lib/resourceTarget";
+import { useServerCapabilities, type CaptureCapabilities } from "@/lib/useServerCapabilities";
 // Network-capture surface for a GameServer's "Capture" tab. Mirrors the
 // Backups tab's structure (own TanStack Query calls, own mutations, plain
 // <table> for the list) per CLAUDE.md's "Add a new dashboard page" recipe.
@@ -59,6 +60,13 @@ import { formatBytes, formatRelative } from "@/lib/utils";
 import type { GameServer, NetworkCapture } from "@/types";
 
 const DEFAULT_RETENTION_SECONDS = 86400; // 24h — FR-007's engineering default, not a legal mandate.
+// Display-only defaults while access is disabled or capabilities are unresolved.
+// A ready response must contain validated site limits before actions are enabled.
+const CAPTURE_DISPLAY_DEFAULTS: CaptureCapabilities = {
+  enabled: false, files: false, state: "unavailable",
+  defaultRetentionSeconds: DEFAULT_RETENTION_SECONDS, maxRetentionSeconds: 604800,
+  defaultMaxDurationSeconds: 300, defaultMaxSizeBytes: 5 * 1024 * 1024 * 1024,
+};
 
 function formatDuration(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -122,11 +130,22 @@ export function CaptureWidget({ name, ns, gs }: Props) {
   const canRead = canManage;
   const resourceTarget = useResourceTarget({ name, namespace: ns });
   const resourceClient = useResourceClient(resourceTarget);
+  const capabilities = useServerCapabilities(resourceTarget, canManage);
+  const capabilityReady = capabilities.isSuccess && capabilities.data.state === "ready";
+  const canStartCapture = canManage && capabilityReady && capabilities.data.enabled;
+  const canDownload = canRead && capabilityReady && capabilities.data.files;
+  const capabilityMessage = !canManage ? null
+    : capabilities.isPending ? "Checking capture support…"
+    : capabilities.isError || capabilities.data?.state === "unavailable" ? "Capture access is temporarily unavailable at this location."
+    : capabilities.data?.state === "unsupported" ? "This location needs a gateway update before captures can be managed here."
+    : !capabilities.data?.enabled ? "New captures are disabled at this location. Existing capture files remain available."
+    : null;
   const { Captures } = resourceClient;
   const qc = useQueryClient();
   const enabled = gs?.spec.capture?.enabled === true;
-  const retentionSeconds = gs?.spec.capture?.retentionSeconds ?? DEFAULT_RETENTION_SECONDS;
-  const retentionHours = Math.max(1, Math.round(retentionSeconds / 3600));
+  const captureLimits = capabilities.data?.state === "ready" ? capabilities.data : CAPTURE_DISPLAY_DEFAULTS;
+  const retentionSeconds = gs?.spec.capture?.retentionSeconds ?? captureLimits.defaultRetentionSeconds;
+  const retentionHours = retentionSeconds / 3600;
 
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [showStartModal, setShowStartModal] = useState(false);
@@ -209,10 +228,11 @@ export function CaptureWidget({ name, ns, gs }: Props) {
               traffic. Enable it to capture packets from joining players for protocol analysis.
             </p>
             {enableMut.error && <ErrorBanner err={enableMut.error} />}
+            {capabilityMessage && <p role="status" className="text-sm text-muted">{capabilityMessage}</p>}
             <Button
               variant="primary"
               onPress={() => enableMut.mutate()}
-              isDisabled={!canManage || enableMut.isPending}
+              isDisabled={!canStartCapture || enableMut.isPending}
             >
               {enableMut.isPending ? "Enabling…" : "Enable Capture"}
             </Button>
@@ -227,6 +247,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
 
   return (
     <div className="space-y-4 p-6">
+      {capabilityMessage && <p role="status" className="text-sm text-muted">{capabilityMessage}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Chip
@@ -254,7 +275,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
             <Button
               variant="primary"
               size="sm"
-              isDisabled={!canManage} onPress={() => setShowStartModal(true)}
+              isDisabled={!canStartCapture} onPress={() => setShowStartModal(true)}
             >
               Start Capture
             </Button>
@@ -405,7 +426,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
                                 size="sm"
                                 variant="ghost"
                                 aria-label={`Download capture ${c.captureId}`}
-                                isDisabled={!canRead || !downloadable || fileMut.isPending}
+                                isDisabled={!canDownload || !downloadable || fileMut.isPending}
                                 onPress={() => fileMut.mutate(c.captureId)}
                               >
                                 <Download className="h-4 w-4" />
@@ -460,15 +481,18 @@ export function CaptureWidget({ name, ns, gs }: Props) {
         </section>
       )}
 
-      <StartCaptureModal
+      {showStartModal && <StartCaptureModal
         open={showStartModal}
+        available={canStartCapture}
+        limits={captureLimits}
+        retentionSeconds={retentionSeconds}
         onClose={() => setShowStartModal(false)}
         onStart={(body) => Captures.start(name, body, ns)}
         onStarted={() => {
           setShowStartModal(false);
           void qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "captures", name, ns) });
         }}
-      />
+      />}
 
       <AlertDialog
         isOpen={deleteTarget !== null}
@@ -519,11 +543,17 @@ export function CaptureWidget({ name, ns, gs }: Props) {
 // scoped to just the field that produced it.
 function StartCaptureModal({
   open,
+  available,
+  limits,
+  retentionSeconds,
   onClose,
   onStart,
   onStarted,
 }: {
   open: boolean;
+  available: boolean;
+  limits: CaptureCapabilities;
+  retentionSeconds: number;
   onClose: () => void;
   onStart: (body: CaptureStartBody) => Promise<NetworkCapture>;
   onStarted: () => void;
@@ -531,20 +561,28 @@ function StartCaptureModal({
   const permissions = useResourcePermissions();
   const canManage = resourceCan(permissions, "captures:manage");
   const [filter, setFilter] = useState("");
-  const [durationValue, setDurationValue] = useState(300);
+  const [durationValue, setDurationValue] = useState(limits.defaultMaxDurationSeconds);
   const [durationUnit, setDurationUnit] = useState<"seconds" | "minutes">("seconds");
-  const [sizeValue, setSizeValue] = useState(5120);
+  const [sizeValue, setSizeValue] = useState(limits.defaultMaxSizeBytes / (1024 * 1024));
   const [sizeUnit, setSizeUnit] = useState<"MB" | "GB">("MB");
-  const [retentionValue, setRetentionValue] = useState(24);
+  const [retentionValue, setRetentionValue] = useState(retentionSeconds / 3600);
   const [retentionUnit, setRetentionUnit] = useState<"hours" | "days">("hours");
+  const durationSeconds = durationUnit === "minutes" ? durationValue * 60 : durationValue;
+  const sizeMultiplier = sizeUnit === "GB" ? 1024 * 1024 * 1024 : 1024 * 1024;
+  const sizeBytes = Math.round(sizeValue * sizeMultiplier);
+  const retentionMultiplier = retentionUnit === "days" ? 86400 : 3600;
+  const retentionTTL = Math.round(retentionValue * retentionMultiplier);
+  const validLimits = Number.isSafeInteger(durationSeconds) && durationSeconds >= 1 && durationSeconds <= 3600 &&
+    Number.isSafeInteger(sizeBytes) && sizeBytes >= 1 && sizeBytes <= limits.defaultMaxSizeBytes &&
+    Number.isSafeInteger(retentionTTL) && retentionTTL >= 60 && retentionTTL <= limits.maxRetentionSeconds;
 
   const start = useMutation({
     mutationFn: () =>
       onStart({
         filter: filter.trim() || undefined,
-        maxDurationSeconds: durationUnit === "minutes" ? durationValue * 60 : durationValue,
-        maxSizeBytes: (sizeUnit === "GB" ? sizeValue * 1024 : sizeValue) * 1024 * 1024,
-        ttlSecondsAfterFinished: retentionUnit === "days" ? retentionValue * 86400 : retentionValue * 3600,
+        maxDurationSeconds: durationSeconds,
+        maxSizeBytes: sizeBytes,
+        ttlSecondsAfterFinished: retentionTTL,
       }),
     onSuccess: onStarted,
   });
@@ -580,7 +618,7 @@ function StartCaptureModal({
                 className="space-y-4"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  if (canManage) start.mutate();
+                  if (available && canManage && validLimits && !start.isPending && !filterError) start.mutate();
                 }}
               >
                 <div className="space-y-2">
@@ -659,7 +697,9 @@ function StartCaptureModal({
                     <Input
                       id="size-value"
                       type="number"
-                      min={1}
+                      min={1 / sizeMultiplier}
+                      max={limits.defaultMaxSizeBytes / sizeMultiplier}
+                      step="any"
                       value={String(sizeValue)}
                       onChange={(e) => setSizeValue(Number(e.target.value))}
                       className="w-[140px]"
@@ -684,7 +724,7 @@ function StartCaptureModal({
                     </Select>
                   </div>
                   <Description>
-                    Maximum file size. Capture stops when reached.
+                    Maximum file size: {formatBytes(limits.defaultMaxSizeBytes)}. Capture stops when reached.
                   </Description>
                 </div>
   
@@ -694,7 +734,9 @@ function StartCaptureModal({
                     <Input
                       id="retention-value"
                       type="number"
-                      min={1}
+                      min={60 / retentionMultiplier}
+                      max={limits.maxRetentionSeconds / retentionMultiplier}
+                      step="any"
                       value={String(retentionValue)}
                       onChange={(e) => setRetentionValue(Number(e.target.value))}
                       className="w-[140px]"
@@ -718,7 +760,7 @@ function StartCaptureModal({
                     </Select>
                   </div>
                   <Description>
-                    How long the capture is retained before auto-delete.
+                    How long the capture is retained before auto-delete. Maximum: {formatDuration(limits.maxRetentionSeconds)}.
                   </Description>
                 </div>
   
@@ -732,7 +774,7 @@ function StartCaptureModal({
               <Button
                 variant="primary"
                 isPending={start.isPending}
-                isDisabled={!canManage || start.isPending || !!filterError || durationValue < 1 || sizeValue < 1}
+                isDisabled={!available || !canManage || start.isPending || !!filterError || !validLimits}
                 onPress={() => start.mutate()}
               >
                 {start.isPending ? "Starting…" : "Start Capture"}

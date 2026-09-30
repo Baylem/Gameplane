@@ -442,7 +442,7 @@ function ModsByIdTab({
   const { Servers } = resourceClient;
   const qc = useQueryClient();
   const access = useResourceAccess();
-  const canManage = access?.canControl === true;
+  const hasManagePermission = access?.canControl === true;
 
   const caps = tmpl?.spec.capabilities?.mods;
   // A registry provider (e.g. ARK declares curseforge) enables in-app
@@ -469,6 +469,8 @@ function ModsByIdTab({
     queryKey: resourceKey(resourceTarget, "mod-ids", name, ns),
     queryFn: ({ signal }) => resourceClient.withSignal(signal).Servers.modIDs(name, ns),
   });
+  // Never offer edits against an unknown or unavailable server-side list.
+  const canManage = hasManagePermission && saved !== undefined && !isError;
 
   const dirty = useMemo(() => rows.some((r) => r.state !== "kept"), [rows]);
 
@@ -550,7 +552,7 @@ function ModsByIdTab({
   // actually drops it); the header count excludes rows marked for removal.
   const selectedCount = rows.filter((r) => r.state !== "removed").length;
 
-  if (browsing) {
+  if (browsing && canManage) {
     return (
       <div className="flex h-full flex-col gap-4 p-6">
         <header className="space-y-2">
@@ -588,7 +590,7 @@ function ModsByIdTab({
     <div className="space-y-6 p-6">
       <header className="flex items-center justify-between gap-3">
         <div className="space-y-0.5">
-          <h2 className="text-sm text-muted">{selectedCount} selected</h2>
+          <h2 className="text-sm text-muted">{saved !== undefined ? `${selectedCount} selected` : isError ? "Couldn’t load mods" : "Loading…"}</h2>
           <p className="text-[11px] text-muted">
             {[tmpl?.spec.displayName, providerName ? `${providerName} mod IDs` : null].filter(Boolean).join(" · ")}
           </p>
@@ -632,7 +634,7 @@ function ModsByIdTab({
         </div>
       )}
 
-      {isError && !saved && (
+      {isError && (
         <div className="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
           {errMsg(listError)} ·{" "}
           <Button variant="ghost" size="sm" className="underline" onPress={() => void refetch()} aria-label="retry">
@@ -678,7 +680,7 @@ function ModsByIdTab({
 
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">Selected mods</h3>
-        {rows.length === 0 ? (
+        {saved === undefined ? null : rows.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-12 text-center">
             <Package className="h-6 w-6 text-muted" />
             <p className="text-sm text-muted">No mods selected.</p>

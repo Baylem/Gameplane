@@ -1,18 +1,18 @@
 import { afterEach, describe, it, expect, onTestFinished, vi } from "vitest";
 import type { ReactElement, ReactNode } from "react";
 import { http, HttpResponse } from "msw";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
 import { renderWithQuery as renderQuery } from "@/test/render";
-import { ResourceTargetProvider } from "@/lib/resourceTarget";
+import { ResourceTargetProvider, resourceKey, type ResourceTarget } from "@/lib/resourceTarget";
 import { makeServer, makeCapture } from "@/test/factories";
 import type { CaptureStartBody } from "@/lib/api";
 import { CaptureWidget } from "./CaptureWidget";
 
-function renderWithQuery(ui: ReactElement, permissions = ["captures:manage"]) {
+function renderWithQuery(ui: ReactElement, permissions = ["captures:manage"], target: ResourceTarget = { cluster: "remote", namespace: "gameplane-games", name: "alpha" }) {
   return renderQuery(
-    <ResourceTargetProvider target={{ cluster: "remote", namespace: "gameplane-games", name: "alpha" }}
+    <ResourceTargetProvider target={target}
       access={{ canWrite: false, canControl: false, canConsole: false, canDelete: false, isOwner: false, isCollaborator: false, permissions }}>
       {ui}
     </ResourceTargetProvider>,
@@ -31,15 +31,224 @@ afterEach(() => {
 });
 
 describe("CaptureWidget", () => {
+  describe("selected-server capabilities", () => {
+    const target: ResourceTarget = { cluster: "remote", namespace: "gameplane-games", name: "alpha", uid: "remote-alpha-uid" };
+    const ready = { enabled: true, files: true, state: "ready" as const,
+      defaultRetentionSeconds: 86400, maxRetentionSeconds: 604800,
+      defaultMaxDurationSeconds: 300, defaultMaxSizeBytes: 5 * 1024 * 1024 * 1024 };
+    const completed = makeCapture({ captureId: "cap-remote", phase: "Completed" });
+
+    function listCompleted() {
+      server.use(http.get(/servers\/alpha:captures$/, () => HttpResponse.json({
+        captures: [completed], total: 1, limit: 100, offset: 0,
+      })));
+    }
+
+    it("blocks Enable while the capability request is pending", async () => {
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const enable = vi.fn(() => HttpResponse.json({}));
+      server.use(
+        http.get("/servers/alpha/capabilities", async () => {
+          await gate;
+          return HttpResponse.json({ target, capture: ready });
+        }),
+        http.post(/servers\/alpha:capture-enable$/, enable),
+      );
+      renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={makeServer()} />, ["captures:manage"], target);
+      const button = screen.getByRole("button", { name: /Enable Capture/i });
+      try {
+        expect(screen.getByText("Checking capture support…")).toBeInTheDocument();
+        expect(button).toBeDisabled();
+        await userEvent.click(button);
+        expect(enable).not.toHaveBeenCalled();
+      } finally {
+        release();
+      }
+      await waitFor(() => expect(button).not.toBeDisabled());
+    });
+
+    it.each([
+      { state: "unsupported", status: 200, message: /needs a gateway update/i },
+      { state: "unavailable", status: 200, message: /temporarily unavailable/i },
+      { state: "unavailable", status: 503, message: /temporarily unavailable/i },
+    ] as const)("disables Start and Download when capture access is $state with HTTP $status", async ({ state, status, message }) => {
+      listCompleted();
+      const download = vi.fn(() => new HttpResponse("unexpected download"));
+      const start = vi.fn(() => HttpResponse.json({}));
+      server.use(
+        http.get("/servers/alpha/capabilities", () => status === 200
+          ? HttpResponse.json({ target, capture: { enabled: false, files: false, state } })
+          : new HttpResponse("unavailable", { status })),
+        http.get(/servers\/alpha:capture-file$/, download),
+        http.post(/servers\/alpha:capture-start$/, start),
+      );
+      renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={makeServer({ spec: { capture: { enabled: true } } })} />, ["captures:manage"], target);
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      const startButton = screen.getByRole("button", { name: /Start Capture/i });
+      const downloadButton = await screen.findByRole("button", { name: "Download capture cap-remote" });
+      expect(startButton).toBeDisabled();
+      expect(downloadButton).toBeDisabled();
+      await userEvent.click(startButton);
+      await userEvent.click(downloadButton);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(start).not.toHaveBeenCalled();
+      expect(download).not.toHaveBeenCalled();
+    });
+
+    it.each(["unsupported", "unavailable"] as const)("disables Enable when a location is %s", async (state) => {
+      const enable = vi.fn(() => HttpResponse.json({}));
+      server.use(
+        http.get("/servers/alpha/capabilities", () => HttpResponse.json({ target, capture: { enabled: false, files: false, state } })),
+        http.post(/servers\/alpha:capture-enable$/, enable),
+      );
+      renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={makeServer()} />, ["captures:manage"], target);
+      await waitFor(() => expect(screen.queryByText("Checking capture support…")).not.toBeInTheDocument());
+      const button = screen.getByRole("button", { name: /Enable Capture/i });
+      expect(button).toBeDisabled();
+      await userEvent.click(button);
+      expect(enable).not.toHaveBeenCalled();
+    });
+
+    it("keeps existing files downloadable when the location disables new captures", async () => {
+      listCompleted();
+      const requests: URL[] = [];
+      server.use(
+        http.get("/servers/alpha/capabilities", () => HttpResponse.json({ target, capture: { ...ready, enabled: false } })),
+        http.get(/servers\/alpha:capture-file$/, ({ request }) => {
+          requests.push(new URL(request.url));
+          return new HttpResponse(new Blob(["remote pcapng"]), { headers: { "Content-Type": "application/octet-stream" } });
+        }),
+      );
+      const createURL = vi.fn(() => "blob:remote-capture");
+      const revokeURL = vi.fn();
+      const originalCreate = Object.getOwnPropertyDescriptor(URL, "createObjectURL");
+      const originalRevoke = Object.getOwnPropertyDescriptor(URL, "revokeObjectURL");
+      Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createURL });
+      Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeURL });
+      const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+      onTestFinished(() => {
+        anchorClick.mockRestore();
+        if (originalCreate) Object.defineProperty(URL, "createObjectURL", originalCreate);
+        else delete (URL as { createObjectURL?: unknown }).createObjectURL;
+        if (originalRevoke) Object.defineProperty(URL, "revokeObjectURL", originalRevoke);
+        else delete (URL as { revokeObjectURL?: unknown }).revokeObjectURL;
+      });
+      renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={makeServer({ spec: { capture: { enabled: true } } })} />, ["captures:manage"], target);
+      expect(await screen.findByText(/New captures are disabled at this location/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Start Capture/i })).toBeDisabled();
+      const downloadButton = await screen.findByRole("button", { name: "Download capture cap-remote" });
+      await waitFor(() => expect(downloadButton).not.toBeDisabled());
+      await userEvent.click(downloadButton);
+      await waitFor(() => expect(anchorClick).toHaveBeenCalledOnce());
+      expect(requests).toHaveLength(1);
+      expect(requests[0].pathname).toBe("/servers/alpha:capture-file");
+      expect(requests[0].searchParams.get("cluster")).toBe("remote");
+      expect(requests[0].searchParams.get("namespace")).toBe("gameplane-games");
+      expect(requests[0].searchParams.get("id")).toBe("cap-remote");
+      expect(createURL).toHaveBeenCalledOnce();
+      expect(revokeURL).toHaveBeenCalledWith("blob:remote-capture");
+    });
+
+    it.each(["unsupported", "failure"] as const)("blocks an already-open Start form after capability %s", async (loss) => {
+      const start = vi.fn(() => HttpResponse.json({ captureId: "must-not-start" }));
+      let state: "ready" | "unsupported" | "failure" = "ready";
+      listCompleted();
+      server.use(
+        http.get("/servers/alpha/capabilities", () => state === "failure"
+          ? new HttpResponse("unavailable", { status: 503 })
+          : HttpResponse.json({ target, capture: state === "ready" ? ready : { enabled: false, files: false, state } })),
+        http.post(/servers\/alpha:capture-start$/, start),
+      );
+      const { client } = renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={makeServer({ spec: { capture: { enabled: true } } })} />, ["captures:manage"], target);
+      const open = screen.getByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(open).not.toBeDisabled());
+      const download = await screen.findByRole("button", { name: "Download capture cap-remote" });
+      await userEvent.click(open);
+      const dialog = await screen.findByRole("dialog");
+      const submit = within(dialog).getByRole("button", { name: /Start Capture/i });
+      expect(submit).not.toBeDisabled();
+      state = loss;
+      await act(async () => { await client.refetchQueries({ queryKey: resourceKey(target, "capabilities") }); });
+      await waitFor(() => expect(submit).toBeDisabled());
+      expect(download).toBeDisabled();
+      await userEvent.click(submit);
+      const form = dialog.querySelector("form");
+      expect(form).not.toBeNull();
+      fireEvent.submit(form!);
+      expect(start).not.toHaveBeenCalled();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    it.each([undefined, 1800])("uses remote capture defaults, ceilings and server retention override %s", async (serverRetention) => {
+      listCompleted();
+      const capture = { ...ready, defaultRetentionSeconds: 7200, maxRetentionSeconds: 10800,
+        defaultMaxDurationSeconds: 120, defaultMaxSizeBytes: 64 * 1024 * 1024 };
+      const started: CaptureStartBody[] = [];
+      server.use(
+        http.get("/servers/alpha/capabilities", () => HttpResponse.json({ target, capture })),
+        http.post(/servers\/alpha:capture-start$/, async ({ request }) => {
+          const url = new URL(request.url);
+          expect(url.searchParams.get("cluster")).toBe("remote");
+          expect(url.searchParams.get("namespace")).toBe("gameplane-games");
+          started.push(await request.json() as CaptureStartBody);
+          return HttpResponse.json(makeCapture({ captureId: "remote-new", phase: "Pending" }), { status: 202 });
+        }),
+      );
+      const retentionSeconds = serverRetention ?? capture.defaultRetentionSeconds;
+      renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={makeServer({ spec: {
+        capture: { enabled: true, ...(serverRetention === undefined ? {} : { retentionSeconds: serverRetention }) },
+      } })} />, ["captures:manage"], target);
+      const open = screen.getByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(open).not.toBeDisabled());
+      expect(screen.getByText(`Captures will auto-delete after ${retentionSeconds / 3600} hours`)).toBeInTheDocument();
+      await userEvent.click(open);
+      const dialog = await screen.findByRole("dialog");
+      const duration = within(dialog).getByLabelText(/Max duration value/i);
+      const size = within(dialog).getByLabelText(/Max size value/i);
+      const retention = within(dialog).getByLabelText(/Retention value/i);
+      const submit = within(dialog).getByRole("button", { name: /Start Capture/i });
+      expect(duration).toHaveValue(120);
+      expect(size).toHaveValue(64);
+      expect(size).toHaveAttribute("max", "64");
+      expect(retention).toHaveValue(retentionSeconds / 3600);
+      expect(retention).toHaveAttribute("min", String(60 / 3600));
+      expect(retention).toHaveAttribute("max", "3");
+      fireEvent.change(retention, { target: { value: String(59 / 3600) } });
+      expect(submit).toBeDisabled();
+      fireEvent.submit(dialog.querySelector("form")!);
+      expect(started).toHaveLength(0);
+      fireEvent.change(retention, { target: { value: String(60 / 3600) } });
+      expect(submit).not.toBeDisabled();
+      fireEvent.change(retention, { target: { value: "4" } });
+      expect(submit).toBeDisabled();
+      fireEvent.submit(dialog.querySelector("form")!);
+      expect(started).toHaveLength(0);
+      fireEvent.change(retention, { target: { value: String(retentionSeconds / 3600) } });
+      fireEvent.change(size, { target: { value: "65" } });
+      expect(submit).toBeDisabled();
+      fireEvent.change(size, { target: { value: "64" } });
+      fireEvent.change(duration, { target: { value: "3601" } });
+      expect(submit).toBeDisabled();
+      fireEvent.change(duration, { target: { value: "120" } });
+      expect(submit).not.toBeDisabled();
+      await userEvent.click(submit);
+      await waitFor(() => expect(started).toHaveLength(1));
+      expect(started[0]).toEqual({ maxDurationSeconds: 120, maxSizeBytes: 64 * 1024 * 1024, ttlSecondsAfterFinished: retentionSeconds });
+    });
+  });
+
   it("requires an exact capture grant even when server controls are permitted", async () => {
     const read = vi.fn(() => HttpResponse.json({ captures: [], total: 0, limit: 100, offset: 0 }));
-    server.use(http.get(/servers\/alpha:captures(\?.*)?$/, read));
+    const capabilities = vi.fn(() => HttpResponse.json({ capture: { enabled: true, files: true, state: "ready" } }));
+    server.use(http.get(/servers\/alpha:captures(\?.*)?$/, read), http.get("/servers/alpha/capabilities", capabilities));
     renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={makeServer({ spec: { capture: { enabled: true } } })} />, ["servers:write"]);
     expect(screen.getByRole("button", { name: /Start Capture/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /Disable Capture/i })).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: /Start Capture/i }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(read).not.toHaveBeenCalled();
+    expect(capabilities).not.toHaveBeenCalled();
   });
 
   it("does not infer capture management from a missing target context", () => {
@@ -58,7 +267,7 @@ describe("CaptureWidget", () => {
       expect(screen.getByText(/Network packet capture is an optional feature/i)).toBeInTheDocument();
     });
 
-    it("renders the Enable Capture button in disabled state", () => {
+    it("enables the Enable Capture button only after checking location support", async () => {
       const gs = makeServer({
         spec: { capture: { enabled: false } },
       });
@@ -66,7 +275,8 @@ describe("CaptureWidget", () => {
 
       const button = screen.getByRole("button", { name: /Enable Capture/i });
       expect(button).toBeInTheDocument();
-      expect(button).not.toBeDisabled();
+      expect(button).toBeDisabled();
+      await waitFor(() => expect(button).not.toBeDisabled());
     });
 
     it("calls enable mutation when Enable Capture is clicked", async () => {
@@ -97,6 +307,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const button = screen.getByRole("button", { name: /Enable Capture/i });
+      await waitFor(() => expect(button).not.toBeDisabled());
       await userEvent.click(button);
 
       // Button shows the loading state while the gated request is in
@@ -138,6 +349,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const button = screen.getByRole("button", { name: /Enable Capture/i });
+      await waitFor(() => expect(button).not.toBeDisabled());
       await userEvent.click(button);
 
       await waitFor(() => {
@@ -540,6 +752,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const downloadBtn = await screen.findByLabelText(/Download capture cap-1/i);
+      await waitFor(() => expect(downloadBtn).not.toBeDisabled());
       await userEvent.click(downloadBtn);
 
       // Button is disabled while the (still-gated) download is in flight.
@@ -860,6 +1073,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       // getByText would also match the still-mounted trigger button and the
@@ -882,6 +1096,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       expect(await screen.findByLabelText(/Packet Filter/i)).toBeInTheDocument();
@@ -906,6 +1121,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const filterInput = (await screen.findByLabelText(/Packet Filter/i)) as HTMLInputElement;
@@ -935,6 +1151,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const filterInput = await screen.findByLabelText(/Packet Filter/i);
@@ -965,6 +1182,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const filterInput = await screen.findByLabelText(/Packet Filter/i);
@@ -995,6 +1213,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const filterInput = await screen.findByLabelText(/Packet Filter/i);
@@ -1026,6 +1245,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const durationUnit = screen.getByLabelText(/Max duration unit/i);
@@ -1051,6 +1271,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const sizeUnit = screen.getByLabelText(/Max size unit/i);
@@ -1076,6 +1297,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const retentionUnit = screen.getByLabelText(/Retention unit/i);
@@ -1101,6 +1323,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const durationInput = screen.getByLabelText(/Max duration value/i);
@@ -1124,6 +1347,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const sizeInput = screen.getByLabelText(/Max size value/i);
@@ -1150,6 +1374,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const filterInput = await screen.findByLabelText(/Packet Filter/i);
@@ -1198,6 +1423,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const filterInput = await screen.findByLabelText(/Packet Filter/i);
@@ -1243,6 +1469,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const durationInput = screen.getByLabelText(/Max duration value/i);
@@ -1283,6 +1510,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const sizeInput = screen.getByLabelText(/Max size value/i);
@@ -1323,6 +1551,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const retentionInput = screen.getByLabelText(/Retention value/i);
@@ -1362,6 +1591,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const filterInput = await screen.findByLabelText(/Packet Filter/i);
@@ -1389,6 +1619,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const submitBtn = screen.getByRole("button", { name: /Start Capture/ });
@@ -1412,6 +1643,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       expect(await screen.findByRole("heading", { name: /Start Capture/i })).toBeInTheDocument();
@@ -1446,6 +1678,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const submitBtn = screen.getByRole("button", { name: /Start Capture/ });
@@ -1474,6 +1707,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const submitBtn = screen.getByRole("button", { name: /Start Capture/ });
@@ -1811,6 +2045,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const submitBtn = screen.getByRole("button", { name: /Start Capture/ });
@@ -1842,6 +2077,7 @@ describe("CaptureWidget", () => {
       renderWithQuery(<CaptureWidget name="alpha" ns="gameplane-games" gs={gs} />);
 
       const startBtn = await screen.findByRole("button", { name: /Start Capture/i });
+      await waitFor(() => expect(startBtn).not.toBeDisabled());
       await userEvent.click(startBtn);
 
       const filterInput = await screen.findByLabelText(/Packet Filter/i);

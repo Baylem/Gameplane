@@ -12,6 +12,20 @@ Optional packet capture sidecar injected into game pods to record network traffi
 
 ## Responsibilities (Design)
 
+### Remote capture identity
+
+Remote gateway downloads and cleanup require the GameServer UID and
+NetworkCapture UID, in addition to the capture name. The operator supplies these
+identities when starting a capture and injects the GameServer UID into the
+sidecar. The sidecar persists the capture's identity beside its data so a
+restart or bounded in-memory history eviction cannot lose the binding. A reused
+name, different server identity or legacy unbound capture cannot use the remote
+route. Existing local control routes remain compatible; mTLS, path validation,
+completion checks and file lifetime rules still apply. The gateway exposes only
+the explicit download and cleanup operations, never arbitrary sidecar proxying.
+Bound cleanup retains an identity tombstone after removing the PCAP, so a retry
+for the same UIDs can confirm deletion while another UID remains rejected.
+
 These are the design responsibilities for the completed sidecar (Phase 2+):
 
 1. Bind an AF_PACKET socket to the pod's primary network interface and enter live capture mode.
@@ -24,8 +38,8 @@ These are the design responsibilities for the completed sidecar (Phase 2+):
 8. Monitor disk space and gracefully stop a capture if the emptyDir volume fills (`ENOSPC` handling).
 8a. Refuse to *start* a capture that would push the volume's retained (not-yet-expired) files plus the new capture's own `maxSizeBytes` past a configured budget (507 Insufficient Storage), so retained files alone can never accumulate past the emptyDir's `SizeLimit` and trigger a kubelet eviction of the pod (F-187).
 
-    **Deleting a capture through the API frees its budget (F-261).** `api/internal/handlers/capture.go`'s `captureDelete` calls the sidecar's `DELETE /captures/{id}` route directly (the same mTLS client and in-cluster host it already uses for downloads) before removing the `NetworkCapture` CRD, so the file stops counting against the volume-budget check in 8a as soon as the delete request succeeds, not only once the pod is eventually recreated. This call is best-effort: it is logged and swallowed, never returned to the caller, if the sidecar is unreachable (pod already gone, transient network error) or the request targets a non-local cluster (the direct sidecar path only exists for the home cluster today — see `newValidatedHost`/`isRemoteCluster` in `capture.go`). In those cases the pre-existing behavior applies: the orphaned file remains until the pod is recreated, and the 507 refusal in 8a is still correct (it still prevents an eviction) even though its `wait for retained captures to expire` message does not distinguish an orphaned file from a genuinely retained one.
-9. Hold no persistent state; each sidecar instance is independent and does not retry captures or maintain history across restarts.
+    **Deleting a capture through the API frees its budget (F-261).** Local cleanup calls `DELETE /captures/{id}` directly over mTLS and retains its best-effort behavior if the sidecar is unreachable. Remote cleanup uses the gateway's server/capture UID-bound route. It must confirm sidecar cleanup before removing the CR; a failure retains the CR for retry. In either case the volume-budget check still counts any retained PCAP bytes and prevents new captures from exceeding the volume limit.
+9. Keep capture identity metadata beside the PCAP on the Pod's emptyDir. It survives a sidecar process restart, but not Pod deletion. In-memory status history is bounded and does not replace the durable identity check; the sidecar does not automatically retry captures after restarting.
 
 ## Non-goals / boundaries
 
@@ -35,7 +49,7 @@ These are the design responsibilities for the completed sidecar (Phase 2+):
 - Does **not** filter packets post-capture — all filtering happens at the kernel level before the packet is copied to userspace.
 - Does **not** persist or replicate captures across pod restarts — files live on emptyDir and are lost when the pod is deleted.
 - Does **not** implement protocol parsing or protocol-specific logic — it is protocol-agnostic; filtering is done via generic BPF expressions.
-- Does **not** serve captures through an HTTP proxy or gateway — the sidecar serves its own files directly over the mTLS endpoint.
+- Does **not** implement a general proxy — it serves its own files over mTLS; the optional per-cluster gateway exposes only its explicit bound file operations.
 
 ## Current Implementation (Phase 2 Foundational)
 

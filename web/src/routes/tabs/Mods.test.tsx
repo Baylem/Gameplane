@@ -1,7 +1,7 @@
-import { ResourceTargetProvider } from "@/lib/resourceTarget";
+import { ResourceTargetProvider, resourceKey, type ResourceTarget } from "@/lib/resourceTarget";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithQuery as baseRenderWithQuery } from "@/test/render";
 import { ModsTab } from "./Mods";
 import type {
@@ -1220,15 +1220,92 @@ describe("ModsTab — id-managed mods (capabilities.mods.idList)", () => {
     });
     renderWithQuery(<ModsTab name="s1" tmpl={idTmpl()} />);
 
-    // "Couldn't load mods" is FileModsTab's static header string (a
-    // different component). idTmpl() declares idList, so this renders
-    // ModsByIdTab, whose error path instead shows errMsg(listError) — the
-    // mocked body's "boom" — next to a "retry" button. The error text and
+    // The API's error text appears next to a retry button. The error text and
     // the retry button are siblings inside the same element ("{errMsg} ·
     // {retryButton}"), so the element's own text is "boom ·", not "boom"
     // alone — match as a substring instead of exact text.
     expect(await screen.findByText(/boom/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "retry" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/paste a mod id/i)).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    expect(screen.queryByText("No mods selected.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(fetchMock.mock.calls.some(([, options]) => options?.method === "PUT")).toBe(false);
+  });
+
+  it("loads and saves a remote ID list without touching a local namesake", async () => {
+    const target: ResourceTarget = { cluster: "remote", namespace: "other-games", name: "s1", uid: "remote-s1" };
+    let saved: ModID[] = [{ id: "remote-existing", name: "Remote mod" }];
+    const requests: { url: URL; method: string; body?: ModID[] }[] = [];
+    fetchMock.mockImplementation((path: string, options?: { method?: string; body?: string }) => {
+      const url = new URL(path, "http://localhost");
+      const method = options?.method ?? "GET";
+      if (url.pathname !== "/servers/s1/mods/ids") return Promise.resolve(jsonRes({}, 404));
+      const body = options?.body ? JSON.parse(options.body) as ModID[] : undefined;
+      requests.push({ url, method, body });
+      if (method === "PUT") saved = body!;
+      return Promise.resolve(jsonRes(saved));
+    });
+    renderWithQuery(<ModsTab name="s1" ns="other-games" tmpl={idTmpl()} />, { target });
+    expect(await screen.findByText("Remote mod")).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText(/paste a mod id/i), { target: { value: "remote-new" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(requests.filter((request) => request.method === "PUT")).toHaveLength(1));
+    expect(requests.find((request) => request.method === "PUT")?.body).toEqual([
+      { id: "remote-existing", name: "Remote mod" }, { id: "remote-new" },
+    ]);
+    expect(await screen.findByText(/Saved — the server will restart/i)).toBeInTheDocument();
+    for (const request of requests) {
+      expect(request.url.searchParams.get("cluster")).toBe("remote");
+      expect(request.url.searchParams.get("namespace")).toBe("other-games");
+    }
+  });
+
+  it("retains remote drafts but blocks Add and Save after a failed refetch", async () => {
+    const target: ResourceTarget = { cluster: "remote", namespace: "gameplane-games", name: "s1", uid: "remote-s1" };
+    let unavailable = false;
+    const puts = vi.fn();
+    fetchMock.mockImplementation((_path: string, options?: { method?: string }) => {
+      if (options?.method === "PUT") puts();
+      return Promise.resolve(unavailable ? jsonRes({ error: "Remote list unavailable" }, 503) : jsonRes([{ id: "existing" }]));
+    });
+    const { client } = renderWithQuery(<ModsTab name="s1" ns="gameplane-games" tmpl={idTmpl()} />, { target });
+    await screen.findByText("existing");
+    fireEvent.change(screen.getByPlaceholderText(/paste a mod id/i), { target: { value: "draft" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByRole("button", { name: "Save changes" })).not.toBeDisabled();
+    unavailable = true;
+    await act(async () => { await client.refetchQueries({ queryKey: resourceKey(target, "mod-ids", "s1", "gameplane-games") }); });
+    expect(await screen.findByText(/Remote list unavailable/)).toBeInTheDocument();
+    expect(screen.getByText("draft")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(puts).not.toHaveBeenCalled();
+  });
+
+  it("closes remote registry editing when the saved ID list becomes unavailable", async () => {
+    const target: ResourceTarget = { cluster: "remote", namespace: "gameplane-games", name: "s1", uid: "remote-s1" };
+    routeIds({ search: [{ id: "registry-mod", title: "Registry mod", provider: "curseforge" }] });
+    const originalFetch = fetchMock.getMockImplementation()!;
+    let unavailable = false;
+    fetchMock.mockImplementation((path: string, options?: { method?: string; body?: string }) => {
+      if (unavailable && path.includes("/mods/ids")) return Promise.resolve(jsonRes({ error: "List unavailable" }, 503));
+      return originalFetch(path, options);
+    });
+    const { client } = renderWithQuery(<ModsTab name="s1" ns="gameplane-games" tmpl={idTmpl({ registry: true })} />, { target });
+    fireEvent.click(await screen.findByRole("button", { name: /browse curseforge/i }));
+    expect(await screen.findByText("Registry mod")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add" })).not.toBeDisabled();
+    unavailable = true;
+    await act(async () => { await client.refetchQueries({ queryKey: resourceKey(target, "mod-ids", "s1", "gameplane-games") }); });
+    expect(await screen.findByText(/List unavailable/)).toBeInTheDocument();
+    expect(screen.queryByText("Registry mod")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
   });
 
   it("header shows selected count excludes removed rows", async () => {
@@ -1256,7 +1333,8 @@ describe("ModsTab — id-managed mods (capabilities.mods.idList)", () => {
 });
 
 let scopedControl = true;
-function renderWithQuery(ui: ReactElement, options?: Parameters<typeof baseRenderWithQuery>[1]) {
+function renderWithQuery(ui: ReactElement, options?: Parameters<typeof baseRenderWithQuery>[1] & { target?: ResourceTarget }) {
   const props = ui.props as { name?: string; ns?: string };
-  return baseRenderWithQuery(<ResourceTargetProvider target={{ cluster: "local", name: props.name ?? "s1", namespace: props.ns }} access={{ canWrite: scopedControl, canControl: scopedControl, canConsole: scopedControl, canDelete: false, isOwner: false, isCollaborator: false, permissions: scopedControl ? ["servers:read", "servers:write"] : ["servers:read"] }}>{ui}</ResourceTargetProvider>, options);
+  const { target = { cluster: "local", name: props.name ?? "s1", namespace: props.ns }, ...renderOptions } = options ?? {};
+  return baseRenderWithQuery(<ResourceTargetProvider target={target} access={{ canWrite: scopedControl, canControl: scopedControl, canConsole: scopedControl, canDelete: false, isOwner: false, isCollaborator: false, permissions: scopedControl ? ["servers:read", "servers:write"] : ["servers:read"] }}>{ui}</ResourceTargetProvider>, renderOptions);
 }

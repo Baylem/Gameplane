@@ -1,7 +1,9 @@
 # Remote agent access
 
 The optional agent gateway extends registered clusters with console, game-file
-logs, file management, player operations, live status, and agent-based mods. The
+logs, file management, player operations, live status, agent-based mods and capture
+files. Registry browsing, modpacks and ID-list mods use the selected Kubernetes
+client and template; provider credentials remain in the central installation. The
 central API still connects directly to each Kubernetes API for resource changes,
 pod logs, PTY attach, and stdin module actions. The gateway does not provide a
 Kubernetes tunnel, replicate storage, or run a second user database.
@@ -100,6 +102,28 @@ health field describes Kubernetes connectivity; it does not claim that the
 gateway is healthy. The authenticated gateway capability endpoint is
 `/v1/capabilities`. A gateway outage does not stop games or their local operator.
 
-Capture-file downloads use a distinct sidecar transport and remain outside this
-agent protocol. ID-list mod configuration also retains its existing local-only
-REST path; the gateway supports the agent-based mods surface.
+Capture files use a separate allowlisted gateway route:
+
+```text
+/v1/clusters/{cluster}/namespaces/{namespace}/servers/{name}/uids/{serverUID}/captures/{captureName}/uids/{captureUID}/file
+```
+
+Only GET and DELETE are supported. The gateway checks the live server, capture
+ownership, completion state and retention before reaching the fixed local capture
+sidecar port (9091). The sidecar verifies the server and capture UIDs against
+persisted file identity, including after a restart. Remote deletion removes the
+file before deleting its NetworkCapture resource; an unavailable gateway leaves
+the resource available for retry. Old files without this identity binding cannot
+be fetched remotely. No arbitrary sidecar path, address or legacy fallback is
+accepted.
+
+`GET /servers/{name}/capabilities` reports the selected server identity and its
+cluster's capture support, enabled state, retention limits and start defaults.
+The central installation's capture flag does not enable or disable a remote
+cluster. Missing or incompatible gateway capabilities disable capture controls;
+permissions still come from normal server and capture authorization. Historical
+downloads remain available when a cluster disables new captures, provided its
+gateway and bound files remain accessible.
+
+See [remote parity design and acceptance](remote-parity.md) for the test matrix
+and the boundary between server operations and central administration.

@@ -21,12 +21,17 @@ import (
 
 // Config restricts a gateway to one cluster and an explicit namespace allowlist.
 type Config struct {
-	Cluster            string
-	Namespaces         []string
-	PeerURI            string
-	TLS                TLSFiles
-	AgentTLS           TLSFiles
-	MaxRequestDuration time.Duration
+	Cluster                        string
+	Namespaces                     []string
+	PeerURI                        string
+	TLS                            TLSFiles
+	AgentTLS                       TLSFiles
+	MaxRequestDuration             time.Duration
+	CaptureEnabled                 bool
+	CaptureDefaultRetentionSeconds int64
+	CaptureMaxRetentionSeconds     int64
+	CaptureDefaultMaxDurationSecs  int64
+	CaptureDefaultMaxSizeBytes     int64
 }
 
 type httpTransport = http.Transport
@@ -45,6 +50,21 @@ func NewHandler(cfg Config, client *kube.Client) (http.Handler, error) {
 	if cfg.MaxRequestDuration <= 0 || cfg.MaxRequestDuration > 5*time.Minute {
 		return nil, errors.New("gateway request duration must be positive and at most five minutes")
 	}
+	if cfg.CaptureDefaultRetentionSeconds == 0 {
+		cfg.CaptureDefaultRetentionSeconds = 86400
+	}
+	if cfg.CaptureMaxRetentionSeconds == 0 {
+		cfg.CaptureMaxRetentionSeconds = 604800
+	}
+	if cfg.CaptureDefaultMaxDurationSecs == 0 {
+		cfg.CaptureDefaultMaxDurationSecs = 300
+	}
+	if cfg.CaptureDefaultMaxSizeBytes == 0 {
+		cfg.CaptureDefaultMaxSizeBytes = 943718400
+	}
+	if cfg.CaptureDefaultRetentionSeconds < 60 || cfg.CaptureDefaultRetentionSeconds > cfg.CaptureMaxRetentionSeconds || cfg.CaptureMaxRetentionSeconds > 604800 || cfg.CaptureDefaultMaxDurationSecs < 1 || cfg.CaptureDefaultMaxDurationSecs > 3600 || cfg.CaptureDefaultMaxSizeBytes < 1 {
+		return nil, errors.New("invalid gateway capture defaults or limits")
+	}
 	return &handler{cfg: cfg, client: client, transport: agentTransport}, nil
 }
 
@@ -61,7 +81,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if req.URL.Path == "/v1/capabilities" && req.Method == http.MethodGet {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"protocol":"v1","targetUID":true}`))
+		_, _ = fmt.Fprintf(w, `{"protocol":"v1","targetUID":true,"captureFiles":true,"captureEnabled":%t,"defaultRetentionSeconds":%d,"maxRetentionSeconds":%d,"defaultMaxDurationSeconds":%d,"defaultMaxSizeBytes":%d}`, h.cfg.CaptureEnabled, h.cfg.CaptureDefaultRetentionSeconds, h.cfg.CaptureMaxRetentionSeconds, h.cfg.CaptureDefaultMaxDurationSecs, h.cfg.CaptureDefaultMaxSizeBytes)
+		return
+	}
+	if target, err := gatewayprotocol.ParseCapturePath(req.URL.Path); err == nil {
+		h.serveCapture(w, req, target)
 		return
 	}
 	target, agentPath, err := gatewayprotocol.ParsePath(req.URL.Path)
