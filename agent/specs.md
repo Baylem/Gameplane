@@ -184,6 +184,7 @@ All endpoints on the `--addr` control mux, except `/healthz`, return `401 Unauth
 - **Resource usage is in-pod**: The `usage` package reads from `/proc` or cgroups; no external metrics pipeline required. Cgroup mode is a fallback for older clusters; proc mode (default in production) requires the operator to set `ShareProcessNamespace: true`.
 - **Module capabilities drive behavior**: Every game-specific handler (players, quiesce, lifecycle, status, actions) reads its config from `--capabilities` (JSON unmarshaled into `caps.Spec`). New games require no agent code change.
 - **RCON connection errors are graceful**: A lost RCON connection does not crash the agent. `console`, `players`, `quiesce`, and `lifecycle` handlers catch connection errors and return appropriate HTTP status (e.g., `502 Bad Gateway`).
+- **Source RCON sends complete frames**: Each AUTH or command frame is submitted in one socket write, with its existing byte-size limit, request ID, type, body, and two NUL terminators preserved. This avoids separate header-only writes rejected by vanilla Minecraft's RCON reader. A short write is an error and drops the connection without replaying the command; response grace and healthy connection reuse remain unchanged.
 - **Log streams are tail-only**: The `logs` package does not support random-access reads. It streams from the current end (live mode) or from file start (backlog mode); clients must handle partial output and reconnection.
 
 ## Dependencies
