@@ -653,6 +653,25 @@ func (p *gatewayParity) capture(t *testing.T) {
 	p.capturePhase(t, start.CaptureID, "Running")
 	// Generate actual target traffic before stopping, not just an empty file.
 	p.expect(t, p.client, http.MethodGet, p.route("/files/read?path=/site.txt"), nil, http.StatusOK)
+	// Running means the socket is active, not that its asynchronous ring has
+	// delivered this request to the writer. Stop deliberately cancels reads.
+	packetCtx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+	p.remote.Eventually(t, 30*time.Second, func() (bool, string) {
+		capture, err := p.remote.Dyn.Resource(networkCaptureGVR).Namespace("gameplane-games").Get(packetCtx, start.CaptureID, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("read capture progress before stop: %v", err)
+		}
+		phase, found, err := unstructured.NestedString(capture.Object, "status", "phase")
+		if err != nil || !found || phase != "Running" {
+			t.Fatalf("capture must remain Running before stop: phase=%q found=%v err=%v", phase, found, err)
+		}
+		packets, _, err := unstructured.NestedInt64(capture.Object, "status", "packetsWritten")
+		if err != nil || packets < 0 {
+			t.Fatalf("invalid capture packet counter before stop: packets=%d err=%v", packets, err)
+		}
+		return packets > 0, "capture writer has not recorded target traffic"
+	})
 	p.expect(t, p.client, http.MethodPost, p.route(":capture-stop"), map[string]string{"captureId": start.CaptureID}, http.StatusOK)
 	p.capturePhase(t, start.CaptureID, "Completed")
 	remoteCapture, err := p.remote.Dyn.Resource(networkCaptureGVR).Namespace("gameplane-games").Get(t.Context(), start.CaptureID, metav1.GetOptions{})

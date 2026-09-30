@@ -29,7 +29,7 @@ for the same UIDs can confirm deletion while another UID remains rejected.
 These are the design responsibilities for the completed sidecar (Phase 2+):
 
 1. Bind an AF_PACKET socket to the pod's primary network interface and enter live capture mode.
-2. Accept a compiled BPF filter expression and apply it at the packet-capture level (kernel-side filtering, not post-processing).
+2. Accept a compiled BPF filter expression and apply it in the kernel and again before a frame can reach the capture writer.
 3. Write captured packets to a PCAPNG file on `/tmp/captures` using standard `gopacket/pcapgo.NgWriter` format, readable by `tcpdump`, Wireshark, and other third-party tools.
 4. Enforce hard duration and size limits: stop capturing when `(now - startTime) >= maxDurationSeconds` or `bytesWritten >= maxSizeBytes`, whichever comes first.
 5. Serve an mTLS-authenticated HTTP control endpoint on `0.0.0.0:9091` with six operations: start a capture (`POST /captures/{id}/start`), stop a capture (`POST /captures/{id}/stop`), poll status (`GET /captures/{id}/status`), download the completed file (`GET /captures/{id}/file`), delete a finished capture's file (`DELETE /captures/{id}`), and an unauthenticated-at-the-mux-level liveness check (`GET /healthz`, see Security Considerations #1 and F-193).
@@ -46,7 +46,7 @@ These are the design responsibilities for the completed sidecar (Phase 2+):
 - Does **not** run the game server itself — that is the operator's and the game container's job.
 - Does **not** authenticate operators or enforce access control — that is the API's job (RBAC applies to the API tier, not the sidecar).
 - Does **not** modify game traffic or the game container — it captures passively via the shared pod network namespace.
-- Does **not** filter packets post-capture — all filtering happens at the kernel level before the packet is copied to userspace.
+- Does **not** rewrite completed captures — kernel filtering and the matching BPF output guard run before any packet is written.
 - Does **not** persist or replicate captures across pod restarts — files live on emptyDir and are lost when the pod is deleted.
 - Does **not** implement protocol parsing or protocol-specific logic — it is protocol-agnostic; filtering is done via generic BPF expressions.
 - Does **not** implement a general proxy — it serves its own files over mTLS; the optional per-cluster gateway exposes only its explicit bound file operations.
@@ -83,7 +83,7 @@ Single Go module; packages organized by responsibility (capture, httpserver, aut
 
 ### Phase 2 Foundational Packages
 
-**`internal/capture/afpacket.go`**: Establishes AF_PACKET socket via gopacket/afpacket.TPacket with MMap'd kernel buffers. Compiles and applies BPF filters for kernel-side packet filtering. Reads packets via blocking poll (respecting context cancellation) and writes to PCAPNG writer. Manages socket lifecycle (Create, Start, Stop, Close) and enforces hard size/duration limits.
+**`internal/capture/afpacket.go`**: Establishes AF_PACKET socket via gopacket/afpacket.TPacket with MMap'd kernel buffers. Compiles the filter and prepares its BPF VM before opening the socket, retains kernel filtering, and checks every received frame against the same program before snaplen truncation or output. Reads packets via blocking poll (respecting context cancellation) and writes to PCAPNG writer. Manages socket lifecycle (Create, Start, Stop, Close) and enforces hard size/duration limits.
 
 **`internal/capture/filter.go`**: Compiles BPF filter expressions via github.com/packetcap/go-pcap/filter into bytecode instructions. Validates filter syntax before capture starts (defense-in-depth, complementing API-tier validation).
 
@@ -156,7 +156,7 @@ All three paths are mounted from the pre-existing `agent-tls` Secret that every 
 
 ### Filtering Guarantee (FR-011)
 
-**At-Capture Filtering (Phase 2)**: The BPF filter will be applied by `gopacket/afpacket.TPacket` at the kernel level. The kernel will drop non-matching packets before they are copied to userspace. This will guarantee:
+**At-Capture Filtering (Phase 2)**: The BPF filter is applied by `gopacket/afpacket.TPacket` at the kernel level. Its socket starts receiving before `SetBPF` can attach the filter, so the same compiled program also evaluates every original frame before snaplen truncation or delivery to the writer. This rejects non-matching frames already queued during socket startup. VM construction or evaluation errors fail closed; rejected frames never reach the PCAP writer. This guarantees:
 - 100% of packets in the file match the filter.
 - 0% of non-matching packets are included.
 - No post-processing or offline filtering.
@@ -200,7 +200,7 @@ All three paths are mounted from the pre-existing `agent-tls` Secret that every 
 
 ## Key Invariants (Design)
 
-1. **Filter validation before capture**. The filter is compiled (via `go-pcap/filter.Compile`) before any AF_PACKET socket is opened. An invalid filter expression is rejected with HTTP 400 before any state is created. This is defense-in-depth; the API tier also validates filters before creating a NetworkCapture CRD.
+1. **Filter validation before capture**. The filter is compiled and its kernel instructions and userspace VM prepared before any AF_PACKET socket is opened. An invalid filter expression is rejected with HTTP 400 before any state is created. Every received frame must pass the same BPF program before output, including frames queued before the kernel filter was installed. This is defense-in-depth; the API tier also validates filters before creating a NetworkCapture CRD.
 
 2. **Hard duration and size limits**. Both are enforced strictly: the capture stops as soon as either limit is reached and no further packets are accepted afterward. For the size limit specifically, the check runs *after* each packet is written (see "Edge Cases" → "Max-size auto-stop and on-disk accounting" below), so the single packet that crosses `maxSizeBytes` is included in the file — every packet after that one is rejected. The PCAPNG file is valid and complete even on a limit-triggered stop.
 
