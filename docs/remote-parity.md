@@ -11,6 +11,10 @@ the central provider configuration. Modpack and mod-ID configuration updates go
 to that selected cluster, with Kubernetes resource-version and UID protection.
 Provider credentials remain centrally managed. The operator still applies the
 desired game configuration.
+Mod-ID and modpack writes retry bounded Kubernetes version conflicts only when
+the selected server's UID, original spec and ownership grants are unchanged.
+Concurrent configuration or ownership edits remain conflicts, and transport
+failures are not retried.
 
 Capture data uses a separate, explicit gateway operation rather than the agent
 file protocol. The request identifies both the GameServer UID and NetworkCapture

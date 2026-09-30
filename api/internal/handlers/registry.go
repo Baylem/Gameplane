@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/ValgulNecron/gameplane/api/internal/httperr"
@@ -202,10 +201,9 @@ func (h *registryHandler) installModpack(w http.ResponseWriter, req *http.Reques
 	}
 
 	apply := append([]envKV{{Name: prov.modpacks.refEnv, Value: strings.TrimSpace(body.Ref)}}, prov.modpacks.env...)
-	setEnvVars(target.server, apply)
-	// Update retains the fetched UID and resourceVersion, so replacement or
-	// concurrent edits fail instead of applying to a newer server incarnation.
-	if _, err := target.k.Dynamic.Resource(kube.GVRs["servers"]).Namespace(target.namespace).Update(req.Context(), target.server, metav1.UpdateOptions{}); err != nil {
+	if _, err := updateModTarget(req.Context(), target, func(current *unstructured.Unstructured) {
+		setEnvVars(current, apply)
+	}); err != nil {
 		httperr.Write(w, req, err)
 		return
 	}

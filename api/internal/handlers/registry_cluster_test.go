@@ -17,6 +17,7 @@ import (
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/ValgulNecron/gameplane/api/internal/auth"
 	"github.com/ValgulNecron/gameplane/api/internal/kube"
@@ -304,7 +305,7 @@ func TestClusterModWritesPreserveIdentityAndSurfaceConflicts(t *testing.T) {
 			})
 			router := mountClusterModRouter(modClusterClients(home, remote), &recordingRegistrySet{provider: &fakeProvider{}}, modRouteUser("remote", "servers:write"), nil)
 			response := do(t, router, route.method, route.path+"?cluster=remote", route.body)
-			if response.Code != http.StatusConflict || updates != 1 || kubeClientCalls(t, home) != 0 {
+			if response.Code != http.StatusConflict || updates != retry.DefaultRetry.Steps || kubeClientCalls(t, home) != 0 {
 				t.Fatalf("conflict handling: status=%d updates=%d home calls=%d", response.Code, updates, kubeClientCalls(t, home))
 			}
 		})

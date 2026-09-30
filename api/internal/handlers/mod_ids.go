@@ -17,7 +17,6 @@ import (
 	"regexp"
 
 	"github.com/go-chi/chi/v5"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/ValgulNecron/gameplane/api/internal/httperr"
@@ -131,9 +130,9 @@ func (h *modIDsHandler) put(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	writeModIDs(target.server, ids)
-	// Preserve the read object's UID and resourceVersion as update preconditions.
-	updated, err := target.k.Dynamic.Resource(kube.GVRs["servers"]).Namespace(target.namespace).Update(req.Context(), target.server, metav1.UpdateOptions{})
+	updated, err := updateModTarget(req.Context(), target, func(current *unstructured.Unstructured) {
+		writeModIDs(current, ids)
+	})
 	if err != nil {
 		httperr.Write(w, req, err)
 		return

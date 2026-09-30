@@ -52,16 +52,16 @@ type gatewayTestLeaf struct {
 }
 
 type gatewayParity struct {
-	remote                           *Env
-	admin, client                    *APIClient
-	cluster, name, template          string
-	serverSecret, trustSecret        string
-	clientSecret                     string
-	endpoint, nodeIP, controlAddress string
-	serverCA, clientCA               gatewayTestPKI
-	clientLeaf                       gatewayTestLeaf
-	localUID, remoteUID              string
-	service                          *corev1.Service
+	remote                    *Env
+	admin, client             *APIClient
+	cluster, name, template   string
+	serverSecret, trustSecret string
+	clientSecret              string
+	endpoint, nodeIP          string
+	serverCA, clientCA        gatewayTestPKI
+	clientLeaf                gatewayTestLeaf
+	localUID, remoteUID       string
+	service                   *corev1.Service
 }
 
 // This test is deliberately not parallel: it changes the remote Helm release
@@ -164,6 +164,21 @@ func gatewayNodeIP(t *testing.T, name string) string {
 	return ip
 }
 
+func gatewayBridgeIP(t *testing.T, name string) string {
+	t.Helper()
+	out, err := exec.CommandContext(t.Context(), "docker", "inspect", "-f",
+		`{{(index .NetworkSettings.Networks "kind").Gateway}}`, name+"-control-plane").Output()
+	if err != nil {
+		t.Fatalf("inspect required kind bridge: %v", err)
+	}
+	address := strings.TrimSpace(string(out))
+	ip := net.ParseIP(address)
+	if ip == nil || ip.To4() == nil || !ip.IsPrivate() {
+		t.Fatal("kind bridge has no valid private IPv4 address")
+	}
+	return address
+}
+
 func gatewaySecret(t *testing.T, env *Env, name string, data map[string][]byte, create bool) {
 	t.Helper()
 	secrets := env.K8s.CoreV1().Secrets("gameplane-system")
@@ -201,7 +216,10 @@ func (p *gatewayParity) install(t *testing.T) {
 	values := map[string]any{"gateway": map[string]any{"enabled": true, "clusterID": p.cluster,
 		"peerURI": gatewayTestPeer, "namespaces": []string{"gameplane-games"}, "serverTLSSecret": p.serverSecret,
 		"centralClientCASecret": p.trustSecret, "maxRequestDuration": "10s",
-		"networkPolicy": map[string]any{"peerCIDRs": []string{gatewayNodeIP(t, envInstance.ClusterName) + "/32"},
+		"networkPolicy": map[string]any{"peerCIDRs": []string{
+			gatewayNodeIP(t, envInstance.ClusterName) + "/32", // Central API pods through their node.
+			gatewayBridgeIP(t, clusterBKindName()) + "/32",    // Direct TLS controls from the Linux host.
+		},
 			"apiServerCIDRs": []string{p.nodeIP + "/32", apiService.Spec.ClusterIP + "/32"}}}}
 	raw, err := json.Marshal(values)
 	if err != nil {
@@ -231,10 +249,10 @@ func (p *gatewayParity) install(t *testing.T) {
 	// reachable only through Kind's Docker bridge, like the registered API.
 	p.service = p.newService(t, p.name)
 	p.endpoint = fmt.Sprintf("https://%s:%d", p.nodeIP, p.service.Spec.Ports[0].NodePort)
-	port, stop := p.remote.PortForward(t, "gameplane-system", "svc/gameplane-gateway", 8443)
-	t.Cleanup(stop)
-	p.controlAddress = fmt.Sprintf("127.0.0.1:%d", port)
-	client := p.directClient(t, p.clientLeaf, p.nodeIP, p.controlAddress)
+	// Direct controls use the same NodePort as the registered gateway. A TLS
+	// rejection must not tear down a shared kubectl port-forward and turn later
+	// authentication checks into unrelated connection-refused failures.
+	client := p.directClient(t, p.clientLeaf, p.nodeIP)
 	defer client.CloseIdleConnections()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, p.endpoint+"/v1/capabilities", nil)
 	if err != nil {
@@ -273,7 +291,7 @@ func (p *gatewayParity) newService(t *testing.T, name string) *corev1.Service {
 	return service
 }
 
-func (p *gatewayParity) directClient(t *testing.T, leaf gatewayTestLeaf, serverName, dialAddress string) *http.Client {
+func (p *gatewayParity) directClient(t *testing.T, leaf gatewayTestLeaf, serverName string) *http.Client {
 	t.Helper()
 	pool := x509.NewCertPool()
 	if !pool.AppendCertsFromPEM(p.serverCA.pem) {
@@ -284,11 +302,6 @@ func (p *gatewayParity) directClient(t *testing.T, leaf gatewayTestLeaf, serverN
 		config.Certificates = []tls.Certificate{leaf.tls}
 	}
 	transport := &http.Transport{TLSClientConfig: config, DisableKeepAlives: true}
-	if dialAddress != "" {
-		transport.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
-			return (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, network, dialAddress)
-		}
-	}
 	return &http.Client{Transport: transport, Timeout: 15 * time.Second}
 }
 
@@ -638,7 +651,7 @@ func (p *gatewayParity) capture(t *testing.T) {
 	if len(publicFile) < 28 || !bytes.Equal(publicFile[:4], []byte{0x0a, 0x0d, 0x0d, 0x0a}) {
 		t.Fatal("capture download is not a PCAPNG section")
 	}
-	client := p.directClient(t, p.clientLeaf, p.nodeIP, p.controlAddress)
+	client := p.directClient(t, p.clientLeaf, p.nodeIP)
 	defer client.CloseIdleConnections()
 	if direct := gatewayDirect(t, client, http.MethodGet, p.endpoint+privatePath, http.StatusOK); !bytes.Equal(direct, publicFile) {
 		t.Fatal("public remote capture differs from its bound gateway file")
@@ -799,15 +812,21 @@ func (p *gatewayParity) minecraft(t *testing.T) {
 		t.Fatalf("actual Minecraft action response: %+v", action)
 	}
 	// A player-list mutation traverses the same remote gateway and RCON path.
-	p.expect(t, p.client, http.MethodPost, route("/players/whitelist/add"), map[string]string{"name": "GatewayE2EBot"}, http.StatusOK)
-	listed := p.expect(t, p.client, http.MethodGet, route("/players/whitelist"), nil, http.StatusOK)
-	if !bytes.Contains(listed, []byte("GatewayE2EBot")) {
-		t.Fatalf("remote whitelist mutation missing: %s", listed)
+	const player = "gatewaye2ebot"
+	p.expect(t, p.client, http.MethodPost, route("/players/whitelist/add"), map[string]string{"name": player}, http.StatusOK)
+	var listed []string
+	if err := json.Unmarshal(p.expect(t, p.client, http.MethodGet, route("/players/whitelist"), nil, http.StatusOK), &listed); err != nil {
+		t.Fatal(err)
 	}
-	p.expect(t, p.client, http.MethodPost, route("/players/whitelist/remove"), map[string]string{"name": "GatewayE2EBot"}, http.StatusOK)
-	listed = p.expect(t, p.client, http.MethodGet, route("/players/whitelist"), nil, http.StatusOK)
-	if bytes.Contains(listed, []byte("GatewayE2EBot")) {
-		t.Fatalf("remote whitelist removal failed: %s", listed)
+	if len(listed) != 1 || listed[0] != player {
+		t.Fatalf("remote whitelist mutation missing: %v", listed)
+	}
+	p.expect(t, p.client, http.MethodPost, route("/players/whitelist/remove"), map[string]string{"name": player}, http.StatusOK)
+	if err := json.Unmarshal(p.expect(t, p.client, http.MethodGet, route("/players/whitelist"), nil, http.StatusOK), &listed); err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 0 {
+		t.Fatalf("remote whitelist removal failed: %v", listed)
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
@@ -851,7 +870,7 @@ func (p *gatewayParity) denials(t *testing.T) {
 	// The central admin's primary local role confers no remote namespaced grant.
 	p.expect(t, p.admin, http.MethodGet, p.route("/files/read?path=/site.txt"), nil, http.StatusForbidden)
 	p.expect(t, p.client, http.MethodPost, "/servers/"+p.name+"/modpack", map[string]string{"ref": "must-not-apply"}, http.StatusForbidden)
-	good := p.directClient(t, p.clientLeaf, p.nodeIP, p.controlAddress)
+	good := p.directClient(t, p.clientLeaf, p.nodeIP)
 	defer good.CloseIdleConnections()
 	gatewayDirect(t, good, http.MethodGet, p.endpoint+"/v1/capabilities", http.StatusOK)
 	for _, path := range []string{p.privatePath(p.localUID, "/files/read?path=/site.txt"),
@@ -872,7 +891,7 @@ func (p *gatewayParity) denials(t *testing.T) {
 		{"wrong-server-SAN", p.clientLeaf, "wrong-gateway.e2e.invalid"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			client := p.directClient(t, tc.leaf, tc.serverName, p.controlAddress)
+			client := p.directClient(t, tc.leaf, tc.serverName)
 			defer client.CloseIdleConnections()
 			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, p.endpoint+"/v1/capabilities", nil)
 			if err != nil {
@@ -912,7 +931,7 @@ func (p *gatewayParity) rotation(t *testing.T) {
 	leaf := p.clientCA.issue(t, gatewayTestPeer, "")
 	gatewaySecret(t, envInstance, p.clientSecret, p.credentials(leaf), false)
 	checkOperation()
-	oldClient := p.directClient(t, p.clientLeaf, p.nodeIP, p.controlAddress)
+	oldClient := p.directClient(t, p.clientLeaf, p.nodeIP)
 	defer oldClient.CloseIdleConnections()
 	server := p.serverCA.issue(t, "", p.nodeIP)
 	newServer, err := x509.ParseCertificate(server.tls.Certificate[0])
@@ -935,7 +954,7 @@ func (p *gatewayParity) rotation(t *testing.T) {
 	checkOperation()
 	newCA := newGatewayTestCA(t)
 	newLeaf := newCA.issue(t, gatewayTestPeer, "")
-	newClient := p.directClient(t, newLeaf, p.nodeIP, p.controlAddress)
+	newClient := p.directClient(t, newLeaf, p.nodeIP)
 	defer newClient.CloseIdleConnections()
 	overlap := append(append([]byte{}, p.clientCA.pem...), newCA.pem...)
 	gatewaySecret(t, p.remote, p.trustSecret, map[string][]byte{"ca.crt": overlap}, false)

@@ -1,11 +1,17 @@
 package handlers
 
 import (
+	"context"
+	"errors"
 	"net/http"
+	"reflect"
 
 	"github.com/go-chi/chi/v5"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/ValgulNecron/gameplane/api/internal/httperr"
 	"github.com/ValgulNecron/gameplane/api/internal/kube"
@@ -21,6 +27,54 @@ type modTarget struct {
 	namespace string
 	server    *unstructured.Unstructured
 	template  *unstructured.Unstructured
+}
+
+// updateModTarget tolerates controller status writes without rebasing a user's
+// change onto another server or concurrently edited configuration. Only an
+// explicit Update conflict can retry; reads and all other failures stop here.
+func updateModTarget(ctx context.Context, target *modTarget, apply func(*unstructured.Unstructured)) (*unstructured.Unstructured, error) {
+	resource := target.k.Dynamic.Resource(kube.GVRs["servers"]).Namespace(target.namespace)
+	original := target.server.DeepCopy()
+	var updated *unstructured.Unstructured
+	var lastConflict error
+	attempt := 0
+	err := wait.ExponentialBackoffWithContext(ctx, retry.DefaultRetry, func(ctx context.Context) (bool, error) {
+		if err := ctx.Err(); err != nil {
+			return false, err
+		}
+		current := original.DeepCopy()
+		if attempt > 0 {
+			fresh, err := resource.Get(ctx, original.GetName(), metav1.GetOptions{})
+			if err != nil {
+				return false, err
+			}
+			if original.GetUID() == "" || fresh.GetUID() != original.GetUID() || fresh.GetDeletionTimestamp() != nil {
+				return false, apierrors.NewNotFound(kube.GVRs["servers"].GroupResource(), original.GetName())
+			}
+			if !reflect.DeepEqual(fresh.Object["spec"], original.Object["spec"]) ||
+				fresh.GetAnnotations()[ownerIDAnnotation] != original.GetAnnotations()[ownerIDAnnotation] ||
+				fresh.GetAnnotations()[collaboratorsAnnotation] != original.GetAnnotations()[collaboratorsAnnotation] {
+				return false, apierrors.NewConflict(kube.GVRs["servers"].GroupResource(), original.GetName(), errors.New("server configuration or ownership changed"))
+			}
+			current = fresh.DeepCopy()
+		}
+		attempt++
+		apply(current)
+		var err error
+		updated, err = resource.Update(ctx, current, metav1.UpdateOptions{})
+		if apierrors.IsConflict(err) {
+			lastConflict = err
+			return false, nil
+		}
+		return err == nil, err
+	})
+	if errors.Is(err, wait.ErrWaitTimeout) {
+		err = lastConflict
+	}
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
 }
 
 func loadModTarget(w http.ResponseWriter, req *http.Request, clients *kube.Registry, local *kube.Client) (*modTarget, bool) {
