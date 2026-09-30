@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -287,6 +288,23 @@ func (p *gatewayParity) newService(t *testing.T, name string) *corev1.Service {
 	}
 	t.Cleanup(func() {
 		_ = p.remote.K8s.CoreV1().Services("gameplane-system").Delete(context.Background(), name, metav1.DeleteOptions{})
+	})
+	// Helm waited for the gateway Deployment before this Service existed.
+	// Its new EndpointSlice and kube-proxy route still need to converge. Wait
+	// only for TCP acceptance; TLS identity and capabilities are asserted once
+	// by the caller, without retrying authentication or protocol failures.
+	address := fmt.Sprintf("%s:%d", p.nodeIP, service.Spec.Ports[0].NodePort)
+	dialer := net.Dialer{Timeout: time.Second}
+	p.remote.Eventually(t, 30*time.Second, func() (bool, string) {
+		conn, err := dialer.DialContext(t.Context(), "tcp", address)
+		if err != nil {
+			if !errors.Is(err, syscall.ECONNREFUSED) {
+				t.Fatalf("new gateway Service TCP readiness: %v", err)
+			}
+			return false, "new gateway NodePort is not accepting connections yet"
+		}
+		_ = conn.Close()
+		return true, ""
 	})
 	return service
 }
