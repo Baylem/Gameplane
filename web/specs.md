@@ -32,7 +32,7 @@ The Gameplane dashboard is a React SPA providing a UI layer over the Gameplane A
 
 ## Unified location views — September 2026
 
-This contract supersedes earlier selected-cluster descriptions below. The approved existing-components design exception for this work is documented in [the unified dashboard design](../docs/unified-dashboard.md); `design.pen` and its exports remain unchanged.
+This contract supersedes earlier selected-cluster descriptions below. The earlier existing-components design exception is documented in [the unified dashboard design](../docs/unified-dashboard.md). The September 30 Pencil reconciliation represents the implemented unified interfaces at revision `8e08a60f9d266dd938836e1f31188b370ca8a2a7`; [the design manifest](../design-export/MANIFEST.md) records its exact node and export scope. This reconciliation preserves the historical browser-reference provenance and does not establish upstream maintainer approval or a new CI result.
 
 - Dashboard, Servers, Backups and global Search consume `/fleet/*` envelopes. Exact location/namespace filters request narrower backend results so they can recover resources omitted by the combined result limit. Authorized scope metadata keeps filter options available for empty or unavailable locations.
 - Each row retains `{cluster, namespace, name, uid}`, resource data and exact target permissions. Same-named resources in different locations remain distinct. Server routes carry `cluster` and `ns`; legacy routes without a cluster resolve local, independently of remembered infrastructure selection.

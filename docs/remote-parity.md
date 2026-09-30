@@ -37,10 +37,16 @@ The UI keeps the existing capture screen, download button and error components.
 Loading, unavailable and older-gateway states disable unsupported operations with
 an explanation; a capability response never grants authorization.
 
-Pencil review uses the existing Capture list (`m5kOm4`), disabled capture screen
-(`Bbnga`) and shared error card (`zzx8f`). These existing layouts are retained
-under the previously documented component-reuse exception; no Pencil document
-or reference export is replaced by a browser capture for this change.
+The September 30 Pencil reconciliation represents the selected site's capture
+capabilities in the access/capability state board (`w1QYmf`), disabled capture
+screen (`Bbnga`), site-limit example in the Start Capture modal (`O08uaD`), and
+mobile Capture screen (`SUtGZ`). Loading, unavailable and older-gateway states
+explain disabled operations; retained-download availability remains distinct
+from permission to start new captures. Existing components and theme tokens
+are retained. The Capture list (`m5kOm4`) inherits shared header changes but was
+not directly updated or re-exported in this pass. The [design manifest](../design-export/MANIFEST.md)
+records the exact updated nodes and export scope. Earlier browser-reference
+provenance and upstream approval requirements remain unchanged.
 
 This change does not move central users, provider credentials, module catalog,
 installation administration or node enrollment into server-scoped operations.
