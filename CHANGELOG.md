@@ -40,12 +40,12 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   an unrestricted egress rule (all ports and protocols, any destination)
   alongside the DNS/advertised-ports rule every provider gets. Previously
   playit got only that rule, so it could not reach its relay (F-262).
-- **Reinstalling over leftover CRDs runs the CRD-apply hook:** a
+- **Helm 3 reinstalling over leftover CRDs runs the CRD-apply hook:** a
   `helm install` onto Gameplane CRDs left behind by an uninstalled release
-  now also runs the `crds.autoApply` hook to bring them up to date, so
-  air-gapped clusters need `crds.autoApply.image` mirrored for that case
-  too. Under Helm 4, CRDs last applied by v0.2.0-beta.8 or earlier need a
-  one-time `helm install --force-conflicts` (F-218).
+  runs the `crds.autoApply` hook to bring them up to date, so air-gapped
+  clusters need `crds.autoApply.image` mirrored for that case. Under Helm 4,
+  existing CRDs are applied natively; CRDs last applied by v0.2.0-beta.8 or
+  earlier need a one-time `helm install --force-conflicts` (F-218).
 
 ### Added
 
