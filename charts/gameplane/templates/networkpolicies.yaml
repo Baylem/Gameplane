@@ -100,7 +100,8 @@ spec:
               app.kubernetes.io/name: gameplane-operator
       ports:
         - { protocol: TCP, port: 8090 }
-{{- if .Values.capture.enabled }}
+{{- $capture := .Values.capture | default dict }}
+{{- if $capture.enabled }}
 ---
 # Capture control and local file access use the sidecar's separate mTLS port.
 # Keep this allowance independent of the agent and kubelet probe ports.

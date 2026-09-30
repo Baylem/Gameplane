@@ -888,6 +888,8 @@ jobs:
                       ('PersistentVolumeClaim', 'gameplane-api-data')}
           assert required <= resources, f"reuse-values removed existing resources: {required - resources}"
           assert ('Deployment', 'gameplane-gateway') not in resources
+          assert ('NetworkPolicy', 'allow-api-to-agent') in resources
+          assert ('NetworkPolicy', 'allow-api-to-capture') not in resources, "legacy values without capture enabled its ingress"
           PY
       - name: crd-manifests in sync with crds
         # The CRD-apply hook serves CRDs from crd-manifests/ (crds/ isn't
