@@ -198,12 +198,12 @@ All endpoints on the `--addr` control mux, except `/healthz`, return `401 Unauth
 |--------|---------|---------|
 | `github.com/go-chi/chi/v5` | v5.3.2 | HTTP router |
 | `github.com/coder/websocket` | v1.8.15 | WebSocket library for console, logs, player queries |
-| `k8s.io/apimachinery` | v0.37.0 | Kubernetes types for status patches |
-| `k8s.io/client-go` | v0.37.0 | Kubernetes client for heartbeat (GameServer status patches) |
+| `k8s.io/apimachinery` | v0.37.1 | Kubernetes types for status patches |
+| `k8s.io/client-go` | v0.37.1 | Kubernetes client for heartbeat (GameServer status patches) |
 | `github.com/prometheus/client_golang` | v1.24.1 | Prometheus metrics (`/metrics` endpoint) |
 | `golang.org/x/sys` | v0.48.0 | System-level utilities (used by client-go) |
 
-The agent, operator, and api modules all use `k8s.io/apimachinery`/`k8s.io/client-go` v0.37.0 — there is no intentional version skew between them.
+The agent and operator modules use `k8s.io/apimachinery`/`k8s.io/client-go` v0.37.1 and the api module v0.37.0; each module resolves its own version, so patch versions can drift between them as Dependabot bumps one module at a time.
 
 ## Data & persistence
 
