@@ -14,13 +14,14 @@ import {
 import { createResourceClient, type LifecycleVerb } from "@/lib/endpoints";
 import { useGameCodes } from "@/lib/useGameCodes";
 import { resolveConsoleMode, serverHasMods, serverHasModpacks } from "@/lib/capabilities";
+import { useMe } from "@/lib/auth";
 import { PhaseChip } from "@/components/ui/PhaseChip";
 import { GameIcon } from "@/components/ui/GameIcon";
 import { capitalize, formatUptime, ignoreRejection } from "@/lib/utils";
 import { ServerActionsMenu } from "@/components/server/ServerActionsMenu";
 import { CaptureWidget } from "@/components/CaptureWidget";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
-import { ResourceTargetProvider, useResourceClient, useResourceTarget, useResourceAccess, resourceKey, serverLink, type ResourceTarget, type ServerAccessResponse } from "@/lib/resourceTarget";
+import { ResourceTargetProvider, useResourceClient, useResourceTarget, useResourceAccess, resourceCan, resourceKey, serverLink, type ResourceTarget, type ServerAccessResponse } from "@/lib/resourceTarget";
 import { createRequestClient } from "@/lib/api";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
@@ -110,6 +111,7 @@ function ServerDetailView({ lookupTarget }: { lookupTarget: ResourceTarget }) {
   const [settingsDirty, setSettingsDirty] = useState(false);
   const qc = useQueryClient();
   const nav = useNavigate();
+  const { data: me } = useMe();
 
   const { data: gs } = useQuery({
     queryKey: resourceKey(lookupTarget, "server"),
@@ -182,10 +184,16 @@ function ServerDetailView({ lookupTarget }: { lookupTarget: ResourceTarget }) {
   // version's loader can run one — hidden for vanilla and plugin loaders
   // (e.g. Paper), which can't load a Modrinth/Forge modpack.
   const modpacksAvailable = serverHasModpacks(tmpl, gs);
+  // Hide Capture only on a confirmed denial. While /users/me is loading or
+  // after it failed, permissions are unknown: keep the tab reachable so the
+  // widget can show its checking / identity-unavailable (retry) state, with
+  // the capture controls still closed.
+  const captureTabVisible = !me || resourceCan(access?.permissions ?? [], "captures:manage");
   const visibleTabs = tabs.filter((t) => {
     if (t.key === "console") return consoleAvailable;
     if (t.key === "mods") return modsAvailable;
     if (t.key === "modpacks") return modpacksAvailable;
+    if (t.key === "capture") return captureTabVisible;
     return true;
   });
 

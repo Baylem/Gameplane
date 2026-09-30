@@ -1330,6 +1330,55 @@ describe("ModsTab — id-managed mods (capabilities.mods.idList)", () => {
     expect(await screen.findByText("Mod Display Name")).toBeInTheDocument();
     expect(await screen.findByText("ID mod-id")).toBeInTheDocument();
   });
+
+  it("respects selected access that excludes this server namespace", async () => {
+    // The selected server's access response resolves a write grant in test-ns
+    // to no control permission for this server in gameplane-games.
+    scopedControl = false;
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/mods")) {
+        return Promise.resolve(jsonRes([]));
+      }
+      return Promise.resolve(jsonRes({}));
+    });
+    // Render in gameplane-games namespace (no permission there).
+    renderWithQuery(<ModsTab name="s1" tmpl={tmpl(withInstall)} />, { target: { cluster: "remote", namespace: "gameplane-games", name: "s1" } });
+
+    expect(await screen.findByText("0 installed")).toBeInTheDocument();
+
+    // "Install mod" stays visible but is disabled because the user's
+    // servers:write grant doesn't cover this server's namespace.
+    const installBtn = screen.getByRole("button", { name: /install mod/i });
+    expect(installBtn).toBeDisabled();
+  });
+
+  it("allows mods operations when selected access includes this server namespace", async () => {
+    // The selected server's access response includes servers:write for its
+    // gameplane-games namespace. The component consumes that resolved access.
+    scopedControl = true;
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes("/mods/registry/providers")) {
+        return Promise.resolve(jsonRes([{ provider: "modrinth", available: true, modpacks: false }]));
+      }
+      if (url.includes("/mods")) {
+        return Promise.resolve(jsonRes([]));
+      }
+      return Promise.resolve(jsonRes({}));
+    });
+    renderWithQuery(<ModsTab name="s1" tmpl={tmpl(withBrowse)} ns="gameplane-games" />, { target: { cluster: "remote", namespace: "gameplane-games", name: "s1" } });
+
+    expect(await screen.findByText("0 installed")).toBeInTheDocument();
+
+    // The selected permission result enables installing into this namespace.
+    const installBtn = screen.getByRole("button", { name: /install mod/i });
+    await waitFor(() => expect(installBtn).not.toBeDisabled());
+    fireEvent.click(installBtn);
+
+    // withBrowse declares a registry, so the install page defaults to
+    // browse mode and shows its "Browse registry" toggle.
+    const browseBtn = await screen.findByRole("button", { name: /browse registry/i });
+    expect(browseBtn).toBeInTheDocument();
+  });
 });
 
 let scopedControl = true;

@@ -913,6 +913,16 @@ Visible tab set depends on server template + active version:
 10. **Capture** — a `CaptureWidget` component driving start/stop of packet captures and a table of past captures for this server, gated on the `captures:manage` permission. Sits between the Backups and Settings tabs per `design-export/json` node `O08uaD`/`b4eaUf` (start-capture modal) and `m5kOm4` (capture list). `CaptureWidget.tsx` with `Captures` client namespace (`web/src/lib/api.ts:127-175`) and router/tab wiring (`ServerDetail.tsx:278`) are implemented in `web/src`.
 11. **Settings** — Grouped form with sub-sections (below); changes are draft-until-save; conflict detection on reload
 
+### Permission Gates (Tab Visibility & Control Access)
+
+ServerDetail verifies the selected server's access response against its cluster,
+namespace, name and UID before providing access through `ResourceTargetProvider`:
+
+- **Capture tab:** Once identity resolves, visibility and controls require `resourceCan` to find `captures:manage` in the verified target's permissions. `/users/me` provides identity readiness, not a replacement permission source. While identity loads, the tab stays visible and the widget shows "Checking access…" with capture queries and controls closed. If identity loading fails, the widget offers a retry through the identity-unavailable state. A resolved identity without the target grant receives the access-denied card. Capture settings use the same target permission and suppress denial text until target permissions resolve.
+- **Mods/Modpacks tab controls:** Install/manage actions use the selected access response's `canControl`, which the API resolves from that server's permissions and allowed ownership/collaborator access. A grant in another cluster or namespace does not enable these controls.
+
+**Other permission checks:** The `can(me, permission, namespace?, cluster?)` helper (`web/src/lib/auth.ts`) mirrors the server's RBAC logic. With `permissionsByCluster`, namespaced callers pass the explicit target cluster; only that cluster or the `*` wildcard cluster can supply a cluster-wide (`*` namespace) or exact namespace grant. Control-plane callers omit both namespace and cluster and accept a cluster-wide grant on any cluster. When `permissionsByCluster` is absent, `can` retains the legacy flat `permissions` fallback. Server resource controls use their verified target access instead of a global cluster selector. The API enforces authorization independently of UI visibility.
+
 ## ServerDetail Settings Sub-sections
 
 Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sections in a left sidebar (`SECTIONS` array):
@@ -1014,7 +1024,7 @@ Each namespace is an object of typed functions building and fetching URLs:
 - **useThemePreferences.ts** — theme preferences plumbing (feature 016; full behavior documented under "User Theme Customization" above): `useThemePreferences(me?, opts?)` reconciles the backend `preferences` from `/users/me` over the `gameplane-theme-prefs` localStorage cache (backend wins on drift), exposes `preferences` + an optimistic `updatePreferences(patch)` mutation (DOM + cache first, PUT via `Users.updatePreferences`, revert-and-report on failure, replay-on-`online` after connectivity loss), and keeps the DOM attributes (`class`/`data-theme`, `data-theme-preset`, `data-theme-type`, `data-custom-css`) and the `#gameplane-custom-css` overlay (always last in `<head>`; unmounted on logout and on `/login`/`/share/:token`) in sync. Plain helpers exported for routes and the boot script's post-boot path: `isSafeModeActive()` (`?safe-mode=1` or the `gameplane-safe-mode` sessionStorage flag — suspends only the overlay), `readThemePreferences` / `writeThemePreferences`, `normalizeThemePreferences`, `themePreferencesEqual`, `applyThemePreferences`, `unmountCustomCssOverlay`, plus the storage keys/element ids and the `gameplane-theme-error` window event. The inline `theme-boot` script in `index.html` applies the same cache synchronously pre-paint and is the authoritative boot path (never applies cached prefs on `/login` or `/share/:token`).
 - **servers.ts** — `countByState(items)` (running/stopped/pending/failed counts), `phaseGroups(items)` (items grouped by phase)
 - **games.ts** — category helpers: `gameCategory(game)`, `resolveCategories(explicit, game)`, `matchesCategory`, `matchesAllCategories`, `categoryFilters(categories)`
-- **auth.ts** — `useMe()` (current-user query hook), `hasRole(me, allowed)`, `can(me, perm, ns?)`
+- **auth.ts** — `useMe()` (current-user query hook), `hasRole(me, allowed)`, `can(me, perm, ns?, cluster?)`
 - **config.ts** — admin-config hooks: `useConfig()`, `useUpdateConfigSection(section)`, `useResetRoleMapping()`
 - **errors.ts** — `errorText(err, fallback?)`, `errorTextWithStatus(err, fallback?)`
 - **cluster.ts** — `getCurrentCluster()` / `setCurrentCluster()` (localStorage-backed)

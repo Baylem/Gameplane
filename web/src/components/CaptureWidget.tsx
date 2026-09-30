@@ -16,6 +16,8 @@ import {
   Download,
   Eye,
   Inbox,
+  Loader2,
+  Lock,
   Trash2,
 } from "lucide-react";
 import {
@@ -53,6 +55,8 @@ import {
 } from "@heroui/react";
 import { APIError, CaptureStartBody } from "@/lib/api";
 import { captureListRefetchMs, isCaptureActive } from "@/lib/capturePolling";
+import { useMe } from "@/lib/auth";
+import { IdentityUnavailable } from "@/components/RequireRole";
 import { CaptureWarningBanner } from "@/components/ui/CaptureWarningBanner";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { Chip } from "@/components/ui/PhaseChip";
@@ -125,8 +129,9 @@ interface Props {
 }
 
 export function CaptureWidget({ name, ns, gs }: Props) {
+  const { data: me, isLoading: meLoading, error: meError, refetch: refetchMe } = useMe();
   const permissions = useResourcePermissions();
-  const canManage = resourceCan(permissions, "captures:manage");
+  const canManage = !!me && resourceCan(permissions, "captures:manage");
   const canRead = canManage;
   const resourceTarget = useResourceTarget({ name, namespace: ns });
   const resourceClient = useResourceClient(resourceTarget);
@@ -142,6 +147,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
     : null;
   const { Captures } = resourceClient;
   const qc = useQueryClient();
+
   const enabled = gs?.spec.capture?.enabled === true;
   const captureLimits = capabilities.data?.state === "ready" ? capabilities.data : CAPTURE_DISPLAY_DEFAULTS;
   const retentionSeconds = gs?.spec.capture?.retentionSeconds ?? captureLimits.defaultRetentionSeconds;
@@ -157,6 +163,13 @@ export function CaptureWidget({ name, ns, gs }: Props) {
   // see captureListRefetchMs.
   const [stoppingId, setStoppingId] = useState<string | null>(null);
 
+  // All hooks above this point must run unconditionally on every render —
+  // useMe() resolves from `undefined` to a real user after mount, which
+  // would otherwise flip this early return between renders and violate the
+  // Rules of Hooks (mount-time "fewer hooks than previous render" crash) for
+  // every legitimately-authorized user. Only the JSX below this point may
+  // branch on canManage. Mirrors NetworkCaptureSection's shape (calls every
+  // hook first, gates only the returned JSX).
   const { data: captures } = useQuery({
     queryKey: resourceKey(resourceTarget, "captures", name, ns),
     queryFn: ({ signal }) => resourceClient.withSignal(signal).Captures.list(name, ns),
@@ -168,7 +181,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
   const { data: activeCaptureDetails } = useQuery({
     queryKey: resourceKey(resourceTarget, "capture", name, activeCapture?.captureId, ns),
     queryFn: ({ signal }) => resourceClient.withSignal(signal).Captures.get(name, activeCapture!.captureId, ns),
-    enabled: !!activeCapture,
+    enabled: !!activeCapture && canManage,
   });
 
   const enableMut = useMutation({
@@ -213,6 +226,44 @@ export function CaptureWidget({ name, ns, gs }: Props) {
       URL.revokeObjectURL(url);
     },
   });
+
+  if (meLoading) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+            <Loader2 className="h-7 w-7 animate-spin text-default-500" />
+            <p className="text-sm text-default-500">Checking access…</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // /users/me failed after its retries: the caller's permissions are
+  // unknown, not absent, so show the retryable identity-unavailable state
+  // (controls stay closed) rather than claiming access is denied.
+  if (!me) {
+    return <IdentityUnavailable error={meError} onRetry={() => void refetchMe()} />;
+  }
+
+  if (!canManage) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-default-100">
+              <Lock className="h-7 w-7 text-default-500" />
+            </div>
+            <p className="text-sm font-medium">{"You don't have access to packet capture on this server."}</p>
+            <p className="max-w-md text-xs text-default-500">
+              Viewing, starting and downloading captures requires capture access for this server. Ask an administrator if you need it.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!enabled) {
     return (
