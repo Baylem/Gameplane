@@ -2337,9 +2337,8 @@ Frames added to `design.pen` per the held design briefs `specs/018-v0-3-release-
 ## Design reconciliation 2026-09-30 — Unified locations and remote server parity
 
 The Pencil design was updated to represent the interfaces implemented at
-`8e08a60f9d266dd938836e1f31188b370ca8a2a7`. The user confirmed saving `design.pen`
-in Pencil on September 30. This pass retains the existing Gameplane components
-and theme tokens; it introduces no global restyle.
+`8e08a60f9d266dd938836e1f31188b370ca8a2a7` and saved in `design.pen` on
+September 30. Existing Gameplane components and theme tokens were retained.
 
 The scope is the ordinary app shell without a global cluster selector; Clusters
 as administration navigation; combined dashboard statistics, location filtering
@@ -2376,23 +2375,22 @@ shared header changes but is outside this pass's direct export scope. The
 historical totals and earlier export entries above are not a fresh enumeration
 of the whole document.
 
-Only the design, its direct exports and related design documentation changed.
-No application code, tests or comparison thresholds changed, and this design
-pass establishes no new CI result. Historical browser-reference provenance is
-retained; upstream review and approval remain separate from this reconciliation.
+This update changed the design, its direct exports and related documentation.
+Application code, tests and comparison thresholds were unchanged. The October 2
+entry below records the subsequent restoration of canonical Pencil comparisons.
 
 ## Visual baseline reconciliation 2026-10-02 — Restore canonical Pencil comparisons
 
 In response to upstream PR #542's review, the visual workflow again runs
 `npm run diff:screenshots -- --check-expected` against `design-export/screenshots`.
-No browser captures replace Pencil baselines. Historical implementation captures
-and their provenance are retained under `web/visual-references/` for reference
-only. Thresholds, masks, scaling rules, screenshot fixtures and expected-screen
-checks are unchanged.
+No browser captures replace Pencil baselines. The retired browser-reference
+bundles remain available in Git history at `4d7c08bb673e38ccf4a7dba9f3b3deb45dd20474`.
+Thresholds, masks, scaling rules, screenshot fixtures and expected-screen checks
+are unchanged.
 
 The three formerly substituted designs were reconciled through Pencil MCP and
-exported directly as editable-node JSON and 2x PNGs. The user confirmed saving
-`design.pen` in Pencil on October 2.
+exported directly as editable-node JSON and 2x PNGs. `design.pen` was saved in
+Pencil on October 2.
 
 | ID | Design reconciliation | PNG dimensions |
 |---|---|---|

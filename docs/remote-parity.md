@@ -1,6 +1,6 @@
 # Remote server feature parity
 
-## Design
+## Routing and identity
 
 The same server pages and permissions apply to local and registered remote game
 servers. Each operation stays bound to its cluster, namespace and resource
@@ -31,26 +31,21 @@ existing behavior.
 
 Capture availability comes from the selected site's configuration. Authenticated
 gateway capabilities advertise protocol, capture support, retention limits and
-start defaults; the central
-installation's capture switch does not determine a remote site's availability.
+start defaults; the central installation's capture switch does not determine
+a remote site's availability.
 The UI keeps the existing capture screen, download button and error components.
 Loading, unavailable and older-gateway states disable unsupported operations with
 an explanation; a capability response never grants authorization.
 
-The September 30 Pencil reconciliation represents the selected site's capture
-capabilities in the access/capability state board (`w1QYmf`), disabled capture
-screen (`Bbnga`), site-limit example in the Start Capture modal (`O08uaD`), and
-mobile Capture screen (`SUtGZ`). Loading, unavailable and older-gateway states
-explain disabled operations; retained-download availability remains distinct
-from permission to start new captures. Existing components and theme tokens
-are retained. The Capture list (`m5kOm4`) inherits shared header changes but was
-not directly updated or re-exported in this pass. The [design manifest](../design-export/MANIFEST.md)
-records the exact updated nodes and export scope. Earlier browser-reference
-provenance and upstream approval requirements remain unchanged.
+The access/capability state board (`w1QYmf`), disabled capture screen (`Bbnga`),
+Start Capture modal (`O08uaD`) and mobile Capture screen (`SUtGZ`) use the
+selected site's capabilities and limits. Retained-download availability remains
+distinct from permission to start new captures. The
+[design manifest](../design-export/MANIFEST.md) records the Pencil export scope.
 
-This change does not move central users, provider credentials, module catalog,
-installation administration or node enrollment into server-scoped operations.
-It introduces no game migration, shared storage or cross-cluster scheduler.
+Users, provider credentials, the module catalog, installation administration and
+node enrollment remain centrally managed. Clusters retain independent game
+workloads and storage; cross-cluster scheduling and migration are not supported.
 
 ## Acceptance
 
@@ -66,11 +61,6 @@ It introduces no game migration, shared storage or cross-cluster scheduler.
 - CI deploys an actual gateway between two independent Kubernetes clusters and
   exercises real agent/game operations, capability compatibility, certificate
   rotation/revocation, endpoint changes and connection failures.
-- The final tested revision is deployed to the disposable Docker Desktop demo
-  with existing accounts and GameServer/PVC identities preserved, and reviewed
-  through the app before the upstream PR head is advanced.
 
-Repository test and lint suites run in GitHub Actions. Compilation and bounded
-manual checks of the disposable preview may run locally. Passing evidence is
-recorded for the exact submitted revision; this design is not a claim that the
-acceptance checks have already passed.
+The integration scenarios are documented in [the e2e specification](../test/e2e/specs.md).
+See [contributing](contributing.md#testing) for the test workflow.

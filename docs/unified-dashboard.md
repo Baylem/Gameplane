@@ -1,8 +1,8 @@
 # Unified dashboard and server management
 
-## Design decision — September 27, 2026
-
-This design presents one dashboard and server list across independent backend clusters, with optional filters and administrator-managed infrastructure. It supersedes the selected-cluster presentation described in [the first multicluster UI slice](multicluster-ui.md). The implementation uses existing Gameplane/HeroUI components. The September 30 Pencil reconciliation brings the corresponding design screens and shared components into line with implementation revision `8e08a60f9d266dd938836e1f31188b370ca8a2a7`; its scope and exports are recorded in [the design manifest](../design-export/MANIFEST.md). The earlier reviewed browser-reference exception remains an implementation-history record and does not establish upstream maintainer approval.
+The dashboard combines authorized resources across independent backend clusters,
+with optional location filters. Cluster registration and node inventory are
+described in [Cluster administration](multicluster-ui.md).
 
 One central login/API presents the resources each user can access. Clusters remain independent execution and storage boundaries. Their Kubernetes APIs, operators and authenticated agent gateways continue to route operations; combining their presentation does not introduce cross-site scheduling, shared storage, game migration or a second user database.
 
@@ -18,13 +18,15 @@ One central login/API presents the resources each user can access. Clusters rema
 
 Use existing page headers, cards, tables, menus, filters, alerts and responsive layouts. The single-site experience should remain familiar. A cluster filter changes the list being viewed, not an already-open server's identity or an outstanding operation.
 
-## Filter layout — September 29, 2026
+## Filter layout
 
 Servers keeps Location inside its existing right-hand Filter popover, alongside Game and Namespace. There is no separate location selector above the statistics. Backups uses the same popover shell on the right of its search row: Location, Server and the current tab's Phase choices are grouped together. Schedules offers Location and Server without a phase field. Server choices retain their full target and narrow to the draft location; switching location clears an incompatible server choice.
 
 All popovers stage selections until Apply. Clear resets the draft, Apply commits it, and closing without applying discards changes. The trigger counts applied filters, including Location. Search stays visible, and the layout wraps at mobile widths. Route-driven location state remains the authority so sidebar navigation and Back/Forward restore the correct applied location.
 
-The September 30 Pencil update represents these menus using the existing Filter Popover and Select styling, including vertically centered selection text and the mobile layout. It also covers combined dashboard views, partial-location coverage, site identity, creation placement, scoped user grants, and server-detail action wrapping. The design retains the existing theme tokens. Applied-filter counts and draft/Apply behavior remain the interaction contract described above.
+The interface uses the existing Gameplane/HeroUI components and theme tokens.
+`design.pen` is the canonical design source; the
+[design manifest](../design-export/MANIFEST.md) records node IDs and export scope.
 
 ## Data and authorization contract
 
@@ -44,6 +46,7 @@ Existing per-target mutation and stream APIs remain in use. Every client operati
 4. Per-row actions use target-scoped capabilities. Namespace-only and owner/collaborator users see only their permitted resources; they do not gain inventory or backup permissions.
 5. A disconnected site or bounded-list limit produces a visible partial-data state. Aggregates remain mathematically meaningful, with unknown metrics displayed as unknown.
 6. Desktop and narrow mobile layouts retain usable filters, distinct identity labels and reachable actions without horizontal clipping.
-7. A disposable two-cluster preview preserves existing accounts and GameServer/PVC identities. Meaningful two-site checks and CI validate the implementation; the preview does not establish production readiness.
 
-Compile checks may run locally. Repository test and lint suites run in GitHub Actions. Design and export scope for the September 30 reconciliation is recorded in the design manifest. Earlier browser-reference provenance remains documented separately; updating the design does not change comparison thresholds or establish a new CI result.
+See [contributing](contributing.md#testing) for the test workflow and
+[remote server feature parity](remote-parity.md#acceptance) for two-cluster
+integration coverage.

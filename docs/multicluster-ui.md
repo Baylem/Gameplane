@@ -1,43 +1,60 @@
-# Multicluster dashboard design and acceptance
+# Cluster administration
 
-## Design decision — September 27, 2026
+One central login manages independent registered clusters. A cluster contains
+nodes and game servers; registering another cluster is separate from adding a
+node. Dashboard, Servers, Backups and Search combine authorized resources across
+locations. See [Unified dashboard and server management](unified-dashboard.md)
+for filtering and server navigation.
 
-This document records the initial selected-cluster UI and its implementation rationale. The [unified dashboard design](unified-dashboard.md) supersedes that presentation and describes current behavior. The design-exception record below documents implementation history; it does not imply upstream maintainer approval.
+## Registered clusters
 
-This UI reuses the existing Gameplane/HeroUI components, with its design documented here and supported by reviewed browser implementation references. This is an exception to the repository's Pencil-first workflow, presented for upstream maintainer review. `design.pen` and its exports remain unchanged; the implementation references do not represent a new Pencil design or establish maintainer approval.
+The **Clusters** page (`/clusters`) lists authorized registrations with their
+display name, stable ID, Kubernetes API health, version and last check when
+available. **Local** identifies the central cluster. The administration navigation
+is available to users with cluster-management or inventory access.
 
-The two existing visual scenarios changed by this work—Mod registries settings (`Wj0V4`) and Edit user (`t3IY3u`)—initially used [reviewed implementation references](../web/visual-references/multicluster/README.md) with original CI capture provenance and SHA256 hashes. The workflow temporarily overlaid those browser images on the Pencil references. On October 2, 2026, that exception was removed at the upstream maintainer's request: CI again compares directly against `design-export/screenshots`, and the affected designs were reconciled through Pencil. The comparator, thresholds, masks, scale checks and expected-screen checks remain unchanged. The earlier browser images remain historical evidence only; see [the export manifest](../design-export/MANIFEST.md) for the new Pencil exports.
+- **View servers** opens the server list filtered to that location.
+- **View nodes** opens the selected cluster's inventory when the user has its
+  inventory permission.
+- Connection health reports Kubernetes API connectivity. It does not establish
+  gateway readiness or game health.
 
-One central login manages independent registered clusters. A cluster contains nodes and game servers; registering another cluster is distinct from adding a node to the selected cluster. The dashboard continues to summarize one selected cluster, rather than inventing fleet totals from incomplete inventory.
+Registration is an administrator-managed prerequisite and grants no user access
+by itself. See [installation](install.md) for Kubernetes registration and
+[remote agent access](multicluster-agent-gateway.md) for gateway credentials.
 
-## Desktop and mobile screens
+## Node inventory
 
-- **Clusters** is a discoverable authenticated navigation item and `/clusters` overview. Existing cards show each authorized registration's display name, stable ID, connection health, Kubernetes version and last check when available. Local is identified as the central cluster. A selected badge and **View servers** action make selection explicit; **View nodes** appears only when the API grants that registration's inventory capability. Namespace-only server readers can discover and select their sites without receiving node inventory access. This is a registry overview: connection health does not assert gateway readiness or game health. Registration remains an operator-managed prerequisite; there is no nonfunctional Add cluster wizard.
-- **Cluster** at the existing `/cluster` URL remains node inventory. Its heading/subtitle identifies the selected cluster and node count. Loading, failed access and genuinely empty inventory are different states. Remote selection never shows central installation storage settings or enables central credential/node-join operations.
-- **Dashboard** remains the selected cluster's game/inventory summary. The selected ID/name is visible and a Clusters link offers a clear way to find other sites. Errors do not become a successful empty node response.
-- **Header:** the existing cluster dropdown stays visible at every viewport width, including the 375 px mobile layout. Its label truncates without removing the accessible name or hiding the switcher; the mobile page title can truncate, while navigation and the user menu remain reachable. The menu's existing misleading Add cluster action becomes **View all clusters**.
+The **Cluster** page (`/cluster`) shows the selected cluster's nodes and capacity.
+Its queries retain that cluster ID, and changing the inventory selection clears
+pending queries and cached results. A failed remote read displays an error;
+it never substitutes local inventory. Loading, denied access and empty inventory
+have separate states.
 
-Use the existing PageHeader, Card, Button, Alert, LoadingCard, HeroUI dropdown and semantic health colors. No new visual design system, enrollment credential form, public status page or fleet-wide mutation surface is introduced.
+Node-join tokens, kubeconfig issuance and installation storage configuration are
+available only for the local cluster. Inventory selection does not change an
+open server's target or the location filters on ordinary resource pages.
 
-## Context and safety behavior
+## User access
 
-Inventory and affected game queries include the selected cluster ID in their query keys and capture that ID when requests begin. Switching clusters cancels and clears outstanding cached queries before publishing the new selection. Route content remounts at the cluster boundary so a previous site's forms, confirmations and credential results cannot remain actionable. Existing streams close through their existing cluster subscription. Registration health is global, scoped by the API to authorized registrations, and never silently changes an unavailable selection to local.
+Kubernetes credentials and dashboard-user grants are separate. The registered
+kubeconfig needs permission to read the target cluster's resources; users need
+grants for the cluster and namespace they are accessing. See
+[remote inventory permissions](gateway-install.md#remote-inventory-permissions)
+for the Kubernetes roles.
 
-Central Modules, Users/RBAC, Audit/System logs and Settings screens carry a central-management banner. Their API requests suppress automatic workload-cluster injection while preserving explicit binding-target query parameters. The central module catalog uses **Deploy locally**, which selects local before opening server creation. Direct server creation uses the selected cluster's template list and pins both the create request and any later tunnel-credential write to that same target. Authentication/profile cache remains central; it is not evidence of a selected cluster inventory grant.
+To grant remote access in **Users & RBAC**:
 
-The server remains the authorization authority. The registry overview does not grant cluster access. Remote node inventory uses the selected backend client; remote installation configuration and central kubeconfig/node-join buttons remain unavailable. A disconnected or removed remote produces an error and an explicit way to choose another cluster, never local fallback.
+1. Create a role in **Roles** with the required workload permissions.
+2. Edit the user and select the remote cluster for a supplemental grant.
+3. Select the role and namespace. For node inventory, use a role containing
+   `cluster:read` with **All namespaces**.
+4. Add the grant. The user's local primary role remains separate.
 
-The Users edit dialog keeps existing primary-role controls and adds a cluster selector for supplemental grants. Each grant identifies cluster and namespace; remote all-namespace grants are independent of the managed local primary grant. All namespaces is available only for roles containing permitted cluster-workload capabilities such as `cluster:read`; global central-administration permissions remain restricted. Roles are created through the existing Roles tab, not automatically. This grant UI depends on the separately reviewed backend binding policy.
+Remote all-namespace roles may contain `cluster:read` and namespaced permissions.
+Wildcard and central-administration permissions are rejected, including when an
+existing role is edited. Namespace-only server grants do not grant node inventory
+access. Changing grants revokes the user's sessions, so they must sign in again.
 
-## Acceptance
-
-CI component and mock-browser coverage must establish:
-
-1. The overview lists both authorized registrations with clear cluster identity and health, distinguishing these entries from node cards; loading, error and empty registry states are explicit.
-2. Selecting a registration opens its node inventory, with the selected ID threaded to API reads. Local and remote fixtures have distinct node names and same-named servers with distinct identities.
-3. Switching during an outstanding local request cannot render its late response under a remote heading. Previous-site forms/results are discarded, and query caches do not share selected inventory or authorization data.
-4. The selector and overview remain usable at desktop and 375 px mobile widths with keyboard-accessible controls. On small screens the page heading sits above wrapping actions; long node names wrap beside a separate status badge. Neither the document nor the scrolling main region overflows horizontally, and the heading and node-operation buttons stay inside the viewport.
-5. Remote node-join/kubeconfig controls remain disabled before and after inventory loading or errors, and central storage configuration is absent remotely.
-6. A remote inventory failure is displayed as an error rather than empty/healthy local inventory. Unauthenticated screens reveal no registry information.
-
-Only compilation runs locally under the repository rules. Full component, lint and mock-browser suites run in GitHub Actions. A subsequent bounded disposable demo check independently compares displayed local/remote nodes and file markers with each real cluster. The [remote parity design](remote-parity.md) extends this work with capture/ID-list mod routing and real-game, failure and certificate-rotation acceptance. Gateway enrollment remains operator-managed; UI-to-Git export is outside this change.
+Accounts, roles, module catalog, audit and installation settings remain centrally
+managed. Their requests do not inherit the inventory selection.

@@ -264,9 +264,13 @@ a cluster-scoped CRD.
   for the UID-bound agent protocol before enabling this path.
 - The **control-plane cluster** hosts the API and dashboard; it may or
   may not have game pods itself (if `cluster=local`).
-- A **request** made to the API with `?cluster=<name>` is dispatched to
+- A **resource request** made to the API with `?cluster=<name>` is dispatched to
   the named cluster's Kubernetes client. Omitting the selector targets
-  the built-in "local" cluster.
+  the built-in "local" cluster. Collection reads under `/fleet/*` instead combine
+  authorized scopes by default, with optional cluster and namespace filters.
+  Each returned resource retains its target identity and permissions; partial
+  results report unavailable or truncated scopes. See the
+  [unified dashboard](unified-dashboard.md) for the collection contract.
 
 **Interactive connections:**
 
@@ -278,10 +282,10 @@ a cluster-scoped CRD.
   validate the new workload. Kubernetes log/attach APIs address Pods by name and
   do not support UID preconditions, so this is a preflight check, not an atomic
   authorization guarantee across deletion/recreation.
-- The browser binds a socket to the selected cluster and closes it, cancels
-  retries and discards queued input on a cluster switch. A new view opens a new
-  connection. Unsupported remote agent operations carry the selector and are
-  rejected instead of reaching the local namesake.
+- The browser binds a socket to the open server's cluster and namespace.
+  Reconnects retain that target; leaving the server view closes its streams.
+  Inventory selection and list filters cannot retarget an open server operation.
+  Unsupported remote operations fail instead of reaching a local namesake.
 - RCON, game-file logs, files, players, live status and agent-based mods use the
   selected cluster's optional gateway. It verifies a dedicated central mTLS peer,
   target cluster, GameServer UID and owned agent Service, then uses local DNS and
@@ -291,7 +295,10 @@ a cluster-scoped CRD.
 - Existing local installations retain direct agent connections. Remote gateway
   access requires both private gateway reachability and direct Kubernetes API
   access; it does not tunnel Kubernetes operations or replicate game storage.
-  Capture-file downloads and ID-list mod configuration remain gated remotely.
+  Capture downloads and cleanup use a separate gateway route bound to both the
+  GameServer and NetworkCapture UIDs; sidecars verify persisted file identity.
+  Modpack and ID-list configuration use the selected Kubernetes client and
+  template, with provider credentials retained centrally.
   See [remote agent access](multicluster-agent-gateway.md) and
   [gateway installation](gateway-install.md) for configuration and boundaries.
 
