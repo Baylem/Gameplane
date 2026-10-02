@@ -12,6 +12,7 @@
     "color": "#00000000"
   },
   "theme": {},
+  "context": "Default Edit User state: local grant scope; remote clusters are selectable. All namespaces is disabled for local grants.",
   "descendants": {
     "E7Whx": {
       "content": "Edit user"
@@ -148,6 +149,7 @@
               "name": "Section Label",
               "fill": "$muted",
               "content": "CLUSTER & NAMESPACE GRANTS",
+              "lineHeight": 1.2727272727,
               "fontFamily": "$typography/font-sans",
               "fontSize": 11,
               "fontWeight": "600",
@@ -161,7 +163,7 @@
               "textGrowth": "fixed-width",
               "width": "fill_container",
               "content": "The primary role above manages local access. Additional grants apply only to their named cluster and namespace.",
-              "lineHeight": 1.4,
+              "lineHeight": 1.3333333333,
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
               "fontWeight": "normal"
@@ -181,7 +183,7 @@
                   "width": "fill_container",
                   "descendants": {
                     "cFsFk": {
-                      "content": "remote-lab"
+                      "content": "Local cluster"
                     }
                   }
                 },
@@ -225,10 +227,11 @@
                   "type": "frame",
                   "id": "jLdrI",
                   "name": "All namespaces button",
+                  "opacity": 0.5,
                   "height": 32,
                   "padding": [
                     0,
-                    8
+                    16
                   ],
                   "justifyContent": "center",
                   "alignItems": "center",
@@ -240,8 +243,8 @@
                       "fill": "$foreground/foreground",
                       "content": "All namespaces",
                       "fontFamily": "$typography/font-sans",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
+                      "fontSize": 14,
+                      "fontWeight": "500"
                     }
                   ]
                 },
@@ -270,7 +273,7 @@
               "textGrowth": "fixed-width",
               "width": "fill_container",
               "content": "For remote node inventory, create a role in the Roles tab with “View nodes, version, and storage”, then grant it to all namespaces on that cluster.",
-              "lineHeight": 1.4,
+              "lineHeight": 1.3333333333,
               "fontFamily": "$typography/font-sans",
               "fontSize": 12,
               "fontWeight": "normal"

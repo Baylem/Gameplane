@@ -2380,3 +2380,31 @@ Only the design, its direct exports and related design documentation changed.
 No application code, tests or comparison thresholds changed, and this design
 pass establishes no new CI result. Historical browser-reference provenance is
 retained; upstream review and approval remain separate from this reconciliation.
+
+## Visual baseline reconciliation 2026-10-02 — Restore canonical Pencil comparisons
+
+In response to upstream PR #542's review, the visual workflow again runs
+`npm run diff:screenshots -- --check-expected` against `design-export/screenshots`.
+No browser captures replace Pencil baselines. Historical implementation captures
+and their provenance are retained under `web/visual-references/` for reference
+only. Thresholds, masks, scaling rules, screenshot fixtures and expected-screen
+checks are unchanged.
+
+The three formerly substituted designs were reconciled through Pencil MCP and
+exported directly as editable-node JSON and 2x PNGs. The user confirmed saving
+`design.pen` in Pencil on October 2.
+
+| ID | Design reconciliation | PNG dimensions |
+|---|---|---|
+| `Wj0V4` | Central-management notice and branding; registered Clusters and Cluster inventory navigation; registry panel spacing and controls | 2880 × 1800 |
+| `t3IY3u` | Default Local cluster grant selection; disabled All namespaces control; helper line heights and grant-row spacing | 960 × 1116 |
+| `DWztv` | Location/namespace identity under each mobile server name, preserving the compact Search/Filter row | 780 × 1688 |
+
+The PNGs were inspected against the original browser captures from CI run
+`36780352172`. That earlier run's 109 passing comparisons included three browser
+substitutions and therefore did not establish Pencil fidelity for these IDs.
+Only 16 of the September 30 pass's 37 directly exported IDs appeared in that
+run's report, and `t3IY3u` was substituted. The remaining exports include shared
+components and additional screens/states; exporting them is not a claim that
+each has an independent automated comparison. Fresh canonical CI results are
+reported separately on the PR with their exact commit and run IDs.
