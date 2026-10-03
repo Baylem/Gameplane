@@ -11,9 +11,12 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	clienttesting "k8s.io/client-go/testing"
 
 	"github.com/ValgulNecron/gameplane/api/internal/gatewayprotocol"
 	"github.com/ValgulNecron/gameplane/api/internal/kube"
@@ -273,6 +276,45 @@ func TestRemoteCaptureMetadataNeverUsesCentralRetentionClamp(t *testing.T) {
 			if rr.Code != 200 || !strings.Contains(rr.Body.String(), "cap-one") {
 				t.Fatalf("outage=%v metadata hidden by central TTL: %d %s", outage, rr.Code, rr.Body)
 			}
+		}
+	}
+}
+
+func TestRemoteCaptureCleanupCannotDeleteRecreatedRecord(t *testing.T) {
+	for _, status := range []int{http.StatusNoContent, http.StatusGone} {
+		server := newCaptureServerObj("alpha", true)
+		server.SetUID("remote-server")
+		nc := newCompletedNetworkCapture(t, "cap-one", "alpha", time.Second, 120)
+		nc.SetUID("original-capture")
+		nc.SetOwnerReferences([]metav1.OwnerReference{{APIVersion: "gameplane.local/v1alpha1", Kind: "GameServer", Name: "alpha", UID: server.GetUID()}})
+		remote := fakeCaptureClient(server, nc)
+		client := remote.Dynamic.(*dynamicfake.FakeDynamicClient)
+		client.PrependReactor("delete", "networkcaptures", func(action clienttesting.Action) (bool, runtime.Object, error) {
+			// Model recreation between gateway acknowledgement and Kubernetes DELETE.
+			replacement := nc.DeepCopy()
+			replacement.SetUID("replacement-capture")
+			if err := client.Tracker().Update(kube.GVRNetworkCapture, replacement, nc.GetNamespace()); err != nil {
+				t.Fatal(err)
+			}
+			opts := action.(clienttesting.DeleteAction).GetDeleteOptions()
+			if opts.Preconditions == nil || opts.Preconditions.UID == nil || *opts.Preconditions.UID != nc.GetUID() {
+				t.Fatal("delete can remove replacement without original UID precondition")
+			}
+			return true, nil, apierrors.NewConflict(kube.GVRNetworkCapture.GroupResource(), nc.GetName(), errors.New("UID precondition failed"))
+		})
+		reg := kube.NewRegistry(scope.DefaultCluster)
+		reg.Set("remote", remote)
+		gateway := &fakeCaptureGateway{deleteStatus: status}
+		h := &captureHandler{reg: reg, cfg: captureTestCfg, auditor: newCaptureAuditor(t), gateway: gateway}
+		r := chi.NewRouter()
+		r.Delete("/servers/{name}:capture", h.captureDelete)
+		rr := do(t, r, http.MethodDelete, "/servers/alpha:capture?id=cap-one&cluster=remote", nil)
+		if rr.Code != http.StatusInternalServerError || gateway.deleted == nil || gateway.deleted.CaptureUID != string(nc.GetUID()) {
+			t.Fatalf("cleanup=%d delete=%d target=%+v", status, rr.Code, gateway.deleted)
+		}
+		remaining, err := client.Resource(kube.GVRNetworkCapture).Namespace(nc.GetNamespace()).Get(t.Context(), nc.GetName(), metav1.GetOptions{})
+		if err != nil || remaining.GetUID() != "replacement-capture" {
+			t.Fatalf("replacement lost: %v %v", remaining, err)
 		}
 	}
 }

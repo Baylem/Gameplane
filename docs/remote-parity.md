@@ -23,11 +23,23 @@ capture endpoint. The sidecar verifies a persisted identity binding before
 serving or removing bytes. No client-supplied host, port or filesystem path is
 accepted. Existing captures without the identity binding cannot use the remote
 route. Downloads preserve Range handling, streaming and synchronous audit.
-Remote deletion requires confirmation of bound file cleanup before deleting the
-CR with a UID precondition. A failed cleanup retains the CR for retry. A retained
+Remote deletion requires a 204 bound cleanup acknowledgement or a 410 confirming
+both identity and PCAP are absent before deleting the CR with a UID precondition.
+A failed cleanup retains the CR for retry. A retained
 identity tombstone makes a repeated same-UID cleanup safe after a lost response;
 it cannot authorize deletion of a replacement file. Local cleanup keeps its
 existing behavior.
+
+The API can skip sidecar cleanup only when the operator has marked the capture
+Completed with current-generation `SidecarStopped=True`, reason `never_started`,
+and no `gameplane.local/capture-pod-uid` annotation was ever recorded. Server
+ownership and capture UID checks still apply. Pending/Running captures must use
+`:capture-stop` and reach a terminal phase first: a Pending record can already
+have an active sidecar if its status update failed. Failed phase, missing
+CompletionTime, a 404, and gateway errors do not establish file absence.
+
+See [capture cleanup recovery](gateway-install.md#capture-cleanup-recovery) for
+unreachable sites and historical captures without identity metadata.
 
 Capture availability comes from the selected site's configuration. Authenticated
 gateway capabilities advertise protocol, capture support, retention limits and

@@ -713,6 +713,9 @@ func (p *gatewayParity) capture(t *testing.T) {
 		gatewayDirect(t, sidecar, http.MethodDelete, bad, http.StatusNotFound)
 	}
 	gatewayDirect(t, sidecar, http.MethodGet, boundFile, http.StatusOK)
+	// Simulate a cleanup acknowledgement lost before the central CR deletion.
+	gatewayDirect(t, sidecar, http.MethodDelete, boundFile, http.StatusNoContent)
+	gatewayDirect(t, sidecar, http.MethodDelete, boundFile, http.StatusNoContent)
 	p.expect(t, p.client, http.MethodDelete, p.route(":capture?id="+start.CaptureID), nil, http.StatusOK)
 	gatewayDirect(t, sidecar, http.MethodGet, boundFile, http.StatusGone)
 	if _, err := p.remote.Dyn.Resource(networkCaptureGVR).Namespace("gameplane-games").Get(t.Context(), start.CaptureID, metav1.GetOptions{}); !apierrors.IsNotFound(err) {
@@ -725,6 +728,42 @@ func (p *gatewayParity) capture(t *testing.T) {
 	enabled, _, _ := unstructured.NestedBool(local.Object, "spec", "capture", "enabled")
 	if enabled {
 		t.Fatal("remote capture enable changed the local namesake")
+	}
+	p.captureAbsentCleanup(t, remoteCapture, client, sidecar)
+}
+
+func (p *gatewayParity) captureAbsentCleanup(t *testing.T, previous *unstructured.Unstructured, gateway, sidecar *http.Client) {
+	t.Helper()
+	pod, err := p.remote.K8s.CoreV1().Pods("gameplane-games").Get(t.Context(), p.name+"-0", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A stop requested at creation prevents StartCapture. Keep a recorded pod UID
+	// so the API must obtain the sidecar's 410 instead of using the never-started
+	// shortcut. This exercises the same empty-volume state as a replaced pod.
+	nc := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "gameplane.local/v1alpha1", "kind": "NetworkCapture",
+		"spec": previous.DeepCopy().Object["spec"],
+	}}
+	nc.SetName(previous.GetName() + "-absent")
+	nc.SetNamespace("gameplane-games")
+	nc.SetOwnerReferences(previous.GetOwnerReferences())
+	nc.SetAnnotations(map[string]string{"gameplane.local/stop-requested": time.Now().UTC().Format(time.RFC3339), "gameplane.local/capture-pod-uid": string(pod.UID)})
+	nc, err = p.remote.Dyn.Resource(networkCaptureGVR).Namespace(nc.GetNamespace()).Create(t.Context(), nc, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = p.remote.Dyn.Resource(networkCaptureGVR).Namespace(nc.GetNamespace()).Delete(context.Background(), nc.GetName(), metav1.DeleteOptions{})
+	})
+	p.capturePhase(t, nc.GetName(), "Completed")
+	boundFile := fmt.Sprintf("https://%s-agent.gameplane-games.svc.cluster.local/v1/targets/%s/captures/%s/uids/%s/file", p.name, p.remoteUID, nc.GetName(), nc.GetUID())
+	gatewayDirect(t, sidecar, http.MethodDelete, boundFile, http.StatusGone)
+	privatePath := fmt.Sprintf("/v1/clusters/%s/namespaces/gameplane-games/servers/%s/uids/%s/captures/%s/uids/%s/file", p.cluster, p.name, p.remoteUID, nc.GetName(), nc.GetUID())
+	gatewayDirect(t, gateway, http.MethodDelete, p.endpoint+privatePath, http.StatusGone)
+	p.expect(t, p.client, http.MethodDelete, p.route(":capture?id="+nc.GetName()), nil, http.StatusOK)
+	if _, err := p.remote.Dyn.Resource(networkCaptureGVR).Namespace(nc.GetNamespace()).Get(t.Context(), nc.GetName(), metav1.GetOptions{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("absent capture CR retained: %v", err)
 	}
 }
 

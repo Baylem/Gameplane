@@ -112,13 +112,18 @@ func (s *Server) openCaptureRegular(name string) (*os.File, error) {
 	return file, nil
 }
 
+func (s *Server) validCaptureTarget(r *http.Request) bool {
+	id, serverUID, captureUID := r.PathValue("id"), r.PathValue("serverUID"), r.PathValue("captureUID")
+	return validCaptureID(id) && captureUIDPattern.MatchString(serverUID) && captureUIDPattern.MatchString(captureUID) && serverUID == s.serverUID && r.URL.RawQuery == "" && r.URL.RawPath == ""
+}
+
 // matchCaptureIdentity reads durable metadata, not the bounded status cache.
 // Old sidecars' unbound files intentionally have no remote download path.
 func (s *Server) matchCaptureIdentity(r *http.Request) bool {
-	id, serverUID, captureUID := r.PathValue("id"), r.PathValue("serverUID"), r.PathValue("captureUID")
-	if !validCaptureID(id) || !captureUIDPattern.MatchString(serverUID) || !captureUIDPattern.MatchString(captureUID) || serverUID != s.serverUID || r.URL.RawQuery != "" || r.URL.RawPath != "" {
+	if !s.validCaptureTarget(r) {
 		return false
 	}
+	id, serverUID, captureUID := r.PathValue("id"), r.PathValue("serverUID"), r.PathValue("captureUID")
 	file, err := s.openCaptureRegular("capture-" + id + ".identity.json")
 	if err != nil {
 		return false
@@ -130,6 +135,23 @@ func (s *Server) matchCaptureIdentity(r *http.Request) bool {
 	}
 	var identity captureIdentity
 	return json.Unmarshal(raw, &identity) == nil && identity.ServerUID == serverUID && identity.CaptureUID == captureUID
+}
+
+// captureDataAbsent runs under s.mu after target validation and the busy check.
+// Lstat counts even dangling symlinks as present. An inaccessible directory or
+// any error other than a missing entry cannot acknowledge cleanup.
+func (s *Server) captureDataAbsent(id string) bool {
+	root, err := os.OpenRoot(s.captureDataDir)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = root.Close() }()
+	for _, suffix := range []string{".identity.json", ".pcapng"} {
+		if _, err := root.Lstat("capture-" + id + suffix); !errors.Is(err, fs.ErrNotExist) {
+			return false
+		}
+	}
+	return true
 }
 
 // HandleBoundDownload opens the immutable pair while locked; a later deletion
@@ -173,13 +195,21 @@ func (s *Server) HandleBoundDownload(w http.ResponseWriter, r *http.Request) {
 func (s *Server) HandleBoundDelete(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.matchCaptureIdentity(r) {
+	if !s.validCaptureTarget(r) {
 		http.NotFound(w, r)
 		return
 	}
 	id := r.PathValue("id")
 	if s.captureBusyLocked(id) {
 		http.Error(w, "capture is still running", http.StatusConflict)
+		return
+	}
+	if s.captureDataAbsent(id) {
+		http.Error(w, "capture data already absent", http.StatusGone)
+		return
+	}
+	if !s.matchCaptureIdentity(r) {
+		http.NotFound(w, r)
 		return
 	}
 	if err := os.Remove(s.captureFilePath(id)); err != nil && !errors.Is(err, fs.ErrNotExist) {

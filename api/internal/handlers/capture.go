@@ -947,11 +947,13 @@ func (h *captureHandler) captureDelete(w http.ResponseWriter, req *http.Request)
 			}
 			return
 		}
-		if err := h.remoteCaptureCleanup(req, bound); err != nil {
-			if h.auditWriteOrFail(w, req, http.MethodDelete, auditPath, target, "cleanup_failed", http.StatusServiceUnavailable) {
-				httperr.WriteCode(w, req, http.StatusServiceUnavailable, errors.New("capture file cleanup unavailable; capture retained for retry"))
+		if !captureNeverStarted(nc) {
+			if err := h.remoteCaptureCleanup(req, bound); err != nil {
+				if h.auditWriteOrFail(w, req, http.MethodDelete, auditPath, target, "cleanup_failed", http.StatusServiceUnavailable) {
+					httperr.WriteCode(w, req, http.StatusServiceUnavailable, errors.New("capture file cleanup unavailable; capture retained for retry"))
+				}
+				return
 			}
-			return
 		}
 		deleteErr = deleteCaptureWithUID(req.Context(), k, nc)
 	} else {

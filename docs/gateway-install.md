@@ -225,3 +225,35 @@ output to both the server UID and NetworkCapture UID on disk. Files created by a
 older sidecar without those bindings remain available through the existing local
 path, but remote file access fails closed. Upgrade all components before expecting
 remote capture downloads or cleanup. See the [parity design](remote-parity.md).
+
+## Capture cleanup recovery
+
+For a Pending or Running capture, request `:capture-stop`, wait for the operator
+to report a terminal phase, then retry deletion. The stop flow also handles
+Pending captures whose sidecar started before a status write failed. Repair
+operator permissions on `networkcaptures/status` if completion cannot persist.
+
+An upgraded sidecar returns 204 after deleting a matching bound file, or 410
+after confirming that neither its identity nor PCAP exists and no writer is
+active. A retry after a lost response uses the retained identity tombstone.
+The API retains the record on ambiguous 404/409/5xx responses, transport errors
+and unavailable sidecars. Repair gateway connectivity, credentials or sidecar
+availability and retry; none of these failures proves the file is gone.
+
+If the site cannot be restored, an administrator must inspect the capture's
+`gameplane.local/capture-pod-uid` annotation, the actual Pod UID, and capture
+storage. A container restart preserves emptyDir data; replacement of the Pod
+removes the old emptyDir. Confirm that capture activity has stopped before
+manual cleanup. Historical unbound PCAPs must be handled through the site's local
+maintenance path; remote routes cannot adopt them under a new UID.
+
+Only after confirming no capture remains active and accepting or removing any
+retained file, an administrator may delete the record on the selected cluster:
+
+```sh
+kubectl --context <remote-context> -n <namespace> delete networkcapture <capture-id>
+```
+
+Record-only deletion does not free retained file storage. The API automatically
+skips file cleanup only for an operator-confirmed never-started capture with no
+recorded pod UID, as described in the [parity design](remote-parity.md).
