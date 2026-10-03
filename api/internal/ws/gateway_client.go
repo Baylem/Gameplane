@@ -171,7 +171,21 @@ func (t *gatewayAgentTransport) Do(ctx context.Context, operation agentRequest) 
 		return nil, err
 	}
 	copyProxyHeaders(req.Header, operation.header)
-	return t.http.Do(req)
+	client := t.http
+	if gatewayprotocol.LongRunningOperation(operation.method, operation.path) {
+		if transport, ok := client.Transport.(*http.Transport); ok {
+			// A slow install may not send headers until extraction completes.
+			// Clone before changing policy so concurrent ordinary requests keep
+			// their header limit and all requests keep their TLS/redirect policy.
+			transport = transport.Clone()
+			transport.ResponseHeaderTimeout = 0
+			defer transport.CloseIdleConnections()
+			copyClient := *client
+			copyClient.Transport = transport
+			client = &copyClient
+		}
+	}
+	return client.Do(req)
 }
 
 func (t *gatewayAgentTransport) Dial(ctx context.Context, target agentTarget, path string) (*websocket.Conn, *http.Response, error) {

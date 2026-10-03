@@ -248,7 +248,7 @@ func TestGatewayDeadlinePolicy(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				h, cert := newFixture(t)
 				h.cfg.MaxRequestDuration = 0
-				ctx, cancel := h.requestContext(t.Context(), cert.NotAfter, longRunningOperation(tc.method, tc.path))
+				ctx, cancel := h.requestContext(t.Context(), cert.NotAfter, gatewayprotocol.LongRunningOperation(tc.method, tc.path))
 				defer cancel()
 				time.Sleep(6 * time.Minute)
 				if tc.longRunning && ctx.Err() != nil {

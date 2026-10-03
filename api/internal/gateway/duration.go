@@ -2,10 +2,7 @@ package gateway
 
 import (
 	"context"
-	"net/http"
 	"time"
-
-	"github.com/ValgulNecron/gameplane/api/internal/gatewayprotocol"
 )
 
 const operationTimeout = 30 * time.Second
@@ -26,11 +23,4 @@ func (h *handler) requestContext(parent context.Context, peerExpiry time.Time, l
 		}
 	}
 	return context.WithDeadline(parent, deadline)
-}
-
-func longRunningOperation(method, path string) bool {
-	if method == http.MethodGet {
-		return gatewayprotocol.Streaming(path) || path == "/files/download" || path == "/logs/download"
-	}
-	return method == http.MethodPost && (path == "/files/upload" || path == "/mods/upload" || path == "/mods/install")
 }
