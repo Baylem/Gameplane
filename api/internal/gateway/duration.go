@@ -14,8 +14,8 @@ const operationTimeout = 30 * time.Second
 // deadline on healthy streams or transfers. A positive MaxRequestDuration is
 // an optional total lifetime for every operation. Peer certificate expiry and
 // parent cancellation always apply, including to upgraded WebSockets.
-func (h *handler) requestContext(req *http.Request, longRunning bool) (context.Context, context.CancelFunc) {
-	deadline := req.TLS.PeerCertificates[0].NotAfter
+func (h *handler) requestContext(parent context.Context, peerExpiry time.Time, longRunning bool) (context.Context, context.CancelFunc) {
+	deadline := peerExpiry
 	limit := h.cfg.MaxRequestDuration
 	if !longRunning && (limit == 0 || limit > operationTimeout) {
 		limit = operationTimeout
@@ -25,7 +25,7 @@ func (h *handler) requestContext(req *http.Request, longRunning bool) (context.C
 			deadline = maximum
 		}
 	}
-	return context.WithDeadline(req.Context(), deadline)
+	return context.WithDeadline(parent, deadline)
 }
 
 func longRunningOperation(method, path string) bool {

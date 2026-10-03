@@ -107,7 +107,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
 		return
 	}
-	ctx, cancel := h.requestContext(req, longRunningOperation(req.Method, agentPath))
+	ctx, cancel := h.requestContext(req.Context(), req.TLS.PeerCertificates[0].NotAfter, longRunningOperation(req.Method, agentPath))
 	defer cancel()
 	req = req.WithContext(ctx)
 	if err := h.verifyTarget(ctx, target); err != nil {

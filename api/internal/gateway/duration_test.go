@@ -33,7 +33,7 @@ func TestGatewayAcceptsOptionalRequestDuration(t *testing.T) {
 
 // Use real HTTP and WebSocket connections: context cancellation must propagate
 // through ReverseProxy, including after an upgrade or response headers.
-func durationProxy(t *testing.T, ctx context.Context, h *handler, cert *x509.Certificate, upstreamHandler http.Handler) *httptest.Server {
+func durationProxy(ctx context.Context, t *testing.T, h *handler, cert *x509.Certificate, upstreamHandler http.Handler) *httptest.Server {
 	t.Helper()
 	upstream := httptest.NewTLSServer(upstreamHandler)
 	t.Cleanup(upstream.Close)
@@ -75,7 +75,7 @@ func TestGatewayTransfersWithoutTotalCap(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			front := durationProxy(t, t.Context(), h, cert, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			front := durationProxy(t.Context(), t, h, cert, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if _, err := io.Copy(io.Discard, r.Body); err != nil {
 					t.Error(err)
 					return
@@ -123,7 +123,7 @@ func TestGatewayUncappedWebSocketCancellation(t *testing.T) {
 			upstreamDone := make(chan struct{})
 			serverCtx, shutdown := context.WithCancel(t.Context())
 			defer shutdown()
-			front := durationProxy(t, serverCtx, h, cert, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			front := durationProxy(serverCtx, t, h, cert, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				defer close(upstreamDone)
 				conn, err := websocket.Accept(w, r, nil)
 				if err != nil {
@@ -201,7 +201,7 @@ func TestGatewayDeadlinePolicy(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				h, cert := newFixture(t)
 				h.cfg.MaxRequestDuration = 0
-				ctx, cancel := h.requestContext(request(t, cert, tc.method, tc.path), longRunningOperation(tc.method, tc.path))
+				ctx, cancel := h.requestContext(t.Context(), cert.NotAfter, longRunningOperation(tc.method, tc.path))
 				defer cancel()
 				time.Sleep(6 * time.Minute)
 				if tc.longRunning && ctx.Err() != nil {
@@ -248,7 +248,7 @@ func TestGatewayDownloadCancellation(t *testing.T) {
 				serverCtx, shutdown := context.WithCancel(t.Context())
 				defer shutdown()
 				upstreamDone := make(chan struct{})
-				front := durationProxy(t, serverCtx, h, cert, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				front := durationProxy(serverCtx, t, h, cert, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					defer close(upstreamDone)
 					w.Header().Set("Content-Length", "16384")
 					_, _ = io.WriteString(w, strings.Repeat("x", 8192))

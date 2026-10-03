@@ -20,7 +20,7 @@ func (h *handler) serveCapture(w http.ResponseWriter, req *http.Request, target 
 		http.Error(w, "capture file operation has no request body", http.StatusBadRequest)
 		return
 	}
-	ctx, cancel := h.requestContext(req, req.Method == http.MethodGet)
+	ctx, cancel := h.requestContext(req.Context(), req.TLS.PeerCertificates[0].NotAfter, req.Method == http.MethodGet)
 	defer cancel()
 	req = req.WithContext(ctx)
 	lookupCtx, finishLookup := context.WithTimeout(ctx, operationTimeout)
