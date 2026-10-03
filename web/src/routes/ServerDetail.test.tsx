@@ -5,7 +5,7 @@ import { http, HttpResponse } from "msw";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
-import { renderWithQuery } from "@/test/render";
+import { makeClient, renderWithQuery } from "@/test/render";
 import { makeServer, makeTemplate, makeUser } from "@/test/factories";
 
 // Router APIs the route reaches into.
@@ -69,6 +69,7 @@ describe("ServerDetailPage lifecycle buttons", () => {
     expect(stop).toBeDisabled();
     await userEvent.click(stop);
     expect(writes).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("tab", { name: "Capture" })).not.toBeInTheDocument());
   });
 
   it("does not expose actions when the live permission response belongs to a replacement UID", async () => {
@@ -685,6 +686,28 @@ describe("ServerDetailPage capture tab", () => {
     expect(backupsIdx).toBeGreaterThanOrEqual(0);
     expect(captureIdx).toBe(backupsIdx + 1);
     expect(settingsIdx).toBe(captureIdx + 1);
+  });
+
+  it("keeps the Capture tab reachable with a retry, not a denial, when /users/me fails", async () => {
+    server.use(
+      http.get("/servers/alpha", () => HttpResponse.json(makeServer())),
+      http.get("/users/me", () => new HttpResponse("unavailable\n", { status: 503 })),
+    );
+    // useMe retries non-401 failures; drop the backoff so its retries are
+    // exhausted within findBy's timeout.
+    const client = makeClient();
+    client.setDefaultOptions({
+      ...client.getDefaultOptions(),
+      queries: { ...client.getDefaultOptions().queries, retryDelay: 0 },
+    });
+    renderWithQuery(<ServerDetailPage />, { client });
+    await userEvent.click(await screen.findByRole("tab", { name: "Capture" }));
+    expect(await screen.findByText("Can't reach the control plane")).toBeInTheDocument();
+    expect(screen.getByText(/HTTP 503/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(
+      screen.queryByText(/You don't have access to packet capture on this server/i),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the not-enabled state (Bbnga copy) when capture is off", async () => {

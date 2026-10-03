@@ -888,6 +888,8 @@ jobs:
                       ('PersistentVolumeClaim', 'gameplane-api-data')}
           assert required <= resources, f"reuse-values removed existing resources: {required - resources}"
           assert ('Deployment', 'gameplane-gateway') not in resources
+          assert ('NetworkPolicy', 'allow-api-to-agent') in resources
+          assert ('NetworkPolicy', 'allow-api-to-capture') not in resources, "legacy values without capture enabled its ingress"
           PY
       - name: crd-manifests in sync with crds
         # The CRD-apply hook serves CRDs from crd-manifests/ (crds/ isn't
@@ -1255,13 +1257,17 @@ jobs:
         # docker-network IP; see multicluster_e2e_test.go's package doc.
         run: ./deploy/kind/e2e.sh up "$CLUSTER_B" e2e
       - name: run go e2e (multicluster)
+        # GatewayParity installs this checkout's real gateway chart on B with
+        # temporary PKI, exercises agent/capture/Minecraft paths from A, and
+        # rotates trust/endpoints. Missing second-cluster infra fails in CI.
         run: |
           RUN_REGEX="$(./test/e2e/buckets.sh regex multicluster)"
           cd test/e2e && \
             GAMEPLANE_E2E_REUSE_CLUSTER=1 \
             GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
             GAMEPLANE_E2E_CLUSTER_B="$CLUSTER_B" \
-            go test -tags=e2e -timeout 15m -v -run "$RUN_REGEX" ./...
+            GAMEPLANE_E2E_REQUIRE_GATEWAY=1 \
+            go test -tags=e2e -timeout 45m -v -run "$RUN_REGEX" ./...
       - name: dump cluster state on failure (multicluster A)
         if: failure()
         uses: ./.github/actions/dump-cluster-state

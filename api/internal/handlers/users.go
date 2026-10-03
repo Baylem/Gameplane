@@ -61,6 +61,13 @@ type userDTO struct {
 	// namespace ("*" = cluster-wide). Populated only on /users/me; it
 	// drives the dashboard's can()-based UI gating.
 	Permissions map[string][]string `json:"permissions,omitempty"`
+	// PermissionsByCluster is the caller's effective permission set partitioned
+	// by cluster, allowing the frontend to determine cluster-specific access.
+	// Structure is cluster → namespace → sorted []permission. Populated only on
+	// /users/me, mirroring the structure returned by SessionStore.LoadPerms.
+	// Enables the frontend's can() function to exactly replicate User.Can()
+	// without triggering 403 errors on multi-cluster deployments.
+	PermissionsByCluster map[string]map[string][]string `json:"permissionsByCluster,omitempty"`
 	// Preferences is the caller's theme/styling preferences. Populated only
 	// on /users/me so the dashboard can apply the theme without a second
 	// round-trip on boot (contracts/user-preferences-api.md §1.4).
@@ -182,7 +189,8 @@ func (h *userHandler) me(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, userDTO{
 		ID: u.ID, Username: u.Username, DisplayName: u.DisplayName,
 		Email: u.Email, Role: u.Role, Permissions: auth.PermsToJSON(u.Perms),
-		Preferences: preferencesDTO(prefs),
+		PermissionsByCluster: auth.PermsByClusterToJSON(u.Perms),
+		Preferences:          preferencesDTO(prefs),
 	})
 }
 

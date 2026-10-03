@@ -501,7 +501,10 @@ agents; old agents fail closed on the versioned protocol. The gateway has no
 separate user database, and the central API still needs direct access to the
 target Kubernetes API. Existing local installations retain direct agent access.
 
-Capture-file downloads and ID-list mod configuration remain gated remotely.
+Remote capture downloads and cleanup require an upgraded gateway and capture
+sidecar with persisted GameServer and NetworkCapture identity. Historical files
+without those bindings are unavailable remotely. Modpack and ID-list configuration
+use the selected Kubernetes client and template; provider credentials stay central.
 The existing `Cluster` health status reports Kubernetes connectivity, not gateway
 readiness or complete interactive feature coverage.
 

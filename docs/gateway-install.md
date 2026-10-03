@@ -11,7 +11,7 @@ the matching central API configuration.
 
 Use matching API, operator and agent versions. The gateway uses the API image's
 `gateway` subcommand, a dedicated ServiceAccount, and read-only `get` access to
-GameServers and Services in its configured namespaces. It has no database and no
+GameServers, NetworkCaptures and Services in its configured namespaces. It has no database and no
 user login. Users authenticate to the central API, which retains authorization.
 
 Create these Secrets in the chart release namespace before enabling the gateway:
@@ -31,9 +31,19 @@ the central API is disabled. The gateway reloads mounted server/trust material o
 new TLS handshakes, rechecks central-peer trust on requests, and reloads agent
 credentials for new upstream requests. Allow time for Kubernetes Secret volume
 projection to update and coordinate client/server trust overlap before retiring
-old certificates. Existing streams last at most `maxRequestDuration` (five minutes
-by default) or the central client certificate's remaining lifetime, whichever is
-shorter. A rolling restart can terminate existing streams sooner if required.
+old certificates. Streams and transfers have no fixed total-duration cap by
+default (`gateway.maxRequestDuration: 0s`); they still end at the central client
+certificate's expiry or when the caller disconnects or the gateway shuts down.
+A positive `maxRequestDuration` adds an optional total lifetime (for example
+`1h`), capped by certificate expiry. Ordinary operations and Kubernetes identity
+lookups remain bounded to 30 seconds; connection, TLS handshake and response
+header timeouts also remain in place.
+
+Trust or permission removal prevents new operations but does not immediately
+revoke an existing stream. Use a gateway restart to terminate active sessions
+sooner, or configure a maximum lifetime to bound this window. Reconnection checks
+authorization and trust again. When upgrading with reused Helm values, change an
+existing `gateway.maxRequestDuration: 5m` to `0s` to remove the old cutoff.
 
 ## Helm configuration for a fresh remote installation
 
@@ -60,7 +70,17 @@ already exist. The chart creates a Role/RoleBinding in each configured namespace
 `networkPolicies.enabled` is true, it also creates matching agent ingress rules.
 When game network policies are disabled, no new game Pod ingress isolation is
 introduced; any externally managed default-deny policies must allow gateway
-traffic on TCP 8090. It does not grant cluster-wide gateway permissions.
+traffic on TCP 8090 and TCP 9091 for capture files. It does not grant cluster-wide
+gateway permissions. Enable `capture.enabled` in this remote chart when captures
+are wanted; the gateway advertises this cluster's capture settings to the central
+API. Upgrade the operator and capture-sidecar together so new capture files carry
+their server and capture UID bindings.
+
+With both `capture.enabled` and `networkPolicies.enabled`, the chart separately
+allows TCP 9091 from this release's operator and enabled API pods in the system
+namespace. The operator uses this port to start, stop and poll captures; the local
+API uses it for files. Narrowing kubelet probe ports does not remove this allowance.
+Externally managed policies must permit the same control traffic.
 
 ```sh
 helm upgrade --install gameplane ./charts/gameplane \
@@ -88,8 +108,26 @@ existing installation. The profile does not migrate the database or its users.
 The central API reads node inventory and storage totals directly from the selected
 cluster's Kubernetes API. Bind these additional read permissions to the identity
 in that cluster's **registered kubeconfig**, alongside its existing game-resource
-permissions. The gateway ServiceAccount keeps its namespace-scoped GameServer and
-Service reads; it does not need the inventory grants.
+permissions. Remote capture management additionally requires `get`, `list`,
+`create`, `patch` and `delete` on `networkcaptures.gameplane.local`, plus `update`
+on its `status` subresource, in each managed game namespace. Add these separate
+rules to the registered identity's namespace-scoped Role:
+
+```yaml
+- apiGroups: [gameplane.local]
+  resources: [networkcaptures]
+  verbs: [get, list, create, patch, delete]
+- apiGroups: [gameplane.local]
+  resources: [networkcaptures/status]
+  verbs: [update]
+```
+
+The API initializes Pending through the status subresource after creating the CR.
+Without its status permission, start can return 403 after the capture was created;
+inspect the capture list before submitting another start request.
+The gateway ServiceAccount keeps its namespace-scoped GameServer,
+NetworkCapture and Service reads; it does not need the inventory grants or write
+access to capture resources.
 
 | API group | Resource or path | Verbs | Purpose |
 |---|---|---|---|
@@ -159,6 +197,7 @@ and API endpoint allowlists. It permits only:
 - DNS on TCP/UDP 53 to configured DNS pods (or exact `dnsCIDRs` for NodeLocal DNS).
 - TCP 443/6443 to `apiServerCIDRs` in the local cluster.
 - TCP 8090 to game agents in the explicitly allowed namespaces.
+- TCP 9091 to capture sidecars in those same namespaces.
 
 Use the source IPs the target cluster actually observes, accounting for private
 relay/SNAT behavior. `peerSelectors` identify pods **inside this cluster**, such
@@ -180,3 +219,9 @@ can change existing StatefulSet templates and roll game Pods during reconciliati
 schedule this rollout for a suitable maintenance window. Remote requests use only
 `/v1/targets/{uid}/...`. Old agents or an operator that has not populated this UID
 fail closed with 404; there is no fallback to legacy agent paths.
+
+Capture sidecars also receive the server UID. New capture start requests bind the
+output to both the server UID and NetworkCapture UID on disk. Files created by an
+older sidecar without those bindings remain available through the existing local
+path, but remote file access fails closed. Upgrade all components before expecting
+remote capture downloads or cleanup. See the [parity design](remote-parity.md).

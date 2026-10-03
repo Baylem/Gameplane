@@ -13,6 +13,19 @@ async function fixture(request: Request, path: string) {
 }
 
 export const fleetHandlers = [
+  http.get("/servers/:name/capabilities", async ({ params, request }) => {
+    const url = new URL(request.url);
+    const cluster = url.searchParams.get("cluster") || "local";
+    const namespace = url.searchParams.get("namespace") || "gameplane-games";
+    const response = await fixture(request, `/servers/${encodeURIComponent(String(params.name))}${url.search}`);
+    if (!response.ok) return new HttpResponse(null, { status: response.status });
+    const resource = await response.json() as Resource;
+    return HttpResponse.json({
+      target: { cluster, namespace, name: String(params.name), uid: resource.metadata.uid },
+      capture: { enabled: true, files: true, state: "ready", defaultRetentionSeconds: 86400,
+        maxRetentionSeconds: 604800, defaultMaxDurationSeconds: 300, defaultMaxSizeBytes: 5 * 1024 * 1024 * 1024 },
+    });
+  }),
   http.get("/servers/:name/access", async ({ params, request }) => {
     const url = new URL(request.url);
     const cluster = url.searchParams.get("cluster") || "local";

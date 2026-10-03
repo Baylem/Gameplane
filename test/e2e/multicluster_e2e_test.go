@@ -198,9 +198,8 @@ func exitErr(err error) error {
 //     namespace.
 //  3. `?cluster=<unknown>` is rejected as a bad request (400) for any
 //     caller, before RBAC or the handler ever sees a namespace/name.
-//  4. Routes built on the API's home-cluster client serve the home cluster
-//     only, for a user whose write grant is on cluster B (see
-//     checkHomeClusterOnlyRoutes).
+//  4. A missing remote server never falls back to the home namesake,
+//     including registry, modpack, and capture routes.
 func TestMultiCluster_ClusterDispatchAndScopedRBAC(t *testing.T) {
 	t.Parallel()
 
@@ -461,24 +460,23 @@ func TestMultiCluster_ClusterDispatchAndScopedRBAC(t *testing.T) {
 			resp.StatusCode, http.StatusBadRequest, string(body))
 	}
 
-	checkHomeClusterOnlyRoutes(t, admin, clusterID)
+	checkMissingRemoteTargetsDoNotReachHome(t, admin, clusterID)
 
 	// Last, because it removes cluster B's registration.
 	checkClusterRemoval(t, admin, operatorClient, clusterID, gsName, tmplName)
 }
 
-// checkHomeClusterOnlyRoutes covers the routes built on the API's home-cluster
-// client: the mod registry browser, modpack install and capture file
-// download. A user whose write grant is on the remote cluster only gets 501
-// from them for ?cluster=<remote>, the home cluster's GameServer keeps its
-// spec, and the capture download refusal is recorded in the audit log.
-func checkHomeClusterOnlyRoutes(t *testing.T, admin *APIClient, clusterID string) {
+// The registry, modpack, and capture routes now resolve the selected cluster.
+// A name present only at home must return 404 remotely, leave the local server
+// unchanged, and preserve the capture denial audit. Successful remote operations
+// are exercised separately by TestMultiCluster_GatewayParity.
+func checkMissingRemoteTargetsDoNotReachHome(t *testing.T, admin *APIClient, clusterID string) {
 	t.Helper()
 	const (
 		ns          = "gameplane-games"
 		modpackEnv  = "E2E_MC_MODPACK"
 		captureID   = "e2e-mc-capture"
-		notLocalWhy = "cluster_not_local"
+		notFoundWhy = "server_not_found"
 	)
 	ctx := context.Background()
 
@@ -571,7 +569,7 @@ func checkHomeClusterOnlyRoutes(t *testing.T, admin *APIClient, clusterID string
 			homeGS, resp.StatusCode, http.StatusForbidden, string(body))
 	}
 
-	// With ?cluster=<remote>, the home-cluster-only routes answer 501 (no cross-cluster agent yet).
+	// The remote cluster has no such name: never resolve its home namesake.
 	for _, c := range []struct {
 		method, path string
 		body         any
@@ -585,8 +583,8 @@ func checkHomeClusterOnlyRoutes(t *testing.T, admin *APIClient, clusterID string
 			t.Fatalf("%s %s: %v", c.method, c.path, err)
 		}
 		resp.Body.Close()
-		if resp.StatusCode != http.StatusNotImplemented {
-			t.Errorf("%s %s: status=%d want=%d body=%s", c.method, c.path, resp.StatusCode, http.StatusNotImplemented, string(body))
+		if resp.StatusCode != http.StatusNotFound {
+			t.Errorf("%s %s: status=%d want=%d body=%s", c.method, c.path, resp.StatusCode, http.StatusNotFound, string(body))
 		}
 	}
 
@@ -626,13 +624,24 @@ func checkHomeClusterOnlyRoutes(t *testing.T, admin *APIClient, clusterID string
 			continue
 		}
 		found = true
-		if e.Reason != notLocalWhy || e.Status != http.StatusNotImplemented {
+		if e.Reason != notFoundWhy || e.Status != http.StatusNotFound {
 			t.Errorf("audit row for %s: reason=%q status=%d, want reason=%q status=%d",
-				target, e.Reason, e.Status, notLocalWhy, http.StatusNotImplemented)
+				target, e.Reason, e.Status, notFoundWhy, http.StatusNotFound)
 		}
 	}
 	if !found {
 		t.Errorf("no audit row for capture download target %s", target)
+	}
+	// Cluster enrollment and credential issuance remain central-only operations.
+	for _, path := range []string{"/cluster/nodes:join", "/cluster/kubeconfig"} {
+		response, raw, err := admin.Post(path+"?cluster="+clusterID, map[string]any{})
+		if err != nil {
+			t.Fatalf("central-only %s: %v", path, err)
+		}
+		response.Body.Close()
+		if response.StatusCode != http.StatusNotImplemented {
+			t.Errorf("central-only %s: status=%d want=501 body=%s", path, response.StatusCode, raw)
+		}
 	}
 }
 

@@ -708,6 +708,11 @@ export interface User {
   // permission means all). Present on /users/me; drives can()-based UI
   // gating. Absent elsewhere.
   permissions?: Record<string, string[]>;
+  // Cluster-scoped permission structure: cluster id → namespace → sorted
+  // permission names. Preserves cluster and namespace dimensions. When
+  // present, can() uses this to mirror the backend's cluster-aware checks.
+  // Omitted (omitempty) when there are no bindings. Present on /users/me.
+  permissionsByCluster?: Record<string, Record<string, string[]>>;
   // Styling/theme preferences embedded by GET /users/me (absent on other
   // user payloads) — see UserThemePreferences below.
   preferences?: UserThemePreferences | null;

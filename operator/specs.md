@@ -19,6 +19,17 @@ The operator is a Kubernetes controller-runtime-based process that reconciles Ga
 - **Fleet observability:** expose Prometheus metrics summarizing GameServer and Backup phases across the entire fleet.
 - **CRD codegen:** curate operator/api/v1alpha1 type definitions; `make generate && make manifests` regenerates deepcopy, RBAC, and CRD YAML whenever types change.
 
+### Capture identity across remote gateways
+
+The operator injects the GameServer UID into the capture sidecar and sends both
+the server and NetworkCapture UIDs in capture-start requests. Status, stop and
+expiry cleanup carry the same original owner and capture UIDs. This binds retained
+capture bytes to their originating resources for authenticated remote downloads
+and cleanup, even after sidecar restart or history eviction. Capture admission,
+start/stop and expiry remain reconciler responsibilities; the gateway cannot
+bypass them or operate an arbitrary pod. Existing game resources and storage are
+not recreated to enable remote parity.
+
 ## Non-goals / boundaries
 
 The operator **does not** handle:
@@ -190,6 +201,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
     - Unset (condition absent): no pool or address requested; no condition emitted.
     - Precedence when several apply: `IgnoredForExposureMode` → `InvalidAddress` → `NoAddressManagerConfigured` → direct-conflict `AddressInUse` → event-derived failure → `ServiceNotReady` → `AssignmentPending` → `Assigned`.
   - **Endpoint population:** `endpointsFromService()` populates `GameServerEndpoint.pool` only when a pool request was actually translated (outcome == Assigned and Manager supports it); never claims a pool for the ClusterIP address shown while assignment is pending, for an ignored request, or for a cluster without an address manager.
+  - **TunnelReady condition:** Reports tunnel pod readiness when `spec.networking.tunnel.enabled=true` (absent when disabled). Computed in `computeTunnelConditions` (`gameserver_status.go`) each pass reconcileStatus runs, with reasons `InvalidConfig`, `DeploymentNotReady`, `PortNotMapped` (frp, unmapped advertised ports), `NoCredentials` (tailscale/playit missing `credentialsSecretRef`), `UnknownProvider`, and `Ready`. **Credential ownership:** `reconcileTunnel` refuses to mount a `credentialsSecretRef` Secret that has no `ownerReference` matching the GameServer's name and UID (including a stale reference from a deleted same-name GameServer) (`isServerOwnedSecret`) — supported credential paths are the dashboard, the `PUT /servers/{name}:tunnel-credentials` API (which sets the ownerReference), or a manually-created Secret with an explicit ownerReference. A refused Secret is never mounted: `reconcileTunnel` still writes the tunnel Deployment, with no credential volume and zero replicas, so a tunnel already running with that Secret stops. It also writes `TunnelReady=False/TunnelCredentialRefused` (naming the Secret, never its data) directly from `reconcileTunnel` before `Reconcile` returns its error — this bypasses the normal `reconcileStatus` pass since Reconcile returns early on that error — The condition carries its own current `observedGeneration`, but `status.observedGeneration` is not advanced on a refused pass (the rest of status is not recomputed). Once the credential becomes acceptable (or the tunnel is no longer wanted), `reconcileTunnel` removes the refusal condition itself (`clearTunnelCredentialRefused`) before returning, so it does not linger if a later step (NetworkPolicy, Service, StatefulSet) fails; reconcileStatus then writes the real TunnelReady. The refusal message points at the dashboard/API, except when the refused Secret is the canonical `<server>-tunnel-auth` name, where the API answers 409 and the message says to fix the ownerReference or delete the Secret first.
 
 ### GameTemplateReconciler
 - **Responsibility:** Lightweight; only maintains status.inUseCount (how many GameServers ref this template).
@@ -429,9 +441,9 @@ Forgetting codegen leaves the YAML out of sync with types — CI's `make manifes
 
 | Module | Version | Purpose |
 |--------|---------|---------|
-| k8s.io/api | v0.37.0 | Kubernetes core types (Pod, StatefulSet, Service, Job, etc.). |
-| k8s.io/apimachinery | v0.37.0 | Kubernetes API machinery (metav1, runtime.Scheme, etc.). |
-| k8s.io/client-go | v0.37.0 | Kubernetes client (for exec, logs, discovery). |
+| k8s.io/api | v0.37.1 | Kubernetes core types (Pod, StatefulSet, Service, Job, etc.). |
+| k8s.io/apimachinery | v0.37.1 | Kubernetes API machinery (metav1, runtime.Scheme, etc.). |
+| k8s.io/client-go | v0.37.1 | Kubernetes client (for exec, logs, discovery). |
 | sigs.k8s.io/controller-runtime | v0.25.1 | Reconciler framework (Manager, Builder, Reconciler interface). |
 | github.com/ValgulNecron/gameplane/netguard | local | SSRF dial guard (permissive policy for module fetches from private registries). |
 | github.com/go-git/go-git/v5 | v5.19.2 | Git operations (clone, fetch) for ModuleSources. |
