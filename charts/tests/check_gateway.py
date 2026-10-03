@@ -89,6 +89,7 @@ def main():
     assert pod["serviceAccountName"] == "gameplane-gateway"
     container = pod["containers"][0]
     assert container["args"][0] == "gateway"
+    assert "--max-request-duration=0s" in container["args"]
     assert "--namespaces=games-one,games-two" in container["args"]
     assert "--peer-uri=spiffe://example/central-api" in container["args"]
     assert container["readinessProbe"]["tcpSocket"]["port"] == "mtls"

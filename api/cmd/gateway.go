@@ -30,7 +30,7 @@ func runGateway(ctx context.Context, args []string) error {
 	flags.StringVar(&cfg.AgentTLS.Certificate, "agent-client-cert", "", "local agent client certificate")
 	flags.StringVar(&cfg.AgentTLS.Key, "agent-client-key", "", "local agent client key")
 	flags.StringVar(&cfg.AgentTLS.CA, "agent-ca", "", "local agent CA bundle")
-	flags.DurationVar(&cfg.MaxRequestDuration, "max-request-duration", 5*time.Minute, "maximum operation or stream lifetime (at most 5m)")
+	flags.DurationVar(&cfg.MaxRequestDuration, "max-request-duration", 0, "optional maximum operation or stream lifetime (0 disables the cap; peer certificate expiry still applies)")
 	flags.BoolVar(&cfg.CaptureEnabled, "capture-enabled", false, "whether this site's operator enables capture")
 	flags.Int64Var(&cfg.CaptureDefaultRetentionSeconds, "capture-default-retention", 86400, "this site's default capture retention in seconds")
 	flags.Int64Var(&cfg.CaptureMaxRetentionSeconds, "capture-max-retention", 604800, "this site's maximum capture retention in seconds")

@@ -31,9 +31,19 @@ the central API is disabled. The gateway reloads mounted server/trust material o
 new TLS handshakes, rechecks central-peer trust on requests, and reloads agent
 credentials for new upstream requests. Allow time for Kubernetes Secret volume
 projection to update and coordinate client/server trust overlap before retiring
-old certificates. Existing streams last at most `maxRequestDuration` (five minutes
-by default) or the central client certificate's remaining lifetime, whichever is
-shorter. A rolling restart can terminate existing streams sooner if required.
+old certificates. Streams and transfers have no fixed total-duration cap by
+default (`gateway.maxRequestDuration: 0s`); they still end at the central client
+certificate's expiry or when the caller disconnects or the gateway shuts down.
+A positive `maxRequestDuration` adds an optional total lifetime (for example
+`1h`), capped by certificate expiry. Ordinary operations and Kubernetes identity
+lookups remain bounded to 30 seconds; connection, TLS handshake and response
+header timeouts also remain in place.
+
+Trust or permission removal prevents new operations but does not immediately
+revoke an existing stream. Use a gateway restart to terminate active sessions
+sooner, or configure a maximum lifetime to bound this window. Reconnection checks
+authorization and trust again. When upgrading with reused Helm values, change an
+existing `gateway.maxRequestDuration: 5m` to `0s` to remove the old cutoff.
 
 ## Helm configuration for a fresh remote installation
 

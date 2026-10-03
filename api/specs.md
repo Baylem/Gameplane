@@ -799,9 +799,15 @@ size and timeout, and reject unsupported protocol/identity combinations.
 Mounted gateway trust is reloaded on each TLS handshake and revalidated on
 every request, including reused connections. Invalid/removed trust rejects
 new requests; TLS session resumption is disabled. Agent credentials reload on
-every operation. Streams and requests end after at most five minutes or the
-central peer certificate's expiry, whichever comes first. Existing streams
-may remain active within that bound following trust or permission removal.
+every operation. Streams, file/log/capture downloads, file/mod uploads and mod
+installs have no fixed total-duration cap by default. `--max-request-duration`
+(`gateway.maxRequestDuration` in Helm) accepts zero to disable the cap or any
+positive duration to impose one; negative values are rejected. Central peer
+certificate expiry and parent cancellation always terminate an operation.
+Ordinary operations and Kubernetes identity lookups have 30-second timeouts.
+Existing streams may remain active until certificate expiry, an explicitly
+configured maximum lifetime, caller disconnect or gateway shutdown following
+trust or permission removal. Reconnection performs fresh authorization.
 No ambiguous mutation is automatically retried.
 
 Kubernetes operations still use the central API's independently scoped remote

@@ -94,8 +94,13 @@ operation. Missing, deleted, unlabeled or malformed credentials fail closed;
 there is no fallback to a local namesake. Removing the optional gateway reference
 removes new interactive access without removing Kubernetes management. Redirects
 are not followed and writes are not automatically retried after an ambiguous
-failure. Existing streams remain bounded by the gateway's session lifetime and
-peer certificate expiration; reconnect performs fresh authorization and lookup.
+failure. Healthy streams and transfers have no fixed total-duration cap by
+default. Peer certificate expiration, caller cancellation and gateway shutdown
+still end them; operators can set `gateway.maxRequestDuration` to a positive
+duration to impose an additional limit. Ordinary operations and Kubernetes
+identity lookups retain 30-second timeouts. Existing streams can survive trust
+or permission removal until one of those termination conditions; reconnect
+performs fresh authorization and lookup.
 
 Gateway health and Kubernetes reachability are separate. The existing Cluster
 health field describes Kubernetes connectivity; it does not claim that the

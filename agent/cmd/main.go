@@ -185,10 +185,10 @@ func main() {
 		logs.Mount(protected, gameLogPath)
 		console.Mount(protected, rconClient)
 		mods.Mount(protected, dataRoot, modsSpec)
+		files.Mount(protected, dataRoot)
 
 		protected.Group(func(bounded chi.Router) {
 			bounded.Use(middleware.Timeout(30 * time.Second))
-			files.Mount(bounded, dataRoot)
 			players.Mount(bounded, rconClient, gameName, playerActions)
 			quiesce.Mount(bounded, rconClient, gameName, quiesceSpec)
 			lifecycle.Mount(bounded, rconClient, gameName, lifecycleSpec)

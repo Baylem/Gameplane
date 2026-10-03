@@ -20,18 +20,17 @@ func (h *handler) serveCapture(w http.ResponseWriter, req *http.Request, target 
 		http.Error(w, "capture file operation has no request body", http.StatusBadRequest)
 		return
 	}
-	lifetime := h.cfg.MaxRequestDuration
-	if remaining := time.Until(req.TLS.PeerCertificates[0].NotAfter); remaining < lifetime {
-		lifetime = remaining
-	}
-	ctx, cancel := context.WithTimeout(req.Context(), lifetime)
+	ctx, cancel := h.requestContext(req, req.Method == http.MethodGet)
 	defer cancel()
 	req = req.WithContext(ctx)
-	if err := h.verifyTarget(ctx, target.Target); err != nil {
+	lookupCtx, finishLookup := context.WithTimeout(ctx, operationTimeout)
+	defer finishLookup()
+	if err := h.verifyTarget(lookupCtx, target.Target); err != nil {
 		http.NotFound(w, req)
 		return
 	}
-	nc, err := h.client.GetNetworkCapture(ctx, target.Namespace, target.Capture)
+	nc, err := h.client.GetNetworkCapture(lookupCtx, target.Namespace, target.Capture)
+	finishLookup()
 	if err != nil || !captureMatches(nc, target) {
 		http.NotFound(w, req)
 		return

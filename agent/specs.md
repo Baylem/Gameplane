@@ -12,6 +12,10 @@ The agent is a per-pod HTTP/HTTPS sidecar that runs inside every game pod to exp
 - **Request authentication**: Verify incoming requests via mTLS (preferred) or shared-secret bearer token.
 - **Console & RCON**: Duplex WebSocket forwarding user commands to the game via RCON and echoing responses; supports Valve/Source, Telnet, WebSocket, BattlEye, Satisfactory, and Palworld protocols.
 - **File I/O**: List, read, download, upload, write, mkdir, delete within the `/data` volume; reject path traversal and symlink escape.
+
+  File uploads and downloads have no router-level total-duration timeout. The
+  remaining file operations retain a 30-second timeout. Authentication, body
+  size limits and path checks apply to transfers as well as short operations.
 - **Logs**: Tail the game container's log file over WebSocket (text frames per line); supports streaming from start or end.
 - **Players**: Query online count, names, ban lists, and moderation actions (kick, ban, unban) via RCON; capabilities advertise per-game support.
 - **Quiesce**: Pause auto-saves and flush in-flight state before snapshots; run module-declared sequences over RCON and handle games that don't support it gracefully.

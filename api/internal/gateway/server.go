@@ -47,8 +47,8 @@ func NewHandler(cfg Config, client *kube.Client) (http.Handler, error) {
 	if client == nil || cfg.Cluster == "" || cfg.PeerURI == "" || len(cfg.Namespaces) == 0 {
 		return nil, errors.New("gateway cluster, namespaces, peer identity, and Kubernetes client required")
 	}
-	if cfg.MaxRequestDuration <= 0 || cfg.MaxRequestDuration > 5*time.Minute {
-		return nil, errors.New("gateway request duration must be positive and at most five minutes")
+	if cfg.MaxRequestDuration < 0 {
+		return nil, errors.New("gateway request duration must not be negative")
 	}
 	if cfg.CaptureDefaultRetentionSeconds == 0 {
 		cfg.CaptureDefaultRetentionSeconds = 86400
@@ -107,11 +107,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
 		return
 	}
-	lifetime := h.cfg.MaxRequestDuration
-	if remaining := time.Until(req.TLS.PeerCertificates[0].NotAfter); remaining < lifetime {
-		lifetime = remaining
-	}
-	ctx, cancel := context.WithTimeout(req.Context(), lifetime)
+	ctx, cancel := h.requestContext(req, longRunningOperation(req.Method, agentPath))
 	defer cancel()
 	req = req.WithContext(ctx)
 	if err := h.verifyTarget(ctx, target); err != nil {
@@ -169,6 +165,8 @@ func (h *handler) namespaceAllowed(ns string) bool {
 }
 
 func (h *handler) verifyTarget(ctx context.Context, target gatewayprotocol.Target) error {
+	ctx, cancel := context.WithTimeout(ctx, operationTimeout)
+	defer cancel()
 	server, err := h.client.GetServer(ctx, target.Namespace, target.Name)
 	if err != nil {
 		return fmt.Errorf("get server: %w", err)
