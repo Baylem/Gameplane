@@ -104,29 +104,37 @@ Gameplane integrates with **10 mod registries**: Modrinth, CurseForge, Thunderst
 
 ## Architecture
 
+```text
+Dashboard UI (React + TypeScript + Vite + HeroUI v3)
+    │ HTTPS / WSS
+Central API (Go): authentication, RBAC, REST, WebSocket, aggregation
+    │
+    ├── Direct Kubernetes API access ───────────────────────────────┐
+    │   Resource management, Pod logs, PTY attach                   │
+    │                                                              ▼
+    │   ┌── Each registered cluster (local or remote) ──────────────────┐
+    │   │ Kubernetes API ◄── Operator (Go, controller-runtime)          │
+    │   │                      │ reconciles CRDs into local resources  │
+    │   │                      ├── GameServer Pods + Services + PVCs    │
+    │   │                      ├── Backup / restore Jobs               │
+    │   │                      ├── Sentinel wake-on-connect Pods       │
+    │   │                      └── Tunnel relay Pods                   │
+    │   │                                                              │
+    └───┼── Private mTLS ──► Optional per-cluster agent gateway         │
+        │                      ├── mTLS ──► Agent sidecars (:8090)      │
+        │                      │            RCON, logs, files, mods    │
+        │                      └── mTLS ──► Capture sidecars (:9091)    │
+        │                                   Capture downloads/cleanup  │
+        └──────────────────────────────────────────────────────────────┘
 ```
-┌────────────────────────────────────────────────────────────────┐
-│  Dashboard UI: React + TypeScript + Vite + HeroUI v3           │
-└────────────────────────────────────────────────────────────────┘
-                            │  HTTPS / WSS
-┌────────────────────────────────────────────────────────────────┐
-│  API Gateway (Go): REST + WebSocket, Auth, RBAC, State Agg    │
-└────────────────────────────────────────────────────────────────┘
-                            │  Kubernetes API
-┌────────────────────────────────────────────────────────────────────────┐
-│  Operator (Go, controller-runtime):                                    │
-│    Reconciles CRDs (GameServer, GameTemplate, Backup,                  │
-│    BackupSchedule, Restore, Module, ModuleSource, Cluster)             │
-│    into StatefulSets, Services, PVCs, Jobs, & Helper Pods              │
-└────────────────────────────────────────────────────────────────────────┘
-        │                              │                              │
-┌───────┴───────────────┐   ┌──────────┴────────────┐     ┌───────────┴──────────┐
-│ GameServer Pod:       │   │ Sentinel Waker Pod:   │     │ Tunnel Relay Pod:    │
-│ ├── Game Container    │   │ └── Daemon (Go):      │     │ └── Supervisor (Go): │
-│ └── Agent Sidecar     │   │     Wake-on-connect   │     │     frp / Tailscale  │
-│     (Go): RCON, files │   │     handshake listener│     │     / playit relay   │
-└───────────────────────┘   └───────────────────────┘     └──────────────────────┘
-```
+
+The central API connects directly to agents in its local cluster. Remote agent
+operations use the optional gateway, which runs the API image's `gateway`
+subcommand and verifies the selected GameServer identity. Direct Kubernetes
+connectivity is still required for every registered cluster. Each cluster retains
+its own operator and storage; users and authorization stay central. See
+[gateway installation](docs/gateway-install.md) and
+[remote request routing](docs/multicluster-agent-gateway.md).
 
 ### Components
 
@@ -134,6 +142,7 @@ Gameplane integrates with **10 mod registries**: Modrinth, CurseForge, Thunderst
 | ---- | -------- | ----------- |
 | `agent/` | Go | Sidecar running in each game pod for RCON, file ops, PTY console, and metrics. |
 | `api/` | Go | Front-end API gateway handling REST endpoints, WebSocket streaming, auth, and RBAC. |
+| `api/cmd/gateway.go` | Go | Optional private per-cluster gateway (`gateway` subcommand in the API image); proxies authorized agent and capture operations over mTLS. |
 | `operator/` | Go | Kubernetes controller reconciling Gameplane CRDs into K8s workloads and resources. |
 | `sentinel/` | Go | Waker daemon listening on game ports while a server is sleeping to trigger wake-on-connect [optional]. |
 | `capture-sidecar/` | Go | Network packet capture sidecar [optional], opt-in per server, admin-only. |
