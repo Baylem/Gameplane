@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -51,6 +52,62 @@ func fleetRouter(reg *kube.Registry) http.Handler {
 	r.Use(rbac.Middleware(reg))
 	MountFleet(r, reg, nil)
 	return r
+}
+
+func TestFleetReadBudgetStopsBeforeDiscovery(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		home, remote := fleetTestClient(), fleetTestClient()
+		reg := clusterTestRegistry(home)
+		reg.Set("remote", remote)
+		router := fleetRouter(reg)
+		user := &auth.User{ID: 42}
+		for i := range 10 {
+			if rr := inventoryRequest(t, router, user, http.MethodGet, "/fleet/servers"); rr.Code != http.StatusOK {
+				t.Fatalf("initial request %d: status=%d body=%s", i, rr.Code, rr.Body)
+			}
+		}
+		homeBefore, remoteBefore := kubeClientCalls(t, home), kubeClientCalls(t, remote)
+		for _, route := range []string{"servers", "backups", "schedules", "restores", "inventory", "placements"} {
+			// A fresh request/user context models a different session for the same account.
+			rr := inventoryRequest(t, router, &auth.User{ID: 42}, http.MethodGet, "/fleet/"+route)
+			if rr.Code != http.StatusTooManyRequests || rr.Header().Get("Retry-After") != "1" {
+				t.Fatalf("%s escaped shared user budget: status=%d retry=%q", route, rr.Code, rr.Header().Get("Retry-After"))
+			}
+		}
+		if kubeClientCalls(t, home) != homeBefore || kubeClientCalls(t, remote) != remoteBefore {
+			t.Fatal("rate-limited request reached Kubernetes discovery or resource listing")
+		}
+		// Same httptest client IP, different authenticated account.
+		if rr := inventoryRequest(t, router, &auth.User{ID: 43}, http.MethodGet, "/fleet/servers"); rr.Code != http.StatusOK {
+			t.Fatalf("another user inherited the exhausted budget: %d", rr.Code)
+		}
+		homeBefore, remoteBefore = kubeClientCalls(t, home), kubeClientCalls(t, remote)
+		if rr := inventoryRequest(t, router, nil, http.MethodGet, "/fleet/servers"); rr.Code != http.StatusUnauthorized {
+			t.Fatalf("unauthenticated status=%d", rr.Code)
+		}
+		if kubeClientCalls(t, home) != homeBefore || kubeClientCalls(t, remote) != remoteBefore {
+			t.Fatal("unauthenticated fleet request reached Kubernetes")
+		}
+		time.Sleep(time.Second)
+		if rr := inventoryRequest(t, router, user, http.MethodGet, "/fleet/servers"); rr.Code != http.StatusOK {
+			t.Fatalf("budget did not refill: %d", rr.Code)
+		}
+	})
+}
+
+func TestFleetReadBudgetAllowsDashboardPolling(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		router := fleetRouter(clusterTestRegistry(fleetTestClient()))
+		user := &auth.User{ID: 42}
+		for range 12 {
+			for _, route := range []string{"servers", "backups", "inventory"} {
+				if rr := inventoryRequest(t, router, user, http.MethodGet, "/fleet/"+route); rr.Code != http.StatusOK {
+					t.Fatalf("five-second polling denied on %s: %d", route, rr.Code)
+				}
+			}
+			time.Sleep(5 * time.Second)
+		}
+	})
 }
 
 func decodeFleet[T any](t *testing.T, router http.Handler, user *auth.User, path string) fleetResult[T] {
