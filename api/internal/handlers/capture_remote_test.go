@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 
 	"github.com/ValgulNecron/gameplane/api/internal/gatewayprotocol"
@@ -158,12 +159,94 @@ type failingCaptureReader struct{}
 func (failingCaptureReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
 
 func TestRemoteCleanupRequiresPositiveBoundAcknowledgement(t *testing.T) {
-	for _, status := range []int{200, 204, 404, 410, 503} {
+	for _, status := range []int{200, 204, 404, 409, 410, 502, 503} {
 		h := &captureHandler{gateway: &fakeCaptureGateway{deleteStatus: status}}
 		err := h.remoteCaptureCleanup(httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/", nil), gatewayprotocol.CaptureTarget{})
-		if (err == nil) != (status == 204) {
+		if (err == nil) != (status == 204 || status == 410) {
 			t.Errorf("status=%d err=%v", status, err)
 		}
+	}
+}
+
+func TestRemoteCaptureDeleteRequiresCleanupOrNeverStartedProof(t *testing.T) {
+	for _, tc := range []struct {
+		name, phase, conditionStatus, reason string
+		observed                             int64
+		pod, wrongOwner, noCompletion        bool
+		cleanupStatus, want                  int
+		wantGateway                          bool
+	}{
+		{name: "bound cleanup", phase: "Completed", cleanupStatus: 204, want: 200, wantGateway: true},
+		{name: "confirmed absence", phase: "Completed", cleanupStatus: 410, want: 200, wantGateway: true},
+		{name: "ambiguous missing", phase: "Completed", cleanupStatus: 404, want: 503, wantGateway: true},
+		{name: "busy", phase: "Completed", cleanupStatus: 409, want: 503, wantGateway: true},
+		{name: "bad gateway", phase: "Completed", cleanupStatus: 502, want: 503, wantGateway: true},
+		{name: "outage", phase: "Completed", cleanupStatus: 503, want: 503, wantGateway: true},
+		{name: "never started", phase: "Completed", conditionStatus: "True", reason: "never_started", observed: 2, want: 200},
+		{name: "stale proof", phase: "Completed", conditionStatus: "True", reason: "never_started", observed: 1, want: 503, wantGateway: true},
+		{name: "false proof", phase: "Completed", conditionStatus: "False", reason: "never_started", observed: 2, want: 503, wantGateway: true},
+		{name: "different reason", phase: "Completed", conditionStatus: "True", reason: "stopped", observed: 2, want: 503, wantGateway: true},
+		{name: "recorded pod", phase: "Completed", conditionStatus: "True", reason: "never_started", observed: 2, pod: true, want: 503, wantGateway: true},
+		{name: "wrong owner", phase: "Completed", conditionStatus: "True", reason: "never_started", observed: 2, wrongOwner: true, want: 404},
+		{name: "pending", phase: "Pending", conditionStatus: "True", reason: "never_started", observed: 2, want: 409},
+		{name: "running", phase: "Running", want: 409},
+		{name: "failed without completion", phase: "Failed", noCompletion: true, want: 503, wantGateway: true},
+		{name: "failed with proof", phase: "Failed", conditionStatus: "True", reason: "never_started", observed: 2, want: 503, wantGateway: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := newCaptureServerObj("alpha", true)
+			server.SetUID("remote-server")
+			nc := newCompletedNetworkCapture(t, "cap-one", "alpha", time.Second, 120)
+			nc.SetUID("remote-capture")
+			nc.SetGeneration(2)
+			owner := server.GetUID()
+			if tc.wrongOwner {
+				owner = "replacement-server"
+			}
+			nc.SetOwnerReferences([]metav1.OwnerReference{{APIVersion: "gameplane.local/v1alpha1", Kind: "GameServer", Name: "alpha", UID: owner}})
+			if tc.pod {
+				nc.SetAnnotations(map[string]string{"gameplane.local/capture-pod-uid": "recorded-pod"})
+			}
+			if err := unstructured.SetNestedField(nc.Object, tc.phase, "status", "phase"); err != nil {
+				t.Fatal(err)
+			}
+			if tc.noCompletion {
+				unstructured.RemoveNestedField(nc.Object, "status", "completionTime")
+			}
+			if tc.conditionStatus != "" {
+				if err := unstructured.SetNestedSlice(nc.Object, []any{map[string]any{"type": "SidecarStopped", "status": tc.conditionStatus, "reason": tc.reason, "observedGeneration": tc.observed, "lastTransitionTime": time.Now().UTC().Format(time.RFC3339), "message": "operator result"}}, "status", "conditions"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			remote := fakeCaptureClient(server, nc)
+			reg := kube.NewRegistry(scope.DefaultCluster)
+			reg.Set("remote", remote)
+			gateway := &fakeCaptureGateway{deleteStatus: tc.cleanupStatus}
+			if tc.cleanupStatus == 0 {
+				gateway.deleteErr = errors.New("gateway unavailable")
+			}
+			h := &captureHandler{reg: reg, cfg: captureTestCfg, auditor: newCaptureAuditor(t), gateway: gateway}
+			r := chi.NewRouter()
+			r.Delete("/servers/{name}:capture", h.captureDelete)
+			rr := do(t, r, http.MethodDelete, "/servers/alpha:capture?id=cap-one&cluster=remote", nil)
+			if rr.Code != tc.want || (gateway.deleted != nil) != tc.wantGateway {
+				t.Fatalf("delete=%d %s gateway=%+v; want=%d gateway=%v", rr.Code, rr.Body, gateway.deleted, tc.want, tc.wantGateway)
+			}
+			deleted := false
+			for _, action := range remote.Dynamic.(*dynamicfake.FakeDynamicClient).Actions() {
+				if action.GetVerb() != "delete" {
+					continue
+				}
+				opts := action.(interface{ GetDeleteOptions() metav1.DeleteOptions }).GetDeleteOptions()
+				if opts.Preconditions == nil || opts.Preconditions.UID == nil || *opts.Preconditions.UID != nc.GetUID() {
+					t.Fatal("delete lost original capture UID")
+				}
+				deleted = true
+			}
+			if deleted != (tc.want == 200) {
+				t.Fatalf("CR deletion=%v status=%d", deleted, rr.Code)
+			}
+		})
 	}
 }
 
