@@ -48,7 +48,10 @@ func TestGatewayRequestErrorContextPreservesClassification(t *testing.T) {
 			target: gatewayprotocol.Target{Cluster: "remote", Namespace: "games", Name: "alpha", UID: "remote-uid"},
 			http:   &http.Client{Transport: gatewayErrorTransport{err: cause}},
 		}
-		_, err := transport.Do(t.Context(), agentRequest{target: agentTarget{name: "alpha", namespace: "games"}, method: http.MethodGet, path: "/status"})
+		resp, err := transport.Do(t.Context(), agentRequest{target: agentTarget{name: "alpha", namespace: "games"}, method: http.MethodGet, path: "/status"})
+		if resp != nil {
+			defer resp.Body.Close()
+		}
 		if err == nil || !strings.HasPrefix(err.Error(), "send gateway agent request:") || !errors.Is(err, cause) {
 			t.Fatalf("request context or cause lost: %v", err)
 		}
@@ -74,12 +77,20 @@ func TestCaptureGatewayErrorsPreserveStageAndCause(t *testing.T) {
 	target := gatewayprotocol.CaptureTarget{Target: gatewayprotocol.Target{Cluster: "remote", Namespace: "gameplane-games", Name: "alpha", UID: "remote-uid"}, Capture: "cap-one", CaptureUID: "capture-uid"}
 	bad := target
 	bad.CaptureUID = "../bad"
-	if _, err := client.Delete(t.Context(), bad); err == nil || errors.Unwrap(err) == nil || !strings.HasPrefix(err.Error(), "build gateway capture path:") {
+	resp, err := client.Delete(t.Context(), bad)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err == nil || errors.Unwrap(err) == nil || !strings.HasPrefix(err.Error(), "build gateway capture path:") {
 		t.Fatalf("missing capture path context: %v", err)
 	}
 	bad = target
 	bad.Cluster = "missing"
-	if _, err := client.Delete(t.Context(), bad); err == nil || !errors.Is(err, scope.ErrForbiddenCluster) || !strings.HasPrefix(err.Error(), "resolve gateway capture target:") {
+	resp, err = client.Delete(t.Context(), bad)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err == nil || !errors.Is(err, scope.ErrForbiddenCluster) || !strings.HasPrefix(err.Error(), "resolve gateway capture target:") {
 		t.Fatalf("missing capture resolution context: %v", err)
 	}
 	if _, err := client.Capabilities(t.Context(), "missing", "gameplane-games", "alpha"); err == nil || !errors.Is(err, scope.ErrForbiddenCluster) || !strings.HasPrefix(err.Error(), "resolve gateway capability target:") {
@@ -87,7 +98,11 @@ func TestCaptureGatewayErrorsPreserveStageAndCause(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	if _, err := client.Delete(ctx, target); err == nil || !errors.Is(err, context.Canceled) || !strings.HasPrefix(err.Error(), "send gateway capture request:") {
+	resp, err = client.Delete(ctx, target)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err == nil || !errors.Is(err, context.Canceled) || !strings.HasPrefix(err.Error(), "send gateway capture request:") {
 		t.Fatalf("missing capture request context: %v", err)
 	}
 }
