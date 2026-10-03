@@ -40,7 +40,7 @@ func (c *CaptureGatewayClient) Capabilities(ctx context.Context, cluster, namesp
 	defer cancel()
 	_, transport, err := c.resolver.resolve(ctx, cluster, agentTarget{name: serverName, namespace: namespace})
 	if err != nil {
-		return CaptureGatewayCapabilities{}, err
+		return CaptureGatewayCapabilities{}, fmt.Errorf("resolve gateway capability target: %w", err)
 	}
 	u := *transport.base
 	u.Path = "/v1/capabilities"
@@ -95,11 +95,11 @@ func (c *CaptureGatewayClient) Delete(ctx context.Context, target gatewayprotoco
 func (c *CaptureGatewayClient) request(ctx context.Context, target gatewayprotocol.CaptureTarget, method string, headers http.Header) (*http.Response, error) {
 	path, err := gatewayprotocol.CapturePath(target)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build gateway capture path: %w", err)
 	}
 	_, transport, err := c.resolver.resolve(ctx, target.Cluster, agentTarget{name: target.Name, namespace: target.Namespace})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("resolve gateway capture target: %w", err)
 	}
 	if transport.target.UID != target.UID {
 		return nil, errors.New("capture server identity changed")
@@ -115,5 +115,9 @@ func (c *CaptureGatewayClient) request(ctx context.Context, target gatewayprotoc
 			req.Header.Set(name, value)
 		}
 	}
-	return transport.http.Do(req)
+	resp, err := transport.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("send gateway capture request: %w", err)
+	}
+	return resp, nil
 }

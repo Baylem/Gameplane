@@ -82,7 +82,7 @@ func (r *agentGatewayResolver) resolve(ctx context.Context, cluster string, targ
 	}
 	cert, err := tls.X509KeyPair(secret.Data["tls.crt"], secret.Data["tls.key"])
 	if err != nil {
-		return nil, nil, errors.New("invalid gateway client certificate or key")
+		return nil, nil, fmt.Errorf("invalid gateway client certificate or key: %w", err)
 	}
 	roots := x509.NewCertPool()
 	if !roots.AppendCertsFromPEM(secret.Data["ca.crt"]) {
@@ -164,11 +164,11 @@ func (t *gatewayAgentTransport) endpoint(target agentTarget, method, path, rawQu
 func (t *gatewayAgentTransport) Do(ctx context.Context, operation agentRequest) (*http.Response, error) {
 	endpoint, err := t.endpoint(operation.target, operation.method, operation.path, operation.rawQuery, false)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build gateway agent endpoint: %w", err)
 	}
 	req, err := http.NewRequestWithContext(ctx, operation.method, endpoint, operation.body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build gateway agent request: %w", err)
 	}
 	copyProxyHeaders(req.Header, operation.header)
 	client := t.http
@@ -185,7 +185,11 @@ func (t *gatewayAgentTransport) Do(ctx context.Context, operation agentRequest) 
 			client = &copyClient
 		}
 	}
-	return client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("send gateway agent request: %w", err)
+	}
+	return resp, nil
 }
 
 func (t *gatewayAgentTransport) Dial(ctx context.Context, target agentTarget, path string) (*websocket.Conn, *http.Response, error) {
