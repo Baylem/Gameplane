@@ -79,6 +79,8 @@ func TestGatewayCaptureVerifiesOwnershipPhaseAndTTL(t *testing.T) {
 		{"wrong capture UID", "original-uid", "replacement", "Completed", http.MethodDelete, time.Second, 404},
 		{"expired", "original-uid", "capture-uid", "Completed", http.MethodGet, 2 * time.Minute, 404},
 		{"running", "original-uid", "capture-uid", "Running", http.MethodDelete, time.Second, 409},
+		{"unreconciled", "original-uid", "capture-uid", "", http.MethodDelete, time.Second, 409},
+		{"unknown phase", "original-uid", "capture-uid", "Unknown", http.MethodDelete, time.Second, 409},
 		{"failed", "original-uid", "capture-uid", "Failed", http.MethodGet, time.Second, 404},
 		{"write forbidden", "original-uid", "capture-uid", "Completed", http.MethodPost, time.Second, 404},
 	} {

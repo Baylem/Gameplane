@@ -192,6 +192,8 @@ func TestRemoteCaptureDeleteRequiresCleanupOrNeverStartedProof(t *testing.T) {
 		{name: "recorded pod", phase: "Completed", conditionStatus: "True", reason: "never_started", observed: 2, pod: true, want: 503, wantGateway: true},
 		{name: "wrong owner", phase: "Completed", conditionStatus: "True", reason: "never_started", observed: 2, wrongOwner: true, want: 404},
 		{name: "pending", phase: "Pending", conditionStatus: "True", reason: "never_started", observed: 2, want: 409},
+		{name: "unreconciled", phase: "", cleanupStatus: 410, want: 409},
+		{name: "unknown phase", phase: "Unknown", cleanupStatus: 410, want: 409},
 		{name: "running", phase: "Running", want: 409},
 		{name: "failed without completion", phase: "Failed", noCompletion: true, want: 503, wantGateway: true},
 		{name: "failed with proof", phase: "Failed", conditionStatus: "True", reason: "never_started", observed: 2, want: 503, wantGateway: true},
@@ -309,7 +311,7 @@ func TestRemoteCaptureCleanupCannotDeleteRecreatedRecord(t *testing.T) {
 		r := chi.NewRouter()
 		r.Delete("/servers/{name}:capture", h.captureDelete)
 		rr := do(t, r, http.MethodDelete, "/servers/alpha:capture?id=cap-one&cluster=remote", nil)
-		if rr.Code != http.StatusInternalServerError || gateway.deleted == nil || gateway.deleted.CaptureUID != string(nc.GetUID()) {
+		if rr.Code != http.StatusConflict || gateway.deleted == nil || gateway.deleted.CaptureUID != string(nc.GetUID()) {
 			t.Fatalf("cleanup=%d delete=%d target=%+v", status, rr.Code, gateway.deleted)
 		}
 		remaining, err := client.Resource(kube.GVRNetworkCapture).Namespace(nc.GetNamespace()).Get(t.Context(), nc.GetName(), metav1.GetOptions{})
