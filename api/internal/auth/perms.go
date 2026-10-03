@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sort"
+
+	"github.com/ValgulNecron/gameplane/api/internal/scope"
 )
 
 // LoadPerms resolves the user's effective permission set from their role
@@ -115,6 +117,9 @@ func PermsByClusterToJSON(perms map[string]map[string]map[string]struct{}) map[s
 //     privilege escalation.
 //   - The "*" permission wildcard (the built-in admin role) matches any perm
 //     but is still subject to the same cluster gating for namespaced perms.
+//   - Inventory (cluster:read) always requires a cluster-wide grant on the
+//     selected cluster or wildcard cluster, regardless of namespaced. An
+//     omitted cluster selects the home cluster; namespace grants never qualify.
 func (u *User) Can(perm string, namespaced bool, cluster, ns string) bool {
 	if u == nil {
 		return false
@@ -122,6 +127,12 @@ func (u *User) Can(perm string, namespaced bool, cluster, ns string) bool {
 	// cwHolds: does the user hold perm cluster-wide (namespace "*") on cluster ck?
 	cwHolds := func(ck string) bool {
 		return permSetHas(u.Perms[ck]["*"], "*") || permSetHas(u.Perms[ck]["*"], perm)
+	}
+	if perm == "cluster:read" {
+		if cluster == "" {
+			cluster = scope.DefaultCluster
+		}
+		return cwHolds(cluster) || cwHolds("*")
 	}
 	if !namespaced {
 		// Control-plane perm: any cluster's cluster-wide binding grants it.

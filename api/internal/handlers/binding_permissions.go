@@ -9,9 +9,10 @@ import (
 )
 
 // remoteWidePermissionsAllowed keeps supplemental remote grants away from
-// control-plane administration. Can(false) deliberately accepts a global
-// permission from any cluster, so only the selected inventory permission and
-// catalogued namespaced permissions are safe here; '*' is never allowed.
+// control-plane administration. Can always scopes cluster:read to the selected
+// cluster. Other Can(false) permissions accept a global grant from any cluster,
+// so only inventory and catalogued namespaced permissions are safe here;
+// '*' is never allowed.
 func remoteWidePermissionsAllowed(permissions []string) bool {
 	for _, permission := range permissions {
 		if permission != "cluster:read" && !rbac.Namespaced(permission) {
