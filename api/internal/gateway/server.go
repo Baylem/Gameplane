@@ -107,7 +107,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
 		return
 	}
-	ctx, cancel := h.requestContext(req.Context(), req.TLS.PeerCertificates[0].NotAfter, longRunningOperation(req.Method, agentPath))
+	longRunning := gatewayprotocol.LongRunningOperation(req.Method, agentPath)
+	ctx, cancel := h.requestContext(req.Context(), req.TLS.PeerCertificates[0].NotAfter, longRunning)
 	defer cancel()
 	req = req.WithContext(ctx)
 	if err := h.verifyTarget(ctx, target); err != nil {
@@ -121,6 +122,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer transport.CloseIdleConnections()
+	if longRunning {
+		transport.ResponseHeaderTimeout = 0
+	}
 	req.Body = http.MaxBytesReader(w, req.Body, maxBody)
 	host := target.Name + "-agent." + target.Namespace + ".svc.cluster.local:8090"
 	proxy := &httputil.ReverseProxy{

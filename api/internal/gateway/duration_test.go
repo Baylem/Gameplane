@@ -31,6 +31,53 @@ func TestGatewayAcceptsOptionalRequestDuration(t *testing.T) {
 	}
 }
 
+func TestGatewayLongOperationDelayedHeaders(t *testing.T) {
+	for _, path := range []string{"/mods/install", "/mods/upload"} {
+		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+			h, cert := newFixture(t)
+			h.cfg.MaxRequestDuration = 0
+			front := durationProxy(t.Context(), t, h, cert, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if _, err := io.Copy(io.Discard, r.Body); err != nil {
+					return
+				}
+				select {
+				case <-time.After(31 * time.Second):
+					w.WriteHeader(http.StatusNoContent)
+				case <-r.Context().Done():
+				}
+			}))
+			fixtureTransport := h.transport
+			h.transport = func(files TLSFiles) (*http.Transport, error) {
+				tr, err := fixtureTransport(files)
+				if err == nil {
+					// Retain the production header policy while redirecting only the dial.
+					tr.ResponseHeaderTimeout = newHTTPTransport(nil).ResponseHeaderTimeout
+				}
+				return tr, err
+			}
+			gatewayPath, err := gatewayprotocol.Path(gatewayprotocol.Target{Cluster: "remote", Namespace: "games", Name: "same-name", UID: "original-uid"}, path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
+			defer cancel()
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, front.URL+gatewayPath, strings.NewReader("archive"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := front.Client().Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusNoContent {
+				t.Fatalf("delayed operation returned %d", resp.StatusCode)
+			}
+		})
+	}
+}
+
 // Use real HTTP and WebSocket connections: context cancellation must propagate
 // through ReverseProxy, including after an upgrade or response headers.
 func durationProxy(ctx context.Context, t *testing.T, h *handler, cert *x509.Certificate, upstreamHandler http.Handler) *httptest.Server {
@@ -201,7 +248,7 @@ func TestGatewayDeadlinePolicy(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				h, cert := newFixture(t)
 				h.cfg.MaxRequestDuration = 0
-				ctx, cancel := h.requestContext(t.Context(), cert.NotAfter, longRunningOperation(tc.method, tc.path))
+				ctx, cancel := h.requestContext(t.Context(), cert.NotAfter, gatewayprotocol.LongRunningOperation(tc.method, tc.path))
 				defer cancel()
 				time.Sleep(6 * time.Minute)
 				if tc.longRunning && ctx.Err() != nil {

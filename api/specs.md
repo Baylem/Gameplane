@@ -805,6 +805,10 @@ installs have no fixed total-duration cap by default. `--max-request-duration`
 positive duration to impose one; negative values are rejected. Central peer
 certificate expiry and parent cancellation always terminate an operation.
 Ordinary operations and Kubernetes identity lookups have 30-second timeouts.
+Both HTTP hops waive the response-header timeout for long agent operations,
+including mod install and upload processing before the first response byte.
+Ordinary requests retain their header limit; dial and TLS handshake limits,
+parent cancellation, certificate expiry and configured total lifetimes still apply.
 Existing streams may remain active until certificate expiry, an explicitly
 configured maximum lifetime, caller disconnect or gateway shutdown following
 trust or permission removal. Reconnection performs fresh authorization.
