@@ -38,11 +38,12 @@ const (
 // Mutations continue through the existing explicitly targeted resource routes.
 func MountFleet(r chi.Router, reg *kube.Registry, store *db.Store) {
 	h := fleetHandler{reg: reg, store: store}
+	limit := auth.NewFleetReadLimiter().UserMiddleware
 	for _, kind := range []string{"servers", "backups", "schedules", "restores"} {
-		r.Get("/fleet/"+kind, h.resources(kind))
+		r.With(limit).Get("/fleet/"+kind, h.resources(kind))
 	}
-	r.Get("/fleet/inventory", h.inventory)
-	r.Get("/fleet/placements", h.placements)
+	r.With(limit).Get("/fleet/inventory", h.inventory)
+	r.With(limit).Get("/fleet/placements", h.placements)
 	r.Get("/servers/{name}/access", h.serverAccess)
 }
 
