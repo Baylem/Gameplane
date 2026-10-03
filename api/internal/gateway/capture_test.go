@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,6 +24,51 @@ func gatewayCaptureFixture(t *testing.T, h *handler, owner, phase string, age ti
 	return gatewayprotocol.CaptureTarget{Target: gatewayprotocol.Target{Cluster: "remote", Namespace: "games", Name: "same-name", UID: "original-uid"}, Capture: "cap-one", CaptureUID: "capture-uid"}
 }
 
+func TestGatewayCaptureAbsenceStillRequiresCurrentIdentities(t *testing.T) {
+	h, cert := newFixture(t)
+	target := gatewayCaptureFixture(t, h, "original-uid", "Completed", time.Second)
+	var calls atomic.Int64
+	front := durationProxy(t.Context(), t, h, cert, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		calls.Add(1)
+		w.WriteHeader(http.StatusGone)
+	}))
+	for _, variant := range []string{"valid", "wrong server", "wrong capture", "missing capture"} {
+		t.Run(variant, func(t *testing.T) {
+			bound := target
+			want := http.StatusNotFound
+			switch variant {
+			case "valid":
+				want = http.StatusGone
+			case "wrong server":
+				bound.UID = "replacement-server"
+			case "wrong capture":
+				bound.CaptureUID = "replacement-capture"
+			case "missing capture":
+				bound.Capture = "missing"
+			}
+			path, err := gatewayprotocol.CapturePath(bound)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodDelete, front.URL+path, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := front.Client().Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != want {
+				t.Fatalf("status=%d want=%d", resp.StatusCode, want)
+			}
+		})
+	}
+	if calls.Load() != 1 {
+		t.Fatalf("invalid targets reached sidecar: %d calls", calls.Load())
+	}
+}
+
 func TestGatewayCaptureVerifiesOwnershipPhaseAndTTL(t *testing.T) {
 	for _, tc := range []struct {
 		name, owner, uid, phase, method string
@@ -33,6 +79,8 @@ func TestGatewayCaptureVerifiesOwnershipPhaseAndTTL(t *testing.T) {
 		{"wrong capture UID", "original-uid", "replacement", "Completed", http.MethodDelete, time.Second, 404},
 		{"expired", "original-uid", "capture-uid", "Completed", http.MethodGet, 2 * time.Minute, 404},
 		{"running", "original-uid", "capture-uid", "Running", http.MethodDelete, time.Second, 409},
+		{"unreconciled", "original-uid", "capture-uid", "", http.MethodDelete, time.Second, 409},
+		{"unknown phase", "original-uid", "capture-uid", "Unknown", http.MethodDelete, time.Second, 409},
 		{"failed", "original-uid", "capture-uid", "Failed", http.MethodGet, time.Second, 404},
 		{"write forbidden", "original-uid", "capture-uid", "Completed", http.MethodPost, time.Second, 404},
 	} {

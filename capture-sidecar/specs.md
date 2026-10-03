@@ -25,6 +25,12 @@ completion checks and file lifetime rules still apply. The gateway exposes only
 the explicit download and cleanup operations, never arbitrary sidecar proxying.
 Bound cleanup retains an identity tombstone after removing the PCAP, so a retry
 for the same UIDs can confirm deletion while another UID remains rejected.
+DELETE returns 204 for this matching binding, including tombstone retries. It
+returns 410 only after validating the route and current server UID, ruling out
+active or flushing writers, and confirming that both identity and PCAP entries
+are absent in the capture directory. Dangling symlinks, inaccessible storage,
+unbound PCAPs and mismatched identities do not count as absence. Downloads keep
+their existing identity requirement; a generic 404 is never cleanup proof.
 
 These are the design responsibilities for the completed sidecar (Phase 2+):
 

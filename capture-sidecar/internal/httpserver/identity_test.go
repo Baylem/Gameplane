@@ -202,3 +202,72 @@ func TestCaptureFileOpenCannotEscapeRoot(t *testing.T) {
 		t.Fatal("followed capture symlink")
 	}
 }
+
+func TestBoundDeleteAcknowledgesAbsentCapture(t *testing.T) {
+	for _, scenario := range []string{"absent", "wrong server", "query", "invalid UID", "corrupt identity", "wrong identity", "unbound PCAP", "identity symlink", "PCAP symlink", "unavailable directory", "active", "finishing", "flushing"} {
+		t.Run(scenario, func(t *testing.T) {
+			s, _ := newTestServer(t)
+			s.serverUID = "server-uid"
+			path := "/v1/targets/server-uid/captures/cap-one/uids/capture-uid/file"
+			want := http.StatusNotFound
+			t.Cleanup(func() {
+				s.currentCapture, s.finishingCapture = nil, nil
+				delete(s.completed, "cap-one")
+			})
+			write := func(path, data string) {
+				t.Helper()
+				if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			switch scenario {
+			case "absent":
+				want = http.StatusGone
+			case "wrong server":
+				path = strings.Replace(path, "server-uid", "replacement", 1)
+			case "query":
+				path += "?extra=true"
+			case "invalid UID":
+				path = strings.Replace(path, "capture-uid", "bad_uid", 1)
+			case "corrupt identity":
+				write(s.captureIdentityPath("cap-one"), "{")
+			case "wrong identity":
+				write(s.captureIdentityPath("cap-one"), `{"serverUID":"server-uid","captureUID":"replacement"}`)
+			case "unbound PCAP":
+				write(s.captureFilePath("cap-one"), "legacy")
+			case "identity symlink", "PCAP symlink":
+				link := s.captureIdentityPath("cap-one")
+				if scenario == "PCAP symlink" {
+					link = s.captureFilePath("cap-one")
+				}
+				// A dangling symlink is not positive evidence of an absent entry.
+				if err := os.Symlink(filepath.Join(t.TempDir(), "missing"), link); err != nil {
+					t.Fatal(err)
+				}
+			case "unavailable directory":
+				s.captureDataDir = filepath.Join(s.captureDataDir, "missing")
+			case "active":
+				s.currentCapture = &captureState{id: "cap-one", status: statusRunning}
+				want = http.StatusConflict
+			case "finishing":
+				s.finishingCapture = &captureState{id: "cap-one", status: statusRunning}
+				want = http.StatusConflict
+			case "flushing":
+				s.completed["cap-one"] = &captureState{id: "cap-one", status: statusRunning}
+				want = http.StatusConflict
+			}
+			rr := httptest.NewRecorder()
+			s.Routes(nil).ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodDelete, path, nil))
+			if rr.Code != want {
+				t.Fatalf("delete=%d %s; want=%d", rr.Code, rr.Body, want)
+			}
+			if scenario == "absent" {
+				rr = httptest.NewRecorder()
+				s.Routes(nil).ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
+				if rr.Code != http.StatusNotFound {
+					t.Fatalf("unbound download=%d", rr.Code)
+				}
+			}
+		})
+	}
+}

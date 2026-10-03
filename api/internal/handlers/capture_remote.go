@@ -109,10 +109,28 @@ func (h *captureHandler) remoteCaptureCleanup(req *http.Request, target gatewayp
 		return fmt.Errorf("remote capture cleanup: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusGone {
 		return fmt.Errorf("remote capture cleanup returned %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// Only the operator can prove a capture never reached the sidecar. It persists
+// the pod UID before starting, so a recorded pod disqualifies this exception
+// even when a later stop reports never_started (for example after pod loss).
+func captureNeverStarted(nc *kube.NetworkCapture) bool {
+	if nc.Status.Phase != kube.CapturePhaseCompleted {
+		return false
+	}
+	if _, recorded := nc.Annotations["gameplane.local/capture-pod-uid"]; recorded {
+		return false
+	}
+	for _, condition := range nc.Status.Conditions {
+		if condition.Type == "SidecarStopped" && condition.Status == metav1.ConditionTrue && condition.Reason == "never_started" && condition.ObservedGeneration == nc.Generation {
+			return true
+		}
+	}
+	return false
 }
 
 // Metadata stays readable during an outage. Explicit CR TTLs remain useful;
