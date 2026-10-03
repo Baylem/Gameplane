@@ -35,7 +35,9 @@ func (h *handler) serveCapture(w http.ResponseWriter, req *http.Request, target 
 		http.NotFound(w, req)
 		return
 	}
-	if nc.Status.Phase == kube.CapturePhasePending || nc.Status.Phase == kube.CapturePhaseRunning {
+	// Empty phase is Pending before the first status update; absence of files
+	// cannot make deletion safe while the operator may still start a writer.
+	if nc.Status.Phase != kube.CapturePhaseCompleted && nc.Status.Phase != kube.CapturePhaseFailed && nc.Status.Phase != kube.CapturePhaseExpired {
 		http.Error(w, "capture is still running", http.StatusConflict)
 		return
 	}

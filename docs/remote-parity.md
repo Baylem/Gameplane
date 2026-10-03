@@ -33,8 +33,9 @@ existing behavior.
 The API can skip sidecar cleanup only when the operator has marked the capture
 Completed with current-generation `SidecarStopped=True`, reason `never_started`,
 and no `gameplane.local/capture-pod-uid` annotation was ever recorded. Server
-ownership and capture UID checks still apply. Pending/Running captures must use
-`:capture-stop` and reach a terminal phase first: a Pending record can already
+ownership and capture UID checks still apply. Unreconciled (empty-phase) and
+Pending/Running captures must use `:capture-stop` and reach a terminal phase
+first: a Pending record can already
 have an active sidecar if its status update failed. Failed phase, missing
 CompletionTime, a 404, and gateway errors do not establish file absence.
 

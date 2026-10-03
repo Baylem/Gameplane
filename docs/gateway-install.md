@@ -228,8 +228,9 @@ remote capture downloads or cleanup. See the [parity design](remote-parity.md).
 
 ## Capture cleanup recovery
 
-For a Pending or Running capture, request `:capture-stop`, wait for the operator
-to report a terminal phase, then retry deletion. The stop flow also handles
+For an unreconciled (empty-phase), Pending or Running capture, request
+`:capture-stop`, wait for the operator to report a terminal phase, then retry
+deletion. The stop flow also handles
 Pending captures whose sidecar started before a status write failed. Repair
 operator permissions on `networkcaptures/status` if completion cannot persist.
 

@@ -637,7 +637,8 @@ func (h *captureHandler) captureStop(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if nc.Status.Phase != kube.CapturePhasePending && nc.Status.Phase != kube.CapturePhaseRunning {
+	// A newly created CR has no phase until its first operator status write.
+	if nc.Status.Phase != "" && nc.Status.Phase != kube.CapturePhasePending && nc.Status.Phase != kube.CapturePhaseRunning {
 		if !h.auditWriteOrFail(w, req, http.MethodPost, auditPath, target, "not_running", http.StatusConflict) {
 			return
 		}
@@ -923,11 +924,10 @@ func (h *captureHandler) captureDelete(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	// A running capture must be stopped first (rest-api.md's Delete a
-	// Capture preconditions) — deleting the CR out from under a Running
-	// sidecar would orphan the sidecar's in-progress write with no CR left
-	// to record what it was doing.
-	if nc.Status.Phase == kube.CapturePhasePending || nc.Status.Phase == kube.CapturePhaseRunning {
+	// Require a known terminal phase. An empty phase is an unreconciled Pending
+	// capture: the operator could already be starting its writer, even before
+	// any file exists for a sidecar cleanup request to find.
+	if nc.Status.Phase != kube.CapturePhaseCompleted && nc.Status.Phase != kube.CapturePhaseFailed && nc.Status.Phase != kube.CapturePhaseExpired {
 		if !h.auditWriteOrFail(w, req, http.MethodDelete, auditPath, target, "capture_running", http.StatusConflict) {
 			return
 		}
