@@ -16901,7 +16901,7 @@
       "type": "frame",
       "id": "W8idqY",
       "x": 0,
-      "y": 12745,
+      "y": 13295,
       "name": "Screen/Create Server — Step 1 Template",
       "theme": {
         "semantic": "dark"
@@ -18156,7 +18156,7 @@
       "type": "frame",
       "id": "nNL3E",
       "x": 1640,
-      "y": 12745,
+      "y": 13295,
       "name": "Screen/Create Server — Step 2 Version",
       "theme": {
         "semantic": "dark"
@@ -18999,7 +18999,7 @@
       "type": "frame",
       "id": "vUqMl",
       "x": 3280,
-      "y": 12745,
+      "y": 13295,
       "name": "Screen/Create Server — Step 3 Configure",
       "theme": {
         "semantic": "dark"
@@ -20433,7 +20433,7 @@
       "type": "frame",
       "id": "f1Vga",
       "x": 4920,
-      "y": 12745,
+      "y": 13295,
       "name": "Screen/Create Server — Step 4 Network",
       "theme": {
         "semantic": "dark"
@@ -21622,7 +21622,7 @@
       "type": "frame",
       "id": "UMJli",
       "x": 6560,
-      "y": 12745,
+      "y": 13295,
       "name": "Screen/Create Server — Step 5 Review",
       "theme": {
         "semantic": "dark"
@@ -22797,7 +22797,7 @@
       "type": "frame",
       "id": "kK8Ji",
       "x": 0,
-      "y": 14865,
+      "y": 15415,
       "name": "Screen/Modules Catalog",
       "theme": {
         "semantic": "dark"
@@ -25984,7 +25984,7 @@
       "type": "frame",
       "id": "DPrYX",
       "x": 0,
-      "y": 16315,
+      "y": 16865,
       "name": "Screen/Backups — Index",
       "theme": {
         "semantic": "dark"
@@ -26261,7 +26261,7 @@
       "type": "frame",
       "id": "fK8Bi",
       "x": 1640,
-      "y": 16315,
+      "y": 16865,
       "name": "Screen/Backups — Schedules",
       "theme": {
         "semantic": "dark"
@@ -27331,7 +27331,7 @@
       "type": "frame",
       "id": "tTSdi",
       "x": 3280,
-      "y": 16315,
+      "y": 16865,
       "name": "Screen/Backups — Restores",
       "theme": {
         "semantic": "dark"
@@ -27850,7 +27850,7 @@
       "type": "frame",
       "id": "j9W8A",
       "x": 0,
-      "y": 17765,
+      "y": 18315,
       "name": "Screen/Cluster Settings",
       "theme": {
         "semantic": "dark"
@@ -28083,7 +28083,7 @@
       "type": "frame",
       "id": "bYDHC",
       "x": 0,
-      "y": 18965,
+      "y": 19515,
       "name": "Screen/Users & RBAC",
       "theme": {
         "semantic": "dark"
@@ -28598,7 +28598,7 @@
       "type": "frame",
       "id": "e9lV4",
       "x": 1640,
-      "y": 18965,
+      "y": 19515,
       "name": "Screen/Users & RBAC — Roles",
       "theme": {
         "semantic": "dark"
@@ -29033,7 +29033,7 @@
       "type": "frame",
       "id": "TBvTC",
       "x": 3280,
-      "y": 18965,
+      "y": 19515,
       "name": "Screen/Users & RBAC — Service accounts",
       "theme": {
         "semantic": "dark"
@@ -29186,7 +29186,7 @@
       "type": "frame",
       "id": "Dpb9f",
       "x": 4920,
-      "y": 18965,
+      "y": 19515,
       "name": "Screen/Users & RBAC — Identity providers",
       "theme": {
         "semantic": "dark"
@@ -29339,7 +29339,7 @@
       "type": "frame",
       "id": "DxKOh",
       "x": 0,
-      "y": 20165,
+      "y": 20715,
       "name": "Screen/Audit Log",
       "theme": {
         "semantic": "dark"
@@ -30636,7 +30636,7 @@
       "type": "frame",
       "id": "Bq2Yg",
       "x": 0,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin — System Logs",
       "theme": {
         "semantic": "dark"
@@ -32040,7 +32040,7 @@
       "type": "frame",
       "id": "WZdnw",
       "x": 1640,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings",
       "theme": {
         "semantic": "dark"
@@ -32373,7 +32373,7 @@
       "type": "frame",
       "id": "uMiwd",
       "x": 3280,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — Authentication",
       "theme": {
         "semantic": "dark"
@@ -33545,7 +33545,7 @@
       "type": "frame",
       "id": "RC3Kf",
       "x": 4920,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — Backup destinations",
       "theme": {
         "semantic": "dark"
@@ -33774,7 +33774,7 @@
       "type": "frame",
       "id": "g5mEpx",
       "x": 6560,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — Module sources",
       "theme": {
         "semantic": "dark"
@@ -34360,7 +34360,7 @@
       "type": "frame",
       "id": "n6Xlo",
       "x": 9840,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — Notifications",
       "theme": {
         "semantic": "dark"
@@ -34880,7 +34880,7 @@
       "type": "frame",
       "id": "uoxQW",
       "x": 11480,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — Telemetry",
       "theme": {
         "semantic": "dark"
@@ -35100,7 +35100,7 @@
       "type": "frame",
       "id": "M2sA4u",
       "x": 13120,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — Updates",
       "theme": {
         "semantic": "dark"
@@ -35306,7 +35306,7 @@
       "type": "frame",
       "id": "zM0VF",
       "x": 14760,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — About",
       "theme": {
         "semantic": "dark"
@@ -35564,7 +35564,7 @@
       "type": "frame",
       "id": "tooKB",
       "x": 0,
-      "y": 22565,
+      "y": 23115,
       "name": "Screen/Mobile — Servers",
       "theme": {
         "semantic": "dark"
@@ -36887,7 +36887,7 @@
       "type": "frame",
       "id": "SeizD",
       "x": 590,
-      "y": 22565,
+      "y": 23115,
       "name": "Screen/Mobile — Nav Drawer",
       "theme": {
         "semantic": "dark"
@@ -40155,7 +40155,7 @@
       "type": "frame",
       "id": "FyV6E",
       "x": -15622,
-      "y": 25519,
+      "y": 25707,
       "name": "Gameplane/Filter Popover",
       "context": "Servers Filter: Location and Namespace are draft values. Apply commits; Clear resets drafts; dismissal discards changes.",
       "reusable": true,
@@ -41138,7 +41138,7 @@
       "type": "frame",
       "id": "IdaU7",
       "x": -15622,
-      "y": 25692,
+      "y": 26070,
       "name": "Gameplane/Search Results",
       "reusable": true,
       "clip": true,
@@ -42022,7 +42022,7 @@
       "type": "frame",
       "id": "igj2U",
       "x": -15622,
-      "y": 25299,
+      "y": 25485,
       "name": "Gameplane/Error Banner",
       "reusable": true,
       "width": 400,
@@ -42055,7 +42055,7 @@
       "type": "frame",
       "id": "w4ntSc",
       "x": -15622,
-      "y": 25858,
+      "y": 26202,
       "name": "Gameplane/Loading Card",
       "reusable": true,
       "width": 400,
@@ -42085,7 +42085,7 @@
       "type": "frame",
       "id": "zzx8f",
       "x": -15622,
-      "y": 25404,
+      "y": 25589,
       "name": "Gameplane/Error Card",
       "reusable": true,
       "width": 400,
@@ -42117,7 +42117,7 @@
       "type": "frame",
       "id": "Wj0V4",
       "x": 8200,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — Mod registries",
       "context": "Central Mod registries administration. The banner describes central ownership; navigation includes registered Clusters and Cluster inventory. Exported against the unchanged screenshot scenario.",
       "theme": {
@@ -51443,7 +51443,7 @@
       "type": "frame",
       "id": "C2LQE4",
       "x": 0,
-      "y": 23709,
+      "y": 24259,
       "name": "Screen/Share Link — Up",
       "theme": {
         "semantic": "dark"
@@ -51469,7 +51469,7 @@
       "type": "frame",
       "id": "q31B6w",
       "x": 1640,
-      "y": 23709,
+      "y": 24259,
       "name": "Screen/Share Link — Asleep (can start)",
       "theme": {
         "semantic": "dark"
@@ -51563,7 +51563,7 @@
       "type": "frame",
       "id": "qFLfB",
       "x": 3280,
-      "y": 23709,
+      "y": 24259,
       "name": "Screen/Share Link — Asleep (view only)",
       "theme": {
         "semantic": "dark"
@@ -51642,7 +51642,7 @@
       "type": "frame",
       "id": "EcoGD",
       "x": 4920,
-      "y": 23709,
+      "y": 24259,
       "name": "Screen/Share Link — Starting",
       "theme": {
         "semantic": "dark"
@@ -51754,7 +51754,7 @@
       "type": "frame",
       "id": "epZO2",
       "x": 6560,
-      "y": 23709,
+      "y": 24259,
       "name": "Screen/Share Link — Invalid or expired",
       "theme": {
         "semantic": "dark"
@@ -57369,7 +57369,7 @@
       "type": "frame",
       "id": "nNGDX",
       "x": 16280,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — Authentication (No OIDC mappings)",
       "theme": {
         "semantic": "dark"
@@ -59587,7 +59587,7 @@
       "type": "frame",
       "id": "dxdEi",
       "x": 1640,
-      "y": 17765,
+      "y": 18315,
       "name": "Screen/Cluster Settings — Default storage class",
       "theme": {
         "semantic": "dark"
@@ -59973,7 +59973,7 @@
       "type": "frame",
       "id": "qvQPg",
       "x": -15622,
-      "y": 25991,
+      "y": 26320,
       "name": "Gameplane/Input/Small",
       "reusable": true,
       "width": 250,
@@ -60015,7 +60015,7 @@
       "type": "note",
       "id": "m8wjom",
       "x": 3280,
-      "y": 22988,
+      "y": 23538,
       "name": "Note — Helm admin mapping banner is conditional",
       "width": 640,
       "height": 0,
@@ -60035,7 +60035,7 @@
       "type": "frame",
       "id": "QgW58",
       "x": 17780,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — Authentication (Save rejected)",
       "theme": {
         "semantic": "dark"
@@ -62316,7 +62316,7 @@
       "type": "note",
       "id": "R6iab",
       "x": 17780,
-      "y": 23085,
+      "y": 23635,
       "name": "Note — Role mapping overrides error states",
       "width": 700,
       "height": 0,
@@ -62416,7 +62416,7 @@
       "type": "frame",
       "id": "zqzr4",
       "x": 19280,
-      "y": 21365,
+      "y": 21915,
       "name": "Screen/Admin Settings — Authentication (Admin mapping warning)",
       "theme": {
         "semantic": "dark"
@@ -64638,7 +64638,7 @@
       "type": "note",
       "id": "x71Cb",
       "x": 19280,
-      "y": 23800,
+      "y": 24463,
       "name": "Note — FR-015 confirm step on this surface",
       "width": 640,
       "height": 0,
@@ -86049,7 +86049,7 @@
       "type": "frame",
       "id": "DWztv",
       "x": 1188,
-      "y": 22565,
+      "y": 23115,
       "name": "Screen/Mobile — Servers (Light)",
       "context": "Unified mobile server list. Location and namespace identify every card; location selection is inside the Filter popover. Below-fold cards remain scrollable in the app.",
       "theme": {
@@ -87304,7 +87304,7 @@
       "name": "Gameplane/Dialog/Clone Server",
       "width": 440,
       "x": -17205,
-      "y": 29759,
+      "y": 29821,
       "theme": {},
       "children": [
         {
@@ -87397,7 +87397,7 @@
       "name": "Gameplane/Dialog/Transfer Ownership",
       "width": 440,
       "x": -16565,
-      "y": 29759,
+      "y": 29821,
       "theme": {},
       "children": [
         {
@@ -87483,7 +87483,7 @@
       "ref": "TzRet",
       "name": "Gameplane/Dialog/Wipe World",
       "x": -15825,
-      "y": 29734,
+      "y": 29821,
       "theme": {},
       "descendants": {
         "ocSbw": {
@@ -96994,7 +96994,7 @@
       "type": "frame",
       "id": "QQtUD",
       "x": 8080,
-      "y": 12745,
+      "y": 13295,
       "name": "Screen/Create Server — Step 4 Network (as built)",
       "theme": {
         "semantic": "dark"
@@ -102940,7 +102940,7 @@
       "type": "frame",
       "id": "lhKzN",
       "x": 4920,
-      "y": 12745,
+      "y": 14665,
       "name": "Create Server — Step 4 Network · Tunnel disabled",
       "theme": {
         "semantic": "dark"
@@ -104074,8 +104074,8 @@
     {
       "type": "frame",
       "id": "a7o9C",
-      "x": 4920,
-      "y": 12745,
+      "x": 6560,
+      "y": 14665,
       "name": "Create Server — Step 4 Network · Tunnel enabled, no provider",
       "theme": {
         "semantic": "dark"
@@ -105209,8 +105209,8 @@
     {
       "type": "frame",
       "id": "ZU1BG",
-      "x": 4920,
-      "y": 12745,
+      "x": 8200,
+      "y": 14665,
       "name": "Create Server — Step 4 Network · Tunnel enabled, provider selected",
       "theme": {
         "semantic": "dark"
@@ -106344,8 +106344,8 @@
     {
       "type": "frame",
       "id": "eGbsg",
-      "x": 4920,
-      "y": 12745,
+      "x": 9840,
+      "y": 14665,
       "name": "Create Server — Step 4 Network · Tunnel enabled, complete",
       "theme": {
         "semantic": "dark"
@@ -107480,7 +107480,7 @@
       "type": "frame",
       "id": "nGJE1",
       "x": 4920,
-      "y": 10375,
+      "y": 12095,
       "name": "Server Detail · Settings · Networking · Tunnel disabled",
       "theme": {
         "semantic": "dark"
@@ -108289,8 +108289,8 @@
     {
       "type": "frame",
       "id": "dhPtX",
-      "x": 4920,
-      "y": 10375,
+      "x": 6560,
+      "y": 12095,
       "name": "Server Detail · Settings · Networking · Tunnel initial enable",
       "theme": {
         "semantic": "dark"
@@ -109099,8 +109099,8 @@
     {
       "type": "frame",
       "id": "tSOeI",
-      "x": 4920,
-      "y": 10375,
+      "x": 8200,
+      "y": 12095,
       "name": "Server Detail · Settings · Networking · Provider selected",
       "theme": {
         "semantic": "dark"
@@ -109909,8 +109909,8 @@
     {
       "type": "frame",
       "id": "y3YcQ",
-      "x": 4920,
-      "y": 10375,
+      "x": 9840,
+      "y": 12095,
       "name": "Server Detail · Settings · Networking · Credentials entering",
       "theme": {
         "semantic": "dark"
@@ -110719,8 +110719,8 @@
     {
       "type": "frame",
       "id": "EKJyM",
-      "x": 4920,
-      "y": 10375,
+      "x": 11480,
+      "y": 12095,
       "name": "Server Detail · Settings · Networking · Provider + credentials complete",
       "theme": {
         "semantic": "dark"
@@ -111528,823 +111528,6 @@
     },
     {
       "type": "frame",
-      "id": "goLqZ",
-      "x": -13423,
-      "y": 25506,
-      "name": "State/Server Actions Menu — Owner-only disabled",
-      "theme": {
-        "semantic": "dark"
-      },
-      "clip": true,
-      "width": 520,
-      "height": 220,
-      "fill": "$background/background",
-      "layout": "none",
-      "children": [
-        {
-          "id": "fVnq2",
-          "type": "ref",
-          "ref": "BPEpm",
-          "name": "Menu",
-          "x": 16,
-          "y": 16,
-          "descendants": {
-            "NhChV": {
-              "opacity": 0.5
-            },
-            "V7Slhc": {
-              "opacity": 0.5
-            },
-            "kdfaC": {
-              "opacity": 0.5
-            }
-          }
-        },
-        {
-          "id": "TCrI5",
-          "type": "ref",
-          "ref": "hIoOw",
-          "name": "Hint Tooltip",
-          "x": 244,
-          "y": 61,
-          "descendants": {
-            "rWONa": {
-              "content": "Requires server owner or admin"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "frame",
-      "id": "Gm3OE",
-      "x": 38540,
-      "y": 10375,
-      "name": "Screen/Server Detail — Settings · Danger zone (Owner-only)",
-      "theme": {
-        "semantic": "dark"
-      },
-      "clip": true,
-      "width": 1440,
-      "height": 900,
-      "fill": "$background/background",
-      "children": [
-        {
-          "id": "Q1pnl",
-          "type": "ref",
-          "ref": "kKFX9",
-          "height": "fill_container",
-          "descendants": {
-            "iTbd8": {
-              "fill": "#00000000"
-            },
-            "iTbd8/ghUsw": {
-              "fill": "$foreground/foreground"
-            },
-            "iTbd8/bpSQ7": {
-              "fill": "$foreground/foreground"
-            },
-            "i8Z1B": {
-              "fill": "$accent/soft"
-            },
-            "i8Z1B/Sr2Q5": {
-              "fill": "$accent/soft-foreground"
-            },
-            "i8Z1B/Ra9NK": {
-              "fill": "$accent/soft-foreground"
-            }
-          }
-        },
-        {
-          "type": "frame",
-          "id": "IByYN",
-          "name": "Main",
-          "width": "fill_container",
-          "height": "fill_container",
-          "fill": "$background/background",
-          "layout": "vertical",
-          "children": [
-            {
-              "id": "SuhPD",
-              "type": "ref",
-              "ref": "gu5WY",
-              "width": "fill_container",
-              "descendants": {
-                "Gl7AY": {
-                  "content": "mc-survival"
-                }
-              }
-            },
-            {
-              "type": "frame",
-              "id": "wAXLR",
-              "name": "Body",
-              "width": "fill_container",
-              "height": "fill_container",
-              "fill": "$background/background",
-              "layout": "vertical",
-              "gap": 24,
-              "padding": 24,
-              "children": [
-                {
-                  "id": "lThno",
-                  "type": "ref",
-                  "ref": "S4k0x",
-                  "name": "Detail Header",
-                  "width": "fill_container"
-                },
-                {
-                  "id": "TdQ1T",
-                  "type": "ref",
-                  "ref": "I9kvlZ",
-                  "name": "Tabs Bar",
-                  "width": "fill_container",
-                  "padding": [
-                    0,
-                    0,
-                    0,
-                    24
-                  ],
-                  "descendants": {
-                    "Wp6q1": {
-                      "fill": "#00000000"
-                    },
-                    "Wp6q1/YUR8N": {
-                      "fill": "$muted"
-                    },
-                    "Y4QES": {
-                      "fill": "$segment"
-                    },
-                    "Y4QES/VcxMI": {
-                      "fill": "$foreground/segment"
-                    }
-                  }
-                },
-                {
-                  "type": "frame",
-                  "id": "I9jKHZ",
-                  "name": "Settings Content",
-                  "width": "fill_container",
-                  "height": "fill_container",
-                  "children": [
-                    {
-                      "id": "Kdl1Y",
-                      "type": "ref",
-                      "ref": "EV8mp",
-                      "name": "Settings Sub Nav",
-                      "width": 224,
-                      "height": "fill_container",
-                      "descendants": {
-                        "axMXL": {
-                          "fill": "#00000000"
-                        },
-                        "QrhqW": {
-                          "fill": "#00000000"
-                        },
-                        "WLobW": {
-                          "fill": "$surface/secondary"
-                        }
-                      }
-                    },
-                    {
-                      "type": "frame",
-                      "id": "YYLhj",
-                      "name": "Settings Panel Wrap",
-                      "width": "fill_container",
-                      "height": "fill_container",
-                      "layout": "vertical",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "a476dW",
-                          "name": "Settings Form",
-                          "width": "fill_container",
-                          "height": "fill_container",
-                          "layout": "vertical",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "JGkx7",
-                              "name": "Form Body",
-                              "width": "fill_container",
-                              "height": "fill_container",
-                              "layout": "vertical",
-                              "gap": 20,
-                              "padding": 24,
-                              "children": [
-                                {
-                                  "id": "b8LAo",
-                                  "type": "ref",
-                                  "ref": "CEGPG",
-                                  "name": "Owner-only Notice",
-                                  "width": "fill_container",
-                                  "descendants": {
-                                    "upZAA": {
-                                      "icon": "lock"
-                                    },
-                                    "nJnfr": {
-                                      "content": "Owner-only actions"
-                                    },
-                                    "zD5GP": {
-                                      "content": "Only the server owner or an admin can wipe, transfer or delete this server."
-                                    }
-                                  }
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "arShi",
-                                  "name": "Wipe World Card",
-                                  "width": "fill_container",
-                                  "fill": "$surface/surface",
-                                  "cornerRadius": "$radius/3xl",
-                                  "stroke": "$border/border",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "#0000000A",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 2
-                                    },
-                                    "blur": 4
-                                  },
-                                  "layout": "vertical",
-                                  "gap": 8,
-                                  "padding": 16,
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "hfpdo",
-                                      "fill": "$foreground/foreground",
-                                      "content": "Wipe world data",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 16,
-                                      "fontWeight": "500"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "NoLfs",
-                                      "fill": "$muted",
-                                      "textGrowth": "fixed-width",
-                                      "width": "fill_container",
-                                      "content": "Deletes everything on the data volume and restarts the server on a fresh world. Take a backup first.",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 14,
-                                      "fontWeight": "normal"
-                                    },
-                                    {
-                                      "id": "cSdLU",
-                                      "type": "ref",
-                                      "ref": "J09iP",
-                                      "opacity": 0.5,
-                                      "descendants": {
-                                        "eWkIT/r4VbAi": {
-                                          "content": "Wipe world…"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "AKMNY",
-                                  "name": "Transfer Ownership Card",
-                                  "width": "fill_container",
-                                  "fill": "$surface/surface",
-                                  "cornerRadius": "$radius/3xl",
-                                  "stroke": "$border/border",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "#0000000A",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 2
-                                    },
-                                    "blur": 4
-                                  },
-                                  "layout": "vertical",
-                                  "gap": 8,
-                                  "padding": 16,
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "FoJue",
-                                      "fill": "$foreground/foreground",
-                                      "content": "Transfer ownership",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 16,
-                                      "fontWeight": "500"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "zDfTs",
-                                      "fill": "$muted",
-                                      "textGrowth": "fixed-width",
-                                      "width": "fill_container",
-                                      "content": "Hand this server to another user. You keep access only if you stay a collaborator.",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 14,
-                                      "fontWeight": "normal"
-                                    },
-                                    {
-                                      "id": "aSPK4",
-                                      "type": "ref",
-                                      "ref": "J09iP",
-                                      "opacity": 0.5,
-                                      "descendants": {
-                                        "eWkIT/r4VbAi": {
-                                          "content": "Transfer…"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "lvJm1",
-                                  "name": "Delete Server Card",
-                                  "width": "fill_container",
-                                  "fill": "$surface/surface",
-                                  "cornerRadius": "$radius/3xl",
-                                  "stroke": "$danger/danger",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "#0000000A",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 2
-                                    },
-                                    "blur": 4
-                                  },
-                                  "layout": "vertical",
-                                  "gap": 8,
-                                  "padding": 16,
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "cutJU",
-                                      "fill": "$foreground/foreground",
-                                      "content": "Delete server",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 16,
-                                      "fontWeight": "500"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "ASOdP",
-                                      "fill": "$muted",
-                                      "textGrowth": "fixed-width",
-                                      "width": "fill_container",
-                                      "content": "Removes the GameServer and its persistent volume. This cannot be undone.",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 14,
-                                      "fontWeight": "normal"
-                                    },
-                                    {
-                                      "id": "bhXeq",
-                                      "type": "ref",
-                                      "ref": "XoX7L",
-                                      "opacity": 0.5,
-                                      "descendants": {
-                                        "C8QRt/t8p1M2": {
-                                          "content": "Delete"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "i4zGit",
-                              "name": "Form Footer",
-                              "width": "fill_container",
-                              "stroke": "$border/border",
-                              "strokeWidth": {
-                                "top": 1
-                              },
-                              "strokeAlignment": "inner",
-                              "strokeLinejoin": "round",
-                              "gap": 12,
-                              "padding": [
-                                12,
-                                24
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "id": "Iicon",
-                                  "type": "ref",
-                                  "ref": "J09iP",
-                                  "name": "Btn Discard",
-                                  "descendants": {
-                                    "eWkIT/WtPjS": {
-                                      "icon": "plus"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "iVKw6",
-                                  "type": "ref",
-                                  "ref": "z9ShNE",
-                                  "name": "Btn Save Changes",
-                                  "descendants": {
-                                    "nWTJb": {
-                                      "enabled": false
-                                    },
-                                    "IVgQ8/U1xvSo": {
-                                      "content": "Save changes"
-                                    }
-                                  }
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "frame",
-      "id": "BB2qO",
-      "x": 40080,
-      "y": 10375,
-      "name": "Screen/Server Detail — Settings · Access (Read-only)",
-      "theme": {
-        "semantic": "dark"
-      },
-      "clip": true,
-      "width": 1440,
-      "height": 900,
-      "fill": "$background/background",
-      "children": [
-        {
-          "id": "pdtXC",
-          "type": "ref",
-          "ref": "kKFX9",
-          "height": "fill_container",
-          "descendants": {
-            "iTbd8": {
-              "fill": "#00000000"
-            },
-            "iTbd8/ghUsw": {
-              "fill": "$foreground/foreground"
-            },
-            "iTbd8/bpSQ7": {
-              "fill": "$foreground/foreground"
-            },
-            "i8Z1B": {
-              "fill": "$accent/soft"
-            },
-            "i8Z1B/Sr2Q5": {
-              "fill": "$accent/soft-foreground"
-            },
-            "i8Z1B/Ra9NK": {
-              "fill": "$accent/soft-foreground"
-            }
-          }
-        },
-        {
-          "type": "frame",
-          "id": "A1i65",
-          "name": "Main",
-          "width": "fill_container",
-          "height": "fill_container",
-          "fill": "$background/background",
-          "layout": "vertical",
-          "children": [
-            {
-              "id": "bq77y",
-              "type": "ref",
-              "ref": "gu5WY",
-              "width": "fill_container",
-              "descendants": {
-                "Gl7AY": {
-                  "content": "mc-survival"
-                }
-              }
-            },
-            {
-              "type": "frame",
-              "id": "D5BTe",
-              "name": "Body",
-              "width": "fill_container",
-              "height": "fill_container",
-              "fill": "$background/background",
-              "layout": "vertical",
-              "gap": 24,
-              "padding": 24,
-              "children": [
-                {
-                  "id": "rLxjQ",
-                  "type": "ref",
-                  "ref": "S4k0x",
-                  "name": "Detail Header",
-                  "width": "fill_container"
-                },
-                {
-                  "id": "LRd5n",
-                  "type": "ref",
-                  "ref": "I9kvlZ",
-                  "name": "Tabs Bar",
-                  "width": "fill_container",
-                  "padding": [
-                    0,
-                    0,
-                    0,
-                    24
-                  ],
-                  "descendants": {
-                    "Wp6q1": {
-                      "fill": "#00000000"
-                    },
-                    "Wp6q1/YUR8N": {
-                      "fill": "$muted"
-                    },
-                    "Y4QES": {
-                      "fill": "$segment"
-                    },
-                    "Y4QES/VcxMI": {
-                      "fill": "$foreground/segment"
-                    }
-                  }
-                },
-                {
-                  "type": "frame",
-                  "id": "ePAMs",
-                  "name": "Settings Content",
-                  "width": "fill_container",
-                  "height": "fill_container",
-                  "children": [
-                    {
-                      "id": "Ma8zp",
-                      "type": "ref",
-                      "ref": "EV8mp",
-                      "name": "Settings Sub Nav",
-                      "width": 224,
-                      "height": "fill_container",
-                      "descendants": {
-                        "axMXL": {
-                          "fill": "#00000000"
-                        },
-                        "QrhqW": {
-                          "fill": "#00000000"
-                        },
-                        "LktID": {
-                          "fill": "$surface/secondary"
-                        },
-                        "paOZA": {
-                          "fill": "$foreground/foreground"
-                        }
-                      }
-                    },
-                    {
-                      "type": "frame",
-                      "id": "gi5Hm",
-                      "name": "Settings Panel Wrap",
-                      "width": "fill_container",
-                      "height": "fill_container",
-                      "layout": "vertical",
-                      "children": [
-                        {
-                          "type": "frame",
-                          "id": "esNZo",
-                          "name": "Settings Form",
-                          "width": "fill_container",
-                          "height": "fill_container",
-                          "layout": "vertical",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "PtnRd",
-                              "name": "Form Body",
-                              "width": "fill_container",
-                              "height": "fill_container",
-                              "layout": "vertical",
-                              "gap": 20,
-                              "padding": 24,
-                              "children": [
-                                {
-                                  "type": "frame",
-                                  "id": "WDNGq",
-                                  "name": "Owner Card",
-                                  "width": "fill_container",
-                                  "fill": "$surface/surface",
-                                  "cornerRadius": "$radius/3xl",
-                                  "stroke": "$border/border",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "#0000000A",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 2
-                                    },
-                                    "blur": 4
-                                  },
-                                  "layout": "vertical",
-                                  "gap": 8,
-                                  "padding": 16,
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "Y61xC",
-                                      "fill": "$foreground/foreground",
-                                      "content": "Owner",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 16,
-                                      "fontWeight": "500"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "lvQpK",
-                                      "fill": "$muted",
-                                      "content": "admin",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 14,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "KJiOi",
-                                  "name": "Collaborators Card",
-                                  "width": "fill_container",
-                                  "fill": "$surface/surface",
-                                  "cornerRadius": "$radius/3xl",
-                                  "stroke": "$border/border",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "effect": {
-                                    "type": "shadow",
-                                    "shadowType": "outer",
-                                    "color": "#0000000A",
-                                    "offset": {
-                                      "x": 0,
-                                      "y": 2
-                                    },
-                                    "blur": 4
-                                  },
-                                  "layout": "vertical",
-                                  "gap": 12,
-                                  "padding": 16,
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "E1MKBp",
-                                      "fill": "$foreground/foreground",
-                                      "content": "Collaborators",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 16,
-                                      "fontWeight": "500"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "KGffH",
-                                      "fill": "$muted",
-                                      "textGrowth": "fixed-width",
-                                      "width": "fill_container",
-                                      "content": "Collaborators get full control of this server (console, files, settings). They can't transfer ownership or edit this list.",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 14,
-                                      "fontWeight": "normal"
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "KBhyn",
-                                      "fill": "$muted",
-                                      "content": "None yet",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 14,
-                                      "fontWeight": "normal"
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "R4imf",
-                                      "x": 16,
-                                      "y": 109,
-                                      "name": "add row",
-                                      "enabled": false,
-                                      "width": "fill_container(828)",
-                                      "gap": 8,
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "id": "V0qwOd",
-                                          "type": "ref",
-                                          "ref": "D0cDM",
-                                          "name": "Input",
-                                          "width": "fill_container",
-                                          "descendants": {
-                                            "PJERm": {
-                                              "content": "Add collaborator by username…",
-                                              "fill": "$field/placeholder"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "D4U4Xm",
-                                          "type": "ref",
-                                          "ref": "tpKRk"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "XRMXL",
-                                      "name": "Read-only Note",
-                                      "fill": "$muted",
-                                      "textGrowth": "fixed-width",
-                                      "width": "fill_container",
-                                      "content": "Only the server owner or an admin can change collaborators.",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 14,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "ig7Ra",
-                              "name": "Form Footer",
-                              "width": "fill_container",
-                              "stroke": "$border/border",
-                              "strokeWidth": {
-                                "top": 1
-                              },
-                              "strokeAlignment": "inner",
-                              "strokeLinejoin": "round",
-                              "gap": 12,
-                              "padding": [
-                                12,
-                                24
-                              ],
-                              "justifyContent": "end",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "id": "aV33g",
-                                  "type": "ref",
-                                  "ref": "J09iP",
-                                  "name": "Btn Discard",
-                                  "descendants": {
-                                    "eWkIT/WtPjS": {
-                                      "icon": "plus"
-                                    }
-                                  }
-                                },
-                                {
-                                  "id": "yQiu8",
-                                  "type": "ref",
-                                  "ref": "z9ShNE",
-                                  "name": "Btn Save Changes",
-                                  "descendants": {
-                                    "nWTJb": {
-                                      "enabled": false
-                                    },
-                                    "IVgQ8/U1xvSo": {
-                                      "content": "Save changes"
-                                    }
-                                  }
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "frame",
       "id": "akr4I",
       "x": 19680,
       "y": 11375,
@@ -112599,7 +111782,7 @@
     {
       "type": "frame",
       "id": "hlwx3",
-      "x": -12843,
+      "x": -13423,
       "y": 25506,
       "name": "State/Server Actions Menu — Owner-only disabled",
       "theme": {
@@ -112648,7 +111831,7 @@
     {
       "type": "frame",
       "id": "IMSD5",
-      "x": 41620,
+      "x": 38540,
       "y": 10375,
       "name": "Screen/Server Detail — Settings · Danger zone (Owner-only)",
       "theme": {
@@ -113054,7 +112237,7 @@
     {
       "type": "frame",
       "id": "gWqMD",
-      "x": 43160,
+      "x": 40080,
       "y": 10375,
       "name": "Screen/Server Detail — Settings · Access (Read-only)",
       "theme": {
@@ -113417,7 +112600,7 @@
       "type": "frame",
       "id": "rCQaM",
       "x": -15622,
-      "y": 26083,
+      "y": 26412,
       "name": "Gameplane/Backups Filter Popover",
       "context": "Backups and Restores filter drafts: Location, Server, Phase. Schedules hides Phase. Apply commits; Clear resets drafts.",
       "reusable": true,
@@ -114736,7 +113919,7 @@
       "type": "frame",
       "id": "pnAbF",
       "x": 4820,
-      "y": 16315,
+      "y": 16865,
       "name": "Screen/Backups — Filters open",
       "context": "Implemented at 8e08a60f. Filter fields are drafts; Apply commits, Clear resets drafts, dismissal discards edits. Server choices retain location and namespace.",
       "theme": {
@@ -115024,7 +114207,7 @@
       "type": "frame",
       "id": "Cb3eC",
       "x": 6360,
-      "y": 16315,
+      "y": 16865,
       "name": "Screen/Backups — Schedules filters open",
       "context": "Implemented at 8e08a60f. Filter fields are drafts; Apply commits, Clear resets drafts, dismissal discards edits. Server choices retain location and namespace.",
       "theme": {
@@ -116111,7 +115294,7 @@
       "type": "frame",
       "id": "fbBqA",
       "x": 7900,
-      "y": 16315,
+      "y": 16865,
       "name": "Screen/Backups — Restores filters open",
       "context": "Implemented at 8e08a60f. Filter fields are drafts; Apply commits, Clear resets drafts, dismissal discards edits. Server choices retain location and namespace.",
       "theme": {
@@ -118360,7 +117543,7 @@
       "type": "frame",
       "id": "SUtGZ",
       "x": 1678,
-      "y": 22565,
+      "y": 23115,
       "name": "Screen/Mobile — Remote server Capture",
       "context": "375px viewport. Server actions wrap. The tab navigation is independently scrolled to Capture; the page itself never overflows horizontally.",
       "theme": {
@@ -118662,7 +117845,7 @@
       "type": "frame",
       "id": "C5Aoe",
       "x": 2153,
-      "y": 22565,
+      "y": 23115,
       "name": "Screen/Mobile — Servers filters open",
       "theme": {
         "semantic": "dark"
@@ -119995,7 +119178,7 @@
       "type": "frame",
       "id": "NKiqf",
       "x": 2628,
-      "y": 22565,
+      "y": 23115,
       "name": "Screen/Mobile — Backups filters open",
       "theme": {
         "semantic": "dark"
@@ -120148,7 +119331,7 @@
       "type": "frame",
       "id": "iYUWc",
       "x": 3180,
-      "y": 17765,
+      "y": 18315,
       "name": "Screen/Clusters — Registered locations",
       "theme": {
         "semantic": "dark"
