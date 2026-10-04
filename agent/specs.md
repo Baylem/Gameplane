@@ -12,6 +12,10 @@ The agent is a per-pod HTTP/HTTPS sidecar that runs inside every game pod to exp
 - **Request authentication**: Verify incoming requests via mTLS (preferred) or shared-secret bearer token.
 - **Console & RCON**: Duplex WebSocket forwarding user commands to the game via RCON and echoing responses; supports Valve/Source, Telnet, WebSocket, BattlEye, Satisfactory, and Palworld protocols.
 - **File I/O**: List, read, download, upload, write, mkdir, delete within the `/data` volume; reject path traversal and symlink escape.
+
+  File uploads and downloads have no router-level total-duration timeout. The
+  remaining file operations retain a 30-second timeout. Authentication, body
+  size limits and path checks apply to transfers as well as short operations.
 - **Logs**: Tail the game container's log file over WebSocket (text frames per line); supports streaming from start or end.
 - **Players**: Query online count, names, ban lists, and moderation actions (kick, ban, unban) via RCON; capabilities advertise per-game support.
 - **Quiesce**: Pause auto-saves and flush in-flight state before snapshots; run module-declared sequences over RCON and handle games that don't support it gracefully.
@@ -95,6 +99,7 @@ Mode: In-pod HTTP/HTTPS sidecar (runs as a container sidecar or as a pod share-p
 | `--tls-key` | `` | — | Server TLS key (PEM) |
 | `--tls-client-ca` | `` | — | CA bundle that signs API client certs (required if `--tls-cert` is set) |
 | `--api-token-file` | `` | — | Fallback shared-secret auth (used when TLS is not configured); file contents become the bearer token |
+| `--server-uid` | `` | `GAMEPLANE_SERVER_UID` | Immutable owning GameServer UID; required for versioned gateway routes |
 | `--server-name` | `` | `GAMEPLANE_SERVER_NAME` | Owning GameServer name (for status patches) |
 | `--template` | `` | `GAMEPLANE_TEMPLATE` | GameTemplate name |
 | `--game` | `` | `GAMEPLANE_GAME` | Game identifier (e.g., `minecraft`, `rust`, `satisfactory`) |
@@ -184,6 +189,7 @@ All endpoints on the `--addr` control mux, except `/healthz`, return `401 Unauth
 - **Resource usage is in-pod**: The `usage` package reads from `/proc` or cgroups; no external metrics pipeline required. Cgroup mode is a fallback for older clusters; proc mode (default in production) requires the operator to set `ShareProcessNamespace: true`.
 - **Module capabilities drive behavior**: Every game-specific handler (players, quiesce, lifecycle, status, actions) reads its config from `--capabilities` (JSON unmarshaled into `caps.Spec`). New games require no agent code change.
 - **RCON connection errors are graceful**: A lost RCON connection does not crash the agent. `console`, `players`, `quiesce`, and `lifecycle` handlers catch connection errors and return appropriate HTTP status (e.g., `502 Bad Gateway`).
+- **Source RCON sends complete frames**: Each AUTH or command frame is submitted in one socket write, with its existing byte-size limit, request ID, type, body, and two NUL terminators preserved. This avoids separate header-only writes rejected by vanilla Minecraft's RCON reader. A short write is an error and drops the connection without replaying the command; response grace and healthy connection reuse remain unchanged.
 - **Log streams are tail-only**: The `logs` package does not support random-access reads. It streams from the current end (live mode) or from file start (backlog mode); clients must handle partial output and reconnection.
 
 ## Dependencies
@@ -199,12 +205,12 @@ All endpoints on the `--addr` control mux, except `/healthz`, return `401 Unauth
 |--------|---------|---------|
 | `github.com/go-chi/chi/v5` | v5.3.2 | HTTP router |
 | `github.com/coder/websocket` | v1.8.15 | WebSocket library for console, logs, player queries |
-| `k8s.io/apimachinery` | v0.37.0 | Kubernetes types for status patches |
-| `k8s.io/client-go` | v0.37.0 | Kubernetes client for heartbeat (GameServer status patches) |
+| `k8s.io/apimachinery` | v0.37.1 | Kubernetes types for status patches |
+| `k8s.io/client-go` | v0.37.1 | Kubernetes client for heartbeat (GameServer status patches) |
 | `github.com/prometheus/client_golang` | v1.24.1 | Prometheus metrics (`/metrics` endpoint) |
 | `golang.org/x/sys` | v0.48.0 | System-level utilities (used by client-go) |
 
-The agent, operator, and api modules all use `k8s.io/apimachinery`/`k8s.io/client-go` v0.37.0 — there is no intentional version skew between them.
+The agent and operator modules use `k8s.io/apimachinery`/`k8s.io/client-go` v0.37.1 and the api module v0.37.0; each module resolves its own version, so patch versions can drift between them as Dependabot bumps one module at a time.
 
 ## Data & persistence
 
@@ -246,3 +252,19 @@ The agent, operator, and api modules all use `k8s.io/apimachinery`/`k8s.io/clien
 - **`docs/security.md`** — Auth model, threat boundaries, pod security defaults, and the module-trust relationship.
 - **`go.mod`** (agent) — Dependency versions and workspace references.
 
+
+## Versioned gateway targets
+
+The optional private cluster gateway uses `/v1/targets/{uid}` followed by an
+existing protected agent route. These endpoints apply the same authentication,
+input validation, and operation handlers as local routes, then reject any UID
+other than the immutable `GAMEPLANE_SERVER_UID` injected by the operator.
+An empty configured UID also fails closed. Legacy unprefixed routes remain
+available to local API/operator callers during upgrades.
+
+A gateway must never retry a failed versioned request through the legacy path:
+older agents deliberately return 404. This binds the final network hop to the
+actual server incarnation even if the name-based agent Service changes between
+the gateway's Kubernetes lookup and connection. Existing operator-owned game
+Pod templates gain the UID environment variable on reconciliation, which can
+roll existing game workloads during an operator upgrade.
