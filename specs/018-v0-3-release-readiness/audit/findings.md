@@ -212,6 +212,13 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-261 | Capture files deleted through the API keep counting against the sidecar volume budget until the pod restarts | capture-sidecar, api | review:#483 | S3 | fixed-unverified | #487 | | follow-up to F-187 (#483) |
 | F-262 | playit tunnel NetworkPolicy adds no egress ports although its comment says all ports are permitted | operator | review:#468 | S3 | fixed-unverified | #488 | | |
 | F-263 | Servers page lists only `gameplane-games`; servers in extra namespaces are hidden unless the viewer owns or collaborates on them | web, api | review:OD-021 item 14 | S3 | fixed-unverified | #498 | | blocks procedures/web.md servers-filter-by-namespace |
+| F-264 | Dependabot never bumps the action pins inside `.github/actions/`, and they already trail the workflows | .github/actions/ | review:.github/actions | S3 | open | | | |
+| F-265 | docker-bake.hcl header names `e2e-images` as its caller; bake runs in `build-e2e-images` | .github/actions/ | review:.github/actions | S4 | open | | | |
+| F-266 | steam-install.sh reports a failed update as success once the game is installed, and never retries it | images/ | review:images | S3 | open | | | |
+| F-267 | images/README.md Dockerfile template runs `chmod` as the non-root user and fails to build | images/ | review:images | S3 | open | | | |
+| F-268 | Documented local `docker run -v game-data:/data` gives a root-owned volume the game user can't write | images/ | review:images | S4 | open | | | |
+| F-269 | images/README.md promises exponential backoff; steam-install.sh uses a fixed delay | images/ | review:images | S4 | open | | | |
+| F-270 | images/README.md trigger list omits `pull_request`, and its manual `docker build -f Dockerfile` commands fail from the repo root | images/ | review:images | S4 | open | | | |
 
 ## Details
 
@@ -3024,3 +3031,97 @@ elsewhere in the operator, but no reconciler ever sets either one.
 **Actual:** Servers outside `gameplane-games` are hidden from the main list, and the namespace filter cannot select another namespace.
 
 **Evidence:** code reading during the OD-021 item 14 procedure fix (2026-09-27); `procedures/web.md` `servers-filter-by-namespace` is blocked on it.
+
+### F-264
+
+**Repro / observation**
+1. `grep -n 'package-ecosystem: "github-actions"' -A2 .github/dependabot.yml` gives one entry, `directory: "/"`.
+2. For that ecosystem, Dependabot treats `/` as `.github/workflows/` plus a root `action.yml`/`action.yaml`. Composite actions in subdirectories are scanned only when they are listed (`directories:` or one entry per path).
+3. `grep -rn 'setup-buildx-action\|upload-artifact' .github/` shows the drift. `build-e2e-images/action.yml:18` has `setup-buildx-action@d7f5e7f5… # v4.1.0`, and the workflows have `@f87e5991… # v4.4.1`. `build-e2e-images/action.yml:59` has `upload-artifact@bbbca2dd… # v7.0.0`, and the workflows have `@043fb46d… # v7.0.1`.
+4. The workflow pins moved through Dependabot group bumps (for example `54b7a0d0`), and the composite-action pins did not.
+
+**Expected:** Spec 008 US3 (`spec.md:55-59`) puts GitHub Actions under Dependabot because "stale actions expose the project to known CVEs", and SC-003 asks for no repository component to be left out. Every `uses:` in `.github/actions/*/action.yml` should get the same version-update PRs as the workflows.
+
+**Actual:** The pins in the four composite actions are never bumped, and they already trail the workflows.
+
+**Evidence:** [evidence/review-github-actions/verification.md#c-github-actions-01](evidence/review-github-actions/verification.md#c-github-actions-01)
+
+### F-265
+
+**Repro / observation**
+1. Read `docker-bake.hcl:1`: "Bake definition for the e2e images (used by .github/actions/e2e-images)."
+2. `grep -rn 'docker-bake.hcl\|bake-action' .github/` finds the bake calls only in `build-e2e-images/action.yml`.
+3. `e2e-images/action.yml` has no bake step. It runs `download-artifact` and `docker load`.
+
+**Expected:** The header names `.github/actions/build-e2e-images`.
+
+**Actual:** It names the loader action, so a reader looking for the builder opens the wrong file.
+
+**Evidence:** [evidence/review-github-actions/verification.md#c-github-actions-06](evidence/review-github-actions/verification.md#c-github-actions-06)
+
+### F-266
+
+**Repro / observation**
+1. Start a pod once so the game installs, and `/data/NuclearOptionServer.x86_64` exists on the volume.
+2. Restart it with the default `UPDATE_ON_BOOT=true`. `entrypoint.sh:32-33` passes `STEAM_SKIP_IF_INSTALLED=false`, so `steam-install.sh:47` doesn't skip.
+3. Attempt 1 runs steamcmd. Suppose it fails partway (a CDN error, or the volume fills up) and exits non-zero. `:83-87` stores `steamcmd_exit`, which nothing reads unless the last attempt fails.
+4. `:90-92` finds the sentinel left by the earlier install, prints "success — sentinel file … found" and exits 0. Attempts 2 and 3 never run, and the server starts on the old or partly updated files.
+
+**Expected:** `README.md:110-112` says the script verifies success and retries on transient failure. When the sentinel existed before the run, a non-zero steamcmd exit should count as a failed attempt.
+
+**Actual:** After the first install the sentinel check is always true, so update failures are reported as success and are never retried.
+
+**Evidence:** [evidence/review-images/verification.md#c-images-01](evidence/review-images/verification.md#c-images-01)
+
+### F-267
+
+**Repro / observation**
+1. Follow "Adding a new game" (`README.md:37-48`) and copy the Dockerfile template.
+2. `FROM ${STEAMCMD_BASE_IMAGE}` inherits `USER gameserver:gameserver` from the base (`steamcmd/Dockerfile:117`).
+3. `COPY entrypoint.sh /entrypoint.sh` creates the file owned by `root:root`.
+4. `RUN chmod +x /entrypoint.sh` runs as `gameserver`. Only the owner or root can `chmod`, so it fails with `Operation not permitted`, and `docker build` stops.
+
+**Expected:** The template builds. For example `COPY --chmod=0755 entrypoint.sh /entrypoint.sh`, as `nuclear-option/Dockerfile:27` does.
+
+**Actual:** The documented template fails to build on top of the documented base.
+
+**Evidence:** [evidence/review-images/verification.md#c-images-02](evidence/review-images/verification.md#c-images-02)
+
+### F-268
+
+**Repro / observation**
+1. Build both images as documented, then run `docker run -it -v game-data:/data gameplane-nuclear-option:latest` with a new named volume.
+2. `/data` doesn't exist in the image, so Docker creates the mount point and the volume root is `root:root 0755`.
+3. The entrypoint runs as UID 10000 (`steamcmd/Dockerfile:117`). `mkdir -p /data` (`steam-install.sh:53`) succeeds, but steamcmd can't write the install into `/data`. Every attempt leaves no sentinel, and the script exits 1 after three tries.
+4. In Kubernetes, `fsGroup: 10000` (`README.md:157`) makes the PVC group-writable, so the problem doesn't show there.
+
+**Expected:** The documented local run works. For example, the base creates `/data` owned by `gameserver` (so Docker seeds a new named volume with that ownership), or the README says to pre-create the volume with the right owner.
+
+**Actual:** The documented local `docker run` fails to install the game.
+
+**Evidence:** [evidence/review-images/verification.md#c-images-03](evidence/review-images/verification.md#c-images-03)
+
+### F-269
+
+**Repro / observation**
+1. Read `README.md:111`: "up to `STEAM_RETRY_COUNT` times (default 3) with exponential backoff."
+2. Read `steam-install.sh:103-104`: `sleep "$STEAM_RETRY_DELAY"`. The delay is the same fixed value (default 5 s, `:28`) between every pair of attempts.
+
+**Expected:** The README describes a fixed delay, as its own variable table does (`:126`), or the script implements backoff.
+
+**Actual:** The README promises exponential backoff, and the script uses a fixed delay.
+
+**Evidence:** [evidence/review-images/verification.md#c-images-04](evidence/review-images/verification.md#c-images-04)
+
+### F-270
+
+**Repro / observation**
+1. Read `images.yaml:3-14`. The triggers are `workflow_dispatch`, `pull_request` on `images/**` and the workflow file, and `push` to `master` on the same paths.
+2. Read `README.md:222-226`. The list has `workflow_dispatch` and two `push` lines, with no `pull_request` and no `master` limit.
+3. From the repo root, run `docker build -t gameplane-steamcmd-base:latest -f Dockerfile images/common/steamcmd` (`README.md:190`). Docker resolves `-f Dockerfile` against the current directory, there is no `./Dockerfile`, and the build fails before it starts. `:193` has the same form.
+
+**Expected:** The trigger list matches `images.yaml`. The manual commands either drop `-f` (the context's `Dockerfile` is the default) or pass `-f images/common/steamcmd/Dockerfile`.
+
+**Actual:** The list leaves out the PR build, and the copy-paste build commands fail from the repo root.
+
+**Evidence:** [evidence/review-images/verification.md#c-images-07](evidence/review-images/verification.md#c-images-07)

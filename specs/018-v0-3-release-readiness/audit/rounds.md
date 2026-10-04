@@ -40,3 +40,50 @@ Pre-RC round: component reviews, inventory enumeration and the known-bug import.
 | Name | Kind | Created by | Round | Removed |
 |------|------|------------|-------|---------|
 | audit018-admin | User | bootstrap-admin cmd | rc.0 | pending |
+
+## rc.1
+
+Release candidate round that never became installable. The tag was pushed, but the release run was cancelled before the operator image, the chart and the GitHub release were published. No rows were run against rc.1; it is superseded by rc.2 (RC-TAG-2 in [OPEN-DECISIONS.md](../OPEN-DECISIONS.md)).
+
+- **Tag**: `v0.3.0-rc.1`, annotated and unsigned (OD-013), tag object `7d9c1653b4bb5ba0dc5454a3ad6cc4954e9f895f`, tagger date 2026-09-24T19:52:15Z, pointing at commit `c44cb1798a996ea834a86ff65b9e20abab3c401d`. Approval: RC-TAG-1 (approved and tagged 2026-09-24).
+- **Helm overrides vs baseline**: none (never deployed).
+- **DB snapshot location (off-git)**: none (never deployed).
+- **Rows run**: 0
+- **New findings**: [F-257](findings.md) (S2, fixed by #435, merged 2026-09-24T22:45:26Z)
+- **Cleanup**: nothing was created on kubelab for this round.
+
+### Release run
+
+`release.yaml` run [36051057887](https://github.com/ValgulNecron/Gameplane/actions/runs/36051057887), event `push`, head `c44cb1798a996ea834a86ff65b9e20abab3c401d`. Conclusion: **cancelled**. Attempt 1 (started 2026-09-24T19:52:19Z) was cancelled at 20:22:52Z; attempt 2 (re-run of the failed jobs) was cancelled the same way at 20:54:00Z. No other `release.yaml` run exists for this tag.
+
+| Job | Conclusion |
+|-----|------------|
+| build & push images: agent, api, audit-syslog-bridge, capture-sidecar, mcp-server, sentinel, telemetry-receiver, web | success |
+| build & push images: tunnel-frp, tunnel-playit, tunnel-tailscale | success |
+| build & push images: operator | cancelled |
+| push & sign module bundles | success |
+| package Helm chart | skipped |
+| publish GitHub release | skipped |
+
+### Published vs not published
+
+- Published (job success; per-tag presence in GHCR and `cosign verify --key cosign.pub` not checked, see below): every component image except the operator, and the module bundles.
+- Not published: the `operator` image `v0.3.0-rc.1`; chart `oci://ghcr.io/valgulnecron/charts/gameplane:0.3.0-rc.1` (packaging job skipped, `needs: images`); the GitHub release (`gh api releases/tags/v0.3.0-rc.1` returns 404; the newest release is `v0.2.0-beta.8`).
+- Because the chart and the GitHub release do not exist, the prerelease-flag and chart-signature checks of contracts/rc-deploy.md §1 are moot for rc.1.
+
+### Deviation
+
+F-257: the multi-arch operator image build exceeds the job's `timeout-minutes: 30` under QEMU emulation, so a tag push cannot complete. Fixed by #435 (cross-compile Go images). Whether the fix works end to end is verified by the rc.2 release run, not by rc.1.
+
+### Verdict
+
+rc.1 is not installable (no operator image, no chart) and is not deployed. It is superseded by rc.2 (RC-TAG-2). The `v0.3.0-rc.1` tag stays in place; do not move or reuse it.
+
+### Not checked in this record
+
+- `cosign verify --key cosign.pub` on the images that did build: the cloud session has no cosign and the GitHub REST API does not list GHCR tags for this repository.
+- That no `0.3` image tag was created or moved: not checkable through the REST API here.
+
+### Test resources
+
+None created.
