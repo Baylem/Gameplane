@@ -261,9 +261,18 @@ func (r *GameServerReconciler) reconcileStatus(
 	if tunnelPlan.wantTunnel && len(tunnelPlan.endpoints) > 0 {
 		gs.Status.Endpoints = append(tunnelPlan.endpoints, gs.Status.Endpoints...)
 	}
-	if phase == gameplanev1alpha1.GameServerPhaseRunning && gs.Status.StartedAt == nil {
-		now := metav1.Now()
-		gs.Status.StartedAt = &now
+	if phase == gameplanev1alpha1.GameServerPhaseRunning {
+		// Track the running game container's start so the dashboard's
+		// "up …" reflects the current pod, not the first time the server
+		// ever reached Running (a restart or pod recreation resets it).
+		if started := r.gameContainerStartedAt(ctx, gs); started != nil {
+			if gs.Status.StartedAt == nil || !gs.Status.StartedAt.Equal(started) {
+				gs.Status.StartedAt = started
+			}
+		} else if gs.Status.StartedAt == nil {
+			now := metav1.Now()
+			gs.Status.StartedAt = &now
+		}
 	}
 	if phase == gameplanev1alpha1.GameServerPhaseStopped || phase == gameplanev1alpha1.GameServerPhaseSuspended {
 		gs.Status.StartedAt = nil
@@ -811,6 +820,24 @@ func addressRequestSummary(plan addressPlan) string {
 	default:
 		return fmt.Sprintf("pool '%s'", plan.Pool)
 	}
+}
+
+// gameContainerStartedAt returns when the game container of pod <name>-0
+// last entered Running, or nil when the pod or that state is unavailable.
+// Best-effort: a failed read just leaves status.startedAt as it was.
+func (r *GameServerReconciler) gameContainerStartedAt(ctx context.Context, gs *gameplanev1alpha1.GameServer) *metav1.Time {
+	var pod corev1.Pod
+	if err := r.Get(ctx, types.NamespacedName{Name: gs.Name + "-0", Namespace: gs.Namespace}, &pod); err != nil {
+		return nil
+	}
+	for i := range pod.Status.ContainerStatuses {
+		cs := &pod.Status.ContainerStatuses[i]
+		if cs.Name == gameContainerName && cs.State.Running != nil {
+			started := cs.State.Running.StartedAt
+			return &started
+		}
+	}
+	return nil
 }
 
 // gameContainerName is the name the controller gives the game container in

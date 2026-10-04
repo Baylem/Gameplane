@@ -1548,3 +1548,24 @@ func TestReconcileStatus_PoolNotFoundClearsWhenPoolCreated(t *testing.T) {
 		t.Errorf("Reason = %q, want AssignmentPending (waiting on the address manager) now that the pool exists but no address is assigned yet", cond.Reason)
 	}
 }
+
+// TestGameContainerStartedAt pins that uptime tracks the game container of
+// the current pod, selected by name rather than by position.
+func TestGameContainerStartedAt(t *testing.T) {
+	started := metav1.NewTime(time.Date(2026, 10, 4, 21, 36, 8, 0, time.UTC))
+	gs := &gameplanev1alpha1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "mc", Namespace: "games"}}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "mc-0", Namespace: "games"},
+		Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{
+			{Name: "agent", State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: metav1.NewTime(started.Add(-time.Hour))}}},
+			{Name: gameContainerName, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{StartedAt: started}}},
+		}},
+	}
+	r := newTestGameServerReconciler(t, pod)
+	if got := r.gameContainerStartedAt(t.Context(), gs); got == nil || !got.Equal(&started) {
+		t.Fatalf("gameContainerStartedAt = %v, want %v", got, started)
+	}
+	if got := newTestGameServerReconciler(t).gameContainerStartedAt(t.Context(), gs); got != nil {
+		t.Fatalf("without a pod: gameContainerStartedAt = %v, want nil", got)
+	}
+}
