@@ -176,6 +176,7 @@ func (h *clusterHandler) view(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	usage := h.fetchNodeUsage(req.Context())
+	podCounts := h.countNodePods(req.Context())
 	version, _ := h.serverVersion()
 	out := clusterView{
 		Nodes:   make([]clusterNode, 0, len(nodes.Items)),
@@ -194,6 +195,10 @@ func (h *clusterHandler) view(w http.ResponseWriter, req *http.Request) {
 				memUsed := u.memoryBytes
 				n.Memory.Used = &memUsed
 			}
+		}
+		if n.Pods != nil && podCounts != nil {
+			podsUsed := float64(podCounts[n.Name])
+			n.Pods.Used = &podsUsed
 		}
 		if n.Status == "Ready" {
 			out.Ready++
@@ -284,6 +289,30 @@ func (h *clusterHandler) fetchNodeUsage(ctx context.Context) map[string]nodeUsag
 		}
 	}
 	return usage
+}
+
+// countNodePods counts non-terminal pods (Pending and Running phases) per
+// node name. Unscheduled pods (empty spec.nodeName) are ignored. It returns
+// nil on any list error: pod counts are informational and the "used" value
+// is simply omitted.
+func (h *clusterHandler) countNodePods(ctx context.Context) map[string]int64 {
+	pods, err := h.k.Typed.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		slog.Debug("count node pods: list failed", "err", err)
+		return nil
+	}
+	counts := make(map[string]int64)
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if pod.Spec.NodeName == "" {
+			continue
+		}
+		switch pod.Status.Phase {
+		case corev1.PodPending, corev1.PodRunning:
+			counts[pod.Spec.NodeName]++
+		}
+	}
+	return counts
 }
 
 func (h *clusterHandler) info(w http.ResponseWriter, req *http.Request) {

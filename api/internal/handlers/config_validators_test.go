@@ -15,7 +15,7 @@ func TestValidateGeneral(t *testing.T) {
 		ok   bool
 		errs string
 	}{
-		{"missing instanceName", `{"defaultNamespace":"x"}`, false, "instanceName"},
+		{"empty instanceName", `{"defaultNamespace":"x"}`, true, ""},
 		{"missing default ns", `{"instanceName":"k"}`, false, "defaultNamespace"},
 		{"bad ns label", `{"instanceName":"k","defaultNamespace":"BadCAPS"}`, false, "RFC1123"},
 		{"bad external url", `{"instanceName":"k","defaultNamespace":"n","externalURL":"ftp://x"}`, false, "http"},
@@ -33,6 +33,13 @@ func TestValidateGeneral(t *testing.T) {
 				t.Fatalf("got %v, want substring %q", err, tc.errs)
 			}
 		})
+	}
+}
+
+func TestValidateGeneral_EmptyInstanceName(t *testing.T) {
+	_, err := validateGeneral([]byte(`{"instanceName":"","defaultNamespace":"games"}`))
+	if err != nil {
+		t.Fatalf("empty instanceName should be valid: %v", err)
 	}
 }
 
