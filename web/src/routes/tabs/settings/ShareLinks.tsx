@@ -127,9 +127,11 @@ function statusColor(status: string): "success" | "warning" | "danger" | "defaul
   return "default";
 }
 
-// Determine link status based on expiry. A null expiry means the link
-// never expires (FR-007), so it can never be reported "Expired".
-function getLinkStatus(expiresAt: string | null): string {
+// Determine link status based on revocation first, then expiry. A null expiry means the link
+// never expires (FR-007), so it can never be reported "Expired". Revoked links are always Revoked
+// regardless of expiry (FR-010).
+function getLinkStatus(expiresAt: string | null, revokedAt?: string | null): string {
+  if (revokedAt !== null && revokedAt !== undefined) return "Revoked";
   if (expiresAt === null) return "Active";
   const expiry = new Date(expiresAt);
   const now = new Date();
@@ -597,9 +599,9 @@ export function ShareLinksSection({ name, ns }: ShareLinksProps) {
                       <Chip
                         variant="soft"
                         size="sm"
-                        color={statusColor(getLinkStatus(link.expiresAt))}
+                        color={statusColor(getLinkStatus(link.expiresAt, link.revokedAt))}
                       >
-                        {getLinkStatus(link.expiresAt)}
+                        {getLinkStatus(link.expiresAt, link.revokedAt)}
                       </Chip>
                     </Table.Cell>
                     <Table.Cell>
