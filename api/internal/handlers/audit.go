@@ -73,11 +73,11 @@ func MountAudit(r chi.Router, a *audit.Auditor) {
 			w.Header().Set("Content-Disposition",
 				fmt.Sprintf(`attachment; filename="gameplane-audit-%s.csv"`, stamp))
 			cw := csv.NewWriter(w)
-			_ = cw.Write([]string{"id", "ts", "actor", "method", "path", "target", "status", "ip"})
+			_ = cw.Write([]string{"id", "ts", "actor", "method", "path", "target", "status", "ip", "reason"})
 			err := a.Stream(req.Context(), filter, func(e audit.Event) error {
 				return cw.Write([]string{
 					strconv.FormatInt(e.ID, 10), e.TS, e.Actor, e.Method, e.Path,
-					e.Target, strconv.Itoa(e.Status), e.IP,
+					e.Target, strconv.Itoa(e.Status), e.IP, e.Reason,
 				})
 			})
 			cw.Flush()

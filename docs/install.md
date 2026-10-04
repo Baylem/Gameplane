@@ -388,8 +388,7 @@ a slow or down sink never blocks or fails a request.
     `gameplane-audit`; empty = root).
   - `api.audit.s3.region` — S3 region (e.g., `us-east-1`; empty defaults to
     `us-east-1`).
-  - `api.audit.s3.insecure` — `true` to skip TLS certificate verification
-    (for self-signed certs on dev/homelab clusters).
+  - `api.audit.s3.insecure` — `true` to use plain HTTP instead of HTTPS (no TLS at all; for local S3-compatible endpoints on dev/homelab clusters).
   - `api.audit.s3.credentialsSecretRef` — reference to a Secret holding S3
     credentials (see [security](security.md)); leave `name` empty to disable S3.
 
@@ -469,7 +468,45 @@ Before registering a target cluster, ensure it has:
 
 - Kubernetes 1.28+
 - Gameplane operator and agent images accessible (same registry as the control-plane)
-- A valid kubeconfig with admin credentials to manage Gameplane CRDs on that cluster
+- A valid kubeconfig scoped to the intended Gameplane operations and namespaces
+
+### Pod logs and PTY console permissions
+
+The central API must reach the target Kubernetes API (including streaming/SPDY
+upgrades). Remote Pod logs and PTY attach need no cross-cluster Pod networking or
+agent mTLS. In each allowed game namespace the registered kubeconfig needs:
+
+| API group | Resources | Verbs | Purpose |
+|---|---|---|---|
+| `gameplane.local` | `gameservers` | `get` | Resolve the selected server |
+| `apps` | `statefulsets` | `get` | Verify its controller ownership |
+| core | `pods` | `get` | Verify ownership and startup status |
+| core | `pods/log` | `get` | Stream init and game container logs |
+| core | `pods/attach` | `create` | Interactive PTY input/output over SPDY |
+
+These are the minimum **streaming** permissions, in addition to any CRD management
+permissions used by other dashboard operations. Attach is write-capable and
+requires Gameplane's `servers:console` permission; logs use `servers:read`. Bind
+Kubernetes permissions only in the intended game namespaces. The chart adds the
+StatefulSet read permission for the local API; existing custom remote credentials
+must be updated too.
+
+### Optional remote agent access
+
+Add a [private gateway in the target cluster](gateway-install.md) and
+[register its endpoint and credentials](multicluster-agent-gateway.md) to enable
+supported RCON, game-file logs, file/player operations, module actions, live
+status and agent-based mods. This requires the updated operator and UID-aware
+agents; old agents fail closed on the versioned protocol. The gateway has no
+separate user database, and the central API still needs direct access to the
+target Kubernetes API. Existing local installations retain direct agent access.
+
+Remote capture downloads and cleanup require an upgraded gateway and capture
+sidecar with persisted GameServer and NetworkCapture identity. Historical files
+without those bindings are unavailable remotely. Modpack and ID-list configuration
+use the selected Kubernetes client and template; provider credentials stay central.
+The existing `Cluster` health status reports Kubernetes connectivity, not gateway
+readiness or complete interactive feature coverage.
 
 ### Path 1: kubectl apply
 
@@ -514,6 +551,7 @@ Before registering a target cluster, ensure it has:
    - `displayName` (optional): Human-readable name shown in the dashboard
    - `kubeconfigSecret.name` (required): Name of the Secret containing the kubeconfig
    - `kubeconfigSecret.key` (optional): Data key within the Secret; defaults to `"kubeconfig"`
+   - `agentGateway` (optional): HTTPS gateway and labeled TLS Secret reference for [remote agent access](multicluster-agent-gateway.md)
 
 3. Apply both to the control-plane cluster:
 

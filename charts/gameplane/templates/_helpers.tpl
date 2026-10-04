@@ -117,3 +117,12 @@ without them rotating a custom Secret would not roll the API and operator.
 {{- end -}}
 {{- join "\n---\n" $parts | sha256sum -}}
 {{- end -}}
+
+{{- /* Absent on releases predating optional gateway installs (--reuse-values). */}}
+{{- define "gameplane.apiEnabled" -}}
+{{- if hasKey .Values.api "enabled" -}}
+{{- .Values.api.enabled -}}
+{{- else -}}
+true
+{{- end -}}
+{{- end -}}
