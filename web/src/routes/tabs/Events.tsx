@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useResourceClient, useResourceTarget, resourceKey } from "@/lib/resourceTarget";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button, Card } from "@heroui/react";
 import type { GameServer } from "@/types";
-import { Servers } from "@/lib/endpoints";
+
 import { EventList } from "@/components/server/EventList";
 import { mapServerEvent, type NormalizedServerEvent } from "@/lib/events";
 
@@ -17,26 +18,34 @@ export function EventsTab({
   ns?: string;
   gs?: GameServer;
 }) {
+  const resourceTarget = useResourceTarget({ name, namespace: ns });
+  const resourceClient = useResourceClient(resourceTarget);
   const [filter, setFilter] = useState<FilterType>("all");
 
   const { data: rawEvents } = useQuery({
-    queryKey: ["events", name, ns],
-    queryFn: () => Servers.events(name, ns),
+    queryKey: resourceKey(resourceTarget, "events", name, ns),
+    queryFn: ({ signal }) => resourceClient.withSignal(signal).Servers.events(name, ns),
     enabled: !!name,
     refetchInterval: gs?.status?.phase === "Running" ? 30_000 : 5_000,
     retry: false,
   });
 
-  const events: NormalizedServerEvent[] = (
-    Array.isArray(rawEvents) ? rawEvents : []
-  ).map(mapServerEvent);
+  // ⚡ Bolt: Memoize raw events mapping to prevent unnecessary array recreation
+  // Expected impact: Eliminates O(N) mapping on every render cycle when polling
+  const events: NormalizedServerEvent[] = useMemo(() => {
+    return (Array.isArray(rawEvents) ? rawEvents : []).map(mapServerEvent);
+  }, [rawEvents]);
 
-  const filteredEvents = events.filter((e) => {
-    if (filter === "all") return true;
-    if (filter === "info") return e.kind === "info";
-    if (filter === "warnings") return e.kind === "warn" || e.kind === "error";
-    return true;
-  });
+  // ⚡ Bolt: Memoize filtered events to prevent unnecessary array recreation
+  // Expected impact: Eliminates O(N) filtering when only filter changes or on general renders
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      if (filter === "all") return true;
+      if (filter === "info") return e.kind === "info";
+      if (filter === "warnings") return e.kind === "warn" || e.kind === "error";
+      return true;
+    });
+  }, [events, filter]);
 
   return (
     <div className="space-y-6 p-6">

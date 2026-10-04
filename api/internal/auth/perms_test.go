@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"slices"
 	"testing"
 )
 
@@ -127,6 +128,40 @@ func TestUserCan_ClusterScopedNotGatedByCluster(t *testing.T) {
 	}
 }
 
+func TestUserCan_InventoryAlwaysTargetScoped(t *testing.T) {
+	for _, tc := range []struct {
+		name, bindingCluster, bindingNamespace, permission, target, namespace string
+		namespaced, want                                                      bool
+	}{
+		{"remote denies omitted home", "remote", "*", "cluster:read", "", "", false, false},
+		{"remote denies explicit home", "remote", "*", "cluster:read", "local", "", false, false},
+		{"remote permits selected inventory", "remote", "*", "cluster:read", "remote", "", false, true},
+		{"remote permits scoped caller", "remote", "*", "cluster:read", "remote", "", true, true},
+		{"local permits omitted home", "local", "*", "cluster:read", "", "", false, true},
+		{"local denies remote", "local", "*", "cluster:read", "remote", "", false, false},
+		{"wildcard permits home", "*", "*", "cluster:read", "", "", false, true},
+		{"wildcard permits remote", "*", "*", "cluster:read", "remote", "", true, true},
+		{"namespace inventory cannot grant nodes", "remote", "games", "cluster:read", "remote", "games", true, false},
+		{"namespace wildcard cannot grant nodes", "remote", "games", "*", "remote", "games", true, false},
+		{"remote admin denies home inventory", "remote", "*", "*", "", "", false, false},
+		{"local admin permits home", "local", "*", "*", "", "", false, true},
+		{"wildcard admin permits remote", "*", "*", "*", "remote", "", false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			u := &User{Perms: map[string]map[string]map[string]struct{}{
+				tc.bindingCluster: {tc.bindingNamespace: {tc.permission: {}}},
+			}}
+			if got := u.Can("cluster:read", tc.namespaced, tc.target, tc.namespace); got != tc.want {
+				t.Fatalf("inventory permission = %v, want %v", got, tc.want)
+			}
+		})
+	}
+	var missing *User
+	if missing.Can("cluster:read", false, "", "") {
+		t.Fatal("missing user granted inventory")
+	}
+}
+
 func TestUserCan_WildcardClusterGrantsAll(t *testing.T) {
 	// A binding on the "*" wildcard cluster should grant access on any cluster.
 	wildcardBinding := &User{Perms: map[string]map[string]map[string]struct{}{"*": {"*": {"servers:write": {}}}}}
@@ -190,5 +225,63 @@ func TestUserCan(t *testing.T) {
 				t.Errorf("Can(%q, %v, %q, %q) = %v, want %v", tc.perm, tc.namespaced, tc.cluster, tc.ns, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestPermsByClusterToJSON_PreservesClusterDimension(t *testing.T) {
+	// Two clusters, wildcard cluster, and wildcard namespace.
+	perms := map[string]map[string]map[string]struct{}{
+		"local": {
+			"*":      {"servers:read": {}, "servers:write": {}},
+			"team-a": {"servers:write": {}},
+		},
+		"prod": {
+			"*": {"captures:manage": {}},
+		},
+		"*": {
+			"*": {"users:manage": {}},
+		},
+	}
+
+	result := PermsByClusterToJSON(perms)
+
+	// Verify local cluster structure.
+	if result["local"] == nil {
+		t.Fatal("local cluster not in result")
+	}
+	if !slices.Equal(result["local"]["*"], []string{"servers:read", "servers:write"}) {
+		t.Errorf("local/* got %v, want sorted perms", result["local"]["*"])
+	}
+	if !slices.Equal(result["local"]["team-a"], []string{"servers:write"}) {
+		t.Errorf("local/team-a got %v, want servers:write", result["local"]["team-a"])
+	}
+
+	// Verify prod cluster structure.
+	if result["prod"] == nil {
+		t.Fatal("prod cluster not in result")
+	}
+	if !slices.Equal(result["prod"]["*"], []string{"captures:manage"}) {
+		t.Errorf("prod/* got %v, want captures:manage", result["prod"]["*"])
+	}
+
+	// Verify wildcard cluster.
+	if result["*"] == nil {
+		t.Fatal("wildcard cluster not in result")
+	}
+	if !slices.Equal(result["*"]["*"], []string{"users:manage"}) {
+		t.Errorf("*/* got %v, want users:manage", result["*"]["*"])
+	}
+
+	// Verify that prod does not have team-a binding.
+	if _, ok := result["prod"]["team-a"]; ok {
+		t.Errorf("prod should not have team-a binding, got %v", result["prod"])
+	}
+}
+
+func TestPermsByClusterToJSON_EmptyReturnsNil(t *testing.T) {
+	perms := map[string]map[string]map[string]struct{}{}
+	result := PermsByClusterToJSON(perms)
+	if result != nil {
+		t.Errorf("empty perms should return nil, got %v", result)
 	}
 }

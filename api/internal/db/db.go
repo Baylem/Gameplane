@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -53,6 +54,10 @@ func Open(ctx context.Context, driver, dsn string) (*Store, error) {
 		if err := adoptLegacySQLite(dsn); err != nil {
 			return nil, err
 		}
+
+		// Add a busy timeout to the DSN if not already present, so concurrent
+		// processes (e.g., API and bootstrap-admin) waiting for locks don't fail immediately.
+		dsn = withSQLiteBusyTimeout(dsn)
 
 		db, err := sql.Open("sqlite", dsn)
 		if err != nil {
@@ -294,6 +299,53 @@ func sqlitePath(dsn string) string {
 	}
 
 	return dsn
+}
+
+// withSQLiteBusyTimeout appends a busy_timeout pragma to the DSN if one is not
+// already present. This allows multiple processes (e.g., the API server and
+// bootstrap-admin both accessing the same SQLite file) to wait for locks instead
+// of failing immediately with SQLITE_BUSY. The timeout is set to 5000 milliseconds.
+// Only DSNs that already contain a _pragma parameter value assigning busy_timeout
+// (busy_timeout(N) or busy_timeout=N, case-insensitive) are returned unchanged; bare
+// reads, near-match names and file paths containing "busy_timeout" do not prevent
+// pragma addition.
+func withSQLiteBusyTimeout(dsn string) string {
+	// Find the query string separator.
+	idx := strings.IndexByte(dsn, '?')
+	var queryStr string
+
+	if idx == -1 {
+		// No query string; add one.
+		return dsn + "?_pragma=busy_timeout(5000)"
+	}
+
+	// Extract the query part (everything after the ?).
+	queryStr = dsn[idx+1:]
+
+	// Parse the query parameters.
+	params, err := url.ParseQuery(queryStr)
+	if err != nil {
+		// If parsing fails, append the pragma (safer than skipping).
+		return dsn + "&_pragma=busy_timeout(5000)"
+	}
+
+	// Check if a _pragma parameter value contains a busy_timeout assignment (case-insensitive).
+	// Only match assignments with values: busy_timeout(...) or busy_timeout=...
+	if pragmaValues, ok := params["_pragma"]; ok {
+		for _, val := range pragmaValues {
+			lower := strings.ToLower(strings.TrimSpace(val))
+			rest, found := strings.CutPrefix(lower, "busy_timeout")
+			rest = strings.TrimSpace(rest)
+			if found && (strings.HasPrefix(rest, "=") || strings.HasPrefix(rest, "(")) &&
+				strings.Trim(rest, "=() ") != "" {
+				// Already present; return unchanged.
+				return dsn
+			}
+		}
+	}
+
+	// busy_timeout not found in pragmas; append it.
+	return dsn + "&_pragma=busy_timeout(5000)"
 }
 
 // adoptLegacySQLite renames kestrel.db to the target DSN path if the target

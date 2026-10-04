@@ -1,3 +1,4 @@
+import { useResourceClient, useResourceTarget, resourceKey, useResourceAccess } from "@/lib/resourceTarget";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -56,11 +57,10 @@ import {
 } from "@heroui/react";
 
 import type { ActionParamDecl, GameServer, GameTemplate, ServerActionDecl } from "@/types";
-import { Servers, type LifecycleVerb } from "@/lib/endpoints";
+import { type LifecycleVerb } from "@/lib/endpoints";
 import { rconAvailable } from "@/lib/capabilities";
 import { APIError } from "@/lib/api";
 import { errorText } from "@/lib/errors";
-import { useMe, can } from "@/lib/auth";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 
 // Curated icon map for the lucide names modules declare. Unknown names
@@ -135,9 +135,12 @@ export function ServerActionsCard({
   ns?: string;
   onOpenConsole?: () => void;
 }) {
+  const resourceTarget = useResourceTarget({ name, namespace: ns });
+  const resourceClient = useResourceClient(resourceTarget);
+  const { Servers } = resourceClient;
   const qc = useQueryClient();
-  const { data: me } = useMe();
-  const canRun = can(me, "servers:write");
+  const access = useResourceAccess();
+  const canRun = access?.canControl === true;
   const [active, setActive] = useState<ServerActionDecl | null>(null);
   const [status, setStatus] = useState<RunStatus | null>(null);
 
@@ -146,7 +149,7 @@ export function ServerActionsCard({
 
   const lifecycle = useMutation({
     mutationFn: (verb: LifecycleVerb) => Servers.lifecycle(name, verb, ns),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["server", name, ns] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "server", name, ns) }),
   });
 
   const run = useMutation<
@@ -156,6 +159,7 @@ export function ServerActionsCard({
   >({
     mutationFn: (vars) => Servers.runAction(name, { id: vars.action.id, params: vars.params }, ns),
     onSuccess: (resp, vars) => {
+      void qc.invalidateQueries({ queryKey: ["fleet"] });
       setActive(null);
       // Base sent-vs-output on the action's TRANSPORT, not on whether the
       // response body is empty: an rcon command legitimately returns no
@@ -172,7 +176,7 @@ export function ServerActionsCard({
           text: resp.raw ? truncate(resp.raw, 200) : `${vars.action.displayName} ran`,
         });
       }
-      return qc.invalidateQueries({ queryKey: ["server-status", name] });
+      return qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "server-status", name) });
     },
     onError: (err) => {
       setActive(null);
