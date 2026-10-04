@@ -49,7 +49,7 @@ export function BackupsTab({ name, ns }: { name: string; ns?: string }) {
       Backups.create(
         {
           serverRef: { name },
-          repoRef: { name: lone!.name, key: "url" },
+          repoRef: { name: lone!.name, key: "repo" },
         },
         ns,
       ),

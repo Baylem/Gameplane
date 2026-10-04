@@ -4,7 +4,7 @@ import { useState } from "react";
 import { DESCRIPTION_ANNOTATION, type SectionProps } from "./types";
 import { Field } from "./Field";
 
-export function GeneralSection({ draft, onChange }: SectionProps) {
+export function GeneralSection({ draft, onChange, template }: SectionProps) {
   const annotations = draft.metadata.annotations ?? {};
   const labels = draft.metadata.labels ?? {};
   const description = annotations[DESCRIPTION_ANNOTATION] ?? "";
@@ -69,7 +69,7 @@ export function GeneralSection({ draft, onChange }: SectionProps) {
               spec: { ...draft.spec, image: e.target.value || undefined },
             })
           }
-          placeholder="itzg/minecraft-server:2025.1.0"
+          placeholder={template?.spec.image ?? "(template image)"}
           spellCheck={false}
         />
       </Field>

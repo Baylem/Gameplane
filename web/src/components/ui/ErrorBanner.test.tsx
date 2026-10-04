@@ -65,4 +65,10 @@ describe("ErrorBanner", () => {
     await user.click(dismissButton);
     expect(onDismiss).toHaveBeenCalledOnce();
   });
+
+  it("shows short message for HTML error responses", () => {
+    render(<ErrorBanner err={new APIError(502, "<html><body>Bad Gateway</body></html>", "Bad Gateway", "text/html")} />);
+    expect(screen.getByText("502 Bad Gateway")).toBeInTheDocument();
+    expect(screen.queryByText(/<html>/)).not.toBeInTheDocument();
+  });
 });

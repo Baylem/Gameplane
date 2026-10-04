@@ -64,7 +64,7 @@ export function ServerStatusCard({
             <GenericStatusRow label="Uptime" value={formatUptime(status.startedAt)} />
             <GenericStatusRow
               label="Version"
-              value={status.agent?.gameVersion ?? gs.spec.templateRef.name ?? "—"}
+              value={status.agent?.gameVersion ?? "—"}
             />
             <GenericStatusRow label="Players" value={players} />
           </dl>
