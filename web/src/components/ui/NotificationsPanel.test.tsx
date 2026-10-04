@@ -201,4 +201,45 @@ describe("NotificationsPanel", () => {
       await screen.findByText(/modified server my-server/)
     ).toBeInTheDocument();
   });
+
+  it("coalesces a burst of events for one kind into a single invalidation", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { client } = renderWithQuery(<NotificationsPanel />);
+      const spy = vi.spyOn(client, "invalidateQueries");
+      for (let i = 1; i <= 30; i++) {
+        await act(() => {
+          sseCallback!({ kind: "templates", eventType: "MODIFIED", object: { metadata: { name: `t-${i}` } } });
+        });
+      }
+      await act(() => {
+        sseCallback!({ kind: "servers", eventType: "MODIFIED", object: { metadata: { name: "s-1" } } });
+      });
+      expect(spy).not.toHaveBeenCalled();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      expect(spy).toHaveBeenCalledTimes(2);
+      expect(spy).toHaveBeenCalledWith({ queryKey: ["templates"] }, { cancelRefetch: false });
+      expect(spy).toHaveBeenCalledWith({ queryKey: ["servers"] }, { cancelRefetch: false });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("drops pending invalidations on unmount", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { client, unmount } = renderWithQuery(<NotificationsPanel />);
+      const spy = vi.spyOn(client, "invalidateQueries");
+      await act(() => {
+        sseCallback!({ kind: "servers", eventType: "MODIFIED", object: { metadata: { name: "s-1" } } });
+      });
+      unmount();
+      await vi.advanceTimersByTimeAsync(500);
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

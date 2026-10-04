@@ -77,11 +77,28 @@ func eventsHandler(reg *kube.Registry) http.HandlerFunc {
 				continue
 			}
 			ri := k.Dynamic.Resource(gvr)
+			// Watch from the collection's current resourceVersion: an empty
+			// one makes the API server replay every existing object as a
+			// synthetic ADDED event, which floods the dashboard with one
+			// refetch and one notification per object on every connect.
+			// Limit 1 keeps the list cheap; only its resourceVersion is used.
+			// If the list fails, fall back to the old replaying watch.
+			var list *unstructured.UnstructuredList
+			var listErr error
+			if cluster(gvr) {
+				list, listErr = ri.List(ctx, metav1.ListOptions{Limit: 1})
+			} else {
+				list, listErr = ri.Namespace(ns).List(ctx, metav1.ListOptions{Limit: 1})
+			}
+			watchOpts := metav1.ListOptions{}
+			if listErr == nil {
+				watchOpts.ResourceVersion = list.GetResourceVersion()
+			}
 			var watcher watch.Interface
 			if cluster(gvr) {
-				watcher, err = ri.Watch(ctx, metav1.ListOptions{})
+				watcher, err = ri.Watch(ctx, watchOpts)
 			} else {
-				watcher, err = ri.Namespace(ns).Watch(ctx, metav1.ListOptions{})
+				watcher, err = ri.Namespace(ns).Watch(ctx, watchOpts)
 			}
 			if err != nil {
 				continue

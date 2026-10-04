@@ -14,6 +14,9 @@ interface Notice {
   at: string;
 }
 
+// Window for coalescing SSE-driven cache invalidations per query key.
+const INVALIDATE_COALESCE_MS = 500;
+
 // No props today — the component owns its own SSE subscription and local
 // state (see the doc comment below). Kept as a named type so callers and
 // future props have a stable place to land.
@@ -33,10 +36,24 @@ export function NotificationsPanel(): JSX.Element {
 
   useEffect(() => {
     let seq = 0;
+    // Coalesce invalidations per query key: a burst of watch events for one
+    // kind costs a single refetch, and an in-flight fetch is not cancelled.
+    const pending = new Map<string, ReturnType<typeof setTimeout>>();
     const dispose = openEventStream({
       onEvent: (ev: GameplaneEvent) => {
         const key = queryKeyForKind(ev.kind);
-        if (key) void qc.invalidateQueries({ queryKey: key });
+        if (key) {
+          const id = key.join("/");
+          if (!pending.has(id)) {
+            pending.set(
+              id,
+              setTimeout(() => {
+                pending.delete(id);
+                void qc.invalidateQueries({ queryKey: key }, { cancelRefetch: false });
+              }, INVALIDATE_COALESCE_MS),
+            );
+          }
+        }
         const name = ev.object?.metadata?.name ?? "";
         const verb = ev.eventType.toLowerCase();
         seq += 1;
@@ -49,7 +66,11 @@ export function NotificationsPanel(): JSX.Element {
         setUnread((u) => u + 1);
       },
     });
-    return dispose;
+    return () => {
+      for (const timer of pending.values()) clearTimeout(timer);
+      pending.clear();
+      dispose();
+    };
   }, [qc]);
 
   return (
