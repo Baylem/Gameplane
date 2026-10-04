@@ -106,14 +106,7 @@ auth.additionalScopes = ["api"]
 auth.token = "your-secure-token-here"
 ```
 
-#### 2. Create a Secret with the token
-
-```bash
-kubectl -n gameplane-games create secret generic frp-creds \
-  --from-literal=token=your-secure-token-here
-```
-
-#### 3. Create a GameServer with frp tunnel
+#### 2. Create a GameServer with frp tunnel
 
 ```yaml
 apiVersion: gameplane.local/v1alpha1
@@ -130,7 +123,7 @@ spec:
       enabled: true
       provider: frp
       credentialsSecretRef:
-        name: frp-creds
+        name: minecraft-tunneled-tunnel-auth
       frp:
         serverAddr: frp.example.com
         serverPort: 7000
@@ -138,6 +131,32 @@ spec:
           - name: game
             remotePort: 25565
 ```
+
+The `credentialsSecretRef.name` is the name that the dashboard or API write after you provide the credential.
+
+#### 3. Provide the credential
+
+The operator only mounts a credentials Secret whose `ownerReference` matches this GameServer's name **and UID** — a plain `kubectl create secret generic` Secret has none, and a Secret left over from a deleted same-name GameServer has a stale UID, so the operator refuses it and the GameServer's `TunnelReady` status condition
+reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
+its contents). The tunnel pod starts without credentials until the credential is
+provided (the Secret does not exist yet). Use one of these instead:
+
+- **Dashboard:** open the server's Networking tab and enter the credential
+  there — it creates the Secret with the correct ownerReference for you.
+- **API:** `PUT /servers/{name}:tunnel-credentials` with body
+  `{"provider": "frp", "values": {"token": "your-secure-token-here"}}`.
+- **kubectl, with an explicit ownerReference:** if you must create the Secret
+  directly, get the GameServer's UID with `kubectl -n gameplane-games get gameserver minecraft-tunneled -o jsonpath='{.metadata.uid}'`,
+  then set `metadata.ownerReferences` to point at the GameServer
+  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
+  and `uid`) so the operator accepts it.
+
+To repair a Secret that is already refused: the dashboard and API always write
+`<server>-tunnel-auth`, so they fix a refused Secret with any other name by
+creating an owned one and pointing `credentialsSecretRef` at it. If the refused
+Secret is itself named `<server>-tunnel-auth`, they answer `409 Conflict`
+instead — add the ownerReference to it, or delete it and save the credential
+again.
 
 Players connect to `frp.example.com:25565`.
 
@@ -148,14 +167,7 @@ Players connect to `frp.example.com:25565`.
 Log into [login.tailscale.com](https://login.tailscale.com), go to **Settings →
 Keys**, and create a **Reusable key**. Copy it.
 
-#### 2. Create a Secret with the auth key
-
-```bash
-kubectl -n gameplane-games create secret generic tailscale-creds \
-  --from-literal=authKey=tskey-client-xxxxx
-```
-
-#### 3. Create a GameServer with Tailscale tunnel
+#### 2. Create a GameServer with Tailscale tunnel
 
 ```yaml
 apiVersion: gameplane.local/v1alpha1
@@ -172,7 +184,7 @@ spec:
       enabled: true
       provider: tailscale
       credentialsSecretRef:
-        name: tailscale-creds
+        name: minecraft-tailnet-tunnel-auth
       tailscale:
         hostname: my-minecraft-server
         tags:
@@ -182,12 +194,54 @@ spec:
 
 The pod joins your tailnet and is reachable via MagicDNS under the hostname you
 specify in `spec.networking.tunnel.tailscale.hostname` (or defaults to the
-GameServer name if left empty). The tags are Tailscale ACL tags applied at device
-registration. Port 25565 is available to devices on your tailnet.
+GameServer name if left empty). Port 25565 is available to devices on your
+tailnet.
+
+> **`tags` requires an ACL grant.** `spec.networking.tunnel.tailscale.tags`
+> is requested when the device registers with your tailnet: the tunnel pod
+> runs `tailscale up --advertise-tags=<tags>` once, over the local daemon's
+> socket. Tailscale's headless daemon config has no field for tags, and
+> changing the tags of a registered device needs a fresh login (see
+> `tunnel/specs.md`). The tailnet's ACL must grant `tagOwners` for the
+> requested tags to the auth key's owner. If it doesn't, Tailscale refuses
+> the request and the tunnel pod logs the error. If the device is not
+> running afterwards, the pod tries once more without tags. That untagged
+> attempt can fail too (for example with a single-use auth key), in which
+> case the error is logged and the device stays logged out. Configure `tagOwners` in your tailnet's ACL before setting
+> `tags` here. Each tag is `tag:<name>` or a bare `<name>`, where the name
+> starts with a letter and holds only letters, digits and `-`. If any tag is
+> invalid, the whole list is logged and ignored and the device registers
+> untagged.
+
+The `credentialsSecretRef.name` is the name that the dashboard or API write after you provide the credential.
 
 > **Private only.** The server is not exposed to the public internet — only to
 > devices on your Tailscale network. This is suitable for playing with friends
 > or family who are all on your tailnet.
+
+#### 3. Provide the credential
+
+The operator only mounts a credentials Secret whose `ownerReference` matches this GameServer's name **and UID** — a plain `kubectl create secret generic` Secret has none, and a Secret left over from a deleted same-name GameServer has a stale UID, so the operator refuses it and the GameServer's `TunnelReady` status condition
+reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
+its contents). The tunnel pod starts without credentials until the credential is
+provided (the Secret does not exist yet). Use one of these instead:
+
+- **Dashboard:** open the server's Networking tab and enter the credential
+  there — it creates the Secret with the correct ownerReference for you.
+- **API:** `PUT /servers/{name}:tunnel-credentials` with body
+  `{"provider": "tailscale", "values": {"authKey": "tskey-client-xxxxx"}}`.
+- **kubectl, with an explicit ownerReference:** if you must create the Secret
+  directly, get the GameServer's UID with `kubectl -n gameplane-games get gameserver minecraft-tailnet -o jsonpath='{.metadata.uid}'`,
+  then set `metadata.ownerReferences` to point at the GameServer
+  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
+  and `uid`) so the operator accepts it.
+
+To repair a Secret that is already refused: the dashboard and API always write
+`<server>-tunnel-auth`, so they fix a refused Secret with any other name by
+creating an owned one and pointing `credentialsSecretRef` at it. If the refused
+Secret is itself named `<server>-tunnel-auth`, they answer `409 Conflict`
+instead — add the ownerReference to it, or delete it and save the credential
+again.
 
 ### playit.gg
 
@@ -196,14 +250,7 @@ registration. Port 25565 is available to devices on your tailnet.
 Visit [playit.gg](https://playit.gg), sign up, and create an account. Your
 **Secret Key** appears in **Settings**. Copy it.
 
-#### 2. Create a Secret with the secret key
-
-```bash
-kubectl -n gameplane-games create secret generic playit-creds \
-  --from-literal=secretKey=<your-secret-key>
-```
-
-#### 3. Create a GameServer with playit tunnel
+#### 2. Create a GameServer with playit tunnel
 
 ```yaml
 apiVersion: gameplane.local/v1alpha1
@@ -220,8 +267,34 @@ spec:
       enabled: true
       provider: playit
       credentialsSecretRef:
-        name: playit-creds
+        name: minecraft-playit-tunnel-auth
 ```
+
+The `credentialsSecretRef.name` is the name that the dashboard or API write after you provide the credential.
+
+#### 3. Provide the credential
+
+The operator only mounts a credentials Secret whose `ownerReference` matches this GameServer's name **and UID** — a plain `kubectl create secret generic` Secret has none, and a Secret left over from a deleted same-name GameServer has a stale UID, so the operator refuses it and the GameServer's `TunnelReady` status condition
+reports `False` with reason `TunnelCredentialRefused`, naming the Secret (never
+its contents). The tunnel pod starts without credentials until the credential is
+provided (the Secret does not exist yet). Use one of these instead:
+
+- **Dashboard:** open the server's Networking tab and enter the credential
+  there — it creates the Secret with the correct ownerReference for you.
+- **API:** `PUT /servers/{name}:tunnel-credentials` with body
+  `{"provider": "playit", "values": {"secretKey": "<your-secret-key>"}}`.
+- **kubectl, with an explicit ownerReference:** if you must create the Secret
+  directly, get the GameServer's UID with `kubectl -n gameplane-games get gameserver minecraft-playit -o jsonpath='{.metadata.uid}'`,
+  then set `metadata.ownerReferences` to point at the GameServer
+  (`apiVersion: gameplane.local/v1alpha1`, `kind: GameServer`, matching `name`
+  and `uid`) so the operator accepts it.
+
+To repair a Secret that is already refused: the dashboard and API always write
+`<server>-tunnel-auth`, so they fix a refused Secret with any other name by
+creating an owned one and pointing `credentialsSecretRef` at it. If the refused
+Secret is itself named `<server>-tunnel-auth`, they answer `409 Conflict`
+instead — add the ownerReference to it, or delete it and save the credential
+again.
 
 Wait for the pod to reach `Running` state. Once the tunnel pod connects and
 reports the assigned address, it appears in `status.endpoints`. The address
@@ -332,7 +405,15 @@ If you want to avoid reconnects on wake, consider:
    kubectl -n gameplane-games get secret <secret-name> -o yaml
    ```
    Ensure the keys match the provider's requirements (`token` for frp, `authKey`
-   for Tailscale, `secretKey` for playit).
+   for Tailscale, `secretKey` for playit). If the Secret lacks an ownerReference
+   to this GameServer, the operator refuses it — check `kubectl get gameserver
+   <name> -o jsonpath='{.status.conditions}'` for a `TunnelReady=False/TunnelCredentialRefused`
+   entry naming the Secret. While the Secret is refused, the tunnel Deployment
+   is scaled to zero with no credential mounted. A refused pass stops the
+   reconcile early, so the condition's own `observedGeneration` is current
+   while `status.observedGeneration` may still lag: automation should read
+   this condition's `observedGeneration` rather than wait for the top-level
+   one to catch up.
 
 4. **Check NetworkPolicy.**
    By default, `networkPolicies.enabled=true` applies a default-deny-egress

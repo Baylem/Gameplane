@@ -60,15 +60,15 @@ were added and verified on **2026-09-26**.
 `netguard/go.mod` has **no `require` block at all** — it imports only the
 Go standard library (`context`, `net`, `net/http`, `errors`, `strings`,
 `syscall`, `time`). It is a dial-time SSRF guard: `IsAllowed` (permissive,
-used by the operator for admin-configured ModuleSource fetches) and
-`IsPublic` (strict, used for user-triggered downloads) both work by
-inspecting the resolved IP in a `net.Dialer.Control` hook, so no client
-library is needed — just `net` and `syscall` for the dial-time hook itself.
+for admin-configured infrastructure) and `IsPublic` (strict, for user-supplied
+targets) both work by inspecting the resolved IP in a `net.Dialer.Control`
+hook, so no client library is needed — just `net` and `syscall` for the
+dial-time hook itself.
 
-Imported by:
-- `operator/internal/oci/` (module bundle OCI pulls) and `operator/internal/modsrc/` (git/http/OCI ModuleSource fetches) — permissive `IsAllowed`.
-- `agent/internal/mods/mods.go` — strict `IsPublic`, for user-triggered mod-install downloads.
-- `api/internal/notify/notify.go` and `deliver.go` — permissive `IsAllowed`, for admin-configured notification destinations (Discord/Slack/SMTP/webhook). This is a third importer beyond the two documented in the architecture doc; it makes sense under the same "admin-configured infrastructure endpoint" rationale as ModuleSources.
+**Callers and policies:**
+- **Operator** (`operator/internal/modsrc/`): module-source HTTP/git fetches via `IsAllowed`.
+- **API gateway** (`api/internal/notify/{notify,deliver}.go` and `api/internal/steam/resolver.go`): admin-configured notification sinks via `IsAllowed`; Steam name resolution via `IsPublic`.
+- **Agent** (`agent/internal/mods/mods.go` and `agent/internal/rcon/websocket.go`): user-supplied mod downloads via `IsPublic`; loopback WebSocket RCON via `IsAllowed`.
 
 It is a local `replace` module (`replace github.com/ValgulNecron/gameplane/netguard => ../netguard` in every importer's `go.mod`), not a published module — each Dockerfile that builds an importer must `COPY netguard/` into the build context alongside the component's own source.
 
@@ -127,9 +127,9 @@ BackupSchedule, Restore, Module, and ModuleSource. Direct deps from
 | Dependency | Version | Why | Status |
 |---|---|---|---|
 | `sigs.k8s.io/controller-runtime` | v0.24.1 | Core reconciler framework — every controller in `internal/controller/*` embeds `client.Client`; `cmd/main.go` builds the manager via `ctrl.NewManager` | direct-runtime | <!-- doc-versions: dependency -->
-| `k8s.io/api` | v0.37.0 | Core/apps/batch typed API objects used across `api/v1alpha1/*_types.go` and controllers to build Pod/PVC/Job/Service/RBAC objects | direct-runtime | <!-- doc-versions: dependency -->
-| `k8s.io/apimachinery` | v0.37.0 | `metav1.ObjectMeta`, `runtime.Scheme`, `types.NamespacedName`, etc. — pervasive across CRD types and controllers | direct-runtime | <!-- doc-versions: dependency -->
-| `k8s.io/client-go` | v0.37.0 | `internal/controller/cluster_controller.go`, `gameserver_stop_attach.go` (pod exec/attach via `kubernetes.Clientset`), `cmd/main.go` scheme/clientset setup | direct-runtime | <!-- doc-versions: dependency -->
+| `k8s.io/api` | v0.37.1 | Core/apps/batch typed API objects used across `api/v1alpha1/*_types.go` and controllers to build Pod/PVC/Job/Service/RBAC objects | direct-runtime | <!-- doc-versions: dependency -->
+| `k8s.io/apimachinery` | v0.37.1 | `metav1.ObjectMeta`, `runtime.Scheme`, `types.NamespacedName`, etc. — pervasive across CRD types and controllers | direct-runtime | <!-- doc-versions: dependency -->
+| `k8s.io/client-go` | v0.37.1 | `internal/controller/cluster_controller.go`, `gameserver_stop_attach.go` (pod exec/attach via `kubernetes.Clientset`), `cmd/main.go` scheme/clientset setup | direct-runtime | <!-- doc-versions: dependency -->
 | `github.com/go-git/go-git/v5` | v5.19.2 | `internal/modsrc/git.go` — clones a ModuleSource's git repo/ref (HTTP or SSH) in-memory to discover module directories | direct-runtime |
 | `github.com/go-git/go-billy/v5` | v5.9.1 | `internal/modsrc/git.go` — in-memory filesystem (`memfs`) backing the git clone above, avoiding disk writes for an admin-configured but externally-controlled fetch | direct-runtime |
 | `golang.org/x/crypto` | v0.55.0 | `internal/modsrc/git.go` — SSH key/host-key handling for git-over-SSH ModuleSource cloning, alongside `go-git`'s SSH transport | direct-runtime | <!-- doc-versions: dependency -->
@@ -199,17 +199,16 @@ and quiesce. Direct deps from `agent/go.mod` (excluding the local
 |---|---|---|---|
 | `github.com/go-chi/chi/v5` | v5.3.2 | `cmd/main.go` — router for the agent's whole HTTP surface; every feature package (console, logs, files, players, status, actions, quiesce, lifecycle, mods) exposes `Mount(r chi.Router, ...)` onto it | direct-runtime |
 | `github.com/coder/websocket` | v1.8.15 | Dual role: server-side WS upgrade for `internal/console/console.go` (RCON console stream) and `internal/logs/logs.go` (live log tail); client-side outbound dial in `internal/rcon/websocket.go` implementing the Rust dedicated server's WebRcon protocol | direct-runtime |
-| `k8s.io/apimachinery` | v0.37.0 | `internal/heartbeat/heartbeat.go` only — `metav1.Now()`/`PatchOptions{}`, `types.MergePatchType` to build the JSON merge-patch that updates `status.agent` | direct-runtime | <!-- doc-versions: dependency -->
-| `k8s.io/client-go` | v0.37.0 | `internal/heartbeat/heartbeat.go` only — `rest.InClusterConfig()` then `dynamic.NewForConfig(...).Resource(gvr).Namespace(...).Patch(...)` to patch the owning GameServer's status every tick; only the `dynamic` + `rest` subpackages are used, no typed clientset | direct-runtime | <!-- doc-versions: dependency -->
+| `k8s.io/apimachinery` | v0.37.1 | `internal/heartbeat/heartbeat.go` only — `metav1.Now()`/`PatchOptions{}`, `types.MergePatchType` to build the JSON merge-patch that updates `status.agent` | direct-runtime | <!-- doc-versions: dependency -->
+| `k8s.io/client-go` | v0.37.1 | `internal/heartbeat/heartbeat.go` only — `rest.InClusterConfig()` then `dynamic.NewForConfig(...).Resource(gvr).Namespace(...).Patch(...)` to patch the owning GameServer's status every tick; only the `dynamic` + `rest` subpackages are used, no typed clientset | direct-runtime | <!-- doc-versions: dependency -->
 | `github.com/prometheus/client_golang` | v1.24.1 | `cmd/main.go` — serves `promhttp.Handler()` at `/metrics`; only the `promhttp` subpackage, no custom collectors | direct-runtime |
 | `golang.org/x/sys` | v0.47.0 | `internal/usage/usage.go` — `unix.Statfs`/`unix.Statfs_t` to report the game data volume's disk usage over heartbeat. **Not** used for a PTY: `internal/console/console.go`'s doc comment states the agent's console is RCON-only by design ("no real PTY"); a `GameTemplate.spec.consoleMode: "pty"` game is bridged instead through `api/internal/ws/attach.go` against the Kubernetes pod-attach API, with no agent involvement at all | direct-runtime | <!-- doc-versions: dependency -->
 
-Note `k8s.io/apimachinery`/`k8s.io/client-go` are pinned at v0.37.0 here <!-- doc-versions: dependency -->
-across `operator`/`api`/`agent`/`mcp-server` — each Go module in the
-workspace resolves its own client-go version independently (there's no
-shared root `go.mod`), but they currently share the same versions.
-The versions aren't lockstepped structurally across the workspace, but
-happen to align today.
+Note `k8s.io/apimachinery`/`k8s.io/client-go` are at v0.37.1 here, as in <!-- doc-versions: dependency -->
+`operator` and `sentinel`; `api`, `mcp-server` and `test/e2e` are still on v0.37.0. <!-- doc-versions: dependency -->
+Each Go module in the workspace resolves its own client-go version
+independently (there's no shared root `go.mod`), so patch versions can
+drift between modules as Dependabot bumps them one module at a time.
 
 ### audit-syslog-bridge
 
@@ -267,8 +266,8 @@ handshake. Direct deps from `sentinel/go.mod` (excluding the local
 
 | Dependency | Version | Why |
 |---|---|---|
-| `k8s.io/apimachinery` | v0.37.0 | `main.go` — typed/unstructured plumbing for reading the target `GameServer`'s status and idle/wake fields | <!-- doc-versions: dependency -->
-| `k8s.io/client-go` | v0.37.0 | `main.go` — in-cluster client used to read `GameServer` status and patch it to trigger a wake | <!-- doc-versions: dependency -->
+| `k8s.io/apimachinery` | v0.37.1 | `main.go` — typed/unstructured plumbing for reading the target `GameServer`'s status and idle/wake fields | <!-- doc-versions: dependency -->
+| `k8s.io/client-go` | v0.37.1 | `main.go` — in-cluster client used to read `GameServer` status and patch it to trigger a wake | <!-- doc-versions: dependency -->
 
 ### capture-sidecar
 
@@ -377,10 +376,10 @@ cluster/kubelab via `GAMEPLANE_E2E_REUSE_CLUSTER`. Direct deps from
 | `k8s.io/apimachinery` | v0.37.0 | 28 files reference it — `metav1`, `types`, `runtime` types used throughout the assertions and helper builders (`env.go`, `test_helpers_e2e_test.go`) | <!-- doc-versions: dependency -->
 | `k8s.io/api` | v0.37.0 | Core/apps typed objects used to construct and inspect Pods/Deployments/etc. during the e2e flows | <!-- doc-versions: dependency -->
 
-The `k8s.io/*` trio here is now aligned (v0.37.0) with the rest of the <!-- doc-versions: dependency -->
-workspace; each module in the workspace resolves its own client-go version
-independently (there's no shared root `go.mod`), so versions can drift,
-but they currently align.
+The `k8s.io/*` trio here is on v0.37.0, like `api` and `mcp-server` <!-- doc-versions: dependency -->
+(`operator`, `agent` and `sentinel` are on v0.37.1); each module in the workspace resolves its own <!-- doc-versions: dependency -->
+client-go version independently (there's no shared root `go.mod`), so
+patch versions can drift between modules.
 
 ## Toolchain / build-time
 
@@ -425,13 +424,14 @@ The Helm chart itself (`charts/gameplane/Chart.yaml`) declares **no chart
   to set `dsn` *and* rebuild the image with `-tags postgres` themselves.
   So `pgx/v5` is a real, live dependency, but it ships dormant in the
   default binary.
-- **netguard's two policies, three importers.** The architecture doc
-  documents `operator` (`IsAllowed`, permissive) and `agent`
-  (`IsPublic`, strict) as netguard's two consumers. `api/internal/notify`
-  is a third, using the permissive `IsAllowed` policy for admin-configured
-  notification destinations (Discord/Slack/SMTP/webhook) — the same
-  "admin-configured infrastructure, not user-supplied" rationale as
-  ModuleSources.
+- **netguard's two policies, three importers.** Both `IsAllowed` (permissive,
+  for admin-configured infrastructure) and `IsPublic` (strict, for user-supplied
+  targets) are used by operator (module sources), API gateway
+  (notification sinks via `IsAllowed`; Steam resolver and module registry via `IsPublic`), and agent
+  (mod downloads via `IsPublic`; loopback WebSocket RCON via `IsAllowed`). The
+  split prevents private-registry access from being re-opened (if strict rules
+  apply to the operator) or agent SSRF from being introduced (if permissive rules
+  apply to the agent).
 - **Local `replace` modules need explicit Docker `COPY`s.** `netguard` and
   `gameaction` are both resolved via `replace ... => ../netguard` /
   `../gameaction` directives, not published modules. Every Dockerfile that
@@ -454,8 +454,8 @@ The Helm chart itself (`charts/gameplane/Chart.yaml`) declares **no chart
   `go vet` (Go) and `npm run build`/`test:cover` (web) are CI-gated. Lint
   is a devcontainer/local (`make lint`) and `docs/contributing.md`
   pre-PR-checklist step today, not an automated CI gate.
-- **Workspace-wide `k8s.io/*` versions.** All six client-go consumers
-  (`operator`, `api`, `agent`, `mcp-server`, `sentinel`, `test/e2e`) are
-  aligned at `k8s.io/api|apimachinery|client-go v0.37.0`. <!-- doc-versions: dependency --> Because `go.work`
-  links independent modules rather than a single root `go.mod`, versions
-  could drift across the workspace, but they currently align.
+- **Workspace-wide `k8s.io/*` versions.** The six client-go consumers
+  are one patch apart: `operator`, `agent` and `sentinel` are on
+  `k8s.io/*` v0.37.1, `api`, `mcp-server` and `test/e2e` on v0.37.0. <!-- doc-versions: dependency --> Because `go.work`
+  links independent modules rather than a single root `go.mod`, Dependabot
+  bumps them one module at a time and patch versions drift between bumps.

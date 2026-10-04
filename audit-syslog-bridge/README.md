@@ -23,7 +23,15 @@ JSON-webhook source, not just audit events. Nothing in it is Gameplane-specific.
 
 The forwarder reuses a lazily-dialed connection, bounds each write with a
 deadline (so a hung collector can't wedge the relay), and reconnects once on a
-write error.
+write error. Before it reuses a TCP connection it checks that the collector
+hasn't closed it, and opens a fresh one if it has. This check is best-effort: it
+waits only a few milliseconds for the collector's close, so a close that
+arrives later can still lose one record while the bridge returns `204` (written
+to connection). Syslog has no application-level acknowledgement, so this window
+can be narrowed but not closed.
+
+Each inbound request must arrive in full (headers and body) within 15 s, and
+idle keep-alive connections close after 120 s.
 
 ## Transport: prefer TCP
 
@@ -36,6 +44,17 @@ write error.
 - **UDP caps message size.** A record whose JSON body approaches the 64 KiB
   intake limit can exceed the single-datagram ceiling and be dropped; TCP
   streams it fine.
+- **TCP (and TLS) can still lose one record after a collector-side close.**
+  A 204 means the record was written to the collector connection (best effort;
+  the connection may close concurrently and the record be lost). If the
+  collector closes a reused connection and its FIN/RST reaches the bridge only
+  after the short liveness probe, the close goes unnoticed: one record is
+  written into the dead connection and the bridge returns `204`. The following
+  write detects the close, reconnects, and retries. If the retry succeeds, the
+  bridge returns `204` and the record is delivered; if the retry fails, the
+  bridge returns `502` and that record is not delivered. Syslog framing has no
+  acknowledgement, so this window cannot be closed without a different transport
+  (for example one with per-record acks).
 
 `AUTH_HEADER` gates who may inject records — set it (the chart wires it from the
 same Secret as the API's webhook token). Without it the relay accepts any POST.

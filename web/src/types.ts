@@ -3,6 +3,7 @@
 
 export interface ObjectMeta {
   name: string;
+  uid?: string;
   namespace?: string;
   creationTimestamp?: string;
   labels?: Record<string, string>;
@@ -707,6 +708,11 @@ export interface User {
   // permission means all). Present on /users/me; drives can()-based UI
   // gating. Absent elsewhere.
   permissions?: Record<string, string[]>;
+  // Cluster-scoped permission structure: cluster id → namespace → sorted
+  // permission names. Preserves cluster and namespace dimensions. When
+  // present, can() uses this to mirror the backend's cluster-aware checks.
+  // Omitted (omitempty) when there are no bindings. Present on /users/me.
+  permissionsByCluster?: Record<string, Record<string, string[]>>;
   // Styling/theme preferences embedded by GET /users/me (absent on other
   // user payloads) — see UserThemePreferences below.
   preferences?: UserThemePreferences | null;
@@ -772,6 +778,8 @@ export interface PermissionGroup {
 export interface RoleBinding {
   roleName: string;
   namespace: string;
+  /** Omitted by older API responses for local bindings. */
+  cluster?: string;
 }
 
 export type ExtendedUser = User;
@@ -829,6 +837,8 @@ export interface ClusterRegistry {
   message?: string;
   serverVersion?: string;
   lastCheckTime?: string;
+  /** Explicit selected-cluster inventory capability; absent on older APIs. */
+  canViewInventory?: boolean;
 }
 
 export interface LoginProvider {
@@ -1030,6 +1040,13 @@ export interface CatalogEntry {
   phase?: ModulePhase;
   lastError?: string;
   appliedDigest?: string;    // digest of the installed bundle
+  // verifiedDigest is set only when the operator actually ran cosign
+  // verification for this install (Module.status.verifiedDigest); empty if
+  // the source had no verify policy at install time, or the module predates
+  // this field. verifyPolicy is the mode ("keyed"/"keyless") that produced
+  // it, empty whenever verifiedDigest is.
+  verifiedDigest?: string;
+  verifyPolicy?: string;
   previousVersion?: string;  // rollback target (operator-owned)
   previousDigest?: string;
   // pinnedVersion is the Module's desired spec.version (what it's pinned to);
