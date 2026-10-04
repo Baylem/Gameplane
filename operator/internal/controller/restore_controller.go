@@ -130,6 +130,13 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	// A missing template is not fatal: it only refines the FSGroup, and
+	// buildBackupPodSecurityContext falls back to 65532 for a zero template.
+	var tmpl gameplanev1alpha1.GameTemplate
+	if err := r.Get(ctx, types.NamespacedName{Name: gs.Spec.TemplateRef.Name}, &tmpl); err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, err
+	}
+
 	if rs.Status.Phase == gameplanev1alpha1.RestorePhaseSuspending {
 		if !gs.Spec.Suspend {
 			gs.Spec.Suspend = true
@@ -151,11 +158,15 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// src (the source Backup, with RepoRef for the Job env) was resolved
 	// above before the volume-snapshot branch.
+	backoff := int32(2)
+	deadline := int64(86400) // 24 hours
 	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "restore-" + rs.Name, Namespace: rs.Namespace}}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
 		if job.CreationTimestamp.IsZero() {
+			job.Spec.BackoffLimit = &backoff
+			job.Spec.ActiveDeadlineSeconds = &deadline
 			job.Spec.Template.Labels = map[string]string{backupRestoreJobLabel: backupRestoreJobValue}
-			job.Spec.Template.Spec = r.buildRestorePodSpec(&rs, &src)
+			job.Spec.Template.Spec = r.buildRestorePodSpec(&rs, &src, &tmpl)
 			job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
 		}
 		return controllerutil.SetControllerReference(&rs, job, r.Scheme)
@@ -196,7 +207,7 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{}, nil
 
-	case job.Status.Failed > 0:
+	case jobPermanentlyFailed(job):
 		// Leave the server suspended; surface the failure.
 		return r.fail(ctx, &rs, "restore job reported Failed")
 
@@ -241,20 +252,14 @@ func (r *RestoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // buildRestorePodSpec mirrors backup_controller.buildBackupPodSpec but
 // runs `restic restore <id>` and mounts the data PVC read-write.
 func (r *RestoreReconciler) buildRestorePodSpec(
-	rs *gameplanev1alpha1.Restore, src *gameplanev1alpha1.Backup,
+	rs *gameplanev1alpha1.Restore, src *gameplanev1alpha1.Backup, tmpl *gameplanev1alpha1.GameTemplate,
 ) corev1.PodSpec {
 	nonRoot := true
 	roRootFS := true
 	noPrivEsc := false
 	uid := int64(65532)
 	return corev1.PodSpec{
-		SecurityContext: &corev1.PodSecurityContext{
-			RunAsNonRoot:   &nonRoot,
-			RunAsUser:      &uid,
-			RunAsGroup:     &uid,
-			FSGroup:        &uid,
-			SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
-		},
+		SecurityContext: buildBackupPodSecurityContext(tmpl),
 		Containers: []corev1.Container{{
 			Name:  "restic",
 			Image: resticImageOrDefault(r.ResticImage),

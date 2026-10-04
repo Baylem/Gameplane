@@ -560,3 +560,67 @@ func TestBackup_FailsFastOnSecretMissingKeys(t *testing.T) {
 		t.Error("no Job must be created for a Backup whose repo Secret lacks required keys")
 	}
 }
+
+// TestBackup_UsesTemplateSecurityContext verifies the backup Job pod uses
+// the FSGroup from the GameTemplate's security context rather than hardcoding 65532.
+func TestBackup_UsesTemplateSecurityContext(t *testing.T) {
+	ns := newNamespace(t)
+	startMgr(t, ns, withBackupReconciler())
+	tmplName := uniqueName("fsg")
+	tmpl := buildGameTemplate(tmplName)
+	tmpl.Spec.Security = &gameplanev1alpha1.GameSecuritySpec{FSGroup: ptrInt64(2000)}
+	if err := k8sClient.Create(context.Background(), tmpl); err != nil {
+		t.Fatalf("create template: %v", err)
+	}
+	deleteCleanup(t, tmpl)
+	gs := buildGameServer(ns, "smp", tmplName)
+	if err := k8sClient.Create(context.Background(), gs); err != nil {
+		t.Fatalf("create gameserver: %v", err)
+	}
+	if err := k8sClient.Create(context.Background(), buildResticRepoSecret(ns, "repo-secret")); err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if err := k8sClient.Create(context.Background(), buildBackup(ns, "smp-manual", "smp", "repo-secret")); err != nil {
+		t.Fatalf("create backup: %v", err)
+	}
+
+	var ps corev1.PodSpec
+	eventually(t, func() (bool, string) {
+		j, ok := getJob(t, ns, "smp-manual")
+		if !ok {
+			return false, "job not yet created"
+		}
+		ps = j.Spec.Template.Spec
+		return true, ""
+	})
+
+	if ps.SecurityContext == nil {
+		t.Fatal("pod SecurityContext nil")
+	}
+	if ps.SecurityContext.FSGroup == nil {
+		t.Fatal("FSGroup nil")
+	}
+	if *ps.SecurityContext.FSGroup != 2000 {
+		t.Errorf("FSGroup = %d, want 2000", *ps.SecurityContext.FSGroup)
+	}
+}
+
+// TestBackupJobPermanentlyFailed_ConditionNotCounter verifies that a Job with
+// Failed>0 but no Failed condition is still retrying, and that only the
+// Failed=True condition counts as permanent failure.
+func TestBackupJobPermanentlyFailed_ConditionNotCounter(t *testing.T) {
+	retrying := &batchv1.Job{Status: batchv1.JobStatus{Failed: 1}}
+	if jobPermanentlyFailed(retrying) {
+		t.Error("Failed counter without a Failed condition must not be permanent failure")
+	}
+	failed := &batchv1.Job{Status: batchv1.JobStatus{Conditions: []batchv1.JobCondition{{
+		Type: batchv1.JobFailed, Status: corev1.ConditionTrue,
+	}}}}
+	if !jobPermanentlyFailed(failed) {
+		t.Error("Failed=True condition must be permanent failure")
+	}
+}
+
+func ptrInt64(v int64) *int64 {
+	return &v
+}
