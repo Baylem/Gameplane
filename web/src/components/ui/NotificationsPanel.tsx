@@ -37,21 +37,25 @@ export function NotificationsPanel(): JSX.Element {
   useEffect(() => {
     let seq = 0;
     // Coalesce invalidations per query key: a burst of watch events for one
-    // kind costs a single refetch, and an in-flight fetch is not cancelled.
+    // kind costs a single refetch. An in-flight fetch is never cancelled (a
+    // steady event stream would starve it), but it may predate the event, so
+    // the invalidation waits for it to settle and then refetches.
     const pending = new Map<string, ReturnType<typeof setTimeout>>();
+    const flush = (id: string, key: string[]) => {
+      if (qc.isFetching({ queryKey: key }) > 0) {
+        pending.set(id, setTimeout(() => flush(id, key), INVALIDATE_COALESCE_MS));
+        return;
+      }
+      pending.delete(id);
+      void qc.invalidateQueries({ queryKey: key }, { cancelRefetch: false });
+    };
     const dispose = openEventStream({
       onEvent: (ev: GameplaneEvent) => {
         const key = queryKeyForKind(ev.kind);
         if (key) {
           const id = key.join("/");
           if (!pending.has(id)) {
-            pending.set(
-              id,
-              setTimeout(() => {
-                pending.delete(id);
-                void qc.invalidateQueries({ queryKey: key }, { cancelRefetch: false });
-              }, INVALIDATE_COALESCE_MS),
-            );
+            pending.set(id, setTimeout(() => flush(id, key), INVALIDATE_COALESCE_MS));
           }
         }
         const name = ev.object?.metadata?.name ?? "";

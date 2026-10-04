@@ -227,6 +227,30 @@ describe("NotificationsPanel", () => {
     }
   });
 
+  it("defers the invalidation until an in-flight fetch for that key settles", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { client } = renderWithQuery(<NotificationsPanel />);
+      const spy = vi.spyOn(client, "invalidateQueries");
+      const fetching = vi.spyOn(client, "isFetching").mockReturnValueOnce(1).mockReturnValue(0);
+      await act(() => {
+        sseCallback!({ kind: "servers", eventType: "MODIFIED", object: { metadata: { name: "s-1" } } });
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      expect(fetching).toHaveBeenCalledWith({ queryKey: ["servers"] });
+      expect(spy).not.toHaveBeenCalled();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy).toHaveBeenCalledWith({ queryKey: ["servers"] }, { cancelRefetch: false });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("drops pending invalidations on unmount", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
