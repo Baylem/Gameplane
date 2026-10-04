@@ -15,7 +15,6 @@ import (
 	"github.com/robfig/cron/v3"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
@@ -163,7 +162,6 @@ func (r *BackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 func (r *BackupScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&gameplanev1alpha1.BackupSchedule{}).
-		Owns(&gameplanev1alpha1.Backup{}).
 		Complete(r)
 }
 
@@ -182,9 +180,6 @@ func (r *BackupScheduleReconciler) fire(
 			Strategy:  sched.Spec.Strategy,
 			Quiesce:   sched.Spec.Quiesce,
 		},
-	}
-	if err := controllerutil.SetControllerReference(sched, b, r.Scheme); err != nil {
-		return err
 	}
 	return r.Create(ctx, b)
 }
