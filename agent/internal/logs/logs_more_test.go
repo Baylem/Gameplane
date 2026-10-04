@@ -110,7 +110,7 @@ func TestStreamFile_CtxCanceledImmediately(t *testing.T) {
 	}
 	defer cli.Close(websocket.StatusNormalClosure, "")
 
-	if err := streamFile(ctx, cli, path, false); !errors.Is(err, context.Canceled) {
+	if err := streamFile(ctx, cli, path, false, 0); !errors.Is(err, context.Canceled) {
 		t.Fatalf("got %v want %v", err, context.Canceled)
 	}
 }

@@ -148,7 +148,7 @@ describe("LogsTab", () => {
     render(<LogsTab name="alpha" logPath="/data/logs/latest.log" />);
     await userEvent.click(screen.getByRole("tab", { name: /game log/i }));
     expect(sockets[0].close).toHaveBeenCalled();
-    expect(sockets[sockets.length - 1].path).toBe("/ws/servers/alpha/logs");
+    expect(sockets[sockets.length - 1].path).toBe("/ws/servers/alpha/logs?tail=500");
   });
 
   it("offers only container output (no toggle) when the template has no logPath", () => {
@@ -201,7 +201,7 @@ describe("LogsTab", () => {
     // Switch from container output to the agent-backed game-log file stream.
     await userEvent.click(screen.getByRole("tab", { name: /game log/i }));
     const sock = sockets[sockets.length - 1];
-    expect(sock.path).toBe("/ws/servers/alpha/logs");
+    expect(sock.path).toBe("/ws/servers/alpha/logs?tail=500");
     // Repeated reconnect attempts mean the agent is unreachable: show the
     // actionable notice instead of an endless spinner.
     sock.statusEv("reconnecting", { attempt: 2, nextRetryMs: 2000 });

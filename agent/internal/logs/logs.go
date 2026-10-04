@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/coder/websocket"
@@ -70,18 +71,28 @@ func (h *handler) tail(w http.ResponseWriter, req *http.Request) {
 	defer cancel()
 
 	// Read any "follow from now" marker: ?from=end (default) vs ?from=start.
+	// Also read ?tail=N to replay the last N lines before following.
 	from := req.URL.Query().Get("from")
+	tailParam := req.URL.Query().Get("tail")
 	fromEnd := from != "start"
+	var tailLines int64
+	if tailParam != "" {
+		if n, err := strconv.ParseInt(tailParam, 10, 64); err == nil && n > 0 {
+			tailLines = min(n, maxTailLines)
+			fromEnd = false // Override fromEnd to false when requesting history
+		}
+	}
 
-	if err := streamFile(ctx, conn, h.path, fromEnd); err != nil && !errors.Is(err, context.Canceled) {
+	if err := streamFile(ctx, conn, h.path, fromEnd, tailLines); err != nil && !errors.Is(err, context.Canceled) {
 		_ = conn.Close(websocket.StatusInternalError, err.Error())
 	}
 }
 
 // streamFile tails path, delivering each full line as a text WS frame.
+// If tailLines > 0, replays the last tailLines lines before following.
 // Reopens the file on rotation (ENOENT or inode change) with a short
 // backoff so logrotate-style setups keep working.
-func streamFile(ctx context.Context, conn *websocket.Conn, path string, fromEnd bool) error {
+func streamFile(ctx context.Context, conn *websocket.Conn, path string, fromEnd bool, tailLines int64) error {
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -96,13 +107,22 @@ func streamFile(ctx context.Context, conn *websocket.Conn, path string, fromEnd 
 			}
 			return err
 		}
-		if fromEnd {
+		// Replay history: read all lines and send the last tailLines before following.
+		if tailLines > 0 {
+			if err := replayTail(ctx, conn, f, tailLines); err != nil {
+				_ = f.Close()
+				return err
+			}
+			// After replaying, prepare for following: seek to current EOF.
+			_, _ = f.Seek(0, io.SeekEnd)
+		} else if fromEnd {
 			_, _ = f.Seek(0, io.SeekEnd)
 		}
 		if err := tailLoop(ctx, conn, f); err != nil {
 			_ = f.Close()
 			if errors.Is(err, errRotated) {
 				fromEnd = false
+				tailLines = 0
 				continue
 			}
 			return err
@@ -113,6 +133,38 @@ func streamFile(ctx context.Context, conn *websocket.Conn, path string, fromEnd 
 }
 
 var errRotated = errors.New("log file rotated")
+
+// maxTailLines caps ?tail=N so a caller cannot make the agent buffer an unbounded history.
+const maxTailLines int64 = 20000
+
+// replayTail reads all lines from file f and sends the last tailLines to conn.
+func replayTail(ctx context.Context, conn *websocket.Conn, f *os.File, tailLines int64) error {
+	reader := bufio.NewReader(f)
+	var buffer []string
+	for {
+		line, err := reader.ReadString('\n')
+		if len(line) > 0 {
+			buffer = append(buffer, line)
+			// Keep only the last tailLines in the buffer.
+			if int64(len(buffer)) > tailLines {
+				buffer = buffer[1:]
+			}
+		}
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return err
+		}
+	}
+	// Send all buffered lines to the client.
+	for _, line := range buffer {
+		if werr := conn.Write(ctx, websocket.MessageText, []byte(line)); werr != nil {
+			return werr
+		}
+	}
+	return nil
+}
 
 func tailLoop(ctx context.Context, conn *websocket.Conn, f *os.File) error {
 	reader := bufio.NewReader(f)
