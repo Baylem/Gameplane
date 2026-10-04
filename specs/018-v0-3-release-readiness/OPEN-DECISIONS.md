@@ -231,6 +231,8 @@ How it's applied:
 
 Update (maintainer, 2026-09-29): once every held finding had an open or merged fix PR, the maintainer asked for the held records to be published. `audit/held/` was committed to this branch in 8249db80, and a `!specs/018-v0-3-release-readiness/audit/held` negation now follows the `**/held` rule in the root `.gitignore`; the `**/held` rule stays for future audits.
 
+Update (2026-10-04): every held fix PR is merged; the 57 held rows moved to audit/findings.md as fixed-unverified.
+
 ### OD-020: verification tier for the opus component reviews (T045) — RESOLVED 2026-09-24
 
 Decision: an independent opus verifier per review chunk (a fresh agent that tries to refute each candidate). The T036–T042 reviews ran on opus because sonnet reviewers were stopped by the model's safeguard in the first session. Fable is not used: the maintainer treats CLAUDE.md rule 13's fable restriction as a ban because of cost. `coverage.md` records the tier as `opus → opus (independent, OD-020)`.

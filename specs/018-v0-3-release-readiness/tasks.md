@@ -83,7 +83,7 @@ description: "Task list for the v0.3 release readiness audit"
   1. On branch `chore/018-rc1-changelog` off `master`, add a `## [0.3.0-rc.1]` section to `CHANGELOG.md` that summarises the unreleased entries.
   2. Open a PR with labels `type: chore` and `area: specs`.
   3. Log `RC-TAG-1: pending` in `specs/018-v0-3-release-readiness/OPEN-DECISIONS.md`, with the commit SHA to tag once the PR is merged and CI is green.
-- [ ] T014 ⛔ approval. After approval, run `git tag -a v0.3.0-rc.1 <sha> -m "v0.3.0-rc.1" && git push origin v0.3.0-rc.1` (annotated, unsigned, per OD-013). Then check the `release.yaml` run against contracts/rc-deploy.md §1:
+- [~] T014 **WITHDRAWN 2026-10-04, superseded by rc.2** (maintainer decision 2026-10-04; live rounds target rc.2, RC-TAG-2). `release.yaml` run 36051057887 for `v0.3.0-rc.1` was cancelled: the operator image was never built, and there is no chart and no GitHub release (recorded under `## rc.1` in `audit/rounds.md`). The deviation is F-257, fixed by #435. Original task text kept below for the record. ⛔ approval. After approval, run `git tag -a v0.3.0-rc.1 <sha> -m "v0.3.0-rc.1" && git push origin v0.3.0-rc.1` (annotated, unsigned, per OD-013). Then check the `release.yaml` run against contracts/rc-deploy.md §1:
   - it is green
   - images `ghcr.io/valgulnecron/gameplane/<component>:v0.3.0-rc.1` exist and pass `cosign verify --key cosign.pub`
   - chart `oci://ghcr.io/valgulnecron/charts/gameplane:0.3.0-rc.1` exists and is signed
@@ -91,7 +91,7 @@ description: "Task list for the v0.3 release readiness audit"
   - no `0.3` image tag was created or moved
 
   Record the results under `## rc.1` in `audit/rounds.md`. Any deviation becomes a finding
-- [ ] T015 Deploy rc.1 to kubelab (contracts/rc-deploy.md §2):
+- [~] T015 **WITHDRAWN 2026-10-04, superseded by rc.2** (maintainer decision 2026-10-04; live rounds target rc.2, RC-TAG-2). `release.yaml` run 36051057887 for `v0.3.0-rc.1` was cancelled: the operator image was never built, and there is no chart and no GitHub release (recorded under `## rc.1` in `audit/rounds.md`). The deviation is F-257, fixed by #435. Original task text kept below for the record. Deploy rc.1 to kubelab (contracts/rc-deploy.md §2):
   1. Take a DB snapshot through the temporary `audit018-db-tool` pod, not `kubectl exec` into the API pod — the API image is `gcr.io/distroless/static:nonroot` with no shell and no `sqlite3` binary (same fact `audit/procedures/upgrade.md`'s baseline-beta8 step 1 documents and works around): scale `gameplane-api` to 0, apply a throwaway pod that mounts the `gameplane-api-data` PVC, `apk add --no-cache sqlite`, run `sqlite3 /data/gameplane.db ".backup /tmp/rc1-pre.db"`, `kubectl cp` it out to `~/gameplane-audit-018/db-snapshots/rc1-pre.db`, delete the pod, then scale `gameplane-api` back to 1.
   2. Run `helm upgrade <release> oci://ghcr.io/valgulnecron/charts/gameplane --version 0.3.0-rc.1 -n <ns> --reuse-values` with only the image registry and tag overrides needed to leave the private tag.
   3. Record each override key under `## rc.1` in `audit/rounds.md`.
