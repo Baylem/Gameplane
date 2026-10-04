@@ -412,6 +412,124 @@ func TestAdoptLegacySQLite_EmptyDSN(t *testing.T) {
 	}
 }
 
+// TestWithSQLiteBusyTimeout tests DSN transformation for busy_timeout pragma.
+func TestWithSQLiteBusyTimeout(t *testing.T) {
+	tests := []struct {
+		name string
+		dsn  string
+		want string
+	}{
+		{
+			name: "DSN with existing pragma, no query string",
+			dsn:  "file:/data/g.db?_pragma=journal_mode(WAL)",
+			want: "file:/data/g.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "bare path, no query string",
+			dsn:  "/data/g.db",
+			want: "/data/g.db?_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "DSN already containing busy_timeout (lowercase)",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout(1000)",
+			want: "file:/data/g.db?_pragma=busy_timeout(1000)",
+		},
+		{
+			name: "DSN with BUSY_TIMEOUT (uppercase, case-insensitive check)",
+			dsn:  "file:/data/g.db?_pragma=BUSY_TIMEOUT(1000)",
+			want: "file:/data/g.db?_pragma=BUSY_TIMEOUT(1000)",
+		},
+		{
+			name: "DSN with Busy_Timeout (mixed case)",
+			dsn:  "file:/data/g.db?_pragma=Busy_Timeout(500)",
+			want: "file:/data/g.db?_pragma=Busy_Timeout(500)",
+		},
+		{
+			name: "memory database",
+			dsn:  ":memory:",
+			want: ":memory:?_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "file:memory: database",
+			dsn:  "file::memory:",
+			want: "file::memory:?_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "path containing busy_timeout without pragma query parameter",
+			dsn:  "/data/busy_timeout.db?_pragma=journal_mode(WAL)",
+			want: "/data/busy_timeout.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "DSN with another pragma (foreign_keys) should add busy_timeout",
+			dsn:  "file:/data/g.db?_pragma=foreign_keys(1)",
+			want: "file:/data/g.db?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "DSN with _pragma=busy_timeout using equals format",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout=5000",
+			want: "file:/data/g.db?_pragma=busy_timeout=5000",
+		},
+		{
+			name: "unrelated query parameter starting with busy_timeout should add pragma",
+			dsn:  "file:/data/g.db?foo=busy_timeout(1)",
+			want: "file:/data/g.db?foo=busy_timeout(1)&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "bare pragma without assignment should add timeout",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout",
+			want: "file:/data/g.db?_pragma=busy_timeout&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "near-match pragma should add timeout",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout_extra(1)",
+			want: "file:/data/g.db?_pragma=busy_timeout_extra(1)&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "empty assignment should add timeout",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout()",
+			want: "file:/data/g.db?_pragma=busy_timeout()&_pragma=busy_timeout(5000)",
+		},
+		{
+			name: "spaced assignment is unchanged",
+			dsn:  "file:/data/g.db?_pragma=busy_timeout%20=%2010000",
+			want: "file:/data/g.db?_pragma=busy_timeout%20=%2010000",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := withSQLiteBusyTimeout(tc.dsn)
+			if got != tc.want {
+				t.Errorf("withSQLiteBusyTimeout(%q) = %q, want %q", tc.dsn, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestOpen_SQLiteAppliesBusyTimeout verifies that Open applies busy_timeout
+// to the DSN and that PRAGMA busy_timeout returns the configured value.
+func TestOpen_SQLiteAppliesBusyTimeout(t *testing.T) {
+	tmpdir := t.TempDir()
+	dbPath := filepath.Join(tmpdir, "test.db")
+	dsn := "file:" + dbPath
+
+	// Open the database; Open should add busy_timeout.
+	store, err := Open(t.Context(), "sqlite", dsn)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+
+	// Query the PRAGMA to verify it was applied.
+	var timeout int
+	if err := store.DB.QueryRowContext(t.Context(), `PRAGMA busy_timeout`).Scan(&timeout); err != nil {
+		t.Fatalf("PRAGMA query: %v", err)
+	}
+
+	if timeout != 5000 {
+		t.Errorf("PRAGMA busy_timeout = %d, want 5000", timeout)
+	}
+}
+
 // TestMigrate_AddsAuditChainColumns verifies migration 005 adds prev_hash and
 // hash columns to audit_events (used by the audit-log tamper-evidence hash
 // chain in api/internal/audit), and applies cleanly on top of 001-004.
@@ -484,6 +602,36 @@ func TestOpen_AdoptsLegacySQLite(t *testing.T) {
 	}
 	if _, err := legacyDB.ExecContext(t.Context(), `CREATE INDEX idx_audit_ts ON audit_events(ts DESC)`); err != nil {
 		t.Fatalf("create audit_events index: %v", err)
+	}
+	// 001_init.sql also creates sessions, oidc_links and api_tokens; the
+	// fixture records 001 as applied, so migration 012's cleanup statements
+	// must find them.
+	if _, err := legacyDB.ExecContext(t.Context(), `CREATE TABLE sessions (
+    token       TEXT PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    csrf_token  TEXT NOT NULL,
+    expires_at  TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+)`); err != nil {
+		t.Fatalf("create sessions: %v", err)
+	}
+	if _, err := legacyDB.ExecContext(t.Context(), `CREATE TABLE oidc_links (
+    user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    issuer   TEXT NOT NULL,
+    subject  TEXT NOT NULL,
+    email    TEXT,
+    PRIMARY KEY (issuer, subject)
+)`); err != nil {
+		t.Fatalf("create oidc_links: %v", err)
+	}
+	if _, err := legacyDB.ExecContext(t.Context(), `CREATE TABLE api_tokens (
+    token       TEXT PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name        TEXT NOT NULL,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    last_used   TEXT
+)`); err != nil {
+		t.Fatalf("create api_tokens: %v", err)
 	}
 	legacyDB.Close()
 

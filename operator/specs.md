@@ -19,6 +19,17 @@ The operator is a Kubernetes controller-runtime-based process that reconciles Ga
 - **Fleet observability:** expose Prometheus metrics summarizing GameServer and Backup phases across the entire fleet.
 - **CRD codegen:** curate operator/api/v1alpha1 type definitions; `make generate && make manifests` regenerates deepcopy, RBAC, and CRD YAML whenever types change.
 
+### Capture identity across remote gateways
+
+The operator injects the GameServer UID into the capture sidecar and sends both
+the server and NetworkCapture UIDs in capture-start requests. Status, stop and
+expiry cleanup carry the same original owner and capture UIDs. This binds retained
+capture bytes to their originating resources for authenticated remote downloads
+and cleanup, even after sidecar restart or history eviction. Capture admission,
+start/stop and expiry remain reconciler responsibilities; the gateway cannot
+bypass them or operate an arbitrary pod. Existing game resources and storage are
+not recreated to enable remote parity.
+
 ## Non-goals / boundaries
 
 The operator **does not** handle:
@@ -135,10 +146,11 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - Graceful stop: if template has Lifecycle.Stop sequence, orchestrate via agent before scaling down.
   - Node affinity: honor spec.nodeSelector and spec.affinity preferences.
   - Ingress NetworkPolicy: enforce per-template advertised ports, admit CIDRs from `--game-ingress-from-cidr`.
+  - Fixed-name child cleanup: Delete four fixed-name objects (`<gs>-config` Secret, `<gs>-files` Secret, `<gs>-rcon` Secret, `<gs>-auto` BackupSchedule) only when the GameServer controls them via OwnerReference; unowned objects with these names stay in place (same rule as game-ingress NetworkPolicy).
   - Load-balancer address management: translate spec.networking.addressPool / .address preferences onto the Service based on the cluster's address-manager flavor (MetalLB, Cilium, or none), report assignment status via the AddressAssignment condition.
   - **Network capture foundation** (**Phase 2 Foundational**): Pre-provision a `captures` emptyDir (1 GiB) unconditionally on every game pod's StatefulSet template (required because pod.spec.volumes is immutable on running pods; a rolling restart of all existing game pods is incurred once on upgrade). Extend the `<gs>-agent` Service with a second numeric ServicePort 9091 for the capture sidecar's control endpoint. RBAC markers grant `pods/ephemeralcontainers` access (get, list, watch, patch, update) and full CRUD on `networkcaptures` resources. The capture sidecar injection as an ephemeral container is implemented: `buildCaptureEphemeralContainer` (`gameserver_controller.go`) is the single source of truth for the container spec, injected eagerly by `GameServerReconciler.reconcileCapture` when `spec.capture.enabled` is set, with `NetworkCaptureReconciler.injectCaptureContainer` as an idempotent fallback for the case where its own cache is ahead of the GameServer reconciler's write.
 - **Split concerns:**
-  - `gameserver_config.go`: render config files, template variable substitution.
+  - `gameserver_config.go`: render config files, template variable substitution. The `config-init` container copies rendered config files onto the data volume on every pod start; when the template sets `security.fsGroup`, config-init makes each file and directory it copied group-writable so a non-root game sharing that fsGroup can update them.
   - `gameserver_modcreds.go`: mount mod credentials Secrets.
   - `gameserver_rcon.go`: RCON port exposure, lifecycle sequences.
   - `gameserver_restart.go`: restart action, pod deletion.
@@ -148,6 +160,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - `gameserver_status.go`: phase computation from StatefulSet/Pod state + agent heartbeat, AddressAssignment condition.
   - `gameserver_stop_attach.go`: pod exec attachment for graceful stop commands.
   - `gameserver_extravolumes.go`: user-supplied additional volume mounts.
+  - `gameserver_tunnel.go`: provision tunnel relay Deployment (frp, Tailscale, Playit providers), mount only the active provider's credential key (items projection with Optional:true) to prevent exposure of stale keys during a direct spec provider switch.
 - **Capture configuration:**
   - **Spec fields (spec.capture):**
     - `Enabled bool`: Optional flag to enable/disable the capture sidecar injection on this GameServer. When false or omitted, no sidecar is injected and the server is unchanged. When true, the operator injects the capture sidecar as an ephemeral container into the running game pod, live and without restarting the game container.
@@ -189,6 +202,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
     - Unset (condition absent): no pool or address requested; no condition emitted.
     - Precedence when several apply: `IgnoredForExposureMode` → `InvalidAddress` → `NoAddressManagerConfigured` → direct-conflict `AddressInUse` → event-derived failure → `ServiceNotReady` → `AssignmentPending` → `Assigned`.
   - **Endpoint population:** `endpointsFromService()` populates `GameServerEndpoint.pool` only when a pool request was actually translated (outcome == Assigned and Manager supports it); never claims a pool for the ClusterIP address shown while assignment is pending, for an ignored request, or for a cluster without an address manager.
+  - **TunnelReady condition:** Reports tunnel pod readiness when `spec.networking.tunnel.enabled=true` (absent when disabled). Computed in `computeTunnelConditions` (`gameserver_status.go`) each pass reconcileStatus runs, with reasons `InvalidConfig`, `DeploymentNotReady`, `PortNotMapped` (frp, unmapped advertised ports), `NoCredentials` (tailscale/playit missing `credentialsSecretRef`), `UnknownProvider`, and `Ready`. **Credential ownership:** `reconcileTunnel` refuses to mount a `credentialsSecretRef` Secret that has no `ownerReference` matching the GameServer's name and UID (including a stale reference from a deleted same-name GameServer) (`isServerOwnedSecret`) — supported credential paths are the dashboard, the `PUT /servers/{name}:tunnel-credentials` API (which sets the ownerReference), or a manually-created Secret with an explicit ownerReference. A refused Secret is never mounted: `reconcileTunnel` still writes the tunnel Deployment, with no credential volume and zero replicas, so a tunnel already running with that Secret stops. It also writes `TunnelReady=False/TunnelCredentialRefused` (naming the Secret, never its data) directly from `reconcileTunnel` before `Reconcile` returns its error — this bypasses the normal `reconcileStatus` pass since Reconcile returns early on that error — The condition carries its own current `observedGeneration`, but `status.observedGeneration` is not advanced on a refused pass (the rest of status is not recomputed). Once the credential becomes acceptable (or the tunnel is no longer wanted), `reconcileTunnel` removes the refusal condition itself (`clearTunnelCredentialRefused`) before returning, so it does not linger if a later step (NetworkPolicy, Service, StatefulSet) fails; reconcileStatus then writes the real TunnelReady. The refusal message points at the dashboard/API, except when the refused Secret is the canonical `<server>-tunnel-auth` name, where the API answers 409 and the message says to fix the ownerReference or delete the Secret first.
 
 ### GameTemplateReconciler
 - **Responsibility:** Lightweight; only maintains status.inUseCount (how many GameServers ref this template).
@@ -219,6 +233,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - Restore Job: mount snapshot (from VolumeSnapshot or restic), run restic restore.
   - Resume: once the restore Job succeeds, clear the GameServer's suspend flag and set Restore's own phase to Succeeded in the same pass — it does not wait for the GameServer to actually reach Running again.
   - Status: report phase (Pending/Suspending/Running/Succeeded/Failed). `RestorePhaseResuming` is declared on the type but never assigned by this reconciler (F-260).
+  - Volume-snapshot restore reference handling: When a volume-snapshot restore stands up a new GameServer from the original server's spec, any references in spec.env (SecretKeyRef, ConfigMapKeyRef) and spec.networking.tunnel.credentialsSecretRef that are owned by the original server must be copied to new objects owned by the restored server, with rewritten names, because the restored server does not own the originals. Ownership of a source object is an OwnerReference to the original server (Kind, Name, UID) and is re-verified against the source object immediately before each copy, not just once during planning. An object that already exists under a copy name is accepted only if the restored server controls it (a controller OwnerReference, `controller: true`); otherwise the restore fails. The restore fails before the new GameServer is created if the original server does not own every referenced object. The references are rewritten in the new GameServer's spec when it is created, and the copies are made right after creation and re-ensured on every reconcile pass. Only an ownership refusal fails the restore; transient errors (stale cache reads, write conflicts, a referenced object not yet visible in the cache) requeue it. A restore's 10-minute deadline starts when the restore first plans the new server (before it is created) and covers both creating the server with its reference copies and waiting for it to reach Running; it is enforced even while a transient error (such as a referenced object that stays missing) keeps recurring, so the restore cannot run past the limit, and once it expires the restore fails with a deadline message.
 
 ### ModuleSourceReconciler
 - **Responsibility:** Index module sources and surface available modules into status.
@@ -234,7 +249,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
 - **Key functions:**
   - Resolve module name/version via ModuleSource status.modules catalog.
   - Fetch OCI bundle (oras pull). The manifest body must hash to the manifest digest, and each layer body to the digest the manifest lists for it; a mismatch fails the pull (`PullFailed`). The signature check therefore covers every byte the bundle contributes.
-  - Verify cosign signature if ModuleSource.spec.verify declared.
+  - Verify cosign signature if ModuleSource.spec.verify declared. On a successful install, record which digest was actually checked and under which policy in `status.verifiedDigest`/`status.verifyPolicy` — but only when the source declares a policy (key or keyless); a source with no `spec.verify` uses the always-succeeding Nop verifier, so nothing is recorded, even though `Verify()` returns nil. Both fields are cleared (left empty) on that no-policy path so a policy added to the source later doesn't make an already-installed Module look verified. The API and web dashboard use `verifiedDigest` (not the source's current policy) to decide whether the solid "verified" badge is warranted, as opposed to the softer "policy" badge for a declared-but-unchecked source.
   - Enforce `spec.digest`: a resolved bundle with a different digest fails with `DigestMismatch`. A Ready Module counts as converged only while a set `spec.digest` equals `status.appliedDigest`, so a pin added or changed after install is checked on the next reconcile.
   - The catalog's ModuleEntry.Digest describes only its LatestVersion's content, never an older pinned one, so convergence only compares `status.appliedDigest` against it when `spec.version` (or its resolved default) equals `LatestVersion`; a version pinned below latest converges on version alone once applied.
   - Extract module.yaml + template.yaml from bundle.
@@ -272,6 +287,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - The annotation is left in place as a record; Completed/Failed/Expired captures ignore it. The watch is the plain `For(&NetworkCapture{})` with no predicates, so the annotation (metadata) update triggers a reconcile.
   - Why: before F-259 the API patched `phase=Completed` itself and the operator stopped the sidecar afterwards, so a client that downloaded as soon as it saw Completed hit the sidecar while it still held the capture as running and got a 409. Completed now always means the file is downloadable, and the API download handler only checks the phase.
   - **Rolling-upgrade fallback:** a Completed capture with `message="stopped by user request"` and no `SidecarStopped` condition (written by a pre-F-259 API or a pre-F-259 operator's capture-disable path) still gets exactly one `StopCapture` call, guarded by `SidecarStoppedCondition`.
+- **Default filter (FR-003):** when `spec.filter` is nil or empty, the reconciler builds the filter it sends to `StartCapture` from the GameServer's template (`networkcapture_filter.go`): one `<tcp|udp> port <containerPort>` term per advertised port (`advertise: true`), in template order, duplicates dropped, joined with `or`. A port with no protocol is TCP. When the template advertises no port, or the template is missing, the capture goes `Failed` with a message and the sidecar is never called. The sidecar keeps refusing an empty filter, so a capture never records unfiltered traffic. A filter set on the capture is sent unchanged.
 - **Ephemeral container injection:** Inject into game pod's spec.ephemeralContainers subresource with:
   - **Name:** "capture"
   - **Image:** operator CLI flag `--capture-sidecar-image` (default `ghcr.io/valgulnecron/gameplane/capture-sidecar:dev`)
@@ -427,9 +443,9 @@ Forgetting codegen leaves the YAML out of sync with types — CI's `make manifes
 
 | Module | Version | Purpose |
 |--------|---------|---------|
-| k8s.io/api | v0.37.0 | Kubernetes core types (Pod, StatefulSet, Service, Job, etc.). |
-| k8s.io/apimachinery | v0.37.0 | Kubernetes API machinery (metav1, runtime.Scheme, etc.). |
-| k8s.io/client-go | v0.37.0 | Kubernetes client (for exec, logs, discovery). |
+| k8s.io/api | v0.37.1 | Kubernetes core types (Pod, StatefulSet, Service, Job, etc.). |
+| k8s.io/apimachinery | v0.37.1 | Kubernetes API machinery (metav1, runtime.Scheme, etc.). |
+| k8s.io/client-go | v0.37.1 | Kubernetes client (for exec, logs, discovery). |
 | sigs.k8s.io/controller-runtime | v0.25.1 | Reconciler framework (Manager, Builder, Reconciler interface). |
 | github.com/ValgulNecron/gameplane/netguard | local | SSRF dial guard (permissive policy for module fetches from private registries). |
 | github.com/go-git/go-git/v5 | v5.19.2 | Git operations (clone, fetch) for ModuleSources. |
@@ -476,9 +492,11 @@ Forgetting codegen leaves the YAML out of sync with types — CI's `make manifes
 
 4. **Agent RBAC:** Each GameServer gets a unique ServiceAccount + Role (verb:exec on that Pod only). Agent token is bound to that SA and verified by the operator before accepting quiesce/unquiesce calls.
 
-5. **Network policies:** Per-GameServer ingress NetworkPolicy admits only the advertised game ports from declared CIDR(s) (default 0.0.0.0/0, customizable via `--game-ingress-from-cidr`).
+5. **Operator RBAC split:** The operator's permission model separates cluster-wide reads from namespace-scoped writes, enforcing least privilege and limiting blast radius if the operator token is compromised. The ClusterRole (`manager-role`, bound as `gameplane-operator-manager`) grants get/list/watch on Gameplane CRDs, Secrets, ConfigMaps, Services, PVCs, Pods, ServiceAccounts, Roles/RoleBindings, VolumeSnapshots and NetworkPolicies; writes are restricted to the cluster-scoped CRDs (GameTemplate CRUD, Module update/patch and finalizers), to CRD `/status` subresources, and to Events. A Role in each managed namespace (`gameplane-games` by default, and any user-defined namespace) grants the operator create/update/patch/delete on GameServers, Backups, BackupSchedules, Restores, NetworkCaptures, StatefulSets, Deployments, Jobs, Services, PVCs, ConfigMaps, Secrets, ServiceAccounts, Roles/RoleBindings, NetworkPolicies and VolumeSnapshots, `update` on the GameServer, Backup, BackupSchedule and Restore finalizers, plus `pods/attach create` and `pods/ephemeralcontainers` get/patch/update. The split confines writes to managed namespaces; cluster-wide reads, including Secrets, remain. **Agent authentication direction:** The operator creates per-GameServer ServiceAccount, Roles, and RoleBindings in the managed namespace. The agent pod runs as that ServiceAccount and uses its RBAC to heartbeat (patch) its GameServer's status. The operator calls the agent sidecar via mTLS at `<name>-agent.<namespace>.svc.cluster.local:8090`; the agent does not call the operator.
 
-6. **Finalizers:** Controllers use ownership and finalizers to ensure cleanup (e.g., Module deletion cascades to GameTemplate; a quiesced Backup's `gameplane.local/backup-finalizer` blocks deletion until the matching unquiesce is sent, so `kubectl delete` can't drop it and leave the game with auto-save off; associated Jobs are reclaimed via ownerReference GC, not a finalizer).
+6. **Network policies:** Per-GameServer ingress NetworkPolicy admits only the advertised game ports from declared CIDR(s) (default 0.0.0.0/0, customizable via `--game-ingress-from-cidr`).
+
+7. **Finalizers:** Controllers use ownership and finalizers to ensure cleanup (e.g., Module deletion cascades to GameTemplate; a quiesced Backup's `gameplane.local/backup-finalizer` blocks deletion until the matching unquiesce is sent, so `kubectl delete` can't drop it and leave the game with auto-save off; associated Jobs are reclaimed via ownerReference GC, not a finalizer).
 
 ## Testing & coverage
 

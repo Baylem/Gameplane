@@ -17,9 +17,21 @@ These items have shipped and are reflected in current `main`.
 
 ### Multi-cluster: dashboard cluster selector (PR #107) (shipped v0.2.0-beta.6) <!-- doc-versions: historical -->
 
-A Topbar cluster selector with per-cluster health, threading `?cluster=` through
-the API client and raw-fetch escape hatches, with `queryClient.clear()` on cluster
-switch. WebSocket streams remain local-cluster-scoped — a documented follow-up.
+The initial dashboard selector routed requests to one cluster at a time. The
+[unified dashboard](unified-dashboard.md) now combines authorized resources with
+optional location filters; selection remains in node inventory administration.
+Server operations retain their own cluster and namespace. Pod logs and PTY
+WebSockets use that cluster's Kubernetes API.
+
+The [optional private agent gateway](multicluster-agent-gateway.md) supports RCON,
+game-file logs, file/player operations, module actions and agent-based mods.
+Remote capture downloads and cleanup bind files to GameServer and NetworkCapture
+UIDs. Registry browsing, modpacks and ID-list configuration use the selected
+Kubernetes client and template. Upgrade the gateway, operator, agents and capture
+sidecars together; direct Kubernetes connectivity remains required.
+
+Dedicated gateway health in the dashboard remains follow-up work. The existing
+cluster-health indicator reports Kubernetes connectivity only.
 
 ### Multi-cluster: dual-cluster e2e coverage (PR #104) (shipped v0.2.0-beta.6) <!-- doc-versions: historical -->
 
@@ -225,13 +237,20 @@ production-readiness hardening below — tracked items, not code gaps.
   provisions. What is missing is the human-facing runbook, not the test.
 - Resource-limit guidance sized from real workloads rather than defaults.
 
-### Postgres driver: make the store fully driver-portable (planned)
+### Postgres driver: production readiness (experimental)
 
-SQLite is the only production-tested driver. Postgres support (via build tag
-`-tags postgres`) is work-in-progress: the SQL written in migrations lacks
-portable placeholder rebinding (`?` → `$n`), and timestamp defaults are SQLite-specific.
-Making it production-ready requires: portable SQL migration syntax, adding Postgres
-to the CI coverage matrix, and e2e testing against a real Postgres instance.
+SQLite is the only production-tested driver. The Postgres driver (build tag
+`-tags postgres`) now works end to end (#518): migrations 001–012 have
+hand-written Postgres equivalents (`api/internal/db/migrations/postgres/`),
+every later migration is one portable file both drivers run
+(`migrations/common/`), the Postgres connection rewrites `?` placeholders to
+`$n`, and runtime timestamps are generated in Go. The `api (postgres)` CI job
+builds the api with the tag and runs `api/internal/db`'s tests against a real
+PostgreSQL server. It stays **experimental** until the rest lands: running the
+handler/auth/audit test suites and the kind e2e and upgrade suites against
+Postgres, a published image built with `-tags postgres`, and multi-replica
+safety (the user-management lock and the audit hash chain assume a single API
+process).
 
 ---
 
@@ -243,6 +262,15 @@ to the CI coverage matrix, and e2e testing against a real Postgres instance.
 ---
 
 ## Known gaps tracked for completion
+
+### Users page: service accounts and identity-provider tabs (planned, v1.1)
+
+The Users page has two placeholder tabs (`web/src/routes/Users.tsx`,
+`ServiceAccountsTab` and `IdpTab`). **Service accounts** (machine-to-machine
+API tokens) don't exist yet and are tracked for v1.1. **Identity providers**
+has no controls of its own: OIDC providers are already managed under Admin
+Settings → Authentication (see [OIDC provider setup](oidc.md)), or through
+the `api.oidc.*` Helm values. The tab's own UI is tracked for v1.1.
 
 ### Game module template specifications (planned)
 

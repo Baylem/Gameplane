@@ -182,7 +182,7 @@ func (s *WebhookSink) post(ctx context.Context, e Event) {
 	}
 	body, err := json.Marshal(webhookPayload{
 		TS: e.TS, Actor: e.Actor, Method: e.Method, Path: e.Path,
-		Target: e.Target, Status: e.Status, IP: e.IP,
+		Target: e.Target, Status: e.Status, IP: e.IP, Reason: e.Reason,
 	})
 	if err != nil {
 		webhookEvents.WithLabelValues("failed").Inc()
@@ -226,6 +226,7 @@ type webhookPayload struct {
 	Target string `json:"target,omitempty"`
 	Status int    `json:"status"`
 	IP     string `json:"ip,omitempty"`
+	Reason string `json:"reason,omitempty"`
 }
 
 // New returns an Auditor configured with options.
@@ -300,11 +301,11 @@ type chainHead struct {
 func writeConfigTx(ctx context.Context, tx *sql.Tx, key, value string) error {
 	_, err := tx.ExecContext(ctx,
 		`INSERT INTO config(key, value, updated_at)
-		 VALUES (?, ?, datetime('now'))
+		 VALUES (?, ?, ?)
 		 ON CONFLICT(key) DO UPDATE SET
 		     value      = excluded.value,
 		     updated_at = excluded.updated_at`,
-		key, value,
+		key, value, db.NowTimestamp(),
 	)
 	return err
 }

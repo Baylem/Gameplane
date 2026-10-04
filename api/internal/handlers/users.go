@@ -35,8 +35,8 @@ func MountUsers(r chi.Router, store *db.Store, sessions *auth.SessionStore, clus
 		r.Delete("/{id}", h.del)
 		r.Patch("/{id}", h.update)
 		r.Post("/{id}/reset-password", h.resetPassword)
-		// Per-namespace role grants (the cluster-wide role is the primary
-		// role, set via PATCH above).
+		// Supplemental namespace and restricted remote-wide grants. The local
+		// cluster-wide binding remains the primary role, set via PATCH above.
 		r.Get("/{id}/bindings", h.listBindings)
 		r.Post("/{id}/bindings", h.addBinding)
 		r.Delete("/{id}/bindings/{role}/{namespace}", h.deleteBinding)
@@ -61,6 +61,13 @@ type userDTO struct {
 	// namespace ("*" = cluster-wide). Populated only on /users/me; it
 	// drives the dashboard's can()-based UI gating.
 	Permissions map[string][]string `json:"permissions,omitempty"`
+	// PermissionsByCluster is the caller's effective permission set partitioned
+	// by cluster, allowing the frontend to determine cluster-specific access.
+	// Structure is cluster → namespace → sorted []permission. Populated only on
+	// /users/me, mirroring the structure returned by SessionStore.LoadPerms.
+	// Enables the frontend's can() function to exactly replicate User.Can()
+	// without triggering 403 errors on multi-cluster deployments.
+	PermissionsByCluster map[string]map[string][]string `json:"permissionsByCluster,omitempty"`
 	// Preferences is the caller's theme/styling preferences. Populated only
 	// on /users/me so the dashboard can apply the theme without a second
 	// round-trip on boot (contracts/user-preferences-api.md §1.4).
@@ -141,15 +148,16 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 		}
 		hash = h2
 	}
-	res, err := h.db.DB.ExecContext(req.Context(),
-		`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?, ?, ?, ?, ?)`,
+	// RETURNING id instead of LastInsertId: pgx's database/sql driver has
+	// no LastInsertId, and both SQLite and Postgres support RETURNING.
+	var id int64
+	if err := h.db.DB.QueryRowContext(req.Context(),
+		`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?, ?, ?, ?, ?) RETURNING id`,
 		body.Username, body.DisplayName, body.Email, body.Role, nullable(hash),
-	)
-	if err != nil {
+	).Scan(&id); err != nil {
 		httperr.Write(w, req, err)
 		return
 	}
-	id, _ := res.LastInsertId()
 	// Mirror the primary role into a cluster-wide ("*") role binding so
 	// RBAC resolves the new user's permissions. Without this the user has
 	// no effective permissions at all.
@@ -181,7 +189,8 @@ func (h *userHandler) me(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, userDTO{
 		ID: u.ID, Username: u.Username, DisplayName: u.DisplayName,
 		Email: u.Email, Role: u.Role, Permissions: auth.PermsToJSON(u.Perms),
-		Preferences: preferencesDTO(prefs),
+		PermissionsByCluster: auth.PermsByClusterToJSON(u.Perms),
+		Preferences:          preferencesDTO(prefs),
 	})
 }
 
@@ -464,13 +473,12 @@ func (h *userHandler) del(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	if _, err := h.db.DB.ExecContext(req.Context(), `DELETE FROM users WHERE id = ?`, id); err != nil {
+	// One transaction removes the account and every row tied to it (SSO
+	// links, preferences, sessions, bindings) and revokes its share links:
+	// sqlite runs without FK cascade, so nothing else would.
+	if err := h.db.DeleteUser(req.Context(), id); err != nil {
 		httperr.Write(w, req, err)
 		return
-	}
-	// sqlite runs without FK cascade, so clear the user's bindings too.
-	if err := h.db.DeleteUserBindings(req.Context(), nil, id); err != nil {
-		slog.Warn("delete user bindings", "err", err, "user", id)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -557,24 +565,24 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 
 	if body.DisplayName != nil {
 		if _, err := tx.ExecContext(req.Context(),
-			`UPDATE users SET display_name = ?, updated_at = datetime('now') WHERE id = ?`,
-			*body.DisplayName, id); err != nil {
+			`UPDATE users SET display_name = ?, updated_at = ? WHERE id = ?`,
+			*body.DisplayName, db.NowTimestamp(), id); err != nil {
 			httperr.Write(w, req, err)
 			return
 		}
 	}
 	if body.Email != nil {
 		if _, err := tx.ExecContext(req.Context(),
-			`UPDATE users SET email = ?, updated_at = datetime('now') WHERE id = ?`,
-			*body.Email, id); err != nil {
+			`UPDATE users SET email = ?, updated_at = ? WHERE id = ?`,
+			*body.Email, db.NowTimestamp(), id); err != nil {
 			httperr.Write(w, req, err)
 			return
 		}
 	}
 	if body.Role != nil {
 		res, err := tx.ExecContext(req.Context(),
-			`UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`,
-			*body.Role, id)
+			`UPDATE users SET role = ?, updated_at = ? WHERE id = ?`,
+			*body.Role, db.NowTimestamp(), id)
 		if err != nil {
 			httperr.Write(w, req, err)
 			return
@@ -643,8 +651,8 @@ func (h *userHandler) resetPassword(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	res, err := h.db.DB.ExecContext(req.Context(),
-		`UPDATE users SET pw_hash = ?, updated_at = datetime('now') WHERE id = ?`,
-		hash, id)
+		`UPDATE users SET pw_hash = ?, updated_at = ? WHERE id = ?`,
+		hash, db.NowTimestamp(), id)
 	if err != nil {
 		httperr.Write(w, req, err)
 		return
@@ -721,9 +729,10 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 	if body.Cluster == "" {
 		body.Cluster = scope.DefaultCluster
 	}
-	// The cluster-wide role is the user's primary role (set via PATCH); this
-	// endpoint only grants additional per-namespace roles.
-	if body.Namespace == "*" || !scope.Allowed(body.Namespace) {
+	// The local cluster-wide role is still managed through the primary role.
+	// An explicit remote-wide grant may carry only inventory/namespaced access.
+	remoteWide := body.Namespace == "*" && body.Cluster != scope.DefaultCluster
+	if !remoteWide && (body.Namespace == "*" || !scope.Allowed(body.Namespace)) {
 		http.Error(w, "namespace not permitted", http.StatusBadRequest)
 		return
 	}
@@ -743,12 +752,27 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "cluster not permitted", http.StatusBadRequest)
 		return
 	}
+	if remoteWide {
+		// Serialize permission validation + insertion with role edits/deletion,
+		// so a safe role cannot become a control-plane grant between them.
+		unlock := h.db.LockUserManagement()
+		defer unlock()
+	}
 	if ok, err := h.db.RoleExists(req.Context(), body.RoleName); err != nil {
 		httperr.Write(w, req, err)
 		return
 	} else if !ok {
 		http.Error(w, "invalid role", http.StatusBadRequest)
 		return
+	}
+	if remoteWide {
+		if allowed, err := remoteWideRoleAllowed(req.Context(), h.db, body.RoleName); err != nil {
+			httperr.Write(w, req, err)
+			return
+		} else if !allowed {
+			http.Error(w, "remote cluster-wide roles may grant only cluster:read and namespaced permissions", http.StatusBadRequest)
+			return
+		}
 	}
 	if ok, err := h.userExists(req.Context(), id); err != nil {
 		httperr.Write(w, req, err)
@@ -790,13 +814,26 @@ func (h *userHandler) deleteBinding(w http.ResponseWriter, req *http.Request) {
 	if cluster == "" {
 		cluster = scope.DefaultCluster
 	}
-	if namespace == "*" {
+	if namespace == "*" && cluster == scope.DefaultCluster {
 		http.Error(w, "the cluster-wide role is managed via the primary role", http.StatusBadRequest)
 		return
 	}
 	if cluster == "*" {
 		http.Error(w, "cluster not permitted", http.StatusBadRequest)
 		return
+	}
+	if namespace == "*" {
+		unlock := h.db.LockUserManagement()
+		defer unlock()
+		// Legacy externally provisioned global grants are not supplemental
+		// remote readers; retain their previous removal protection.
+		if allowed, err := remoteWideRoleAllowed(req.Context(), h.db, role); err != nil {
+			httperr.Write(w, req, err)
+			return
+		} else if !allowed {
+			http.Error(w, "remote control-plane bindings cannot be removed through supplemental grants", http.StatusBadRequest)
+			return
+		}
 	}
 	res, err := h.db.DB.ExecContext(req.Context(),
 		`DELETE FROM user_role_bindings WHERE user_id = ? AND role_name = ? AND cluster = ? AND namespace = ?`,

@@ -23,7 +23,8 @@ threshold:
 exclude:
   paths:
     - ^cmd/                                   # main.go + flag/signal wiring
-    # Postgres driver is build-tag gated and needs Docker (testcontainers).
-    # Coverage runs without -tags=postgres, so this file is never built.
-    # Tracked separately on a nightly job.
+    # Postgres driver is build-tag gated. Coverage runs without
+    # -tags=postgres, so this file is never built here; the `api (postgres)`
+    # CI job builds it and runs internal/db's tests against a PostgreSQL
+    # service container (without a coverage gate).
     - ^internal/db/db_postgres\.go$

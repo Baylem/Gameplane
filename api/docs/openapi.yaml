@@ -4,6 +4,21 @@ info:
   title: Gameplane API
   version: 1.0.0
 paths:
+  '/admin/audit':
+    get:
+      responses:
+        '200':
+          description: OK
+  '/admin/audit/export':
+    get:
+      responses:
+        '200':
+          description: OK
+  '/admin/audit/verify':
+    get:
+      responses:
+        '200':
+          description: OK
   '/admin/auth/providers/{name}/secret':
     delete:
       responses:
@@ -13,8 +28,18 @@ paths:
       responses:
         '200':
           description: OK
+  '/admin/config':
+    get:
+      responses:
+        '200':
+          description: OK
   '/admin/config/auth/role-mappings/{role}':
     delete:
+      responses:
+        '200':
+          description: OK
+  '/admin/config/{section}':
+    put:
       responses:
         '200':
           description: OK
@@ -36,212 +61,17 @@ paths:
       responses:
         '200':
           description: OK
-  '/backup-destinations/{name}':
-    delete:
-      responses:
-        '200':
-          description: OK
-    get:
-      responses:
-        '200':
-          description: OK
-  '/backups/{name}':
-    delete:
-      responses:
-        '200':
-          description: OK
-    get:
-      responses:
-        '200':
-          description: OK
-    put:
-      responses:
-        '200':
-          description: OK
-  '/clusters/{name}':
-    delete:
-      responses:
-        '200':
-          description: OK
-  '/modules/sources/{name}':
-    delete:
-      responses:
-        '200':
-          description: OK
-    put:
-      responses:
-        '200':
-          description: OK
-  '/modules/sources/{name}/upload/{module}':
-    delete:
-      responses:
-        '200':
-          description: OK
-  '/modules/{name}':
-    delete:
-      responses:
-        '200':
-          description: OK
-    get:
-      responses:
-        '200':
-          description: OK
-    patch:
-      responses:
-        '200':
-          description: OK
-  '/restores/{name}':
-    delete:
-      responses:
-        '200':
-          description: OK
-    get:
-      responses:
-        '200':
-          description: OK
-    put:
-      responses:
-        '200':
-          description: OK
-  '/roles/{name}':
-    delete:
-      responses:
-        '200':
-          description: OK
-    patch:
-      responses:
-        '200':
-          description: OK
-  '/schedules/{name}':
-    delete:
-      responses:
-        '200':
-          description: OK
-    get:
-      responses:
-        '200':
-          description: OK
-    put:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}':
-    delete:
-      responses:
-        '200':
-          description: OK
-    get:
-      responses:
-        '200':
-          description: OK
-    put:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/files/delete':
-    delete:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/mods':
-    delete:
-      responses:
-        '200':
-          description: OK
-    get:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:capture':
-    delete:
-      responses:
-        '200':
-          description: OK
-    get:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:shares/servers/{name}/shares/{id}':
-    delete:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:tunnel-credentials':
-    delete:
-      responses:
-        '200':
-          description: OK
-    get:
-      responses:
-        '200':
-          description: OK
-    put:
-      responses:
-        '200':
-          description: OK
-  '/templates/{name}':
-    delete:
-      responses:
-        '200':
-          description: OK
-    get:
-      responses:
-        '200':
-          description: OK
-    put:
-      responses:
-        '200':
-          description: OK
-  '/users/{id}':
-    delete:
-      responses:
-        '200':
-          description: OK
-    patch:
-      responses:
-        '200':
-          description: OK
-  '/users/{id}/bindings/{role}/{namespace}':
-    delete:
-      responses:
-        '200':
-          description: OK
-  '/admin/audit':
-    get:
-      responses:
-        '200':
-          description: OK
-  '/admin/audit/export':
-    get:
-      responses:
-        '200':
-          description: OK
-  '/admin/audit/verify':
-    get:
-      responses:
-        '200':
-          description: OK
-  '/admin/config':
-    get:
-      responses:
-        '200':
-          description: OK
   '/admin/system-logs/{component}':
     get:
       responses:
         '200':
           description: OK
-  '/auth/oidc/callback':
-    get:
+  '/auth/logout':
+    post:
       responses:
         '200':
           description: OK
   '/auth/oidc/start':
-    get:
-      responses:
-        '200':
-          description: OK
-  '/auth/oidc/{provider}/callback':
     get:
       responses:
         '200':
@@ -265,12 +95,34 @@ paths:
       responses:
         '200':
           description: OK
+  '/backup-destinations/{name}':
+    delete:
+      responses:
+        '200':
+          description: OK
+    get:
+      responses:
+        '200':
+          description: OK
   '/backups':
     get:
       responses:
         '200':
           description: OK
     post:
+      responses:
+        '200':
+          description: OK
+  '/backups/{name}':
+    delete:
+      responses:
+        '200':
+          description: OK
+    get:
+      responses:
+        '200':
+          description: OK
+    put:
       responses:
         '200':
           description: OK
@@ -281,6 +133,16 @@ paths:
           description: OK
   '/cluster/info':
     get:
+      responses:
+        '200':
+          description: OK
+  '/cluster/kubeconfig':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/cluster/nodes:join':
+    post:
       responses:
         '200':
           description: OK
@@ -298,6 +160,11 @@ paths:
       responses:
         '200':
           description: OK
+  '/clusters/{name}':
+    delete:
+      responses:
+        '200':
+          description: OK
   '/events':
     get:
       responses:
@@ -308,16 +175,36 @@ paths:
       responses:
         '200':
           description: OK
-  '/metrics':
-    get:
-      responses:
-        '200':
-          description: OK
   '/modules':
     get:
       responses:
         '200':
           description: OK
+    post:
+      responses:
+        '200':
+          description: OK
+  '/modules/builder/archetypes':
+    get:
+      responses:
+        '200':
+          description: OK
+  '/modules/builder/export':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/modules/builder/preview':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/modules/builder/scaffold':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/modules/builder/validate':
     post:
       responses:
         '200':
@@ -336,12 +223,62 @@ paths:
       responses:
         '200':
           description: OK
+  '/modules/sources/{name}':
+    delete:
+      responses:
+        '200':
+          description: OK
+    put:
+      responses:
+        '200':
+          description: OK
+  '/modules/sources/{name}/upload':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/modules/sources/{name}/upload/{module}':
+    delete:
+      responses:
+        '200':
+          description: OK
+  '/modules/{name}':
+    delete:
+      responses:
+        '200':
+          description: OK
+    get:
+      responses:
+        '200':
+          description: OK
+    patch:
+      responses:
+        '200':
+          description: OK
+  '/namespaces':
+    get:
+      responses:
+        '200':
+          description: OK
   '/restores':
     get:
       responses:
         '200':
           description: OK
     post:
+      responses:
+        '200':
+          description: OK
+  '/restores/{name}':
+    delete:
+      responses:
+        '200':
+          description: OK
+    get:
+      responses:
+        '200':
+          description: OK
+    put:
       responses:
         '200':
           description: OK
@@ -359,12 +296,34 @@ paths:
       responses:
         '200':
           description: OK
+  '/roles/{name}':
+    delete:
+      responses:
+        '200':
+          description: OK
+    patch:
+      responses:
+        '200':
+          description: OK
   '/schedules':
     get:
       responses:
         '200':
           description: OK
     post:
+      responses:
+        '200':
+          description: OK
+  '/schedules/{name}':
+    delete:
+      responses:
+        '200':
+          description: OK
+    get:
+      responses:
+        '200':
+          description: OK
+    put:
       responses:
         '200':
           description: OK
@@ -377,8 +336,31 @@ paths:
       responses:
         '200':
           description: OK
+  '/servers/{name}':
+    delete:
+      responses:
+        '200':
+          description: OK
+    get:
+      responses:
+        '200':
+          description: OK
+    put:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/actions/run':
+    post:
+      responses:
+        '200':
+          description: OK
   '/servers/{name}/events':
     get:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/files/delete':
+    delete:
       responses:
         '200':
           description: OK
@@ -392,12 +374,41 @@ paths:
       responses:
         '200':
           description: OK
+  '/servers/{name}/files/mkdir':
+    post:
+      responses:
+        '200':
+          description: OK
   '/servers/{name}/files/read':
     get:
       responses:
         '200':
           description: OK
+  '/servers/{name}/files/upload':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/files/write':
+    post:
+      responses:
+        '200':
+          description: OK
   '/servers/{name}/logs/download':
+    get:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/modpack':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/mods':
+    delete:
+      responses:
+        '200':
+          description: OK
     get:
       responses:
         '200':
@@ -408,6 +419,11 @@ paths:
         '200':
           description: OK
     put:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/mods/install':
+    post:
       responses:
         '200':
           description: OK
@@ -436,8 +452,18 @@ paths:
       responses:
         '200':
           description: OK
+  '/servers/{name}/mods/upload':
+    post:
+      responses:
+        '200':
+          description: OK
   '/servers/{name}/players':
     get:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/players/ban':
+    post:
       responses:
         '200':
           description: OK
@@ -446,8 +472,33 @@ paths:
       responses:
         '200':
           description: OK
+  '/servers/{name}/players/kick':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/players/unban':
+    post:
+      responses:
+        '200':
+          description: OK
   '/servers/{name}/players/whitelist':
     get:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/players/whitelist/add':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/players/whitelist/remove':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}/shares/{id}':
+    delete:
       responses:
         '200':
           description: OK
@@ -456,8 +507,37 @@ paths:
       responses:
         '200':
           description: OK
+  '/servers/{name}:capture':
+    delete:
+      responses:
+        '200':
+          description: OK
+    get:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:capture-disable':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:capture-enable':
+    post:
+      responses:
+        '200':
+          description: OK
   '/servers/{name}:capture-file':
     get:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:capture-start':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:capture-stop':
+    post:
       responses:
         '200':
           description: OK
@@ -466,11 +546,74 @@ paths:
       responses:
         '200':
           description: OK
+  '/servers/{name}:clone':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:collaborators':
+    put:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:restart':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:shares':
+    get:
+      responses:
+        '200':
+          description: OK
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:start':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:stop':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:transfer':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:tunnel-credentials':
+    delete:
+      responses:
+        '200':
+          description: OK
+    get:
+      responses:
+        '200':
+          description: OK
+    put:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:wake':
+    post:
+      responses:
+        '200':
+          description: OK
+  '/servers/{name}:wipe-data':
+    post:
+      responses:
+        '200':
+          description: OK
   '/shares/{token}':
     get:
       responses:
         '200':
           description: OK
+  '/shares/{token}/start':
     post:
       responses:
         '200':
@@ -481,6 +624,19 @@ paths:
         '200':
           description: OK
     post:
+      responses:
+        '200':
+          description: OK
+  '/templates/{name}':
+    delete:
+      responses:
+        '200':
+          description: OK
+    get:
+      responses:
+        '200':
+          description: OK
+    put:
       responses:
         '200':
           description: OK
@@ -498,8 +654,31 @@ paths:
       responses:
         '200':
           description: OK
+  '/users/me/preferences':
+    get:
+      responses:
+        '200':
+          description: OK
+    put:
+      responses:
+        '200':
+          description: OK
+  '/users/me/preferences/reset':
+    post:
+      responses:
+        '200':
+          description: OK
   '/users/me/servers':
     get:
+      responses:
+        '200':
+          description: OK
+  '/users/{id}':
+    delete:
+      responses:
+        '200':
+          description: OK
+    patch:
       responses:
         '200':
           description: OK
@@ -508,6 +687,16 @@ paths:
       responses:
         '200':
           description: OK
+    post:
+      responses:
+        '200':
+          description: OK
+  '/users/{id}/bindings/{role}/{namespace}':
+    delete:
+      responses:
+        '200':
+          description: OK
+  '/users/{id}/reset-password':
     post:
       responses:
         '200':
@@ -529,171 +718,6 @@ paths:
           description: OK
   '/ws/servers/{name}/logs/pod':
     get:
-      responses:
-        '200':
-          description: OK
-  '/admin/notifications/sinks/{name}/test':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/auth/login':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/auth/logout':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/cluster/kubeconfig':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/cluster/nodes:join':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/modules/sources/{name}/upload':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/actions/run':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/files/mkdir':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/files/upload':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/files/write':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/modpack':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/mods/install':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/mods/upload':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/players/ban':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/players/kick':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/players/unban':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/players/whitelist/add':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}/players/whitelist/remove':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:capture-disable':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:capture-enable':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:capture-start':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:capture-stop':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:clone':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:restart':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:start':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:stop':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:transfer':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:wake':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:wipe-data':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/shares/{token}/start':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/users/{id}/reset-password':
-    post:
-      responses:
-        '200':
-          description: OK
-  '/admin/config/{section}':
-    put:
-      responses:
-        '200':
-          description: OK
-  '/servers/{name}:collaborators':
-    put:
       responses:
         '200':
           description: OK

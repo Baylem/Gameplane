@@ -190,11 +190,15 @@ const (
 )
 
 // RBAC markers below describe only the CLUSTER-wide permissions the
-// operator needs. Writes to workload primitives (StatefulSets, Services,
-// PVCs, Secrets, ConfigMaps, Jobs) are scoped per-namespace via a
+// operator needs. Writes to workload primitives (StatefulSets,
+// Deployments, Services, PVCs, Secrets, ConfigMaps, Jobs,
+// NetworkPolicies, ServiceAccounts, Roles/RoleBindings), to the
+// namespaced Gameplane CRDs and their finalizers, and to
+// pods/ephemeralcontainers are scoped per-namespace via a
 // hand-managed Role bound in the games namespace(s) — see
 // operator/config/rbac/role_namespace.yaml and the Helm chart. This
-// keeps a compromised operator token from reading Secrets cluster-wide.
+// keeps a compromised operator token from mutating workloads, policies
+// or RBAC outside the games namespace(s).
 //
 // pods/attach create (softStop's stdin pod-attach for consoleMode: pty
 // games, see gameserver_stop_attach.go) is likewise namespace-scoped
@@ -206,20 +210,17 @@ const (
 // in this list.
 //
 // +kubebuilder:rbac:groups=gameplane.local,resources=gameservers,verbs=get;list;watch
-// +kubebuilder:rbac:groups=gameplane.local,resources=gameservers/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=gameplane.local,resources=gameservers/finalizers,verbs=update
-// +kubebuilder:rbac:groups=gameplane.local,resources=gametemplates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=gameplane.local,resources=gametemplates,verbs=get;list;watch
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
-// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=services;persistentvolumeclaims;configmaps;secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=pods;pods/log,verbs=get;list;watch
-// +kubebuilder:rbac:groups="",resources=pods/ephemeralcontainers,verbs=get;list;watch;patch;update
-// +kubebuilder:rbac:groups=gameplane.local,resources=networkcaptures,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=gameplane.local,resources=networkcaptures/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=pods/ephemeralcontainers,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gameplane.local,resources=networkcaptures,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings,verbs=get;list;watch
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch
 //
@@ -1590,7 +1591,7 @@ const captureContainerName = "capture"
 // NetworkCaptureReconciler (idempotent fallback injection at first capture
 // start) so the two paths can never drift apart. image falls back to
 // DefaultCaptureSidecarImage when empty.
-func buildCaptureEphemeralContainer(image string) corev1.EphemeralContainer {
+func buildCaptureEphemeralContainer(image, serverUID string) corev1.EphemeralContainer {
 	if image == "" {
 		image = DefaultCaptureSidecarImage
 	}
@@ -1659,6 +1660,7 @@ func buildCaptureEphemeralContainer(image string) corev1.EphemeralContainer {
 				// refuse a start that would push retained files plus the new
 				// capture past the volume's real limit (F-187).
 				{Name: "CAPTURE_VOLUME_BUDGET_BYTES", Value: strconv.FormatInt(captureVolumeBudgetBytes, 10)},
+				{Name: "GAMEPLANE_SERVER_UID", Value: serverUID},
 			},
 		},
 		// Targets the game container for a shared pid/network/ipc namespace.
@@ -1760,7 +1762,7 @@ func (r *GameServerReconciler) reconcileCapture(ctx context.Context, gs *gamepla
 
 	if !hasCaptureEphemeralContainer(&pod) {
 		image := r.CaptureSidecarImage
-		pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, buildCaptureEphemeralContainer(image))
+		pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, buildCaptureEphemeralContainer(image, string(gs.UID)))
 		if err := r.SubResource("ephemeralcontainers").Update(ctx, &pod); err != nil {
 			// A requeue racing ahead of the manager cache's propagation of
 			// the previous injection can see hasCaptureEphemeralContainer
@@ -1858,16 +1860,28 @@ func configInitImageOrDefault(image string) string {
 // data volume on every pod start — operator-rendered files always win
 // over in-place edits (e.g. via the dashboard Files tab). image is the
 // operator-configured config-init image; empty falls back to the pin.
+// When the template sets security.fsGroup, config-init makes each file
+// and directory it copied group-writable so a non-root game sharing that
+// fsGroup can update them.
 func buildConfigInitContainer(image string, tmpl *gameplanev1alpha1.GameTemplate) corev1.Container {
 	image = configInitImageOrDefault(image)
 	mountPath := effectiveMountPath(tmpl)
+	cpCmd := "cp -RL " + configFilesStagingPath + "/* '" + mountPath + "/'"
+
+	// If fsGroup is set, append a chmod step to make each file and directory
+	// config-init copied group-writable (entries that came from the staging tree;
+	// other files already on the volume keep their modes).
+	if tmpl.Spec.Security != nil && tmpl.Spec.Security.FSGroup != nil {
+		cpCmd += " && cd " + configFilesStagingPath + " && find ./* -follow \\( -type f -o -type d \\) | while IFS= read -r p; do chmod g+w '" + mountPath + "/'\"$p\"; done"
+	}
+
 	return corev1.Container{
 		Name:    "config-init",
 		Image:   image,
 		Command: []string{"/bin/sh", "-c"},
 		// -L dereferences the kubelet's per-key symlinks; the * glob
 		// skips the ..data/..<timestamp> dot-entries of the Secret mount.
-		Args: []string{"cp -RL " + configFilesStagingPath + "/* '" + mountPath + "/'"},
+		Args: []string{cpCmd},
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: "config-files", MountPath: configFilesStagingPath, ReadOnly: true},
 			{Name: "data", MountPath: mountPath},
@@ -2147,6 +2161,7 @@ func buildAgentContainer(
 	}
 	env := []corev1.EnvVar{
 		{Name: "GAMEPLANE_SERVER_NAME", Value: gs.Name},
+		{Name: "GAMEPLANE_SERVER_UID", Value: string(gs.UID)},
 		{Name: "GAMEPLANE_TEMPLATE", Value: tmpl.Name},
 		{Name: "GAMEPLANE_GAME", Value: tmpl.Spec.Game},
 		// Games without RCON (consoleMode pty/none) must not have the
@@ -2238,11 +2253,7 @@ func (r *GameServerReconciler) reconcileBackupSchedule(
 	}
 
 	if gs.Spec.BackupPolicy == nil {
-		err := r.Delete(ctx, bs)
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
+		return r.deleteIfControlledBy(ctx, gs, bs)
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, bs, func() error {

@@ -17,6 +17,7 @@ The api module is the REST + WebSocket gateway for Gameplane, serving the web da
 - **Notifications:** watch CRD status transitions (server health, backup outcomes) and dispatch to admin-configured sinks (Discord, Slack, SMTP, webhook)
 - **Module registries:** pluggable providers (CurseForge, Modrinth, Spigot, Hangar, Nexus, Steam, Thunderstore, Factorio, GitHub, UMod); live lookup + caching
 - **Multi-cluster dispatch:** `?cluster=` selector routes requests to remote clusters via registered kubeconfigs; home cluster is `local`
+- **Unified reads:** `/fleet/*` aggregates only the caller's authorized resources across registered clusters, with explicit target identities, target permissions, partial failures and bounded work; it does not schedule or mutate resources.
 - **Telemetry:** opt-in anonymous daily usage metrics (version, server count, template count) POSTed to admin-configured endpoint
 
 ## Non-goals / boundaries
@@ -57,11 +58,11 @@ api/
 - **handlers:** 23+ route groups (Audit, AuthProviderSecrets, Capture, Cluster, ClusterActions, Clusters, Config, Destinations, Events, Lifecycle, ModIDs, ModSources, Modules, ModUpdates, Notifications, Ownership, PodEvents, Registry, RegistrySecrets, Resources, Roles, SystemLogs, Users, WebSocket Mount)
 - **auth:** SessionStore (CSRF + expiry), Local (argon2id password check), OIDC (provider registry + claim mapping), Registry (auth provider discovery per request)
 - **rbac:** Middleware (namespace/cluster-scoped permission check + owner/collaborator fallback), rule table (method/path -> permission), catalog (permission definitions)
-- **db:** driver-selectable (modernc.org/sqlite or pgx/v5 via postgres build tag), migrations (001-011), Store (query interface)
+- **db:** driver-selectable (modernc.org/sqlite or pgx/v5 via postgres build tag), migrations (001-012 per dialect in `migrations/sqlite/` and `migrations/postgres/`; 013+ shared and portable in `migrations/common/`), Store (query interface); queries use `?` placeholders, rebound to `$n` by the Postgres connection (`db.Rebind`)
 - **kube:** Client (K8s API wrapper), Registry (per-cluster clients from Cluster CRDs), watch (cluster-config sync)
 - **audit:** Auditor (insert to DB + distribute to sinks), webhook sink (POST JSON to URL), S3 sink (object storage), hash-chain (detect tampering)
 - **notify:** Notifier (watch GameServer/Backup/Restore status, format + deliver to sinks), sinks (Discord, Slack, SMTP, webhook)
-- **ws:** Mount (WebSocket router), agent-client (mTLS to agent), actions (RCON/PTY execution), attach (SPDY proxy), podlogs (live pod logs)
+- **ws:** Mount (WebSocket router), agent-client (JSON agent reads), transport (shared HTTP/WebSocket agent connection), actions (RCON/PTY execution), attach (SPDY proxy), podlogs (live pod logs)
 - **registry:** provider types (each implements Search, Details, Manifest, Download), Set (versioned provider pool with key fallback)
 - **scope:** ResolveNamespace (extract from path or default), ResolveCluster (validate `?cluster=` against registry)
 - **httperr:** classify error type to safe HTTP status + message; preserve full error server-side
@@ -85,7 +86,8 @@ Two subcommands:
 2. **`bootstrap-admin`** — seed or reset the initial admin user
    - Flags: `--db-driver`, `--db-dsn`, `--username`, `--password`, `--password-stdin`, `--email`, `--display-name`, `--force`, `--enable-local-login`
    - Runs schema migrations like the serve path; password hashed with argon2id
-   - Break-glass: `--enable-local-login` alone re-enables local auth in the config row (for OIDC-lockout recovery)
+   - Break-glass: `--enable-local-login` alone re-enables local auth in the config row (for OIDC-lockout recovery); every other key of the row (other providers, `helmOverride`) is written back unchanged
+   - `--force` on an existing user resets the password, promotes to admin, and deletes all of that user's sessions (same eviction as the dashboard password reset)
 
 ### REST surface (domain-level)
 
@@ -102,10 +104,24 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/healthz` — GET: liveness probe
 
 **Protected (authenticated + RBAC):**
-- `/servers/{name}` — CRUD for GameServer CRDs; cluster-dispatch via `?cluster=`; multiplexed console/files
+- All six `/fleet/*` reads share a per-authenticated-user token bucket: 60 requests/minute sustained, burst 10. Exhausted requests receive 429 with `Retry-After: 1` before cluster discovery or resource listing. Sessions and routes share the account's budget; users behind the same IP do not. This per-process limit bounds request frequency without removing owner/collaborator scans; multiple API replicas have independent budgets.
+- `/namespaces` — GET: namespaces the caller may read servers in (scope.AllowedNamespaces filtered by servers:read on the resolved `?cluster=`); lets the dashboard fan out `/servers?namespace=` across every namespace it can see instead of only scope.Resolve's default (F-263)
+- `/fleet/servers`, `/fleet/backups`, `/fleet/schedules`, `/fleet/restores` — GET, authenticated: unified reads across registered clients and persisted registrations, restricted to configured allowed namespaces. Optional exact `cluster` and `namespace` filters narrow the backend read; omission means all eligible scopes, independent of the old selected-cluster default. Duplicate filters, wildcard IDs and invalid namespaces are rejected. A valid unknown or unauthorized cluster filter returns an empty filtered result without confirming registration existence.
+  - Resource envelope: `{items:[{target:{cluster,namespace,name,uid},resource,permissions,access?}],partial,issues,totalReturned,scopes?}`. `resource` is the original Kubernetes object; server heartbeat freshness is projected as on existing reads. `target.uid` distinguishes replacement objects in row/cache identity; it does not add mutation preconditions to existing CRUD. `permissions` is the sorted catalogue of namespaced permissions actually held at that target, never a union of other clusters' grants.
+  - Servers include objects granted by exact target `servers:read`, or the current object's owner/collaborator fallback. `access` exposes `canWrite` (explicit `servers:write`, required for full-object PUT), `canControl` (write or owner/collaborator), `canConsole` (console permission or owner/collaborator), `canDelete` (target admin wildcard or owner), `isOwner` and `isCollaborator`. These are UI projections; existing mutation/stream authorization remains authoritative.
+  - Backups and restores require exact target `backups:read`; schedules require `schedules:read`. Server ownership alone does not grant those collection reads. Unauthorized scopes are never queried for these resources. Owner-only server discovery scans configured namespaces but returns only matching objects; unrelated registration names never appear in issue metadata.
+  - `scopes` supplies deduplicated, sorted filter choices: explicitly read-granted scopes are included even when empty, unavailable or their items are truncated; ownership-only scopes appear only after an owned/collaborator object is found. Scope metadata is capped at 2,000 and remains separate from the item limit. An exact backend filter can retrieve a scope omitted from an unfiltered result.
+- `/fleet/inventory` — GET, authenticated: same status envelope, with items `{cluster,name,view,stats}` and cluster-only `scopes`. Only an exact cluster-wide `cluster:read` grant (or wildcard cluster) qualifies; server namespace permissions and ownership never qualify. The route reads that cluster's nodes, bound PVs and optional metrics. Node usage retains `used` as absent when unavailable; clients must sum measured used/capacity pairs and show sample coverage rather than treat unmeasured nodes as idle. Storage remains provisioned PV capacity, not disk usage. A node/PV read failure omits that cluster's entire inventory item and reports partial coverage. Optional Kubernetes version metadata is omitted to keep reads cancellable. Namespace filters are invalid here.
+- `/fleet/placements` — GET, authenticated: same status envelope, with items `{cluster,namespace,templates:[GameTemplate]}` and eligible `scopes`. Requires existing global `templates:read` plus explicit target `servers:write`; ownership alone cannot create a placement. Reads templates once per eligible cluster. Unavailable/empty catalogs offer no valid placement. This is permission/template eligibility, not a scheduler or capacity guarantee. Creation remains an explicit existing per-target request; the client must retain its chosen cluster/namespace for every follow-up and must not retry on another cluster.
+- Fleet bounds and failures: `limit` is 1–2,000 (default 2,000); four workers, at most 128 work scopes, 200 objects per page, 2,000 scanned per resource scope, 10,000 scanned objects per request, a ten-second overall deadline and five-second scope deadlines. Metrics have a one-second sub-deadline. Inventory caps node/PV lists at 2,000 each; placements cap emitted template copies at 2,000. Discovery lists at most 2,000 registrations, while an exact filter directly looks up its registration. Limits/deadlines never become silent empty totals: HTTP 200 retains successful reads with `partial:true` and safe issues (`unavailable`, `forbidden`, `limit`). Issue `cluster:""` denotes a collection-wide limit/discovery problem; raw Kubernetes errors and credentials are never included. Hidden ownership-only scan failures may set `partial` without revealing a scope. Optional Cluster-CRD absence alone permits local discovery fallback; other discovery failures are reported as partial coverage.
+- `/servers/{name}/access` — GET: existing selected-server read/owner/collaborator authorization, rechecked against the live object. Returns the same server access flags, explicit `target` and exact namespaced `permissions` for deep links; no global administration permissions are inferred. This avoids finding a server in a capped list just to decide which detail actions to show.
+- `/servers/{name}/capabilities` — GET: the same selected-server read authorization and live-UID check. Returns `{target,capture:{enabled,files,state,defaultRetentionSeconds,maxRetentionSeconds,defaultMaxDurationSeconds,defaultMaxSizeBytes}}`. State is `ready`, `unsupported` or `unavailable`; these are transport capabilities, not permissions. Local settings come from CaptureConfig; remote settings come from the authenticated selected gateway and never from central capture defaults.
+- `/servers` — GET, POST: list and create GameServer CRDs
+- `/servers/{name}` — GET, PUT, DELETE: manage GameServer CRDs; cluster-dispatch via `?cluster=`; multiplexed console/files
 - `/servers/{name}/console` — WebSocket: RCON/exec; cluster-dispatch
 - `/servers/{name}:start`, `:stop`, `:restart` — actions (operator-handled)
 - `/servers/{name}:collaborators`, `:transfer` — GameServer owner/collaborator management
+- `/servers/{name}:tunnel-credentials` — PUT/GET/DELETE: the server's tunnel credential Secret (`<server>-tunnel-auth`, owned by the GameServer). PUT stores the given provider's key (`frp`: `token`, `tailscale`: `authKey`, `playit`: `secretKey`) and removes stale keys, keeping keys no provider uses. It keeps the key of the provider still named in `spec.networking.tunnel.provider` even when that differs from the key just saved, since the dashboard saves credentials and switches that field in separate requests and a pod still running the active provider must keep being able to read its credential until the switch completes; that key is cleared on the next PUT once the spec provider matches. GET reports the key names, never the values, and is deterministic: the GameServer's `spec.networking.tunnel.provider` wins, then the fixed order frp, tailscale, playit. `PUT /servers/{name}` (direct spec provider switch) also participates in credential cleanup: the handler prunes every other provider's key from `<name>-tunnel-auth` immediately after the successful write that changes `spec.networking.tunnel.provider` (skipping a missing or not-API-owned Secret; a prune failure is logged, not returned), so the superseded provider's credential is removed before the tunnel pod picks up the new provider. A later credential PUT is only the retry path if that prune failed. The operator further protects against stale credentials by mounting only the active provider's key via items projection (optional:true), ensuring that even if a key was not pruned, it is never exposed to the tunnel pod. Removing the tunnel (no provider) is not a switch and leaves the stored credential in place; DELETE removes it explicitly.
 - `/servers/{name}/files/*` — file browser, upload, download (proxied to agent); cluster-dispatch
 - `/servers/{name}:capture-enable`, `:capture-disable` — sidecar lifecycle actions (fully implemented; see "Network capture endpoints" below)
 - `/servers/{name}:capture-start` — POST: start a network packet capture (creates NetworkCapture CR, transitions to Pending)
@@ -113,23 +129,29 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/servers/{name}:captures` — GET: list all NetworkCaptures (active and historical) for a server, excluding Expired captures
 - `/servers/{name}:capture` — GET: fetch a single capture's metadata and status; query param `id={captureId}`; 404 if not found or Expired
 - `/servers/{name}:capture-file` — GET: download completed PCAPNG file from the capture sidecar; query param `id={captureId}` (proxied to sidecar over mTLS; 409 if still running)
-- `/templates/{name}` — CRUD for GameTemplate (cluster-scoped)
-- `/backups/{name}` — CRUD for Backup (namespaced, cluster-dispatch)
-- `/schedules/{name}` — CRUD for BackupSchedule (namespaced, cluster-dispatch)
-- `/restores/{name}` — CRUD for Restore (namespaced, cluster-dispatch)
-- `/backup-destinations/{name}` — CRUD for restic repo Secrets (namespaced, cluster-dispatch)
-- `/modules` — GET: list installed Module CRDs; POST: upload/install
-- `/modules/{name}` — CRUD (cluster-scoped)
+- `/templates` — GET, POST: list and create GameTemplate CRDs
+- `/templates/{name}` — GET, PUT, DELETE: manage GameTemplate CRDs (cluster-scoped)
+- `/backups` — GET, POST: list and create Backup CRDs
+- `/backups/{name}` — GET, PUT, DELETE: manage Backup CRDs (namespaced, cluster-dispatch)
+- `/schedules` — GET, POST: list and create BackupSchedule CRDs
+- `/schedules/{name}` — GET, PUT, DELETE: manage BackupSchedule CRDs (namespaced, cluster-dispatch)
+- `/restores` — GET, POST: list and create Restore CRDs
+- `/restores/{name}` — GET, PUT, DELETE: manage Restore CRDs (namespaced, cluster-dispatch)
+- `/backup-destinations` — GET, POST: list and create restic repo Secrets
+- `/backup-destinations/{name}` — GET, PUT, DELETE: manage restic repo Secrets (namespaced, cluster-dispatch)
+- `/modules` — GET, POST: list and install Module CRDs
+- `/modules/{name}` — GET, PATCH, DELETE: manage Module CRDs (cluster-scoped)
 - `/modules/{name}:uninstall` — action
-- `/modules/sources` — CRUD for ModuleSource (cluster-scoped)
+- `/modules/sources` — GET, POST: list and create ModuleSource CRDs
+- `/modules/sources/{name}` — GET, PUT, DELETE: manage ModuleSource CRDs (cluster-scoped)
 - `/modules/sources/{name}/upload`, `/modules/sources/{name}/upload/{module}` — bundle upload/delete
 - `/modules/catalog` — GET: merged catalog across sources, with installation state
 - `/modules/builder/{archetypes,scaffold,validate,preview,export}` — module builder workflow
 - `/registry/{provider}/search`, `/{id}` — live mod registry queries (CurseForge, Modrinth, Spigot, etc.)
 - `/mod-updates/{name}` — GET: available updates for a mod
 - `/mod-ids/{name}` — PATCH: ID-managed mods (ARK CurseForge IDs, Project Zomboid MOD_IDs, Steam Workshop lists)
-- `/cluster`, `/cluster/info`, `/cluster/stats` — GET: version, nodes, storage, usage (read-only, viewer+)
-- `/cluster/nodes:join`, `/cluster/kubeconfig` — POST: credential-minting ops (admin only, `--cluster-ops` flag gated; 501 when disabled)
+- `/cluster`, `/cluster/info`, `/cluster/stats` — GET: selected-cluster version, nodes, storage and optional usage. Require cluster-wide `cluster:read` on the selected cluster (or wildcard cluster); namespace grants cannot read node inventory. Remote requests use only that registry client's nodes, PVs, metrics and version, never home-cluster inventory. A registered cluster whose client is unavailable returns 503; an authorized unknown selector returns 400. Kubernetes denials retain their status with generic messages. Metrics-server absence remains optional and omits usage rather than reporting zero. Remote info returns the registration ID as its name, `clusterOps: false`, no local update channel, and the central API's `gameplaneVersion`.
+- `/cluster/nodes:join`, `/cluster/kubeconfig` — POST: credential-minting ops (admin only, `--cluster-ops` flag gated; 501 when disabled or a remote cluster is selected, before credential operations)
 - `/clusters` — multi-cluster: list remote Cluster CRDs; create/delete cluster registrations. POST labels the kubeconfig Secret `gameplane.local/cluster-kubeconfig=true` and `gameplane.local/managed-by=gameplane-api`. DELETE removes the cluster's client from the registry at once, and deletes the referenced Secret only when it is the one POST generates for that cluster (cluster-<name>-kubeconfig) and carries `gameplane.local/cluster-kubeconfig=true` (Secrets created before managed-by labelling included); any other Secret, including one named for a different cluster, is left in place
 - `/events` — SSE: real-time K8s events (multiplexed per namespace + cluster). The route needs `servers:read`; the stream then carries only the kinds the caller may read in the resolved cluster and namespace, each gated by the permission its GET route needs (`rbac.ReadPermission`): servers → `servers:read`, templates → `templates:read`, backups and restores → `backups:read`, schedules → `schedules:read`. Tests: `TestEvents_StreamsOnlyReadableKinds` (`handlers/events_scope_test.go`); e2e `TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions` (bucket `operator`)
 - `/pod-events` — SSE: pod-level events
@@ -137,10 +159,13 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/users/me/servers` — GET: own GameServers (owner/collaborator)
 - `/users/me/preferences` — GET/PUT: own theme/styling preferences (feature 016)
 - `/users/me/preferences/reset` — POST: reset own theme preferences to defaults (feature 016)
-- `/users/{id}` — CRUD for users (admin only)
-- `/users/{id}/role-bindings` — PATCH: role assignments (per namespace + cluster)
+- `/users` — GET, POST: list and create users
+- `/users/{id}` — PATCH, DELETE: manage users (admin only). DELETE runs `db.Store.DeleteUser`: one transaction deletes the user's `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and role bindings, revokes the share links the user created (sets `revoked_at`), then deletes the `users` row. It does not rely on FK cascades (off on SQLite). An SSO subject whose user was deleted is provisioned as a new user on its next login
+- `/users/{id}/bindings` — GET/POST supplemental role assignments; DELETE `/users/{id}/bindings/{role}/{namespace}?cluster={id}` removes an exact assignment. Namespace `*` remains protected for the local primary role. An explicit registered remote cluster may receive a supplemental `*` namespace binding only when every role permission is `cluster:read` or a catalogued namespaced permission; wildcard/global administration permissions are rejected. Cluster `*` is never accepted for supplemental grants. Binding changes revoke the target user's sessions, and permissions are resolved from bindings on every request.
 - `/roles` — GET catalog and custom roles; POST/PATCH/DELETE custom roles. A PATCH whose permission list drops `users:manage` from a role that grants it is refused (400) when that role is the caller's own primary role, or when every user who can manage users holds that role — the same lockout guards `PATCH /users/{id}` applies to a role change. Tests: `TestRoles_UpdateKeepsCallersOwnUserManagement`, `TestRoles_UpdateKeepsAtLeastOneUserManager`, `TestRoles_UpdateRemovesUserManagementWhenAnotherManagerRemains` (`handlers/roles_guard_test.go`); e2e `TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions` (bucket `operator`)
+  - A role used by any remote-wide binding cannot gain global/control-plane permissions until those bindings are removed; safe permission removal still takes effect on the next request. Safe remote binding validation/insertion, role permission edits, and the role deletion in-use check share the existing user-management lock. This prevents a concurrent edit or delete/recreate from widening a supplemental remote grant. Existing externally provisioned global remote-wide bindings retain their prior removal protection. Tests: `TestRemoteBindings_*` (`handlers/remote_bindings_test.go`).
 - `/admin/audit` — GET: audit log (searchable, hash-chain verifiable)
+- `/admin/audit/export` — GET: streams the full matching audit trail as a download, `?format=csv` (default) or `?format=json`; optional filters `since`/`until` (RFC3339 timestamps, inclusive), `actor` (case-insensitive substring), `method` (`GET`/`POST`/`PUT`/`PATCH`/`DELETE`), and `status` (class `2xx`/`4xx`/`5xx`); an unrecognised `format`, `method`, or `status` value returns 400. CSV header, in column order: `id, ts, actor, method, path, target, status, ip, reason`. JSON is a top-level array of the same `audit.Event` objects `/admin/audit` returns.
 - `/admin/config` — GET/PATCH: global settings (OIDC, notifications, telemetry, module upload limits, etc.)
 - `/admin/notifications` — PATCH config + test-send to sinks
 - `/admin/auth` — PATCH identity-provider secrets
@@ -156,22 +181,52 @@ All cluster-dispatch routes accept `?cluster={name}` (validates against register
 ### WebSocket bridge
 
 - **`/ws/servers/{name}/console` (GET upgrade)** — RCON to game pod via agent; write-capable
-- **`/ws/servers/{name}/console-pty` (GET upgrade)** — PTY/exec to game pod; write-capable
+- **`/ws/servers/{name}/console-pty` (GET upgrade)** — PTY attach to the selected cluster's game pod; write-capable
 - **`/ws/servers/{name}/logs` (GET upgrade)** — game/agent log file stream via agent; read-only
-- **`/ws/servers/{name}/logs/pod` (GET upgrade)** — pod stdout stream via Kubernetes watch; read-only
-- All authenticate via session + mTLS to agent (for console routes)
-- Multiplexed per `?cluster=` + namespace
+- **`/ws/servers/{name}/logs/pod` (GET upgrade)** — selected cluster's init/game stdout via the Kubernetes Pod log API; read-only
+- All authenticate via session and cluster/namespace RBAC. Pod logs and PTY use
+  the selected registry client's Kubernetes credentials and verify the
+  GameServer → StatefulSet → Pod owner UID chain before opening streams.
+- Agent routes use local mTLS and reject non-local selectors. Pod logs and PTY
+  accept registered `?cluster=` targets without requiring agent mTLS.
+- A browser cluster switch closes old streams and cancels retries/queued input.
+  Pod log polling stops if a Pod is replaced; reconnects validate ownership again.
+- Kubernetes log/attach calls are name-addressed, without UID preconditions;
+  the owner checks do not make deletion/recreation atomic with stream startup.
+
+### Agent transport boundary
+
+The browser-facing agent proxy and internal `AgentClient` use the same transport
+interface for HTTP operations and WebSocket connections. Handlers supply a server
+name and namespace plus a registered agent path; they never supply a destination
+URL. The direct transport validates the target, constructs its cluster-local DNS
+address, uses the configured agent mTLS credentials, and refuses redirects. HTTP
+headers retain the existing allowlist, so browser cookies, authorization and CSRF
+material do not reach agents. Proxy body limits and JSON response limits remain at
+the caller boundary.
+
+Registered clusters may additionally configure `spec.agentGateway.url` and a
+labeled `tlsSecretRef` in the central API namespace. Each remote request resolves
+its Kubernetes client, GameServer UID and gateway mTLS credentials independently;
+unknown/missing routes never fall back locally. HTTP/WebSocket agent operations,
+RCON module actions and internal mod-update reads use the versioned gateway
+protocol. Stdin actions use the selected Kubernetes client with workload ownership
+preflight. Existing installations retain their direct local adapter.
+
+See [remote agent access](../docs/multicluster-agent-gateway.md) for registration,
+trust assumptions, rotation behavior and surfaces outside this protocol.
 
 ### Network capture endpoints
 
 **Mounting & configuration:**
-- `MountCapture(r chi.Router, reg *kube.Registry, auditor *audit.Auditor, cfg CaptureConfig, agentCABundle, agentClientCert, agentClientKey string)` — wires 7 implemented capture endpoints on a chi.Router with cluster-dispatch and mTLS client pool for sidecar communication
-- `type CaptureConfig struct { FeatureEnabled bool; DefaultRetentionSeconds, MaxRetentionSeconds int64; DefaultMaxDurationSecs int; DefaultMaxSizeBytes int64 }` — cluster-wide capture feature flag, defaults, and size/duration limits; passed from `cmd/main.go`'s flag parsing
+- `MountCapture(r chi.Router, reg *kube.Registry, auditor *audit.Auditor, cfg CaptureConfig, agentCABundle, agentClientCert, agentClientKey string)` — wires capture endpoints on a chi.Router with cluster dispatch and authenticated local sidecar or remote gateway transport
+- `type CaptureConfig struct { FeatureEnabled bool; GatewayNamespace string; DefaultRetentionSeconds, MaxRetentionSeconds int64; DefaultMaxDurationSecs int; DefaultMaxSizeBytes int64 }` — local capture settings plus the central namespace for remote gateway credential lookup; passed from `cmd/main.go`
 - Registered in api/cmd/main.go's `run()` with CaptureConfig fields bound from: `--capture-enabled` and `--capture-default-max-duration` (CLI flags), plus `GAMEPLANE_CAPTURE_DEFAULT_RETENTION`, `GAMEPLANE_CAPTURE_MAX_RETENTION`, and `GAMEPLANE_CAPTURE_DEFAULT_MAX_SIZE` (env-only, no corresponding flag)
 
-**Implemented endpoints (7 routes, all cluster-dispatch via `?cluster=`, all require `captures:manage` RBAC permission, all authenticate via session, audit all writes synchronously before response):**
+**Implemented endpoints (cluster-dispatch via `?cluster=`, all require `captures:manage` RBAC permission, all authenticate via session, audit all writes synchronously before response):**
 
 - **POST `/servers/{name}:capture-start`** — Create a NetworkCapture CR and transition to Pending; request body: `{filter?: string, maxDurationSeconds: int, maxSizeBytes: int64, ttlSecondsAfterFinished?: int64}`; response: `{captureId, phase, serverName, filter, maxDurationSeconds, maxSizeBytes, ttlSecondsAfterFinished, createdAt, startedAt?, completedAt?, bytesWritten, packetsWritten}` (HTTP 202 Accepted)
+  - The selected Kubernetes identity needs `create` on `networkcaptures` and `update` on `networkcaptures/status` for the initial Pending phase. A status-write denial can follow a successful CR create; callers must inspect existing captures instead of blindly repeating start.
   - Verifies server exists and `spec.capture.enabled = true`; returns 400 if capture not enabled on server
   - Validates pcap-filter expression before CRD creation (FR-003; character whitelist + length check, no full BPF compile); returns 400 on invalid filter (e.g., control chars, >1024 chars)
   - Enforces maximum one Pending/Running capture per server (rejects with 409 Conflict if one exists); checks both `status.capture.activeCapture` and scans all NetworkCaptures as a guard against eventual consistency lag
@@ -209,18 +264,21 @@ All cluster-dispatch routes accept `?cluster={name}` (validates against register
   - Returns 404 if capture phase == Expired (TTL window elapsed)
   - Returns 409 for any phase other than Completed (Pending, Running, or Failed — Expired is handled above as 404, not here)
   - Proxies from sidecar's `https://<gs>-agent.<ns>.svc.cluster.local:9091/captures/{id}/file` over mTLS
-  - Home cluster only: that Service name resolves in the API's own cluster and the mTLS material is the home cluster's, so a `?cluster=` naming any other registered cluster returns 501 not implemented (no cross-cluster agent yet) before any lookup, audited with reason "cluster_not_local" (see Authorization → Home-cluster-only routes)
+  - Remotely, the central API resolves the selected server and capture UIDs and calls the registered gateway's versioned capture-file route. The gateway independently validates live ownership, phase and TTL, then reaches the selected cluster's fixed sidecar Service on 9091. The sidecar validates persisted server/capture identity before serving bytes. No fallback to local data or an unbound legacy remote file is permitted.
   - **CRITICAL (FR-006):** Audit `WriteSync()` with status code BEFORE streaming starts (on both success and error paths); if audit write fails, returns 500 and stops download entirely (audit failure fails the operation)
   - Sets response headers: `Content-Type: application/vnd.tcpdump.pcap`, `Content-Disposition: attachment; filename="capture-{id}.pcapng"`
   - Streams file without buffering via `io.Copy(responseWriter, sidecarResponse.Body)` so large captures don't accumulate in memory
   - On sidecar error (non-2xx), classifies via `writeUpstreamError` (timeout→504, other transport error→502); error message is safe generic text to client, full error logged server-side
   - Audit reason field: "not_found", "not_running", "expired", "invalid_host", "download_failed", or "" on success; a second audit row (with "download_failed") is written post-stream if sidecar returned non-2xx (to correct the initial optimistic row)
 
-- **Error responses:** All errors are plain text via `httperr.WriteCode()`, no JSON envelope. Status codes: 400 (validation), 404 (not found), 409 (conflict/wrong state), 501 (non-home `?cluster=`: no cross-cluster agent yet), 503 (sidecar unavailable), 500 (internal error)
+- **DELETE `/servers/{name}:capture`** — Remove a completed or failed capture. Remote deletion confirms sidecar file cleanup before deleting the NetworkCapture with its UID precondition; gateway failure retains the resource for retry. A stale or replaced capture cannot delete another capture's bytes.
+
+- **Error responses:** All errors are plain text via `httperr.WriteCode()`, no JSON envelope. Status codes include 400 (validation), 404 (not found or stale identity), 409 (conflict/wrong state), 501 (capture feature or required gateway capability unavailable), 502/504 (gateway transport failure), 503 (sidecar unavailable), and 500 (internal error).
 
 **Fully implemented endpoints (all routing registered, RBAC gated, handlers complete):**
 
 - **POST `/servers/{name}:capture-enable`** — Enable capture sidecar injection on a GameServer (sets `spec.capture.enabled = true`, triggers live injection)
+  - Enable and start use the selected cluster's feature flag. For a remote cluster, authenticated gateway capabilities supply that flag plus retention/default duration/default size settings; an incompatible or unreachable gateway fails closed before mutation.
   - Patches GameServer spec directly; operator watches and injects sidecar as ephemeral container live into running pod (rule 10: operator is authoritative)
   - Gated by `captures:manage` permission
   - Audit: synchronous write before response with reason "feature_disabled", "server_not_found", "terminating", "patch_failed", or "" on success
@@ -248,6 +306,8 @@ All cluster-dispatch routes accept `?cluster={name}` (validates against register
 - **Two safety guards:**
   1. Role assignment only applies when mappings are explicitly configured (when overrides exist or when Helm seeded them). No automatic role assignment from bare group names without explicit mapping.
   2. Demotion guard: A user who is the **only user able to manage users** (sole admin, or sole admin-equivalent) cannot be demoted or removed from the admin role by the login-time role assignment flow. This prevents accidental lockout: if a user is currently the only admin and a role remapping would remove their admin status, the remapping is skipped (logged as warn), leaving them as admin. The guard applies only on login re-evaluation; the override API (PATCH /admin/config/auth) does not enforce it (an explicit admin action).
+- **Re-evaluation trigger:** re-evaluation runs whenever the effective policy the role was computed from has role mappings — for the Helm provider that is the Helm seed merged with `helmOverride`, so an override alone (no Helm-seeded mappings) is enough.
+- **Audit (FR-014):** every applied role assignment (first login, or a re-evaluation that changes the role) is audited with reason `oidc role assigned: provider=<name> matched=<group> from=<old> to=<new>`, for the Helm provider (`provider=helm`) and for every dashboard-managed provider (`provider=<provider name>`). A demotion skipped by the guard is logged, not audited.
 
 **The helmOverride overlay:**
 - **Storage:** Lives in the "auth" config row as `helmOverride.roleMappings.{admin, operator, viewer}`. No separate table, no migration beyond the existing config table. The entire overlay is optional.
@@ -292,7 +352,7 @@ Per-user dashboard styling (theme preset, appearance mode, custom colors, custom
 - **GET `/users/me/preferences`** — returns the effective preferences object `{themeType, presetId, appearanceMode, customColors, customCssEnabled, customCss, updatedAt}`; a user without a stored row gets the defaults (pink/system/nulls). 401 when unauthenticated.
 - **PUT `/users/me/preferences`** — handler-level merge (FR-012). Required: `themeType` (enum), `presetId` (`"pink" | "legacy"`), `appearanceMode` (enum), `customCssEnabled` (bool). Optional: `customColors` (`accent`/`surface`, each validated against `^#([0-9a-fA-F]{6})$`), `customCss` (sanitized per FR-013). The handler reads the stored row and applies only the fields present in the body, so omitted custom fields keep their stored values — an ordinary update (preset switch, overlay toggle) can never null them. 400 names the offending field/rule; 401 unauthenticated; 403 CSRF mismatch.
 - **POST `/users/me/preferences/reset`** — the **only** operation that deletes stored custom settings (FR-012): NULLs `custom_accent`/`custom_surface`/`custom_css`, sets `custom_css_enabled = 0` and `theme_type = 'preset'`. Optional body `{presetId?, appearanceMode?}` (each validated; omitted fields resolve to the user's current values). Returns the resulting preferences object.
-- **GET `/users/me`** — embeds `preferences` in the profile payload (`userDTO.Preferences`) so the dashboard can apply the theme without a second round-trip on boot. Not present on other user payloads.
+- **GET `/users/me`** — embeds `preferences` in the profile payload (`userDTO.Preferences`) so the dashboard can apply the theme without a second round-trip on boot. Also embeds `permissionsByCluster` (cluster → namespace → sorted []string of permissions) so the frontend can determine cluster-specific access without triggering 403 errors on multi-cluster deployments. The existing `permissions` field (namespace → permissions, merged across clusters) is preserved for backward compatibility. Neither field is present on other user payloads.
 
 **FR-013 custom CSS sanitization (authoritative enforcement gate, `sanitizeCustomCSS` in api/internal/handlers/users.go):**
 
@@ -377,7 +437,7 @@ A submitted stylesheet is rejected with 400 and a message naming the offending r
 
 **Built-in roles:**
 - **admin:** wildcard permission `*`; full access to all resources and config
-- **operator:** read/write servers, backups, schedules, templates; read modules, destinations, cluster, roles (modules install/upgrade/uninstall requires `modules:manage`, seeded only to admin — see `api/internal/db/migrations/003_roles.sql`)
+- **operator:** read/write servers, backups, schedules, templates; read modules, destinations, cluster, roles (modules install/upgrade/uninstall requires `modules:manage`, seeded only to admin — see `api/internal/db/migrations/sqlite/003_roles.sql`)
 - **viewer:** read-only across servers, backups, schedules, templates, modules, destinations, cluster, roles
 
 **Permissions (granular, per resource and action):**
@@ -389,7 +449,7 @@ templates:read, templates:write (cluster-scoped)
 modules:read, modules:manage (cluster-scoped)
 destinations:read, destinations:manage (namespaced)
 captures:manage (namespaced)
-cluster:read, cluster:manage (cluster-scoped)
+cluster:read (selected-cluster inventory), cluster:manage (control-plane)
 users:read, users:manage (cluster-scoped)
 roles:read, roles:manage (cluster-scoped)
 audit:read, config:read, config:manage (cluster-scoped)
@@ -420,7 +480,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 2. **Every mutating request audited:** audit middleware logs actor, method, path, target, status, IP to database + external sinks
 3. **Three-role baseline RBAC:** admin/operator/viewer roles reproduce historical permission matrix exactly
 4. **Multi-dimensional RBAC:** namespace + cluster + owner/collaborator dimensions; cluster gating prevents cross-cluster privilege escalation
-5. **Append-only migrations:** database schema mutations are irreversible (migrations 001-011); no down-migrations
+5. **Append-only migrations:** database schema mutations are irreversible (migrations 001-012); no down-migrations
 6. **Login rate limiting:** `/auth/login` is per-IP (burst 10, 5/min, `LoginLimiter`) plus a per-username throttle layered on top (burst 6, 3/min, `LoginUserLimiter` in `auth/local.go`); the OIDC callback routes (`/auth/oidc/{provider}/callback`, legacy `/auth/oidc/callback`) are per-IP only (burst 10, 10/min via `OIDCCallbackLimiter`), no per-user dimension
 7. **Audit hash-chain:** each audit_events row includes hash of previous row (prev_hash) + its own content hash (hash); detects DB-level UPDATE/DELETE tampering
 8. **Audit pagination is bounded:** The `Auditor.Page(ctx, limit)` method clamps the untrusted `limit` parameter to a maximum of 500 entries (`MaxAuditPageSize`). Clamping occurs at both the API handler layer (api/internal/handlers/audit.go line 25) and the store layer (api/internal/audit/audit.go lines 820–822) so untrusted input is bounded at the earliest opportunity and again at use time. The allocated slice is always created with capacity within the bound (`make([]Event, 0, limit)` after clamping), guaranteeing that no untrusted client input can cause unbounded memory allocation regardless of how the limit value flows through the system.
@@ -436,7 +496,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 ## Dependencies
 
 **Internal (same workspace via go.work):**
-- `github.com/ValgulNecron/gameplane/netguard` — SSRF dial-guard for outbound HTTP (module registry fetches)
+- `github.com/ValgulNecron/gameplane/netguard` — dial-time address guard for outbound HTTP: mod-registry browse/search and the Steam name resolver use `IsPublic`; notification sinks use `IsAllowed`
 - `github.com/ValgulNecron/gameplane/gameaction` — console-injection guard + command-template renderer
 
 **External (go.mod):**
@@ -444,7 +504,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 - `github.com/coder/websocket` v1.8.12 — WebSocket upgrade + streaming
 - `github.com/coreos/go-oidc/v3` v3.11.0 — OIDC provider discovery + token validation
 - `github.com/go-jose/go-jose/v4` v4.0.2 — OIDC JWT parsing (transitive via go-oidc)
-- `github.com/jackc/pgx/v5` v5.5.4 — PostgreSQL driver (build tag: postgres, experimental)
+- `github.com/jackc/pgx/v5` v5.11.0 — PostgreSQL driver (build tag: postgres, experimental)
 - `github.com/minio/minio-go/v7` v7.2.1 — S3-compatible client (audit sink)
 - `github.com/prometheus/client_golang` v1.23.2 — Prometheus metrics
 - `modernc.org/sqlite` v1.34.1 — SQLite driver (production, tested)
@@ -460,11 +520,14 @@ Verify from `/api/go.mod`.
 ### Database driver selection
 
 - **Production (default):** `modernc.org/sqlite` — file-based, WAL mode, tested
-- **Experimental:** PostgreSQL via `jackc/pgx/v5` — compile with `-tags=postgres`
+- **Experimental:** PostgreSQL via `jackc/pgx/v5` — compile with `-tags=postgres`. Works end to end; `api/internal/db`'s tests run against PostgreSQL in the `api (postgres)` CI job, but there is no Postgres e2e/upgrade coverage yet
 - Driver selected at startup via `--db-driver` (sqlite|postgres) + `--db-dsn`
-- Migrations run automatically on startup (`store.Migrate(ctx)`)
+- SQLite DSNs automatically receive a `busy_timeout(5000)` pragma if one is not already specified, allowing multiple processes (e.g., the API and bootstrap-admin) sharing the same file to wait for locks instead of failing immediately
+- Migrations run automatically on startup (`store.Migrate(ctx)`): the driver's legacy set (`migrations/sqlite/` or `migrations/postgres/`, 001-012, same filenames and resulting schema) then the shared set (`migrations/common/`, 013+, one portable file per migration), in version order; a version present in both sets is a startup error. Versions are recorded in `schema_migrations` by bare filename, so SQLite installs see the same versions as before the split
+- Runtime SQL is written once with `?` placeholders; the Postgres connector rewrites them to `$n` (`db.Rebind`). Timestamps that used SQLite's `datetime('now')` are generated in Go (`db.NowTimestamp()`, same `YYYY-MM-DD HH:MM:SS` UTC text) and bound as parameters; inserted ids come from `RETURNING id` (pgx has no `LastInsertId`)
+- Postgres legacy migrations declare the text columns the API sorts or range-compares (`roles.name`, role-binding scope columns, `audit_events.ts`, `sessions.expires_at`, `share_links.created_at`/`expires_at`) `COLLATE "C"` so ordering matches SQLite's byte-wise collation
 
-### Schema (migrations 001-011)
+### Schema (migrations 001-012)
 
 **001_init.sql:**
 - `users` — username (unique), email, display_name, pw_hash (argon2id), role (legacy, now via role_bindings), created_at, updated_at
@@ -490,7 +553,9 @@ Verify from `/api/go.mod`.
 **006_share_links.sql:** (unauthenticated server access tokens)
 - Creates `share_links` table: signed, revocable tokens for unauthenticated access to a single GameServer's status and connection address, optionally with start capability
 - Token never stored; only SHA-256 hash persisted and indexed for O(1) lookup
+- Revocation (`DELETE /servers/{name}/shares/{id}`, `db.Store.RevokeShareLink`) matches the link's cluster, namespace, server name and id; no match returns `db.ErrShareLinkNotFound`, which the handler answers with 404
 - Pre-existing; not part of the Phase 2 Foundational feature scope
+- `created_by` has no foreign key on Postgres (the SQLite file's `ON DELETE CASCADE` never fires there), so a deleted user's links stay behind, revoked, on both drivers
 
 **007_audit_reason.sql:** (Phase 2 Foundational: capture operation auditing)
 - Adds nullable `reason TEXT` column to `audit_events`
@@ -516,7 +581,10 @@ Verify from `/api/go.mod`.
 - Backfills every pre-existing user with the legacy preset (`preset_id = 'legacy'`, dark-preserving upgrade per FR-003); accounts created later default to pink via column defaults + `db.DefaultUserPreferences()`
 - Retention rule (FR-012): the custom columns are nulled only by the reset endpoint, never by ordinary updates (see "User theme preferences" under External interface / contracts)
 
-All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); API layer is authoritative.
+**012_account_removal_cleanup.sql:** (account removal cleanup)
+- One-off pass that deletes `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and `user_role_bindings` rows whose user no longer exists, and revokes (sets `revoked_at`, RFC3339 UTC) active `share_links` whose creator no longer exists. Clears rows left by user deletes made before `db.Store.DeleteUser` removed them explicitly; forward-only, so a rollback needs the pre-upgrade DB snapshot
+
+Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); the API layer is authoritative and deletes dependent rows itself, so the Postgres cascades never change the outcome. The one exception is `share_links.created_by`: the Postgres schema declares it as a plain column with no foreign key, so deleting a user keeps that user's share links (revoked) in the audit trail on both drivers, instead of cascading them away.
 
 ## Security considerations
 
@@ -526,17 +594,18 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 - **Sessions:** cryptographically random token + paired CSRF token; DB-only persistence (no in-memory store), 12-hour TTL from creation, garbage-collected on an interval (`SessionStore.StartGC`)
 - **CSRF cookie is JS-readable by design:** unlike the session cookie (`HttpOnly`), the CSRF cookie is set `HttpOnly: false` so the SPA can read its value and echo it back as `X-Gameplane-CSRF` on mutating requests — the standard double-submit pattern (see `docs/security.md`). Logout's cookie-clear always sends `HttpOnly: true` regardless, since a MaxAge<0 delete carries no value and the browser matches it on Name/Domain/Path alone.
 - **Bootstrap:** `bootstrap-admin` subcommand hashes password same way as API
+- **Client IP:** `auth.ClientIPFromTrustedProxies` (`internal/auth/clientip.go`) records the client IP that the rate limiters and audit key on. A TCP peer outside `--trusted-proxies` is the client and its `X-Forwarded-For` is ignored. Behind a trusted peer the header is read right to left up to the first address outside the list, or to the leftmost address when every hop is trusted; an entry that isn't an IP address ends the walk at the last address reached. An empty list makes the peer the client. Tests: `internal/auth/clientip_test.go`.
 
 ### Authorization
 - **RBAC middleware:** intercepts all protected routes; namespace + cluster gating
 - **Owner/collaborator fallback:** fallback only when RBAC denies AND GameServer is explicitly named; fail-closed on malformed paths
 - **Cluster dispatch validation:** `?cluster=` against registry; unknown cluster is a 400 (malformed request, not 403 forbidden)
-- **Home-cluster-only routes:** some server-scoped handlers are built on the API's own (home) cluster client instead of the cluster registry, or reach agent and sidecar Services that resolve only in the home cluster. They serve the home cluster only: a `?cluster=` naming any other registered cluster answers 501 not implemented (no cross-cluster agent yet) before the handler reads or writes anything (`rejectRemoteCluster` and `isRemoteCluster` in `handlers/resources.go`, `rejectRemoteCluster` in `ws/dialer.go`), so a permission is only ever applied to the cluster it was granted on. The routes are:
-  - the mod registry browser and modpack install (`MountRegistry`): GET `/servers/{name}/mods/registry/providers`, `/servers/{name}/mods/registry/search`, `/servers/{name}/mods/registry/projects/{project}/versions`, `/servers/{name}/mods/registry/projects/{project}/modpack`, and POST `/servers/{name}/modpack`
-  - the mod update check (GET `/servers/{name}/mods/updates`) and the mod-id list (GET/PUT `/servers/{name}/mods/ids`)
-  - the capture file download (GET `/servers/{name}:capture-file`), which also records the refusal in the audit log with reason "cluster_not_local"
-  - every agent and pod route in `api/internal/ws`: console, PTY console, logs, pod logs, log download, files, players, actions, status and mods
-  - Tests: `TestHomeClientMounts_ServeHomeClusterOnly` (`handlers/cluster_guard_test.go`) calls every route of every mount that `cmd/main.go` builds with the home-cluster client, as a user whose only grant is on another cluster, and checks that the home-cluster client sees no call. `TestHomeClientMounts_MatchMain` (`cmd/mounts_test.go`) fails when `main.go` passes that client to a mount the first test doesn't cover. The multicluster e2e bucket (`TestMultiCluster_ClusterDispatchAndScopedRBAC`) checks the registry, modpack and capture download routes across two real clusters.
+- **Inventory authorization and discovery:** inventory routes authorize the selected cluster before looking up its registration, so an unauthorized selection returns 403 without probing Kubernetes. GET `/clusters` accepts authenticated callers and filters persisted registrations: cluster-wide inventory readers and namespace server readers discover their own targets; existing user/cluster managers can discover registration metadata for administration. Each entry reports `canViewInventory` from the selected-cluster grant, independently of discovery permission. Detailed version/health text is omitted for discovery-only callers, and disconnected registrations remain visible with an unavailable status. No discovery path grants inventory or server permissions.
+- **Selected-cluster mod operations:** production uses `MountRegistryWithRegistry` and `MountModIDsWithRegistry`. Registry providers/search/versions/modpack dependencies and GET/PUT `/servers/{name}/mods/ids` resolve the selected server and template, validating any owner/collaborator UID grant before provider access. POST `/servers/{name}/modpack` and mod-ID updates retain UID/resourceVersion and write only that cluster. Update conflicts receive bounded, context-aware retries for status changes on the same UID with unchanged spec and owner/collaborator grants; concurrent configuration or ownership edits retain HTTP 409. Provider engines and credentials remain centrally configured. Legacy bare-client mounts keep their remote refusal.
+- **Selected-cluster capture files:** GET `/servers/{name}:capture-file` and file cleanup during DELETE `:capture` use the private gateway for remote targets. Both server and capture UIDs are checked at the gateway and sidecar. Remote deletion accepts only a 204 bound cleanup acknowledgement or a 410 confirming both identity and PCAP absence before UID-guarded record deletion; ambiguous errors retain the record for retry. Cleanup may be skipped only for Completed captures with current-generation SidecarStopped=True, reason never_started, and no recorded gameplane.local/capture-pod-uid annotation, after validating server ownership. Pending/Running captures still require stop first; Failed phase or missing completion time is not absence proof. Existing local transport and cleanup behavior remain supported. Capture permissions and synchronous audit requirements do not change. Missing/old gateways fail closed, with no local fallback.
+- **Server capabilities:** GET `/servers/{name}/capabilities` requires the normal target-scoped server read permission and returns the exact target plus `capture.enabled`, `capture.files` and `capture.state`. Local enablement uses central configuration; remote enablement comes from the authenticated selected gateway. States are `ready`, `unsupported` or `unavailable`. Capabilities describe transport support and never grant capture permission.
+- **Central administration:** cluster node-join/kubeconfig, users, provider credentials, module catalog and installation management remain central administrative operations. `TestHomeClientMounts_ServeHomeClusterOnly` and `TestHomeClientMounts_MatchMain` retain their local-client boundary checks. Remote routing, identity and isolation tests cover the registry-backed mounts separately.
+- **Gateway-enabled agent routes:** the production mount enables selected-cluster RCON, game-file logs/downloads, files, players, status and agent-based mods through the optional gateway. RCON module actions use that gateway; stdin actions, Pod logs and PTY attach use the selected Kubernetes client. GET `/servers/{name}/mods/updates` uses `MountModUpdatesWithRegistry` so its template and agent reads target the same selected cluster. Consumers mounted without the remote resolver retain the legacy 501 guard; missing or invalid gateway configuration fails closed rather than using a local agent. Tests: `TestModUpdatesRoutesAgentAndTemplateToRemoteCluster`, `TestModUpdatesRemoteCannotUseLocalOnlyAgent` and `ws/gateway_client_test.go` cover remote routing and fail-closed behavior.
 
 ### Audit
 - **Scope:** every mutating request (POST/PATCH/DELETE); reads excluded
@@ -553,16 +622,19 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 - **Synchronous writes (handler-direct):** Routes that need immediate audit writes before sending the response call `Auditor.WriteSync(ctx, method, path, target, reason, status)` directly, providing the reason
   - Method signature: `WriteSync(ctx context.Context, method, path, target, reason string, status int) error`
   - Extracts actor from context (set by auth middleware)
-  - Extracts client IP from context (set by ClientIPFromXFF middleware)
+  - Extracts client IP from context (set by the `auth.ClientIPFromTrustedProxies` middleware)
   - Generates RFC3339 timestamp
   - Returns error if DB write fails. Most synchronous callers treat this as **non-fatal** (log it, don't fail the request — e.g. `config.go`'s role-mapping override/reset audit). The network capture handlers are the deliberate exception (FR-006): they check the return value via `auditWriteOrFail` and bail with 500 without proceeding, so a failed audit write does fail those operations (see "Network capture endpoints" above and `WriteSync` at capture.go)
   - Fan-outs to external sinks (webhook, S3, stdout) with reason included
 - **Hash-chain boundary (backward compatibility):** The `reason` field is included in the canonical hash **only when non-empty**. This preserves the hash computation of pre-migration rows (which have NULL/empty reason) bit-for-bit identical. A post-migration row with a non-empty reason hashes differently, providing integrity protection. Rows differing only in reason will hash differently; Verify still walks the chain correctly across both pre- and post-migration rows.
 
 ### Outbound safety
-- **netguard SSRF guard:** on module registry fetches (HTTP/HTTPS); permissive allowlist (modular, self-hosted registries on loopback OK)
+- **netguard dial guard:** mod-registry browse/search (`api/internal/registry`) shares one client built with `netguard.HTTPClient(…, netguard.IsPublic)`, so every registry fetch, redirects included, connects only to a globally routable address and never through a proxy from the pod environment. Notification sinks use the permissive `netguard.IsAllowed` policy, so self-hosted endpoints on private addresses stay reachable.
 - **mTLS to agent:** client cert + key validate console operations
 - **Agent proxy URL construction:** `api/internal/ws/dialer.go`'s ws and http proxy handlers build the upstream agent URL from the namespace and pod name taken off the request path. In both handlers the namespace and pod name are validated as DNS-1123 labels via `isDNS1123Label` first, and a request with an invalid namespace or pod name is rejected with `400 Bad Request` before any URL is built. Only after that validation do the two paths diverge in how they construct the URL: the HTTP proxy path assembles it with `url.URL`, while the WebSocket proxy path concatenates the already-validated host onto a fixed `wss://` scheme and the fixed agent path (`upstream := "wss://" + host + agentPath`). The load-bearing safety property — validation strictly precedes URL construction — holds for both paths regardless of which one then uses string concatenation.
+
+### Upload limits
+- **Module bundle upload** (`POST /modules/sources/{name}/upload`): the compressed body is capped at 900 KiB (413 above it). Extraction caps each member at 900 KiB, the archive at 256 distinct paths, the running total of extracted bytes at 4 MiB (`maxUploadExtractedBytes`, repeated member names included), and the whole decompressed tar stream (including headers and entries extraction skips) at 5 MiB (`maxUploadDecompressedBytes`, covering tar framing). Extraction stops at the first member that crosses a limit, and the request gets 400. The four kept bundle files must together stay under 900 KiB.
 
 ### Error handling
 - **httperr package:** internal errors (K8s 404, DB constraint, FS path) mapped to safe HTTP status + generic message
@@ -603,7 +675,7 @@ All foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF)
 
 Excluded:
 - `cmd/` (main.go + flag/signal wiring)
-- `internal/db/db_postgres.go` (Postgres driver, build-tag gated, needs Docker/testcontainers; excluded from the coverage gate — no CI workflow currently builds or runs it on any schedule)
+- `internal/db/db_postgres.go` (Postgres driver, build-tag gated; excluded from the coverage gate because coverage runs without `-tags postgres`. The `api (postgres)` CI job builds it and runs `internal/db`'s tests, including `db_postgres_test.go`, against a PostgreSQL service container)
 
 Final 20% gap concentrated in:
 - `ws/attach.go` handle() (SPDY exec proxy, exercised by e2e)
@@ -663,101 +735,88 @@ Final 20% gap concentrated in:
 <!-- REMOVED: PUT /modules/{name} — removed in commit 1749bb6396d7d4d53f8fc57ad6214164eee299b8 Mon Sep 21 00:16:43 2026 +0200 -->
 <!-- REMOVED: PUT /users/{id} — removed in commit 1749bb6396d7d4d53f8fc57ad6214164eee299b8 Mon Sep 21 00:16:43 2026 +0200 -->
 
+
 ### Auto-Discovered Endpoints (Drift Detected)
-- `/admin/auth/providers/{name}/secret` — DELETE
-- `/admin/config/auth/role-mappings/{role}` — DELETE
-- `/admin/notifications/sinks/{name}/secret` — DELETE
-- `/admin/registries/{provider}/secret` — DELETE
-- `/clusters/{name}` — DELETE
-- `/modules/sources/{name}` — DELETE
-- `/modules/sources/{name}/upload/{module}` — DELETE
-- `/roles/{name}` — DELETE
-- `/servers/{name}/files/delete` — DELETE
-- `/servers/{name}/mods` — DELETE
-- `/servers/{name}:capture` — DELETE
-- `/servers/{name}:shares/servers/{name}/shares/{id}` — DELETE
-- `/servers/{name}:tunnel-credentials` — DELETE
-- `/users/{id}/bindings/{role}/{namespace}` — DELETE
-- `/admin/audit/export` — GET
-- `/admin/audit/verify` — GET
-- `/admin/system-logs/{component}` — GET
-- `/backup-destinations` — GET
-- `/backups` — GET
-- `/cluster/info` — GET
-- `/cluster/stats` — GET
-- `/modules/catalog` — GET
-- `/modules/sources` — GET
-- `/restores` — GET
-- `/roles/permissions` — GET
-- `/schedules` — GET
-- `/servers` — GET
-- `/servers/{name}/events` — GET
-- `/servers/{name}/files/download` — GET
-- `/servers/{name}/files/list` — GET
-- `/servers/{name}/files/read` — GET
-- `/servers/{name}/logs/download` — GET
-- `/servers/{name}/mods` — GET
-- `/servers/{name}/mods/ids` — GET
-- `/servers/{name}/mods/registry/projects/{project}/modpack` — GET
-- `/servers/{name}/mods/registry/projects/{project}/versions` — GET
-- `/servers/{name}/mods/registry/providers` — GET
-- `/servers/{name}/mods/registry/search` — GET
-- `/servers/{name}/mods/updates` — GET
-- `/servers/{name}/players` — GET
-- `/servers/{name}/players/banned` — GET
-- `/servers/{name}/players/whitelist` — GET
-- `/servers/{name}/status` — GET
-- `/servers/{name}:tunnel-credentials` — GET
-- `/shares/{token}` — GET
-- `/templates` — GET
-- `/users` — GET
-- `/users/{id}/bindings` — GET
-- `/modules/{name}` — PATCH
-- `/roles/{name}` — PATCH
-- `/users/{id}` — PATCH
-- `/admin/notifications/sinks/{name}/test` — POST
-- `/backup-destinations` — POST
-- `/backups` — POST
-- `/cluster/kubeconfig` — POST
-- `/cluster/nodes:join` — POST
-- `/clusters` — POST
-- `/modules/sources` — POST
-- `/modules/sources/{name}/upload` — POST
-- `/restores` — POST
-- `/schedules` — POST
-- `/servers` — POST
-- `/servers/{name}/actions/run` — POST
-- `/servers/{name}/files/mkdir` — POST
-- `/servers/{name}/files/upload` — POST
-- `/servers/{name}/files/write` — POST
-- `/servers/{name}/modpack` — POST
-- `/servers/{name}/mods/install` — POST
-- `/servers/{name}/mods/upload` — POST
-- `/servers/{name}/players/ban` — POST
-- `/servers/{name}/players/kick` — POST
-- `/servers/{name}/players/unban` — POST
-- `/servers/{name}/players/whitelist/add` — POST
-- `/servers/{name}/players/whitelist/remove` — POST
-- `/servers/{name}:capture-disable` — POST
-- `/servers/{name}:capture-enable` — POST
-- `/servers/{name}:clone` — POST
-- `/servers/{name}:restart` — POST
-- `/servers/{name}:start` — POST
-- `/servers/{name}:stop` — POST
-- `/servers/{name}:transfer` — POST
-- `/servers/{name}:wake` — POST
-- `/servers/{name}:wipe-data` — POST
-- `/shares/{token}` — POST
-- `/shares/{token}/start` — POST
-- `/templates` — POST
-- `/users` — POST
-- `/users/{id}/bindings` — POST
-- `/users/{id}/reset-password` — POST
-- `/admin/auth/providers/{name}/secret` — PUT
-- `/admin/config/{section}` — PUT
-- `/admin/notifications/sinks/{name}/secret` — PUT
-- `/admin/registries/{provider}/secret` — PUT
-- `/modules/sources/{name}` — PUT
-- `/servers/{name}/mods/ids` — PUT
-- `/servers/{name}:collaborators` — PUT
-- `/servers/{name}:tunnel-credentials` — PUT
+### Removed Endpoints
+<!-- REMOVED: /modules/sources — DELETE removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /roles — DELETE removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/system-logs — GET removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /auth/oidc/callback — GET removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /auth/oidc/{provider}/callback — GET removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /mod-updates/{name} — GET removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /users/{id} — GET removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/auth — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/config — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/notifications — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/registries/{provider}/secret — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /backup-destinations/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /backups/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /mod-ids/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /modules/sources — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /restores/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /roles — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /schedules/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /servers/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /templates/{name} — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /users/{id}/role-bindings — PATCH removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /admin/notifications/sinks/{name}/test — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /auth/login — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /backup-destinations/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /backups/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /modules/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /restores/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /schedules/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /servers/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /shares/{token} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /templates/{name} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /users/{id} — POST removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /backup-destinations/{name} — PUT removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /modules/sources — PUT removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /modules/{name} — PUT removed in commit <sha> 2026-09-28 -->
+<!-- REMOVED: /users/{id} — PUT removed in commit <sha> 2026-09-28 -->
+
+## Optional private agent gateway
+
+The `gateway` subcommand starts an mTLS-only listener without the application
+database, browser sessions, or administrative API routes. It defaults to
+`127.0.0.1:8443` and requires an explicit registered cluster ID, namespace
+allowlist, dedicated central-client CA, and exact allowed central URI SAN.
+The central API remains the user-authorization authority.
+
+`gatewayprotocol` defines versioned target routes and the shared exact
+method/path allowlist. `gateway` validates the addressed GameServer UID and
+controller-owned agent Service, then forwards to the fixed cluster-local
+port-8090 agent using `/v1/targets/{uid}`. Final agent UID enforcement prevents
+a name-reuse race from reaching a replacement server. The gateway never falls
+back to unversioned agent routes. Separate capture-file routes validate both
+GameServer and NetworkCapture UIDs, ownership, completion and expiry before
+using the fixed capture-sidecar port 9091 and its identity-bound route.
+
+Authenticated GET `/v1/capabilities` advertises protocol `v1`, target UID support,
+capture-file transport support and this site's capture feature switch. Central
+capability reads use fresh registration/credential resolution, bounded response
+size and timeout, and reject unsupported protocol/identity combinations.
+
+Mounted gateway trust is reloaded on each TLS handshake and revalidated on
+every request, including reused connections. Invalid/removed trust rejects
+new requests; TLS session resumption is disabled. Agent credentials reload on
+every operation. Streams, file/log/capture downloads, file/mod uploads and mod
+installs have no fixed total-duration cap by default. `--max-request-duration`
+(`gateway.maxRequestDuration` in Helm) accepts zero to disable the cap or any
+positive duration to impose one; negative values are rejected. Central peer
+certificate expiry and parent cancellation always terminate an operation.
+Ordinary operations and Kubernetes identity lookups have 30-second timeouts.
+Both HTTP hops waive the response-header timeout for long agent operations,
+including mod install and upload processing before the first response byte.
+Ordinary requests retain their header limit; dial and TLS handshake limits,
+parent cancellation, certificate expiry and configured total lifetimes still apply.
+Existing streams may remain active until certificate expiry, an explicitly
+configured maximum lifetime, caller disconnect or gateway shutdown following
+trust or permission removal. Reconnection performs fresh authorization.
+No ambiguous mutation is automatically retried.
+
+Kubernetes operations still use the central API's independently scoped remote
+Kubernetes clients. Gateway loss does not inherently disable those clients.
+The protocol does not provide storage replication, workload migration, or
+central database availability. Deployment guidance is in
+[`docs/gateway-install.md`](../docs/gateway-install.md).

@@ -88,14 +88,15 @@ func bootstrapAdmin(ctx context.Context, args []string, stdin io.Reader, stderr 
 	row := store.DB.QueryRowContext(ctx, `SELECT id FROM users WHERE username = ?`, bf.username)
 	switch err := row.Scan(&existingID); {
 	case errors.Is(err, sql.ErrNoRows):
-		res, err := store.DB.ExecContext(ctx,
-			`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?, ?, ?, 'admin', ?)`,
+		// RETURNING id instead of LastInsertId: pgx's database/sql driver
+		// has no LastInsertId, and both SQLite and Postgres support RETURNING.
+		var newID int64
+		if err := store.DB.QueryRowContext(ctx,
+			`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?, ?, ?, 'admin', ?) RETURNING id`,
 			bf.username, display, bf.email, hash,
-		)
-		if err != nil {
+		).Scan(&newID); err != nil {
 			return fmt.Errorf("insert user: %w", err)
 		}
-		newID, _ := res.LastInsertId()
 		// Mirror the admin role into a cluster-wide role binding so RBAC
 		// resolves the user's permissions (this runs after Migrate, so the
 		// migration's backfill never saw this row).
@@ -111,16 +112,33 @@ func bootstrapAdmin(ctx context.Context, args []string, stdin io.Reader, stderr 
 	if !bf.force {
 		return fmt.Errorf("user %q already exists; pass --force to overwrite password and promote to admin", bf.username)
 	}
-	if _, err := store.DB.ExecContext(ctx,
+
+	// Wrap password, role, and session eviction in a transaction so they
+	// commit together: no session outlives a reset that succeeded and
+	// nothing changes if any step fails.
+	tx, err := store.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin reset: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx,
 		`UPDATE users
-		   SET pw_hash = ?, role = 'admin', display_name = ?, email = ?, updated_at = datetime('now')
+		   SET pw_hash = ?, role = 'admin', display_name = ?, email = ?, updated_at = ?
 		 WHERE id = ?`,
-		hash, display, bf.email, existingID,
+		hash, display, bf.email, db.NowTimestamp(), existingID,
 	); err != nil {
 		return fmt.Errorf("update user: %w", err)
 	}
-	if err := store.SetClusterRoleBinding(ctx, nil, existingID, scope.DefaultCluster, "admin"); err != nil {
+	if err := store.SetClusterRoleBinding(ctx, tx, existingID, scope.DefaultCluster, "admin"); err != nil {
 		return fmt.Errorf("bind admin role: %w", err)
+	}
+	if err := auth.NewSessionStore(store).DeleteForUserWith(ctx, tx, existingID); err != nil {
+		return fmt.Errorf("end existing sessions: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit reset: %w", err)
 	}
 	_, _ = fmt.Fprintf(stderr, "bootstrap-admin: updated user %q\n", bf.username)
 	return nil
@@ -151,8 +169,9 @@ func (b *bootstrapFlags) bind(fs *flag.FlagSet) {
 }
 
 // enableLocalLogin flips (or injects) the local provider's enabled flag
-// in the persisted auth config, preserving every other provider. A
-// missing row already means "local enabled", so it's left absent.
+// in the persisted auth config, preserving every other provider and every
+// other top-level key of the row (helmOverride included). A missing row
+// already means "local enabled", so it's left absent.
 func enableLocalLogin(ctx context.Context, store *db.Store, stderr io.Writer) error {
 	raw, ok, err := store.ConfigValue(ctx, "auth")
 	if err != nil {
@@ -162,35 +181,52 @@ func enableLocalLogin(ctx context.Context, store *db.Store, stderr io.Writer) er
 		_, _ = fmt.Fprintln(stderr, "bootstrap-admin: no auth config row — local login is already enabled by default")
 		return nil
 	}
-	var cfg struct {
-		Providers []map[string]any `json:"providers"`
-	}
-	if err := json.Unmarshal([]byte(raw), &cfg); err != nil {
+	// Decode only the top level, so every key other than "providers" is
+	// written back byte-for-byte instead of being dropped.
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &top); err != nil {
 		return fmt.Errorf("parse auth config: %w", err)
 	}
+	if top == nil {
+		top = map[string]json.RawMessage{}
+	}
+	var providers []map[string]any
+	if rawProviders, ok := top["providers"]; ok {
+		if err := json.Unmarshal(rawProviders, &providers); err != nil {
+			return fmt.Errorf("parse auth config providers: %w", err)
+		}
+	}
 	found := false
-	for _, p := range cfg.Providers {
+	for _, p := range providers {
+		if p == nil {
+			continue
+		}
 		if kind, _ := p["kind"].(string); kind == "local" {
 			p["enabled"] = true
 			found = true
 		}
 	}
 	if !found {
-		cfg.Providers = append(cfg.Providers, map[string]any{
+		providers = append(providers, map[string]any{
 			"name": "local", "kind": "local", "enabled": true,
 		})
 	}
-	canon, err := json.Marshal(cfg)
+	encodedProviders, err := json.Marshal(providers)
 	if err != nil {
-		return err
+		return fmt.Errorf("encode auth config providers: %w", err)
+	}
+	top["providers"] = encodedProviders
+	canon, err := json.Marshal(top)
+	if err != nil {
+		return fmt.Errorf("encode auth config: %w", err)
 	}
 	if _, err := store.DB.ExecContext(ctx,
 		`INSERT INTO config(key, value, updated_at)
-		 VALUES ('auth', ?, datetime('now'))
+		 VALUES ('auth', ?, ?)
 		 ON CONFLICT(key) DO UPDATE SET
 		     value      = excluded.value,
 		     updated_at = excluded.updated_at`,
-		string(canon),
+		string(canon), db.NowTimestamp(),
 	); err != nil {
 		return fmt.Errorf("write auth config: %w", err)
 	}

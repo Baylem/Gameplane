@@ -11,6 +11,7 @@ import { makeServer, makeClusterStats } from "@/test/factories";
 // Replace it with a plain anchor — same DOM contract for what we assert.
 // Extract search params and build the full href so route-parameter assertions work.
 vi.mock("@tanstack/react-router", () => ({
+  useLocation: () => ({ search: {} }),
   Link: ({ children, to, search, ...rest }: { children: ReactNode; to: string; search?: Record<string, unknown> } & Record<string, unknown>) => {
     let href = to;
     if (search && Object.keys(search).length > 0) {
@@ -207,10 +208,11 @@ describe("ServersPage", () => {
       http.get("/cluster/stats", () => HttpResponse.error()),
     );
     renderWithQuery(<ServersPage />);
-    await screen.findByText(/Servers/i);
+    await screen.findByRole("heading", { name: "Servers" });
+    expect(await screen.findByText(/Inventory are partial/)).toBeInTheDocument();
   });
 
-  it("renders shared servers under a 'Shared with you' header", async () => {
+  it("includes shared servers in the unified list", async () => {
     server.use(
       http.get("/servers", () =>
         HttpResponse.json({
@@ -230,7 +232,7 @@ describe("ServersPage", () => {
     );
     renderWithQuery(<ServersPage />);
     await screen.findByText("owned");
-    expect(screen.getByText(/Shared with you/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Shared with you/i)).not.toBeInTheDocument();
     expect(screen.getByText("shared")).toBeInTheDocument();
   });
 
@@ -273,7 +275,7 @@ describe("ServersPage", () => {
       ),
     );
     renderWithQuery(<ServersPage />);
-    await screen.findByText(/Shared with you/i);
+    await screen.findByText("shared-alpha");
     const search = screen.getByPlaceholderText(/Search/i);
     await userEvent.type(search, "alpha");
     await waitFor(() => expect(screen.queryByText("shared-beta")).not.toBeInTheDocument());
@@ -362,7 +364,7 @@ describe("ServersPage", () => {
     );
     renderWithQuery(<ServersPage />);
     await screen.findByText("alpha");
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     expect(filterButton).toBeInTheDocument();
     // Badge should not contain a number when no facets are applied
     expect(within(filterButton).queryByText(/\d/)).not.toBeInTheDocument();
@@ -392,7 +394,7 @@ describe("ServersPage", () => {
     renderWithQuery(<ServersPage />);
     await screen.findByText("alpha");
 
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     await userEvent.click(filterButton);
 
     // HeroUI Popover contains checkboxes with the game and namespace names
@@ -423,7 +425,7 @@ describe("ServersPage", () => {
     await screen.findByText("alpha");
 
     // Open filter
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     await userEvent.click(filterButton);
 
     // Select minecraft-java
@@ -460,7 +462,7 @@ describe("ServersPage", () => {
     await screen.findByText("alpha");
 
     // Open filter
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     await userEvent.click(filterButton);
 
     // Select minecraft-java
@@ -496,7 +498,7 @@ describe("ServersPage", () => {
     await screen.findByText("alpha");
 
     // Open filter
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     await userEvent.click(filterButton);
 
     // Select one game
@@ -546,7 +548,7 @@ describe("ServersPage", () => {
     await screen.findByText("mc-running");
 
     // Apply game filter for minecraft-java
-    const filterButton = screen.getByRole("button", { name: /Filter/i });
+    const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
     await userEvent.click(filterButton);
     const minecraftCheckbox = screen.getByRole("checkbox", { name: "minecraft-java" });
     await userEvent.click(minecraftCheckbox);
@@ -590,6 +592,158 @@ describe("ServersPage", () => {
     expect(within(row).queryByTitle("Start")).not.toBeInTheDocument();
     await userEvent.click(within(row).getByTitle("Wake"));
     await waitFor(() => expect(wakeHandler).toHaveBeenCalled());
+  });
+
+  // F-263: /servers page fans out per allowed namespace and merges results.
+  describe("namespace fan-out (F-263)", () => {
+    it("fans out /servers per namespace from /namespaces and merges the results", async () => {
+      server.use(
+        http.get("/namespaces", () =>
+          HttpResponse.json({ namespaces: ["gameplane-games", "extra-ns"] }),
+        ),
+        http.get("/servers", ({ request }) => {
+          const url = new URL(request.url);
+          const ns = url.searchParams.get("namespace") ?? "gameplane-games";
+          if (ns === "extra-ns") {
+            return HttpResponse.json({
+              items: [makeServer({ metadata: { name: "extra-server", namespace: "extra-ns" } })],
+            });
+          }
+          return HttpResponse.json({
+            items: [makeServer({ metadata: { name: "default-server", namespace: "gameplane-games" } })],
+          });
+        }),
+      );
+      renderWithQuery(<ServersPage />);
+      // Both namespace queries start once /namespaces resolves; wait for
+      // each rather than relying on the order MSW answers them in.
+      await screen.findByText("extra-server");
+      // Merged: both namespaces' servers show up in one list.
+      expect(await screen.findByText("default-server")).toBeInTheDocument();
+    });
+
+    it("builds the namespace filter from the merged, fanned-out list", async () => {
+      server.use(
+        http.get("/namespaces", () =>
+          HttpResponse.json({ namespaces: ["gameplane-games", "extra-ns"] }),
+        ),
+        http.get("/servers", ({ request }) => {
+          const url = new URL(request.url);
+          const ns = url.searchParams.get("namespace") ?? "gameplane-games";
+          if (ns === "extra-ns") {
+            return HttpResponse.json({
+              items: [makeServer({ metadata: { name: "extra-server", namespace: "extra-ns" } })],
+            });
+          }
+          return HttpResponse.json({
+            items: [makeServer({ metadata: { name: "default-server", namespace: "gameplane-games" } })],
+          });
+        }),
+      );
+      renderWithQuery(<ServersPage />);
+      // extra-ns's server (and thus its facet) only appears after the
+      // second-wave query resolves — wait for it before opening the popover.
+      await screen.findByText("extra-server");
+
+      const filterButton = screen.getByRole("button", { name: /^Filter(?:\s*\d+)?$/i });
+      await userEvent.click(filterButton);
+      expect(await screen.findByRole("checkbox", { name: "gameplane-games" })).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "extra-ns" })).toBeInTheDocument();
+    });
+
+    it("does not blank the page when one namespace's request fails", async () => {
+      const brokenNsHandler = vi.fn(() => HttpResponse.error());
+      server.use(
+        http.get("/namespaces", () =>
+          HttpResponse.json({ namespaces: ["gameplane-games", "broken-ns"] }),
+        ),
+        http.get("/servers", ({ request }) => {
+          const url = new URL(request.url);
+          const ns = url.searchParams.get("namespace") ?? "gameplane-games";
+          if (ns === "broken-ns") {
+            return brokenNsHandler();
+          }
+          return HttpResponse.json({
+            items: [makeServer({ metadata: { name: "healthy-server", namespace: "gameplane-games" } })],
+          });
+        }),
+      );
+      renderWithQuery(<ServersPage />);
+      // The failing namespace must not blank the whole page.
+      await screen.findByText("healthy-server");
+      // ...and it must actually have been fanned out to, not silently
+      // skipped.
+      await waitFor(() => expect(brokenNsHandler).toHaveBeenCalled());
+      // ...and the partial failure must surface, naming the broken namespace.
+      expect(await screen.findByText(/broken-ns.*servers unavailable/i)).toBeInTheDocument();
+    });
+
+    // Review finding (F-263 follow-up): {"namespaces": []} is an
+    // authoritative "servers:read in no namespace" answer, the normal case
+    // for a user with no role binding who only owns/collaborates on
+    // servers — not an error. The page must fan out over nothing (no
+    // /servers request at all) and show only the Shared with you list, with
+    // no error banner and no stuck "Loading…" state.
+    it("includes owner-only servers with no error when namespace access is empty", async () => {
+      const serversHandler = vi.fn(() => HttpResponse.json({ items: [] }));
+      server.use(
+        http.get("/namespaces", () => HttpResponse.json({ namespaces: [] })),
+        http.get("/servers", serversHandler),
+        http.get("/users/me/servers", () =>
+          HttpResponse.json({
+            items: [makeServer({ metadata: { name: "shared-only" }, status: { phase: "Running" } })],
+          }),
+        ),
+      );
+      renderWithQuery(<ServersPage />);
+      await screen.findByText("shared-only");
+      expect(screen.queryByText(/Shared with you/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Couldn't load servers in/i)).not.toBeInTheDocument();
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+      // Empty namespace list fans out over nothing — no /servers call at all.
+      expect(serversHandler).not.toHaveBeenCalled();
+    });
+
+    it("behaves like a single-namespace install when /namespaces returns one namespace", async () => {
+      const serversHandler = vi.fn(() =>
+        HttpResponse.json({
+          items: [makeServer({ metadata: { name: "solo-server", namespace: "gameplane-games" } })],
+        }),
+      );
+      server.use(
+        http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
+        http.get("/servers", ({ request }) => {
+          const url = new URL(request.url);
+          expect(url.searchParams.get("namespace")).toBe("gameplane-games");
+          return serversHandler();
+        }),
+      );
+      renderWithQuery(<ServersPage />);
+      await screen.findByText("solo-server");
+      // Exactly one /servers request, for the default namespace — same
+      // shape as the pre-fan-out single-namespace behavior.
+      expect(serversHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to the default namespace's servers when /namespaces errors", async () => {
+      const serversHandler = vi.fn(({ request }: { request: Request }) => {
+        const url = new URL(request.url);
+        expect(url.searchParams.get("namespace")).toBe("gameplane-games");
+        return HttpResponse.json({
+          items: [makeServer({ metadata: { name: "fallback-server", namespace: "gameplane-games" } })],
+        });
+      });
+      server.use(
+        http.get("/namespaces", () => HttpResponse.json({ error: "boom" }, { status: 500 })),
+        http.get("/servers", serversHandler),
+      );
+      renderWithQuery(<ServersPage />);
+      // The /namespaces query retries twice (1s + 2s backoff) before
+      // isError, so allow well past the default 5s find timeout.
+      await screen.findByText("fallback-server", {}, { timeout: 8000 });
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+      expect(serversHandler).toHaveBeenCalledTimes(1);
+    }, 10_000);
   });
 
   // C1: an asleep server is phase Suspended, but :stop is still a real
@@ -680,7 +834,7 @@ describe("ServersPage mobile layout", () => {
     expect(screen.queryByTitle("Restart")).not.toBeInTheDocument();
   });
 
-  it("shows an empty-state card and a 'Shared with you' section on mobile", async () => {
+  it("includes owner-only servers in the mobile list", async () => {
     setMobileViewport();
     server.use(
       http.get("/servers", () => HttpResponse.json({ items: [] })),
@@ -691,7 +845,7 @@ describe("ServersPage mobile layout", () => {
       ),
     );
     renderWithQuery(<ServersPage />);
-    expect(await screen.findByText(/Shared with you/i)).toBeInTheDocument();
+    expect(await screen.findByText("mobile-shared")).toBeInTheDocument();
     expect(screen.getByText("mobile-shared")).toBeInTheDocument();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });

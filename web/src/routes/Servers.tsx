@@ -13,7 +13,6 @@ import {
   RotateCw,
   Search,
   Server as ServerIcon,
-  Share2,
   SlidersHorizontal,
   Square,
   Sunrise,
@@ -25,48 +24,48 @@ import { StatCard } from "@/components/ui/StatCard";
 import { PhaseChip } from "@/components/ui/PhaseChip";
 import { FilterPopover } from "@/components/ui/FilterPopover";
 import { GameIcon } from "@/components/ui/GameIcon";
-import { useGameCodes } from "@/lib/useGameCodes";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { describeStorageProvisioned, formatBytes, cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/media";
-import type { ClusterStats, ClusterView, GameServer, GameServerPhase, GameTemplate } from "@/types";
-import { Cluster, Servers, type LifecycleVerb } from "@/lib/endpoints";
+import type { GameServer, GameServerPhase, GameTemplate } from "@/types";
+import { Servers, type LifecycleVerb } from "@/lib/endpoints";
 import { countByState } from "@/lib/servers";
+import { useFleetLocation, Fleet, inventoryTotals, playerCoverage, templateKey, useFleetGameCodes, located, resourceTarget, targetKey, targetLabel, targetSearch, useFleetPlacements, useFleetServerSelection, useFleetServers, type FleetTarget, type Located } from "@/lib/fleet";
+import { FleetCoverage, FleetScopeFilter } from "@/components/FleetScope";
 
 type FilterKey = "all" | "running" | "stopped";
 
 export function ServersPage() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
-    queryKey: ["servers"],
-    queryFn: () => Servers.list(),
-    refetchInterval: 5_000,
-  });
+  const { data: placements } = useFleetPlacements();
+  const canCreate = (placements?.items.length ?? 0) > 0;
+  const [location, setLocation] = useFleetLocation();
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [query, setQuery] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [appliedGames, setAppliedGames] = useState<Set<string>>(new Set());
+  const [appliedNamespaces, setAppliedNamespaces] = useState<Set<string>>(new Set());
+  const [draftLocation, setDraftLocation] = useState(location);
+  const [draftGames, setDraftGames] = useState<Set<string>>(new Set());
+  const [draftNamespaces, setDraftNamespaces] = useState<Set<string>>(new Set());
 
-  const { templates, gameCodes, byName } = useGameCodes();
-
-  const { data: cluster } = useQuery({
-    queryKey: ["cluster-stats"],
-    queryFn: () => Cluster.stats().catch(() => ({} as ClusterStats)),
+  const { data: scopes } = useFleetServers();
+  const { data: fleet, isLoading, error } = useFleetServerSelection(location, appliedNamespaces);
+  const { data: inventory, error: inventoryError } = useQuery({
+    queryKey: ["fleet", "inventory", location],
+    queryFn: ({ signal }) => Fleet.inventory({ cluster: location || undefined }, signal),
     staleTime: 30_000,
   });
-  const { data: clusterView } = useQuery({
-    queryKey: ["cluster"],
-    queryFn: () => Cluster.view().catch(() => ({} as ClusterView)),
-    staleTime: 30_000,
-  });
-
-  const { data: myServers } = useQuery({
-    queryKey: ["my-servers"],
-    queryFn: () => Servers.getMyServers(),
-    refetchInterval: 5_000,
-  });
-
+  const allServers = useMemo(() => (fleet?.items ?? []).map(located), [fleet]);
+  const servers = useMemo(() => allServers.filter((server) => !location || server.fleetTarget.cluster === location), [allServers, location]);
+  const clusterView = inventoryTotals((inventory?.items ?? []).filter((item) => !location || item.cluster === location));
+  const cluster = { ...clusterView, nodes: clusterView.total };
+  const { gameCodes, byName, templatesByCluster } = useFleetGameCodes(fleet?.items);
   const act = useMutation({
-    mutationFn: (args: { name: string; verb: LifecycleVerb; ns?: string }) =>
-      Servers.lifecycle(args.name, args.verb, args.ns),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["servers"] }),
+    mutationFn: (args: { target: FleetTarget; verb: LifecycleVerb }) =>
+      Servers.lifecycle(args.target.name, args.verb, args.target.namespace, args.target.cluster),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fleet", "servers"] }),
   });
 
   // Below `md`, a wide table doesn't fit — render stacked cards instead.
@@ -75,28 +74,11 @@ export function ServersPage() {
   // row's accessible text in the DOM.
   const isMobile = useMediaQuery("(max-width: 767px)");
 
-  const [filter, setFilter] = useState<FilterKey>("all");
-  const [query, setQuery] = useState("");
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [appliedGames, setAppliedGames] = useState<Set<string>>(new Set());
-  const [appliedNamespaces, setAppliedNamespaces] = useState<Set<string>>(new Set());
-  const [draftGames, setDraftGames] = useState<Set<string>>(new Set());
-  const [draftNamespaces, setDraftNamespaces] = useState<Set<string>>(new Set());
 
-  const servers = useMemo(() => data?.items ?? [], [data?.items]);
-
-  // Compute shared servers (in my-servers but not in the main list)
-  const sharedServers = useMemo(() => {
-    if (!myServers?.items) return [];
-    const serverKeys = new Set(servers.map((s) => `${s.metadata.namespace ?? "gameplane-games"}/${s.metadata.name}`));
-    return myServers.items.filter((s) => {
-      const key = `${s.metadata.namespace ?? "gameplane-games"}/${s.metadata.name}`;
-      return !serverKeys.has(key);
-    });
-  }, [servers, myServers]);
   const counts = useMemo(() => countByState(servers), [servers]);
+  const players = playerCoverage(servers);
   const vcpus = (clusterView?.nodes ?? []).reduce((s, n) => s + (n.cpu?.capacity ?? 0), 0);
-  const storage = describeStorageProvisioned(cluster?.usedStorageBytes, cluster?.totalStorageBytes);
+  const storage = cluster.usedStorageBytes === undefined ? { valueText: "—", subText: "inventory unavailable", overcommitted: false } : describeStorageProvisioned(cluster.usedStorageBytes, cluster.totalStorageBytes);
 
   // Derive distinct games and namespaces from servers
   const distinctGames = useMemo(() => {
@@ -108,14 +90,19 @@ export function ServersPage() {
   }, [servers]);
 
   const distinctNamespaces = useMemo(() => {
-    const namespaces = new Set<string>();
-    servers.forEach((s) => {
-      namespaces.add(s.metadata.namespace ?? "gameplane-games");
-    });
-    return Array.from(namespaces).sort();
-  }, [servers]);
+    const namespaces = new Set([...appliedNamespaces, ...draftNamespaces]);
+    for (const scope of scopes?.scopes ?? []) if (scope.namespace) namespaces.add(scope.namespace);
+    for (const item of scopes?.items ?? []) namespaces.add(item.target.namespace);
+    for (const server of servers) namespaces.add(server.metadata.namespace ?? "gameplane-games");
+    return [...namespaces].sort();
+  }, [scopes, servers, appliedNamespaces, draftNamespaces]);
 
-  const appliedFacetCount = appliedGames.size + appliedNamespaces.size;
+  const appliedFacetCount = appliedGames.size + appliedNamespaces.size + (location ? 1 : 0);
+  const locationChoices = [...(scopes?.scopes ?? []).map((scope) => scope.cluster), ...(scopes?.items ?? []).map((item) => item.target.cluster), ...(scopes?.issues ?? []).map((issue) => issue.cluster)];
+  const locationField = <div className="space-y-1">
+    <div className="text-xs font-semibold text-muted">Location</div>
+    <FleetScopeFilter value={draftLocation} onChange={setDraftLocation} clusters={locationChoices} />
+  </div>;
 
   const filterServer = (gs: GameServer) => {
     if (query && !gs.metadata.name.toLowerCase().includes(query.toLowerCase())) return false;
@@ -134,6 +121,7 @@ export function ServersPage() {
   const handleOpenFilterChange = (open: boolean) => {
     setIsFilterOpen(open);
     if (open) {
+      setDraftLocation(location);
       setDraftGames(new Set(appliedGames));
       setDraftNamespaces(new Set(appliedNamespaces));
     }
@@ -160,56 +148,59 @@ export function ServersPage() {
   };
 
   const handleApplyFilter = () => {
+    setLocation(draftLocation);
     setAppliedGames(new Set(draftGames));
     setAppliedNamespaces(new Set(draftNamespaces));
     setIsFilterOpen(false);
   };
 
   const handleClearFilter = () => {
+    setDraftLocation("");
     setDraftGames(new Set());
     setDraftNamespaces(new Set());
   };
 
   const visible = servers.filter(filterServer);
-  const visibleShared = sharedServers.filter(filterServer);
 
   return (
     <div className="space-y-6 p-6">
       {!isMobile && (
         <PageHeader
           title="Servers"
-          subtitle="Manage game server workloads across your cluster."
-          actions={
+          subtitle="Manage your game servers across all authorized locations."
+          actions={canCreate ?
             <Link to="/servers/new" className={cn(buttonVariants({ variant: "primary" }), "rounded-full")}>
               <Plus className="h-4 w-4" /> Create server
-            </Link>
+            </Link> : undefined
           }
         />
       )}
 
       {act.error && <ErrorBanner err={act.error} onDismiss={() => act.reset()} />}
+      <FleetCoverage partial={fleet?.partial} issues={fleet?.issues} error={error} label="Server results" />
+      <FleetCoverage partial={inventory?.partial} issues={inventory?.issues} error={inventoryError} label="Inventory" />
 
       {!isMobile && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <StatCard
             label="Running"
             icon={<Activity className="h-4 w-4" />}
-            value={counts.running}
-            sub={`of ${servers.length} total`}
-            accent="success"
+            value={error || (fleet?.partial && servers.length === 0) ? "—" : counts.running}
+            sub={error || (fleet?.partial && servers.length === 0) ? "server status unavailable" : `of ${servers.length} ${fleet?.partial ? "returned" : "total"}`}
+            accent={error || (fleet?.partial && servers.length === 0) ? "warning" : "success"}
           />
           <StatCard
             label="Players online"
             icon={<UsersIcon className="h-4 w-4" />}
-            value={counts.players}
-            sub={`peak ${counts.playersMax}`}
+            value={error || !players.known || (fleet?.partial && servers.length === 0) ? "—" : counts.players}
+            sub={error || !players.known || (fleet?.partial && servers.length === 0) ? "player status unavailable" : players.unknown ? `${players.unknown} server player counts unavailable` : `peak ${counts.playersMax}`}
             accent="primary"
           />
           <StatCard
             label="vCPUs"
             icon={<Cpu className="h-4 w-4" />}
             value={vcpus > 0 ? vcpus : "—"}
-            sub="cluster cores"
+            sub={inventory?.partial ? "returned inventory cores" : "authorized inventory cores"}
             accent="warning"
           />
           <StatCard
@@ -220,10 +211,10 @@ export function ServersPage() {
             accent={storage.overcommitted ? "warning" : "violet"}
           />
           <StatCard
-            label="Cluster size"
+            label="Inventory nodes"
             icon={<ServerIcon className="h-4 w-4" />}
-            value={cluster?.nodes ?? "—"}
-            sub="nodes ready"
+            value={!inventoryError && cluster.nodes > 0 ? cluster.nodes : "—"}
+            sub={inventoryError ? "inventory unavailable" : cluster.nodes === 0 ? "no node data" : inventory?.partial ? "returned nodes only" : "authorized inventory nodes"}
             accent="warning"
           />
         </div>
@@ -275,6 +266,7 @@ export function ServersPage() {
               />
             </div>
             <FilterPopover
+              fields={locationField}
               games={distinctGames}
               selectedGames={draftGames}
               onToggleGame={handleToggleDraftGame}
@@ -313,6 +305,7 @@ export function ServersPage() {
             />
           </div>
           <FilterPopover
+            fields={locationField}
             games={distinctGames}
             selectedGames={draftGames}
             onToggleGame={handleToggleDraftGame}
@@ -324,14 +317,11 @@ export function ServersPage() {
             isOpen={isFilterOpen}
             onOpenChange={handleOpenFilterChange}
           >
-            <Button
-              isIconOnly
-              variant="ghost"
-              className="filter-trigger w-10 h-10 rounded-xl border border-default-300 bg-default-100 hover:bg-default-200"
-              aria-label="Filter"
-            >
+            <div className="filter-trigger relative inline-flex items-center justify-center w-10 h-10 rounded-xl border border-default-300 bg-default-100 hover:bg-default-200 cursor-pointer">
+              <span className="sr-only">Filter</span>
               <SlidersHorizontal className="h-[18px] w-[18px]" />
-            </Button>
+              {appliedFacetCount > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-accent px-1 text-[10px] text-accent-foreground">{appliedFacetCount}</span>}
+            </div>
           </FilterPopover>
         </div>
       )}
@@ -341,34 +331,19 @@ export function ServersPage() {
           {isLoading && (
             <Card className="p-10 text-center text-sm text-foreground/60">Loading…</Card>
           )}
-          {!isLoading && visible.length === 0 && visibleShared.length === 0 && (
-            <Card className="p-12 text-center text-sm text-foreground/60">No servers match.</Card>
+          {!isLoading && visible.length === 0 && (
+            <Card className="p-12 text-center text-sm text-foreground/60">{error || fleet?.partial ? "No server data available for this filter." : "No servers match."}</Card>
           )}
           {visible.map((gs) => (
             <ServerCard
-              key={`${gs.metadata.namespace ?? "gameplane-games"}/${gs.metadata.name}`}
+              key={targetKey(resourceTarget(gs))}
               gs={gs}
-              templates={templates}
+              templates={templatesByCluster.get(resourceTarget(gs).cluster)}
               gameCodes={gameCodes}
             />
           ))}
 
-          {visibleShared.length > 0 && (
-            <>
-              <div className="flex items-center gap-2 px-1 pt-2 text-xs font-semibold uppercase tracking-wider text-foreground/60">
-                <Share2 className="h-4 w-4" />
-                Shared with you
-              </div>
-              {visibleShared.map((gs) => (
-                <ServerCard
-                  key={`shared-${gs.metadata.namespace ?? ""}-${gs.metadata.name}`}
-                  gs={gs}
-                  templates={templates}
-                  gameCodes={gameCodes}
-                />
-              ))}
-            </>
-          )}
+
         </div>
       ) : (
         <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -388,29 +363,30 @@ export function ServersPage() {
                 <Table.Body
                   renderEmptyState={() => (
                     <div className="text-center py-10 text-foreground/60">
-                      {isLoading ? "Loading…" : "No servers match."}
+                      {isLoading ? "Loading…" : error || fleet?.partial ? "No server data available for this filter." : "No servers match."}
                     </div>
                   )}
                 >
               {visible.map((gs) => (
-                <Table.Row key={`${gs.metadata.namespace ?? "gameplane-games"}/${gs.metadata.name}`}>
+                <Table.Row key={targetKey(resourceTarget(gs))}>
                   <Table.Cell>
                     <div className="flex items-center gap-3">
                       <GameIcon
                         game={gs.spec.templateRef.name}
-                        icon={byName.get(gs.spec.templateRef.name)?.spec.icon}
-                        code={gameCodes.get(gs.spec.templateRef.name)}
+                        icon={byName.get(templateKey(resourceTarget(gs).cluster, gs.spec.templateRef.name))?.spec.icon}
+                        code={gameCodes.get(templateKey(resourceTarget(gs).cluster, gs.spec.templateRef.name))}
                         size="sm"
                       />
                       <div className="min-w-0">
                         <Link
                           to="/servers/$name"
                           params={{ name: gs.metadata.name }}
-                          search={gs.metadata.namespace && gs.metadata.namespace !== "gameplane-games" ? { ns: gs.metadata.namespace } : {}}
+                          search={targetSearch(resourceTarget(gs))}
                           className="truncate font-mono text-sm text-foreground hover:text-primary"
                         >
                           {gs.metadata.name}
                         </Link>
+                        <div className="truncate text-xs text-muted">{targetLabel(resourceTarget(gs))}</div>
                         <div className="text-[11px] text-foreground/60">
                           {gs.metadata.namespace ?? "gameplane-games"}
                         </div>
@@ -451,88 +427,12 @@ export function ServersPage() {
                   <Table.Cell className="text-right">
                     {(() => {
                       const { phase, asleep } = serverRowData(gs);
-                      return <ServerLifecycleActions gs={gs} phase={phase} asleep={asleep} onAct={act.mutate} />;
+                      return <ServerLifecycleActions gs={gs} phase={phase} asleep={asleep} pending={act.isPending} onAct={act.mutate} />;
                     })()}
                   </Table.Cell>
                 </Table.Row>
               ))}
 
-              {visibleShared.length > 0 && (
-                <>
-                  <Table.Row className="bg-surface/20" key="shared-header">
-                    <Table.Cell colSpan={8}>
-                      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground/60">
-                        <Share2 className="h-4 w-4" />
-                        Shared with you
-                      </div>
-                    </Table.Cell>
-                  </Table.Row>
-                  {visibleShared.map((gs) => (
-                    <Table.Row key={`shared-${gs.metadata.namespace ?? ""}-${gs.metadata.name}`}>
-                      <Table.Cell>
-                        <div className="flex items-center gap-3">
-                          <GameIcon
-                            game={gs.spec.templateRef.name}
-                            icon={byName.get(gs.spec.templateRef.name)?.spec.icon}
-                            code={gameCodes.get(gs.spec.templateRef.name)}
-                            size="sm"
-                          />
-                          <div className="min-w-0">
-                            <Link
-                              to="/servers/$name"
-                              params={{ name: gs.metadata.name }}
-                              search={gs.metadata.namespace && gs.metadata.namespace !== "gameplane-games" ? { ns: gs.metadata.namespace } : {}}
-                              className="truncate font-mono text-sm text-foreground hover:text-primary"
-                            >
-                              {gs.metadata.name}
-                            </Link>
-                            <div className="text-[11px] text-foreground/60">
-                              {gs.metadata.namespace ?? "gameplane-games"}
-                            </div>
-                          </div>
-                        </div>
-                      </Table.Cell>
-                      <Table.Cell>{gs.spec.templateRef.name}</Table.Cell>
-                      <Table.Cell>
-                        {(() => {
-                          const { phase, asleep } = serverRowData(gs);
-                          return <PhaseChip phase={phase} asleep={asleep} />;
-                        })()}
-                      </Table.Cell>
-                      <Table.Cell>
-                        {(() => {
-                          const { cpuLabel } = serverRowData(gs);
-                          return <span className="font-mono">{cpuLabel}</span>;
-                        })()}
-                      </Table.Cell>
-                      <Table.Cell>
-                        {(() => {
-                          const { memLabel } = serverRowData(gs);
-                          return <span className="font-mono">{memLabel}</span>;
-                        })()}
-                      </Table.Cell>
-                      <Table.Cell>
-                        {(() => {
-                          const { playersLabel } = serverRowData(gs);
-                          return <span className="font-mono">{playersLabel}</span>;
-                        })()}
-                      </Table.Cell>
-                      <Table.Cell>
-                        {(() => {
-                          const { node } = serverRowData(gs);
-                          return <span className="font-mono text-foreground/60">{node ?? "—"}</span>;
-                        })()}
-                      </Table.Cell>
-                      <Table.Cell className="text-right">
-                        {(() => {
-                          const { phase, asleep } = serverRowData(gs);
-                          return <ServerLifecycleActions gs={gs} phase={phase} asleep={asleep} onAct={act.mutate} />;
-                        })()}
-                      </Table.Cell>
-                    </Table.Row>
-                  ))}
-                </>
-              )}
                 </Table.Body>
               </Table.Content>
             </Table.ScrollContainer>
@@ -605,31 +505,33 @@ function ServerLifecycleActions({
   phase,
   asleep,
   onAct,
+  pending,
 }: {
-  gs: GameServer;
+  gs: Located<GameServer>;
   phase?: GameServerPhase;
   asleep?: boolean;
-  onAct: (args: { name: string; verb: LifecycleVerb; ns?: string }) => void;
+  pending: boolean;
+  onAct: (args: { target: FleetTarget; verb: LifecycleVerb }) => void;
 }) {
   const qc = useQueryClient();
   const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: ["servers"] });
-    void qc.invalidateQueries({ queryKey: ["my-servers"] });
+    void qc.invalidateQueries({ queryKey: ["fleet", "servers"] });
   };
   return (
     <div className="inline-flex items-center">
       {asleep ? (
         <ActionButton
           title="Wake"
-          onClick={() => onAct({ name: gs.metadata.name, verb: "wake", ns: gs.metadata.namespace })}
+          disabled={pending || !gs.fleetAccess?.canControl}
+          onClick={() => onAct({ target: gs.fleetTarget, verb: "wake" })}
         >
           <Sunrise className="h-4 w-4" />
         </ActionButton>
       ) : (
         <ActionButton
           title="Start"
-          disabled={phase === "Running" || phase === "Starting"}
-          onClick={() => onAct({ name: gs.metadata.name, verb: "start", ns: gs.metadata.namespace })}
+          disabled={pending || !gs.fleetAccess?.canControl || phase === "Running" || phase === "Starting"}
+          onClick={() => onAct({ target: gs.fleetTarget, verb: "start" })}
         >
           <Play className="h-4 w-4" />
         </ActionButton>
@@ -640,18 +542,19 @@ function ServerLifecycleActions({
         // action there — it patches spec.suspend=true, which the operator
         // honors immediately, distinct from an idle sleep a wake window
         // would otherwise resurrect.
-        disabled={!asleep && (phase === "Stopped" || phase === "Suspended")}
-        onClick={() => onAct({ name: gs.metadata.name, verb: "stop", ns: gs.metadata.namespace })}
+        disabled={pending || !gs.fleetAccess?.canControl || (!asleep && (phase === "Stopped" || phase === "Suspended"))}
+        onClick={() => onAct({ target: gs.fleetTarget, verb: "stop" })}
       >
         <Square className="h-4 w-4" />
       </ActionButton>
       <ActionButton
         title="Restart"
-        onClick={() => onAct({ name: gs.metadata.name, verb: "restart", ns: gs.metadata.namespace })}
+        disabled={pending || !gs.fleetAccess?.canControl}
+        onClick={() => onAct({ target: gs.fleetTarget, verb: "restart" })}
       >
         <RotateCw className="h-4 w-4" />
       </ActionButton>
-      <ServerActionsMenu gs={gs} onDeleted={invalidate} onTransferred={invalidate} />
+      <ServerActionsMenu gs={gs} target={gs.fleetTarget} access={gs.fleetAccess ? { ...gs.fleetAccess, permissions: gs.fleetPermissions } : undefined} onDeleted={invalidate} onTransferred={invalidate} />
     </div>
   );
 }
@@ -668,7 +571,7 @@ function ServerCard({
   templates?: GameTemplate[];
   gameCodes: Map<string, string>;
 }) {
-  const { phase, asleep, isSharedNonDefault, memLabel, playersLabel } = serverRowData(gs);
+  const { phase, asleep, memLabel, playersLabel } = serverRowData(gs);
 
   // Extract address from the first endpoint, if available
   const endpoint = gs.status?.endpoints?.[0];
@@ -682,18 +585,19 @@ function ServerCard({
           <GameIcon
             game={gs.spec.templateRef.name}
             icon={templates?.find((t) => t.metadata.name === gs.spec.templateRef.name)?.spec.icon}
-            code={gameCodes.get(gs.spec.templateRef.name)}
+            code={gameCodes.get(templateKey(resourceTarget(gs).cluster, gs.spec.templateRef.name))}
             size="sm"
           />
           <div className="min-w-0">
             <Link
               to="/servers/$name"
               params={{ name: gs.metadata.name }}
-              search={isSharedNonDefault ? { ns: gs.metadata.namespace } : {}}
+              search={targetSearch(resourceTarget(gs))}
               className="block truncate font-medium text-sm text-foreground hover:text-primary"
             >
               {gs.metadata.name}
             </Link>
+            <div className="truncate text-xs text-muted">{targetLabel(resourceTarget(gs))}</div>
             <div className="truncate text-xs text-foreground/60 font-mono">
               {address}
             </div>

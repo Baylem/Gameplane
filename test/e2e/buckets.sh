@@ -39,6 +39,9 @@ TestHelmInstall_AllCRDsPresent
 TestHelmInstall_CRDApplyHookSkippedOnFreshInstall
 TestHelmInstall_APIHealthz
 TestHelmInstall_MetricsNotOnPublicPort
+TestHelmInstall_APIServerEgressPolicy_AllowsPrivateRanges
+TestHelmInstall_BringYourOwnMTLSCA
+TestHelmInstall_MTLSClientCertReissuedOnCAChange
 TestHelmInstall_APILogsClean
 TestHelmInstall_OperatorLogsClean
 TestCRD_Validation_GameServerWithoutTemplate
@@ -46,6 +49,9 @@ TestCRD_Validation_BackupScheduleBadCron
 TestCRD_Validation_BackupRequiresServerRef
 TestCRD_Validation_GameTemplateRequiresImage
 TestCRD_Validation_IdleRejectsBadValues
+TestCRD_Validation_TunnelServerAddrInvalid
+TestCRD_Validation_TunnelProxyNameInvalid
+TestCRD_Validation_TunnelServerAddrValid
 TestGameServer_OperatorMaterializesChildren
 TestGameServer_SuspendScalesToZeroAndBack
 TestGameServer_IdleNeverSleepsWithoutAPlayerCount
@@ -58,6 +64,7 @@ TestGameServer_NonexistentStorageClassSurfacesError
 TestGameServer_VersionSwitch
 TestGameServer_WipeReportsFailureOnPermissionDenied
 TestGameServer_CascadingDelete
+TestGameServer_TunnelCredentialRefusalSurfaced
 TestGameServer_IngressNetworkPolicyShapeAndCascade
 TestGameServer_NetworkCaptureStartStopDownload
 TestGameServer_NetworkCaptureEphemeralContainer
@@ -74,6 +81,7 @@ TestModuleSource_RejectsSSRFTarget
 TestModuleSourceAndModule
 TestModuleSourceUpload
 TestModule_ScaffoldAndPackage
+TestModule_SteamcmdScaffoldKeepsNonRootSecurity
 TestBackup_OperatorMaterializesJob
 TestBackup_FailsOnMissingPVC
 TestBackup_FailsOnBadCredentials
@@ -84,6 +92,7 @@ TestBackupSchedule_ConcurrencyForbid
 TestRestore_RoundTrip
 TestRestore_RejectsMissingBackup
 TestRestore_FailsOnMissingSnapshot
+TestGameServer_UnownedNamesakeSurvives
 TestAddressPool_DefaultPoolNoPreference
 TestAddressPool_NamedPoolAssignment
 TestAddressPool_NonLoadBalancerIgnored
@@ -190,6 +199,10 @@ EOF
 # login budget, not by subject: api-roles is at its ceiling. It costs +1
 # e2e-admin login (bringing api-mods to 6) plus one login as its own
 # operator-role user.
+# TestAPI_BootstrapAdminForceEndsExistingSessions now costs +1 e2e-admin
+# login (for cleanup) plus one login as its own throwaway account (a fresh
+# per-username bucket, one slot of the job's shared per-IP budget). This
+# brings api-mods to 7.
 bucket_api_mods() { cat <<'EOF'
 TestAPI_ModManifestInstallUpgrade
 TestAPI_ModUpload
@@ -197,6 +210,7 @@ TestAPI_ModArchiveConfinement_PathTraversalRejected
 TestAPI_ModArchiveConfinement_SymlinkEscapeRejected
 TestAPI_ModArchiveConfinement_ValidArchiveExtracts
 TestAPI_OwnerOnlyServerOperations_RequireOwnerOrAdmin
+TestAPI_BootstrapAdminForceEndsExistingSessions
 EOF
 }
 
@@ -308,8 +322,18 @@ EOF
 # RBAC), which none of the other buckets' single-cluster jobs provide — see
 # multicluster_e2e_test.go's package doc. Its own dedicated CI job
 # (e2e-multicluster) brings up both clusters before running it.
+#
+# TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision and
+# TestAPI_ModuleUpload_ExtractionStaysWithinBudget live here for the login
+# budget, not by subject: api-mods is at its ~7 e2e-admin-login ceiling. Each
+# costs +1 e2e-admin login (account removal also uses fake-OIDC sign-ins,
+# which every e2e.sh cluster deploys), bringing this job to 3; both run
+# against the primary cluster.
 bucket_multicluster() { cat <<'EOF'
+TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision
+TestAPI_ModuleUpload_ExtractionStaysWithinBudget
 TestMultiCluster_ClusterDispatchAndScopedRBAC
+TestMultiCluster_GatewayParity
 EOF
 }
 

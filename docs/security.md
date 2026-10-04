@@ -55,32 +55,70 @@ kubectl -n gameplane-system exec deploy/gameplane-api -- \
   /api bootstrap-admin --enable-local-login
 ```
 
-It force-enables the local provider in the auth config row (preserving
-everything else) and takes effect on the next login attempt.
+It force-enables the local provider in the auth config row, keeping
+everything else in that row as it was (the other providers and the
+`helmOverride` role-mapping overlay), and takes effect on the next login
+attempt.
+
+`bootstrap-admin --username <name> --force` resets that account's password,
+promotes it to `admin`, and ends every existing session of the account, the
+same way a dashboard password reset does.
 
 ### Client IP extraction from forwarded headers
 
-The API determines the real client IP from the `X-Forwarded-For` header
-to power login rate limiting and audit records. This is configurable via
-`api.trustedProxies` (default: private/loopback ranges `127.0.0.0/8`,
-`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`,
-`::1/128`, `fc00::/7`, `fe80::/10`).
+The API records a client IP for every request. Login rate limiting
+(per-IP caps) and audit records key on it. The IP comes from the TCP peer
+and, only when that peer is a trusted proxy, from the `X-Forwarded-For`
+header. Trusted proxies are set by `api.trustedProxies` (default:
+loopback and private ranges `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`,
+`192.168.0.0/16`, `169.254.0.0/16`, `::1/128`, `fc00::/7`, `fe80::/10`).
 
-**In a normal Kubernetes install** (API behind nginx-ingress, ALB, etc.),
-the default works out-of-the-box: the ingress sits in one of the default
-ranges and sets `X-Forwarded-For` unconditionally, so the API extracts the
-true client IP safely. The API **only** trusts `X-Forwarded-For` from
-requests originating within the configured CIDR blocks, defeating IP
-spoofing.
+The API applies these rules in order (`api/internal/auth/clientip.go`):
 
-**When the API is directly exposed** (no proxy), the default is correct:
-`X-Forwarded-For` is ignored, and rate limiting uses the TCP peer's
-address as the true client IP — which is already authoritative. If you
-place a proxy in front of the API, add that proxy's address(es) to
-`api.trustedProxies` so the API can extract the real client IP from
-`X-Forwarded-For`.
+1. A TCP peer outside `api.trustedProxies` is the client. Any
+   `X-Forwarded-For` header on its request is ignored.
+2. When the peer is a trusted proxy, the API reads `X-Forwarded-For` from
+   right to left and takes the first address outside `api.trustedProxies`
+   as the client.
+3. When every address in the chain is inside `api.trustedProxies`, the
+   leftmost address is the client.
+4. An entry that isn't an IP address ends the walk at the last address
+   already reached. With no `X-Forwarded-For` header that is the peer.
+5. With `api.trustedProxies` empty, the peer is always the client.
 
-Example for direct exposure behind a specific proxy at `203.0.113.1`:
+**IPv4-mapped IPv6 prefixes.** Prefixes must be standard IPv4 (e.g., `10.42.0.0/16`)
+or IPv6 (e.g., `fc00::/7`). IPv4-mapped IPv6 prefixes (e.g., `::ffff:10.42.0.0/112`)
+are automatically normalized: they are converted to their unmapped IPv4 form and must
+be at least `/96` bits to be valid (`::ffff:10.42.0.0/96` becomes `10.42.0.0/0`,
+`::ffff:10.42.0.0/112` becomes `10.42.0.0/16`). Prefixes shorter than `/96` are
+rejected at startup.
+
+**In a normal Kubernetes install** (ingress controller, then the web
+front end, then the API), the default works out of the box: the proxies
+run in pod and node ranges the default covers, and a client on the public
+internet is recorded by its own address.
+
+**Clients on a private network.** The default treats every private-range
+address as a possible proxy, so for clients that connect from a private
+range the recorded IP depends on the forwarded chain those addresses
+present (rule 3). If dashboard users reach Gameplane from a private
+network and you rely on per-client limits for them, narrow
+`api.trustedProxies` to the ranges your proxies actually run in, usually
+the cluster's pod CIDR plus any load balancer in front of the ingress:
+
+```yaml
+api:
+  trustedProxies: "10.42.0.0/16"   # k3s default pod CIDR; use your cluster's
+```
+
+**When the API is directly exposed** (no proxy), set
+`api.trustedProxies` to `""`: the TCP peer is then always the client. If
+you place a proxy in front of the API, list that proxy's addresses so the
+API reads `X-Forwarded-For` from it. A proxy outside the list is recorded
+as the client itself, so every user behind it shares one rate-limit
+bucket.
+
+Example for a single proxy at `203.0.113.1`:
 
 ```yaml
 api:
@@ -88,9 +126,9 @@ api:
 ```
 
 The client IP is used for login rate limiting (per-IP caps) and audit
-records, so misconfigurating this can either hide the real attacker's IP
-in logs or prevent legitimate users from logging in if they're grouped
-behind a proxy the API doesn't trust.
+records, so misconfiguring this can either record a proxy instead of the
+client in audit logs or group legitimate users behind one proxy address
+in a single rate-limit bucket.
 
 ## Authorization
 
@@ -126,6 +164,12 @@ named set of permissions, and a user is bound to roles **per namespace**.
 - **Event stream.** `GET /events` carries only the resource kinds the caller
   may read in the resolved cluster and namespace, using the same read
   permission as each kind's list route.
+- **Account removal.** `DELETE /users/{id}` removes the account and every row
+  tied to it in one transaction (SSO links, preferences, sessions, API
+  tokens, role bindings) and revokes the share links the account created.
+  The API does this itself rather than relying on foreign-key cascades,
+  which the shipped SQLite DSN leaves off. An SSO user who is deleted and
+  signs in again is provisioned as a new user.
 
 ### Per-GameServer access (owner + collaborators)
 
@@ -150,7 +194,7 @@ restore jobs, schedules, and events remain namespace-gated in this release.
 
 ## Share links
 
-Share links (`api/internal/db/shares.go`, schema in `api/internal/db/migrations/006_share_links.sql`) grant unauthenticated, token-bearing access to a single GameServer's status and connection address, optionally with permission to wake it. Because they are unauthenticated, their security rests entirely on the token being both hard to guess and hard to recover if the database or a backup leaks.
+Share links (`api/internal/db/shares.go`, schema in `api/internal/db/migrations/sqlite/006_share_links.sql`, Postgres twin in `migrations/postgres/`) grant unauthenticated, token-bearing access to a single GameServer's status and connection address, optionally with permission to wake it. Because they are unauthenticated, their security rests entirely on the token being both hard to guess and hard to recover if the database or a backup leaks.
 
 **Storage.** Only a SHA-256 hash of the token is persisted (`token_hash`, indexed for O(1) lookup); the raw 32-byte random token is generated at creation, returned exactly once in the create response, and never stored, logged, or recoverable afterwards.
 
@@ -166,7 +210,7 @@ Share links (`api/internal/db/shares.go`, schema in `api/internal/db/migrations/
 
 **Expiry.** Every share link either has an expiry timestamp or is explicitly created with no expiry (owner's choice; see `specs/done_017-share-link-expiry/`). There is no platform-enforced maximum lifetime: a non-expiring or long-lived link is exactly as hard to guess on any given day as a short-lived one, because guessing difficulty comes from the token's entropy, not from its age. The tradeoff of a long-lived or non-expiring link is operational — a forgotten link stays live until the owner revokes it — not cryptographic, which is why the create-link UI warns the owner explicitly ("This link works until you revoke it." for no expiry; a long-lived-token warning for a custom date a year or more out) rather than the system silently capping the choice.
 
-**Revocation.** Revocation sets `revoked_at` (never a delete, preserving the audit trail) and is checked independently of, and prior to, any expiry check, so it applies uniformly regardless of whether the link expires, expires far in the future, or never expires.
+**Revocation.** Revocation sets `revoked_at` (never a delete, preserving the audit trail) and is checked independently of, and prior to, any expiry check, so it applies uniformly regardless of whether the link expires, expires far in the future, or never expires. `DELETE /servers/{name}/shares/{id}` revokes a link only when it belongs to that server (cluster, namespace and name); any other id answers 404. Deleting a user revokes every share link that user created.
 
 **Rate limiting.** The public resolve/start endpoints are rate-limited (`auth.ShareLimiter`) specifically because tokens are guessable-by-brute-force in principle (just computationally infeasible in practice); the rate limit is defense in depth against automated probing, not a substitute for token entropy.
 
@@ -194,13 +238,21 @@ When `networkPolicies.enabled=true` (default) the chart applies:
   gated by the `allow-game-public-egress` policy below, and apiserver
   access by `allow-agent-to-apiserver`.
 - `allow-agent-to-apiserver` — allows game pods to reach the kube-apiserver
-  for status heartbeat (GameServer status patches). Permits TCP 443 and 6443
-  to apiserver endpoints; by default targets RFC1918 + link-local ranges, or
-  customizable via `networkPolicies.apiServerCIDRs`.
+  for status heartbeat (GameServer status patches). By default permits TCP 443
+  and 6443 to all addresses in RFC1918 and link-local ranges (10.0.0.0/8,
+  172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16), not limited to the apiserver
+  endpoint. Customize via `networkPolicies.apiServerCIDRs` to narrow to specific
+  API server addresses.
 - `allow-api-to-agent` — allows the API and operator pods (in the
   control-plane namespace) to reach every game pod's agent on TCP port 8090.
   The API proxies console/files/logs/players; the operator calls `/quiesce`
   before backups.
+- `allow-api-to-capture` — rendered only when `capture.enabled=true`; allows TCP
+  9091 to game pods from this release's operator and enabled API pods in the
+  control-plane namespace. Both the namespace and pod selectors must match.
+  This admits operator capture control and local API file access without opening
+  other ports or depending on the kubelet probe allowance. Remote file access has
+  its separate gateway policy.
 - `<gameserver-name>-game-ingress` — created by the **operator** for each
   GameServer, allows external traffic to reach only the advertised ports
   declared in the GameTemplate. Selects traffic from `networkPolicies.gameIngress.fromCIDRs`
@@ -253,6 +305,16 @@ audit-syslog-bridge) runs as:
 - `capabilities.drop: [ALL]`
 - `allowPrivilegeEscalation: false`
 
+The agent sidecar in each game pod gets the same fixed hardening. The game
+container itself does not: it runs as the template's
+`spec.security.runAsUser`/`runAsGroup` when the template sets them (see
+[module authoring](module-authoring.md#security-context)), and otherwise as
+the image's own default user, which may be root. The operator sets no
+`runAsNonRoot`, `allowPrivilegeEscalation`, `readOnlyRootFilesystem`,
+`seccompProfile` or capability drop on the game container, so it keeps the
+container runtime's defaults. This keeps arbitrary third-party game images
+working unchanged.
+
 Game pods are shaped per-template. For a hostile game module, enable
 Pod Security Standards `restricted` on the games namespace via
 `podSecurity.enforceRestricted=true`.
@@ -288,10 +350,14 @@ Kubernetes sets `no_new_privs` whenever `allowPrivilegeEscalation: false`.
 Therefore, the container must also set `allowPrivilegeEscalation: true` for the
 file capability to function.
 
-The game container retains its unprivileged posture: `runAsNonRoot: true`,
-`allowPrivilegeEscalation: false`, and no elevated capabilities. Only the capture
-sidecar holds `CAP_NET_RAW`; exploit of game code cannot grant packet-capture
-ability.
+The game container does not share this exception: the operator never sets
+`allowPrivilegeEscalation: true` on it or adds `NET_RAW` to it, and the capture
+sidecar is the only container Gameplane grants `CAP_NET_RAW` for capture. The
+game container keeps the posture described in [Pod security](#pod-security):
+the template's uid/gid or the image's default user, and the container
+runtime's default capability set. Which capabilities the game container holds
+therefore depends on that runtime default and on the user the image runs as,
+not on the capture feature.
 
 **Trade-off with PodSecurity `restricted`**: A cluster enforcing the `restricted`
 Pod Security Standards profile on the games namespace will reject any pod with
@@ -736,10 +802,12 @@ On each OIDC login, Gameplane:
 4. If no role matches, assigns the default role (configured via `api.oidc.defaultRole`;
    defaults to `viewer`; can be set to `deny` to reject login).
 
-This re-evaluation runs only when Helm OIDC role mappings are configured
-(i.e., `api.oidc.roleMappings` has at least one non-empty role array). If role
-mappings are not configured, new OIDC users receive the fixed `viewer` role and
-existing users' roles are never re-evaluated.
+This re-evaluation runs whenever the effective role mappings exist: Helm-seeded
+`api.oidc.roleMappings` (at least one non-empty role array), a dashboard
+`helmOverride.roleMappings` overlay (which counts even when the Helm values set
+no mappings), or the mappings of a dashboard-managed provider. If none is
+configured, new OIDC users receive the fixed `viewer` role and existing users'
+roles are never re-evaluated.
 
 Two guards prevent lockout during re-evaluation:
 
@@ -777,7 +845,7 @@ is recorded in `audit_events` with the matched group name and role transition:
 - **Action**: OIDC login with role assignment
 - **Target**: the user (subject of the OIDC token)
 - **Details recorded**:
-  - Which OIDC provider performed the assignment (always `"helm"` for Helm-seeded mappings)
+  - Which OIDC provider performed the assignment (`"helm"` for the Helm-seeded provider, otherwise the dashboard-managed provider's name)
   - Which group matched a mapping rule (or `"none"` if no mapping matched)
   - The user's old role (`"new_user"` on first login, or the previous role)
   - The assigned role (`"viewer"`, `"operator"`, `"admin"`, or `"denied"` if rejected)

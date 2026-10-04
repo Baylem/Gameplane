@@ -34,6 +34,27 @@ import (
 
 var Version = "dev"
 
+// parseTrustedProxyPrefix parses a CIDR string and normalizes IPv4-mapped IPv6
+// prefixes. If a prefix is IPv4-mapped (e.g., ::ffff:10.0.0.0/112):
+// - If Bits() < 96: returns an error (IPv4-mapped prefix too short to contain full IPv4)
+// - If Bits() >= 96: returns the unmapped IPv4 prefix (e.g., 10.0.0.0/16 for ::ffff:10.0.0.0/112)
+// Plain IPv4 and IPv6 prefixes are returned unchanged.
+func parseTrustedProxyPrefix(cidr string) (netip.Prefix, error) {
+	prefix, err := netip.ParsePrefix(cidr)
+	if err != nil {
+		return netip.Prefix{}, err
+	}
+
+	if prefix.Addr().Is4In6() {
+		if prefix.Bits() < 96 {
+			return netip.Prefix{}, fmt.Errorf("IPv4-mapped prefix %q has less than 96 bits; unmapped IPv4 range would be incomplete", cidr)
+		}
+		return netip.PrefixFrom(prefix.Addr().Unmap(), prefix.Bits()-96), nil
+	}
+
+	return prefix, nil
+}
+
 func main() {
 	// Level from the environment first so the subcommand dispatch and
 	// bootstrap-admin honor it; the serve path rebuilds the logger from
@@ -51,6 +72,12 @@ func main() {
 		switch args[0] {
 		case "serve":
 			args = args[1:]
+		case "gateway":
+			if err := runGateway(ctx, args[1:]); err != nil {
+				logger.Error("gateway", "err", err)
+				os.Exit(1)
+			}
+			return
 		case "bootstrap-admin":
 			if err := bootstrapAdmin(ctx, args[1:], os.Stdin, os.Stderr); err != nil {
 				logger.Error("bootstrap-admin", "err", err)
@@ -110,16 +137,19 @@ func main() {
 
 	// Validate and trim trusted proxies CIDR list.
 	validProxies := []string{}
+	trustedPrefixes := []netip.Prefix{}
 	for _, p := range cfg.trustedProxies {
 		p = strings.TrimSpace(p)
 		if p == "" {
 			continue
 		}
-		if _, err := netip.ParsePrefix(p); err != nil {
-			logger.Error("invalid trusted proxy CIDR", "cidr", p, "err", err)
+		prefix, perr := parseTrustedProxyPrefix(p)
+		if perr != nil {
+			logger.Error("invalid trusted proxy CIDR", "cidr", p, "err", perr)
 			os.Exit(1)
 		}
 		validProxies = append(validProxies, p)
+		trustedPrefixes = append(trustedPrefixes, prefix)
 	}
 	cfg.trustedProxies = validProxies
 
@@ -221,13 +251,16 @@ func main() {
 		}
 	}
 	auditor := audit.New(store, auditOpts...)
-	// Wire the Helm OIDC provider to the auditor for role-assignment audit events (FR-014).
+	// Wire every OIDC provider to the auditor for role-assignment audit events (FR-014):
+	// the Helm-flag provider directly, and the dashboard-managed providers through the
+	// registry, which attaches the func to each provider it builds.
 	// auth must not import audit (audit imports auth), so the dependency is inverted here
-	// via a closure over the concrete auditor's WriteSync method.
+	// via the concrete auditor's WriteSync method value.
 	if oidcAuth != nil {
 		oidcAuth.AttachAuditWriteSyncFunc(auditor.WriteSync)
 		oidcAuth.SetProviderName(auth.HelmProviderName)
 	}
+	authRegistry.AttachAuditWriteSyncFunc(auditor.WriteSync)
 
 	// Notification delivery: watch CRD status transitions (server health,
 	// backup/restore outcomes) and push matching events to the sinks
@@ -245,9 +278,10 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID, middleware.Recoverer)
 	// Client IP middleware runs before rate limiting and audit so the determined
-	// IP is used for rate-limit buckets and audit records. Trusted proxy networks
+	// IP is used for rate-limit buckets and audit records. X-Forwarded-For is
+	// read only when the TCP peer is inside the trusted proxy networks, which
 	// come from explicit operator configuration (default: private ranges).
-	r.Use(middleware.ClientIPFromXFF(cfg.trustedProxies...))
+	r.Use(auth.ClientIPFromTrustedProxies(trustedPrefixes))
 	r.Use(secureHeaders)
 	r.Use(requestTimeout(60 * time.Second))
 	r.Use(bodyLimit(1 << 20)) // 1 MiB default; upload proxy raises its own ceiling
@@ -298,6 +332,8 @@ func main() {
 		p.Use(rbac.Middleware(reg))
 
 		handlers.MountResources(p, reg)
+		handlers.MountFleet(p, reg, store)
+		handlers.MountNamespaces(p, reg)
 		handlers.MountPodEvents(p, reg)
 		handlers.MountLifecycle(p, reg)
 		handlers.MountShareLinks(p, reg, store)
@@ -308,7 +344,7 @@ func main() {
 		handlers.MountConfig(p, store, auditor, oidcAuth != nil, cfg.gameDataStorageClass, helmPolicy)
 		handlers.MountNotifications(p, notifier, k8s, cfg.namespace)
 		handlers.MountAuthProviderSecrets(p, k8s, cfg.namespace)
-		handlers.MountCluster(p, k8s, store, Version, cfg.clusterOps, cfg.updateChannel)
+		handlers.MountCluster(p, reg, store, Version, cfg.clusterOps, cfg.updateChannel)
 		handlers.MountClusterActions(p, k8s, cfg.clusterOps, cfg.clusterExternalAddress)
 		handlers.MountClusters(p, reg, k8s, cfg.namespace)
 		handlers.MountEvents(p, reg)
@@ -328,27 +364,26 @@ func main() {
 			registry.DBKeyFunc(store, registry.NewK8sSecretReader(k8s, cfg.namespace)),
 			registry.StaticKeys(map[string]string{"curseforge": cfg.curseforgeAPIKey}),
 		))
-		handlers.MountRegistry(p, k8s, regSet)
-		// The update check reads the agent's mod manifest server-side over
-		// the same mTLS material as the proxy. Missing material degrades
-		// the endpoint to 503 (nil lister), matching the proxied routes.
-		var agentLister handlers.AgentModLister
-		if ac, err := ws.NewAgentClient(cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey); err == nil {
-			agentLister = ac
-		}
-		handlers.MountModUpdates(p, k8s, regSet, agentLister)
+		handlers.MountRegistryWithRegistry(p, reg, regSet)
+		// Internal reads use the same selected cluster and credentials as
+		// browser-facing agent routes, including remote-only management installs.
+		agentLister := ws.NewClusterAgentClient(reg, cfg.namespace, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
+		handlers.MountModUpdatesWithRegistry(p, reg, regSet, agentLister)
 		// ID-managed mods (ARK CurseForge ids, Project Zomboid MOD_IDS,
 		// Steam Workshop lists): the API only writes GameServer.spec.mods.ids;
 		// the operator projects it into the game's env (rule 10).
-		handlers.MountModIDs(p, k8s)
-		handlers.MountCapture(p, reg, auditor, handlers.CaptureConfig{
+		handlers.MountModIDsWithRegistry(p, reg)
+		captureConfig := handlers.CaptureConfig{
 			FeatureEnabled:          cfg.captureFeatureEnabled,
+			GatewayNamespace:        cfg.namespace,
 			DefaultRetentionSeconds: cfg.captureDefaultRetentionSecs,
 			MaxRetentionSeconds:     cfg.captureMaxRetentionSecs,
 			DefaultMaxDurationSecs:  cfg.captureDefaultMaxDurationS,
 			DefaultMaxSizeBytes:     cfg.captureDefaultMaxSizeBytes,
-		}, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
-		ws.Mount(p, k8s, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
+		}
+		handlers.MountServerCapabilities(p, reg, ws.NewCaptureGatewayClient(reg, cfg.namespace), captureConfig)
+		handlers.MountCapture(p, reg, auditor, captureConfig, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey)
+		ws.Mount(p, reg, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey, ws.AgentGatewayOptions{Namespace: cfg.namespace})
 	})
 
 	// Opt-in, off-by-default anonymous usage telemetry. No-op unless an
@@ -523,7 +558,7 @@ func (c *config) bindFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.auditS3Bucket, "audit-s3-bucket", envOr("GAMEPLANE_AUDIT_S3_BUCKET", ""), "S3 bucket for audit events (required if endpoint is set)")
 	fs.StringVar(&c.auditS3Prefix, "audit-s3-prefix", envOr("GAMEPLANE_AUDIT_S3_PREFIX", ""), "S3 object key prefix (e.g., 'gameplane-audit')")
 	fs.StringVar(&c.auditS3Region, "audit-s3-region", envOr("GAMEPLANE_AUDIT_S3_REGION", ""), "S3 region (e.g., 'us-east-1'; defaults to us-east-1 if empty)")
-	fs.BoolVar(&c.auditS3Insecure, "audit-s3-insecure", envOr("GAMEPLANE_AUDIT_S3_INSECURE", "") == "true", "disable TLS certificate verification for S3 endpoint (for self-signed certs)")
+	fs.BoolVar(&c.auditS3Insecure, "audit-s3-insecure", envOr("GAMEPLANE_AUDIT_S3_INSECURE", "") == "true", "use plain HTTP instead of HTTPS for the S3 endpoint (no TLS at all; for local S3-compatible endpoints on dev/homelab clusters)")
 	// S3 credentials come from environment only (mounted Secret), never flags.
 	c.auditS3AccessKey = envOr("GAMEPLANE_AUDIT_S3_ACCESS_KEY", "")
 	c.auditS3SecretKey = envOr("GAMEPLANE_AUDIT_S3_SECRET_KEY", "")
@@ -544,13 +579,13 @@ func (c *config) bindFlags(fs *flag.FlagSet) {
 
 	// Trusted proxy networks for client IP extraction. Comma-separated CIDRs.
 	// Default: loopback + private ranges, which work out-of-the-box for
-	// in-cluster ingress. In Kubernetes the ingress/load balancer sits in
-	// one of these ranges, so this default is explicit and allows the API to
-	// determine the real client IP via X-Forwarded-For without spoofing risk.
+	// in-cluster ingress. X-Forwarded-For is read only when the TCP peer is
+	// inside one of these ranges; any other peer is itself the client (see
+	// auth.ClientIPFromTrustedProxies and docs/security.md).
 	trustedProxiesStr := envOr("GAMEPLANE_TRUSTED_PROXIES",
 		"127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,::1/128,fc00::/7,fe80::/10")
 	fs.StringVar(&trustedProxiesStr, "trusted-proxies", trustedProxiesStr,
-		"comma-separated list of CIDR blocks for trusted reverse proxies; client IP is extracted from X-Forwarded-For only from these ranges")
+		"comma-separated list of CIDR blocks for trusted reverse proxies; X-Forwarded-For is read only when the TCP peer is in one of these ranges")
 
 	// Parse and validate the trusted proxies list after flags are parsed.
 	// This must happen in main() after flag parsing, not here, so we can

@@ -97,7 +97,7 @@ printf '%s' "$ADMIN_PASSWORD" | kubectl -n gameplane-system exec -i deploy/gamep
 ```
 
 If a user with that name already exists, pass `--force` to rotate the
-password and promote them to `admin`.
+password, promote them to `admin`, and end their existing sessions.
 
 Open `https://<ingress.host>` and log in.
 
@@ -124,7 +124,7 @@ Top-level knobs (see `values.yaml` for the full list):
   GameServer enters Pending with a `PVCProvisioningFailed` condition (visible in
   the dashboard); no pod starts until resolved. Example:
   `--set operator.gameDataStorage.storageClassName=fast-nvme`
-- `api.db.driver` — `sqlite` (default, production-tested) or `postgres` [experimental] (work-in-progress)
+- `api.db.driver` — `sqlite` (default, production-tested) or `postgres` [experimental] (requires an api image built with `-tags postgres`; not yet covered by e2e or upgrade tests)
 - `api.db.dsn` — connection string; SQLite default persists to a PVC
 - `api.storage.existingClaim` — pre-existing PVC to mount for the API's SQLite database instead of letting Helm create `gameplane-api-data` (default `""`). The chart annotates `gameplane-api-data` with `helm.sh/resource-policy: keep` so switching to an existing claim preserves the previous PVC.
 - `api.oidc.enabled` + the following settings — wire OIDC login from Helm (shows
@@ -137,8 +137,9 @@ Top-level knobs (see `values.yaml` for the full list):
   - Role mapping (new, seeded at install time) (unreleased; ships in the next release):
     - `groupsClaim` — OIDC claim name containing group memberships (default `""`).
       Typically `"groups"` or `"roles"` depending on your IdP. Empty/omitted =
-      group-based role mapping disabled; new OIDC users default to `defaultRole`
-      (see below). Example: `--set api.oidc.groupsClaim=groups`
+      read the `"groups"` claim. This only chooses which claim is read; it does
+      not turn group-based role mapping on or off (`roleMappings` below does).
+      Example: `--set api.oidc.groupsClaim=roles`
     - `roleMappings.admin`, `roleMappings.operator`, `roleMappings.viewer` — arrays
       of IdP group names mapping to each dashboard role (default `[]`). Example:
       `roleMappings.admin: ["gameplane-admins", "ops-team"]` means users in either
@@ -151,10 +152,13 @@ Top-level knobs (see `values.yaml` for the full list):
     - `defaultRole` — Helm-only (no dashboard override in v1). Default role when a
       user's IdP groups don't match any `roleMappings` entry (default `""`).
       Accepted values: `""` (treat as `"viewer"`), `"viewer"`, `"operator"`,
-      `"admin"`, or `"deny"` (reject login). Meaningful only if `groupsClaim` and
-      `roleMappings` are configured. Example: `--set api.oidc.defaultRole=viewer`
-  **Backward compatibility**: Omitting `groupsClaim` and `roleMappings` disables
-  group-based mapping — existing OIDC setups continue unchanged
+      `"admin"`, or `"deny"` (reject login). Meaningful only when role mappings
+      are configured. Example: `--set api.oidc.defaultRole=viewer`
+  **Backward compatibility**: Group-based mapping is active whenever at least
+  one `roleMappings` list is non-empty or an admin has set a mapping override
+  in the dashboard, whatever `groupsClaim` says. With neither, mapping is off:
+  new OIDC users get `viewer`, existing users' roles are never re-evaluated,
+  and existing OIDC setups continue unchanged
 - `ingress.host` — dashboard hostname
 - `gamesNamespace` — namespace where GameServers are created (default `gameplane-games`)
 - `networkPolicies.enabled` — default-deny in games namespace (recommended on)
@@ -163,7 +167,7 @@ Top-level knobs (see `values.yaml` for the full list):
   - `networkPolicies.gameIngress` — control ingress to game pods from external sources (players)
     - `gameIngress.enabled` — toggle player-ingress allowance (default `true`)
     - `gameIngress.fromCIDRs` — CIDRs from which player traffic is allowed (default `[0.0.0.0/0]`)
-  - `networkPolicies.apiServerCIDRs` — CIDRs for agent heartbeat to kube-apiserver (defaults to RFC1918 + link-local on 443/6443)
+  - `networkPolicies.apiServerCIDRs` — CIDRs allowed for agent heartbeat to kube-apiserver (defaults to all RFC1918 and link-local addresses on TCP 443/6443; customize to narrow to specific API endpoint(s))
   - `networkPolicies.gameEgress` — control public-internet egress for game pods (downloads, mod registries)
     - `gameEgress.enabled` — toggle public-egress allowance (default `true`)
     - `gameEgress.ports` — TCP ports for downloads (default 80, 443)
@@ -384,8 +388,7 @@ a slow or down sink never blocks or fails a request.
     `gameplane-audit`; empty = root).
   - `api.audit.s3.region` — S3 region (e.g., `us-east-1`; empty defaults to
     `us-east-1`).
-  - `api.audit.s3.insecure` — `true` to skip TLS certificate verification
-    (for self-signed certs on dev/homelab clusters).
+  - `api.audit.s3.insecure` — `true` to use plain HTTP instead of HTTPS (no TLS at all; for local S3-compatible endpoints on dev/homelab clusters).
   - `api.audit.s3.credentialsSecretRef` — reference to a Secret holding S3
     credentials (see [security](security.md)); leave `name` empty to disable S3.
 
@@ -465,7 +468,45 @@ Before registering a target cluster, ensure it has:
 
 - Kubernetes 1.28+
 - Gameplane operator and agent images accessible (same registry as the control-plane)
-- A valid kubeconfig with admin credentials to manage Gameplane CRDs on that cluster
+- A valid kubeconfig scoped to the intended Gameplane operations and namespaces
+
+### Pod logs and PTY console permissions
+
+The central API must reach the target Kubernetes API (including streaming/SPDY
+upgrades). Remote Pod logs and PTY attach need no cross-cluster Pod networking or
+agent mTLS. In each allowed game namespace the registered kubeconfig needs:
+
+| API group | Resources | Verbs | Purpose |
+|---|---|---|---|
+| `gameplane.local` | `gameservers` | `get` | Resolve the selected server |
+| `apps` | `statefulsets` | `get` | Verify its controller ownership |
+| core | `pods` | `get` | Verify ownership and startup status |
+| core | `pods/log` | `get` | Stream init and game container logs |
+| core | `pods/attach` | `create` | Interactive PTY input/output over SPDY |
+
+These are the minimum **streaming** permissions, in addition to any CRD management
+permissions used by other dashboard operations. Attach is write-capable and
+requires Gameplane's `servers:console` permission; logs use `servers:read`. Bind
+Kubernetes permissions only in the intended game namespaces. The chart adds the
+StatefulSet read permission for the local API; existing custom remote credentials
+must be updated too.
+
+### Optional remote agent access
+
+Add a [private gateway in the target cluster](gateway-install.md) and
+[register its endpoint and credentials](multicluster-agent-gateway.md) to enable
+supported RCON, game-file logs, file/player operations, module actions, live
+status and agent-based mods. This requires the updated operator and UID-aware
+agents; old agents fail closed on the versioned protocol. The gateway has no
+separate user database, and the central API still needs direct access to the
+target Kubernetes API. Existing local installations retain direct agent access.
+
+Remote capture downloads and cleanup require an upgraded gateway and capture
+sidecar with persisted GameServer and NetworkCapture identity. Historical files
+without those bindings are unavailable remotely. Modpack and ID-list configuration
+use the selected Kubernetes client and template; provider credentials stay central.
+The existing `Cluster` health status reports Kubernetes connectivity, not gateway
+readiness or complete interactive feature coverage.
 
 ### Path 1: kubectl apply
 
@@ -510,6 +551,7 @@ Before registering a target cluster, ensure it has:
    - `displayName` (optional): Human-readable name shown in the dashboard
    - `kubeconfigSecret.name` (required): Name of the Secret containing the kubeconfig
    - `kubeconfigSecret.key` (optional): Data key within the Secret; defaults to `"kubeconfig"`
+   - `agentGateway` (optional): HTTPS gateway and labeled TLS Secret reference for [remote agent access](multicluster-agent-gateway.md)
 
 3. Apply both to the control-plane cluster:
 
@@ -668,4 +710,5 @@ This ensures no two API processes try to write the same SQLite database file
 SQLite-backed installs experience a few seconds of dashboard downtime during
 an upgrade — this is expected and deliberate. Postgres-backed installs (experimental)
 would use rolling updates with no downtime, since the database is external and
-shared, but full Postgres support remains a work-in-progress.
+shared, but Postgres remains experimental and the API should still run as a
+single replica (see `api.replicas` in `values.yaml`).
