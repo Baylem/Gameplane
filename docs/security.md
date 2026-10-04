@@ -238,13 +238,21 @@ When `networkPolicies.enabled=true` (default) the chart applies:
   gated by the `allow-game-public-egress` policy below, and apiserver
   access by `allow-agent-to-apiserver`.
 - `allow-agent-to-apiserver` — allows game pods to reach the kube-apiserver
-  for status heartbeat (GameServer status patches). Permits TCP 443 and 6443
-  to apiserver endpoints; by default targets RFC1918 + link-local ranges, or
-  customizable via `networkPolicies.apiServerCIDRs`.
+  for status heartbeat (GameServer status patches). By default permits TCP 443
+  and 6443 to all addresses in RFC1918 and link-local ranges (10.0.0.0/8,
+  172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16), not limited to the apiserver
+  endpoint. Customize via `networkPolicies.apiServerCIDRs` to narrow to specific
+  API server addresses.
 - `allow-api-to-agent` — allows the API and operator pods (in the
   control-plane namespace) to reach every game pod's agent on TCP port 8090.
   The API proxies console/files/logs/players; the operator calls `/quiesce`
   before backups.
+- `allow-api-to-capture` — rendered only when `capture.enabled=true`; allows TCP
+  9091 to game pods from this release's operator and enabled API pods in the
+  control-plane namespace. Both the namespace and pod selectors must match.
+  This admits operator capture control and local API file access without opening
+  other ports or depending on the kubelet probe allowance. Remote file access has
+  its separate gateway policy.
 - `<gameserver-name>-game-ingress` — created by the **operator** for each
   GameServer, allows external traffic to reach only the advertised ports
   declared in the GameTemplate. Selects traffic from `networkPolicies.gameIngress.fromCIDRs`

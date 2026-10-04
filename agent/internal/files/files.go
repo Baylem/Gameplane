@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/ValgulNecron/gameplane/agent/internal/httpjson"
 )
@@ -26,6 +27,33 @@ import (
 // classification is enforced in one place.
 var errPathOutOfRoot = errors.New("path escapes root")
 
+// errDotfile rejects any path with a dot-prefixed component. Dotfiles in the
+// data root hold agent-managed state (e.g. the mods manifest) and are not
+// part of the file-browser surface. Like errPathOutOfRoot it is safe to echo.
+var errDotfile = errors.New("dotfile access denied")
+
+// hasDotComponent reports whether the slash-separated relative path rel
+// (already stripped of its leading slash) has a dot-prefixed component.
+func hasDotComponent(rel string) bool {
+	return strings.HasPrefix(rel, ".") || strings.Contains(rel, "/.")
+}
+
+// resolvedHasDotComponent reports whether the symlink-resolved absolute path
+// resolved (already confirmed to be under h.root) has a dot-prefixed
+// component below the root. hasDotComponent only sees the requested path,
+// so a plain-named symlink pointing at a dotfile or into a dot-directory
+// would otherwise pass.
+func (h *handler) resolvedHasDotComponent(resolved string) bool {
+	rel, err := filepath.Rel(h.root, resolved)
+	if err != nil {
+		return true
+	}
+	if rel == "." {
+		return false
+	}
+	return hasDotComponent(filepath.ToSlash(rel))
+}
+
 type handler struct {
 	root string
 }
@@ -34,13 +62,17 @@ type handler struct {
 func Mount(r chi.Router, root string) {
 	h := &handler{root: filepath.Clean(root)}
 	r.Route("/files", func(r chi.Router) {
-		r.Get("/list", h.list)
-		r.Get("/read", h.read)
+		// Transfers can legitimately outlive the ordinary operation timeout.
 		r.Get("/download", h.download)
-		r.Post("/write", h.write)
 		r.Post("/upload", h.upload)
-		r.Post("/mkdir", h.mkdir)
-		r.Delete("/delete", h.del)
+		r.Group(func(bounded chi.Router) {
+			bounded.Use(middleware.Timeout(30 * time.Second))
+			bounded.Get("/list", h.list)
+			bounded.Get("/read", h.read)
+			bounded.Post("/write", h.write)
+			bounded.Post("/mkdir", h.mkdir)
+			bounded.Delete("/delete", h.del)
+		})
 	})
 }
 
@@ -59,6 +91,9 @@ func (h *handler) resolve(rel string) (string, error) {
 	if rel == "" {
 		return h.root, nil
 	}
+	if hasDotComponent(rel) {
+		return "", errDotfile
+	}
 	abs := filepath.Join(h.root, filepath.Clean("/"+rel))
 	if !strings.HasPrefix(abs, h.root+string(os.PathSeparator)) && abs != h.root {
 		return "", errPathOutOfRoot
@@ -71,6 +106,9 @@ func (h *handler) resolve(rel string) (string, error) {
 	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
 		if !strings.HasPrefix(resolved, h.root+string(os.PathSeparator)) && resolved != h.root {
 			return "", errPathOutOfRoot
+		}
+		if h.resolvedHasDotComponent(resolved) {
+			return "", errDotfile
 		}
 		return resolved, nil
 	} else if !os.IsNotExist(err) {
@@ -88,6 +126,9 @@ func (h *handler) resolve(rel string) (string, error) {
 		if err == nil {
 			if !strings.HasPrefix(resolvedParent, h.root+string(os.PathSeparator)) && resolvedParent != h.root {
 				return "", errPathOutOfRoot
+			}
+			if h.resolvedHasDotComponent(resolvedParent) {
+				return "", errDotfile
 			}
 			return abs, nil
 		}
@@ -110,6 +151,9 @@ func (h *handler) resolveForDelete(rel string) (string, error) {
 	if rel == "" {
 		return h.root, nil
 	}
+	if hasDotComponent(rel) {
+		return "", errDotfile
+	}
 	abs := filepath.Join(h.root, filepath.Clean("/"+rel))
 	if !strings.HasPrefix(abs, h.root+string(os.PathSeparator)) && abs != h.root {
 		return "", errPathOutOfRoot
@@ -122,6 +166,9 @@ func (h *handler) resolveForDelete(rel string) (string, error) {
 	if !strings.HasPrefix(resolvedParent, h.root+string(os.PathSeparator)) && resolvedParent != h.root {
 		return "", errPathOutOfRoot
 	}
+	if h.resolvedHasDotComponent(resolvedParent) {
+		return "", errDotfile
+	}
 	fi, err := os.Stat(resolvedParent)
 	if err != nil {
 		return "", err
@@ -132,12 +179,13 @@ func (h *handler) resolveForDelete(rel string) (string, error) {
 	return filepath.Join(resolvedParent, filepath.Base(abs)), nil
 }
 
-// badRequest writes a 400 with a client-safe message. errPathOutOfRoot is
-// the one class we echo verbatim — everything else (EvalSymlinks errors,
-// multipart parse details, etc.) is logged and replaced with a generic
-// "bad request" so filesystem/implementation details stay inside the pod.
+// badRequest writes a 400 with a client-safe message. errPathOutOfRoot and
+// errDotfile are the classes we echo verbatim — everything else
+// (EvalSymlinks errors, multipart parse details, etc.) is logged and
+// replaced with a generic "bad request" so filesystem/implementation
+// details stay inside the pod.
 func (h *handler) badRequest(w http.ResponseWriter, err error) {
-	if errors.Is(err, errPathOutOfRoot) {
+	if errors.Is(err, errPathOutOfRoot) || errors.Is(err, errDotfile) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -158,6 +206,10 @@ func (h *handler) list(w http.ResponseWriter, req *http.Request) {
 	}
 	out := make([]Entry, 0, len(ents))
 	for _, e := range ents {
+		// Skip dot-prefixed entries (dotfiles and dot-directories).
+		if strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
 		fi, err := e.Info()
 		if err != nil {
 			continue
@@ -327,10 +379,10 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 			h.badRequest(w, fmt.Errorf("too many files (max %d)", maxUploadFiles))
 			return
 		}
-		saveErr := savePart(p, part.FileName(), part, maxUploadFileBytes)
+		saveErr := savePart(h.root, p, part.FileName(), part, maxUploadFileBytes)
 		_ = part.Close()
 		if saveErr != nil {
-			if errors.Is(saveErr, io.ErrUnexpectedEOF) {
+			if errors.Is(saveErr, io.ErrUnexpectedEOF) || errors.Is(saveErr, errDotfile) || errors.Is(saveErr, errPathOutOfRoot) {
 				h.badRequest(w, saveErr)
 				return
 			}
@@ -347,18 +399,37 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 }
 
 // savePart streams one multipart part into dir under a sanitized name,
-// refusing anything larger than limit bytes. It writes to a temp file in
+// refusing anything larger than limit bytes and any destination that is a
+// symlink not resolving inside root. It writes to a temp file in
 // dir first and renames it over the final name only once the copy
 // succeeds, so a failure partway through (a truncated/erroring source, or
 // an over-limit part) removes only the temp file — a pre-existing file at
 // that name is left untouched instead of being deleted (F-102).
-func savePart(dir, filename string, src io.Reader, limit int64) error {
+func savePart(root, dir, filename string, src io.Reader, limit int64) error {
 	// Sanitize filename — reject anything that would climb out of dir.
 	name := filepath.Base(filename)
 	if name == "." || name == ".." || name == string(os.PathSeparator) {
 		return errors.New("invalid filename")
 	}
+	if strings.HasPrefix(name, ".") {
+		return errDotfile
+	}
 	dstPath := filepath.Clean(filepath.Join(dir, name))
+
+	// Confine the final destination: an existing symlink at this name must resolve inside root.
+	if info, err := os.Lstat(dstPath); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		// Compare against the root with its own symlinks resolved too, so a
+		// data root reached through a symlinked path still accepts in-root links.
+		realRoot, rootErr := filepath.EvalSymlinks(root)
+		if rootErr != nil {
+			return fmt.Errorf("resolve root: %w", rootErr)
+		}
+		resolved, evalErr := filepath.EvalSymlinks(dstPath)
+		if evalErr != nil || (!strings.HasPrefix(resolved, realRoot+string(os.PathSeparator)) && resolved != realRoot) {
+			return errPathOutOfRoot
+		}
+	}
+
 	tmp, err := os.CreateTemp(dir, ".upload-*")
 	if err != nil {
 		return err
@@ -410,6 +481,16 @@ func (h *handler) del(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	recursive := req.URL.Query().Get("recursive") == "true"
+	if recursive {
+		// A direct request for a dot-prefixed path is denied, so a recursive
+		// delete must not remove protected descendants either.
+		if fi, lerr := os.Lstat(p); lerr == nil && fi.IsDir() {
+			if derr := checkNoDotDescendants(p); derr != nil {
+				h.badRequest(w, derr)
+				return
+			}
+		}
+	}
 	var rerr error
 	if recursive {
 		rerr = os.RemoveAll(p)
@@ -421,6 +502,27 @@ func (h *handler) del(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// checkNoDotDescendants walks the directory tree rooted at dir and returns
+// errDotfile if any dot-prefixed entry is found. Symlinks are not followed
+// (os.RemoveAll does not follow them either).
+func checkNoDotDescendants(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", dir, err)
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".") {
+			return errDotfile
+		}
+		if e.IsDir() {
+			if err := checkNoDotDescendants(filepath.Join(dir, e.Name())); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func httpErr(w http.ResponseWriter, err error) {

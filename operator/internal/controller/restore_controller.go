@@ -24,18 +24,33 @@ import (
 // to serialize I/O against its data PVC.
 type RestoreReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	// APIReader bypasses the informer cache — used to re-verify a ref
+	// copy's live ownership right before accepting it as already made
+	// (see ensureOwnedRefCopies). Wired from mgr.GetAPIReader() in
+	// cmd/main.go, mirroring GameServerReconciler.APIReader. May be nil
+	// (e.g. in unit tests that construct a RestoreReconciler directly);
+	// apiReader() falls back to Client in that case.
+	APIReader client.Reader
+	Scheme    *runtime.Scheme
 	// ResticImage is the image for the restic restore Job. Set from an
 	// operator flag so air-gapped installs can point it at a private
 	// registry mirror. Empty falls back to DefaultResticImage.
 	ResticImage string
 }
 
-// +kubebuilder:rbac:groups=gameplane.local,resources=restores,verbs=get;list;watch;update;patch
-// +kubebuilder:rbac:groups=gameplane.local,resources=restores/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=gameplane.local,resources=gameservers,verbs=get;list;watch;create;update;patch
+// apiReader returns the uncached reader for live-consistency checks,
+// falling back to the cached Client when APIReader is unset.
+func (r *RestoreReconciler) apiReader() client.Reader {
+	if r.APIReader != nil {
+		return r.APIReader
+	}
+	return r.Client
+}
+
+// +kubebuilder:rbac:groups=gameplane.local,resources=restores,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gameplane.local,resources=gameservers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gameplane.local,resources=backups,verbs=get;list;watch
-// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch
 
 func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var rs gameplanev1alpha1.Restore

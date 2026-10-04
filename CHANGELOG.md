@@ -317,6 +317,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **api:** hardened OIDC role re-evaluation, role-assignment auditing for every OIDC provider, and the `bootstrap-admin` break-glass reset.
 - **api:** hardened role-edit guards and event-stream authorization.
 - **api:** hardened cluster registration removal.
+- **operator:** hardened ownership checks on restore and cleanup.
 - **api:** hardened audit export fields by including reason in webhook, S3 and CSV output.
 - **ci:** hardened the release signing order and the scope of the signing key.
 - **api:** hardened Prometheus metrics serving with a dedicated in-cluster listener.
@@ -324,6 +325,12 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **capture-sidecar:** hardened TLS configuration defaults and capture size limits.
 - **audit-syslog-bridge:** hardened `APP-NAME`/`HOSTNAME` field validation.
 - **gameproto:** hardened handshake string-length and status-response validation.
+- **agent:** hardened RCON error handling, TLS certificate validation, and dotfile access in file operations.
+- **netguard:** hardened SSRF dial-guard policies to block cloud metadata addresses and refine reserved ranges.
+- **operator:** hardened RBAC scope with cluster-wide reads and namespace-scoped writes.
+- **chart:** hardened agent mTLS Secret configuration to support bring-your-own CA paths; referenced Secrets that do not exist now fail live installs or upgrades, and the API and operator mTLS checksum now covers custom Secret data to roll both on Secret rotation.
+- **agent:** confined the final upload path to the data root.
+- **web:** hardened dashboard permission gates for capture and mod controls.
 - **operator, api, web:** hardened the module "verified" badge to reflect a recorded signature check instead of a source's current policy.
 - **tunnel:** hardened relay config rendering with escaping and validation.
 - **audit-syslog-bridge:** hardened collector delivery reporting and intake time bounds.
@@ -334,6 +341,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **docs:** hardened the accuracy of the game-container posture and OIDC group-claim documentation.
 - **telemetry-receiver:** hardened ingest payload validation.
 - **gameaction:** hardened console action parameter validation against shell and RCON metacharacters.
+- **operator:** hardened tunnel credential handling: a credentials Secret not owned by its GameServer is now refused, the tunnel is scaled to zero, and TunnelReady=False (reason TunnelCredentialRefused) reports why.
 
 ## [0.3.0-rc.2] — Unreleased
 

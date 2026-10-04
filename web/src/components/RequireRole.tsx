@@ -45,9 +45,11 @@ function RoleSkeleton() {
  * IdentityUnavailable covers the case where /users/me could not be loaded for
  * a reason other than 401 — an API rollout, a proxy error, a stalled query.
  * The user's permissions are unknown, not absent, so claiming "access denied"
- * would be a lie that only a manual reload could undo.
+ * would be a lie that only a manual reload could undo. Exported so
+ * in-page permission gates (e.g. the server Capture tab) can show the same
+ * state instead of a false denial.
  */
-function IdentityUnavailable({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+export function IdentityUnavailable({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   const detail = error instanceof APIError ? `HTTP ${error.status}` : null;
   return (
     <div className="flex h-full items-center justify-center p-6">
