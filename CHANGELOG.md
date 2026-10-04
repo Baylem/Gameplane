@@ -133,6 +133,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 ### Fixed
 
+- **api:** SQLite DSN now automatically includes a `_pragma=busy_timeout(5000)` pragma if one is not already specified, allowing concurrent processes (API and bootstrap-admin) sharing the same database file to wait for locks instead of failing with SQLITE_BUSY immediately.
 - **agent, chart:** the agent now serves Prometheus metrics on a separate,
   unauthenticated listener (`:9090`, `--metrics-addr`) instead of the mTLS
   control port (`:8090`) it used to share `/metrics` with — every agent
@@ -179,9 +180,12 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **api:** hardened OIDC role re-evaluation, role-assignment auditing for every OIDC provider, and the `bootstrap-admin` break-glass reset.
 - **api:** hardened role-edit guards and event-stream authorization.
 - **api:** hardened cluster registration removal.
+- **api:** hardened audit export fields by including reason in webhook, S3 and CSV output.
 - **ci:** hardened the release signing order and the scope of the signing key.
 - **api:** hardened Prometheus metrics serving with a dedicated in-cluster listener.
 - **netguard:** hardened SSRF dial-guard policies to block cloud metadata addresses and refine reserved ranges.
+- **agent:** confined the final upload path to the data root.
+- **web:** hardened dashboard permission gates for capture and mod controls.
 - **operator, api, web:** hardened the module "verified" badge to reflect a recorded signature check instead of a source's current policy.
 - **tunnel:** hardened relay config rendering with escaping and validation.
 - **audit-syslog-bridge:** hardened collector delivery reporting and intake time bounds.

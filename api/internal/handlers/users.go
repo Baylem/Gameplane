@@ -35,8 +35,8 @@ func MountUsers(r chi.Router, store *db.Store, sessions *auth.SessionStore, clus
 		r.Delete("/{id}", h.del)
 		r.Patch("/{id}", h.update)
 		r.Post("/{id}/reset-password", h.resetPassword)
-		// Per-namespace role grants (the cluster-wide role is the primary
-		// role, set via PATCH above).
+		// Supplemental namespace and restricted remote-wide grants. The local
+		// cluster-wide binding remains the primary role, set via PATCH above.
 		r.Get("/{id}/bindings", h.listBindings)
 		r.Post("/{id}/bindings", h.addBinding)
 		r.Delete("/{id}/bindings/{role}/{namespace}", h.deleteBinding)
@@ -61,6 +61,13 @@ type userDTO struct {
 	// namespace ("*" = cluster-wide). Populated only on /users/me; it
 	// drives the dashboard's can()-based UI gating.
 	Permissions map[string][]string `json:"permissions,omitempty"`
+	// PermissionsByCluster is the caller's effective permission set partitioned
+	// by cluster, allowing the frontend to determine cluster-specific access.
+	// Structure is cluster → namespace → sorted []permission. Populated only on
+	// /users/me, mirroring the structure returned by SessionStore.LoadPerms.
+	// Enables the frontend's can() function to exactly replicate User.Can()
+	// without triggering 403 errors on multi-cluster deployments.
+	PermissionsByCluster map[string]map[string][]string `json:"permissionsByCluster,omitempty"`
 	// Preferences is the caller's theme/styling preferences. Populated only
 	// on /users/me so the dashboard can apply the theme without a second
 	// round-trip on boot (contracts/user-preferences-api.md §1.4).
@@ -182,7 +189,8 @@ func (h *userHandler) me(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, userDTO{
 		ID: u.ID, Username: u.Username, DisplayName: u.DisplayName,
 		Email: u.Email, Role: u.Role, Permissions: auth.PermsToJSON(u.Perms),
-		Preferences: preferencesDTO(prefs),
+		PermissionsByCluster: auth.PermsByClusterToJSON(u.Perms),
+		Preferences:          preferencesDTO(prefs),
 	})
 }
 
@@ -721,9 +729,10 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 	if body.Cluster == "" {
 		body.Cluster = scope.DefaultCluster
 	}
-	// The cluster-wide role is the user's primary role (set via PATCH); this
-	// endpoint only grants additional per-namespace roles.
-	if body.Namespace == "*" || !scope.Allowed(body.Namespace) {
+	// The local cluster-wide role is still managed through the primary role.
+	// An explicit remote-wide grant may carry only inventory/namespaced access.
+	remoteWide := body.Namespace == "*" && body.Cluster != scope.DefaultCluster
+	if !remoteWide && (body.Namespace == "*" || !scope.Allowed(body.Namespace)) {
 		http.Error(w, "namespace not permitted", http.StatusBadRequest)
 		return
 	}
@@ -743,12 +752,27 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "cluster not permitted", http.StatusBadRequest)
 		return
 	}
+	if remoteWide {
+		// Serialize permission validation + insertion with role edits/deletion,
+		// so a safe role cannot become a control-plane grant between them.
+		unlock := h.db.LockUserManagement()
+		defer unlock()
+	}
 	if ok, err := h.db.RoleExists(req.Context(), body.RoleName); err != nil {
 		httperr.Write(w, req, err)
 		return
 	} else if !ok {
 		http.Error(w, "invalid role", http.StatusBadRequest)
 		return
+	}
+	if remoteWide {
+		if allowed, err := remoteWideRoleAllowed(req.Context(), h.db, body.RoleName); err != nil {
+			httperr.Write(w, req, err)
+			return
+		} else if !allowed {
+			http.Error(w, "remote cluster-wide roles may grant only cluster:read and namespaced permissions", http.StatusBadRequest)
+			return
+		}
 	}
 	if ok, err := h.userExists(req.Context(), id); err != nil {
 		httperr.Write(w, req, err)
@@ -790,13 +814,26 @@ func (h *userHandler) deleteBinding(w http.ResponseWriter, req *http.Request) {
 	if cluster == "" {
 		cluster = scope.DefaultCluster
 	}
-	if namespace == "*" {
+	if namespace == "*" && cluster == scope.DefaultCluster {
 		http.Error(w, "the cluster-wide role is managed via the primary role", http.StatusBadRequest)
 		return
 	}
 	if cluster == "*" {
 		http.Error(w, "cluster not permitted", http.StatusBadRequest)
 		return
+	}
+	if namespace == "*" {
+		unlock := h.db.LockUserManagement()
+		defer unlock()
+		// Legacy externally provisioned global grants are not supplemental
+		// remote readers; retain their previous removal protection.
+		if allowed, err := remoteWideRoleAllowed(req.Context(), h.db, role); err != nil {
+			httperr.Write(w, req, err)
+			return
+		} else if !allowed {
+			http.Error(w, "remote control-plane bindings cannot be removed through supplemental grants", http.StatusBadRequest)
+			return
+		}
 	}
 	res, err := h.db.DB.ExecContext(req.Context(),
 		`DELETE FROM user_role_bindings WHERE user_id = ? AND role_name = ? AND cluster = ? AND namespace = ?`,
