@@ -46,3 +46,9 @@ I ran no workflow, test or lint. The security-sensitive candidates for this comp
 **Expected:** The header names `.github/actions/build-e2e-images`.
 
 **Actual:** It names the loader action, so a reader looking for the builder opens the wrong file.
+
+## Held candidates (recorded after fix merged, OD-019)
+
+- **S-1 → KEEP, S3 → F-271.** Redaction key-name coverage; fixed by #545 (merged 2026-10-04).
+- **S-2 → KEEP, S4 → F-272.** Inputs interpolated into `run:` bodies; fixed by #545 (merged 2026-10-04).
+- **S-3 → REJECT.** `go-cache` restore-key fallback: GitHub scopes caches by branch, so a PR-written cache can't be restored on `master`, and the release jobs don't use `go-cache`.

@@ -276,6 +276,8 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-268 | Documented local `docker run -v game-data:/data` gives a root-owned volume the game user can't write | images/ | review:images | S4 | open | | | |
 | F-269 | images/README.md promises exponential backoff; steam-install.sh uses a fixed delay | images/ | review:images | S4 | open | | | |
 | F-270 | images/README.md trigger list omits `pull_request`, and its manual `docker build -f Dockerfile` commands fail from the repo root | images/ | review:images | S4 | open | | | |
+| F-271 | CI `dump-cluster-state` redaction covered only a fixed set of credential key names | .github/ | review:.github/actions | S3 | fixed-unverified | #545 | | held until #545 merged (OD-019); distinct from F-006/F-013, which fixed quoted/JSON values |
+| F-272 | CI `dump-cluster-state` interpolated action inputs directly into `run:` scripts | .github/ | review:.github/actions | S4 | fixed-unverified | #545 | | held until #545 merged (OD-019); no current caller passed untrusted input |
 
 ## Details
 
@@ -4084,3 +4086,26 @@ elsewhere in the operator, but no reconciler ever sets either one.
 **Actual:** The list leaves out the PR build, and the copy-paste build commands fail from the repo root.
 
 **Evidence:** [evidence/review-images/verification.md#c-images-07](evidence/review-images/verification.md#c-images-07)
+
+### F-271
+
+**Repro / observation (defensive; confirms whether the control holds)**
+1. Read `.github/actions/dump-cluster-state/action.yml` at master before #545: every step pasted the same `redact()` filter, which redacted only values after the key names password, passwd, token, secret, api_key, bearer and authorization.
+2. Pipe sample lines with other credential key names (for example `passphrase:`, `client_secret=`, `AWS_ACCESS_KEY_ID=`, `Cookie:`) or a URL with userinfo through that filter; they come out unchanged.
+
+**Expected:** Diagnostic output written to public CI logs redacts common credential forms, not only a short key list.
+
+**Actual (before #545):** Values under other key names and URL userinfo passed through unredacted. #545 moved the filter into one shared `redact.sed`, widened the key list (passphrase, credentials, private/client/access/secret keys, x-api-key, auth config, cookies, session), added URL userinfo and bare `Bearer`/`Basic` rules, and kept the earlier quoted/JSON handling.
+
+**Evidence:** [evidence/review-github-actions/verification.md](evidence/review-github-actions/verification.md); fix #545.
+
+### F-272
+
+**Repro / observation (defensive; confirms whether the control holds)**
+1. Read `.github/actions/dump-cluster-state/action.yml` at master before #545: `${{ inputs.context }}`, `${{ inputs.namespaces }}` and `${{ inputs.include-previous-logs }}` were expanded inside `run:` bodies.
+
+**Expected:** Composite-action inputs reach step scripts through `env:` and are referenced as quoted shell variables.
+
+**Actual (before #545):** Inputs were expanded into the script text. Every caller in `ci.yaml` passed a literal or a job `env` value, so nothing was reachable from untrusted input; this is hardening. #545 passes them as `DUMP_*` env vars.
+
+**Evidence:** [evidence/review-github-actions/verification.md](evidence/review-github-actions/verification.md); fix #545.
