@@ -2,7 +2,7 @@
   "type": "frame",
   "id": "nNGDX",
   "x": 16280,
-  "y": 21365,
+  "y": 21915,
   "name": "Screen/Admin Settings — Authentication (No OIDC mappings)",
   "theme": {
     "semantic": "dark"

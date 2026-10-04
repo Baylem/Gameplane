@@ -2,7 +2,7 @@
   "type": "frame",
   "id": "SUtGZ",
   "x": 1678,
-  "y": 22565,
+  "y": 23115,
   "name": "Screen/Mobile — Remote server Capture",
   "context": "375px viewport. Server actions wrap. The tab navigation is independently scrolled to Capture; the page itself never overflows horizontally.",
   "theme": {
