@@ -230,6 +230,28 @@ func NowTimestamp() string {
 	return time.Now().UTC().Format(sqliteTimestampLayout)
 }
 
+// NormalizeTimestamp converts a stored timestamp to RFC3339 UTC. Rows written
+// by Go that use NowTimestamp are in sqliteTimestampLayout; migrations that
+// used datetime('now')/to_char stored legacy naive "YYYY-MM-DD HH:MM:SS" values.
+// This function converts both to RFC3339 UTC for consistent API responses,
+// so web clients (which parse with new Date()) receive unambiguous UTC strings.
+// Falls back to the raw value if it matches neither format, rather than losing data.
+func NormalizeTimestamp(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	// Try RFC3339 first (already normalized, or from share_links/audit).
+	if _, err := time.Parse(time.RFC3339, raw); err == nil {
+		return raw
+	}
+	// Try naive format and convert.
+	if t, err := time.Parse(sqliteTimestampLayout, raw); err == nil {
+		return t.UTC().Format(time.RFC3339)
+	}
+	// Fall back to raw (data preserved, but still unparseable).
+	return raw
+}
+
 func (s *Store) runMigration(ctx context.Context, name, sqlText string) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {

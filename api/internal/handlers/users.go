@@ -96,6 +96,7 @@ func (h *userHandler) list(w http.ResponseWriter, req *http.Request) {
 			httperr.Write(w, req, err)
 			return
 		}
+		u.CreatedAt = db.NormalizeTimestamp(u.CreatedAt)
 		out = append(out, u)
 	}
 	writeJSON(w, out)
@@ -141,7 +142,7 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, "password too short", http.StatusBadRequest)
 			return
 		}
-		h2, err := auth.HashPassword(body.Password)
+		h2, err := auth.HashPassword(req.Context(), body.Password)
 		if err != nil {
 			httperr.Write(w, req, err)
 			return
@@ -645,7 +646,7 @@ func (h *userHandler) resetPassword(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "password too short", http.StatusBadRequest)
 		return
 	}
-	hash, err := auth.HashPassword(body.Password)
+	hash, err := auth.HashPassword(req.Context(), body.Password)
 	if err != nil {
 		httperr.Write(w, req, err)
 		return
@@ -882,6 +883,9 @@ func (h *userHandler) fetchByID(ctx context.Context, id int64) (userDTO, error) 
 		       END
 		FROM users u WHERE u.id = ?`, id,
 	).Scan(&u.ID, &u.Username, &u.DisplayName, &u.Email, &u.Role, &u.CreatedAt, &u.Provider)
+	if err == nil {
+		u.CreatedAt = db.NormalizeTimestamp(u.CreatedAt)
+	}
 	return u, err
 }
 
