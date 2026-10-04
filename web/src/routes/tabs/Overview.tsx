@@ -1,8 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useResourceClient, useResourceTarget, resourceKey } from "@/lib/resourceTarget";
+import { useEffect, useState, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Copy, Cpu, HardDrive, MemoryStick, AlertCircle } from "lucide-react";
 import type { GameServer, GameTemplate, PlayersResp } from "@/types";
-import { Players, Servers } from "@/lib/endpoints";
+
 import { Card, CardHeader, CardContent, Alert } from "@heroui/react";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { ServerActionsCard } from "@/components/server/ServerActionsCard";
@@ -27,9 +28,11 @@ export function OverviewTab({
   onViewAllEvents?: () => void;
   onOpenConsole?: () => void;
 }) {
+  const resourceTarget = useResourceTarget({ name, namespace: ns });
+  const resourceClient = useResourceClient(resourceTarget);
   const { data: roster } = useQuery({
-    queryKey: ["players", name, "overview", ns],
-    queryFn: () => Players.snapshot(name, ns),
+    queryKey: resourceKey(resourceTarget, "players", name, "overview", ns),
+    queryFn: ({ signal }) => resourceClient.withSignal(signal).Players.snapshot(name, ns),
     enabled: !!name && (gs?.status?.phase === "Running"),
     refetchInterval: 10_000,
     retry: false,
@@ -39,12 +42,18 @@ export function OverviewTab({
   // scheduling, crash-loops. Poll faster while not Running so provisioning
   // diagnostics stay fresh; back off once the server is up.
   const { data: rawEvents } = useQuery({
-    queryKey: ["events", name, ns],
-    queryFn: () => Servers.events(name, ns),
+    queryKey: resourceKey(resourceTarget, "events", name, ns),
+    queryFn: ({ signal }) => resourceClient.withSignal(signal).Servers.events(name, ns),
     enabled: !!name,
     refetchInterval: gs?.status?.phase === "Running" ? 30_000 : 5_000,
     retry: false,
   });
+
+  // ⚡ Bolt: Memoize raw events mapping to prevent unnecessary array recreation
+  // Expected impact: Eliminates O(N) mapping on every render cycle when polling
+  const events: NormalizedServerEvent[] = useMemo(() => {
+    return (Array.isArray(rawEvents) ? rawEvents : []).map(mapServerEvent);
+  }, [rawEvents]);
 
   if (!gs) return <div className="p-6 text-muted">Loading…</div>;
 
@@ -79,9 +88,6 @@ export function OverviewTab({
     typeof agent?.playersOnline === "number" && agent.playersOnline >= 0
       ? (agent.playersOnline as number)
       : 0;
-  const events: NormalizedServerEvent[] = (Array.isArray(rawEvents) ? rawEvents : []).map(
-    mapServerEvent,
-  );
   const endpoints = status.endpoints ?? [];
   const primary = endpoints[0];
   // The operator prepends tunnel endpoints ahead of the cluster-native ones

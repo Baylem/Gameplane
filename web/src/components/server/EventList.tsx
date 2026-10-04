@@ -1,16 +1,24 @@
+import React from "react";
 import type { NormalizedServerEvent } from "@/lib/events";
 import { formatRelative } from "@/lib/utils";
 
-function EventDot({ kind }: { kind: NormalizedServerEvent["kind"] }) {
+// ⚡ Bolt: Memoize EventDot to prevent unnecessary re-renders of list items.
+// Expected impact: Prevents React from diffing the EventDot component tree when
+// its kind prop hasn't changed.
+const EventDot = React.memo(function EventDot({ kind }: { kind: NormalizedServerEvent["kind"] }) {
   const color = {
     info: "bg-accent",
     warn: "bg-warning",
     error: "bg-danger",
   }[kind];
   return <span className={`mt-1.5 inline-block h-2 w-2 rounded-full ${color}`} />;
-}
+});
 
-export function EventList({
+// ⚡ Bolt: Memoize EventList to prevent entire list re-rendering when parent polls.
+// Expected impact: Events Tab and Overview Tab poll for events every 5-30s. This
+// optimization completely skips rendering the often 50+ item long event list when
+// the API returns unchanged events.
+export const EventList = React.memo(function EventList({
   events,
   emptyMessage = "No events yet.",
 }: {
@@ -40,4 +48,4 @@ export function EventList({
       </ul>
     </>
   );
-}
+});

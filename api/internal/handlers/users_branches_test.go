@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strconv"
 	"sync"
 	"testing"
@@ -80,6 +81,68 @@ func TestUsers_Me(t *testing.T) {
 		}
 		if u.Username != "self" || len(u.Permissions["*"]) != 2 {
 			t.Fatalf("unexpected me payload: %+v", u)
+		}
+	})
+	t.Run("includes permissionsByCluster for multi-cluster access checking", func(t *testing.T) {
+		// User with permissions on different clusters to verify permissionsByCluster
+		// structure is preserved separately from the flattened permissions field.
+		caller := &auth.User{
+			ID: 42, Username: "multicluster", Role: "operator",
+			Perms: map[string]map[string]map[string]struct{}{
+				"local": {
+					"*":      {"servers:read": {}, "servers:write": {}},
+					"team-a": {"captures:manage": {}},
+				},
+				"prod": {
+					"*": {"servers:read": {}},
+				},
+			},
+		}
+		srv, _, _ := newUsersServer(t, caller)
+		status, body := doReq(t, "GET", srv.URL+"/users/me", nil)
+		if status != http.StatusOK {
+			t.Fatalf("status=%d body=%s", status, body)
+		}
+		var u userDTO
+		if err := json.Unmarshal(body, &u); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+
+		// Verify permissionsByCluster structure preserves cluster dimension.
+		if u.PermissionsByCluster == nil {
+			t.Fatal("permissionsByCluster should not be nil")
+		}
+
+		// local cluster should have both namespace "*" and "team-a".
+		if _, ok := u.PermissionsByCluster["local"]; !ok {
+			t.Fatalf("local cluster not found in permissionsByCluster: %+v", u.PermissionsByCluster)
+		}
+		if _, ok := u.PermissionsByCluster["local"]["*"]; !ok {
+			t.Fatalf("local/* namespace not found: %+v", u.PermissionsByCluster["local"])
+		}
+		if _, ok := u.PermissionsByCluster["local"]["team-a"]; !ok {
+			t.Fatalf("local/team-a namespace not found: %+v", u.PermissionsByCluster["local"])
+		}
+
+		// prod cluster should only have "*", not "team-a".
+		if _, ok := u.PermissionsByCluster["prod"]; !ok {
+			t.Fatalf("prod cluster not found in permissionsByCluster: %+v", u.PermissionsByCluster)
+		}
+		if _, ok := u.PermissionsByCluster["prod"]["team-a"]; ok {
+			t.Fatalf("prod should not have team-a binding: %+v", u.PermissionsByCluster["prod"])
+		}
+
+		// Verify capture:manage only appears under local/team-a, not under prod.
+		if slices.Contains(u.PermissionsByCluster["prod"]["*"], "captures:manage") {
+			t.Fatalf("captures:manage should not appear in prod cluster: %v", u.PermissionsByCluster["prod"]["*"])
+		}
+		if !slices.Contains(u.PermissionsByCluster["local"]["team-a"], "captures:manage") {
+			t.Fatalf("captures:manage should appear in local/team-a: %v", u.PermissionsByCluster["local"]["team-a"])
+		}
+
+		// Verify the legacy flattened "permissions" field is still present in the response.
+		if len(u.Permissions) == 0 {
+			t.Fatal("legacy permissions field should be present in response")
 		}
 	})
 }

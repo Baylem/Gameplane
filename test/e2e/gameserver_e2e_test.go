@@ -1719,6 +1719,98 @@ func TestGameServer_NonexistentStorageClassSurfacesError(t *testing.T) {
 	}
 }
 
+// TestGameServer_TunnelCredentialRefusalSurfaced: a tunnel credentials Secret
+// created without an ownerReference to the GameServer (the kubectl path the
+// old docs described) must be refused by the operator, and that refusal must
+// be visible as a GameServer status condition — not only in operator logs
+// (F-069). No external relay is involved; the tunnel pod is never expected
+// to run.
+func TestGameServer_TunnelCredentialRefusalSurfaced(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ns := "gameplane-games"
+	// Unique per run: a leftover owned Secret or GameServer from an earlier
+	// run must not let this test pass without exercising the refusal path.
+	suffix := time.Now().UnixNano()
+	tmpl := fmt.Sprintf("e2e-tunnel-cred-refused-tmpl-%d", suffix)
+	gsName := fmt.Sprintf("e2e-tunnel-cred-refused-gs-%d", suffix)
+	secName := fmt.Sprintf("e2e-tunnel-cred-refused-secret-%d", suffix)
+
+	applyBusyboxTemplate(t, tmpl)
+
+	// Secret with no ownerReference — the refused path (docs used to
+	// recommend exactly this via `kubectl create secret generic`).
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: secName, Namespace: ns},
+		StringData: map[string]string{"token": "e2e-fake-token"},
+	}
+	if _, err := envInstance.K8s.CoreV1().Secrets(ns).Create(ctx, sec, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = envInstance.K8s.CoreV1().Secrets(ns).Delete(context.Background(), secName, metav1.DeleteOptions{})
+	})
+
+	gsSpec := map[string]any{
+		"templateRef": map[string]any{"name": tmpl},
+		"networking": map[string]any{
+			"tunnel": map[string]any{
+				"enabled":              true,
+				"provider":             "frp",
+				"credentialsSecretRef": map[string]any{"name": secName},
+				"frp": map[string]any{
+					"serverAddr": "relay.example.invalid",
+					"remotePorts": []any{
+						map[string]any{"name": "noop", "remotePort": int64(25565)},
+					},
+				},
+			},
+		},
+	}
+	gsObj := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "gameplane.local/v1alpha1",
+		"kind":       "GameServer",
+		"metadata":   map[string]any{"name": gsName, "namespace": ns},
+		"spec":       gsSpec,
+	}}
+	if _, err := envInstance.Dyn.Resource(gameServerGVR).Namespace(ns).
+		Create(ctx, gsObj, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("create gameserver: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = envInstance.Dyn.Resource(gameServerGVR).Namespace(ns).
+			Delete(context.Background(), gsName, metav1.DeleteOptions{})
+	})
+
+	envInstance.Eventually(t, 2*time.Minute, func() (bool, string) {
+		obj, err := envInstance.Dyn.Resource(gameServerGVR).Namespace(ns).
+			Get(ctx, gsName, metav1.GetOptions{})
+		if err != nil {
+			return false, "get gameserver: " + err.Error()
+		}
+		conditions, _, _ := unstructured.NestedSlice(obj.Object, "status", "conditions")
+		for _, cIface := range conditions {
+			c, ok := cIface.(map[string]any)
+			if !ok {
+				continue
+			}
+			if c["type"] == "TunnelReady" && c["status"] == "False" {
+				reason, _ := c["reason"].(string)
+				message, _ := c["message"].(string)
+				if reason == "TunnelCredentialRefused" {
+					if !strings.Contains(message, secName) {
+						return false, fmt.Sprintf("TunnelReady message does not name the secret: %s", message)
+					}
+					return true, ""
+				}
+				return false, fmt.Sprintf("TunnelReady=False but reason=%s (want TunnelCredentialRefused)", reason)
+			}
+		}
+		return false, "no TunnelReady=False condition yet"
+	})
+}
+
 // TestGameServer_ExplicitStorageClassOverridesDefault: a GameServer with an
 // explicit spec.storage.storageClassName must use that class, taking
 // precedence over the template default and the operator's install-time default.
