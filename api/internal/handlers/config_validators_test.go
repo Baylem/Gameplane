@@ -37,9 +37,12 @@ func TestValidateGeneral(t *testing.T) {
 }
 
 func TestValidateGeneral_EmptyInstanceName(t *testing.T) {
-	_, err := validateGeneral([]byte(`{"instanceName":"","defaultNamespace":"games"}`))
+	canon, err := validateGeneral([]byte(`{"instanceName":"","defaultNamespace":"games"}`))
 	if err != nil {
 		t.Fatalf("empty instanceName should be valid: %v", err)
+	}
+	if string(canon) != `{"instanceName":"","externalURL":"","defaultNamespace":"games"}` {
+		t.Fatalf("canonicalized output: got %s", canon)
 	}
 }
 

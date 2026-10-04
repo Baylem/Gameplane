@@ -434,6 +434,13 @@ func TestRestore_UsesTemplateSecurityContext(t *testing.T) {
 		t.Fatalf("create restore: %v", err)
 	}
 
+	// The restore only creates its Job once the target server is suspended
+	// (see TestRestore_AdvancesToRunningOnceSuspended).
+	eventually(t, func() (bool, string) {
+		return getGameServer(t, ns, "smp").Spec.Suspend, "spec.suspend not yet true"
+	})
+	markGameServerPhase(t, ns, "smp", gameplanev1alpha1.GameServerPhaseSuspended)
+
 	var ps corev1.PodSpec
 	eventually(t, func() (bool, string) {
 		j, ok := getJob(t, ns, "restore-rs-1")
