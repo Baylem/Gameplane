@@ -376,6 +376,9 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 	if err := r.reconcileStatefulSet(ctx, &gs, &tmpl, ver, mc, replicas); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		logger.Error(err, "reconcile StatefulSet")
 		return ctrl.Result{}, err
 	}
