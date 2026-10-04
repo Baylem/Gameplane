@@ -2253,11 +2253,7 @@ func (r *GameServerReconciler) reconcileBackupSchedule(
 	}
 
 	if gs.Spec.BackupPolicy == nil {
-		err := r.Delete(ctx, bs)
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
+		return r.deleteIfControlledBy(ctx, gs, bs)
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, bs, func() error {
