@@ -49,6 +49,12 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 ### Added
 
+- **Multicluster gateways and unified server management:** an optional
+  private mTLS agent gateway (with its own Helm deployment) lets one dashboard
+  and API manage authorized game servers across independent clusters.
+  Dashboard, Servers, Backups and Search combine every site with optional
+  location filters, and console, files, players, mods and captures are routed
+  to the selected server's cluster (#542).
 - **User theme customization (feature 016):** Settings → Theme & Appearance
   offers preset themes (Modern Pink, Legacy Orange) and custom color selection
   with live WCAG AA contrast validation. Custom accent and surface colors are
