@@ -218,3 +218,41 @@ func TestLogin_EmbedsPreferences(t *testing.T) {
 		t.Errorf("preferences = %+v, want legacy/dark", got.User.Preferences)
 	}
 }
+
+// TestLogin_Success_AttributesAuditActor pins that a successful login names
+// the user on the request's audit actor holder.
+func TestLogin_Success_AttributesAuditActor(t *testing.T) {
+	s := newAuthDB(t)
+	seedUser(t, s, "actor-alice", "hunter2", "admin")
+	ctx, holder := WithActorHolder(context.Background())
+	body := strings.NewReader(`{"username":"actor-alice","password":"hunter2"}`)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(ctx, "POST", "/login", body)
+	req.Header.Set("Content-Type", "application/json")
+	NewLocal(s).HandleLogin(NewSessionStore(s), nil).ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("code=%d body=%s", rr.Code, rr.Body)
+	}
+	if got := holder.Name(); got != "actor-alice" {
+		t.Errorf("audit actor = %q, want %q", got, "actor-alice")
+	}
+}
+
+// TestLogin_WrongPassword_LeavesAuditActorAnonymous pins that a failed login
+// does not attribute the audit row to the attempted username.
+func TestLogin_WrongPassword_LeavesAuditActorAnonymous(t *testing.T) {
+	s := newAuthDB(t)
+	seedUser(t, s, "actor-bob", "rightpw", "admin")
+	ctx, holder := WithActorHolder(context.Background())
+	body := strings.NewReader(`{"username":"actor-bob","password":"wrong"}`)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(ctx, "POST", "/login", body)
+	req.Header.Set("Content-Type", "application/json")
+	NewLocal(s).HandleLogin(NewSessionStore(s), nil).ServeHTTP(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("code=%d", rr.Code)
+	}
+	if got := holder.Name(); got != "" {
+		t.Errorf("audit actor = %q, want empty", got)
+	}
+}
