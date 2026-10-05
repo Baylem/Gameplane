@@ -421,7 +421,7 @@ func TestBoundAndSortEvents_SortsNewestFirst(t *testing.T) {
 		},
 	}
 
-	bounded := boundAndSortEvents(list, 100)
+	bounded := boundAndSortEvents(list)
 
 	if len(bounded.Items) != 4 {
 		t.Errorf("want 4 items, got %d", len(bounded.Items))
@@ -443,16 +443,16 @@ func TestBoundAndSortEvents_TruncatesAndNotifies(t *testing.T) {
 		})
 	}
 
-	bounded := boundAndSortEvents(list, 100)
+	bounded := boundAndSortEvents(list)
 
 	if len(bounded.Items) != 100 {
 		t.Errorf("want 100 items after bounding, got %d", len(bounded.Items))
 	}
-	if !strings.Contains(bounded.ListMeta.ResourceVersion, "truncated") {
-		t.Errorf("want truncation notice, got %q", bounded.ListMeta.ResourceVersion)
+	if !strings.Contains(bounded.ResourceVersion, "truncated") {
+		t.Errorf("want truncation notice, got %q", bounded.ResourceVersion)
 	}
-	if !strings.Contains(bounded.ListMeta.ResourceVersion, "150") {
-		t.Errorf("want 'of 150' in truncation notice, got %q", bounded.ListMeta.ResourceVersion)
+	if !strings.Contains(bounded.ResourceVersion, "150") {
+		t.Errorf("want 'of 150' in truncation notice, got %q", bounded.ResourceVersion)
 	}
 }
 
@@ -468,13 +468,13 @@ func TestBoundAndSortEvents_NoTruncationWhenUnderLimit(t *testing.T) {
 		},
 	}
 
-	bounded := boundAndSortEvents(list, 100)
+	bounded := boundAndSortEvents(list)
 
 	if len(bounded.Items) != 1 {
 		t.Errorf("want 1 item, got %d", len(bounded.Items))
 	}
-	if bounded.ListMeta.ResourceVersion != "" && strings.Contains(bounded.ListMeta.ResourceVersion, "truncated") {
-		t.Errorf("want no truncation notice when under limit, got %q", bounded.ListMeta.ResourceVersion)
+	if bounded.ResourceVersion != "" && strings.Contains(bounded.ResourceVersion, "truncated") {
+		t.Errorf("want no truncation notice when under limit, got %q", bounded.ResourceVersion)
 	}
 }
 

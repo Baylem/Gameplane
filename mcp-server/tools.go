@@ -22,6 +22,9 @@ import (
 	"github.com/ValgulNecron/gameplane/mcp-server/internal/kube"
 )
 
+// maxListEvents is the maximum number of events to include in list responses.
+const maxListEvents = 100
+
 // registeredToolNames lists every tool this server installs, in
 // registration order. main_test.go uses it to assert the read-only
 // invariant (no name/description implying a mutating verb) without needing
@@ -224,7 +227,7 @@ func listEventsHandler(c *kube.Client) mcp.ToolHandlerFor[listEventsInput, any] 
 		}
 
 		// Sort events by lastTimestamp (newest first) and bound to 100 events
-		truncated := boundAndSortEvents(list, 100)
+		truncated := boundAndSortEvents(list)
 
 		stripped, err := stripManagedFields(truncated)
 		if err != nil {
@@ -261,11 +264,11 @@ func filterEventsByLabel(list *corev1.EventList, selector string) (*corev1.Event
 }
 
 // boundAndSortEvents sorts events by lastTimestamp (newest first) and
-// bounds the list to maxEvents. If the list is truncated, it mutates
+// bounds the list to maxListEvents. If the list is truncated, it mutates
 // the list metadata to include a truncation notice in the resourceVersion
 // field, since MCP text responses don't have a structured place for metadata.
 // Returns a DeepCopy to avoid mutating the input.
-func boundAndSortEvents(list *corev1.EventList, maxEvents int) *corev1.EventList {
+func boundAndSortEvents(list *corev1.EventList) *corev1.EventList {
 	out := list.DeepCopy()
 
 	// Sort newest first by lastTimestamp, falling back to eventTime, then
@@ -274,10 +277,10 @@ func boundAndSortEvents(list *corev1.EventList, maxEvents int) *corev1.EventList
 		return eventTime(&out.Items[i]).After(eventTime(&out.Items[j]))
 	})
 
-	// Bound to maxEvents and set truncation notice if needed
-	if len(out.Items) > maxEvents {
-		out.Items = out.Items[:maxEvents]
-		out.ListMeta.ResourceVersion = fmt.Sprintf("truncated (showing newest %d of %d events)", maxEvents, len(list.Items))
+	// Bound to maxListEvents and set truncation notice if needed
+	if len(out.Items) > maxListEvents {
+		out.Items = out.Items[:maxListEvents]
+		out.ResourceVersion = fmt.Sprintf("truncated (showing newest %d of %d events)", maxListEvents, len(list.Items))
 	}
 
 	return out
