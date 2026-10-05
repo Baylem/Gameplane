@@ -212,7 +212,7 @@ describe("SharePage", () => {
 
       // Should show Starting state
       await waitFor(() => {
-        expect(screen.getByText(/The server is waking up/)).toBeInTheDocument();
+        expect(screen.getByText(/The server is starting up/)).toBeInTheDocument();
       });
 
       // Advance time to trigger polling
@@ -267,7 +267,7 @@ describe("SharePage", () => {
       expect(vi.mocked(Shares.start)).toHaveBeenCalledWith("test-token");
 
       await waitFor(() => {
-        expect(screen.getByText(/The server is waking up/)).toBeInTheDocument();
+        expect(screen.getByText(/The server is starting up/)).toBeInTheDocument();
       });
     });
   });
@@ -283,7 +283,7 @@ describe("SharePage", () => {
 
       await waitFor(() => {
         expect(screen.getByText("mc-survival")).toBeInTheDocument();
-        expect(screen.getByText(/The server is waking up/)).toBeInTheDocument();
+        expect(screen.getByText(/The server is starting up/)).toBeInTheDocument();
       });
     });
 
@@ -298,7 +298,7 @@ describe("SharePage", () => {
       renderWithRouter("test-token");
 
       await waitFor(() => {
-        expect(screen.getByText(/The server is waking up/)).toBeInTheDocument();
+        expect(screen.getByText(/The server is starting up/)).toBeInTheDocument();
       });
 
       // First call on mount
@@ -331,7 +331,7 @@ describe("SharePage", () => {
       renderWithRouter("test-token");
 
       await waitFor(() => {
-        expect(screen.getByText(/The server is waking up/)).toBeInTheDocument();
+        expect(screen.getByText(/The server is starting up/)).toBeInTheDocument();
       });
 
       vi.advanceTimersByTime(2000);
