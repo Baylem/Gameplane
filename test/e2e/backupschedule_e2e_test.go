@@ -141,12 +141,17 @@ func TestBackupSchedule_RetentionTrimsPast(t *testing.T) {
 	// alignment + reconcile slack; the second adds another 60s. Allowing
 	// 3 minutes here gives the controller a comfortable cushion before
 	// retention is asserted.
+	// Retention deletes Backups, so capture each Backup's snapshot id (by
+	// Backup name) while it still exists; the trimmed ones are asserted gone
+	// from the repository at the end.
+	seen := map[string]string{}
 	envInstance.Eventually(t, 3*time.Minute, func() (bool, string) {
 		bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
 			List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
 		if err != nil {
 			return false, "list backups: " + err.Error()
 		}
+		recordBackupSnapshotIDs(bks.Items, seen)
 		if len(bks.Items) >= 2 {
 			return true, ""
 		}
@@ -159,7 +164,47 @@ func TestBackupSchedule_RetentionTrimsPast(t *testing.T) {
 	// with a one-minute cron and are never trimmed); if more than
 	// keepLast succeeded backups persist, retention is broken. Two cron
 	// windows of slack lets the second backup finish and get trimmed.
+	// Make sure both Backups' snapshot ids were captured before retention (and
+	// the snapshot finalizer's forget Job) removed the older one.
+	envInstance.Eventually(t, 3*time.Minute, func() (bool, string) {
+		bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
+			List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
+		if err != nil {
+			return false, "list backups: " + err.Error()
+		}
+		recordBackupSnapshotIDs(bks.Items, seen)
+		if len(seen) >= 2 {
+			return true, ""
+		}
+		return false, "snapshot ids recorded for " + itoa(len(seen)) + " Backups, want 2"
+	})
+
 	waitBackupCount(t, ns, schedName, 1, 3*time.Minute)
+
+	// Trimming a Backup must also forget its restic snapshot. A Backup that has
+	// vanished since its id was recorded was trimmed (its finalizer ran or gave
+	// up), so each such id must be gone from the repository. Only those ids are
+	// asserted: the repository is shared with parallel tests and is never
+	// expected to be empty.
+	bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
+		List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
+	if err != nil {
+		t.Fatalf("list backups after trim: %v", err)
+	}
+	remaining := map[string]bool{}
+	for _, item := range bks.Items {
+		remaining[item.GetName()] = true
+	}
+	var trimmed []string
+	for name, id := range seen {
+		if !remaining[name] {
+			trimmed = append(trimmed, id)
+		}
+	}
+	if len(trimmed) == 0 {
+		t.Fatalf("no trimmed Backup was observed; recorded snapshot ids for %d Backups", len(seen))
+	}
+	assertSnapshotsAbsent(t, trimmed...)
 }
 
 // TestBackupSchedule_ConcurrencyForbid — concurrencyPolicy=Forbid must
