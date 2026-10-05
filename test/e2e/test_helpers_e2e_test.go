@@ -394,6 +394,11 @@ func waitBackupCount(t *testing.T, ns, schedName string, want int, timeout time.
 			if phase != "Succeeded" {
 				continue
 			}
+			// A Backup retention already deleted lingers Terminating while its
+			// snapshot finalizer runs the forget Job; it is no longer kept.
+			if item.GetDeletionTimestamp() != nil {
+				continue
+			}
 			got++
 		}
 		if got == want {
