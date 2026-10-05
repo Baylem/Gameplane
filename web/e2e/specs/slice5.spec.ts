@@ -210,7 +210,7 @@ test.describe("Slice 5: Share links — public page (mock mode)", () => {
     await startButton.click();
 
     await expect(page.getByText("Starting...").first()).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/waking up/i)).toBeVisible();
+    await expect(page.getByText(/starting up/i)).toBeVisible();
 
     // Polling runs every 2s in SharePage; allow a few intervals to land.
     await expect(page.getByText("Online")).toBeVisible({ timeout: 15_000 });
@@ -228,7 +228,7 @@ test.describe("Slice 5: Share links — public page (mock mode)", () => {
       timeout: 10_000,
     });
     await expect(page.getByText("Starting...").first()).toBeVisible();
-    await expect(page.getByText(/waking up/i)).toBeVisible();
+    await expect(page.getByText(/starting up/i)).toBeVisible();
     await expectNoPrivacyLeak(page);
   });
 

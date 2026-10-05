@@ -228,7 +228,7 @@
                                   "fill": "$field/placeholder"
                                 },
                                 "wolxN": {
-                                  "content": "Shown in the UI and OIDC replies."
+                                  "content": "Optional. Names this install on the Cluster page and in notifications."
                                 }
                               }
                             }
