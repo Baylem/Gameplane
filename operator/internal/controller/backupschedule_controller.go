@@ -55,9 +55,9 @@ func (r *BackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// only when something actually changed (avoids reconcile churn).
 	before := sched.Status.DeepCopy()
 
-	// Owns(&Backup{}) re-triggers this Reconcile on every owned Backup
-	// status transition, so this runs (and can advance the high-water
-	// mark) even while the schedule itself is suspended.
+	// The controller watches BackupSchedules only; it finds a schedule's
+	// Backups by the gameplane.local/backup-schedule label on each reconcile
+	// (scheduled requeues).
 	if err := r.updateLastSuccessfulTime(ctx, &sched); err != nil {
 		return ctrl.Result{}, err
 	}

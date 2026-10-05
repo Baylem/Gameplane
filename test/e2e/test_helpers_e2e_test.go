@@ -380,7 +380,7 @@ func waitBackupCount(t *testing.T, ns, schedName string, want int, timeout time.
 	ctx := context.Background()
 	envInstance.Eventually(t, timeout, func() (bool, string) {
 		bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
-			List(ctx, metav1.ListOptions{})
+			List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
 		if err != nil {
 			return false, "list backups: " + err.Error()
 		}
@@ -394,17 +394,12 @@ func waitBackupCount(t *testing.T, ns, schedName string, want int, timeout time.
 			if phase != "Succeeded" {
 				continue
 			}
-			for _, owner := range item.GetOwnerReferences() {
-				if owner.Kind == "BackupSchedule" && owner.Name == schedName {
-					got++
-					break
-				}
-			}
+			got++
 		}
 		if got == want {
 			return true, ""
 		}
-		return false, "succeeded owned Backups got=" + itoa(got) + " want=" + itoa(want)
+		return false, "succeeded labelled Backups got=" + itoa(got) + " want=" + itoa(want)
 	})
 }
 

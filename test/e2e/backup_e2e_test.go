@@ -154,22 +154,18 @@ func TestBackupSchedule_CreatesBackupCR(t *testing.T) {
 			Delete(context.Background(), schedName, metav1.DeleteOptions{})
 	})
 
-	// Wait up to 2 minutes for a Backup CR owned by the schedule to
+	// Wait up to 2 minutes for a Backup CR labelled by the schedule to
 	// appear. The cron grants the scheduler a window of up to 60s; on
 	// top of that, controller-runtime's reconcile cadence adds a few
 	// seconds of slack.
 	envInstance.Eventually(t, 2*time.Minute+30*time.Second, func() (bool, string) {
 		bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
-			List(ctx, metav1.ListOptions{})
+			List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
 		if err != nil {
 			return false, "list backups: " + err.Error()
 		}
-		for _, item := range bks.Items {
-			for _, owner := range item.GetOwnerReferences() {
-				if owner.Kind == "BackupSchedule" && owner.Name == schedName {
-					return true, ""
-				}
-			}
+		if len(bks.Items) > 0 {
+			return true, ""
 		}
 		// Surface the schedule's status to make a hung schedule easier
 		// to debug from CI logs.
@@ -187,22 +183,14 @@ func TestBackupSchedule_CreatesBackupCR(t *testing.T) {
 	// Sanity-check that the Backup we found references the right
 	// server and repo — guards against a regression where the
 	// scheduler drops fields on the way through.
-	bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).List(ctx, metav1.ListOptions{})
+	bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
 	if err != nil {
 		t.Fatalf("list backups (sanity): %v", err)
 	}
-	var found *unstructured.Unstructured
-	for i := range bks.Items {
-		for _, owner := range bks.Items[i].GetOwnerReferences() {
-			if owner.Kind == "BackupSchedule" && owner.Name == schedName {
-				found = &bks.Items[i]
-				break
-			}
-		}
+	if len(bks.Items) == 0 {
+		t.Fatal("labelled Backup vanished between Eventually and sanity check")
 	}
-	if found == nil {
-		t.Fatal("scheduled Backup vanished between Eventually and sanity check")
-	}
+	found := &bks.Items[0]
 	srvRef, _, _ := unstructured.NestedString(found.Object, "spec", "serverRef", "name")
 	if srvRef != gs {
 		t.Errorf("scheduled Backup serverRef=%q, want %q", srvRef, gs)
