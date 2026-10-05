@@ -34,7 +34,7 @@ Both call the validation and rendering functions independently; each is its own 
 
 ```
 gameaction/
-├── action.go           # Core API: Param, Resolve, Command, Compile, Render
+├── action.go           # Core API: Param, Resolve, Command, Compile, Render, CheckText, ErrControlChar, ErrMetaChar
 └── action_test.go      # Unit tests (91% coverage gate)
 ```
 
@@ -131,6 +131,7 @@ Executes the compiled template with the resolved parameters.
 - `strconv` — integer parsing
 - `strings` — trimming, splitting, contains checks
 - `text/template` — command template compilation and rendering
+- `errors` — CheckText sentinel errors
 
 No external modules.
 

@@ -88,7 +88,7 @@ components:
       required: [name]
       properties:
         name:   { type: string, description: "1-32 chars [A-Za-z0-9_]" }
-        reason: { type: string, description: "Optional, max 256 chars; rejected if it contains newlines" }
+        reason: { type: string, description: "Optional; truncated to 256 bytes. Rejected with 400 if it contains an ASCII control character or a shell/RCON metacharacter (semicolon, ampersand, pipe, dollar, backtick, backslash, double or single quote), per gameaction.CheckText" }
     ModerationResponse:
       type: object
       required: [ok]

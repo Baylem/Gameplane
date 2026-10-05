@@ -1208,7 +1208,7 @@ capabilities:
   **fire-and-forget**: no output is returned inline (it appears in the
   Console tab), so the dashboard shows "sent" rather than command output.
 - Parameter values are validated by `type` and sanitized before
-  rendering: CR/LF, other control characters and the shell/RCON metacharacters ; & | $ ` \ " ' are rejected so a value
+  rendering: CR/LF, other control characters and the shell/RCON metacharacters ``; & | $ ` \ " '`` are rejected so a value
   can never chain a second console command. `int`/`bool`/`enum` values
   must parse/match; missing optional params fall back to `default`. The
   same validation runs on both transports and on both the API and the
