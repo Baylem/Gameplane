@@ -811,17 +811,66 @@ describe("ServerActionsCard", () => {
     expect(await screen.findByText("Actions")).toBeInTheDocument();
   });
 
-  // PRODUCT GAP (not fixable from the test): renderActionButton computes
-  // `disabled = !canRun || !hasRcon || run.isPending` once for every action
-  // using the game-level hasRcon, and never consults the action's own
-  // `transport`. A stdin-transport action doesn't need rcon at all, but on
-  // a template with no `spec.rcon` (hasRcon === false) the button stays
-  // permanently disabled regardless — so this scenario can never reach a
-  // click. Fixing it requires gating disabled on
-  // `resolveTransport(a, hasRcon) === "rcon" && !hasRcon` (or similar) in
-  // ServerActionsCard.tsx, which is out of scope for a test-only fix.
-  // Deleted per instructions rather than asserting behavior the source
-  // doesn't implement.
+  describe("transport gating without RCON", () => {
+    // A pty-console game with no RCON (e.g. Terraria): actions resolve to
+    // the stdin transport and are delivered over pod attach.
+    const ptyTemplate = (actions: ServerActionDecl[], consoleMode: "pty" | "none" = "pty"): GameTemplate => ({
+      metadata: { name: "terraria" },
+      spec: {
+        displayName: "Terraria",
+        game: "terraria",
+        version: "1",
+        image: "img",
+        consoleMode,
+        capabilities: { actions },
+      },
+    });
+
+    it("enables a stdin action on a pty game and reports it as sent", async () => {
+      const runs: RunCall[] = [];
+      routeFetch("operator", runs);
+      renderWithQuery(
+        <ServerActionsCard name="s1" tmpl={ptyTemplate([{ id: "save", displayName: "Save world" }])} />,
+      );
+      const btn = await screen.findByRole("button", { name: /save world/i });
+      await waitFor(() => expect(btn).not.toBeDisabled());
+      expect(screen.queryByText(/need a live console/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/need RCON/i)).not.toBeInTheDocument();
+      fireEvent.click(btn);
+      await waitFor(() => expect(runs).toEqual([{ id: "save" }]));
+      expect(await screen.findByText("Save world sent")).toBeInTheDocument();
+    });
+
+    it("keeps an rcon-transport action disabled on a pty game and explains why", async () => {
+      routeFetch("operator", []);
+      renderWithQuery(
+        <ServerActionsCard
+          name="s1"
+          tmpl={ptyTemplate([
+            { id: "save", displayName: "Save world" },
+            { id: "say", displayName: "Say hi", transport: "rcon" },
+          ])}
+        />,
+      );
+      const stdinBtn = await screen.findByRole("button", { name: /save world/i });
+      await waitFor(() => expect(stdinBtn).not.toBeDisabled());
+      expect(screen.getByRole("button", { name: /say hi/i })).toBeDisabled();
+      expect(screen.getByText("Some actions need RCON; this game has none.")).toBeInTheDocument();
+    });
+
+    it("keeps a stdin action disabled when the game has no console at all", async () => {
+      routeFetch("operator", []);
+      renderWithQuery(
+        <ServerActionsCard
+          name="s1"
+          tmpl={ptyTemplate([{ id: "save", displayName: "Save world", transport: "stdin" }], "none")}
+        />,
+      );
+      const btn = await screen.findByRole("button", { name: /save world/i });
+      expect(btn).toBeDisabled();
+      expect(screen.getByText("Actions need a live console; this game has none.")).toBeInTheDocument();
+    });
+  });
 
   it("displays API error without parsed error field fallback to body", async () => {
     const permissions = { "*": ["servers:read", "servers:write"] };

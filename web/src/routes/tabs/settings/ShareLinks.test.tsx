@@ -13,7 +13,7 @@ const mockLinks: ShareLink[] = [
   {
     id: "link-1",
     createdAt: "2026-07-28T00:00:00Z",
-    expiresAt: "2026-08-04T00:00:00Z",
+    expiresAt: null,
     canStart: true,
   },
   {
@@ -163,12 +163,14 @@ describe("ShareLinksSection", () => {
     });
   });
 
-  it("renders Revoke button for each link", async () => {
+  it("renders Revoke only for active links", async () => {
     render(<ShareLinksSection name="mc-survival" />, { wrapper: Wrapper });
     await waitFor(() => {
       const revokeButtons = screen.getAllByRole("button", { name: "Revoke" });
-      expect(revokeButtons).toHaveLength(3);
+      expect(revokeButtons).toHaveLength(1);
     });
+    // The two expired links show a muted dash instead of a Revoke button.
+    expect(screen.getAllByText("—")).toHaveLength(2);
   });
 
   // Create dialog tests
@@ -494,6 +496,7 @@ describe("ShareLinksSection", () => {
     });
     expect(screen.queryByText("Active")).not.toBeInTheDocument();
     expect(screen.queryByText("Expired")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Revoke" })).not.toBeInTheDocument();
   });
 
   // T029: expiry-choice request shapes, warnings, and client-side blocking.
