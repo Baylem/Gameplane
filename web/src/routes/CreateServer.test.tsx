@@ -535,6 +535,31 @@ describe("CreateServerWizard review", () => {
     expect(configPre?.className).toMatch(/max-h-/);
   });
 
+  it("masks password-type config values on the review step", async () => {
+    const t = template({
+      configSchema: [
+        { name: "MOTD", displayName: "Server MOTD", type: "string" },
+        { name: "ADMIN_PASSWORD", displayName: "Admin password", type: "password" },
+      ],
+    });
+    fetchMock.mockResolvedValue(jsonRes(200, { items: [t] }));
+    const { container } = renderWithQuery(<CreateServerWizard />);
+    await pickTemplate(t);
+    fireEvent.change(screen.getByPlaceholderText("mc-hardcore"), { target: { value: "mc-test" } });
+    fireEvent.change(screen.getByLabelText("Server MOTD"), { target: { value: "hello" } });
+    fireEvent.change(screen.getByLabelText("Admin password"), { target: { value: "hunter2" } });
+    fireEvent.click(screen.getByRole("button", { name: /Continue to Network/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Continue to Review/i }));
+
+    const configPre = Array.from(container.querySelectorAll("pre")).find((p) =>
+      p.textContent?.includes('"MOTD"'),
+    );
+    expect(configPre).toBeTruthy();
+    expect(configPre?.textContent).toContain('"MOTD": "hello"');
+    expect(configPre?.textContent).toContain('"ADMIN_PASSWORD": "********"');
+    expect(configPre?.textContent).not.toContain("hunter2");
+  });
+
   it("shows Cancel on step 1 and closes the wizard back to the server list", async () => {
     fetchMock.mockResolvedValue(jsonRes(200, { items: [template()] }));
     renderWithQuery(<CreateServerWizard />);

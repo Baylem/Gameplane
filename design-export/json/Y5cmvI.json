@@ -302,6 +302,77 @@
                                   ]
                                 }
                               ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "qIJ2p",
+                              "name": "Field Node Selector",
+                              "width": "fill_container",
+                              "gap": 16,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "LaMjP",
+                                  "name": "lbl",
+                                  "width": 200,
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "H08JVk",
+                                      "name": "t",
+                                      "fill": "$foreground/foreground",
+                                      "content": "Node selector",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 14,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "orbAD",
+                                      "name": "h",
+                                      "fill": "$muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": 200,
+                                      "content": "Additional node selection constraints (e.g., {\"gameplane.local/pinned\": \"true\"}). Clear this field to remove node restrictions set during server creation.",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "fCNiJ",
+                                  "name": "editor",
+                                  "clip": true,
+                                  "width": "fill_container",
+                                  "height": 150,
+                                  "fill": "#0D0D0D",
+                                  "cornerRadius": 6,
+                                  "stroke": "$border/border",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "layout": "vertical",
+                                  "padding": [
+                                    10,
+                                    12
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Yh3vv",
+                                      "name": "code",
+                                      "fill": "#D4D4D4",
+                                      "content": "{}",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
                             }
                           ]
                         },

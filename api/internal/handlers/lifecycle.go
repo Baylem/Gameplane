@@ -249,6 +249,9 @@ func cloneHandler(reg *kube.Registry) http.HandlerFunc {
 			httperr.Write(w, req, err)
 			return
 		}
+		// The clone stores the source's config verbatim; only the response is redacted.
+		created = created.DeepCopy()
+		newConfigRuleCache(k).redact(req.Context(), created)
 		writeOrErr(w, req, created, nil)
 	}
 }

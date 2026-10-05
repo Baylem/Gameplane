@@ -389,6 +389,7 @@ func (h fleetHandler) readScope(ctx context.Context, u *auth.User, kind string, 
 	}
 	ctx, cancel := context.WithTimeout(ctx, fleetScopeTimeout)
 	defer cancel()
+	cfgRules := newConfigRuleCache(s.cluster.k)
 	continuation := ""
 	seen := map[string]bool{}
 	for scanned := 0; ; {
@@ -428,6 +429,7 @@ func (h fleetHandler) readScope(ctx context.Context, u *auth.User, kind string, 
 				}
 				access = &permissions
 				gateStaleAgent(&obj)
+				cfgRules.redact(ctx, &obj)
 			}
 			out.items = append(out.items, fleetResource{Target: fleetTarget{
 				Cluster: s.cluster.id, Namespace: s.namespace, Name: obj.GetName(), UID: string(obj.GetUID()),

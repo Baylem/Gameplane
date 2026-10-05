@@ -8,7 +8,8 @@ point. Assume:
 - the login page is enumerable by any scanner,
 - cluster-internal attackers may land a pod in `gameplane-games` via a
   compromised game image (Minecraft plugins, Valheim mods, etc.),
-- the game pods themselves should be treated as low-trust.
+- the game pods themselves should be treated as low-trust,
+- a dashboard user with only `servers:read` must not be able to read game passwords (RCON, admin or server passwords) out of a GameServer.
 
 ## Authentication
 
@@ -191,6 +192,28 @@ between (for example its ownership is transferred), the API re-reads it and
 repeats the check, so a caller who is no longer the owner is refused, and
 after three conflicting attempts the request fails with 409. Backups,
 restore jobs, schedules, and events remain namespace-gated in this release.
+
+## GameServer config passwords
+
+`GameServer.spec.config` holds wizard values as stored in Kubernetes, including
+the values of `type: password` fields of the template's `configSchema`. The API
+never returns those in clear: every response that carries a GameServer
+(`/servers`, `/servers/{name}` including create/update replies, `:clone`,
+`/users/me/servers`, `/fleet/servers` and the `/events` stream) replaces each
+non-empty password value with the marker `__gameplane_redacted__`, through one
+helper (`api/internal/handlers/config_redact.go`). If the GameTemplate cannot be
+read, every config value is redacted (fail closed).
+
+On `PUT /servers/{name}` a password value equal to the marker keeps the stored
+value, a different non-empty value replaces it, and an empty string clears it
+only when the field is optional (a required field keeps its value); a required
+password omitted from the body is restored. Share links, capture, mods, tunnel
+credentials, notifications, WebSockets and the audit log (which never records
+request bodies) do not carry `spec.config`.
+
+Residual exposure: anyone who can read the GameServer object through the
+Kubernetes API (kubectl, GitOps tooling, the optional read-only `mcp-server`)
+still sees the stored values; restrict that with cluster RBAC.
 
 ## Share links
 
