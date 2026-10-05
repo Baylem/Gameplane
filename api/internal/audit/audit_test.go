@@ -222,7 +222,7 @@ func TestMiddleware_RecordsRowWhenHandlerDidNotMarkRecorded(t *testing.T) {
 	}
 }
 
-func TestMarkRecorded_NoopOutsideMiddleware(t *testing.T) {
+func TestMarkRecorded_NoopOutsideMiddleware(_ *testing.T) {
 	MarkRecorded(context.Background()) // must not panic
 }
 
