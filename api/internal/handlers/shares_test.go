@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -1029,5 +1030,87 @@ func TestShareListIncludesRevokedStatus(t *testing.T) {
 	status, _ = shareReq(t, h, "GET", "/shares/"+token, nil, nil, "203.0.113.51:1")
 	if status != http.StatusNotFound {
 		t.Fatalf("resolve revoked token: status = %d, want 404", status)
+	}
+}
+
+// serverWithCreation returns a share-test server whose metadata carries the
+// given creationTimestamp, as a real apiserver object always does.
+func serverWithCreation(name string, ownerID int64, created time.Time) *unstructured.Unstructured {
+	obj := newShareTestServer(name, ownerID)
+	obj.SetCreationTimestamp(metav1.NewTime(created))
+	return obj
+}
+
+// TestShareLinkRejectedWhenServerRecreated verifies that a link minted for an
+// earlier GameServer does not resolve or start a later server that reuses the
+// name (links are keyed by name, not UID): both public paths return the
+// uniform 404. A server older than the link still resolves.
+func TestShareLinkRejectedWhenServerRecreated(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-recreated")
+	token, _, err := store.CreateShareLink(t.Context(), "local", "gameplane-games", "srv-recreated", ownerID, true, nil)
+	if err != nil {
+		t.Fatalf("CreateShareLink: %v", err)
+	}
+
+	// Control: server created an hour before the link, so the link is valid.
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(serverWithCreation("srv-recreated", ownerID, time.Now().Add(-time.Hour))))
+	h := mountSharesRouter(reg, store)
+	if status, body := shareReq(t, h, "GET", "/shares/"+token, nil, nil, "203.0.113.61:1"); status != http.StatusOK {
+		t.Fatalf("resolve against older server: status = %d, want 200; body=%s", status, body)
+	}
+
+	// The server was deleted and recreated after the link was minted.
+	reg2 := kube.NewRegistry("local")
+	reg2.Set("local", fakeKubeClient(serverWithCreation("srv-recreated", ownerID, time.Now().Add(time.Hour))))
+	h2 := mountSharesRouter(reg2, store)
+	status, body := shareReq(t, h2, "GET", "/shares/"+token, nil, nil, "203.0.113.62:1")
+	if status != http.StatusNotFound {
+		t.Fatalf("resolve against recreated server: status = %d, want 404; body=%s", status, body)
+	}
+	if !bytes.Equal(body, wantShareNotFoundBody) {
+		t.Fatalf("resolve against recreated server: body = %q, want %q", body, wantShareNotFoundBody)
+	}
+	status, body = shareReq(t, h2, "POST", "/shares/"+token+"/start", nil, nil, "203.0.113.63:1")
+	if status != http.StatusNotFound {
+		t.Fatalf("start against recreated server: status = %d, want 404; body=%s", status, body)
+	}
+	if !bytes.Equal(body, wantShareNotFoundBody) {
+		t.Fatalf("start against recreated server: body = %q, want %q", body, wantShareNotFoundBody)
+	}
+}
+
+// TestServerDeleteRevokesShareLinks verifies that DELETE /servers/{name}
+// revokes that server's share links, and only that server's.
+func TestServerDeleteRevokesShareLinks(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-delete-revoke")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(
+		newShareTestServer("srv-del", ownerID),
+		newShareTestServer("srv-keep", ownerID),
+	))
+	r := chi.NewRouter()
+	MountResources(r, reg, store)
+
+	delToken, _, err := store.CreateShareLink(t.Context(), "local", "gameplane-games", "srv-del", ownerID, false, nil)
+	if err != nil {
+		t.Fatalf("CreateShareLink srv-del: %v", err)
+	}
+	keepToken, _, err := store.CreateShareLink(t.Context(), "local", "gameplane-games", "srv-keep", ownerID, false, nil)
+	if err != nil {
+		t.Fatalf("CreateShareLink srv-keep: %v", err)
+	}
+
+	if status, body := shareReq(t, r, "DELETE", "/servers/srv-del", nil, nil, "203.0.113.64:1"); status != http.StatusNoContent {
+		t.Fatalf("delete status = %d, want 204; body=%s", status, body)
+	}
+
+	if _, err := store.LookupShareLink(t.Context(), delToken); !errors.Is(err, db.ErrShareLinkInvalid) {
+		t.Fatalf("LookupShareLink after delete = %v, want ErrShareLinkInvalid", err)
+	}
+	if _, err := store.LookupShareLink(t.Context(), keepToken); err != nil {
+		t.Fatalf("link of the other server must stay valid, got %v", err)
 	}
 }

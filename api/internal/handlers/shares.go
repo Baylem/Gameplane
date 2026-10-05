@@ -345,7 +345,7 @@ func resolveShareHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 		obj, err := k.Dynamic.Resource(kube.GVRs["servers"]).
 			Namespace(link.Namespace).
 			Get(req.Context(), link.ServerName, metav1.GetOptions{})
-		if err != nil {
+		if err != nil || serverReplacedSinceLink(obj, link) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
@@ -418,10 +418,10 @@ func startShareHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 			return
 		}
 
-		_, err = k.Dynamic.Resource(kube.GVRs["servers"]).
+		obj, err := k.Dynamic.Resource(kube.GVRs["servers"]).
 			Namespace(link.Namespace).
 			Get(req.Context(), link.ServerName, metav1.GetOptions{})
-		if err != nil {
+		if err != nil || serverReplacedSinceLink(obj, link) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusNotFound)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
@@ -444,6 +444,17 @@ func startShareHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusAccepted)
 	}
+}
+
+// serverReplacedSinceLink reports whether obj was created after link was
+// minted, i.e. the GameServer the link was issued for was deleted and a new
+// one now holds the same name. Links are keyed by name, not UID, so without
+// this check an old link would grant access to the new server. A zero
+// creationTimestamp (never the case for a real apiserver object) is not
+// treated as newer.
+func serverReplacedSinceLink(obj *unstructured.Unstructured, link db.ShareLink) bool {
+	created := obj.GetCreationTimestamp().Time
+	return !created.IsZero() && created.After(link.CreatedAt)
 }
 
 // getPhase extracts the server's phase (status.phase).

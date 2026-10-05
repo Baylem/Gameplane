@@ -319,6 +319,25 @@ func (s *Store) RevokeShareLink(ctx context.Context, cluster, ns, serverName, id
 	return nil
 }
 
+// RevokeShareLinksForServer revokes every still-active share link on one
+// server (cluster, namespace, server_name), keeping the rows for the audit
+// trail. Called when the server is deleted so a link can never resolve against
+// a later server that reuses the name. An empty cluster means "local", as in
+// CreateShareLink. Revoking nothing is not an error.
+func (s *Store) RevokeShareLinksForServer(ctx context.Context, cluster, ns, serverName string) error {
+	if cluster == "" {
+		cluster = "local"
+	}
+	revokedAt := time.Now().UTC().Format(time.RFC3339)
+	if _, err := s.DB.ExecContext(ctx,
+		`UPDATE share_links SET revoked_at = ?
+		 WHERE cluster = ? AND namespace = ? AND server_name = ? AND revoked_at IS NULL`,
+		revokedAt, cluster, ns, serverName); err != nil {
+		return fmt.Errorf("revoke share links for server: %w", err)
+	}
+	return nil
+}
+
 // TouchShareLink updates the last_used timestamp for a share link, recording
 // when it was last accessed. Used by LookupShareLink internally.
 func (s *Store) TouchShareLink(ctx context.Context, id string) error {

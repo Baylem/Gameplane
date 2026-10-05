@@ -908,3 +908,48 @@ func TestRevokeShareLink_UnknownIDReturnsNotFound(t *testing.T) {
 		t.Fatalf("got %v, want ErrShareLinkNotFound", err)
 	}
 }
+
+func TestRevokeShareLinksForServer(t *testing.T) {
+	s := newShareLinksStore(t)
+	ctx := context.Background()
+	uid := insertTestUser(t, s, "owner")
+
+	tokA, _, err := s.CreateShareLink(ctx, "local", "ns", "srv-a", uid, false, nil)
+	if err != nil {
+		t.Fatalf("create a: %v", err)
+	}
+	tokB, _, err := s.CreateShareLink(ctx, "local", "ns", "srv-b", uid, false, nil)
+	if err != nil {
+		t.Fatalf("create b: %v", err)
+	}
+	tokOtherCluster, _, err := s.CreateShareLink(ctx, "remote", "ns", "srv-a", uid, false, nil)
+	if err != nil {
+		t.Fatalf("create remote: %v", err)
+	}
+
+	// An empty cluster means "local".
+	if err := s.RevokeShareLinksForServer(ctx, "", "ns", "srv-a"); err != nil {
+		t.Fatalf("RevokeShareLinksForServer: %v", err)
+	}
+	if _, err := s.LookupShareLink(ctx, tokA); !errors.Is(err, ErrShareLinkInvalid) {
+		t.Fatalf("srv-a link after revoke = %v, want ErrShareLinkInvalid", err)
+	}
+	if _, err := s.LookupShareLink(ctx, tokB); err != nil {
+		t.Fatalf("srv-b link must stay valid: %v", err)
+	}
+	if _, err := s.LookupShareLink(ctx, tokOtherCluster); err != nil {
+		t.Fatalf("same-name link on another cluster must stay valid: %v", err)
+	}
+
+	// Revoking again (nothing active) is not an error, and the row is kept.
+	if err := s.RevokeShareLinksForServer(ctx, "local", "ns", "srv-a"); err != nil {
+		t.Fatalf("second revoke: %v", err)
+	}
+	links, err := s.ListShareLinks(ctx, "local", "ns", "srv-a")
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(links) != 1 || links[0].RevokedAt == nil {
+		t.Fatalf("revoked link row must be kept with revoked_at set, got %+v", links)
+	}
+}

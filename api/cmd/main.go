@@ -331,7 +331,7 @@ func main() {
 		p.Use(mutationRateLimit)
 		p.Use(rbac.Middleware(reg))
 
-		handlers.MountResources(p, reg)
+		handlers.MountResources(p, reg, store)
 		handlers.MountFleet(p, reg, store)
 		handlers.MountNamespaces(p, reg)
 		handlers.MountPodEvents(p, reg)
