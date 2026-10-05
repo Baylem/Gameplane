@@ -112,6 +112,92 @@ describe("ServerActionsCard", () => {
     );
   });
 
+  describe("currentFrom", () => {
+    const difficultyAction: ServerActionDecl = {
+      id: "set-difficulty",
+      displayName: "Set difficulty",
+      params: [
+        {
+          name: "level",
+          displayName: "Difficulty",
+          type: "enum",
+          enum: ["peaceful", "easy", "normal", "hard"],
+          default: "normal",
+          required: true,
+          currentFrom: "difficulty",
+        },
+      ],
+    };
+
+    // routeStatus layers a /servers/s1/status answer over routeFetch.
+    function routeStatus(readings: unknown) {
+      const base = fetchMock.getMockImplementation();
+      fetchMock.mockImplementation((url: string, opts?: { method?: string; body?: string }) =>
+        url.endsWith("/servers/s1/status")
+          ? Promise.resolve(jsonRes(readings))
+          : base?.(url, opts),
+      );
+    }
+
+    it("pre-fills an enum param from its status metric, matching case-insensitively", async () => {
+      const runs: RunCall[] = [];
+      routeFetch("operator", runs);
+      routeStatus([{ id: "difficulty", value: "Easy" }]);
+      renderWithQuery(<ServerActionsCard name="s1" tmpl={tmpl([difficultyAction])} />);
+      const open = await screen.findByRole("button", { name: /set difficulty/i });
+      await waitFor(() => expect(open).not.toBeDisabled());
+      fireEvent.click(open);
+
+      // The Select trigger is a button named by its label (see the enum test above).
+      const trigger = screen.getByRole("button", { name: /difficulty/i });
+      await waitFor(() => expect(trigger).toHaveTextContent("easy"));
+      fireEvent.click(screen.getByRole("button", { name: "Run" }));
+      await waitFor(() =>
+        expect(runs).toEqual([{ id: "set-difficulty", params: { level: "easy" } }]),
+      );
+    });
+
+    it("keeps the user's choice over the live reading", async () => {
+      const runs: RunCall[] = [];
+      routeFetch("operator", runs);
+      routeStatus([{ id: "difficulty", value: "Easy" }]);
+      renderWithQuery(<ServerActionsCard name="s1" tmpl={tmpl([difficultyAction])} />);
+      const open = await screen.findByRole("button", { name: /set difficulty/i });
+      await waitFor(() => expect(open).not.toBeDisabled());
+      fireEvent.click(open);
+
+      const trigger = screen.getByRole("button", { name: /difficulty/i });
+      await waitFor(() => expect(trigger).toHaveTextContent("easy"));
+      fireEvent.click(trigger);
+      fireEvent.click(await screen.findByRole("option", { name: "hard" }));
+      await waitFor(() => expect(trigger).toHaveTextContent("hard"));
+      fireEvent.click(screen.getByRole("button", { name: "Run" }));
+      await waitFor(() =>
+        expect(runs).toEqual([{ id: "set-difficulty", params: { level: "hard" } }]),
+      );
+    });
+
+    it("falls back to the default when the reading matches no option", async () => {
+      const runs: RunCall[] = [];
+      routeFetch("operator", runs);
+      routeStatus([{ id: "difficulty", value: "Extreme" }]);
+      renderWithQuery(<ServerActionsCard name="s1" tmpl={tmpl([difficultyAction])} />);
+      await waitFor(() =>
+        expect(
+          fetchMock.mock.calls.some(([u]) => String(u).endsWith("/servers/s1/status")),
+        ).toBe(true),
+      );
+      const open = await screen.findByRole("button", { name: /set difficulty/i });
+      await waitFor(() => expect(open).not.toBeDisabled());
+      fireEvent.click(open);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Run" }));
+      await waitFor(() =>
+        expect(runs).toEqual([{ id: "set-difficulty", params: { level: "normal" } }]),
+      );
+    });
+  });
+
   it("disables actions for a viewer", async () => {
     routeFetch("viewer", []);
     renderWithQuery(
