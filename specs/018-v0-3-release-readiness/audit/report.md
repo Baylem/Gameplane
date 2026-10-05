@@ -6,11 +6,12 @@ Built from the audit records at the end of the audit (T066). Readable cold in un
 
 ## Decision
 
-Not decided. This section is the maintainer's (T070): name, date and go/no-go go here.
+**Go**, with the open criteria accepted as known risk (maintainer decision, T070).
 
-- Go/no-go: _pending_
-- Maintainer: _pending_
-- Date: _pending_
+- Go/no-go: **go**
+- Maintainer: valgulnecron
+- Date: 2026-10-05
+- Accepted risk: the release criteria marked Not met / Partially below (RC-01, RC-03..RC-08) are not blocking for v0.3.0 by this decision; the gaps stay listed under [Not live-verified](#not-live-verified) and in the release notes. The cold read ([evidence/cold-read.md](evidence/cold-read.md)) recommended no-go; the maintainer chose go.
 
 ## Release criteria
 
