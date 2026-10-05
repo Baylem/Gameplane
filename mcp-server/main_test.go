@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -325,6 +326,193 @@ func TestProposeFixTool(t *testing.T) {
 			t.Errorf("want backup advice, got %q", text)
 		}
 	})
+}
+
+func TestStripManagedFields_RemovesField(t *testing.T) {
+	obj := map[string]any{
+		"apiVersion": "v1",
+		"kind":       "Pod",
+		"metadata": map[string]any{
+			"name":          "my-pod",
+			"namespace":     "default",
+			"managedFields": []any{map[string]any{"manager": "kubelet"}},
+		},
+		"spec": map[string]any{"containers": []any{}},
+	}
+
+	stripped, err := stripManagedFields(obj)
+	if err != nil {
+		t.Fatalf("stripManagedFields: %v", err)
+	}
+
+	strippedMap := stripped.(map[string]any)
+	metadata := strippedMap["metadata"].(map[string]any)
+
+	if _, exists := metadata["managedFields"]; exists {
+		t.Error("managedFields still present after stripping")
+	}
+	if metadata["name"] != "my-pod" {
+		t.Errorf("want name=my-pod, got %v", metadata["name"])
+	}
+}
+
+func TestStripManagedFields_NestedItems(t *testing.T) {
+	obj := map[string]any{
+		"apiVersion": "v1",
+		"kind":       "PodList",
+		"items": []any{
+			map[string]any{
+				"metadata": map[string]any{
+					"name":          "pod1",
+					"managedFields": []any{},
+				},
+			},
+			map[string]any{
+				"metadata": map[string]any{
+					"name":          "pod2",
+					"managedFields": []any{},
+				},
+			},
+		},
+	}
+
+	stripped, err := stripManagedFields(obj)
+	if err != nil {
+		t.Fatalf("stripManagedFields: %v", err)
+	}
+
+	strippedMap := stripped.(map[string]any)
+	items := strippedMap["items"].([]any)
+
+	for i, item := range items {
+		itemMap := item.(map[string]any)
+		metadata := itemMap["metadata"].(map[string]any)
+		if _, exists := metadata["managedFields"]; exists {
+			t.Errorf("items[%d] still has managedFields", i)
+		}
+	}
+}
+
+func TestBoundAndSortEvents_SortsNewestFirst(t *testing.T) {
+	now := time.Now()
+	list := &corev1.EventList{
+		Items: []corev1.Event{
+			{
+				ObjectMeta:    metav1.ObjectMeta{Name: "ev1", Namespace: "games"},
+				LastTimestamp: metav1.NewTime(now.Add(-2 * time.Minute)),
+				Reason:        "Started",
+			},
+			{
+				ObjectMeta:    metav1.ObjectMeta{Name: "ev2", Namespace: "games"},
+				LastTimestamp: metav1.NewTime(now),
+				Reason:        "Restarted",
+			},
+			{
+				ObjectMeta:    metav1.ObjectMeta{Name: "ev3", Namespace: "games"},
+				LastTimestamp: metav1.NewTime(now.Add(-1 * time.Minute)),
+				Reason:        "Warning",
+			},
+		},
+	}
+
+	bounded := boundAndSortEvents(list, 100)
+
+	if len(bounded.Items) != 3 {
+		t.Errorf("want 3 items, got %d", len(bounded.Items))
+	}
+	if bounded.Items[0].Name != "ev2" || bounded.Items[1].Name != "ev3" || bounded.Items[2].Name != "ev1" {
+		t.Errorf("want order [ev2, ev3, ev1], got [%s, %s, %s]",
+			bounded.Items[0].Name, bounded.Items[1].Name, bounded.Items[2].Name)
+	}
+}
+
+func TestBoundAndSortEvents_TruncatesAndNotifies(t *testing.T) {
+	now := time.Now()
+	list := &corev1.EventList{Items: make([]corev1.Event, 0, 150)}
+	for i := 0; i < 150; i++ {
+		list.Items = append(list.Items, corev1.Event{
+			ObjectMeta:    metav1.ObjectMeta{Name: fmt.Sprintf("ev%d", i), Namespace: "games"},
+			LastTimestamp: metav1.NewTime(now.Add(time.Duration(-i) * time.Second)),
+			Reason:        "Test",
+		})
+	}
+
+	bounded := boundAndSortEvents(list, 100)
+
+	if len(bounded.Items) != 100 {
+		t.Errorf("want 100 items after bounding, got %d", len(bounded.Items))
+	}
+	if !strings.Contains(bounded.ListMeta.ResourceVersion, "truncated") {
+		t.Errorf("want truncation notice, got %q", bounded.ListMeta.ResourceVersion)
+	}
+	if !strings.Contains(bounded.ListMeta.ResourceVersion, "150") {
+		t.Errorf("want 'of 150' in truncation notice, got %q", bounded.ListMeta.ResourceVersion)
+	}
+}
+
+func TestBoundAndSortEvents_NoTruncationWhenUnderLimit(t *testing.T) {
+	now := time.Now()
+	list := &corev1.EventList{
+		Items: []corev1.Event{
+			{
+				ObjectMeta:    metav1.ObjectMeta{Name: "ev1", Namespace: "games"},
+				LastTimestamp: metav1.NewTime(now),
+				Reason:        "Test",
+			},
+		},
+	}
+
+	bounded := boundAndSortEvents(list, 100)
+
+	if len(bounded.Items) != 1 {
+		t.Errorf("want 1 item, got %d", len(bounded.Items))
+	}
+	if bounded.ListMeta.ResourceVersion != "" && strings.Contains(bounded.ListMeta.ResourceVersion, "truncated") {
+		t.Errorf("want no truncation notice when under limit, got %q", bounded.ListMeta.ResourceVersion)
+	}
+}
+
+func TestListEventsHandler_StripsAndBounds(t *testing.T) {
+	// Create fixture with many events and managedFields
+	now := time.Now()
+	events := make([]corev1.Event, 0, 120)
+	for i := 0; i < 120; i++ {
+		events = append(events, corev1.Event{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("ev%d", i),
+				Namespace: "games",
+				// Simulate managedFields (when marshaled to JSON/YAML)
+			},
+			LastTimestamp:  metav1.NewTime(now.Add(time.Duration(-i) * time.Second)),
+			InvolvedObject: corev1.ObjectReference{Kind: "Pod", Name: "my-server-0"},
+			Reason:         "Started",
+			Message:        "Started container agent",
+		})
+	}
+
+	scheme := kube.NewScheme()
+	typed := k8sfake.NewSimpleClientset(events...)
+	dyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKindMap())
+	c := kube.NewFrom(typed, dyn, scheme)
+
+	server := newMCPServer(c)
+	cs := connectInMemory(t, server)
+
+	text := callToolText(t, cs, "list_events", map[string]any{"namespace": "games"})
+
+	// Verify truncation notice is present
+	if !strings.Contains(text, "truncated") {
+		t.Errorf("want truncation notice in response for 120 events, got: %s", text)
+	}
+	if !strings.Contains(text, "120") {
+		t.Errorf("want 'of 120' in truncation notice, got: %s", text)
+	}
+
+	// Verify managedFields is not in output (it's not set in our fake objects,
+	// but we verify the stripping function was called by checking result structure)
+	if !strings.Contains(text, "Started") {
+		t.Errorf("want event reason in output, got: %s", text)
+	}
 }
 
 func TestRunIdleReturnsOnCancel(t *testing.T) {

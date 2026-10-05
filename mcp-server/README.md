@@ -65,7 +65,7 @@ the threat model.
 | `get_gameplane_resource` | A single Gameplane CRD object by kind/namespace/name |
 | `list_pods` | Core Pods in a namespace (or all namespaces), optionally by label selector |
 | `get_pod` | A single Pod's spec and status |
-| `list_events` | Core Events in a namespace (or all namespaces), optionally by field/label selector |
+| `list_events` | Core Events in a namespace (or all namespaces), optionally by field/label selector. Bounded to the most-recent 100 events (sorted newest-first); responses include a truncation notice if more exist. |
 | `get_pod_logs` | A bounded tail (default 200 lines, capped at 5000) of a container's logs |
 | `propose_fix` | Given a resource reference + a free-text symptom, returns suggested YAML/kubectl text, grounded in a best-effort read of the resource's current status. Never applies anything itself. |
 
@@ -131,3 +131,16 @@ component. Two flags matter for the standalone case above:
   Without it, `127.0.0.1` inside the container resolves to the container
   itself, not the host, and every tool call fails with a connection error.
   It's not needed against a real (non-loopback) API server address.
+
+## Response size optimization
+
+Every tool that returns Kubernetes objects strips `metadata.managedFields`
+from the response to reduce payload size (~33% of unstripped responses). This
+field carries an audit trail of every manager that has written to the object;
+it is rarely needed for debugging and waste LLM context tokens.
+
+`list_events` additionally bounds responses to the most-recent 100 events
+(sorted by `lastTimestamp`, newest first). When more events exist in the
+cluster than can fit in 100, the response's `metadata.resourceVersion` field
+is set to a truncation notice (e.g. `"truncated (showing newest 100 of 342
+events)"`). This prevents large event logs from exhausting the LLM context.

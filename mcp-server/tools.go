@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -112,7 +113,11 @@ func listResourcesHandler(c *kube.Client) mcp.ToolHandlerFor[listResourcesInput,
 		if err != nil {
 			return nil, nil, err
 		}
-		text, err := marshalIndent(list)
+		stripped, err := stripManagedFields(list)
+		if err != nil {
+			return nil, nil, fmt.Errorf("strip managedFields from %s list: %w", in.Kind, err)
+		}
+		text, err := marshalIndent(stripped)
 		if err != nil {
 			return nil, nil, fmt.Errorf("marshal %s list: %w", in.Kind, err)
 		}
@@ -134,7 +139,11 @@ func getResourceHandler(c *kube.Client) mcp.ToolHandlerFor[getResourceInput, any
 		if err != nil {
 			return nil, nil, err
 		}
-		text, err := marshalIndent(obj)
+		stripped, err := stripManagedFields(obj)
+		if err != nil {
+			return nil, nil, fmt.Errorf("strip managedFields from %s %s/%s: %w", in.Kind, in.Namespace, in.Name, err)
+		}
+		text, err := marshalIndent(stripped)
 		if err != nil {
 			return nil, nil, fmt.Errorf("marshal %s %s/%s: %w", in.Kind, in.Namespace, in.Name, err)
 		}
@@ -155,7 +164,11 @@ func listPodsHandler(c *kube.Client) mcp.ToolHandlerFor[listPodsInput, any] {
 		if err != nil {
 			return nil, nil, err
 		}
-		text, err := marshalIndent(list)
+		stripped, err := stripManagedFields(list)
+		if err != nil {
+			return nil, nil, fmt.Errorf("strip managedFields from pod list: %w", err)
+		}
+		text, err := marshalIndent(stripped)
 		if err != nil {
 			return nil, nil, fmt.Errorf("marshal pod list: %w", err)
 		}
@@ -176,7 +189,11 @@ func getPodHandler(c *kube.Client) mcp.ToolHandlerFor[getPodInput, any] {
 		if err != nil {
 			return nil, nil, err
 		}
-		text, err := marshalIndent(pod)
+		stripped, err := stripManagedFields(pod)
+		if err != nil {
+			return nil, nil, fmt.Errorf("strip managedFields from pod %s/%s: %w", in.Namespace, in.Name, err)
+		}
+		text, err := marshalIndent(stripped)
 		if err != nil {
 			return nil, nil, fmt.Errorf("marshal pod %s/%s: %w", in.Namespace, in.Name, err)
 		}
@@ -204,7 +221,15 @@ func listEventsHandler(c *kube.Client) mcp.ToolHandlerFor[listEventsInput, any] 
 				return nil, nil, err
 			}
 		}
-		text, err := marshalIndent(list)
+
+		// Sort events by lastTimestamp (newest first) and bound to 100 events
+		truncated := boundAndSortEvents(list, 100)
+
+		stripped, err := stripManagedFields(truncated)
+		if err != nil {
+			return nil, nil, fmt.Errorf("strip managedFields from event list: %w", err)
+		}
+		text, err := marshalIndent(stripped)
 		if err != nil {
 			return nil, nil, fmt.Errorf("marshal event list: %w", err)
 		}
@@ -232,6 +257,30 @@ func filterEventsByLabel(list *corev1.EventList, selector string) (*corev1.Event
 	out := list.DeepCopy()
 	out.Items = filtered
 	return out, nil
+}
+
+// boundAndSortEvents sorts events by lastTimestamp (newest first) and
+// bounds the list to maxEvents. If the list is truncated, it mutates
+// the list metadata to include a truncation notice in the resourceVersion
+// field, since MCP text responses don't have a structured place for metadata.
+// Returns a DeepCopy to avoid mutating the input.
+func boundAndSortEvents(list *corev1.EventList, maxEvents int) *corev1.EventList {
+	out := list.DeepCopy()
+
+	// Sort by lastTimestamp, newest first
+	sort.Slice(out.Items, func(i, j int) bool {
+		iTime := out.Items[i].LastTimestamp.Time
+		jTime := out.Items[j].LastTimestamp.Time
+		return iTime.After(jTime)
+	})
+
+	// Bound to maxEvents and set truncation notice if needed
+	if len(out.Items) > maxEvents {
+		out.Items = out.Items[:maxEvents]
+		out.ListMeta.ResourceVersion = fmt.Sprintf("truncated (showing newest %d of %d events)", maxEvents, len(list.Items))
+	}
+
+	return out
 }
 
 // --- get_pod_logs ---
@@ -282,4 +331,47 @@ func marshalIndent(v any) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+// stripManagedFields removes metadata.managedFields from an object to reduce
+// payload size. It works on any JSON-serializable value by round-tripping
+// through map[string]any.
+func stripManagedFields(v any) (any, error) {
+	// Marshal to JSON, unmarshal to map, strip, return the map
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var m any
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, err
+	}
+	// Recursively strip managedFields from this object and any nested lists/items
+	return stripManagedFieldsRecursive(m), nil
+}
+
+// stripManagedFieldsRecursive recursively strips metadata.managedFields from
+// any map or slice.
+func stripManagedFieldsRecursive(v any) any {
+	switch vv := v.(type) {
+	case map[string]any:
+		// Delete managedFields from metadata
+		if meta, ok := vv["metadata"].(map[string]any); ok {
+			delete(meta, "managedFields")
+		}
+		// Recurse into nested items
+		if items, ok := vv["items"].([]any); ok {
+			for i, item := range items {
+				items[i] = stripManagedFieldsRecursive(item)
+			}
+		}
+		return vv
+	case []any:
+		for i, item := range vv {
+			vv[i] = stripManagedFieldsRecursive(item)
+		}
+		return vv
+	default:
+		return v
+	}
 }
