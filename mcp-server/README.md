@@ -137,10 +137,10 @@ component. Two flags matter for the standalone case above:
 Every tool that returns Kubernetes objects strips `metadata.managedFields`
 from the response to reduce payload size (~33% of unstripped responses). This
 field carries an audit trail of every manager that has written to the object;
-it is rarely needed for debugging and waste LLM context tokens.
+it is rarely needed for debugging and wastes LLM context tokens.
 
 `list_events` additionally bounds responses to the most-recent 100 events
-(sorted by `lastTimestamp`, newest first). When more events exist in the
+(sorted by `lastTimestamp`, falling back to `eventTime`, newest first). When more events exist in the
 cluster than can fit in 100, the response's `metadata.resourceVersion` field
 is set to a truncation notice (e.g. `"truncated (showing newest 100 of 342
 events)"`). This prevents large event logs from exhausting the LLM context.

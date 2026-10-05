@@ -412,17 +412,22 @@ func TestBoundAndSortEvents_SortsNewestFirst(t *testing.T) {
 				LastTimestamp: metav1.NewTime(now.Add(-1 * time.Minute)),
 				Reason:        "Warning",
 			},
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "ev4", Namespace: "games"},
+				EventTime:  metav1.NewMicroTime(now.Add(-30 * time.Second)),
+				Reason:     "Info",
+			},
 		},
 	}
 
 	bounded := boundAndSortEvents(list, 100)
 
-	if len(bounded.Items) != 3 {
-		t.Errorf("want 3 items, got %d", len(bounded.Items))
+	if len(bounded.Items) != 4 {
+		t.Errorf("want 4 items, got %d", len(bounded.Items))
 	}
-	if bounded.Items[0].Name != "ev2" || bounded.Items[1].Name != "ev3" || bounded.Items[2].Name != "ev1" {
-		t.Errorf("want order [ev2, ev3, ev1], got [%s, %s, %s]",
-			bounded.Items[0].Name, bounded.Items[1].Name, bounded.Items[2].Name)
+	if bounded.Items[0].Name != "ev2" || bounded.Items[1].Name != "ev4" || bounded.Items[2].Name != "ev3" || bounded.Items[3].Name != "ev1" {
+		t.Errorf("want order [ev2, ev4, ev3, ev1], got [%s, %s, %s, %s]",
+			bounded.Items[0].Name, bounded.Items[1].Name, bounded.Items[2].Name, bounded.Items[3].Name)
 	}
 }
 

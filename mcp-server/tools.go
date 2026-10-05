@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -267,11 +268,10 @@ func filterEventsByLabel(list *corev1.EventList, selector string) (*corev1.Event
 func boundAndSortEvents(list *corev1.EventList, maxEvents int) *corev1.EventList {
 	out := list.DeepCopy()
 
-	// Sort by lastTimestamp, newest first
-	sort.Slice(out.Items, func(i, j int) bool {
-		iTime := out.Items[i].LastTimestamp.Time
-		jTime := out.Items[j].LastTimestamp.Time
-		return iTime.After(jTime)
+	// Sort newest first by lastTimestamp, falling back to eventTime, then
+	// creationTimestamp, for events that never set lastTimestamp.
+	sort.SliceStable(out.Items, func(i, j int) bool {
+		return eventTime(&out.Items[i]).After(eventTime(&out.Items[j]))
 	})
 
 	// Bound to maxEvents and set truncation notice if needed
@@ -281,6 +281,17 @@ func boundAndSortEvents(list *corev1.EventList, maxEvents int) *corev1.EventList
 	}
 
 	return out
+}
+
+// eventTime returns the most meaningful timestamp for an event.
+func eventTime(e *corev1.Event) time.Time {
+	if !e.LastTimestamp.IsZero() {
+		return e.LastTimestamp.Time
+	}
+	if !e.EventTime.IsZero() {
+		return e.EventTime.Time
+	}
+	return e.CreationTimestamp.Time
 }
 
 // --- get_pod_logs ---
