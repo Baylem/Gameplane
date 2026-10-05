@@ -997,26 +997,35 @@ func TestNetworkCapture_RetentionExpiresCompletedCapture(t *testing.T) {
 func TestNetworkCapture_RetentionTerminatesStuckRunningCapture(t *testing.T) {
 	ns := newNamespace(t)
 
+	// The manager's cache spans all namespaces (startMgr), so it also
+	// reconciles captures earlier tests left behind; count only calls for
+	// this test's namespace.
 	var mu sync.Mutex
 	stopCalls, deleteCalls, getCaptureStatusCalls := 0, 0, 0
 	stub := &StubSidecarClient{
-		stopCaptureFn: func(_ context.Context, _, _, _ string) error {
-			mu.Lock()
-			stopCalls++
-			mu.Unlock()
+		stopCaptureFn: func(_ context.Context, captureNS, _, _ string) error {
+			if captureNS == ns {
+				mu.Lock()
+				stopCalls++
+				mu.Unlock()
+			}
 			return nil
 		},
-		deleteCaptureFileFn: func(_ context.Context, _, _, _ string) error {
-			mu.Lock()
-			deleteCalls++
-			mu.Unlock()
+		deleteCaptureFileFn: func(_ context.Context, captureNS, _, _ string) error {
+			if captureNS == ns {
+				mu.Lock()
+				deleteCalls++
+				mu.Unlock()
+			}
 			return nil
 		},
 		// Count GetCaptureStatus calls to verify the retention safety net short-circuits.
-		getCaptureStatusFn: func(_ context.Context, _, _, _ string) (string, int64, int64, string, error) {
-			mu.Lock()
-			getCaptureStatusCalls++
-			mu.Unlock()
+		getCaptureStatusFn: func(_ context.Context, captureNS, _, _ string) (string, int64, int64, string, error) {
+			if captureNS == ns {
+				mu.Lock()
+				getCaptureStatusCalls++
+				mu.Unlock()
+			}
 			return "running", 0, 0, "", nil
 		},
 	}
