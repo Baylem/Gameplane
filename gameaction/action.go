@@ -6,6 +6,7 @@
 package gameaction
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -79,7 +80,7 @@ func validateParam(p Param, val string) (string, error) {
 		}
 		return "", fmt.Errorf("parameter %q must be one of the declared options", p.Name)
 	default:
-		if hasControl(val) {
+		if err := CheckText(val); err != nil {
 			return "", fmt.Errorf("parameter %q must not contain control characters", p.Name)
 		}
 		if utf8.RuneCountInString(val) > 512 {
@@ -89,20 +90,35 @@ func validateParam(p Param, val string) (string, error) {
 	}
 }
 
-// hasControl reports whether s contains an ASCII control character or a
-// shell/RCON metacharacter. Rejecting these stops a parameter value from
-// chaining a second console command into the rendered line.
-func hasControl(s string) bool {
+// ErrControlChar is returned by CheckText when the text contains an ASCII
+// control character (0x00-0x1f or 0x7f).
+var ErrControlChar = errors.New("contains a control character")
+
+// ErrMetaChar is returned by CheckText when the text contains a shell/RCON
+// metacharacter: ; & | $ ` \ " or '.
+var ErrMetaChar = errors.New("contains a command metacharacter")
+
+// CheckText is the shared input-character policy for free text that is
+// folded into a console command (action string params here; the agent's
+// player-moderation reason). It rejects ASCII control characters and
+// shell/RCON metacharacters so a value cannot chain a second console
+// command or break out of a quoted argument. Control characters take
+// precedence: when both kinds are present it returns ErrControlChar.
+// It does not enforce length; callers apply their own cap.
+func CheckText(s string) error {
+	meta := false
 	for _, r := range s {
 		if r < 0x20 || r == 0x7f {
-			return true
+			return ErrControlChar
 		}
-		// Reject shell/RCON metacharacters
 		if r == ';' || r == '&' || r == '|' || r == '$' || r == '`' || r == '\\' || r == '"' || r == '\'' {
-			return true
+			meta = true
 		}
 	}
-	return false
+	if meta {
+		return ErrMetaChar
+	}
+	return nil
 }
 
 // Command is a parsed action command template.

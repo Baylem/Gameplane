@@ -1,6 +1,7 @@
 package gameaction
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -146,5 +147,41 @@ func TestRender_MissingKey(t *testing.T) {
 	}
 	if _, err := cmd.Render(map[string]string{"message": "hi"}); err == nil {
 		t.Fatal("Render: want error referencing an undeclared key")
+	}
+}
+
+func TestCheckText(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want error
+	}{
+		{"empty", "", nil},
+		{"plain", "hello world", nil},
+		{"unicode", "café 你好", nil},
+		{"punctuation allowed", "x-ray (fly) [a/b]: 100% #1, ok? yes!", nil},
+		{"newline", "a\nb", ErrControlChar},
+		{"carriage return", "a\rb", ErrControlChar},
+		{"nul", "a\x00b", ErrControlChar},
+		{"esc", "a\x1bb", ErrControlChar},
+		{"tab", "a\tb", ErrControlChar},
+		{"del", "a\x7fb", ErrControlChar},
+		{"semicolon", "a;b", ErrMetaChar},
+		{"ampersand", "a&b", ErrMetaChar},
+		{"pipe", "a|b", ErrMetaChar},
+		{"dollar", "a$b", ErrMetaChar},
+		{"backtick", "a`b", ErrMetaChar},
+		{"backslash", `a\b`, ErrMetaChar},
+		{"double quote", `a"b`, ErrMetaChar},
+		{"single quote", "a'b", ErrMetaChar},
+		{"control wins over meta (meta first)", "a;b\nc", ErrControlChar},
+		{"control wins over meta (control first)", "a\nb;c", ErrControlChar},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := CheckText(tc.in); !errors.Is(got, tc.want) {
+				t.Errorf("CheckText(%q) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
 	}
 }

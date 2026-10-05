@@ -247,6 +247,8 @@ cert. Agent refuses plain-HTTP traffic when TLS material is present.
 Fallback: a shared-secret bearer token via `--api-token-file`. Only
 intended for local `kind` development where mTLS is overkill.
 
+**Console-injection guard.** Free text folded into an RCON/stdin command (module action string params and player kick/ban reasons) passes through `gameaction.CheckText`, which rejects ASCII control characters and the metacharacters ; & | $ ` \ " '. The agent applies it independently of the API.
+
 ## NetworkPolicies
 
 When `networkPolicies.enabled=true` (default) the chart applies:

@@ -27,6 +27,7 @@ import (
 	"github.com/ValgulNecron/gameplane/agent/internal/caps"
 	"github.com/ValgulNecron/gameplane/agent/internal/httpjson"
 	"github.com/ValgulNecron/gameplane/agent/internal/rcon"
+	"github.com/ValgulNecron/gameplane/gameaction"
 )
 
 // Rcon is the interface to the game's remote console.
@@ -311,17 +312,21 @@ func validateName(name string) error {
 	return nil
 }
 
-// sanitizeReason rejects control characters in a ban/kick reason before it
-// gets folded into an RCON command. This mirrors gameaction.hasControl (the
-// shared console-injection guard in the gameaction package, used by the
-// actions handler) rather than only checking CR/LF: a NUL byte, for
-// instance, truncates the null-terminated command a Source RCON server
-// parses server-side, silently dropping everything after it.
+// sanitizeReason validates a ban/kick reason before it is folded into an RCON
+// command, applying the same input-character policy as the shared
+// console-injection guard (gameaction.CheckText, used by the actions
+// handler): ASCII control characters and the shell/RCON metacharacters
+// ; & | $ ` \ " ' are rejected. Checking only CR/LF is not enough: a NUL byte,
+// for instance, truncates the null-terminated command a Source RCON server
+// parses server-side, silently dropping everything after it, and a quote or
+// separator can break out of a quoted template argument. The whole input is
+// validated first, then truncated to 256 bytes.
 func sanitizeReason(reason string) (string, error) {
-	for _, r := range reason {
-		if r < 0x20 || r == 0x7f {
-			return "", errors.New("reason must not contain control characters")
-		}
+	switch err := gameaction.CheckText(reason); {
+	case errors.Is(err, gameaction.ErrControlChar):
+		return "", errors.New("reason must not contain control characters")
+	case err != nil:
+		return "", errors.New("reason must not contain command separators, quotes or backslashes")
 	}
 	if len(reason) > 256 {
 		reason = reason[:256]
