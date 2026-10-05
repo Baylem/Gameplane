@@ -14,7 +14,8 @@ Status: every question below was **Settled by the maintainer on 2026-10-05** (in
 - **Q6 - Test sign-off. Settled 2026-10-05:** approved. `--retry-lock 10m` is added to the backup Job args, and the two envtest assertions that pin the old args are updated (CLAUDE.md rule 1 sign-off recorded here). The assertions changed, in `operator/internal/controller/backup_envtest_test.go`:
   - `TestBackup_CreatesJobWithExpectedSpec`: expected args `backup /data --json --tag gameplane` become `backup /data --json --retry-lock 10m --tag gameplane`.
   - `TestBackup_PassesTagsToRestic`: expected args gain the same `--retry-lock 10m` after `--json`.
-  No test is deleted or weakened. Audit result: no other existing test depends on Backup deletion being immediate (the retention envtests run only the schedule reconciler against Backups without the finalizer; the envtest namespaces have no namespace controller, so namespace cleanup never waits on a finalizer).
+  - `test/e2e/test_helpers_e2e_test.go` `waitBackupCount` no longer counts Backups with a `deletionTimestamp` (a trimmed Backup lingers `Terminating` while its forget Job runs), and `TestBackupSchedule_RetentionTrimsPast` waits for a trimmed Backup to be gone before asserting its snapshot left the repository.
+  No test is deleted or weakened. Audit result: apart from the e2e `waitBackupCount` helper above, no other existing test depends on Backup deletion being immediate (the retention envtests run only the schedule reconciler against Backups without the finalizer; the envtest namespaces have no namespace controller, so namespace cleanup never waits on a finalizer).
 - **Q7 - UI copy. Settled 2026-10-05:** no change to the Backup delete confirmation.
 - **Q8 - Existing orphans. Settled 2026-10-05:** no cleanup of snapshots already orphaned (including the two known ones in `gameplane-test-restic`). Not in this change.
 

@@ -167,7 +167,6 @@ the first place. Deleting a quiesced Backup goes through the same release: a
 finalizer holds the object until the unquiesce is sent, so `kubectl delete
 backup` can't drop it silently.
 
-
 ### Backup deletion and snapshot cleanup
 
 Deleting a restic-strategy `Backup` also removes its snapshot from the
@@ -189,8 +188,8 @@ garbage collection of a deleted GameServer's auto-schedule.
   backup Job. It needs no PVC, GameServer or GameTemplate, so it still works
   after the server is gone. The Job has a backoff limit of 3 and a 30-minute
   deadline, and waits up to 10 minutes for the repository lock
-  (`--retry-lock`); backup Jobs use the same `--retry-lock` so a backup does not
-  fail while a forget is pruning. A snapshot that is already gone counts as
+  (`--retry-lock`); backup and restore Jobs use the same `--retry-lock` so neither
+  fails while a forget is pruning. A snapshot that is already gone counts as
   success. The Backup stays `Terminating` for the duration (seconds to minutes),
   then goes; the outcome is recorded as a `SnapshotForgotten` condition and a
   `SnapshotForgotten` event.
