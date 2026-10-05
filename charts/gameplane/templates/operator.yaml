@@ -286,17 +286,26 @@ spec:
                    from a release predating them) so the operator's defaults
                    (2 / 86400) apply. Not `| default`: an explicit 0 backoff is
                    valid and must be honoured; a 0 deadline falls back. */}}
-            {{- if not (kindIs "invalid" .Values.operator.backupJobBackoffLimit) }}
-            {{- if lt (.Values.operator.backupJobBackoffLimit | int64) 0 }}
-            {{- fail "operator.backupJobBackoffLimit must be >= 0" }}
+            {{- /* Validate before `| int64`: it turns any non-integer (e.g. "abc",
+                   1.5) into 0 instead of failing. YAML numbers arrive as
+                   float64 (1000000 prints as 1e+06), so check by kind. */}}
+            {{- $backoff := .Values.operator.backupJobBackoffLimit }}
+            {{- if not (kindIs "invalid" $backoff) }}
+            {{- $whole := or (and (kindIs "float64" $backoff) (eq ($backoff | int64 | float64) $backoff)) (kindIs "int" $backoff) (kindIs "int64" $backoff) (and (kindIs "string" $backoff) (regexMatch "^[0-9]+$" $backoff)) }}
+            {{- if or (not $whole) (lt ($backoff | int64) 0) }}
+            {{- fail "operator.backupJobBackoffLimit must be an integer >= 0" }}
             {{- end }}
-            - --backup-job-backoff-limit={{ .Values.operator.backupJobBackoffLimit | int64 }}
+            - --backup-job-backoff-limit={{ $backoff | int64 }}
             {{- end }}
-            {{- if .Values.operator.backupJobActiveDeadlineSeconds }}
-            {{- if lt (.Values.operator.backupJobActiveDeadlineSeconds | int64) 0 }}
-            {{- fail "operator.backupJobActiveDeadlineSeconds must be > 0" }}
+            {{- $deadline := .Values.operator.backupJobActiveDeadlineSeconds }}
+            {{- if $deadline }}
+            {{- $whole := or (and (kindIs "float64" $deadline) (eq ($deadline | int64 | float64) $deadline)) (kindIs "int" $deadline) (kindIs "int64" $deadline) (and (kindIs "string" $deadline) (regexMatch "^[0-9]+$" $deadline)) }}
+            {{- if or (not $whole) (lt ($deadline | int64) 0) }}
+            {{- fail "operator.backupJobActiveDeadlineSeconds must be an integer > 0" }}
             {{- end }}
-            - --backup-job-active-deadline-seconds={{ .Values.operator.backupJobActiveDeadlineSeconds | int64 }}
+            {{- if gt ($deadline | int64) 0 }}
+            - --backup-job-active-deadline-seconds={{ $deadline | int64 }}
+            {{- end }}
             {{- end }}
             - --agent-ca-bundle=/etc/gameplane/agent-ca/ca.crt
             - --agent-client-cert=/etc/gameplane/agent-client/tls.crt
