@@ -359,4 +359,12 @@ Original question:
 
 Provisional values shipped by the live-test sweep fix: `BackoffLimit: 2` (same as the wipe Job) and `ActiveDeadlineSeconds: 86400` (24 h) on backup and restore Jobs, so a pod stuck in `CreateContainerConfigError` (e.g. its destination Secret was deleted) can no longer keep a Backup in flight forever. No existing requirement sets these numbers. Confirm or replace them (for example, scale the deadline with volume size or make it a Helm value).
 
+The values ship in #549 (merged 2026-10-05) and remain provisional pending the maintainer.
+
 (Added on master by the live-test sweep, #549, as "OD-005"; renumbered to OD-027 when merged into this branch because OD-005 is the upgrade-baseline decision.)
+
+### OD-028: API cluster-wide pod list (B15) — RESOLVED 2026-10-05
+
+The live-sweep fix for the Cluster page's per-node pod usage (B15, [F-285](audit/findings.md)) adds `list` on `pods` in all namespaces to the `<release>-api-read` ClusterRole. A pod list exposes the plain-text env values of every workload on the cluster to the API service account.
+
+Decision (maintainer, 2026-10-05, as recorded in #549): accept the RBAC widening. Shipped in #549 (merged 2026-10-05) and documented in `docs/security.md` under "API cluster-wide pod list".

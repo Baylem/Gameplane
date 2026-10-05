@@ -87,3 +87,56 @@ rc.1 is not installable (no operator image, no chart) and is not deployed. It is
 ### Test resources
 
 None created.
+
+## live-sweep 2026-10-04
+
+Informal live feature sweep of `master`, recorded after the fact from the descriptions of #548 and #549 (both merged 2026-10-05). It is not a formal round: per-row inventory outcomes (the T025-T033 format) were **not** recorded, so this sweep does not replace the formal per-row round, which is still pending rc.2.
+
+- **Target**: `master` at the time (not an RC tag; RC-TAG-2 is still pending).
+- **Cluster**: kubelab, 3-node k3s.
+- **Method**: browser-driven smoke test of the dashboard plus the admin bootstrap guide (`docs/install.md`), and a feature sweep (the PR text gives no more detail).
+- **Run by**: session [session_01NsN6bnAMRM9XQtrTQ6KC7U](https://claude.ai/code/session_01NsN6bnAMRM9XQtrTQ6KC7U).
+- **Rows run**: not recorded.
+- **Helm overrides vs baseline / DB snapshot location**: not recorded.
+- **Fixes**: [#548](https://github.com/ValgulNecron/Gameplane/pull/548) (events replay, server uptime, sign-in audit; merged 2026-10-05T00:19:26Z) and [#549](https://github.com/ValgulNecron/Gameplane/pull/549) (everything else fixed; merged 2026-10-05T01:22:53Z).
+- **New findings**: [F-273 to F-293](findings.md). Status `fixed-unverified` for the fixed ones (to be verified live on an RC), `open` for the deferred ones.
+- **Cleanup / test resources**: not recorded.
+
+### Bugs found
+
+#549 numbers the bugs B1 to B20. The PR texts name B1-B12, B15, B16 and B20; the four findings fixed by #548 carry no B-number there. B13, B14 and B17-B19 are not described in either PR, so they are not recorded here. Mapping of B2/B5 and B4/B12 to individual symptoms is not stated.
+
+| ID | Short description | Fix | Status | Finding |
+|----|-------------------|-----|--------|---------|
+| (none) | `/events` replayed every existing object as ADDED on connect | #548 | fixed-unverified | F-273 |
+| (none) | `status.startedAt` not refreshed after a pod restart (uptime showed age) | #548 | fixed-unverified | F-274 |
+| (none) | Successful sign-ins audited as `anonymous` | #548 | fixed-unverified | F-275 |
+| (none) | Stopped tab includes Failed servers (intentional, documented in `web/src/lib/servers.ts:15-16`) | none | not-a-defect | F-276 |
+| B1 | Uploaded files and mods unreadable by the game container (agent temp-file mode) | #549 | fixed-unverified | F-277 |
+| B10 | Logs tab did not replay recent history | #549 | fixed-unverified | F-278 |
+| B2, B5 | Backup/restore Jobs: template fsGroup, unbounded retries and deadline | #549 | fixed-unverified | F-279 |
+| B6 | Deleting a BackupSchedule cascade-deleted its backups | #549 | fixed-unverified | F-280 |
+| B8 | Server not restarted after a world wipe | #549 | fixed-unverified | F-281 |
+| B20 | Expected races logged as reconciler errors | #549 | fixed-unverified | F-282 |
+| B4, B12 | Argon2 login burst OOM-killed the API; user timestamps not RFC 3339 | #549 | fixed-unverified | F-283 |
+| B7 | Revoked share links not shown as Revoked | #549 | fixed-unverified | F-284 |
+| B15 | No per-node pod usage on the Cluster page (RBAC widening, see OD-028) | #549 | fixed-unverified | F-285 |
+| B16 | `instanceName` required | #549 | fixed-unverified | F-286 |
+| B9 | Hidden-tab event streams exhausted the 6-connections-per-origin limit | #549 | fixed-unverified | F-287 |
+| B11 | Small dashboard fixes (proxy HTML errors, game version, transfer audit label, next-backup time, backup repo Secret key, image placeholder) | #549 | fixed-unverified | F-288 |
+| B3 | Terraria and tModLoader TCP readiness probe | deferred | open | F-289 |
+
+### Deferred
+
+- **B3** (F-289): needs a separate `gameplane-module` PR plus an e2e update.
+- **Design-first items** (need a Pencil design PR before code): 21c "starting up" vs "waking up" copy on the public share page (F-290); the AdminSettings `instanceName` hint text (F-291); 18c Files folder selection/delete (F-292); 21h console history (F-293).
+
+### Not recorded
+
+- Per-row inventory outcomes (T025-T033 format). The formal per-row round is still pending rc.2, and T025-T034 stay unticked.
+- Evidence files, request/response logs and the rows that were run.
+- Whether #548/#549 coverage and CI results hold on an RC build: `fixed-unverified` until re-verified live.
+
+### Test resources
+
+Not recorded.

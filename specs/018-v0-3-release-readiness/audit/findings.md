@@ -278,6 +278,27 @@ Security findings that are not yet fixed are held off-git until their fix merges
 | F-270 | images/README.md trigger list omits `pull_request`, and its manual `docker build -f Dockerfile` commands fail from the repo root | images/ | review:images | S4 | open | | | |
 | F-271 | CI `dump-cluster-state` redaction covered only a fixed set of credential key names | .github/ | review:.github/actions | S3 | fixed-unverified | #545 | | held until #545 merged (OD-019); distinct from F-006/F-013, which fixed quoted/JSON values |
 | F-272 | CI `dump-cluster-state` interpolated action inputs directly into `run:` scripts | .github/ | review:.github/actions | S4 | fixed-unverified | #545 | | held until #545 merged (OD-019); no current caller passed untrusted input |
+| F-273 | `/events` opened every watch with an empty `resourceVersion`, so each existing object replayed as a synthetic ADDED | api, web | live:sweep-2026-10-04 | S3 | fixed-unverified | #548 | | S3: degraded (request flood, fake notifications), dashboard still usable. live sweep, no B-number recorded in the PR text |
+| F-274 | Server header showed the server's age after a pod restart because `status.startedAt` was set only once | operator | live:sweep-2026-10-04 | S4 | fixed-unverified | #548 | | S4: wrong display value only. live sweep, no B-number recorded in the PR text |
+| F-275 | Successful sign-ins were audited as `anonymous`, so Recent activity showed every attempt as "anonymous created" | api, web | live:sweep-2026-10-04 | S3 | fixed-unverified | #548 | | S3: audit trail degraded, no data loss. live sweep, no B-number recorded in the PR text |
+| F-276 | Servers page "Stopped" tab includes Failed servers | web | live:sweep-2026-10-04 | S4 | not-a-defect | | | Raised in the sweep and left unchanged by #548: `web/src/lib/servers.ts:15-16` documents and tests it as intentional. live sweep, no B-number recorded in the PR text |
+| F-277 | Agent temp-file writes (mode 0600) left uploaded files and mods unreadable by the game container | agent | live:sweep-2026-10-04 | S2 | fixed-unverified | #549 | | B1. S2: uploads and mods unusable by the game process; no workaround is stated in the PR (maintainer may lower to S3). A regression from 02e5c74b |
+| F-278 | Logs tab showed no recent game log history when opened | web, api, agent | live:sweep-2026-10-04 | S3 | fixed-unverified | #549 | | B10. S3: live logs worked, history was missing |
+| F-279 | Backup/restore Jobs ran without the template fsGroup and could retry or hang with no bound | operator | live:sweep-2026-10-04 | S2 | fixed-unverified | #549 | | B2, B5 (the PR text does not say which symptom is which). S2: backups/restores failing or stuck in flight forever (OD-027 covers the provisional limits) |
+| F-280 | Deleting a BackupSchedule cascade-deleted its backups | operator | live:sweep-2026-10-04 | S1 | fixed-unverified | #549 | | B6. S1 by R3: data loss (backups removed with their schedule) |
+| F-281 | World wipe left the server stopped | operator | live:sweep-2026-10-04 | S3 | fixed-unverified | #549 | | B8. S3: server can be started by hand |
+| F-282 | Operator logged expected races as reconciler errors | operator | live:sweep-2026-10-04 | S4 | fixed-unverified | #549 | | B20. S4: log noise |
+| F-283 | Unbounded concurrent argon2 hashing let a login burst OOM-kill the API; user timestamps were not RFC 3339 | api | live:sweep-2026-10-04 | S2 | fixed-unverified | #549 | | B4, B12 (one finding; the PR text does not map each to a symptom). S2 by R3: API crash under a login burst, no stated workaround; the timestamp part alone is S4 |
+| F-284 | Revoked share links did not show the Revoked chip | web | live:sweep-2026-10-04 | S4 | fixed-unverified | #549 | | B7. S4: cosmetic; design `xCJlu` already specifies the chip |
+| F-285 | Cluster page did not show per-node pod usage | web, api, charts/gameplane/ | live:sweep-2026-10-04 | S3 | fixed-unverified | #549 | | B15. S3: missing information, degraded view. Fix widens the `<release>-api-read` ClusterRole (pod list in all namespaces); the maintainer accepted it 2026-10-05 ([OD-028](../OPEN-DECISIONS.md#od-028-api-cluster-wide-pod-list-b15--resolved-2026-10-05)); docs/security.md "API cluster-wide pod list" |
+| F-286 | `instanceName` was required in AdminSettings | api, web | live:sweep-2026-10-04 | S4 | fixed-unverified | #549 | | B16. S4: validation strictness |
+| F-287 | Event streams in hidden tabs exhausted the browser's 6-connections-per-origin limit | web | live:sweep-2026-10-04 | S3 | fixed-unverified | #549 | | B9. S3: many open tabs starve requests; closing tabs is a workaround |
+| F-288 | Assorted small dashboard defects: proxy HTML error pages, game version, transfer audit label, next-backup time, backup repo Secret key, image placeholder | web | live:sweep-2026-10-04 | S4 | fixed-unverified | #549 | | B11. S4: cosmetic/wording, bundled as one commit in the PR |
+| F-289 | Terraria and tModLoader servers lack a TCP readiness probe | modules/ | live:sweep-2026-10-04 | S3 | open |  | | B3. Deferred by #549: needs a separate `gameplane-module` PR plus an e2e update. Severity provisional: S3 (details of the symptom are not in the PR text) |
+| F-290 | Public share page: "starting up" vs "waking up" copy (item 21c) | web | live:sweep-2026-10-04 | S4 | open |  | | Item 21c. Design-first: needs a Pencil design PR before any code (CLAUDE.md core rule 1). S4: wording |
+| F-291 | AdminSettings `instanceName` hint text | web | live:sweep-2026-10-04 | S4 | open |  | | Design-first item deferred by #549 (companion to B16). S4: wording |
+| F-292 | Files tab: folder selection and delete (item 18c) | web | live:sweep-2026-10-04 | S3 | open |  | | Item 18c. Design-first: needs a Pencil design PR before any code. Severity provisional (the PR text gives no detail) |
+| F-293 | Console history (item 21h) | web | live:sweep-2026-10-04 | S3 | open |  | | Item 21h. Design-first: needs a Pencil design PR before any code. Severity provisional (the PR text gives no detail) |
 
 ## Details
 
@@ -4109,3 +4130,257 @@ elsewhere in the operator, but no reconciler ever sets either one.
 **Actual (before #545):** Inputs were expanded into the script text. Every caller in `ci.yaml` passed a literal or a job `env` value, so nothing was reachable from untrusted input; this is hardening. #545 passes them as `DUMP_*` env vars.
 
 **Evidence:** [evidence/review-github-actions/verification.md](evidence/review-github-actions/verification.md); fix #545.
+
+### F-273
+
+**Repro / observation**
+1. Loading the dashboard on a cluster with 30 GameTemplates fired about 30 `GET /templates` (176 KB each) in about 5 s and filled the bell with "9+" fake `added template ...` notifications.
+2. Source: the description of [#548](https://github.com/ValgulNecron/Gameplane/pull/548); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** The events stream starts from the collection's current state and reports only new changes.
+
+**Actual:** The API server replayed every existing object as ADDED on each connect. #548 watches from the list's current `resourceVersion` (`Limit: 1` list) and coalesces SSE-driven invalidations per query key (500 ms).
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/548](https://github.com/ValgulNecron/Gameplane/pull/548) (PR description and commit list).
+
+### F-274
+
+**Repro / observation**
+1. After a pod restart or recreation the header still showed the server's age ("up 13d").
+2. Source: the description of [#548](https://github.com/ValgulNecron/Gameplane/pull/548); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** `status.startedAt` follows the current start of the `game` container.
+
+**Actual:** `startedAt` was set only the first time a server reached Running. #548 follows the `game` container's `Running.StartedAt` while Running, falling back to set-once when the pod can't be read.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/548](https://github.com/ValgulNecron/Gameplane/pull/548) (PR description and commit list).
+
+### F-275
+
+**Repro / observation**
+1. Recent activity on the dashboard rendered every login attempt as "anonymous created".
+2. Source: the description of [#548](https://github.com/ValgulNecron/Gameplane/pull/548); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Successful logins are attributed to the user; failed attempts stay anonymous so attempted usernames are not recorded.
+
+**Actual:** Successful logins were audited as `anonymous`. #548 records the user through `auth.SetActor` and the dashboard says "<user> signed in" / "<actor> failed to sign in".
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/548](https://github.com/ValgulNecron/Gameplane/pull/548) (PR description and commit list).
+
+### F-276
+
+**Repro / observation**
+1. The Servers page's Stopped tab lists Failed servers.
+2. Source: the description of [#548](https://github.com/ValgulNecron/Gameplane/pull/548); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** As documented in `web/src/lib/servers.ts:15-16`.
+
+**Actual:** Matches the documented, tested behaviour. #548 did not change it.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/548](https://github.com/ValgulNecron/Gameplane/pull/548) (PR description and commit list).
+
+**Justification:** #548 ("Not changed") states the Stopped tab including Failed servers is documented and tested as intentional in `web/src/lib/servers.ts:15-16` (`countByState`: "stopped" folds in Suspended and Failed).
+
+### F-277
+
+**Repro / observation**
+1. Files and mods uploaded through the agent could not be read by the game container.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Uploads and mods are group-readable by the game container.
+
+**Actual:** Temp files were written 0600 and renamed into place. #549 chmods them to the target mode before the rename; a follow-up keeps the target's mode when an upload replaces a symlink.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-278
+
+**Repro / observation**
+1. Opening the Logs tab did not replay recent log history.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** The tab replays recent history, then follows live.
+
+**Actual:** #549: the tab requests `?tail=500`; the API forwards only the allow-listed `from` and `tail` keys; the agent validates `tail`, caps it at 20000, bounds replay by bytes and does not replay again after a rotation.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-279
+
+**Repro / observation**
+1. restic backup/restore Jobs did not run with the GameTemplate fsGroup (the PR text gives no further symptom), and a Job stuck (for example `CreateContainerConfigError` after its destination Secret was deleted) kept a Backup in flight indefinitely.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Jobs run with the GameTemplate fsGroup, retries are bounded, and only a real failure is permanent.
+
+**Actual:** #549: restic Jobs use the template fsGroup (fallback 65532), get `BackoffLimit: 2` and `ActiveDeadlineSeconds: 86400`, and only `Failed=True` counts as permanent failure. The limits are provisional ([OD-027](../OPEN-DECISIONS.md)).
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-280
+
+**Repro / observation**
+1. Deleting a BackupSchedule removed the Backups it had created, through the ownerReference.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Backups survive their schedule.
+
+**Actual:** #549 drops the ownerReference; the `backup-schedule` label still tracks the backups.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-281
+
+**Repro / observation**
+1. After a world wipe the server did not come back.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** The server restarts once the wipe finishes.
+
+**Actual:** #549: the wipe waits for the StatefulSet to report 0 replicas (and for the game Pod to be gone) and `ackWipe` sets `spec.suspend=false`.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-282
+
+**Repro / observation**
+1. Module finalize on an already-gone object and StatefulSet update conflicts were logged as errors.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Expected races are ignored or requeued quietly.
+
+**Actual:** #549: module finalize ignores NotFound; StatefulSet update conflicts requeue quietly. The new `IsConflict` branch in `gameserver_controller.go` has no test (stated in the PR).
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-283
+
+**Repro / observation**
+1. A burst of logins OOM-killed the 256 MiB API pod, and user timestamps came back in a non-RFC 3339 form.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Hashing concurrency is bounded and timestamps are RFC 3339.
+
+**Actual:** #549: a 2-slot weighted semaphore bounds argon2id hashing (honours the request context, keeps timing parity) and user timestamps are normalized to RFC 3339 (`TestUsers_FetchByIDReturnsRFC3339`).
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-284
+
+**Repro / observation**
+1. Revoked share links were not labelled Revoked.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Revoked links show the Revoked chip, as in design `xCJlu`.
+
+**Actual:** #549 shows the Revoked chip.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-285
+
+**Repro / observation**
+1. The Cluster page had no per-node pod counts.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Per-node pod usage is reported.
+
+**Actual:** #549 reports per-node pod usage (paged and cached in a follow-up commit), with the RBAC widening described in the note.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-286
+
+**Repro / observation**
+1. An empty `instanceName` was rejected.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** `instanceName` is optional.
+
+**Actual:** #549 makes it optional (`config_validators_test.go` updated: empty is now valid). The hint text in AdminSettings is deferred (see the design-first finding below).
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-287
+
+**Repro / observation**
+1. With many dashboard tabs open, EventSource connections used up the per-origin limit of 6.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Hidden tabs release their stream.
+
+**Actual:** #549: hidden tabs close their EventSource and reconnect when visible.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-288
+
+**Repro / observation**
+1. Several small display defects seen in the sweep (proxy HTML error pages shown raw; issues with the game version, transfer audit label, next-backup time, backup repo Secret key and image placeholder).
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Each shows the correct value.
+
+**Actual:** #549 (`fix(web): small dashboard fixes from the live sweep`): proxy HTML error pages show their short status; the other items are corrected. The PR text does not describe each wrong value.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-289
+
+**Repro / observation**
+1. Raised in the live sweep as B3; the PR text gives no further symptom.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Terraria and tModLoader templates declare a TCP readiness probe.
+
+**Actual:** Not fixed; deferred by #549 to a `gameplane-module` PR and an e2e update.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-290
+
+**Repro / observation**
+1. Deferred by #549 as a design-first item.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Distinct "starting up" and "waking up" copy on the public share page.
+
+**Actual:** Not changed; waiting on a design PR.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-291
+
+**Repro / observation**
+1. Deferred by #549 as a design-first item.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** AdminSettings shows a hint that `instanceName` is optional.
+
+**Actual:** Not changed; waiting on a design PR.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-292
+
+**Repro / observation**
+1. Deferred by #549 as a design-first item.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Folder selection and delete in the Files tab, as designed.
+
+**Actual:** Not changed; waiting on a design PR.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
+
+### F-293
+
+**Repro / observation**
+1. Deferred by #549 as a design-first item.
+2. Source: the description of [#549](https://github.com/ValgulNecron/Gameplane/pull/549); the sweep did not record per-row evidence (see [rounds.md](rounds.md#live-sweep-2026-10-04)).
+
+**Expected:** Console history, as designed.
+
+**Actual:** Not changed; waiting on a design PR.
+
+**Evidence:** [https://github.com/ValgulNecron/Gameplane/pull/549](https://github.com/ValgulNecron/Gameplane/pull/549) (PR description and commit list).
