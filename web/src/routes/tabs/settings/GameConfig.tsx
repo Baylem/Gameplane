@@ -14,7 +14,7 @@ const INVALID_CONFIG_PREFIX = "invalid config:";
 // GameConfigSection edits spec.config from the template's configSchema. Unset
 // key = template default (or auto). Only non-default values are written, so a
 // later template default change still flows. Password values are write-only:
-// the API returns a marker for a stored password; the marker stays in the
+// the API returns a marker for a stored password (or for any key it cannot classify); the marker stays in the
 // draft until the user types, and the PUT then keeps the stored value.
 export function GameConfigSection({ draft, onChange, template, onValidityChange }: SectionProps) {
   const access = useResourceAccess();
@@ -31,12 +31,13 @@ export function GameConfigSection({ draft, onChange, template, onValidityChange 
     onValidityChange?.(errors.length === 0);
   }, [errors, onValidityChange]);
 
-  // Names of password fields the API has reported as stored. Emptying a
-  // password input the user had started typing in returns to "unchanged".
+  // Names of fields the API has reported as the redaction marker (stored
+  // passwords, or every key when the API could not read the template).
+  // Emptying an input the user had started typing in returns to "unchanged".
   const storedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     for (const f of schema) {
-      if (f.type === "password" && values[f.name] === CONFIG_REDACTED_MARKER) {
+      if (values[f.name] === CONFIG_REDACTED_MARKER) {
         storedRef.current.add(f.name);
       }
     }
@@ -58,9 +59,11 @@ export function GameConfigSection({ draft, onChange, template, onValidityChange 
   const setValue = (name: string, value: string) => {
     const field = schema.find((f) => f.name === name);
     const next = { ...values };
-    if (field?.type === "password" && value === "") {
-      if (storedRef.current.has(name)) next[name] = CONFIG_REDACTED_MARKER;
-      else delete next[name];
+    if (value === "" && storedRef.current.has(name)) {
+      // Emptied a field the API reported as the marker: back to "unchanged".
+      next[name] = CONFIG_REDACTED_MARKER;
+    } else if (field?.type === "password" && value === "") {
+      delete next[name];
     } else if (value === (field?.default ?? "")) {
       // Equal to the template default (or empty with no default): unset.
       delete next[name];

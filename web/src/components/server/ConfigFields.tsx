@@ -14,6 +14,10 @@ import { CONFIG_REDACTED_MARKER, type ConfigField } from "@/lib/validation";
 export type ConfigFieldVariant = "wizard" | "settings";
 
 export const STORED_PASSWORD_PLACEHOLDER = "Unchanged — type to replace";
+// Leading empty <option> labels for selects whose draft value is empty: unset
+// (no value, no default) or reported by the API as the redaction marker.
+export const UNSET_OPTION_LABEL = "Select…";
+export const UNCHANGED_OPTION_LABEL = "Unchanged";
 
 const SELECT_BASE = "h-9 w-full rounded-md border border-border bg-surface px-3 text-sm";
 
@@ -41,9 +45,11 @@ export function ConfigFieldInput({
   const label = field.displayName ?? field.name;
   const settings = variant === "settings";
   const invalid = settings && error !== undefined && error !== "";
-  // Write-only: while the API reports a stored password (the redaction
-  // marker) the input is empty and the marker is never rendered.
-  const stored = settings && field.type === "password" && value === CONFIG_REDACTED_MARKER;
+  // While the API reports a stored value (the redaction marker: always for a
+  // password, and for every key when the API cannot read the template and
+  // redacts everything) the control is shown empty/"Unchanged" and the marker
+  // is never rendered, whatever the field type or variant.
+  const stored = value === CONFIG_REDACTED_MARKER;
 
   const common = {
     id,
@@ -54,13 +60,20 @@ export function ConfigFieldInput({
 
   let control: ReactNode;
   if (field.type === "enum") {
+    // The select always shows exactly what the draft holds: with no value and
+    // no default (or the marker) that is a leading empty option, not the first
+    // enum member.
+    const current = stored ? "" : (value ?? field.default ?? "");
     control = (
       <select
         {...common}
         className={cn(SELECT_BASE, invalid && "border-danger", disabled && "opacity-60")}
-        value={value ?? field.default ?? ""}
+        value={current}
         onChange={(e) => onChange(e.target.value)}
       >
+        {current === "" && (
+          <option value="">{stored ? UNCHANGED_OPTION_LABEL : UNSET_OPTION_LABEL}</option>
+        )}
         {field.enum?.map((v) => (
           <option key={v} value={v}>
             {v}
@@ -69,13 +82,20 @@ export function ConfigFieldInput({
       </select>
     );
   } else if (field.type === "bool") {
+    // An optional bool with no value/default reads "false" (unset is valid). A
+    // REQUIRED one has no implicit value: show the empty option so Save stays
+    // disabled until a real value is chosen (and choosing "false" fires onChange).
+    const current = stored ? "" : (value ?? field.default ?? (field.required ? "" : "false"));
     control = (
       <select
         {...common}
         className={cn(SELECT_BASE, invalid && "border-danger", disabled && "opacity-60")}
-        value={value ?? field.default ?? "false"}
+        value={current}
         onChange={(e) => onChange(e.target.value)}
       >
+        {current === "" && (
+          <option value="">{stored ? UNCHANGED_OPTION_LABEL : UNSET_OPTION_LABEL}</option>
+        )}
         <option value="true">true</option>
         <option value="false">false</option>
       </select>

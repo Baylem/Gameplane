@@ -241,3 +241,22 @@ describe("validateConfig value checks", () => {
     expect(errs[0].message).toBe(errs[0].text);
   });
 });
+
+describe("validateConfig redaction marker (any field type)", () => {
+  const schema: ConfigField[] = [
+    { name: "S", displayName: "Str", type: "string", required: true, minLength: 99 },
+    { name: "I", type: "int", min: 1, max: 5 },
+    { name: "E", type: "enum", enum: ["a", "b"], required: true },
+    { name: "B", type: "bool", required: true },
+  ];
+
+  it("treats the marker as unchanged for string, int, enum and bool, including required ones", () => {
+    const m = CONFIG_REDACTED_MARKER;
+    expect(validateConfig(schema, { S: m, I: m, E: m, B: m })).toEqual([]);
+  });
+
+  it("still reports a real invalid value next to marker-backed fields", () => {
+    const errs = validateConfig(schema, { S: CONFIG_REDACTED_MARKER, I: "9", E: CONFIG_REDACTED_MARKER, B: CONFIG_REDACTED_MARKER });
+    expect(errs.map((e) => e.name)).toEqual(["I"]);
+  });
+});

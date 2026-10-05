@@ -197,3 +197,72 @@ describe("GameConfigSection", () => {
     expect(screen.getByText("This template has no configurable settings.")).toBeInTheDocument();
   });
 });
+
+describe("GameConfigSection redaction marker for any field type", () => {
+  it("masks a marker on every field type, keeps it in the draft, and stays valid", () => {
+    const spy = vi.fn();
+    const onValidity = vi.fn();
+    const { container } = renderWithQuery(
+      <Harness
+        initial={server({ WORLD_NAME: CONFIG_REDACTED_MARKER, DIFFICULTY: CONFIG_REDACTED_MARKER, MAX_PLAYERS: CONFIG_REDACTED_MARKER, PVP: CONFIG_REDACTED_MARKER, MOTD: CONFIG_REDACTED_MARKER })}
+        spy={spy}
+        onValidity={onValidity}
+      />,
+    );
+    expect(container.innerHTML).not.toContain(CONFIG_REDACTED_MARKER);
+    expect(screen.getByLabelText(/World name/)).toHaveValue("");
+    expect(screen.getByLabelText(/Max players/)).toHaveValue("");
+    expect(screen.getByLabelText(/MOTD/)).toHaveValue("");
+    expect(screen.getByLabelText(/Difficulty/)).toHaveValue("");
+    expect(screen.getByLabelText(/PvP/)).toHaveValue("");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(onValidity).toHaveBeenLastCalledWith(true);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("emptying a marker-backed non-password field restores the marker; typing replaces it", () => {
+    const spy = vi.fn();
+    renderWithQuery(<Harness initial={server({ MOTD: CONFIG_REDACTED_MARKER, WORLD_NAME: CONFIG_REDACTED_MARKER })} spy={spy} />);
+    fireEvent.change(screen.getByLabelText(/MOTD/), { target: { value: "hello" } });
+    expect(spy.mock.calls.at(-1)?.[0].spec.config).toEqual({ MOTD: "hello", WORLD_NAME: CONFIG_REDACTED_MARKER });
+    fireEvent.change(screen.getByLabelText(/MOTD/), { target: { value: "" } });
+    expect(spy.mock.calls.at(-1)?.[0].spec.config).toEqual({ MOTD: CONFIG_REDACTED_MARKER, WORLD_NAME: CONFIG_REDACTED_MARKER });
+    // a field with a default is also restored to the marker, not to an explicit empty value
+    fireEvent.change(screen.getByLabelText(/World name/), { target: { value: "w" } });
+    fireEvent.change(screen.getByLabelText(/World name/), { target: { value: "" } });
+    expect(spy.mock.calls.at(-1)?.[0].spec.config).toEqual({ MOTD: CONFIG_REDACTED_MARKER, WORLD_NAME: CONFIG_REDACTED_MARKER });
+  });
+
+  it("choosing a real option on a marker-backed select replaces the marker", () => {
+    const spy = vi.fn();
+    renderWithQuery(<Harness initial={server({ DIFFICULTY: CONFIG_REDACTED_MARKER, PVP: CONFIG_REDACTED_MARKER })} spy={spy} />);
+    fireEvent.change(screen.getByLabelText(/Difficulty/), { target: { value: "Expert" } });
+    expect(spy.mock.calls.at(-1)?.[0].spec.config).toEqual({ DIFFICULTY: "Expert", PVP: CONFIG_REDACTED_MARKER });
+    fireEvent.change(screen.getByLabelText(/PvP/), { target: { value: "false" } });
+    expect(spy.mock.calls.at(-1)?.[0].spec.config).toEqual({ DIFFICULTY: "Expert", PVP: "false" });
+  });
+});
+
+describe("GameConfigSection required bool and enum without a default", () => {
+  const REQUIRED: Schema = [
+    { name: "FLAG", displayName: "Flag", type: "bool", required: true },
+    { name: "MODE", displayName: "Mode", type: "enum", enum: ["a", "b"], required: true },
+  ];
+
+  it("shows the empty option, keeps Save disabled until real values are chosen, and choosing false sets the draft", () => {
+    const spy = vi.fn();
+    const onValidity = vi.fn();
+    renderWithQuery(<Harness initial={server()} template={tmpl(REQUIRED)} spy={spy} onValidity={onValidity} />);
+    expect(screen.getByLabelText(/Flag/)).toHaveValue("");
+    expect(screen.getByLabelText(/Mode/)).toHaveValue("");
+    expect(screen.getAllByRole("option", { name: "Select…" })).toHaveLength(2);
+    expect(onValidity).toHaveBeenLastCalledWith(false);
+    fireEvent.change(screen.getByLabelText(/Flag/), { target: { value: "false" } });
+    expect(spy.mock.calls.at(-1)?.[0].spec.config).toEqual({ FLAG: "false" });
+    expect(screen.getByLabelText(/Flag/)).toHaveValue("false");
+    expect(onValidity).toHaveBeenLastCalledWith(false);
+    fireEvent.change(screen.getByLabelText(/Mode/), { target: { value: "a" } });
+    expect(spy.mock.calls.at(-1)?.[0].spec.config).toEqual({ FLAG: "false", MODE: "a" });
+    expect(onValidity).toHaveBeenLastCalledWith(true);
+  });
+});

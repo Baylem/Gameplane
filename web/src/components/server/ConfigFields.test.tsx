@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import { ConfigFieldInput, ConfigFields, STORED_PASSWORD_PLACEHOLDER } from "./ConfigFields";
+import { ConfigFieldInput, ConfigFields, STORED_PASSWORD_PLACEHOLDER, UNCHANGED_OPTION_LABEL, UNSET_OPTION_LABEL } from "./ConfigFields";
 import { CONFIG_REDACTED_MARKER, type ConfigField } from "@/lib/validation";
 
 const enumField: ConfigField = { name: "DIFFICULTY", displayName: "Difficulty", type: "enum", enum: ["easy", "hard"], default: "easy" };
@@ -134,5 +134,78 @@ describe("ConfigFields", () => {
   it("defaults to the wizard variant and renders nothing for an empty schema", () => {
     const { container } = render(<ConfigFields schema={[]} values={{}} onChange={() => {}} />);
     expect(container.innerHTML).toBe("");
+  });
+});
+
+describe("ConfigFieldInput redaction marker and empty select option", () => {
+  const reqBool: ConfigField = { name: "FLAG", displayName: "Flag", type: "bool", required: true };
+  const reqEnum: ConfigField = { name: "MODE", displayName: "Mode", type: "enum", enum: ["a", "b"], required: true };
+  const optEnum: ConfigField = { name: "TIER", displayName: "Tier", type: "enum", enum: ["x", "y"] };
+
+  it.each([
+    ["string", { name: "S", displayName: "Str", type: "string" } as ConfigField],
+    ["int", { name: "I", displayName: "Int", type: "int", default: "16" } as ConfigField],
+  ])("masks the marker on a %s field in both variants", (_label, field) => {
+    for (const variant of ["wizard", "settings"] as const) {
+      const onChange = vi.fn();
+      const { container, unmount } = render(
+        <ConfigFieldInput field={field} value={CONFIG_REDACTED_MARKER} onChange={onChange} variant={variant} />,
+      );
+      const input = screen.getByRole("textbox");
+      expect(input).toHaveValue("");
+      expect(input).toHaveAttribute("placeholder", STORED_PASSWORD_PLACEHOLDER);
+      expect(container.innerHTML).not.toContain(CONFIG_REDACTED_MARKER);
+      fireEvent.change(input, { target: { value: "5" } });
+      expect(onChange).toHaveBeenCalledWith("5");
+      unmount();
+    }
+  });
+
+  it("masks the marker on enum and bool selects with an Unchanged option", () => {
+    for (const field of [enumField, boolField]) {
+      const onChange = vi.fn();
+      const { container, unmount } = render(
+        <ConfigFieldInput field={field} value={CONFIG_REDACTED_MARKER} onChange={onChange} variant="settings" />,
+      );
+      const select = screen.getByRole("combobox");
+      expect(select).toHaveValue("");
+      expect(screen.getByRole("option", { name: UNCHANGED_OPTION_LABEL })).toBeInTheDocument();
+      expect(container.innerHTML).not.toContain(CONFIG_REDACTED_MARKER);
+      fireEvent.change(select, { target: { value: field === enumField ? "hard" : "true" } });
+      expect(onChange).toHaveBeenCalledWith(field === enumField ? "hard" : "true");
+      unmount();
+    }
+  });
+
+  it("renders a required bool with no value or default as an empty option and fires onChange for false", () => {
+    const onChange = vi.fn();
+    render(<ConfigFieldInput field={reqBool} value={undefined} onChange={onChange} variant="settings" />);
+    const select = screen.getByLabelText(/Flag/);
+    expect(select).toHaveValue("");
+    expect(screen.getByRole("option", { name: UNSET_OPTION_LABEL })).toBeInTheDocument();
+    fireEvent.change(select, { target: { value: "false" } });
+    expect(onChange).toHaveBeenCalledWith("false");
+  });
+
+  it("renders an enum without value or default as an empty option, required or not", () => {
+    for (const field of [reqEnum, optEnum]) {
+      const onChange = vi.fn();
+      const { unmount } = render(<ConfigFieldInput field={field} value={undefined} onChange={onChange} />);
+      expect(screen.getByRole("combobox")).toHaveValue("");
+      expect(screen.getByRole("option", { name: UNSET_OPTION_LABEL })).toBeInTheDocument();
+      fireEvent.change(screen.getByRole("combobox"), { target: { value: field.enum?.[0] ?? "" } });
+      expect(onChange).toHaveBeenCalledWith(field.enum?.[0]);
+      unmount();
+    }
+  });
+
+  it("shows no empty option once a value or default exists", () => {
+    const { rerender } = render(<ConfigFieldInput field={reqEnum} value="b" onChange={() => {}} />);
+    expect(screen.queryByRole("option", { name: UNSET_OPTION_LABEL })).toBeNull();
+    rerender(<ConfigFieldInput field={reqBool} value="false" onChange={() => {}} />);
+    expect(screen.queryByRole("option", { name: UNSET_OPTION_LABEL })).toBeNull();
+    rerender(<ConfigFieldInput field={{ ...reqBool, default: "true" }} value={undefined} onChange={() => {}} />);
+    expect(screen.getByRole("combobox")).toHaveValue("true");
+    expect(screen.queryByRole("option", { name: UNSET_OPTION_LABEL })).toBeNull();
   });
 });

@@ -45,7 +45,7 @@ export interface ConfigError {
 }
 
 // CONFIG_REDACTED_MARKER is what the API sends instead of a stored
-// password-type spec.config value. Sending it back in a PUT keeps the stored
+// password-type spec.config value (or of any value when it cannot read the template). Sending it back in a PUT keeps the stored
 // value. It must never be rendered.
 export const CONFIG_REDACTED_MARKER = "__gameplane_redacted__";
 
@@ -95,8 +95,9 @@ export function validateConfig(
       continue;
     }
     if (provided === "") continue;
-    // A stored password reported by the API is unchanged: nothing to check.
-    if (field.type === "password" && provided === CONFIG_REDACTED_MARKER) continue;
+    // A value the API reported as the redaction marker is unchanged, whatever
+    // the field type: nothing to check.
+    if (provided === CONFIG_REDACTED_MARKER) continue;
     if (field.type === "enum" && field.enum && !field.enum.includes(provided)) {
       const message = `${label} must be one of: ${field.enum.join(", ")}`;
       errors.push({ name: field.name, message, text: message });
