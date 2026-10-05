@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { Outlet, useLocation, useMatches, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   Archive,
@@ -94,6 +94,7 @@ export function AppLayout() {
   const canViewInventory = registry?.items.some((item) => item.canViewInventory === true) === true;
   const canManageInfrastructure = can(me, "cluster:manage") || canViewInventory;
   const { pathname } = useLocation();
+  const matches = useMatches();
   const navigate = useNavigate();
   const [theme, setTheme, isCustomColorsActive] = useAppearance(me);
   // Below `lg`, the fixed sidebar becomes an off-canvas drawer toggled by
@@ -192,7 +193,12 @@ export function AppLayout() {
     },
   ];
 
-  const crumbs = buildCrumbs(pathname);
+  // The splat route under this layout (see router/tree.tsx) is the 404 page;
+  // its crumb is fixed instead of echoing the unknown URL segments.
+  const onNotFound = matches.some((m) => m.routeId.endsWith("$"));
+  const crumbs = onNotFound
+    ? [{ label: "gameplane", to: "/" }, { label: "Page not found" }]
+    : buildCrumbs(pathname);
   // Extract the last breadcrumb label as the mobile title
   const mobileTitle = crumbs.length > 0 ? crumbs[crumbs.length - 1].label : "";
   const centralManagement = ["/modules", "/users", "/admin", "/settings"].some(

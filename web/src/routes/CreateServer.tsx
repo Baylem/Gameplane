@@ -6,6 +6,7 @@ import { Button, Input, Alert, Select, Label, ListBox, ListBoxItem } from "@hero
 import { GameIcon } from "@/components/ui/GameIcon";
 import { ResourceInput } from "@/components/ui/ResourceInput";
 import { PortOverridesEditor } from "@/components/server/PortOverridesEditor";
+import { ConfigFields } from "@/components/server/ConfigFields";
 import { assignGameCodesForTemplates } from "@/lib/gameIcon";
 import { useFleetPlacements, type FleetPlacement } from "@/lib/fleet";
 import { serverLink } from "@/lib/resourceTarget";
@@ -19,6 +20,7 @@ import {
   isValidK8sName,
   isValidQuantity,
   isValidVersion,
+  maskPasswordConfig,
   validateConfig,
 } from "@/lib/validation";
 import { parseCpuQuantity, cpuCores, parseMemQuantity, memBytes } from "@/lib/quantity";
@@ -812,43 +814,13 @@ function Configure({ state, setState, caps }: { state: WizardState; setState: (s
       {fields.length > 0 && (
         <div className="space-y-3 pt-3">
           <div className="text-xs uppercase tracking-wide text-muted">Template configuration</div>
-          {fields.map((f) => (
-            <label key={f.name} className="space-y-1.5 block">
-              <div className="text-xs text-muted">{f.displayName ?? f.name}</div>
-              {f.type === "enum" ? (
-                <select
-                  className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
-                  value={state.config[f.name] ?? f.default ?? ""}
-                  onChange={(e) => setState({ ...state, config: { ...state.config, [f.name]: e.target.value } })}
-                >
-                  {f.enum?.map((v) => (
-                    <option key={v} value={v}>
-                      {v}
-                    </option>
-                  ))}
-                </select>
-              ) : f.type === "bool" ? (
-                <select
-                  className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
-                  value={state.config[f.name] ?? f.default ?? "false"}
-                  onChange={(e) => setState({ ...state, config: { ...state.config, [f.name]: e.target.value } })}
-                >
-                  <option value="true">true</option>
-                  <option value="false">false</option>
-                </select>
-              ) : (
-                <Input
-                  type={f.type === "password" ? "password" : "text"}
-                  value={state.config[f.name] ?? f.default ?? ""}
-                  placeholder={f.autoFromMemoryLimit
-                    ? `Auto: ${f.autoFromMemoryLimit.percent}% of the memory limit`
-                    : undefined}
-                  onChange={(e) => setState({ ...state, config: { ...state.config, [f.name]: e.target.value } })}
-                />
-              )}
-              {f.description && <span className="text-[11px] text-muted">{f.description}</span>}
-            </label>
-          ))}
+          <ConfigFields
+            schema={fields}
+            values={state.config}
+            onChange={(name, value) =>
+              setState({ ...state, config: { ...state.config, [name]: value } })
+            }
+          />
         </div>
       )}
     </div>
@@ -1283,7 +1255,7 @@ function Review({ state, onEdit, location }: { state: WizardState; onEdit: (key:
         <div className="pt-1">
           <div className="pb-1 text-xs uppercase text-muted">Template config</div>
           <pre className="max-h-64 overflow-auto rounded bg-surface p-3 font-mono text-xs scrollbar-thin">
-            {JSON.stringify(state.config, null, 2)}
+            {JSON.stringify(maskPasswordConfig(state.template?.spec.configSchema ?? [], state.config), null, 2)}
           </pre>
         </div>
       )}

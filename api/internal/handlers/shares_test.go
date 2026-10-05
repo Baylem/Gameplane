@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/ValgulNecron/gameplane/api/internal/auth"
 	"github.com/ValgulNecron/gameplane/api/internal/db"
@@ -1029,5 +1031,194 @@ func TestShareListIncludesRevokedStatus(t *testing.T) {
 	status, _ = shareReq(t, h, "GET", "/shares/"+token, nil, nil, "203.0.113.51:1")
 	if status != http.StatusNotFound {
 		t.Fatalf("resolve revoked token: status = %d, want 404", status)
+	}
+}
+
+// serverWithCreation returns a share-test server whose metadata carries the
+// given creationTimestamp, as a real apiserver object always does.
+func serverWithCreation(name string, ownerID int64, created time.Time) *unstructured.Unstructured {
+	obj := newShareTestServer(name, ownerID)
+	obj.SetCreationTimestamp(metav1.NewTime(created))
+	return obj
+}
+
+// TestShareLinkRejectedWhenServerRecreated verifies that a link minted for an
+// earlier GameServer does not resolve or start a later server that reuses the
+// name (links are keyed by name, not UID): both public paths return the
+// uniform 404. A server older than the link still resolves.
+func TestShareLinkRejectedWhenServerRecreated(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-recreated")
+	token, _, err := store.CreateShareLink(t.Context(), "local", "gameplane-games", "srv-recreated", ownerID, true, nil)
+	if err != nil {
+		t.Fatalf("CreateShareLink: %v", err)
+	}
+
+	// Control: server created an hour before the link, so the link is valid.
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(serverWithCreation("srv-recreated", ownerID, time.Now().Add(-time.Hour))))
+	h := mountSharesRouter(reg, store)
+	if status, body := shareReq(t, h, "GET", "/shares/"+token, nil, nil, "203.0.113.61:1"); status != http.StatusOK {
+		t.Fatalf("resolve against older server: status = %d, want 200; body=%s", status, body)
+	}
+
+	// The server was deleted and recreated after the link was minted.
+	reg2 := kube.NewRegistry("local")
+	reg2.Set("local", fakeKubeClient(serverWithCreation("srv-recreated", ownerID, time.Now().Add(time.Hour))))
+	h2 := mountSharesRouter(reg2, store)
+	status, body := shareReq(t, h2, "GET", "/shares/"+token, nil, nil, "203.0.113.62:1")
+	if status != http.StatusNotFound {
+		t.Fatalf("resolve against recreated server: status = %d, want 404; body=%s", status, body)
+	}
+	if !bytes.Equal(body, wantShareNotFoundBody) {
+		t.Fatalf("resolve against recreated server: body = %q, want %q", body, wantShareNotFoundBody)
+	}
+	status, body = shareReq(t, h2, "POST", "/shares/"+token+"/start", nil, nil, "203.0.113.63:1")
+	if status != http.StatusNotFound {
+		t.Fatalf("start against recreated server: status = %d, want 404; body=%s", status, body)
+	}
+	if !bytes.Equal(body, wantShareNotFoundBody) {
+		t.Fatalf("start against recreated server: body = %q, want %q", body, wantShareNotFoundBody)
+	}
+}
+
+// TestServerDeleteRevokesShareLinks verifies that DELETE /servers/{name}
+// revokes that server's share links, and only that server's.
+func TestServerDeleteRevokesShareLinks(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-delete-revoke")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(
+		newShareTestServer("srv-del", ownerID),
+		newShareTestServer("srv-keep", ownerID),
+	))
+	r := chi.NewRouter()
+	MountResources(r, reg, store)
+
+	delToken, _, err := store.CreateShareLink(t.Context(), "local", "gameplane-games", "srv-del", ownerID, false, nil)
+	if err != nil {
+		t.Fatalf("CreateShareLink srv-del: %v", err)
+	}
+	keepToken, _, err := store.CreateShareLink(t.Context(), "local", "gameplane-games", "srv-keep", ownerID, false, nil)
+	if err != nil {
+		t.Fatalf("CreateShareLink srv-keep: %v", err)
+	}
+
+	if status, body := shareReq(t, r, "DELETE", "/servers/srv-del", nil, nil, "203.0.113.64:1"); status != http.StatusNoContent {
+		t.Fatalf("delete status = %d, want 204; body=%s", status, body)
+	}
+
+	if _, err := store.LookupShareLink(t.Context(), delToken); !errors.Is(err, db.ErrShareLinkInvalid) {
+		t.Fatalf("LookupShareLink after delete = %v, want ErrShareLinkInvalid", err)
+	}
+	if _, err := store.LookupShareLink(t.Context(), keepToken); err != nil {
+		t.Fatalf("link of the other server must stay valid, got %v", err)
+	}
+}
+
+// serverWithUID is serverWithCreation plus a metadata.uid.
+func serverWithUID(name string, ownerID int64, created time.Time, uid string) *unstructured.Unstructured {
+	obj := serverWithCreation(name, ownerID, created)
+	obj.SetUID(types.UID(uid))
+	return obj
+}
+
+// shareStatusFor mints a link via CreateShareLinkForServer (serverUID may be
+// empty for a legacy-style link) and returns the GET /shares/{token} status
+// against a registry holding live.
+func shareStatusFor(t *testing.T, store *db.Store, ownerID int64, name, serverUID string, live *unstructured.Unstructured, addr string) int {
+	t.Helper()
+	token, _, err := store.CreateShareLinkForServer(t.Context(), "local", "gameplane-games", name, serverUID, ownerID, true, nil)
+	if err != nil {
+		t.Fatalf("CreateShareLinkForServer: %v", err)
+	}
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(live))
+	status, _ := shareReq(t, mountSharesRouter(reg, store), "GET", "/shares/"+token, nil, nil, addr)
+	return status
+}
+
+// TestShareLinkServerUIDMismatch404 covers the same-second delete+recreate:
+// the live server is OLDER than the link (timestamp check would pass) but has
+// a different UID, so both public paths must 404.
+func TestShareLinkServerUIDMismatch404(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-uid-mismatch")
+	token, _, err := store.CreateShareLinkForServer(t.Context(), "local", "gameplane-games", "srv-uid-mm", "uid-old", ownerID, true, nil)
+	if err != nil {
+		t.Fatalf("CreateShareLinkForServer: %v", err)
+	}
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(serverWithUID("srv-uid-mm", ownerID, time.Now().Add(-time.Hour), "uid-new")))
+	h := mountSharesRouter(reg, store)
+	status, body := shareReq(t, h, "GET", "/shares/"+token, nil, nil, "203.0.113.71:1")
+	if status != http.StatusNotFound || !bytes.Equal(body, wantShareNotFoundBody) {
+		t.Fatalf("resolve with UID mismatch: status=%d body=%q, want 404 %q", status, body, wantShareNotFoundBody)
+	}
+	status, body = shareReq(t, h, "POST", "/shares/"+token+"/start", nil, nil, "203.0.113.72:1")
+	if status != http.StatusNotFound || !bytes.Equal(body, wantShareNotFoundBody) {
+		t.Fatalf("start with UID mismatch: status=%d body=%q, want 404 %q", status, body, wantShareNotFoundBody)
+	}
+}
+
+// TestShareLinkServerUIDMatch200 verifies the UID is authoritative: a matching
+// UID resolves and starts even when the live server's creationTimestamp is
+// later than the link's created_at.
+func TestShareLinkServerUIDMatch200(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-uid-match")
+	token, _, err := store.CreateShareLinkForServer(t.Context(), "local", "gameplane-games", "srv-uid-ok", "uid-same", ownerID, true, nil)
+	if err != nil {
+		t.Fatalf("CreateShareLinkForServer: %v", err)
+	}
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(serverWithUID("srv-uid-ok", ownerID, time.Now().Add(time.Hour), "uid-same")))
+	h := mountSharesRouter(reg, store)
+	if status, body := shareReq(t, h, "GET", "/shares/"+token, nil, nil, "203.0.113.73:1"); status != http.StatusOK {
+		t.Fatalf("resolve with matching UID: status=%d body=%s, want 200", status, body)
+	}
+	if status, body := shareReq(t, h, "POST", "/shares/"+token+"/start", nil, nil, "203.0.113.74:1"); status != http.StatusAccepted {
+		t.Fatalf("start with matching UID: status=%d body=%s, want 202", status, body)
+	}
+}
+
+// TestShareLinkLegacyEmptyUIDUsesTimestamp verifies links without a stored
+// UID (pre-013) keep the creationTimestamp validation, and that an empty UID
+// never matches by itself: a live server that has a UID does not make a
+// legacy link pass when it is newer than the link.
+func TestShareLinkLegacyEmptyUIDUsesTimestamp(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-uid-legacy")
+
+	older := serverWithUID("srv-legacy-old", ownerID, time.Now().Add(-time.Hour), "uid-live")
+	if got := shareStatusFor(t, store, ownerID, "srv-legacy-old", "", older, "203.0.113.75:1"); got != http.StatusOK {
+		t.Fatalf("legacy link vs older server: status=%d, want 200", got)
+	}
+	newer := serverWithUID("srv-legacy-new", ownerID, time.Now().Add(time.Hour), "uid-live")
+	if got := shareStatusFor(t, store, ownerID, "srv-legacy-new", "", newer, "203.0.113.76:1"); got != http.StatusNotFound {
+		t.Fatalf("legacy link vs newer server: status=%d, want 404", got)
+	}
+}
+
+// TestShareCreateStoresServerUID verifies the create handler binds the link
+// to the live GameServer's UID.
+func TestShareCreateStoresServerUID(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-uid-create")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(serverWithUID("srv-uid-create", ownerID, time.Now().Add(-time.Hour), "uid-create")))
+	h := mountSharesRouter(reg, store)
+
+	status, body := shareReq(t, h, "POST", "/servers/srv-uid-create:shares?namespace=gameplane-games",
+		map[string]any{"neverExpires": true}, &auth.User{ID: ownerID, Role: "admin"}, "203.0.113.77:1")
+	if status != http.StatusOK {
+		t.Fatalf("create: status=%d body=%s", status, body)
+	}
+	links, err := store.ListShareLinks(t.Context(), "local", "gameplane-games", "srv-uid-create")
+	if err != nil {
+		t.Fatalf("ListShareLinks: %v", err)
+	}
+	if len(links) != 1 || links[0].ServerUID != "uid-create" {
+		t.Fatalf("links = %+v, want one link with ServerUID uid-create", links)
 	}
 }

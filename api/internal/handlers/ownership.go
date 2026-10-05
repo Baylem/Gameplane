@@ -366,5 +366,6 @@ func (h *ownershipHandler) getOwnedServers(w http.ResponseWriter, req *http.Requ
 		}
 	}
 
+	newConfigRuleCache(k).redactList(req.Context(), filtered)
 	writeJSON(w, filtered)
 }

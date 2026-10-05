@@ -38,7 +38,46 @@ export function defaultVersionId(template: GameTemplate | undefined): string | u
 
 export interface ConfigError {
   name: string;
+  // Full sentence for step-level summaries (the wizard shows the first one).
   message: string;
+  // Text for the inline message under the field (no field name prefix).
+  text: string;
+}
+
+// CONFIG_REDACTED_MARKER is what the API sends instead of a stored
+// password-type spec.config value (or of any value when it cannot read the template). Sending it back in a PUT keeps the stored
+// value. It must never be rendered.
+export const CONFIG_REDACTED_MARKER = "__gameplane_redacted__";
+
+const GO_BOOLS = ["1", "t", "T", "TRUE", "true", "True", "0", "f", "F", "FALSE", "false", "False"];
+
+// fieldValueProblem mirrors the operator's materializeConfig checks for one
+// non-empty value. The operator stays authoritative; this only gives early
+// feedback.
+function fieldValueProblem(field: ConfigField, value: string): string | null {
+  switch (field.type) {
+    case "int": {
+      if (!/^[+-]?\d+$/.test(value)) return "Must be a whole number.";
+      const n = Number(value);
+      const { min, max } = field;
+      if (min != null && max != null && (n < min || n > max)) return `Must be between ${min} and ${max}.`;
+      if (min != null && n < min) return `Must be at least ${min}.`;
+      if (max != null && n > max) return `Must be at most ${max}.`;
+      return null;
+    }
+    case "bool":
+      return GO_BOOLS.includes(value) ? null : "Must be true or false.";
+    case "string":
+    case "password": {
+      const len = new TextEncoder().encode(value).length;
+      const { minLength, maxLength } = field;
+      if (minLength != null && len < minLength) return `Must be at least ${minLength} characters.`;
+      if (maxLength != null && len > maxLength) return `Must be at most ${maxLength} characters.`;
+      return null;
+    }
+    default:
+      return null;
+  }
 }
 
 export function validateConfig(
@@ -49,19 +88,45 @@ export function validateConfig(
   for (const field of schema) {
     const raw = values[field.name];
     const provided = raw ?? field.default ?? "";
+    const label = field.displayName ?? field.name;
     if (field.required && provided === "") {
-      errors.push({
-        name: field.name,
-        message: `${field.displayName ?? field.name} is required`,
-      });
+      const message = `${label} is required`;
+      errors.push({ name: field.name, message, text: message });
       continue;
     }
-    if (provided !== "" && field.type === "enum" && field.enum && !field.enum.includes(provided)) {
-      errors.push({
-        name: field.name,
-        message: `${field.displayName ?? field.name} must be one of: ${field.enum.join(", ")}`,
-      });
+    if (provided === "") continue;
+    // A value the API reported as the redaction marker is unchanged, whatever
+    // the field type: nothing to check.
+    if (provided === CONFIG_REDACTED_MARKER) continue;
+    if (field.type === "enum" && field.enum && !field.enum.includes(provided)) {
+      const message = `${label} must be one of: ${field.enum.join(", ")}`;
+      errors.push({ name: field.name, message, text: message });
+      continue;
+    }
+    const problem = fieldValueProblem(field, provided);
+    if (problem) {
+      errors.push({ name: field.name, message: `${label}: ${problem}`, text: problem });
     }
   }
   return errors;
+}
+
+// PASSWORD_MASK is shown in place of a password-type template config value
+// anywhere config values are displayed. The API itself never returns stored
+// passwords (it sends a fixed redaction marker), so the dashboard must not
+// render either the value or the marker.
+export const PASSWORD_MASK = "********";
+
+// maskPasswordConfig returns a copy of values with every non-empty value of a
+// password-type field replaced by PASSWORD_MASK. Empty values stay empty.
+export function maskPasswordConfig(
+  schema: ConfigField[],
+  values: Record<string, string>,
+): Record<string, string> {
+  const passwords = new Set(schema.filter((f) => f.type === "password").map((f) => f.name));
+  const out: Record<string, string> = {};
+  for (const [name, value] of Object.entries(values)) {
+    out[name] = passwords.has(name) && value !== "" ? PASSWORD_MASK : value;
+  }
+  return out;
 }

@@ -654,6 +654,33 @@ configSchema:
       percent: 75
 ```
 
+#### Editing configuration after creation
+
+`configSchema` is not only used by the "New server" wizard: the server's
+**Settings > Game configuration** section renders the same schema, so every
+field stays editable after the server exists. Rules to keep in mind when
+writing or revising a module:
+
+- Saving a change always restarts the server (the operator re-renders the
+  pod's environment and config files); there is no "apply on next restart"
+  mode.
+- Only values that differ from your `default` are stored in the server's
+  `spec.config`; an unset key means "use the default" (or the
+  `autoFromMemoryLimit` value), so changing a default in a later template
+  version flows to servers that never overrode it.
+- `password` values are write-only in the dashboard: the API never returns a
+  stored password, and the form shows an empty "Unchanged" input.
+- `min`/`max` (int) and `minLength`/`maxLength` (string, password) are
+  checked in the form for early feedback; the operator re-checks them and is
+  authoritative.
+- **Removing or renaming a field orphans it.** A server that stored a value
+  for the old name keeps that key in `spec.config`, and the operator rejects
+  unknown keys: the server reports `invalid config: unknown config keys ...`
+  and does not roll out changes until the key is removed. The Game
+  configuration section lists such keys under "No longer in the template"
+  with a Remove button. Prefer adding a new field and keeping old ones for a
+  release, or document the rename in your module's upgrade notes.
+
 #### Automatic computation from memory limit (`autoFromMemoryLimit`)
 
 When a field's value is not supplied by the user or a default, `autoFromMemoryLimit`
@@ -1096,6 +1123,7 @@ capabilities:
 
 - Moderation commands are Go `text/template`s rendered with `.Player`
   and `.Reason` (reason may be empty — guard with `{{if .Reason}}`).
+  The reason is validated with the same input policy as action string params (no control characters, no ; & | $ ` \ " '; max 256 bytes), so templates may interpolate it without extra escaping of those characters.
   Unset actions are reported as unsupported and the UI hides them.
 - `banList.entryRegex` matches one banned player per output line via
   the named groups `name` (required), `source` and `reason`.
@@ -1207,7 +1235,7 @@ capabilities:
   **fire-and-forget**: no output is returned inline (it appears in the
   Console tab), so the dashboard shows "sent" rather than command output.
 - Parameter values are validated by `type` and sanitized before
-  rendering: CR/LF and other control characters are rejected so a value
+  rendering: CR/LF, other control characters and the shell/RCON metacharacters ``; & | $ ` \ " '`` are rejected so a value
   can never chain a second console command. `int`/`bool`/`enum` values
   must parse/match; missing optional params fall back to `default`. The
   same validation runs on both transports and on both the API and the

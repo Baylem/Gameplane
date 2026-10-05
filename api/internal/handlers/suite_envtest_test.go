@@ -121,7 +121,7 @@ func TestMain(m *testing.M) {
 	captureAuditor := audit.New(captureAuditStore)
 
 	mountedR = chi.NewRouter()
-	MountResources(mountedR, reg)
+	MountResources(mountedR, reg, nil)
 	MountLifecycle(mountedR, reg)
 	MountTunnelCredentials(mountedR, reg)
 	MountDestinations(mountedR, reg)
