@@ -77,6 +77,22 @@ func TestBackup_DeleteForgetsSnapshot(t *testing.T) {
 	runResticJob(t, "restic forget "+ids[twiceName]+" --prune --retry-lock 5m")
 	deleteBackupCR(t, ns, twiceName)
 	waitBackupGone(t, ns, twiceName, 5*time.Minute)
+	envInstance.Eventually(t, time.Minute, func() (bool, string) {
+		evs, err := envInstance.K8s.CoreV1().Events(ns).List(context.Background(),
+			metav1.ListOptions{FieldSelector: "involvedObject.name=" + twiceName})
+		if err != nil {
+			return false, "list events: " + err.Error()
+		}
+		for _, ev := range evs.Items {
+			if ev.Reason == "SnapshotForgetAbandoned" {
+				t.Fatalf("Backup %s was released by the give-up path: %s", twiceName, ev.Message)
+			}
+			if ev.Reason == "SnapshotForgotten" {
+				return true, ""
+			}
+		}
+		return false, "no SnapshotForgotten event for Backup " + twiceName + " yet"
+	})
 
 	present = resticSnapshotIDs(t)
 	if !snapshotListed(present, ids[keepName]) {
@@ -180,7 +196,7 @@ func resticSnapshotIDs(t *testing.T) []string {
 // repository and returns the container's log once the Job completes. The Job
 // uses the same credentials Secret, security posture and pod label (which the
 // egress NetworkPolicy selects on) as the operator's own restic Jobs, and is
-// deleted when the test ends. A Job that fails or does not finish in three
+// deleted when the test ends. A Job that fails or does not finish in six
 // minutes fails the test with its log.
 func runResticJob(t *testing.T, script string) string {
 	t.Helper()
@@ -258,7 +274,7 @@ func runResticJob(t *testing.T, script string) string {
 			metav1.DeleteOptions{PropagationPolicy: &propagation})
 	})
 
-	deadline := time.Now().Add(3 * time.Minute)
+	deadline := time.Now().Add(6 * time.Minute)
 	for {
 		j, err := e.K8s.BatchV1().Jobs(ns).Get(ctx, name, metav1.GetOptions{})
 		if err == nil {

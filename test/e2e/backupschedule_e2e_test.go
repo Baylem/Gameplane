@@ -186,24 +186,28 @@ func TestBackupSchedule_RetentionTrimsPast(t *testing.T) {
 	// up), so each such id must be gone from the repository. Only those ids are
 	// asserted: the repository is shared with parallel tests and is never
 	// expected to be empty.
-	bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
-		List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
-	if err != nil {
-		t.Fatalf("list backups after trim: %v", err)
-	}
-	remaining := map[string]bool{}
-	for _, item := range bks.Items {
-		remaining[item.GetName()] = true
-	}
 	var trimmed []string
-	for name, id := range seen {
-		if !remaining[name] {
-			trimmed = append(trimmed, id)
+	envInstance.Eventually(t, 5*time.Minute, func() (bool, string) {
+		bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
+			List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
+		if err != nil {
+			return false, "list backups after trim: " + err.Error()
 		}
-	}
-	if len(trimmed) == 0 {
-		t.Fatalf("no trimmed Backup was observed; recorded snapshot ids for %d Backups", len(seen))
-	}
+		remaining := map[string]bool{}
+		for _, item := range bks.Items {
+			remaining[item.GetName()] = true
+		}
+		trimmed = nil
+		for name, id := range seen {
+			if !remaining[name] {
+				trimmed = append(trimmed, id)
+			}
+		}
+		if len(trimmed) > 0 {
+			return true, ""
+		}
+		return false, "no trimmed Backup has finished its snapshot forget yet; recorded ids for " + itoa(len(seen)) + " Backups"
+	})
 	assertSnapshotsAbsent(t, trimmed...)
 }
 
