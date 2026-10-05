@@ -137,6 +137,7 @@ describe("SettingsTab", () => {
       target: { value: "test desc" },
     });
 
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
 
     await waitFor(() => expect(putBody).not.toBeNull());
@@ -148,6 +149,97 @@ describe("SettingsTab", () => {
     expect(body.metadata.annotations?.["gameplane.local/managed-by-operator"]).toBe("true");
     // User-edited annotation applied.
     expect(body.metadata.annotations?.["gameplane.local/description"]).toBe("test desc");
+  });
+
+  it("keeps concurrent stop and version edits when saving a description", async () => {
+    let putBody: GameServer | null = null;
+    fetchMock.mockImplementation(async (url: string, init?: FetchInit) => {
+      if (url.startsWith("/templates/")) return jsonRes({ metadata: { name: "minecraft-java" }, spec: { displayName: "Minecraft", game: "minecraft-java", version: "1.0", image: "x" } });
+      if (url === "/servers/mc-survival" && init?.method === "PUT") {
+        putBody = JSON.parse(init.body as string) as GameServer;
+        return jsonRes(putBody);
+      }
+      if (url === "/servers/mc-survival") return jsonRes(gs({ spec: { templateRef: { name: "minecraft-java" }, suspend: true, version: "1.21" } }));
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    renderWithQuery(<SettingsTab gs={gs({ spec: { templateRef: { name: "minecraft-java" }, suspend: false, version: "1.20" } })} name="mc-survival" />);
+    fireEvent.change(screen.getByPlaceholderText(/Long-standing/), { target: { value: "new description" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    await waitFor(() => expect(putBody).not.toBeNull());
+    const body = putBody as GameServer | null;
+    expect(body?.spec).toEqual({ templateRef: { name: "minecraft-java" }, suspend: true, version: "1.21" });
+  });
+
+  it("offers reload without writing when the same description changed concurrently", async () => {
+    let writes = 0;
+    fetchMock.mockImplementation(async (url: string, init?: FetchInit) => {
+      if (url.startsWith("/templates/")) return jsonRes({ metadata: { name: "minecraft-java" }, spec: { displayName: "Minecraft", game: "minecraft-java", version: "1.0", image: "x" } });
+      if (init?.method === "PUT") writes++;
+      return jsonRes(gs({ metadata: { name: "mc-survival", annotations: { "gameplane.local/description": "someone else's edit" } } }));
+    });
+    renderWithQuery(<SettingsTab gs={gs()} name="mc-survival" />);
+    fireEvent.change(screen.getByPlaceholderText(/Long-standing/), { target: { value: "my edit" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    await waitFor(() => expect(screen.getByText(/changed since you opened this page/i)).toBeInTheDocument());
+    expect(writes).toBe(0);
+  });
+
+  it("cannot save invalid game config after switching sections and recovers after correction", async () => {
+    let writes = 0;
+    fetchMock.mockImplementation(async (url: string, init?: FetchInit) => {
+      if (url.startsWith("/templates/")) return jsonRes({
+        metadata: { name: "minecraft-java" },
+        spec: { displayName: "Minecraft", game: "minecraft-java", version: "1.0", image: "x", configSchema: [{ name: "MAX_PLAYERS", displayName: "Max players", type: "int", default: "16" }] },
+      });
+      if (init?.method === "PUT") { writes++; return jsonRes(JSON.parse(init.body as string)); }
+      if (url === "/servers/mc-survival") return jsonRes(gs());
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    renderWithQuery(<SettingsTab gs={gs()} name="mc-survival" />);
+    fireEvent.click(await screen.findByRole("tab", { name: /Game configuration/i }));
+    fireEvent.change(screen.getByLabelText(/Max players/), { target: { value: "1.5" } });
+    fireEvent.click(screen.getByRole("tab", { name: /^General$/i }));
+    const save = screen.getByRole("button", { name: /Save changes/i });
+    expect(save).toBeDisabled();
+    fireEvent.click(save);
+    expect(writes).toBe(0);
+    fireEvent.click(screen.getByRole("tab", { name: /Game configuration/i }));
+    fireEvent.change(screen.getByLabelText(/Max players/), { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("tab", { name: /^General$/i }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    await waitFor(() => expect(writes).toBe(1));
+  });
+
+  it("waits for the template before allowing a draft to save", async () => {
+    let resolveTemplate!: (response: Response) => void;
+    const pendingTemplate = new Promise<Response>((resolve) => { resolveTemplate = resolve; });
+    fetchMock.mockImplementation(() => pendingTemplate);
+    renderWithQuery(<SettingsTab gs={gs()} name="mc-survival" />);
+    fireEvent.change(screen.getByPlaceholderText(/Long-standing/), { target: { value: "edited" } });
+    expect(screen.getByRole("button", { name: /Save changes/i })).toBeDisabled();
+    await act(async () => resolveTemplate(jsonRes({ metadata: { name: "minecraft-java" }, spec: { displayName: "Minecraft", game: "minecraft-java", version: "1.0", image: "x" } })));
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
+  });
+
+  it("retains an editor validation failure on navigation and resets editor text on discard", async () => {
+    stubTemplate();
+    renderWithQuery(<SettingsTab gs={gs()} name="mc-survival" />);
+    fireEvent.change(screen.getByPlaceholderText(/Long-standing/), { target: { value: "edited" } });
+    fireEvent.click(screen.getByRole("tab", { name: /Network capture/i }));
+    fireEvent.change(screen.getByLabelText("Retention window value"), { target: { value: "8" } });
+    fireEvent.click(screen.getByRole("tab", { name: /^General$/i }));
+    expect(screen.getByRole("button", { name: /Save changes/i })).toBeDisabled();
+    fireEvent.click(screen.getByRole("tab", { name: /Network capture/i }));
+    fireEvent.change(screen.getByLabelText("Retention window value"), { target: { value: "8" } });
+    fireEvent.click(screen.getByRole("button", { name: /Discard/i }));
+    expect(screen.getByLabelText("Retention window value")).toHaveValue("");
+    expect(screen.queryByText(/Exceeds the cluster maximum/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /^General$/i }));
+    fireEvent.change(screen.getByPlaceholderText(/Long-standing/), { target: { value: "new edit" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
   });
 
   it("surfaces a reload prompt on 409 conflict", async () => {
@@ -172,6 +264,7 @@ describe("SettingsTab", () => {
     fireEvent.change(screen.getByPlaceholderText(/Long-standing/), {
       target: { value: "x" },
     });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
 
     await waitFor(() =>
@@ -233,6 +326,7 @@ describe("SettingsTab", () => {
     });
     await waitFor(() => expect(onDirty).toHaveBeenCalledWith(true));
 
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
     await waitFor(() => {
       expect(putCalled).toBe(true);
@@ -264,6 +358,7 @@ describe("SettingsTab", () => {
     fireEvent.change(screen.getByPlaceholderText(/Long-standing/), {
       target: { value: "x" },
     });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
 
     await waitFor(() =>
@@ -328,6 +423,7 @@ describe("SettingsTab", () => {
     fireEvent.change(screen.getByPlaceholderText(/Long-standing/), {
       target: { value: "x" },
     });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
 
     await waitFor(() =>
@@ -431,6 +527,7 @@ describe("SettingsTab", () => {
       throw new Error(`unexpected fetch: ${url}`);
     });
 
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
     await waitFor(() =>
       expect(screen.getByText(/changed since you opened this page/i)).toBeInTheDocument(),
@@ -475,6 +572,7 @@ describe("SettingsTab", () => {
     fireEvent.change(screen.getByPlaceholderText(/Long-standing/), {
       target: { value: "edited" },
     });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
     await waitFor(() =>
       expect(screen.getByText(/changed since you opened this page/i)).toBeInTheDocument(),
