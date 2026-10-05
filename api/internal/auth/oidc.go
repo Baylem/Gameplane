@@ -615,6 +615,11 @@ func (o *OIDC) resolveOrLinkUser(
 // Re-evaluation only runs when the effective policy (post-helmOverride merge) has RoleMappings
 // configured. With no mappings, the user's role is assigned once at first login and never re-evaluated.
 func (o *OIDC) syncUserRole(ctx context.Context, userID int64, newRole, matchedGroup string) (*RoleAssignmentOutcome, error) {
+	// Share the same guard as manual role changes and account deletion.
+	// Keep the role/count reads and the transaction in one critical section.
+	unlock := o.db.LockUserManagement()
+	defer unlock()
+
 	// Fetch the user's current role to report in the outcome.
 	var currentRole string
 	err := o.db.DB.QueryRowContext(ctx, `SELECT role FROM users WHERE id = ?`, userID).Scan(&currentRole)
