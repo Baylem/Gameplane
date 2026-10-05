@@ -15,7 +15,7 @@ func TestIngestBoundsDistinctVersionLabels(t *testing.T) {
 		t.Helper()
 		body := fmt.Sprintf(`{"version":%q,"servers":0,"templates":0}`, version)
 		w := httptest.NewRecorder()
-		s.ingest(w, httptest.NewRequest(http.MethodPost, "/ingest", strings.NewReader(body)))
+		s.ingest(w, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/ingest", strings.NewReader(body)))
 		if w.Code != http.StatusNoContent {
 			t.Fatalf("ingest %q: status %d", version, w.Code)
 		}
@@ -52,7 +52,7 @@ func TestConcurrentIngestKeepsVersionBudget(t *testing.T) {
 		workers.Go(func() {
 			body := fmt.Sprintf(`{"version":"2.0.%d","servers":0,"templates":0}`, i)
 			w := httptest.NewRecorder()
-			s.ingest(w, httptest.NewRequest(http.MethodPost, "/ingest", strings.NewReader(body)))
+			s.ingest(w, httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/ingest", strings.NewReader(body)))
 			if w.Code != http.StatusNoContent {
 				t.Errorf("ingest status %d", w.Code)
 			}
