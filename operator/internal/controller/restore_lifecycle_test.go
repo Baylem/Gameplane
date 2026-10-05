@@ -55,7 +55,7 @@ func restoreLifecycleFixture(t *testing.T, extras ...client.Object) (*RestoreRec
 		}
 		if !found {
 			zero := int32(0)
-			objects = append(objects, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: server.Name, Namespace: server.Namespace, UID: types.UID(server.Name + "-ss"), OwnerReferences: []metav1.OwnerReference{{Kind: "GameServer", Name: server.Name, UID: server.UID, Controller: ownerBoolPtr(true)}}}, Spec: appsv1.StatefulSetSpec{Replicas: &zero}})
+			objects = append(objects, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: server.Name, Namespace: server.Namespace, UID: types.UID(server.Name + "-ss"), OwnerReferences: []metav1.OwnerReference{{APIVersion: gameplanev1alpha1.GroupVersion.String(), Kind: "GameServer", Name: server.Name, UID: server.UID, Controller: ownerBoolPtr(true)}}}, Spec: appsv1.StatefulSetSpec{Replicas: &zero}})
 		}
 	}
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).
@@ -103,7 +103,7 @@ func TestRestoreWaitsForObservedScaleDownAndPodTermination(t *testing.T) {
 		t.Run(state, func(t *testing.T) {
 			zero := int32(0)
 			ss := &appsv1.StatefulSet{
-				ObjectMeta: metav1.ObjectMeta{Name: "server", Namespace: "ns", UID: "ss-uid", Generation: 2, OwnerReferences: []metav1.OwnerReference{{Kind: "GameServer", Name: "server", UID: "server-uid", Controller: ownerBoolPtr(true)}}},
+				ObjectMeta: metav1.ObjectMeta{Name: "server", Namespace: "ns", UID: "ss-uid", Generation: 2, OwnerReferences: []metav1.OwnerReference{{APIVersion: gameplanev1alpha1.GroupVersion.String(), Kind: "GameServer", Name: "server", UID: "server-uid", Controller: ownerBoolPtr(true)}}},
 				Spec:       appsv1.StatefulSetSpec{Replicas: &zero},
 				Status:     appsv1.StatefulSetStatus{ObservedGeneration: 2},
 			}
@@ -449,7 +449,7 @@ func TestRestoreGuardOverridesResumeRequest(t *testing.T) {
 
 func TestRestoreGuardFencesStaleStatefulSetScaleUp(t *testing.T) {
 	zero := int32(0)
-	ss := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "server", Namespace: "ns", UID: "ss-uid", OwnerReferences: []metav1.OwnerReference{{Kind: "GameServer", Name: "server", UID: "server-uid", Controller: ownerBoolPtr(true)}}}, Spec: appsv1.StatefulSetSpec{Replicas: &zero}}
+	ss := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "server", Namespace: "ns", UID: "ss-uid", OwnerReferences: []metav1.OwnerReference{{APIVersion: gameplanev1alpha1.GroupVersion.String(), Kind: "GameServer", Name: "server", UID: "server-uid", Controller: ownerBoolPtr(true)}}}, Spec: appsv1.StatefulSetSpec{Replicas: &zero}}
 	r, staleGS, _ := restoreLifecycleFixture(t, ss)
 	lifecyclePasses(t, r, "first", 8)
 	// This snapshot deliberately predates acquisition of the target guard.
@@ -526,6 +526,28 @@ func TestRestoreDifferentTargetsDoNotBlockEachOther(t *testing.T) {
 	lifecyclePasses(t, r, "first", 8)
 	lifecyclePasses(t, r, "second", 8)
 	if got := len(lifecycleJobs(t, r)); got != 2 {
-		t.Fatal(fmt.Sprintf("independent targets blocked: %d Jobs", got))
+		t.Fatalf("independent targets blocked: %d Jobs", got)
+	}
+}
+
+func TestRestoreJobUsesConfiguredLimits(t *testing.T) {
+	for _, backoff := range []int32{0, 5} {
+		t.Run(fmt.Sprintf("backoff-%d", backoff), func(t *testing.T) {
+			r, _, _ := restoreLifecycleFixture(t)
+			r.JobBackoffLimit = &backoff
+			r.JobActiveDeadlineSeconds = 3600
+			lifecyclePasses(t, r, "first", 8)
+			jobs := lifecycleJobs(t, r)
+			if len(jobs) != 1 {
+				t.Fatalf("got %d Jobs, want one", len(jobs))
+			}
+			job := jobs[0]
+			if job.Spec.BackoffLimit == nil || *job.Spec.BackoffLimit != backoff {
+				t.Fatalf("Job did not preserve configured backoff %d: %v", backoff, job.Spec.BackoffLimit)
+			}
+			if job.Spec.ActiveDeadlineSeconds == nil || *job.Spec.ActiveDeadlineSeconds != 3600 {
+				t.Fatalf("Job did not preserve configured deadline: %v", job.Spec.ActiveDeadlineSeconds)
+			}
+		})
 	}
 }
