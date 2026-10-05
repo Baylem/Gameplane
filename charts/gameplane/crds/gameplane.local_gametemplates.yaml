@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    gameplane.local/crd-bundle-sha256: 13361941435c18767a393a107f2a80242b0e84339630ad0db002d46d00e1e62d
+    gameplane.local/crd-bundle-sha256: 5fa59369664cfab2e0c8ccedfd665ca4dfbd1f3f933e778bd8e1d6bae52c6eea
     controller-gen.kubebuilder.io/version: v0.20.1
   name: gametemplates.gameplane.local
 spec:
@@ -222,6 +222,15 @@ spec:
                             description: ActionParamSpec is a single input collected
                               before running an action.
                             properties:
+                              currentFrom:
+                                description: |-
+                                  CurrentFrom names a status metric (spec.capabilities.status.metrics[].id)
+                                  whose live value pre-fills this input in the dashboard dialog, so a
+                                  "set" action opens on the current setting. Default applies when the
+                                  metric has no reading or (for Type=enum) no option matches it.
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+                                type: string
                               default:
                                 description: Default is the pre-filled value (as a
                                   string).

@@ -19,6 +19,8 @@ export interface ActionParamDecl {
   default?: string;
   enum?: string[];
   required?: boolean;
+  // Status metric id whose live value pre-fills this param in the dialog.
+  currentFrom?: string;
 }
 
 // A module-declared operator action surfaced as a button on the server

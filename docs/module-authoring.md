@@ -1214,6 +1214,15 @@ capabilities:
   agent — the shared `gameaction` module — so neither is trusted blind.
 - A command template that fails to parse disables only that one action
   (logged), never the whole panel.
+- **`currentFrom`** (optional, on a param) names a
+  `capabilities.status.metrics[].id`. When the dialog opens, the dashboard
+  pre-fills the param with that metric's live value, so a "set" action
+  starts on the current setting. An `enum` param takes the option that
+  matches case-insensitively (a reading of `Easy` selects `easy`), a `bool`
+  takes `true`/`false` and an `int` takes an integer. With no reading, or
+  no valid match, the param falls back to `default`; the user's own choice
+  always wins. Readings come from the Status metrics below, so they need
+  RCON. Minecraft's `set-difficulty` uses `currentFrom: difficulty`.
 
 #### Status
 
