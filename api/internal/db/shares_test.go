@@ -908,3 +908,101 @@ func TestRevokeShareLink_UnknownIDReturnsNotFound(t *testing.T) {
 		t.Fatalf("got %v, want ErrShareLinkNotFound", err)
 	}
 }
+
+func TestRevokeShareLinksForServer(t *testing.T) {
+	s := newShareLinksStore(t)
+	ctx := context.Background()
+	uid := insertTestUser(t, s, "owner")
+
+	tokA, _, err := s.CreateShareLink(ctx, "local", "ns", "srv-a", uid, false, nil)
+	if err != nil {
+		t.Fatalf("create a: %v", err)
+	}
+	tokB, _, err := s.CreateShareLink(ctx, "local", "ns", "srv-b", uid, false, nil)
+	if err != nil {
+		t.Fatalf("create b: %v", err)
+	}
+	tokOtherCluster, _, err := s.CreateShareLink(ctx, "remote", "ns", "srv-a", uid, false, nil)
+	if err != nil {
+		t.Fatalf("create remote: %v", err)
+	}
+
+	// An empty cluster means "local".
+	if err := s.RevokeShareLinksForServer(ctx, "", "ns", "srv-a"); err != nil {
+		t.Fatalf("RevokeShareLinksForServer: %v", err)
+	}
+	if _, err := s.LookupShareLink(ctx, tokA); !errors.Is(err, ErrShareLinkInvalid) {
+		t.Fatalf("srv-a link after revoke = %v, want ErrShareLinkInvalid", err)
+	}
+	if _, err := s.LookupShareLink(ctx, tokB); err != nil {
+		t.Fatalf("srv-b link must stay valid: %v", err)
+	}
+	if _, err := s.LookupShareLink(ctx, tokOtherCluster); err != nil {
+		t.Fatalf("same-name link on another cluster must stay valid: %v", err)
+	}
+
+	// Revoking again (nothing active) is not an error, and the row is kept.
+	if err := s.RevokeShareLinksForServer(ctx, "local", "ns", "srv-a"); err != nil {
+		t.Fatalf("second revoke: %v", err)
+	}
+	links, err := s.ListShareLinks(ctx, "local", "ns", "srv-a")
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(links) != 1 || links[0].RevokedAt == nil {
+		t.Fatalf("revoked link row must be kept with revoked_at set, got %+v", links)
+	}
+}
+
+// TestCreateShareLinkForServer_PersistsServerUID verifies the UID is stored
+// and returned by both Lookup and List, that CreateShareLink leaves it empty,
+// and that a row written without the column (pre-013 shape) reads back as "".
+func TestCreateShareLinkForServer_PersistsServerUID(t *testing.T) {
+	s := newShareLinksStore(t)
+	ctx := context.Background()
+	userID := insertTestUser(t, s, "uid-owner")
+
+	token, created, err := s.CreateShareLinkForServer(ctx, "local", "default", "srv-uid", "uid-1234", userID, false, nil)
+	if err != nil {
+		t.Fatalf("CreateShareLinkForServer: %v", err)
+	}
+	if created.ServerUID != "uid-1234" {
+		t.Errorf("created.ServerUID = %q, want uid-1234", created.ServerUID)
+	}
+	looked, err := s.LookupShareLink(ctx, token)
+	if err != nil {
+		t.Fatalf("LookupShareLink: %v", err)
+	}
+	if looked.ServerUID != "uid-1234" {
+		t.Errorf("looked.ServerUID = %q, want uid-1234", looked.ServerUID)
+	}
+
+	if _, plain, err := s.CreateShareLink(ctx, "local", "default", "srv-plain", userID, false, nil); err != nil {
+		t.Fatalf("CreateShareLink: %v", err)
+	} else if plain.ServerUID != "" {
+		t.Errorf("CreateShareLink ServerUID = %q, want empty", plain.ServerUID)
+	}
+
+	// Legacy-shaped row: INSERT omits server_uid, so the column default applies.
+	if _, err := s.DB.ExecContext(ctx,
+		`INSERT INTO share_links(id, cluster, namespace, server_name, created_by, can_start, token_hash, expires_at, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
+		"legacy-id", "local", "default", "srv-legacy", userID, 0, hashShareLinkToken("legacy-token"), time.Now().UTC().Format(time.RFC3339)); err != nil {
+		t.Fatalf("insert legacy row: %v", err)
+	}
+	legacy, err := s.LookupShareLink(ctx, "legacy-token")
+	if err != nil {
+		t.Fatalf("lookup legacy: %v", err)
+	}
+	if legacy.ServerUID != "" {
+		t.Errorf("legacy ServerUID = %q, want empty", legacy.ServerUID)
+	}
+
+	links, err := s.ListShareLinks(ctx, "local", "default", "srv-uid")
+	if err != nil {
+		t.Fatalf("ListShareLinks: %v", err)
+	}
+	if len(links) != 1 || links[0].ServerUID != "uid-1234" {
+		t.Fatalf("ListShareLinks = %+v, want one link with ServerUID uid-1234", links)
+	}
+}

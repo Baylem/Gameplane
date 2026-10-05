@@ -37,10 +37,10 @@ func TestHashPerCallDiffers(t *testing.T) {
 
 func TestHashPassword_CancelledContextReturnsWhileSlotsHeld(t *testing.T) {
 	SetFastHashParams(t)
-	if err := argonSem.Acquire(context.Background(), 2); err != nil {
+	if err := argonSem.Acquire(context.Background(), argonConcurrency); err != nil {
 		t.Fatalf("acquire: %v", err)
 	}
-	defer argonSem.Release(2)
+	defer argonSem.Release(argonConcurrency)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -61,10 +61,10 @@ func TestHashPassword_CancelledContextReturnsWhileSlotsHeld(t *testing.T) {
 
 func TestVerifyPassword_CancelledContextReturnsWhileSlotsHeld(t *testing.T) {
 	SetFastHashParams(t)
-	if err := argonSem.Acquire(context.Background(), 2); err != nil {
+	if err := argonSem.Acquire(context.Background(), argonConcurrency); err != nil {
 		t.Fatalf("acquire: %v", err)
 	}
-	defer argonSem.Release(2)
+	defer argonSem.Release(argonConcurrency)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

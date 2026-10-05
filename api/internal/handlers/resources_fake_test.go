@@ -16,7 +16,7 @@ func mountResourcesRouter(k *kube.Client) *chi.Mux {
 	reg := kube.NewRegistry(scope.DefaultCluster)
 	reg.Set(scope.DefaultCluster, k)
 	r := chi.NewRouter()
-	MountResources(r, reg)
+	MountResources(r, reg, nil)
 	return r
 }
 
