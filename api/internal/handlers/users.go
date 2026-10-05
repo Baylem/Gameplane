@@ -152,10 +152,11 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 	// RETURNING id instead of LastInsertId: pgx's database/sql driver has
 	// no LastInsertId, and both SQLite and Postgres support RETURNING.
 	var id int64
+	var createdAt string
 	if err := h.db.DB.QueryRowContext(req.Context(),
-		`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?, ?, ?, ?, ?) RETURNING id`,
+		`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?, ?, ?, ?, ?) RETURNING id, created_at`,
 		body.Username, body.DisplayName, body.Email, body.Role, nullable(hash),
-	).Scan(&id); err != nil {
+	).Scan(&id, &createdAt); err != nil {
 		httperr.Write(w, req, err)
 		return
 	}
@@ -173,6 +174,7 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, userDTO{
 		ID: id, Username: body.Username, DisplayName: body.DisplayName,
 		Email: body.Email, Role: body.Role, Provider: provider,
+		CreatedAt: db.NormalizeTimestamp(createdAt),
 	})
 }
 

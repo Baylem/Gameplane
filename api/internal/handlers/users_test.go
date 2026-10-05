@@ -131,6 +131,40 @@ func TestUsers_CreatePersistsAndLists(t *testing.T) {
 	}
 }
 
+// POST /users must return createdAt as RFC 3339 like GET and PATCH do,
+// not the empty string the DTO zero value produced before.
+func TestUsers_CreateReturnsRFC3339CreatedAt(t *testing.T) {
+	srv, _, _ := newUsersServer(t, &auth.User{ID: 1, Role: "admin"})
+	status, body := doReq(t, "POST", srv.URL+"/users", map[string]any{
+		"username": "carol",
+		"password": "longenoughpw1",
+		"role":     "viewer",
+	})
+	if status != 200 {
+		t.Fatalf("create want 200 got %d body=%s", status, body)
+	}
+	var created userDTO
+	if err := json.Unmarshal(body, &created); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if _, err := time.Parse(time.RFC3339, created.CreatedAt); err != nil {
+		t.Fatalf("createdAt %q is not RFC3339: %v", created.CreatedAt, err)
+	}
+
+	// The create response must agree with what the list reports.
+	status, body = doReq(t, "GET", srv.URL+"/users", nil)
+	if status != 200 {
+		t.Fatalf("list want 200 got %d", status)
+	}
+	var listed []userDTO
+	if err := json.Unmarshal(body, &listed); err != nil {
+		t.Fatalf("decode list: %v", err)
+	}
+	if len(listed) != 1 || listed[0].CreatedAt != created.CreatedAt {
+		t.Fatalf("list createdAt = %+v, want %q", listed, created.CreatedAt)
+	}
+}
+
 // Creating a user mirrors their primary role into a cluster-wide ("*")
 // role binding — without it the user would resolve to no permissions.
 func TestUsers_CreateBindsClusterRole(t *testing.T) {
