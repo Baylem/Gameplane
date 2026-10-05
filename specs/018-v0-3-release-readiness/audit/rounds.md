@@ -90,7 +90,7 @@ None created.
 
 ## live-sweep 2026-10-04
 
-Informal live feature sweep of `master`, recorded after the fact from the descriptions of #548 and #549 (both merged 2026-10-05). It is not a formal round: per-row inventory outcomes (the T025-T033 format) were **not** recorded, so this sweep does not replace the formal per-row round, which is still pending rc.2.
+Informal live feature sweep of `master`, recorded after the fact from the descriptions of #548 and #549 (both merged 2026-10-05). It was not run as a formal per-row round (see OD-029 for how it is counted): per-row inventory outcomes (the T025-T033 format) were **not** recorded, so this sweep does not replace the formal per-row round, which is still pending rc.2.
 
 - **Target**: `master` at the time (not an RC tag; RC-TAG-2 is still pending).
 - **Cluster**: kubelab, 3-node k3s.
@@ -133,7 +133,7 @@ Informal live feature sweep of `master`, recorded after the fact from the descri
 
 ### Not recorded
 
-- Per-row inventory outcomes (T025-T033 format). The formal per-row round is still pending rc.2, and T025-T034 stay unticked.
+- Per-row inventory outcomes (T025-T033 format). The maintainer decided on 2026-10-05 ([OD-029](../OPEN-DECISIONS.md)) that this sweep on the latest `master` commit stands in for the formal round on rc.2, so T025-T033 are withdrawn; T034 (cleanup) stays open.
 - Evidence files, request/response logs and the rows that were run.
 - Whether #548/#549 coverage and CI results hold on an RC build: `fixed-unverified` until re-verified live.
 

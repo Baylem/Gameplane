@@ -368,3 +368,7 @@ The values ship in #549 (merged 2026-10-05) and remain provisional pending the m
 The live-sweep fix for the Cluster page's per-node pod usage (B15, [F-285](audit/findings.md)) adds `list` on `pods` in all namespaces to the `<release>-api-read` ClusterRole. A pod list exposes the plain-text env values of every workload on the cluster to the API service account.
 
 Decision (maintainer, 2026-10-05, as recorded in #549): accept the RBAC widening. Shipped in #549 (merged 2026-10-05) and documented in `docs/security.md` under "API cluster-wide pod list".
+
+### OD-029: the live round runs on the latest `master` commit, not on rc.2 — RESOLVED 2026-10-05
+
+Decision (maintainer, 2026-10-05): the live round was run on the latest `master` commit on kubelab (the 2026-10-04 live sweep, fixes in #548 and #549) instead of on a published rc.2. That sweep stands in for the formal per-row round: T025–T033 are withdrawn, and its bugs are recorded as F-273..F-293 (`audit/rounds.md` § live-sweep 2026-10-04). Per-row `INV-*` outcomes were not recorded, so `audit/inventory.md` rows keep their pre-round Outcome. T034 (cleanup after the round), the upgrade and node rounds (T061, T062, T065), and RC-TAG-2 are not changed by this decision.
