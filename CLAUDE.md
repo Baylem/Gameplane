@@ -26,7 +26,7 @@ Run every session.
 6. **Editing:** `Edit` needs a prior `Read` in the conversation; don't re-read right after editing.
 7. **External memory** (`~/.claude/projects/-home-valgul-project-Gameplane/memory/`, outside git): announce file + exact line on every write; never store conventions/decisions/preferences there (use repo specs/rules); repo files override memory.
 8. **Skills** are optional; disclose edit/plan/commit skill runs first; repo rules override skills.
-9. **Communication:** no preambles; closing recaps standalone (findings, actions, next steps, modified files).
+9. **Communication:** no preambles; closing recaps standalone (findings, actions, next steps, modified files). Short yes/no questions ("can I merge?", "is it green?") get a yes or no first, plus at most one line on what blocks it — no tables or recaps. Ask decisions with the question tool, not in prose.
 10. **Conflicts/missing context:** surface instruction conflicts immediately; unsettled values go in `OPEN-DECISIONS.md`, never committed as settled contracts.
 
 ## Repository map
