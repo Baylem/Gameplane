@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 
-	"github.com/ValgulNecron/gameplane/operator/kubeconfig"
+	remoteconfig "github.com/ValgulNecron/gameplane/api/internal/kubeconfig"
 )
 
 // ClusterKubeconfigLabel marks a Secret as containing a kubeconfig for a remote cluster.
@@ -18,7 +18,7 @@ const ClusterKubeconfigLabel = "gameplane.local/cluster-kubeconfig"
 
 // ConfigFromKubeconfig parses self-contained kubeconfig bytes and returns a rest.Config.
 func ConfigFromKubeconfig(data []byte) (*rest.Config, error) {
-	cfg, err := kubeconfig.RESTConfig(data)
+	cfg, err := remoteconfig.RESTConfig(data)
 	if err != nil {
 		return nil, fmt.Errorf("parse kubeconfig: %w", err)
 	}

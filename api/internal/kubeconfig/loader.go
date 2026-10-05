@@ -1,5 +1,5 @@
 // Package kubeconfig loads self-contained remote-cluster credentials.
-// Keep this policy and its regression cases aligned with api/internal/kubeconfig;
+// Keep this policy and its regression cases aligned with operator/kubeconfig;
 // API and operator are independently built Go modules.
 package kubeconfig
 
