@@ -50,6 +50,29 @@ const (
 // or the pod is restarted.
 const maxUnquiesceFinalizeRetry = 10 * time.Minute
 
+// Default bounds for the restic backup and restore Jobs (spec 018 OD-027).
+// Operators override them via --backup-job-backoff-limit /
+// --backup-job-active-deadline-seconds (Helm operator.backupJobBackoffLimit /
+// operator.backupJobActiveDeadlineSeconds).
+const (
+	DefaultBackupJobBackoffLimit          int32 = 2
+	DefaultBackupJobActiveDeadlineSeconds int64 = 86400 // 24 hours
+)
+
+// resolveJobLimits returns the Job BackoffLimit and ActiveDeadlineSeconds to
+// use: a nil backoff selects the default (0 is a valid explicit value, so
+// nil, not zero, means unset); a non-positive deadline selects the default.
+func resolveJobLimits(backoff *int32, deadline int64) (int32, int64) {
+	b, d := DefaultBackupJobBackoffLimit, DefaultBackupJobActiveDeadlineSeconds
+	if backoff != nil && *backoff >= 0 {
+		b = *backoff
+	}
+	if deadline > 0 {
+		d = deadline
+	}
+	return b, d
+}
+
 // backupRestoreJobLabel/backupRestoreJobValue mark Backup and Restore Job
 // pods so the chart's allow-backup-restore-egress NetworkPolicy (F-215)
 // can select them. Without this label the Job pod carries only the Job
@@ -94,6 +117,11 @@ type BackupReconciler struct {
 	// operator flag so air-gapped installs can point it at a private
 	// registry mirror. Empty falls back to DefaultResticImage.
 	ResticImage string
+	// JobBackoffLimit / JobActiveDeadlineSeconds bound the restic backup Job.
+	// Set from operator flags; nil / zero fall back to
+	// DefaultBackupJobBackoffLimit / DefaultBackupJobActiveDeadlineSeconds.
+	JobBackoffLimit          *int32
+	JobActiveDeadlineSeconds int64
 	// SnapshotScrapeGracePeriod bounds how long after the restic Job
 	// completes the reconciler keeps retrying to read the snapshot id from
 	// the pod logs before failing the Backup. Zero uses
@@ -319,8 +347,7 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	backoff := int32(2)
-	deadline := int64(86400) // 24 hours
+	backoff, deadline := resolveJobLimits(r.JobBackoffLimit, r.JobActiveDeadlineSeconds)
 	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: b.Name, Namespace: b.Namespace}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
 		if job.CreationTimestamp.IsZero() {
