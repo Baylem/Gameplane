@@ -685,6 +685,15 @@ type ActionParamSpec struct {
 	// +optional
 	Default string `json:"default,omitempty"`
 
+	// CurrentFrom names a status metric (spec.capabilities.status.metrics[].id)
+	// whose live value pre-fills this input in the dashboard dialog, so a
+	// "set" action opens on the current setting. Default applies when the
+	// metric has no reading or (for Type=enum) no option matches it.
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=63
+	// +optional
+	CurrentFrom string `json:"currentFrom,omitempty"`
+
 	// Enum restricts valid values when Type=enum.
 	// +optional
 	Enum []string `json:"enum,omitempty"`
