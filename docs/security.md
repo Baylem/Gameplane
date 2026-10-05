@@ -448,8 +448,8 @@ earlier:
 - The data-root path itself is operator-configured and trusted (it may be a
   symlink); only components below it are checked.
 
-The mods package has its own confinement (`ConfinePath`/`ConfineRelPath`) and
-is not covered by this change.
+The mods package confines its own paths separately (`ConfinePath`/`ConfineRelPath`)
+and does not use this descriptor walk.
 
 ## Runtime mod installs (agent)
 

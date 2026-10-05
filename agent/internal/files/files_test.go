@@ -550,9 +550,6 @@ func TestSavePart_RejectsDanglingSymlinkDestination(t *testing.T) {
 	}
 }
 
-// TestSavePart_AllowsInRootSymlinkDestination checks that a destination
-// symlink pointing at another folder inside root is accepted: the upload
-// replaces the link and the linked file is left as it was.
 // TestSavePart_RejectsInRootSymlinkDestination checks that a destination
 // symlink is refused even when it points at another folder inside root:
 // link traversal is rejected at every component, and both the link and the

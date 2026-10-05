@@ -487,3 +487,9 @@ func TestRemoveEntry(t *testing.T) {
 		t.Fatalf("remove missing: got %v, want ErrNotExist", err)
 	}
 }
+
+func TestFileFromFDRejectsNegative(t *testing.T) {
+	if f, err := fileFromFD(-1, "x"); f != nil || !errors.Is(err, unix.EBADF) {
+		t.Fatalf("got f=%v err=%v, want nil and EBADF", f, err)
+	}
+}

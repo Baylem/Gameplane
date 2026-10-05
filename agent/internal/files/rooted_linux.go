@@ -64,6 +64,16 @@ func closeFD(fd int) {
 	_ = unix.Close(fd)
 }
 
+// fileFromFD wraps fd, returned by a successful openat, in an *os.File. A
+// successful openat never yields a negative descriptor; the guard keeps the
+// int to uintptr conversion provably in range (gosec G115).
+func fileFromFD(fd int, name string) (*os.File, error) {
+	if fd < 0 {
+		return nil, fmt.Errorf("open %q: %w", name, unix.EBADF)
+	}
+	return os.NewFile(uintptr(fd), name), nil
+}
+
 // openRoot opens the configured data root. The root path is operator-supplied
 // and trusted (it may legitimately be reached through a symlink), so it is the
 // only component that is followed.
@@ -229,7 +239,10 @@ func dirNames(fd int) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reopen directory: %w", err)
 	}
-	f := os.NewFile(uintptr(rd), ".")
+	f, err := fileFromFD(rd, ".")
+	if err != nil {
+		return nil, err
+	}
 	defer func() { _ = f.Close() }()
 	names, err := f.Readdirnames(-1)
 	if err != nil {
@@ -306,7 +319,7 @@ func (h *handler) openFile(comps []string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return os.NewFile(uintptr(fd), name), nil
+	return fileFromFD(fd, name)
 }
 
 // makeDirs creates the directory comps (and any missing ancestors), the
@@ -332,7 +345,8 @@ func createTemp(dirFD int, prefix string) (*os.File, string, error) {
 		name := prefix + rand.Text()
 		fd, err := openat(dirFD, name, unix.O_WRONLY|unix.O_CREAT|unix.O_EXCL|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0o600)
 		if err == nil {
-			return os.NewFile(uintptr(fd), name), name, nil
+			f, ferr := fileFromFD(fd, name)
+			return f, name, ferr
 		}
 		if !errors.Is(err, unix.EEXIST) {
 			return nil, "", fmt.Errorf("create temp file: %w", err)
