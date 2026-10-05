@@ -717,6 +717,31 @@ func TestMkdir(t *testing.T) {
 	}
 }
 
+// Directories the agent creates must be traversable by the game uid, which on
+// templates without an fsGroup reaches the volume through the "other" bits.
+func TestMkdir_DirectoriesAreWorldTraversable(t *testing.T) {
+	srvURL, root := newServer(t)
+	resp, err := testPost(t, srvURL+"/files/mkdir?path=/a/b", "", nil)
+	if err != nil {
+		t.Fatalf("post: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("status=%d body=%s", resp.StatusCode, readBody(resp))
+	}
+	for _, p := range []string{"a", filepath.Join("a", "b")} {
+		fi, err := os.Stat(filepath.Join(root, p))
+		if err != nil {
+			t.Fatalf("stat %s: %v", p, err)
+		}
+		// Only the "other" r-x bits are asserted so the test is stable under any
+		// umask that keeps them (the common 022).
+		if perm := fi.Mode().Perm(); perm&0o005 != 0o005 {
+			t.Errorf("dir %s mode=%03o, want other r-x (0o755)", p, perm)
+		}
+	}
+}
+
 func TestMkdir_BadResolve(t *testing.T) {
 	// An ancestor that is a regular file → resolve fails (ENOTDIR). A merely
 	// missing parent now resolves so MkdirAll can create the subtree.

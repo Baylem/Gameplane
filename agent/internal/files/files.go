@@ -294,7 +294,7 @@ func (h *handler) write(w http.ResponseWriter, req *http.Request) {
 	}
 	defer func() { _ = req.Body.Close() }()
 	dir := filepath.Dir(p)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
+	if err := os.MkdirAll(dir, dirMode); err != nil {
 		httpErr(w, err)
 		return
 	}
@@ -321,7 +321,7 @@ func (h *handler) write(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// Chmod before rename: preserve the existing file's mode when overwriting,
-	// else use 0o644 so the game container (different uid, shared fsGroup) can read it.
+	// else use 0o644 so the game container (a different uid) can read it.
 	mode := os.FileMode(0o644)
 	if fi, err := os.Stat(filepath.Clean(p)); err == nil {
 		mode = fi.Mode().Perm()
@@ -355,7 +355,7 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 		h.badRequest(w, err)
 		return
 	}
-	if err := os.MkdirAll(p, 0o750); err != nil {
+	if err := os.MkdirAll(p, dirMode); err != nil {
 		httpErr(w, err)
 		return
 	}
@@ -462,7 +462,7 @@ func savePart(root, dir, filename string, src io.Reader, limit int64) error {
 		return fmt.Errorf("file %q exceeds %d-byte limit", name, limit)
 	}
 	// Chmod before rename: preserve the existing file's mode when overwriting,
-	// else use 0o644 so the game container (different uid, shared fsGroup) can read it.
+	// else use 0o644 so the game container (a different uid) can read it.
 	mode := os.FileMode(0o644)
 	if fi, err := os.Stat(dstPath); err == nil {
 		mode = fi.Mode().Perm()
@@ -484,7 +484,7 @@ func (h *handler) mkdir(w http.ResponseWriter, req *http.Request) {
 		h.badRequest(w, err)
 		return
 	}
-	if err := os.MkdirAll(p, 0o750); err != nil {
+	if err := os.MkdirAll(p, dirMode); err != nil {
 		httpErr(w, err)
 		return
 	}
@@ -559,3 +559,11 @@ func httpErr(w http.ResponseWriter, err error) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
 }
+
+// dirMode is the permission for directories the agent creates (mkdir, upload
+// and write ancestors). The game container runs as a different uid and, on
+// templates without an fsGroup, reaches the data volume only through the
+// "other" bits, so directories must be traversable (0o755) just like files are
+// readable (0o644). The gosec G301 finding for this file is scoped in
+// .golangci.yml.
+const dirMode = 0o755
