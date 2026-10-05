@@ -21,7 +21,7 @@ verified.
 **Source ID**: G-a  
 **Evidence**: README.md:8; operator/api/v1alpha1/gameserver_types.go:1–50  
 **Checked on**: 2026-09-02  
-**What was verified**: README status line confirms project is beta; GameServer CRD types and controller-runtime operator documented in operator module with support for k3s and multi-node clusters.  
+**What was verified**: README status line confirms project is a pre-v1 release (`v0.3.0`; status line re-checked 2026-10-05); GameServer CRD types and controller-runtime operator documented in operator module with support for k3s and multi-node clusters.  
 **Last-known URL**: https://github.com/ValgulNecron/Gameplane
 
 <a id="gameplane-row-b"></a>

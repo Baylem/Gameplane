@@ -1,6 +1,6 @@
 # telemetry-receiver — Specification
 
-**Status:** beta (v0.2.0-beta.8)  
+**Status:** pre-v1 (v0.3.0)  
 **Module / package:** github.com/ValgulNecron/gameplane/telemetry-receiver  
 **Go version:** 1.26
 
@@ -50,7 +50,7 @@ telemetry-receiver/
 ### Ingest payload
 
 ```json
-{ "version": "0.2.0-beta.7", "servers": 3, "templates": 7 }
+{ "version": "0.3.0", "servers": 3, "templates": 7 }
 ```
 
 The body must be exactly one JSON object with all three required fields and no trailing non-whitespace content. Keys are matched exactly, case-sensitively; duplicate keys are rejected. Missing or null required fields and unknown fields are rejected (16 KiB body cap applies to the entire request).
@@ -62,7 +62,7 @@ The body must be exactly one JSON object with all three required fields and no t
 ### Prometheus metrics
 
 ```
-gameplane_telemetry_reports_total{version="0.2.0-beta.7"}  # counter, by version label
+gameplane_telemetry_reports_total{version="0.3.0"}  # counter, by version label
 gameplane_telemetry_servers_bucket{le="…"}                 # histogram (buckets: 0,1,2,5,10,25,50,100,250,+Inf)
 gameplane_telemetry_servers_sum                            # histogram sum
 gameplane_telemetry_servers_count                          # histogram count

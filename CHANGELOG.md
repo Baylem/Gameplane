@@ -7,6 +7,14 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-10-05
+
+The first Gameplane release without a pre-release suffix, a pre-v1 release. It
+contains every change made since v0.2.0-beta.8, including the changes first
+previewed in v0.3.0-rc.1 and the pre-release audit fixes summarized under
+0.3.0-rc.2 below. It does not claim v1 or production support; see
+[`docs/roadmap.md`](docs/roadmap.md).
+
 ### Upgrade Notes
 
 - **Network capture feature adds an emptyDir volume to every game pod:** The
@@ -350,11 +358,12 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **gameaction:** hardened console action parameter validation against shell and RCON metacharacters.
 - **operator:** hardened tunnel credential handling: a credentials Secret not owned by its GameServer is now refused, the tunnel is scaled to zero, and TunnelReady=False (reason TunnelCredentialRefused) reports why.
 
-## [0.3.0-rc.2] — Unreleased
+## [0.3.0-rc.2] — not tagged
 
-The second release candidate for v0.3.0. It adds the changes merged since
+The second release candidate for v0.3.0 was not tagged separately; its changes
+shipped in [0.3.0](#030--2026-10-05). It covers the changes merged since
 v0.3.0-rc.1, mostly fixes from the v0.3 pre-release audit. They are listed
-under [Unreleased](#unreleased) above, which also holds the rc.1 changes;
+under [0.3.0](#030--2026-10-05) above, which also holds the rc.1 changes;
 the Highlights below summarize what is new since rc.1.
 
 ### Highlights
@@ -390,8 +399,8 @@ the Highlights below summarize what is new since rc.1.
 
 The first release candidate for v0.3.0, the first Gameplane release without a
 beta suffix. It contains the changes made since v0.2.0-beta.8 up to
-2026-09-23; the entries under Unreleased above that come from later PRs
-(the pre-release audit fixes) are in 0.3.0-rc.2, not in this release.
+2026-09-23; the entries under 0.3.0 above that come from later PRs
+(the pre-release audit fixes) are in 0.3.0, not in this release.
 Release candidates are for testing against diverse workloads and deployment
 topologies before the v1-ready v0.3.0 GA; pre-releases are
 published and listed in the GitHub releases page.
@@ -1077,8 +1086,9 @@ testing. Not yet recommended for unattended production workloads — see
   runner (retry + longer readiness window), eliminating a cascade of flaky
   API e2e failures.
 
-[Unreleased]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.8...HEAD
-[0.3.0-rc.2]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0-rc.1...HEAD
+[Unreleased]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0-rc.1...v0.3.0
+[0.3.0-rc.2]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0-rc.1...v0.3.0
 [0.3.0-rc.1]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.8...v0.3.0-rc.1
 [0.2.0-beta.8]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.7...v0.2.0-beta.8
 [0.2.0-beta.7]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.6...v0.2.0-beta.7

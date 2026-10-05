@@ -11,7 +11,7 @@
 
 The chart and its images are published to the GitHub Container Registry (GHCR)
 as OCI artifacts — no `helm repo add` needed. Install a tagged release straight
-from the registry (replace `<version>` with a release, e.g. `0.2.0-beta.8`):
+from the registry (replace `<version>` with a release, e.g. `0.3.0`):
 
 ```sh
 helm upgrade --install gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
@@ -31,7 +31,7 @@ belong to is enabled (and, for `sentinel` and `capture-sidecar`, only for
 GameServers that opt in). See each component's values block for its enable
 flag.
 
-### Edge channel (latest beta)
+### Edge channel (latest edge build)
 
 Every push to `master` publishes rolling `:edge` images. To track them, install
 the chart and point images at the edge tag:
@@ -634,7 +634,7 @@ GameServers intact.
 `helm` instead of skipping existing CRDs, so a `helm install` over leftover
 CRDs updates them itself (stamp included) and the hook stays pre-upgrade
 only. The hook applies under the same `helm` field manager so that apply
-never conflicts with it. Releases up to `0.2.0-beta.8` applied under
+never conflicts with it. Releases up to and including `0.2.0-beta.8` applied under <!-- doc-versions: historical -->
 kubectl's default manager (`kubectl`); if CRDs such a release upgraded were
 left behind, a Helm 4 `helm install` stops with `conflict with "kubectl" …
 .spec.versions`. Re-run it with `--force-conflicts` to take them over:

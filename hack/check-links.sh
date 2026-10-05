@@ -57,14 +57,14 @@
 #      (in document order), append -1, -2, ... to disambiguate, matching
 #      GitHub's own de-duplication behavior.
 #
-#   Worked example: "## Beta Status & Limitations"
-#     -> strip marker:           "Beta Status & Limitations"
+#   Worked example: "## Pre-v1 Status & Limitations"
+#     -> strip marker:           "Pre-v1 Status & Limitations"
 #     -> no markdown link, no backticks
 #     -> remove '&' (its surrounding spaces are untouched by the removal,
 #        since only the '&' character itself is deleted):
-#                                 "Beta Status  Limitations"   (two spaces)
-#     -> lowercase:               "beta status  limitations"
-#     -> spaces -> hyphens:       "beta-status--limitations"   (two hyphens)
+#                                 "Pre-v1 Status  Limitations"   (two spaces)
+#     -> lowercase:               "pre-v1 status  limitations"
+#     -> spaces -> hyphens:       "pre-v1-status--limitations"   (two hyphens)
 #
 #   Explicit HTML anchors `<a id="x">` / `<a name="x">` (case-insensitive tag
 #   and attribute name; single or double quoted value) are also valid anchor
@@ -208,7 +208,7 @@ self_test() {
     # Regression: existing ASCII behavior (worked example in the header
     # comment) must not change.
     _assert_slug "ASCII punctuation (regression)" \
-        "Beta Status & Limitations" "beta-status--limitations"
+        "Pre-v1 Status & Limitations" "pre-v1-status--limitations"
 
     # Unicode arrow: only the arrow itself is dropped, surrounding spaces
     # are untouched (so two spaces -> two hyphens), matching GitHub.

@@ -20,7 +20,7 @@ GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context-name> GAMEPLANE_E2E
 
 A successful run is the only event that licenses updating `Last Verified` to the current date.
 
-**Status:** beta (v0.2.0-beta.8), in-progress (QUERY depth measured; in-game claim gate blocks authentication)
+**Status:** pre-v1 (v0.3.0), in-progress (QUERY depth measured; in-game claim gate blocks authentication)
 
 ## Purpose
 

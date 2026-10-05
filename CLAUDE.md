@@ -2,7 +2,7 @@
 
 Architecture, commands, and binding rules for AI agents. Humans: [`README.md`](README.md), [`docs/contributing.md`](docs/contributing.md).
 
-**Gameplane:** Kubernetes-native game server control panel (CubeCoders AMP alternative); identical on single-node k3s and multi-node clusters. **Status:** beta `v0.2.0-beta.8`; v1 scope feature-complete, stabilizing.
+**Gameplane:** Kubernetes-native game server control panel (CubeCoders AMP alternative); identical on single-node k3s and multi-node clusters. **Status:** Pre-v1 release (`v0.3.0`); v1 scope feature-complete, stabilizing.
 
 ## ⏳ Session start: blocked dependency upgrades (delete an entry once unblocked)
 
