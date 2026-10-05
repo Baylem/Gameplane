@@ -366,7 +366,7 @@ describe("ConsoleTab", () => {
 
   it("sends an RCON command from the input bar", async () => {
     const { term } = await renderConsole("rcon");
-    await userEvent.type(screen.getByPlaceholderText("Type a command…"), "say hi");
+    await userEvent.type(screen.getByPlaceholderText(/Type a command…/), "say hi");
     await userEvent.click(screen.getByRole("button", { name: /send/i }));
     expect(mocks.wsHandle.send).toHaveBeenCalledWith(JSON.stringify({ kind: "cmd", body: "say hi" }));
     expect(term.writeln).toHaveBeenCalledWith("say hi");
@@ -374,7 +374,7 @@ describe("ConsoleTab", () => {
 
   it("frames a PTY command as stdin with a trailing newline", async () => {
     await renderConsole("pty");
-    await userEvent.type(screen.getByPlaceholderText("Type a command…"), "ls");
+    await userEvent.type(screen.getByPlaceholderText(/Type a command…/), "ls");
     await userEvent.click(screen.getByRole("button", { name: /send/i }));
     expect(mocks.wsHandle.send).toHaveBeenCalledWith(
       JSON.stringify({ kind: "stdin", body: btoa("ls\n") }),
@@ -383,8 +383,29 @@ describe("ConsoleTab", () => {
 
   it("ignores an empty command", async () => {
     await renderConsole("rcon");
-    await userEvent.type(screen.getByPlaceholderText("Type a command…"), "   ");
+    await userEvent.type(screen.getByPlaceholderText(/Type a command…/), "   ");
     await userEvent.click(screen.getByRole("button", { name: /send/i }));
     expect(mocks.wsHandle.send).not.toHaveBeenCalled();
+  });
+
+  it("recalls sent commands with ArrowUp and ArrowDown", async () => {
+    await renderConsole("rcon");
+    const input = screen.getByPlaceholderText(/Type a command…/);
+    const send = screen.getByRole("button", { name: /send/i });
+    await userEvent.type(input, "first");
+    await userEvent.click(send);
+    await userEvent.type(input, "second");
+    await userEvent.click(send);
+    await userEvent.type(input, "dra");
+    await userEvent.keyboard("{ArrowUp}");
+    expect(input).toHaveValue("second");
+    await userEvent.keyboard("{ArrowUp}");
+    expect(input).toHaveValue("first");
+    await userEvent.keyboard("{ArrowUp}");
+    expect(input).toHaveValue("first");
+    await userEvent.keyboard("{ArrowDown}");
+    expect(input).toHaveValue("second");
+    await userEvent.keyboard("{ArrowDown}");
+    expect(input).toHaveValue("dra");
   });
 });

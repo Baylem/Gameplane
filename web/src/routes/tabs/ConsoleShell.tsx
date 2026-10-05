@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { Button, Input } from "@heroui/react";
 import { Download, Eraser, Maximize2 } from "lucide-react";
 
@@ -22,6 +22,9 @@ const STATUS_LABEL: Record<WSStatus, string> = {
   closed: "offline",
 };
 
+// Commands kept for Up/Down recall in the input bar; per mount, not persisted.
+const HISTORY_LIMIT = 100;
+
 // ConsoleShell is the M8 chrome from design.pen frame Xn5ns: a header
 // toolbar (connection indicator + Clear/Download/Fullscreen) bracketing the
 // xterm host, and a dedicated command-input bar. All behavior comes from the
@@ -29,6 +32,36 @@ const STATUS_LABEL: Record<WSStatus, string> = {
 export function ConsoleShell({ handle }: { handle: ConsoleHandle }) {
   const { hostRef, status, clear, download, toggleFullscreen, sendCommand } = handle;
   const [cmd, setCmd] = useState("");
+  // history holds sent commands, oldest first. histIdx is the entry being
+  // shown while browsing (null = editing a fresh line), and draft keeps the
+  // unsent line so ArrowDown past the newest entry restores it.
+  const history = useRef<string[]>([]);
+  const histIdx = useRef<number | null>(null);
+  const draft = useRef("");
+  const onHistoryKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    const h = history.current;
+    if (e.key === "ArrowUp") {
+      if (h.length === 0) return;
+      e.preventDefault();
+      if (histIdx.current === null) {
+        draft.current = cmd;
+        histIdx.current = h.length - 1;
+      } else if (histIdx.current > 0) {
+        histIdx.current -= 1;
+      }
+      setCmd(h[histIdx.current]);
+    } else if (e.key === "ArrowDown") {
+      if (histIdx.current === null) return;
+      e.preventDefault();
+      if (histIdx.current < h.length - 1) {
+        histIdx.current += 1;
+        setCmd(h[histIdx.current]);
+      } else {
+        histIdx.current = null;
+        setCmd(draft.current);
+      }
+    }
+  };
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2">
@@ -76,13 +109,19 @@ export function ConsoleShell({ handle }: { handle: ConsoleHandle }) {
           const line = cmd.trim();
           if (!line) return;
           sendCommand(line);
+          const h = history.current;
+          if (h[h.length - 1] !== line) h.push(line);
+          if (h.length > HISTORY_LIMIT) h.shift();
+          histIdx.current = null;
+          draft.current = "";
           setCmd("");
         }}
       >
         <Input
-          placeholder="Type a command…"
+          placeholder="Type a command… (↑/↓ recalls history)"
           value={cmd}
           onChange={(e) => setCmd(e.target.value)}
+          onKeyDown={onHistoryKey}
           className="flex-1 font-mono text-xs"
         />
         <Button
