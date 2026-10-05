@@ -322,6 +322,12 @@ export interface GameTemplate {
       required?: boolean;
       target?: "env" | "file";
       autoFromMemoryLimit?: { percent: number };
+      // Bounds mirror the CRD ConfigField: min/max apply to int fields,
+      // minLength/maxLength to string and password fields (bytes).
+      min?: number;
+      max?: number;
+      minLength?: number;
+      maxLength?: number;
     }>;
   };
   status?: { inUseCount?: number };

@@ -38,7 +38,46 @@ export function defaultVersionId(template: GameTemplate | undefined): string | u
 
 export interface ConfigError {
   name: string;
+  // Full sentence for step-level summaries (the wizard shows the first one).
   message: string;
+  // Text for the inline message under the field (no field name prefix).
+  text: string;
+}
+
+// CONFIG_REDACTED_MARKER is what the API sends instead of a stored
+// password-type spec.config value. Sending it back in a PUT keeps the stored
+// value. It must never be rendered.
+export const CONFIG_REDACTED_MARKER = "__gameplane_redacted__";
+
+const GO_BOOLS = ["1", "t", "T", "TRUE", "true", "True", "0", "f", "F", "FALSE", "false", "False"];
+
+// fieldValueProblem mirrors the operator's materializeConfig checks for one
+// non-empty value. The operator stays authoritative; this only gives early
+// feedback.
+function fieldValueProblem(field: ConfigField, value: string): string | null {
+  switch (field.type) {
+    case "int": {
+      if (!/^[+-]?\d+$/.test(value)) return "Must be a whole number.";
+      const n = Number(value);
+      const { min, max } = field;
+      if (min != null && max != null && (n < min || n > max)) return `Must be between ${min} and ${max}.`;
+      if (min != null && n < min) return `Must be at least ${min}.`;
+      if (max != null && n > max) return `Must be at most ${max}.`;
+      return null;
+    }
+    case "bool":
+      return GO_BOOLS.includes(value) ? null : "Must be true or false.";
+    case "string":
+    case "password": {
+      const len = new TextEncoder().encode(value).length;
+      const { minLength, maxLength } = field;
+      if (minLength != null && len < minLength) return `Must be at least ${minLength} characters.`;
+      if (maxLength != null && len > maxLength) return `Must be at most ${maxLength} characters.`;
+      return null;
+    }
+    default:
+      return null;
+  }
 }
 
 export function validateConfig(
@@ -49,18 +88,23 @@ export function validateConfig(
   for (const field of schema) {
     const raw = values[field.name];
     const provided = raw ?? field.default ?? "";
+    const label = field.displayName ?? field.name;
     if (field.required && provided === "") {
-      errors.push({
-        name: field.name,
-        message: `${field.displayName ?? field.name} is required`,
-      });
+      const message = `${label} is required`;
+      errors.push({ name: field.name, message, text: message });
       continue;
     }
-    if (provided !== "" && field.type === "enum" && field.enum && !field.enum.includes(provided)) {
-      errors.push({
-        name: field.name,
-        message: `${field.displayName ?? field.name} must be one of: ${field.enum.join(", ")}`,
-      });
+    if (provided === "") continue;
+    // A stored password reported by the API is unchanged: nothing to check.
+    if (field.type === "password" && provided === CONFIG_REDACTED_MARKER) continue;
+    if (field.type === "enum" && field.enum && !field.enum.includes(provided)) {
+      const message = `${label} must be one of: ${field.enum.join(", ")}`;
+      errors.push({ name: field.name, message, text: message });
+      continue;
+    }
+    const problem = fieldValueProblem(field, provided);
+    if (problem) {
+      errors.push({ name: field.name, message: `${label}: ${problem}`, text: problem });
     }
   }
   return errors;

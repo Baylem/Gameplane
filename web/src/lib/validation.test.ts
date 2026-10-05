@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CONFIG_REDACTED_MARKER,
   defaultVersionId,
   isValidK8sName,
   isValidQuantity,
@@ -169,5 +170,74 @@ describe("defaultVersionId", () => {
         ]),
       ),
     ).toBe("a");
+  });
+});
+
+describe("validateConfig value checks", () => {
+  const schema: ConfigField[] = [
+    { name: "MAX_PLAYERS", displayName: "Max players", type: "int", min: 1, max: 255 },
+    { name: "MIN_ONLY", type: "int", min: 5 },
+    { name: "MAX_ONLY", type: "int", max: 9 },
+    { name: "FREE_INT", type: "int" },
+    { name: "PVP", type: "bool" },
+    { name: "MOTD", type: "string", minLength: 2, maxLength: 5 },
+    { name: "PASS", type: "password", required: true, minLength: 8 },
+    { name: "MODE", type: "enum", enum: ["a", "b"] },
+  ];
+  const ok = { PASS: CONFIG_REDACTED_MARKER };
+
+  it("accepts values inside every bound", () => {
+    expect(
+      validateConfig(schema, { ...ok, MAX_PLAYERS: "8", MIN_ONLY: "5", MAX_ONLY: "9", FREE_INT: "-3", PVP: "true", MOTD: "hey", MODE: "a" }),
+    ).toEqual([]);
+  });
+
+  it("rejects non-integers", () => {
+    const errs = validateConfig(schema, { ...ok, MAX_PLAYERS: "8.5" });
+    expect(errs).toHaveLength(1);
+    expect(errs[0].text).toBe("Must be a whole number.");
+    expect(errs[0].message).toBe("Max players: Must be a whole number.");
+    expect(validateConfig(schema, { ...ok, FREE_INT: "abc" })[0].text).toBe("Must be a whole number.");
+  });
+
+  it("reports the range with the design wording", () => {
+    expect(validateConfig(schema, { ...ok, MAX_PLAYERS: "900" })[0].text).toBe("Must be between 1 and 255.");
+    expect(validateConfig(schema, { ...ok, MAX_PLAYERS: "0" })[0].text).toBe("Must be between 1 and 255.");
+  });
+
+  it("reports one-sided bounds", () => {
+    expect(validateConfig(schema, { ...ok, MIN_ONLY: "4" })[0].text).toBe("Must be at least 5.");
+    expect(validateConfig(schema, { ...ok, MAX_ONLY: "10" })[0].text).toBe("Must be at most 9.");
+  });
+
+  it("checks booleans like the operator (Go ParseBool spellings)", () => {
+    expect(validateConfig(schema, { ...ok, PVP: "maybe" })[0].text).toBe("Must be true or false.");
+    expect(validateConfig(schema, { ...ok, PVP: "1" })).toEqual([]);
+    expect(validateConfig(schema, { ...ok, PVP: "FALSE" })).toEqual([]);
+  });
+
+  it("checks string length in bytes", () => {
+    expect(validateConfig(schema, { ...ok, MOTD: "a" })[0].text).toBe("Must be at least 2 characters.");
+    expect(validateConfig(schema, { ...ok, MOTD: "abcdef" })[0].text).toBe("Must be at most 5 characters.");
+    // two 2-byte characters + 2 ASCII = 6 bytes > 5
+    expect(validateConfig(schema, { ...ok, MOTD: "ééab" })[0].text).toBe("Must be at most 5 characters.");
+  });
+
+  it("checks password length but treats the redaction marker as unchanged", () => {
+    expect(validateConfig(schema, { PASS: "short" })[0].text).toBe("Must be at least 8 characters.");
+    expect(validateConfig(schema, { PASS: CONFIG_REDACTED_MARKER })).toEqual([]);
+  });
+
+  it("a required password with no value and no stored marker is an error", () => {
+    const errs = validateConfig(schema, {});
+    expect(errs.map((e) => e.name)).toEqual(["PASS"]);
+    expect(errs[0].text).toBe("PASS is required");
+  });
+
+  it("skips empty optional values and keeps enum errors", () => {
+    expect(validateConfig(schema, { ...ok, MAX_PLAYERS: "" })).toEqual([]);
+    const errs = validateConfig(schema, { ...ok, MODE: "z" });
+    expect(errs[0].text).toBe("MODE must be one of: a, b");
+    expect(errs[0].message).toBe(errs[0].text);
   });
 });
