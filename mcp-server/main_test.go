@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
@@ -480,9 +481,9 @@ func TestBoundAndSortEvents_NoTruncationWhenUnderLimit(t *testing.T) {
 func TestListEventsHandler_StripsAndBounds(t *testing.T) {
 	// Create fixture with many events and managedFields
 	now := time.Now()
-	events := make([]corev1.Event, 0, 120)
+	events := make([]runtime.Object, 0, 120)
 	for i := 0; i < 120; i++ {
-		events = append(events, corev1.Event{
+		events = append(events, &corev1.Event{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("ev%d", i),
 				Namespace: "games",
