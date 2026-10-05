@@ -28,18 +28,19 @@ Multi-cluster: the authenticated calls thread `?cluster=` like every other endpo
 
 - Route path `/share/$token` per OD-1 (Settled 2026-09-03), registered in `web/src/router/tree.tsx` outside the authenticated layout, no sidebar, no top bar.
 - States from the resolve response: **Up** (address, port, players if exposed), **Asleep and can start** (Start button → `POST …/start` → **Starting** with polling), **Asleep view only**, **Invalid or expired** (neutral copy, no hint whether the token ever existed).
+- Starting polls wait at least five seconds after each request completes; requests never overlap. Transient 429, 5xx and network failures retain the last resolved public Starting view (or the loading spinner on initial resolve), back off from ten seconds to a sixty-second ceiling, and honor a larger Retry-After in seconds or HTTP-date form. Success resets backoff; a neutral invalid response stops polling. Token changes and unmount abort requests and ignore stale responses.
 - Honours the stored appearance preference; no toggle.
 
 ## Privacy rules (FR-005, rule 3)
 
 - The public page renders only what the resolve response returns for that token. It never shows cluster name, namespace, version, other servers, user names or counts.
 - Invalid, expired and revoked tokens produce the same page and the same copy.
-- No telemetry, no error detail beyond the neutral copy; the API's rate-limit response maps to the same invalid state.
+- No telemetry and no raw error details. Permanent invalid/auth responses use neutral unavailable copy. A transient rate-limit/service/network failure preserves only the loading spinner or the already-resolved public Starting view while retrying; it does not declare the link invalid.
 - The public route is excluded from the authenticated `AppLayout` and from the 401 redirect logic.
 
 ## Tests
 
-- Vitest for the section, both dialogs, each public state, and the neutral-error rule (invalid vs expired vs rate-limited render identically).
+- Vitest for the section, both dialogs, each public state, neutral invalid/expired errors, and Starting polling/backoff/cancellation without public error details.
 - Playwright mock spec for create → copy → revoke, and for the public page states.
 - Playwright live spec: create a link for the seeded server, open it signed out, revoke it, reopen and get the invalid page.
 - `web/specs.md` gains a Share links entry under Routing and under Settings sub-sections.
