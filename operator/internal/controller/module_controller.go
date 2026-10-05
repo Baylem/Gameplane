@@ -67,6 +67,10 @@ type ModuleReconciler struct {
 // +kubebuilder:rbac:groups=gameplane.local,resources=gameservers,verbs=get;list;watch
 
 func (r *ModuleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	return requeueOnConflict(r.reconcile(ctx, req))
+}
+
+func (r *ModuleReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var mod gameplanev1alpha1.Module
 	if err := r.Get(ctx, req.NamespacedName, &mod); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
