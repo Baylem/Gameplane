@@ -10,6 +10,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
@@ -19,6 +20,7 @@ import (
 	"sync"
 
 	"golang.org/x/crypto/argon2"
+	"golang.org/x/sync/semaphore"
 )
 
 // argonTime / argonMemory are variables (not consts) solely so tests can
@@ -28,6 +30,12 @@ import (
 var (
 	argonTime   uint32 = 3
 	argonMemory uint32 = 64 * 1024
+
+	// argonSem bounds concurrent argon2 operations to 2 simultaneous hashes/verifies.
+	// Each operation allocates 64 MiB; with 2 concurrent ops, peak usage is ~128 MiB,
+	// fitting comfortably within the 256 MiB API container limit. The semaphore is
+	// context-aware so client disconnects abort pending operations.
+	argonSem = semaphore.NewWeighted(2)
 )
 
 const (
@@ -62,7 +70,7 @@ var dummyHash = sync.OnceValue(func() string {
 		// we can't safely serve auth anyway.
 		panic("crypto/rand: " + err.Error())
 	}
-	h, err := HashPassword(string(r))
+	h, err := HashPassword(context.Background(), string(r))
 	if err != nil {
 		panic("init dummy hash: " + err.Error())
 	}
@@ -72,12 +80,17 @@ var dummyHash = sync.OnceValue(func() string {
 // VerifyDummy runs an argon2id compare against a hash nobody can match.
 // Use it on login paths where the outcome is already "deny" but you
 // want the time envelope to match a real verify. pw is discarded.
-func VerifyDummy(pw string) {
-	_, _ = VerifyPassword(pw, dummyHash())
+func VerifyDummy(ctx context.Context, pw string) {
+	_, _ = VerifyPassword(ctx, pw, dummyHash())
 }
 
 // HashPassword hashes a password using argon2id.
-func HashPassword(pw string) (string, error) {
+func HashPassword(ctx context.Context, pw string) (string, error) {
+	if err := argonSem.Acquire(ctx, 1); err != nil {
+		return "", fmt.Errorf("hash password: %w", err)
+	}
+	defer argonSem.Release(1)
+
 	salt := make([]byte, argonSaltLen)
 	if _, err := rand.Read(salt); err != nil {
 		return "", err
@@ -92,7 +105,13 @@ func HashPassword(pw string) (string, error) {
 }
 
 // VerifyPassword verifies a password against an argon2id hash.
-func VerifyPassword(pw, encoded string) (bool, error) {
+func VerifyPassword(ctx context.Context, pw, encoded string) (bool, error) {
+	// Acquire semaphore before parsing to ensure timing parity on all paths.
+	if err := argonSem.Acquire(ctx, 1); err != nil {
+		return false, fmt.Errorf("verify password: %w", err)
+	}
+	defer argonSem.Release(1)
+
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 6 || parts[1] != "argon2id" {
 		return false, errors.New("unsupported hash format")

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	corev1 "k8s.io/api/core/v1"
@@ -28,10 +30,21 @@ import (
 // keeping the operator authoritative. All routes are GETs (viewer+ under
 // the RBAC rules in api/internal/rbac).
 func MountCluster(r chi.Router, reg *kube.Registry, store *db.Store, gameplaneVersion string, clusterOps bool, updateChannel string) {
-	h := &clusterHandler{reg: reg, store: store, gameplaneVersion: gameplaneVersion, clusterOps: clusterOps, updateChannel: updateChannel}
+	h := &clusterHandler{reg: reg, store: store, gameplaneVersion: gameplaneVersion, clusterOps: clusterOps, updateChannel: updateChannel, podCounts: &podCountCache{entries: map[string]podCountEntry{}}}
 	r.Get("/cluster", h.view)
 	r.Get("/cluster/info", h.info)
 	r.Get("/cluster/stats", h.stats)
+}
+
+type podCountEntry struct {
+	counts map[string]int64
+	exp    time.Time
+}
+
+// podCountCache is shared by every per-request copy of clusterHandler (held by pointer, so no lock is copied).
+type podCountCache struct {
+	mu      sync.Mutex
+	entries map[string]podCountEntry // keyed by clusterID
 }
 
 type clusterHandler struct {
@@ -42,6 +55,7 @@ type clusterHandler struct {
 	gameplaneVersion string
 	clusterOps       bool
 	updateChannel    string
+	podCounts        *podCountCache
 }
 
 func (h *clusterHandler) forRequest(w http.ResponseWriter, req *http.Request) (*clusterHandler, bool) {
@@ -176,6 +190,7 @@ func (h *clusterHandler) view(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	usage := h.fetchNodeUsage(req.Context())
+	podCounts := h.countNodePods(req.Context())
 	version, _ := h.serverVersion()
 	out := clusterView{
 		Nodes:   make([]clusterNode, 0, len(nodes.Items)),
@@ -194,6 +209,10 @@ func (h *clusterHandler) view(w http.ResponseWriter, req *http.Request) {
 				memUsed := u.memoryBytes
 				n.Memory.Used = &memUsed
 			}
+		}
+		if n.Pods != nil && podCounts != nil {
+			podsUsed := float64(podCounts[n.Name])
+			n.Pods.Used = &podsUsed
 		}
 		if n.Status == "Ready" {
 			out.Ready++
@@ -284,6 +303,65 @@ func (h *clusterHandler) fetchNodeUsage(ctx context.Context) map[string]nodeUsag
 		}
 	}
 	return usage
+}
+
+// countNodePods counts non-terminal pods (Pending and Running phases) per
+// node name. Unscheduled pods (empty spec.nodeName) are ignored. It returns
+// nil on any list error: pod counts are informational and the "used" value
+// is simply omitted. Results are cached per cluster for ~15 seconds.
+func (h *clusterHandler) countNodePods(ctx context.Context) map[string]int64 {
+	const cacheTTL = 15 * time.Second
+
+	// Check cache.
+	if h.podCounts != nil {
+		h.podCounts.mu.Lock()
+		e, ok := h.podCounts.entries[h.clusterID]
+		h.podCounts.mu.Unlock()
+		if ok && time.Now().Before(e.exp) {
+			return e.counts
+		}
+	}
+
+	// Paginate: list 500 pods at a time.
+	counts := make(map[string]int64)
+	opts := metav1.ListOptions{
+		Limit:         500,
+		FieldSelector: "status.phase!=Succeeded,status.phase!=Failed",
+	}
+
+	for {
+		pods, err := h.k.Typed.CoreV1().Pods("").List(ctx, opts)
+		if err != nil {
+			slog.Debug("count node pods: list failed", "err", err)
+			return nil
+		}
+
+		// Process this page: count Pending and Running pods.
+		for i := range pods.Items {
+			pod := &pods.Items[i]
+			if pod.Spec.NodeName == "" {
+				continue
+			}
+			switch pod.Status.Phase {
+			case corev1.PodPending, corev1.PodRunning:
+				counts[pod.Spec.NodeName]++
+			}
+		}
+
+		// Stop if no continue token.
+		if pods.Continue == "" {
+			break
+		}
+		opts.Continue = pods.Continue
+	}
+
+	// Cache the result.
+	if h.podCounts != nil {
+		h.podCounts.mu.Lock()
+		h.podCounts.entries[h.clusterID] = podCountEntry{counts: counts, exp: time.Now().Add(cacheTTL)}
+		h.podCounts.mu.Unlock()
+	}
+	return counts
 }
 
 func (h *clusterHandler) info(w http.ResponseWriter, req *http.Request) {

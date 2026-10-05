@@ -281,7 +281,7 @@ export function auditAction(e: { method: string; path: string; target?: string }
     const verb = colon[1];
     const nice: Record<string, string> = {
       start: "Started", stop: "Stopped", restart: "Restarted", clone: "Cloned",
-      "wipe-data": "Wiped data on",
+      "wipe-data": "Wiped data on", transfer: "Transferred ownership of",
     };
     return `${nice[verb] ?? verb} server${t}`;
   }

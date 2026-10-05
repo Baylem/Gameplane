@@ -357,3 +357,60 @@ func TestFetchNodeUsage_FakeClientDoesNotPanic(t *testing.T) {
 		t.Fatalf("usage = %+v, want nil against a fake clientset", usage)
 	}
 }
+
+func TestCluster_PodCount(t *testing.T) {
+	cs := fake.NewSimpleClientset(
+		readyNode("node-0", true, "4", "8Gi"),
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: "app-0", Namespace: "default"},
+			Spec:       corev1.PodSpec{NodeName: "node-0"},
+			Status:     corev1.PodStatus{Phase: corev1.PodRunning},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: "app-1", Namespace: "default"},
+			Spec:       corev1.PodSpec{NodeName: "node-0"},
+			Status:     corev1.PodStatus{Phase: corev1.PodRunning},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: "completed", Namespace: "default"},
+			Spec:       corev1.PodSpec{NodeName: "node-0"},
+			Status:     corev1.PodStatus{Phase: corev1.PodSucceeded},
+		},
+		&corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: "unscheduled", Namespace: "default"},
+			Spec:       corev1.PodSpec{},
+			Status:     corev1.PodStatus{Phase: corev1.PodRunning},
+		},
+	)
+	cs.Discovery().(*fakediscovery.FakeDiscovery).FakedServerVersion = &version.Info{GitVersion: "v1.31.0"}
+	k := &kube.Client{Typed: cs}
+
+	r := chi.NewRouter()
+	MountCluster(r, clusterTestRegistry(k), nil, "v9.9.9-test", false, "")
+
+	rr := httptest.NewRecorder()
+	r.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/cluster", nil))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, body=%s", rr.Code, rr.Body.String())
+	}
+	var view clusterView
+	if err := json.Unmarshal(rr.Body.Bytes(), &view); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	var node *clusterNode
+	for i := range view.Nodes {
+		if view.Nodes[i].Name == "node-0" {
+			node = &view.Nodes[i]
+			break
+		}
+	}
+	if node == nil {
+		t.Fatalf("node-0 not found")
+	}
+	if node.Pods == nil || node.Pods.Capacity != 110 {
+		t.Fatalf("Pods capacity = %v, want 110", node.Pods)
+	}
+	if node.Pods.Used == nil || *node.Pods.Used != 2 {
+		t.Fatalf("Pods used = %v, want 2", node.Pods.Used)
+	}
+}

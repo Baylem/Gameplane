@@ -21,3 +21,7 @@ Decision: drop the beta suffix (v0.3.0), status wording becomes pre-v1 release, 
 ## OD-004: Where findings and the report live — RESOLVED 2026-09-23
 
 Decision: files inside this spec folder. Recorded in `spec.md` Clarifications and FR-020.
+
+## OD-005: Backup/restore Job retry and deadline limits — OPEN
+
+Provisional values shipped by the live-test sweep fix: `BackoffLimit: 2` (same as the wipe Job) and `ActiveDeadlineSeconds: 86400` (24 h) on backup and restore Jobs, so a pod stuck in `CreateContainerConfigError` (e.g. its destination Secret was deleted) can no longer keep a Backup in flight forever. No existing requirement sets these numbers. Confirm or replace them (for example, scale the deadline with volume size or make it a Helm value).

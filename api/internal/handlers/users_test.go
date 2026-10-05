@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -49,7 +50,7 @@ func seedUser(t *testing.T, store *db.Store, username, role, password string) in
 	auth.SetFastHashParams(t)
 	var hash any
 	if password != "" {
-		h, err := auth.HashPassword(password)
+		h, err := auth.HashPassword(t.Context(), password)
 		if err != nil {
 			t.Fatalf("hash: %v", err)
 		}
@@ -387,10 +388,10 @@ func TestUsers_ResetPasswordHashesAndInvalidatesSessions(t *testing.T) {
 	if err := store.DB.QueryRowContext(t.Context(), `SELECT pw_hash FROM users WHERE id=?`, id).Scan(&newHash); err != nil {
 		t.Fatalf("read hash: %v", err)
 	}
-	if ok, _ := auth.VerifyPassword("brand-new-password-1", newHash); !ok {
+	if ok, _ := auth.VerifyPassword(t.Context(), "brand-new-password-1", newHash); !ok {
 		t.Fatalf("new password does not verify against stored hash")
 	}
-	if ok, _ := auth.VerifyPassword("originalpassword", newHash); ok {
+	if ok, _ := auth.VerifyPassword(t.Context(), "originalpassword", newHash); ok {
 		t.Fatalf("old password unexpectedly still verifies")
 	}
 	if got := sessionCount(t, store, id); got != 0 {
@@ -593,5 +594,61 @@ func TestUsers_DeleteRemovesAccountRows(t *testing.T) {
 	}
 	if _, err := store.LookupShareLink(ctx, token); !errors.Is(err, db.ErrShareLinkInvalid) {
 		t.Errorf("share link after creator delete: got %v, want ErrShareLinkInvalid", err)
+	}
+}
+
+func TestUsers_ListReturnsRFC3339Timestamps(t *testing.T) {
+	srv, store, _ := newUsersServer(t, &auth.User{ID: 1, Role: "admin"})
+	// Seed a user to ensure created_at is present
+	id := seedUser(t, store, "alice", "viewer", "pw")
+
+	// List users
+	status, body := doReq(t, "GET", srv.URL+"/users", nil)
+	if status != 200 {
+		t.Fatalf("list want 200 got %d body=%s", status, body)
+	}
+
+	var users []userDTO
+	if err := json.Unmarshal(body, &users); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	// Find the seeded user
+	var alice *userDTO
+	for i := range users {
+		if users[i].ID == id {
+			alice = &users[i]
+			break
+		}
+	}
+	if alice == nil {
+		t.Fatalf("seeded user not found in list")
+	}
+
+	// Verify created_at is RFC3339
+	if _, err := time.Parse(time.RFC3339, alice.CreatedAt); err != nil {
+		t.Fatalf("createdAt %q is not RFC3339: %v", alice.CreatedAt, err)
+	}
+}
+
+func TestUsers_FetchByIDReturnsRFC3339(t *testing.T) {
+	srv, store, _ := newUsersServer(t, &auth.User{ID: 1, Role: "admin"})
+	id := seedUser(t, store, "bob", "viewer", "pw")
+
+	status, body := doReq(t, "PATCH", srv.URL+"/users/"+strconv.FormatInt(id, 10), map[string]any{
+		"displayName": "Bobby",
+	})
+	if status != 200 {
+		t.Fatalf("patch want 200 got %d body=%s", status, body)
+	}
+
+	var user userDTO
+	if err := json.Unmarshal(body, &user); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	// Verify created_at is RFC3339
+	if _, err := time.Parse(time.RFC3339, user.CreatedAt); err != nil {
+		t.Fatalf("createdAt %q is not RFC3339: %v", user.CreatedAt, err)
 	}
 }

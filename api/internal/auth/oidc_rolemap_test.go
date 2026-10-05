@@ -513,7 +513,7 @@ func TestHandleCallback_BootstrapAdminAndOIDCCoexist(t *testing.T) {
 
 	// Seed a local (non-OIDC) bootstrap admin account.
 	SetFastHashParams(t)
-	bootstrapHash, err := HashPassword("bootstrap-pass")
+	bootstrapHash, err := HashPassword(context.Background(), "bootstrap-pass")
 	if err != nil {
 		t.Fatalf("hash: %v", err)
 	}

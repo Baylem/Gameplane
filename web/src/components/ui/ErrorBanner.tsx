@@ -10,7 +10,7 @@ export interface ErrorBannerProps {
 export function ErrorBanner({ err, onDismiss }: ErrorBannerProps) {
   const msg =
     err instanceof APIError
-      ? err.body || err.message
+      ? err.isHTML ? err.message : err.body || err.message
       : String(err);
 
   return (

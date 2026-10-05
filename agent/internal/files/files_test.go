@@ -1111,3 +1111,175 @@ func itoa(i int) string {
 	}
 	return string(buf[pos:])
 }
+
+// TestWrite_FilePermissions verifies that written files default to 0o644
+// so the game container (different uid, shared fsGroup) can read them.
+func TestWrite_FilePermissions(t *testing.T) {
+	srvURL, root := newServer(t)
+
+	// Write a new file
+	body := bytes.NewReader([]byte("new content"))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srvURL+"/files/write?path=/new.txt", body)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("status=%d", resp.StatusCode)
+	}
+
+	fi, err := os.Stat(filepath.Join(root, "new.txt"))
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if perm := fi.Mode().Perm(); perm != 0o644 {
+		t.Errorf("new file mode=%03o, want 0o644", perm)
+	}
+
+	// Overwrite preserves the existing mode
+	if err := os.WriteFile(filepath.Join(root, "existing.txt"), []byte("orig"), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	body = bytes.NewReader([]byte("replaced content"))
+	req, err = http.NewRequestWithContext(t.Context(), http.MethodPost, srvURL+"/files/write?path=/existing.txt", body)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("status=%d", resp.StatusCode)
+	}
+
+	fi, err = os.Stat(filepath.Join(root, "existing.txt"))
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if perm := fi.Mode().Perm(); perm != 0o600 {
+		t.Errorf("overwritten file mode=%03o, want 0o600 (preserved)", perm)
+	}
+}
+
+// TestUpload_FilePermissions verifies that uploaded files default to 0o644
+// so the game container (different uid, shared fsGroup) can read them.
+func TestUpload_FilePermissions(t *testing.T) {
+	srvURL, root := newServer(t)
+
+	// Upload a new file
+	body := new(bytes.Buffer)
+	mw := multipart.NewWriter(body)
+	part, err := mw.CreateFormFile("file", "upload.txt")
+	if err != nil {
+		t.Fatalf("createformfile: %v", err)
+	}
+	if _, err := part.Write([]byte("uploaded content")); err != nil {
+		t.Fatalf("write part: %v", err)
+	}
+	mw.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srvURL+"/files/upload?path=/", body)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("upload: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("status=%d", resp.StatusCode)
+	}
+
+	fi, err := os.Stat(filepath.Join(root, "upload.txt"))
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if perm := fi.Mode().Perm(); perm != 0o644 {
+		t.Errorf("uploaded file mode=%03o, want 0o644", perm)
+	}
+
+	// Upload over an existing file with a different mode (preserve mode)
+	if err := os.WriteFile(filepath.Join(root, "override.txt"), []byte("orig"), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	body = new(bytes.Buffer)
+	mw = multipart.NewWriter(body)
+	part, err = mw.CreateFormFile("file", "override.txt")
+	if err != nil {
+		t.Fatalf("createformfile: %v", err)
+	}
+	if _, err := part.Write([]byte("replaced content")); err != nil {
+		t.Fatalf("write part: %v", err)
+	}
+	mw.Close()
+
+	req, err = http.NewRequestWithContext(t.Context(), http.MethodPost, srvURL+"/files/upload?path=/", body)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("upload: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("status=%d", resp.StatusCode)
+	}
+
+	fi, err = os.Stat(filepath.Join(root, "override.txt"))
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if perm := fi.Mode().Perm(); perm != 0o600 {
+		t.Errorf("override file mode=%03o, want 0o600 (preserved)", perm)
+	}
+}
+
+func TestUpload_ReplacesSymlinkWithTargetMode(t *testing.T) {
+	root := t.TempDir()
+
+	// Create target file with restricted mode
+	targetFile := filepath.Join(root, "target")
+	if err := os.WriteFile(targetFile, []byte("original"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create symlink pointing to target
+	link := filepath.Join(root, "link")
+	if err := os.Symlink("target", link); err != nil {
+		t.Skipf("symlink unsupported: %v", err)
+	}
+
+	// Upload replaces the symlink
+	src := strings.NewReader("new content")
+	if err := savePart(root, root, "link", src, 1000); err != nil {
+		t.Fatalf("savePart failed: %v", err)
+	}
+
+	// Verify the link is now a regular file (not a symlink)
+	fileStat, err := os.Lstat(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fileStat.Mode()&os.ModeSymlink != 0 {
+		t.Fatal("expected regular file, got symlink")
+	}
+
+	// Verify the new file has the target's mode (0o600), not symlink mode (0o777)
+	newFileMode := fileStat.Mode().Perm()
+	expectedMode := os.FileMode(0o600)
+	if newFileMode != expectedMode {
+		t.Errorf("expected mode %o, got %o (symlink mode is 0o777; fix uses os.Stat, not os.Lstat)", expectedMode, newFileMode)
+	}
+}

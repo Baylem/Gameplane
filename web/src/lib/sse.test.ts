@@ -188,4 +188,109 @@ describe("openEventStream with EventSource", () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });
+
+  it("closes stream when tab hidden, reopens and calls onReconnect when visible", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+
+    const events: GameplaneEvent[] = [];
+    const onReconnect = vi.fn();
+    const dispose = openEventStream({
+      onEvent: (e) => events.push(e),
+      onReconnect,
+    });
+
+    const es1 = FakeEventSource.instances[0];
+    expect(es1.closed).toBe(false);
+
+    // Simulate tab becoming hidden
+    Object.defineProperty(document, "hidden", {
+      value: true,
+      configurable: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    // EventSource should be closed
+    expect(es1.closed).toBe(true);
+
+    // Simulate tab becoming visible again
+    Object.defineProperty(document, "hidden", {
+      value: false,
+      configurable: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    // New EventSource should be created and onReconnect called
+    expect(FakeEventSource.instances).toHaveLength(2);
+    expect(onReconnect).toHaveBeenCalledTimes(1);
+    const es2 = FakeEventSource.instances[1];
+    expect(es2.closed).toBe(false);
+
+    dispose();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("does not reconnect after dispose even if visibility changes", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+
+    const dispose = openEventStream({
+      onEvent: vi.fn(),
+      onReconnect: vi.fn(),
+    });
+
+    expect(FakeEventSource.instances).toHaveLength(1);
+    dispose();
+
+    // Simulate visibility change after dispose
+    Object.defineProperty(document, "hidden", {
+      value: true,
+      configurable: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    Object.defineProperty(document, "hidden", {
+      value: false,
+      configurable: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    // Should still only have 1 instance, no reconnect
+    expect(FakeEventSource.instances).toHaveLength(1);
+
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("clears pending retry timeout when tab becomes hidden", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+
+    const dispose = openEventStream({
+      onEvent: vi.fn(),
+      onReconnect: vi.fn(),
+    });
+
+    const es = FakeEventSource.instances[0];
+    // Trigger error to schedule a retry
+    es.readyState = FakeEventSource.CLOSED;
+    es.onerror?.();
+
+    // Simulate tab becoming hidden before retry fires
+    Object.defineProperty(document, "hidden", {
+      value: true,
+      configurable: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    // Advance time and verify no reconnect happened
+    vi.advanceTimersByTime(3000);
+    expect(FakeEventSource.instances).toHaveLength(1);
+
+    Object.defineProperty(document, "hidden", { value: false, configurable: true });
+    dispose();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
 });

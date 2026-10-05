@@ -986,8 +986,9 @@ function makeResourceEndpoints(request: RequestClient) {
     downloadURL: (server: string, ns?: string) =>
       withCluster(withNS(`/servers/${encodeURIComponent(server)}/logs/download`, ns)),
     // Live tail of the configured game log file, via the agent (mTLS).
+    // Requests the last 500 lines before following new output.
     fileStreamPath: (server: string, ns?: string) =>
-      withCluster(withNS(`/ws/servers/${encodeURIComponent(server)}/logs`, ns)),
+      withCluster(withNS(`/ws/servers/${encodeURIComponent(server)}/logs?tail=500`, ns)),
     // Live stream of the game container's stdout via the pod-log API.
     // Shows download/config output during startup — before the game's own
     // log file exists — and works even when agent mTLS isn't configured.

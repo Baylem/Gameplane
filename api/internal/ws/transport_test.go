@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -70,7 +71,7 @@ func TestDirectAgentTransportRejectsInvalidTargets(t *testing.T) {
 		if err == nil {
 			t.Errorf("HTTP accepted invalid target %+v", target)
 		}
-		conn, resp, err := transport.Dial(t.Context(), target, "/console")
+		conn, resp, err := transport.Dial(t.Context(), target, "/console", "")
 		if resp != nil && resp.Body != nil {
 			_ = resp.Body.Close()
 		}
@@ -126,7 +127,7 @@ func TestDirectAgentTransportWebSocket(t *testing.T) {
 		}
 	}))
 	defer srv.Close()
-	conn, resp, err := testDirectTransport(srv).Dial(t.Context(), agentTarget{name: "alpha", namespace: "games"}, "/console")
+	conn, resp, err := testDirectTransport(srv).Dial(t.Context(), agentTarget{name: "alpha", namespace: "games"}, "/console", "")
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
@@ -149,7 +150,7 @@ func (r *recordingAgentTransport) Do(_ context.Context, operation agentRequest) 
 	r.operation = operation
 	return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader("[]"))}, nil
 }
-func (*recordingAgentTransport) Dial(context.Context, agentTarget, string) (*websocket.Conn, *http.Response, error) {
+func (*recordingAgentTransport) Dial(context.Context, agentTarget, string, string) (*websocket.Conn, *http.Response, error) {
 	panic("unexpected WebSocket operation")
 }
 
@@ -179,5 +180,80 @@ func TestAgentClientUsesAgentTransport(t *testing.T) {
 	got := transport.operation
 	if got.target.name != "alpha" || got.target.namespace != "games" || got.method != http.MethodGet || got.path != "/mods" {
 		t.Fatalf("operation = %+v", got)
+	}
+}
+
+func TestFilterAllowedQueryParams(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		allowed   []string
+		wantKeys  map[string]bool
+		wantEmpty bool
+	}{
+		{
+			name:      "empty input",
+			input:     "",
+			allowed:   []string{"from", "tail"},
+			wantEmpty: true,
+		},
+		{
+			name:     "allowed keys only",
+			input:    "from=start&tail=100",
+			allowed:  []string{"from", "tail"},
+			wantKeys: map[string]bool{"from": true, "tail": true},
+		},
+		{
+			name:     "disallowed keys removed",
+			input:    "from=start&cluster=prod&tail=100&namespace=games",
+			allowed:  []string{"from", "tail"},
+			wantKeys: map[string]bool{"from": true, "tail": true},
+		},
+		{
+			name:      "no allowed keys in input",
+			input:     "cluster=prod&namespace=games",
+			allowed:   []string{"from", "tail"},
+			wantEmpty: true,
+		},
+		{
+			name:     "only from allowed",
+			input:    "from=end&tail=100&cluster=local",
+			allowed:  []string{"from"},
+			wantKeys: map[string]bool{"from": true},
+		},
+		{
+			name:     "multiple values for same key",
+			input:    "tail=50&tail=100&cluster=prod",
+			allowed:  []string{"tail"},
+			wantKeys: map[string]bool{"tail": true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := filterAllowedQueryParams(tt.input, tt.allowed)
+			if tt.wantEmpty {
+				if got != "" {
+					t.Errorf("filterAllowedQueryParams(%q, %v) = %q, want empty", tt.input, tt.allowed, got)
+				}
+				return
+			}
+			// Parse and verify allowed keys are present
+			parsed, err := url.ParseQuery(got)
+			if err != nil {
+				t.Errorf("invalid output query: %v", err)
+				return
+			}
+			for k := range tt.wantKeys {
+				if !parsed.Has(k) {
+					t.Errorf("filterAllowedQueryParams(%q, %v) missing key %q", tt.input, tt.allowed, k)
+				}
+			}
+			// Verify no disallowed keys are present
+			for k := range parsed {
+				if !tt.wantKeys[k] {
+					t.Errorf("filterAllowedQueryParams(%q, %v) unexpectedly included key %q", tt.input, tt.allowed, k)
+				}
+			}
+		})
 	}
 }

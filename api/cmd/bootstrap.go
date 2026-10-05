@@ -75,7 +75,7 @@ func bootstrapAdmin(ctx context.Context, args []string, stdin io.Reader, stderr 
 		}
 	}
 
-	hash, err := auth.HashPassword(pw)
+	hash, err := auth.HashPassword(ctx, pw)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}

@@ -1152,3 +1152,93 @@ func TestExtAllowed(t *testing.T) {
 		}
 	}
 }
+
+// mockHTTPClient returns an *http.Client that responds to all requests with
+// the given content.
+func mockHTTPClient(content string) *http.Client {
+	return &http.Client{
+		Transport: &mockTransport{content: content},
+	}
+}
+
+type mockTransport struct {
+	content string
+}
+
+func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader(m.content)),
+		Request:    req,
+	}, nil
+}
+
+// TestDownload_FilePermissions verifies that downloaded mod files are 0o644
+// so the game container (different uid, shared fsGroup) can read them.
+func TestDownload_FilePermissions(t *testing.T) {
+	root := t.TempDir()
+	h := newHandler(root, &caps.Mods{
+		Path: "mods",
+		Install: &caps.ModInstall{
+			AllowedHosts: []string{"example.com"},
+			MaxSizeMB:    256,
+		},
+	})
+	h.client = mockHTTPClient("test-mod-content")
+
+	_, err := h.download(t.Context(), "http://example.com/test.jar", "test.jar")
+	if err != nil {
+		t.Fatalf("download: %v", err)
+	}
+
+	fi, err := os.Stat(filepath.Join(root, "mods", "test.jar"))
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if perm := fi.Mode().Perm(); perm != 0o644 {
+		t.Errorf("file mode=%03o, want 0o644", perm)
+	}
+}
+
+// TestUpload_FilePermissions verifies that uploaded mod files are 0o644
+// so the game container (different uid, shared fsGroup) can read them.
+func TestUpload_FilePermissions(t *testing.T) {
+	root := t.TempDir()
+	spec := &caps.Mods{Path: "mods", Extensions: []string{".jar"}}
+	srv := newSrv(t, root, spec)
+
+	client := &http.Client{}
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	part, err := mw.CreateFormFile("file", "test.jar")
+	if err != nil {
+		t.Fatalf("createformfile: %v", err)
+	}
+	if _, err := part.Write([]byte("test-content")); err != nil {
+		t.Fatalf("write part: %v", err)
+	}
+	mw.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/mods/upload", &buf)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("upload: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status=%d", resp.StatusCode)
+	}
+
+	fi, err := os.Stat(filepath.Join(root, "mods", "test.jar"))
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if perm := fi.Mode().Perm(); perm != 0o644 {
+		t.Errorf("file mode=%03o, want 0o644", perm)
+	}
+}

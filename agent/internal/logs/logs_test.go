@@ -338,3 +338,109 @@ func TestCheckRotation_StatError(t *testing.T) {
 		t.Fatal("rot should be false on a stat error, not treated as a rotation")
 	}
 }
+
+// TestTail_TailParameterReplaysLastNLines verifies that ?tail=N causes
+// the agent to replay the last N lines before following new output.
+func TestTail_TailParameterReplaysLastNLines(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "latest.log")
+	if err := os.WriteFile(logPath, []byte("line1\nline2\nline3\nline4\nline5\n"), 0o600); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	url := mountServer(t, logPath)
+	wsURL := "ws" + strings.TrimPrefix(url, "http") + "/logs/tail?tail=2"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, dialResp, err := websocket.Dial(ctx, wsURL, nil)
+	if dialResp != nil && dialResp.Body != nil {
+		defer dialResp.Body.Close()
+	}
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close(websocket.StatusNormalClosure, "") })
+
+	// Should receive the last 2 lines before any new output.
+	mt, b, err := conn.Read(ctx)
+	if err != nil {
+		t.Fatalf("read 1: %v", err)
+	}
+	if mt != websocket.MessageText || string(b) != "line4\n" {
+		t.Fatalf("got %d %q, want line4", mt, b)
+	}
+
+	mt, b, err = conn.Read(ctx)
+	if err != nil {
+		t.Fatalf("read 2: %v", err)
+	}
+	if mt != websocket.MessageText || string(b) != "line5\n" {
+		t.Fatalf("got %d %q, want line5", mt, b)
+	}
+
+	// Append a new line and verify it's delivered.
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	if _, err := f.WriteString("line6\n"); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	_ = f.Close()
+
+	mt, b, err = conn.Read(ctx)
+	if err != nil {
+		t.Fatalf("read new: %v", err)
+	}
+	if mt != websocket.MessageText || string(b) != "line6\n" {
+		t.Fatalf("got %d %q, want line6", mt, b)
+	}
+}
+
+// TestTail_InvalidTailParameterIgnored verifies that an invalid ?tail
+// parameter (non-numeric or negative) is ignored and falls back to the
+// default behavior (from=end).
+func TestTail_InvalidTailParameterIgnored(t *testing.T) {
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "latest.log")
+	if err := os.WriteFile(logPath, []byte("already-here\n"), 0o600); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	url := mountServer(t, logPath)
+	wsURL := "ws" + strings.TrimPrefix(url, "http") + "/logs/tail?tail=invalid"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, dialResp, err := websocket.Dial(ctx, wsURL, nil)
+	if dialResp != nil && dialResp.Body != nil {
+		defer dialResp.Body.Close()
+	}
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	t.Cleanup(func() { _ = conn.Close(websocket.StatusNormalClosure, "") })
+
+	// Wait briefly for seek-to-end to complete.
+	time.Sleep(100 * time.Millisecond)
+
+	// Append a new line.
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	if _, err := f.WriteString("fresh\n"); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	_ = f.Close()
+
+	// Should receive only the new line (old content was skipped).
+	mt, b, err := conn.Read(ctx)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if mt != websocket.MessageText || string(b) != "fresh\n" {
+		t.Fatalf("got %d %q, want only the post-connect line", mt, b)
+	}
+}

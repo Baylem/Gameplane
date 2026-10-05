@@ -138,11 +138,11 @@ func (l *Local) HandleLogin(sessions *SessionStore, reg *Registry) http.HandlerF
 		// is a username-enumeration oracle.
 		u, hash, err := l.fetchUser(req.Context(), body.Username)
 		if err != nil || hash == "" {
-			VerifyDummy(body.Password)
+			VerifyDummy(req.Context(), body.Password)
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)
 			return
 		}
-		ok, err := VerifyPassword(body.Password, hash)
+		ok, err := VerifyPassword(req.Context(), body.Password, hash)
 		if err != nil || !ok {
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)
 			return
