@@ -355,13 +355,15 @@ Original question:
 `charts/gameplane/values.yaml:473` pins the default git module source to `ref: v0.2.0-beta.6` (finding F-028).
 - Question: which `gameplane-module` tag should v0.3.0 point to? Should a new tag (e.g. `v0.3.0`) be cut in that repo after the live module rows pass?
 
-### OD-027: Backup/restore Job retry and deadline limits — OPEN
+### OD-027: Backup/restore Job retry and deadline limits — RESOLVED 2026-10-05
 
 Provisional values shipped by the live-test sweep fix: `BackoffLimit: 2` (same as the wipe Job) and `ActiveDeadlineSeconds: 86400` (24 h) on backup and restore Jobs, so a pod stuck in `CreateContainerConfigError` (e.g. its destination Secret was deleted) can no longer keep a Backup in flight forever. No existing requirement sets these numbers. Confirm or replace them (for example, scale the deadline with volume size or make it a Helm value).
 
 The values ship in #549 (merged 2026-10-05) and remain provisional pending the maintainer.
 
 (Added on master by the live-test sweep, #549, as "OD-005"; renumbered to OD-027 when merged into this branch because OD-005 is the upgrade-baseline decision.)
+
+Decision (maintainer, 2026-10-05): make them Helm values. #573 adds `operator.backupJobBackoffLimit` (default 2) and `operator.backupJobActiveDeadlineSeconds` (default 86400), passed to the operator as `--backup-job-backoff-limit` / `--backup-job-active-deadline-seconds`; a missing key keeps the default, negative values are rejected.
 
 ### OD-028: API cluster-wide pod list (B15) — RESOLVED 2026-10-05
 
