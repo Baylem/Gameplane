@@ -390,6 +390,7 @@ A submitted stylesheet is rejected with 400 and a message naming the offending r
 - **Signature:** `WriteSync(ctx context.Context, method, path, target, reason string, status int) error` (api/internal/audit/audit.go:689)
 - **Timing:** The audit row is inserted into the database **before WriteHeader is called**, so if the audit write fails, the handler returns HTTP 500 (internal error) without sending the response body — **a failed audit write fails the entire capture operation (FR-006)**
 - **Error handling:** WriteSync returns an error if the database write fails; the handler must check the return value and bail if it's non-nil. This is enforced by a helper method `auditWriteOrFail` in capture.go, which returns false on write failure (the handler then returns 500 without proceeding)
+- **One row per request:** after a successful WriteSync, `auditWriteOrFail` calls `audit.MarkRecorded(ctx)`, which makes the global `audit.Middleware` skip its generic row for that request, so each capture mutation is audited once (the explicit row also carries `reason` and the composite `target`). If WriteSync fails the flag stays unset and the middleware row is written as a fallback
 
 **Audit reason field** (migration 007_audit_reason.sql and audit.go):
 

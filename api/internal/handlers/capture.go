@@ -1246,6 +1246,9 @@ func (h *captureHandler) auditWriteOrFail(w http.ResponseWriter, req *http.Reque
 		httperr.WriteCode(w, req, http.StatusInternalServerError, errors.New("audit write failed"))
 		return false
 	}
+	// This row is the request's audit record; stop audit.Middleware adding a
+	// second, less detailed one for the same request.
+	audit.MarkRecorded(req.Context())
 	return true
 }
 
