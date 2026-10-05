@@ -333,7 +333,7 @@ export function SharePage() {
           </div>
 
           <p className="text-sm text-muted">
-            The server is waking up. This usually takes a minute or two — this page
+            The server is starting up. This usually takes a minute or two — this page
             updates on its own.
           </p>
         </Card>

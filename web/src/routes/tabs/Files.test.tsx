@@ -451,6 +451,54 @@ describe("FilesTab", () => {
     await waitFor(() => expect(createCalled).toBe(true));
   });
 
+  it("deletes a folder from its row button without opening it", async () => {
+    let deleteURL: string | null = null;
+    fetchMock.mockImplementation(async (url: string, init?: FetchInit) => {
+      if (url.startsWith("/servers/mc-survival/files/list")) return jsonRes(ROOT_ENTRIES);
+      if (
+        url.startsWith("/servers/mc-survival/files/delete") &&
+        init?.method === "DELETE"
+      ) {
+        deleteURL = url;
+        return new Response(null, { status: 204 });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    renderWithQuery(<FilesTab name="mc-survival" />);
+    await screen.findByText("config");
+    fireEvent.click(screen.getByRole("button", { name: "Delete config" }));
+    expect(await screen.findByText(/Delete config\?/)).toBeInTheDocument();
+    // The row click must not have navigated into the folder.
+    expect(
+      fetchMock.mock.calls.some(([u]) => String(u).includes("path=%2Fconfig")),
+    ).toBe(false);
+    const confirmBtn = screen.getByRole("button", { name: /^Delete$/ });
+    await act(async () => {
+      fireEvent.click(confirmBtn);
+    });
+    await waitFor(() =>
+      expect(deleteURL).toMatch(/^\/servers\/mc-survival\/files\/delete\?path=%2Fconfig/),
+    );
+  });
+
+  it("explains why a new file name is rejected", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.startsWith("/servers/mc-survival/files/list")) return jsonRes(ROOT_ENTRIES);
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    renderWithQuery(<FilesTab name="mc-survival" />);
+    await screen.findByText("server.properties");
+    fireEvent.click(screen.getByRole("button", { name: /New file/ }));
+    const input = await screen.findByPlaceholderText("config.yaml");
+    expect(screen.queryByText(/Names can't contain/)).not.toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "../escape.txt" } });
+    expect(screen.getByText(/Names can't contain/)).toBeInTheDocument();
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("button", { name: /^Create$/ })).toBeDisabled();
+    fireEvent.change(input, { target: { value: "ok.txt" } });
+    expect(screen.queryByText(/Names can't contain/)).not.toBeInTheDocument();
+  });
+
   it("rejects new file names with slashes", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url.startsWith("/servers/mc-survival/files/list")) return jsonRes(ROOT_ENTRIES);

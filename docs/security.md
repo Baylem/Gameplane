@@ -648,6 +648,18 @@ a self-hosted API-key reviewer:
 The review is advisory — a human reviewer must still validate changes before merge
 — and the tool can be disabled at any time via GitHub's app management UI.
 
+## API cluster-wide pod list
+
+The API's `<release>-api-read` ClusterRole grants `list` on Pods in **every**
+namespace, so the Cluster page can show per-node pod usage
+(`countNodePods` in `api/internal/handlers/cluster.go`). A pod list returns
+full pod specs, including plain-text environment values, for every workload
+sharing the cluster — not just `gameplane-games`. A compromised API could
+read them. The maintainer accepted this tradeoff on 2026-10-05 for the pod
+meter. Values held in Secrets are not exposed: the API has no cluster-wide
+Secret read. Without the grant, the API omits "used" and the dashboard shows
+"—".
+
 ## mcp-server (optional)
 
 The optional MCP server [optional] (`mcpServer.enabled`, see [`mcp-server/README.md`](../mcp-server/README.md))

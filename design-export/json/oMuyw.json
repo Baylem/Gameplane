@@ -1,23 +1,14 @@
 {
-  "id": "JLaGB",
+  "id": "oMuyw",
   "type": "ref",
-  "reusable": true,
-  "ref": "x3beP",
-  "name": "Gameplane/Dialog/New File",
-  "width": 440,
-  "x": -15225,
+  "ref": "JLaGB",
+  "name": "Gameplane/Dialog/New File (Invalid name)",
+  "x": -14705,
   "y": 28539,
-  "theme": {},
   "descendants": {
-    "E7Whx": {
-      "content": "New file"
-    },
-    "qzcst": {
-      "enabled": false
-    },
-    "Nht52": {
+    "q9QPFd": {
       "type": "frame",
-      "id": "q9QPFd",
+      "id": "hNGjw",
       "name": "mBody",
       "width": "fill_container",
       "layout": "vertical",
@@ -31,7 +22,8 @@
       "children": [
         {
           "type": "text",
-          "id": "OE13L",
+          "id": "EgYe0",
+          "name": "Label",
           "fill": "$muted",
           "content": "File name",
           "fontFamily": "$typography/font-sans",
@@ -39,22 +31,30 @@
           "fontWeight": "normal"
         },
         {
-          "id": "pTLGH",
+          "id": "nhs80",
           "type": "ref",
           "ref": "D0cDM",
           "name": "Input",
           "width": "fill_container",
+          "stroke": "$danger/danger",
           "descendants": {
             "PJERm": {
-              "content": "config.yaml",
-              "fill": "#5C5C5C"
+              "content": "../escape.txt",
+              "fill": "$field/foreground"
             }
           }
+        },
+        {
+          "type": "text",
+          "id": "ZIf7a",
+          "name": "Field Error",
+          "fill": "$danger/danger",
+          "content": "Names can't contain \"/\" or be \".\" or \"..\".",
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 11,
+          "fontWeight": "normal"
         }
       ]
-    },
-    "TZ7Ef": {
-      "content": "Create"
     }
   }
 }

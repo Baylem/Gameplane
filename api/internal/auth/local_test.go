@@ -27,7 +27,7 @@ func newAuthDB(t *testing.T) *db.Store {
 func seedUser(t *testing.T, s *db.Store, username, pw, role string) {
 	t.Helper()
 	SetFastHashParams(t)
-	hash, err := HashPassword(pw)
+	hash, err := HashPassword(context.Background(), pw)
 	if err != nil {
 		t.Fatalf("hash: %v", err)
 	}

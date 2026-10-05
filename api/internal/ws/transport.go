@@ -43,7 +43,27 @@ type agentRequest struct {
 // existing direct connection inside the home cluster.
 type agentTransport interface {
 	Do(context.Context, agentRequest) (*http.Response, error)
-	Dial(context.Context, agentTarget, string) (*websocket.Conn, *http.Response, error)
+	Dial(context.Context, agentTarget, string, string) (*websocket.Conn, *http.Response, error)
+}
+
+// filterAllowedQueryParams builds a query string from the input rawQuery,
+// keeping only the specified allowed keys. This prevents callers from
+// injecting unauthorized parameters into agent operations.
+func filterAllowedQueryParams(rawQuery string, allowedKeys []string) string {
+	if rawQuery == "" {
+		return ""
+	}
+	parsed, err := url.Parse("?" + rawQuery)
+	if err != nil {
+		return ""
+	}
+	filtered := url.Values{}
+	for _, key := range allowedKeys {
+		if values, ok := parsed.Query()[key]; ok {
+			filtered[key] = values
+		}
+	}
+	return filtered.Encode()
 }
 
 type directAgentTransport struct {
@@ -95,8 +115,10 @@ func (t *directAgentTransport) Do(ctx context.Context, operation agentRequest) (
 	return t.http.Do(req)
 }
 
-func (t *directAgentTransport) Dial(ctx context.Context, target agentTarget, path string) (*websocket.Conn, *http.Response, error) {
-	endpoint, err := t.endpoint(target, "wss", path, "")
+func (t *directAgentTransport) Dial(ctx context.Context, target agentTarget, path string, rawQuery string) (*websocket.Conn, *http.Response, error) {
+	// Filter query parameters: only allow "from" and "tail" keys for agent operations.
+	filteredQuery := filterAllowedQueryParams(rawQuery, []string{"from", "tail"})
+	endpoint, err := t.endpoint(target, "wss", path, filteredQuery)
 	if err != nil {
 		return nil, nil, err
 	}

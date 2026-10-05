@@ -356,7 +356,7 @@ func (r *ModuleReconciler) finalize(ctx context.Context, mod *gameplanev1alpha1.
 	}
 	controllerutil.RemoveFinalizer(mod, gameplanev1alpha1.ModuleFinalizer)
 	if err := r.Update(ctx, mod); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	return ctrl.Result{}, nil
 }

@@ -59,20 +59,16 @@ func TestBackupSchedule_SuspendStopsScheduling(t *testing.T) {
 	})
 
 	// Watch for ~75s. A non-suspended schedule with `* * * * *` would
-	// have fired once. Any owned Backup appearing in this window is a
+	// have fired once. Any labelled Backup appearing in this window is a
 	// regression in the suspend gate.
 	envInstance.Consistently(t, 75*time.Second, 5*time.Second, func() (bool, string) {
 		bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
-			List(ctx, metav1.ListOptions{})
+			List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
 		if err != nil {
 			return false, "list backups: " + err.Error()
 		}
-		for _, item := range bks.Items {
-			for _, owner := range item.GetOwnerReferences() {
-				if owner.Kind == "BackupSchedule" && owner.Name == schedName {
-					return false, "suspended schedule still emitted Backup " + item.GetName()
-				}
-			}
+		if len(bks.Items) > 0 {
+			return false, "suspended schedule still emitted Backup " + bks.Items[0].GetName()
 		}
 		return true, ""
 	})
@@ -86,18 +82,14 @@ func TestBackupSchedule_SuspendStopsScheduling(t *testing.T) {
 	}
 	envInstance.Eventually(t, 2*time.Minute+30*time.Second, func() (bool, string) {
 		bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
-			List(ctx, metav1.ListOptions{})
+			List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
 		if err != nil {
 			return false, "list backups: " + err.Error()
 		}
-		for _, item := range bks.Items {
-			for _, owner := range item.GetOwnerReferences() {
-				if owner.Kind == "BackupSchedule" && owner.Name == schedName {
-					return true, ""
-				}
-			}
+		if len(bks.Items) > 0 {
+			return true, ""
 		}
-		return false, "no Backup CR yet after unsuspend"
+		return false, "no labelled Backup yet after unsuspend"
 	})
 }
 
@@ -151,23 +143,14 @@ func TestBackupSchedule_RetentionTrimsPast(t *testing.T) {
 	// retention is asserted.
 	envInstance.Eventually(t, 3*time.Minute, func() (bool, string) {
 		bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
-			List(ctx, metav1.ListOptions{})
+			List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
 		if err != nil {
 			return false, "list backups: " + err.Error()
 		}
-		got := 0
-		for _, item := range bks.Items {
-			for _, owner := range item.GetOwnerReferences() {
-				if owner.Kind == "BackupSchedule" && owner.Name == schedName {
-					got++
-					break
-				}
-			}
-		}
-		if got >= 2 {
+		if len(bks.Items) >= 2 {
 			return true, ""
 		}
-		return false, "fewer than 2 owned Backups produced (got " + itoa(got) + ")"
+		return false, "fewer than 2 labelled Backups produced (got " + itoa(len(bks.Items)) + ")"
 	})
 
 	// Retention reconcile is asynchronous — the controller may emit a
@@ -225,19 +208,15 @@ func TestBackupSchedule_ConcurrencyForbid(t *testing.T) {
 			Delete(context.Background(), schedName, metav1.DeleteOptions{})
 	})
 
-	// Wait for the first owned Backup to land.
+	// Wait for the first labelled Backup to land.
 	envInstance.Eventually(t, 2*time.Minute+30*time.Second, func() (bool, string) {
 		bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
-			List(ctx, metav1.ListOptions{})
+			List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
 		if err != nil {
 			return false, "list backups: " + err.Error()
 		}
-		for _, item := range bks.Items {
-			for _, owner := range item.GetOwnerReferences() {
-				if owner.Kind == "BackupSchedule" && owner.Name == schedName {
-					return true, ""
-				}
-			}
+		if len(bks.Items) > 0 {
+			return true, ""
 		}
 		return false, "no scheduled Backup yet"
 	})
@@ -248,23 +227,13 @@ func TestBackupSchedule_ConcurrencyForbid(t *testing.T) {
 	deadline := time.Now().Add(90 * time.Second)
 	for time.Now().Before(deadline) {
 		bks, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).
-			List(ctx, metav1.ListOptions{})
+			List(ctx, metav1.ListOptions{LabelSelector: "gameplane.local/backup-schedule=" + schedName})
 		if err != nil {
 			t.Fatalf("list backups: %v", err)
 		}
 		nonTerminal := 0
 		var names []string
 		for _, item := range bks.Items {
-			isOwned := false
-			for _, owner := range item.GetOwnerReferences() {
-				if owner.Kind == "BackupSchedule" && owner.Name == schedName {
-					isOwned = true
-					break
-				}
-			}
-			if !isOwned {
-				continue
-			}
 			phase, _, _ := unstructured.NestedString(item.Object, "status", "phase")
 			if phase != "Succeeded" && phase != "Failed" {
 				nonTerminal++

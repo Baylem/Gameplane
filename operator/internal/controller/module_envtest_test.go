@@ -233,6 +233,62 @@ func TestModule_DeletionBlockedByGameServer(t *testing.T) {
 	}
 }
 
+// TestModule_ConcurrentDeletionDuringFinalization verifies that concurrent
+// Module deletion during finalization is handled gracefully. When the Module
+// finalizer is removed and an Update is issued, a concurrent delete can race
+// and cause the Update to return NotFound. This must not produce an error or
+// ERROR log.
+func TestModule_ConcurrentDeletionDuringFinalization(t *testing.T) {
+	ns := newNamespace(t)
+	fake := newFakeOCI()
+	startMgr(t, ns, withModuleReconciler(fake))
+
+	const ref = "local/test/minecraft"
+	fake.putBundle(ref, "1.0.0", fixtureBundle("minecraft", "1.0.0", "Minecraft"))
+
+	srcName := uniqueName("modsrc")
+	createIndexedSource(t, srcName, "local/test", fake, []gameplanev1alpha1.ModuleEntry{{
+		Name:          "minecraft",
+		Reference:     ref,
+		Versions:      []string{"1.0.0"},
+		LatestVersion: "1.0.0",
+	}})
+
+	modName := uniqueName("mc")
+	mod := &gameplanev1alpha1.Module{
+		ObjectMeta: metav1.ObjectMeta{Name: modName},
+		Spec: gameplanev1alpha1.ModuleSpec{
+			Source: corev1.LocalObjectReference{Name: srcName},
+			Name:   "minecraft",
+		},
+	}
+	if err := k8sClient.Create(context.Background(), mod); err != nil {
+		t.Fatalf("create module: %v", err)
+	}
+
+	// Wait for materialization.
+	eventually(t, func() (bool, string) {
+		got := getModule(t, modName)
+		return got.Status.Phase == gameplanev1alpha1.ModulePhaseReady, "phase=" + got.Status.Phase
+	})
+
+	// Delete the Module (may race with finalizer removal).
+	if err := k8sClient.Delete(context.Background(), mod); err != nil {
+		t.Fatalf("delete module: %v", err)
+	}
+
+	// The Module should eventually be gone, and no ERROR should be logged
+	// from a NotFound during finalizer removal.
+	eventually(t, func() (bool, string) {
+		var m gameplanev1alpha1.Module
+		err := k8sClient.Get(context.Background(), types.NamespacedName{Name: modName}, &m)
+		if apierrors.IsNotFound(err) {
+			return true, ""
+		}
+		return false, fmt.Sprintf("module still present: err=%v", err)
+	})
+}
+
 func getModule(t *testing.T, name string) *gameplanev1alpha1.Module {
 	t.Helper()
 	var m gameplanev1alpha1.Module

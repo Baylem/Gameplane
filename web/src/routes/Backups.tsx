@@ -25,7 +25,7 @@ import {
   Switch,
 } from "@heroui/react";
 import { PageHeader } from "@/components/PageHeader";
-import { formatRelative } from "@/lib/utils";
+import { formatRelative, formatRelativeFuture } from "@/lib/utils";
 import { PhaseChip } from "@/components/ui/PhaseChip";
 import { ErrorBanner } from "@/components/backups/ErrorBanner";
 import { ScheduleForm } from "@/components/backups/ScheduleForm";
@@ -456,7 +456,7 @@ function SchedulesTabPanel({ location, onLocationChange, locations }: LocationFi
                       {formatRelative(s.status?.lastSuccessfulTime)}
                     </Table.Cell>
                     <Table.Cell className="text-foreground/60">
-                      {s.spec.suspend ? "—" : formatRelative(s.status?.nextScheduleTime)}
+                      {s.spec.suspend ? "—" : formatRelativeFuture(s.status?.nextScheduleTime)}
                     </Table.Cell>
                     <Table.Cell>
                       <Switch

@@ -15,12 +15,15 @@ export interface GameplaneEvent {
 export interface EventStreamOptions {
   onEvent: (ev: GameplaneEvent) => void;
   onError?: () => void;
+  onReconnect?: () => void;
 }
 
 // openEventStream connects to /events and invokes onEvent for each parsed
 // frame. Returns a disposer that closes the stream and stops reconnects.
 // EventSource reconnects on transient drops on its own; we additionally
 // re-open if the connection errors out and was closed.
+// When the tab is hidden (background), the stream is closed to free the
+// connection slot; it reconnects when the tab becomes visible again.
 export function openEventStream(opts: EventStreamOptions): () => void {
   // No EventSource (e.g. jsdom/test, or an ancient browser) → no-op; the
   // dashboard's refetchInterval pollers keep data fresh as a fallback.
@@ -28,10 +31,11 @@ export function openEventStream(opts: EventStreamOptions): () => void {
 
   let es: EventSource | null = null;
   let closed = false;
+  let hidden = false;
   let retry: ReturnType<typeof setTimeout> | undefined;
 
   function connect() {
-    if (closed) return;
+    if (closed || hidden) return;
     es = new EventSource("/events", { withCredentials: true });
     es.onmessage = (e) => {
       try {
@@ -44,7 +48,7 @@ export function openEventStream(opts: EventStreamOptions): () => void {
       opts.onError?.();
       // EventSource auto-retries while open; if the browser closed it,
       // re-open after a short backoff.
-      if (!closed && es && es.readyState === EventSource.CLOSED) {
+      if (!closed && !hidden && es && es.readyState === EventSource.CLOSED) {
         es.close();
         retry = setTimeout(connect, 3000);
       }
@@ -52,10 +56,28 @@ export function openEventStream(opts: EventStreamOptions): () => void {
   }
   connect();
 
+  function handleVisibilityChange() {
+    if (document.hidden) {
+      hidden = true;
+      if (retry) clearTimeout(retry);
+      es?.close();
+      es = null;
+    } else {
+      hidden = false;
+      if (!closed && !es) {
+        connect();
+        opts.onReconnect?.();
+      }
+    }
+  }
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
   return () => {
     closed = true;
     if (retry) clearTimeout(retry);
     es?.close();
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
   };
 }
 

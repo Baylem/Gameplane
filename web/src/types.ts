@@ -1066,6 +1066,7 @@ export interface ShareLink {
   id: string;
   createdAt: string; // RFC3339 timestamp
   expiresAt: string | null; // RFC3339 timestamp, or null = never expires
+  revokedAt?: string | null; // RFC3339 timestamp, or null = active
   canStart: boolean;
   token?: string; // only in create response
 }

@@ -297,7 +297,7 @@ export function FilesTab({ name, ns }: { name: string; ns?: string }) {
                 key={e.path}
                 onClick={() => onEntryClick(e)}
                 className={cn(
-                  "flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm hover:bg-default-100",
+                  "group flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm hover:bg-default-100",
                   selected?.path === e.path && "bg-primary/10 text-foreground",
                 )}
               >
@@ -307,7 +307,23 @@ export function FilesTab({ name, ns }: { name: string; ns?: string }) {
                   <FileIcon className="h-3 w-3 text-default-500" />
                 )}
                 <span className="truncate">{e.name}</span>
-                {!e.dir && (
+                {e.dir ? (
+                  // Folders open on click, so the delete action sits in its own
+                  // button and the wrapper keeps its click from reaching the row.
+                  <span className="ml-auto" onClick={(ev) => ev.stopPropagation()}>
+                    <Button
+                      isIconOnly
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Delete ${e.name}`}
+                      isDisabled={!canControl}
+                      onPress={() => setConfirmDelete(e)}
+                      className="h-6 w-6 min-w-6 text-danger md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </span>
+                ) : (
                   <span className="ml-auto text-xs text-default-500">
                     {formatBytes(e.size)}
                   </span>
@@ -524,6 +540,8 @@ function NamePromptDialog({
   // Reject empty, slashes, and dot-only names — keeps the prompt aligned with
   // what the agent's resolve() will accept anyway, so users get instant feedback.
   const valid = trimmed.length > 0 && !trimmed.includes("/") && trimmed !== "." && trimmed !== "..";
+  // Explain a rejected name instead of only disabling Create (design oMuyw).
+  const showError = trimmed.length > 0 && !valid;
   return (
     <Modal isOpen={open} onOpenChange={onOpenChange}>
       <ModalBackdrop isDismissable={!busy}>
@@ -546,7 +564,15 @@ function NamePromptDialog({
                     placeholder={placeholder}
                     onChange={(e) => setValue(e.target.value)}
                     spellCheck={false}
+                    aria-invalid={showError || undefined}
+                    aria-describedby={showError ? "name-prompt-error" : undefined}
+                    className={cn(showError && "border-danger")}
                   />
+                  {showError && (
+                    <p id="name-prompt-error" className="pt-1 text-xs text-danger">
+                      {'Names can\'t contain "/" or be "." or "..".'}
+                    </p>
+                  )}
                 </div>
               </form>
             </ModalBody>

@@ -320,6 +320,17 @@ func (h *handler) write(w http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
+	// Chmod before rename: preserve the existing file's mode when overwriting,
+	// else use 0o644 so the game container (different uid, shared fsGroup) can read it.
+	mode := os.FileMode(0o644)
+	if fi, err := os.Stat(filepath.Clean(p)); err == nil {
+		mode = fi.Mode().Perm()
+	}
+	if err := os.Chmod(tmpName, mode); err != nil {
+		_ = os.Remove(tmpName)
+		httpErr(w, err)
+		return
+	}
 	if err := os.Rename(tmpName, filepath.Clean(p)); err != nil {
 		_ = os.Remove(tmpName)
 		httpErr(w, err)
@@ -449,6 +460,16 @@ func savePart(root, dir, filename string, src io.Reader, limit int64) error {
 	if n > limit {
 		_ = os.Remove(tmpName)
 		return fmt.Errorf("file %q exceeds %d-byte limit", name, limit)
+	}
+	// Chmod before rename: preserve the existing file's mode when overwriting,
+	// else use 0o644 so the game container (different uid, shared fsGroup) can read it.
+	mode := os.FileMode(0o644)
+	if fi, err := os.Stat(dstPath); err == nil {
+		mode = fi.Mode().Perm()
+	}
+	if err := os.Chmod(tmpName, mode); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("save %q: %w", name, err)
 	}
 	if err := os.Rename(tmpName, dstPath); err != nil {
 		_ = os.Remove(tmpName)

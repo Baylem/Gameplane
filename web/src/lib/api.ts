@@ -59,10 +59,14 @@ export function csrfHeaders(): Record<string, string> {
 export class APIError extends Error {
   status: number;
   body: string;
-  constructor(status: number, body: string) {
-    super(`${status}: ${body}`);
+  isHTML: boolean;
+  constructor(status: number, body: string, statusText?: string, contentType?: string) {
+    const isHTML = body.trimStart().startsWith("<") || (contentType?.includes("text/html") ?? false);
+    const message = isHTML ? `${status} ${statusText || ""}`.trim() : `${status}: ${body}`;
+    super(message);
     this.status = status;
     this.body = body;
+    this.isHTML = isHTML;
   }
 }
 
@@ -101,7 +105,7 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new APIError(res.status, text);
+    throw new APIError(res.status, text, res.statusText, res.headers.get("content-type") ?? undefined);
   }
   if (res.status === 204) return undefined as T;
   // Some 2xx responses (e.g. 202 Accepted from fire-and-forget actions) carry

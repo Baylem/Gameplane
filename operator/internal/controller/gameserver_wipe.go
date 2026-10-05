@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -57,6 +58,36 @@ func (r *GameServerReconciler) reconcileWipe(
 	// volume. The API sets suspend=true when requesting a wipe.
 	if !gs.Spec.Suspend {
 		log.FromContext(ctx).Info("data wipe requested but server not suspended; waiting", "server", gs.Name)
+		return nil
+	}
+
+	// Wait for the pod to actually be gone (Status.Replicas == 0) before mounting
+	// the PVC. A slowly-stopping game would still hold the ReadWriteOnce volume
+	// if the Job ran during the graceful stop, causing the Job to fail permanently.
+	var ss appsv1.StatefulSet
+	switch err := r.Get(ctx, types.NamespacedName{Namespace: gs.Namespace, Name: gs.Name}, &ss); {
+	case apierrors.IsNotFound(err):
+		// StatefulSet is gone — pod is definitely gone.
+	case err != nil:
+		return err
+	case ss.Status.Replicas > 0:
+		// Pod still present — requeue and wait for scale-down to complete.
+		log.FromContext(ctx).Info("data wipe requested but pod still draining; waiting", "server", gs.Name)
+		return nil
+	}
+
+	// Also verify the game pod object itself is gone, not just scaled down —
+	// a pod in Terminating state still holds the ReadWriteOnce PVC.
+	var pod corev1.Pod
+	podName := types.NamespacedName{Namespace: gs.Namespace, Name: gs.Name + "-0"}
+	switch err := r.Get(ctx, podName, &pod); {
+	case apierrors.IsNotFound(err):
+		// Pod is definitely gone.
+	case err != nil:
+		return err
+	default:
+		// Pod still exists (including Terminating state) — requeue.
+		log.FromContext(ctx).Info("data wipe requested but pod still terminating; waiting", "server", gs.Name)
 		return nil
 	}
 
@@ -180,6 +211,9 @@ func (r *GameServerReconciler) ackWipe(ctx context.Context, gs *gameplanev1alpha
 		gs.Annotations = map[string]string{}
 	}
 	gs.Annotations[WipeCompletedAnnotation] = token
+	// A successful wipe restarts the server on a fresh world. Set suspend=false
+	// to resume the server after the data has been cleared.
+	gs.Spec.Suspend = false
 	if err := r.Patch(ctx, gs, patch); err != nil {
 		return err
 	}

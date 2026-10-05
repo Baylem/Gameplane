@@ -667,3 +667,40 @@ func TestOpen_AdoptsLegacySQLite(t *testing.T) {
 		t.Fatal("no migrations applied")
 	}
 }
+
+func TestNormalizeTimestamp_ConvertsNaive(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		after string
+	}{
+		{
+			name:  "RFC3339 passes through",
+			input: "2026-02-01T12:30:45Z",
+			after: "2026-02-01T12:30:45Z",
+		},
+		{
+			name:  "naive format converted",
+			input: "2026-02-01 12:30:45",
+			after: "2026-02-01T12:30:45Z",
+		},
+		{
+			name:  "empty string",
+			input: "",
+			after: "",
+		},
+		{
+			name:  "unparseable falls back",
+			input: "not-a-date",
+			after: "not-a-date",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NormalizeTimestamp(tt.input)
+			if got != tt.after {
+				t.Errorf("NormalizeTimestamp(%q) = %q, want %q", tt.input, got, tt.after)
+			}
+		})
+	}
+}

@@ -61,6 +61,7 @@ type shareResp struct {
 	ID        string  `json:"id"`
 	CreatedAt string  `json:"createdAt"`
 	ExpiresAt *string `json:"expiresAt"` // RFC3339 string, or null when the link never expires
+	RevokedAt *string `json:"revokedAt"` // RFC3339 string, or null when the link is active
 	CanStart  bool    `json:"canStart"`
 	Token     string  `json:"token,omitempty"` // only in create response
 }
@@ -68,6 +69,16 @@ type shareResp struct {
 // formatExpiresAt renders a nullable expiry as an RFC3339 string pointer, or
 // nil (which marshals as JSON null) when the link never expires.
 func formatExpiresAt(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.UTC().Format(time.RFC3339)
+	return &s
+}
+
+// formatRevokedAt renders a nullable revocation timestamp as an RFC3339 string pointer, or
+// nil (which marshals as JSON null) when the link is active.
+func formatRevokedAt(t *time.Time) *string {
 	if t == nil {
 		return nil
 	}
@@ -168,6 +179,7 @@ func createShareHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 			ID:        link.ID,
 			CreatedAt: link.CreatedAt.UTC().Format(time.RFC3339),
 			ExpiresAt: formatExpiresAt(link.ExpiresAt),
+			RevokedAt: formatRevokedAt(link.RevokedAt),
 			CanStart:  link.CanStart,
 			Token:     rawToken, // only in create response
 		}
@@ -221,6 +233,7 @@ func listSharesHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 				ID:        link.ID,
 				CreatedAt: link.CreatedAt.UTC().Format(time.RFC3339),
 				ExpiresAt: formatExpiresAt(link.ExpiresAt),
+				RevokedAt: formatRevokedAt(link.RevokedAt),
 				CanStart:  link.CanStart,
 				// Token deliberately omitted in list response
 			}
