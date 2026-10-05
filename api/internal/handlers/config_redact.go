@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"sync"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -15,10 +14,6 @@ import (
 // GameServer spec.config field in API responses. A PUT that sends the marker
 // back keeps the stored value (the dashboard returns draft.spec wholesale).
 const configRedactedMarker = "__gameplane_redacted__"
-
-// configRulesTTL bounds how long a template's password-field set is reused by
-// one cache (one request, or one SSE connection).
-const configRulesTTL = 30 * time.Second
 
 // configRules says which spec.config keys are secret for one GameTemplate.
 // failClosed means the template could not be read: every key is then treated
@@ -56,21 +51,18 @@ func rulesFromTemplate(tmpl *unstructured.Unstructured) configRules {
 	return rules
 }
 
-type configRuleEntry struct {
-	rules configRules
-	at    time.Time
-}
-
-// configRuleCache resolves GameTemplates for one cluster client. It is safe for
-// concurrent use; failed lookups are never cached.
+// configRuleCache memoises GameTemplate lookups for ONE request or ONE SSE
+// event. It must never outlive that unit: rules read for an earlier response
+// could predate a template edit that turned a field into a password. It is
+// safe for concurrent use; failed lookups are never cached.
 type configRuleCache struct {
 	k       *kube.Client
 	mu      sync.Mutex
-	entries map[string]configRuleEntry
+	entries map[string]configRules
 }
 
 func newConfigRuleCache(k *kube.Client) *configRuleCache {
-	return &configRuleCache{k: k, entries: map[string]configRuleEntry{}}
+	return &configRuleCache{k: k, entries: map[string]configRules{}}
 }
 
 // rulesFor returns the rules for the named template, failing closed when the
@@ -80,10 +72,10 @@ func (c *configRuleCache) rulesFor(ctx context.Context, templateName string) con
 		return configRules{failClosed: true}
 	}
 	c.mu.Lock()
-	e, ok := c.entries[templateName]
+	cached, ok := c.entries[templateName]
 	c.mu.Unlock()
-	if ok && time.Since(e.at) < configRulesTTL {
-		return e.rules
+	if ok {
+		return cached
 	}
 	tmpl, err := c.k.Dynamic.Resource(kube.GVRs["templates"]).Get(ctx, templateName, metav1.GetOptions{})
 	if err != nil {
@@ -91,7 +83,7 @@ func (c *configRuleCache) rulesFor(ctx context.Context, templateName string) con
 	}
 	rules := rulesFromTemplate(tmpl)
 	c.mu.Lock()
-	c.entries[templateName] = configRuleEntry{rules: rules, at: time.Now()}
+	c.entries[templateName] = rules
 	c.mu.Unlock()
 	return rules
 }
@@ -157,21 +149,26 @@ func restoreRedactedConfig(ctx context.Context, c *configRuleCache, desired, liv
 	out := make(map[string]any, len(incoming))
 	for key, val := range incoming {
 		s, isStr := val.(string)
+		// The marker is API-emitted (a fail-closed read marks every key), so it
+		// is restored for ANY key, whatever the current template says, and
+		// whatever type the stored value has. With nothing stored the marker is
+		// dropped rather than persisted.
+		if isStr && s == configRedactedMarker {
+			if storedVal, hasStored := stored[key]; hasStored {
+				out[key] = storedVal
+			}
+			continue
+		}
 		if !isStr || !rules.redacts(key) {
 			out[key] = val
 			continue
 		}
 		storedVal, hasStored := stored[key].(string)
-		switch {
-		case s == configRedactedMarker:
-			if hasStored {
-				out[key] = storedVal
-			}
-		case s == "" && hasStored && storedVal != "" && (rules.failClosed || rules.required[key]):
+		if s == "" && hasStored && storedVal != "" && (rules.failClosed || rules.required[key]) {
 			out[key] = storedVal
-		default:
-			out[key] = s
+			continue
 		}
+		out[key] = s
 	}
 	for key := range rules.required {
 		if _, present := incoming[key]; present {

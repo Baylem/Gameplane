@@ -71,7 +71,6 @@ func eventsHandler(reg *kube.Registry) http.HandlerFunc {
 		// ignored write errors and leaked watchers on client disconnect).
 		events := make(chan []byte, 32)
 		var wg sync.WaitGroup
-		cfgRules := newConfigRuleCache(k)
 		for path, gvr := range kube.GVRs {
 			path, gvr := path, gvr
 			if !canReadKind(caller, path, clusterID, ns) {
@@ -126,7 +125,9 @@ func eventsHandler(reg *kube.Registry) http.HandlerFunc {
 						if path == "servers" {
 							// Watch objects are shared with the client's cache: redact a copy.
 							u = u.DeepCopy()
-							cfgRules.redact(ctx, u)
+							// Fresh cache per event: a template edited since the previous
+							// event must take effect immediately.
+							newConfigRuleCache(k).redact(ctx, u)
 						}
 						b, mErr := json.Marshal(map[string]any{
 							"kind":      path,

@@ -192,9 +192,9 @@ func TestRedact_UpdateRules(t *testing.T) {
 			want: map[string]any{"MOTD": "x", "ADMIN_PASSWORD": "adm1n"},
 		},
 		{
-			name: "marker on a non-password key is a literal value", withTemplate: true,
+			name: "marker on a non-password key restores the stored value", withTemplate: true,
 			in:   map[string]any{"MOTD": marker, "RCON_PASSWORD": marker, "ADMIN_PASSWORD": marker},
-			want: map[string]any{"MOTD": marker, "RCON_PASSWORD": "s3cret", "ADMIN_PASSWORD": "adm1n"},
+			want: map[string]any{"MOTD": "hello", "RCON_PASSWORD": "s3cret", "ADMIN_PASSWORD": "adm1n"},
 		},
 		{
 			name: "unreadable template: markers keep every stored value", withTemplate: false,
@@ -384,5 +384,115 @@ func TestRedact_EventsStreamHidesPasswordValues(t *testing.T) {
 	}
 	if got, _, _ := unstructured.NestedString(gs.Object, "spec", "config", "RCON_PASSWORD"); got != "s3cret" {
 		t.Fatalf("watch object was mutated in place: %q", got)
+	}
+}
+
+func TestRedact_UpdateMarkerRestoresStoredValueOnAnyKey(t *testing.T) {
+	k := fakeKubeClient(redactTemplate(), serverWithConfig("alpha", plainConfig()))
+	in := map[string]any{"MOTD": configRedactedMarker, "RCON_PASSWORD": configRedactedMarker, "ADMIN_PASSWORD": configRedactedMarker}
+	rr := do(t, mountResourcesRouter(k), "PUT", "/servers/alpha", updateBody(in))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("put: %d %s", rr.Code, rr.Body)
+	}
+	if got := storedConfig(t, k, "alpha"); !sameConfig(got, plainConfig()) {
+		t.Fatalf("stored config = %v, want %v", got, plainConfig())
+	}
+}
+
+func TestRedact_UpdateMarkerForAbsentStoredKeyIsDropped(t *testing.T) {
+	k := fakeKubeClient(redactTemplate(), serverWithConfig("alpha", plainConfig()))
+	in := map[string]any{"MOTD": "hello", "EXTRA": configRedactedMarker, "RCON_PASSWORD": configRedactedMarker, "ADMIN_PASSWORD": configRedactedMarker}
+	rr := do(t, mountResourcesRouter(k), "PUT", "/servers/alpha", updateBody(in))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("put: %d %s", rr.Code, rr.Body)
+	}
+	got := storedConfig(t, k, "alpha")
+	if _, present := got["EXTRA"]; present {
+		t.Fatalf("marker for an absent key was stored: %v", got)
+	}
+	if !sameConfig(got, plainConfig()) {
+		t.Fatalf("stored config = %v, want %v", got, plainConfig())
+	}
+}
+
+func TestRedact_UpdateMarkerPreservesNonStringStoredValue(t *testing.T) {
+	stored := map[string]any{
+		"MOTD": "hello", "RCON_PASSWORD": "s3cret", "ADMIN_PASSWORD": "adm1n",
+		"MAX_PLAYERS": int64(20), "OPS": []any{"a", "b"},
+	}
+	k := fakeKubeClient(redactTemplate(), serverWithConfig("alpha", stored))
+	in := map[string]any{
+		"MOTD": "hello", "RCON_PASSWORD": configRedactedMarker, "ADMIN_PASSWORD": configRedactedMarker,
+		"MAX_PLAYERS": configRedactedMarker, "OPS": configRedactedMarker,
+	}
+	rr := do(t, mountResourcesRouter(k), "PUT", "/servers/alpha", updateBody(in))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("put: %d %s", rr.Code, rr.Body)
+	}
+	if got := storedConfig(t, k, "alpha"); !sameConfig(got, stored) {
+		t.Fatalf("stored config = %v, want %v", got, stored)
+	}
+}
+
+// TestRedact_EventsStreamHonoursTemplateChangeBetweenEvents guards against a
+// cache outliving one event: a field that becomes password-type after the first
+// event must be redacted in the second.
+func TestRedact_EventsStreamHonoursTemplateChangeBetweenEvents(t *testing.T) {
+	tmpl := redactTemplate()
+	tmpl.Object["spec"] = map[string]any{"configSchema": []any{
+		map[string]any{"name": "TOKEN", "type": "string"},
+	}}
+	k := fleetTestClient(tmpl)
+	fw := watch.NewFake()
+	k.Dynamic.(*dynamicfake.FakeDynamicClient).PrependWatchReactor("gameservers",
+		func(_ clienttesting.Action) (bool, watch.Interface, error) { return true, fw, nil })
+	reg := kube.NewRegistry(scope.DefaultCluster)
+	reg.Set(scope.DefaultCluster, k)
+
+	ctx, cancel := context.WithCancel(auth.WithUser(t.Context(), testAdminUser()))
+	defer cancel()
+	req := httptest.NewRequestWithContext(ctx, "GET", "/events", nil)
+	w := &lockedBuffer{header: http.Header{}}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		eventsHandler(reg)(w, req)
+	}()
+
+	waitFrames := func(n int) {
+		t.Helper()
+		deadline := time.Now().Add(5 * time.Second)
+		for strings.Count(w.String(), "data:") < n {
+			if time.Now().After(deadline) {
+				cancel()
+				t.Fatalf("want %d SSE frames, got: %s", n, w.String())
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	go fw.Add(serverWithConfig("alpha", map[string]any{"TOKEN": "tok-first"}))
+	waitFrames(1)
+
+	updated := tmpl.DeepCopy()
+	updated.Object["spec"] = map[string]any{"configSchema": []any{
+		map[string]any{"name": "TOKEN", "type": "password"},
+	}}
+	if _, err := k.Dynamic.Resource(kube.GVRs["templates"]).Update(t.Context(), updated, metav1.UpdateOptions{}); err != nil {
+		cancel()
+		t.Fatalf("update template: %v", err)
+	}
+
+	go fw.Modify(serverWithConfig("alpha", map[string]any{"TOKEN": "tok-second"}))
+	waitFrames(2)
+	cancel()
+	<-done
+
+	out := w.String()
+	if strings.Contains(out, "tok-second") {
+		t.Fatalf("second event leaked a value that became a password: %s", out)
+	}
+	if !strings.Contains(out, configRedactedMarker) {
+		t.Fatalf("second event has no redaction marker: %s", out)
 	}
 }
