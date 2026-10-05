@@ -269,18 +269,53 @@ test.describe("Slice 5: Share links — public page (mock mode)", () => {
     await expectNoPrivacyLeak(page);
   });
 
-  test("Invalid/expired: a rate-limited (429) resolve renders the identical neutral copy", async ({
-    page,
-  }) => {
-    // FR-005: invalid, expired, and rate-limited must be indistinguishable.
-    await mockShareResolve(page, { "tok-limited": { status: 429 } });
-    await page.goto("/share/tok-limited");
-    await expect(page.getByRole("heading", { name: /link not available/i })).toBeVisible({
-      timeout: 10_000,
+  test("Initial rate limit: stays loading until Retry-After, then recovers", async ({ page }) => {
+    await page.clock.install();
+    // Keep the response rate-limited until the test explicitly restores it.
+    // This also handles StrictMode's aborted initial resolve without consuming
+    // a scripted recovery response before the active request can retry.
+    await page.addInitScript(() => {
+      let recovered = false;
+      let resolveCount = 0;
+      window.addEventListener("share-resolve-recovered", () => {
+        recovered = true;
+      });
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (/\/shares\/tok-limited(?:\?|$)/.test(url)) {
+          document.documentElement.dataset.shareResolveCount = String(++resolveCount);
+          return Promise.resolve(new Response(
+            recovered ? JSON.stringify({ serverName: "mc-survival", status: "Running" }) : null,
+            {
+              status: recovered ? 200 : 429,
+              headers: { "Content-Type": "application/json", "Retry-After": "60" },
+            },
+          ));
+        }
+        return originalFetch(input, init);
+      };
     });
-    await expect(
-      page.getByText(/this link may be invalid, expired, or revoked/i),
-    ).toBeVisible();
+    await page.goto("/share/tok-limited");
+    await expect(page.getByRole("status", { name: "Loading" })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-share-resolve-count", /[1-9]\d*/);
+    // Let bootstrap finish before pausing, then drive retry timers explicitly.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+    const initialResolveCount = Number(await page.locator("html").getAttribute("data-share-resolve-count"));
+    await page.clock.runFor(10000);
+    await expect(page.locator("html")).toHaveAttribute("data-share-resolve-count", String(initialResolveCount));
+    await expect(page.getByRole("status", { name: "Loading" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /link not available/i })).not.toBeVisible();
+    await expectNoPrivacyLeak(page);
+
+    await page.evaluate(() => window.dispatchEvent(new Event("share-resolve-recovered")));
+    await page.clock.runFor(60000);
+    await expect(page.getByRole("heading", { name: "mc-survival" })).toBeVisible();
+    await expect(page.getByText("Online", { exact: true })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-share-resolve-count", String(initialResolveCount + 1),
+    );
+    await expect(page.getByRole("heading", { name: /link not available/i })).not.toBeVisible();
     await expectNoPrivacyLeak(page);
   });
 

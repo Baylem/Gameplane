@@ -206,7 +206,7 @@ describe("SharePage", () => {
     });
 
     it("shows view-only when user tries to start but polling shows still asleep", async () => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
+      vi.useFakeTimers();
 
       vi.mocked(Shares.resolve)
         .mockResolvedValueOnce({
@@ -221,33 +221,38 @@ describe("SharePage", () => {
       vi.mocked(Shares.start).mockResolvedValue();
 
       renderWithRouter("test-token");
-
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: /start server/i })).toBeInTheDocument();
-      });
+      await act(async () => {});
 
       const startBtn = screen.getByRole("button", { name: /start server/i });
-      fireEvent.click(startBtn);
+      await act(async () => {
+        fireEvent.click(startBtn);
+      });
 
       expect(vi.mocked(Shares.start)).toHaveBeenCalledWith("test-token", expect.any(AbortSignal));
 
-      // Should show Starting state
-      await waitFor(() => {
-        expect(screen.getByText(/The server is starting up/)).toBeInTheDocument();
-      });
+      expect(screen.getByText(/The server is starting up/)).toBeInTheDocument();
 
-      // Advance time to trigger polling
-      vi.advanceTimersByTime(5000);
+      // The first poll must wait the full five seconds after Start completes.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4999);
+      });
+      expect(Shares.resolve).toHaveBeenCalledTimes(1);
+      expect(screen.getByText(/The server is starting up/)).toBeInTheDocument();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
 
       // Polling should show it's still asleep, so transition to view-only
-      await waitFor(() => {
-        expect(screen.getByText(/This server is asleep right now/)).toBeInTheDocument();
-        expect(
-          screen.queryByRole("button", { name: /start server/i })
-        ).not.toBeInTheDocument();
-      });
+      expect(screen.getByText(/This server is asleep right now/)).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /start server/i })
+      ).not.toBeInTheDocument();
 
-      vi.useRealTimers();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60000);
+      });
+      expect(Shares.resolve).toHaveBeenCalledTimes(2);
     });
 
     it("handles Stopped status the same as Suspended", async () => {
