@@ -271,6 +271,7 @@ Six of the nine ServerDetail tabs are rebuilt in this slice:
    - Interactive RCON/PTY terminal (xterm.js, lazy-loaded, NOT rebuilt — uses existing engine)
    - LoadingCard during template resolution (line 28); ErrorCard if no console available (line 35)
    - Uses ui/ LoadingCard, ErrorCard only (lines 4–5); console I/O engine unchanged
+   - Command bar under the terminal (`ConsoleShell.tsx`): Send or Enter submits; ArrowUp/ArrowDown recall the last 100 commands sent from this tab (consecutive repeats collapsed), and ArrowDown past the newest restores the unsent line. History lives per mount and is not persisted
 
 4. **Logs** (`web/src/routes/tabs/Logs.tsx`, 299 lines)
    - Pod stdout or configured game log file stream (WebSocket, NOT rebuilt — uses existing engine)
@@ -283,6 +284,8 @@ Six of the nine ServerDetail tabs are rebuilt in this slice:
    - Create folder/file dialogs via HeroUI Modal/ModalBackdrop/ModalContainer/ModalDialog/ModalHeader/ModalBody/ModalFooter (lines 9–19)
    - Delete confirmation via ui/ ConfirmDialog (line 35, used at line 408)
    - Error display via ui/ ErrorBanner (line 36, used at line 261)
+   - Folder rows carry a trash button (on row hover or focus on desktop, always visible on mobile) that opens the same delete confirmation without opening the folder
+   - The new file/folder name prompt explains a rejected name inline ("Names can't contain "/" or be "." or "..".") and marks the input `aria-invalid`; Create stays disabled
    - Monaco editor unchanged
 
 6. **Players** (`web/src/routes/tabs/Players.tsx`, 386 lines)
@@ -805,6 +808,7 @@ package.json                # @gameplane/web v0.2.0-beta.8; dev: vite, npm scrip
 9. **AdminSettings** (`/admin`) → `AdminSettingsPage` (gated by `config:manage` permission)
    - Sections: General (version, telemetry), Authentication (OIDC providers), Mod registries (API keys),
      Notification sinks (Discord/Slack/SMTP/webhook), Backup destinations
+   - **General:** Instance name is optional. It names this install on the Cluster page and in notifications, which fall back to "Gameplane" when it is blank
    - **Section save semantics:** each config section edits a local draft (`useSectionForm`). Nothing is stored until
      that section's Save; leaving the section discards the draft.
    - **Managed Secrets:** the API-managed Secrets behind identity providers (`gameplane-auth-<name>`), keyed mod
@@ -895,7 +899,7 @@ The warning is shown regardless of how many groups are being added (single or mu
     - Public, unauthenticated, no sidebar or top bar
     - Resolves a share link token to its public view (server name, status, address, player count if exposed)
     - Rate-limited; all errors (404, 429, auth) map to neutral "Link not available" message per FR-005
-    - Five states: loading (spinner), up (server online), asleep-start (sleeping, can start), asleep-viewonly (sleeping, view-only), starting (waking up), invalid (link unavailable)
+    - Five states: loading (spinner), up (server online), asleep-start (sleeping, can start), asleep-viewonly (sleeping, view-only), starting ("starting up" copy, shown both after a visitor's Start and for an ordinary start), invalid (link unavailable)
     - Respects stored appearance preference (light/dark/system); no theme toggle shown
     - Uses HeroUI Card, Button, Chip, Spinner; brand header with ShieldCheck icon; address copy button
     - Built directly from HeroUI primitives; no ui/ atom components
