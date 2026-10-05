@@ -120,7 +120,7 @@ type BackupScheduleStatus struct {
 // +kubebuilder:printcolumn:name="Schedule",type=string,JSONPath=`.spec.schedule`
 // +kubebuilder:printcolumn:name="Suspended",type=boolean,JSONPath=`.spec.suspend`
 // +kubebuilder:printcolumn:name="Last",type=date,JSONPath=`.status.lastSuccessfulTime`
-// +kubebuilder:printcolumn:name="Next",type=date,JSONPath=`.status.nextScheduleTime`
+// +kubebuilder:printcolumn:name="Next",type=string,JSONPath=`.status.nextScheduleTime`
 // +kubebuilder:subresource:status
 
 // BackupSchedule describes a recurring backup policy for a single
