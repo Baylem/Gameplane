@@ -1096,6 +1096,7 @@ capabilities:
 
 - Moderation commands are Go `text/template`s rendered with `.Player`
   and `.Reason` (reason may be empty — guard with `{{if .Reason}}`).
+  The reason is validated with the same input policy as action string params (no control characters, no ; & | $ ` \ " '; max 256 bytes), so templates may interpolate it without extra escaping of those characters.
   Unset actions are reported as unsupported and the UI hides them.
 - `banList.entryRegex` matches one banned player per output line via
   the named groups `name` (required), `source` and `reason`.
@@ -1207,7 +1208,7 @@ capabilities:
   **fire-and-forget**: no output is returned inline (it appears in the
   Console tab), so the dashboard shows "sent" rather than command output.
 - Parameter values are validated by `type` and sanitized before
-  rendering: CR/LF and other control characters are rejected so a value
+  rendering: CR/LF, other control characters and the shell/RCON metacharacters ; & | $ ` \ " ' are rejected so a value
   can never chain a second console command. `int`/`bool`/`enum` values
   must parse/match; missing optional params fall back to `default`. The
   same validation runs on both transports and on both the API and the

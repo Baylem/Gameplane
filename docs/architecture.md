@@ -339,10 +339,10 @@ for the registration flow.
 - **Agent/API → game console (module actions)**: a shared console-injection
   guard and command-template renderer (`gameaction/`) validates every
   module-declared action's inputs before rendering — rejecting control
-  characters and enforcing types, enum membership, a length cap, and
+  characters and shell/RCON metacharacters (; & | $ ` \ " ') and enforcing types, enum membership, a length cap, and
   required-ness. Both importers (the agent's RCON path and the API's stdin
   pod-attach) call it independently; each is its own trust boundary, so
-  validation is never skipped because the other side already checked.
+  validation is never skipped because the other side already checked. The agent's player-moderation reason (kick/ban) uses the same policy function (gameaction.CheckText).
 - **Operator → sentinel [optional]**: holds advertised ports while a GameServer
   is asleep and wakes it on a genuine connection attempt (opt-in via
   `spec.idle.wakeOnConnect`). Runs as a small 1-replica Deployment per armed
