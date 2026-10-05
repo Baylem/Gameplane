@@ -391,7 +391,23 @@ func deleteHandler(reg *kube.Registry, store *db.Store, gvr schema.GroupVersionR
 			if !ok {
 				return
 			}
-			err = k.Dynamic.Resource(gvr).Namespace(ns).Delete(req.Context(), name, metav1.DeleteOptions{})
+			options := metav1.DeleteOptions{}
+			if gvr == kube.GVRs["servers"] {
+				obj, ok := authorizedServer(w, req, k, ns, name)
+				if !ok {
+					return
+				}
+				// Repeat the owner-only check against the same snapshot used by
+				// the delete preconditions. Middleware authenticates production
+				// requests; direct handler fixtures may omit the caller.
+				if u := auth.UserFromContext(req.Context()); u != nil &&
+					!u.Can("*", true, scope.RequestedCluster(req), ns) && !isServerOwner(obj, u.ID) {
+					http.Error(w, "forbidden", http.StatusForbidden)
+					return
+				}
+				options.Preconditions = objectDeletePreconditions(obj)
+			}
+			err = k.Dynamic.Resource(gvr).Namespace(ns).Delete(req.Context(), name, options)
 		}
 		if err != nil {
 			httperr.Write(w, req, err)

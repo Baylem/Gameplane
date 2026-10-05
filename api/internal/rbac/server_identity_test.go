@@ -88,3 +88,32 @@ func TestNamespacePermissionDoesNotBecomeOwnershipBound(t *testing.T) {
 		t.Fatal(response.Code)
 	}
 }
+
+func TestOwnerOnlyNamespacePermissionStillBindsOwnershipIdentity(t *testing.T) {
+	server := &unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"name": "same-name", "namespace": scope.DefaultNamespace, "uid": "original-uid",
+			"annotations": map[string]any{"gameplane.local/owner-id": "42"}},
+	}}
+	user := &auth.User{ID: 42, Perms: map[string]map[string]map[string]struct{}{"remote": {"*": {"servers:write": {}}}}}
+	for _, path := range []string{"/servers/same-name", "/servers/same-name:wipe-data"} {
+		t.Run(path, func(t *testing.T) {
+			handler := Middleware(identityFetcher{server})(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				if err := ValidateServerIdentity(req.Context(), "remote", scope.DefaultNamespace, "same-name", "replacement-uid"); !errors.Is(err, ErrServerIdentityChanged) {
+					t.Errorf("owner-only namespace grant rebound to replacement: %v", err)
+				}
+				w.WriteHeader(http.StatusNoContent)
+			}))
+			method := http.MethodDelete
+			if path != "/servers/same-name" {
+				method = http.MethodPost
+			}
+			req := httptest.NewRequestWithContext(t.Context(), method, path+"?cluster=remote", nil)
+			req = req.WithContext(auth.WithUser(req.Context(), user))
+			response := httptest.NewRecorder()
+			handler.ServeHTTP(response, req)
+			if response.Code != http.StatusNoContent {
+				t.Fatalf("got %d %s", response.Code, response.Body)
+			}
+		})
+	}
+}

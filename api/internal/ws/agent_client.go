@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ValgulNecron/gameplane/api/internal/kube"
+	"github.com/ValgulNecron/gameplane/api/internal/rbac"
 	"github.com/ValgulNecron/gameplane/api/internal/scope"
 )
 
@@ -82,6 +83,19 @@ func (c *AgentClient) GetJSONForCluster(ctx context.Context, cluster, name, name
 		if err != nil {
 			return err
 		}
+	} else if c.gateway != nil && c.gateway.registry != nil {
+		var err error
+		target, err = localAgentTarget(ctx, c.gateway.registry.Default(), target)
+		if err != nil {
+			return err
+		}
+	} else if bound, ok := rbac.BoundServerIdentity(ctx); ok {
+		// Legacy clients lack a registry, but can still enforce the exact
+		// ownership grant at the receiving agent's UID route.
+		if err := rbac.ValidateServerIdentity(ctx, scope.DefaultCluster, namespace, name, bound.UID); err != nil {
+			return err
+		}
+		target.uid = bound.UID
 	}
 	if transport == nil {
 		return errors.New("agent mTLS not configured")
@@ -91,7 +105,7 @@ func (c *AgentClient) GetJSONForCluster(ctx context.Context, cluster, name, name
 	defer cancel()
 
 	resp, err := transport.Do(ctx, agentRequest{
-		target: agentTarget{name: name, namespace: namespace},
+		target: target,
 		method: http.MethodGet, path: path,
 		header: http.Header{"Accept": {"application/json"}},
 	})

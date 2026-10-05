@@ -71,11 +71,8 @@ func requireOwnerOrAdmin(w http.ResponseWriter, req *http.Request, reg *kube.Reg
 		httperr.Write(w, req, err)
 		return nil, false
 	}
-	obj, err := k.Dynamic.Resource(kube.GVRs["servers"]).
-		Namespace(ns).
-		Get(req.Context(), name, metav1.GetOptions{})
-	if err != nil {
-		httperr.Write(w, req, err)
+	obj, ok := authorizedServer(w, req, k, ns, name)
+	if !ok {
 		return nil, false
 	}
 	if !u.Can("*", true, cl, ns) && !isServerOwner(obj, u.ID) {
@@ -91,10 +88,11 @@ const ownerOnlyPatchAttempts = 3
 
 // patchServerAsOwner applies the merge patch that build returns for obj,
 // the server requireOwnerOrAdmin just authorized against. The patch
-// carries obj's resourceVersion, so the API server rejects it with 409
+// carries obj's UID and resourceVersion, so the API server rejects it with 409
 // Conflict if the server changed after the check read it (for example an
 // ownership transfer by someone else). On a conflict it re-reads the
 // server and repeats the owner-or-admin check before rebuilding the patch,
+// rejecting any replacement UID even for an unbound administrator,
 // so a caller who lost ownership in the meantime is refused. After
 // ownerOnlyPatchAttempts conflicts the client gets 409. Objects served by
 // a real API server always carry a resourceVersion; one without it (test
@@ -103,16 +101,9 @@ const ownerOnlyPatchAttempts = 3
 func patchServerAsOwner(w http.ResponseWriter, req *http.Request, reg *kube.Registry, k *kube.Client, ns, name string,
 	obj *unstructured.Unstructured, build func(obj *unstructured.Unstructured) map[string]any,
 ) bool {
+	uid := obj.GetUID()
 	for attempt := 1; ; attempt++ {
-		patch := build(obj)
-		if rv := obj.GetResourceVersion(); rv != "" {
-			md, _ := patch["metadata"].(map[string]any)
-			if md == nil {
-				md = map[string]any{}
-				patch["metadata"] = md
-			}
-			md["resourceVersion"] = rv
-		}
+		patch := conditionObjectPatch(build(obj), obj)
 		body, err := json.Marshal(patch)
 		if err != nil {
 			httperr.Write(w, req, err)
@@ -130,6 +121,10 @@ func patchServerAsOwner(w http.ResponseWriter, req *http.Request, reg *kube.Regi
 		}
 		var ok bool
 		if obj, ok = requireOwnerOrAdmin(w, req, reg, k, ns, name); !ok {
+			return false
+		}
+		if uid != "" && obj.GetUID() != uid {
+			httperr.Write(w, req, apierrors.NewNotFound(kube.GVRs["servers"].GroupResource(), name))
 			return false
 		}
 	}
