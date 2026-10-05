@@ -193,8 +193,10 @@ func resticImageOrDefault(image string) string {
 	return image
 }
 
-// +kubebuilder:rbac:groups=gameplane.local,resources=backups,verbs=get;list;watch
-// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch
+// +kubebuilder:rbac:groups=gameplane.local,resources=backups,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=gameplane.local,resources=backups/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=gameplane.local,resources=backups/finalizers,verbs=update
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=pods/log,verbs=get
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
@@ -223,6 +225,19 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
+	}
+
+	// Restic Backups own a snapshot in the repository, so hold their deletion
+	// until finalizeSnapshot has forgotten it. Unlike the quiesce finalizer above
+	// this does not return after the Update: adding it is a metadata-only change,
+	// and the pass carries on with the refreshed object. That also covers
+	// terminal Backups created before this finalizer existed, which would
+	// otherwise short-circuit below and never get it.
+	if wantsSnapshotFinalizer(&b) && !controllerutil.ContainsFinalizer(&b, gameplanev1alpha1.BackupSnapshotFinalizer) {
+		controllerutil.AddFinalizer(&b, gameplanev1alpha1.BackupSnapshotFinalizer)
+		if err := r.Update(ctx, &b); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// A Succeeded Backup whose restic snapshot id we never managed to read isn't
@@ -601,11 +616,28 @@ func (r *BackupReconciler) setUnquiescedCondition(
 // pod alone being gone, e.g. the StatefulSet pod was deleted independently)
 // and releases the finalizer immediately when there's nothing left to
 // unquiesce — a freshly (re)started pod comes up with auto-save on. When the
+// finalizeDelete runs on a Backup marked for deletion, in two stages. Stage 1
+// (finalizeUnquiesce) releases a quiesced game world; stage 2 (finalizeSnapshot)
+// forgets the restic snapshot. Unquiesce goes first because it is time
+// critical: a world left with auto-save off is worse than an orphaned snapshot.
+func (r *BackupReconciler) finalizeDelete(ctx context.Context, b *gameplanev1alpha1.Backup) (ctrl.Result, error) {
+	if controllerutil.ContainsFinalizer(b, gameplanev1alpha1.BackupFinalizer) {
+		res, err := r.finalizeUnquiesce(ctx, b)
+		if err != nil || res.RequeueAfter > 0 {
+			return res, err
+		}
+	}
+	if !controllerutil.ContainsFinalizer(b, gameplanev1alpha1.BackupSnapshotFinalizer) {
+		return ctrl.Result{}, nil
+	}
+	return r.finalizeSnapshot(ctx, b)
+}
+
 // target is still around but the agent stays unreachable, the retry is
 // bounded by maxUnquiesceFinalizeRetry so a persistently broken agent can't
 // block deletion forever either; past that window a Warning event is
 // recorded and the finalizer releases anyway.
-func (r *BackupReconciler) finalizeDelete(ctx context.Context, b *gameplanev1alpha1.Backup) (ctrl.Result, error) {
+func (r *BackupReconciler) finalizeUnquiesce(ctx context.Context, b *gameplanev1alpha1.Backup) (ctrl.Result, error) {
 	if !controllerutil.ContainsFinalizer(b, gameplanev1alpha1.BackupFinalizer) {
 		return ctrl.Result{}, nil
 	}
@@ -843,36 +875,13 @@ func volumeSnapshotsAvailable(rm meta.RESTMapper) bool {
 // Both containers share the same env (repo + password from the user's
 // Secret) and a tmpfs-backed cache to keep the rootfs read-only.
 func (r *BackupReconciler) buildBackupPodSpec(b *gameplanev1alpha1.Backup, tmpl *gameplanev1alpha1.GameTemplate) corev1.PodSpec {
-	nonRoot := true
-	roRootFS := true
-	noPrivEsc := false
-	uid := int64(65532)
+	env := resticEnv(b.Spec.RepoRef.Name)
+	containerSec := resticContainerSecurityContext()
 
-	env := []corev1.EnvVar{
-		{Name: "RESTIC_REPOSITORY", ValueFrom: &corev1.EnvVarSource{
-			SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: b.Spec.RepoRef.Name},
-				Key:                  "repo",
-			},
-		}},
-		{Name: "RESTIC_PASSWORD", ValueFrom: &corev1.EnvVarSource{
-			SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: b.Spec.RepoRef.Name},
-				Key:                  "password",
-			},
-		}},
-		{Name: "XDG_CACHE_HOME", Value: "/tmp/restic-cache"},
-	}
-
-	containerSec := &corev1.SecurityContext{
-		RunAsNonRoot:             &nonRoot,
-		RunAsUser:                &uid,
-		ReadOnlyRootFilesystem:   &roRootFS,
-		AllowPrivilegeEscalation: &noPrivEsc,
-		Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
-	}
-
-	args := []string{"backup", "/data", "--json", "--tag", "gameplane"}
+	// --retry-lock makes the backup wait (up to 10m) for the repository lock
+	// instead of failing while a snapshot forget/prune, started by deleting
+	// another Backup, holds it exclusively.
+	args := []string{"backup", "/data", "--json", "--retry-lock", "10m", "--tag", "gameplane"}
 	for _, t := range b.Spec.Tags {
 		args = append(args, "--tag", t)
 	}
@@ -918,6 +927,46 @@ func (r *BackupReconciler) buildBackupPodSpec(b *gameplanev1alpha1.Backup, tmpl 
 				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 			},
 		},
+	}
+}
+
+// resticEnv is the container environment shared by every Job that talks to a
+// backup repository (the backup Job and the snapshot-forget Job): the
+// repo URL and password from the user's Secret, keys "repo" and "password", plus
+// a cache directory under the writable /tmp mount so the root filesystem can
+// stay read-only.
+func resticEnv(repoSecretName string) []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{Name: "RESTIC_REPOSITORY", ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: repoSecretName},
+				Key:                  "repo",
+			},
+		}},
+		{Name: "RESTIC_PASSWORD", ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{Name: repoSecretName},
+				Key:                  "password",
+			},
+		}},
+		{Name: "XDG_CACHE_HOME", Value: "/tmp/restic-cache"},
+	}
+}
+
+// resticContainerSecurityContext is the locked-down container security context
+// for restic Jobs: non-root, read-only root filesystem, no privilege
+// escalation, all capabilities dropped.
+func resticContainerSecurityContext() *corev1.SecurityContext {
+	nonRoot := true
+	roRootFS := true
+	noPrivEsc := false
+	uid := int64(65532)
+	return &corev1.SecurityContext{
+		RunAsNonRoot:             &nonRoot,
+		RunAsUser:                &uid,
+		ReadOnlyRootFilesystem:   &roRootFS,
+		AllowPrivilegeEscalation: &noPrivEsc,
+		Capabilities:             &corev1.Capabilities{Drop: []corev1.Capability{"ALL"}},
 	}
 }
 

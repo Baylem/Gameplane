@@ -24,6 +24,16 @@ const (
 // spec.quiesce=true; see backup_controller.go's finalizeDelete.
 const BackupFinalizer = "gameplane.local/backup-finalizer"
 
+// BackupSnapshotFinalizer blocks the deletion of a restic-strategy Backup until
+// the operator has run `restic forget --prune` for the Backup's snapshot (or has
+// given up after a bounded wait and left the snapshot in the repository). Without
+// it, deleting a Backup — by hand, through the API, or via BackupSchedule
+// retention — orphans its snapshot forever. Added to every Backup that has a
+// repoRef and a non-volume-snapshot strategy; volume-snapshot Backups need none
+// because their VolumeSnapshot is garbage-collected through its owner reference.
+// See backup_forget.go's finalizeSnapshot.
+const BackupSnapshotFinalizer = "gameplane.local/backup-snapshot-finalizer"
+
 // BackupSpec is the desired state of a one-shot backup.
 // +kubebuilder:validation:XValidation:rule="self.strategy == 'volume-snapshot' || has(self.repoRef)",message="repoRef is required for the restic-snapshot strategy"
 type BackupSpec struct {

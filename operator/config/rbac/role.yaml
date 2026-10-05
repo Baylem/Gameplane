@@ -43,8 +43,12 @@ rules:
   resources:
   - jobs
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - events.k8s.io
@@ -57,6 +61,34 @@ rules:
   - gameplane.local
   resources:
   - backups
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gameplane.local
+  resources:
+  - backups/finalizers
+  - modules/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - gameplane.local
+  resources:
+  - backups/status
+  - clusters/status
+  - gametemplates/status
+  - modules/status
+  - modulesources/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - gameplane.local
+  resources:
   - backupschedules
   - clusters
   - gameservers
@@ -67,17 +99,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - gameplane.local
-  resources:
-  - clusters/status
-  - gametemplates/status
-  - modules/status
-  - modulesources/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - gameplane.local
   resources:
@@ -100,12 +121,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - gameplane.local
-  resources:
-  - modules/finalizers
-  verbs:
-  - update
 - apiGroups:
   - metallb.io
   resources:
