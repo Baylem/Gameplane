@@ -19,6 +19,7 @@ type ShareLink struct {
 	Cluster    string     // cluster identifier
 	Namespace  string     // Kubernetes namespace
 	ServerName string     // GameServer name
+	ServerUID  string     // GameServer metadata.uid at mint time; "" for legacy links minted before migration 013
 	CreatedBy  int64      // user ID who created it
 	CanStart   bool       // whether the link grants start capability
 	ExpiresAt  *time.Time // nil = never expires; matches RevokedAt/LastUsed's pattern
@@ -42,11 +43,20 @@ var ErrShareLinkExpiryInvalid = errors.New("share link expiry invalid")
 // classifies it as 404.
 var ErrShareLinkNotFound = errors.New("share link not found")
 
-// CreateShareLink mints a new share link and returns the raw token, which is
-// never stored and never recoverable afterwards. expiresAt is optional: nil
-// means the link never expires. When non-nil it must be strictly in the
-// future; there is no maximum lifetime.
+// CreateShareLink mints a share link that is not bound to a GameServer UID
+// (server_uid is stored empty). Such a link is validated by the public
+// handlers with the creationTimestamp check only; the API create handler uses
+// CreateShareLinkForServer instead.
 func (s *Store) CreateShareLink(ctx context.Context, cluster, ns, serverName string, createdBy int64, canStart bool, expiresAt *time.Time) (rawToken string, link ShareLink, err error) {
+	return s.CreateShareLinkForServer(ctx, cluster, ns, serverName, "", createdBy, canStart, expiresAt)
+}
+
+// CreateShareLinkForServer mints a new share link bound to serverUID (the
+// GameServer's metadata.uid) and returns the raw token, which is never stored
+// and never recoverable afterwards. expiresAt is optional: nil means the link
+// never expires. When non-nil it must be strictly in the future; there is no
+// maximum lifetime. An empty serverUID stores a legacy-style unbound link.
+func (s *Store) CreateShareLinkForServer(ctx context.Context, cluster, ns, serverName, serverUID string, createdBy int64, canStart bool, expiresAt *time.Time) (rawToken string, link ShareLink, err error) {
 	if cluster == "" {
 		cluster = "local"
 	}
@@ -84,9 +94,9 @@ func (s *Store) CreateShareLink(ctx context.Context, cluster, ns, serverName str
 		expiresAtArg = expiresAt.Format(time.RFC3339)
 	}
 	_, err = s.DB.ExecContext(ctx,
-		`INSERT INTO share_links(id, cluster, namespace, server_name, created_by, can_start, token_hash, expires_at, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, cluster, ns, serverName, createdBy, canStartInt, tokenHash, expiresAtArg, createdAt.Format(time.RFC3339))
+		`INSERT INTO share_links(id, cluster, namespace, server_name, server_uid, created_by, can_start, token_hash, expires_at, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		id, cluster, ns, serverName, serverUID, createdBy, canStartInt, tokenHash, expiresAtArg, createdAt.Format(time.RFC3339))
 	if err != nil {
 		return "", ShareLink{}, fmt.Errorf("insert share link: %w", err)
 	}
@@ -104,6 +114,7 @@ func (s *Store) CreateShareLink(ctx context.Context, cluster, ns, serverName str
 		Cluster:    cluster,
 		Namespace:  ns,
 		ServerName: serverName,
+		ServerUID:  serverUID,
 		CreatedBy:  createdBy,
 		CanStart:   canStart,
 		ExpiresAt:  expiresAtCopy,
@@ -129,13 +140,14 @@ func (s *Store) LookupShareLink(ctx context.Context, rawToken string) (ShareLink
 	var createdAtStr string
 
 	err := s.DB.QueryRowContext(ctx,
-		`SELECT id, cluster, namespace, server_name, created_by, can_start, expires_at, revoked_at, created_at, last_used
+		`SELECT id, cluster, namespace, server_name, server_uid, created_by, can_start, expires_at, revoked_at, created_at, last_used
 		 FROM share_links WHERE token_hash = ?`,
 		tokenHash).Scan(
 		&link.ID,
 		&link.Cluster,
 		&link.Namespace,
 		&link.ServerName,
+		&link.ServerUID,
 		&link.CreatedBy,
 		&canStartInt,
 		&expiresAtStr,
@@ -208,7 +220,7 @@ func (s *Store) ListShareLinks(ctx context.Context, cluster, ns, serverName stri
 		cluster = "local"
 	}
 	rows, err := s.DB.QueryContext(ctx,
-		`SELECT id, cluster, namespace, server_name, created_by, can_start, expires_at, revoked_at, created_at, last_used
+		`SELECT id, cluster, namespace, server_name, server_uid, created_by, can_start, expires_at, revoked_at, created_at, last_used
 		 FROM share_links WHERE cluster = ? AND namespace = ? AND server_name = ?
 		 ORDER BY created_at DESC`,
 		cluster, ns, serverName)
@@ -233,6 +245,7 @@ func (s *Store) ListShareLinks(ctx context.Context, cluster, ns, serverName stri
 			&link.Cluster,
 			&link.Namespace,
 			&link.ServerName,
+			&link.ServerUID,
 			&link.CreatedBy,
 			&canStartInt,
 			&expiresAtStr,

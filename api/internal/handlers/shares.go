@@ -165,7 +165,7 @@ func createShareHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 		}
 
 		cl, _ := scope.ResolveCluster(req, reg)
-		rawToken, link, err := store.CreateShareLink(req.Context(), cl, ns, name, u.ID, body.CanStart, expiresAt)
+		rawToken, link, err := store.CreateShareLinkForServer(req.Context(), cl, ns, name, string(obj.GetUID()), u.ID, body.CanStart, expiresAt)
 		if err != nil {
 			if errors.Is(err, db.ErrShareLinkExpiryInvalid) {
 				http.Error(w, "expiresAt must be in the future", http.StatusBadRequest)
@@ -446,13 +446,21 @@ func startShareHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 	}
 }
 
-// serverReplacedSinceLink reports whether obj was created after link was
-// minted, i.e. the GameServer the link was issued for was deleted and a new
-// one now holds the same name. Links are keyed by name, not UID, so without
-// this check an old link would grant access to the new server. A zero
+// serverReplacedSinceLink reports whether obj is not the GameServer the link
+// was minted for, i.e. that server was deleted and a new one now holds the
+// same name. A link carrying a ServerUID is valid only while the live
+// server's UID equals it; the UID is authoritative and the timestamp is not
+// consulted (creationTimestamp has 1s precision, so a same-second
+// delete+recreate would pass a timestamp comparison). A legacy link
+// (ServerUID == "", minted before migration 013) falls back to the
+// creationTimestamp check: replaced when the server was created after the
+// link. An empty UID is never treated as a match by itself. A zero
 // creationTimestamp (never the case for a real apiserver object) is not
 // treated as newer.
 func serverReplacedSinceLink(obj *unstructured.Unstructured, link db.ShareLink) bool {
+	if link.ServerUID != "" {
+		return string(obj.GetUID()) != link.ServerUID
+	}
 	created := obj.GetCreationTimestamp().Time
 	return !created.IsZero() && created.After(link.CreatedAt)
 }
