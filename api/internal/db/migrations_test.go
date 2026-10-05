@@ -1,7 +1,6 @@
 package db
 
 import (
-	"errors"
 	"io/fs"
 	"regexp"
 	"strings"
