@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/ValgulNecron/gameplane/api/internal/auth"
+	"github.com/ValgulNecron/gameplane/api/internal/db"
 	"github.com/ValgulNecron/gameplane/api/internal/httperr"
 	"github.com/ValgulNecron/gameplane/api/internal/kube"
 	"github.com/ValgulNecron/gameplane/api/internal/scope"
@@ -38,25 +39,27 @@ import (
 const heartbeatStaleTTL = 60 * time.Second
 
 // MountResources wires /servers, /templates, /backups, /schedules.
+// store may be nil (tests); when set, deleting a GameServer revokes its share
+// links so they cannot attach to a later server with the same name.
 //
 // Templates are cluster-scoped; the others are namespaced. The kube
 // package's GVR map determines which is which via resource path. Every
 // handler resolves its target cluster per request from reg via the
 // `?cluster=` selector (resolveCluster) — a request with no selector
 // resolves to scope.DefaultCluster, preserving single-cluster behavior.
-func MountResources(r chi.Router, reg *kube.Registry) {
+func MountResources(r chi.Router, reg *kube.Registry, store *db.Store) {
 	for path, gvr := range kube.GVRs {
-		mountOne(r, reg, path, gvr)
+		mountOne(r, reg, store, path, gvr)
 	}
 }
 
-func mountOne(r chi.Router, reg *kube.Registry, path string, gvr schema.GroupVersionResource) {
+func mountOne(r chi.Router, reg *kube.Registry, store *db.Store, path string, gvr schema.GroupVersionResource) {
 	r.Route("/"+path, func(r chi.Router) {
 		r.Get("/", listHandler(reg, gvr))
 		r.Post("/", createHandler(reg, gvr))
 		r.Get("/{name}", getHandler(reg, gvr))
 		r.Put("/{name}", updateHandler(reg, gvr))
-		r.Delete("/{name}", deleteHandler(reg, gvr))
+		r.Delete("/{name}", deleteHandler(reg, store, gvr))
 	})
 }
 
@@ -347,7 +350,7 @@ func pruneTunnelProviderOnSpecChange(ctx context.Context, k *kube.Client, ns, na
 	}
 }
 
-func deleteHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.HandlerFunc {
+func deleteHandler(reg *kube.Registry, store *db.Store, gvr schema.GroupVersionResource) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		k, ok := resolveCluster(w, req, reg)
 		if !ok {
@@ -364,10 +367,12 @@ func deleteHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 			}
 		}
 		var err error
+		var ns string
 		if cluster(gvr) {
 			err = k.Dynamic.Resource(gvr).Delete(req.Context(), name, metav1.DeleteOptions{})
 		} else {
-			ns, ok := resolveNS(w, req)
+			var ok bool
+			ns, ok = resolveNS(w, req)
 			if !ok {
 				return
 			}
@@ -376,6 +381,16 @@ func deleteHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 		if err != nil {
 			httperr.Write(w, req, err)
 			return
+		}
+		if store != nil && gvr == kube.GVRs["servers"] {
+			// The server is gone; its share links must not outlive it. A
+			// failure here is logged, not surfaced: the delete already
+			// happened, and the public share handlers also reject any link
+			// older than the live server's creationTimestamp.
+			clusterID, _ := scope.ResolveCluster(req, reg) // already validated by resolveCluster above
+			if rerr := store.RevokeShareLinksForServer(req.Context(), clusterID, ns, name); rerr != nil {
+				slog.Warn("revoke share links after server delete", "server", name, "namespace", ns, "err", rerr)
+			}
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}

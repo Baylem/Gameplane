@@ -177,6 +177,55 @@ func TestMiddleware_NoSinkByDefault(t *testing.T) {
 	}
 }
 
+// A handler that wrote its own synchronous row and called MarkRecorded must
+// produce exactly one audit row: its own, with reason and composite target.
+func TestMiddleware_SkipsRowWhenHandlerRecordedSync(t *testing.T) {
+	s := newStore(t)
+	a := New(s)
+	h := Middleware(a)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := a.WriteSync(r.Context(), "POST", "/servers/alpha:capture-start", "alpha", "invalid_size", http.StatusBadRequest); err != nil {
+			t.Errorf("WriteSync: %v", err)
+		}
+		MarkRecorded(r.Context())
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	req := httptest.NewRequestWithContext(context.Background(), "POST", "/servers/alpha:capture-start", nil)
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	if got := countEvents(t, s); got != 1 {
+		t.Fatalf("db events = %d, want 1 (explicit row only)", got)
+	}
+	var target, reason string
+	var status int
+	if err := s.DB.QueryRowContext(context.Background(),
+		`SELECT target, reason, status FROM audit_events`).Scan(&target, &reason, &status); err != nil {
+		t.Fatalf("select: %v", err)
+	}
+	if target != "alpha" || reason != "invalid_size" || status != http.StatusBadRequest {
+		t.Errorf("row = (%q, %q, %d), want (alpha, invalid_size, 400)", target, reason, status)
+	}
+}
+
+// Without MarkRecorded (for example because the explicit write failed) the
+// middleware must still record the request.
+func TestMiddleware_RecordsRowWhenHandlerDidNotMarkRecorded(t *testing.T) {
+	s := newStore(t)
+	a := New(s)
+	h := Middleware(a)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = a.WriteSync(r.Context(), "POST", "/servers/alpha:capture-start", "alpha", "", http.StatusAccepted)
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	req := httptest.NewRequestWithContext(context.Background(), "POST", "/servers/alpha:capture-start", nil)
+	h.ServeHTTP(httptest.NewRecorder(), req)
+	if got := countEvents(t, s); got != 2 {
+		t.Fatalf("db events = %d, want 2 (explicit + middleware fallback)", got)
+	}
+}
+
+func TestMarkRecorded_NoopOutsideMiddleware(_ *testing.T) {
+	MarkRecorded(context.Background()) // must not panic
+}
+
 func TestShouldLog(t *testing.T) {
 	cases := []struct {
 		method string

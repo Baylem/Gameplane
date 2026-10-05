@@ -167,6 +167,55 @@ the first place. Deleting a quiesced Backup goes through the same release: a
 finalizer holds the object until the unquiesce is sent, so `kubectl delete
 backup` can't drop it silently.
 
+### Backup deletion and snapshot cleanup
+
+Deleting a restic-strategy `Backup` also removes its snapshot from the
+repository, so retention actually reclaims space instead of orphaning one
+snapshot per deleted Backup. The same path serves every way a Backup can go:
+`kubectl delete`, the dashboard/API, a `BackupSchedule`'s retention trim, a
+`concurrencyPolicy: Replace` schedule dropping an in-flight Backup, and
+garbage collection of a deleted GameServer's auto-schedule.
+
+- **Finalizer.** Every Backup that has a `repoRef` and is not a
+  `volume-snapshot` Backup carries `gameplane.local/backup-snapshot-finalizer`
+  (added by the operator on its first reconcile, including for Backups created
+  before the finalizer existed). Volume-snapshot Backups need none: their
+  `VolumeSnapshot` is garbage-collected through its owner reference. A Backup
+  that is Failed, or has no recorded `status.snapshotID`, is released at once.
+- **Forget Job.** On delete the operator runs a one-shot Job
+  `<backup>-forget` that executes `restic forget <snapshotID> --prune` with
+  the same repo Secret, restic image and locked-down security context as the
+  backup Job. It needs no PVC, GameServer or GameTemplate, so it still works
+  after the server is gone. The Job has a backoff limit of 3 and a 30-minute
+  deadline, and waits up to 10 minutes for the repository lock
+  (`--retry-lock`); backup and restore Jobs use the same `--retry-lock` so neither
+  fails while a forget is pruning. A snapshot that is already gone counts as
+  success. The Backup stays `Terminating` for the duration (seconds to minutes),
+  then goes; the outcome is recorded as a `SnapshotForgotten` condition and a
+  `SnapshotForgotten` event.
+- **Ordering.** The unquiesce finalizer runs first (a frozen game world is
+  worse than an orphaned snapshot). A Backup deleted while its own Job is
+  running has that Job deleted, and its pods awaited, before anything is
+  forgotten; if no snapshot id had been recorded by then, the Backup is released
+  with a `SnapshotForgetSkipped` warning and any snapshot it wrote is left in
+  place. The forget also waits while a non-terminal `Restore` uses the Backup (by
+  reference or by pinned snapshot id), since `forget --prune` takes the
+  repository's exclusive lock.
+- **Never blocks forever.** The whole stage is capped at 45 minutes, measured
+  from the `backup.gameplane.local/forget-started-at` annotation. When the repo
+  Secret is gone, its keys are missing, the namespace is terminating, the Job
+  fails, or the cap passes, the finalizer is released with a
+  `SnapshotForgetAbandoned` warning naming the snapshot, and
+  `SnapshotForgotten=False` is recorded. The snapshot then stays in the
+  repository and can be removed by hand with `restic forget <id> --prune`.
+- **Caveats.** A repository that cannot be pruned with the Secret's credentials
+  (for example an append-only rest-server) cannot be cleaned up this way; every
+  delete there ends in the abandoned path, so prune it externally. Snapshots of
+  Backups deleted before this finalizer existed are not cleaned up retroactively.
+  Rolling the operator back to a release without this finalizer leaves existing
+  Backups with a finalizer the old operator does not remove; clear it with
+  `kubectl patch backup <name> --type=merge -p '{"metadata":{"finalizers":null}}'`.
+
 ### Restore from backup
 
 1. Dashboard → `POST /restores` with inline `spec` (Backup reference, target GameServer)

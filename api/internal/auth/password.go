@@ -31,12 +31,20 @@ var (
 	argonTime   uint32 = 3
 	argonMemory uint32 = 64 * 1024
 
-	// argonSem bounds concurrent argon2 operations to 2 simultaneous hashes/verifies.
-	// Each operation allocates 64 MiB; with 2 concurrent ops, peak usage is ~128 MiB,
-	// fitting comfortably within the 256 MiB API container limit. The semaphore is
-	// context-aware so client disconnects abort pending operations.
-	argonSem = semaphore.NewWeighted(2)
+	// argonSem bounds concurrent argon2 operations to argonConcurrency
+	// simultaneous hashes/verifies. Each operation allocates a 64 MiB block
+	// that turns into garbage as soon as it returns; the semaphore bounds the
+	// LIVE blocks, and api/cmd's soft memory limit (derived from the cgroup
+	// limit) makes the GC reclaim the garbage before the 256 MiB container
+	// limit is reached. One slot keeps live argon memory at 64 MiB: a burst of
+	// concurrent failed logins previously OOM-killed the API with two slots.
+	// The semaphore is context-aware so client disconnects abort pending
+	// operations.
+	argonSem = semaphore.NewWeighted(argonConcurrency)
 )
+
+// argonConcurrency is the number of argon2 operations allowed to run at once.
+const argonConcurrency = 1
 
 const (
 	// 2 threads matches OWASP 2023 guidance and stays responsive on

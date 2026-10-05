@@ -53,6 +53,12 @@ func (r *BackupScheduleReconciler) trimBackups(
 		if b.Status.CompletionTime == nil {
 			continue
 		}
+		// A Backup already being deleted is held by its snapshot finalizer and
+		// still reads Succeeded. Counting it would shift the keep window past
+		// Backups that should stay and re-issue a Delete already in flight.
+		if !b.DeletionTimestamp.IsZero() {
+			continue
+		}
 		succeeded = append(succeeded, b)
 	}
 	if len(succeeded) == 0 {

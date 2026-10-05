@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -596,8 +597,26 @@ func (a *Auditor) verifyHead(ctx context.Context, checkpointID, checked int64) (
 	return nil, nil
 }
 
+// recordedKey is the context key for the per-request "already audited" flag.
+type recordedKey struct{}
+
+// MarkRecorded tells Middleware that the handler has already written this
+// request's audit row itself (via Auditor.WriteSync), so the generic row must
+// not be added on top of it. Call it only after WriteSync returned nil: if the
+// explicit write failed, leaving the flag unset lets Middleware record the
+// request as a fallback instead of leaving a hole in the trail. It is a no-op
+// on a context that did not pass through Middleware.
+func MarkRecorded(ctx context.Context) {
+	if f, ok := ctx.Value(recordedKey{}).(*atomic.Bool); ok {
+		f.Store(true)
+	}
+}
+
 // Middleware logs every mutating request after the handler returns.
 // Reads and health probes are skipped to keep the audit log signal-dense.
+// A request whose handler called MarkRecorded is skipped too: its own
+// synchronous row (which also carries the failure reason and the composite
+// target) is the single record of that request.
 func Middleware(a *Auditor) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -606,10 +625,12 @@ func Middleware(a *Auditor) func(http.Handler) http.Handler {
 			// context never propagates back up here, which is why audit
 			// rows used to record "anonymous" for authenticated actions.
 			ctx, holder := auth.WithActorHolder(req.Context())
+			recorded := new(atomic.Bool)
+			ctx = context.WithValue(ctx, recordedKey{}, recorded)
 			req = req.WithContext(ctx)
 			rw := &responseRecorder{ResponseWriter: w, status: 200}
 			next.ServeHTTP(rw, req)
-			if !shouldLog(req) {
+			if !shouldLog(req) || recorded.Load() {
 				return
 			}
 			actor := "anonymous"

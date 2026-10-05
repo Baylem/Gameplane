@@ -61,6 +61,7 @@ func main() {
 	// the --log-level flag once it has parsed its flags.
 	logger := newLogger(envOr("GAMEPLANE_LOG_LEVEL", "info"))
 	slog.SetDefault(logger)
+	applyMemoryLimit(logger)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -331,7 +332,7 @@ func main() {
 		p.Use(mutationRateLimit)
 		p.Use(rbac.Middleware(reg))
 
-		handlers.MountResources(p, reg)
+		handlers.MountResources(p, reg, store)
 		handlers.MountFleet(p, reg, store)
 		handlers.MountNamespaces(p, reg)
 		handlers.MountPodEvents(p, reg)
