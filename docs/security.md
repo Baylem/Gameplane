@@ -15,7 +15,7 @@ point. Assume:
 Two modes, configurable independently:
 
 - **Local accounts** — argon2id (64 MiB, t=3, p=2) password hashing.
-  Session cookies are HttpOnly, Secure, SameSite=Lax. CSRF protection
+  Session cookies are HttpOnly, Secure, SameSite=Lax. The database stores only a SHA-256 digest of the session cookie value, so a leaked database or backup does not yield usable session cookies; the digest itself is rejected if presented as a cookie. CSRF protection
   via a double-submit `X-Gameplane-CSRF` header on mutating requests.
 - **OIDC** — Keycloak, Google, GitHub, any RFC-7519 compliant IdP.
   State validated through a short-lived cookie; `id_token` signature

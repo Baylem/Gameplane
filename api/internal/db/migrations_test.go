@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"io/fs"
 	"regexp"
 	"strings"
@@ -286,5 +287,99 @@ func TestNowTimestamp_Format(t *testing.T) {
 	}
 	if d := time.Since(parsed); d < -time.Minute || d > time.Minute {
 		t.Fatalf("NowTimestamp() = %q is not the current UTC time", ts)
+	}
+}
+
+func TestMigrate_SessionDigestResetDeletesExistingSessions(t *testing.T) {
+	s := newRBACStore(t)
+	ctx := t.Context()
+
+	// Insert a test user
+	_, err := s.DB.ExecContext(ctx,
+		`INSERT INTO users(username, display_name, email, role) VALUES (?,?,?,?)`,
+		"sess-user", "sess-user", "sess@example.com", "viewer")
+	if err != nil {
+		t.Fatalf("insert user: %v", err)
+	}
+
+	// Insert two sessions with raw-looking tokens
+	_, err = s.DB.ExecContext(ctx,
+		`INSERT INTO sessions(token, user_id, csrf_token, expires_at) VALUES (?,?,?,?)`,
+		"raw-1", 1, "csrf-1", "2999-01-01T00:00:00Z")
+	if err != nil {
+		t.Fatalf("insert session 1: %v", err)
+	}
+	_, err = s.DB.ExecContext(ctx,
+		`INSERT INTO sessions(token, user_id, csrf_token, expires_at) VALUES (?,?,?,?)`,
+		"raw-2", 1, "csrf-2", "2999-01-01T00:00:00Z")
+	if err != nil {
+		t.Fatalf("insert session 2: %v", err)
+	}
+
+	// Delete the migration marker to re-run migration 014
+	_, err = s.DB.ExecContext(ctx, `DELETE FROM schema_migrations WHERE version = ?`, "014_sessions_digest_reset.sql")
+	if err != nil {
+		t.Fatalf("delete migration marker: %v", err)
+	}
+
+	// Run migrations - 014 should delete all sessions
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	// Verify sessions were deleted
+	var count int
+	err = s.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM sessions`).Scan(&count)
+	if err != nil {
+		t.Fatalf("count sessions: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("session count after 014: %d, want 0", count)
+	}
+
+	// Verify migration version was recorded
+	var v string
+	err = s.DB.QueryRowContext(ctx, `SELECT version FROM schema_migrations WHERE version = ?`, "014_sessions_digest_reset.sql").Scan(&v)
+	if err != nil {
+		t.Errorf("migration 014 not recorded: %v", err)
+	}
+
+	// Insert a new session after migration
+	_, err = s.DB.ExecContext(ctx,
+		`INSERT INTO sessions(token, user_id, csrf_token, expires_at) VALUES (?,?,?,?)`,
+		"digest-row", 1, "csrf-3", "2999-01-01T00:00:00Z")
+	if err != nil {
+		t.Fatalf("insert session after 014: %v", err)
+	}
+
+	// Run migrations again - 014 should not re-run
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatalf("migrate again: %v", err)
+	}
+
+	// Verify the new session still exists (migration not re-run)
+	err = s.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM sessions WHERE token = ?`, "digest-row").Scan(&count)
+	if err != nil {
+		t.Fatalf("count new session: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("new session count after re-run: %d, want 1", count)
+	}
+}
+
+func TestSharedMigrations_IncludeSessionDigestReset(t *testing.T) {
+	files, err := listSQL(migrations, sharedMigrationDir)
+	if err != nil {
+		t.Fatalf("list shared migrations: %v", err)
+	}
+	var found bool
+	for _, f := range files {
+		if f.name == "014_sessions_digest_reset.sql" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("014_sessions_digest_reset.sql not found in shared migrations")
 	}
 }
