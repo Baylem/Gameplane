@@ -22,6 +22,12 @@ const INVALIDATE_COALESCE_MS = 500;
 // future props have a stable place to land.
 export type NotificationsPanelProps = Record<string, never>;
 
+// phaseOf reads status.phase off a watch object ("" when absent).
+function phaseOf(obj: GameplaneEvent["object"] | undefined): string {
+  const status = obj?.status as { phase?: unknown } | undefined;
+  return typeof status?.phase === "string" ? status.phase : "";
+}
+
 /**
  * NotificationsPanel opens the /events SSE stream: each watch event
  * invalidates the matching TanStack Query cache (so views refresh without
@@ -49,8 +55,27 @@ export function NotificationsPanel(): JSX.Element {
       pending.delete(id);
       void qc.invalidateQueries(filters, { cancelRefetch: false });
     };
+    // Agent heartbeats patch status.agent every ~20 s per server, which
+    // arrives as MODIFIED with no spec or phase change. Remember each
+    // object's (generation, phase) signature and drop a MODIFIED that leaves
+    // it unchanged: it neither notifies nor invalidates (the pollers cover
+    // heartbeat-only fields). ADDED and DELETED always pass.
+    const seen = new Map<string, string>();
+    const isMeaningful = (ev: GameplaneEvent): boolean => {
+      const meta = ev.object?.metadata;
+      const key = `${ev.kind}/${meta?.namespace ?? ""}/${meta?.name ?? ""}`;
+      if (ev.eventType === "DELETED") {
+        seen.delete(key);
+        return true;
+      }
+      const sig = `${meta?.generation ?? ""}/${phaseOf(ev.object)}`;
+      const prev = seen.get(key);
+      seen.set(key, sig);
+      return ev.eventType !== "MODIFIED" || prev !== sig;
+    };
     const dispose = openEventStream({
       onEvent: (ev: GameplaneEvent) => {
+        if (!isMeaningful(ev)) return;
         const filters = queryFilterForKind(ev.kind);
         if (filters) {
           const id = ev.kind;

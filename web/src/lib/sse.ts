@@ -11,7 +11,7 @@ export interface GameplaneEvent {
   kind: string;
   // Kubernetes watch event type: "ADDED" | "MODIFIED" | "DELETED"
   eventType: string;
-  object: { metadata?: { name?: string; namespace?: string } } & Record<string, unknown>;
+  object: { metadata?: { name?: string; namespace?: string; generation?: number } } & Record<string, unknown>;
 }
 
 export interface EventStreamOptions {

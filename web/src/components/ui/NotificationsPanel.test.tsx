@@ -267,4 +267,86 @@ describe("NotificationsPanel", () => {
       vi.useRealTimers();
     }
   });
+
+  describe("heartbeat noise filter", () => {
+    const send = async (eventType: string, object?: Record<string, unknown>) => {
+      await act(() => {
+        sseCallback!({ kind: "servers", eventType, object });
+      });
+    };
+    const server = (generation: number, phase: string) => ({
+      metadata: { name: "s1", namespace: "games", generation },
+      status: { phase },
+    });
+    // Opens the panel and returns how many notices it lists.
+    const noticeCount = async () => {
+      await userEvent.click(screen.getByRole("button", { name: /notifications/i }));
+      await screen.findByText("Recent activity");
+      return screen.queryAllByRole("listitem").length;
+    };
+
+    it("drops MODIFIED events that change neither generation nor phase", async () => {
+      renderWithQuery(<NotificationsPanel />);
+      await send("ADDED", server(1, "Running"));
+      await send("MODIFIED", server(1, "Running"));
+      await send("MODIFIED", server(1, "Running"));
+      await send("MODIFIED", server(1, "Running"));
+      expect(await noticeCount()).toBe(1);
+      expect(screen.getByText(/added server s1/)).toBeInTheDocument();
+    });
+
+    it("records a MODIFIED when the phase changes", async () => {
+      renderWithQuery(<NotificationsPanel />);
+      await send("ADDED", server(1, "Running"));
+      await send("MODIFIED", server(1, "Stopped"));
+      await send("MODIFIED", server(1, "Stopped"));
+      expect(await noticeCount()).toBe(2);
+      expect(screen.getByText(/modified server s1/)).toBeInTheDocument();
+    });
+
+    it("records a MODIFIED when the generation (spec) changes", async () => {
+      renderWithQuery(<NotificationsPanel />);
+      await send("ADDED", server(1, "Running"));
+      await send("MODIFIED", server(2, "Running"));
+      expect(await noticeCount()).toBe(2);
+    });
+
+    it("records the first MODIFIED of an unseen object once, even without generation or status", async () => {
+      renderWithQuery(<NotificationsPanel />);
+      await send("MODIFIED", { metadata: { name: "bare" } });
+      await send("MODIFIED", { metadata: { name: "bare" } });
+      await send("MODIFIED", { metadata: { name: "bare" } });
+      // An event with no object at all is handled too (recorded once).
+      await send("MODIFIED");
+      expect(await noticeCount()).toBe(2);
+    });
+
+    it("forgets the baseline on DELETED so a later MODIFIED is recorded", async () => {
+      renderWithQuery(<NotificationsPanel />);
+      await send("ADDED", server(1, "Running"));
+      await send("DELETED", server(1, "Running"));
+      await send("MODIFIED", server(1, "Running"));
+      expect(await noticeCount()).toBe(3);
+    });
+
+    it("does not invalidate caches for a suppressed MODIFIED", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const { client } = renderWithQuery(<NotificationsPanel />);
+        const spy = vi.spyOn(client, "invalidateQueries");
+        await send("ADDED", server(1, "Running"));
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(500);
+        });
+        expect(spy).toHaveBeenCalledTimes(1);
+        await send("MODIFIED", server(1, "Running"));
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1000);
+        });
+        expect(spy).toHaveBeenCalledTimes(1);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });
