@@ -485,7 +485,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 2. **Every mutating request audited:** audit middleware logs actor, method, path, target, status, IP to database + external sinks
 3. **Three-role baseline RBAC:** admin/operator/viewer roles reproduce historical permission matrix exactly
 4. **Multi-dimensional RBAC:** namespace + cluster + owner/collaborator dimensions; cluster gating prevents cross-cluster privilege escalation
-5. **Append-only migrations:** database schema mutations are irreversible (migrations 001-012); no down-migrations
+5. **Append-only migrations:** database schema mutations are irreversible (migrations 001-014); no down-migrations
 6. **Login rate limiting:** `/auth/login` is per-IP (burst 10, 5/min, `LoginLimiter`) plus a per-username throttle layered on top (burst 6, 3/min, `LoginUserLimiter` in `auth/local.go`); the OIDC callback routes (`/auth/oidc/{provider}/callback`, legacy `/auth/oidc/callback`) are per-IP only (burst 10, 10/min via `OIDCCallbackLimiter`), no per-user dimension
 7. **Audit hash-chain:** each audit_events row includes hash of previous row (prev_hash) + its own content hash (hash); detects DB-level UPDATE/DELETE tampering
 8. **Audit pagination is bounded:** The `Auditor.Page(ctx, limit)` method clamps the untrusted `limit` parameter to a maximum of 500 entries (`MaxAuditPageSize`). Clamping occurs at both the API handler layer (api/internal/handlers/audit.go line 25) and the store layer (api/internal/audit/audit.go lines 820–822) so untrusted input is bounded at the earliest opportunity and again at use time. The allocated slice is always created with capacity within the bound (`make([]Event, 0, limit)` after clamping), guaranteeing that no untrusted client input can cause unbounded memory allocation regardless of how the limit value flows through the system.
@@ -533,11 +533,11 @@ Verify from `/api/go.mod`.
 - Runtime SQL is written once with `?` placeholders; the Postgres connector rewrites them to `$n` (`db.Rebind`). Timestamps that used SQLite's `datetime('now')` are generated in Go (`db.NowTimestamp()`, same `YYYY-MM-DD HH:MM:SS` UTC text) and bound as parameters; inserted ids come from `RETURNING id` (pgx has no `LastInsertId`)
 - Postgres legacy migrations declare the text columns the API sorts or range-compares (`roles.name`, role-binding scope columns, `audit_events.ts`, `sessions.expires_at`, `share_links.created_at`/`expires_at`) `COLLATE "C"` so ordering matches SQLite's byte-wise collation
 
-### Schema (migrations 001-012)
+### Schema (migrations 001-014)
 
 **001_init.sql:**
 - `users` — username (unique), email, display_name, pw_hash (argon2id), role (legacy, now via role_bindings), created_at, updated_at
-- `sessions` — token (PK), user_id (FK), csrf_token, expires_at
+- `sessions` — token (PK; since 014 holds the hex SHA-256 digest of the session cookie value, never the value), user_id (FK), csrf_token, expires_at
 - `oidc_links` — (issuer, subject) -> user_id (many-to-one); email claim
 - `audit_events` — ts, actor, method, path, target, status, ip
 - `api_tokens` — token (PK), user_id, name, last_used
@@ -595,6 +595,9 @@ Verify from `/api/go.mod`.
 - Adds `server_uid TEXT NOT NULL DEFAULT ''` to `share_links`; portable, runs unchanged on SQLite and PostgreSQL. Existing rows get `''` (legacy links, validated by creationTimestamp only); no backfill
 - New links store the GameServer `metadata.uid`; public share handlers require the live UID to equal it when non-empty (see "Share links are bound to the GameServer incarnation")
 
+**014_sessions_digest_reset.sql:** (session digest storage)
+- `DELETE FROM sessions` once. Sessions switched to storing a SHA-256 digest of the cookie value (`auth.sessionDigest`); pre-existing rows hold raw values and are deliberately invalidated, so every user signs in again once after upgrade. Numbered 014 because 013 is used by another shared migration. The runner applies pending files in version (filename) order and skips recorded ones, so 013 and 014 pending together run 013 first; a 013 added after 014 was recorded on an earlier startup still runs on the next startup, after it. Forward-only: a rollback to a pre-digest binary also invalidates digest-era sessions.
+
 Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); the API layer is authoritative and deletes dependent rows itself, so the Postgres cascades never change the outcome. The one exception is `share_links.created_by`: the Postgres schema declares it as a plain column with no foreign key, so deleting a user keeps that user's share links (revoked) in the audit trail on both drivers, instead of cascading them away.
 
 ## Security considerations
@@ -602,7 +605,7 @@ Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); th
 ### Authentication
 - **Local:** argon2id (Argon2id13, m=64MiB, t=3, p=2) with per-user random salt; ~200ms per check; operations are bounded by a 1-slot weighted semaphore (`argonConcurrency`) that honours request context, so client disconnects abort pending argon2 operations and prevent stalling under concurrent login attempts. Each operation allocates a 64 MiB block that is garbage on return, so at startup `api/cmd/memlimit.go` also sets the Go soft memory limit to 80% of the cgroup memory limit (256Mi chart default -> ~204 MiB) unless `GOMEMLIMIT` is set, making the GC reclaim those blocks before a burst of concurrent failed logins can OOM-kill the container
 - **OIDC:** `coreos/go-oidc/v3` discovery + `go-jose/v4` JWT validation; claims mapping (email, groups, roles)
-- **Sessions:** cryptographically random token + paired CSRF token; DB-only persistence (no in-memory store), 12-hour TTL from creation, garbage-collected on an interval (`SessionStore.StartGC`)
+- **Sessions:** cryptographically random token + paired CSRF token; only the SHA-256 digest (hex) of the token is persisted (the cookie carries the raw value, so a database copy cannot be replayed as a cookie; lookup, logout and cleanup hash the presented value first); DB-only persistence (no in-memory store), 12-hour TTL from creation, garbage-collected on an interval (`SessionStore.StartGC`)
 - **CSRF cookie is JS-readable by design:** unlike the session cookie (`HttpOnly`), the CSRF cookie is set `HttpOnly: false` so the SPA can read its value and echo it back as `X-Gameplane-CSRF` on mutating requests — the standard double-submit pattern (see `docs/security.md`). Logout's cookie-clear always sends `HttpOnly: true` regardless, since a MaxAge<0 delete carries no value and the browser matches it on Name/Domain/Path alone.
 - **Bootstrap:** `bootstrap-admin` subcommand hashes password same way as API
 - **Client IP:** `auth.ClientIPFromTrustedProxies` (`internal/auth/clientip.go`) records the client IP that the rate limiters and audit key on. A TCP peer outside `--trusted-proxies` is the client and its `X-Forwarded-For` is ignored. Behind a trusted peer the header is read right to left up to the first address outside the list, or to the leftmost address when every hop is trusted; an entry that isn't an IP address ends the walk at the last address reached. An empty list makes the peer the client. Tests: `internal/auth/clientip_test.go`.

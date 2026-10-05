@@ -41,7 +41,7 @@ func TestSessions_Lookup_Expired(t *testing.T) {
 	}
 	// Force-expire the row directly.
 	if _, err := s.DB.ExecContext(context.Background(), `UPDATE sessions SET expires_at = ? WHERE token = ?`,
-		time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), tok); err != nil {
+		time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), sessionDigest(tok)); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 	if _, _, err := store.lookup(context.Background(), tok); err == nil ||
@@ -55,7 +55,7 @@ func TestSessions_Lookup_CorruptExpires(t *testing.T) {
 	seedUser(t, s, "alice", "pw", "admin")
 	store := NewSessionStore(s)
 	tok, _, _ := store.Create(context.Background(), 1)
-	if _, err := s.DB.ExecContext(context.Background(), `UPDATE sessions SET expires_at = 'garbage' WHERE token = ?`, tok); err != nil {
+	if _, err := s.DB.ExecContext(context.Background(), `UPDATE sessions SET expires_at = 'garbage' WHERE token = ?`, sessionDigest(tok)); err != nil {
 		t.Fatalf("update: %v", err)
 	}
 	if _, _, err := store.lookup(context.Background(), tok); err == nil ||
@@ -64,7 +64,7 @@ func TestSessions_Lookup_CorruptExpires(t *testing.T) {
 	}
 	// Row should also be deleted.
 	var n int
-	_ = s.DB.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM sessions WHERE token = ?`, tok).Scan(&n)
+	_ = s.DB.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM sessions WHERE token = ?`, sessionDigest(tok)).Scan(&n)
 	if n != 0 {
 		t.Fatalf("corrupt row not removed (%d rows remaining)", n)
 	}
@@ -182,7 +182,7 @@ func TestSessions_HandleLogout(t *testing.T) {
 	}
 	// Row deleted.
 	var n int
-	_ = s.DB.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM sessions WHERE token=?`, tok).Scan(&n)
+	_ = s.DB.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM sessions WHERE token=?`, sessionDigest(tok)).Scan(&n)
 	if n != 0 {
 		t.Fatalf("session row not deleted")
 	}
@@ -205,7 +205,7 @@ func TestSessions_GCOnce_DeletesExpired(t *testing.T) {
 	store := NewSessionStore(s)
 	tok, _, _ := store.Create(context.Background(), 1)
 	_, _ = s.DB.ExecContext(context.Background(), `UPDATE sessions SET expires_at = ? WHERE token = ?`,
-		time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), tok)
+		time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), sessionDigest(tok))
 	store.gcOnce(context.Background())
 	var n int
 	_ = s.DB.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM sessions`).Scan(&n)
@@ -220,7 +220,7 @@ func TestSessions_StartGC(t *testing.T) {
 	store := NewSessionStore(s)
 	tok, _, _ := store.Create(context.Background(), 1)
 	_, _ = s.DB.ExecContext(context.Background(), `UPDATE sessions SET expires_at = ? WHERE token = ?`,
-		time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), tok)
+		time.Now().Add(-time.Hour).UTC().Format(time.RFC3339), sessionDigest(tok))
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	store.StartGC(ctx, 20*time.Millisecond)
