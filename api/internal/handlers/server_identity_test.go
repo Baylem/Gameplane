@@ -136,9 +136,9 @@ func TestServerIdentity_CurrentCloneAndDeleteSucceed(t *testing.T) {
 				t.Fatalf("got %d %s", rr.Code, rr.Body)
 			}
 			if tc.method == "POST" {
-				copy, err := k.GetServer(t.Context(), scope.DefaultNamespace, "copy")
-				if err != nil || copy.GetAnnotations()[ownerIDAnnotation] != "42" {
-					t.Fatalf("clone failed: %v %v", copy, err)
+				cloned, err := k.GetServer(t.Context(), scope.DefaultNamespace, "copy")
+				if err != nil || cloned.GetAnnotations()[ownerIDAnnotation] != "42" {
+					t.Fatalf("clone failed: %v %v", cloned, err)
 				}
 			} else if _, err := k.GetServer(t.Context(), scope.DefaultNamespace, "alpha"); !apierrors.IsNotFound(err) {
 				t.Fatalf("delete did not remove current server: %v", err)
@@ -361,7 +361,7 @@ func TestServerIdentity_TunnelDeleteIgnoresSecretCreatedAfterCheck(t *testing.T)
 		t.Fatal(err)
 	}
 	k := fakeKubeClient(gs)
-	k.Dynamic.(*dynamicfake.FakeDynamicClient).PrependReactor("patch", "gameservers", func(a ktesting.Action) (bool, runtime.Object, error) {
+	k.Dynamic.(*dynamicfake.FakeDynamicClient).PrependReactor("patch", "gameservers", func(_ ktesting.Action) (bool, runtime.Object, error) {
 		if _, err := k.Typed.CoreV1().Secrets(scope.DefaultNamespace).Create(t.Context(), identitySecret(), metav1.CreateOptions{}); err != nil {
 			t.Fatal(err)
 		}
