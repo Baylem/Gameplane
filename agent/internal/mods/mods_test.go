@@ -527,6 +527,26 @@ func TestUnzipInto_RejectsZipSlip(t *testing.T) {
 	}
 }
 
+func TestUnzipInto_DirectoriesAreWorldTraversable(t *testing.T) {
+	zipPath := makeZip(t, map[string]string{"world/region/r.0.0.mca": "x"})
+	dst := filepath.Join(t.TempDir(), "out")
+	if err := os.Mkdir(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := unzipInto(zipPath, dst, 1<<20); err != nil {
+		t.Fatalf("unzipInto: %v", err)
+	}
+	for _, p := range []string{"world", filepath.Join("world", "region")} {
+		fi, err := os.Stat(filepath.Join(dst, p))
+		if err != nil {
+			t.Fatalf("stat %s: %v", p, err)
+		}
+		if perm := fi.Mode().Perm(); perm&0o005 != 0o005 {
+			t.Errorf("dir %s mode=%03o, want other r-x (0o755)", p, perm)
+		}
+	}
+}
+
 func TestUnzipInto_SizeCap(t *testing.T) {
 	zipPath := makeZip(t, map[string]string{"big.bin": strings.Repeat("A", 4096)})
 	dst := filepath.Join(t.TempDir(), "out")

@@ -96,7 +96,10 @@ func (r *BackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	})
 
 	now := time.Now()
-	prev := now.Add(-time.Hour)
+	// A schedule that has never fired counts missed runs from its creation, not
+	// from an arbitrary window in the past, so a brand-new schedule waits for
+	// its first real cron tick instead of firing on the first reconcile.
+	prev := sched.CreationTimestamp.Time
 	if sched.Status.LastScheduleTime != nil {
 		prev = sched.Status.LastScheduleTime.Time
 	}

@@ -158,6 +158,10 @@ type NetworkCaptureReconciler struct {
 // +kubebuilder:rbac:groups="",resources=pods/ephemeralcontainers,verbs=get;list;watch
 
 func (r *NetworkCaptureReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	return requeueOnConflict(r.reconcile(ctx, req))
+}
+
+func (r *NetworkCaptureReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var nc gameplanev1alpha1.NetworkCapture
 	if err := r.Get(ctx, req.NamespacedName, &nc); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)

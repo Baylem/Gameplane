@@ -43,6 +43,11 @@ const (
 	// the game container, which runs as a different uid and must read the files.
 	// The gosec G302 finding for this file is scoped in .golangci.yml.
 	moduleFileMode = 0o644
+	// moduleDirMode is the permission for directories the agent creates on the
+	// shared mods/data volume (mods dir, archive extraction dirs). The game
+	// container runs as a different uid and must be able to traverse them.
+	// The gosec G301 finding for this file is scoped in .golangci.yml.
+	moduleDirMode = 0o755
 )
 
 type handler struct {
@@ -313,7 +318,7 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := os.MkdirAll(h.dir, 0o750); err != nil {
+	if err := os.MkdirAll(h.dir, moduleDirMode); err != nil {
 		slog.Warn("mod upload mkdir", "err", err)
 		httpjson.Error(w, http.StatusInternalServerError, "could not store the upload")
 		return
@@ -427,7 +432,7 @@ func (h *handler) removeEntry(name string) error {
 // the size cap. The caller owns the returned path (rename it into place or
 // unpack it), and must remove it.
 func (h *handler) downloadTemp(ctx context.Context, rawURL string) (string, int64, error) {
-	if err := os.MkdirAll(h.dir, 0o750); err != nil {
+	if err := os.MkdirAll(h.dir, moduleDirMode); err != nil {
 		return "", 0, fmt.Errorf("mkdir mods: %w", err)
 	}
 	// Validate the URL scheme and host in this function, on the parsed URL
@@ -611,12 +616,12 @@ func unzipInto(zipPath, dst string, maxBytes int64) error {
 			return fmt.Errorf("zip-slip: %w", errSymlinkEntry)
 		}
 		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(target, 0o750); err != nil {
+			if err := os.MkdirAll(target, moduleDirMode); err != nil {
 				return err
 			}
 			continue
 		}
-		if err := os.MkdirAll(filepath.Dir(target), 0o750); err != nil {
+		if err := os.MkdirAll(filepath.Dir(target), moduleDirMode); err != nil {
 			return err
 		}
 		rc, err := f.Open()
