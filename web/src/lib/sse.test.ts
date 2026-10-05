@@ -1,17 +1,52 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { openEventStream, queryKeyForKind, type GameplaneEvent } from "./sse";
+import type { Query } from "@tanstack/react-query";
+import { openEventStream, queryFilterForKind, type GameplaneEvent } from "./sse";
 
-describe("queryKeyForKind", () => {
-  it("maps known CRD kinds to query keys", () => {
-    expect(queryKeyForKind("servers")).toEqual(["servers"]);
-    expect(queryKeyForKind("backups")).toEqual(["backups"]);
-    expect(queryKeyForKind("schedules")).toEqual(["schedules"]);
-    expect(queryKeyForKind("restores")).toEqual(["restores"]);
-    expect(queryKeyForKind("templates")).toEqual(["templates"]);
+// matches runs a kind's filter predicate against a bare query key.
+function matches(kind: string, key: readonly unknown[]): boolean {
+  const predicate = queryFilterForKind(kind)?.predicate;
+  return predicate ? predicate({ queryKey: key } as unknown as Query) : false;
+}
+
+const fleet = (kind: string) => ["fleet", kind, "", ""];
+const collection = (kind: string) => ["resource", "local", "ns", "collection", kind];
+const serverDetail = ["resource", "local", "ns", "mc", "", "server"];
+
+describe("queryFilterForKind", () => {
+  it("selects templates by key prefix", () => {
+    expect(queryFilterForKind("templates")).toEqual({ queryKey: ["templates"] });
   });
 
+  it("matches the real fleet, collection and detail keys for servers", () => {
+    expect(matches("servers", fleet("servers"))).toBe(true);
+    expect(matches("servers", collection("servers"))).toBe(true);
+    expect(matches("servers", serverDetail)).toBe(true);
+  });
+
+  it("does not match unrelated queries for servers", () => {
+    expect(matches("servers", fleet("backups"))).toBe(false);
+    expect(matches("servers", collection("backups"))).toBe(false);
+    expect(matches("servers", ["resource", "local", "ns", "mc", "uid1", "captures"])).toBe(false);
+    expect(matches("servers", ["resource", "local", "ns", "mc", "", "server-status", "x"])).toBe(false);
+    expect(matches("servers", ["templates", "local"])).toBe(false);
+  });
+
+  it.each(["backups", "schedules", "restores"])(
+    "matches only the fleet list and per-server collection for %s",
+    (kind) => {
+      expect(matches(kind, fleet(kind))).toBe(true);
+      expect(matches(kind, collection(kind))).toBe(true);
+      const other = kind === "backups" ? "restores" : "backups";
+      expect(matches(kind, fleet(other))).toBe(false);
+      expect(matches(kind, collection(other))).toBe(false);
+      // The server-detail query is not refetched by backup-family events.
+      expect(matches(kind, serverDetail)).toBe(false);
+      expect(matches(kind, ["templates", "local"])).toBe(false);
+    },
+  );
+
   it("returns null for unknown kinds", () => {
-    expect(queryKeyForKind("widgets")).toBeNull();
+    expect(queryFilterForKind("widgets")).toBeNull();
   });
 });
 

@@ -13,7 +13,7 @@ vi.mock("@/lib/sse", () => ({
       sseCallback = null;
     };
   },
-  queryKeyForKind: (kind: string) => {
+  queryFilterForKind: (kind: string) => {
     const keyMap: Record<string, string[] | null> = {
       servers: ["servers"],
       templates: ["templates"],
@@ -21,7 +21,8 @@ vi.mock("@/lib/sse", () => ({
       schedules: ["schedules"],
       restores: ["restores"],
     };
-    return keyMap[kind] ?? null;
+    const key = keyMap[kind];
+    return key ? { queryKey: key } : null;
   },
 }));
 

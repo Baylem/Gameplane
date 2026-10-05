@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import type { JSX } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryFilters } from "@tanstack/react-query";
 import {
   Popover,
   Card,
 } from "@heroui/react";
 import { Bell } from "lucide-react";
-import { openEventStream, queryKeyForKind, type GameplaneEvent } from "@/lib/sse";
+import { openEventStream, queryFilterForKind, type GameplaneEvent } from "@/lib/sse";
 
 interface Notice {
   id: number;
@@ -41,21 +41,21 @@ export function NotificationsPanel(): JSX.Element {
     // steady event stream would starve it), but it may predate the event, so
     // the invalidation waits for it to settle and then refetches.
     const pending = new Map<string, ReturnType<typeof setTimeout>>();
-    const flush = (id: string, key: string[]) => {
-      if (qc.isFetching({ queryKey: key }) > 0) {
-        pending.set(id, setTimeout(() => flush(id, key), INVALIDATE_COALESCE_MS));
+    const flush = (id: string, filters: QueryFilters) => {
+      if (qc.isFetching(filters) > 0) {
+        pending.set(id, setTimeout(() => flush(id, filters), INVALIDATE_COALESCE_MS));
         return;
       }
       pending.delete(id);
-      void qc.invalidateQueries({ queryKey: key }, { cancelRefetch: false });
+      void qc.invalidateQueries(filters, { cancelRefetch: false });
     };
     const dispose = openEventStream({
       onEvent: (ev: GameplaneEvent) => {
-        const key = queryKeyForKind(ev.kind);
-        if (key) {
-          const id = key.join("/");
+        const filters = queryFilterForKind(ev.kind);
+        if (filters) {
+          const id = ev.kind;
           if (!pending.has(id)) {
-            pending.set(id, setTimeout(() => flush(id, key), INVALIDATE_COALESCE_MS));
+            pending.set(id, setTimeout(() => flush(id, filters), INVALIDATE_COALESCE_MS));
           }
         }
         const name = ev.object?.metadata?.name ?? "";

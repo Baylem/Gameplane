@@ -4,6 +4,8 @@
 // TanStack Query caches (so views refresh without waiting for the next
 // poll) and to feed the notifications panel.
 
+import type { QueryFilters } from "@tanstack/react-query";
+
 export interface GameplaneEvent {
   // CRD path segment: "servers" | "templates" | "backups" | "schedules" | "restores"
   kind: string;
@@ -85,20 +87,46 @@ export function openEventStream(opts: EventStreamOptions): () => void {
   };
 }
 
-// queryKeyForKind maps an event's CRD kind to the TanStack Query key the
-// dashboard caches it under, so a watch event invalidates the right view.
-export function queryKeyForKind(kind: string): string[] | null {
+type QueryKey = readonly unknown[];
+
+// Fleet-wide lists: ["fleet", <kind>, ...] (lib/fleet.ts, routes/Backups.tsx).
+function isFleetList(key: QueryKey, kind: string): boolean {
+  return key[0] === "fleet" && key[1] === kind;
+}
+
+// Per-server collections: resourceKey(target, <kind>) =
+// ["resource", cluster, ns, "collection", <kind>] (lib/resourceTarget.tsx).
+function isResourceCollection(key: QueryKey, kind: string): boolean {
+  return key[0] === "resource" && key[3] === "collection" && key[4] === kind;
+}
+
+// One server's detail: resourceKey(target, "server") =
+// ["resource", cluster, ns, name, "", "server"].
+function isServerDetail(key: QueryKey): boolean {
+  return key[0] === "resource" && key[5] === "server";
+}
+
+// queryFilterForKind maps an event's CRD kind to the TanStack Query filter
+// that selects the cached views showing that kind, so a watch event
+// invalidates exactly those queries (and not every ["fleet"] / ["resource"]
+// query, which would refetch unrelated data on each event).
+export function queryFilterForKind(kind: string): QueryFilters | null {
   switch (kind) {
-    case "servers":
-      return ["servers"];
     case "templates":
-      return ["templates"];
+      return { queryKey: ["templates"] };
+    case "servers":
+      return {
+        predicate: (q) =>
+          isFleetList(q.queryKey, "servers") ||
+          isResourceCollection(q.queryKey, "servers") ||
+          isServerDetail(q.queryKey),
+      };
     case "backups":
-      return ["backups"];
     case "schedules":
-      return ["schedules"];
     case "restores":
-      return ["restores"];
+      return {
+        predicate: (q) => isFleetList(q.queryKey, kind) || isResourceCollection(q.queryKey, kind),
+      };
     default:
       return null;
   }
