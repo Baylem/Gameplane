@@ -531,7 +531,7 @@ Every file in slice 2b imports **only** from `@heroui/react` and `@/components/u
 - Validation (`validateStep`): tunnel credentials required if tunnel enabled; frp requires a server address, at least one complete port mapping, and port numbers in 1–65535 (server port too, when set); no client-side check on the LoadBalancer address/CIDR fields themselves
 
 **Step 5 — Review & Confirmation:**
-- Display-only summary of all prior steps' selections (name, template, version, config values, networking, tunnel)
+- Display-only summary of all prior steps' selections (name, template, version, config values, networking, tunnel). Values of password-type template config fields are shown as `********` (`maskPasswordConfig`, `web/src/lib/validation.ts`), never as typed text; the create payload is unchanged. The API never returns stored GameServer passwords (it sends the marker `__gameplane_redacted__`; see `api/specs.md`), so no screen may render a password-type `spec.config` value or that marker. The Settings tab's whole-`spec` PUT (`mergeDraftOntoLatest`) deliberately echoes the marker back: the API keeps the stored value for it.
 - "Create server" button triggers POST to `/servers` endpoint
 - Error display if creation fails (network error, validation error, server name conflict)
 - On success, redirect to ServerDetail page for new server

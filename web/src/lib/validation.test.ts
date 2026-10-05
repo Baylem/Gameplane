@@ -4,6 +4,8 @@ import {
   isValidK8sName,
   isValidQuantity,
   isValidVersion,
+  maskPasswordConfig,
+  PASSWORD_MASK,
   validateConfig,
   type ConfigField,
 } from "./validation";
@@ -61,6 +63,32 @@ describe("isValidQuantity", () => {
   it("accepts plain integers (e.g. CPU count or millicores)", () => {
     expect(isValidQuantity("2")).toBe(true);
     expect(isValidQuantity("500m")).toBe(true);
+  });
+});
+
+describe("maskPasswordConfig", () => {
+  const schema: ConfigField[] = [
+    { name: "MOTD", type: "string" },
+    { name: "ADMIN_PASSWORD", type: "password" },
+    { name: "RCON_PASSWORD", type: "password" },
+  ];
+
+  it("masks non-empty password values and leaves the rest alone", () => {
+    expect(
+      maskPasswordConfig(schema, { MOTD: "hello", ADMIN_PASSWORD: "hunter2", RCON_PASSWORD: "" }),
+    ).toEqual({ MOTD: "hello", ADMIN_PASSWORD: PASSWORD_MASK, RCON_PASSWORD: "" });
+  });
+
+  it("masks the API redaction marker too", () => {
+    expect(maskPasswordConfig(schema, { ADMIN_PASSWORD: "__gameplane_redacted__" })).toEqual({
+      ADMIN_PASSWORD: PASSWORD_MASK,
+    });
+  });
+
+  it("does not mutate its input and ignores values not in the schema", () => {
+    const input = { ADMIN_PASSWORD: "hunter2", EXTRA: "x" };
+    expect(maskPasswordConfig(schema, input)).toEqual({ ADMIN_PASSWORD: PASSWORD_MASK, EXTRA: "x" });
+    expect(input.ADMIN_PASSWORD).toBe("hunter2");
   });
 });
 

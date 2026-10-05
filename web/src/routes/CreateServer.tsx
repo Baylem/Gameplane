@@ -19,6 +19,7 @@ import {
   isValidK8sName,
   isValidQuantity,
   isValidVersion,
+  maskPasswordConfig,
   validateConfig,
 } from "@/lib/validation";
 import { parseCpuQuantity, cpuCores, parseMemQuantity, memBytes } from "@/lib/quantity";
@@ -1283,7 +1284,7 @@ function Review({ state, onEdit, location }: { state: WizardState; onEdit: (key:
         <div className="pt-1">
           <div className="pb-1 text-xs uppercase text-muted">Template config</div>
           <pre className="max-h-64 overflow-auto rounded bg-surface p-3 font-mono text-xs scrollbar-thin">
-            {JSON.stringify(state.config, null, 2)}
+            {JSON.stringify(maskPasswordConfig(state.template?.spec.configSchema ?? [], state.config), null, 2)}
           </pre>
         </div>
       )}

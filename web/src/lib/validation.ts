@@ -65,3 +65,23 @@ export function validateConfig(
   }
   return errors;
 }
+
+// PASSWORD_MASK is shown in place of a password-type template config value
+// anywhere config values are displayed. The API itself never returns stored
+// passwords (it sends a fixed redaction marker), so the dashboard must not
+// render either the value or the marker.
+export const PASSWORD_MASK = "********";
+
+// maskPasswordConfig returns a copy of values with every non-empty value of a
+// password-type field replaced by PASSWORD_MASK. Empty values stay empty.
+export function maskPasswordConfig(
+  schema: ConfigField[],
+  values: Record<string, string>,
+): Record<string, string> {
+  const passwords = new Set(schema.filter((f) => f.type === "password").map((f) => f.name));
+  const out: Record<string, string> = {};
+  for (const [name, value] of Object.entries(values)) {
+    out[name] = passwords.has(name) && value !== "" ? PASSWORD_MASK : value;
+  }
+  return out;
+}
