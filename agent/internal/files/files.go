@@ -464,7 +464,7 @@ func savePart(root, dir, filename string, src io.Reader, limit int64) error {
 	// Chmod before rename: preserve the existing file's mode when overwriting,
 	// else use 0o644 so the game container (different uid, shared fsGroup) can read it.
 	mode := os.FileMode(0o644)
-	if fi, err := os.Lstat(dstPath); err == nil {
+	if fi, err := os.Stat(dstPath); err == nil {
 		mode = fi.Mode().Perm()
 	}
 	if err := os.Chmod(tmpName, mode); err != nil {

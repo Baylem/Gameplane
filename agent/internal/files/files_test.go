@@ -1245,3 +1245,41 @@ func TestUpload_FilePermissions(t *testing.T) {
 		t.Errorf("override file mode=%03o, want 0o600 (preserved)", perm)
 	}
 }
+
+func TestUpload_ReplacesSymlinkWithTargetMode(t *testing.T) {
+	root := t.TempDir()
+
+	// Create target file with restricted mode
+	targetFile := filepath.Join(root, "target")
+	if err := os.WriteFile(targetFile, []byte("original"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create symlink pointing to target
+	link := filepath.Join(root, "link")
+	if err := os.Symlink("target", link); err != nil {
+		t.Skipf("symlink unsupported: %v", err)
+	}
+
+	// Upload replaces the symlink
+	src := strings.NewReader("new content")
+	if err := savePart(root, root, "link", src, 1000); err != nil {
+		t.Fatalf("savePart failed: %v", err)
+	}
+
+	// Verify the link is now a regular file (not a symlink)
+	fileStat, err := os.Lstat(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fileStat.Mode()&os.ModeSymlink != 0 {
+		t.Fatal("expected regular file, got symlink")
+	}
+
+	// Verify the new file has the target's mode (0o600), not symlink mode (0o777)
+	newFileMode := fileStat.Mode().Perm()
+	expectedMode := os.FileMode(0o600)
+	if newFileMode != expectedMode {
+		t.Errorf("expected mode %o, got %o (symlink mode is 0o777; fix uses os.Stat, not os.Lstat)", expectedMode, newFileMode)
+	}
+}
