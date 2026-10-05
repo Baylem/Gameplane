@@ -553,7 +553,11 @@ func TestSavePart_RejectsDanglingSymlinkDestination(t *testing.T) {
 // TestSavePart_AllowsInRootSymlinkDestination checks that a destination
 // symlink pointing at another folder inside root is accepted: the upload
 // replaces the link and the linked file is left as it was.
-func TestSavePart_AllowsInRootSymlinkDestination(t *testing.T) {
+// TestSavePart_RejectsInRootSymlinkDestination checks that a destination
+// symlink is refused even when it points at another folder inside root:
+// link traversal is rejected at every component, and both the link and the
+// linked file are left as they were.
+func TestSavePart_RejectsInRootSymlinkDestination(t *testing.T) {
 	root := resolvedTempDir(t)
 	dirA := filepath.Join(root, "a")
 	dirB := filepath.Join(root, "b")
@@ -571,14 +575,15 @@ func TestSavePart_AllowsInRootSymlinkDestination(t *testing.T) {
 		t.Fatalf("symlink: %v", err)
 	}
 
-	if err := savePart(root, dirA, "x", strings.NewReader("new"), 1024); err != nil {
-		t.Fatalf("savePart: %v", err)
+	err := savePart(root, dirA, "x", strings.NewReader("new"), 1024)
+	if !errors.Is(err, errPathOutOfRoot) {
+		t.Fatalf("got %v, want %v", err, errPathOutOfRoot)
 	}
-	got, err := os.ReadFile(linkPath)
-	if err != nil || string(got) != "new" {
-		t.Fatalf("upload not stored: got %q err=%v", got, err)
+	fi, err := os.Lstat(linkPath)
+	if err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("symlink was replaced: fi=%v err=%v", fi, err)
 	}
-	got, err = os.ReadFile(target)
+	got, err := os.ReadFile(target)
 	if err != nil || string(got) != "orig" {
 		t.Fatalf("linked file modified: got %q err=%v", got, err)
 	}
@@ -624,10 +629,11 @@ func symlinkedRoot(t *testing.T) (string, string) {
 	return link, realRoot
 }
 
-// TestUpload_SymlinkedRootAllowsInRootSymlinkDestination checks that when
-// the data root itself is reached through a symlink, uploading over an
-// existing symlink whose target is inside the root is accepted.
-func TestUpload_SymlinkedRootAllowsInRootSymlinkDestination(t *testing.T) {
+// TestUpload_SymlinkedRootRejectsInRootSymlinkDestination checks that when
+// the data root itself is reached through a symlink (the root path is
+// trusted and followed), uploading over an existing symlink whose target is
+// inside the root is still rejected and leaves link and target untouched.
+func TestUpload_SymlinkedRootRejectsInRootSymlinkDestination(t *testing.T) {
 	linkRoot, realRoot := symlinkedRoot(t)
 	if err := os.Mkdir(filepath.Join(realRoot, "b"), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
@@ -650,14 +656,14 @@ func TestUpload_SymlinkedRootAllowsInRootSymlinkDestination(t *testing.T) {
 		t.Fatalf("post: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("status=%d body=%s", resp.StatusCode, readBody(resp))
 	}
-	got, err := os.ReadFile(filepath.Join(realRoot, "x"))
-	if err != nil || string(got) != "new" {
-		t.Fatalf("upload not stored: got %q err=%v", got, err)
+	fi, err := os.Lstat(filepath.Join(realRoot, "x"))
+	if err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("symlink was replaced: fi=%v err=%v", fi, err)
 	}
-	got, err = os.ReadFile(target)
+	got, err := os.ReadFile(target)
 	if err != nil || string(got) != "orig" {
 		t.Fatalf("linked file modified: got %q err=%v", got, err)
 	}
@@ -886,8 +892,10 @@ func TestResolve_SymlinkEscape(t *testing.T) {
 		t.Skipf("symlink unsupported: %v", err)
 	}
 	h := &handler{root: resolved}
-	if _, err := h.resolve("/escape"); !errors.Is(err, errPathOutOfRoot) {
-		t.Fatalf("got %v", err)
+	rr := httptest.NewRecorder()
+	h.list(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/files/list?path=/escape", nil))
+	if rr.Code != http.StatusBadRequest || !strings.Contains(rr.Body.String(), "escapes root") {
+		t.Fatalf("status=%d body=%q, want 400 escapes root", rr.Code, rr.Body.String())
 	}
 }
 
@@ -1055,24 +1063,34 @@ func TestResolve_SymlinkToDotfileRejected(t *testing.T) {
 		t.Fatalf("symlink: %v", err)
 	}
 	h := &handler{root: resolved}
+	call := func(fn http.HandlerFunc, method, target string) *httptest.ResponseRecorder {
+		rr := httptest.NewRecorder()
+		fn(rr, httptest.NewRequestWithContext(t.Context(), method, target, strings.NewReader("x")))
+		return rr
+	}
+	wantDotfile := func(rr *httptest.ResponseRecorder, what string) {
+		t.Helper()
+		if rr.Code != http.StatusBadRequest || rr.Body.String() != "dotfile access denied\n" {
+			t.Fatalf("%s: status=%d body=%q, want 400 dotfile access denied", what, rr.Code, rr.Body.String())
+		}
+	}
 
 	// Existing target reached through a link to a dotfile.
-	if _, err := h.resolve("/manifest"); !errors.Is(err, errDotfile) {
-		t.Fatalf("resolve(/manifest) err=%v, want errDotfile", err)
-	}
-	// New file whose existing ancestor is a link to a dot-directory.
-	if _, err := h.resolve("/state/new.txt"); !errors.Is(err, errDotfile) {
-		t.Fatalf("resolve(/state/new.txt) err=%v, want errDotfile", err)
-	}
+	wantDotfile(call(h.read, http.MethodGet, "/files/read?path=/manifest"), "read /manifest")
+	// New file whose ancestor is a link to a dot-directory.
+	wantDotfile(call(h.write, http.MethodPost, "/files/write?path=/state/new.txt"), "write /state/new.txt")
 	// Delete of an entry inside a dot-directory reached through a link.
-	if _, err := h.resolveForDelete("/state/x"); !errors.Is(err, errDotfile) {
-		t.Fatalf("resolveForDelete(/state/x) err=%v, want errDotfile", err)
-	}
+	wantDotfile(call(h.del, http.MethodDelete, "/files/delete?path=/state/x"), "delete /state/x")
 	// Deleting the link itself stays allowed: it removes the link, not the
 	// dotfile it points to.
-	want := filepath.Join(resolved, "manifest")
-	if got, err := h.resolveForDelete("/manifest"); err != nil || got != want {
-		t.Fatalf("resolveForDelete(/manifest) = %q, %v; want %q", got, err, want)
+	if rr := call(h.del, http.MethodDelete, "/files/delete?path=/manifest"); rr.Code != http.StatusNoContent {
+		t.Fatalf("delete /manifest: status=%d body=%q, want 204", rr.Code, rr.Body.String())
+	}
+	if _, err := os.Lstat(filepath.Join(resolved, "manifest")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("link still present: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(resolved, ".gameplane-mods.json")); err != nil {
+		t.Fatalf("dotfile was removed: %v", err)
 	}
 }
 
@@ -1271,7 +1289,7 @@ func TestUpload_FilePermissions(t *testing.T) {
 	}
 }
 
-func TestUpload_ReplacesSymlinkWithTargetMode(t *testing.T) {
+func TestUpload_RejectsSymlinkDestinationInRoot(t *testing.T) {
 	root := t.TempDir()
 
 	// Create target file with restricted mode
@@ -1286,25 +1304,25 @@ func TestUpload_ReplacesSymlinkWithTargetMode(t *testing.T) {
 		t.Skipf("symlink unsupported: %v", err)
 	}
 
-	// Upload replaces the symlink
+	// Upload refuses the symlink destination.
 	src := strings.NewReader("new content")
-	if err := savePart(root, root, "link", src, 1000); err != nil {
-		t.Fatalf("savePart failed: %v", err)
+	if err := savePart(root, root, "link", src, 1000); !errors.Is(err, errPathOutOfRoot) {
+		t.Fatalf("savePart err=%v, want %v", err, errPathOutOfRoot)
 	}
 
-	// Verify the link is now a regular file (not a symlink)
+	// The link is still a symlink and its target is untouched.
 	fileStat, err := os.Lstat(link)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fileStat.Mode()&os.ModeSymlink != 0 {
-		t.Fatal("expected regular file, got symlink")
+	if fileStat.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("symlink was replaced")
 	}
-
-	// Verify the new file has the target's mode (0o600), not symlink mode (0o777)
-	newFileMode := fileStat.Mode().Perm()
-	expectedMode := os.FileMode(0o600)
-	if newFileMode != expectedMode {
-		t.Errorf("expected mode %o, got %o (symlink mode is 0o777; fix uses os.Stat, not os.Lstat)", expectedMode, newFileMode)
+	got, err := os.ReadFile(targetFile)
+	if err != nil || string(got) != "original" {
+		t.Fatalf("target modified: got %q err=%v", got, err)
+	}
+	if fi, err := os.Stat(targetFile); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("target mode changed: fi=%v err=%v", fi, err)
 	}
 }
