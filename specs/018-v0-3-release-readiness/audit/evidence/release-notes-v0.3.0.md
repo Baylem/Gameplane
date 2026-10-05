@@ -37,6 +37,7 @@ Draft for the maintainer (T068). Not published and not final: v0.3.0 has no go d
 
 - **Every existing GameServer pod restarts once on upgrade** due to the network
   capture feature adding an emptyDir volume; plan your upgrade window accordingly.
+  This interrupts active player sessions.
 - **User theme customization:** presets (Modern Pink, Legacy Orange) + custom
   accent/surface colors with WCAG AA contrast guarantee, custom CSS overlay, and
   safe-mode suspension on demand. Accessed via Settings → Theme & Appearance.
@@ -100,7 +101,7 @@ Rows are not live-verified if they are `blocked` (listed below, with the prerequ
 
 This is a pre-v1 release. These items are wanted for v1 and are not blocking v0.3.0:
 
-#### Production-readiness hardening (planned)
+### Production-readiness hardening (planned)
 
 - A documented backup/restore **drill** — a runbook an operator can follow.
   The *coverage* half of this item is already done and was stale here:
@@ -110,7 +111,7 @@ This is a pre-v1 release. These items are wanted for v1 and are not blocking v0.
   provisions. What is missing is the human-facing runbook, not the test.
 - Resource-limit guidance sized from real workloads rather than defaults.
 
-#### Postgres driver: production readiness (experimental)
+### Postgres driver: production readiness (experimental)
 
 SQLite is the only production-tested driver. The Postgres driver (build tag
 `-tags postgres`) now works end to end (#518): migrations 001–012 have
