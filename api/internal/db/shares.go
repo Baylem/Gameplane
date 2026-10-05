@@ -93,10 +93,19 @@ func (s *Store) CreateShareLinkForServer(ctx context.Context, cluster, ns, serve
 	if expiresAt != nil {
 		expiresAtArg = expiresAt.Format(time.RFC3339)
 	}
-	_, err = s.DB.ExecContext(ctx,
-		`INSERT INTO share_links(id, cluster, namespace, server_name, server_uid, created_by, can_start, token_hash, expires_at, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, cluster, ns, serverName, serverUID, createdBy, canStartInt, tokenHash, expiresAtArg, createdAt.Format(time.RFC3339))
+	if serverUID == "" {
+		// An unbound link leaves server_uid to its column default (''), so this
+		// insert is the same one CreateShareLink issued before migration 013.
+		_, err = s.DB.ExecContext(ctx,
+			`INSERT INTO share_links(id, cluster, namespace, server_name, created_by, can_start, token_hash, expires_at, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			id, cluster, ns, serverName, createdBy, canStartInt, tokenHash, expiresAtArg, createdAt.Format(time.RFC3339))
+	} else {
+		_, err = s.DB.ExecContext(ctx,
+			`INSERT INTO share_links(id, cluster, namespace, server_name, server_uid, created_by, can_start, token_hash, expires_at, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			id, cluster, ns, serverName, serverUID, createdBy, canStartInt, tokenHash, expiresAtArg, createdAt.Format(time.RFC3339))
+	}
 	if err != nil {
 		return "", ShareLink{}, fmt.Errorf("insert share link: %w", err)
 	}
