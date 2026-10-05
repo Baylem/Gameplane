@@ -138,8 +138,10 @@ func listHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Handl
 			list, err = k.Dynamic.Resource(gvr).Namespace(ns).List(req.Context(), metav1.ListOptions{})
 		}
 		if err == nil && list != nil && gvr.Resource == "gameservers" {
+			cfgRules := newConfigRuleCache(k)
 			for i := range list.Items {
 				gateStaleAgent(&list.Items[i])
+				cfgRules.redact(req.Context(), &list.Items[i])
 			}
 		}
 		writeOrErr(w, req, list, err)
@@ -168,6 +170,7 @@ func getHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Handle
 		}
 		if err == nil && obj != nil && gvr.Resource == "gameservers" {
 			gateStaleAgent(obj)
+			newConfigRuleCache(k).redact(req.Context(), obj)
 		}
 		writeOrErr(w, req, obj, err)
 	}
@@ -187,6 +190,7 @@ func createHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 		// Record the creating user as the server's owner (informational).
 		if gvr.Resource == "gameservers" {
 			stampOwner(obj, req)
+			stripRedactedConfig(obj)
 		}
 		var created *unstructured.Unstructured
 		if cluster(gvr) {
@@ -212,6 +216,10 @@ func createHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 		if err != nil {
 			httperr.Write(w, req, err)
 			return
+		}
+		if gvr.Resource == "gameservers" {
+			created = created.DeepCopy()
+			newConfigRuleCache(k).redact(req.Context(), created)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
@@ -247,6 +255,7 @@ func updateHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 		// spec.networking.tunnel.provider switch and prune the superseded
 		// provider's credential — so it is declared outside this block.
 		var live *unstructured.Unstructured
+		var cfgRules *configRuleCache
 		if gvr.Resource == "gameservers" {
 			ns, ok := resolveNS(w, req)
 			if !ok {
@@ -280,6 +289,10 @@ func updateHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 				}
 				obj.SetAnnotations(objAnn)
 			}
+			// The dashboard sends spec back wholesale, so password config values
+			// arrive as the redaction marker: keep the stored value for those.
+			cfgRules = newConfigRuleCache(k)
+			restoreRedactedConfig(req.Context(), cfgRules, obj, live)
 			cl := req.URL.Query().Get("cluster")
 			if cl == "" {
 				cl = scope.DefaultCluster
@@ -305,6 +318,8 @@ func updateHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 			updated, err = k.Dynamic.Resource(gvr).Namespace(ns).Update(req.Context(), obj, metav1.UpdateOptions{})
 			if err == nil && gvr.Resource == "gameservers" {
 				pruneTunnelProviderOnSpecChange(req.Context(), k, ns, name, live, updated)
+				updated = updated.DeepCopy()
+				cfgRules.redact(req.Context(), updated)
 			}
 		}
 		writeOrErr(w, req, updated, err)
