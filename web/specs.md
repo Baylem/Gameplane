@@ -312,7 +312,7 @@ Console input/output and Logs streaming use existing bidirectional WebSocket (co
 - **WipeServerDialog.tsx** (123 lines) — Wipe-world confirmation from the HeroUI `AlertDialog` family plus `Checkbox` (import lines 3–14) — not ui/ConfirmDialog
 - **DeleteServerDialog.tsx** (52 lines) — Delete server confirmation via ui/ ConfirmDialog (line 2)
 - **ServerStatusCard.tsx** (73 lines) — Status summary card in Overview tab, built on HeroUI Card (line 3)
-- **ServerActionsCard.tsx** (487 lines) — Lifecycle action card in Overview tab; HeroUI Button/Card/CardHeader/CardContent/Modal family/Input/Label/Select/ListBox/ListBoxItem/Checkbox/Description/FieldError (import lines 20–39)
+- **ServerActionsCard.tsx** (487 lines) — Lifecycle action card in Overview tab; HeroUI Button/Card/CardHeader/CardContent/Modal family/Input/Label/Select/ListBox/ListBoxItem/Checkbox/Description/FieldError (import lines 20–39). A param with `currentFrom` is pre-filled from that status metric's live reading (shared `server-status` query; enum options match case-insensitively), falling back to `default`; the user's edits always take precedence
 - **ServerSleepCard.tsx** (170 lines) — Server sleep/idle state summary; HeroUI Card/Alert (line 2) plus a `Chip` re-exported from ui/PhaseChip (line 6)
 - **EventList.tsx** (43 lines) — Kubernetes event list renderer, used from both Events.tsx (line 6) and Overview.tsx (line 12)
 - **PortOverridesEditor.tsx** (80 lines) — Port configuration helper; HeroUI Input/Button (line 1) (Settings tab, deferred)
