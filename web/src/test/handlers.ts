@@ -34,6 +34,7 @@ import {
   screenshotConfigCurseforgeOnly,
   screenshotEmptyMods,
   screenshotModrinthProjects,
+  screenshotTemplateConfigSchemas,
 } from "./screenshotData";
 
 export const INVALID_BPF_FILTER_FIXTURE = "tcp prot 8080 foo";
@@ -342,7 +343,14 @@ export const handlers = [
         }),
       );
     }
-    return HttpResponse.json(makeTemplate({ metadata: { name } }));
+    // Only the single-get carries a configSchema: Settings > Game
+    // configuration reads it, the wizard's list view must stay unchanged.
+    const template = makeTemplate({ metadata: { name } });
+    const configSchema = screenshotTemplateConfigSchemas[name];
+    if (configSchema) {
+      return HttpResponse.json({ ...template, spec: { ...template.spec, configSchema } });
+    }
+    return HttpResponse.json(template);
   }),
 
   // Backups
