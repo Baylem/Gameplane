@@ -2,7 +2,7 @@
 
 Built from the audit records at the end of the audit (T066). Readable cold in under 15 minutes (SC-008).
 
-**State of this report (2026-10-05, master `c79715a6`): the audit is not finished.** It is a snapshot of what the records say, not a go case. 1 of 8 release criteria is Met. The formal live round did not run (OD-029), the upgrade and node rounds have not run, and no finding is `verified` (T058 has not run). `v0.3.0-rc.2` **has not been tagged or pushed**: RC-TAG-2 in [OPEN-DECISIONS.md](../OPEN-DECISIONS.md#rc-tag-2-publish-v030-rc2--pending) still reads PENDING, and its tag target is the #496 merge commit `6750ba87`: `gh api repos/ValgulNecron/Gameplane/git/refs/tags/v0.3.0-rc.2` returns 404 on 2026-10-05, and only `v0.3.0-rc.1` exists (never installable, see [rounds.md](rounds.md#rc1)).
+**State of this report (2026-10-05, master `c79715a6`): the audit is not finished.** It is a snapshot of what the records say, not a go case. 1 of 8 release criteria is Met (RC-01 stays Not met: 8 `UPG`/`NODE` rows and the 16 `INV-SEC-*` rows are still `untested`; the other 459 rows are `pass` on a maintainer attestation, OD-030). The formal live round did not run (OD-029), the upgrade and node rounds have not run, and no finding is `verified` (T058 has not run). `v0.3.0-rc.2` **has not been tagged or pushed**: RC-TAG-2 in [OPEN-DECISIONS.md](../OPEN-DECISIONS.md#rc-tag-2-publish-v030-rc2--pending) still reads PENDING, and its tag target is the #496 merge commit `6750ba87`: `gh api repos/ValgulNecron/Gameplane/git/refs/tags/v0.3.0-rc.2` returns 404 on 2026-10-05, and only `v0.3.0-rc.1` exists (never installable, see [rounds.md](rounds.md#rc1)).
 
 ## Decision
 
@@ -19,7 +19,7 @@ Evidence as of 2026-10-05. `Met` here is filled only from the records; the maint
 
 | ID | Criterion | Source | Met | Reason |
 |---|---|---|---|---|
-| RC-01 | Every inventory row has an outcome, zero rows `fail`, and every `blocked` row names its prerequisite and is listed as not live-verified | SC-001 | **Not met** | 467 of 486 rows are `untested` and no row is `pass`; no row is `fail`. 19 rows are `blocked`, each names its prerequisite, and they are listed under Not live-verified. The criterion needs an outcome on every row. |
+| RC-01 | Every inventory row has an outcome, zero rows `fail`, and every `blocked` row names its prerequisite and is listed as not live-verified | SC-001 | **Not met** | 8 of 486 rows are still `untested` (5 `UPG`, 3 `NODE`; 24 of 502 with the 16 `INV-SEC-*` rows), and `untested` is not an outcome (data-model.md), so the criterion is not met; no row is `fail`. 459 rows are `pass` on the maintainer's attestation that all screens and features were tested live on kubelab on 2026-10-04 ([OD-030](../OPEN-DECISIONS.md#od-030-screen-and-feature-rows-recorded-as-pass-from-the-live-sweep--resolved-2026-10-05)); this is an attestation, not per-row evidence. 19 rows are `blocked`, each names its prerequisite, and they are listed under Not live-verified. The attestation does not cover the `UPG`, `NODE` or `SEC` rows. |
 | RC-02 | Every component has a `complete` review record | SC-002 | **Met** | `audit/coverage.md` has 27 component rows, all `complete`. The 15 `go.work` entries, `web/`, `charts/gameplane/`, `deploy/`, `hack/`, `.github/workflows/`, `.github/actions/`, `images/`, `docs/`, root docs, `design-export/`, `modules/` and `website/` are all there. The records say a review happened; findings from them are counted under RC-03. |
 | RC-03 | Zero findings in `imported`, `open`, `fixing` or `fixed-unverified` | SC-003, SC-004 | **Not met** | 291 findings are in a blocking status: 25 `imported`, 37 `open`, 0 `fixing`, 229 `fixed-unverified`. None is `verified`. |
 | RC-04 | Each FR-008 boundary has at least one active violation attempt recorded | SC-007 | **Not met** | The 16 `INV-SEC-*` rows (in `audit/held/inventory-SEC.md`, OD-019) are all `untested`, so no violation attempt is recorded for any FR-008 boundary. |
@@ -46,13 +46,13 @@ How each number was produced: findings from the `| F-NNN |` rows of `audit/findi
 
 | Outcome | `inventory.md` (486) | With `INV-SEC-*` (502) |
 |---|---|---|
-| pass | 0 | 0 |
+| pass | 459 | 459 |
 | fail | 0 | 0 |
 | blocked | 19 | 19 |
 | n/a | 0 | 0 |
-| untested | 467 | 483 |
+| untested | 8 | 24 |
 
-No row is `pass`. The formal per-row round did not run (OD-029), so most rows stay `untested`; they are reported as such.
+The 459 `pass` rows (WEB, API, CRD, AGT, AUX, HELM, MOD) are recorded from a maintainer attestation (OD-030), not per-row evidence: the formal per-row round did not run (OD-029). The `UPG`, `NODE` and `SEC` rows stay `untested`; the 19 `blocked` rows stay `blocked`.
 
 ### Coverage
 
@@ -64,7 +64,7 @@ No row is `pass`. The formal per-row round did not run (OD-029), so most rows st
 |---|---|
 | rc.0 | pre-RC review and inventory enumeration; 0 rows run |
 | rc.1 | `v0.3.0-rc.1` tagged 2026-09-24, release run cancelled (F-257), never installable; 0 rows run |
-| live-sweep 2026-10-04 | informal sweep of `master` on kubelab; F-273 to F-293; per-row outcomes not recorded (OD-029) |
+| live-sweep 2026-10-04 | informal sweep of `master` on kubelab; F-273 to F-293; per-row outcomes not recorded (OD-029); 459 rows recorded as `pass` from the maintainer attestation (OD-030) |
 | rc.2 | RC-TAG-2 PENDING; tag target `6750ba87` (#496 merge commit), **not tagged or pushed** |
 | upgrade, node (T061, T062, T065) | not run |
 | re-verification of fixed-unverified findings (T058) | not run |
@@ -171,7 +171,7 @@ Rows are not live-verified if they are `blocked` (listed below, with the prerequ
 
 ### Untested rows
 
-- **467 of 486 inventory rows in `audit/inventory.md` are still `untested`** (WEB 145, API 146, CRD 35, AGT 36, AUX 13, HELM 28, MOD 56, UPG 5, NODE 3). The formal per-row live round did not run (OD-029): the 2026-10-04 informal live sweep on `master` stands in for it, and it did not record per-row outcomes, so no row is marked `pass`.
+- **8 of 486 inventory rows in `audit/inventory.md` are still `untested`** (UPG 5, NODE 3); 24 of 502 with the `INV-SEC-*` rows. 459 rows (WEB 145, API 146, CRD 35, AGT 36, AUX 13, HELM 28, MOD 56) are `pass` on the strength of a maintainer attestation, not per-row evidence: the formal per-row live round did not run (OD-029) and the 2026-10-04 informal live sweep on `master` did not record per-row outcomes, so on 2026-10-05 the maintainer attested that "all screen and feature where tested live in a cluster" (OD-030). The attestation does not cover `UPG`, `NODE`, `SEC` or the 19 `blocked` rows.
 - The 16 security-control rows (`INV-SEC-001` to `INV-SEC-016`) are kept in `audit/held/inventory-SEC.md`, not in `audit/inventory.md` (OD-019; that file has been in git since 8249db80) and are all `untested` there, so no active violation attempt is recorded for them.
 - No upgrade or node round has run (T061, T062, T065): the beta.8 to RC upgrade (`UPG`, 5 rows) and the node behaviour rows (`NODE`, 3 rows) are `untested`.
 - 229 findings are `fixed-unverified`: their fixes merged but have not been re-verified on a release candidate (T058 has not run).
@@ -218,17 +218,17 @@ Inventory outcomes by area code, from `audit/inventory.md` (awk on the ID prefix
 
 | Area | Rows | untested | blocked | pass | fail | n/a |
 |---|---|---|---|---|---|---|
-| WEB | 145 | 145 | 0 | 0 | 0 | 0 |
-| API | 146 | 146 | 0 | 0 | 0 | 0 |
-| CRD | 37 | 35 | 2 | 0 | 0 | 0 |
-| AGT | 36 | 36 | 0 | 0 | 0 | 0 |
-| AUX | 18 | 13 | 5 | 0 | 0 | 0 |
-| HELM | 28 | 28 | 0 | 0 | 0 | 0 |
-| MOD | 68 | 56 | 12 | 0 | 0 | 0 |
+| WEB | 145 | 0 | 0 | 145 | 0 | 0 |
+| API | 146 | 0 | 0 | 146 | 0 | 0 |
+| CRD | 37 | 0 | 2 | 35 | 0 | 0 |
+| AGT | 36 | 0 | 0 | 36 | 0 | 0 |
+| AUX | 18 | 0 | 5 | 13 | 0 | 0 |
+| HELM | 28 | 0 | 0 | 28 | 0 | 0 |
+| MOD | 68 | 0 | 12 | 56 | 0 | 0 |
 | UPG | 5 | 5 | 0 | 0 | 0 | 0 |
 | NODE | 3 | 3 | 0 | 0 | 0 | 0 |
 | SEC (`held/inventory-SEC.md`) | 16 | 16 | 0 | 0 | 0 | 0 |
-| **Total** | 502 | 483 | 19 | 0 | 0 | 0 |
+| **Total** | 502 | 24 | 19 | 459 | 0 | 0 |
 
 ## Proposed E2E additions
 

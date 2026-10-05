@@ -91,7 +91,7 @@ Rows are not live-verified if they are `blocked` (listed below, with the prerequ
 
 ### Untested rows
 
-- **467 of 486 inventory rows in `audit/inventory.md` are still `untested`** (WEB 145, API 146, CRD 35, AGT 36, AUX 13, HELM 28, MOD 56, UPG 5, NODE 3). The formal per-row live round did not run (OD-029): the 2026-10-04 informal live sweep on `master` stands in for it, and it did not record per-row outcomes, so no row is marked `pass`.
+- **8 of 486 inventory rows in `audit/inventory.md` are still `untested`** (UPG 5, NODE 3); 24 of 502 with the `INV-SEC-*` rows. 459 rows (WEB 145, API 146, CRD 35, AGT 36, AUX 13, HELM 28, MOD 56) are `pass` on the strength of a maintainer attestation, not per-row evidence: the formal per-row live round did not run (OD-029) and the 2026-10-04 informal live sweep on `master` did not record per-row outcomes, so on 2026-10-05 the maintainer attested that "all screen and feature where tested live in a cluster" (OD-030). The attestation does not cover `UPG`, `NODE`, `SEC` or the 19 `blocked` rows.
 - The 16 security-control rows (`INV-SEC-001` to `INV-SEC-016`) are kept in `audit/held/inventory-SEC.md`, not in `audit/inventory.md` (OD-019; that file has been in git since 8249db80) and are all `untested` there, so no active violation attempt is recorded for them.
 - No upgrade or node round has run (T061, T062, T065): the beta.8 to RC upgrade (`UPG`, 5 rows) and the node behaviour rows (`NODE`, 3 rows) are `untested`.
 - 229 findings are `fixed-unverified`: their fixes merged but have not been re-verified on a release candidate (T058 has not run).
