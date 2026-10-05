@@ -422,6 +422,35 @@ serve a `GameTemplate` whose image/command runs in your cluster — only point
 Gameplane at module sources you trust, and prefer signed, pinned installs for
 third-party games. Authoring details: [`module-authoring.md`](module-authoring.md).
 
+## Agent file browser (path confinement)
+
+The agent's `/files/*` routes (list, read, download, write, upload, mkdir,
+delete) operate on the game data volume and are reachable by anyone who can
+use the dashboard file browser, while the game container (a different uid)
+can create symlinks on the same volume. The agent therefore treats the data
+directory contents as untrusted and does not trust a path it validated
+earlier:
+
+- The requested path is validated lexically (no `..` escape, no dot-prefixed
+  component) and every operation then runs relative to a directory descriptor
+  opened on the data root, opening one component at a time with
+  `openat(O_NOFOLLOW)`. A symlink at any component is refused (HTTP 400); there
+  is no "follow it if it stays inside the root" case.
+- Reads, writes, creates and deletes use the descriptors they obtained
+  (`fstatat`, `mkdirat`, `unlinkat`, `renameat`, serving from the opened file)
+  and never re-open an absolute path, so swapping a checked directory or file
+  for a symlink between validation and use cannot redirect the operation out of
+  the root. Writes are atomic: temp file in the parent descriptor, `fsync`,
+  `renameat` in the same directory.
+- Recursive delete walks descriptors and unlinks links as links; it refuses
+  trees that contain dot-prefixed entries (agent state such as the mods
+  manifest).
+- The data-root path itself is operator-configured and trusted (it may be a
+  symlink); only components below it are checked.
+
+The mods package has its own confinement (`ConfinePath`/`ConfineRelPath`) and
+is not covered by this change.
+
 ## Runtime mod installs (agent)
 
 Separately from the module supply chain above, a running server can install
