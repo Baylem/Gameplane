@@ -320,6 +320,7 @@ Console input/output and Logs streaming use existing bidirectional WebSocket (co
 - **ServerSleepCard.tsx** (170 lines) — Server sleep/idle state summary; HeroUI Card/Alert (line 2) plus a `Chip` re-exported from ui/PhaseChip (line 6)
 - **EventList.tsx** (43 lines) — Kubernetes event list renderer, used from both Events.tsx (line 6) and Overview.tsx (line 12)
 - **PortOverridesEditor.tsx** (80 lines) — Port configuration helper; HeroUI Input/Button (line 1) (Settings tab, deferred)
+- **ConfigFields.tsx** — `ConfigFieldInput`/`ConfigFields`: schema-driven config field renderer shared by the Create wizard (variant `wizard`, stacked) and Settings > Game configuration (variant `settings`: label-left rows, required marker, write-only passwords, file note, inline errors); native selects for enum and bool, text input with numeric keyboard for int
 
 ### Design Import Rule (FR-012)
 
@@ -756,6 +757,7 @@ package.json                # @gameplane/web v0.2.0-beta.8; dev: vite, npm scrip
 - Root route → `<Outlet>`
 - Login route (`/login`) → public, unauthenticated
 - App layout (`/app-layout`) → contains all authenticated pages
+- Catch-all (`$` splat child of the app layout) → `NotFoundPage` ("Page not found", button "Go to dashboard") rendered inside the app shell; the layout's auth guard (401 → `/login`) applies, so unauthenticated visitors never see the page, and `/login` and `/share/$token` still match first. The breadcrumb reads "Page not found".
 
 **Top-level Pages:**
 
@@ -937,10 +939,11 @@ namespace, name and UID before providing access through `ResourceTargetProvider`
 
 ## ServerDetail Settings Sub-sections
 
-Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sections in a left sidebar (`SECTIONS` array):
+Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sections in a left sidebar (`SECTIONS` array; a 13th, Game configuration, is inserted after Version when the template declares a `configSchema`):
 
 1. **General** — Server name, description, game-icon image field with placeholder from template's image or "(template image)" when no template
 2. **Version** — Template version selector (triggers container restart)
+2a. **Game configuration** — `GameConfigSection` (`web/src/routes/tabs/settings/GameConfig.tsx`), key `config`, shown only when `template.spec.configSchema` has entries (or the server still carries `spec.config` keys, so stray keys can be removed). Edits `draft.spec.config` through the tab's shared draft/Save footer; renders fields with the shared `ConfigFields` (`web/src/components/server/ConfigFields.tsx`, variant `settings`). An unset key means the template default (or the auto value); a value equal to the schema default removes the key, and an emptied map is written as `undefined` (never `{}`). Client validation (`validateConfig`, `web/src/lib/validation.ts`): required, enum, int (whole number, min/max), bool, string/password length; failures show inline and disable Save through `onValidityChange` (the operator stays authoritative; the API does not validate against the schema). Password fields are write-only: the API returns the marker `__gameplane_redacted__` for a stored password, the input is empty with the placeholder "Unchanged — type to replace" and a "Write-only" note, the marker is never rendered, stays in the draft until the user types (the PUT then keeps the stored value) and typing replaces it. `target: file` fields carry a "Written to file" note. Keys present in `spec.config` but absent from the schema are listed with a "Remove" button ("No longer in the template") because the operator rejects unknown keys. An info alert states that saving restarts the server (always; there is no apply-later mode). When `status.conditions[type=Ready].message` starts with `invalid config:` a danger alert shows it. Without `servers:write` (`access.canWrite`) the fields are disabled, the alert is hidden and the footer shows "You need permission to change this server's settings." instead of Discard/Save.
 3. **Resources** — CPU request/limit, memory request/limit (Kubernetes resource specs)
 4. **Networking** — Service type (ClusterIP/NodePort/LoadBalancer), LoadBalancer hostname, address pool / explicit address request, port overrides. Tunnel validation (`tunnel.enabled`, provider-specific config, credentials) is computed during render and reported via `onValidityChange` callback in an effect; local field state for `addressPool` and `address` is held in `useState` — so consecutive edits within one render are cumulative rather than each recomputing against the same stale `net` snapshot — and is re-seeded from props by two complementary mechanisms: on identity change, via a parent `key` remount; and in-render, whenever the incoming values differ by value from the last synced pair (so a save round-trip or a reload that returns changed values for the *same* server is picked up).
 5. **Environment** — Custom env var key=value pairs
@@ -1098,7 +1101,7 @@ openEventStream(opts: EventStreamOptions)
 5. **Pre-auth privacy** — login page and unauthenticated screens leak no internal state (rule 3, CLAUDE.md)
 6. **Fix, not silence** — ESLint / TypeScript flags are fixed at source, never suppressed inline (rule 4, CLAUDE.md)
 7. **Operator is authoritative** — business logic lives in the operator; the dashboard is a pure view layer
-8. **Generic, template-driven rendering** — Game configuration (Create Server steps, Settings tab) and status (Overview metrics) render via the template's declared schema (`spec.configSchema`, `spec.capabilities.status.metrics`, etc.), with no per-game branching; the surface works identically for every game type (FR-024)
+8. **Generic, template-driven rendering** — Game configuration (Create Server steps, Settings tab) and status (Overview metrics) render via the template's declared schema (`spec.configSchema`, `spec.capabilities.status.metrics`, etc.), with no per-game branching; the surface works identically for every game type (FR-024). The Create wizard's Configure step and Settings > Game configuration share one field renderer, `ConfigFields` (`web/src/components/server/ConfigFields.tsx`)
 
 ## Dependencies
 

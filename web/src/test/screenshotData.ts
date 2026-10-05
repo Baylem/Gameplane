@@ -264,6 +264,15 @@ export const screenshotServers: GameServer[] = [
     },
     spec: {
       templateRef: { name: "minecraft-java" },
+      // Matches design frame OC804 (Settings · Game configuration). The
+      // password is the API's redaction marker, as the real API returns it.
+      config: {
+        DIFFICULTY: "Expert",
+        MAX_PLAYERS: "8",
+        PVP: "false",
+        SERVER_PASSWORD: "__gameplane_redacted__",
+        MOTD: "Welcome to Gameplane",
+      },
       idle: {
         enabled: true,
         afterMinutes: 30,
@@ -1360,9 +1369,28 @@ export const screenshotModrinthProjects: RegistryProject[] = [
 // Helper for tests/e2e to conditionally swap handler sets
 // ============================================================================
 
+// configSchema served ONLY by the single-template GET (see handlers.ts), so
+// Settings > Game configuration renders (design frames OC804/QFEg9) while the
+// Create wizard's template list — whose captures have no "Template
+// configuration" block — stays unchanged.
+export const screenshotTemplateConfigSchemas: Record<
+  string,
+  NonNullable<GameTemplate["spec"]["configSchema"]>
+> = {
+  "minecraft-java": [
+    { name: "WORLD_NAME", displayName: "World name", type: "string", default: "Gameplane" },
+    { name: "DIFFICULTY", displayName: "Difficulty", type: "enum", enum: ["Classic", "Expert", "Master", "Journey"], default: "Classic" },
+    { name: "MAX_PLAYERS", displayName: "Max players", type: "int", default: "16", min: 1, max: 255 },
+    { name: "PVP", displayName: "PvP", type: "bool", default: "true" },
+    { name: "SERVER_PASSWORD", displayName: "Server password", type: "password" },
+    { name: "MOTD", displayName: "MOTD", type: "string", target: "file" },
+  ],
+};
+
 export function getScreenshotData() {
   return {
     templates: screenshotTemplates,
+    templateConfigSchemas: screenshotTemplateConfigSchemas,
     servers: screenshotServers,
     nodes: screenshotNodes,
     clusterView: screenshotClusterView,

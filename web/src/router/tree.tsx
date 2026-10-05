@@ -18,6 +18,7 @@ import { CreateServerWizard } from "@/routes/CreateServer";
 import { BackupsPage } from "@/routes/Backups";
 import { AuditLogPage } from "@/routes/AuditLog";
 import { AdminLogsPage } from "@/routes/AdminLogs";
+import { NotFoundPage } from "@/routes/NotFound";
 
 const rootRoute = new RootRoute({ component: Outlet });
 
@@ -171,6 +172,16 @@ const backupsRoute = new Route({
   }),
 });
 
+// Catch-all: any URL no other route claims renders the 404 page inside the
+// authenticated shell. AppLayout owns the auth guard (401 -> /login), and
+// /login and /share/$token are siblings that match first, so neither ever
+// gets the shell.
+const notFoundRoute = new Route({
+  getParentRoute: () => appLayoutRoute,
+  path: "$",
+  component: NotFoundPage,
+});
+
 export const routeTree = rootRoute.addChildren([
   loginRoute,
   shareRoute,
@@ -188,5 +199,6 @@ export const routeTree = rootRoute.addChildren([
     auditLogRoute,
     adminLogsRoute,
     backupsRoute,
+    notFoundRoute,
   ]),
 ]);
