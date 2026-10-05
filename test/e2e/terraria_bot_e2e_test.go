@@ -73,9 +73,19 @@ func TestGameServer_TerrariaBot_Joined(t *testing.T) {
 		ExpectDepth:   expectedDepth,
 		RCON:          map[string]any{"protocol": "none"},
 		ConsoleMode:   "pty",
-		// No probes, matching the module: a tcpSocket probe's connect-and-close
-		// crashes the Terraria server (ObjectDisposedException in Netplay.ServerLoop).
-		Probes: nil,
+		// The module's exec readiness probe: it reads /proc/net/tcp instead of
+		// connecting, because a tcpSocket probe's connect-and-close crashes the
+		// Terraria server (ObjectDisposedException in Netplay.ServerLoop).
+		Probes: map[string]any{
+			"readiness": map[string]any{
+				"exec": map[string]any{
+					"command": []any{"sh", "-c", "grep -qsE ':1E61 [0-9A-F]+:[0-9A-F]{4} 0A' /proc/net/tcp /proc/net/tcp6"},
+				},
+				"initialDelaySeconds": int64(30),
+				"periodSeconds":       int64(10),
+				"failureThreshold":    int64(30),
+			},
+		},
 		Actions: []any{
 			map[string]any{
 				"id":          "broadcast",
