@@ -223,7 +223,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
 - **Responsibility:** Cron scheduler + retention enforcement.
 - **Key functions:**
   - Parse spec.Schedule cron expression; report ScheduleValid condition.
-  - Compute next firing time; create Backup CR when due. Scheduled Backups carry no ownerReference to the BackupSchedule; instead, they are tracked by the label `gameplane.local/backup-schedule: <schedule-name>` stamped at creation (same namespace). This allows Backups to persist when their BackupSchedule is deleted.
+  - Compute next firing time (a schedule that has never fired counts missed runs from its `metadata.creationTimestamp`, so a new schedule waits for its first real tick); create Backup CR when due. Scheduled Backups carry no ownerReference to the BackupSchedule; instead, they are tracked by the label `gameplane.local/backup-schedule: <schedule-name>` stamped at creation (same namespace). This allows Backups to persist when their BackupSchedule is deleted.
   - Retention trimming: list Backups by label, apply keep-hourly/keep-daily/keep-weekly/keep-monthly/keep-yearly rules, delete excess.
   - Report RetentionTrimmed condition (success) or retention failure (TrimFailed).
 
