@@ -147,7 +147,7 @@ async function mockShareCreate(page: Page, token: string): Promise<void> {
             JSON.stringify({
               id: "share-shot",
               createdAt: "2026-07-28T00:00:00Z",
-              expiresAt: "2026-08-04T00:00:00Z",
+              expiresAt: null,
               canStart: false,
               token: t,
             }),
