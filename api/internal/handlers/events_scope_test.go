@@ -182,3 +182,65 @@ func TestEvents_StreamsOnlyReadableKinds(t *testing.T) {
 		})
 	}
 }
+
+// TestEvents_WatchesFromListResourceVersion pins that /events lists each
+// kind first and watches from the list's resourceVersion, so opening the
+// stream does not replay every existing object as a synthetic ADDED event.
+func TestEvents_WatchesFromListResourceVersion(t *testing.T) {
+	type permMap = map[string]map[string]map[string]struct{}
+	dyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
+		kube.GVRs["servers"]:   "GameServerList",
+		kube.GVRs["templates"]: "GameTemplateList",
+		kube.GVRs["backups"]:   "BackupList",
+		kube.GVRs["schedules"]: "BackupScheduleList",
+		kube.GVRs["restores"]:  "RestoreList",
+	})
+	dyn.PrependReactor("list", "*", func(clienttesting.Action) (bool, runtime.Object, error) {
+		l := &unstructured.UnstructuredList{}
+		l.SetResourceVersion("4242")
+		return true, l, nil
+	})
+	var mu sync.Mutex
+	rvs := map[string]string{}
+	dyn.PrependWatchReactor("*", func(action clienttesting.Action) (bool, watch.Interface, error) {
+		if wa, ok := action.(clienttesting.WatchAction); ok {
+			mu.Lock()
+			rvs[action.GetResource().Resource] = wa.GetWatchRestrictions().ResourceVersion
+			mu.Unlock()
+		}
+		return true, watch.NewFake(), nil
+	})
+	reg := kube.NewRegistry(scope.DefaultCluster)
+	reg.Set(scope.DefaultCluster, &kube.Client{Dynamic: dyn, Typed: kubefake.NewClientset()})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	u := &auth.User{ID: 9, Username: "events-reader", Perms: permMap{scope.DefaultCluster: {"*": eventsPermSet("*")}}}
+	req := httptest.NewRequestWithContext(auth.WithUser(ctx, u), http.MethodGet, "/events", nil)
+	w := &sseRecorder{header: http.Header{}}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		eventsHandler(reg)(w, req)
+	}()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		n := len(rvs)
+		mu.Unlock()
+		if n == len(kube.GVRs) {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	cancel()
+	<-done
+
+	mu.Lock()
+	defer mu.Unlock()
+	for _, gvr := range kube.GVRs {
+		if got := rvs[gvr.Resource]; got != "4242" {
+			t.Errorf("watch %s resourceVersion = %q, want %q (from the list)", gvr.Resource, got, "4242")
+		}
+	}
+}

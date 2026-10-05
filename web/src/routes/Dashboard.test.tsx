@@ -215,6 +215,20 @@ describe("DashboardPage", () => {
     }
   });
 
+  it("describes login audit rows as sign-ins", async () => {
+    server.use(
+      http.get("/admin/audit", () =>
+        HttpResponse.json([
+          makeAudit({ id: 1, actor: "ada", method: "POST", path: "/auth/login", status: 200 }),
+          makeAudit({ id: 2, actor: "anonymous", method: "POST", path: "/auth/login", status: 401 }),
+        ]),
+      ),
+    );
+    renderWithQuery(<DashboardPage />);
+    expect(await screen.findByText("ada signed in")).toBeInTheDocument();
+    expect(screen.getByText("anonymous failed to sign in")).toBeInTheDocument();
+  });
+
   it("renders empty states for activity and backups", async () => {
     server.use(
       http.get("/admin/audit", () => HttpResponse.json([])),
