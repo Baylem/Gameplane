@@ -1078,7 +1078,7 @@ openEventStream(opts: EventStreamOptions)
 - Connects to `/events` (EventSource, auto-reconnect on transient close)
 - Each frame is a Kubernetes watch event: `{ kind, eventType, object }`
 - Frames are parsed as JSON; malformed frames are silently dropped
-- Closes the stream when the tab becomes hidden (document.hidden); clears pending retries and reconnects when visible, calling onReconnect
+- Closes the stream when the tab becomes hidden (document.hidden); clears pending retries and reconnects when visible, calling onReconnect. A tab that is already hidden when `openEventStream` is called (opened in the background) does not connect at all until it first becomes visible
 - Manual reconnect on onerror (after 3s backoff) if the browser closed the stream
 - No-op fallback if EventSource is undefined (jsdom, ancient browser)
 

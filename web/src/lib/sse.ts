@@ -31,7 +31,11 @@ export function openEventStream(opts: EventStreamOptions): () => void {
 
   let es: EventSource | null = null;
   let closed = false;
-  let hidden = false;
+  // A tab opened in the background never gets a visibilitychange to tell
+  // us it is hidden, so start from the current state and do not connect
+  // until it becomes visible (the handler below then connects and calls
+  // onReconnect).
+  let hidden = typeof document !== "undefined" && document.hidden;
   let retry: ReturnType<typeof setTimeout> | undefined;
 
   function connect() {

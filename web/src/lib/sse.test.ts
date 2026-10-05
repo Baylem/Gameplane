@@ -293,4 +293,28 @@ describe("openEventStream with EventSource", () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });
+
+  it("does not connect when opened in a hidden tab, connects once it becomes visible", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
+    Object.defineProperty(document, "hidden", { value: true, configurable: true });
+    try {
+      const onReconnect = vi.fn();
+      const dispose = openEventStream({ onEvent: vi.fn(), onReconnect });
+      // Hidden from the start: no socket is opened and no retry is scheduled.
+      expect(FakeEventSource.instances).toHaveLength(0);
+
+      Object.defineProperty(document, "hidden", { value: false, configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+      expect(FakeEventSource.instances).toHaveLength(1);
+      expect(FakeEventSource.instances[0].closed).toBe(false);
+      expect(onReconnect).toHaveBeenCalledTimes(1);
+
+      dispose();
+    } finally {
+      Object.defineProperty(document, "hidden", { value: false, configurable: true });
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
 });
