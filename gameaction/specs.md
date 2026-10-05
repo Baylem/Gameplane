@@ -9,13 +9,14 @@
 Shared console-injection guard and command-template renderer for all transports that execute module-declared actions against a game server. Used by:
 - **API** (`api/internal/ws/actions.go`) — stdin pod-attach console execution
 - **Agent** (`agent/internal/actions/actions.go`) — RCON console execution
+- **Agent player moderation** (`agent/internal/players`) — kick/ban reason, via CheckText
 
 Both call the validation and rendering functions independently; each is its own trust boundary, so validation is never skipped because "the other side already checked."
 
 ## Responsibilities
 
 1. Validate raw user-supplied action parameters against declared specifications before any rendering occurs.
-2. Reject console-injection vectors (control characters) that would chain a second command on the same console line.
+2. Reject console-injection vectors (control characters and the shell/RCON metacharacters ; & | $ ` \ " ') that would chain a second command on the same console line.
 3. Enforce parameter types (string, int, bool, enum) and constraints.
 4. Enforce a 512-character length cap on string parameters.
 5. Enforce required-parameter checking and default value substitution.
@@ -79,13 +80,13 @@ Behavior:
   - **`int` type:** parses as base-10 int64 (post-trim), returns trimmed string; rejects non-integer strings.
   - **`bool` type:** accepts "true" or "false" (case-insensitive, post-trim); rejects other values.
   - **`enum` type:** rejects values not in the declared `Enum` slice (exact match, no trimming).
-  - **`string` type** (or empty Type): rejects control characters (ASCII 0x00–0x1f, 0x7f), rejects strings over 512 chars, returns as-is.
+  - **`string` type** (or empty Type): rejects control characters (ASCII 0x00–0x1f, 0x7f) and the metacharacters ; & | $ ` \ " ' (via CheckText), rejects strings over 512 chars, returns as-is.
 - Returns the resolved map with all declared param names present (defaults may produce empty strings for optional params).
 
-Control-character rejection (via `hasControl`):
+Input-character policy (via exported `CheckText`):
 ```go
-// Rejects any ASCII control character (r < 0x20 || r == 0x7f)
-// Specifically blocks CR, LF, NUL, ESC, DEL — injection vectors for chaining commands.
+// CheckText(s) error: ErrControlChar for r < 0x20 || r == 0x7f (wins when both present);
+// ErrMetaChar for ; & | $ ` \ " '; nil otherwise. No length check.
 ```
 
 **`Compile(name, command string) (*Command, error)`**
@@ -104,6 +105,8 @@ Executes the compiled template with the resolved parameters.
 - Returns the rendered command string, trimmed of leading/trailing whitespace.
 - Returns an error if the template references a missing key (enforced by `missingkey=error`) or if execution fails.
 - Result is ready to pass to the console (RCON or pod-attach stdin).
+
+**CheckText(s string) (error)** — the shared free-text input policy. Also called by the agent's player-moderation reason validation (agent/internal/players sanitizeReason) so both paths share one character set.
 
 ## Key invariants
 
@@ -133,7 +136,7 @@ No external modules.
 
 ## Security considerations
 
-1. **Console injection:** The control-character guard is the primary defense against chaining commands on the same console line. Rejecting 0x00–0x1f and 0x7f stops CR, LF, NUL, ESC, DEL, and related codes that could terminate a command or start a new one.
+1. **Console injection:** The control-character guard is the primary defense against chaining commands on the same console line. Rejecting 0x00–0x1f and 0x7f stops CR, LF, NUL, ESC, DEL, and related codes that could terminate a command or start a new one. The same policy also rejects ; & | $ ` \ " ', which can break out of a quoted template argument.
 
 2. **Template injection:** Compiling with `missingkey=error` prevents silent fallthrough to empty strings if a template references a param that `Resolve` didn't provide. This makes template errors visible and loud.
 
@@ -158,6 +161,7 @@ No external modules.
 - Template parse errors (`TestCompile_BadTemplate`)
 - Parameter substitution in templates (`TestRender_Params`)
 - Missing-key errors in templates (`TestRender_MissingKey`)
+- Shared text policy: allowed text, control chars, each metacharacter, control-over-meta precedence (`TestCheckText`)
 
 ## References
 
