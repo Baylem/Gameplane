@@ -45,6 +45,26 @@ fi`
 func (r *GameServerReconciler) reconcileWipe(
 	ctx context.Context, gs *gameplanev1alpha1.GameServer, tmpl *gameplanev1alpha1.GameTemplate,
 ) error {
+	// A previous acknowledgement may be newer than this cache snapshot.
+	// Refresh the request and guard before any wipe side effect, so a stale
+	// pending token cannot recreate a writer after a restore acquires it.
+	reader := r.APIReader
+	if reader == nil {
+		reader = r.Client
+	}
+	var live gameplanev1alpha1.GameServer
+	if err := reader.Get(ctx, client.ObjectKeyFromObject(gs), &live); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+	if live.UID != gs.UID {
+		return nil
+	}
+	gs = &live
+	// A restic restore has exclusive access to this data volume. Do not
+	// create a wipe Job or acknowledge a wipe by resuming the server yet.
+	if gs.Annotations[restoreGuardAnnotation] != "" {
+		return nil
+	}
 	req := gs.Annotations[WipeRequestedAnnotation]
 	done := gs.Annotations[WipeCompletedAnnotation]
 	jobName := gs.Name + "-wipe"

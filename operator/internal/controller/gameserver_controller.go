@@ -1154,6 +1154,11 @@ func (r *GameServerReconciler) desiredReplicas(
 	ctx context.Context, gs *gameplanev1alpha1.GameServer, tmpl *gameplanev1alpha1.GameTemplate,
 	idle idleState,
 ) (int32, time.Duration, error) {
+	// Restore owns the data PVC until its workers have drained. Keep the
+	// workload stopped even if a concurrent power request clears suspend.
+	if gs.Annotations[restoreGuardAnnotation] != "" {
+		return r.softStop(ctx, gs, tmpl)
+	}
 	// A pending restart (stamped by the API) drives a transient scale-down →
 	// scale-up entirely operator-side, so the request can't be lost to a
 	// coalesced reconcile the way a client-issued suspend/resume pair can.
@@ -1380,7 +1385,28 @@ func (r *GameServerReconciler) reconcileStatefulSet(
 			"app.kubernetes.io/instance": gs.Name,
 			"gameplane.local/template":   tmpl.Name,
 		}
-		ss.Spec.Replicas = &replicas
+		actualReplicas := replicas
+		if ss.Annotations[restoreGuardAnnotation] != "" {
+			actualReplicas = 0
+		} else if ss.ResourceVersion == "" && r.APIReader != nil {
+			// A new StatefulSet can be created from a stale GameServer cache
+			// snapshot. Consult the live object before starting its first pod.
+			var live gameplanev1alpha1.GameServer
+			if err := r.APIReader.Get(ctx, client.ObjectKeyFromObject(gs), &live); err != nil {
+				return err
+			}
+			if live.UID != gs.UID {
+				return fmt.Errorf("GameServer changed identity before StatefulSet creation")
+			}
+			if guard := live.Annotations[restoreGuardAnnotation]; guard != "" {
+				actualReplicas = 0
+				if ss.Annotations == nil {
+					ss.Annotations = make(map[string]string)
+				}
+				ss.Annotations[restoreGuardAnnotation] = guard
+			}
+		}
+		ss.Spec.Replicas = &actualReplicas
 		ss.Spec.ServiceName = gs.Name
 		ss.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
 		ss.Spec.Template.Labels = labels
