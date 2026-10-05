@@ -296,7 +296,10 @@ func TestSessions_CSRFStillEnforcedWithDigestStorage(t *testing.T) {
 
 func TestSessions_LoginCookieIsRawValue(t *testing.T) {
 	s := newAuthDB(t)
-	seedUser(t, s, "alice", "hunter2", "admin")
+	// LoginUserLimiter and LoginLimiter are package singletons keyed by
+	// username and client IP; TestLogin_PerUserRateLimit drains "alice", so
+	// this test logs in with its own username and address.
+	seedUser(t, s, "digest-alice", "hunter2", "admin")
 	if _, err := s.DB.ExecContext(context.Background(),
 		`INSERT INTO user_role_bindings(user_id, role_name, cluster, namespace) VALUES (1, 'viewer', 'local', '*')`,
 	); err != nil {
@@ -305,8 +308,9 @@ func TestSessions_LoginCookieIsRawValue(t *testing.T) {
 	store := NewSessionStore(s)
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/login",
-		strings.NewReader(`{"username":"alice","password":"hunter2"}`))
+		strings.NewReader(`{"username":"digest-alice","password":"hunter2"}`))
 	req.Header.Set("Content-Type", "application/json")
+	req.RemoteAddr = "198.51.100.71:1234"
 	NewLocal(s).HandleLogin(store, nil).ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("login code=%d body=%s", rr.Code, rr.Body)
@@ -335,7 +339,7 @@ func TestSessions_LoginCookieIsRawValue(t *testing.T) {
 		t.Fatalf("sessions.token = %q, want sessionDigest(login cookie) = %q", stored, sessionDigest(cookie))
 	}
 	u, csrf, err := store.lookup(context.Background(), cookie)
-	if err != nil || u.Username != "alice" || csrf != body.CSRF {
-		t.Fatalf("lookup(login cookie) = %+v, %q, %v; want alice with the login CSRF token", u, csrf, err)
+	if err != nil || u.Username != "digest-alice" || csrf != body.CSRF {
+		t.Fatalf("lookup(login cookie) = %+v, %q, %v; want digest-alice with the login CSRF token", u, csrf, err)
 	}
 }
