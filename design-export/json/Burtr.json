@@ -501,6 +501,7 @@
                           "layout": "horizontal",
                           "justifyContent": "space_between",
                           "alignItems": "center",
+                          "fill": "$default/default",
                           "children": [
                             {
                               "id": "nya8I",
@@ -546,23 +547,33 @@
                               ]
                             },
                             {
-                              "id": "QqRFt",
-                              "type": "ref",
-                              "ref": "TDRJE",
-                              "name": "Size",
+                              "type": "frame",
+                              "id": "kHLhx",
+                              "name": "Folder Actions",
                               "padding": [
-                                4,
-                                12
+                                0,
+                                8
                               ],
-                              "descendants": {
-                                "HNAOu": {
-                                  "content": "",
-                                  "fontFamily": "$typography/font-sans",
-                                  "fontSize": 12,
-                                  "fontWeight": "normal",
-                                  "fill": "$muted"
+                              "justifyContent": "end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "ccokq",
+                                  "type": "ref",
+                                  "ref": "j9sz4",
+                                  "name": "Btn Delete Folder",
+                                  "width": 24,
+                                  "height": 24,
+                                  "descendants": {
+                                    "uQ9KQ": {
+                                      "icon": "trash-2",
+                                      "width": 14,
+                                      "height": 14,
+                                      "fill": "$danger/danger"
+                                    }
+                                  }
                                 }
-                              }
+                              ]
                             }
                           ]
                         },

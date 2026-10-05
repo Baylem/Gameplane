@@ -4859,6 +4859,53 @@
                       ]
                     }
                   ]
+                },
+                {
+                  "type": "frame",
+                  "id": "bdXV9",
+                  "name": "Command Bar",
+                  "width": "fill_container",
+                  "stroke": "$border/border",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "B65qEu",
+                      "type": "ref",
+                      "ref": "D0cDM",
+                      "name": "Command Input",
+                      "width": "fill_container",
+                      "descendants": {
+                        "PJERm": {
+                          "content": "Type a command… (↑/↓ recalls history)",
+                          "fontFamily": "$typography/font-mono",
+                          "fontSize": 12
+                        }
+                      }
+                    },
+                    {
+                      "id": "g6g11y",
+                      "type": "ref",
+                      "ref": "z9ShNE",
+                      "name": "Btn Send",
+                      "descendants": {
+                        "nWTJb": {
+                          "enabled": false
+                        },
+                        "IVgQ8/U1xvSo": {
+                          "content": "Send"
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -6228,6 +6275,7 @@
                               "layout": "horizontal",
                               "justifyContent": "space_between",
                               "alignItems": "center",
+                              "fill": "$default/default",
                               "children": [
                                 {
                                   "id": "nya8I",
@@ -6273,23 +6321,33 @@
                                   ]
                                 },
                                 {
-                                  "id": "QqRFt",
-                                  "type": "ref",
-                                  "ref": "TDRJE",
-                                  "name": "Size",
+                                  "type": "frame",
+                                  "id": "kHLhx",
+                                  "name": "Folder Actions",
                                   "padding": [
-                                    4,
-                                    12
+                                    0,
+                                    8
                                   ],
-                                  "descendants": {
-                                    "HNAOu": {
-                                      "content": "",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 12,
-                                      "fontWeight": "normal",
-                                      "fill": "$muted"
+                                  "justifyContent": "end",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "id": "ccokq",
+                                      "type": "ref",
+                                      "ref": "j9sz4",
+                                      "name": "Btn Delete Folder",
+                                      "width": 24,
+                                      "height": 24,
+                                      "descendants": {
+                                        "uQ9KQ": {
+                                          "icon": "trash-2",
+                                          "width": 14,
+                                          "height": 14,
+                                          "fill": "$danger/danger"
+                                        }
+                                      }
                                     }
-                                  }
+                                  ]
                                 }
                               ]
                             },
@@ -32266,7 +32324,7 @@
                                       "fill": "$field/placeholder"
                                     },
                                     "wolxN": {
-                                      "content": "Shown in the UI and OIDC replies."
+                                      "content": "Optional. Names this install on the Cluster page and in notifications."
                                     }
                                   }
                                 }
@@ -45359,6 +45417,9 @@
               }
             }
           ]
+        },
+        "TZ7Ef": {
+          "content": "Create"
         }
       }
     },
@@ -45416,6 +45477,9 @@
               }
             }
           ]
+        },
+        "TZ7Ef": {
+          "content": "Create"
         }
       }
     },
@@ -51737,7 +51801,7 @@
                   "fill": "$muted",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "The server is waking up. This usually takes a minute or two — this page updates on its own.",
+                  "content": "The server is starting up. This usually takes a minute or two — this page updates on its own.",
                   "lineHeight": 1.5,
                   "textAlign": "center",
                   "fontFamily": "$typography/font-sans",
@@ -119637,6 +119701,66 @@
           ]
         }
       ]
+    },
+    {
+      "id": "oMuyw",
+      "type": "ref",
+      "ref": "JLaGB",
+      "name": "Gameplane/Dialog/New File (Invalid name)",
+      "x": -14705,
+      "y": 28539,
+      "descendants": {
+        "q9QPFd": {
+          "type": "frame",
+          "id": "hNGjw",
+          "name": "mBody",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 6,
+          "padding": [
+            16,
+            0,
+            0,
+            0
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "EgYe0",
+              "name": "Label",
+              "fill": "$muted",
+              "content": "File name",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "nhs80",
+              "type": "ref",
+              "ref": "D0cDM",
+              "name": "Input",
+              "width": "fill_container",
+              "stroke": "$danger/danger",
+              "descendants": {
+                "PJERm": {
+                  "content": "../escape.txt",
+                  "fill": "$field/foreground"
+                }
+              }
+            },
+            {
+              "type": "text",
+              "id": "ZIf7a",
+              "name": "Field Error",
+              "fill": "$danger/danger",
+              "content": "Names can't contain \"/\" or be \".\" or \"..\".",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      }
     }
   ],
   "themes": {

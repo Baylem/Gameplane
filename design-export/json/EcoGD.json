@@ -97,7 +97,7 @@
               "fill": "$muted",
               "textGrowth": "fixed-width",
               "width": "fill_container",
-              "content": "The server is waking up. This usually takes a minute or two — this page updates on its own.",
+              "content": "The server is starting up. This usually takes a minute or two — this page updates on its own.",
               "lineHeight": 1.5,
               "textAlign": "center",
               "fontFamily": "$typography/font-sans",
