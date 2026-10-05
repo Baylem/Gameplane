@@ -134,3 +134,29 @@ type dummyWS struct {
 	URL   string
 	Close func()
 }
+
+func TestAppendTail_BoundsLinesAndBytes(t *testing.T) {
+	var buf []string
+	var total int64
+	for i := 0; i < 10; i++ {
+		buf, total = appendTail(buf, total, strings.Repeat("a", 9)+"\n", 3, 1000)
+	}
+	if len(buf) != 3 || total != 30 {
+		t.Fatalf("line cap: got %d lines, %d bytes; want 3 lines, 30 bytes", len(buf), total)
+	}
+	buf, total = nil, 0
+	for i := 0; i < 10; i++ {
+		buf, total = appendTail(buf, total, strings.Repeat("b", 99)+"\n", 100, 250)
+	}
+	if len(buf) != 2 || total != 200 {
+		t.Fatalf("byte cap: got %d lines, %d bytes; want 2 lines, 200 bytes", len(buf), total)
+	}
+	buf, total = appendTail(buf, total, strings.Repeat("c", 300)+"\n", 100, 250)
+	if len(buf) != 2 || total != 200 {
+		t.Fatalf("oversize line must be skipped: got %d lines, %d bytes", len(buf), total)
+	}
+	buf, total = appendTail(nil, 0, "", 3, 1000)
+	if len(buf) != 0 || total != 0 {
+		t.Fatalf("empty line must be ignored: got %d lines, %d bytes", len(buf), total)
+	}
+}

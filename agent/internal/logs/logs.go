@@ -113,8 +113,6 @@ func streamFile(ctx context.Context, conn *websocket.Conn, path string, fromEnd 
 				_ = f.Close()
 				return err
 			}
-			// After replaying, prepare for following: seek to current EOF.
-			_, _ = f.Seek(0, io.SeekEnd)
 		} else if fromEnd {
 			_, _ = f.Seek(0, io.SeekEnd)
 		}
@@ -137,19 +135,33 @@ var errRotated = errors.New("log file rotated")
 // maxTailLines caps ?tail=N so a caller cannot make the agent buffer an unbounded history.
 const maxTailLines int64 = 20000
 
+const maxTailBytes int64 = 4 << 20 // 4 MiB
+
+// appendTail adds line to the replay window buf (holding total bytes) and evicts
+// the oldest lines until it holds at most maxLines lines and maxBytes bytes. An
+// empty line is ignored, and a line longer than maxBytes on its own is skipped.
+func appendTail(buf []string, total int64, line string, maxLines, maxBytes int64) ([]string, int64) {
+	n := int64(len(line))
+	if n == 0 || n > maxBytes {
+		return buf, total
+	}
+	buf = append(buf, line)
+	total += n
+	for len(buf) > 0 && (int64(len(buf)) > maxLines || total > maxBytes) {
+		total -= int64(len(buf[0]))
+		buf = buf[1:]
+	}
+	return buf, total
+}
+
 // replayTail reads all lines from file f and sends the last tailLines to conn.
 func replayTail(ctx context.Context, conn *websocket.Conn, f *os.File, tailLines int64) error {
 	reader := bufio.NewReader(f)
 	var buffer []string
+	var totalBytes int64
 	for {
 		line, err := reader.ReadString('\n')
-		if len(line) > 0 {
-			buffer = append(buffer, line)
-			// Keep only the last tailLines in the buffer.
-			if int64(len(buffer)) > tailLines {
-				buffer = buffer[1:]
-			}
-		}
+		buffer, totalBytes = appendTail(buffer, totalBytes, line, tailLines, maxTailBytes)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
