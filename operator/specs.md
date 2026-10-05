@@ -147,6 +147,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - Node affinity: honor spec.nodeSelector and spec.affinity preferences.
   - Ingress NetworkPolicy: enforce per-template advertised ports, admit CIDRs from `--game-ingress-from-cidr`.
   - Fixed-name child cleanup: Delete four fixed-name objects (`<gs>-config` Secret, `<gs>-files` Secret, `<gs>-rcon` Secret, `<gs>-auto` BackupSchedule) only when the GameServer controls them via OwnerReference; unowned objects with these names stay in place (same rule as game-ingress NetworkPolicy).
+  - **StatefulSet conflict requeue:** When reconcileStatefulSet encounters an apierrors.IsConflict error (concurrent update races), requeue without error logging — conflicts are expected and transient.
   - Load-balancer address management: translate spec.networking.addressPool / .address preferences onto the Service based on the cluster's address-manager flavor (MetalLB, Cilium, or none), report assignment status via the AddressAssignment condition.
   - **Network capture foundation** (**Phase 2 Foundational**): Pre-provision a `captures` emptyDir (1 GiB) unconditionally on every game pod's StatefulSet template (required because pod.spec.volumes is immutable on running pods; a rolling restart of all existing game pods is incurred once on upgrade). Extend the `<gs>-agent` Service with a second numeric ServicePort 9091 for the capture sidecar's control endpoint. RBAC markers grant `pods/ephemeralcontainers` access (get, list, watch, patch, update) and full CRUD on `networkcaptures` resources. The capture sidecar injection as an ephemeral container is implemented: `buildCaptureEphemeralContainer` (`gameserver_controller.go`) is the single source of truth for the container spec, injected eagerly by `GameServerReconciler.reconcileCapture` when `spec.capture.enabled` is set, with `NetworkCaptureReconciler.injectCaptureContainer` as an idempotent fallback for the case where its own cache is ahead of the GameServer reconciler's write.
 - **Split concerns:**
@@ -154,7 +155,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - `gameserver_modcreds.go`: mount mod credentials Secrets.
   - `gameserver_rcon.go`: RCON port exposure, lifecycle sequences.
   - `gameserver_restart.go`: restart action, pod deletion.
-  - `gameserver_wipe.go`: data wipe sequence (runs an `rm` Job against the existing PVC; the PVC itself is never deleted or recreated).
+  - `gameserver_wipe.go`: data wipe sequence. Request idempotency: token-based (request token acked once Job succeeds, same token never re-runs). Wipe gate: requires spec.suspend=true (API sets this); waits for StatefulSet scaled to 0 replicas AND game pod object deleted (pod by name `<gs>-0`) before starting the destructive Job. Restart: ackWipe sets spec.suspend=false after successful Job completion to resume the server on the fresh world. Job: runs rm against the existing PVC (never deleted/recreated); carries BackoffLimit 2 and no ActiveDeadlineSeconds.
   - `gameserver_version.go`: track/propagate game version.
   - `gameserver_node.go`: node affinity, pod anti-affinity.
   - `gameserver_status.go`: phase computation from StatefulSet/Pod state + agent heartbeat, AddressAssignment condition.
@@ -212,7 +213,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
 - **Responsibility:** Drive Backup to completion: coordinate quiesce (if agent available), spawn restic Job, track snapshot ID.
 - **Key functions:**
   - Quiesce orchestration: call agent Quiesce before Job, Unquiesce after completion.
-  - Restic Job: mount data PVC, run restic backup to configured destination (S3, B2, rest-server, local fs).
+  - Restic Job: mount data PVC, run restic backup to configured destination (S3, B2, rest-server, local fs). Job carries BackoffLimit 2 and ActiveDeadlineSeconds 86400 (provisional, OD-005); only a Failed=True Job condition (set by jobPermanentlyFailed check) marks the Backup Failed. Pod SecurityContext takes FSGroup from the target GameTemplate's spec.security.fsGroup (fallback 65532 if template missing).
   - Snapshot tracking: parse restic JSON output from container logs to extract snapshot ID.
   - Status: report phase (Pending/Running/Succeeded/Failed), error details.
 - **Integrations:** Agent client (quiesce), Kubernetes Pod logs (restic output), VolumeSnapshot API (CSI backups).
@@ -221,8 +222,8 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
 - **Responsibility:** Cron scheduler + retention enforcement.
 - **Key functions:**
   - Parse spec.Schedule cron expression; report ScheduleValid condition.
-  - Compute next firing time; create Backup CR when due.
-  - Retention trimming: list Backups, apply keep-hourly/keep-daily/keep-weekly/keep-monthly/keep-yearly rules, delete excess.
+  - Compute next firing time; create Backup CR when due. Scheduled Backups carry no ownerReference to the BackupSchedule; instead, they are tracked by the label `gameplane.local/backup-schedule: <schedule-name>` stamped at creation (same namespace). This allows Backups to persist when their BackupSchedule is deleted.
+  - Retention trimming: list Backups by label, apply keep-hourly/keep-daily/keep-weekly/keep-monthly/keep-yearly rules, delete excess.
   - Report RetentionTrimmed condition (success) or retention failure (TrimFailed).
 
 ### RestoreReconciler
@@ -230,7 +231,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
 - **Key functions:**
   - Pin snapshot ID at observation (immutable during restore).
   - Suspend: set spec.suspend=true on target GameServer, wait for pods to scale to 0.
-  - Restore Job: mount snapshot (from VolumeSnapshot or restic), run restic restore.
+  - Restore Job: mount snapshot (from VolumeSnapshot or restic), run restic restore. Job carries BackoffLimit 2 and ActiveDeadlineSeconds 86400 (provisional, OD-005); only a Failed=True Job condition marks the Restore Failed. Pod SecurityContext takes FSGroup from the target GameTemplate's spec.security.fsGroup (fallback 65532 if template missing).
   - Resume: once the restore Job succeeds, clear the GameServer's suspend flag and set Restore's own phase to Succeeded in the same pass — it does not wait for the GameServer to actually reach Running again.
   - Status: report phase (Pending/Suspending/Running/Succeeded/Failed). `RestorePhaseResuming` is declared on the type but never assigned by this reconciler (F-260).
   - Volume-snapshot restore reference handling: When a volume-snapshot restore stands up a new GameServer from the original server's spec, any references in spec.env (SecretKeyRef, ConfigMapKeyRef) and spec.networking.tunnel.credentialsSecretRef that are owned by the original server must be copied to new objects owned by the restored server, with rewritten names, because the restored server does not own the originals. Ownership of a source object is an OwnerReference to the original server (Kind, Name, UID) and is re-verified against the source object immediately before each copy, not just once during planning. An object that already exists under a copy name is accepted only if the restored server controls it (a controller OwnerReference, `controller: true`); otherwise the restore fails. The restore fails before the new GameServer is created if the original server does not own every referenced object. The references are rewritten in the new GameServer's spec when it is created, and the copies are made right after creation and re-ensured on every reconcile pass. Only an ownership refusal fails the restore; transient errors (stale cache reads, write conflicts, a referenced object not yet visible in the cache) requeue it. A restore's 10-minute deadline starts when the restore first plans the new server (before it is created) and covers both creating the server with its reference copies and waiting for it to reach Running; it is enforced even while a transient error (such as a referenced object that stays missing) keeps recurring, so the restore cannot run past the limit, and once it expires the restore fails with a deadline message.
@@ -257,6 +258,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - Validate operator version against bundle's gameplaneMinVersion.
   - Report the root cause (signature mismatch, version too old, fetch failed, etc.) via the `Ready` condition set to `False` with a reason string naming the specific failure — there is no separate `InstallFailed` condition type.
   - Retry a Failed Module every `minRefreshInterval` (1 minute) via `RequeueAfter`. A spec change (new generation) or a change to its ModuleSource reconciles it at once. A same-generation retry keeps Phase=Failed while it re-pulls (no Pulling flip), and status is written only when something other than condition timestamps changes, so a Module stuck on the same failure does not rewrite its status or re-queue itself (F-258).
+  - **Finalization:** Module deletion clears the ModuleFinalizer and deletes the owned GameTemplate. When the Module object deletion completes, the finalizer removal ignores NotFound errors (the Module may be deleted before the Update reaches the API server).
 
 ### ClusterStatusReconciler
 - **Responsibility:** Periodic health checks on remote clusters.

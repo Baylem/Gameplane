@@ -152,7 +152,7 @@ Resource usage env vars (set by the operator):
 | `/files/upload` | POST | Upload one or more files to a directory; query param `path`; body is `multipart/form-data` with `files[]`; returns HTTP 400 if destination path is a symlink that resolves outside the data root or cannot be resolved |
 | `/files/mkdir` | POST | Create directory (recursive); query param `path` |
 | `/files/delete` | DELETE | Delete file or directory; query param `path`, optional `recursive` (boolean) |
-| `/logs/tail` | GET | Tail game log over WebSocket; query param `from` (enum: `start`, `end`, default `end`) |
+| `/logs/tail` | GET | Tail game log over WebSocket; query params `from` (enum: `start`, `end`, default `end`) and `tail` (optional positive integer, capped at 20000 lines and 4 MiB bytes; replays last N lines before following; no replay after rotation) |
 | `/console` | GET | Duplex console over WebSocket; client sends `{ kind: "cmd", body: "<command>" }` (JSON), server replies `{ kind: "out"\|"err", body: "<response>" }` |
 | `/players` | GET | Current online player count and names; response: `{ online, max, players[], asOf, capabilities }`. `online`/`max` are `-1` when unknown (RCON disabled, or no recognized player-list format) — the sole "unknown" representation, never `0`. |
 | `/players/kick` | POST | Kick a player; request: `{ name, reason? }`; response: `{ ok, raw? }`; 501 if unsupported |
@@ -178,6 +178,8 @@ All endpoints on the `--addr` control mux, except `/healthz`, return `401 Unauth
 ## Key invariants
 
 - **Every protected request is authenticated**: The `auth` package gates all protected game-data routes (`/files`, `/logs`, `/console`, `/players`, RCON) with either mTLS verification or bearer-token matching. The documented public endpoints (`/healthz` on the control mux, `/metrics` on its separate listener) are the only exceptions; see above.
+- **File write permissions**: `files.write` and `files.savePart` preserve the existing target's permission bits when the target can be inspected; otherwise, they set the new file to `0o644` so the game container (different uid, shared fsGroup) can read it.
+- **Direct mod file permissions**: Non-extracted mod uploads and downloads are set to `mods.moduleFileMode` (`0o644`) before rename. Extracted mod files remain covered by the existing world-readable invariant.
 - **RCON is a lower-trust boundary**: The agent uses `netguard.IsAllowed()` for WebRcon dial operations (permissive, allows loopback and private addresses on the assumption game servers run inside the cluster), and `netguard.IsPublic()` (strict, permissive only for well-known registries) for mod-install downloads, assuming modules are less trusted than the operator.
 - **Gameaction validation is independent**: Both the API (stdin pod-attach) and the agent (RCON) call `gameaction.Resolve()` independently to validate action inputs (no control characters, 512-char cap, required-ness checks, etc.). Neither trusts the other.
 - **No persistent storage**: The agent has no database. GameServer status patches flow through the operator; all transient state (WebSocket streams, RCON sessions) is in-memory.
