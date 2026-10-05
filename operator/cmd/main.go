@@ -148,6 +148,8 @@ func main() {
 		captureSidecarImage              string
 		captureDefaultMaxDurationSeconds int64
 		captureDefaultMaxSizeBytes       int64
+		backupJobBackoffLimit            int64
+		backupJobActiveDeadlineSeconds   int64
 	)
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "Address the metrics endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "Address the probe endpoint binds to.")
@@ -167,6 +169,10 @@ func main() {
 	flag.StringVar(&resticImage, "restic-image", controller.DefaultResticImage,
 		"Image for the restic backup/restore Jobs. "+
 			"Point at a private registry mirror for air-gapped installs.")
+	flag.Int64Var(&backupJobBackoffLimit, "backup-job-backoff-limit", int64(controller.DefaultBackupJobBackoffLimit),
+		"BackoffLimit for the restic backup and restore Jobs (retries before the Job is marked Failed). Must be >= 0. Defaults to 2.")
+	flag.Int64Var(&backupJobActiveDeadlineSeconds, "backup-job-active-deadline-seconds", controller.DefaultBackupJobActiveDeadlineSeconds,
+		"ActiveDeadlineSeconds for the restic backup and restore Jobs. Must be > 0. Defaults to 86400 (24 hours).")
 	flag.StringVar(&sentinelImage, "sentinel-image", controller.DefaultSentinelImage,
 		"Image for the wake sentinel pod that holds advertised ports while a server is asleep. "+
 			"Point at a private registry mirror for air-gapped installs.")
@@ -256,6 +262,16 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 	setupLog := ctrl.Log.WithName("setup")
+
+	backupJobBackoff32, err := boundedInt32(backupJobBackoffLimit) // rejects <0 and >MaxInt32
+	if err != nil {
+		setupLog.Error(err, "invalid --backup-job-backoff-limit value (must be >= 0)", "value", backupJobBackoffLimit)
+		os.Exit(1)
+	}
+	if backupJobActiveDeadlineSeconds <= 0 {
+		setupLog.Error(nil, "invalid --backup-job-active-deadline-seconds value (must be > 0)", "value", backupJobActiveDeadlineSeconds)
+		os.Exit(1)
+	}
 
 	// Validate capture retention flags while they are still the int64 type
 	// flag.Int64Var naturally produces. The minimum of 60 seconds aligns with
@@ -398,12 +414,14 @@ func main() {
 	}
 
 	if err := (&controller.BackupReconciler{
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		Clientset:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
-		AgentClient:   agentClient,
-		ResticImage:   resticImage,
-		EventRecorder: mgr.GetEventRecorder("backup-controller"),
+		Client:                   mgr.GetClient(),
+		Scheme:                   mgr.GetScheme(),
+		Clientset:                kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		AgentClient:              agentClient,
+		ResticImage:              resticImage,
+		JobBackoffLimit:          &backupJobBackoff32,
+		JobActiveDeadlineSeconds: backupJobActiveDeadlineSeconds,
+		EventRecorder:            mgr.GetEventRecorder("backup-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to set up controller", "controller", "Backup")
 		os.Exit(1)
@@ -416,10 +434,12 @@ func main() {
 		os.Exit(1)
 	}
 	if err := (&controller.RestoreReconciler{
-		Client:      mgr.GetClient(),
-		APIReader:   mgr.GetAPIReader(),
-		Scheme:      mgr.GetScheme(),
-		ResticImage: resticImage,
+		Client:                   mgr.GetClient(),
+		APIReader:                mgr.GetAPIReader(),
+		Scheme:                   mgr.GetScheme(),
+		ResticImage:              resticImage,
+		JobBackoffLimit:          &backupJobBackoff32,
+		JobActiveDeadlineSeconds: backupJobActiveDeadlineSeconds,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to set up controller", "controller", "Restore")
 		os.Exit(1)

@@ -36,6 +36,11 @@ type RestoreReconciler struct {
 	// operator flag so air-gapped installs can point it at a private
 	// registry mirror. Empty falls back to DefaultResticImage.
 	ResticImage string
+	// JobBackoffLimit / JobActiveDeadlineSeconds bound the restic restore Job.
+	// Set from operator flags; nil / zero fall back to
+	// DefaultBackupJobBackoffLimit / DefaultBackupJobActiveDeadlineSeconds.
+	JobBackoffLimit          *int32
+	JobActiveDeadlineSeconds int64
 }
 
 // apiReader returns the uncached reader for live-consistency checks,
@@ -158,8 +163,7 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// src (the source Backup, with RepoRef for the Job env) was resolved
 	// above before the volume-snapshot branch.
-	backoff := int32(2)
-	deadline := int64(86400) // 24 hours
+	backoff, deadline := resolveJobLimits(r.JobBackoffLimit, r.JobActiveDeadlineSeconds)
 	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "restore-" + rs.Name, Namespace: rs.Namespace}}
 	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
 		if job.CreationTimestamp.IsZero() {

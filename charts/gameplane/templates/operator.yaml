@@ -282,6 +282,22 @@ spec:
             {{- if .Values.operator.resticImage }}
             - --restic-image={{ .Values.operator.resticImage }}
             {{- end }}
+            {{- /* Omit the flags when the keys are absent/null (e.g. --reuse-values
+                   from a release predating them) so the operator's defaults
+                   (2 / 86400) apply. Not `| default`: an explicit 0 backoff is
+                   valid and must be honoured; a 0 deadline falls back. */}}
+            {{- if not (kindIs "invalid" .Values.operator.backupJobBackoffLimit) }}
+            {{- if lt (.Values.operator.backupJobBackoffLimit | int64) 0 }}
+            {{- fail "operator.backupJobBackoffLimit must be >= 0" }}
+            {{- end }}
+            - --backup-job-backoff-limit={{ .Values.operator.backupJobBackoffLimit | int64 }}
+            {{- end }}
+            {{- if .Values.operator.backupJobActiveDeadlineSeconds }}
+            {{- if lt (.Values.operator.backupJobActiveDeadlineSeconds | int64) 0 }}
+            {{- fail "operator.backupJobActiveDeadlineSeconds must be > 0" }}
+            {{- end }}
+            - --backup-job-active-deadline-seconds={{ .Values.operator.backupJobActiveDeadlineSeconds | int64 }}
+            {{- end }}
             - --agent-ca-bundle=/etc/gameplane/agent-ca/ca.crt
             - --agent-client-cert=/etc/gameplane/agent-client/tls.crt
             - --agent-client-key=/etc/gameplane/agent-client/tls.key
