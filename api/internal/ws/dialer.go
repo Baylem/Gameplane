@@ -165,7 +165,10 @@ func (p *proxy) wsProxy(agentPath string) http.HandlerFunc {
 		}
 		defer func() { _ = downConn.Close(websocket.StatusNormalClosure, "") }()
 
-		upConn, upResp, err := p.transport.Dial(req.Context(), target, agentPath)
+		// Filter query parameters: only allow "from" and "tail" keys for agent operations.
+		// This prevents callers from injecting unauthorized parameters (e.g., cluster, ns).
+		filteredQuery := filterAllowedQueryParams(req.URL.RawQuery, []string{"from", "tail"})
+		upConn, upResp, err := p.transport.Dial(req.Context(), target, agentPath, filteredQuery)
 		if upResp != nil && upResp.Body != nil {
 			_ = upResp.Body.Close()
 		}

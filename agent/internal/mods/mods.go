@@ -337,6 +337,14 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 		httpjson.Error(w, http.StatusInternalServerError, "could not store the upload")
 		return
 	}
+	// Chmod before rename: the temp file is 0o600, but mods must be 0o644 so
+	// the game container (different uid, shared fsGroup) can read them.
+	if err := os.Chmod(tmpName, moduleFileMode); err != nil {
+		_ = os.Remove(tmpName)
+		slog.Warn("mod upload chmod", "err", err)
+		httpjson.Error(w, http.StatusInternalServerError, "could not store the upload")
+		return
+	}
 
 	installName := name
 	if h.extract {
@@ -494,6 +502,12 @@ func (h *handler) download(ctx context.Context, url, name string) (int64, error)
 	if err != nil {
 		_ = os.Remove(tmpName)
 		return 0, err
+	}
+	// Chmod before rename: the temp file is 0o600, but mods must be 0o644 so
+	// the game container (different uid, shared fsGroup) can read them.
+	if err := os.Chmod(tmpName, moduleFileMode); err != nil {
+		_ = os.Remove(tmpName)
+		return 0, fmt.Errorf("chmod temp: %w", err)
 	}
 	if err := os.Rename(tmpName, finalPath); err != nil {
 		_ = os.Remove(tmpName)

@@ -474,6 +474,28 @@ describe("ShareLinksSection", () => {
     });
   });
 
+  it("renders Revoked status for revoked links", async () => {
+    server.use(
+      http.get(/\/servers\/[^/]+:shares$/, () =>
+        HttpResponse.json([
+          {
+            id: "revoked-link",
+            createdAt: "2026-05-12T00:00:00Z",
+            expiresAt: "2026-05-19T00:00:00Z",
+            revokedAt: "2026-05-13T10:30:00Z",
+            canStart: true,
+          },
+        ]),
+      ),
+    );
+    render(<ShareLinksSection name="mc-survival" />, { wrapper: Wrapper });
+    await waitFor(() => {
+      expect(screen.getByText("Revoked")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Active")).not.toBeInTheDocument();
+    expect(screen.queryByText("Expired")).not.toBeInTheDocument();
+  });
+
   // T029: expiry-choice request shapes, warnings, and client-side blocking.
   describe("expiry choice request shapes (T029)", () => {
     // (a) The four day-count presets: each must send an absolute `expiresAt`

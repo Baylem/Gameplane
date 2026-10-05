@@ -445,9 +445,7 @@ func validateGeneral(body []byte) (json.RawMessage, error) {
 	if err := json.Unmarshal(body, &c); err != nil {
 		return nil, fmt.Errorf("invalid json: %w", err)
 	}
-	if c.InstanceName == "" {
-		return nil, fmt.Errorf("instanceName is required")
-	}
+	// instanceName is optional; notifications fall back to "Gameplane" when empty.
 	if c.DefaultNamespace == "" {
 		return nil, fmt.Errorf("defaultNamespace is required")
 	}

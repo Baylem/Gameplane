@@ -521,10 +521,13 @@ function sortBackups(items: Backup[]): Backup[] {
 }
 
 // describeAudit turns an audit row into a one-line human summary. Lifecycle
-// sub-resource paths (":start" etc.) get a specific verb; otherwise the verb
+// sub-resource paths (":start" etc.) and sign-ins get specific verbs; otherwise the verb
 // derives from the HTTP method.
 function describeAudit(e: AuditEvent): string {
   const target = e.target ? ` ${e.target}` : "";
+  if (e.path.endsWith("/auth/login")) {
+    return e.status >= 200 && e.status < 300 ? `${e.actor} signed in` : `${e.actor} failed to sign in`;
+  }
   if (e.path.includes(":start")) return `${e.actor} started${target}`;
   if (e.path.includes(":stop")) return `${e.actor} stopped${target}`;
   if (e.path.includes(":restart")) return `${e.actor} restarted${target}`;

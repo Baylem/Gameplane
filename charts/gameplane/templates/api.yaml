@@ -40,6 +40,11 @@ rules:
   - apiGroups: [""]
     resources: [nodes, events]
     verbs: [get, list, watch]
+  # Per-node pod counts for the dashboard's cluster meters
+  # (countNodePods in api/internal/handlers/cluster.go lists pods cluster-wide).
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [list]
   # Live node CPU/memory for the dashboard's cluster meters
   # (fetchNodeUsage in api/internal/handlers/cluster.go reads the
   # metrics-server aggregated API). Optional by design: without

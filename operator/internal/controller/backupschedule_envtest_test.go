@@ -42,17 +42,6 @@ func TestSchedule_FiresBackupWhenDue(t *testing.T) {
 		if len(backups) == 0 {
 			return false, "no backups created yet"
 		}
-		// The Backup must carry the schedule's controller ownerRef.
-		ok := false
-		for _, ref := range backups[0].OwnerReferences {
-			if ref.Kind == "BackupSchedule" && ref.Name == "smp-sched" && ref.Controller != nil && *ref.Controller {
-				ok = true
-				break
-			}
-		}
-		if !ok {
-			return false, "backup is not controlled by the schedule"
-		}
 		return true, ""
 	})
 }
@@ -611,6 +600,63 @@ func TestSchedule_LastSuccessfulTimeAdvancesAndNeverRewinds(t *testing.T) {
 		}
 		if s.Status.LastSuccessfulTime == nil || !s.Status.LastSuccessfulTime.Time.Equal(t2.Time) {
 			return false, "LastSuccessfulTime rewound to " + got + ", want to stay " + t2.String()
+		}
+		return true, ""
+	})
+}
+
+// TestSchedule_DeletePreservesBackups — When a BackupSchedule is deleted,
+// its labelled Backups must survive (not cascade-deleted). The UI promises
+// "Existing backups remain intact".
+func TestSchedule_DeletePreservesBackups(t *testing.T) {
+	ns := newNamespace(t)
+	startMgr(t, ns, withScheduleReconciler())
+
+	if err := k8sClient.Create(context.Background(), buildResticRepoSecret(ns, "repo")); err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+
+	// Create a schedule and advance LastScheduleTime so it fires immediately.
+	sched := buildBackupSchedule(ns, "smp-sched", "smp", "repo", "* * * * *", nil)
+	if err := k8sClient.Create(context.Background(), sched); err != nil {
+		t.Fatalf("create schedule: %v", err)
+	}
+	fiveMinAgo := metav1.NewTime(time.Now().Add(-5 * time.Minute))
+	sched.Status.LastScheduleTime = &fiveMinAgo
+	if err := k8sClient.Status().Update(context.Background(), sched); err != nil {
+		t.Fatalf("status update schedule: %v", err)
+	}
+
+	// Wait for a Backup to be created.
+	var backupName string
+	eventually(t, func() (bool, string) {
+		bs := listBackupsForSchedule(t, ns, "smp-sched")
+		if len(bs) == 0 {
+			return false, "no backups created yet"
+		}
+		backupName = bs[0].Name
+		return true, ""
+	})
+
+	// Delete the schedule.
+	if err := k8sClient.Delete(context.Background(), sched); err != nil {
+		t.Fatalf("delete schedule: %v", err)
+	}
+
+	// The Backup must still exist (not cascade-deleted).
+	eventually(t, func() (bool, string) {
+		var b gameplanev1alpha1.Backup
+		err := k8sClient.Get(context.Background(),
+			types.NamespacedName{Namespace: ns, Name: backupName}, &b)
+		if err != nil {
+			if meta.IsNoMatchError(err) || err.Error() == "not found" {
+				return false, "backup was deleted when schedule was deleted"
+			}
+			return false, "get backup: " + err.Error()
+		}
+		// Backup must still have the schedule label.
+		if b.Labels["gameplane.local/backup-schedule"] != "smp-sched" {
+			return false, "backup lost its schedule label"
 		}
 		return true, ""
 	})

@@ -59,7 +59,7 @@ The dashboard's visual surface composes its foundational atom components on `@he
 - **FilterPopover** — filter/search popover with form controls
 - **LoadingCard** — skeleton placeholder during data fetch
 - **ErrorCard** — error state card with message and recovery action slot
-- **ErrorBanner** — top-of-page alert for form/request errors
+- **ErrorBanner** — top-of-page alert for form/request errors; shows short status text instead of raw HTML when APIError.isHTML is set
 - **Meter** — horizontal progress indicator with percentage display
 - **Sparkline** — mini inline chart for resource trends (CPU, memory)
 - **GameIcon** — cached game-specific icon with fallback
@@ -107,7 +107,7 @@ The multi-slice rebuild is complete: the previous Radix-based primitives that us
 - **`ui/Sidebar.tsx` (T046, T052)** — left navigation: fixed variant (always visible on desktop) or drawer variant (mobile off-canvas). Renders nav groups + items, active route highlighting, appearance toggle footer, and user-info footer with logout. Permission gating is computed by AppLayout; Sidebar renders whatever nav items it receives.
 - **`ui/TopBar.tsx` (T047)** — horizontal header: hamburger (mobile), breadcrumb slot, cluster selector slot, global search slot, notifications slot, user menu (avatar + logout). All four slots are ReactNode — each slot component fetches its own data (no centralized fetching in TopBar).
 - **`ui/Breadcrumbs.tsx` (T048)** — route-hierarchy breadcrumbs: renders the tree path (gameplane / Servers / my-server) using `buildCrumbs` logic kept from the old AppLayout. Distinct from `ui/PageHeader.tsx`'s internal page-level breadcrumbs.
-- **`ui/NotificationsPanel.tsx` (T049)** — bell icon + popover + SSE notification list: owns the `openEventStream` subscription and local state (same as today's `Notifications()` in AppLayout). Fetching moved into the component, not centralized in AppLayout.
+- **`ui/NotificationsPanel.tsx` (T049)** — bell icon + popover + SSE notification list: owns the `openEventStream` subscription and local state (same as today's `Notifications()` in AppLayout). Fetching moved into the component, not centralized in AppLayout. Each watch event schedules an invalidation of its query key, and events for the same key within 500 ms (`INVALIDATE_COALESCE_MS`) share one invalidation. If a fetch for that key is already in flight when the timer fires, the invalidation waits for it to settle (re-checking every 500 ms) and then refetches. The in-flight read is never cancelled, which would starve it under a steady event stream, and its possibly pre-event result is never taken as current. Pending timers are cleared on unmount.
 - **`ui/GlobalSearch.tsx` (T050)** — search field + results popover: owns the `useQuery` call for servers list and client-side filter. Kept from today's AppLayout.
 - **`ui/AppearanceToggle.tsx` (T052)** — three-state appearance mode selector (light/dark/system): dispatches `onChange` to parent (AppLayout), which owns the `useTheme()` hook. Uses HeroUI `ToggleButtonGroup` or fallback three-button set.
 
@@ -115,7 +115,7 @@ The multi-slice rebuild is complete: the previous Radix-based primitives that us
 - **`PageHeader.tsx` (T043)** — route-level page header: thin wrapper around `ui/PageHeader` (slice-0 atom), passing through `title/subtitle/actions/breadcrumbs` unchanged. Called by ~30+ route pages; no changes required in call sites.
 - **`ClusterSelector.tsx` (T044)** — HeroUI dropdown on the Cluster inventory page, with authorized registrations, phase colors and a **View all clusters** action. It changes the infrastructure selection without setting a default target for server operations.
 - **`Login.tsx` (T040)** — login form: refactored from raw DOM to HeroUI `TextField`/`Label`/`Input`/`InputGroup`, `Alert` for errors, `Button` for actions. Kept all state, error handling, SSO provider rendering, and marketing panel. Verified compliant with FR-005 (login privacy).
-- **`Dashboard.tsx` (T041)** — landing page: renders fleet server/player summaries and inventory statistics, with optional location filtering and partial-coverage indicators. Missing measurements remain unknown.
+- **`Dashboard.tsx` (T041)** — landing page: renders fleet server/player summaries and inventory statistics, with optional location filtering and partial-coverage indicators. Missing measurements remain unknown. Recent-activity rows for audit entries whose path ends in `/auth/login` read "<actor> signed in" for a 2xx status and "<actor> failed to sign in" otherwise.
 
 ### Design Import Rule (FR-012)
 
@@ -274,6 +274,7 @@ Six of the nine ServerDetail tabs are rebuilt in this slice:
 
 4. **Logs** (`web/src/routes/tabs/Logs.tsx`, 299 lines)
    - Pod stdout or configured game log file stream (WebSocket, NOT rebuilt — uses existing engine)
+   - Requests last 500 lines of history via `?tail=500` query parameter before streaming new output
    - Search/filter input via HeroUI Input; download button
    - Virtualized log viewer (TanStack Virtual, NOT rebuilt)
    - Uses HeroUI Button, Input only (line 4); log streaming engine unchanged
@@ -311,7 +312,7 @@ Console input/output and Logs streaming use existing bidirectional WebSocket (co
 - **TransferServerDialog.tsx** (143 lines) — Transfer form (destination picker) from the HeroUI `Modal` family plus `ListBox`/`ListBoxItem`/`Popover`/`PopoverTrigger`/`PopoverContent` (import lines 3–16) — not ui/ConfirmDialog
 - **WipeServerDialog.tsx** (123 lines) — Wipe-world confirmation from the HeroUI `AlertDialog` family plus `Checkbox` (import lines 3–14) — not ui/ConfirmDialog
 - **DeleteServerDialog.tsx** (52 lines) — Delete server confirmation via ui/ ConfirmDialog (line 2)
-- **ServerStatusCard.tsx** (73 lines) — Status summary card in Overview tab, built on HeroUI Card (line 3)
+- **ServerStatusCard.tsx** (73 lines) — Status summary card in Overview tab, built on HeroUI Card (line 3); displays "—" when the agent reports no game version instead of falling back to template name
 - **ServerActionsCard.tsx** (487 lines) — Lifecycle action card in Overview tab; HeroUI Button/Card/CardHeader/CardContent/Modal family/Input/Label/Select/ListBox/ListBoxItem/Checkbox/Description/FieldError (import lines 20–39)
 - **ServerSleepCard.tsx** (170 lines) — Server sleep/idle state summary; HeroUI Card/Alert (line 2) plus a `Chip` re-exported from ui/PhaseChip (line 6)
 - **EventList.tsx** (43 lines) — Kubernetes event list renderer, used from both Events.tsx (line 6) and Overview.tsx (line 12)
@@ -575,6 +576,7 @@ Every file in slice 2b imports **only** from `@heroui/react` and `@/components/u
 
 **Tab 2 — Schedules:**
 - Table of BackupSchedule CRs (name, server, cron expression, last/next run, active)
+- Next run displays as a future relative time (e.g., "in 2 hours"); shows "—" when schedule is suspended
 - Inline "New schedule for" server picker (not a button) opens `ScheduleForm` for that server
 - Row actions: suspend/resume toggle (`Switch`), delete (confirm dialog) — no edit action
 
@@ -881,6 +883,7 @@ The warning is shown regardless of how many groups are being added (single or mu
 
 10. **AuditLog** (`/admin/audit`) → `AuditLogPage` (gated by `audit:read` permission)
     - Paginated audit event table (action, actor, resource, result, timestamp)
+    - Server ownership transfer actions display as "Transferred ownership of" in the action column
     - Verify audit trail hash chain, export to CSV
 
 11. **AdminLogs** (`/admin/logs`) → `AdminLogsPage` (gated by `*` wildcard permission)
@@ -912,7 +915,7 @@ Visible tab set depends on server template + active version:
 6. **Mods** — List/install/remove mods; browse by registry provider (Modrinth, CurseForge, etc.) if template declares one
 7. **Modpacks** — Install modpacks (only if template + active version supports loader with modpack capability)
 8. **Players** — Online player snapshot, ban list, whitelist, kick/ban/unban actions
-9. **Backups** — Per-server backup list, schedule management, restore trigger
+9. **Backups** — Per-server backup list, schedule management, restore trigger; reads backup repository URL from Secret `key: "repo"`
 10. **Capture** — a `CaptureWidget` component driving start/stop of packet captures and a table of past captures for this server, gated on the `captures:manage` permission. Sits between the Backups and Settings tabs per `design-export/json` node `O08uaD`/`b4eaUf` (start-capture modal) and `m5kOm4` (capture list). `CaptureWidget.tsx` with `Captures` client namespace (`web/src/lib/api.ts:127-175`) and router/tab wiring (`ServerDetail.tsx:278`) are implemented in `web/src`.
 11. **Settings** — Grouped form with sub-sections (below); changes are draft-until-save; conflict detection on reload
 
@@ -932,7 +935,7 @@ namespace, name and UID before providing access through `ResourceTargetProvider`
 
 Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sections in a left sidebar (`SECTIONS` array):
 
-1. **General** — Server name, description
+1. **General** — Server name, description, game-icon image field with placeholder from template's image or "(template image)" when no template
 2. **Version** — Template version selector (triggers container restart)
 3. **Resources** — CPU request/limit, memory request/limit (Kubernetes resource specs)
 4. **Networking** — Service type (ClusterIP/NodePort/LoadBalancer), LoadBalancer hostname, address pool / explicit address request, port overrides. Tunnel validation (`tunnel.enabled`, provider-specific config, credentials) is computed during render and reported via `onValidityChange` callback in an effect; local field state for `addressPool` and `address` is held in `useState` — so consecutive edits within one render are cumulative rather than each recomputing against the same stale `net` snapshot — and is re-seeded from props by two complementary mechanisms: on identity change, via a parent `key` remount; and in-render, whenever the incoming values differ by value from the last synced pair (so a save round-trip or a reload that returns changed values for the *same* server is picked up).
@@ -944,7 +947,7 @@ Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sec
 10. **RBAC & access** — Server owner + collaborator list, permission inheritance. The `setCollaborators` mutation runs unconditionally at component render (not gated by an early return), so hook invocation order is consistent. The mutation's namespace is derived from the GameServer's `metadata.namespace` (or `gameplane-games` as fallback); when no server is loaded, the mutation returns early without calling the API. On success, the mutation invalidates the `["server", gs.metadata.name]` query cache, clears input state, and resets errors; on error, it sets a locally-rendered error message and does not clear input, allowing retry.
 11. **Danger zone** — Wipe world data (confirm-dialog), transfer ownership (confirm-dialog), delete server (confirm-dialog); no Clone action (`web/src/routes/tabs/settings/Danger.tsx`)
 
-**Share links (T179):** Mounted in `Settings.tsx` by slice 5 (`ShareLinksSection`). `ShareLinksSection` (`web/src/routes/tabs/settings/ShareLinks.tsx`). Create/list/revoke share links per server; table shows Created, Expires, Can start capability (view-only vs. can-start), Status (Active/Expired/Revoked). Create dialog opens to set expiry and start permission; success shows Created dialog with full URL and one-time copy prompt (token hashed server-side and unrecoverable after close). Revoke dialog (AlertDialog danger) confirms destruction. Empty state when no links exist. Visible only to users with the API-enforced permission (owner/admin create/revoke, viewers see list read-only if API permits). Uses HeroUI Modal/ModalBackdrop/ModalContainer/ModalDialog/ModalHeader/ModalHeading/ModalBody/ModalFooter, AlertDialog family, Button, Table, Select, ListBox, ListBoxItem, Label, Description, Switch, Chip.
+**Share links (T179):** Mounted in `Settings.tsx` by slice 5 (`ShareLinksSection`). `ShareLinksSection` (`web/src/routes/tabs/settings/ShareLinks.tsx`). Create/list/revoke share links per server; table shows Created, Expires, Can start capability (view-only vs. can-start), Status (Active/Expired/Revoked). The status shows Revoked when revokedAt is set, regardless of expiry state. Create dialog opens to set expiry and start permission; success shows Created dialog with full URL and one-time copy prompt (token hashed server-side and unrecoverable after close). Revoke dialog (AlertDialog danger) confirms destruction. Empty state when no links exist. Visible only to users with the API-enforced permission (owner/admin create/revoke, viewers see list read-only if API permits). Uses HeroUI Modal/ModalBackdrop/ModalContainer/ModalDialog/ModalHeader/ModalHeading/ModalBody/ModalFooter, AlertDialog family, Button, Table, Select, ListBox, ListBoxItem, Label, Description, Switch, Chip.
 
 **Configurable expiry (feature 017, `ShareLinks.tsx`):** The expiry selector offers exactly six choices — 15 days, 30 days, 60 days, 90 days, No expiry, Custom (date picker) — with 30 days pre-selected, replacing the old fixed 24h/7d/30d/90d menu and its "Maximum 90 days" help text. Selecting "No expiry" shows the warning "This link works until you revoke it." and sends `neverExpires: true`. Selecting "Custom" shows a date picker restricted to dates strictly after today (no maximum); choosing a date 365 days or more out additionally shows "Long-lived link — it stays valid for over a year unless you revoke it." Presets and the custom date are converted client-side to an absolute RFC3339 instant (a custom date is valid through 23:59:59 in the owner's local time) and sent as `expiresAt`; the dialog never sends the deprecated `expiresIn`. The Expires column renders "Never" for a link with `expiresAt: null`, and such a link is never shown as "Expired".
 
@@ -963,7 +966,7 @@ api<T>(path: string, opts?: Options): Promise<T>
 - Base URL: relative paths (Vite proxy in dev, same-origin in prod)
 - CSRF: reads `gameplane_csrf` cookie, injects `X-Gameplane-CSRF` header on POST/PUT/PATCH
 - Cluster threading: uses the explicit `Options.cluster` or existing URL selector; defaults to local. Central endpoints do not inherit a workload cluster. Resource clients bind requests to the open target.
-- Error: throws `APIError(status, body)` on !ok; TanStack Query treats it uniformly
+- Error: throws `APIError(status, body, statusText?, contentType?)` on !ok; detects HTML response bodies (text/html or body starting with `<`) and sets isHTML flag; TanStack Query treats it uniformly
 - 204 No Content: returns `undefined as T`
 - Credentials: `include` (send cookies)
 
@@ -1071,6 +1074,7 @@ openEventStream(opts: EventStreamOptions)
 - Connects to `/events` (EventSource, auto-reconnect on transient close)
 - Each frame is a Kubernetes watch event: `{ kind, eventType, object }`
 - Frames are parsed as JSON; malformed frames are silently dropped
+- Closes the stream when the tab becomes hidden (document.hidden); clears pending retries and reconnects when visible, calling onReconnect
 - Manual reconnect on onerror (after 3s backoff) if the browser closed the stream
 - No-op fallback if EventSource is undefined (jsdom, ancient browser)
 

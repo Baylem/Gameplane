@@ -19,8 +19,9 @@ func TestBuildRestorePodSpec_UsesResticDeleteFlag(t *testing.T) {
 
 	src := &gameplanev1alpha1.Backup{}
 	src.Spec.RepoRef = &gameplanev1alpha1.SecretKeySelector{Name: "repo"}
+	tmpl := &gameplanev1alpha1.GameTemplate{}
 
-	ps := r.buildRestorePodSpec(rs, src)
+	ps := r.buildRestorePodSpec(rs, src, tmpl)
 	if len(ps.Containers) != 1 {
 		t.Fatalf("containers = %d, want 1", len(ps.Containers))
 	}

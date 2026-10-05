@@ -983,3 +983,51 @@ func TestShareLinkStopsResolvingWhenCreatorDeleted(t *testing.T) {
 		t.Fatalf("start after creator delete: status = %d, want 404; body=%s", status, body)
 	}
 }
+
+// TestShareListIncludesRevokedStatus verifies that a revoked share link
+// appears in the list with revokedAt set, and shows status "Revoked" to the UI.
+func TestShareListIncludesRevokedStatus(t *testing.T) {
+	store := newTestStore(t)
+	ownerID := insertShareTestUser(t, store, "owner-list-revoked")
+	reg := kube.NewRegistry("local")
+	reg.Set("local", fakeKubeClient(newShareTestServer("srv-list-revoked", ownerID)))
+	h := mountSharesRouter(reg, store)
+	owner := &auth.User{ID: ownerID, Username: "owner-list-revoked", Role: "admin"}
+
+	ctx := context.Background()
+
+	// Create a link, revoke it, then list it.
+	token, link, err := store.CreateShareLink(ctx, "local", "gameplane-games", "srv-list-revoked", ownerID, false, ptrTime(time.Now().UTC().Add(time.Hour)))
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	if err := store.RevokeShareLink(ctx, "local", link.Namespace, link.ServerName, link.ID); err != nil {
+		t.Fatalf("revoke: %v", err)
+	}
+
+	// List the link.
+	status, body := shareReq(t, h, "GET", "/servers/srv-list-revoked:shares", nil, owner, "203.0.113.50:1")
+	if status != http.StatusOK {
+		t.Fatalf("list status = %d, want 200; body=%s", status, body)
+	}
+	var listed []map[string]any
+	if err := json.Unmarshal(body, &listed); err != nil {
+		t.Fatalf("unmarshal list response: %v; body=%s", err, body)
+	}
+	if len(listed) != 1 {
+		t.Fatalf("list length = %d, want 1; body=%s", len(listed), body)
+	}
+
+	// Verify revokedAt is present in the list response.
+	item := listed[0]
+	revokedAt, ok := item["revokedAt"].(string)
+	if !ok || revokedAt == "" {
+		t.Fatalf("list response missing revokedAt field or not a string; got %v; body=%s", item["revokedAt"], body)
+	}
+
+	// Verify the revoked link no longer resolves publicly.
+	status, _ = shareReq(t, h, "GET", "/shares/"+token, nil, nil, "203.0.113.51:1")
+	if status != http.StatusNotFound {
+		t.Fatalf("resolve revoked token: status = %d, want 404", status)
+	}
+}

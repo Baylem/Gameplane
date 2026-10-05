@@ -254,6 +254,13 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
+	// A missing template is not fatal: it only refines the FSGroup, and
+	// buildBackupPodSecurityContext falls back to 65532 for a zero template.
+	var tmpl gameplanev1alpha1.GameTemplate
+	if err := r.Get(ctx, types.NamespacedName{Name: gs.Spec.TemplateRef.Name}, &tmpl); err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, err
+	}
+
 	// Volume-snapshot backups take a CSI snapshot of the data PVC rather
 	// than running restic, so they branch off here — before the restic
 	// repo Secret checks, which don't apply to them.
@@ -293,11 +300,15 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
+	backoff := int32(2)
+	deadline := int64(86400) // 24 hours
 	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: b.Name, Namespace: b.Namespace}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
 		if job.CreationTimestamp.IsZero() {
+			job.Spec.BackoffLimit = &backoff
+			job.Spec.ActiveDeadlineSeconds = &deadline
 			job.Spec.Template.Labels = map[string]string{backupRestoreJobLabel: backupRestoreJobValue}
-			job.Spec.Template.Spec = r.buildBackupPodSpec(&b)
+			job.Spec.Template.Spec = r.buildBackupPodSpec(&b, &tmpl)
 			job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
 		}
 		return controllerutil.SetControllerReference(&b, job, r.Scheme)
@@ -372,7 +383,7 @@ func (r *BackupReconciler) mirrorJobStatus(
 	switch {
 	case job.Status.Succeeded > 0:
 		phase = gameplanev1alpha1.BackupPhaseSucceeded
-	case job.Status.Failed > 0:
+	case jobPermanentlyFailed(job):
 		phase = gameplanev1alpha1.BackupPhaseFailed
 	case job.Status.Active > 0:
 		phase = gameplanev1alpha1.BackupPhaseRunning
@@ -827,7 +838,7 @@ func volumeSnapshotsAvailable(rm meta.RESTMapper) bool {
 //
 // Both containers share the same env (repo + password from the user's
 // Secret) and a tmpfs-backed cache to keep the rootfs read-only.
-func (r *BackupReconciler) buildBackupPodSpec(b *gameplanev1alpha1.Backup) corev1.PodSpec {
+func (r *BackupReconciler) buildBackupPodSpec(b *gameplanev1alpha1.Backup, tmpl *gameplanev1alpha1.GameTemplate) corev1.PodSpec {
 	nonRoot := true
 	roRootFS := true
 	noPrivEsc := false
@@ -863,13 +874,7 @@ func (r *BackupReconciler) buildBackupPodSpec(b *gameplanev1alpha1.Backup) corev
 	}
 
 	return corev1.PodSpec{
-		SecurityContext: &corev1.PodSecurityContext{
-			RunAsNonRoot:   &nonRoot,
-			RunAsUser:      &uid,
-			RunAsGroup:     &uid,
-			FSGroup:        &uid,
-			SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
-		},
+		SecurityContext: buildBackupPodSecurityContext(tmpl),
 		InitContainers: []corev1.Container{{
 			Name:    "restic-init",
 			Image:   resticImageOrDefault(r.ResticImage),
@@ -909,6 +914,24 @@ func (r *BackupReconciler) buildBackupPodSpec(b *gameplanev1alpha1.Backup) corev
 				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 			},
 		},
+	}
+}
+
+// buildBackupPodSecurityContext returns the pod-level SecurityContext for backup/restore jobs.
+// It includes the template's FSGroup (if set) along with standard settings for the backup job.
+func buildBackupPodSecurityContext(tmpl *gameplanev1alpha1.GameTemplate) *corev1.PodSecurityContext {
+	nonRoot := true
+	uid := int64(65532)
+	fsGroup := uid
+	if tmpl.Spec.Security != nil && tmpl.Spec.Security.FSGroup != nil {
+		fsGroup = *tmpl.Spec.Security.FSGroup
+	}
+	return &corev1.PodSecurityContext{
+		RunAsNonRoot:   &nonRoot,
+		RunAsUser:      &uid,
+		RunAsGroup:     &uid,
+		FSGroup:        &fsGroup,
+		SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault},
 	}
 }
 

@@ -138,11 +138,11 @@ func (l *Local) HandleLogin(sessions *SessionStore, reg *Registry) http.HandlerF
 		// is a username-enumeration oracle.
 		u, hash, err := l.fetchUser(req.Context(), body.Username)
 		if err != nil || hash == "" {
-			VerifyDummy(body.Password)
+			VerifyDummy(req.Context(), body.Password)
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)
 			return
 		}
-		ok, err := VerifyPassword(body.Password, hash)
+		ok, err := VerifyPassword(req.Context(), body.Password, hash)
 		if err != nil || !ok {
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)
 			return
@@ -167,6 +167,9 @@ func (l *Local) HandleLogin(sessions *SessionStore, reg *Registry) http.HandlerF
 		}
 		setSessionCookie(w, token, sessionTTL)
 		setCSRFCookie(w, csrf, sessionTTL)
+		// Attribute the audit row to the user who just signed in; the
+		// request itself is unauthenticated, so it would read "anonymous".
+		SetActor(req.Context(), u.Username)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(loginResp{User: newUserJSON(u, prefs), CSRF: csrf})
 	}

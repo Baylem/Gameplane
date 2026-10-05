@@ -2406,3 +2406,62 @@ run's report, and `t3IY3u` was substituted. The remaining exports include shared
 components and additional screens/states; exporting them is not a claim that
 each has an independent automated comparison. Fresh canonical CI results are
 reported separately on the PR with their exact commit and run IDs.
+
+## Canvas reorganization 2026-10-05 — overlapping top-level frames
+
+A scan of every top-level frame's bounds found 30 overlapping pairs in four clusters. All were fixed by moving frames. No node's content, size, style or component changed.
+
+- **Server Detail · Settings · Networking flow.**
+  - Five tunnel-flow states were stacked exactly on `J5pjJ3` at (4920, 10375).
+  - `J5pjJ3` keeps its slot in the Settings row.
+  - The five states now sit under it in flow order, in a sub-row below `J5pjJ3`'s existing state fragments (`jXykV`, `IyMFM`) and the Lifecycle screen. They are at y 12095, x 4920–11480, with a 1640 px pitch:
+    1. `nGJE1` (Tunnel disabled)
+    2. `dhPtX` (Tunnel initial enable)
+    3. `tSOeI` (Provider selected)
+    4. `y3YcQ` (Credentials entering)
+    5. `EKJyM` (Provider + credentials complete)
+- **Create Server — Step 4 Network flow.**
+  - Four tunnel states were stacked on `f1Vga`.
+  - They now sit in a sub-row 100 px under `f1Vga`, at y 14665, x 4920–9840:
+    1. `lhKzN` (Tunnel disabled)
+    2. `a7o9C` (enabled, no provider)
+    3. `ZU1BG` (provider selected)
+    4. `eGbsg` (complete)
+- **Screen grid shift.** To make room, every screen-grid frame at or below the old Create Server row (y ≥ 12745, x ≥ 0) moved down 550 px. This covers the Create Server, Modules, Backups, Clusters, Users & RBAC, Audit, Admin, Mobile and Share Link rows, plus the `m8wjom` and `R6iab` notes. Positions within each row are unchanged.
+- **Components band.**
+  - `Gameplane/Audit Integrity Banner` (`kIxaJ`) overlapped `igj2U` and `zzx8f`, and `FyV6E` overlapped `IdaU7`.
+  - The `x = -15622` column (`igj2U`, `zzx8f`, `FyV6E`, `IdaU7`, `w4ntSc`, `qvQPg`, `rCQaM`) was restacked below `kIxaJ` with 60 px gaps, which fixes both.
+  - `Jpl8j`, `NVN2r` and `FhrUm` moved to y 29821 so that `NVN2r` clears `Gameplane/Dialog/Edit User` (`t3IY3u`).
+- **Notes.** `x71Cb` moved to 60 px below `zqzr4`; it had overlapped `zqzr4`'s bottom edge by 53 px.
+
+**Export method & validation:**
+
+- **55 frames that only moved:**
+  - Only the top-level `"y"` in each `design-export/json/<id>.json` changed.
+  - It was patched in place with `sed`, without re-serializing, and checked with `jq -e '.y == <new>'`.
+  - Their screenshots were not re-exported, because moving a frame does not change its rendered pixels.
+- **The nine flow states above:**
+  - These had never been exported before; this pass exports them.
+  - JSON came from `Print(JSON.stringify(Get(id, {depth: 30, includePathGeometry: true})))` and was re-serialized with `jq .`. It has zero `"..."` elisions, and `jq empty` passes.
+  - Screenshots were made with `Export(ids, "png", …)` at 2× scale.
+- **Notes:** `m8wjom`, `R6iab` and `x71Cb` stay unexported, per the standing exclusion.
+- **Final check:** a scan of the whole document after the moves found 0 overlapping top-level pairs.
+
+**Duplicate cleanup (same pass):** Three top-level frames were byte-identical, unexported copies of exported frames, and nothing in the repo referenced them. They were deleted:
+- `goLqZ`, a copy of `hlwx3` (State/Server Actions Menu — Owner-only disabled)
+- `Gm3OE`, a copy of `IMSD5` (Settings · Danger zone (Owner-only))
+- `BB2qO`, a copy of `gWqMD` (Settings · Access (Read-only))
+
+Identical means that, node for node, each pair had the same type, name, text, ref, fill and descendant overrides.
+
+The kept copies moved into the freed slots so their rows stay contiguous, and only the top-level `"x"` in their JSON changed:
+
+| Frame | Old x | New x |
+| --- | --- | --- |
+| `IMSD5` | 41620 | 38540 |
+| `gWqMD` | 43160 | 40080 |
+| `hlwx3` | -12843 | -13423 |
+
+The second Settings set at x ≥ 30440 (`uCA23`, `VctzT`, `iLm38`, `QpEvu`, `XR0f9`) was not touched. Those screens are not duplicates; their content differs from the originals.
+
+After the cleanup there are 217 top-level frames and 0 overlaps.

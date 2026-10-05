@@ -2,7 +2,7 @@
   "type": "frame",
   "id": "Wj0V4",
   "x": 8200,
-  "y": 21365,
+  "y": 21915,
   "name": "Screen/Admin Settings — Mod registries",
   "context": "Central Mod registries administration. The banner describes central ownership; navigation includes registered Clusters and Cluster inventory. Exported against the unchanged screenshot scenario.",
   "theme": {

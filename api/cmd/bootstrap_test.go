@@ -70,7 +70,7 @@ func TestBootstrap_Insert(t *testing.T) {
 	if email != "a@b.test" {
 		t.Fatalf("email=%q", email)
 	}
-	ok, err := auth.VerifyPassword("correct-horse-battery", hash)
+	ok, err := auth.VerifyPassword(context.Background(), "correct-horse-battery", hash)
 	if err != nil || !ok {
 		t.Fatalf("password did not verify (ok=%v err=%v)", ok, err)
 	}
@@ -90,7 +90,7 @@ func TestBootstrap_PasswordStdin(t *testing.T) {
 	if err := s.DB.QueryRowContext(context.Background(), `SELECT pw_hash FROM users WHERE username='admin'`).Scan(&hash); err != nil {
 		t.Fatalf("select: %v", err)
 	}
-	ok, _ := auth.VerifyPassword("fromstdin-password", hash)
+	ok, _ := auth.VerifyPassword(context.Background(), "fromstdin-password", hash)
 	if !ok {
 		t.Fatal("stdin password did not verify")
 	}
@@ -108,7 +108,7 @@ func TestBootstrap_PasswordEnv(t *testing.T) {
 	if err := s.DB.QueryRowContext(context.Background(), `SELECT pw_hash FROM users WHERE username='admin'`).Scan(&hash); err != nil {
 		t.Fatalf("select: %v", err)
 	}
-	ok, _ := auth.VerifyPassword("env-supplied-pass", hash)
+	ok, _ := auth.VerifyPassword(context.Background(), "env-supplied-pass", hash)
 	if !ok {
 		t.Fatal("env password did not verify")
 	}
@@ -169,7 +169,7 @@ func TestBootstrap_RefusesOverwriteWithoutForce(t *testing.T) {
 	if err := s.DB.QueryRowContext(context.Background(), `SELECT pw_hash FROM users WHERE username='admin'`).Scan(&hash); err != nil {
 		t.Fatalf("select: %v", err)
 	}
-	ok, _ := auth.VerifyPassword("correct-horse-battery", hash)
+	ok, _ := auth.VerifyPassword(context.Background(), "correct-horse-battery", hash)
 	if !ok {
 		t.Fatal("original password no longer verifies after rejected overwrite")
 	}
@@ -197,10 +197,10 @@ func TestBootstrap_ForceUpdatesPassword(t *testing.T) {
 	if err := s.DB.QueryRowContext(context.Background(), `SELECT pw_hash FROM users WHERE username='admin'`).Scan(&hash); err != nil {
 		t.Fatalf("select: %v", err)
 	}
-	if ok, _ := auth.VerifyPassword("original-correct-horse", hash); ok {
+	if ok, _ := auth.VerifyPassword(context.Background(), "original-correct-horse", hash); ok {
 		t.Fatal("old password still verifies after --force")
 	}
-	if ok, _ := auth.VerifyPassword("fresh-rotation-secret", hash); !ok {
+	if ok, _ := auth.VerifyPassword(context.Background(), "fresh-rotation-secret", hash); !ok {
 		t.Fatal("new password does not verify after --force")
 	}
 }
@@ -420,7 +420,7 @@ func TestBootstrap_ForceResetIsAllOrNothing(t *testing.T) {
 	if err := s.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	oldHash, _ := auth.HashPassword("original-password")
+	oldHash, _ := auth.HashPassword(context.Background(), "original-password")
 	if _, err := s.DB.ExecContext(ctx,
 		`INSERT INTO users(username, display_name, email, role, pw_hash) VALUES (?,?,?,?,?)`,
 		"admin", "Admin", "admin@example.com", "viewer", oldHash,
@@ -461,7 +461,7 @@ func TestBootstrap_ForceResetIsAllOrNothing(t *testing.T) {
 	if err := s.DB.QueryRowContext(ctx, `SELECT pw_hash, role FROM users WHERE id=?`, userID).Scan(&hash, &role); err != nil {
 		t.Fatalf("select user state: %v", err)
 	}
-	if ok, _ := auth.VerifyPassword("original-password", hash); !ok {
+	if ok, _ := auth.VerifyPassword(context.Background(), "original-password", hash); !ok {
 		t.Fatal("pw_hash was modified even though transaction should have rolled back")
 	}
 	if role != "viewer" {

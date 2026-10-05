@@ -192,7 +192,7 @@ func TestConfig_PutValidationFailure(t *testing.T) {
 		section string
 		body    any
 	}{
-		{"general missing instanceName", "general", generalCfg{DefaultNamespace: "gameplane-games"}},
+		{"general missing defaultNamespace", "general", generalCfg{InstanceName: "x"}},
 		{"general bad URL", "general", generalCfg{InstanceName: "x", DefaultNamespace: "gameplane-games", ExternalURL: "not a url"}},
 		{"general bad namespace", "general", generalCfg{InstanceName: "x", DefaultNamespace: "Bad_Name"}},
 		{"auth bad kind", "auth", authCfg{Providers: []authProvider{{Name: "x", Kind: "wat"}}}},

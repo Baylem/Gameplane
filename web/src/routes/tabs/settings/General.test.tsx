@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { GeneralSection } from "./General";
 import { DESCRIPTION_ANNOTATION } from "./types";
-import { makeServer } from "@/test/factories";
+import { makeServer, makeTemplate } from "@/test/factories";
 
 describe("GeneralSection", () => {
   it("renders the name and template as disabled fields", () => {
@@ -37,8 +37,8 @@ describe("GeneralSection", () => {
 
   it("setting image sets spec.image", () => {
     const onChange = vi.fn();
-    render(<GeneralSection draft={makeServer()} onChange={onChange} />);
-    fireEvent.change(screen.getByPlaceholderText(/itzg\/minecraft/i), {
+    render(<GeneralSection draft={makeServer()} onChange={onChange} template={makeTemplate()} />);
+    fireEvent.change(screen.getByPlaceholderText(/minecraft:1\.21/), {
       target: { value: "my/image:latest" },
     });
     const lastCall = onChange.mock.calls.at(-1)![0];
@@ -51,9 +51,10 @@ describe("GeneralSection", () => {
       <GeneralSection
         draft={makeServer({ spec: { templateRef: { name: "x" }, image: "old" } })}
         onChange={onChange}
+        template={makeTemplate()}
       />,
     );
-    fireEvent.change(screen.getByPlaceholderText(/itzg\/minecraft/i), { target: { value: "" } });
+    fireEvent.change(screen.getByPlaceholderText(/minecraft:1\.21/), { target: { value: "" } });
     const lastCall = onChange.mock.calls.at(-1)![0];
     expect(lastCall.spec.image).toBeUndefined();
   });
@@ -227,12 +228,27 @@ describe("GeneralSection", () => {
       <GeneralSection
         draft={makeServer({ spec: { templateRef: { name: "x" }, image: "my/image" } })}
         onChange={onChange}
+        template={makeTemplate()}
       />,
     );
-    fireEvent.change(screen.getByPlaceholderText(/itzg\/minecraft/i), {
+    fireEvent.change(screen.getByPlaceholderText(/minecraft:1\.21/), {
       target: { value: "" },
     });
     const lastCall = onChange.mock.calls.at(-1)![0];
     expect(lastCall.spec.image).toBeUndefined();
+  });
+
+  it("uses the template image as the image placeholder, with a neutral hint when there is no template", () => {
+    const { unmount } = render(
+      <GeneralSection
+        draft={makeServer()}
+        onChange={() => {}}
+        template={makeTemplate({ spec: { image: "example/game:2" } })}
+      />,
+    );
+    expect(screen.getByPlaceholderText("example/game:2")).toBeInTheDocument();
+    unmount();
+    render(<GeneralSection draft={makeServer()} onChange={() => {}} />);
+    expect(screen.getByPlaceholderText("(template image)")).toBeInTheDocument();
   });
 });

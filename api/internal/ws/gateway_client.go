@@ -192,8 +192,10 @@ func (t *gatewayAgentTransport) Do(ctx context.Context, operation agentRequest) 
 	return resp, nil
 }
 
-func (t *gatewayAgentTransport) Dial(ctx context.Context, target agentTarget, path string) (*websocket.Conn, *http.Response, error) {
-	endpoint, err := t.endpoint(target, http.MethodGet, path, "", true)
+func (t *gatewayAgentTransport) Dial(ctx context.Context, target agentTarget, path string, rawQuery string) (*websocket.Conn, *http.Response, error) {
+	// Filter query parameters: only allow "from" and "tail" keys for agent operations.
+	filteredQuery := filterAllowedQueryParams(rawQuery, []string{"from", "tail"})
+	endpoint, err := t.endpoint(target, http.MethodGet, path, filteredQuery, true)
 	if err != nil {
 		return nil, nil, err
 	}

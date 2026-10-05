@@ -15,7 +15,6 @@ import (
 	"github.com/robfig/cron/v3"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
@@ -56,9 +55,9 @@ func (r *BackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// only when something actually changed (avoids reconcile churn).
 	before := sched.Status.DeepCopy()
 
-	// Owns(&Backup{}) re-triggers this Reconcile on every owned Backup
-	// status transition, so this runs (and can advance the high-water
-	// mark) even while the schedule itself is suspended.
+	// The controller watches BackupSchedules only; it finds a schedule's
+	// Backups by the gameplane.local/backup-schedule label on each reconcile
+	// (scheduled requeues).
 	if err := r.updateLastSuccessfulTime(ctx, &sched); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -163,7 +162,6 @@ func (r *BackupScheduleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 func (r *BackupScheduleReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&gameplanev1alpha1.BackupSchedule{}).
-		Owns(&gameplanev1alpha1.Backup{}).
 		Complete(r)
 }
 
@@ -182,9 +180,6 @@ func (r *BackupScheduleReconciler) fire(
 			Strategy:  sched.Spec.Strategy,
 			Quiesce:   sched.Spec.Quiesce,
 		},
-	}
-	if err := controllerutil.SetControllerReference(sched, b, r.Scheme); err != nil {
-		return err
 	}
 	return r.Create(ctx, b)
 }

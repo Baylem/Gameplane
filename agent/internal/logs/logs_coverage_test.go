@@ -44,7 +44,7 @@ func TestDownload_StatNonNotExistError(t *testing.T) {
 func TestStreamFile_DirectoryPathReturnsError(t *testing.T) {
 	dir := t.TempDir() // a directory used as the "log file" path
 
-	err := streamFile(context.Background(), nil, dir, false)
+	err := streamFile(context.Background(), nil, dir, false, 0)
 	if err == nil {
 		t.Fatal("streamFile on a directory path should fail once ReadString hits EISDIR")
 	}

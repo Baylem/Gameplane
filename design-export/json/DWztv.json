@@ -2,7 +2,7 @@
   "type": "frame",
   "id": "DWztv",
   "x": 1188,
-  "y": 22565,
+  "y": 23115,
   "name": "Screen/Mobile — Servers (Light)",
   "context": "Unified mobile server list. Location and namespace identify every card; location selection is inside the Filter popover. Below-fold cards remain scrollable in the app.",
   "theme": {
