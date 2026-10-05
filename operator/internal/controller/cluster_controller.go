@@ -10,11 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
+	"github.com/ValgulNecron/gameplane/operator/kubeconfig"
 )
 
 // ClusterStatusReconciler performs periodic health checks on remote clusters.
@@ -81,8 +81,8 @@ func (r *ClusterStatusReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{RequeueAfter: 2 * time.Minute}, nil
 	}
 
-	// Parse the kubeconfig.
-	restCfg, err := clientcmd.RESTConfigFromKubeConfig(kubeconfigData)
+	// Validate embedded credentials before building the remote client.
+	restCfg, err := kubeconfig.RESTConfig(kubeconfigData)
 	if err != nil {
 		if err := r.markUnhealthy(ctx, &cluster, "BadKubeconfig",
 			fmt.Sprintf("failed to parse kubeconfig: %v", err),
