@@ -58,7 +58,7 @@ import {
 
 import type { ActionParamDecl, GameServer, GameTemplate, ServerActionDecl, StatusReading } from "@/types";
 import { type LifecycleVerb } from "@/lib/endpoints";
-import { rconAvailable } from "@/lib/capabilities";
+import { rconAvailable, resolveConsoleMode } from "@/lib/capabilities";
 import { APIError } from "@/lib/api";
 import { errorText } from "@/lib/errors";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
@@ -146,6 +146,12 @@ export function ServerActionsCard({
 
   const actions = tmpl?.spec.capabilities?.actions ?? [];
   const hasRcon = rconAvailable(tmpl);
+  // stdin-transport actions are written to the game container over pod
+  // attach (the API's runStdinAction), so they only need an attachable
+  // console (rcon or pty), not RCON. rcon-transport actions need RCON.
+  const consoleAttachable = resolveConsoleMode(tmpl) !== "none";
+  const transportReady = (a: ServerActionDecl) =>
+    resolveTransport(a, hasRcon) === "rcon" ? hasRcon : consoleAttachable;
 
   // Live readings for params that pre-fill from a status metric. Same key as
   // ServerStatusCard, so both share one cache entry and one poll.
@@ -271,7 +277,7 @@ export function ServerActionsCard({
   const renderActionButton = (a: ServerActionDecl) => {
     const Icon = actionIcon(a.icon);
     const needsDialog = (a.params?.length ?? 0) > 0 || a.confirm;
-    const disabled = !canRun || !hasRcon || run.isPending;
+    const disabled = !canRun || !transportReady(a) || run.isPending;
     return (
       <button
         key={a.id}
@@ -303,9 +309,11 @@ export function ServerActionsCard({
         <h2 className="text-base font-semibold text-foreground">Quick actions</h2>
       </CardHeader>
       <CardContent className="space-y-1 px-0 py-0">
-        {!hasRcon && (
+        {actions.some((a) => !transportReady(a)) && (
           <p className="px-6 pb-2 text-xs text-muted">
-            Actions need a live console; this game has none.
+            {consoleAttachable
+              ? "Some actions need RCON; this game has none."
+              : "Actions need a live console; this game has none."}
           </p>
         )}
         {status && (
