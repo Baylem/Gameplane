@@ -997,30 +997,38 @@ func TestNetworkCapture_RetentionExpiresCompletedCapture(t *testing.T) {
 func TestNetworkCapture_RetentionTerminatesStuckRunningCapture(t *testing.T) {
 	ns := newNamespace(t)
 
+	// The manager's cache spans all namespaces (startMgr), so it also
+	// reconciles captures earlier tests left behind; count only calls for
+	// this test's namespace.
 	var mu sync.Mutex
 	stopCalls, deleteCalls, getCaptureStatusCalls := 0, 0, 0
 	stub := &StubSidecarClient{
-		stopCaptureFn: func(_ context.Context, _, _, _ string) error {
-			mu.Lock()
-			stopCalls++
-			mu.Unlock()
+		stopCaptureFn: func(_ context.Context, captureNS, _, _ string) error {
+			if captureNS == ns {
+				mu.Lock()
+				stopCalls++
+				mu.Unlock()
+			}
 			return nil
 		},
-		deleteCaptureFileFn: func(_ context.Context, _, _, _ string) error {
-			mu.Lock()
-			deleteCalls++
-			mu.Unlock()
+		deleteCaptureFileFn: func(_ context.Context, captureNS, _, _ string) error {
+			if captureNS == ns {
+				mu.Lock()
+				deleteCalls++
+				mu.Unlock()
+			}
 			return nil
 		},
 		// Count GetCaptureStatus calls to verify the retention safety net short-circuits.
-		getCaptureStatusFn: func(_ context.Context, _, _, _ string) (string, int64, int64, string, error) {
-			mu.Lock()
-			getCaptureStatusCalls++
-			mu.Unlock()
+		getCaptureStatusFn: func(_ context.Context, captureNS, _, _ string) (string, int64, int64, string, error) {
+			if captureNS == ns {
+				mu.Lock()
+				getCaptureStatusCalls++
+				mu.Unlock()
+			}
 			return "running", 0, 0, "", nil
 		},
 	}
-	startMgr(t, ns, withNetworkCaptureReconciler(stub))
 
 	gsName := "test-server-stuck"
 	if err := k8sClient.Create(context.Background(), buildCaptureGameServer(ns, gsName)); err != nil {
@@ -1045,6 +1053,11 @@ func TestNetworkCapture_RetentionTerminatesStuckRunningCapture(t *testing.T) {
 		t.Fatalf("patch capture to Running with a past startTime: %v", err)
 	}
 
+	// Start the manager only now, so no reconcile ever sees the capture
+	// Pending (that path polls the sidecar) and the first one already finds
+	// it Running past its retention window.
+	startMgr(t, ns, withNetworkCaptureReconciler(stub))
+
 	eventually(t, func() (bool, string) {
 		var got gameplanev1alpha1.NetworkCapture
 		err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: "cap-stuck-001"}, &got)
@@ -1063,14 +1076,10 @@ func TestNetworkCapture_RetentionTerminatesStuckRunningCapture(t *testing.T) {
 	if dCalls < 1 {
 		t.Error("sidecar DeleteCaptureFile was never called for the retention-expired running capture")
 	}
-	// The retention safety net may allow a single GetCaptureStatus call during the
-	// first Running-phase reconcile before expiry triggers on a subsequent reconcile,
-	// or one call in Pending phase before the test manually updates to Running.
-	// The important invariant is that the safety net prevents excessive polling of
-	// a capture that is already past its TTL. Allow up to 2 calls; more than that
-	// suggests the safety net is not triggering at all.
-	if gCalls > 2 {
-		t.Errorf("sidecar GetCaptureStatus was called %d times; retention safety net should prevent excessive polling", gCalls)
+	// The capture was already past its retention window when the manager
+	// started, so the safety net expires it without ever polling the sidecar.
+	if gCalls != 0 {
+		t.Errorf("sidecar GetCaptureStatus was called %d times; the retention safety net should expire the capture without polling it", gCalls)
 	}
 }
 
