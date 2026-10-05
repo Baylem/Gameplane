@@ -76,6 +76,21 @@ func (r *GameServerReconciler) reconcileWipe(
 		return nil
 	}
 
+	// Also verify the game pod object itself is gone, not just scaled down —
+	// a pod in Terminating state still holds the ReadWriteOnce PVC.
+	var pod corev1.Pod
+	podName := types.NamespacedName{Namespace: gs.Namespace, Name: gs.Name + "-0"}
+	switch err := r.Get(ctx, podName, &pod); {
+	case apierrors.IsNotFound(err):
+		// Pod is definitely gone.
+	case err != nil:
+		return err
+	default:
+		// Pod still exists (including Terminating state) — requeue.
+		log.FromContext(ctx).Info("data wipe requested but pod still terminating; waiting", "server", gs.Name)
+		return nil
+	}
+
 	var job batchv1.Job
 	err := r.Get(ctx, types.NamespacedName{Name: jobName, Namespace: gs.Namespace}, &job)
 	switch {

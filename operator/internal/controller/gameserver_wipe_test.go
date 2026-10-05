@@ -207,6 +207,43 @@ func TestReconcileWipe_WaitsForPodToBeGone(t *testing.T) {
 	}
 }
 
+func TestReconcileWipe_WaitsForPodObjectToBeGone(t *testing.T) {
+	s := wipeScheme(t)
+	gs := wipeGameServer(true, "tok1")
+	tmpl := &gameplanev1alpha1.GameTemplate{}
+	tmpl.Name = "mc"
+
+	// StatefulSet exists with replicas == 0 but pod still terminating.
+	ss := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "alpha",
+			Namespace: "ns",
+		},
+		Status: appsv1.StatefulSetStatus{Replicas: 0},
+	}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "alpha-0",
+			Namespace: "ns",
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{Name: "test", Image: "test"}},
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(gs, ss, pod).Build()
+	r := &GameServerReconciler{Client: cl, APIReader: cl, Scheme: s}
+	if err := r.reconcileWipe(context.Background(), gs, tmpl); err != nil {
+		t.Fatalf("reconcileWipe: %v", err)
+	}
+
+	// No wipe job should be created while the pod object exists, even with replicas == 0.
+	var job batchv1.Job
+	err := cl.Get(context.Background(), types.NamespacedName{Name: "alpha-wipe", Namespace: "ns"}, &job)
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("expected no wipe job while pod object exists, got err=%v", err)
+	}
+}
+
 func TestReconcileWipe_CreatesJobWhenPodGone(t *testing.T) {
 	s := wipeScheme(t)
 	gs := wipeGameServer(true, "tok1")
