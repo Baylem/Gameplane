@@ -271,7 +271,7 @@ function renderIntegrityBanner(query: UseQueryResult<AuditVerifyResult>): ReactN
 const VERB: Record<string, string> = {
   POST: "Created", PUT: "Updated", PATCH: "Updated", DELETE: "Deleted", GET: "Viewed",
 };
-export function auditAction(e: { method: string; path: string; target?: string }): string {
+export function auditAction(e: { method: string; path: string; target?: string; status?: number }): string {
   // Strip a leading /api/v<n> prefix so route matching is version-agnostic.
   const p = e.path.replace(/^\/api\/v\d+/, "").replace(/\/+$/, "") || "/";
   const t = e.target ? ` ${e.target}` : "";
@@ -296,7 +296,7 @@ export function auditAction(e: { method: string; path: string; target?: string }
   if (m("/modules")) return `${VERB[e.method] ?? e.method} module${t}`;
   if (m("/destinations") || m("/backup-destinations")) return `${VERB[e.method] ?? e.method} backup destination${t}`;
   if (m("/admin/config")) return "Updated settings";
-  if (m("/auth/login")) return "Signed in";
+  if (m("/auth/login")) return e.status !== undefined && e.status >= 400 ? "Failed sign-in" : "Signed in";
   if (m("/cluster")) return `${VERB[e.method] ?? e.method} cluster${t}`;
   // Fallback: verb + last path segment.
   const seg = p.split("/").filter(Boolean).pop() ?? "resource";

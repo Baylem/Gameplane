@@ -3,7 +3,9 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -49,15 +51,25 @@ type SessionStore struct {
 // NewSessionStore returns a new SessionStore.
 func NewSessionStore(store *db.Store) *SessionStore { return &SessionStore{db: store} }
 
+// sessionDigest returns the hex SHA-256 of a raw session cookie value. The
+// sessions table stores only this digest (column "token"), never the cookie
+// value, so a copy of the database cannot be replayed as a session cookie.
+// The raw value is 256 bits of CSPRNG output, so a plain unsalted hash is
+// sufficient and keeps lookup a single equality match.
+func sessionDigest(raw string) string {
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
+}
+
 // Create writes a new session row for the given user and returns the
-// values that need to go back on the response (session cookie value +
-// CSRF token).
+// values that need to go back on the response (raw session cookie value +
+// CSRF token). Only the digest of the session value is persisted.
 func (s *SessionStore) Create(ctx context.Context, userID int64) (session, csrf string, err error) {
 	session = randomToken()
 	csrf = randomToken()
 	_, err = s.db.DB.ExecContext(ctx,
 		`INSERT INTO sessions(token, user_id, csrf_token, expires_at) VALUES (?,?,?,?)`,
-		session, userID, csrf, time.Now().Add(sessionTTL).UTC().Format(time.RFC3339),
+		sessionDigest(session), userID, csrf, time.Now().Add(sessionTTL).UTC().Format(time.RFC3339),
 	)
 	return
 }
@@ -141,6 +153,7 @@ func (s *SessionStore) Authenticate(next http.Handler) http.Handler {
 }
 
 func (s *SessionStore) lookup(ctx context.Context, token string) (*User, string, error) {
+	digest := sessionDigest(token)
 	var (
 		u       User
 		csrf    string
@@ -149,7 +162,7 @@ func (s *SessionStore) lookup(ctx context.Context, token string) (*User, string,
 	err := s.db.DB.QueryRowContext(ctx, `
 		SELECT u.id, u.username, u.display_name, u.email, u.role, s.csrf_token, s.expires_at
 		FROM sessions s JOIN users u ON u.id = s.user_id
-		WHERE s.token = ?`, token,
+		WHERE s.token = ?`, digest,
 	).Scan(&u.ID, &u.Username, &u.DisplayName, &u.Email, &u.Role, &csrf, &expires)
 	if err != nil {
 		return nil, "", err
@@ -165,11 +178,11 @@ func (s *SessionStore) lookup(ctx context.Context, token string) (*User, string,
 		// session from the client's perspective — delete it and make the
 		// user log in again. Log so it's visible in ops.
 		slog.Warn("session expires_at parse", "err", perr, "value", expires)
-		_, _ = s.db.DB.ExecContext(ctx, `DELETE FROM sessions WHERE token = ?`, token)
+		_, _ = s.db.DB.ExecContext(ctx, `DELETE FROM sessions WHERE token = ?`, digest)
 		return nil, "", errors.New("session invalid")
 	}
 	if time.Now().After(exp) {
-		_, _ = s.db.DB.ExecContext(ctx, `DELETE FROM sessions WHERE token = ?`, token)
+		_, _ = s.db.DB.ExecContext(ctx, `DELETE FROM sessions WHERE token = ?`, digest)
 		return nil, "", errors.New("session expired")
 	}
 	return &u, csrf, nil
@@ -179,7 +192,7 @@ func (s *SessionStore) lookup(ctx context.Context, token string) (*User, string,
 func (s *SessionStore) HandleLogout() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		if c, err := req.Cookie(sessionCookie); err == nil {
-			_, _ = s.db.DB.ExecContext(req.Context(), `DELETE FROM sessions WHERE token = ?`, c.Value)
+			_, _ = s.db.DB.ExecContext(req.Context(), `DELETE FROM sessions WHERE token = ?`, sessionDigest(c.Value))
 		}
 		clearCookie(w, sessionCookie)
 		// The CSRF cookie is JS-readable while set (see setCSRFCookie), but

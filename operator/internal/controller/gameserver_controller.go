@@ -396,6 +396,9 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 	if err := r.reconcileWipe(ctx, &gs, &tmpl); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		logger.Error(err, "reconcile data wipe")
 		return ctrl.Result{}, err
 	}

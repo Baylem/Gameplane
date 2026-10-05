@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -383,9 +384,17 @@ func runGameBotTest(t *testing.T, s gameBotSpec) {
 //     on the agent being reachable.
 //
 //   - "stdin" (Terraria): the action is fire-and-forget pod-attach (no
-//     RCON, no reply body) — its effect only ever shows up on the game's
-//     own stdout, which is exactly what the console-pty stream carries
-//     for a consoleMode: pty template. See runControlActionStdinPTY.
+//     RCON, no reply body) — its effect only ever shows up on the
+//     container's stdout, which is exactly what the console-pty stream
+//     carries for a consoleMode: pty template. With the e2e template
+//     (no module console wrapper) nothing reads the container's stdin, so
+//     what the stream carries is the TTY line-discipline echo of the
+//     written line; the assertion therefore proves the write reached the
+//     pod through a live attach, not that the game acted on it. Because
+//     pod-attach output is live-tail only, runControlActionStdinPTY first
+//     ARMS the console-pty session (writes a probe line through the same
+//     WS and waits for its echo) before firing the action. See
+//     runControlActionStdinPTY.
 //     Neither the action write nor console-pty touch the agent sidecar —
 //     both attach via the API's own in-cluster kubeconfig against the
 //     kubelet (mountAttach/WriteStdinLines) — so this path has no
@@ -488,17 +497,25 @@ func runControlActionRCON(t *testing.T, cli *APIClient, gsName, ns string, ctrl 
 // runStdinAction's doc comment in api/internal/ws/actions.go): any effect
 // only ever shows up on the game's stdout.
 //
-// The console-pty connection is dialed and its read loop armed BEFORE the
-// action fires, not after: pod-attach output is live-tail only (nothing
-// buffers it for a client that attaches late), and the action's write goes
-// through a SEPARATE, short-lived attach session (WriteStdinLines in
-// api/internal/kube/stdin.go) rather than this one — so dialing first is
-// what keeps the marker from racing past a reader that isn't listening
-// yet. Both connections attach via the API's own in-cluster kubeconfig
-// (mountAttach in attach.go / WriteStdinLines in stdin.go), never the
-// agent sidecar's mTLS proxy — so unlike runControlActionRCON, this path
-// has no agent-unreachable failure mode at all; a read failure here means
-// the pod-attach itself broke.
+// The console-pty session is dialed AND ARMED before the action fires:
+// pod-attach output is live-tail only (nothing buffers it for a client that
+// attaches late), and the action's write goes through a SEPARATE,
+// short-lived attach session (WriteStdinLines in
+// api/internal/kube/stdin.go) rather than this one. A completed WS upgrade
+// is not enough — mountAttach (attach.go) accepts the WS first and only
+// then builds the SPDY attach to the kubelet, so the marker could race past
+// a stdout reader that does not exist yet. Arming therefore writes a unique
+// probe line as stdin through this very WS (retried periodically) and waits
+// until its TTY echo comes back on stdout, which proves this session's
+// stdout side is live. Only then is the action POSTed. One reader goroutine
+// serves the whole session (coder/websocket closes the connection when a
+// Read context expires, so per-read timeouts must not be used); the
+// arming phase and the marker wait consume the same frame channel. Both
+// connections attach via the API's own in-cluster kubeconfig (mountAttach
+// in attach.go / WriteStdinLines in stdin.go), never the agent sidecar's
+// mTLS proxy — so unlike runControlActionRCON, this path has no
+// agent-unreachable failure mode at all; a read failure here means the
+// pod-attach itself broke.
 func runControlActionStdinPTY(t *testing.T, cli *APIClient, gsName string, ctrl pathAControl) {
 	t.Helper()
 	ctx := context.Background()
@@ -506,6 +523,41 @@ func runControlActionStdinPTY(t *testing.T, cli *APIClient, gsName string, ctrl 
 
 	wsConn, stop := dialAuthedWS(t, cli, fmt.Sprintf("/ws/servers/%s/console-pty", gsName))
 	defer stop()
+
+	// One reader for the whole session; cancelled (before stop() closes the
+	// conn, LIFO) on every return path so the goroutine never leaks.
+	sessCtx, sessCancel := context.WithCancel(ctx)
+	defer sessCancel()
+	frames := startPTYReader(sessCtx, wsConn)
+
+	// Arm: the WS upgrade completes before the API's SPDY attach exists, so
+	// prove the stdout side is live by echoing a probe line through this
+	// same session before the action's separate attach fires.
+	const (
+		armTimeout  = 60 * time.Second
+		armInterval = 2 * time.Second
+	)
+	armProbe := gsName + "-arm"
+	probeFrame, mErr := json.Marshal(ptyEnvelope{
+		Kind: "stdin",
+		Body: base64.StdEncoding.EncodeToString([]byte(armProbe + "\n")),
+	})
+	if mErr != nil {
+		t.Fatalf("marshal arming probe: %v", mErr)
+	}
+	writeProbe := func() {
+		wCtx, wCancel := context.WithTimeout(sessCtx, 10*time.Second)
+		defer wCancel()
+		if wErr := wsConn.Write(wCtx, websocket.MessageText, probeFrame); wErr != nil {
+			t.Fatalf("pod attach unreachable: write arming probe %q to console-pty failed: %v", armProbe, wErr)
+		}
+	}
+	writeProbe()
+	armTimer := time.NewTimer(armTimeout)
+	defer armTimer.Stop()
+	armTick := time.NewTicker(armInterval)
+	defer armTick.Stop()
+	awaitPTYMarker(t, frames, armProbe, armTimer.C, armTick.C, writeProbe)
 
 	resp, body, err := cli.Post(
 		fmt.Sprintf("/servers/%s/actions/run", gsName),
@@ -531,35 +583,107 @@ func runControlActionStdinPTY(t *testing.T, cli *APIClient, gsName string, ctrl 
 		t.Fatalf("API rejected the action: response body reported ok=false: %s", string(body))
 	}
 
-	readCtx, readCancel := context.WithTimeout(ctx, 30*time.Second)
-	defer readCancel()
+	// Same overall 30s deadline as before, started after the action POST
+	// succeeded; same reader/frame channel as the arming phase.
+	markerTimer := time.NewTimer(30 * time.Second)
+	defer markerTimer.Stop()
+	awaitPTYMarker(t, frames, uniqueMessage, markerTimer.C, nil, nil)
+}
+
+// ptyFrame is one decoded console-pty frame handed from the reader goroutine
+// to the test goroutine. kind is "stdout" or "err"; text is the decoded
+// stdout bytes or the server's error message; err is a WS read failure.
+type ptyFrame struct {
+	kind string
+	text string
+	err  error
+}
+
+// startPTYReader runs the single long-lived console-pty reader for a session.
+// It decodes envelopes (dropping malformed/non-stdout/non-err frames), sends
+// them on the returned channel, and exits (closing the channel) on the first
+// read error or when ctx is cancelled. It never calls t. A Read ctx expiry
+// closes a coder/websocket conn, so ctx here is only the session ctx.
+func startPTYReader(ctx context.Context, ws *websocket.Conn) <-chan ptyFrame {
+	out := make(chan ptyFrame, 16)
+	go func() {
+		defer close(out)
+		for {
+			_, data, err := ws.Read(ctx)
+			var f ptyFrame
+			if err != nil {
+				f = ptyFrame{err: err}
+			} else {
+				var env ptyEnvelope
+				if json.Unmarshal(data, &env) != nil {
+					continue
+				}
+				switch env.Kind {
+				case "err":
+					f = ptyFrame{kind: "err", text: env.Body}
+				case "stdout":
+					raw, decErr := base64.StdEncoding.DecodeString(env.Body)
+					if decErr != nil {
+						continue
+					}
+					f = ptyFrame{kind: "stdout", text: string(raw)}
+				default:
+					continue
+				}
+			}
+			select {
+			case out <- f:
+			case <-ctx.Done():
+				return
+			}
+			if f.err != nil {
+				return
+			}
+		}
+	}()
+	return out
+}
+
+// awaitPTYMarker consumes frames until marker appears in the stdout stream
+// (matched across frame boundaries via a short rolling tail) and returns, or
+// fails the test on a server err envelope, a WS read error, the reader
+// stopping, or the deadline channel firing. If tick is non-nil, onTick is
+// called on each tick (used to re-send the arming probe). Must run on the
+// test goroutine (calls t.Fatalf).
+func awaitPTYMarker(t *testing.T, frames <-chan ptyFrame, marker string, deadline, tick <-chan time.Time, onTick func()) {
+	t.Helper()
+	tail := ""
 	for {
-		_, frame, err := wsConn.Read(readCtx)
-		if err != nil {
-			// mountAttach (attach.go) accepts the WS unconditionally, then
-			// writes a {"kind":"err",...} envelope before closing on any
-			// pod-attach failure (build-executor error, SPDY stream
-			// error) — so an outright Read error here means the
-			// connection dropped some OTHER way (context deadline, TCP
-			// reset), not a clean server-reported failure.
-			t.Fatalf("pod attach unreachable: console-pty WS read failed before %q appeared: %v", uniqueMessage, err)
-		}
-		var env ptyEnvelope
-		if jsonErr := json.Unmarshal(frame, &env); jsonErr != nil {
-			continue
-		}
-		if env.Kind == "err" {
-			t.Fatalf("pod attach unreachable: console-pty returned a server-side error envelope before %q appeared: %s", uniqueMessage, env.Body)
-		}
-		if env.Kind != "stdout" {
-			continue
-		}
-		raw, decErr := base64.StdEncoding.DecodeString(env.Body)
-		if decErr != nil {
-			continue
-		}
-		if strings.Contains(string(raw), uniqueMessage) {
-			return // Success: found the message on the console-pty stream.
+		select {
+		case f, ok := <-frames:
+			if !ok {
+				t.Fatalf("pod attach unreachable: console-pty reader stopped before %q appeared", marker)
+			}
+			if f.err != nil {
+				// mountAttach (attach.go) accepts the WS unconditionally, then
+				// writes a {"kind":"err",...} envelope before closing on any
+				// pod-attach failure (build-executor error, SPDY stream
+				// error) — so an outright Read error here means the
+				// connection dropped some OTHER way (TCP reset, close), not
+				// a clean server-reported failure.
+				t.Fatalf("pod attach unreachable: console-pty WS read failed before %q appeared: %v", marker, f.err)
+			}
+			if f.kind == "err" {
+				t.Fatalf("pod attach unreachable: console-pty returned a server-side error envelope before %q appeared: %s", marker, f.text)
+			}
+			buf := tail + f.text
+			if strings.Contains(buf, marker) {
+				return // Success: marker seen on the console-pty stream.
+			}
+			if keep := len(marker) - 1; len(buf) > keep {
+				tail = buf[len(buf)-keep:]
+			} else {
+				tail = buf
+			}
+		case <-tick:
+			onTick()
+		case <-deadline:
+			t.Fatalf("pod attach unreachable: console-pty WS read failed before %q appeared: timed out waiting for it on the stream", marker)
 		}
 	}
 }

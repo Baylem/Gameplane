@@ -19,6 +19,8 @@ export interface ActionParamDecl {
   default?: string;
   enum?: string[];
   required?: boolean;
+  // Status metric id whose live value pre-fills this param in the dialog.
+  currentFrom?: string;
 }
 
 // A module-declared operator action surfaced as a button on the server
@@ -320,6 +322,12 @@ export interface GameTemplate {
       required?: boolean;
       target?: "env" | "file";
       autoFromMemoryLimit?: { percent: number };
+      // Bounds mirror the CRD ConfigField: min/max apply to int fields,
+      // minLength/maxLength to string and password fields (bytes).
+      min?: number;
+      max?: number;
+      minLength?: number;
+      maxLength?: number;
     }>;
   };
   status?: { inUseCount?: number };

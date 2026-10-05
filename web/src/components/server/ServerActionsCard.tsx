@@ -1,6 +1,6 @@
 import { useResourceClient, useResourceTarget, resourceKey, useResourceAccess } from "@/lib/resourceTarget";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Backpack,
   Ban,
@@ -56,9 +56,9 @@ import {
   Description,
 } from "@heroui/react";
 
-import type { ActionParamDecl, GameServer, GameTemplate, ServerActionDecl } from "@/types";
+import type { ActionParamDecl, GameServer, GameTemplate, ServerActionDecl, StatusReading } from "@/types";
 import { type LifecycleVerb } from "@/lib/endpoints";
-import { rconAvailable } from "@/lib/capabilities";
+import { rconAvailable, resolveConsoleMode } from "@/lib/capabilities";
 import { APIError } from "@/lib/api";
 import { errorText } from "@/lib/errors";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
@@ -146,6 +146,23 @@ export function ServerActionsCard({
 
   const actions = tmpl?.spec.capabilities?.actions ?? [];
   const hasRcon = rconAvailable(tmpl);
+  // stdin-transport actions are written to the game container over pod
+  // attach (the API's runStdinAction), so they only need an attachable
+  // console (rcon or pty), not RCON. rcon-transport actions need RCON.
+  const consoleAttachable = resolveConsoleMode(tmpl) !== "none";
+  const transportReady = (a: ServerActionDecl) =>
+    resolveTransport(a, hasRcon) === "rcon" ? hasRcon : consoleAttachable;
+
+  // Live readings for params that pre-fill from a status metric. Same key as
+  // ServerStatusCard, so both share one cache entry and one poll.
+  const wantsStatus = actions.some((a) => a.params?.some((p) => p.currentFrom));
+  const { data: readings } = useQuery({
+    queryKey: resourceKey(resourceTarget, "server-status", name, ns),
+    queryFn: ({ signal }) => resourceClient.withSignal(signal).Servers.status(name, ns),
+    enabled: wantsStatus && hasRcon,
+    staleTime: 10_000,
+    retry: false,
+  });
 
   const lifecycle = useMutation({
     mutationFn: (verb: LifecycleVerb) => Servers.lifecycle(name, verb, ns),
@@ -260,7 +277,7 @@ export function ServerActionsCard({
   const renderActionButton = (a: ServerActionDecl) => {
     const Icon = actionIcon(a.icon);
     const needsDialog = (a.params?.length ?? 0) > 0 || a.confirm;
-    const disabled = !canRun || !hasRcon || run.isPending;
+    const disabled = !canRun || !transportReady(a) || run.isPending;
     return (
       <button
         key={a.id}
@@ -292,9 +309,11 @@ export function ServerActionsCard({
         <h2 className="text-base font-semibold text-foreground">Quick actions</h2>
       </CardHeader>
       <CardContent className="space-y-1 px-0 py-0">
-        {!hasRcon && (
+        {actions.some((a) => !transportReady(a)) && (
           <p className="px-6 pb-2 text-xs text-muted">
-            Actions need a live console; this game has none.
+            {consoleAttachable
+              ? "Some actions need RCON; this game has none."
+              : "Actions need a live console; this game has none."}
           </p>
         )}
         {status && (
@@ -355,6 +374,7 @@ export function ServerActionsCard({
       {active && (
         <ActionDialog
           action={active}
+          readings={readings}
           pending={run.isPending}
           onCancel={() => setActive(null)}
           onRun={(params) => run.mutate({ action: active, params })}
@@ -370,18 +390,27 @@ export function ServerActionsCard({
 // trip and to render the right input per type.
 function ActionDialog({
   action,
+  readings,
   pending,
   onCancel,
   onRun,
 }: {
   action: ServerActionDecl;
+  readings?: StatusReading[];
   pending: boolean;
   onCancel: () => void;
   onRun: (params: Record<string, string>) => void;
 }) {
   const params = action.params ?? [];
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(params.map((p) => [p.name, p.default ?? defaultFor(p)])),
+  // Only the user's edits are state. Everything else is derived per render,
+  // so a reading that lands after the dialog opened still pre-fills its
+  // input until the user picks a value themselves.
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const values: Record<string, string> = Object.fromEntries(
+    params.map((p) => [
+      p.name,
+      edits[p.name] ?? currentValue(p, readings) ?? p.default ?? defaultFor(p),
+    ]),
   );
 
   const errors = params
@@ -407,7 +436,7 @@ function ActionDialog({
                     key={p.name}
                     param={p}
                     value={values[p.name] ?? ""}
-                    onChange={(v) => setValues((prev) => ({ ...prev, [p.name]: v }))}
+                    onChange={(v) => setEdits((prev) => ({ ...prev, [p.name]: v }))}
                   />
                 ))}
                 {params.length === 0 && (
@@ -522,6 +551,27 @@ function defaultFor(p: ActionParamDecl): string {
   if (p.type === "bool") return "false";
   if (p.type === "enum") return p.enum?.[0] ?? "";
   return "";
+}
+
+// currentValue maps the live metric named by p.currentFrom onto a value the
+// input accepts, or undefined when there is no usable reading. Enum options
+// match case-insensitively: Minecraft reports "Easy" for the option "easy".
+function currentValue(p: ActionParamDecl, readings?: StatusReading[]): string | undefined {
+  if (!p.currentFrom) return undefined;
+  const raw = readings?.find((r) => r.id === p.currentFrom)?.value.trim();
+  if (!raw) return undefined;
+  switch (p.type) {
+    case "enum":
+      return p.enum?.find((o) => o.toLowerCase() === raw.toLowerCase());
+    case "bool": {
+      const b = raw.toLowerCase();
+      return b === "true" || b === "false" ? b : undefined;
+    }
+    case "int":
+      return /^-?\d+$/.test(raw) ? raw : undefined;
+    default:
+      return raw;
+  }
 }
 
 // validate returns an error string or null. Mirrors the agent's

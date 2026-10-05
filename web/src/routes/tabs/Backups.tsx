@@ -152,7 +152,7 @@ export function BackupsTab({ name, ns }: { name: string; ns?: string }) {
                   )}
                 </div>
                 <span className="text-foreground/60">
-                  Next: {formatRelative(s.status?.nextScheduleTime)}
+                  Next: {formatRelativeFuture(s.status?.nextScheduleTime)}
                 </span>
               </div>
             );

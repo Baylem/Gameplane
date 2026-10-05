@@ -884,6 +884,12 @@ export function buildScreenshotHandlers() {
     http.get("/templates/:name", ({ params }) => {
       const name = String(params.name);
       const template = data.templates.find((t) => t.metadata.name === name);
+      // Only the single-get carries a configSchema: Settings > Game
+      // configuration reads it, the wizard's list view must stay unchanged.
+      const configSchema = data.templateConfigSchemas[name];
+      if (template && configSchema) {
+        return HttpResponse.json({ ...template, spec: { ...template.spec, configSchema } });
+      }
       return HttpResponse.json(template ?? makeTemplate({ metadata: { name } }));
     }),
 
@@ -1656,7 +1662,7 @@ export function buildScreenshotHandlers() {
         {
           id: "share-1",
           createdAt: "2026-07-28T00:00:00Z",
-          expiresAt: "2026-08-04T00:00:00Z",
+          expiresAt: null,
           canStart: true,
         },
         {

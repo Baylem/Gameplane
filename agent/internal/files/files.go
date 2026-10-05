@@ -1,6 +1,9 @@
-// Package files serves the file-browser HTTP API. All paths are
-// resolved relative to a fixed root (e.g. /data) and path-traversal
-// attempts (.., symlinks escaping the root) are rejected.
+// Package files serves the file-browser HTTP API. All paths are resolved
+// relative to a fixed root (e.g. /data). The requested path is validated
+// lexically, then every operation runs relative to a directory descriptor
+// opened on that root, one component at a time with symlinks refused (see
+// rooted_linux.go), so a filesystem change made after validation cannot
+// redirect an operation outside the root.
 package files
 
 import (
@@ -21,10 +24,10 @@ import (
 )
 
 // errPathOutOfRoot is the only "bad path" error safe to echo back to the
-// client. Anything else (EvalSymlinks filesystem errors, etc.) might leak
-// absolute paths or volume internals — those get logged and 400'd with
-// a generic message. Handlers route through badRequest() so the
-// classification is enforced in one place.
+// client. Anything else (filesystem errors, etc.) might leak absolute paths or
+// volume internals — those get logged and 400'd with a generic message.
+// Handlers route through fail()/badRequest() so the classification is
+// enforced in one place.
 var errPathOutOfRoot = errors.New("path escapes root")
 
 // errDotfile rejects any path with a dot-prefixed component. Dotfiles in the
@@ -38,24 +41,16 @@ func hasDotComponent(rel string) bool {
 	return strings.HasPrefix(rel, ".") || strings.Contains(rel, "/.")
 }
 
-// resolvedHasDotComponent reports whether the symlink-resolved absolute path
-// resolved (already confirmed to be under h.root) has a dot-prefixed
-// component below the root. hasDotComponent only sees the requested path,
-// so a plain-named symlink pointing at a dotfile or into a dot-directory
-// would otherwise pass.
-func (h *handler) resolvedHasDotComponent(resolved string) bool {
-	rel, err := filepath.Rel(h.root, resolved)
-	if err != nil {
-		return true
-	}
-	if rel == "." {
-		return false
-	}
-	return hasDotComponent(filepath.ToSlash(rel))
-}
-
 type handler struct {
 	root string
+
+	// beforeOpen is a test seam. When non-nil it is called synchronously
+	// immediately before a path component is opened ("open"), before the
+	// destination of a write is inspected ("stat"), before the final rename of
+	// an atomic write ("commit") and before a non-recursive delete ("remove").
+	// dir is the slash-joined parent path below the root ("" for the root).
+	// Production code never sets it.
+	beforeOpen func(stage, dir, name string)
 }
 
 // Mount registers the file-browser HTTP handlers on the supplied router.
@@ -86,6 +81,11 @@ type Entry struct {
 	ModTime string `json:"modTime"`
 }
 
+// resolve validates the client-supplied path lexically (dot components,
+// escape from the root) and returns it joined below the root. It does not
+// touch the filesystem: symlink and dotfile-through-symlink checks happen
+// while the descriptor walk performs the operation, so there is no
+// validated-then-reopened window to race.
 func (h *handler) resolve(rel string) (string, error) {
 	rel = strings.TrimPrefix(rel, "/")
 	if rel == "" {
@@ -98,92 +98,24 @@ func (h *handler) resolve(rel string) (string, error) {
 	if !strings.HasPrefix(abs, h.root+string(os.PathSeparator)) && abs != h.root {
 		return "", errPathOutOfRoot
 	}
-	// Evaluate symlinks to block the "/data/escape -> /etc/passwd"
-	// attack: a prefix check on the raw path passes, but the real read
-	// hits the linked target. If the path doesn't exist yet (a new
-	// file about to be written), EvalSymlinks returns an error — fall
-	// back to checking the deepest existing ancestor.
-	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
-		if !strings.HasPrefix(resolved, h.root+string(os.PathSeparator)) && resolved != h.root {
-			return "", errPathOutOfRoot
-		}
-		if h.resolvedHasDotComponent(resolved) {
-			return "", errDotfile
-		}
-		return resolved, nil
-	} else if !os.IsNotExist(err) {
-		return "", err
-	}
-	// The target doesn't exist yet (a new file/dir about to be written).
-	// Walk up to the deepest ancestor that *does* exist and verify it
-	// resolves inside the root, so the symlink-escape check still holds
-	// while allowing nested creation (mkdir -p, or uploading into a new
-	// subtree). Checking only the immediate parent rejected "/one/two/file"
-	// whenever "/one" was absent, making the later MkdirAll unreachable. The
-	// loop terminates at worst at the filesystem root, which always exists.
-	for parent := filepath.Dir(abs); ; parent = filepath.Dir(parent) {
-		resolvedParent, err := filepath.EvalSymlinks(parent)
-		if err == nil {
-			if !strings.HasPrefix(resolvedParent, h.root+string(os.PathSeparator)) && resolvedParent != h.root {
-				return "", errPathOutOfRoot
-			}
-			if h.resolvedHasDotComponent(resolvedParent) {
-				return "", errDotfile
-			}
-			return abs, nil
-		}
-		if !os.IsNotExist(err) {
-			return "", err
-		}
-	}
+	return abs, nil
 }
 
-// resolveForDelete validates that path's parent directory stays inside
-// root, then returns the literal path to the named entry — the entry
-// itself, not whatever it points to. Unlike resolve, it never evaluates
-// symlinks on the final path component: a symlink must be deleted as the
-// link it is, not dereferenced to its target (F-102/F-108 audit finding
-// F-108). os.Remove/os.RemoveAll already default to that behaviour on
-// their own — the bug was handing them resolve()'s fully-EvalSymlinks'd
-// path instead of the raw one.
-func (h *handler) resolveForDelete(rel string) (string, error) {
-	rel = strings.TrimPrefix(rel, "/")
-	if rel == "" {
-		return h.root, nil
-	}
-	if hasDotComponent(rel) {
-		return "", errDotfile
-	}
-	abs := filepath.Join(h.root, filepath.Clean("/"+rel))
-	if !strings.HasPrefix(abs, h.root+string(os.PathSeparator)) && abs != h.root {
-		return "", errPathOutOfRoot
-	}
-	parent := filepath.Dir(abs)
-	resolvedParent, err := filepath.EvalSymlinks(parent)
+// components validates rel and returns its path components below the root
+// (nil for the root itself).
+func (h *handler) components(rel string) ([]string, error) {
+	p, err := h.resolve(rel)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	if !strings.HasPrefix(resolvedParent, h.root+string(os.PathSeparator)) && resolvedParent != h.root {
-		return "", errPathOutOfRoot
-	}
-	if h.resolvedHasDotComponent(resolvedParent) {
-		return "", errDotfile
-	}
-	fi, err := os.Stat(resolvedParent)
-	if err != nil {
-		return "", err
-	}
-	if !fi.IsDir() {
-		return "", fmt.Errorf("%s: not a directory", parent)
-	}
-	return filepath.Join(resolvedParent, filepath.Base(abs)), nil
+	return relComponents(h.root, p)
 }
 
 // badRequest writes a 400 with a client-safe message. errPathOutOfRoot and
-// errDotfile are the classes we echo verbatim — everything else
-// (EvalSymlinks errors, multipart parse details, etc.) is logged and
-// replaced with a generic "bad request" so filesystem/implementation
-// details stay inside the pod.
+// errDotfile are the classes we echo verbatim — everything else (filesystem
+// errors, multipart parse details, etc.) is logged and replaced with a
+// generic "bad request" so filesystem/implementation details stay inside the
+// pod.
 func (h *handler) badRequest(w http.ResponseWriter, err error) {
 	if errors.Is(err, errPathOutOfRoot) || errors.Is(err, errDotfile) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -193,47 +125,44 @@ func (h *handler) badRequest(w http.ResponseWriter, err error) {
 	http.Error(w, "bad request", http.StatusBadRequest)
 }
 
-func (h *handler) list(w http.ResponseWriter, req *http.Request) {
-	p, err := h.resolve(req.URL.Query().Get("path"))
-	if err != nil {
+// fail maps an error from path validation or a descriptor walk to a response:
+// bad-path classes are 400s via badRequest, everything else goes through
+// httpErr (404/403/500).
+func (h *handler) fail(w http.ResponseWriter, err error) {
+	if errors.Is(err, errPathOutOfRoot) || errors.Is(err, errDotfile) || errors.Is(err, errBadPath) {
 		h.badRequest(w, err)
 		return
 	}
-	ents, err := os.ReadDir(p)
+	httpErr(w, err)
+}
+
+func (h *handler) list(w http.ResponseWriter, req *http.Request) {
+	comps, err := h.components(req.URL.Query().Get("path"))
 	if err != nil {
-		httpErr(w, err)
+		h.fail(w, err)
 		return
 	}
-	out := make([]Entry, 0, len(ents))
-	for _, e := range ents {
-		// Skip dot-prefixed entries (dotfiles and dot-directories).
-		if strings.HasPrefix(e.Name(), ".") {
-			continue
-		}
-		fi, err := e.Info()
-		if err != nil {
-			continue
-		}
-		rel, _ := filepath.Rel(h.root, filepath.Join(p, e.Name()))
-		out = append(out, Entry{
-			Name:    e.Name(),
-			Path:    "/" + filepath.ToSlash(rel),
-			Size:    fi.Size(),
-			Mode:    fi.Mode().String(),
-			Dir:     fi.IsDir(),
-			ModTime: fi.ModTime().UTC().Format(time.RFC3339),
-		})
+	out, err := h.listDir(comps)
+	if err != nil {
+		h.fail(w, err)
+		return
 	}
 	httpjson.Write(w, http.StatusOK, out)
 }
 
 func (h *handler) read(w http.ResponseWriter, req *http.Request) {
-	p, err := h.resolve(req.URL.Query().Get("path"))
+	comps, err := h.components(req.URL.Query().Get("path"))
 	if err != nil {
-		h.badRequest(w, err)
+		h.fail(w, err)
 		return
 	}
-	fi, err := os.Stat(p)
+	f, err := h.openFile(comps)
+	if err != nil {
+		h.fail(w, err)
+		return
+	}
+	defer func() { _ = f.Close() }()
+	fi, err := f.Stat()
 	if err != nil {
 		httpErr(w, err)
 		return
@@ -247,16 +176,22 @@ func (h *handler) read(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "file too large; use /files/download", http.StatusRequestEntityTooLarge)
 		return
 	}
-	http.ServeFile(w, req, p)
+	http.ServeContent(w, req, fi.Name(), fi.ModTime(), f)
 }
 
 func (h *handler) download(w http.ResponseWriter, req *http.Request) {
-	p, err := h.resolve(req.URL.Query().Get("path"))
+	comps, err := h.components(req.URL.Query().Get("path"))
 	if err != nil {
-		h.badRequest(w, err)
+		h.fail(w, err)
 		return
 	}
-	fi, err := os.Stat(p)
+	f, err := h.openFile(comps)
+	if err != nil {
+		h.fail(w, err)
+		return
+	}
+	defer func() { _ = f.Close() }()
+	fi, err := f.Stat()
 	if err != nil {
 		httpErr(w, err)
 		return
@@ -266,8 +201,8 @@ func (h *handler) download(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Disposition",
-		fmt.Sprintf(`attachment; filename=%q`, filepath.Base(p)))
-	http.ServeFile(w, req, p)
+		fmt.Sprintf(`attachment; filename=%q`, fi.Name()))
+	http.ServeContent(w, req, fi.Name(), fi.ModTime(), f)
 }
 
 // maxWriteBytes caps a single /files/write body. The API-side ws proxy
@@ -287,53 +222,23 @@ const maxUploadFileBytes = 64 << 20
 const maxUploadFiles = 64
 
 func (h *handler) write(w http.ResponseWriter, req *http.Request) {
-	p, err := h.resolve(req.URL.Query().Get("path"))
+	comps, err := h.components(req.URL.Query().Get("path"))
 	if err != nil {
-		h.badRequest(w, err)
+		h.fail(w, err)
 		return
 	}
 	defer func() { _ = req.Body.Close() }()
-	dir := filepath.Dir(p)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		httpErr(w, err)
-		return
-	}
-	// Write to a temp file in the same directory, then rename it over the
-	// target only on success. os.Create truncates the target immediately,
-	// so any error after that point (ENOSPC, a body that ends early, an
-	// agent restart mid-copy) used to leave the previous file destroyed
-	// (F-102).
-	tmp, err := os.CreateTemp(dir, ".write-*")
+	body := http.MaxBytesReader(w, req.Body, maxWriteBytes)
+	// The data goes to a temp file next to the target and is renamed over it
+	// only on success, so any error after the copy starts (ENOSPC, a body that
+	// ends early, an agent restart mid-copy) leaves the previous file intact
+	// (F-102). The whole sequence runs through one parent directory descriptor.
+	err = h.writeFile(comps, func(dst io.Writer) error {
+		_, copyErr := io.Copy(dst, body)
+		return copyErr
+	})
 	if err != nil {
-		httpErr(w, err)
-		return
-	}
-	tmpName := tmp.Name()
-	_, copyErr := io.Copy(tmp, http.MaxBytesReader(w, req.Body, maxWriteBytes))
-	closeErr := tmp.Close()
-	if copyErr != nil || closeErr != nil {
-		_ = os.Remove(tmpName)
-		if copyErr != nil {
-			httpErr(w, copyErr)
-		} else {
-			httpErr(w, closeErr)
-		}
-		return
-	}
-	// Chmod before rename: preserve the existing file's mode when overwriting,
-	// else use 0o644 so the game container (different uid, shared fsGroup) can read it.
-	mode := os.FileMode(0o644)
-	if fi, err := os.Stat(filepath.Clean(p)); err == nil {
-		mode = fi.Mode().Perm()
-	}
-	if err := os.Chmod(tmpName, mode); err != nil {
-		_ = os.Remove(tmpName)
-		httpErr(w, err)
-		return
-	}
-	if err := os.Rename(tmpName, filepath.Clean(p)); err != nil {
-		_ = os.Remove(tmpName)
-		httpErr(w, err)
+		h.fail(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -350,13 +255,13 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 		h.badRequest(w, err)
 		return
 	}
-	p, err := h.resolve(req.URL.Query().Get("path"))
+	comps, err := h.components(req.URL.Query().Get("path"))
 	if err != nil {
-		h.badRequest(w, err)
+		h.fail(w, err)
 		return
 	}
-	if err := os.MkdirAll(p, 0o750); err != nil {
-		httpErr(w, err)
+	if err := h.makeDirs(comps); err != nil {
+		h.fail(w, err)
 		return
 	}
 	count := 0
@@ -390,14 +295,14 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 			h.badRequest(w, fmt.Errorf("too many files (max %d)", maxUploadFiles))
 			return
 		}
-		saveErr := savePart(h.root, p, part.FileName(), part, maxUploadFileBytes)
+		saveErr := h.storePart(comps, part.FileName(), part, maxUploadFileBytes)
 		_ = part.Close()
 		if saveErr != nil {
-			if errors.Is(saveErr, io.ErrUnexpectedEOF) || errors.Is(saveErr, errDotfile) || errors.Is(saveErr, errPathOutOfRoot) {
+			if errors.Is(saveErr, io.ErrUnexpectedEOF) {
 				h.badRequest(w, saveErr)
 				return
 			}
-			httpErr(w, saveErr)
+			h.fail(w, saveErr)
 			return
 		}
 	}
@@ -409,15 +314,27 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// savePart streams one multipart part into dir under a sanitized name,
-// refusing anything larger than limit bytes and any destination that is a
-// symlink not resolving inside root. It writes to a temp file in
-// dir first and renames it over the final name only once the copy
-// succeeds, so a failure partway through (a truncated/erroring source, or
-// an over-limit part) removes only the temp file — a pre-existing file at
-// that name is left untouched instead of being deleted (F-102).
+// savePart streams one multipart part into the directory dir (an absolute
+// path below root) under a sanitized name, refusing anything larger than
+// limit bytes and any destination that is a symlink. It is a thin wrapper
+// over handler.storePart, which does the work through directory descriptors.
 func savePart(root, dir, filename string, src io.Reader, limit int64) error {
-	// Sanitize filename — reject anything that would climb out of dir.
+	h := &handler{root: root}
+	comps, err := relComponents(h.root, dir)
+	if err != nil {
+		return err
+	}
+	return h.storePart(comps, filename, src, limit)
+}
+
+// storePart stores one upload part in the directory comps (below the root)
+// under a sanitized name. It writes to a temp file in that directory first
+// and renames it over the final name only once the copy succeeds, so a
+// failure partway through (a truncated/erroring source, or an over-limit
+// part) removes only the temp file — a pre-existing file at that name is left
+// untouched instead of being deleted (F-102).
+func (h *handler) storePart(comps []string, filename string, src io.Reader, limit int64) error {
+	// Sanitize filename — reject anything that would climb out of the directory.
 	name := filepath.Base(filename)
 	if name == "." || name == ".." || name == string(os.PathSeparator) {
 		return errors.New("invalid filename")
@@ -425,125 +342,51 @@ func savePart(root, dir, filename string, src io.Reader, limit int64) error {
 	if strings.HasPrefix(name, ".") {
 		return errDotfile
 	}
-	dstPath := filepath.Clean(filepath.Join(dir, name))
-
-	// Confine the final destination: an existing symlink at this name must resolve inside root.
-	if info, err := os.Lstat(dstPath); err == nil && info.Mode()&os.ModeSymlink != 0 {
-		// Compare against the root with its own symlinks resolved too, so a
-		// data root reached through a symlinked path still accepts in-root links.
-		realRoot, rootErr := filepath.EvalSymlinks(root)
-		if rootErr != nil {
-			return fmt.Errorf("resolve root: %w", rootErr)
-		}
-		resolved, evalErr := filepath.EvalSymlinks(dstPath)
-		if evalErr != nil || (!strings.HasPrefix(resolved, realRoot+string(os.PathSeparator)) && resolved != realRoot) {
-			return errPathOutOfRoot
-		}
-	}
-
-	tmp, err := os.CreateTemp(dir, ".upload-*")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-	// Read one byte past the cap: if that byte materializes the part is
-	// over the limit, whatever its multipart headers claimed.
-	n, err := io.Copy(tmp, io.LimitReader(src, limit+1))
-	closeErr := tmp.Close()
-	if err != nil || closeErr != nil {
-		_ = os.Remove(tmpName)
+	return h.storeIn(comps, name, ".upload-", false, func(dst io.Writer) error {
+		// Read one byte past the cap: if that byte materializes the part is
+		// over the limit, whatever its multipart headers claimed.
+		n, err := io.Copy(dst, io.LimitReader(src, limit+1))
 		if err != nil {
 			return fmt.Errorf("save %q: %w", name, err)
 		}
-		return fmt.Errorf("save %q: %w", name, closeErr)
-	}
-	if n > limit {
-		_ = os.Remove(tmpName)
-		return fmt.Errorf("file %q exceeds %d-byte limit", name, limit)
-	}
-	// Chmod before rename: preserve the existing file's mode when overwriting,
-	// else use 0o644 so the game container (different uid, shared fsGroup) can read it.
-	mode := os.FileMode(0o644)
-	if fi, err := os.Stat(dstPath); err == nil {
-		mode = fi.Mode().Perm()
-	}
-	if err := os.Chmod(tmpName, mode); err != nil {
-		_ = os.Remove(tmpName)
-		return fmt.Errorf("save %q: %w", name, err)
-	}
-	if err := os.Rename(tmpName, dstPath); err != nil {
-		_ = os.Remove(tmpName)
-		return fmt.Errorf("save %q: %w", name, err)
-	}
-	return nil
+		if n > limit {
+			return fmt.Errorf("file %q exceeds %d-byte limit", name, limit)
+		}
+		return nil
+	})
 }
 
 func (h *handler) mkdir(w http.ResponseWriter, req *http.Request) {
-	p, err := h.resolve(req.URL.Query().Get("path"))
+	comps, err := h.components(req.URL.Query().Get("path"))
 	if err != nil {
-		h.badRequest(w, err)
+		h.fail(w, err)
 		return
 	}
-	if err := os.MkdirAll(p, 0o750); err != nil {
-		httpErr(w, err)
+	if err := h.makeDirs(comps); err != nil {
+		h.fail(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *handler) del(w http.ResponseWriter, req *http.Request) {
-	p, err := h.resolveForDelete(req.URL.Query().Get("path"))
+	comps, err := h.components(req.URL.Query().Get("path"))
 	if err != nil {
-		h.badRequest(w, err)
+		h.fail(w, err)
 		return
 	}
-	if p == h.root {
+	if len(comps) == 0 {
 		http.Error(w, "refusing to delete root", http.StatusBadRequest)
 		return
 	}
-	recursive := req.URL.Query().Get("recursive") == "true"
-	if recursive {
-		// A direct request for a dot-prefixed path is denied, so a recursive
-		// delete must not remove protected descendants either.
-		if fi, lerr := os.Lstat(p); lerr == nil && fi.IsDir() {
-			if derr := checkNoDotDescendants(p); derr != nil {
-				h.badRequest(w, derr)
-				return
-			}
-		}
-	}
-	var rerr error
-	if recursive {
-		rerr = os.RemoveAll(p)
-	} else {
-		rerr = os.Remove(p)
-	}
-	if rerr != nil {
-		httpErr(w, rerr)
+	// A recursive delete refuses trees containing dot-prefixed entries, since a
+	// direct request for such a path is denied too. A symlink is deleted as the
+	// link it is, never dereferenced.
+	if err := h.removePath(comps, req.URL.Query().Get("recursive") == "true"); err != nil {
+		h.fail(w, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// checkNoDotDescendants walks the directory tree rooted at dir and returns
-// errDotfile if any dot-prefixed entry is found. Symlinks are not followed
-// (os.RemoveAll does not follow them either).
-func checkNoDotDescendants(dir string) error {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return fmt.Errorf("read %s: %w", dir, err)
-	}
-	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".") {
-			return errDotfile
-		}
-		if e.IsDir() {
-			if err := checkNoDotDescendants(filepath.Join(dir, e.Name())); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 func httpErr(w http.ResponseWriter, err error) {
@@ -559,3 +402,11 @@ func httpErr(w http.ResponseWriter, err error) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
 }
+
+// dirMode is the permission for directories the agent creates (mkdir, upload
+// and write ancestors). The game container runs as a different uid and, on
+// templates without an fsGroup, reaches the data volume only through the
+// "other" bits, so directories must be traversable (0o755) just like files are
+// readable (0o644). The gosec G301 finding for this file is scoped in
+// .golangci.yml.
+const dirMode = 0o755

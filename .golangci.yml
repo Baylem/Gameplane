@@ -57,6 +57,14 @@ linters:
       - path: (^|/)internal/mods/mods\.go$
         linters: [gosec]
         text: "G302"
+      # The agent creates directories on a volume shared with the game container,
+      # which runs as a different uid (65532 vs the game's). On templates without an
+      # fsGroup it reaches the volume only via the "other" bits, so 0o750 directories
+      # cannot be entered. Same constraint as the G302 rule above. G301 remains
+      # active everywhere else.
+      - path: (^|/)internal/(mods/mods|files/files)\.go$
+        linters: [gosec]
+        text: "G301"
       # The websocket and HTTP proxy handlers take a namespace and pod name from the
       # request path and use them to build the upstream agent URL. Both are validated as
       # DNS-1123 labels first - lowercase alphanumeric and hyphen, 63 chars max, no leading

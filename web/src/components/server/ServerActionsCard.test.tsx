@@ -112,6 +112,92 @@ describe("ServerActionsCard", () => {
     );
   });
 
+  describe("currentFrom", () => {
+    const difficultyAction: ServerActionDecl = {
+      id: "set-difficulty",
+      displayName: "Set difficulty",
+      params: [
+        {
+          name: "level",
+          displayName: "Difficulty",
+          type: "enum",
+          enum: ["peaceful", "easy", "normal", "hard"],
+          default: "normal",
+          required: true,
+          currentFrom: "difficulty",
+        },
+      ],
+    };
+
+    // routeStatus layers a /servers/s1/status answer over routeFetch.
+    function routeStatus(readings: unknown) {
+      const base = fetchMock.getMockImplementation();
+      fetchMock.mockImplementation((url: string, opts?: { method?: string; body?: string }) =>
+        url.endsWith("/servers/s1/status")
+          ? Promise.resolve(jsonRes(readings))
+          : base?.(url, opts),
+      );
+    }
+
+    it("pre-fills an enum param from its status metric, matching case-insensitively", async () => {
+      const runs: RunCall[] = [];
+      routeFetch("operator", runs);
+      routeStatus([{ id: "difficulty", value: "Easy" }]);
+      renderWithQuery(<ServerActionsCard name="s1" tmpl={tmpl([difficultyAction])} />);
+      const open = await screen.findByRole("button", { name: /set difficulty/i });
+      await waitFor(() => expect(open).not.toBeDisabled());
+      fireEvent.click(open);
+
+      // The Select trigger is a button named by its label (see the enum test above).
+      const trigger = screen.getByRole("button", { name: /difficulty/i });
+      await waitFor(() => expect(trigger).toHaveTextContent("easy"));
+      fireEvent.click(screen.getByRole("button", { name: "Run" }));
+      await waitFor(() =>
+        expect(runs).toEqual([{ id: "set-difficulty", params: { level: "easy" } }]),
+      );
+    });
+
+    it("keeps the user's choice over the live reading", async () => {
+      const runs: RunCall[] = [];
+      routeFetch("operator", runs);
+      routeStatus([{ id: "difficulty", value: "Easy" }]);
+      renderWithQuery(<ServerActionsCard name="s1" tmpl={tmpl([difficultyAction])} />);
+      const open = await screen.findByRole("button", { name: /set difficulty/i });
+      await waitFor(() => expect(open).not.toBeDisabled());
+      fireEvent.click(open);
+
+      const trigger = screen.getByRole("button", { name: /difficulty/i });
+      await waitFor(() => expect(trigger).toHaveTextContent("easy"));
+      fireEvent.click(trigger);
+      fireEvent.click(await screen.findByRole("option", { name: "hard" }));
+      await waitFor(() => expect(trigger).toHaveTextContent("hard"));
+      fireEvent.click(screen.getByRole("button", { name: "Run" }));
+      await waitFor(() =>
+        expect(runs).toEqual([{ id: "set-difficulty", params: { level: "hard" } }]),
+      );
+    });
+
+    it("falls back to the default when the reading matches no option", async () => {
+      const runs: RunCall[] = [];
+      routeFetch("operator", runs);
+      routeStatus([{ id: "difficulty", value: "Extreme" }]);
+      renderWithQuery(<ServerActionsCard name="s1" tmpl={tmpl([difficultyAction])} />);
+      await waitFor(() =>
+        expect(
+          fetchMock.mock.calls.some(([u]) => String(u).endsWith("/servers/s1/status")),
+        ).toBe(true),
+      );
+      const open = await screen.findByRole("button", { name: /set difficulty/i });
+      await waitFor(() => expect(open).not.toBeDisabled());
+      fireEvent.click(open);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Run" }));
+      await waitFor(() =>
+        expect(runs).toEqual([{ id: "set-difficulty", params: { level: "normal" } }]),
+      );
+    });
+  });
+
   it("disables actions for a viewer", async () => {
     routeFetch("viewer", []);
     renderWithQuery(
@@ -725,17 +811,66 @@ describe("ServerActionsCard", () => {
     expect(await screen.findByText("Actions")).toBeInTheDocument();
   });
 
-  // PRODUCT GAP (not fixable from the test): renderActionButton computes
-  // `disabled = !canRun || !hasRcon || run.isPending` once for every action
-  // using the game-level hasRcon, and never consults the action's own
-  // `transport`. A stdin-transport action doesn't need rcon at all, but on
-  // a template with no `spec.rcon` (hasRcon === false) the button stays
-  // permanently disabled regardless — so this scenario can never reach a
-  // click. Fixing it requires gating disabled on
-  // `resolveTransport(a, hasRcon) === "rcon" && !hasRcon` (or similar) in
-  // ServerActionsCard.tsx, which is out of scope for a test-only fix.
-  // Deleted per instructions rather than asserting behavior the source
-  // doesn't implement.
+  describe("transport gating without RCON", () => {
+    // A pty-console game with no RCON (e.g. Terraria): actions resolve to
+    // the stdin transport and are delivered over pod attach.
+    const ptyTemplate = (actions: ServerActionDecl[], consoleMode: "pty" | "none" = "pty"): GameTemplate => ({
+      metadata: { name: "terraria" },
+      spec: {
+        displayName: "Terraria",
+        game: "terraria",
+        version: "1",
+        image: "img",
+        consoleMode,
+        capabilities: { actions },
+      },
+    });
+
+    it("enables a stdin action on a pty game and reports it as sent", async () => {
+      const runs: RunCall[] = [];
+      routeFetch("operator", runs);
+      renderWithQuery(
+        <ServerActionsCard name="s1" tmpl={ptyTemplate([{ id: "save", displayName: "Save world" }])} />,
+      );
+      const btn = await screen.findByRole("button", { name: /save world/i });
+      await waitFor(() => expect(btn).not.toBeDisabled());
+      expect(screen.queryByText(/need a live console/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/need RCON/i)).not.toBeInTheDocument();
+      fireEvent.click(btn);
+      await waitFor(() => expect(runs).toEqual([{ id: "save" }]));
+      expect(await screen.findByText("Save world sent")).toBeInTheDocument();
+    });
+
+    it("keeps an rcon-transport action disabled on a pty game and explains why", async () => {
+      routeFetch("operator", []);
+      renderWithQuery(
+        <ServerActionsCard
+          name="s1"
+          tmpl={ptyTemplate([
+            { id: "save", displayName: "Save world" },
+            { id: "say", displayName: "Say hi", transport: "rcon" },
+          ])}
+        />,
+      );
+      const stdinBtn = await screen.findByRole("button", { name: /save world/i });
+      await waitFor(() => expect(stdinBtn).not.toBeDisabled());
+      expect(screen.getByRole("button", { name: /say hi/i })).toBeDisabled();
+      expect(screen.getByText("Some actions need RCON; this game has none.")).toBeInTheDocument();
+    });
+
+    it("keeps a stdin action disabled when the game has no console at all", async () => {
+      routeFetch("operator", []);
+      renderWithQuery(
+        <ServerActionsCard
+          name="s1"
+          tmpl={ptyTemplate([{ id: "save", displayName: "Save world", transport: "stdin" }], "none")}
+        />,
+      );
+      const btn = await screen.findByRole("button", { name: /save world/i });
+      expect(btn).toBeDisabled();
+      expect(screen.getByText("Actions need a live console; this game has none.")).toBeInTheDocument();
+    });
+  });
 
   it("displays API error without parsed error field fallback to body", async () => {
     const permissions = { "*": ["servers:read", "servers:write"] };

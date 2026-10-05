@@ -605,17 +605,21 @@ export function ShareLinksSection({ name, ns }: ShareLinksProps) {
                       </Chip>
                     </Table.Cell>
                     <Table.Cell>
-                      <Button
-                        variant="danger-soft"
-                        size="sm"
-                        onPress={() => {
-                          if (!access?.isOwner) return;
-                          setRevokeId(link.id);
-                          setRevokeOpen(true);
-                        }}
-                      >
-                        Revoke
-                      </Button>
+                      {getLinkStatus(link.expiresAt, link.revokedAt) === "Active" ? (
+                        <Button
+                          variant="danger-soft"
+                          size="sm"
+                          onPress={() => {
+                            if (!access?.isOwner) return;
+                            setRevokeId(link.id);
+                            setRevokeOpen(true);
+                          }}
+                        >
+                          Revoke
+                        </Button>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
                     </Table.Cell>
                   </Table.Row>
                 ))}

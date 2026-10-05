@@ -4,6 +4,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -421,6 +422,13 @@ func TestSchedule_ForbidSkipsWhileInFlight(t *testing.T) {
 	if err := k8sClient.Create(context.Background(), sched); err != nil {
 		t.Fatalf("create schedule: %v", err)
 	}
+	// A new schedule no longer fires on its first reconcile; pin
+	// LastScheduleTime so the next occurrence is overdue.
+	fiveMinAgo := metav1.NewTime(time.Now().Add(-5 * time.Minute))
+	sched.Status.LastScheduleTime = &fiveMinAgo
+	if err := k8sClient.Status().Update(context.Background(), sched); err != nil {
+		t.Fatalf("status update schedule: %v", err)
+	}
 
 	consistently(t, 1500*time.Millisecond, func() (bool, string) {
 		bs := listBackupsForSchedule(t, ns, "smp-sched")
@@ -458,6 +466,13 @@ func TestSchedule_ReplaceDeletesInFlight(t *testing.T) {
 	sched.Spec.ConcurrencyPolicy = "Replace"
 	if err := k8sClient.Create(context.Background(), sched); err != nil {
 		t.Fatalf("create schedule: %v", err)
+	}
+	// A new schedule no longer fires on its first reconcile; pin
+	// LastScheduleTime so the next occurrence is overdue.
+	fiveMinAgo := metav1.NewTime(time.Now().Add(-5 * time.Minute))
+	sched.Status.LastScheduleTime = &fiveMinAgo
+	if err := k8sClient.Status().Update(context.Background(), sched); err != nil {
+		t.Fatalf("status update schedule: %v", err)
 	}
 
 	eventually(t, func() (bool, string) {
@@ -680,6 +695,39 @@ func listBackupsForSchedule(t *testing.T, ns, schedName string) []gameplanev1alp
 		}
 	}
 	return out
+}
+
+// TestSchedule_NewScheduleDoesNotFireImmediately — a brand-new schedule whose
+// cron last ticked 30 minutes ago must wait for its next tick; it must not
+// treat that tick as a missed run (missed runs count from creation).
+func TestSchedule_NewScheduleDoesNotFireImmediately(t *testing.T) {
+	ns := newNamespace(t)
+	startMgr(t, ns, withScheduleReconciler())
+
+	if err := k8sClient.Create(context.Background(), buildResticRepoSecret(ns, "repo")); err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	// Hourly at the minute that passed 30 minutes ago: the next tick is ~30 min away.
+	minute := time.Now().Add(-30 * time.Minute).Minute()
+	cronExpr := fmt.Sprintf("%d * * * *", minute)
+	if err := k8sClient.Create(context.Background(),
+		buildBackupSchedule(ns, "smp-sched", "smp", "repo", cronExpr, nil)); err != nil {
+		t.Fatalf("create schedule: %v", err)
+	}
+
+	eventually(t, func() (bool, string) {
+		s := getSchedule(t, ns, "smp-sched")
+		if s.Status.NextScheduleTime == nil {
+			return false, "NextScheduleTime not yet set"
+		}
+		return true, ""
+	})
+	consistently(t, time.Second, func() (bool, string) {
+		if bs := listBackupsForSchedule(t, ns, "smp-sched"); len(bs) > 0 {
+			return false, "new schedule fired a Backup for a tick before its creation"
+		}
+		return true, ""
+	})
 }
 
 // freezeSchedule pins a schedule's LastScheduleTime to "now" so the

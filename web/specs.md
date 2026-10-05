@@ -107,7 +107,7 @@ The multi-slice rebuild is complete: the previous Radix-based primitives that us
 - **`ui/Sidebar.tsx` (T046, T052)** — left navigation: fixed variant (always visible on desktop) or drawer variant (mobile off-canvas). Renders nav groups + items, active route highlighting, appearance toggle footer, and user-info footer with logout. Permission gating is computed by AppLayout; Sidebar renders whatever nav items it receives.
 - **`ui/TopBar.tsx` (T047)** — horizontal header: hamburger (mobile), breadcrumb slot, cluster selector slot, global search slot, notifications slot, user menu (avatar + logout). All four slots are ReactNode — each slot component fetches its own data (no centralized fetching in TopBar).
 - **`ui/Breadcrumbs.tsx` (T048)** — route-hierarchy breadcrumbs: renders the tree path (gameplane / Servers / my-server) using `buildCrumbs` logic kept from the old AppLayout. Distinct from `ui/PageHeader.tsx`'s internal page-level breadcrumbs.
-- **`ui/NotificationsPanel.tsx` (T049)** — bell icon + popover + SSE notification list: owns the `openEventStream` subscription and local state (same as today's `Notifications()` in AppLayout). Fetching moved into the component, not centralized in AppLayout. Each watch event schedules an invalidation of its query key, and events for the same key within 500 ms (`INVALIDATE_COALESCE_MS`) share one invalidation. If a fetch for that key is already in flight when the timer fires, the invalidation waits for it to settle (re-checking every 500 ms) and then refetches. The in-flight read is never cancelled, which would starve it under a steady event stream, and its possibly pre-event result is never taken as current. Pending timers are cleared on unmount.
+- **`ui/NotificationsPanel.tsx` (T049)** — bell icon + popover + SSE notification list: owns the `openEventStream` subscription and local state (same as today's `Notifications()` in AppLayout). Fetching moved into the component, not centralized in AppLayout. Each watch event schedules an invalidation of the queries that show its kind (`queryFilterForKind` in `lib/sse.ts`: the `["templates"]` prefix, or a predicate matching the `["fleet", <kind>, …]` lists, the per-server `["resource", …, "collection", <kind>]` lists and, for servers, the server-detail `["resource", …, "server"]` query), and events of the same kind within 500 ms (`INVALIDATE_COALESCE_MS`) share one invalidation. A MODIFIED event is ignored (no notice, no invalidation) when the object's `(metadata.generation, status.phase)` signature equals the last one seen for it, which filters out the agent's ~20 s status heartbeat patches; ADDED and DELETED are always shown, DELETED forgets the signature. If a fetch for that kind is already in flight when the timer fires, the invalidation waits for it to settle (re-checking every 500 ms) and then refetches. The in-flight read is never cancelled, which would starve it under a steady event stream, and its possibly pre-event result is never taken as current. Pending timers are cleared on unmount.
 - **`ui/GlobalSearch.tsx` (T050)** — search field + results popover: owns the `useQuery` call for servers list and client-side filter. Kept from today's AppLayout.
 - **`ui/AppearanceToggle.tsx` (T052)** — three-state appearance mode selector (light/dark/system): dispatches `onChange` to parent (AppLayout), which owns the `useTheme()` hook. Uses HeroUI `ToggleButtonGroup` or fallback three-button set.
 
@@ -271,6 +271,7 @@ Six of the nine ServerDetail tabs are rebuilt in this slice:
    - Interactive RCON/PTY terminal (xterm.js, lazy-loaded, NOT rebuilt — uses existing engine)
    - LoadingCard during template resolution (line 28); ErrorCard if no console available (line 35)
    - Uses ui/ LoadingCard, ErrorCard only (lines 4–5); console I/O engine unchanged
+   - Command bar under the terminal (`ConsoleShell.tsx`): Send or Enter submits; ArrowUp/ArrowDown recall the last 100 commands sent from this tab (consecutive repeats collapsed), and ArrowDown past the newest restores the unsent line. History lives per mount and is not persisted
 
 4. **Logs** (`web/src/routes/tabs/Logs.tsx`, 299 lines)
    - Pod stdout or configured game log file stream (WebSocket, NOT rebuilt — uses existing engine)
@@ -284,6 +285,8 @@ Six of the nine ServerDetail tabs are rebuilt in this slice:
    - Create folder/file dialogs via HeroUI Modal/ModalBackdrop/ModalContainer/ModalDialog/ModalHeader/ModalBody/ModalFooter (lines 9–19)
    - Delete confirmation via ui/ ConfirmDialog (line 35, used at line 408)
    - Error display via ui/ ErrorBanner (line 36, used at line 261)
+   - Folder rows carry a trash button (on row hover or focus on desktop, always visible on mobile) that opens the same delete confirmation without opening the folder
+   - The new file/folder name prompt explains a rejected name inline ("Names can't contain "/" or be "." or "..".") and marks the input `aria-invalid`; Create stays disabled
    - Monaco editor unchanged
 
 6. **Players** (`web/src/routes/tabs/Players.tsx`, 386 lines)
@@ -313,10 +316,11 @@ Console input/output and Logs streaming use existing bidirectional WebSocket (co
 - **WipeServerDialog.tsx** (123 lines) — Wipe-world confirmation from the HeroUI `AlertDialog` family plus `Checkbox` (import lines 3–14) — not ui/ConfirmDialog
 - **DeleteServerDialog.tsx** (52 lines) — Delete server confirmation via ui/ ConfirmDialog (line 2)
 - **ServerStatusCard.tsx** (73 lines) — Status summary card in Overview tab, built on HeroUI Card (line 3); displays "—" when the agent reports no game version instead of falling back to template name
-- **ServerActionsCard.tsx** (487 lines) — Lifecycle action card in Overview tab; HeroUI Button/Card/CardHeader/CardContent/Modal family/Input/Label/Select/ListBox/ListBoxItem/Checkbox/Description/FieldError (import lines 20–39)
+- **ServerActionsCard.tsx** (487 lines) — Lifecycle action card in Overview tab; HeroUI Button/Card/CardHeader/CardContent/Modal family/Input/Label/Select/ListBox/ListBoxItem/Checkbox/Description/FieldError (import lines 20–39). A param with `currentFrom` is pre-filled from that status metric's live reading (shared `server-status` query; enum options match case-insensitively), falling back to `default`; the user's edits always take precedence. A button is enabled by its action's resolved transport (mirroring the API): stdin actions (explicit `transport: stdin`, or no transport on a game without RCON) only need an attachable console (`consoleMode` not `none`), rcon actions need RCON; when some action is blocked a hint says why
 - **ServerSleepCard.tsx** (170 lines) — Server sleep/idle state summary; HeroUI Card/Alert (line 2) plus a `Chip` re-exported from ui/PhaseChip (line 6)
 - **EventList.tsx** (43 lines) — Kubernetes event list renderer, used from both Events.tsx (line 6) and Overview.tsx (line 12)
 - **PortOverridesEditor.tsx** (80 lines) — Port configuration helper; HeroUI Input/Button (line 1) (Settings tab, deferred)
+- **ConfigFields.tsx** — `ConfigFieldInput`/`ConfigFields`: schema-driven config field renderer shared by the Create wizard (variant `wizard`, stacked) and Settings > Game configuration (variant `settings`: label-left rows, required marker, write-only passwords, file note, inline errors); native selects for enum and bool, text input with numeric keyboard for int
 
 ### Design Import Rule (FR-012)
 
@@ -528,7 +532,7 @@ Every file in slice 2b imports **only** from `@heroui/react` and `@/components/u
 - Validation (`validateStep`): tunnel credentials required if tunnel enabled; frp requires a server address, at least one complete port mapping, and port numbers in 1–65535 (server port too, when set); no client-side check on the LoadBalancer address/CIDR fields themselves
 
 **Step 5 — Review & Confirmation:**
-- Display-only summary of all prior steps' selections (name, template, version, config values, networking, tunnel)
+- Display-only summary of all prior steps' selections (name, template, version, config values, networking, tunnel). Values of password-type template config fields are shown as `********` (`maskPasswordConfig`, `web/src/lib/validation.ts`), never as typed text; the create payload is unchanged. The API never returns stored GameServer passwords (it sends the marker `__gameplane_redacted__`; see `api/specs.md`), so no screen may render a password-type `spec.config` value or that marker. The Settings tab's whole-`spec` PUT (`mergeDraftOntoLatest`) deliberately echoes the marker back: the API keeps the stored value for it.
 - "Create server" button triggers POST to `/servers` endpoint
 - Error display if creation fails (network error, validation error, server name conflict)
 - On success, redirect to ServerDetail page for new server
@@ -753,6 +757,7 @@ package.json                # @gameplane/web v0.2.0-beta.8; dev: vite, npm scrip
 - Root route → `<Outlet>`
 - Login route (`/login`) → public, unauthenticated
 - App layout (`/app-layout`) → contains all authenticated pages
+- Catch-all (`$` splat child of the app layout) → `NotFoundPage` ("Page not found", button "Go to dashboard") rendered inside the app shell; the layout's auth guard (401 → `/login`) applies, so unauthenticated visitors never see the page, and `/login` and `/share/$token` still match first. The breadcrumb reads "Page not found".
 
 **Top-level Pages:**
 
@@ -807,6 +812,7 @@ package.json                # @gameplane/web v0.2.0-beta.8; dev: vite, npm scrip
 9. **AdminSettings** (`/admin`) → `AdminSettingsPage` (gated by `config:manage` permission)
    - Sections: General (version, telemetry), Authentication (OIDC providers), Mod registries (API keys),
      Notification sinks (Discord/Slack/SMTP/webhook), Backup destinations
+   - **General:** Instance name is optional. It names this install on the Cluster page and in notifications, which fall back to "Gameplane" when it is blank
    - **Section save semantics:** each config section edits a local draft (`useSectionForm`). Nothing is stored until
      that section's Save; leaving the section discards the draft.
    - **Managed Secrets:** the API-managed Secrets behind identity providers (`gameplane-auth-<name>`), keyed mod
@@ -898,7 +904,7 @@ The warning is shown regardless of how many groups are being added (single or mu
     - Public, unauthenticated, no sidebar or top bar
     - Resolves a share link token to its public view (server name, status, address, player count if exposed)
     - Rate-limited; all errors (404, 429, auth) map to neutral "Link not available" message per FR-005
-    - Five states: loading (spinner), up (server online), asleep-start (sleeping, can start), asleep-viewonly (sleeping, view-only), starting (waking up), invalid (link unavailable)
+    - Five states: loading (spinner), up (server online), asleep-start (sleeping, can start), asleep-viewonly (sleeping, view-only), starting ("starting up" copy, shown both after a visitor's Start and for an ordinary start), invalid (link unavailable)
     - Respects stored appearance preference (light/dark/system); no theme toggle shown
     - Uses HeroUI Card, Button, Chip, Spinner; brand header with ShieldCheck icon; address copy button
     - Built directly from HeroUI primitives; no ui/ atom components
@@ -933,10 +939,11 @@ namespace, name and UID before providing access through `ResourceTargetProvider`
 
 ## ServerDetail Settings Sub-sections
 
-Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sections in a left sidebar (`SECTIONS` array):
+Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sections in a left sidebar (`SECTIONS` array; a 13th, Game configuration, is inserted after Version when the template declares a `configSchema`):
 
 1. **General** — Server name, description, game-icon image field with placeholder from template's image or "(template image)" when no template
 2. **Version** — Template version selector (triggers container restart)
+2a. **Game configuration** — `GameConfigSection` (`web/src/routes/tabs/settings/GameConfig.tsx`), key `config`, shown only when `template.spec.configSchema` has entries (or the server still carries `spec.config` keys, so stray keys can be removed). Edits `draft.spec.config` through the tab's shared draft/Save footer; renders fields with the shared `ConfigFields` (`web/src/components/server/ConfigFields.tsx`, variant `settings`). An unset key means the template default (or the auto value); a value equal to the schema default removes the key, and an emptied map is written as `undefined` (never `{}`). Client validation (`validateConfig`, `web/src/lib/validation.ts`): required, enum, int (whole number, min/max), bool, string/password length; failures show inline and disable Save through `onValidityChange` (the operator stays authoritative; the API does not validate against the schema). Password fields are write-only: the API returns the marker `__gameplane_redacted__` for a stored password, the input is empty with the placeholder "Unchanged — type to replace" and a "Write-only" note, the marker is never rendered, stays in the draft until the user types (the PUT then keeps the stored value) and typing replaces it. `target: file` fields carry a "Written to file" note. Keys present in `spec.config` but absent from the schema are listed with a "Remove" button ("No longer in the template") because the operator rejects unknown keys. An info alert states that saving restarts the server (always; there is no apply-later mode). When `status.conditions[type=Ready].message` starts with `invalid config:` a danger alert shows it. Without `servers:write` (`access.canWrite`) the fields are disabled, the alert is hidden and the footer shows "You need permission to change this server's settings." instead of Discard/Save.
 3. **Resources** — CPU request/limit, memory request/limit (Kubernetes resource specs)
 4. **Networking** — Service type (ClusterIP/NodePort/LoadBalancer), LoadBalancer hostname, address pool / explicit address request, port overrides. Tunnel validation (`tunnel.enabled`, provider-specific config, credentials) is computed during render and reported via `onValidityChange` callback in an effect; local field state for `addressPool` and `address` is held in `useState` — so consecutive edits within one render are cumulative rather than each recomputing against the same stale `net` snapshot — and is re-seeded from props by two complementary mechanisms: on identity change, via a parent `key` remount; and in-render, whenever the incoming values differ by value from the last synced pair (so a save round-trip or a reload that returns changed values for the *same* server is picked up).
 5. **Environment** — Custom env var key=value pairs
@@ -947,7 +954,7 @@ Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sec
 10. **RBAC & access** — Server owner + collaborator list, permission inheritance. The `setCollaborators` mutation runs unconditionally at component render (not gated by an early return), so hook invocation order is consistent. The mutation's namespace is derived from the GameServer's `metadata.namespace` (or `gameplane-games` as fallback); when no server is loaded, the mutation returns early without calling the API. On success, the mutation invalidates the `["server", gs.metadata.name]` query cache, clears input state, and resets errors; on error, it sets a locally-rendered error message and does not clear input, allowing retry.
 11. **Danger zone** — Wipe world data (confirm-dialog), transfer ownership (confirm-dialog), delete server (confirm-dialog); no Clone action (`web/src/routes/tabs/settings/Danger.tsx`)
 
-**Share links (T179):** Mounted in `Settings.tsx` by slice 5 (`ShareLinksSection`). `ShareLinksSection` (`web/src/routes/tabs/settings/ShareLinks.tsx`). Create/list/revoke share links per server; table shows Created, Expires, Can start capability (view-only vs. can-start), Status (Active/Expired/Revoked). The status shows Revoked when revokedAt is set, regardless of expiry state. Create dialog opens to set expiry and start permission; success shows Created dialog with full URL and one-time copy prompt (token hashed server-side and unrecoverable after close). Revoke dialog (AlertDialog danger) confirms destruction. Empty state when no links exist. Visible only to users with the API-enforced permission (owner/admin create/revoke, viewers see list read-only if API permits). Uses HeroUI Modal/ModalBackdrop/ModalContainer/ModalDialog/ModalHeader/ModalHeading/ModalBody/ModalFooter, AlertDialog family, Button, Table, Select, ListBox, ListBoxItem, Label, Description, Switch, Chip.
+**Share links (T179):** Mounted in `Settings.tsx` by slice 5 (`ShareLinksSection`). `ShareLinksSection` (`web/src/routes/tabs/settings/ShareLinks.tsx`). Create/list/revoke share links per server; table shows Created, Expires, Can start capability (view-only vs. can-start), Status (Active/Expired/Revoked). The status shows Revoked when revokedAt is set, regardless of expiry state. Create dialog opens to set expiry and start permission; success shows Created dialog with full URL and one-time copy prompt (token hashed server-side and unrecoverable after close). Revoke dialog (AlertDialog danger) confirms destruction. Empty state when no links exist. Visible only to users with the API-enforced permission (owner/admin create/revoke, viewers see list read-only if API permits). Uses HeroUI Modal/ModalBackdrop/ModalContainer/ModalDialog/ModalHeader/ModalHeading/ModalBody/ModalFooter, AlertDialog family, Button, Table, Select, ListBox, ListBoxItem, Label, Description, Switch, Chip. Only Active links show a Revoke button; Expired and Revoked rows show "—" (design xCJlu).
 
 **Configurable expiry (feature 017, `ShareLinks.tsx`):** The expiry selector offers exactly six choices — 15 days, 30 days, 60 days, 90 days, No expiry, Custom (date picker) — with 30 days pre-selected, replacing the old fixed 24h/7d/30d/90d menu and its "Maximum 90 days" help text. Selecting "No expiry" shows the warning "This link works until you revoke it." and sends `neverExpires: true`. Selecting "Custom" shows a date picker restricted to dates strictly after today (no maximum); choosing a date 365 days or more out additionally shows "Long-lived link — it stays valid for over a year unless you revoke it." Presets and the custom date are converted client-side to an absolute RFC3339 instant (a custom date is valid through 23:59:59 in the owner's local time) and sent as `expiresAt`; the dialog never sends the deprecated `expiresIn`. The Expires column renders "Never" for a link with `expiresAt: null`, and such a link is never shown as "Expired".
 
@@ -1074,13 +1081,13 @@ openEventStream(opts: EventStreamOptions)
 - Connects to `/events` (EventSource, auto-reconnect on transient close)
 - Each frame is a Kubernetes watch event: `{ kind, eventType, object }`
 - Frames are parsed as JSON; malformed frames are silently dropped
-- Closes the stream when the tab becomes hidden (document.hidden); clears pending retries and reconnects when visible, calling onReconnect
+- Closes the stream when the tab becomes hidden (document.hidden); clears pending retries and reconnects when visible, calling onReconnect. A tab that is already hidden when `openEventStream` is called (opened in the background) does not connect at all until it first becomes visible
 - Manual reconnect on onerror (after 3s backoff) if the browser closed the stream
 - No-op fallback if EventSource is undefined (jsdom, ancient browser)
 
 **Used by:**
 - Global event listener in `main.tsx` or a provider component
-- Invalidates TanStack Query caches on MODIFIED/DELETED (watches servers, templates, backups, schedules, restores)
+- Invalidates the TanStack Query caches that show the event's kind (watches servers, templates, backups, schedules, restores) via `queryFilterForKind`; it never invalidates a whole `["fleet"]` or `["resource"]` prefix
 - Powers notifications panel (shows recent activity)
 
 **Note:** SSE does not thread cluster context (local only, for now).
@@ -1094,7 +1101,7 @@ openEventStream(opts: EventStreamOptions)
 5. **Pre-auth privacy** — login page and unauthenticated screens leak no internal state (rule 3, CLAUDE.md)
 6. **Fix, not silence** — ESLint / TypeScript flags are fixed at source, never suppressed inline (rule 4, CLAUDE.md)
 7. **Operator is authoritative** — business logic lives in the operator; the dashboard is a pure view layer
-8. **Generic, template-driven rendering** — Game configuration (Create Server steps, Settings tab) and status (Overview metrics) render via the template's declared schema (`spec.configSchema`, `spec.capabilities.status.metrics`, etc.), with no per-game branching; the surface works identically for every game type (FR-024)
+8. **Generic, template-driven rendering** — Game configuration (Create Server steps, Settings tab) and status (Overview metrics) render via the template's declared schema (`spec.configSchema`, `spec.capabilities.status.metrics`, etc.), with no per-game branching; the surface works identically for every game type (FR-024). The Create wizard's Configure step and Settings > Game configuration share one field renderer, `ConfigFields` (`web/src/components/server/ConfigFields.tsx`)
 
 ## Dependencies
 

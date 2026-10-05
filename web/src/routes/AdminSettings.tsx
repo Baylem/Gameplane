@@ -289,7 +289,7 @@ function GeneralSection({ initial }: { initial?: GeneralCfg }) {
         </>
       }
     >
-      <Field label="Instance name" hint="Shown in the UI and OIDC replies.">
+      <Field label="Instance name" hint="Optional. Names this install on the Cluster page and in notifications.">
         <HeroInput
           value={f.draft.instanceName}
           onChange={(e) => f.update({ instanceName: e.target.value })}

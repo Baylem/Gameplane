@@ -221,6 +221,15 @@ spec:
                             description: ActionParamSpec is a single input collected
                               before running an action.
                             properties:
+                              currentFrom:
+                                description: |-
+                                  CurrentFrom names a status metric (spec.capabilities.status.metrics[].id)
+                                  whose live value pre-fills this input in the dashboard dialog, so a
+                                  "set" action opens on the current setting. Default applies when the
+                                  metric has no reading or (for Type=enum) no option matches it.
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+                                type: string
                               default:
                                 description: Default is the pre-filled value (as a
                                   string).

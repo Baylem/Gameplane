@@ -2465,3 +2465,37 @@ The kept copies moved into the freed slots so their rows stay contiguous, and on
 The second Settings set at x ≥ 30440 (`uCA23`, `VctzT`, `iLm38`, `QpEvu`, `XR0f9`) was not touched. Those screens are not duplicates; their content differs from the originals.
 
 After the cleanup there are 217 top-level frames and 0 overlaps.
+
+## Live-sweep UX pass (2026-10-05)
+
+These are the design-first changes for the four UX findings from the 2026-10-04 kubelab live sweep that needed a design before code. One new top-level frame was added, so the document now has 218 top-level frames. It does not overlap any other frame.
+
+| Object | Name | Change |
+| --- | --- | --- |
+| `EcoGD` | Screen/Share Link — Starting | The body copy says "The server is starting up…" instead of "…waking up…". The old copy was wrong for a normal start that no visitor triggered. |
+| `WZdnw` | Screen/Admin Settings | The Instance name hint (`E8BwC`) now reads "Optional. Names this install on the Cluster page and in notifications." The field is optional, and the API never used it in OIDC replies. |
+| `Burtr` | Screen/Server Detail — Files | Row `WdtR2` ("logs") is shown in its hover state. A small ghost `trash-2` button (`ccokq`, in `kHLhx`) replaces its Size cell, so folders can be deleted. Clicking a folder row still opens the folder. |
+| `oMuyw` | Gameplane/Dialog/New File (Invalid name) | **New**, an instance of `JLaGB` placed to its right. The input shows `../escape.txt` with a danger stroke, an 11px danger error line under it, and the dimmed Create button. |
+| `JLaGB`, `I9W8z` | Gameplane/Dialog/New File, New Folder | The primary button reads "Create". Before, it inherited "Run snapshot" from the base modal `x3beP`. |
+| `Xn5ns` | Screen/Server Detail — Console | Adds the command bar (`bdXV9`) that the code already renders, under the terminal. It has a full-width input with the placeholder "Type a command… (↑/↓ recalls history)" and a small primary Send button with no icon. |
+
+- **JSON:** made with `Print(JSON.stringify(Get(id, {depth: 30, includePathGeometry: true})))` and re-serialized with `jq .`. Zero `"..."` elisions, and `jq empty` passes.
+- **Screenshots:** made with `Export(ids, "png", …)` at 2× scale.
+- **Not changed, for a follow-up:** `Jpl8j` (Clone Server) and `NVN2r` (Transfer Ownership) still carry the "Run snapshot" label in their exports.
+
+## Sweep-2 design pass (2026-10-05)
+
+Server Settings gets a "Game configuration" section (edit `spec.config` from the template's configSchema) and the app gets a Not Found screen. The first-pass frames `FgBPr`, `Yes8M`, `F88zp2`, `EHzj3` and `bAWsF` were deleted and rebuilt; their stale exports are removed. All new frames are copies of `uCA23` (Settings · General), so header, tabs, sub-nav, and form and footer layout are inherited.
+
+| Object ID | Name | Change |
+| --- | --- | --- |
+| `OC804` | Screen/Server Detail — Settings · Game configuration | **New.** Sub-nav item "Game configuration" is active. Title and description ("Settings from this server's game template. Saving restarts the server."). Fields: World name `Gameplane`, Difficulty select `Expert`, Max players `8`, PvP select `false`, Server password (empty, placeholder "Unchanged — type to replace", helper "Write-only"), MOTD `Welcome to Gameplane` (helper "Written to serverconfig.txt"). Warning alert "Saving changes restarts the server so they apply." directly under the section header. |
+| `QFEg9` | Screen/Server Detail — Settings · Game configuration (Invalid value) | **New.** Max players shows `900` with a danger border and the danger helper "Must be between 1 and 255."; Save changes is dimmed (disabled). |
+| `wxINm` | Screen/Server Detail — Settings · Game configuration (Read-only) | **New.** All inputs and selects dimmed (disabled); the restart alert is removed; the footer buttons are replaced by the muted text "You need permission to change this server's settings." |
+| `e9FnC` | Screen/Server Detail — Settings · Game configuration (Orphaned key) | **New.** Extra row `OLD_SETTING` = `legacy` with muted helper "No longer in the template" and a small ghost "Remove" button. The frame is 960 px tall (the extra row does not fit in 900). |
+| `Ne5TA` | Screen/Not Found | **New.** Authenticated shell (App Sidebar, Top Bar with breadcrumb "Page not found"). Centred empty state: 48 px circular muted badge with lucide `compass`, title "Page not found", body "The page you're looking for doesn't exist or has moved.", primary button "Go to dashboard". No cluster names, versions or counts in the body. |
+| `EV8mp` | Gameplane/Server Settings Sub Nav | **Changed.** Added `snGameConfig` "Game configuration" as the 3rd item (after Version). JSON and PNG re-exported. Active state is set by instance override on each screen. |
+
+- **JSON:** made with `Print(JSON.stringify(Get(id, {depth: 30, includePathGeometry: true})))` and re-serialized with `jq .`. Zero `"..."` elisions, and `jq empty` passes.
+- **Screenshots:** `Export(ids, "png", …, {scale: 2})`.
+- **Re-exported for the sub-nav change:** PNGs of `swxkJ`, `E0ypH`, `J5pjJ3`, `ugDSa`, `i1bLR`, `KaRFX`, `Y5cmvI`, `VfB0Y`, `i8wib`, `xCJlu`, `RodrS`, `VctzT`, `iLm38`, `QpEvu`, `XR0f9`, `nGJE1`, `dhPtX`, `tSOeI`, `y3YcQ`, `EKJyM`, `IMSD5`, `gWqMD` and `EV8mp`; JSON of `Y5cmvI` and `J5pjJ3` (they were out of date with the canvas).

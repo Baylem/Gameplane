@@ -8,14 +8,15 @@ point. Assume:
 - the login page is enumerable by any scanner,
 - cluster-internal attackers may land a pod in `gameplane-games` via a
   compromised game image (Minecraft plugins, Valheim mods, etc.),
-- the game pods themselves should be treated as low-trust.
+- the game pods themselves should be treated as low-trust,
+- a dashboard user with only `servers:read` must not be able to read game passwords (RCON, admin or server passwords) out of a GameServer.
 
 ## Authentication
 
 Two modes, configurable independently:
 
 - **Local accounts** — argon2id (64 MiB, t=3, p=2) password hashing.
-  Session cookies are HttpOnly, Secure, SameSite=Lax. CSRF protection
+  Session cookies are HttpOnly, Secure, SameSite=Lax. The database stores only a SHA-256 digest of the session cookie value, so a leaked database or backup does not yield usable session cookies; the digest itself is rejected if presented as a cookie. CSRF protection
   via a double-submit `X-Gameplane-CSRF` header on mutating requests.
 - **OIDC** — Keycloak, Google, GitHub, any RFC-7519 compliant IdP.
   State validated through a short-lived cookie; `id_token` signature
@@ -192,6 +193,28 @@ repeats the check, so a caller who is no longer the owner is refused, and
 after three conflicting attempts the request fails with 409. Backups,
 restore jobs, schedules, and events remain namespace-gated in this release.
 
+## GameServer config passwords
+
+`GameServer.spec.config` holds wizard values as stored in Kubernetes, including
+the values of `type: password` fields of the template's `configSchema`. The API
+never returns those in clear: every response that carries a GameServer
+(`/servers`, `/servers/{name}` including create/update replies, `:clone`,
+`/users/me/servers`, `/fleet/servers` and the `/events` stream) replaces each
+non-empty password value with the marker `__gameplane_redacted__`, through one
+helper (`api/internal/handlers/config_redact.go`). If the GameTemplate cannot be
+read, every config value is redacted (fail closed).
+
+On `PUT /servers/{name}` a password value equal to the marker keeps the stored
+value, a different non-empty value replaces it, and an empty string clears it
+only when the field is optional (a required field keeps its value); a required
+password omitted from the body is restored. Share links, capture, mods, tunnel
+credentials, notifications, WebSockets and the audit log (which never records
+request bodies) do not carry `spec.config`.
+
+Residual exposure: anyone who can read the GameServer object through the
+Kubernetes API (kubectl, GitOps tooling, the optional read-only `mcp-server`)
+still sees the stored values; restrict that with cluster RBAC.
+
 ## Share links
 
 Share links (`api/internal/db/shares.go`, schema in `api/internal/db/migrations/sqlite/006_share_links.sql`, Postgres twin in `migrations/postgres/`) grant unauthenticated, token-bearing access to a single GameServer's status and connection address, optionally with permission to wake it. Because they are unauthenticated, their security rests entirely on the token being both hard to guess and hard to recover if the database or a backup leaks.
@@ -223,6 +246,8 @@ cert. Agent refuses plain-HTTP traffic when TLS material is present.
 
 Fallback: a shared-secret bearer token via `--api-token-file`. Only
 intended for local `kind` development where mTLS is overkill.
+
+**Console-injection guard.** Free text folded into an RCON/stdin command (module action string params and player kick/ban reasons) passes through `gameaction.CheckText`, which rejects ASCII control characters and the metacharacters ; & | $ ` \ " '. The agent applies it independently of the API.
 
 ## NetworkPolicies
 
@@ -421,6 +446,35 @@ Verification and pinning are opt-in. A source with neither is trusted to
 serve a `GameTemplate` whose image/command runs in your cluster — only point
 Gameplane at module sources you trust, and prefer signed, pinned installs for
 third-party games. Authoring details: [`module-authoring.md`](module-authoring.md).
+
+## Agent file browser (path confinement)
+
+The agent's `/files/*` routes (list, read, download, write, upload, mkdir,
+delete) operate on the game data volume and are reachable by anyone who can
+use the dashboard file browser, while the game container (a different uid)
+can create symlinks on the same volume. The agent therefore treats the data
+directory contents as untrusted and does not trust a path it validated
+earlier:
+
+- The requested path is validated lexically (no `..` escape, no dot-prefixed
+  component) and every operation then runs relative to a directory descriptor
+  opened on the data root, opening one component at a time with
+  `openat(O_NOFOLLOW)`. A symlink at any component is refused (HTTP 400); there
+  is no "follow it if it stays inside the root" case.
+- Reads, writes, creates and deletes use the descriptors they obtained
+  (`fstatat`, `mkdirat`, `unlinkat`, `renameat`, serving from the opened file)
+  and never re-open an absolute path, so swapping a checked directory or file
+  for a symlink between validation and use cannot redirect the operation out of
+  the root. Writes are atomic: temp file in the parent descriptor, `fsync`,
+  `renameat` in the same directory.
+- Recursive delete walks descriptors and unlinks links as links; it refuses
+  trees that contain dot-prefixed entries (agent state such as the mods
+  manifest).
+- The data-root path itself is operator-configured and trusted (it may be a
+  symlink); only components below it are checked.
+
+The mods package confines its own paths separately (`ConfinePath`/`ConfineRelPath`)
+and does not use this descriptor walk.
 
 ## Runtime mod installs (agent)
 

@@ -14,6 +14,7 @@ import {
   Settings as SettingsIcon,
   ShieldCheck,
   Sliders,
+  SlidersHorizontal,
   Variable,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ import { errorText } from "@/lib/errors";
 
 import { GeneralSection } from "./settings/General";
 import { VersionSection } from "./settings/Version";
+import { GameConfigSection } from "./settings/GameConfig";
 import { ResourcesSection } from "./settings/Resources";
 import { NetworkingSection } from "./settings/Networking";
 import { EnvVarsSection } from "./settings/EnvVars";
@@ -40,6 +42,7 @@ const PlacementSection = lazy(() =>
 type SectionKey =
   | "general"
   | "version"
+  | "config"
   | "resources"
   | "networking"
   | "env"
@@ -54,6 +57,7 @@ type SectionKey =
 const SECTIONS: { key: SectionKey; label: string; icon: typeof SettingsIcon }[] = [
   { key: "general",    label: "General",       icon: SettingsIcon },
   { key: "version",    label: "Version",       icon: Layers },
+  { key: "config",     label: "Game configuration", icon: SlidersHorizontal },
   { key: "resources",  label: "Resources",     icon: HardDrive },
   { key: "networking", label: "Networking",    icon: Network },
   { key: "env",        label: "Environment",   icon: Variable },
@@ -188,10 +192,23 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
     if (savedAt) setSavedAt(null);
   };
 
-  // The Version section only exists for templates with a version catalog.
-  const sections = SECTIONS.filter(
-    (s) => s.key !== "version" || (template?.spec.versions?.length ?? 0) > 0,
-  );
+  // The Version section only exists for templates with a version catalog;
+  // Game configuration only for templates with a configSchema (or when the
+  // server still carries config keys that need removing, because the operator
+  // rejects unknown keys).
+  const sections = SECTIONS.filter((s) => {
+    if (s.key === "version") return (template?.spec.versions?.length ?? 0) > 0;
+    if (s.key === "config") {
+      return (
+        (template?.spec.configSchema?.length ?? 0) > 0 ||
+        Object.keys(draft.spec.config ?? {}).length > 0
+      );
+    }
+    return true;
+  });
+  // Without servers:write the Game configuration section is view-only and the
+  // footer shows a note instead of Discard/Save.
+  const readOnlyConfig = section === "config" && !access?.canWrite;
 
   return (
     <div className="flex h-full">
@@ -218,6 +235,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
         <div className="flex-1 overflow-auto p-6 scrollbar-thin">
           {section === "general"    && <GeneralSection    draft={draft} onChange={onChangeDraft} template={template} />}
           {section === "version"    && <VersionSection    draft={draft} onChange={onChangeDraft} template={template} />}
+          {section === "config"     && <GameConfigSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={setSectionValid} />}
           {section === "resources"  && <ResourcesSection  draft={draft} onChange={onChangeDraft} template={template} />}
           {section === "networking" && <NetworkingSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={setSectionValid} />}
           {section === "env"        && <EnvVarsSection    draft={draft} onChange={onChangeDraft} template={template} />}
@@ -270,7 +288,13 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
               {!conflict && !error && !dirty && savedAt && (
                 <span className="text-muted">Saved.</span>
               )}
+              {readOnlyConfig && (
+                <span className="text-muted">
+                  You need permission to change this server&apos;s settings.
+                </span>
+              )}
             </div>
+            {!readOnlyConfig && (
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -288,6 +312,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
                 {save.isPending ? "Saving…" : "Save changes"}
               </Button>
             </div>
+            )}
           </footer>
         )}
       </div>

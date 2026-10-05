@@ -295,6 +295,40 @@ describe("BackupsTab", () => {
     expect(await screen.findByText(/Next backup/i)).toBeInTheDocument();
   });
 
+  describe("schedule row next run", () => {
+    const scheduleWithNext = (next?: string) =>
+      http.get("/schedules", () =>
+        HttpResponse.json({
+          items: [
+            makeSchedule({
+              spec: { serverRef: { name: "alpha" }, schedule: "0 3 * * *", suspend: false },
+              status: next ? { nextScheduleTime: next } : {},
+            }),
+          ],
+        }),
+      );
+
+    it("shows a future next run as 'in <interval>', not 'ago'", async () => {
+      const next = new Date(Date.now() + 3 * 3600 * 1000 + 60_000).toISOString();
+      server.use(scheduleWithNext(next));
+      renderWithQuery(<BackupsTab name="alpha" />);
+      expect(await screen.findByText("Next: in 3h")).toBeInTheDocument();
+      expect(screen.queryByText(/Next: .*ago/)).not.toBeInTheDocument();
+    });
+
+    it("shows 'due' when the next run time has passed", async () => {
+      server.use(scheduleWithNext("2020-01-01T00:00:00Z"));
+      renderWithQuery(<BackupsTab name="alpha" />);
+      expect(await screen.findByText("Next: due")).toBeInTheDocument();
+    });
+
+    it("shows a dash when the schedule has no next run time", async () => {
+      server.use(scheduleWithNext(undefined));
+      renderWithQuery(<BackupsTab name="alpha" />);
+      expect(await screen.findByText("Next: —")).toBeInTheDocument();
+    });
+  });
+
   it("calculates total size from all backups", async () => {
     server.use(
       http.get("/backups", () =>

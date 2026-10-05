@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import type { JSX } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryFilters } from "@tanstack/react-query";
 import {
   Popover,
   Card,
 } from "@heroui/react";
 import { Bell } from "lucide-react";
-import { openEventStream, queryKeyForKind, type GameplaneEvent } from "@/lib/sse";
+import { openEventStream, queryFilterForKind, type GameplaneEvent } from "@/lib/sse";
 
 interface Notice {
   id: number;
@@ -21,6 +21,12 @@ const INVALIDATE_COALESCE_MS = 500;
 // state (see the doc comment below). Kept as a named type so callers and
 // future props have a stable place to land.
 export type NotificationsPanelProps = Record<string, never>;
+
+// phaseOf reads status.phase off a watch object ("" when absent).
+function phaseOf(obj: GameplaneEvent["object"] | undefined): string {
+  const status = obj?.status as { phase?: unknown } | undefined;
+  return typeof status?.phase === "string" ? status.phase : "";
+}
 
 /**
  * NotificationsPanel opens the /events SSE stream: each watch event
@@ -41,21 +47,40 @@ export function NotificationsPanel(): JSX.Element {
     // steady event stream would starve it), but it may predate the event, so
     // the invalidation waits for it to settle and then refetches.
     const pending = new Map<string, ReturnType<typeof setTimeout>>();
-    const flush = (id: string, key: string[]) => {
-      if (qc.isFetching({ queryKey: key }) > 0) {
-        pending.set(id, setTimeout(() => flush(id, key), INVALIDATE_COALESCE_MS));
+    const flush = (id: string, filters: QueryFilters) => {
+      if (qc.isFetching(filters) > 0) {
+        pending.set(id, setTimeout(() => flush(id, filters), INVALIDATE_COALESCE_MS));
         return;
       }
       pending.delete(id);
-      void qc.invalidateQueries({ queryKey: key }, { cancelRefetch: false });
+      void qc.invalidateQueries(filters, { cancelRefetch: false });
+    };
+    // Agent heartbeats patch status.agent every ~20 s per server, which
+    // arrives as MODIFIED with no spec or phase change. Remember each
+    // object's (generation, phase) signature and drop a MODIFIED that leaves
+    // it unchanged: it neither notifies nor invalidates (the pollers cover
+    // heartbeat-only fields). ADDED and DELETED always pass.
+    const seen = new Map<string, string>();
+    const isMeaningful = (ev: GameplaneEvent): boolean => {
+      const meta = ev.object?.metadata;
+      const key = `${ev.kind}/${meta?.namespace ?? ""}/${meta?.name ?? ""}`;
+      if (ev.eventType === "DELETED") {
+        seen.delete(key);
+        return true;
+      }
+      const sig = `${meta?.generation ?? ""}/${phaseOf(ev.object)}`;
+      const prev = seen.get(key);
+      seen.set(key, sig);
+      return ev.eventType !== "MODIFIED" || prev !== sig;
     };
     const dispose = openEventStream({
       onEvent: (ev: GameplaneEvent) => {
-        const key = queryKeyForKind(ev.kind);
-        if (key) {
-          const id = key.join("/");
+        if (!isMeaningful(ev)) return;
+        const filters = queryFilterForKind(ev.kind);
+        if (filters) {
+          const id = ev.kind;
           if (!pending.has(id)) {
-            pending.set(id, setTimeout(() => flush(id, key), INVALIDATE_COALESCE_MS));
+            pending.set(id, setTimeout(() => flush(id, filters), INVALIDATE_COALESCE_MS));
           }
         }
         const name = ev.object?.metadata?.name ?? "";

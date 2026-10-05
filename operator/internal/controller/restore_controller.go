@@ -280,7 +280,7 @@ func (r *RestoreReconciler) buildRestorePodSpec(
 			// anything under --target. --include /data pins that scope
 			// to the same subtree the companion backup captures, so the
 			// restore both lands and prunes only inside /data.
-			Args: []string{"restore", rs.Status.SnapshotID, "--target", "/", "--delete", "--include", "/data"},
+			Args: []string{"restore", rs.Status.SnapshotID, "--target", "/", "--delete", "--include", "/data", "--retry-lock", "10m"},
 			Env: []corev1.EnvVar{
 				{Name: "RESTIC_REPOSITORY", ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
