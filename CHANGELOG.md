@@ -49,6 +49,7 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 ### Added
 
+- **Configurable backup/restore Job limits:** the restic backup and restore Jobs' retry limit and deadline are now Helm values (`operator.backupJobBackoffLimit`, default `2`; `operator.backupJobActiveDeadlineSeconds`, default `86400`), passed to the operator as `--backup-job-backoff-limit` / `--backup-job-active-deadline-seconds`.
 - **Multicluster gateways and unified server management:** an optional
   private mTLS agent gateway (with its own Helm deployment) lets one dashboard
   and API manage authorized game servers across independent clusters.
