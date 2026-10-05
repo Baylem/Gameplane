@@ -61,6 +61,7 @@ rules:
   - gameplane.local
   resources:
   - backups
+  - modules
   verbs:
   - get
   - list
@@ -106,16 +107,6 @@ rules:
   verbs:
   - create
   - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - gameplane.local
-  resources:
-  - modules
-  verbs:
   - get
   - list
   - patch

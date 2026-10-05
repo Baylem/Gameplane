@@ -21,7 +21,7 @@ const (
 // sent the matching unquiesce. Without it, deleting a Backup while
 // quiesce-attempted=true drops the unquiesce entirely and the game is left
 // with auto-save off indefinitely (F-048). Added only for Backups with
-// spec.quiesce=true; see backup_controller.go's finalizeDelete.
+// spec.quiesce=true; see backup_forget.go's finalizeDelete.
 const BackupFinalizer = "gameplane.local/backup-finalizer"
 
 // BackupSnapshotFinalizer blocks the deletion of a restic-strategy Backup until

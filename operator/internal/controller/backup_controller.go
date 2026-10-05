@@ -600,7 +600,7 @@ func (r *BackupReconciler) setUnquiescedCondition(
 	return r.Status().Update(ctx, b)
 }
 
-// finalizeDelete runs on a Backup marked for deletion. It releases a
+// finalizeUnquiesce is stage 1 of finalizeDelete (see backup_forget.go). It releases a
 // quiesced world (F-048) before letting the finalizer clear and the
 // apiserver garbage-collect the object — without it, deleting a Backup
 // while quiesce-attempted=true drops the unquiesce entirely and the game
@@ -616,23 +616,6 @@ func (r *BackupReconciler) setUnquiescedCondition(
 // pod alone being gone, e.g. the StatefulSet pod was deleted independently)
 // and releases the finalizer immediately when there's nothing left to
 // unquiesce — a freshly (re)started pod comes up with auto-save on. When the
-// finalizeDelete runs on a Backup marked for deletion, in two stages. Stage 1
-// (finalizeUnquiesce) releases a quiesced game world; stage 2 (finalizeSnapshot)
-// forgets the restic snapshot. Unquiesce goes first because it is time
-// critical: a world left with auto-save off is worse than an orphaned snapshot.
-func (r *BackupReconciler) finalizeDelete(ctx context.Context, b *gameplanev1alpha1.Backup) (ctrl.Result, error) {
-	if controllerutil.ContainsFinalizer(b, gameplanev1alpha1.BackupFinalizer) {
-		res, err := r.finalizeUnquiesce(ctx, b)
-		if err != nil || res.RequeueAfter > 0 {
-			return res, err
-		}
-	}
-	if !controllerutil.ContainsFinalizer(b, gameplanev1alpha1.BackupSnapshotFinalizer) {
-		return ctrl.Result{}, nil
-	}
-	return r.finalizeSnapshot(ctx, b)
-}
-
 // target is still around but the agent stays unreachable, the retry is
 // bounded by maxUnquiesceFinalizeRetry so a persistently broken agent can't
 // block deletion forever either; past that window a Warning event is
