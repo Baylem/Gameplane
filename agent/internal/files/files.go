@@ -158,14 +158,7 @@ func (h *handler) read(w http.ResponseWriter, req *http.Request) {
 	}
 	f, err := h.openFile(comps)
 	if err != nil {
-		switch {
-		case errors.Is(err, os.ErrNotExist):
-			http.Error(w, "404 page not found", http.StatusNotFound)
-		case errors.Is(err, os.ErrPermission):
-			http.Error(w, "403 Forbidden", http.StatusForbidden)
-		default:
-			h.fail(w, err)
-		}
+		h.fail(w, err)
 		return
 	}
 	defer func() { _ = f.Close() }()
@@ -194,14 +187,7 @@ func (h *handler) download(w http.ResponseWriter, req *http.Request) {
 	}
 	f, err := h.openFile(comps)
 	if err != nil {
-		switch {
-		case errors.Is(err, os.ErrNotExist):
-			http.Error(w, "404 page not found", http.StatusNotFound)
-		case errors.Is(err, os.ErrPermission):
-			http.Error(w, "403 Forbidden", http.StatusForbidden)
-		default:
-			h.fail(w, err)
-		}
+		h.fail(w, err)
 		return
 	}
 	defer func() { _ = f.Close() }()
