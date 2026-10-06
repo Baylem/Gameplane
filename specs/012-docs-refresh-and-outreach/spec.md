@@ -209,7 +209,7 @@ An evaluator exploring the Gameplane README wants to see what the dashboard look
 
 ## Out of Scope
 
-- **Changes to website/ submodule**: The public marketing website (gameplane-website repo) is out of scope. This feature covers only README.md and docs/ in the main repo.
+- **Changes to website/ submodule**: The public marketing website (gameplane-website repo) is out of scope, except the website screenshot sync (OD-16), which captures and updates website screenshots on the gameplane-website repo via a separate workflow step.
 
 - **Changes to product code, CRDs, or charts**: This feature documents what ships, not what will ship.
 
@@ -224,6 +224,20 @@ An evaluator exploring the Gameplane README wants to see what the dashboard look
 - **Audit of optional components' expanded coverage**: capture-sidecar, tunnel, audit-syslog-bridge, telemetry-receiver, mcp-server, and sentinel component READMEs are audited for accuracy, but expanding their coverage in core docs is not required.
 
 - **Full rewrite of architectural documentation**: docs/architecture.md is audited for accuracy, but complete restructuring is not required unless the existing structure is inaccurate.
+
+---
+
+## Amendment (2026-10-07): Website Screenshot Sync
+
+This amendment extends the screenshot-refresh workflow to the public website repo (gameplane-website) per maintainer ruling OD-16. The following requirements apply exclusively to the website screenshot capture phase and do not affect the main-repo screenshot deliverables (FR-015 through FR-019).
+
+**FR-026**: The screenshot-refresh workflow MUST include a dedicated step that captures five dashboard screenshots for the gameplane-website repo at 1440×900 viewport with deviceScaleFactor 2 (2880×1800 PNG RGBA): dashboard home, servers list, console, backups index, modules catalog. Output directory: `web/website-screenshots/` (repo-local, gitignored).
+
+**FR-027**: The workflow step MUST open or update a pull request on the gameplane-website main branch, copying the five captured PNGs to `src/assets/screenshots/{dashboard,servers,console,backups,modules}.png` in the website clone.
+
+**FR-028**: If the `WEBSITE_SCREENSHOT_BOT_PAT` repository secret is not configured, the website step MUST log a `::notice::` message and exit 0, keeping the overall workflow run green. The secret is fine-grained PAT scoped to gameplane-website only, with Contents + Pull requests write permission.
+
+**FR-029**: The workflow MUST NEVER push directly to the gameplane-website main branch. All changes MUST be submitted via pull request, which is the only path to main (main branch is protected and auto-deploys GitHub Pages).
 
 ---
 

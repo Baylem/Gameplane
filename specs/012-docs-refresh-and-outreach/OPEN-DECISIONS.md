@@ -1,8 +1,8 @@
 # Open Decisions
 
-**Status**: All fifteen decisions ruled on 2026-09-02; none remain open.
+**Status**: All sixteen decisions ruled (OD-1 through OD-15 on 2026-09-02; OD-16 on 2026-10-07); none remain open.
 
-All open questions documented here arise from the feature spec (spec.md), CLAUDE.md guidance, constitution principles, or research findings (R1–R8) that could not be resolved without maintainer judgment. This document is the authoritative list of everything blocking detailed planning and implementation.
+All open questions documented here arise from the feature spec (spec.md), CLAUDE.md guidance, constitution principles, research findings (R1–R8), or maintainer amendments that could not be resolved without maintainer judgment. This document is the authoritative list of everything blocking detailed planning and implementation.
 
 ---
 
@@ -521,6 +521,30 @@ Should alt text for live-stream tabs (Console, Logs) explicitly note "mocked dat
 
 ---
 
+## Amendment: OD-16
+
+### OD-16: Website screenshot sync — credential and workflow scope
+
+**Status**: RULED 2026-10-07
+
+**Question**: The screenshot-refresh workflow (OD-3c, ruled 2026-09-02) captures dashboard screenshots for the main Gameplane repo (docs/img/). Should the workflow also capture screenshots for the public website (the separate gameplane-website repository) and open PRs there to keep them synchronized?
+
+**Why it matters**: The website displays dashboard UI screenshots to market the product. Currently these are Pencil design renders (outdated). Automating website screenshot sync ensures both repos use current UI captures on every release, improving marketing consistency and reducing manual work.
+
+**Evidence**:
+- spec.md Out of Scope: "website/ is out of scope (exception: OD-16 website screenshot sync)"
+- OD-3c (ruled 2026-09-02): Screenshot refresh workflow exists for main repo docs/img/
+- Maintainer ruling 2026-10-07: Extend screenshot refresh to gameplane-website
+
+**Ruling (2026-10-07)**: The screenshot-refresh workflow EXTENDS to the gameplane-website repo. Maintained separately from the main-repo screenshots per the maintainer's contract ruling, this extends OD-3c/OD-13 and does NOT alter OD-13's token (this repo only). Website screenshot capture is governed by a NEW fine-grained PAT secret (`WEBSITE_SCREENSHOT_BOT_PAT`) scoped to gameplane-website only, with Contents + Pull requests write permission. When the secret is empty the website step logs a `::notice::` and exits 0, keeping the run green. The workflow ALWAYS opens or updates a PR against gameplane-website main and NEVER pushes to main (main auto-deploys GitHub Pages and is protected). The five website screenshots are captured by a separate Playwright spec (web/e2e/specs/websiteScreenshots.spec.ts), distinct from the dashboard-screenshots spec, at 1440×900 viewport with deviceScaleFactor 2 (= 2880×1800 PNG RGBA), output to web/website-screenshots/ (repo path; gitignored). The workflow copies these PNGs to the website clone at src/assets/screenshots/ ({dashboard,servers,console,backups,modules}.png) and opens/updates a PR on gameplane-website main.
+
+**Blocks**:
+- .github/workflows/screenshot-refresh.yaml amendment (extend to website)
+- web/e2e/specs/websiteScreenshots.spec.ts creation
+- specs/012-docs-refresh-and-outreach amendment (OD-16, FRs, contracts, tasks)
+
+---
+
 ## Summary Table
 
 | ID | Title | Blocks | Status |
@@ -540,12 +564,13 @@ Should alt text for live-stream tabs (Console, Logs) explicitly note "mocked dat
 | OD-13 | Credential for the automatic screenshot-refresh pull request | OD-3c workflow credential | RULED |
 | OD-14 | Allowlist marker for historical version references | OD-1 script, SC-005 gate | RULED |
 | OD-15 | First screenshot capture path (CI dispatch only) | FR-015/016/017, capture task | RULED |
+| OD-16 | Website screenshot sync — credential and workflow scope | workflow-refresh amendment, websiteScreenshots.spec | RULED |
 
 ---
 
 ## Notes for Implementation
 
-1. **All fifteen decisions ruled on 2026-09-02; none remain open** — OD-1 through OD-15 are settled and ready for implementation.
+1. **All sixteen decisions ruled** — OD-1 through OD-15 ruled 2026-09-02; OD-16 ruled 2026-10-07; none remain open, ready for implementation.
 2. **Recommended defaults are proposals, not decisions** — each recommendation is clearly labelled and may be overridden.
 3. **Evidence is path:line traceable** — every claim cites the spec, research files, codebase, or constitution.
 4. **Interdependencies exist** — OD-3 (screenshot environment) affects captured data freshness; OD-2 (link checking) enables SC-006 validation; OD-1/2 together determine pre-merge CI gates.

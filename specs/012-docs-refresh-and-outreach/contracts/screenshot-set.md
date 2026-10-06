@@ -403,6 +403,46 @@ Use this checklist **before merging** the screenshot commits (D-F, per constitut
 
 ---
 
+## Website Set (OD-16)
+
+**Amendment (2026-10-07)**: Website screenshot sync extends the screenshot-refresh workflow to capture five dashboard screenshots for the gameplane-website repo. These are separate from the dashboard screenshots documented in the "Scope: Six Existing Screenshots" and "Scope: At Least Five New Screenshots" sections above.
+
+### Scope: Website Screenshots (OD-16, FR-026)
+
+The following five PNG files are captured for the gameplane-website repo at 2880×1800 PNG RGBA format (1440×900 viewport with deviceScaleFactor 2).
+
+| # | Filename | Route | Component | Purpose | Alt Text | Format |
+|---|---|---|---|---|---|---|
+| 1 | `dashboard.png` | `/` | `DashboardPage` | Fleet health overview | Fleet health at a glance: running/stopped/failed server counts, cluster CPU/memory/storage, node status | 2880×1800 PNG |
+| 2 | `servers.png` | `/servers` | `ServersPage` | Server list table | Every game server, one list: live status, CPU, memory, node placement | 2880×1800 PNG |
+| 3 | `console.png` | `/servers/mc-survival (Console tab)` | `ServerDetail` Console tab | Live xterm.js streaming output | Live streaming console: game server stdout output | 2880×1800 PNG |
+| 4 | `backups.png` | `/backups` | Backups page | Backup management and restore interface | Backups page: backup list with status, size, timestamps; restore button | 2880×1800 PNG |
+| 5 | `modules.png` | `/modules` | Modules catalog | Game module registry browser | Modules catalog: grid of game modules, download counts | 2880×1800 PNG |
+
+### Capture Method (OD-16, FR-026)
+
+Website screenshots are captured by a dedicated Playwright spec `web/e2e/specs/websiteScreenshots.spec.ts` (separate from the dashboard spec `web/e2e/specs/screenshots.spec.ts`). The spec:
+- Uses MSW mock-mode API responses (same mocked data as dashboard screenshots)
+- Sets viewport to 1440×900 with deviceScaleFactor 2 (resulting in 2880×1800 PNG)
+- Captures as PNG (not JPEG, for transparency and precision)
+- Outputs to `web/website-screenshots/` (repo-local, gitignored)
+
+### Website Workflow Integration (OD-16, FR-027, FR-028, FR-029)
+
+The `.github/workflows/screenshot-refresh.yaml` workflow includes a step that:
+1. Runs `web/e2e/specs/websiteScreenshots.spec.ts` to capture the five PNGs
+2. Clones the gameplane-website repo
+3. Copies the five PNGs to `src/assets/screenshots/{dashboard,servers,console,backups,modules}.png`
+4. Opens or updates a pull request on gameplane-website main branch (never pushes directly to main)
+5. Uses the `WEBSITE_SCREENSHOT_BOT_PAT` fine-grained PAT secret (scoped to gameplane-website only)
+6. If the secret is unconfigured, logs a `::notice::` and exits 0 (keeping the run green)
+
+### Dummy Data (FR-019, OD-16)
+
+Website screenshots follow the same dummy-data rules as dashboard screenshots (test server names, generic cluster names, no real hostnames/IPs). The captured UI layout and components are identical; only the viewport and format differ.
+
+---
+
 ## References
 
 - **Specification**: `/home/user/Gameplane/specs/012-docs-refresh-and-outreach/spec.md` (FR-015 through FR-019, SC-009 through SC-011)
