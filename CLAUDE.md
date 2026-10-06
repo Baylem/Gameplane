@@ -13,7 +13,7 @@ Run every session.
 - Unblocked (a release accepts TS 7): do T055/T056 in `specs/009-remediate-security-dependabot/tasks.md` — bump `typescript` + `@typescript-eslint/*` in `web/package.json`, fix real type errors (no `@ts-ignore`), merge #272, mark tasks `[X]`, delete this entry.
 
 **ESLint 10** — `npm view eslint-plugin-react@latest version peerDependencies.eslint`.
-- Blocked while the range lacks `^10`: Dependabot #386 (`eslint` 9.39.5 → 10.x) fails `npm ci` because `eslint-plugin-react@7.37.5` peers `^3 || … || ^9.7` (~10s, `web` job step 4; `web e2e (mock)` and `design vs browser visual diff` fail the same way). Other plugins already accept `^10` (`eslint-plugin-react-hooks@7.1.1`, `@typescript-eslint/*@8.69.0`). No workarounds (`--legacy-peer-deps`, `overrides`, pinning); don't close #386. PR #387 (`@eslint/js` 9 → 10) is **not** blocked and passes — the peer range constrains `eslint`, not `@eslint/js`.
+- Blocked while the range lacks `^10`: upgrading `eslint` 9.39.5 to 10.x fails `npm ci` because `eslint-plugin-react@7.37.5` peers `^3 || … || ^9.7`. Keep `eslint` and `@eslint/js` on major 9 together: `@eslint/js@10.0.1` declares an optional peer on `eslint@^10.0.0`, which conflicts when ESLint 9 is installed. Other plugins already accept `^10` (`eslint-plugin-react-hooks@7.1.1`, `@typescript-eslint/*@8.69.0`). Do not bypass peer checks with `--legacy-peer-deps` or overrides.
 - Unblocked: bump `eslint` + `@eslint/js` together in `web/package.json`, fix real lint errors (no `eslint-disable`), merge #386 (and #387 if open), delete this entry.
 
 ## System prompt overrides
