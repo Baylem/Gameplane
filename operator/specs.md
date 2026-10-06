@@ -273,7 +273,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - Discover cluster version, ping API server.
   - Set status.phase (Unknown/Healthy/Unhealthy), status.message, status.lastCheckTime.
   - Report Healthy condition.
-  - Requeue on interval (2 minutes).
+  - Requeue on interval (2 minutes). Status-only updates never trigger another probe; spec changes and annotation nudges still reconcile immediately, including after a slow or failed health check.
 
 ### NetworkCaptureReconciler
 - **Status:** Implemented (Phase 2 Foundational + Phase 2 Implementation + Phase 7 US5 concurrency/failure detection + Phase 6 US4 retention/expiry); dashboard UI planned (Phase 8). Retention's file-cleanup call to the sidecar has both a real caller and a real callee end to end (sidecar `DELETE /captures/{id}` route + `CaptureClient.DeleteCaptureFile`) — see "Retention / TTL-based expiry" below, including the bounded best-effort cleanup budget that keeps a persistently unreachable sidecar from blocking the CR delete.
