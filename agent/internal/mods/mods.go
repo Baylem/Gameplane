@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -296,7 +297,34 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 	// 1 MiB of multipart-framing headroom; the exact per-file cap is
 	// enforced on the copy below.
 	req.Body = http.MaxBytesReader(w, req.Body, maxBytes+(1<<20))
-	file, hdr, err := req.FormFile("file")
+	reader, err := req.MultipartReader()
+	if err != nil {
+		httpjson.Error(w, http.StatusBadRequest, `multipart form with a "file" field is required`)
+		return
+	}
+	// Stream into the mounted mods directory. FormFile spills large uploads
+	// to the system temp directory, which is read-only in the sidecar.
+	// Preserve ReadForm's default part-count bound as well as the byte cap.
+	parts := 0
+	errTooManyParts := errors.New("too many multipart parts")
+	nextPart := func() (*multipart.Part, error) {
+		part, partErr := reader.NextPart()
+		if partErr != nil {
+			return nil, partErr
+		}
+		parts++
+		if parts > 1000 {
+			return nil, errTooManyParts
+		}
+		return part, nil
+	}
+	file, err := nextPart()
+	for err == nil && (file.FormName() != "file" || file.FileName() == "") {
+		if _, err = io.Copy(io.Discard, file); err != nil {
+			break
+		}
+		file, err = nextPart()
+	}
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
@@ -308,7 +336,7 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 	}
 	defer func() { _ = file.Close() }()
 
-	name, err := safeName(hdr.Filename)
+	name, err := safeName(file.FileName())
 	if err != nil {
 		httpjson.Error(w, http.StatusBadRequest, err.Error())
 		return
@@ -332,10 +360,28 @@ func (h *handler) upload(w http.ResponseWriter, req *http.Request) {
 	tmpName := tmp.Name()
 	n, err := io.Copy(tmp, io.LimitReader(file, maxBytes+1))
 	closeErr := tmp.Close()
+	// Consume remaining parts before publishing, preserving the request cap
+	// and rejecting truncated multipart bodies without using a temp directory.
+	for err == nil && n <= maxBytes {
+		part, nextErr := nextPart()
+		if errors.Is(nextErr, io.EOF) {
+			break
+		}
+		if nextErr != nil {
+			err = nextErr
+			break
+		}
+		_, err = io.Copy(io.Discard, part)
+	}
 	if err != nil || closeErr != nil || n > maxBytes {
 		_ = os.Remove(tmpName)
-		if n > maxBytes {
+		var tooLarge *http.MaxBytesError
+		if n > maxBytes || errors.As(err, &tooLarge) {
 			httpjson.Error(w, http.StatusRequestEntityTooLarge, "mod exceeds the size limit")
+			return
+		}
+		if errors.Is(err, errTooManyParts) {
+			httpjson.Error(w, http.StatusBadRequest, "too many multipart parts")
 			return
 		}
 		slog.Warn("mod upload copy", "err", err, "closeErr", closeErr)
@@ -545,6 +591,12 @@ func (h *handler) swapInArchive(tmpZip, folder string, maxBytes int64) error {
 	if err := unzipInto(tmpZip, staging, maxBytes); err != nil {
 		_ = os.RemoveAll(staging)
 		return err
+	}
+	// MkdirTemp creates 0700 directories. The game container uses another
+	// uid and needs to traverse the installed archive root.
+	if err := os.Chmod(staging, moduleDirMode); err != nil {
+		_ = os.RemoveAll(staging)
+		return fmt.Errorf("chmod archive root: %w", err)
 	}
 	// Use ConfinePath to validate and resolve the final path within h.dir.
 	// ConfinePath consolidates validation and symlink resolution in one function,
