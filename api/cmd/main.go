@@ -154,6 +154,20 @@ func main() {
 	}
 	cfg.trustedProxies = validProxies
 
+	// Resolve where telemetry goes once, now: a bad default endpoint or an
+	// interval below one minute is a configuration error, not something to
+	// discover at the first report.
+	if cfg.telemetryInterval < time.Minute {
+		logger.Error("invalid --telemetry-interval (minimum 1m)", "value", cfg.telemetryInterval.String())
+		os.Exit(1)
+	}
+	telemetryDest, err := telemetry.ResolveDestination(cfg.telemetryDisabled, cfg.telemetryEndpoint, cfg.telemetryBundled)
+	if err != nil {
+		logger.Error("resolve telemetry destination", "err", err)
+		os.Exit(1)
+	}
+	logger.Info("telemetry destination", "kind", telemetryDest.Kind, "host", telemetryDest.Host)
+
 	store, err := db.Open(ctx, cfg.dbDriver, cfg.dbDSN)
 	if err != nil {
 		logger.Error("open db", "err", err)
@@ -387,9 +401,10 @@ func main() {
 		ws.Mount(p, reg, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey, ws.AgentGatewayOptions{Namespace: cfg.namespace})
 	})
 
-	// Opt-in, off-by-default anonymous usage telemetry. No-op unless an
-	// endpoint is configured AND the admin enabled the sendMetrics toggle.
-	go telemetry.New(store, k8s, cfg.telemetryEndpoint, cfg.telemetryAuth, Version, 24*time.Hour).Run(ctx)
+	// Anonymous usage telemetry. No-op when the resolved destination is
+	// disabled or none (an empty URL), or when the admin turned the
+	// sendMetrics toggle off.
+	go telemetry.New(store, k8s, telemetryDest.URL, cfg.telemetryAuth, Version, cfg.telemetryInterval).Run(ctx)
 
 	// Opt-in audit-event retention. Off by default (0 days = keep forever);
 	// when set, a daily sweep prunes events past the window so the table
@@ -483,6 +498,10 @@ type config struct {
 
 	telemetryEndpoint      string
 	telemetryAuth          string
+	telemetryDisabled      bool
+	telemetryBundled       bool
+	telemetryInterval      time.Duration
+	officialModuleSource   string
 	clusterOps             bool
 	clusterExternalAddress string
 	updateChannel          string
@@ -538,7 +557,16 @@ func (c *config) bindFlags(fs *flag.FlagSet) {
 		"Comma-separated IdP group(s) seeding the operator role")
 	fs.StringVar(&c.oidcRoleMappingViewer, "oidc-role-mapping-viewer", envOr("GAMEPLANE_OIDC_ROLE_MAPPING_VIEWER", ""),
 		"Comma-separated IdP group(s) seeding the viewer role")
-	fs.StringVar(&c.telemetryEndpoint, "telemetry-endpoint", envOr("GAMEPLANE_TELEMETRY_ENDPOINT", ""), "URL to POST anonymous usage metrics to (empty = telemetry off)")
+	fs.StringVar(&c.telemetryEndpoint, "telemetry-endpoint", envOr("GAMEPLANE_TELEMETRY_ENDPOINT", ""), "URL to POST anonymous usage metrics to (empty = the project default)")
+	fs.BoolVar(&c.telemetryDisabled, "telemetry-disabled", envOr("GAMEPLANE_TELEMETRY_DISABLED", "") == "true",
+		"hard-disable telemetry: nothing is ever sent, whatever the admin toggles say")
+	fs.DurationVar(&c.telemetryInterval, "telemetry-interval", envOrDuration("GAMEPLANE_TELEMETRY_INTERVAL", 24*time.Hour),
+		"spacing between telemetry reports (minimum 1m; shorter values are for testing only)")
+	fs.StringVar(&c.officialModuleSource, "official-module-source", envOr("GAMEPLANE_OFFICIAL_MODULE_SOURCE", ""),
+		"name of the official ModuleSource, so telemetry can tell official game modules from custom ones (empty = every module counts as custom)")
+	// Set only by the chart when it auto-wires the bundled in-cluster
+	// receiver, so it is read from the environment and has no flag.
+	c.telemetryBundled = envOr("GAMEPLANE_TELEMETRY_BUNDLED", "") == "true"
 	// Like the audit webhook auth, the telemetry ingest token is a
 	// credential and only comes from the environment (a mounted Secret),
 	// never a flag.
@@ -629,6 +657,17 @@ func envOrInt(key string, def int) int {
 	if v, ok := os.LookupEnv(key); ok {
 		if n, err := strconv.Atoi(v); err == nil {
 			return n
+		}
+	}
+	return def
+}
+
+// envOrDuration reads a duration env var ("24h", "30m"), falling back to def
+// when unset or unparseable, like envOrInt.
+func envOrDuration(key string, def time.Duration) time.Duration {
+	if v, ok := os.LookupEnv(key); ok {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
 		}
 	}
 	return def

@@ -533,6 +533,21 @@ jobs:
           version: v2.12.2
           working-directory: ${{ matrix.module }}
 
+  # Merge gate for spec 022: the project default telemetry destination
+  # (DefaultEndpoint in api/internal/telemetry/destination.go) must be an https
+  # URL. Expected to fail until OPEN-DECISIONS OD-1 is ruled. Deliberately
+  # separate: not part of `make lint`, and not in the `report` job's needs.
+  telemetry-default-gate:
+    name: telemetry default gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: check the default telemetry destination
+        run: sh hack/check-telemetry-default.sh
+
   go:
     name: go (${{ matrix.module }} / ${{ matrix.arch }})
     needs: [changes]

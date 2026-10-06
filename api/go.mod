@@ -22,6 +22,13 @@ require github.com/ValgulNecron/gameplane/gp-module v0.0.0
 // `go build ./api/...`.
 replace github.com/ValgulNecron/gameplane/gp-module => ../gp-module
 
+require github.com/ValgulNecron/gameplane/telemetryschema v0.0.0
+
+// telemetryschema is an in-repo module (no published version); resolve it
+// locally both inside the go.work workspace and for standalone
+// `go build ./api/...`.
+replace github.com/ValgulNecron/gameplane/telemetryschema => ../telemetryschema
+
 require (
 	github.com/coder/websocket v1.8.15
 	github.com/coreos/go-oidc/v3 v3.21.0
