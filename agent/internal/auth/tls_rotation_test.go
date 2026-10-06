@@ -101,7 +101,11 @@ func rotationClient(cert tls.Certificate, roots []byte, version uint16) *http.Cl
 
 func rotationRequest(t *testing.T, client *http.Client, srv *httptest.Server) (*tls.ConnectionState, error) {
 	t.Helper()
-	response, err := client.Get(srv.URL)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +236,11 @@ func TestServerTLS_HTTPProtocolsSurviveRenewal(t *testing.T) {
 			major    int
 		}{{h2, "h2", 2}, {h1, "http/1.1", 1}} {
 			tc.client.Transport.(*http.Transport).CloseIdleConnections()
-			response, err := tc.client.Get(srv.URL)
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			response, err := tc.client.Do(req)
 			if err != nil {
 				t.Fatal(err)
 			}
