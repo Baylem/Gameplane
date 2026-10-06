@@ -1,7 +1,7 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import type { ReactNode } from "react";
 import { http, HttpResponse } from "msw";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
 import { renderWithQuery } from "@/test/render";
@@ -20,6 +20,88 @@ afterEach(() => {
 });
 
 describe("AdminSettingsPage", () => {
+  it.each([false, true])("rebases a saved section while preserving later edits=%s", async (editDuringSave) => {
+    let general = { instanceName: "old-name", externalURL: "https://example.com", defaultNamespace: "gameplane-games" };
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    const save = vi.fn(async ({ request }: { request: Request }) => {
+      const submitted = await request.json() as typeof general;
+      await pending;
+      general = submitted;
+      return new HttpResponse(null, { status: 204 });
+    });
+    server.use(
+      http.get("/admin/config", () => HttpResponse.json({ general })),
+      http.put("/admin/config/general", save),
+    );
+    const { client } = renderWithQuery(<AdminSettingsPage />);
+    const input = await screen.findByDisplayValue("old-name");
+    await userEvent.clear(input);
+    await userEvent.type(input, "submitted-name");
+    await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    if (editDuringSave) {
+      await userEvent.clear(input);
+      await userEvent.type(input, "later-draft");
+    }
+    await act(async () => { release(); });
+    await waitFor(() => expect(client.isMutating()).toBe(0));
+    expect(screen.getByDisplayValue(editDuringSave ? "later-draft" : "submitted-name")).toBeInTheDocument();
+    if (editDuringSave) {
+      await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+      await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+      expect(general.instanceName).toBe("later-draft");
+    } else {
+      general = { ...general, externalURL: "https://later.example.com" };
+      await userEvent.click(screen.getByRole("button", { name: /^General$/i }));
+      expect(await screen.findByDisplayValue("https://later.example.com")).toBeInTheDocument();
+    }
+  });
+
+  it.each([false, true])("handles a delayed navigation refresh with dirty=%s", async (dirty) => {
+    const oldGeneral = { instanceName: "cached-name", externalURL: "https://old.example.com", defaultNamespace: "gameplane-games" };
+    const freshGeneral = { ...oldGeneral, externalURL: "https://fresh.example.com" };
+    let release!: () => void;
+    const refresh = new Promise<void>((resolve) => { release = resolve; });
+    let reads = 0;
+    let body: unknown;
+    const save = vi.fn(async ({ request }: { request: Request }) => {
+      body = await request.json();
+      return new HttpResponse(null, { status: 204 });
+    });
+    server.use(
+      http.get("/admin/config", async () => {
+        if (++reads > 1) await refresh;
+        return HttpResponse.json({ general: reads > 1 ? freshGeneral : oldGeneral });
+      }),
+      http.put("/admin/config/general", save),
+    );
+    const { client } = renderWithQuery(<AdminSettingsPage />);
+    await screen.findByDisplayValue("cached-name");
+    // Re-selecting General triggers the same refresh as returning from a tab.
+    await userEvent.click(screen.getByRole("button", { name: /^General$/i }));
+    await waitFor(() => expect(reads).toBe(2));
+    if (dirty) {
+      const name = screen.getByDisplayValue("cached-name");
+      await userEvent.clear(name);
+      await userEvent.type(name, "my-draft");
+    }
+    await act(async () => { release(); });
+    await waitFor(() => expect(client.isFetching({ queryKey: ["config"] })).toBe(0));
+    if (dirty) {
+      expect(screen.getByDisplayValue("my-draft")).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+      expect(await screen.findByText(/Configuration changed.*reopen this section/i)).toBeInTheDocument();
+      expect(save).not.toHaveBeenCalled();
+    } else {
+      expect(await screen.findByDisplayValue("https://fresh.example.com")).toBeInTheDocument();
+      await userEvent.type(screen.getByDisplayValue("cached-name"), "-edited");
+      await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+      await waitFor(() => expect(save).toHaveBeenCalled());
+      expect(body).toEqual({ ...freshGeneral, instanceName: "cached-name-edited" });
+    }
+  });
+
   it("renders the General section by default", async () => {
     server.use(
       http.get("/admin/config", () =>

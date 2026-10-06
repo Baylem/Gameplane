@@ -49,6 +49,7 @@ import {
   useConfig,
   useUpdateConfigSection,
   useResetRoleMapping,
+  type AllConfig,
   type AuthCfg,
   type AuthDefaultRole,
   type AuthKind,
@@ -206,27 +207,52 @@ type StagedSecret = { kind: "write" | "remove"; run: () => Promise<unknown> };
 // together.
 function useSectionForm<T>(initial: T, section: Parameters<typeof useUpdateConfigSection>[0]) {
   const [draft, setDraft] = useState<T>(initial);
+  const [base, setBase] = useState<T>(initial);
+  const [dirty, setDirty] = useState(false);
+  const revision = useRef(0);
+  const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [writing, setWriting] = useState(false);
+  const [checking, setChecking] = useState(false);
   // Keyed per Secret (for example "sink:<name>"): a later change to the
   // same Secret replaces the earlier one.
   const [staged, setStaged] = useState<Record<string, StagedSecret>>({});
   const mut = useUpdateConfigSection(section);
 
-  const update = (patch: Partial<T>) => {
-    setDraft((d) => ({ ...d, ...patch }));
+  useEffect(() => {
+    if (!dirty && !writing && !mut.isPending) {
+      setDraft(initial);
+      setBase(initial);
+    }
+  }, [initial, dirty, writing, mut.isPending]);
+
+  const markEdited = () => {
+    revision.current++;
+    setDirty(true);
     setError(null);
     setSaved(false);
+  };
+
+  const update = (patch: Partial<T>) => {
+    markEdited();
+    setDraft((d) => ({ ...d, ...patch }));
   };
 
   const replace = (next: SetStateAction<T>) => {
+    markEdited();
     setDraft(next);
-    setError(null);
-    setSaved(false);
+  };
+
+  // A successful dedicated reset changes both the stored baseline and draft.
+  const acceptReset = (transform: (value: T) => T) => {
+    markEdited();
+    setBase(transform);
+    setDraft(transform);
   };
 
   const stageSecret = (key: string, change: StagedSecret) => {
+    markEdited();
     setStaged((s) => ({ ...s, [key]: change }));
   };
 
@@ -238,6 +264,22 @@ function useSectionForm<T>(initial: T, section: Parameters<typeof useUpdateConfi
   const run = async () => {
     setSaved(false);
     setError(null);
+    const submittedRevision = revision.current;
+    // A navigation refresh may still be in flight. Await that same request
+    // before checking the baseline or performing any staged Secret writes.
+    if (qc.isFetching({ queryKey: ["config"] })) {
+      setChecking(true);
+      try {
+        await qc.refetchQueries({ queryKey: ["config"] }, { cancelRefetch: false });
+      } finally {
+        setChecking(false);
+      }
+    }
+    const latest = qc.getQueryData<AllConfig>(["config"])?.[section] ?? initial;
+    if (JSON.stringify(latest) !== JSON.stringify(base)) {
+      setError("Configuration changed. Copy your edits and reopen this section before saving.");
+      return;
+    }
     const changes = staged;
     const list = Object.values(changes);
     setWriting(true);
@@ -257,7 +299,16 @@ function useSectionForm<T>(initial: T, section: Parameters<typeof useUpdateConfi
         setStaged((s) =>
           Object.fromEntries(Object.entries(s).filter(([key, c]) => changes[key] !== c)),
         );
-        setSaved(true);
+        // The mutation's onSuccess awaits query invalidation. Rebase on that
+        // fresh value, but preserve edits made while the request was pending.
+        const refreshed = (qc.getQueryData<AllConfig>(["config"])?.[section] ?? initial) as T;
+        setBase(refreshed);
+        const unchanged = revision.current === submittedRevision;
+        if (unchanged) {
+          setDraft(refreshed);
+          setDirty(false);
+        }
+        setSaved(unchanged);
       },
       onError: (e) => setError(errorText(e, "Save failed")),
     });
@@ -267,7 +318,7 @@ function useSectionForm<T>(initial: T, section: Parameters<typeof useUpdateConfi
     void run();
   };
 
-  return { draft, update, replace, save, stageSecret, fail, pending: mut.isPending || writing, error, saved };
+  return { draft, update, replace, acceptReset, save, stageSecret, fail, pending: mut.isPending || writing || checking, error, saved };
 }
 
 const defaultGeneral: GeneralCfg = {
@@ -485,7 +536,7 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
           initial={f.draft}
           installTimeSettings={installTimeSettings}
           onUpdate={f.replace}
-          onResetDone={(role) => f.replace((d) => withoutRoleOverride(d, role))}
+          onResetDone={(role) => f.acceptReset((d) => withoutRoleOverride(d, role))}
           onResetError={f.fail}
           formState={{ pending: f.pending, error: f.error, saved: f.saved }}
           onSave={f.save}
