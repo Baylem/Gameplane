@@ -114,6 +114,9 @@ func (r *ModuleReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	if mod.Status.AppliedVersion == desiredVersion && mod.Status.AppliedTemplate == mod.Name &&
 		mod.Status.Phase == gameplanev1alpha1.ModulePhaseReady &&
+		// The same version in a different source or logical module is not the
+		// installed bundle. Every desired-state change must pass through apply.
+		mod.Status.ObservedGeneration == mod.Generation &&
 		// entry.Digest describes only the catalog's LatestVersion, never a
 		// pinned older one, so it can only gate convergence when the
 		// desired version *is* the latest — otherwise a pinned install
