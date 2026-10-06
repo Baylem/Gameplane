@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
 )
@@ -38,6 +39,7 @@ func wipeGameServer(suspend bool, req string) *gameplanev1alpha1.GameServer {
 	gs := &gameplanev1alpha1.GameServer{}
 	gs.Name = "alpha"
 	gs.Namespace = "ns"
+	gs.UID = "game-server"
 	gs.Annotations = map[string]string{WipeRequestedAnnotation: req}
 	gs.Spec.Suspend = suspend
 	gs.Spec.TemplateRef.Name = "mc"
@@ -114,6 +116,9 @@ func TestReconcileWipe_AcksWhenJobSucceeded(t *testing.T) {
 		},
 		Status: batchv1.JobStatus{Succeeded: 1},
 	}
+	if err := controllerutil.SetControllerReference(gs, job, s); err != nil {
+		t.Fatal(err)
+	}
 	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(gs, ss, job).Build()
 	r := &GameServerReconciler{Client: cl, APIReader: cl, Scheme: s}
 	if err := r.reconcileWipe(context.Background(), gs, tmpl); err != nil {
@@ -159,6 +164,9 @@ func TestReconcileWipe_RestartsServerAfterWipe(t *testing.T) {
 			Labels:    map[string]string{wipeTokenLabel: "tok1"},
 		},
 		Status: batchv1.JobStatus{Succeeded: 1},
+	}
+	if err := controllerutil.SetControllerReference(gs, job, s); err != nil {
+		t.Fatal(err)
 	}
 	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(gs, ss, job).Build()
 	r := &GameServerReconciler{Client: cl, APIReader: cl, Scheme: s}
