@@ -104,6 +104,8 @@ type BackupLogReader interface {
 // Job that runs restic against the GameServer's data volume.
 type BackupReconciler struct {
 	client.Client
+	// APIReader bypasses informer caches for guard ownership and worker drain checks.
+	APIReader client.Reader
 	Scheme    *runtime.Scheme
 	Clientset kubernetes.Interface
 	// AgentClient may be nil for installs that haven't configured
@@ -343,8 +345,8 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 			b.Spec.RepoRef.Name, strings.Join(missing, ", ")))
 	}
 
-	if err := r.maybeQuiesce(ctx, &b); err != nil {
-		return ctrl.Result{}, err
+	if res, err := r.prepareBackupQuiesce(ctx, &b); err != nil || res.RequeueAfter > 0 {
+		return res, err
 	}
 
 	backoff, deadline := resolveJobLimits(r.JobBackoffLimit, r.JobActiveDeadlineSeconds)
@@ -353,7 +355,7 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if job.CreationTimestamp.IsZero() {
 			job.Spec.BackoffLimit = &backoff
 			job.Spec.ActiveDeadlineSeconds = &deadline
-			job.Spec.Template.Labels = map[string]string{backupRestoreJobLabel: backupRestoreJobValue}
+			job.Spec.Template.Labels = map[string]string{backupRestoreJobLabel: backupRestoreJobValue, backupUIDLabel: string(b.UID)}
 			job.Spec.Template.Spec = r.buildBackupPodSpec(&b, &tmpl)
 			job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
 		}
@@ -376,8 +378,14 @@ func (r *BackupReconciler) maybeQuiesce(ctx context.Context, b *gameplanev1alpha
 	if r.AgentClient == nil {
 		return nil
 	}
-	if _, ok := b.Annotations[annoQuiesceAttempted]; ok {
+	if state := b.Annotations[annoQuiesceAttempted]; state != "" && state != "pending" {
 		return nil
+	}
+	// Persist cleanup intent BEFORE save-off: a crash or a partial agent failure
+	// must still owe save-on even when quiesced-at was never recorded.
+	patchBackupAnnotations(b, map[string]string{annoQuiesceAttempted: "pending"})
+	if err := r.Update(ctx, b); err != nil {
+		return err
 	}
 
 	err := r.AgentClient.Quiesce(ctx, b.Namespace, b.Spec.ServerRef.Name)
@@ -587,6 +595,13 @@ func (r *BackupReconciler) recordServerBackupTime(ctx context.Context, b *gamepl
 // and the dashboard) and retried — the unquiesced-at annotation makes the
 // retry idempotent and stops the loop once it lands.
 func (r *BackupReconciler) runUnquiesce(ctx context.Context, b *gameplanev1alpha1.Backup) (ctrl.Result, error) {
+	busy, err := r.backupCleanupWorkersLive(ctx, b, false)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if busy {
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
 	if err := r.maybeUnquiesce(ctx, b); err != nil {
 		ctrl.LoggerFrom(ctx).Error(err, "unquiesce failed; will retry", "backup", b.Name)
 		if cerr := r.setUnquiescedCondition(ctx, b, false, err.Error()); cerr != nil {
@@ -601,7 +616,7 @@ func (r *BackupReconciler) runUnquiesce(ctx context.Context, b *gameplanev1alpha
 			return ctrl.Result{}, cerr
 		}
 	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, r.releaseBackupTarget(ctx, b)
 }
 
 // setUnquiescedCondition upserts the Unquiesced condition on the Backup.
@@ -651,7 +666,16 @@ func (r *BackupReconciler) finalizeUnquiesce(ctx context.Context, b *gameplanev1
 	if !controllerutil.ContainsFinalizer(b, gameplanev1alpha1.BackupFinalizer) {
 		return ctrl.Result{}, nil
 	}
+	busy, err := r.backupCleanupWorkersLive(ctx, b, true)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if busy {
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+	confirmed := true
 	if unquiesceErr := r.maybeUnquiesce(ctx, b); unquiesceErr != nil {
+		confirmed = false
 		ctrl.LoggerFrom(ctx).Error(unquiesceErr, "unquiesce failed during backup delete; checking target",
 			"backup", b.Name)
 
@@ -682,6 +706,13 @@ func (r *BackupReconciler) finalizeUnquiesce(ctx context.Context, b *gameplanev1
 		ctrl.LoggerFrom(ctx).Info("releasing backup finalizer without a confirmed unquiesce",
 			"backup", b.Name, "reason", reason)
 	}
+	// On abandoned cleanup leave the durable owner behind. A subsequent
+	// contender must recover saving before starting its own protected copy.
+	if confirmed {
+		if err := r.releaseBackupTarget(ctx, b); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 	controllerutil.RemoveFinalizer(b, gameplanev1alpha1.BackupFinalizer)
 	if err := r.Update(ctx, b); err != nil {
 		return ctrl.Result{}, err
@@ -697,17 +728,29 @@ func (r *BackupReconciler) finalizeUnquiesce(ctx context.Context, b *gameplanev1
 // starts with auto-save on, so retrying the unquiesce would never succeed
 // and would only block this Backup's deletion.
 func (r *BackupReconciler) unquiesceTargetGone(ctx context.Context, b *gameplanev1alpha1.Backup) (bool, error) {
-	if b.Spec.ServerRef.Name == "" {
+	targetName := b.Spec.ServerRef.Name
+	var targetUID types.UID
+	if value := b.Annotations[backupTargetAnnotation]; value != "" {
+		identity, err := parseBackupIdentity(value)
+		if err != nil {
+			return false, err
+		}
+		targetName, targetUID = identity.Name, identity.UID
+	}
+	if targetName == "" {
 		return true, nil
 	}
 	gs := &gameplanev1alpha1.GameServer{}
-	key := types.NamespacedName{Namespace: b.Namespace, Name: b.Spec.ServerRef.Name}
+	key := types.NamespacedName{Namespace: b.Namespace, Name: targetName}
 	switch err := r.Get(ctx, key, gs); {
 	case apierrors.IsNotFound(err):
 		return true, nil
 	case err != nil:
 		return false, fmt.Errorf("get gameserver %s to check unquiesce target: %w", key.Name, err)
 	case gs.DeletionTimestamp != nil:
+		return true, nil
+	}
+	if targetUID != "" && gs.UID != targetUID {
 		return true, nil
 	}
 
@@ -780,9 +823,6 @@ func missingRepoSecretKeys(s *corev1.Secret) []string {
 //   - quiesce was attempted but the game didn't support it,
 //   - unquiesce already succeeded on a prior pass.
 func (r *BackupReconciler) maybeUnquiesce(ctx context.Context, b *gameplanev1alpha1.Backup) error {
-	if r.AgentClient == nil {
-		return nil
-	}
 	state := b.Annotations[annoQuiesceAttempted]
 	if state == "" || state == "unsupported" {
 		return nil
@@ -790,7 +830,30 @@ func (r *BackupReconciler) maybeUnquiesce(ctx context.Context, b *gameplanev1alp
 	if _, ok := b.Annotations[annoUnquiescedAt]; ok {
 		return nil
 	}
-	if err := r.AgentClient.Unquiesce(ctx, b.Namespace, b.Spec.ServerRef.Name); err != nil {
+	targetName := b.Spec.ServerRef.Name
+	if b.Annotations[backupTargetAnnotation] != "" {
+		gs, err := r.ownedBackupTarget(ctx, b)
+		if err != nil {
+			return err
+		}
+		if gs == nil {
+			return nil // Replaced target or another Backup owns save-on.
+		}
+		targetName = gs.Name
+	} else if b.Spec.ServerRef.Name != "" {
+		var gs gameplanev1alpha1.GameServer
+		err := r.backupAPIReader().Get(ctx, types.NamespacedName{Namespace: b.Namespace, Name: b.Spec.ServerRef.Name}, &gs)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		if gs.Annotations[backupGuardAnnotation] != "" {
+			return fmt.Errorf("legacy quiesce cleanup is blocked by a protected backup")
+		}
+	}
+	if r.AgentClient == nil {
+		return fmt.Errorf("cannot release quiesced world without an agent client")
+	}
+	if err := r.AgentClient.Unquiesce(ctx, b.Namespace, targetName); err != nil {
 		return err
 	}
 	patchBackupAnnotations(b, map[string]string{
@@ -845,6 +908,9 @@ func (r *BackupReconciler) fail(ctx context.Context, b *gameplanev1alpha1.Backup
 }
 
 func (r *BackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if r.APIReader == nil {
+		r.APIReader = mgr.GetAPIReader()
+	}
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&gameplanev1alpha1.Backup{}).
 		Owns(&batchv1.Job{})
