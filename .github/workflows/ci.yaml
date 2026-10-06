@@ -587,6 +587,14 @@ jobs:
           mkdir -p coverage
           go test -covermode=atomic -coverpkg=./... \
             -coverprofile=coverage/unit.out ./...
+      - name: agent file access across real UIDs
+        if: matrix.module == 'agent' && matrix.arch == 'amd64'
+        working-directory: agent
+        # Root only launches the test's unprivileged game/agent subprocesses.
+        # Keep sudo scoped to this compiled regression, never the general suite.
+        run: |
+          go test -c -o "$RUNNER_TEMP/agent-files.test" ./internal/files
+          sudo "$RUNNER_TEMP/agent-files.test" -test.run='^TestFileAccessAcrossUIDs$' -test.v -test.timeout=2m
       - name: setup-envtest binary cache
         if: matrix.module == 'operator' || matrix.module == 'api'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
