@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,7 +14,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
@@ -57,6 +60,7 @@ func TestServerIdentity_ReplacedServerRejected(t *testing.T) {
 		method, suffix string
 		body           any
 	}{
+		{"GET", "", nil},
 		{"DELETE", "", nil},
 		{"PUT", ":tunnel-credentials", putReq{Provider: "frp", Values: map[string]string{"token": "new"}}},
 		{"GET", ":tunnel-credentials", nil},
@@ -82,6 +86,72 @@ func TestServerIdentity_ReplacedServerRejected(t *testing.T) {
 			}
 			if actions := k.Typed.(*kubefake.Clientset).Actions(); len(actions) != 0 {
 				t.Fatalf("replacement request accessed Secrets: %v", actions)
+			}
+		})
+	}
+}
+
+func TestServerIdentity_CurrentReadSucceeds(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		user *auth.User
+		uid  types.UID
+	}{
+		{"owner", &auth.User{ID: 42}, "authorized"},
+		{"namespace-admin", testAdminUser(), "replacement"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			k := fakeKubeClient(identityServer(tc.uid))
+			rr := doWithUser(t, identityRouter(k, identityServer("authorized")), "GET", "/servers/alpha", nil, tc.user)
+			if rr.Code != http.StatusOK {
+				t.Fatalf("got %d %s", rr.Code, rr.Body)
+			}
+			var got unstructured.Unstructured
+			if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil || got.GetUID() != tc.uid {
+				t.Fatalf("unexpected read: uid %q, error %v", got.GetUID(), err)
+			}
+		})
+	}
+}
+
+func TestShareStart_ConditionsCheckedServerAndRejectsReplacement(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  error
+	}{
+		{"resource-version", apierrors.NewConflict(kube.GVRs["servers"].GroupResource(), "alpha", errors.New("recreated after read"))},
+		{"uid", apierrors.NewInvalid(schema.GroupKind{Group: kube.GVRs["servers"].Group, Kind: "GameServer"}, "alpha", field.ErrorList{field.Invalid(field.NewPath("metadata", "uid"), "authorized", "immutable")})},
+		{"deleted", apierrors.NewNotFound(kube.GVRs["servers"].GroupResource(), "alpha")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := newTestStore(t)
+			ownerID := insertShareTestUser(t, store, "share-identity-"+tc.name)
+			token, _, err := store.CreateShareLinkForServer(t.Context(), scope.DefaultCluster, scope.DefaultNamespace, "alpha", "authorized", ownerID, true, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			k := fakeKubeClient(identityServer("authorized"))
+			dyn := k.Dynamic.(*dynamicfake.FakeDynamicClient)
+			patches := 0
+			dyn.PrependReactor("patch", "gameservers", func(a ktesting.Action) (bool, runtime.Object, error) {
+				patches++
+				assertIdentityPatch(t, a, "authorized", "10")
+				replacement := identityServer("replacement")
+				replacement.SetResourceVersion("11")
+				if err := dyn.Tracker().Update(kube.GVRs["servers"], replacement, scope.DefaultNamespace); err != nil {
+					t.Fatal(err)
+				}
+				return true, nil, tc.err
+			})
+			reg := kube.NewRegistry(scope.DefaultCluster)
+			reg.Set(scope.DefaultCluster, k)
+			status, body := shareReq(t, mountSharesRouter(reg, store), "POST", "/shares/"+token+"/start", nil, nil, "203.0.113.201:1234")
+			if status != http.StatusNotFound || !bytes.Equal(body, []byte("{\"error\":\"not found\"}\n")) || patches != 1 {
+				t.Fatalf("got %d %s, patches %d", status, body, patches)
+			}
+			live, err := k.GetServer(t.Context(), scope.DefaultNamespace, "alpha")
+			if err != nil || live.GetUID() != "replacement" || live.GetAnnotations()[idleWakeRequestedAnnotation] != "" {
+				t.Fatalf("replacement modified: %v, error %v", live, err)
 			}
 		})
 	}

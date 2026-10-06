@@ -169,7 +169,14 @@ func getHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Handle
 			if !ok {
 				return
 			}
-			obj, err = k.Dynamic.Resource(gvr).Namespace(ns).Get(req.Context(), name, metav1.GetOptions{})
+			if gvr.Resource == "gameservers" {
+				obj, ok = authorizedServer(w, req, k, ns, name)
+				if !ok {
+					return
+				}
+			} else {
+				obj, err = k.Dynamic.Resource(gvr).Namespace(ns).Get(req.Context(), name, metav1.GetOptions{})
+			}
 		}
 		if err == nil && obj != nil && gvr.Resource == "gameservers" {
 			gateStaleAgent(obj)
