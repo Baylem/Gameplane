@@ -10,7 +10,7 @@ on:
     # variant covers any future in-tree files under that path.
     # paths + negations (not paths-ignore, which cannot re-include) so that a
     # change touching only a specs.md still runs make check-specs (ruling D5).
-    # Docs re-inclusion entries run the lint job's automated doc gates (check-links,
+    # Docs re-inclusion entries run the dedicated documentation gates (check-links,
     # check-doc-versions) on docs-only changes so stale versions and broken links
     # are caught without running unrelated test suites.
     paths:
@@ -90,6 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
+      contents: read
       pull-requests: read
     outputs:
       go: ${{ steps.combine.outputs.go }}
@@ -102,8 +103,25 @@ jobs:
       specs: ${{ steps.combine.outputs.specs }}
       docs: ${{ steps.combine.outputs.docs }}
       kindsmoke: ${{ steps.combine.outputs.kindsmoke }}
+      lint: ${{ steps.scope.outputs.lint }}
+      modules: ${{ steps.scope.outputs.modules }}
+      lint-exclude: ${{ steps.scope.outputs.lint-exclude }}
+      go-exclude: ${{ steps.scope.outputs.go-exclude }}
+      e2e-unit: ${{ steps.scope.outputs.e2e-unit }}
+      bot-matrix: ${{ steps.bots.outputs.matrix }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: select affected Go modules and consumers
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: python3 hack/ci_scope.py modules --base "$BASE_SHA" --head "$HEAD_SHA"
+      - name: partition every bot-fast test onto its own runner
+        id: bots
+        run: python3 hack/ci_scope.py bots
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -161,6 +179,8 @@ jobs:
             ci:
               - '.github/workflows/ci.yaml'
               - '.github/actions/**'
+              - 'hack/ci_scope.py'
+              - 'hack/test_ci_scope.py'
               - 'Makefile'
               - 'go.work'
               - 'go.work.sum'
@@ -176,6 +196,8 @@ jobs:
               - '.github/actions/**'
               - '.github/zizmor.yml'
               - '.github/dependabot.yml'
+              - 'hack/ci_scope.py'
+              - 'hack/test_ci_scope.py'
               - 'hack/check-ci-report-coverage.sh'
               - 'hack/test-check-ci-report-coverage.sh'
               - 'hack/testdata/check-ci-report-coverage/**'
@@ -239,12 +261,12 @@ jobs:
         # go|charts|e2etree|ci; images/weblive are needed by the kind e2e jobs
         # and the live-web job, so they = e2e|web|ci.
         env:
-          GO: ${{ steps.filter.outputs.go }}
+          GO: ${{ steps.scope.outputs.go }}
           WEB: ${{ steps.filter.outputs.web }}
           CHARTS: ${{ steps.filter.outputs.charts }}
           E2ETREE: ${{ steps.filter.outputs.e2etree }}
           GAMECOVERAGE: ${{ steps.filter.outputs.gamecoverage }}
-          CI: ${{ steps.filter.outputs.ci }}
+          CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' }}
           GITHUB: ${{ steps.filter.outputs.github }}
           SPECS: ${{ steps.filter.outputs.specs }}
           DOCS: ${{ steps.filter.outputs.docs }}
@@ -440,13 +462,36 @@ jobs:
           echo "The sidecar will fail at runtime when it tries to open AF_PACKET sockets." >&2
           exit 1
 
-  # Unit tests, envtest integration (operator/api), and the coverage
-  # gate run in ONE job per module: the gate reads the profiles it just
-  # produced, with no cross-job artifact hand-off.
+  # Repository-wide gates run once, including on documentation-only changes.
+  docs:
+    name: docs and repository checks
+    needs: [changes]
+    if: needs.changes.outputs.lint == 'true' || needs.changes.outputs.specs == 'true' || needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: verify lint gate configuration
+        run: ./test/e2e/lint-gate-verify.sh verify
+      - name: check documentation links
+        run: make check-links
+      - name: check documentation versions
+        run: make check-doc-versions
+      - name: test documentation version checker
+        run: make test-doc-versions
+      - name: check specs compliance
+        run: make check-specs
+      - name: check dev-load image coverage
+        run: make check-dev-load-images
+      - name: test up.sh registry/context bootstrap
+        run: make test-up-registry
+
   lint:
     name: lint (${{ matrix.module }})
     needs: [changes]
-    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.specs == 'true' || needs.changes.outputs.docs == 'true'
+    if: needs.changes.outputs.lint == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -455,37 +500,9 @@ jobs:
       fail-fast: false
       matrix:
         module: [netguard, gameaction, gameproto, operator, agent, api, sentinel, audit-syslog-bridge, telemetry-receiver, mcp-server, capture-sidecar, svcutil, tunnel, gp-module, test/e2e]
+        exclude: ${{ fromJSON(needs.changes.outputs.lint-exclude) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: verify lint gate configuration
-        if: matrix.module == 'netguard'
-        run: ./test/e2e/lint-gate-verify.sh verify
-      # Repository-wide docs link check; gated to one matrix entry like check-specs (ruling D5).
-      - name: check documentation links
-        if: matrix.module == 'netguard'
-        run: make check-links
-      # Repository-wide docs version check; gated to one matrix entry like check-specs (ruling D5).
-      - name: check documentation versions
-        if: matrix.module == 'netguard'
-        run: make check-doc-versions
-      # Fixture tests for the doc-version checker (spec 018 OD-012); gated like the checker itself.
-      - name: test documentation version checker
-        if: matrix.module == 'netguard'
-        run: make test-doc-versions
-      # Repository-wide check; gated to one matrix entry so it runs once per lint run (ruling D5).
-      - name: check specs compliance
-        if: matrix.module == 'netguard'
-        run: make check-specs
-      # Repository-wide check that `dev-load` loads every image `images` builds
-      # (F-255); gated to one matrix entry like check-specs (ruling D5).
-      - name: check dev-load image coverage
-        if: matrix.module == 'netguard'
-        run: make check-dev-load-images
-      # Fixture tests for deploy/kind/up.sh's registry bootstrap (F-234) and
-      # kubectl context pinning (F-232); gated like check-specs (ruling D5).
-      - name: test up.sh registry/context bootstrap
-        if: matrix.module == 'netguard'
-        run: make test-up-registry
       - uses: ./.github/actions/go-cache
         with:
           key-suffix: lint-${{ matrix.module }}
@@ -547,6 +564,7 @@ jobs:
       fail-fast: false
       matrix:
         module: [netguard, gameaction, gameproto, operator, api, agent, audit-syslog-bridge, telemetry-receiver, sentinel, mcp-server, capture-sidecar, svcutil, tunnel, gp-module]
+        exclude: ${{ fromJSON(needs.changes.outputs.go-exclude) }}
         arch: [amd64, arm64]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -970,10 +988,10 @@ jobs:
           tmp="$(mktemp -d)"
           cd "$tmp"
           curl -fsSL -o actionlint.tar.gz \
-            https://github.com/rhysd/actionlint/releases/download/v1.7.9/actionlint_1.7.9_linux_amd64.tar.gz
+            https://github.com/rhysd/actionlint/releases/download/v1.7.10/actionlint_1.7.10_linux_amd64.tar.gz
           # sha256sum -c exits non-zero on mismatch, and set -e aborts the step:
           # the binary never executes unless it matches the pinned digest.
-          echo "233b280d05e100837f4af1433c7b40a5dcb306e3aa68fb4f17f8a7f45a7df7b4  actionlint.tar.gz" | sha256sum -c -
+          echo "f4c76b71db5755a713e6055cbb0857ed07e103e028bda117817660ebadb4386f  actionlint.tar.gz" | sha256sum -c -
           tar -xzf actionlint.tar.gz
           # actionlint takes workflow FILE paths, not a directory. With no
           # arguments it discovers every workflow in the repository itself,
@@ -991,6 +1009,8 @@ jobs:
       # This gate makes SC-001 ("100% SHA-pinned") mechanically true by failing on
       # unpinned uses and ref-version mismatches. The four deferred rules and their
       # tracking are defined in .github/zizmor.yml.
+      - name: CI scope regression tests
+        run: make test-ci-scope
       - name: zizmor
         uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
         with:
@@ -1007,7 +1027,7 @@ jobs:
   go-e2e-unit:
     name: go (test/e2e)
     needs: [changes]
-    if: needs.changes.outputs.e2e == 'true'
+    if: needs.changes.outputs.e2e-unit == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1036,7 +1056,7 @@ jobs:
   api-postgres:
     name: api (postgres)
     needs: [changes]
-    if: needs.changes.outputs.go == 'true'
+    if: contains(fromJSON(needs.changes.outputs.modules), 'api')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1121,7 +1141,7 @@ jobs:
 
   e2e-go:
     name: e2e ${{ matrix.bucket }} / ${{ matrix.arch }} (kind)
-    needs: [changes, build-images, build-images-arm64]
+    needs: [changes, build-images]
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: ${{ matrix.job_timeout }}
@@ -1135,10 +1155,9 @@ jobs:
         # t.Parallel(); `parallel` bounds in-flight tests per bucket
         # (operator does zero logins and is wait-dominated, so it runs
         # wide; the api buckets stay within the login limiter's budget).
-        # Each bucket runs on amd64 and arm64; the include entries attach the
-        # per-bucket config to both arch combinations.
+        # The arm64 job below uses the same steps and per-bucket settings.
         bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods]
-        arch: [amd64, arm64]
+        arch: [amd64]
         include:
           - bucket: operator
             parallel: 8
@@ -1168,7 +1187,7 @@ jobs:
     env:
       CLUSTER: gameplane-e2e
       CTX: kind-gameplane-e2e
-    steps:
+    steps: &e2e-go-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/go-cache
         with:
@@ -1211,13 +1230,64 @@ jobs:
           namespaces: "gameplane-system,gameplane-games"
           include-previous-logs: "true"
 
+  e2e-go-arm64:
+    name: e2e ${{ matrix.bucket }} / ${{ matrix.arch }} (kind)
+    needs: [changes, build-images-arm64]
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    timeout-minutes: ${{ matrix.job_timeout }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # Buckets are cut by login pressure, not feature area — see the
+        # header comment in test/e2e/buckets.sh. The suite runs with
+        # t.Parallel(); `parallel` bounds in-flight tests per bucket
+        # (operator does zero logins and is wait-dominated, so it runs
+        # wide; the api buckets stay within the login limiter's budget).
+        # The arm64 job below uses the same steps and per-bucket settings.
+        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods]
+        arch: [arm64]
+        include:
+          - bucket: operator
+            parallel: 8
+            test_timeout: 20m
+            job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+          - bucket: api-auth
+            parallel: 4
+            test_timeout: 15m
+            job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+            tail: ratelimit
+          - bucket: api-roles
+            parallel: 3
+            test_timeout: 10m
+            job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+          - bucket: api-rbac
+            parallel: 4
+            test_timeout: 10m
+            job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+          - bucket: api-agent
+            parallel: 4
+            test_timeout: 15m
+            job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+          - bucket: api-mods
+            parallel: 2
+            test_timeout: 15m
+            job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+    env:
+      CLUSTER: gameplane-e2e
+      CTX: kind-gameplane-e2e
+    steps: *e2e-go-steps
+
   # Dual-cluster ?cluster= dispatch + scoped RBAC (test/e2e/multicluster_e2e_test.go).
   # Split out from e2e-go: it's the only bucket that needs a SECOND kind
   # cluster (registered as a remote target via POST /clusters), so it gets
   # its own job rather than complicating the single-cluster matrix above.
+
   e2e-multicluster:
     name: e2e multicluster / ${{ matrix.arch }} (kind x2)
-    needs: [changes, build-images, build-images-arm64]
+    needs: [changes, build-images]
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, across two clusters.
@@ -1226,13 +1296,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64]
+        arch: [amd64]
     env:
       CLUSTER: gameplane-e2e
       CLUSTER_B: gameplane-e2e-b
       CTX: kind-gameplane-e2e
       CTX_B: kind-gameplane-e2e-b
-    steps:
+    steps: &e2e-multicluster-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/go-cache
         with:
@@ -1280,6 +1350,25 @@ jobs:
           context: ${{ env.CTX_B }}
           include-api-logs: "false"
 
+  e2e-multicluster-arm64:
+    name: e2e multicluster / ${{ matrix.arch }} (kind x2)
+    needs: [changes, build-images-arm64]
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    timeout-minutes: 60 # Same, across two clusters.
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64]
+    env:
+      CLUSTER: gameplane-e2e
+      CLUSTER_B: gameplane-e2e-b
+      CTX: kind-gameplane-e2e
+      CTX_B: kind-gameplane-e2e-b
+    steps: *e2e-multicluster-steps
+
   # helm upgrade from the last published release to this tree
   # (test/e2e/upgrade_e2e_test.go). Split out from e2e-go for the same reason
   # as multicluster: its cluster is set up differently. Every other job
@@ -1287,9 +1376,10 @@ jobs:
   # PUBLISHED GHCR images of the previous release, then upgrades onto the tree
   # — so it cannot share a cluster with anything, and needs network access to
   # ghcr.io that the other kind jobs do not.
+
   e2e-upgrade:
     name: e2e upgrade / ${{ matrix.arch }} (kind)
-    needs: [changes, build-images, build-images-arm64]
+    needs: [changes, build-images]
     if: needs.changes.outputs.e2e == 'true'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a chart upgrade across versions.
@@ -1298,14 +1388,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64]
+        arch: [amd64]
     env:
       CLUSTER: gameplane-upgrade
       CTX: kind-gameplane-upgrade
       # The release to upgrade FROM. Bump at release time to the previous
       # published version. deploy/kind/upgrade.sh carries the same default.
       GAMEPLANE_UPGRADE_FROM: 0.2.0-beta.8
-    steps:
+    steps: &e2e-upgrade-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/go-cache
         with:
@@ -1336,9 +1426,30 @@ jobs:
           include-helm-history: "true"
           include-get-jobs: "true"
 
+
+  e2e-upgrade-arm64:
+    name: e2e upgrade / ${{ matrix.arch }} (kind)
+    needs: [changes, build-images-arm64]
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    timeout-minutes: 60 # Same, plus a chart upgrade across versions.
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64]
+    env:
+      CLUSTER: gameplane-upgrade
+      CTX: kind-gameplane-upgrade
+      # The release to upgrade FROM. Bump at release time to the previous
+      # published version. deploy/kind/upgrade.sh carries the same default.
+      GAMEPLANE_UPGRADE_FROM: 0.2.0-beta.8
+    steps: *e2e-upgrade-steps
+
   e2e-web-live:
     name: e2e web live / ${{ matrix.arch }} (kind)
-    needs: [changes, build-images, build-images-arm64]
+    needs: [changes, build-images]
     if: needs.changes.outputs.weblive == 'true'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a live dashboard drive.
@@ -1347,11 +1458,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64]
+        arch: [amd64]
     env:
       CLUSTER: gameplane-e2e
       CTX: kind-gameplane-e2e
-    steps:
+    steps: &e2e-web-live-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/go-cache
         with:
@@ -1402,13 +1513,31 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: playwright-report-live
+          name: playwright-report-live-${{ matrix.arch }}
           path: web/playwright-report
           retention-days: 7
           if-no-files-found: warn
 
+
+  e2e-web-live-arm64:
+    name: e2e web live / ${{ matrix.arch }} (kind)
+    needs: [changes, build-images-arm64]
+    if: needs.changes.outputs.weblive == 'true'
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    timeout-minutes: 60 # Same, plus a live dashboard drive.
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64]
+    env:
+      CLUSTER: gameplane-e2e
+      CTX: kind-gameplane-e2e
+    steps: *e2e-web-live-steps
+
   e2e-game-bot:
-    name: e2e game bot (kind)
+    name: e2e game bot / ${{ matrix.test }} (kind)
     needs: [changes, build-images]
     if: needs.changes.outputs.e2e == 'true'
     # amd64 only: this boots the external itzg/minecraft-server (multi-arch) AND
@@ -1421,7 +1550,11 @@ jobs:
     timeout-minutes: 60 # Pulls multi-GB game images, boots real servers, runs protocol joins.
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.changes.outputs.bot-matrix) }}
     env:
+      BOT_TEST: ${{ matrix.test }}
       CLUSTER: gameplane-e2e
       CTX: kind-gameplane-e2e
     steps:
@@ -1446,7 +1579,7 @@ jobs:
         # tag, both fixed. The in-cluster harness is still what exercises the
         # network path a real client uses.)
         run: |
-          RUN_REGEX="$(./test/e2e/buckets.sh regex bot-fast)"
+          RUN_REGEX="^${BOT_TEST}$"
           cd test/e2e && \
             GAMEPLANE_E2E_REUSE_CLUSTER=1 \
             GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
@@ -1554,6 +1687,7 @@ jobs:
         build-images,
         build-images-arm64,
         capture-sidecar-setcap-proof,
+        docs,
         lint,
         go,
         web,
@@ -1565,9 +1699,13 @@ jobs:
         api-postgres,
         e2e-buckets,
         e2e-go,
+        e2e-go-arm64,
         e2e-multicluster,
+        e2e-multicluster-arm64,
         e2e-upgrade,
+        e2e-upgrade-arm64,
         e2e-web-live,
+        e2e-web-live-arm64,
         e2e-game-bot,
         e2e-kind-ingress-smoke,
       ]
@@ -1660,11 +1798,11 @@ jobs:
 
             const NEEDS_ORDER = [
               'changes', 'build-images', 'build-images-arm64',
-              'capture-sidecar-setcap-proof', 'lint', 'go',
+              'capture-sidecar-setcap-proof', 'docs', 'lint', 'go',
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
-              'e2e-buckets', 'e2e-go', 'e2e-multicluster', 'e2e-upgrade',
-              'e2e-web-live', 'e2e-game-bot', 'e2e-kind-ingress-smoke',
+              'e2e-buckets', 'e2e-go', 'e2e-go-arm64', 'e2e-multicluster', 'e2e-multicluster-arm64', 'e2e-upgrade', 'e2e-upgrade-arm64',
+              'e2e-web-live', 'e2e-web-live-arm64', 'e2e-game-bot', 'e2e-kind-ingress-smoke',
             ];
 
             // Maps each workflow job id to how its `name:` field (as reported by
@@ -1675,6 +1813,7 @@ jobs:
               'build-images': (n) => n === 'build e2e images',
               'build-images-arm64': (n) => n === 'build e2e images (arm64)',
               'capture-sidecar-setcap-proof': (n) => n === 'capture-sidecar CAP_NET_RAW survival',
+              docs: (n) => n === 'docs and repository checks',
               lint: (n) => n.startsWith('lint ('),
               go: (n) => n.startsWith('go (') && n !== 'go (test/e2e)',
               web: (n) => n === 'web',
@@ -1685,11 +1824,15 @@ jobs:
               'go-e2e-unit': (n) => n === 'go (test/e2e)',
               'api-postgres': (n) => n === 'api (postgres)',
               'e2e-buckets': (n) => n === 'e2e bucket coverage',
-              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods) \//.test(n),
-              'e2e-multicluster': (n) => n.startsWith('e2e multicluster /'),
-              'e2e-upgrade': (n) => n.startsWith('e2e upgrade /'),
-              'e2e-web-live': (n) => n.startsWith('e2e web live /'),
-              'e2e-game-bot': (n) => n === 'e2e game bot (kind)',
+              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods) \//.test(n) && n.includes('/ amd64 '),
+              'e2e-go-arm64': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods) \//.test(n) && n.includes('/ arm64 '),
+              'e2e-multicluster': (n) => n.startsWith('e2e multicluster /') && n.includes('/ amd64 '),
+              'e2e-multicluster-arm64': (n) => n.startsWith('e2e multicluster /') && n.includes('/ arm64 '),
+              'e2e-upgrade': (n) => n.startsWith('e2e upgrade /') && n.includes('/ amd64 '),
+              'e2e-upgrade-arm64': (n) => n.startsWith('e2e upgrade /') && n.includes('/ arm64 '),
+              'e2e-web-live': (n) => n.startsWith('e2e web live /') && n.includes('/ amd64 '),
+              'e2e-web-live-arm64': (n) => n.startsWith('e2e web live /') && n.includes('/ arm64 '),
+              'e2e-game-bot': (n) => n.startsWith('e2e game bot /'),
               'e2e-kind-ingress-smoke': (n) => n === 'ingress-nginx smoke (kind)',
             };
 
