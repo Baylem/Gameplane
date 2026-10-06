@@ -324,37 +324,32 @@ test.describe("Slice 5: Share links — public page (Desktop — 1440x900) @scre
     await capture(page, "C2LQE4");
   });
 
-  test("q31B6w: Share page — Asleep, can start", async ({ page }) => {
+  test("q31B6w: Share page — Asleep, can start before and after a pending wake", async ({ page }) => {
     await mockShareResolve(page, {
       "shot-asleep-start": {
         status: 200,
         body: { serverName: "mc-survival", status: "Suspended" },
       },
+      "shot-asleep-start:start": { status: 202, body: {} },
     });
     await page.goto("/share/shot-asleep-start");
     await expect(page.getByRole("heading", { name: "mc-survival" })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByRole("button", { name: /start server/i })).toBeVisible();
+    const startButton = page.getByRole("button", { name: /start server/i });
+    await expect(startButton).toBeVisible();
+    await expect(startButton).toBeEnabled();
+    await startButton.click();
+    await expect(page.getByText(/starting up/i)).toBeVisible();
+    await expect(page.getByText("Asleep", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(startButton).toBeVisible();
+    await expect(startButton).toBeEnabled();
+    await expect(page.getByText(/check back later/i)).toHaveCount(0);
+    // The old qFLfB view-only scenario inferred permission from phase. A
+    // still-asleep poll must retain retry, matching the existing q31B6w
+    // reference. Capture once after recovery to avoid duplicate output IDs.
     await page.waitForTimeout(200);
     await capture(page, "q31B6w");
-  });
-
-  test("qFLfB: Share page — Asleep, view-only", async ({ page }) => {
-    await mockShareResolve(page, {
-      "shot-asleep-view": [
-        { status: 200, body: { serverName: "mc-survival", status: "Suspended" } },
-        { status: 200, body: { serverName: "mc-survival", status: "Suspended" } },
-      ],
-      "shot-asleep-view:start": { status: 202, body: {} },
-    });
-    await page.goto("/share/shot-asleep-view");
-    const startButton = page.getByRole("button", { name: /start server/i });
-    await expect(startButton).toBeVisible({ timeout: 10_000 });
-    await startButton.click();
-    await expect(page.getByText(/check back later/i)).toBeVisible({ timeout: 15_000 });
-    await page.waitForTimeout(200);
-    await capture(page, "qFLfB");
   });
 
   test("EcoGD: Share page — Starting", async ({ page }) => {
