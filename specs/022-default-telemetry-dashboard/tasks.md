@@ -45,7 +45,9 @@ description: "Task list for feature 022: default telemetry destination, extended
 
   - `api/internal/handlers/config_test.go` `TestConfig_GetEmpty` (added 2026-10-07): Migrate now seeds the fresh-install telemetry default, so it becomes `TestConfig_GetFreshInstallDefaults` and asserts exactly the seeded `telemetry` key. The `telStore` and `bareStore` helpers in the reporter tests above upsert or remove the seeded row, with no assertion changes.
 
-  **Signed off 2026-10-06** by the user ("Approve all", then "Approve" for the `/metrics` changes; "Assert the seeded default" for `TestConfig_GetEmpty` on 2026-10-07). Record the sign-off in the PR description.
+  - `api/internal/handlers/config_validators_test.go` `TestValidateTelemetry` (added 2026-10-07): the canonical output gains `"extended":false`, and a new case checks that `{"sendMetrics":false,"extended":true}` normalises to both false.
+
+  **Signed off 2026-10-06** by the user ("Approve all", then "Approve" for the `/metrics` changes; "Assert the seeded default" for `TestConfig_GetEmpty` and "Assert the new shape" for `TestValidateTelemetry` on 2026-10-07). Record the sign-off in the PR description.
 - [X] T003 Create `telemetryschema/go.mod` (`module github.com/ValgulNecron/gameplane/telemetryschema`, `go 1.26.0`, no requires) and `telemetryschema/doc.go` with a package comment: "the shared telemetry report contract used by api and telemetry-receiver; see specs/022-default-telemetry-dashboard/contracts/report-schema.md".
 - [X] T004 Add `./telemetryschema` to the `use` block in `go.work`, and add `telemetryschema` to `GO_MODULES` in `Makefile:43` (after `gameproto`).
 - [X] T005 [P] Add `telemetryschema` to both Go module matrices in `.github/workflows/ci.yaml` (the `module:` lists at about lines 457 and 549). Add `telemetryschema/**` everywhere `telemetry-receiver/**` appears as a path filter (about line 119), and to the api and telemetry-receiver image path filters in `.github/workflows/publish-edge.yaml`. Add a `gomod` entry for `/telemetryschema` in `.github/dependabot.yml`, copied from the `/telemetry-receiver` entry at about line 176.
@@ -205,7 +207,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - **2xx**: set `last_success_at` and `last_outcome='ok'`, reset `consecutive_failures`, and set `next_due_at = now + interval + U(0, interval/48)`.
   - **Other errors**: set `last_outcome='failed'`, and back off `min(1h·2^n, interval)`.
   - Never queue or replay reports.
-- [ ] T035 [US1] Create `api/internal/telemetry/consent.go` with `ApplyConsent(ctx, tx, basic, extended bool, source string)`, shared by the config hook and the notice actions. It:
+- [ ] T035 [US1] Create `api/internal/telemetry/consent.go` with `ApplyConsent(ctx, tx, dest, interval, basic, extended bool, source string)` (it needs the destination for `ErrOperatorDisabled` and the interval to schedule the first slot; SQLite's single connection means it uses the tx helpers in a new `api/internal/db/telemetry_tx.go`), shared by the config hook and the notice actions. It:
   - writes the config key `telemetry`
   - sets `consent_source`
   - creates or clears the install ID (creating the signing secret through `EnsureSigningSecret` when an ID is created)
@@ -243,7 +245,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `seen` is posted exactly once
   - each action posts the right body and hides the banner
   - it is hidden for users without `config:manage`
-- [ ] T045 [US1] In `deploy/kind/e2e.sh` (the helm command at about line 301) and `deploy/kind/up.sh` (its helm install), add `--set api.telemetry.receiver.enabled=true` with the comment "never let CI or dev installs reach the project provider (spec 022 R17)".
+- [ ] T045 [US1] In `deploy/kind/e2e.sh` (the helm command at about line 301) and the `Makefile` `dev-install` target (`deploy/kind/up.sh` has no helm command), add the telemetry-receiver image to the E2E image set (`docker-bake.hcl`, `.github/actions/build-e2e-images/action.yml`, the `e2e.sh` load loop and `make e2e-images`), and add `--set api.telemetry.receiver.enabled=true` with the comment "never let CI or dev installs reach the project provider (spec 022 R17)".
 - [ ] T046 [US1] Register a new bucket `telemetry`, using the `e2e-test-authoring` skill:
   - in `test/e2e/buckets.sh`: add it to `bucket_names` (line 357), add a `list_bucket` case, and add `bucket_telemetry()` returning `TestTelemetryLifecycle`
   - in the e2e matrix in `.github/workflows/ci.yaml` (about line 1140): `parallel: 1`, `test_timeout: 25m`, `job_timeout: 60`
@@ -345,15 +347,15 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Independent Test**: Feed synthetic basic reports across several days, sign in, and check every figure for 7, 30, 90 and 365 days. Every unauthenticated response is identical whether data exists or not. Rotating the token invalidates sessions without losing data.
 
-- [ ] T062 [P] [US4] Create `telemetry-receiver/ratelimit.go` (research R6):
+- [X] T062 [P] [US4] Create `telemetry-receiver/ratelimit.go` (research R6):
   - a per-source accepted-reports-per-UTC-day counter, where `INGEST_SOURCE_DAILY_LIMIT=0` means unlimited
   - a generic token bucket
   - idle purge after 10 minutes and a reset at midnight
   - `sourceIP(r *http.Request, trusted []netip.Prefix) netip.Addr`, which honours `X-Forwarded-For` only when the peer is inside `TRUSTED_PROXY_CIDRS`
   - addresses are never written to the store or the logs
-- [ ] T063 [US4] Move the ingest handler from `telemetry-receiver/main.go` to a new `telemetry-receiver/ingest.go`, keeping auth, the size cap and status codes. Add the per-source limit (`429` plus `gameplane_telemetry_rate_limited_total{route="ingest"}`). Write the basic aggregates (`daily_basic.reports`, `servers_sum` and `templates_sum`; `daily_version`; `daily_fleet` with values capped at 1001; `meta.reports_total`) in one transaction. Keep the existing Prometheus series; they are served from the dashboard listener (T067). The existing `main_test.go` ingest tests and `cardinality_test.go` (added upstream in #578) must pass unchanged; only the T002-approved `/metrics` changes apply. Those tests call `newServer(config{})` and then `s.ingest` and `s.reg` directly, 160 times from one source, so the zero-value `config` must mean an in-memory store and no per-source limit (the 20-per-day default is applied by `loadConfig`, not by the zero value), `newServer` keeps its signature, and the 128-label `versionLabel` budget stays.
-- [ ] T064 [US4] In `telemetry-receiver/store.go`, add an hourly lifecycle job that is idempotent and resumes from `meta.rollover_through`. It deletes `daily_*` rows older than `RETENTION_DAYS`, and is started from `serve`. US5 adds the lapsed and expiry steps.
-- [ ] T065 [US4] Create `telemetry-receiver/views.go` with `BuildViews(ctx, store, rangeDays int, now time.Time) (Views, error)` for the basic block in the `contracts/receiver-http.md` `/api/v1/views` shape:
+- [X] T063 [US4] Move the ingest handler from `telemetry-receiver/main.go` to a new `telemetry-receiver/ingest.go`, keeping auth, the size cap and status codes. Add the per-source limit (`429` plus `gameplane_telemetry_rate_limited_total{route="ingest"}`). Write the basic aggregates (`daily_basic.reports`, `servers_sum` and `templates_sum`; `daily_version`; `daily_fleet` with values capped at 1001; `meta.reports_total`) in one transaction. Keep the existing Prometheus series; they are served from the dashboard listener (T067). The existing `main_test.go` ingest tests and `cardinality_test.go` (added upstream in #578) must pass unchanged; only the T002-approved `/metrics` changes apply. Those tests call `newServer(config{})` and then `s.ingest` and `s.reg` directly, 160 times from one source, so the zero-value `config` must mean an in-memory store and no per-source limit (the 20-per-day default is applied by `loadConfig`, not by the zero value), `newServer` keeps its signature, and the 128-label `versionLabel` budget stays.
+- [X] T064 [US4] In `telemetry-receiver/store.go`, add an hourly lifecycle job that is idempotent and resumes from `meta.rollover_through`. It deletes `daily_*` rows older than `RETENTION_DAYS`, and is started from `serve`. US5 adds the lapsed and expiry steps.
+- [X] T065 [US4] Create `telemetry-receiver/views.go` with `BuildViews(ctx, store, rangeDays int, now time.Time) (Views, error)` for the basic block in the `contracts/receiver-http.md` `/api/v1/views` shape:
   - `reportsPerDay`
   - versions as the top 10, then `Other`, then `Invalid`
   - fleet bands and the exact median
@@ -362,8 +364,8 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `asOf` = yesterday (UTC)
 
   Invalid ranges fall back to 30.
-- [ ] T066 [US4] Load the `dataviz` skill, then design the receiver pages in `telemetry-receiver/telemetry-dashboard.pen` (seeded with a copy of the HeroUI design, spec Q10) through Pencil MCP: the login page (also used for the refusal, with "Invalid credentials"), the overview's basic section with the range selector (7, 30, 90, 365), the empty state, and the "approximate, self-reported" labelling (FR-026). Ask the user to open that file, then save it, run `design-export` into `telemetry-receiver/design-export/`, and commit.
-- [ ] T067 [US4] Create `telemetry-receiver/dashboard.go`, mounted on `DASHBOARD_LISTEN_ADDR` only when `DASHBOARD_TOKEN` is set. It implements these routes from `contracts/receiver-http.md`:
+- [X] T066 [US4] Load the `dataviz` skill, then design the receiver pages in `telemetry-receiver/telemetry-dashboard.pen` (seeded with a copy of the HeroUI design, spec Q10) through Pencil MCP: the login page (also used for the refusal, with "Invalid credentials"), the overview's basic section with the range selector (7, 30, 90, 365), the empty state, and the "approximate, self-reported" labelling (FR-026). Ask the user to open that file, then save it, run `design-export` into `telemetry-receiver/design-export/`, and commit.
+- [X] T067 [US4] Create `telemetry-receiver/dashboard.go`, mounted on `DASHBOARD_LISTEN_ADDR` only when `DASHBOARD_TOKEN` is set. It implements these routes from `contracts/receiver-http.md`:
   - `GET /login` and `POST /login`, comparing the token in constant time, with a login limit of 5 per minute per source and a same-origin `Origin`/`Referer` check
   - `POST /logout`
   - `GET /`
@@ -372,7 +374,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `/static/*`
 
   The cookie is `gp_telemetry_session` = `expiry || HMAC(K, expiry)`, where `K = HMAC-SHA256(DASHBOARD_TOKEN, "gameplane-telemetry-session")`, with `HttpOnly; Secure; SameSite=Strict; Max-Age=43200`. Unauthenticated HTML requests get `303` to `/login`, and unauthenticated JSON requests get `401 {"error":"unauthorized"}`. Every response carries the CSP, `nosniff`, `no-referrer` and `no-store` headers.
-- [ ] T068 [US4] Create `telemetry-receiver/web/`, embedded with `go:embed`: `layout.html`, `login.html` and `overview.html` (basic section), `style.css`, and inline-SVG chart partials (line or bar for reports per day, horizontal bars for versions, a histogram for fleet sizes), following the T066 design. There is no JavaScript, and the range is chosen with links.
+- [ ] T068 [US4] Create `telemetry-receiver/web/`, embedded with `go:embed`: `layout.html`, `login.html` and `overview.html` (basic section), `style.css`, and inline-SVG chart partials (columns for reports per day, horizontal bars for versions, a histogram for fleet sizes), following the T066 design (pink theme, dark first, light values from the same tokens). No inline `style` attributes or `<style>` blocks: the CSP sets `style-src 'self'`. Include the logo PNG from `website/design-assets/gameplane-icon.png` as a static asset. There is no JavaScript, and the range is chosen with links.
 - [ ] T069 [US4] Change the chart for the dashboard, in `charts/gameplane/templates/telemetry-receiver.yaml`:
   - `DASHBOARD_TOKEN` from `dashboard.tokenSecretRef` when it is named
   - Service port `dashboard` (8081) when the token is named
@@ -382,7 +384,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - create `templates/NOTES.txt`, which prints a warning when `serviceMonitors.enabled` and the bundled receiver are on but no dashboard token is named (no receiver ServiceMonitor is rendered)
   - apply the T002-approved changes to the `ci.yaml` "observability scrape" step
   - a `CHANGELOG.md` note under T094: receiver metrics now need the dashboard token
-- [ ] T070 [P] [US4] Create `telemetry-receiver/views_test.go`, `dashboard_test.go` and `ratelimit_test.go`, covering:
+- [X] T070 [P] [US4] Create `telemetry-receiver/views_test.go`, `dashboard_test.go` and `ratelimit_test.go`, covering:
   - the exact figures for a synthetic multi-day dataset in every range
   - the empty state
   - the **refusal invariant**: every unauthenticated response body and status is byte-identical between an empty store and a populated one
@@ -395,7 +397,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `GET /metrics` returns `404` on the public listener, `401` on the dashboard listener without the Bearer token, and `200` with it
 - [ ] T071 [US4] Add these subtests to `test/e2e/telemetry_e2e_test.go`:
   - `dashboard_refuses_unauthenticated`, where `/` returns 303 to a login page that contains no digits from the data and `/api/v1/views` returns 401
-  - `dashboard_shows_reports`, which signs in with the Secret's token through `Env.PortForward` on 8081, and asserts that `reportsPerDay` holds the reports from earlier subtests and that `empty` is false
+  - `dashboard_shows_reports`, which signs in with the Secret's token through `Env.PortForward` on 8081 (setting the `Cookie` header by hand, since the session cookie is `Secure` and the port-forward is plain HTTP). Views end at yesterday (UTC), so same-day reports from earlier subtests are not in them: it asserts that `/api/v1/views` returns `200` with `asOf` = yesterday and a well-formed body, and that `/metrics` (Bearer) counts the earlier reports. The exact figures are covered by `views_test.go`.
 
 **Checkpoint**: the provider keeps history and shows basic views privately.
 
@@ -421,7 +423,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - shares for `env.*`, `games`, `features`, `tunnels`, `clusters`, `db` and `language`, weighted by install-days as in research R4
 
   The block is `null` when the range has no extended reports.
-- [ ] T075 [US5] In `telemetry-receiver/telemetry-dashboard.pen`, add the overview's extended section: install KPIs, new and lapsed trends, environment, game and feature breakdowns, and the coverage note. Load the `dataviz` skill for charts and categorical colours. Ask the user to open that file, then save it, run `design-export` into `telemetry-receiver/design-export/`, and commit.
+- [X] T075 [US5] In `telemetry-receiver/telemetry-dashboard.pen`, add the overview's extended section: install KPIs, new and lapsed trends, environment, game and feature breakdowns, and the coverage note. Load the `dataviz` skill for charts and categorical colours. Ask the user to open that file, then save it, run `design-export` into `telemetry-receiver/design-export/`, and commit.
 - [ ] T076 [US5] Add `telemetry-receiver/web/overview_extended.html` and its chart partials, following the T075 design. When `extended` is null, render the "no reports in this range included extended data" message.
 - [ ] T077 [P] [US5] Create `telemetry-receiver/population_test.go`, `ingest_ext_test.go` and `views_perf_test.go`:
   - **Synthetic population** with a fake clock: resets, upgrades and lapses. Assert exact new, lapsed and active counts, and a 30-day unique count within 1% (SC-008).

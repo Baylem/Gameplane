@@ -73,7 +73,7 @@ Body: `{"action": "seen" | "keep" | "extended-off" | "all-off"}`.
 
 | Action | Effect |
 |---|---|
-| `seen` | Sets `notice_shown_at` if it isn't set yet, and opens the schedule (`next_due_at = now + U(0, 15m)`). Records no ack. Idempotent. |
+| `seen` | Sets `notice_shown_at` if it isn't set yet, and opens the schedule (`next_due_at = now + U(0, min(15m, interval/4))`, research R12). Records no ack. Idempotent. |
 | `keep` | Ack (`action=keep`). Consent unchanged. |
 | `extended-off` | Ack. `extended=false`, `consent_source=admin`, install ID deleted. |
 | `all-off` | Ack. `sendMetrics=false`, `extended=false`, `consent_source=admin`, install ID deleted, schedule closed. |

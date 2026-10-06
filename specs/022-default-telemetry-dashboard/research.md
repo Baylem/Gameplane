@@ -117,12 +117,13 @@ Fallback for older receivers (FR-016, SC-013):
 
 ## R6. Per-source limits and source addresses (FR-014, FR-021, FR-032)
 
-**Decision**: All limits are in memory only and keyed by source IP, which is never written to disk.
+**Decision**: All limits are in memory only and keyed by source, which is never written to disk. A source is the IPv4 address (IPv4-mapped IPv6 included) or the IPv6 /64, so one host can't rotate through its prefix.
 - **Ingest.** At most `INGEST_SOURCE_DAILY_LIMIT` *accepted* reports per source per UTC day, default **20**. Over the limit the receiver returns `429`.
 - **Public summary.** A token bucket of 60 requests per minute per source, burst 10.
 - **Dashboard login.** 5 attempts per minute per source.
 - **Source IP.** This is the TCP peer address. `X-Forwarded-For` is trusted only when the peer falls inside `TRUSTED_PROXY_CIDRS` (default empty).
-- **Cleanup.** Limiter state is purged at UTC midnight and whenever an entry has been idle for 10 minutes.
+- **Cleanup.** Daily counters reset at UTC midnight. Token buckets are purged after 10 idle minutes (daily counters are not, or an idle source would regain its budget).
+- **Capacity.** Each limiter tracks at most 100,000 sources. Beyond that, new sources share one overflow budget with the same limit as a single source, so a flood of addresses never bypasses the limits (security review of 4c742e7d).
 
 **Rationale**:
 - A default of 20 tolerates CGNAT and shared egress (several homelabs behind one address) while capping how much one source can distort a day.
@@ -137,7 +138,7 @@ Fallback for older receivers (FR-016, SC-013):
 **Decision**:
 - **Rendering.** The receiver renders the dashboard itself with `html/template`. CSS and templates are embedded with `go:embed`, and charts are **inline SVG** generated server-side. There is **no JavaScript**.
 - **Range selection.** The range is chosen with plain links (`?range=7|30|90|365`, default 30).
-- **Listener.** The dashboard has its own listener, `DASHBOARD_LISTEN_ADDR` (default `:8081`), separate from the public listener (`:8080`: ingest, healthz, public summary). Prometheus `/metrics` also moves to the dashboard listener, behind the token (spec Q8), so no aggregate other than the public summary is readable from the public port.
+- **Listener.** The dashboard has its own listener, `DASHBOARD_LISTEN_ADDR` (default `:8081`), separate from the public listener (`:8080`: ingest, healthz, public summary). Templates use no inline `style` attributes or `<style>` blocks, because the CSP sets `style-src 'self'`; SVG presentation attributes are fine. Prometheus `/metrics` also moves to the dashboard listener, behind the token (spec Q8), so no aggregate other than the public summary is readable from the public port.
 - **CSP.** `default-src 'none'; style-src 'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`.
 - **Chart design.** Designs come from frames in `telemetry-receiver/telemetry-dashboard.pen` (spec Q10), a separate Pencil file seeded with a copy of the HeroUI design, exported to `telemetry-receiver/design-export/`. The rendered HTML recreates the HeroUI look in plain CSS, because there is no React (constitution II, by analogy). The `dataviz` skill is applied when the frames are designed and again when the SVG is implemented.
 

@@ -24,7 +24,7 @@
 - Q7: What happens on save when basic is turned off while extended is on? → A: **Extended is turned off with it**, and saving succeeds. The dashboard also disables the extended switch whenever basic is off.
 - Q8: Where do the provider's operational metrics live? → A: **Behind the dashboard credential, on the private port.** No aggregate is readable from the provider's public port except the public summary.
 - Q9: Is running the project's receiver in scope? → A: **A runbook only.** It documents deployment, TLS, secrets, the public summary and backups. No infrastructure code.
-- Q10: Where is the provider dashboard designed? → A: **In its own Pencil file**, `telemetry-receiver/telemetry-dashboard.pen`, which starts from a copy of the HeroUI design.
+- Q10: Where is the provider dashboard designed? → A: **In its own Pencil file**, `telemetry-receiver/telemetry-dashboard.pen`, which starts from a copy of the HeroUI design. It follows the pink theme the main app and website share (`web/src/styles/globals.css` tokens, Geist and JetBrains Mono), dark first (user direction, 2026-10-07).
 - Q6: What happens when a report's signature is wrong, or its ID is already claimed by another key? → A: **The provider refuses it and counts nothing.** When the refusal says the ID belongs to another key, the install automatically replaces its ID (and with it the key) and resends.
 
 ## Context
