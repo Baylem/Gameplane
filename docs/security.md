@@ -225,6 +225,11 @@ non-empty password value with the marker `__gameplane_redacted__`, through one
 helper (`api/internal/handlers/config_redact.go`). If the GameTemplate cannot be
 read, every config value is redacted (fail closed).
 
+These responses also omit the `kubectl.kubernetes.io/last-applied-configuration`
+annotation, which can contain passwords from an older manifest even after they
+are removed from current config. This applies even to servers without config;
+the annotation remains stored in Kubernetes.
+
 On `PUT /servers/{name}` a password value equal to the marker keeps the stored
 value, a different non-empty value replaces it, and an empty string clears it
 only when the field is optional (a required field keeps its value); a required

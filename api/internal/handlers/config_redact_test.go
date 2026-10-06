@@ -356,6 +356,8 @@ func TestRedact_EventsStreamHidesPasswordValues(t *testing.T) {
 
 	gs := serverWithConfig("alpha", plainConfig())
 	added := make(chan struct{})
+	const lastApplied = "kubectl.kubernetes.io/last-applied-configuration"
+	gs.SetAnnotations(map[string]string{lastApplied: `{"spec":{"config":{"OLD_PASSWORD":"historical-secret"}}}`})
 	go func() {
 		fw.Add(gs)
 		close(added)
@@ -379,6 +381,12 @@ func TestRedact_EventsStreamHidesPasswordValues(t *testing.T) {
 
 	out := w.String()
 	assertNoSecretLeak(t, out)
+	if strings.Contains(out, lastApplied) || strings.Contains(out, "historical-secret") {
+		t.Fatalf("event exposed last-applied configuration: %s", out)
+	}
+	if gs.GetAnnotations()[lastApplied] == "" {
+		t.Fatal("watch object's last-applied annotation was mutated in place")
+	}
 	if !strings.Contains(out, configRedactedMarker) {
 		t.Fatalf("frame has no redaction marker: %s", out)
 	}
