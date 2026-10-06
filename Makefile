@@ -254,6 +254,10 @@ test-doc-versions: ## Run the fixture tests for hack/check-doc-versions.sh
 check-links: ## Verify internal documentation links and anchors resolve
 	hack/check-links.sh
 
+.PHONY: check-telemetry-catalog
+check-telemetry-catalog: ## Verify telemetryschema/catalog.txt matches the chart's official module list
+	hack/check-telemetry-catalog.sh
+
 .PHONY: check-dev-load-images
 check-dev-load-images: ## Verify `dev-load` loads every image `images` builds
 	hack/check-dev-load-images.sh
@@ -263,7 +267,7 @@ test-up-registry: ## Run the fixture tests for deploy/kind/up.sh's registry/cont
 	hack/test-up-registry.sh
 
 .PHONY: lint
-lint: check-doc-versions check-links check-specs check-dev-load-images test-up-registry lint-go lint-web ## Run all linters
+lint: check-doc-versions check-links check-specs check-telemetry-catalog check-dev-load-images test-up-registry lint-go lint-web ## Run all linters
 
 .PHONY: lint-go
 lint-go: ## Run golangci-lint across all modules
