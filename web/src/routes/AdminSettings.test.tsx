@@ -20,6 +20,79 @@ afterEach(() => {
 });
 
 describe("AdminSettingsPage", () => {
+  it.each([false, true])("keeps successful writes when their refresh fails, with later edits=%s", async (editDuringSave) => {
+    let general = { instanceName: "old-name", externalURL: "https://example.com", defaultNamespace: "gameplane-games" };
+    let failReads = false;
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    const save = vi.fn(async ({ request }: { request: Request }) => {
+      const submitted = await request.json() as typeof general;
+      await pending;
+      general = submitted;
+      failReads = true;
+      return new HttpResponse(null, { status: 204 });
+    });
+    server.use(
+      http.get("/admin/config", () => failReads ? new HttpResponse(null, { status: 500 }) : HttpResponse.json({ general })),
+      http.put("/admin/config/general", save),
+    );
+    const { client } = renderWithQuery(<AdminSettingsPage />);
+    const name = await screen.findByDisplayValue("old-name");
+    await userEvent.clear(name);
+    await userEvent.type(name, "submitted-name");
+    await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    if (editDuringSave) {
+      const url = screen.getByDisplayValue("https://example.com");
+      await userEvent.clear(url);
+      await userEvent.type(url, "https://later.example.com");
+    }
+    await act(async () => { release(); });
+    await waitFor(() => expect(client.isMutating()).toBe(0));
+    expect(client.getQueryState(["config"])?.status).toBe("error");
+    expect(screen.getByDisplayValue("submitted-name")).toBeInTheDocument();
+    if (!editDuringSave) {
+      const url = screen.getByDisplayValue("https://example.com");
+      await userEvent.clear(url);
+      await userEvent.type(url, "https://later.example.com");
+    }
+    // A failed read cannot validate a whole-section write against old cache.
+    await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    expect(await screen.findByText(/Could not refresh configuration/i)).toBeInTheDocument();
+    expect(save).toHaveBeenCalledTimes(1);
+    failReads = false;
+    await act(async () => { await client.refetchQueries({ queryKey: ["config"] }); });
+    expect(screen.getByDisplayValue("https://later.example.com")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+    expect(general).toEqual({ instanceName: "submitted-name", externalURL: "https://later.example.com", defaultNamespace: "gameplane-games" });
+  });
+
+  it("blocks writes when the navigation refresh awaited by Save fails", async () => {
+    const general = { instanceName: "old-name", externalURL: "https://example.com", defaultNamespace: "gameplane-games" };
+    let reads = 0;
+    let release!: () => void;
+    const refresh = new Promise<void>((resolve) => { release = resolve; });
+    const save = vi.fn(() => new HttpResponse(null, { status: 204 }));
+    server.use(
+      http.get("/admin/config", async () => {
+        if (++reads === 1) return HttpResponse.json({ general });
+        await refresh;
+        return new HttpResponse(null, { status: 500 });
+      }),
+      http.put("/admin/config/general", save),
+    );
+    renderWithQuery(<AdminSettingsPage />);
+    await userEvent.type(await screen.findByDisplayValue("old-name"), "-edited");
+    await userEvent.click(screen.getByRole("button", { name: /^General$/i }));
+    await waitFor(() => expect(reads).toBe(2));
+    await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    await act(async () => { release(); });
+    expect(await screen.findByText(/Could not refresh configuration/i)).toBeInTheDocument();
+    expect(screen.getByDisplayValue("old-name-edited")).toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+  });
+
   it.each([false, true])("rebases a saved section while preserving later edits=%s", async (editDuringSave) => {
     let general = { instanceName: "old-name", externalURL: "https://example.com", defaultNamespace: "gameplane-games" };
     let release!: () => void;

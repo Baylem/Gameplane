@@ -210,7 +210,11 @@ function useSectionForm<T>(initial: T, section: Parameters<typeof useUpdateConfi
   const [base, setBase] = useState<T>(initial);
   const [dirty, setDirty] = useState(false);
   const revision = useRef(0);
+  // A successful PUT must not be undone by the cache from before that write.
+  const [committedAfter, setCommittedAfter] = useState<number | null>(null);
   const qc = useQueryClient();
+  const configState = qc.getQueryState<AllConfig>(["config"]);
+  const [syncedSource, setSyncedSource] = useState({ initial, count: configState?.dataUpdateCount });
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [writing, setWriting] = useState(false);
@@ -220,12 +224,16 @@ function useSectionForm<T>(initial: T, section: Parameters<typeof useUpdateConfi
   const [staged, setStaged] = useState<Record<string, StagedSecret>>({});
   const mut = useUpdateConfigSection(section);
 
-  useEffect(() => {
-    if (!dirty && !writing && !mut.isPending) {
-      setDraft(initial);
-      setBase(initial);
-    }
-  }, [initial, dirty, writing, mut.isPending]);
+  // Adjust this component's state before rendering children for a new source.
+  // Remember its identity and successful-read count so this converges on the
+  // next render, including when a refetch returns structurally identical data.
+  if (!dirty && !writing && !mut.isPending && configState?.status === "success"
+    && (committedAfter === null || configState.dataUpdateCount > committedAfter)
+    && (syncedSource.initial !== initial || syncedSource.count !== configState.dataUpdateCount)) {
+    setSyncedSource({ initial, count: configState.dataUpdateCount });
+    setDraft(initial);
+    setBase(initial);
+  }
 
   const markEdited = () => {
     revision.current++;
@@ -275,7 +283,13 @@ function useSectionForm<T>(initial: T, section: Parameters<typeof useUpdateConfi
         setChecking(false);
       }
     }
-    const latest = qc.getQueryData<AllConfig>(["config"])?.[section] ?? initial;
+    const verified = qc.getQueryState<AllConfig>(["config"]);
+    if (verified?.status !== "success"
+      || (committedAfter !== null && verified.dataUpdateCount <= committedAfter)) {
+      setError("Could not refresh configuration. Retry the refresh before saving.");
+      return;
+    }
+    const latest = verified.data?.[section] ?? initial;
     if (JSON.stringify(latest) !== JSON.stringify(base)) {
       setError("Configuration changed. Copy your edits and reopen this section before saving.");
       return;
@@ -291,6 +305,7 @@ function useSectionForm<T>(initial: T, section: Parameters<typeof useUpdateConfi
     } finally {
       setWriting(false);
     }
+    const beforeSave = qc.getQueryState(["config"])?.dataUpdateCount ?? 0;
     mut.mutate(draft as never, {
       onSuccess: () => {
         for (const c of list) {
@@ -299,9 +314,13 @@ function useSectionForm<T>(initial: T, section: Parameters<typeof useUpdateConfi
         setStaged((s) =>
           Object.fromEntries(Object.entries(s).filter(([key, c]) => changes[key] !== c)),
         );
-        // The mutation's onSuccess awaits query invalidation. Rebase on that
-        // fresh value, but preserve edits made while the request was pending.
-        const refreshed = (qc.getQueryData<AllConfig>(["config"])?.[section] ?? initial) as T;
+        // Invalidation awaits the GET but swallows its errors. Only a new,
+        // successful response supersedes the value that the PUT committed.
+        setCommittedAfter(beforeSave);
+        const refreshedState = qc.getQueryState<AllConfig>(["config"]);
+        const refreshed = refreshedState?.status === "success" && refreshedState.dataUpdateCount > beforeSave
+          ? (refreshedState.data?.[section] ?? draft) as T
+          : draft;
         setBase(refreshed);
         const unchanged = revision.current === submittedRevision;
         if (unchanged) {

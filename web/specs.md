@@ -842,6 +842,10 @@ Save reports a conflict before any Secret or config writes; the administrator ca
 copy their edits and reopen the section to start from current values. A successful
 save rebases on refreshed config without discarding edits made during the request.
 Dedicated role-mapping resets update both the baseline and draft.
+If the refresh following a successful PUT fails, the submitted values remain the
+committed baseline and visible draft (preserving newer local edits). Stale cached
+values cannot reset that draft. Save requires a successful refresh before any
+further writes when the last configuration read failed.
 
 **Why the split:**  
 A StorageClass is a cluster infrastructure concern, not an authentication concern. Cluster.tsx is the natural home for infrastructure settings; AdminSettings.tsx owns auth-only config. This separation keeps concerns aligned with where users expect to find them.
