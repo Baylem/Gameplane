@@ -62,6 +62,8 @@ From `tools.go` `registeredToolNames`:
 | `get_pod_logs` | `namespace`, `pod`, optional `container`, optional `tailLines` (capped 5000), optional `previous` | Log text (up to 256 KiB of the newest bytes; when truncated, prefixed with a notice) |
 | `propose_fix` | Optional `kind`/`namespace`/`name`, required `symptom` (free text) | Suggested diagnostics + fix text (never applies anything) |
 
+Pod logs read the complete finite Kubernetes tail response while retaining only a 256 KiB rolling buffer. Long lines can make the requested tail exceed 4 MiB; the returned suffix still includes the actual final bytes. Request cancellation and stream read failures return errors instead of presenting partial output as the newest logs.
+
 **Artifact scope:**
 - **7 of Gameplane's 9 CRDs** (not Cluster or NetworkCapture): GameServer, GameTemplate, Backup, BackupSchedule, Restore, Module, ModuleSource (4 namespaced, 3 cluster-scoped; verified against `CRDKinds` in `internal/kube/client.go`).
 - **Core resources**: `v1` Pods, Events, `pods/log` subresource.

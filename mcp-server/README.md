@@ -66,7 +66,7 @@ the threat model.
 | `list_pods` | Core Pods in a namespace (or all namespaces), optionally by label selector |
 | `get_pod` | A single Pod's spec and status |
 | `list_events` | Core Events in a namespace (or all namespaces), optionally by field/label selector. Bounded to the most-recent 100 events (sorted newest-first); responses include a truncation notice if more exist. |
-| `get_pod_logs` | A bounded tail (default 200 lines, capped at 5000) of a container's logs |
+| `get_pod_logs` | A bounded tail (default 200 lines, capped at 5000) of a container's logs; retains the newest 256 KiB from the complete response, with a notice when truncated |
 | `propose_fix` | Given a resource reference + a free-text symptom, returns suggested YAML/kubectl text, grounded in a best-effort read of the resource's current status. Never applies anything itself. |
 
 ## Transport: stdio only, no network port
