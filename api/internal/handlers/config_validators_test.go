@@ -164,8 +164,18 @@ func TestValidateTelemetry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("happy: %v", err)
 	}
-	if string(canon) != `{"sendMetrics":true}` {
+	if string(canon) != `{"sendMetrics":true,"extended":false}` {
 		t.Fatalf("canonicalized output: got %s", canon)
+	}
+	canon, err = validateTelemetry([]byte(`{"sendMetrics":true,"extended":true}`))
+	if err != nil || string(canon) != `{"sendMetrics":true,"extended":true}` {
+		t.Fatalf("both tiers on: got %s, %v", canon, err)
+	}
+	// Basic off turns extended off with it and the save is not rejected
+	// (FR-003, spec Q7).
+	canon, err = validateTelemetry([]byte(`{"sendMetrics":false,"extended":true}`))
+	if err != nil || string(canon) != `{"sendMetrics":false,"extended":false}` {
+		t.Fatalf("basic off must normalise extended off: got %s, %v", canon, err)
 	}
 	if _, err := validateTelemetry([]byte(`bogus`)); err == nil {
 		t.Fatal("expected json error")

@@ -767,6 +767,9 @@ export const handlers = [
   ),
   http.get("/admin/config", () => HttpResponse.json(makeConfig())),
   http.put("/admin/config/:section", () => new HttpResponse(null, { status: 204 })),
+  // First-login telemetry notice (spec 022): not pending by default, so
+  // tests that render the app shell as an admin see no banner.
+  http.get("/admin/telemetry/notice", () => HttpResponse.json({ pending: false })),
   http.post("/admin/notifications/sinks/:name/test", () =>
     HttpResponse.json({ delivered: true }),
   ),

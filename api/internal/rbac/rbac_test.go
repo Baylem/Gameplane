@@ -178,6 +178,12 @@ func TestAllow(t *testing.T) {
 		{RoleOperator, "PUT", "/admin/registries/curseforge/secret", scope.DefaultCluster, false},
 		{RoleAdmin, "PUT", "/admin/registries/curseforge/secret", scope.DefaultCluster, true},
 		{RoleAdmin, "DELETE", "/admin/registries/curseforge/secret", scope.DefaultCluster, true},
+		// Telemetry notice (spec 022): reads need config:read, writes config:manage.
+		{RoleViewer, "GET", "/admin/telemetry/notice", scope.DefaultCluster, false},
+		{RoleAdmin, "GET", "/admin/telemetry/notice", scope.DefaultCluster, true},
+		{RoleViewer, "POST", "/admin/telemetry/notice", scope.DefaultCluster, false},
+		{RoleOperator, "POST", "/admin/telemetry/notice", scope.DefaultCluster, false},
+		{RoleAdmin, "POST", "/admin/telemetry/notice", scope.DefaultCluster, true},
 		// Restores: read viewer+, create operator+ (backups:restore).
 		{RoleViewer, "GET", "/restores", scope.DefaultCluster, true},
 		{RoleViewer, "POST", "/restores", scope.DefaultCluster, false},

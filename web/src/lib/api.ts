@@ -223,6 +223,33 @@ export const Config = {
     ),
 };
 
+// Telemetry notice types mirror contracts/api-telemetry-http.md (spec 022).
+export type TelemetryNoticeAction = "seen" | "keep" | "extended-off" | "all-off";
+
+export interface TelemetryDestination {
+  kind: "default" | "custom" | "bundled" | "disabled" | "none";
+  // The URL host only; null for the disabled and none kinds.
+  host: string | null;
+}
+
+// GET /admin/telemetry/notice. When pending is false the other keys are
+// omitted, so a caller without config:manage gets exactly {"pending":false}.
+export interface TelemetryNotice {
+  pending: boolean;
+  destination?: TelemetryDestination;
+  fields?: { basic: string[]; extended: string[] };
+}
+
+export const Telemetry = {
+  // GET /admin/telemetry/notice — the first-login notice for the caller.
+  notice: () => api<TelemetryNotice>("/admin/telemetry/notice"),
+  // POST /admin/telemetry/notice — "seen" records that the notice was rendered
+  // (no ack, idempotent); the other actions dismiss it. Every action answers
+  // 204, and a 409 means the notice was not pending.
+  ack: (action: TelemetryNoticeAction) =>
+    api<void>("/admin/telemetry/notice", { method: "POST", body: { action } }),
+};
+
 // ShareLinkCreateBody is the discriminated create-request shape callers
 // build: exactly one of an absolute `expiresAt` instant or `neverExpires:
 // true` (OD-1/OD-5), or the deprecated-for-one-release relative `expiresIn`

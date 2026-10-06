@@ -356,7 +356,9 @@ func main() {
 		handlers.MountUsers(p, store, sessions, reg)
 		handlers.MountRoles(p, store)
 		handlers.MountAudit(p, auditor)
-		handlers.MountConfig(p, store, auditor, oidcAuth != nil, cfg.gameDataStorageClass, helmPolicy)
+		telemetrySettings := handlers.TelemetrySettings{Dest: telemetryDest, Interval: cfg.telemetryInterval}
+		handlers.MountConfigWithTelemetry(p, store, auditor, oidcAuth != nil, cfg.gameDataStorageClass, helmPolicy, telemetrySettings)
+		handlers.MountTelemetry(p, store, telemetrySettings)
 		handlers.MountNotifications(p, notifier, k8s, cfg.namespace)
 		handlers.MountAuthProviderSecrets(p, k8s, cfg.namespace)
 		handlers.MountCluster(p, reg, store, Version, cfg.clusterOps, cfg.updateChannel)
@@ -401,10 +403,28 @@ func main() {
 		ws.Mount(p, reg, cfg.agentCABundle, cfg.agentClientCert, cfg.agentClientKey, ws.AgentGatewayOptions{Namespace: cfg.namespace})
 	})
 
-	// Anonymous usage telemetry. No-op when the resolved destination is
-	// disabled or none (an empty URL), or when the admin turned the
-	// sendMetrics toggle off.
-	go telemetry.New(store, k8s, telemetryDest.URL, cfg.telemetryAuth, Version, cfg.telemetryInterval).Run(ctx)
+	// Usage telemetry. Run returns at once when the resolved destination is
+	// disabled or none. Otherwise it sends nothing while the admin's basic
+	// toggle is off or, on a fresh install, until an admin was shown the
+	// notice (spec 022 FR-004); each report slot is claimed in the database.
+	go telemetry.New(telemetry.Config{
+		Dest:     telemetryDest,
+		Interval: cfg.telemetryInterval,
+		Auth:     cfg.telemetryAuth,
+		Deps: telemetry.Deps{
+			Kube:    k8s,
+			Store:   store,
+			Version: Version,
+			Flags: telemetry.Flags{
+				CaptureEnabled:       cfg.captureFeatureEnabled,
+				OIDCConfigured:       cfg.oidcIssuer != "",
+				AuditWebhook:         cfg.auditWebhookURL != "",
+				AuditS3:              cfg.auditS3Endpoint != "" && cfg.auditS3Bucket != "",
+				DBDriver:             cfg.dbDriver,
+				OfficialModuleSource: cfg.officialModuleSource,
+			},
+		},
+	}).Run(ctx)
 
 	// Opt-in audit-event retention. Off by default (0 days = keep forever);
 	// when set, a daily sweep prunes events past the window so the table
