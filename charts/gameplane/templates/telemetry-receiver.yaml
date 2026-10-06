@@ -10,15 +10,23 @@
   --reuse-values` (F-214), so each is read through a guard: a missing block
   becomes an empty dict, and hasKey (not `default`) keeps an explicit 0 or
   false the operator set. Absent keys fall back to the values.yaml defaults.
+  In particular: an absent persistence block (an upgrade with --reuse-values
+  from beta.8) counts as disabled, so the upgrade adds no PVC.
 */}}
 {{- $persistence := $r.persistence | default dict }}
-{{- $persistenceEnabled := ternary $persistence.enabled true (hasKey $persistence "enabled") }}
+{{- $persistenceEnabled := ternary $persistence.enabled false (hasKey $persistence "enabled") }}
 {{- $dashboard := $r.dashboard | default dict }}
 {{- $dashboardToken := $dashboard.tokenSecretRef | default dict }}
 {{- $pepper := $r.pepperSecretRef | default dict }}
 {{- $publicSummary := $r.publicSummary | default dict }}
 {{- if and $persistenceEnabled (gt (int $r.replicas) 1) }}
 {{- fail "api.telemetry.receiver.replicas must be 1 while api.telemetry.receiver.persistence.enabled is true: the SQLite store has a single writer" }}
+{{- end }}
+{{- if and (hasKey $r "retentionDays") (lt (int $r.retentionDays) 365) }}
+{{- fail "api.telemetry.receiver.retentionDays must be at least 365 (spec 022 OD-3)" }}
+{{- end }}
+{{- if and (hasKey $r "activityExpiryDays") (lt (int $r.activityExpiryDays) 31) }}
+{{- fail "api.telemetry.receiver.activityExpiryDays must be at least 31 (spec 022 OD-4)" }}
 {{- end }}
 {{- if $persistenceEnabled }}
 apiVersion: v1
