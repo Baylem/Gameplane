@@ -12,7 +12,9 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
 )
@@ -165,6 +167,10 @@ func (r *ClusterStatusReconciler) markHealthy(ctx context.Context, c *gameplanev
 
 func (r *ClusterStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&gameplanev1alpha1.Cluster{}).
+		// Health results update LastCheckTime. Watching those status writes
+		// would immediately repeat slow probes, bypassing the two-minute timer.
+		For(&gameplanev1alpha1.Cluster{}, builder.WithPredicates(predicate.Or(
+			predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{},
+		))).
 		Complete(r)
 }
