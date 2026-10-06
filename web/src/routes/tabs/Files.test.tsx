@@ -1,5 +1,5 @@
 import { ResourceTargetProvider } from "@/lib/resourceTarget";
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderWithQuery as baseRenderWithQuery } from "@/test/render";
@@ -54,7 +54,178 @@ const ROOT_ENTRIES = [
   { name: "server.properties", path: "/server.properties", size: 2100, dir: false },
 ];
 
+function deferredResponse() {
+  let resolve!: (response: Response) => void;
+  const promise = new Promise<Response>((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+const TWO_FILES = [...ROOT_ENTRIES, { name: "config.yaml", path: "/config.yaml", size: 100, dir: false }];
+
 describe("FilesTab", () => {
+  it("clears the previous draft and cannot save until the newly selected file loads", async () => {
+    const secondRead = deferredResponse();
+    const writes: { url: string; body: string }[] = [];
+    fetchMock.mockImplementation(async (url: string, init?: FetchInit) => {
+      if (url.includes("/files/list")) return jsonRes(TWO_FILES);
+      if (url.includes("/files/read?path=%2Fserver.properties")) return textRes("first file");
+      if (url.includes("/files/read?path=%2Fconfig.yaml")) return secondRead.promise;
+      if (url.includes("/files/write")) { writes.push({ url, body: init?.body as string }); return new Response(null, { status: 204 }); }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("confirm", () => true);
+    renderWithQuery(<FilesTab name="mc-survival" />);
+    fireEvent.click(await screen.findByText("server.properties"));
+    fireEvent.change(await screen.findByTestId("monaco"), { target: { value: "discarded first draft" } });
+    fireEvent.click(screen.getByText("config.yaml"));
+    expect(screen.queryByTestId("monaco")).not.toBeInTheDocument();
+    const save = screen.getByRole("button", { name: /Save/ });
+    expect(save).toBeDisabled();
+    fireEvent.click(save);
+    expect(writes).toEqual([]);
+    await act(async () => secondRead.resolve(textRes("second file")));
+    const editor = await screen.findByTestId("monaco");
+    expect(editor).toHaveValue("second file");
+    fireEvent.change(editor, { target: { value: "second draft" } });
+    fireEvent.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(writes).toEqual([{ url: "/servers/mc-survival/files/write?path=%2Fconfig.yaml", body: "second draft" }]));
+  });
+
+  it("ignores a previous file read that resolves after another file is selected", async () => {
+    const firstRead = deferredResponse();
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/files/list")) return jsonRes(TWO_FILES);
+      if (url.includes("path=%2Fserver.properties")) return firstRead.promise;
+      if (url.includes("path=%2Fconfig.yaml")) return textRes("second file");
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    renderWithQuery(<FilesTab name="mc-survival" />);
+    fireEvent.click(await screen.findByText("server.properties"));
+    fireEvent.click(screen.getByText("config.yaml"));
+    expect(await screen.findByTestId("monaco")).toHaveValue("second file");
+    await act(async () => firstRead.resolve(textRes("late first file")));
+    expect(screen.getByTestId("monaco")).toHaveValue("second file");
+    expect(screen.getByRole("button", { name: /Save/ })).toBeDisabled();
+  });
+
+  it("preserves edits made while the selected file is saving", async () => {
+    const pendingSave = deferredResponse();
+    const bodies: string[] = [];
+    fetchMock.mockImplementation(async (url: string, init?: FetchInit) => {
+      if (url.includes("/files/list")) return jsonRes(ROOT_ENTRIES);
+      if (url.includes("/files/read")) return textRes("original");
+      if (url.includes("/files/write")) { bodies.push(init?.body as string); return bodies.length === 1 ? pendingSave.promise : new Response(null, { status: 204 }); }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    renderWithQuery(<FilesTab name="mc-survival" />);
+    fireEvent.click(await screen.findByText("server.properties"));
+    const editor = await screen.findByTestId("monaco");
+    fireEvent.change(editor, { target: { value: "first edit" } });
+    fireEvent.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(bodies).toEqual(["first edit"]));
+    fireEvent.change(editor, { target: { value: "second edit" } });
+    await act(async () => pendingSave.resolve(new Response(null, { status: 204 })));
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save/ })).toBeEnabled());
+    expect(editor).toHaveValue("second edit");
+    fireEvent.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(bodies).toEqual(["first edit", "second edit"]));
+  });
+
+  it("does not change the new file's baseline when an earlier save completes", async () => {
+    const pendingSave = deferredResponse();
+    const writes: { url: string; body: string }[] = [];
+    fetchMock.mockImplementation(async (url: string, init?: FetchInit) => {
+      if (url.includes("/files/list")) return jsonRes(TWO_FILES);
+      if (url.includes("/files/read?path=%2Fserver.properties")) return textRes("first file");
+      if (url.includes("/files/read?path=%2Fconfig.yaml")) return textRes("second file");
+      if (url.includes("/files/write")) { writes.push({ url, body: init?.body as string }); return writes.length === 1 ? pendingSave.promise : new Response(null, { status: 204 }); }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("confirm", () => true);
+    renderWithQuery(<FilesTab name="mc-survival" />);
+    fireEvent.click(await screen.findByText("server.properties"));
+    fireEvent.change(await screen.findByTestId("monaco"), { target: { value: "first saved draft" } });
+    fireEvent.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    fireEvent.click(screen.getByText("config.yaml"));
+    expect(await screen.findByTestId("monaco")).toHaveValue("second file");
+    await act(async () => pendingSave.resolve(new Response(null, { status: 204 })));
+    await waitFor(() => expect(screen.queryByText(/modified/)).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /Save/ })).toBeDisabled();
+    fireEvent.change(screen.getByTestId("monaco"), { target: { value: "second saved draft" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save/ })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(writes).toEqual([
+      { url: "/servers/mc-survival/files/write?path=%2Fserver.properties", body: "first saved draft" },
+      { url: "/servers/mc-survival/files/write?path=%2Fconfig.yaml", body: "second saved draft" },
+    ]));
+  });
+
+  it("clears the editor on target change and ignores an old target's pending save", async () => {
+    const pendingSave = deferredResponse();
+    const writes: { url: string; body: string }[] = [];
+    function TargetHarness() {
+      const [cluster, setCluster] = useState("local");
+      return <ResourceTargetProvider target={{ cluster, name: "mc-survival" }} access={{ canWrite: true, canControl: true, canConsole: true, canDelete: true, isOwner: true, isCollaborator: false, permissions: ["*"] }}>
+        <button onClick={() => setCluster("remote")}>Switch target</button>
+        <FilesTab name="mc-survival" />
+      </ResourceTargetProvider>;
+    }
+    fetchMock.mockImplementation(async (url: string, init?: FetchInit) => {
+      if (url.includes("/files/list")) return jsonRes(ROOT_ENTRIES);
+      if (url.includes("/files/read")) return textRes(url.includes("cluster=remote") ? "remote content" : "local content");
+      if (url.includes("/files/write")) { writes.push({ url, body: init?.body as string }); return writes.length === 1 ? pendingSave.promise : new Response(null, { status: 204 }); }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    baseRenderWithQuery(<TargetHarness />);
+    fireEvent.click(await screen.findByText("server.properties"));
+    fireEvent.change(await screen.findByTestId("monaco"), { target: { value: "local saved draft" } });
+    fireEvent.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    fireEvent.click(screen.getByRole("button", { name: "Switch target" }));
+    expect(screen.queryByTestId("monaco")).not.toBeInTheDocument();
+    expect(screen.getByText("Select a file to edit.")).toBeInTheDocument();
+    fireEvent.click(await screen.findByText("server.properties"));
+    expect(await screen.findByTestId("monaco")).toHaveValue("remote content");
+    await act(async () => pendingSave.resolve(new Response(null, { status: 204 })));
+    expect(screen.getByTestId("monaco")).toHaveValue("remote content");
+    expect(screen.getByRole("button", { name: /Save/ })).toBeDisabled();
+    fireEvent.change(screen.getByTestId("monaco"), { target: { value: "remote saved draft" } });
+    fireEvent.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(writes).toEqual([
+      { url: "/servers/mc-survival/files/write?path=%2Fserver.properties", body: "local saved draft" },
+      { url: "/servers/mc-survival/files/write?path=%2Fserver.properties&cluster=remote", body: "remote saved draft" },
+    ]));
+  });
+
+  it("does not reuse an earlier save's baseline after discarding and reopening the same path", async () => {
+    const pendingSave = deferredResponse();
+    let firstFileReads = 0;
+    let writeStarted = false;
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.includes("/files/list")) return jsonRes(TWO_FILES);
+      if (url.includes("/files/read?path=%2Fserver.properties")) return textRes(++firstFileReads === 1 ? "original" : "reopened content");
+      if (url.includes("/files/read?path=%2Fconfig.yaml")) return textRes("second file");
+      if (url.includes("/files/write")) { writeStarted = true; return pendingSave.promise; }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("confirm", () => true);
+    const { container } = renderWithQuery(<FilesTab name="mc-survival" />);
+    fireEvent.click(await screen.findByText("server.properties"));
+    fireEvent.change(await screen.findByTestId("monaco"), { target: { value: "saved draft" } });
+    fireEvent.click(screen.getByRole("button", { name: /Save/ }));
+    await waitFor(() => expect(writeStarted).toBe(true));
+    fireEvent.click(screen.getByText("config.yaml"));
+    expect(await screen.findByTestId("monaco")).toHaveValue("second file");
+    fireEvent.click(within(container.querySelector("aside")!).getByText("server.properties"));
+    await waitFor(() => expect(screen.getByTestId("monaco")).toHaveValue("reopened content"));
+    await act(async () => pendingSave.resolve(new Response(null, { status: 204 })));
+    expect(screen.getByTestId("monaco")).toHaveValue("reopened content");
+    expect(screen.queryByText(/modified/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save/ })).toBeDisabled();
+  });
+
+
   it("renders entries from /files/list", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === "/servers/mc-survival/files/list?path=%2F") {

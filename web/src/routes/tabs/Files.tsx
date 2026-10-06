@@ -1,4 +1,4 @@
-import { useResourceClient, useResourceAccess, useResourceTarget, resourceKey } from "@/lib/resourceTarget";
+import { useResourceClient, useResourceAccess, useResourceTarget, resourceKey, type ResourceTarget } from "@/lib/resourceTarget";
 import {
   useEffect,
   useRef,
@@ -35,28 +35,56 @@ import {
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
-import { type FileEntry } from "@/lib/endpoints";
+import { createResourceClient, type FileEntry } from "@/lib/endpoints";
 import { cn, formatBytes } from "@/lib/utils";
 
 const ROOT = "/";
 
 export function FilesTab({ name, ns }: { name: string; ns?: string }) {
-  const canControl = useResourceAccess()?.canControl === true;
   const resourceTarget = useResourceTarget({ name, namespace: ns });
+  // A different server incarnation, namespace or cluster starts a fresh browser.
+  // Old asynchronous work remains attached to the instance that initiated it.
+  return <FilesBrowser key={JSON.stringify(resourceKey(resourceTarget, "file-editor"))} resourceTarget={resourceTarget} />;
+}
+
+interface FileDraft {
+  target: ResourceTarget;
+  path: string;
+  selectionId: number;
+  serverContent: string;
+  editorValue: string;
+}
+
+interface FileSave {
+  target: ResourceTarget;
+  path: string;
+  selectionId: number;
+  directory: string;
+  body: string;
+}
+
+function FilesBrowser({ resourceTarget }: { resourceTarget: ResourceTarget }) {
+  const canControl = useResourceAccess()?.canControl === true;
+  const { name, namespace: ns } = resourceTarget;
   const resourceClient = useResourceClient(resourceTarget);
   const { Files } = resourceClient;
   const qc = useQueryClient();
   const listKey = (cwd: string) => resourceKey(resourceTarget, "files", name, cwd, ns);
 
   const [cwd, setCwd] = useState(ROOT);
-  const [selected, setSelected] = useState<FileEntry | null>(null);
+  const [selection, setSelection] = useState<{ entry: FileEntry; id: number } | null>(null);
+  const selected = selection?.entry ?? null;
+  const selectionCounter = useRef(0);
   // Below `md` the tree and the file view can't sit side by side — show one
   // pane at a time, switched by tapping an entry (→ view) or the "Files"
   // back-button (→ tree). At `md`+ both panes are always visible regardless
   // of this state (see the `md:flex` overrides below).
   const [pane, setPane] = useState<"tree" | "view">("tree");
-  const [serverContent, setServerContent] = useState<string | null>(null);
-  const [editorValue, setEditorValue] = useState<string>("");
+  const [fileDraft, setFileDraft] = useState<FileDraft | null>(null);
+  const loadedFile = fileDraft?.selectionId === selection?.id &&
+    fileDraft?.path === selected?.path && fileDraft?.target === resourceTarget ? fileDraft : null;
+  const serverContent = loadedFile?.serverContent ?? null;
+  const editorValue = loadedFile?.editorValue ?? "";
   const [loadError, setLoadError] = useState<string | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
 
@@ -76,21 +104,20 @@ export function FilesTab({ name, ns }: { name: string; ns?: string }) {
   // Load file contents when a file is selected (and only then). Folder
   // navigation is handled in onEntryClick to avoid an effect cascade.
   useEffect(() => {
-    if (!selected || selected.dir) return;
+    if (!selection || selection.entry.dir) return;
+    const { entry, id } = selection;
     let aborted = false;
     const controller = new AbortController();
     const load = async () => {
       // Clear any stale error as the first step of a fresh load.
       setLoadError(null);
       try {
-        const text = await resourceClient.withSignal(controller.signal).Files.read(name, selected.path, ns);
-        if (aborted) return;
-        setServerContent(text);
-        setEditorValue(text);
+        const text = await createResourceClient(resourceTarget, controller.signal).Files.read(name, entry.path, ns);
+        if (aborted || selectionCounter.current !== id) return;
+        setFileDraft({ target: resourceTarget, path: entry.path, selectionId: id, serverContent: text, editorValue: text });
       } catch (err) {
-        if (aborted) return;
-        setServerContent(null);
-        setEditorValue("");
+        if (aborted || selectionCounter.current !== id) return;
+        setFileDraft(null);
         setLoadError((err as Error).message);
       }
     };
@@ -99,13 +126,30 @@ export function FilesTab({ name, ns }: { name: string; ns?: string }) {
       aborted = true;
       controller.abort();
     };
-  }, [selected, name, ns, resourceClient]);
+  }, [selection, name, ns, resourceTarget]);
+
+  function clearSelection() {
+    selectionCounter.current++;
+    setSelection(null);
+    setFileDraft(null);
+    setLoadError(null);
+    setOpError(null);
+  }
+
+  function selectFile(entry: FileEntry) {
+    const id = ++selectionCounter.current;
+    // Clear in the selection handler, before a new read can begin. No content
+    // from the previous path may be rendered or used as this file's draft.
+    setFileDraft(null);
+    setLoadError(null);
+    setOpError(null);
+    setSelection({ entry, id });
+    setPane("view");
+  }
 
   function navigateTo(path: string) {
     if (dirty && !confirmDiscard()) return;
-    setSelected(null);
-    setServerContent(null);
-    setEditorValue("");
+    clearSelection();
     setCwd(path);
     // Navigating (breadcrumbs, "..") is a browsing action — show the tree
     // on mobile rather than stranding the user on the now-stale editor pane.
@@ -122,22 +166,26 @@ export function FilesTab({ name, ns }: { name: string; ns?: string }) {
       return;
     }
     if (dirty && !confirmDiscard()) return;
-    setSelected(e);
-    setPane("view");
+    selectFile(e);
   }
 
   const saveMutation = useMutation({
-    mutationFn: async (body: string) => {
-      if (!selected) throw new Error("no file selected");
-      await Files.write(name, selected.path, body, ns);
+    mutationFn: async ({ target, path, body }: FileSave) => {
+      await createResourceClient(target).Files.write(target.name, path, body, target.namespace);
     },
-    onSuccess: async (_data, body) => {
+    onSuccess: async (_data, saved) => {
       void qc.invalidateQueries({ queryKey: ["fleet"] });
-      setServerContent(body);
-      await qc.invalidateQueries({ queryKey: listKey(cwd) });
-      setOpError(null);
+      setFileDraft((current) => current?.selectionId === saved.selectionId &&
+        current.path === saved.path && current.target === saved.target
+        ? { ...current, serverContent: saved.body } : current);
+      // Keep edits typed after Save was pressed, and ignore a completion for a
+      // file that was discarded/reselected (even if its path is the same).
+      if (selectionCounter.current === saved.selectionId) setOpError(null);
+      await qc.invalidateQueries({ queryKey: resourceKey(saved.target, "files", saved.target.name, saved.directory, saved.target.namespace) });
     },
-    onError: (err: Error) => setOpError(err.message),
+    onError: (err: Error, saved) => {
+      if (selectionCounter.current === saved.selectionId) setOpError(err.message);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -148,9 +196,7 @@ export function FilesTab({ name, ns }: { name: string; ns?: string }) {
     onSuccess: async (entry) => {
       void qc.invalidateQueries({ queryKey: ["fleet"] });
       if (selected?.path === entry.path) {
-        setSelected(null);
-        setServerContent(null);
-        setEditorValue("");
+        clearSelection();
         setPane("tree");
       }
       setConfirmDelete(null);
@@ -182,7 +228,7 @@ export function FilesTab({ name, ns }: { name: string; ns?: string }) {
       void qc.invalidateQueries({ queryKey: ["fleet"] });
       setNewFileOpen(false);
       await qc.invalidateQueries({ queryKey: listKey(cwd) });
-      setSelected({
+      selectFile({
         name: path.slice(path.lastIndexOf("/") + 1),
         path,
         size: 0,
@@ -379,8 +425,11 @@ export function FilesTab({ name, ns }: { name: string; ns?: string }) {
                   </Button>
                   <Button
                     size="sm"
-                    isDisabled={!canControl || !dirty || saveMutation.isPending}
-                    onPress={() => saveMutation.mutate(editorValue)}
+                    isDisabled={!canControl || !loadedFile || !dirty || saveMutation.isPending}
+                    onPress={() => {
+                      if (!canControl || !loadedFile || !dirty || saveMutation.isPending) return;
+                      saveMutation.mutate({ target: loadedFile.target, path: loadedFile.path, selectionId: loadedFile.selectionId, directory: cwd, body: loadedFile.editorValue });
+                    }}
                     variant="primary"
                   >
                     {saveMutation.isPending ? (
@@ -406,7 +455,8 @@ export function FilesTab({ name, ns }: { name: string; ns?: string }) {
                     theme="vs-dark"
                     language={guessLang(selected.name)}
                     value={editorValue}
-                    onChange={(v) => setEditorValue(v ?? "")}
+                    onChange={(v) => setFileDraft((current) => current && current.selectionId === selection?.id
+                      ? { ...current, editorValue: v ?? "" } : current)}
                     options={{
                       minimap: { enabled: false },
                       fontFamily: "JetBrains Mono",

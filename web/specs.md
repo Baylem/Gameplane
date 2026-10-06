@@ -288,6 +288,7 @@ Six of the nine ServerDetail tabs are rebuilt in this slice:
    - Folder rows carry a trash button (on row hover or focus on desktop, always visible on mobile) that opens the same delete confirmation without opening the folder
    - The new file/folder name prompt explains a rejected name inline ("Names can't contain "/" or be "." or "..".") and marks the input `aria-invalid`; Create stays disabled
    - Monaco editor unchanged
+   - File drafts bind to the selected path, resource target and selection generation. Selection clears content immediately and Save stays disabled until that file has loaded. Late reads and save completions cannot replace another selection's content or baseline, including reopening the same path. Saves capture their target, path, body and directory at click time; edits typed during a save remain dirty against the saved body. Changing server/namespace/cluster/UID starts a fresh file browser.
 
 6. **Players** (`web/src/routes/tabs/Players.tsx`, 386 lines)
    - Online player snapshot, ban list, whitelist management
