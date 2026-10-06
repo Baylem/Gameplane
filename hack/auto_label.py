@@ -98,9 +98,9 @@ def planned_labels(title, files, existing):
     existing = set(existing)
     add = []
     type_label, breaking = parse_title(title)
-    if type_label and not any(l.startswith("type: ") for l in existing):
+    if type_label and not any(name.startswith("type: ") for name in existing):
         add.append(type_label)
-    if files and not any(l.startswith("area: ") for l in existing):
+    if files and not any(name.startswith("area: ") for name in existing):
         areas = {area_for_path(f) for f in files} - {None}
         add.extend(sorted(areas) or ["area: shared"])
     if breaking and "breaking" not in existing:
@@ -110,16 +110,15 @@ def planned_labels(title, files, existing):
 
 def api(method, path, token, body=None):
     data = None if body is None else json.dumps(body).encode()
-    req = urllib.request.Request(
-        API + path,
-        data=data,
-        method=method,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": "Bearer " + token,
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-    )
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": "Bearer " + token,
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    if data is not None:
+        # urllib defaults bodies to application/x-www-form-urlencoded.
+        headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(API + path, data=data, method=method, headers=headers)
     with urllib.request.urlopen(req, timeout=30) as resp:
         return json.load(resp)
 
@@ -153,10 +152,10 @@ def main(argv):
     failed = False
     for pr in pulls:
         number = pr["number"]
-        existing = [l["name"] for l in pr.get("labels", [])]
+        existing = [label["name"] for label in pr.get("labels", [])]
         try:
             files = []
-            if not any(l.startswith("area: ") for l in existing):
+            if not any(name.startswith("area: ") for name in existing):
                 files = [
                     f["filename"]
                     for f in paginate(f"/repos/{repo}/pulls/{number}/files", token)
