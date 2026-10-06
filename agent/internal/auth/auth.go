@@ -88,16 +88,77 @@ func bearer(h string) string {
 }
 
 // ServerTLS builds a tls.Config enforcing client-cert verification
-// against the supplied CA bundle.
+// against the supplied CA bundle. Material is validated at startup and loaded
+// again for each new handshake so projected Secret renewal needs no rollout.
 func ServerTLS(certFile, keyFile, clientCAFile string) (*tls.Config, error) {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	paths := []string{certFile, keyFile, clientCAFile}
+	cfg, err := loadServerTLS(paths, os.ReadFile)
+	if err != nil {
+		return nil, err
+	}
+	cfg.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
+		current, err := loadServerTLS(paths, os.ReadFile)
+		if err != nil {
+			// Do not fall back to cached certificates or trust after bad rotation.
+			return nil, err
+		}
+		// Retain caller-provided TLS settings without mutating a configuration
+		// already in use by another handshake.
+		next := cfg.Clone()
+		next.GetConfigForClient = nil
+		next.Certificates = current.Certificates
+		next.ClientCAs = current.ClientCAs
+		next.ClientAuth = tls.RequireAndVerifyClientCert
+		next.MinVersion = max(next.MinVersion, tls.VersionTLS12)
+		next.SessionTicketsDisabled = true
+		return next, nil
+	}
+	return cfg, nil
+}
+
+// loadServerTLS reads one generation of every projected volume before parsing
+// any material. Resolving each visible file separately can mix a serving pair
+// from one generation with a client CA from another, even when the key matches.
+func loadServerTLS(paths []string, readFile func(string) ([]byte, error)) (*tls.Config, error) {
+	pinned := make([]string, len(paths))
+	generations := make(map[string]string)
+	for i, path := range paths {
+		if path == "" {
+			continue
+		}
+		path = filepath.Clean(path)
+		dir := filepath.Dir(path)
+		generation, ok := generations[dir]
+		if !ok {
+			target, err := os.Readlink(filepath.Join(dir, "..data"))
+			switch {
+			case err == nil:
+				generation = filepath.Join(dir, target)
+			case errors.Is(err, os.ErrNotExist):
+				// Regular files remain supported for non-Kubernetes deployments.
+				generation = dir
+			default:
+				return nil, fmt.Errorf("resolve TLS Secret generation: %w", err)
+			}
+			generations[dir] = generation
+		}
+		pinned[i] = filepath.Join(generation, filepath.Base(path))
+	}
+	certPEM, err := readFile(pinned[0])
+	if err != nil {
+		return nil, fmt.Errorf("server keypair: %w", err)
+	}
+	keyPEM, err := readFile(pinned[1])
+	if err != nil {
+		return nil, fmt.Errorf("server keypair: %w", err)
+	}
+	cert, err := tls.X509KeyPair(certPEM, keyPEM)
 	if err != nil {
 		return nil, fmt.Errorf("server keypair: %w", err)
 	}
 	pool := x509.NewCertPool()
-	if clientCAFile != "" {
-		clientCAFile = filepath.Clean(clientCAFile)
-		ca, err := os.ReadFile(clientCAFile)
+	if pinned[2] != "" {
+		ca, err := readFile(pinned[2])
 		if err != nil {
 			return nil, fmt.Errorf("read client CA: %w", err)
 		}
@@ -110,5 +171,8 @@ func ServerTLS(certFile, keyFile, clientCAFile string) (*tls.Config, error) {
 		ClientCAs:    pool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		MinVersion:   tls.VersionTLS12,
+		// Every new connection must verify against the current client CA.
+		// TLS 1.2/1.3 session resumption would otherwise retain stale trust.
+		SessionTicketsDisabled: true,
 	}, nil
 }

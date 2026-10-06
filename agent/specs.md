@@ -62,6 +62,17 @@ Per-package roles:
 
 - **`actions`**: Renders module-declared RCON command templates with user parameters; validates via `gameaction` package.
 - **`auth`**: Two modes: mTLS (agent listens TLS, requires client cert signed by `--tls-client-ca`), or shared-secret bearer token (fallback for dev).
+  mTLS validates the serving certificate/key and client CA at startup and
+  reloads them for every new TLS handshake. The operator mounts all three
+  files in one projected Secret; the loader pins its `..data` generation
+  before reading, so a concurrent projection update cannot mix material.
+  Invalid, missing or mismatched rotated material rejects new handshakes
+  until repaired, without falling back to cached credentials or trust.
+  TLS remains at least 1.2 with a required verified client certificate.
+  Session tickets are disabled to reverify client trust on every new
+  connection. Established connections keep their existing TLS state.
+  Regular PEM files are also supported; replace the set consistently to
+  avoid temporary handshake failures during updates.
 - **`caps`**: Unmarshals JSON capabilities blob from `GAMEPLANE_CAPABILITIES` env; exposes `Spec` with `Players`, `Quiesce`, `Lifecycle`, `Actions`, `Status`, `Mods`.
 - **`console`**: Accepts `{ kind: "cmd", body: "<rcon cmd>" }` JSON over WebSocket, runs it via RCON, replies with `{ kind: "out"|"err", body: "<response>" }`. On an RCON failure the `err` body is the generic `upstream unavailable`; the detailed error is logged with every occurrence of the submitted command replaced by `<redacted>`, since RCON clients embed the command in their errors and it may carry a secret.
 - **`files`**: Walks the filesystem under `--data-root`, validates paths lexically, then performs every operation relative to a directory descriptor on the root with `openat(O_NOFOLLOW)` per component (no `..`, no symlink at any component), handles multipart uploads.
