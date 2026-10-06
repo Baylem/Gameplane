@@ -67,9 +67,9 @@ func Build(ctx context.Context, c client.Client, namespace string, src *gameplan
 	var verifier Verifier
 	switch {
 	case v.Key != nil:
-		pub, err := readKey(ctx, c, namespace, v.Key.Name)
-		if err != nil {
-			return nil, err
+		pub, readErr := readKey(ctx, c, namespace, v.Key.Name)
+		if readErr != nil {
+			return nil, readErr
 		}
 		verifier, err = newKeyed(ctx, pub, auth, insecure, v.RequireTransparencyLog)
 	case v.Keyless != nil:
@@ -314,6 +314,16 @@ func authFor(ctx context.Context, c client.Client, namespace string, ref *corev1
 		return nil, fmt.Errorf("parse dockerconfigjson in %s: %w", ref.Name, err)
 	}
 	e, ok := dc.Auths[registry]
+	// go-containerregistry calls Docker Hub index.docker.io, while ORAS
+	// pulls from registry-1.docker.io. These names identify the same service;
+	// only this explicit alias set may share credentials. Exact entries win.
+	if !ok && isDockerHubRegistry(registry) {
+		for _, alias := range []string{"registry-1.docker.io", "index.docker.io", "docker.io"} {
+			if e, ok = dc.Auths[alias]; ok {
+				break
+			}
+		}
+	}
 	if !ok {
 		return authn.Anonymous, nil
 	}
@@ -324,4 +334,13 @@ func authFor(ctx context.Context, c client.Client, namespace string, ref *corev1
 		return authn.FromConfig(authn.AuthConfig{Auth: e.Auth}), nil
 	}
 	return authn.Anonymous, nil
+}
+
+func isDockerHubRegistry(registry string) bool {
+	switch registry {
+	case "docker.io", "index.docker.io", "registry-1.docker.io":
+		return true
+	default:
+		return false
+	}
 }

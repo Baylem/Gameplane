@@ -10,11 +10,13 @@ import (
 	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -56,8 +58,78 @@ func TestBuild_KeyBadPEMErrors(t *testing.T) {
 	}
 	src := ociSource(&gameplanev1alpha1.VerifySpec{Key: &corev1.LocalObjectReference{Name: "k"}})
 	c := fake.NewClientBuilder().WithObjects(sec).Build()
-	if _, err := Build(context.Background(), c, "ns", src); err == nil {
+	verifier, err := Build(t.Context(), c, "ns", src)
+	if err == nil {
 		t.Fatal("expected error for malformed public key")
+	}
+	if verifier != nil {
+		t.Fatal("malformed public key returned a verifier")
+	}
+}
+
+func TestBuild_KeyedTrustFailureDoesNotReturnVerifier(t *testing.T) {
+	// A valid signing key proceeds to Rekor trust loading. Keep this failure
+	// deterministic and offline; no TUF/network request should be necessary.
+	t.Setenv("SIGSTORE_REKOR_PUBLIC_KEY", filepath.Join(t.TempDir(), "missing-rekor.pub"))
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "key", Namespace: "ns"},
+		Data:       map[string][]byte{cosignPubKey: testPubPEM(t)},
+	}
+	src := ociSource(&gameplanev1alpha1.VerifySpec{
+		Key: &corev1.LocalObjectReference{Name: sec.Name}, RequireTransparencyLog: true,
+	})
+	c := fake.NewClientBuilder().WithObjects(sec).Build()
+	verifier, err := Build(t.Context(), c, "ns", src)
+	if err == nil || !strings.Contains(err.Error(), "load rekor public keys") {
+		t.Fatalf("expected Rekor trust-loading error, got %v", err)
+	}
+	if verifier != nil {
+		t.Fatal("failed trust loading returned a verifier")
+	}
+}
+
+func TestDockerHubSignatureCredentials(t *testing.T) {
+	for _, source := range []string{"docker.io/org/modules", "index.docker.io/org/modules", "registry-1.docker.io/org/modules"} {
+		for _, credentialHost := range []string{"registry-1.docker.io", "index.docker.io", "docker.io"} {
+			t.Run(source+"/"+credentialHost, func(t *testing.T) {
+				// ORAS uses registry-1.docker.io for a docker.io source, while
+				// the signature library normalizes docker.io to index.docker.io.
+				repository, err := name.NewRepository(source)
+				if err != nil {
+					t.Fatal(err)
+				}
+				cfg, err := json.Marshal(map[string]any{"auths": map[string]any{
+					credentialHost:      map[string]string{"username": "hub-user", "password": "hub-password"},
+					"unrelated.example": map[string]string{"username": "private-user", "password": "private-password"},
+				}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				sec := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "pull", Namespace: "ns"}, Data: map[string][]byte{corev1.DockerConfigJsonKey: cfg}}
+				c := fake.NewClientBuilder().WithObjects(sec).Build()
+				ref := &corev1.LocalObjectReference{Name: sec.Name}
+				a, err := authFor(t.Context(), c, "ns", ref, repository.RegistryStr())
+				if err != nil {
+					t.Fatal(err)
+				}
+				credentials, err := a.Authorization()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if credentials.Username != "hub-user" || credentials.Password != "hub-password" {
+					t.Fatal("Docker Hub credentials were not selected")
+				}
+				for _, foreign := range []string{"docker.io.evil.example", "registry-1.docker.io:5000", "other.example"} {
+					a, err := authFor(t.Context(), c, "ns", ref, foreign)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if a != authn.Anonymous {
+						t.Fatalf("Hub credentials escaped to %s", foreign)
+					}
+				}
+			})
+		}
 	}
 }
 
