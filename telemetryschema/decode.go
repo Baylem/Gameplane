@@ -239,6 +239,9 @@ func decodePublicKey(s string) ([]byte, error) {
 	if len(b) != keySize {
 		return nil, fmt.Errorf("key is %d bytes, want %d", len(b), keySize)
 	}
+	if base64.RawURLEncoding.EncodeToString(b) != s {
+		return nil, fmt.Errorf("key is not unpadded base64url: %w", err)
+	}
 	return b, nil
 }
 

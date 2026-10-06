@@ -62,7 +62,7 @@ JSON tags are the camelCase names in the contract (`installId`, `wakeOnConnect`,
 |---|---|
 | `Distros` | `k3s` `rke2` `k0s` `eks` `gke` `aks` `openshift` `microk8s` `minikube` `kind` `doks` `talos` `other` |
 | `Arches` | `amd64` `arm64` `arm` `ppc64le` `s390x` `riscv64` `other` |
-| `Tunnels` | `frp` `tailscale` `playit` |
+| `Tunnels` | `frp` `tailscale` `playit` `other` |
 | `DBs` | `sqlite` `postgres` |
 | `Languages` | `en` |
 | `NodeBands` | `1` `2-3` `4-10` `11-50` `51+` |

@@ -186,6 +186,9 @@ jobs:
             specs:
               - '**/specs.md'
               - 'hack/check-specs.sh'
+              - 'hack/check-telemetry-catalog.sh'
+              - 'telemetryschema/catalog.txt'
+              - 'charts/gameplane/values.yaml'
               - 'hack/check-dev-load-images.sh'
               - 'hack/test-up-registry.sh'
               - 'deploy/kind/up.sh'
@@ -477,6 +480,9 @@ jobs:
       - name: check specs compliance
         if: matrix.module == 'netguard'
         run: make check-specs
+      - name: check telemetry catalog
+        if: matrix.module == 'netguard'
+        run: make check-telemetry-catalog
       # Repository-wide check that `dev-load` loads every image `images` builds
       # (F-255); gated to one matrix entry like check-specs (ruling D5).
       - name: check dev-load image coverage

@@ -348,6 +348,7 @@ func TestDecodeExtRejects(t *testing.T) {
 		"key standard base64":       setAt(t, strings.ReplaceAll(testKey, "_", "/"), "key"),
 		"key not base64":            setAt(t, "!!!"+testKey[3:], "key"),
 		"key non-canonical":         setAt(t, testKey[:42]+"t", "key"),
+		"key with newline":          setAt(t, testKey[:20]+"\n"+testKey[20:], "key"),
 		"sentAt empty":              setAt(t, "", "sentAt"),
 		"sentAt words":              setAt(t, "yesterday", "sentAt"),
 		"sentAt date only":          setAt(t, "2026-10-06", "sentAt"),

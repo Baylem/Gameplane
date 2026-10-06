@@ -102,7 +102,7 @@ func TestEnumerationContents(t *testing.T) {
 	}{
 		{"Distros", Distros, []string{"k3s", "rke2", "k0s", "eks", "gke", "aks", "openshift", "microk8s", "minikube", "kind", "doks", "talos", "other"}},
 		{"Arches", Arches, []string{"amd64", "arm64", "arm", "ppc64le", "s390x", "riscv64", "other"}},
-		{"Tunnels", Tunnels, []string{"frp", "tailscale", "playit"}},
+		{"Tunnels", Tunnels, []string{"frp", "tailscale", "playit", "other"}},
 		{"DBs", DBs, []string{"sqlite", "postgres"}},
 		{"Languages", Languages, []string{"en"}},
 		{"NodeBands", NodeBands, []string{"1", "2-3", "4-10", "11-50", "51+"}},

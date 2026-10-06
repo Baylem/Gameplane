@@ -83,6 +83,9 @@ func Verify(header, publicKey string, body []byte) error {
 	if err != nil || len(sig) != ed25519.SignatureSize {
 		return fmt.Errorf("%w: malformed signature", ErrBadSignature)
 	}
+	if base64.RawURLEncoding.EncodeToString(sig) != encoded {
+		return fmt.Errorf("%w: malformed signature", ErrBadSignature)
+	}
 	pub, err := decodePublicKey(publicKey)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrBadSignature, err)

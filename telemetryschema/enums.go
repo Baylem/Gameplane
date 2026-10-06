@@ -27,7 +27,7 @@ var (
 	// Arches lists the recognised CPU architectures.
 	Arches = []string{"amd64", "arm64", "arm", "ppc64le", "s390x", "riscv64", "other"}
 	// Tunnels lists the recognised tunnel providers.
-	Tunnels = []string{"frp", "tailscale", "playit"}
+	Tunnels = []string{"frp", "tailscale", "playit", "other"}
 	// DBs lists the recognised API database drivers.
 	DBs = []string{"sqlite", "postgres"}
 	// Languages lists the recognised dashboard languages.
