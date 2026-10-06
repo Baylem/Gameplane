@@ -90,12 +90,9 @@ func (h *tunnelCredsHandler) put(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Fetch the GameServer to get its UID for the owner reference.
-	gs, err := k.Dynamic.Resource(kube.GVRs["servers"]).
-		Namespace(ns).
-		Get(req.Context(), name, metav1.GetOptions{})
-	if err != nil {
-		httperr.Write(w, req, err)
+	// Check the authorized GameServer before accessing its credentials.
+	gs, ok := authorizedServer(w, req, k, ns, name)
+	if !ok {
 		return
 	}
 
@@ -119,8 +116,8 @@ func (h *tunnelCredsHandler) put(w http.ResponseWriter, req *http.Request) {
 
 	// Try create first; on AlreadyExists, fall through to a JSON-merge patch.
 	// This preserves any extra fields an admin may have set via kubectl and
-	// avoids the resourceVersion issue that would fail a blind Update.
-	_, err = k.Typed.CoreV1().Secrets(ns).Create(req.Context(), desired, metav1.CreateOptions{})
+	// pins updates to the Secret whose ownership was checked below.
+	_, err := k.Typed.CoreV1().Secrets(ns).Create(req.Context(), desired, metav1.CreateOptions{})
 	if err != nil && !apierrors.IsAlreadyExists(err) {
 		httperr.Write(w, req, err)
 		return
@@ -151,7 +148,7 @@ func (h *tunnelCredsHandler) put(w http.ResponseWriter, req *http.Request) {
 			httperr.Write(w, req, apErr)
 			return
 		}
-		patchBytes, mErr := json.Marshal(tunnelCredentialPatch(body.Provider, activeProvider, body.Values))
+		patchBytes, mErr := json.Marshal(conditionObjectPatch(tunnelCredentialPatch(body.Provider, activeProvider, body.Values), existing))
 		if mErr != nil {
 			httperr.Write(w, req, mErr)
 			return
@@ -166,7 +163,7 @@ func (h *tunnelCredsHandler) put(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Patch the GameServer to set the credentialsSecretRef.
-	patch, _ := json.Marshal(map[string]any{
+	if !patchAuthorizedServer(w, req, k, gs, map[string]any{
 		"spec": map[string]any{
 			"networking": map[string]any{
 				"tunnel": map[string]any{
@@ -176,12 +173,7 @@ func (h *tunnelCredsHandler) put(w http.ResponseWriter, req *http.Request) {
 				},
 			},
 		},
-	})
-	_, err = k.Dynamic.Resource(kube.GVRs["servers"]).
-		Namespace(ns).
-		Patch(req.Context(), name, types.MergePatchType, patch, metav1.PatchOptions{})
-	if err != nil {
-		httperr.Write(w, req, err)
+	}) {
 		return
 	}
 
@@ -201,12 +193,9 @@ func (h *tunnelCredsHandler) get(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Fetch the GameServer to check if tunnel credentials are set.
-	gs, err := k.Dynamic.Resource(kube.GVRs["servers"]).
-		Namespace(ns).
-		Get(req.Context(), name, metav1.GetOptions{})
-	if err != nil {
-		httperr.Write(w, req, err)
+	// Check the authorized GameServer before reading its credential reference.
+	gs, ok := authorizedServer(w, req, k, ns, name)
+	if !ok {
 		return
 	}
 
@@ -272,12 +261,9 @@ func (h *tunnelCredsHandler) delete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Fetch the GameServer to check tunnel state and get the Secret name.
-	gs, err := k.Dynamic.Resource(kube.GVRs["servers"]).
-		Namespace(ns).
-		Get(req.Context(), name, metav1.GetOptions{})
-	if err != nil {
-		httperr.Write(w, req, err)
+	// Check the authorized GameServer before accessing its credentials.
+	gs, ok := authorizedServer(w, req, k, ns, name)
+	if !ok {
 		return
 	}
 
@@ -301,6 +287,7 @@ func (h *tunnelCredsHandler) delete(w http.ResponseWriter, req *http.Request) {
 	// Verify that the secret to delete is actually owned by this GameServer.
 	// This prevents an attacker from referencing an arbitrary secret (e.g. backup credentials
 	// or another server's secret) and deleting it via this endpoint.
+	var checkedSecret *corev1.Secret
 	if ok && secretRef != "" {
 		existing, err := k.Typed.CoreV1().Secrets(ns).Get(req.Context(), secretRef, metav1.GetOptions{})
 		if err == nil {
@@ -308,6 +295,7 @@ func (h *tunnelCredsHandler) delete(w http.ResponseWriter, req *http.Request) {
 				http.Error(w, "forbidden: cannot delete secret not owned by this server", http.StatusForbidden)
 				return
 			}
+			checkedSecret = existing
 		} else if !apierrors.IsNotFound(err) {
 			httperr.Write(w, req, err)
 			return
@@ -316,7 +304,7 @@ func (h *tunnelCredsHandler) delete(w http.ResponseWriter, req *http.Request) {
 
 	// Patch the GameServer to clear the credentialsSecretRef first, before deleting the Secret.
 	// This ensures the spec stays valid according to the CEL rule.
-	patch, _ := json.Marshal(map[string]any{
+	if !patchAuthorizedServer(w, req, k, gs, map[string]any{
 		"spec": map[string]any{
 			"networking": map[string]any{
 				"tunnel": map[string]any{
@@ -324,18 +312,14 @@ func (h *tunnelCredsHandler) delete(w http.ResponseWriter, req *http.Request) {
 				},
 			},
 		},
-	})
-	_, err = k.Dynamic.Resource(kube.GVRs["servers"]).
-		Namespace(ns).
-		Patch(req.Context(), name, types.MergePatchType, patch, metav1.PatchOptions{})
-	if err != nil {
-		httperr.Write(w, req, err)
+	}) {
 		return
 	}
 
 	// Now delete the Secret if it exists. Report the error if deletion fails.
-	if ok && secretRef != "" {
-		err = k.Typed.CoreV1().Secrets(ns).Delete(req.Context(), secretRef, metav1.DeleteOptions{})
+	// A Secret absent at the check must not be deleted if one appears later.
+	if checkedSecret != nil {
+		err = k.Typed.CoreV1().Secrets(ns).Delete(req.Context(), secretRef, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(checkedSecret)})
 		if err != nil && !apierrors.IsNotFound(err) {
 			// Secret deletion failed and it wasn't just "not found"; report it.
 			httperr.Write(w, req, fmt.Errorf("patched spec but failed to delete credential Secret: %w", err))
@@ -445,7 +429,7 @@ func pruneStaleTunnelProviderKeys(ctx context.Context, k *kube.Client, ns, serve
 		// Nothing stale to remove.
 		return nil
 	}
-	patchBytes, err := json.Marshal(patch)
+	patchBytes, err := json.Marshal(conditionObjectPatch(patch, existing))
 	if err != nil {
 		return fmt.Errorf("marshal tunnel-auth prune patch: %w", err)
 	}
