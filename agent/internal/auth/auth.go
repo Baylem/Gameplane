@@ -18,6 +18,7 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
@@ -163,6 +164,21 @@ func loadServerTLS(paths []string, readFile func(string) ([]byte, error)) (*tls.
 		ca, err := readFile(pinned[2])
 		if err != nil {
 			return nil, fmt.Errorf("read client CA: %w", err)
+		}
+		// AppendCertsFromPEM silently skips invalid certificates. Validate every
+		// certificate block first so a partially corrupt rotation fails closed.
+		for rest := ca; len(rest) > 0; {
+			var block *pem.Block
+			block, rest = pem.Decode(rest)
+			if block == nil {
+				break
+			}
+			if block.Type != "CERTIFICATE" {
+				continue
+			}
+			if _, err := x509.ParseCertificate(block.Bytes); err != nil {
+				return nil, fmt.Errorf("parse client CA certificate: %w", err)
+			}
 		}
 		if !pool.AppendCertsFromPEM(ca) {
 			return nil, errors.New("client CA bundle contains no valid certs")

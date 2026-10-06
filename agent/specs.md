@@ -68,6 +68,9 @@ Per-package roles:
   before reading, so a concurrent projection update cannot mix material.
   Invalid, missing or mismatched rotated material rejects new handshakes
   until repaired, without falling back to cached credentials or trust.
+  Every decoded `CERTIFICATE` block in the client CA bundle must contain
+  valid DER, even when other CA certificates in that bundle are valid.
+  Fully valid bundles may contain multiple trusted CAs.
   TLS remains at least 1.2 with a required verified client certificate.
   The control server advertises HTTP/2 and HTTP/1.1 across TLS renewal.
   Session tickets are disabled to reverify client trust on every new

@@ -206,6 +206,64 @@ func TestServerTLS_InvalidRotationFailsClosedAndRecovers(t *testing.T) {
 	}
 }
 
+// TestServerTLS_MalformedCertificateRejectsEntireCABundle covers startup and
+// live rotation, including recovery to a valid bundle with multiple trusted CAs.
+func TestServerTLS_MalformedCertificateRejectsEntireCABundle(t *testing.T) {
+	ca1, ca2 := newRotationCA(t, 100), newRotationCA(t, 200)
+	cert, key, _ := ca1.issue(t, 1, x509.ExtKeyUsageServerAuth)
+	_, _, client1 := ca1.issue(t, 11, x509.ExtKeyUsageClientAuth)
+	_, _, client2 := ca2.issue(t, 22, x509.ExtKeyUsageClientAuth)
+	invalid := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: []byte("invalid DER")}))
+	valid := []byte(string(ca1.pem) + string(ca2.pem))
+	for _, version := range []uint16{tls.VersionTLS12, tls.VersionTLS13} {
+		t.Run(tls.VersionName(version), func(t *testing.T) {
+			for _, tc := range []struct {
+				name   string
+				bundle string
+			}{
+				{"invalid first", invalid + string(valid)},
+				{"invalid last", string(valid) + invalid},
+				{"invalid between CAs", string(ca1.pem) + invalid + string(ca2.pem)},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					dir := t.TempDir()
+					writeRotationBundle(t, dir, cert, key, valid)
+					certPath, keyPath, caPath := filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key"), filepath.Join(dir, "ca.crt")
+					cfg, err := ServerTLS(certPath, keyPath, caPath)
+					if err != nil {
+						t.Fatalf("valid multi-CA bundle rejected: %v", err)
+					}
+					srv := rotationServer(t, cfg)
+					clients := []*http.Client{
+						rotationClient(client1, ca1.pem, version),
+						rotationClient(client2, ca1.pem, version),
+					}
+					for i, client := range clients {
+						if _, err := rotationRequest(t, client, srv); err != nil {
+							t.Fatalf("CA %d rejected before rotation: %v", i+1, err)
+						}
+					}
+					writeRotationBundle(t, dir, cert, key, []byte(tc.bundle))
+					if cfg, err := ServerTLS(certPath, keyPath, caPath); err == nil || cfg != nil {
+						t.Error("mixed valid/malformed CA bundle accepted at startup")
+					}
+					for i, client := range clients {
+						if _, err := rotationRequest(t, client, srv); err == nil {
+							t.Errorf("CA %d still trusted after malformed rotation", i+1)
+						}
+					}
+					writeRotationBundle(t, dir, cert, key, valid)
+					for i, client := range clients {
+						if _, err := rotationRequest(t, client, srv); err != nil {
+							t.Fatalf("CA %d did not recover after repair: %v", i+1, err)
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestServerTLS_HTTPProtocolsSurviveRenewal(t *testing.T) {
 	ca := newRotationCA(t, 100)
 	cert1, key1, _ := ca.issue(t, 1, x509.ExtKeyUsageServerAuth)

@@ -19,7 +19,10 @@ client CA on each new handshake, so operator Secret renewal takes effect
 once Kubernetes updates the mounted projection. It reads one pinned
 `..data` generation from the Secret rather than mixing files during a
 projection swap. Invalid rotated material rejects new handshakes until
-repaired; it never falls back to old trust. TLS session tickets are
+repaired; it never falls back to old trust. A decoded client-CA
+`CERTIFICATE` block with invalid DER rejects the entire bundle, even
+when it also contains valid CAs. Valid multi-CA bundles remain supported.
+TLS session tickets are
 disabled so new connections cannot resume authentication against a
 removed CA. Existing connections retain their established TLS state.
 
