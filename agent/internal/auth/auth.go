@@ -90,6 +90,8 @@ func bearer(h string) string {
 // ServerTLS builds a tls.Config enforcing client-cert verification
 // against the supplied CA bundle. Material is validated at startup and loaded
 // again for each new handshake so projected Secret renewal needs no rollout.
+// It advertises HTTP/2 and HTTP/1.1, matching the agent's HTTP server. Callers
+// using other protocol policies must set NextProtos to their supported list.
 func ServerTLS(certFile, keyFile, clientCAFile string) (*tls.Config, error) {
 	paths := []string{certFile, keyFile, clientCAFile}
 	cfg, err := loadServerTLS(paths, os.ReadFile)
@@ -171,6 +173,9 @@ func loadServerTLS(paths []string, readFile func(string) ([]byte, error)) (*tls.
 		ClientCAs:    pool,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		MinVersion:   tls.VersionTLS12,
+		// net/http adjusts ALPN on its own clone. Set our HTTP protocols
+		// explicitly so GetConfigForClient's replacement retains negotiation.
+		NextProtos: []string{"h2", "http/1.1"},
 		// Every new connection must verify against the current client CA.
 		// TLS 1.2/1.3 session resumption would otherwise retain stale trust.
 		SessionTicketsDisabled: true,

@@ -69,6 +69,7 @@ Per-package roles:
   Invalid, missing or mismatched rotated material rejects new handshakes
   until repaired, without falling back to cached credentials or trust.
   TLS remains at least 1.2 with a required verified client certificate.
+  The control server advertises HTTP/2 and HTTP/1.1 across TLS renewal.
   Session tickets are disabled to reverify client trust on every new
   connection. Established connections keep their existing TLS state.
   Regular PEM files are also supported; replace the set consistently to

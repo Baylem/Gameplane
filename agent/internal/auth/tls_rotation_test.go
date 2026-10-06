@@ -202,6 +202,52 @@ func TestServerTLS_InvalidRotationFailsClosedAndRecovers(t *testing.T) {
 	}
 }
 
+func TestServerTLS_HTTPProtocolsSurviveRenewal(t *testing.T) {
+	ca := newRotationCA(t, 100)
+	cert1, key1, _ := ca.issue(t, 1, x509.ExtKeyUsageServerAuth)
+	cert2, key2, _ := ca.issue(t, 2, x509.ExtKeyUsageServerAuth)
+	_, _, clientCert := ca.issue(t, 11, x509.ExtKeyUsageClientAuth)
+	dir := t.TempDir()
+	writeRotationBundle(t, dir, cert1, key1, ca.pem)
+	cfg, err := ServerTLS(filepath.Join(dir, "tls.crt"), filepath.Join(dir, "tls.key"), filepath.Join(dir, "ca.crt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := httptest.NewUnstartedServer(okHandler())
+	srv.EnableHTTP2 = true
+	srv.TLS = cfg
+	srv.StartTLS()
+	t.Cleanup(srv.Close)
+	h2 := rotationClient(clientCert, ca.pem, tls.VersionTLS13)
+	h2.Transport.(*http.Transport).ForceAttemptHTTP2 = true
+	h1 := rotationClient(clientCert, ca.pem, tls.VersionTLS13)
+	h1.Transport.(*http.Transport).TLSClientConfig.NextProtos = []string{"http/1.1"}
+	for _, serial := range []int64{1, 2} {
+		if serial == 2 {
+			writeRotationBundle(t, dir, cert2, key2, ca.pem)
+		}
+		for _, tc := range []struct {
+			client   *http.Client
+			protocol string
+			major    int
+		}{{h2, "h2", 2}, {h1, "http/1.1", 1}} {
+			tc.client.Transport.(*http.Transport).CloseIdleConnections()
+			response, err := tc.client.Get(srv.URL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, readErr := io.Copy(io.Discard, response.Body)
+			closeErr := response.Body.Close()
+			if readErr != nil || closeErr != nil {
+				t.Fatalf("read: %v, close: %v", readErr, closeErr)
+			}
+			if response.StatusCode != http.StatusOK || response.ProtoMajor != tc.major || response.TLS.NegotiatedProtocol != tc.protocol || response.TLS.PeerCertificates[0].SerialNumber.Int64() != serial {
+				t.Fatalf("serial %d: got status %d protocol %s ALPN %q certificate %s", serial, response.StatusCode, response.Proto, response.TLS.NegotiatedProtocol, response.TLS.PeerCertificates[0].SerialNumber)
+			}
+		}
+	}
+}
+
 func swapRotationProjection(t *testing.T, dir, generation string) {
 	t.Helper()
 	if err := os.Symlink(generation, filepath.Join(dir, "..data-new")); err != nil {
