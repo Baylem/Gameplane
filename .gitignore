@@ -24,6 +24,7 @@ web/.turbo/
 web/coverage/
 web/playwright-report/
 web/test-results/
+web/website-screenshots/
 web/e2e/.portforward.pid
 *.log
 .npmrc.local
