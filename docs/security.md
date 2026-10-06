@@ -768,6 +768,12 @@ In a multi-cluster setup, each target cluster is referenced by a Secret
 containing its kubeconfig. Access to cluster credentials is protected
 by several layers:
 
+- **Embedded credentials only.** The API and operator reject token files,
+  client certificate/key files, CA files, `exec` authentication, and
+  `auth-provider` plugins before creating a client. This applies to every
+  entry, including unused contexts. Remote kubeconfigs must carry tokens
+  or certificate/key/CA data directly; they cannot read control-plane files
+  or run local authentication commands.
 - **Label guard.** The API only reads Secrets labelled
   `gameplane.local/cluster-kubeconfig=true` when registering a cluster
   via the dashboard or API. This prevents a user from pointing at an
