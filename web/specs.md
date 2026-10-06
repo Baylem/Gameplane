@@ -836,6 +836,18 @@ package.json                # @gameplane/web v0.3.0; dev: vite, npm scripts for 
 1. **Cluster.tsx** displays the **storage class card** — `gameDataStorageClass` value or "Cluster default" badge if unset; rendered with a contextual hint when unset
 2. **AdminSettings.tsx** displays the **OIDC provider and role mappings overrides** — all auth-related configuration
 
+Admin settings section drafts follow refreshed configuration while pristine,
+including delayed responses after navigation. Edits and staged Secret operations
+remain local until Save. If a refreshed section differs from the draft's baseline,
+Save reports a conflict before any Secret or config writes; the administrator can
+copy their edits and reopen the section to start from current values. A successful
+save rebases on refreshed config without discarding edits made during the request.
+Dedicated role-mapping resets update both the baseline and draft.
+If the refresh following a successful PUT fails, the submitted values remain the
+committed baseline and visible draft (preserving newer local edits). Stale cached
+values cannot reset that draft. Save requires a successful refresh before any
+further writes when the last configuration read failed.
+
 **Why the split:**  
 A StorageClass is a cluster infrastructure concern, not an authentication concern. Cluster.tsx is the natural home for infrastructure settings; AdminSettings.tsx owns auth-only config. This separation keeps concerns aligned with where users expect to find them.
 
