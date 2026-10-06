@@ -494,7 +494,7 @@ Forgetting codegen leaves the YAML out of sync with types — CI's `make manifes
 
 ## Security considerations
 
-1. **cosign signature verification:** ModuleSource.spec.verify declares keyed (public key Secret) or keyless (Rekor + transparency log) verification. Operator refuses to install bundles with invalid/missing signatures if verify is declared. The OCI client checks the pulled manifest and every layer against their digests before use, so the verified digest covers the installed content.
+1. **cosign signature verification:** ModuleSource.spec.verify declares keyed (public key Secret) or keyless (Rekor + transparency log) verification. Operator refuses to install bundles with invalid/missing signatures if verify is declared. The OCI client checks the pulled manifest and every layer against their digests before use, so the verified digest covers the installed content. Signature fetching selects the pull Secret entry matching the source registry hostname (including its port); Docker Hub's docker.io, index.docker.io and registry-1.docker.io aliases may share credentials, with an exact entry taking precedence. An unmatched registry uses anonymous access, never another registry's credentials.
 
 2. **SSRF dial guard (netguard):** ModuleSource fetch (git clone, HTTP download) uses netguard's permissive IsAllowed policy — allows self-hosted registries on private addresses (10.0.0.0/8, etc.), but blocks obvious metadata-service endpoints (169.254.169.254). Agent module install (`capabilities.mods.install`) uses strict IsPublic policy, rejecting private IPs.
 
