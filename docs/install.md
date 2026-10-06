@@ -160,6 +160,13 @@ Top-level knobs (see `values.yaml` for the full list):
   new OIDC users get `viewer`, existing users' roles are never re-evaluated,
   and existing OIDC setups continue unchanged
 - `ingress.host` — dashboard hostname
+- `ingress.annotations.nginx\.ingress\.kubernetes\.io/proxy-body-size` —
+  defaults to `512m`, matching the dashboard nginx and API mod-upload
+  request limit. The complete multipart request, including framing, must
+  fit; the agent defaults to 256 MiB per mod file. When upgrading with
+  reused values or custom annotations, replace an existing `64m` limit
+  with `512m` to permit those uploads. Other ingress controllers need
+  their equivalent body-size setting.
 - `gamesNamespace` — namespace where GameServers are created (default `gameplane-games`)
 - `networkPolicies.enabled` — default-deny in games namespace (recommended on)
   - `networkPolicies.kubeletCIDRs` — CIDRs for kubelet liveness/readiness probes (defaults to RFC1918 + link-local)
