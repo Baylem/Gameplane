@@ -29,6 +29,9 @@ const (
 	metaPepper          = "pepper"
 	metaCollectionStart = "collection_started"
 	metaReportsTotal    = "reports_total"
+	// metaRolloverThrough is the last completed UTC day the lifecycle job
+	// has finalised (data-model.md, Lifecycle jobs).
+	metaRolloverThrough = "rollover_through"
 )
 
 const (
@@ -242,4 +245,129 @@ func (s *store) close() error {
 		return fmt.Errorf("close store: %w", err)
 	}
 	return nil
+}
+
+// writeTx runs fn in one transaction under the single-writer lock. The
+// transaction commits when fn returns nil and rolls back otherwise. fn must
+// use only tx: the in-memory store has a single connection, so reading
+// through s.db inside fn would deadlock.
+func (s *store) writeTx(ctx context.Context, fn func(tx *sql.Tx) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	if err := fn(tx); err != nil {
+		return errors.Join(err, rollbackErr(tx.Rollback()))
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+	return nil
+}
+
+// rollbackErr hides sql.ErrTxDone, which only means the transaction had
+// already ended.
+func rollbackErr(err error) error {
+	if errors.Is(err, sql.ErrTxDone) {
+		return nil
+	}
+	return err
+}
+
+const (
+	// lifecycleInterval is how often the lifecycle job runs.
+	lifecycleInterval = time.Hour
+	// maxRolloverCatchup bounds how many missed days one run finalises after
+	// a long outage.
+	maxRolloverCatchup = 400
+)
+
+// retentionSweeps delete the daily_* rows older than the cutoff day (the one
+// bound parameter). The statements are constants, never built from input.
+var retentionSweeps = []string{
+	`DELETE FROM daily_basic WHERE day < ?`,
+	`DELETE FROM daily_version WHERE day < ?`,
+	`DELETE FROM daily_fleet WHERE day < ?`,
+	`DELETE FROM daily_ext WHERE day < ?`,
+	`DELETE FROM daily_dim WHERE day < ?`,
+	`DELETE FROM daily_game WHERE day < ?`,
+}
+
+// pendingDays returns the completed UTC days after through, up to and
+// including yesterday (relative to now), oldest first. An empty through
+// yields just yesterday. At most maxRolloverCatchup days are returned.
+func pendingDays(through string, now time.Time) []string {
+	yesterday := now.UTC().Truncate(24*time.Hour).AddDate(0, 0, -1)
+	last, err := time.Parse(time.DateOnly, through)
+	if through == "" || err != nil {
+		return []string{dayString(yesterday)}
+	}
+	first := last.AddDate(0, 0, 1)
+	if earliest := yesterday.AddDate(0, 0, 1-maxRolloverCatchup); first.Before(earliest) {
+		first = earliest
+	}
+	var days []string
+	for d := first; !d.After(yesterday); d = d.AddDate(0, 0, 1) {
+		days = append(days, dayString(d))
+	}
+	return days
+}
+
+// lifecycleOnce runs one pass of the lifecycle job. It is idempotent: it
+// finalises the completed days after meta.rollover_through, then deletes
+// daily_* rows older than retentionDays. A retentionDays of zero or less
+// (the zero config) deletes nothing. US5 adds the lapsed-install and
+// activity-expiry steps inside the loop over pending days.
+func (s *store) lifecycleOnce(ctx context.Context, now time.Time, retentionDays int) error {
+	through, _, err := s.metaGet(ctx, metaRolloverThrough)
+	if err != nil {
+		return err
+	}
+	now = now.UTC()
+	days := pendingDays(through, now)
+	cutoff := dayString(now.AddDate(0, 0, -retentionDays))
+	return s.writeTx(ctx, func(tx *sql.Tx) error {
+		if len(days) > 0 {
+			// Never move the marker backwards.
+			if _, err := tx.ExecContext(ctx,
+				`INSERT INTO meta (key, value) VALUES (?, ?)
+				 ON CONFLICT (key) DO UPDATE SET value = excluded.value WHERE excluded.value > meta.value`,
+				metaRolloverThrough, days[len(days)-1]); err != nil {
+				return fmt.Errorf("advance rollover_through: %w", err)
+			}
+		}
+		if retentionDays <= 0 {
+			return nil
+		}
+		for _, sweep := range retentionSweeps {
+			if _, err := tx.ExecContext(ctx, sweep, cutoff); err != nil {
+				return fmt.Errorf("retention sweep: %w", err)
+			}
+		}
+		return nil
+	})
+}
+
+// runLifecycle runs lifecycleOnce immediately and then every
+// lifecycleInterval until ctx is cancelled. Failures are logged and retried
+// on the next tick.
+func (s *store) runLifecycle(ctx context.Context, retentionDays int, now func() time.Time) {
+	run := func() {
+		if err := s.lifecycleOnce(ctx, now(), retentionDays); err != nil && ctx.Err() == nil {
+			slog.Error("telemetry lifecycle job failed", "err", err)
+		}
+	}
+	run()
+	t := time.NewTicker(lifecycleInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			run()
+		}
+	}
 }

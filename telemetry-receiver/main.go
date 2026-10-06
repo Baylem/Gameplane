@@ -14,7 +14,6 @@ package main
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"fmt"
 	"io"
@@ -31,7 +30,6 @@ import (
 
 	"github.com/ValgulNecron/gameplane/telemetryschema"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Version is set at build time via -ldflags "-X main.Version=...".
@@ -47,6 +45,12 @@ const (
 	readHeaderTimeout = 10 * time.Second
 	readTimeout       = 15 * time.Second
 	idleTimeout       = 120 * time.Second
+)
+
+// Route label values of gameplane_telemetry_rate_limited_total.
+const (
+	routeIngest = "ingest"
+	routeLogin  = "login"
 )
 
 // maxVersionLabels bounds how many different valid version labels are
@@ -202,9 +206,15 @@ type server struct {
 	versionMu sync.Mutex
 	versions  map[string]struct{}
 
-	reports   *prometheus.CounterVec
-	servers   prometheus.Histogram
-	templates prometheus.Histogram
+	// now is the clock for day bucketing and limiter windows; tests replace it.
+	now func() time.Time
+	// daily is the per-source accepted-reports-per-UTC-day counter (T062).
+	daily *dailyLimiter
+
+	reports     *prometheus.CounterVec
+	servers     prometheus.Histogram
+	templates   prometheus.Histogram
+	rateLimited *prometheus.CounterVec
 }
 
 // newServer builds a server backed by a private in-memory store, whatever
@@ -230,6 +240,8 @@ func newServerWithStore(cfg config, st *store) *server {
 		reg:      reg,
 		store:    st,
 		versions: make(map[string]struct{}),
+		now:      time.Now,
+		daily:    newDailyLimiter(cfg.ingestSourceDailyLimit),
 		reports: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "gameplane_telemetry_reports_total",
 			Help: "Telemetry reports accepted, by reported Gameplane version.",
@@ -246,8 +258,16 @@ func newServerWithStore(cfg config, st *store) *server {
 			Help:    "Distribution of GameTemplate counts across reports.",
 			Buckets: []float64{0, 1, 2, 5, 10, 25, 50, 100, 250},
 		}),
+		rateLimited: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "gameplane_telemetry_rate_limited_total",
+			Help: "Requests refused by a per-source limit, by route.",
+		}, []string{"route"}),
 	}
-	reg.MustRegister(s.reports, s.servers, s.templates)
+	reg.MustRegister(s.reports, s.servers, s.templates, s.rateLimited)
+	// Make the series visible from the start, so a scrape shows 0 rather
+	// than nothing.
+	s.rateLimited.WithLabelValues(routeIngest)
+	s.rateLimited.WithLabelValues(routeLogin)
 	return s
 }
 
@@ -256,77 +276,8 @@ func (s *server) routes() http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, "ok")
 	})
-	mux.Handle("GET /metrics", promhttp.HandlerFor(s.reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("POST /ingest", s.ingest)
 	return mux
-}
-
-// dashboardRoutes is the scaffold for the dashboard listener. It has no
-// routes yet, so every request gets a 404; the dashboard, its login and the
-// token-protected /metrics arrive with later tasks (T067).
-func (s *server) dashboardRoutes() http.Handler {
-	return http.NewServeMux()
-}
-
-func (s *server) ingest(w http.ResponseWriter, req *http.Request) {
-	if s.cfg.authToken != "" {
-		got := req.Header.Get("Authorization")
-		if subtle.ConstantTimeCompare([]byte(got), []byte(s.cfg.authToken)) != 1 {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-	}
-	// Read the whole body first so the size limit applies to all of it, not
-	// just to the part a JSON decoder happens to consume.
-	body, err := io.ReadAll(http.MaxBytesReader(w, req.Body, maxBody))
-	if err != nil {
-		var tooBig *http.MaxBytesError
-		if errors.As(err, &tooBig) {
-			http.Error(w, "body too large", http.StatusRequestEntityTooLarge)
-			return
-		}
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	p, err := decodePayload(body)
-	if err != nil {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	if p.Servers < 0 || p.Templates < 0 {
-		http.Error(w, "invalid payload", http.StatusBadRequest)
-		return
-	}
-	version := s.versionLabel(p.Version)
-
-	slog.Info("telemetry report",
-		"version", version, "servers", p.Servers, "templates", p.Templates)
-	s.reports.WithLabelValues(version).Inc()
-	s.servers.Observe(float64(p.Servers))
-	s.templates.Observe(float64(p.Templates))
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// versionLabel retains the first 128 valid versions for this process.
-// Overflow reports still count, but share one label. Never evict entries:
-// CounterVec would otherwise retain every old label and keep growing.
-func (s *server) versionLabel(version string) string {
-	if !telemetryschema.VersionRE.MatchString(version) || version == "invalid" {
-		return "invalid"
-	}
-	if version == "other" {
-		return "other"
-	}
-	s.versionMu.Lock()
-	defer s.versionMu.Unlock()
-	if _, ok := s.versions[version]; ok {
-		return version
-	}
-	if len(s.versions) >= maxVersionLabels {
-		return "other"
-	}
-	s.versions[version] = struct{}{}
-	return version
 }
 
 func newHTTPServer(addr string, h http.Handler) *http.Server {
@@ -359,6 +310,19 @@ func serve(ctx context.Context, cfg config) error {
 		}
 	}()
 	s := newServerWithStore(cfg, st)
+
+	// The hourly lifecycle job (retention sweep, day rollover) stops before
+	// the store is closed: defers run last-in first.
+	lifeCtx, stopLife := context.WithCancel(ctx)
+	lifeDone := make(chan struct{})
+	go func() {
+		defer close(lifeDone)
+		st.runLifecycle(lifeCtx, cfg.retentionDays, time.Now)
+	}()
+	defer func() {
+		stopLife()
+		<-lifeDone
+	}()
 
 	srv := newHTTPServer(cfg.listen, s.routes())
 	servers := []*http.Server{srv}

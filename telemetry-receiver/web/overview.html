@@ -1,0 +1,18 @@
+{{define "content"}}
+<h1>Telemetry overview</h1>
+<dl>
+<dt>Range (days)</dt><dd>{{.Range}}</dd>
+<dt>As of</dt><dd>{{.AsOf}}</dd>
+<dt>Empty</dt><dd>{{.Empty}}</dd>
+{{with .Basic}}
+{{range .ReportsPerDay}}<dt>Reports on {{.Day}}</dt><dd>{{.Reports}}</dd>
+{{end}}
+{{range .Versions}}<dt>Version {{.Label}}</dt><dd>{{.Reports}}</dd>
+{{end}}
+<dt>Servers median</dt><dd>{{.Fleet.Servers.Median}}</dd>
+<dt>Templates median</dt><dd>{{.Fleet.Templates.Median}}</dd>
+<dt>Servers on latest day</dt><dd>{{.LatestDay.ServersTotal}}</dd>
+<dt>Templates on latest day</dt><dd>{{.LatestDay.TemplatesTotal}}</dd>
+{{end}}
+</dl>
+{{end}}
