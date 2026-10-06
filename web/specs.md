@@ -532,7 +532,7 @@ Every file in slice 2b imports **only** from `@heroui/react` and `@/components/u
 - Validation (`validateStep`): tunnel credentials required if tunnel enabled; frp requires a server address, at least one complete port mapping, and port numbers in 1–65535 (server port too, when set); no client-side check on the LoadBalancer address/CIDR fields themselves
 
 **Step 5 — Review & Confirmation:**
-- Display-only summary of all prior steps' selections (name, template, version, config values, networking, tunnel). Values of password-type template config fields are shown as `********` (`maskPasswordConfig`, `web/src/lib/validation.ts`), never as typed text; the create payload is unchanged. The API never returns stored GameServer passwords (it sends the marker `__gameplane_redacted__`; see `api/specs.md`), so no screen may render a password-type `spec.config` value or that marker. The Settings tab's whole-`spec` PUT (`mergeDraftOntoLatest`) deliberately echoes the marker back: the API keeps the stored value for it.
+- Display-only summary of all prior steps' selections (name, template, version, config values, networking, tunnel). Values of password-type template config fields are shown as `********` (`maskPasswordConfig`, `web/src/lib/validation.ts`), never as typed text; the create payload is unchanged. The API never returns stored GameServer passwords (it sends the marker `__gameplane_redacted__`; see `api/specs.md`), so no screen may render a password-type `spec.config` value or that marker. The Settings tab's merged PUT (`mergeDraftOntoLatest`) preserves unchanged markers from the latest server: the API keeps the stored value for them.
 - "Create server" button triggers POST to `/servers` endpoint
 - Error display if creation fails (network error, validation error, server name conflict)
 - On success, redirect to ServerDetail page for new server
@@ -940,6 +940,8 @@ namespace, name and UID before providing access through `ResourceTargetProvider`
 ## ServerDetail Settings Sub-sections
 
 Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sections in a left sidebar (`SECTIONS` array; a 13th, Game configuration, is inserted after Version when the template declares a `configSchema`):
+
+Save fetches the latest server and applies only the changes from the original baseline to the draft (`web/src/lib/settingsMerge.ts`). Untouched spec fields, labels, annotations, status and resourceVersion survive concurrent edits. Nested object keys merge independently; arrays are atomic. Divergent changes to the same field, including deleting a concurrently modified field, show the existing reload prompt before any PUT. Clearing config/label/annotation maps removes baseline keys while preserving concurrently added keys. Save waits for the template and validates the entire draft's game configuration regardless of the selected section; section-reported editor validity is retained across navigation. Discard, reload and successful save reset editor state and validity.
 
 1. **General** — Server name, description, game-icon image field with placeholder from template's image or "(template image)" when no template
 2. **Version** — Template version selector (triggers container restart)
