@@ -7,11 +7,13 @@ Run by .github/workflows/auto-label.yaml on a schedule. For every open PR:
                          (`fix(api): ...` -> `type: fix`); unknown prefixes add
                          nothing.
   - no `area:` label  -> derive one per top-level directory the PR changes
-                         (docs/contributing.md "PR labels" taxonomy).
+                         (docs/contributing.md "PR labels" taxonomy). docs/
+                         pages only count when nothing else changed.
   - `!` before the colon in the title (`feat(api)!: ...`) -> `breaking`.
 
 A category that already has a label is left alone, so a maintainer's manual
-choice is never overridden or re-added after removal. Labels are only added,
+choice is never overridden (removing the last label of a category lets the
+next run derive one again). Labels are only added,
 never removed. `type: security` cannot be derived and stays manual.
 
 The script reads PR titles and file lists through the REST API only; it never
@@ -28,7 +30,6 @@ import json
 import os
 import re
 import sys
-import urllib.error
 import urllib.request
 
 API = "https://api.github.com"
@@ -78,11 +79,17 @@ def parse_title(title):
 
 
 def area_for_path(path):
-    """Map one changed file path to its `area:` label (fallback: shared)."""
+    """Map one changed file path to its `area:` label (fallback: shared).
+
+    Returns None for docs/ pages, which accompany most code changes and only
+    mean `area: shared` when nothing else changed.
+    """
     if path in AREA_BY_FILE:
         return AREA_BY_FILE[path]
     if path.startswith("test/e2e/"):
         return "area: e2e"
+    if path.startswith("docs/"):
+        return None
     return AREA_BY_DIR.get(path.split("/", 1)[0], "area: shared")
 
 
@@ -93,8 +100,9 @@ def planned_labels(title, files, existing):
     type_label, breaking = parse_title(title)
     if type_label and not any(l.startswith("type: ") for l in existing):
         add.append(type_label)
-    if not any(l.startswith("area: ") for l in existing):
-        add.extend(sorted({area_for_path(f) for f in files}))
+    if files and not any(l.startswith("area: ") for l in existing):
+        areas = {area_for_path(f) for f in files} - {None}
+        add.extend(sorted(areas) or ["area: shared"])
     if breaking and "breaking" not in existing:
         add.append("breaking")
     return add
@@ -123,7 +131,8 @@ def paginate(path, token, max_pages=30):
         batch = api("GET", f"{path}{sep}per_page=100&page={page}", token)
         items.extend(batch)
         if len(batch) < 100:
-            break
+            return items
+    print(f"warning: {path} truncated at {len(items)} items", file=sys.stderr)
     return items
 
 
@@ -135,8 +144,14 @@ def main(argv):
         print("GITHUB_TOKEN and GITHUB_REPOSITORY must be set", file=sys.stderr)
         return 1
 
+    try:
+        pulls = paginate(f"/repos/{repo}/pulls?state=open", token)
+    except (OSError, ValueError) as err:
+        print(f"listing open pull requests: {err}", file=sys.stderr)
+        return 1
+
     failed = False
-    for pr in paginate(f"/repos/{repo}/pulls?state=open", token):
+    for pr in pulls:
         number = pr["number"]
         existing = [l["name"] for l in pr.get("labels", [])]
         try:
@@ -153,7 +168,8 @@ def main(argv):
             if not dry_run:
                 api("POST", f"/repos/{repo}/issues/{number}/labels", token,
                     {"labels": add})
-        except urllib.error.HTTPError as err:
+        # HTTPError/URLError and timeouts are OSError; bad JSON is ValueError.
+        except (OSError, ValueError, KeyError) as err:
             print(f"#{number}: {err}", file=sys.stderr)
             failed = True
     return 1 if failed else 0

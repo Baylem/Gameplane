@@ -50,7 +50,7 @@ class AreaForPath(unittest.TestCase):
             "netguard/guard.go": "area: shared",
             ".github/workflows/ci.yaml": "area: shared",
             "Makefile": "area: shared",
-            "docs/security.md": "area: shared",
+            "docs/security.md": None,
         }
         for path, want in cases.items():
             with self.subTest(path=path):
@@ -84,6 +84,16 @@ class PlannedLabels(unittest.TestCase):
         self.assertEqual(
             planned_labels("feat!: x", [], ["type: feature", "area: api", "breaking"]),
             [],
+        )
+
+    def test_docs_only_count_alone(self):
+        self.assertEqual(
+            planned_labels("docs: x", ["docs/a.md", "api/b.go"], []),
+            ["type: docs", "area: api"],
+        )
+        self.assertEqual(
+            planned_labels("docs: x", ["docs/a.md"], []),
+            ["type: docs", "area: shared"],
         )
 
     def test_unknown_prefix_still_gets_area(self):
