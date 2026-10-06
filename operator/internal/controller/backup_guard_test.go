@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -432,5 +433,187 @@ func TestBackupSnapshotAPIDisappearsAfterQuiesce(t *testing.T) {
 	guardPass(t, r, "snapshot")
 	if q.quiesced != 1 || q.unquiesced != 1 || guardGetBackup(t, r, "snapshot").Status.Phase != gameplanev1alpha1.BackupPhaseFailed {
 		t.Fatalf("API removal lost cleanup: %+v", q)
+	}
+}
+
+func forceDeleteGuardBackup(t *testing.T, r *BackupReconciler, name string) {
+	t.Helper()
+	b := guardGetBackup(t, r, name)
+	b.Finalizers = nil
+	if err := r.Update(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Delete(context.Background(), b); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBackupGuardRecoveryLineageSurvivesRepeatedOwnerDeletion(t *testing.T) {
+	for _, normalDelete := range []bool{false, true} {
+		t.Run(fmt.Sprintf("normal-delete-%t", normalDelete), func(t *testing.T) {
+			r, q := guardFixture(t, guardBackup("a"), guardBackup("b"), guardBackup("c"))
+			guardPass(t, r, "a")
+			var job batchv1.Job
+			if err := r.Get(context.Background(), types.NamespacedName{Namespace: "ns", Name: "a"}, &job); err != nil {
+				t.Fatal(err)
+			}
+			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "worker-a", Namespace: "ns", Labels: job.Spec.Template.Labels}, Status: corev1.PodStatus{Phase: corev1.PodRunning}}
+			if err := r.Create(context.Background(), pod); err != nil {
+				t.Fatal(err)
+			}
+			forceDeleteGuardBackup(t, r, "a")
+			guardPass(t, r, "b")
+			if normalDelete {
+				b := guardGetBackup(t, r, "b")
+				if err := r.Delete(context.Background(), b); err != nil {
+					t.Fatal(err)
+				}
+				guardPass(t, r, "b")
+			} else {
+				forceDeleteGuardBackup(t, r, "b")
+			}
+			guardPass(t, r, "c")
+			if q.quiesced != 1 || q.unquiesced != 0 {
+				t.Fatalf("lost A's live worker through B: %+v", q)
+			}
+			if err := r.Delete(context.Background(), pod); err != nil {
+				t.Fatal(err)
+			}
+			if normalDelete {
+				guardPass(t, r, "b")
+			}
+			guardPass(t, r, "c")
+			if q.quiesced != 2 || q.unquiesced != 1 {
+				t.Fatalf("chain did not hand off after A drained: %+v", q)
+			}
+		})
+	}
+}
+
+func TestBackupGuardPendingSnapshotCleanupWaitsForCapture(t *testing.T) {
+	for _, mode := range []string{"delete", "orphan", "legacy"} {
+		t.Run(mode, func(t *testing.T) {
+			a := guardBackup("snapshot")
+			a.Spec.Strategy = "volume-snapshot"
+			if mode == "legacy" {
+				a.Annotations = map[string]string{annoQuiesceAttempted: "true"}
+			}
+			r, q := guardFixture(t, a, guardBackup("next"))
+			guardPass(t, r, "snapshot")
+			if mode == "orphan" {
+				forceDeleteGuardBackup(t, r, "snapshot")
+			} else if mode == "delete" {
+				a := guardGetBackup(t, r, "snapshot")
+				if err := r.Delete(context.Background(), a); err != nil {
+					t.Fatal(err)
+				}
+				guardPass(t, r, "snapshot")
+			}
+			guardPass(t, r, "next")
+			if q.unquiesced != 0 {
+				t.Fatalf("save-on during pending CSI capture: %+v", q)
+			}
+			var jobs batchv1.JobList
+			if err := r.List(context.Background(), &jobs); err != nil {
+				t.Fatal(err)
+			}
+			if len(jobs.Items) != 0 {
+				t.Fatal("started next copy during pending CSI capture")
+			}
+			var vs snapshotv1.VolumeSnapshot
+			if err := r.Get(context.Background(), types.NamespacedName{Namespace: "ns", Name: "snapshot"}, &vs); err != nil {
+				t.Fatal(err)
+			}
+			ready := true
+			vs.Status = &snapshotv1.VolumeSnapshotStatus{ReadyToUse: &ready}
+			if err := r.Status().Update(context.Background(), &vs); err != nil {
+				t.Fatal(err)
+			}
+			if mode != "orphan" {
+				guardPass(t, r, "snapshot")
+			}
+			guardPass(t, r, "next")
+			if q.unquiesced != 1 {
+				t.Fatalf("CSI cleanup did not progress after capture: %+v", q)
+			}
+			if err := r.List(context.Background(), &jobs); err != nil {
+				t.Fatal(err)
+			}
+			if len(jobs.Items) != 1 {
+				t.Fatal("next copy did not start after CSI capture")
+			}
+		})
+	}
+}
+
+func TestBackupSnapshotAmbiguousCreateStillCleansUp(t *testing.T) {
+	b := guardBackup("snapshot")
+	b.Spec.Strategy = "volume-snapshot"
+	r, q := guardFixture(t, b)
+	r.Client = interceptor.NewClient(r.Client.(client.WithWatch), interceptor.Funcs{Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+		if err := cl.Create(ctx, obj, opts...); err != nil {
+			return err
+		}
+		if _, ok := obj.(*snapshotv1.VolumeSnapshot); ok {
+			return errors.New("response lost after successful snapshot creation")
+		}
+		return nil
+	}})
+	guardPass(t, r, "snapshot")
+	if q.quiesced != 1 || q.unquiesced != 1 || guardGetBackup(t, r, "snapshot").Status.Phase != gameplanev1alpha1.BackupPhaseFailed {
+		t.Fatalf("ambiguous create lost abort cleanup: %+v", q)
+	}
+	var vs snapshotv1.VolumeSnapshot
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: "ns", Name: "snapshot"}, &vs); err != nil {
+		t.Fatal(err)
+	}
+	if vs.Status != nil && vs.Status.ReadyToUse != nil && *vs.Status.ReadyToUse {
+		t.Fatal("expected still-pending ambiguous capture")
+	}
+}
+
+func TestBackupSnapshotForbiddenAPIAfterQuiesceStillCleansUp(t *testing.T) {
+	b := guardBackup("snapshot")
+	b.Spec.Strategy = "volume-snapshot"
+	r, q := guardFixture(t, b)
+	guardPass(t, r, "snapshot")
+	r.Client = interceptor.NewClient(r.Client.(client.WithWatch), interceptor.Funcs{Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+		if _, ok := obj.(*snapshotv1.VolumeSnapshot); ok {
+			return apierrors.NewForbidden(schema.GroupResource{Resource: "volumesnapshots"}, key.Name, errors.New("permission revoked"))
+		}
+		return cl.Get(ctx, key, obj, opts...)
+	}})
+	guardPass(t, r, "snapshot")
+	if q.unquiesced != 1 || guardGetBackup(t, r, "snapshot").Status.Phase != gameplanev1alpha1.BackupPhaseFailed {
+		t.Fatalf("revoked API permission trapped cleanup: %+v", q)
+	}
+}
+
+func TestBackupResticCleanupWithoutSnapshotScheme(t *testing.T) {
+	b := quiescedBackup()
+	b.Status.Phase = gameplanev1alpha1.BackupPhaseSucceeded
+	b.Status.SnapshotID = "abc123"
+	q := &scrapeQuiescer{}
+	r := newScrapeReconciler(t, b, nil, time.Hour, q)
+	r.Scheme = nil
+	res, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(b)})
+	if err != nil || res.RequeueAfter > 0 || q.unquiesced != 1 {
+		t.Fatalf("unrelated CSI registration blocked restic cleanup: result=%+v err=%v calls=%d", res, err, q.unquiesced)
+	}
+}
+
+func TestBackupSnapshotAbortSurvivesInterruptedStatusWrite(t *testing.T) {
+	b := guardBackup("snapshot")
+	b.Spec.Strategy = "volume-snapshot"
+	b.Status.Phase = gameplanev1alpha1.BackupPhaseRunning
+	b.Annotations = map[string]string{backupSnapshotAbortAnnotation: "true", annoQuiesceAttempted: "true"}
+	r, q := guardFixture(t, b)
+	guardPass(t, r, "snapshot")
+	if q.unquiesced != 1 || guardGetBackup(t, r, "snapshot").Status.Phase != gameplanev1alpha1.BackupPhaseFailed {
+		t.Fatalf("resumed an aborted capture after interrupted failure status: %+v", q)
+	}
+	var vs snapshotv1.VolumeSnapshot
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: "ns", Name: "snapshot"}, &vs); !apierrors.IsNotFound(err) {
+		t.Fatalf("created a snapshot after durable abort: %v", err)
 	}
 }

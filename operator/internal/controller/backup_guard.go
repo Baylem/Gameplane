@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -18,10 +20,12 @@ import (
 )
 
 const (
-	backupTargetAnnotation   = "backup.gameplane.local/target"
-	backupGuardAnnotation    = "backup.gameplane.local/owner"
-	backupUIDLabel           = "backup.gameplane.local/uid"
-	backupRecoveryAnnotation = "backup.gameplane.local/recovering-owner"
+	backupTargetAnnotation          = "backup.gameplane.local/target"
+	backupGuardAnnotation           = "backup.gameplane.local/owner"
+	backupUIDLabel                  = "backup.gameplane.local/uid"
+	backupRecoveryAnnotation        = "backup.gameplane.local/recovering-owner"
+	backupRecoveryLineageAnnotation = "backup.gameplane.local/recovering-owners"
+	backupSnapshotAbortAnnotation   = "backup.gameplane.local/snapshot-aborted"
 )
 
 type backupIdentity struct {
@@ -119,6 +123,24 @@ func (r *BackupReconciler) claimBackupTarget(ctx context.Context, b *gameplanev1
 		if err := r.Update(ctx, b); err != nil {
 			return false, err
 		}
+		// Preserve every predecessor on the surviving GameServer, atomically
+		// with the owner transfer. A recovering Backup can itself disappear
+		// before an earlier owner's copy worker has stopped.
+		lineage, err := parseBackupRecoveryLineage(gs.Annotations[backupRecoveryLineageAnnotation])
+		if err != nil {
+			return false, err
+		}
+		found := false
+		for _, predecessor := range lineage {
+			if predecessor == id {
+				found = true
+			}
+		}
+		if !found {
+			lineage = append(lineage, id)
+		}
+		data, _ := json.Marshal(lineage)
+		gs.Annotations[backupRecoveryLineageAnnotation] = string(data)
 	}
 	if gs.Annotations == nil {
 		gs.Annotations = make(map[string]string)
@@ -131,17 +153,18 @@ func (r *BackupReconciler) claimBackupTarget(ctx context.Context, b *gameplanev1
 }
 
 func (r *BackupReconciler) recoverBackupTarget(ctx context.Context, b *gameplanev1alpha1.Backup) (bool, error) {
-	value := b.Annotations[backupRecoveryAnnotation]
-	if value == "" {
-		return true, nil
-	}
-	id, err := parseBackupIdentity(value)
+	ids, err := r.backupRecoveryIdentities(ctx, b)
 	if err != nil {
 		return false, err
 	}
-	busy, err := r.backupWorkersLive(ctx, b.Namespace, id, true)
-	if err != nil || busy {
-		return false, err
+	if len(ids) == 0 {
+		return true, nil
+	}
+	for _, id := range ids {
+		busy, err := r.backupWorkersLive(ctx, b.Namespace, id, true)
+		if err != nil || busy {
+			return false, err
+		}
 	}
 	if r.AgentClient == nil {
 		return false, fmt.Errorf("cannot recover orphaned quiesce without an agent client")
@@ -155,7 +178,52 @@ func (r *BackupReconciler) recoverBackupTarget(ctx context.Context, b *gameplane
 	if err := r.Update(ctx, b); err != nil {
 		return false, err
 	}
+	gs, err := r.ownedBackupTarget(ctx, b)
+	if err != nil {
+		return false, err
+	}
+	if gs == nil {
+		return false, fmt.Errorf("backup lost recovery ownership")
+	}
+	delete(gs.Annotations, backupRecoveryLineageAnnotation)
+	if err := r.Update(ctx, gs); err != nil {
+		return false, err
+	}
 	return true, nil
+}
+
+func parseBackupRecoveryLineage(value string) ([]backupIdentity, error) {
+	if value == "" {
+		return nil, nil
+	}
+	var ids []backupIdentity
+	if err := json.Unmarshal([]byte(value), &ids); err != nil {
+		return nil, fmt.Errorf("decode backup recovery lineage: %w", err)
+	}
+	for _, id := range ids {
+		if id.Name == "" || id.UID == "" {
+			return nil, fmt.Errorf("backup recovery lineage requires names and UIDs")
+		}
+	}
+	return ids, nil
+}
+
+func (r *BackupReconciler) backupRecoveryIdentities(ctx context.Context, b *gameplanev1alpha1.Backup) ([]backupIdentity, error) {
+	gs, err := r.ownedBackupTarget(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+	if gs != nil && gs.Annotations[backupRecoveryLineageAnnotation] != "" {
+		return parseBackupRecoveryLineage(gs.Annotations[backupRecoveryLineageAnnotation])
+	}
+	if value := b.Annotations[backupRecoveryAnnotation]; value != "" {
+		id, err := parseBackupIdentity(value)
+		if err != nil {
+			return nil, err
+		}
+		return []backupIdentity{id}, nil
+	}
+	return nil, nil
 }
 
 func (r *BackupReconciler) backupCleanupWorkersLive(ctx context.Context, b *gameplanev1alpha1.Backup, cancel bool) (bool, error) {
@@ -179,12 +247,15 @@ func (r *BackupReconciler) backupCleanupWorkersLive(ctx context.Context, b *game
 			}
 		}
 	}
-	if value := b.Annotations[backupRecoveryAnnotation]; value != "" {
-		id, err := parseBackupIdentity(value)
-		if err != nil {
-			return false, err
+	ids, err := r.backupRecoveryIdentities(ctx, b)
+	if err != nil {
+		return false, err
+	}
+	for _, id := range ids {
+		busy, err := r.backupWorkersLive(ctx, b.Namespace, id, true)
+		if err != nil || busy {
+			return busy, err
 		}
-		return r.backupWorkersLive(ctx, b.Namespace, id, true)
 	}
 	return false, nil
 }
@@ -251,6 +322,7 @@ func (r *BackupReconciler) releaseBackupTarget(ctx context.Context, b *gameplane
 		return err
 	}
 	delete(gs.Annotations, backupGuardAnnotation)
+	delete(gs.Annotations, backupRecoveryLineageAnnotation)
 	return r.Update(ctx, gs)
 }
 
@@ -297,5 +369,45 @@ func (r *BackupReconciler) backupWorkersLive(ctx context.Context, namespace stri
 			busy = true
 		}
 	}
-	return busy, nil
+	if busy {
+		return true, nil
+	}
+	return r.backupSnapshotCopyLive(ctx, namespace, id)
+}
+
+// CSI captures have no Job or Pod. On normal deletion retain quiesce until
+// capture completion/error instead of deleting the pending VolumeSnapshot;
+// owner-reference GC will delete it after the Backup's finalizer clears.
+func (r *BackupReconciler) backupSnapshotCopyLive(ctx context.Context, namespace string, id backupIdentity) (bool, error) {
+	scheme := r.Scheme
+	if scheme == nil {
+		scheme = r.Client.Scheme()
+	}
+	if !scheme.Recognizes(snapshotv1.SchemeGroupVersion.WithKind("VolumeSnapshot")) {
+		return false, nil
+	}
+	var b gameplanev1alpha1.Backup
+	err := r.backupAPIReader().Get(ctx, types.NamespacedName{Namespace: namespace, Name: id.Name}, &b)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return false, err
+	}
+	if b.UID == id.UID && b.Annotations[backupSnapshotAbortAnnotation] == "true" {
+		return false, nil
+	}
+	var vs snapshotv1.VolumeSnapshot
+	err = r.backupAPIReader().Get(ctx, types.NamespacedName{Namespace: namespace, Name: id.Name}, &vs)
+	if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	owner := metav1.GetControllerOf(&vs)
+	if owner == nil || owner.Kind != "Backup" || owner.UID != id.UID {
+		return false, nil
+	}
+	if vs.Status != nil && ((vs.Status.ReadyToUse != nil && *vs.Status.ReadyToUse) || (vs.Status.Error != nil && vs.Status.Error.Message != nil)) {
+		return false, nil
+	}
+	return true, nil
 }
