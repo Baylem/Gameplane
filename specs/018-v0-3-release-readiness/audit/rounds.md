@@ -140,3 +140,41 @@ Informal live feature sweep of `master`, recorded after the fact from the descri
 ### Test resources
 
 Not recorded.
+
+## v0.3.0
+
+Release record for the public `v0.3.0` tag (T073). The maintainer chose to skip rc.2 and tag `v0.3.0` directly after the go decision ([report.md#decision](report.md#decision)).
+
+- **Tag**: `v0.3.0`, annotated, tag object `d6f7a9afc1e2480da928b6418b8dcb438bb5866b`, tagger valgulnecron, 2026-10-06T04:03:41Z, pointing at commit `040e10ee16253f6ead593bd076ed90835b68e2c1` (merge of [#587](https://github.com/ValgulNecron/Gameplane/pull/587)). GitHub reports the tag object as signature-verified; OD-013 asked for an unsigned tag, but a signed tag does not change the release pipeline.
+- **Module ref**: the chart default `ref: v0.3.0` resolves to `gameplane-module` tag `v0.3.0` (tag object `bca8143ddaac15cd392fe709a2e288156564dd89`, commit `b42eea2f051b7b4b416758d7c9763843ac32c146`, the commit the `modules` submodule points at on master).
+
+### Release run
+
+`release.yaml` run [37411911079](https://github.com/ValgulNecron/Gameplane/actions/runs/37411911079), event `push`, head `040e10ee16253f6ead593bd076ed90835b68e2c1`, 2026-10-06T04:03:44Z to 04:10:54Z. Conclusion: **success**, every job green (the F-257 timeout from rc.1 did not recur).
+
+| Job | Conclusion |
+|-----|------------|
+| build & push images: agent, api, audit-syslog-bridge, capture-sidecar, mcp-server, operator, sentinel, telemetry-receiver, web | success |
+| build & push images: tunnel-frp, tunnel-playit, tunnel-tailscale | success |
+| push & sign module bundles | success |
+| package Helm chart | success |
+| publish GitHub release | success |
+
+### Checks (contracts/rc-deploy.md §1)
+
+| Check | Result |
+|-------|--------|
+| Images signed | Each image job ran `sign image (keyed, logged)` and `verify signature & check published key`, both success. For `api`, the cosign signature manifest `sha256-ccbe2975….sig` exists in GHCR for the release digest. |
+| Chart signed | `sign chart (keyed, logged)` and `verify chart signature` success; `oci://ghcr.io/valgulnecron/charts/gameplane` lists tag `0.3.0`. |
+| GitHub release not prerelease | [Release v0.3.0](https://github.com/ValgulNecron/Gameplane/releases/tag/v0.3.0), published 2026-10-06T04:10:51Z: `prerelease: false`, `draft: false`, and it is the repository's latest release. |
+| Notes from `## [0.3.0]` | The release body opens with the `## [0.3.0]` section text of `CHANGELOG.md` at the tag ("The first Gameplane release without a pre-release suffix…"). |
+| `0.3` image tag | `ghcr.io/valgulnecron/gameplane/api` tags `0.3.0`, `v0.3.0`, `0.3` and `latest` all resolve to digest `sha256:ccbe29755dd72fe191f97f0a3bc36e13bd672d6578e659272c9cb0be64198ae3`. |
+| CI on the tagged commit (RC-08) | The `ci` push run on `040e10e` ([37411539484](https://github.com/ValgulNecron/Gameplane/actions/runs/37411539484)) was cancelled by `cancel-in-progress` when later PRs merged into master. The PR head it merges ([#587](https://github.com/ValgulNecron/Gameplane/pull/587), `23c23401`) passed the full `ci` run (19 jobs passed, 0 failed); see RC-08 in [release-criteria.md](release-criteria.md) for the re-run. |
+
+### Other tag-triggered workflows
+
+- `screenshot refresh` run [37411911070](https://github.com/ValgulNecron/Gameplane/actions/runs/37411911070) failed (3 of 139 gallery shots: `mods-registry-browse`, `server-console`, `server-detail-logs`). It has failed on every run since 2026-09-06, including `v0.3.0-rc.1`; it does not publish release artifacts and is not a release criterion.
+
+### Test resources
+
+None created.
