@@ -374,3 +374,11 @@ Decision (maintainer, 2026-10-05, as recorded in #549): accept the RBAC widening
 ### OD-029: the live round runs on the latest `master` commit, not on rc.2 — RESOLVED 2026-10-05
 
 Decision (maintainer, 2026-10-05): the live round was run on the latest `master` commit on kubelab (the 2026-10-04 live sweep, fixes in #548 and #549) instead of on a published rc.2. That sweep stands in for the formal per-row round: T025–T033 are withdrawn, and its bugs are recorded as F-273..F-293 (`audit/rounds.md` § live-sweep 2026-10-04). Per-row `INV-*` outcomes were not recorded, so `audit/inventory.md` rows keep their pre-round Outcome. T034 (cleanup after the round), the upgrade and node rounds (T061, T062, T065), and RC-TAG-2 are not changed by this decision.
+
+### OD-030: screen and feature rows recorded as pass from the live sweep — RESOLVED 2026-10-05
+
+Decision (maintainer valgulnecron, 2026-10-05), attestation: "all screen and feature where tested live in a cluster". It refers to the 2026-10-04 live sweep on kubelab (OD-029; `audit/rounds.md` § live-sweep 2026-10-04; fixes in #548 and #549; findings F-273..F-293). On that basis every `audit/inventory.md` row in the `WEB`, `API`, `CRD`, `AGT`, `AUX`, `HELM` and `MOD` areas whose Outcome was `untested` (459 rows) is recorded as `pass`, Round `live-sweep 2026-10-04`, with Evidence pointing at this entry. The Reason and Findings cells are unchanged.
+
+Not covered: the `UPG` (5) and `NODE` (3) rows stay `untested`, the 16 `INV-SEC-*` rows in `audit/held/inventory-SEC.md` stay `untested`, and the 19 rows that were already `blocked` stay `blocked` (CRD 2, AUX 5, MOD 12). Finding statuses are not changed by this decision: the findings from the sweep keep their current status.
+
+This is a maintainer attestation, not per-row evidence: the sweep did not record a per-row outcome, and no `evidence/INV-*/` record was created for these rows. The report and the release notes say so. It resolves the "no row is `pass`" gap noted under OD-029 for these areas only; it does not change T034, the upgrade and node rounds (T061, T062, T065) or RC-TAG-2.
