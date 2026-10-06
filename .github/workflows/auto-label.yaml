@@ -1,0 +1,58 @@
+name: auto-label
+
+# Adds missing `type:` and `area:` labels to open PRs (hack/auto_label.py).
+#
+# Runs on a schedule rather than on pull_request: fork PRs only get a
+# read-only token there, and pull_request_target is a dangerous trigger
+# (zizmor). The scheduled run checks out the default branch only and never
+# executes PR code -- it reads PR titles and file lists through the REST API.
+# The pull_request trigger below only runs the script's unit tests.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'hack/auto_label.py'
+      - 'hack/test_auto_label.py'
+      - '.github/workflows/auto-label.yaml'
+
+permissions: {}
+
+concurrency:
+  group: auto-label-${{ github.event_name == 'pull_request' && github.ref || 'label' }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: auto-label unit tests
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run unit tests
+        run: python3 hack/test_auto_label.py -v
+
+  label:
+    name: label open pull requests
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # add labels to PRs
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Add missing labels
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 hack/auto_label.py
