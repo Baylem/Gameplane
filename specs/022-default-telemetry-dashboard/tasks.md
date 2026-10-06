@@ -43,7 +43,9 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `telemetry-receiver/main_test.go` (added 2026-10-06 for spec Q8): the `metrics()` helper (lines 38–50) calls the dashboard handler with `Authorization: Bearer <token>` instead of the public `routes()`, `TestMetricsMethodNotAllowed` (line 138) targets that handler, and a new case asserts that `GET /metrics` on the public `routes()` returns `404`. The `decodePayload` tests stay unchanged, because T017 keeps a `decodePayload` wrapper.
   - `.github/workflows/ci.yaml`, the "observability scrape TLS/reachability" step (about lines 773–812): the receiver ServiceMonitor and NetworkPolicy renders also set `api.telemetry.receiver.dashboard.tokenSecretRef.name`, the ServiceMonitor check expects `port: dashboard` and `bearerTokenSecret`, the NetworkPolicy check expects the Prometheus namespace on port 8081, and a new check asserts no receiver ServiceMonitor renders without a token.
 
-  **Signed off 2026-10-06** by the user ("Approve all", then "Approve" for the `/metrics` changes). Record the sign-off in the PR description.
+  - `api/internal/handlers/config_test.go` `TestConfig_GetEmpty` (added 2026-10-07): Migrate now seeds the fresh-install telemetry default, so it becomes `TestConfig_GetFreshInstallDefaults` and asserts exactly the seeded `telemetry` key. The `telStore` and `bareStore` helpers in the reporter tests above upsert or remove the seeded row, with no assertion changes.
+
+  **Signed off 2026-10-06** by the user ("Approve all", then "Approve" for the `/metrics` changes; "Assert the seeded default" for `TestConfig_GetEmpty` on 2026-10-07). Record the sign-off in the PR description.
 - [X] T003 Create `telemetryschema/go.mod` (`module github.com/ValgulNecron/gameplane/telemetryschema`, `go 1.26.0`, no requires) and `telemetryschema/doc.go` with a package comment: "the shared telemetry report contract used by api and telemetry-receiver; see specs/022-default-telemetry-dashboard/contracts/report-schema.md".
 - [X] T004 Add `./telemetryschema` to the `use` block in `go.work`, and add `telemetryschema` to `GO_MODULES` in `Makefile:43` (after `gameproto`).
 - [X] T005 [P] Add `telemetryschema` to both Go module matrices in `.github/workflows/ci.yaml` (the `module:` lists at about lines 457 and 549). Add `telemetryschema/**` everywhere `telemetry-receiver/**` appears as a path filter (about line 119), and to the api and telemetry-receiver image path filters in `.github/workflows/publish-edge.yaml`. Add a `gomod` entry for `/telemetryschema` in `.github/dependabot.yml`, copied from the `/telemetry-receiver` entry at about line 176.
@@ -52,7 +54,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `CLAUDE.md`: in the repository map add `telemetryschema/   shared telemetry report contract (api, telemetry-receiver)`; change "links all 15 Go modules" to 16; add `telemetryschema 90` to the coverage minimums; add a row to the Architecture table.
   - `docs/agent-architecture.md`: add a `telemetryschema/specs.md` row next to Telemetry-Receiver (line 29).
 - [X] T008 [P] Make the module-list checks accept the new module. Inspect how `hack/check-ci-report-coverage.sh`, `hack/check-publish-edge-paths.sh` and `hack/check-specs.sh` enumerate modules, and add `telemetryschema` to any list they read. Edit the lists only, not the checks' logic.
-- [ ] T009 Wire the dependency:
+- [X] T009 Wire the dependency:
   - Add `require github.com/ValgulNecron/gameplane/telemetryschema v0.0.0` and `replace github.com/ValgulNecron/gameplane/telemetryschema => ../telemetryschema` to `api/go.mod` and `telemetry-receiver/go.mod` in the same change as their first import (T026, T017), following the netguard pattern at `api/go.mod:5-9`. `test/e2e/go.mod` gets the same lines in T088, with the test-only signing client.
   - Add `COPY telemetryschema/ ./telemetryschema/` to `api/Dockerfile` next to `COPY netguard/` (line 7).
   - In `telemetry-receiver/Dockerfile`, copy `telemetryschema/` before `go mod download` so that the `replace` path resolves.
@@ -69,26 +71,26 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 ### Report contract (`telemetryschema/`)
 
-- [ ] T010 [P] Create `telemetryschema/report.go`:
+- [X] T010 [P] Create `telemetryschema/report.go`:
   - Types `Report{Version string; Servers, Templates int; Ext *Extended}`, `Extended{Schema int; InstallID string; Env Env; Games Games; Features Features; Key string; SentAt time.Time}`, `Env{K8s, Distro string; Arch []string; Nodes string}`, `Games{Official map[string]int; Custom int}`, and `Features{WakeOnConnect bool; Tunnels []string; Capture, Backups, SSO, AuditForwarding bool; Clusters, DB, Language string}`.
   - JSON tags exactly as in `contracts/report-schema.md`.
   - `Encode(Report) ([]byte, error)`, which emits sorted map keys and sorted arrays so the output is deterministic.
-- [ ] T011 [P] Create `telemetryschema/enums.go`:
+- [X] T011 [P] Create `telemetryschema/enums.go`:
   - The enumerations from the field-rules table in `contracts/report-schema.md`: Distros, Arches, Tunnels, DBs, `Languages = ["en"]`, NodeBands and ClusterBands.
   - `VersionRE` (moved from `telemetry-receiver/main.go:52`).
   - `K8sMinorRE = ^1\.[0-9]{1,3}$`.
   - `NodeBand(n int) string` (1, 2-3, 4-10, 11-50, 51+), `ClusterBand(n int) string` (1, 2-3, 4-10, 11+), and `FleetBands = []float64{0,1,2,5,10,25,50,100,250}`.
   - `SanitizeEnum(set, v) string`, which returns `other` for unknown values.
-- [ ] T012 Create `telemetryschema/decode.go`, with `Decode(body []byte) (Report, DecodeInfo, error)`:
+- [X] T012 Create `telemetryschema/decode.go`, with `Decode(body []byte) (Report, DecodeInfo, error)`:
   - Port the strict token-walking logic from `decodePayload` in `telemetry-receiver/main.go:85-186`: exactly one object, exact case-sensitive keys, no duplicates or nulls, nothing trailing.
   - Extend it with the optional `ext` object, validated against the field-rules table in `contracts/report-schema.md`.
   - Structural errors wrap `ErrInvalidPayload` with `%w`. `ext.schema > 1` returns `ErrUnsupportedSchema`.
   - Out-of-set values become `other`. Unknown `games.official` keys are added to `Custom`, using the catalog from T013.
   - A malformed `installId` sets `DecodeInfo.ExtDropped = true` and returns `Ext = nil`.
-- [ ] T013 [P] Create `telemetryschema/catalog.txt` (one module name per line, copied from `charts/gameplane/values.yaml` `defaultModuleSource.oci.modules` at about line 583) and `telemetryschema/catalog.go` (`//go:embed catalog.txt`, `IsOfficial(name string) bool`, `Catalog() []string`).
+- [X] T013 [P] Create `telemetryschema/catalog.txt` (one module name per line, copied from `charts/gameplane/values.yaml` `defaultModuleSource.oci.modules` at about line 583) and `telemetryschema/catalog.go` (`//go:embed catalog.txt`, `IsOfficial(name string) bool`, `Catalog() []string`).
   - Add `hack/check-telemetry-catalog.sh` (POSIX sh). It extracts the values.yaml list and diffs it with `catalog.txt`, exiting 1 with the diff on mismatch.
-  - Add a `check-telemetry-catalog` target to `Makefile`, and add it to the `lint:` prerequisites at `Makefile:266`.
-- [ ] T014 [P] Create `telemetryschema/sign.go` (research R20):
+  - Add a `check-telemetry-catalog` target to `Makefile`, and add it to the `lint:` prerequisites at `Makefile:266`. CI runs it as a `lint (netguard)` step, and the `specs` path filter covers the script, `telemetryschema/catalog.txt` and `charts/gameplane/values.yaml`.
+- [X] T014 [P] Create `telemetryschema/sign.go` (research R20):
   - `const SignatureHeader = "Gameplane-Telemetry-Signature"`.
   - `NewSecret() ([]byte, error)`: 32 bytes from `crypto/rand`.
   - `DeriveKey(secret []byte, installID string) (ed25519.PrivateKey, error)`: `crypto/hkdf` with SHA-256, salt = installID, info = `gameplane-telemetry-signing-v1`, 32-byte seed, then `ed25519.NewKeyFromSeed`.
@@ -96,25 +98,25 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `Sign(priv, body []byte) string`: returns `ed25519=<b64url sig>`.
   - `Verify(header, publicKey string, body []byte) error`, wrapping `ErrBadSignature`.
   - `KeyFingerprint(publicKey string) string`: hex SHA-256 of the raw key.
-- [ ] T015 [P] Create `telemetryschema/decode_test.go`, `enums_test.go`, `catalog_test.go` and `sign_test.go`, covering:
+- [X] T015 [P] Create `telemetryschema/decode_test.go`, `enums_test.go`, `catalog_test.go` and `sign_test.go`, covering:
   - every reject case already covered by `telemetry-receiver/main_test.go` `TestDecodePayloadRequiresExactKeys`
   - every `ext` rule, including `other` folding, unknown modules going to `Custom`, `ExtDropped`, and schema 2 being rejected
   - band boundaries 1/2/3/4/10/11/50/51 and clusters 10/11
   - catalog membership
   - a fixed `DeriveKey` vector, sign/verify round trip, a single-byte tamper failing, and different IDs deriving different keys
-- [ ] T016 [P] Create `telemetryschema/specs.md` with the full content, replacing the T006 skeleton: types, enumerations, bands, the signature scheme, invariants (no free text, bounded categories), and the compatibility table from `contracts/report-schema.md`.
-- [ ] T017 Change `telemetry-receiver/main.go` to delegate decoding to `telemetryschema.Decode`:
+- [X] T016 [P] Create `telemetryschema/specs.md` with the full content, replacing the T006 skeleton: types, enumerations, bands, the signature scheme, invariants (no free text, bounded categories), and the compatibility table from `contracts/report-schema.md`.
+- [X] T017 Change `telemetry-receiver/main.go` to delegate decoding to `telemetryschema.Decode`:
   - Keep `decodePayload(body []byte) (payload, error)` as a thin wrapper, so the existing `main_test.go` tests keep compiling and passing unchanged.
   - The wrapper returns `errInvalidPayload` for any report that carries `ext`. This keeps today's behaviour until T072.
   - Replace the local `versionRE` with `telemetryschema.VersionRE`.
 
 ### Install-side state (API database)
 
-- [ ] T018 Create `api/internal/db/migrations/common/015_telemetry_state.sql` with tables `telemetry_state` and `telemetry_notice_acks`, with exactly the columns in `data-model.md` § API, including `signing_secret` and `last_id_rotation_at`. Follow the portability rules in `api/internal/db/migrations/README.md`: no `AUTOINCREMENT`, no `datetime(...)`, no `INSERT OR`, and no comment line ending in `;`.
-- [ ] T019 Change `Store.Migrate` in `api/internal/db/db.go:99`:
+- [X] T018 Create `api/internal/db/migrations/common/015_telemetry_state.sql` with tables `telemetry_state` and `telemetry_notice_acks`, with exactly the columns in `data-model.md` § API, including `signing_secret` and `last_id_rotation_at`. Follow the portability rules in `api/internal/db/migrations/README.md`: no `AUTOINCREMENT`, no `datetime(...)`, no `INSERT OR`, and no comment line ending in `;`.
+- [X] T019 Change `Store.Migrate` in `api/internal/db/db.go:99`:
   - Before applying anything, count rows in `schema_migrations`. `fresh := count == 0`.
   - After applying, call `s.seedTelemetryState(ctx, fresh)`.
-- [ ] T020 Create `api/internal/db/telemetry.go`:
+- [X] T020 Create `api/internal/db/telemetry.go`:
   - `seedTelemetryState` (research R10), idempotent through `INSERT ... ON CONFLICT (id) DO NOTHING`:
     - **fresh**: `consent_source='default'`, and upsert the config key `telemetry` = `{"sendMetrics":true,"extended":true}`.
     - **otherwise**: `consent_source='legacy'`. If the config key `telemetry` exists, rewrite it with `extended:false` added.
@@ -125,8 +127,8 @@ description: "Task list for feature 022: default telemetry destination, extended
     - `EnsureSigningSecret`, which creates the secret once and never returns it outside the package API used by `api/internal/telemetry`
     - `MarkNoticeShown`, which sets the value only if NULL
     - `InsertNoticeAck`, `HasNoticeAck` and `DeleteNoticeAcksForUser`
-- [ ] T021 Call `DeleteNoticeAcksForUser` from the existing account-removal path in `api/internal/db/users.go`, in the same place other per-user rows are deleted (migrations README rule 3).
-- [ ] T022 [P] Create `api/internal/db/telemetry_test.go`, covering:
+- [X] T021 Call `DeleteNoticeAcksForUser` from the existing account-removal path in `api/internal/db/users.go`, in the same place other per-user rows are deleted (migrations README rule 3).
+- [X] T022 [P] Create `api/internal/db/telemetry_test.go`, covering:
   - fresh versus existing seeding, including running `Migrate` twice (the bootstrap-admin then serve order), an existing DB with `sendMetrics:true`, and an existing DB with no telemetry row
   - two concurrent `ClaimTelemetryDue` calls where exactly one wins
   - notice ack lifecycle and user deletion
@@ -135,31 +137,31 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 ### Install-side destination and collection (`api/internal/telemetry/`)
 
-- [ ] T023 Create `api/internal/telemetry/destination.go`:
+- [X] T023 Create `api/internal/telemetry/destination.go`:
   - `const DefaultEndpoint = ""`, with a comment: "Project default telemetry destination. Empty until specs/022…/OPEN-DECISIONS.md OD-1 is ruled; the feature PR must not merge while empty (hack/check-telemetry-default.sh)."
   - `type Destination struct{ Kind, URL, Host string }`
   - `ResolveDestination(disabled bool, endpoint string, bundled bool) (Destination, error)`, implementing the research R13 table. A `default` kind whose scheme isn't `https` returns an error.
-- [ ] T024 [P] Create `hack/check-telemetry-default.sh` (POSIX sh). It reads the `DefaultEndpoint` value from `api/internal/telemetry/destination.go` and exits 1 unless it is non-empty and starts with `https://`. Add a separate job `telemetry-default-gate` to `.github/workflows/ci.yaml` that runs only this script. Don't add it to `make lint`.
-- [ ] T025 Add flags in `api/cmd/main.go`:
+- [X] T024 [P] Create `hack/check-telemetry-default.sh` (POSIX sh). It reads the `DefaultEndpoint` value from `api/internal/telemetry/destination.go` and exits 1 unless it is non-empty and starts with `https://`. Add a separate job `telemetry-default-gate` to `.github/workflows/ci.yaml` that runs only this script. Don't add it to `make lint`.
+- [X] T025 Add flags in `api/cmd/main.go`:
   - `--telemetry-disabled` / `GAMEPLANE_TELEMETRY_DISABLED`
   - `--telemetry-interval` / `GAMEPLANE_TELEMETRY_INTERVAL` (default `24h`; a value below `1m` is a startup error)
   - `--official-module-source` / `GAMEPLANE_OFFICIAL_MODULE_SOURCE`
   - `GAMEPLANE_TELEMETRY_BUNDLED`, read from the environment only
 
   Change the `--telemetry-endpoint` help text at line 541 to "URL to POST anonymous usage metrics to (empty = the project default)". Resolve the destination once at startup through `telemetry.ResolveDestination`, and exit on error.
-- [ ] T026 Create `api/internal/telemetry/collect.go` with `Collect(ctx, deps) (telemetryschema.Report, error)`. `deps` holds the kube client, store, config flags, version and official source.
+- [X] T026 Create `api/internal/telemetry/collect.go` with `Collect(ctx, deps) (telemetryschema.Report, error)`. `deps` holds the kube client, store, config flags, version and official source.
   - **Basic.** Keep the current local-cluster counts from `count()` in `telemetry.go:146`.
   - **Extended.** Build it only when `extendedOn`, from the research R14 table: discovery `ServerVersion`, local nodes, GameServers, GameTemplate labels, BackupSchedules, `Cluster` CRs, `cfg.captureFeatureEnabled`, the OIDC flag or a DB `auth` provider, the audit webhook or S3 sink, and `cfg.dbDriver`. `language` is `"en"`.
   - **Signing fields.** `Key` = `PublicKeyString(DeriveKey(secret, installID))` and `SentAt = now`.
   - **Partial failures.** A failure for one field yields `0` or `other`, not an error.
-- [ ] T027 [P] Create `api/internal/telemetry/official.go`. Following research R15, a GameServer counts as official module `m` only when its template has all of:
+- [X] T027 [P] Create `api/internal/telemetry/official.go`. Following research R15, a GameServer counts as official module `m` only when its template has all of:
   - label `gameplane.local/managed-by=Module`
   - label `gameplane.local/module-source` equal to `--official-module-source`
   - label `gameplane.local/module-name=m`, with `m` in that ModuleSource's `spec.oci.modules[].name` (or its git index), and `telemetryschema.IsOfficial(m)`
 
   Everything else, including look-alike names, adds to `Custom`.
-- [ ] T028 [P] Create `api/internal/telemetry/distro.go` with `detectDistro(gitVersion string, nodes []corev1.Node) string`, implementing the research R16 table in order.
-- [ ] T029 [P] Create `api/internal/telemetry/collect_test.go`, `official_test.go`, `distro_test.go` and `destination_test.go`, using the fake dynamic and typed clients:
+- [X] T028 [P] Create `api/internal/telemetry/distro.go` with `detectDistro(gitVersion string, nodes []corev1.Node) string`, implementing the research R16 table in order.
+- [X] T029 [P] Create `api/internal/telemetry/collect_test.go`, `official_test.go`, `distro_test.go` and `destination_test.go`, using the fake dynamic and typed clients:
   - every R14 field, including partial-failure fallbacks
   - official, custom, upload-source and look-alike modules
   - every R16 row plus kubeadm becoming `other`
@@ -167,13 +169,13 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 ### Receiver storage (`telemetry-receiver/`)
 
-- [ ] T030 Create `telemetry-receiver/store.go`:
+- [X] T030 Create `telemetry-receiver/store.go`:
   - Open `modernc.org/sqlite` (add it to `telemetry-receiver/go.mod`) at `$DATA_DIR/telemetry.db`. When `DATA_DIR` is empty, use a private in-memory database per store (`:memory:` with `SetMaxOpenConns(1)`, not a process-wide shared cache, so the many `newServer(config{})` calls in the existing tests stay isolated) and log a warning. `newServer(cfg config) *server` keeps its signature and opens an in-memory store; `main` opens the configured store and passes it in through a second constructor.
   - Enable WAL, with a single writer goroutine or a mutex.
   - Create every table in `data-model.md` § Receiver, including `activity.key_fp` and `activity.last_sent_at`.
   - Initialise `meta` keys `schema_version`, `collection_started` and `reports_total`. Generate and store `pepper` when `ID_PEPPER` is unset.
-- [ ] T031 Extend `loadConfig` in `telemetry-receiver/main.go` with every variable in the `contracts/receiver-http.md` Configuration table. Enforce `RETENTION_DAYS ≥ 365` and `ACTIVITY_EXPIRY_DAYS ≥ 31` (OD-3, OD-4), failing with a startup error. Add the second listener scaffold, which starts only when `DASHBOARD_TOKEN` is set. Keep `TestLoadConfigDefaults` passing.
-- [ ] T032 Add receiver persistence to the chart:
+- [X] T031 Extend `loadConfig` in `telemetry-receiver/main.go` with every variable in the `contracts/receiver-http.md` Configuration table. Enforce `RETENTION_DAYS ≥ 365` and `ACTIVITY_EXPIRY_DAYS ≥ 31` (OD-3, OD-4), failing with a startup error. Add the second listener scaffold, which starts only when `DASHBOARD_TOKEN` is set. Keep `TestLoadConfigDefaults` passing.
+- [X] T032 Add receiver persistence to the chart:
   - In `charts/gameplane/values.yaml`, add the `api.telemetry.receiver` keys `persistence`, `dashboard`, `publicSummary`, `pepperSecretRef`, `retentionDays: 730`, `activityExpiryDays: 90`, `ingestSourceDailyLimit: 20` and `trustedProxyCIDRs`, per `contracts/install-config.md`.
   - In `charts/gameplane/templates/telemetry-receiver.yaml`:
     - a PVC `gameplane-telemetry-receiver-data`, or an `emptyDir` when persistence is disabled, mounted at `/data`, with `DATA_DIR=/data`
@@ -181,7 +183,7 @@ description: "Task list for feature 022: default telemetry destination, extended
     - a `fail` when `replicas > 1` and persistence is enabled
     - env passthrough for the retention, expiry, limit and proxy settings
   - Read every new key through a `hasKey` or `dig` guard (F-214 precedent at `templates/api.yaml:394-399`).
-- [ ] T033 [P] Create `telemetry-receiver/store_test.go`, covering schema creation, reopening the same `DATA_DIR` (aggregates and pepper survive, SC-009), and in-memory mode.
+- [X] T033 [P] Create `telemetry-receiver/store_test.go`, covering schema creation, reopening the same `DATA_DIR` (aggregates and pepper survive, SC-009), and in-memory mode.
 
 **Checkpoint**: the contract, state, collection and storage foundations exist, and user stories can start.
 
@@ -210,7 +212,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - opens or closes the schedule
 
   It returns `ErrOperatorDisabled` when the destination kind is `disabled`.
-- [ ] T036 [US1] Replace the reporter start at `api/cmd/main.go:392` (`telemetry.New(..., 24*time.Hour)`) with the new constructor, using the resolved destination and the interval flag.
+- [ ] T036 [US1] **Closes an interim consent gap (security review of 1ab7ee6b): until this task lands, fresh installs are seeded `sendMetrics:true` while the old reporter checks only that flag, so it can send before the notice. This task and T034 must ship in the same PR as Phase 2.** Replace the reporter start at `api/cmd/main.go:392` (`telemetry.New(..., 24*time.Hour)`) with the new constructor, using the resolved destination and the interval flag.
 - [ ] T037 [US1] Extend `api/internal/handlers/config.go` for the `telemetry` section:
   - Add `Extended bool \`json:"extended"\`` to `telemetryCfg` (line 724).
   - Normalise instead of rejecting: when `sendMetrics` is false, store `extended: false` too (FR-003, spec Q7). There is no 422 for this case.

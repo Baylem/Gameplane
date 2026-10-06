@@ -50,7 +50,7 @@ Gameplane-Telemetry-Signature: ed25519=<base64url Ed25519 signature over the exa
 | `servers`, `templates` | integer | ≥ 0 | 400 |
 | `ext` | object | optional | — |
 | `ext.schema` | integer | `1` | A higher value gets 400, which triggers the API's basic-only fallback. |
-| `ext.installId` | string | lowercase UUIDv4 | The receiver ignores `ext` and counts the report as basic. |
+| `ext.installId` | string | lowercase UUIDv4 | Once `ext` passes the structural checks, the receiver ignores it and counts the report as basic. A structurally broken `ext` is a 400 whatever the ID. |
 | `ext.env.k8s` | string | `1.<minor>`, where minor is 1–3 digits | `other` |
 | `ext.env.distro` | string | `k3s` `rke2` `k0s` `eks` `gke` `aks` `openshift` `microk8s` `minikube` `kind` `doks` `talos` `other` | `other` |
 | `ext.env.arch` | string[] | non-empty, sorted, unique, drawn from `amd64` `arm64` `arm` `ppc64le` `s390x` `riscv64` `other` | Unknown members become `other`. An empty array gets 400. |
@@ -58,11 +58,11 @@ Gameplane-Telemetry-Signature: ed25519=<base64url Ed25519 signature over the exa
 | `ext.games.official` | object | keys are module names from the embedded catalog, values are integers ≥ 1 | Unknown keys are added to `custom`. A non-positive value gets 400. |
 | `ext.games.custom` | integer | ≥ 0 | 400 |
 | `ext.features.wakeOnConnect`, `capture`, `backups`, `sso`, `auditForwarding` | boolean | — | 400 |
-| `ext.features.tunnels` | string[] | sorted, unique, drawn from `frp` `tailscale` `playit` (may be empty) | Unknown members become `other`. |
+| `ext.features.tunnels` | string[] | sorted, unique, drawn from `frp` `tailscale` `playit` `other` (may be empty) | Unknown members become `other`. |
 | `ext.features.clusters` | string | `1` `2-3` `4-10` `11+` | `other` |
 | `ext.features.db` | string | `sqlite` `postgres` | `other` |
 | `ext.features.language` | string | `en` (spec 019 extends this list) | `other` |
-| `ext.key` | string | base64url (unpadded) encoding of a 32-byte Ed25519 public key | 400 |
+| `ext.key` | string | canonical base64url (unpadded, no line breaks) encoding of a 32-byte Ed25519 public key | 400 |
 | `ext.sentAt` | string | RFC 3339 UTC | 400 if it doesn't parse. 403 `stale` if it is outside `[now − 36h, now + 1h]`. |
 
 ## Signature and claim (FR-035–FR-038, research R20)

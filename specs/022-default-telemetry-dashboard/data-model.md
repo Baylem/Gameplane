@@ -105,7 +105,7 @@ No HTTP endpoint writes this table directly. It is written by:
 
 | Column | Type | Meaning |
 |---|---|---|
-| `user_id` | TEXT PK | The admin who dismissed the notice. Deleted in Go when the user is removed (migrations README rule 3). |
+| `user_id` | BIGINT PK | The admin who dismissed the notice (`users.id`). Deleted in Go when the user is removed (migrations README rule 3). |
 | `acked_at` | TEXT | When the notice was dismissed. |
 | `action` | TEXT | `keep`, `extended-off`, or `all-off`. |
 

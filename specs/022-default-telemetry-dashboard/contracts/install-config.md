@@ -40,7 +40,7 @@ api:
       trustedProxyCIDRs: []       # NEW (R6)
 ```
 
-All new keys are read with `hasKey` or `dig` guards, so `helm upgrade --reuse-values` from beta.8 renders exactly what it rendered before (the F-214 precedent).
+All new keys are read with `hasKey` or `dig` guards (the F-214 precedent), so `helm upgrade --reuse-values` from beta.8 needs no new values and adds no storage: an absent `persistence` block counts as disabled (an `emptyDir`), and other absent keys fall back to the defaults above. `retentionDays` below 365 or `activityExpiryDays` below 31 fails rendering, so a bad value never reaches a crash-looping pod.
 
 ## How values render
 
