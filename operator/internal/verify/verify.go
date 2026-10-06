@@ -12,6 +12,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -54,7 +56,14 @@ func Build(ctx context.Context, c client.Client, namespace string, src *gameplan
 	if src.Spec.OCI == nil {
 		return nil, errors.New("spec.verify requires an oci source")
 	}
-	repository, err := name.NewRepository(src.Spec.OCI.URL)
+	prefix := src.Spec.OCI.URL
+	if prefix == "" || strings.HasPrefix(prefix, "/") || strings.Contains(prefix, "://") {
+		return nil, errors.New("parse OCI source registry: expected a registry/repository prefix without a URL scheme")
+	}
+	// The source is a prefix, possibly just host:port. Like the OCI fetcher,
+	// append a module name before parsing so bare hosts are recognized as
+	// registries instead of Docker Hub repository names.
+	repository, err := name.NewRepository(path.Join(prefix, "module"))
 	if err != nil {
 		return nil, fmt.Errorf("parse OCI source registry: %w", err)
 	}

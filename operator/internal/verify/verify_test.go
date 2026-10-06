@@ -159,6 +159,62 @@ func TestBuild_KeyValidPEMReturnsVerifier(t *testing.T) {
 	}
 }
 
+func TestBuild_OCIRegistryPrefixes(t *testing.T) {
+	key := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "key", Namespace: "ns"}, Data: map[string][]byte{cosignPubKey: testPubPEM(t)}}
+	c := fake.NewClientBuilder().WithObjects(key).Build()
+	for _, tc := range []struct {
+		prefix   string
+		registry string
+	}{
+		{prefix: "ghcr.io", registry: "ghcr.io"},
+		{prefix: "ghcr.io/", registry: "ghcr.io"},
+		{prefix: "ghcr.io/org/modules", registry: "ghcr.io"},
+		{prefix: "ghcr.io/org/modules/", registry: "ghcr.io"},
+		{prefix: "gameplane-test-registry.gameplane-system.svc:5000", registry: "gameplane-test-registry.gameplane-system.svc:5000"},
+		{prefix: "localhost", registry: "localhost"},
+		{prefix: "localhost:5000/", registry: "localhost:5000"},
+		{prefix: "localhost:5001/modules", registry: "localhost:5001"},
+		{prefix: "[::1]:5000", registry: "[::1]:5000"},
+		{prefix: "docker.io", registry: "index.docker.io"},
+		{prefix: "docker.io/", registry: "index.docker.io"},
+		{prefix: "docker.io/org/modules", registry: "index.docker.io"},
+		{prefix: "index.docker.io", registry: "index.docker.io"},
+		{prefix: "registry-1.docker.io", registry: "registry-1.docker.io"},
+		{prefix: "org/modules", registry: "index.docker.io"},
+		{prefix: ""},
+		{prefix: "/"},
+		{prefix: "https://ghcr.io/org/modules"},
+		{prefix: "http://localhost:5000"},
+		{prefix: "ghcr.io/modules:latest"},
+		{prefix: "ghcr.io/modules@sha256:" + strings.Repeat("a", 64)},
+		{prefix: "ghcr.io/invalid path"},
+		{prefix: "ghcr.io/modules?query=value"},
+		{prefix: "localhost:invalid"},
+	} {
+		t.Run(tc.prefix, func(t *testing.T) {
+			src := ociSource(&gameplanev1alpha1.VerifySpec{Key: &corev1.LocalObjectReference{Name: key.Name}})
+			src.Spec.OCI.URL = tc.prefix
+			v, err := Build(t.Context(), c, "ns", src)
+			if tc.registry == "" {
+				if err == nil || !strings.Contains(err.Error(), "parse OCI source registry") || v != nil {
+					t.Fatalf("malformed prefix returned verifier %T, error %v", v, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Build: %v", err)
+			}
+			guard, ok := v.(*registryVerifier)
+			if !ok {
+				t.Fatalf("expected registry verifier, got %T", v)
+			}
+			if guard.registry != tc.registry {
+				t.Fatalf("registry = %q, want %q", guard.registry, tc.registry)
+			}
+		})
+	}
+}
+
 func TestAuthFor(t *testing.T) {
 	t.Run("anonymous when no ref", func(t *testing.T) {
 		a, err := authFor(context.Background(), fake.NewClientBuilder().Build(), "ns", nil, "ghcr.io")
@@ -223,16 +279,25 @@ func TestSignatureCredentialsStayWithTheirRegistry(t *testing.T) {
 	src.Spec.OCI.URL = host + "/modules"
 	src.Spec.OCI.Insecure = true
 	src.Spec.OCI.PullSecretRef = ref
-	for range 20 {
-		v, err := Build(t.Context(), c, "ns", src)
-		if err != nil {
-			t.Fatal(err)
-		}
-		// No signature is served; reaching the registry with the right credentials
-		// is the assertion, not accepting an unsigned bundle.
-		if err := v.Verify(t.Context(), host+"/module", "sha256:"+strings.Repeat("a", 64)); err == nil {
-			t.Fatal("unsigned bundle accepted")
-		}
+	for _, prefix := range []string{host, host + "/", host + "/modules", host + "/modules/"} {
+		t.Run(prefix, func(t *testing.T) {
+			src.Spec.OCI.URL = prefix
+			before := requests.Load()
+			for range 20 {
+				v, err := Build(t.Context(), c, "ns", src)
+				if err != nil {
+					t.Fatal(err)
+				}
+				// No signature is served; reaching the registry with the right credentials
+				// is the assertion, not accepting an unsigned bundle.
+				if err := v.Verify(t.Context(), host+"/module", "sha256:"+strings.Repeat("a", 64)); err == nil {
+					t.Fatal("unsigned bundle accepted")
+				}
+			}
+			if requests.Load() == before {
+				t.Fatal("signature verification did not contact the source registry")
+			}
+		})
 	}
 	if requests.Load() == 0 || leaked.Load() != 0 {
 		t.Fatalf("signature requests=%d, wrong credentials=%d", requests.Load(), leaked.Load())
