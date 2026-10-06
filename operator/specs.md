@@ -133,6 +133,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
 
 ### GameServerReconciler
 - **Responsibility:** Reconcile GameServer → StatefulSet, Service, Config ConfigMap, PVC, NetworkPolicy.
+- **Template recovery:** A missing template reports Failed and retries every 15 seconds. Template creation or spec changes enqueue referencing servers immediately, so a GameServer applied before its Module/template recovers without a manual edit; template status updates do not enqueue servers.
 - **Key functions:**
   - **PVC StorageClass selection** — apply precedence chain at PVC creation time (only):
     - Chain: GameServer.Spec.Storage.StorageClassName (explicit override) > GameTemplate.Spec.Storage.StorageClassName (template default) > operator `--game-data-storage-class` flag (install-time default) > nil (cluster default)

@@ -27,10 +27,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
@@ -243,7 +245,7 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	var tmpl gameplanev1alpha1.GameTemplate
 	if err := r.Get(ctx, types.NamespacedName{Name: gs.Spec.TemplateRef.Name}, &tmpl); err != nil {
 		if apierrors.IsNotFound(err) {
-			return ctrl.Result{}, r.setPhase(ctx, &gs,
+			return ctrl.Result{RequeueAfter: 15 * time.Second}, r.setPhase(ctx, &gs,
 				fmt.Sprintf("GameTemplate %q not found", gs.Spec.TemplateRef.Name))
 		}
 		return ctrl.Result{}, err
@@ -467,7 +469,27 @@ func (r *GameServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
 		Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(r.mapPodToGameServer)).
+		Watches(&gameplanev1alpha1.GameTemplate{}, handler.EnqueueRequestsFromMapFunc(r.mapTemplateToGameServers),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
+}
+
+// Template creation and spec changes must wake servers that failed before any
+// child workload existed. Status-only template updates need no reconciliation.
+func (r *GameServerReconciler) mapTemplateToGameServers(ctx context.Context, obj client.Object) []reconcile.Request {
+	var servers gameplanev1alpha1.GameServerList
+	if err := r.List(ctx, &servers); err != nil {
+		log.FromContext(ctx).Error(err, "list servers for template change", "template", obj.GetName())
+		return nil // Missing-template servers also have a bounded retry.
+	}
+	var requests []reconcile.Request
+	for i := range servers.Items {
+		gs := &servers.Items[i]
+		if gs.Spec.TemplateRef.Name == obj.GetName() {
+			requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(gs)})
+		}
+	}
+	return requests
 }
 
 // mapPodToGameServer maps a game Pod event to its owning GameServer, so
