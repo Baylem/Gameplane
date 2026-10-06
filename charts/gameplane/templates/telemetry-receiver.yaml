@@ -5,6 +5,38 @@
        condition in api.yaml). */ -}}
 {{- if and (eq (include "gameplane.apiEnabled" .) "true") .Values.api.telemetry.receiver.enabled (not .Values.api.telemetry.endpoint) }}
 {{- $r := .Values.api.telemetry.receiver }}
+{{- /*
+  Every key added after v0.2.0-beta.8 may be absent after `helm upgrade
+  --reuse-values` (F-214), so each is read through a guard: a missing block
+  becomes an empty dict, and hasKey (not `default`) keeps an explicit 0 or
+  false the operator set. Absent keys fall back to the values.yaml defaults.
+*/}}
+{{- $persistence := $r.persistence | default dict }}
+{{- $persistenceEnabled := ternary $persistence.enabled true (hasKey $persistence "enabled") }}
+{{- $dashboard := $r.dashboard | default dict }}
+{{- $dashboardToken := $dashboard.tokenSecretRef | default dict }}
+{{- $pepper := $r.pepperSecretRef | default dict }}
+{{- $publicSummary := $r.publicSummary | default dict }}
+{{- if and $persistenceEnabled (gt (int $r.replicas) 1) }}
+{{- fail "api.telemetry.receiver.replicas must be 1 while api.telemetry.receiver.persistence.enabled is true: the SQLite store has a single writer" }}
+{{- end }}
+{{- if $persistenceEnabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gameplane-telemetry-receiver-data
+  namespace: {{ .Release.Namespace }}
+  labels: {{- include "gameplane.labels" . | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  {{- with $persistence.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $persistence.size | default "1Gi" | quote }}
+---
+{{- end }}
 # Anonymous-usage-telemetry collector. The API POSTs its daily
 # {version, servers, templates} report here; this validates it and
 # exposes aggregate Prometheus metrics. It touches no Kubernetes API, so
@@ -17,6 +49,10 @@ metadata:
   labels: {{- include "gameplane.labels" . | nindent 4 }}
 spec:
   replicas: {{ $r.replicas }}
+  # One writer owns the SQLite file, so a rollout must stop the old pod
+  # before the new one starts.
+  strategy:
+    type: Recreate
   selector:
     matchLabels: { app.kubernetes.io/name: gameplane-telemetry-receiver }
   template:
@@ -28,6 +64,9 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
+        # The image is distroless nonroot (UID 65532); fsGroup makes the
+        # PVC (or emptyDir) mounted at /data writable by that user.
+        fsGroup: 65532
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: receiver
@@ -35,6 +74,34 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - { name: LISTEN_ADDR, value: ":8080" }
+            - { name: DATA_DIR, value: "/data" }
+            - name: PUBLIC_SUMMARY
+              value: {{ ($publicSummary.enabled | default false) | quote }}
+            - name: RETENTION_DAYS
+              value: {{ (ternary $r.retentionDays 730 (hasKey $r "retentionDays")) | int64 | quote }}
+            - name: ACTIVITY_EXPIRY_DAYS
+              value: {{ (ternary $r.activityExpiryDays 90 (hasKey $r "activityExpiryDays")) | int64 | quote }}
+            - name: INGEST_SOURCE_DAILY_LIMIT
+              value: {{ (ternary $r.ingestSourceDailyLimit 20 (hasKey $r "ingestSourceDailyLimit")) | int64 | quote }}
+            {{- with $r.trustedProxyCIDRs }}
+            - name: TRUSTED_PROXY_CIDRS
+              value: {{ join "," . | quote }}
+            {{- end }}
+            {{- if $dashboardToken.name }}
+            # The dashboard listener only starts when this is set.
+            - name: DASHBOARD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $dashboardToken.name }}
+                  key:  {{ $dashboardToken.key | default "token" }}
+            {{- end }}
+            {{- if $pepper.name }}
+            - name: ID_PEPPER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $pepper.name }}
+                  key:  {{ $pepper.key | default "pepper" }}
+            {{- end }}
             {{- if .Values.api.telemetry.authSecretRef.name }}
             # Require the same shared token the API sends as its
             # Authorization header, so the receiver rejects POSTs from
@@ -55,6 +122,17 @@ spec:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        - name: data
+          {{- if $persistenceEnabled }}
+          persistentVolumeClaim:
+            claimName: gameplane-telemetry-receiver-data
+          {{- else }}
+          # Persistence is disabled: aggregates are lost when the pod restarts.
+          emptyDir: {}
+          {{- end }}
       {{- with .Values.image.pullSecrets }}
       imagePullSecrets: {{- toYaml . | nindent 8 }}
       {{- end }}
