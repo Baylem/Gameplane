@@ -15,6 +15,9 @@ import { captureLocator } from "./capture";
 // (specs/done_014-heroui-web-rebuild/contracts/share-link-ui.md): five Settings ·
 // Share links frames (xCJlu, dQV9N, atqRh, VM7ro, S7SCDc) and five public
 // /share/$token page states (C2LQE4, q31B6w, qFLfB, EcoGD, epZO2).
+// qFLfB is a historical view-only design: server phase cannot establish
+// permission. Its former inferred-permission scenario now verifies recovery
+// against q31B6w; the four reachable public states retain browser captures.
 //
 // T179 mounted ShareLinksSection into Settings.tsx's SECTIONS ("Share
 // links" in the vertical Tabs nav). The two full-page Settings frames,
