@@ -129,7 +129,11 @@ func TestGenericServerUpdatePreservesControllerState(t *testing.T) {
 }
 
 func TestAuthorizedWipeStillUsesDedicatedRoute(t *testing.T) {
-	k := fakeKubeClient(ownedServerObj("alpha", nil))
+	// Owner-only grants are bound to the server UID (rbac.ValidateServerIdentity
+	// fails closed on an empty UID), so the fixture needs one like a real object.
+	live := ownedServerObj("alpha", nil)
+	live.SetUID("alpha-uid")
+	k := fakeKubeClient(live)
 	r := annotationRouter(k)
 	denied := doWithUser(t, r, http.MethodPost, "/servers/alpha:wipe-data", wipeDataReq{Confirm: "alpha"}, testOperatorUser())
 	if denied.Code != http.StatusForbidden {
