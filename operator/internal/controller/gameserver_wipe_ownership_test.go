@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	batchv1 "k8s.io/api/batch/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -88,12 +89,16 @@ func TestWipeCleanupPreservesJobReplacedDuringDelete(t *testing.T) {
 			if err := c.Create(ctx, replacement); err != nil {
 				return err
 			}
+			// The fake client does not enforce UID preconditions; emulate the API server.
+			if options.Preconditions != nil && options.Preconditions.UID != nil && *options.Preconditions.UID != replacement.UID {
+				return apierrors.NewConflict(batchv1.Resource("jobs"), replacement.Name, fmt.Errorf("UID precondition %s does not match replacement UID %s", *options.Preconditions.UID, replacement.UID))
+			}
 			return c.Delete(ctx, obj, opts...)
 		},
 	}).Build()
 	r := &GameServerReconciler{Client: c, APIReader: c, Scheme: scheme}
-	if err := r.reconcileWipe(t.Context(), gs, &gameplanev1alpha1.GameTemplate{}); err == nil {
-		t.Fatal("replacement delete did not conflict")
+	if err := r.reconcileWipe(t.Context(), gs, &gameplanev1alpha1.GameTemplate{}); !apierrors.IsConflict(err) {
+		t.Fatalf("replacement delete error = %v, want conflict", err)
 	}
 	if !preconditioned {
 		t.Fatal("wipe cleanup omitted the verified Job UID")
