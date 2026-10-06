@@ -47,23 +47,27 @@ func TestDailyLimiterZeroMeansUnlimitedAndKeepsNoState(t *testing.T) {
 	}
 }
 
-func TestDailyLimiterSourceCapLetsUntrackedSourcesThrough(t *testing.T) {
+func TestDailyLimiterSourceCapSharesOverflowBudget(t *testing.T) {
 	l := newDailyLimiter(1)
 	l.max = 1
 	a, b := addr("192.0.2.1"), addr("192.0.2.2")
 	if !l.take(a, limiterNow) {
 		t.Fatal("tracked source, first report")
 	}
-	for range 3 {
-		if !l.take(b, limiterNow) {
-			t.Fatal("a source that does not fit is let through untracked")
-		}
+	// b is untracked and uses the overflow budget (same limit as a)
+	if !l.take(b, limiterNow) {
+		t.Fatal("overflow source, first report")
 	}
+	// Now the overflow budget is exhausted for the day
+	if l.take(b, limiterNow) {
+		t.Fatal("overflow source is limited after budget exhausted")
+	}
+	// The tracked source is still limited independently
 	if l.take(a, limiterNow) {
 		t.Fatal("the tracked source is still limited")
 	}
-	if len(l.counts) != 1 {
-		t.Fatalf("tracked %d sources, want 1", len(l.counts))
+	if len(l.counts) != 2 {
+		t.Fatalf("tracked %d sources, want 2 (a and overflow)", len(l.counts))
 	}
 }
 
@@ -101,10 +105,10 @@ func TestBucketLimiterPurgesIdleSources(t *testing.T) {
 		t.Fatalf("buckets = %d, want 2 before the idle purge", len(l.buckets))
 	}
 	l.allow(b, limiterNow.Add(11*time.Minute))
-	if _, ok := l.buckets[a]; ok {
+	if _, ok := l.buckets[sourceKey(a)]; ok {
 		t.Fatal("source a idle for 11 minutes must be purged")
 	}
-	if _, ok := l.buckets[b]; !ok || len(l.buckets) != 1 {
+	if _, ok := l.buckets[sourceKey(b)]; !ok || len(l.buckets) != 1 {
 		t.Fatalf("source b idle for 6 minutes must be kept; buckets = %d", len(l.buckets))
 	}
 }
@@ -124,18 +128,22 @@ func TestBucketLimiterResetsAtUTCMidnight(t *testing.T) {
 	}
 }
 
-func TestBucketLimiterSourceCapLetsUntrackedSourcesThrough(t *testing.T) {
+func TestBucketLimiterSourceCapSharesOverflowBudget(t *testing.T) {
 	l := newBucketLimiter(1, 1)
 	l.max = 1
 	a, b := addr("192.0.2.1"), addr("192.0.2.2")
 	if !l.allow(a, limiterNow) {
 		t.Fatal("tracked source, first request")
 	}
-	for range 3 {
-		if !l.allow(b, limiterNow) {
-			t.Fatal("a source that does not fit is let through untracked")
-		}
+	// b is untracked and uses the overflow budget (same limit as a)
+	if !l.allow(b, limiterNow) {
+		t.Fatal("overflow source, first request")
 	}
+	// Overflow budget is exhausted
+	if l.allow(b, limiterNow) {
+		t.Fatal("overflow source is limited after burst exhausted")
+	}
+	// The tracked source is still limited independently
 	if l.allow(a, limiterNow) {
 		t.Fatal("the tracked source is still limited")
 	}
@@ -334,5 +342,160 @@ func TestPeerAddr(t *testing.T) {
 	}
 	if peerAddr("not an address").IsValid() {
 		t.Error("peerAddr of garbage must be the zero Addr")
+	}
+}
+
+func TestSourceKeyIPv6SlashSixtyFour(t *testing.T) {
+	// Two IPv6 addresses in the same /64 share a key
+	a1 := addr("2001:db8::1")
+	a2 := addr("2001:db8::2")
+	k1 := sourceKey(a1)
+	k2 := sourceKey(a2)
+	if k1 != k2 {
+		t.Fatalf("sourceKey(%v) = %v, sourceKey(%v) = %v, want equal", a1, k1, a2, k2)
+	}
+	// But a different /64 has its own key
+	a3 := addr("2001:db9::1")
+	k3 := sourceKey(a3)
+	if k3 == k1 {
+		t.Fatalf("sourceKey(%v) = %v, sourceKey(%v) = %v, want different", a1, k1, a3, k3)
+	}
+}
+
+func TestSourceKeyIPv4MappedSharedWithIPv4(t *testing.T) {
+	// An IPv4 address and its IPv4-mapped IPv6 form share a key
+	a4 := addr("192.0.2.1")
+	a6mapped := addr("::ffff:192.0.2.1")
+	k4 := sourceKey(a4)
+	k6mapped := sourceKey(a6mapped)
+	if k4 != k6mapped {
+		t.Fatalf("sourceKey(%v) = %v, sourceKey(%v) = %v, want equal", a4, k4, a6mapped, k6mapped)
+	}
+}
+
+func TestSourceKeyInvalidAddressUsesOverflow(t *testing.T) {
+	// Invalid addresses map to the overflow key
+	k := sourceKey(netip.Addr{})
+	if k != overflowKey {
+		t.Fatalf("sourceKey(invalid) = %v, want %v", k, overflowKey)
+	}
+}
+
+func TestDailyLimiterIPv6SharingSameBudget(t *testing.T) {
+	l := newDailyLimiter(2)
+	a1 := addr("2001:db8::1")
+	a2 := addr("2001:db8::2")
+	// Both addresses share one /64, so they share the budget
+	if !l.take(a1, limiterNow) || !l.take(a2, limiterNow) {
+		t.Fatal("two addresses in same /64 must share one budget")
+	}
+	if l.take(a1, limiterNow) {
+		t.Fatal("shared budget exhausted")
+	}
+	if l.take(a2, limiterNow) {
+		t.Fatal("shared budget exhausted")
+	}
+}
+
+func TestDailyLimiterIPv6DifferentSubnets(t *testing.T) {
+	l := newDailyLimiter(1)
+	a1 := addr("2001:db8::1")
+	a2 := addr("2001:db9::1")
+	// Different /64 subnets have separate budgets
+	if !l.take(a1, limiterNow) || !l.take(a2, limiterNow) {
+		t.Fatal("two addresses in different /64 must have separate budgets")
+	}
+	if l.take(a1, limiterNow) || l.take(a2, limiterNow) {
+		t.Fatal("each budget should be exhausted")
+	}
+}
+
+func TestBucketLimiterIPv6SharingSameBudget(t *testing.T) {
+	l := newBucketLimiter(60, 2) // one token per second, burst 2
+	a1 := addr("2001:db8::1")
+	a2 := addr("2001:db8::2")
+	// Both addresses in same /64 share the budget
+	if !l.allow(a1, limiterNow) || !l.allow(a2, limiterNow) {
+		t.Fatal("two addresses in same /64 must share burst")
+	}
+	if l.allow(a1, limiterNow) || l.allow(a2, limiterNow) {
+		t.Fatal("shared burst should be exhausted")
+	}
+}
+
+func TestDailyLimiterOverflowBehavior(t *testing.T) {
+	l := newDailyLimiter(1)
+	l.max = 2 // Low capacity to force overflow
+	a := addr("192.0.2.1")
+	b := addr("192.0.2.2")
+	c := addr("192.0.2.3")
+
+	// First two sources get tracked
+	if !l.take(a, limiterNow) {
+		t.Fatal("first source, first report")
+	}
+	if !l.take(b, limiterNow) {
+		t.Fatal("second source, first report")
+	}
+
+	// Third source overflows; it shares overflow budget with any other overflow sources
+	if !l.take(c, limiterNow) {
+		t.Fatal("overflow source, first report (uses shared overflow budget)")
+	}
+	if l.take(c, limiterNow) {
+		t.Fatal("overflow source should be limited after first report")
+	}
+
+	// The tracked sources are still independent
+	if l.take(a, limiterNow) {
+		t.Fatal("tracked source a should be limited")
+	}
+	if l.take(b, limiterNow) {
+		t.Fatal("tracked source b should be limited")
+	}
+
+	// At next UTC day, overflow source gets a fresh budget
+	if !l.take(c, limiterNow.Add(24*time.Hour)) {
+		t.Fatal("overflow source gets fresh budget at UTC midnight")
+	}
+}
+
+func TestBucketLimiterOverflowBehavior(t *testing.T) {
+	l := newBucketLimiter(60, 2) // one token per second, burst 2
+	l.max = 2                    // Low capacity to force overflow
+	a := addr("192.0.2.1")
+	b := addr("192.0.2.2")
+	c := addr("192.0.2.3")
+
+	// First two sources get tracked
+	if !l.allow(a, limiterNow) {
+		t.Fatal("first source, first request")
+	}
+	if !l.allow(b, limiterNow) {
+		t.Fatal("second source, first request")
+	}
+
+	// Third source overflows and takes from shared overflow budget
+	if !l.allow(c, limiterNow) {
+		t.Fatal("overflow source, first request (uses shared overflow budget)")
+	}
+	if !l.allow(c, limiterNow) {
+		t.Fatal("overflow source, second request (burst = 2)")
+	}
+	if l.allow(c, limiterNow) {
+		t.Fatal("overflow source should be limited after burst exhausted")
+	}
+
+	// The tracked sources are still independent
+	if !l.allow(a, limiterNow) || !l.allow(b, limiterNow) {
+		t.Fatal("tracked sources have a second token (burst = 2)")
+	}
+	if l.allow(a, limiterNow) || l.allow(b, limiterNow) {
+		t.Fatal("tracked sources should be limited after burst exhausted")
+	}
+
+	// After a second, the overflow bucket refills
+	if !l.allow(c, limiterNow.Add(time.Second)) {
+		t.Fatal("overflow bucket refills after 1 second")
 	}
 }

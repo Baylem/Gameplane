@@ -197,7 +197,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Independent Test**: Fresh Kind install with the bundled receiver. Sign in, and the notice is pending. Once it has been shown, a report reaches the receiver within one interval. "Turn off all" stops all reports. An upgraded beta.8 install stays off with no notice.
 
-- [ ] T034 [US1] Rewrite `api/internal/telemetry/telemetry.go` (research R12, data-model § schedule):
+- [X] T034 [US1] Rewrite `api/internal/telemetry/telemetry.go` (research R12, data-model § schedule):
   - The `Reporter` takes the `Destination`, interval, store, collect deps and auth header.
   - The tick is `min(5m, interval/4)`.
   - It evaluates "Gate open" (data-model § Derived values). While the gate is closed, `next_due_at` stays NULL. When it opens, `next_due_at = now + U(0, min(15m, interval/4))`.
@@ -207,20 +207,20 @@ description: "Task list for feature 022: default telemetry destination, extended
   - **2xx**: set `last_success_at` and `last_outcome='ok'`, reset `consecutive_failures`, and set `next_due_at = now + interval + U(0, interval/48)`.
   - **Other errors**: set `last_outcome='failed'`, and back off `min(1h·2^n, interval)`.
   - Never queue or replay reports.
-- [ ] T035 [US1] Create `api/internal/telemetry/consent.go` with `ApplyConsent(ctx, tx, dest, interval, basic, extended bool, source string)` (it needs the destination for `ErrOperatorDisabled` and the interval to schedule the first slot; SQLite's single connection means it uses the tx helpers in a new `api/internal/db/telemetry_tx.go`), shared by the config hook and the notice actions. It:
+- [X] T035 [US1] Create `api/internal/telemetry/consent.go` with `ApplyConsent(ctx, tx, dest, interval, basic, extended bool, source string)` (it needs the destination for `ErrOperatorDisabled` and the interval to schedule the first slot; SQLite's single connection means it uses the tx helpers in a new `api/internal/db/telemetry_tx.go`), shared by the config hook and the notice actions. It:
   - writes the config key `telemetry`
   - sets `consent_source`
   - creates or clears the install ID (creating the signing secret through `EnsureSigningSecret` when an ID is created)
   - opens or closes the schedule
 
   It returns `ErrOperatorDisabled` when the destination kind is `disabled`.
-- [ ] T036 [US1] **Closes an interim consent gap (security review of 1ab7ee6b): until this task lands, fresh installs are seeded `sendMetrics:true` while the old reporter checks only that flag, so it can send before the notice. This task and T034 must ship in the same PR as Phase 2.** Replace the reporter start at `api/cmd/main.go:392` (`telemetry.New(..., 24*time.Hour)`) with the new constructor, using the resolved destination and the interval flag.
-- [ ] T037 [US1] Extend `api/internal/handlers/config.go` for the `telemetry` section:
+- [X] T036 [US1] **Closes an interim consent gap (security review of 1ab7ee6b): until this task lands, fresh installs are seeded `sendMetrics:true` while the old reporter checks only that flag, so it can send before the notice. This task and T034 must ship in the same PR as Phase 2.** Replace the reporter start at `api/cmd/main.go:392` (`telemetry.New(..., 24*time.Hour)`) with the new constructor, using the resolved destination and the interval flag.
+- [X] T037 [US1] Extend `api/internal/handlers/config.go` for the `telemetry` section:
   - Add `Extended bool \`json:"extended"\`` to `telemetryCfg` (line 724).
   - Normalise instead of rejecting: when `sendMetrics` is false, store `extended: false` too (FR-003, spec Q7). There is no 422 for this case.
   - In `put`, add a `telemetry` post-save hook next to the `auth` hook at line 131. It calls `telemetry.ApplyConsent(..., "admin")` in the same transaction as the config upsert, and returns `409` "telemetry is disabled by the operator" on `ErrOperatorDisabled`.
-- [ ] T038 [US1] Create `api/internal/handlers/telemetry.go` with `GET /admin/telemetry/notice` and `POST /admin/telemetry/notice`, exactly as in `contracts/api-telemetry-http.md` (the pending computation from data-model § Derived values; the four actions through `ApplyConsent`; `204` or `409`). Mount it in `api/cmd/main.go` next to the config handlers. In `api/internal/rbac/rbac.go`, add `{method: "GET", segment: "admin", prefix: "/admin/telemetry", perm: "config:read"}` and `{segment: "admin", prefix: "/admin/telemetry", perm: "config:manage"}` **before** `{segment: "admin", perm: "*"}` (line 217). The GET handler itself returns `{"pending":false}` to callers without `config:manage`.
-- [ ] T039 [P] [US1] Rewrite the signed-off tests from T002 in `api/internal/telemetry/telemetry_test.go` and `telemetry_branches_test.go`, and add new cases using a fake clock and `httptest`:
+- [X] T038 [US1] Create `api/internal/handlers/telemetry.go` with `GET /admin/telemetry/notice` and `POST /admin/telemetry/notice`, exactly as in `contracts/api-telemetry-http.md` (the pending computation from data-model § Derived values; the four actions through `ApplyConsent`; `204` or `409`). Mount it in `api/cmd/main.go` next to the config handlers. In `api/internal/rbac/rbac.go`, add `{method: "GET", segment: "admin", prefix: "/admin/telemetry", perm: "config:read"}` and `{segment: "admin", prefix: "/admin/telemetry", perm: "config:manage"}` **before** `{segment: "admin", perm: "*"}` (line 217). The GET handler itself returns `{"pending":false}` to callers without `config:manage`.
+- [X] T039 [P] [US1] Rewrite the signed-off tests from T002 in `api/internal/telemetry/telemetry_test.go` and `telemetry_branches_test.go`, and add new cases using a fake clock and `httptest`:
   - no POST while the source is `default` and the notice hasn't been seen
   - the first POST within 15 minutes of `MarkNoticeShown`
   - spacing of at least the interval
@@ -229,7 +229,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - backoff growth and cap
   - two Reporters sharing one database send one POST per slot
   - the auth header is still sent
-- [ ] T040 [P] [US1] Create `api/internal/handlers/telemetry_envtest_test.go`, covering:
+- [X] T040 [P] [US1] Create `api/internal/handlers/telemetry_envtest_test.go`, covering:
   - the notice is pending only for `config:manage` holders, a `default` source, and a destination other than `none` or `disabled`
   - `seen` sets `notice_shown_at` once
   - the effects of `keep`, `extended-off` and `all-off`
@@ -238,18 +238,18 @@ description: "Task list for feature 022: default telemetry destination, extended
 
   The existing `api/internal/handlers/config_test.go:144-156` must pass unchanged.
 - [ ] T041 [US1] Design the "Telemetry notice" banner in `design.pen` through Pencil MCP, with states for the default and the bundled destination. It lists the basic fields and the extended fields (stating that a random install ID is included), shows the destination host, offers the actions "Keep sharing", "Turn off extended" and "Turn off all", links to Admin Settings, and links to the data-handling statement. Ask the user to save, run the `design-export` skill (`design-export/json/<id>.json`, `design-export/screenshots/<id>.png`, `design-export/MANIFEST.md`), and commit the design and export together.
-- [ ] T042 [P] [US1] In `web/src/lib/api.ts`, add `Telemetry.notice()` and `Telemetry.ack(action: "seen" | "keep" | "extended-off" | "all-off")` with response types from `contracts/api-telemetry-http.md`. Add an MSW default handler for `GET /admin/telemetry/notice` (`{pending:false}`) wherever the shared test handlers live (the same place the `/admin/config` defaults come from; `web/src/test/`).
+- [X] T042 [P] [US1] In `web/src/lib/api.ts`, add `Telemetry.notice()` and `Telemetry.ack(action: "seen" | "keep" | "extended-off" | "all-off")` with response types from `contracts/api-telemetry-http.md`. Add an MSW default handler for `GET /admin/telemetry/notice` (`{pending:false}`) wherever the shared test handlers live (the same place the `/admin/config` defaults come from; `web/src/test/`).
 - [ ] T043 [US1] Create `web/src/components/ui/TelemetryNotice.tsx`, implementing the T041 design. It uses TanStack Query for `Telemetry.notice()` and posts `seen` once on mount with `void`. Each action calls `ack` and invalidates the `["telemetry"]` and `["admin-config"]` queries. Mount it in `web/src/components/AppLayout.tsx` beside the `SafeModeBanner` block (line 213), only for users who hold `config:manage`, using the existing permission helper the layout uses for admin navigation.
 - [ ] T044 [P] [US1] Create `web/src/components/ui/TelemetryNotice.test.tsx`, and add an `AppLayout` test case, covering:
   - it renders only while pending
   - `seen` is posted exactly once
   - each action posts the right body and hides the banner
   - it is hidden for users without `config:manage`
-- [ ] T045 [US1] In `deploy/kind/e2e.sh` (the helm command at about line 301) and the `Makefile` `dev-install` target (`deploy/kind/up.sh` has no helm command), add the telemetry-receiver image to the E2E image set (`docker-bake.hcl`, `.github/actions/build-e2e-images/action.yml`, the `e2e.sh` load loop and `make e2e-images`), and add `--set api.telemetry.receiver.enabled=true` with the comment "never let CI or dev installs reach the project provider (spec 022 R17)".
-- [ ] T046 [US1] Register a new bucket `telemetry`, using the `e2e-test-authoring` skill:
+- [X] T045 [US1] In `deploy/kind/e2e.sh` (the helm command at about line 301) and the `Makefile` `dev-install` target (`deploy/kind/up.sh` has no helm command), add the telemetry-receiver image to the E2E image set (`docker-bake.hcl`, `.github/actions/build-e2e-images/action.yml`, the `e2e.sh` load loop and `make e2e-images`), and add `--set api.telemetry.receiver.enabled=true` with the comment "never let CI or dev installs reach the project provider (spec 022 R17)".
+- [X] T046 [US1] Register a new bucket `telemetry`, using the `e2e-test-authoring` skill:
   - in `test/e2e/buckets.sh`: add it to `bucket_names` (line 357), add a `list_bucket` case, and add `bucket_telemetry()` returning `TestTelemetryLifecycle`
   - in the e2e matrix in `.github/workflows/ci.yaml` (about line 1140): `parallel: 1`, `test_timeout: 25m`, `job_timeout: 60`
-- [ ] T047 [US1] Create `test/e2e/telemetry_e2e_test.go` with `TestTelemetryLifecycle`. It calls `t.Parallel()` and runs ordered `t.Run` subtests (research R17).
+- [X] T047 [US1] Create `test/e2e/telemetry_e2e_test.go` with `TestTelemetryLifecycle`. It calls `t.Parallel()` and runs ordered `t.Run` subtests (research R17).
   - **Setup.** Create the Secret `telemetry-dashboard`, then run `helm upgrade --reuse-values` (pattern: `test/e2e/upgrade_e2e_test.go:118`) with these values:
     - `api.telemetry.interval=1m`
     - `api.telemetry.receiver.dashboard.tokenSecretRef.name=telemetry-dashboard`
@@ -261,7 +261,7 @@ description: "Task list for feature 022: default telemetry destination, extended
     - `all_off_stops_reports`, followed by turning telemetry back on through `PUT /admin/config/telemetry`
     - `api_restart_does_not_resend_early`
   - Keep admin logins to 2 or fewer (bucket login budget).
-- [ ] T048 [US1] In `test/e2e/upgrade_e2e_test.go` (`TestUpgrade_FromPreviousRelease`), add assertions after the upgrade: `GET /admin/telemetry/notice` returns `pending:false`, and the `GET /admin/config` `telemetry` section is absent or `{sendMetrics:false}` (US1 scenario 5).
+- [X] T048 [US1] In `test/e2e/upgrade_e2e_test.go` (`TestUpgrade_FromPreviousRelease`), add assertions after the upgrade: `GET /admin/telemetry/notice` returns `pending:false`, and the `GET /admin/config` `telemetry` section is absent or `{sendMetrics:false}` (US1 scenario 5).
 
 **Checkpoint**: US1 is demonstrable end to end against the bundled receiver, which still counts reports in memory only.
 
