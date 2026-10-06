@@ -970,6 +970,7 @@ describe("ModsTab — id-managed mods (capabilities.mods.idList)", () => {
         submitted = JSON.parse(options.body ?? "[]") as ModID[];
         return pending;
       }
+      if (url.includes("/mods/ids") && submitted) return Promise.resolve(jsonRes(submitted));
       return original(url, options);
     });
     renderWithQuery(<ModsTab name="s1" tmpl={idTmpl({ registry: true })} />);
