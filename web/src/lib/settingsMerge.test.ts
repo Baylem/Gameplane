@@ -10,6 +10,16 @@ function server(): GameServer {
 }
 
 describe("mergeDraftOntoLatest", () => {
+  it("rejects a different UID even when edited fields do not conflict", () => {
+    const baseline = server();
+    baseline.metadata.uid = "original";
+    const draft = structuredClone(baseline);
+    draft.spec.image = "edited";
+    const latest = structuredClone(baseline);
+    latest.metadata.uid = "replacement";
+    expect(() => mergeDraftOntoLatest(draft, baseline, latest)).toThrow(SettingsConflictError);
+  });
+
   it("preserves a concurrent stop, version change, nested config edit and label addition", () => {
     const baseline = server();
     const draft = structuredClone(baseline);

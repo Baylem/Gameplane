@@ -92,8 +92,10 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [sectionValidity, setSectionValidity] = useState<Partial<Record<SectionKey, boolean>>>({});
   const [draftRevision, setDraftRevision] = useState(0);
+  const savingRef = useRef(false);
   const validityCallbacks = useMemo(() => {
     const report = (key: SectionKey) => (valid: boolean) => {
+      if (savingRef.current) return;
       setSectionValidity((previous) => previous[key] === valid ? previous : { ...previous, [key]: valid });
     };
     return { config: report("config"), networking: report("networking"), capture: report("capture"), placement: report("placement") };
@@ -147,6 +149,8 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
     Object.values(sectionValidity).every(Boolean);
 
   const save = useMutation({
+    onMutate: () => { savingRef.current = true; },
+    onSettled: () => { savingRef.current = false; },
     mutationFn: async (next: GameServer) => {
       if (!template || validateConfig(template.spec.configSchema ?? [], next.spec.config ?? {}).length > 0 ||
         !Object.values(sectionValidity).every(Boolean)) {
@@ -215,6 +219,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
   };
 
   const onChangeDraft = (next: GameServer) => {
+    if (savingRef.current) return;
     setDraft(next);
     setDirty(baselineRef.current ? isDirty(next, baselineRef.current) : false);
     if (savedAt) setSavedAt(null);
@@ -259,7 +264,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div key={draftRevision} className="flex-1 overflow-auto p-6 scrollbar-thin">
+        <fieldset key={draftRevision} disabled={save.isPending} inert={save.isPending} className="min-w-0 flex-1 overflow-auto border-0 p-6 scrollbar-thin">
           {section === "general"    && <GeneralSection    draft={draft} onChange={onChangeDraft} template={template} />}
           {section === "version"    && <VersionSection    draft={draft} onChange={onChangeDraft} template={template} />}
           {section === "config"     && <GameConfigSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={validityCallbacks.config} />}
@@ -282,7 +287,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
           {section === "access"     && <AccessSection     gs={gs} />}
           {section === "sharelinks" && <ShareLinksSection name={name} ns={ns} />}
           {section === "danger"     && <DangerSection     name={name} ns={ns} />}
-        </div>
+        </fieldset>
 
         {section !== "danger" && section !== "access" && section !== "sharelinks" && (
           <footer className="flex items-center justify-between gap-4 border-t border-border bg-surface/30 px-6 py-3">

@@ -55,6 +55,57 @@ function stubTemplate() {
 }
 
 describe("SettingsTab", () => {
+  it("requires reload without writing to a replacement server UID", async () => {
+    let writes = 0;
+    fetchMock.mockImplementation(async (url: string, init?: FetchInit) => {
+      if (url.startsWith("/templates/")) return jsonRes({ metadata: { name: "minecraft-java" }, spec: { displayName: "Minecraft", game: "minecraft-java", version: "1.0", image: "x" } });
+      if (init?.method === "PUT") writes++;
+      return jsonRes(gs({ metadata: { name: "mc-survival", uid: "replacement", resourceVersion: "200" } }));
+    });
+    renderWithQuery(<SettingsTab gs={gs({ metadata: { name: "mc-survival", uid: "original", resourceVersion: "100" } })} name="mc-survival" />);
+    fireEvent.change(screen.getByPlaceholderText(/Long-standing/), { target: { value: "original server edit" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    await screen.findByText(/changed since you opened this page/i);
+    expect(writes).toBe(0);
+    expect(screen.getByPlaceholderText(/Long-standing/)).toHaveValue("original server edit");
+    fireEvent.click(screen.getByRole("button", { name: /^Reload$/ }));
+    await waitFor(() => expect(screen.getByPlaceholderText(/Long-standing/)).toHaveValue(""));
+  });
+
+  it("locks every settings editor until both the latest GET and PUT finish", async () => {
+    let finishGet!: (response: Response) => void;
+    let finishPut!: (response: Response) => void;
+    const get = new Promise<Response>((resolve) => { finishGet = resolve; });
+    const put = new Promise<Response>((resolve) => { finishPut = resolve; });
+    let submitted: GameServer | undefined;
+    fetchMock.mockImplementation((url: string, init?: FetchInit) => {
+      if (url.startsWith("/templates/")) return Promise.resolve(jsonRes({ metadata: { name: "minecraft-java" }, spec: { displayName: "Minecraft", game: "minecraft-java", version: "1.0", image: "x" } }));
+      if (init?.method === "PUT") { submitted = JSON.parse(init.body as string) as GameServer; return put; }
+      return get;
+    });
+    renderWithQuery(<SettingsTab gs={gs()} name="mc-survival" />);
+    const description = screen.getByPlaceholderText(/Long-standing/);
+    fireEvent.change(description, { target: { value: "submitted" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: /Save changes/i })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+    await waitFor(() => expect(description).toBeDisabled());
+    expect(description.closest("fieldset")).toHaveAttribute("inert");
+    // A portalled control or delayed editor callback may still dispatch a
+    // change outside the disabled subtree. The parent must reject it too.
+    fireEvent.change(description, { target: { value: "late edit" } });
+    expect(description).toHaveValue("submitted");
+    fireEvent.click(screen.getByRole("tab", { name: /Environment/i }));
+    expect(screen.getByRole("button", { name: /Add variable/i })).toBeDisabled();
+    await act(async () => finishGet(jsonRes(gs())));
+    await waitFor(() => expect(submitted).toBeDefined());
+    expect(screen.getByRole("button", { name: /Add variable/i })).toBeDisabled();
+    await act(async () => finishPut(jsonRes(submitted)));
+    await waitFor(() => expect(screen.getByRole("button", { name: /Add variable/i })).toBeEnabled());
+    fireEvent.click(screen.getByRole("tab", { name: /^General$/i }));
+    expect(screen.getByPlaceholderText(/Long-standing/)).toHaveValue("submitted");
+  });
+
   it("starts clean and reports dirty after editing description", async () => {
     stubTemplate();
     const onDirty = vi.fn();

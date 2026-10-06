@@ -959,6 +959,33 @@ describe("ModsTab — id-managed mods (capabilities.mods.idList)", () => {
     expect(puts[0]).toEqual([{ id: "889745", name: "Structures Plus (S+)" }, { id: "895711" }]);
   });
 
+  it("locks ID-list editing and registry browsing until a pending save finishes", async () => {
+    let finishPut!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => { finishPut = resolve; });
+    routeIds({ ids: [{ id: "889745", name: "Existing mod" }] });
+    const original = fetchMock.getMockImplementation()!;
+    let submitted: ModID[] | undefined;
+    fetchMock.mockImplementation((url: string, options?: { method?: string; body?: string }) => {
+      if (url.includes("/mods/ids") && options?.method === "PUT") {
+        submitted = JSON.parse(options.body ?? "[]") as ModID[];
+        return pending;
+      }
+      return original(url, options);
+    });
+    renderWithQuery(<ModsTab name="s1" tmpl={idTmpl({ registry: true })} />);
+    await screen.findByText("Existing mod");
+    fireEvent.change(screen.getByPlaceholderText(/paste a.*mod id/i), { target: { value: "895711" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(submitted).toBeDefined());
+    expect(screen.getByPlaceholderText(/paste a.*mod id/i)).toBeDisabled();
+    expect(screen.getByRole("button", { name: /browse curseforge/i })).toBeDisabled();
+    for (const button of screen.getAllByRole("button", { name: "Remove" })) expect(button).toBeDisabled();
+    await act(async () => finishPut(jsonRes(submitted)));
+    await waitFor(() => expect(screen.getByPlaceholderText(/paste a.*mod id/i)).toBeEnabled());
+    expect(screen.getByText("895711")).toBeInTheDocument();
+  });
+
   it("marks a removal as pending and only applies it on save", async () => {
     const puts: ModID[][] = [];
     routeIds({ ids: [{ id: "889745", name: "Structures Plus (S+)" }], onPut: (b) => puts.push(b) });

@@ -14,6 +14,8 @@ export function mergeDraftOntoLatest(
   baseline: GameServer,
   latest: GameServer,
 ): GameServer {
+  // Never carry edits from a deleted server onto a namesake replacement.
+  if (baseline.metadata.uid !== latest.metadata.uid) throw new SettingsConflictError();
   const out = structuredClone(latest);
   // These maps use absence and an empty object interchangeably. Clearing the
   // last baseline key must still preserve keys another writer added meanwhile.
