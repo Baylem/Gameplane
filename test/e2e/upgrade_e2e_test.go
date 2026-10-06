@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -206,6 +207,42 @@ func TestUpgrade_FromPreviousRelease(t *testing.T) {
 		t.Errorf("upgraded API does not return the pre-upgrade GameServer %q; body=%s", gs, body)
 	}
 	resp.Body.Close()
+
+	// ---- 6b. telemetry stays off for an install that never opted in ------
+	//
+	// The previous release had no telemetry choice saved for this install, so
+	// the upgrade must not turn reporting on or show the notice (spec 022 US1
+	// scenario 5): migration 015 seeds consent_source "legacy".
+	resp, body, err = client.Get("/admin/telemetry/notice")
+	if err != nil || resp.StatusCode != 200 {
+		t.Fatalf("GET /admin/telemetry/notice after upgrade: %v status %d body %s", err, resp.StatusCode, body)
+	}
+	var notice struct {
+		Pending bool `json:"pending"`
+	}
+	if err := json.Unmarshal(body, &notice); err != nil {
+		t.Fatalf("decode notice: %v\n%s", err, body)
+	}
+	if notice.Pending {
+		t.Errorf("telemetry notice is pending after an upgrade; want pending:false, body=%s", body)
+	}
+	resp, body, err = client.Get("/admin/config")
+	if err != nil || resp.StatusCode != 200 {
+		t.Fatalf("GET /admin/config after upgrade: %v status %d body %s", err, resp.StatusCode, body)
+	}
+	var cfgAll struct {
+		Telemetry *struct {
+			SendMetrics bool `json:"sendMetrics"`
+		} `json:"telemetry"`
+	}
+	if err := json.Unmarshal(body, &cfgAll); err != nil {
+		t.Fatalf("decode config: %v\n%s", err, body)
+	}
+	// Absent (nothing was ever saved) or sendMetrics false. The upgrade may add
+	// "extended":false next to a saved value, so only sendMetrics is compared.
+	if cfgAll.Telemetry != nil && cfgAll.Telemetry.SendMetrics {
+		t.Errorf("telemetry sendMetrics is true after an upgrade with no saved choice; body=%s", body)
+	}
 
 	// ---- 7. F-218: a fresh `helm install` over leftover, STALE CRDs ------
 	//

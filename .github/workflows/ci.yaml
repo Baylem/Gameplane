@@ -1159,7 +1159,7 @@ jobs:
         # wide; the api buckets stay within the login limiter's budget).
         # Each bucket runs on amd64 and arm64; the include entries attach the
         # per-bucket config to both arch combinations.
-        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods]
+        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry]
         arch: [amd64, arm64]
         include:
           - bucket: operator
@@ -1186,6 +1186,10 @@ jobs:
           - bucket: api-mods
             parallel: 2
             test_timeout: 15m
+            job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+          - bucket: telemetry
+            parallel: 1
+            test_timeout: 25m
             job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
     env:
       CLUSTER: gameplane-e2e
@@ -1707,7 +1711,7 @@ jobs:
               'go-e2e-unit': (n) => n === 'go (test/e2e)',
               'api-postgres': (n) => n === 'api (postgres)',
               'e2e-buckets': (n) => n === 'e2e bucket coverage',
-              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods) \//.test(n),
+              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry) \//.test(n),
               'e2e-multicluster': (n) => n.startsWith('e2e multicluster /'),
               'e2e-upgrade': (n) => n.startsWith('e2e upgrade /'),
               'e2e-web-live': (n) => n.startsWith('e2e web live /'),
@@ -1851,7 +1855,7 @@ jobs:
             const bucketSet = new Set();
             for (const j of apiJobs) {
               const n = j.name || '';
-              const m = n.match(/^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods) \//);
+              const m = n.match(/^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry) \//);
               if (m) bucketSet.add(m[1]);
               if (/^e2e multicluster \//.test(n)) bucketSet.add('multicluster');
               if (/^e2e upgrade \//.test(n)) bucketSet.add('upgrade');

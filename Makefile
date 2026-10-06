@@ -187,6 +187,7 @@ e2e-images: ## Build operator/api/agent/fakeoidc images tagged for e2e
 	docker build -t gameplane-test/operator:$(KIND_E2E_TAG) -f operator/Dockerfile .
 	docker build -t gameplane-test/api:$(KIND_E2E_TAG)      -f api/Dockerfile      .
 	docker build -t gameplane-test/agent:$(KIND_E2E_TAG)    -f agent/Dockerfile    .
+	docker build -t gameplane-test/telemetry-receiver:$(KIND_E2E_TAG) -f telemetry-receiver/Dockerfile .
 	docker build -t gameplane-test/fakeoidc:$(KIND_E2E_TAG) -f test/e2e/Dockerfile.fakeoidc .
 
 .PHONY: test-e2e
@@ -417,12 +418,15 @@ dev-install: ## Install Gameplane Helm chart into the selected cluster
 	# not just this target. On a first install the hook also fires on
 	# pre-install, but only over leftover CRDs whose bundle stamp is stale or
 	# missing (an earlier, uninstalled release's); fresh CRDs come from crds/.
+	# Deploy the bundled telemetry receiver and point the API at it: never let
+	# CI or dev installs reach the project provider (spec 022 R17).
 	$(KUBECONFIG_ENV) helm upgrade --install $(CHART_RELEASE) $(CHART_DIR) \
 		--kube-context $(KUBE_CONTEXT) \
 		--namespace $(NAMESPACE) --create-namespace \
 		--set image.tag=$(TAG) \
 		--set image.registry=$(REGISTRY) \
 		--set operator.addressManager=$(ADDRESS_MANAGER) \
+		--set api.telemetry.receiver.enabled=true \
 		--set defaultModuleSource.type=oci \
 		--set defaultModuleSource.oci.url=$(MODULE_SOURCE_URL) \
 		--set defaultModuleSource.oci.insecure=$(MODULE_SOURCE_INSECURE)

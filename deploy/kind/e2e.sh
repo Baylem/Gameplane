@@ -8,7 +8,7 @@
 # Diffs from dev-up (deploy/kind/up.sh):
 #   - Single-node cluster (faster boot, sufficient for E2E coverage).
 #   - Skips ingress-nginx (the dashboard isn't exercised here).
-#   - Loads pre-built gameplane-test/{operator,api,agent,sentinel,capture-sidecar,fakeoidc}:<tag>
+#   - Loads pre-built gameplane-test/{operator,api,agent,sentinel,capture-sidecar,telemetry-receiver,fakeoidc}:<tag>
 #     images (and gameplane-test/gameprobe:<tag> when present).
 #   - Helm install with --wait so pods are Ready before tests start.
 #
@@ -163,8 +163,8 @@ EOF
     install_metallb
     apply_metallb_pools
 
-    echo "loading gameplane-test/{operator,api,agent,sentinel,capture-sidecar}:${TAG} images into kind"
-    for img in operator api agent sentinel capture-sidecar; do
+    echo "loading gameplane-test/{operator,api,agent,sentinel,capture-sidecar,telemetry-receiver}:${TAG} images into kind"
+    for img in operator api agent sentinel capture-sidecar telemetry-receiver; do
         if ! docker image inspect "gameplane-test/${img}:${TAG}" >/dev/null 2>&1; then
             echo "  missing local image gameplane-test/${img}:${TAG} — building"
             docker build -t "gameplane-test/${img}:${TAG}" -f "${REPO}/${img}/Dockerfile" "${REPO}"
@@ -298,6 +298,8 @@ EOF
     # Disable the web front end: the suite drives the API directly via
     # port-forward (never the browser), so building/loading the nginx image
     # would only add minutes, and `--wait` would block on an unloaded image.
+    # Deploy the bundled telemetry receiver and point the API at it: never let
+    # CI or dev installs reach the project provider (spec 022 R17).
     helm upgrade --install gameplane "${CHART_DIR}" \
         --namespace gameplane-system --create-namespace \
         --set "image.registry=gameplane-test" \
@@ -318,6 +320,7 @@ EOF
         --set "operator.addressManager=metallb" \
         --set "operator.gameDataStorage.storageClassName=gameplane-e2e-install-default" \
         --set "defaultModuleSource.enabled=false" \
+        --set "api.telemetry.receiver.enabled=true" \
         --wait --timeout 5m
 
     echo

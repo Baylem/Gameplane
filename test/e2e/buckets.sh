@@ -348,13 +348,22 @@ TestUpgrade_FromPreviousRelease
 EOF
 }
 
+# One sequential lifecycle test that runs `helm upgrade --reuse-values` (1m
+# report interval, dashboard token, public summary, no per-source ingest
+# limit) on its own bucket cluster, so it must not share a cluster with other
+# tests. It makes ONE admin login (budget: 2 or fewer). Spec 022 research R17.
+bucket_telemetry() { cat <<'EOF'
+TestTelemetryLifecycle
+EOF
+}
+
 # Tests that exist in the suite but deliberately run in NO bucket. Every
 # entry needs a reason; `verify` fails on any unlisted stray so additions
 # here are a conscious, reviewed act. Currently empty.
 unbucketed() { :; }
 
 bucket_names() {
-	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade
+	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade telemetry
 }
 
 list_bucket() {
@@ -370,6 +379,7 @@ list_bucket() {
 	bot-heavy) bucket_bot_heavy ;;
 	multicluster) bucket_multicluster ;;
 	upgrade) bucket_upgrade ;;
+	telemetry) bucket_telemetry ;;
 	*)
 		echo "unknown bucket: $1 (known: $(bucket_names | tr '\n' ' '))" >&2
 		exit 2
