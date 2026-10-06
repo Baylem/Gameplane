@@ -169,7 +169,7 @@ Release record for the public `v0.3.0` tag (T073). The maintainer chose to skip 
 | GitHub release not prerelease | [Release v0.3.0](https://github.com/ValgulNecron/Gameplane/releases/tag/v0.3.0), published 2026-10-06T04:10:51Z: `prerelease: false`, `draft: false`, and it is the repository's latest release. |
 | Notes from `## [0.3.0]` | The release body opens with the `## [0.3.0]` section text of `CHANGELOG.md` at the tag ("The first Gameplane release without a pre-release suffix…"). |
 | `0.3` image tag | `ghcr.io/valgulnecron/gameplane/api` tags `0.3.0`, `v0.3.0`, `0.3` and `latest` all resolve to digest `sha256:ccbe29755dd72fe191f97f0a3bc36e13bd672d6578e659272c9cb0be64198ae3`. |
-| CI on the tagged commit (RC-08) | The `ci` push run on `040e10e` ([37411539484](https://github.com/ValgulNecron/Gameplane/actions/runs/37411539484)) was cancelled by `cancel-in-progress` when later PRs merged into master. The PR head it merges ([#587](https://github.com/ValgulNecron/Gameplane/pull/587), `23c23401`) passed the full `ci` run (19 jobs passed, 0 failed); see RC-08 in [release-criteria.md](release-criteria.md) for the re-run. |
+| CI on the tagged commit (RC-08) | **Green.** The `ci` push run on `040e10e` ([37411539484](https://github.com/ValgulNecron/Gameplane/actions/runs/37411539484)) was first cancelled by `cancel-in-progress` when later PRs merged into master; attempt 2, re-run once master's `ci` was idle, finished 2026-10-06T05:34:05Z with conclusion success (75 jobs success, 1 skipped). |
 
 ### Other tag-triggered workflows
 
