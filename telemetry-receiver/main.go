@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"sync"
 	"syscall"
 	"time"
 
@@ -46,10 +47,11 @@ const (
 	idleTimeout       = 120 * time.Second
 )
 
-// versionRE bounds what lands in the reports_total version label —
-// free-form input must not be able to explode label cardinality with
-// garbage. Anything else is counted under "invalid".
+// versionRE limits each label's syntax. The separate per-server budget
+// limits how many different valid labels can be retained.
 var versionRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$`)
+
+const maxVersionLabels = 128
 
 type config struct {
 	listen    string
@@ -194,6 +196,9 @@ type server struct {
 	cfg config
 	reg *prometheus.Registry
 
+	versionMu sync.Mutex
+	versions  map[string]struct{}
+
 	reports   *prometheus.CounterVec
 	servers   prometheus.Histogram
 	templates prometheus.Histogram
@@ -202,8 +207,9 @@ type server struct {
 func newServer(cfg config) *server {
 	reg := prometheus.NewRegistry()
 	s := &server{
-		cfg: cfg,
-		reg: reg,
+		cfg:      cfg,
+		reg:      reg,
+		versions: make(map[string]struct{}),
 		reports: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "gameplane_telemetry_reports_total",
 			Help: "Telemetry reports accepted, by reported Gameplane version.",
@@ -264,10 +270,7 @@ func (s *server) ingest(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
-	version := p.Version
-	if !versionRE.MatchString(version) {
-		version = "invalid"
-	}
+	version := s.versionLabel(p.Version)
 
 	slog.Info("telemetry report",
 		"version", version, "servers", p.Servers, "templates", p.Templates)
@@ -275,6 +278,28 @@ func (s *server) ingest(w http.ResponseWriter, req *http.Request) {
 	s.servers.Observe(float64(p.Servers))
 	s.templates.Observe(float64(p.Templates))
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// versionLabel retains the first 128 valid versions for this process.
+// Overflow reports still count, but share one label. Never evict entries:
+// CounterVec would otherwise retain every old label and keep growing.
+func (s *server) versionLabel(version string) string {
+	if !versionRE.MatchString(version) || version == "invalid" {
+		return "invalid"
+	}
+	if version == "other" {
+		return "other"
+	}
+	s.versionMu.Lock()
+	defer s.versionMu.Unlock()
+	if _, ok := s.versions[version]; ok {
+		return version
+	}
+	if len(s.versions) >= maxVersionLabels {
+		return "other"
+	}
+	s.versions[version] = struct{}{}
+	return version
 }
 
 func newHTTPServer(addr string, h http.Handler) *http.Server {

@@ -30,9 +30,13 @@ gameplane_telemetry_servers                                 # histogram of GameS
 gameplane_telemetry_templates                               # histogram of GameTemplate counts
 ```
 
-Version strings that don't look like a version (bad charset, > 32 chars)
-are counted under `version="invalid"` so hostile input can't explode
-label cardinality or leak into the metrics page.
+Version strings with an invalid character set or more than 32 characters
+are counted under `version="invalid"`. The receiver retains the first 128
+distinct valid versions per process. Further versions count under
+`version="other"`; previously retained versions keep their own counters.
+The two bucket names are reserved. This caps the metric at 130 series,
+including concurrent ingestion. Restarting the receiver resets the budget
+and all counters.
 
 ## Configuration (environment variables)
 
