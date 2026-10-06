@@ -206,6 +206,14 @@ repeats the check, so a caller who is no longer the owner is refused, and
 after three conflicting attempts the request fails with 409. Backups,
 restore jobs, schedules, and events remain namespace-gated in this release.
 
+Generic GameServer create/update requests cannot set or remove annotations in
+the `gameplane.local` domain or its subdomains, except the user-editable
+`description` and unused legacy `grace-period-seconds` hints. The API strips supplied values
+on creation before assigning the owner, and preserves live values on updates.
+Wipe requests, controller acknowledgements and lifecycle guards therefore cannot
+be injected or erased through ordinary settings writes. Use the authorized
+lifecycle and ownership endpoints for those operations.
+
 ## GameServer config passwords
 
 `GameServer.spec.config` holds wizard values as stored in Kubernetes, including

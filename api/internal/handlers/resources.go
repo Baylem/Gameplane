@@ -192,6 +192,7 @@ func createHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 		}
 		// Record the creating user as the server's owner (informational).
 		if gvr.Resource == "gameservers" {
+			protectServerAnnotations(obj, nil)
 			stampOwner(obj, req)
 			stripRedactedConfig(obj)
 		}
@@ -271,27 +272,7 @@ func updateHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 				httperr.Write(w, req, getErr)
 				return
 			}
-			if live != nil {
-				// Copy ownership annotations from the live object.
-				liveAnn := live.GetAnnotations()
-				objAnn := obj.GetAnnotations()
-				if objAnn == nil {
-					objAnn = map[string]string{}
-				}
-				for _, key := range []string{
-					"gameplane.local/owner-id",
-					"gameplane.local/owner",
-					"gameplane.local/collaborators",
-					"gameplane.local/collaborator-names",
-				} {
-					if v, ok := liveAnn[key]; ok {
-						objAnn[key] = v
-					} else {
-						delete(objAnn, key)
-					}
-				}
-				obj.SetAnnotations(objAnn)
-			}
+			protectServerAnnotations(obj, live)
 			// The dashboard sends spec back wholesale, so password config values
 			// arrive as the redaction marker: keep the stored value for those.
 			cfgRules = newConfigRuleCache(k)
