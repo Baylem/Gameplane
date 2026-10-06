@@ -1,0 +1,3 @@
+Checking for remaining audit018- resources...
+No audit018- resources found.
+exit=0

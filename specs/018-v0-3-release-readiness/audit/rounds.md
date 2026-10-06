@@ -178,3 +178,19 @@ Release record for the public `v0.3.0` tag (T073). The maintainer chose to skip 
 ### Test resources
 
 None created.
+
+### Final kubelab state and cleanup (T034, T074)
+
+The maintainer decided (2026-10-06, T074) that kubelab stays on public `v0.3.0`. The maintainer ran the upgrade and the final checks from the devbox; the evidence is in [evidence/v0.3.0/](evidence/v0.3.0/).
+
+- **Upgrade**: Helm release `gameplane` revision 10, chart `oci://ghcr.io/valgulnecron/charts/gameplane` `0.3.0`. Values are the baseline values without the side-loaded `gameplane-test/*` image keys, so every component pulls the public `:0.3.0` images; `capture.enabled` (set during the live sweep) is back to the default, off. kubelab keeps its `defaultModuleSource.git.ref: main` override from the baseline.
+- **CRDs**: kubelab runs with `crds.autoApply.enabled: false`, so the 0.3.0 CRDs were applied by hand (`kubectl apply --server-side --field-manager=helm`). The `backupschedules` CRD had three earlier field managers and needed `--force-conflicts`.
+- **DB snapshot (off-git)**: the API was scaled to 0 for about a minute and its SQLite data directory archived on the devbox as `~/gameplane-audit-018/db-pre-v0.3.0-20261006T220427Z/api-data.tgz` (sha256 `60e572c5…`).
+- **After the upgrade**: API, operator and web run 0.3.0 and the API started cleanly; the four game servers that were running restarted on the 0.3.0 agent and are Ready; the operator logged no errors.
+- **cleanup-check.sh**: exit 0, no `audit018-` resources ([cleanup-check.txt](evidence/v0.3.0/cleanup-check.txt)).
+- **snapshot-diff.sh baseline → final**: exit 1 with 13 lines ([snapshot-diff.txt](evidence/v0.3.0/snapshot-diff.txt)): generation changes on GameServers `mc-fabric`, `soak-no-preference`, `soak-pool-west`, GameTemplates `minecraft-java`, `terraria`, `the-isle`, `tmodloader`, Modules `minecraft-java`, `terraria`, `tmodloader` and ModuleSource `default`, and new UIDs for GameTemplate and Module `beammp`. The same 13 lines appear when the 2026-09-23 baseline is diffed against the [pre-upgrade](evidence/v0.3.0/pre-upgrade/) snapshot (2026-10-06, taken just before the upgrade), and the pre-upgrade → [final](evidence/v0.3.0/final/) diff exits 0 apart from the intended `capture` value. So the upgrade itself changed nothing the diff checks; the 13 changes come from the live sweep and the module re-pushes between 2026-09-23 and 2026-10-06. **Maintainer decision 2026-10-06: accepted as intended changes, not a finding** (T034 step 5).
+- **Leftover outside the `audit018-` prefix**: the `gameplane-test-restic` Deployment and Service in `gameplane-system`, created by the 2026-10-04 live sweep, are not seen by `cleanup-check.sh`. Maintainer decision 2026-10-06: delete them (`kubectl -n gameplane-system delete deploy/gameplane-test-restic svc/gameplane-test-restic`).
+- **Not checked**: T034 step 4 (no `audit018-` entries in the API user, role and share lists) needs a dashboard admin login, which the devbox session did not have.
+- **Pre-existing, not caused by the upgrade**: GameServer `squad` has been Failed for 15 days on an image that cannot be pulled (a placeholder digest and the `gameplane-test/agent:e2e` agent).
+
+RC-06 stays `not met (accepted risk, T070)`: the baseline → final diff is not clean, even though the drift is accepted as intended.
