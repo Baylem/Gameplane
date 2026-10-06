@@ -500,9 +500,10 @@ func TestBackupGuardPendingSnapshotCleanupWaitsForCapture(t *testing.T) {
 			}
 			r, q := guardFixture(t, a, guardBackup("next"))
 			guardPass(t, r, "snapshot")
-			if mode == "orphan" {
+			switch mode {
+			case "orphan":
 				forceDeleteGuardBackup(t, r, "snapshot")
-			} else if mode == "delete" {
+			case "delete":
 				a := guardGetBackup(t, r, "snapshot")
 				if err := r.Delete(context.Background(), a); err != nil {
 					t.Fatal(err)
