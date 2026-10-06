@@ -258,7 +258,7 @@ Every capture that reaches a terminal state reports `status` (`completed` or `fa
 
 ## Security Considerations (Phase 2 Design)
 
-1. **mTLS-only communication**: All endpoints require mTLS. The sidecar validates the client certificate against the cluster CA. No bearer tokens or API keys are used. Only authenticated clients (the API server, the operator) can reach the sidecar's control endpoints.
+1. **mTLS-only communication**: All endpoints require mTLS. The sidecar validates the client certificate against the cluster CA. No bearer tokens or API keys are used. Only authenticated clients (the API server, the operator) can reach the sidecar's control endpoints. Serving certificates, keys, and client CA bundles reload on each new TLS handshake after Kubernetes updates the mounted Secret. Each handshake pins one projected Secret generation; invalid or unreadable replacements fail closed and recover after valid material returns. Every certificate in the CA bundle must parse successfully. Session tickets are disabled so resumed sessions cannot bypass current client CA validation; established connections remain open.
 
 2. **File capability isolation**: `CAP_NET_RAW` is granted to the sidecar's binary only, via file capabilities. The game container retains no elevated privileges. This is a structural boundary, not a runtime check.
 

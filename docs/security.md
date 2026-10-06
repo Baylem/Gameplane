@@ -13,6 +13,19 @@ point. Assume:
 
 ## Authentication
 
+Operator-managed agent and capture-sidecar control traffic uses mTLS with TLS 1.2 or newer and a verified
+client certificate. Both servers reload their serving certificate, key and
+client CA on each new handshake, so operator Secret renewal takes effect
+once Kubernetes updates the mounted projection. Each server reads one pinned
+`..data` generation from the Secret rather than mixing files during a
+projection swap. Invalid rotated material rejects new handshakes until
+repaired; it never falls back to old trust. A decoded client-CA
+`CERTIFICATE` block with invalid DER rejects the entire bundle, even
+when it also contains valid CAs. Valid multi-CA bundles remain supported.
+TLS session tickets are
+disabled so new connections cannot resume authentication against a
+removed CA. Existing connections retain their established TLS state.
+
 Two modes, configurable independently:
 
 - **Local accounts** — argon2id (64 MiB, t=3, p=2) password hashing.
