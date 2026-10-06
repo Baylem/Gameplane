@@ -11,7 +11,7 @@ Written before round 0 (FR-015). Columns are fixed by [contracts/audit-records.m
 | RC-05 | Live beta.8 → RC upgrade with zero data loss and zero lost accounts | SC-005, OD-005 | [inventory.md#upg](inventory.md#upg) | not met (accepted risk, T070) |
 | RC-06 | The baseline snapshot matches the post-cleanup snapshot, with zero `audit018-` resources remaining | SC-006 | [rounds.md](rounds.md), [kubelab-baseline.md](kubelab-baseline.md) | not met (accepted risk, T070) |
 | RC-07 | Every `not-a-defect` and `out-of-scope` closure is justified, and each out-of-scope one cites a roadmap line | SC-009 | [findings.md](findings.md) | partially (accepted risk, T070) |
-| RC-08 | CI is green on the tagged commit | FR-017 | [rounds.md#v030](rounds.md#v030) | pending (set after the v0.3.0 tag, T073) |
+| RC-08 | CI is green on the tagged commit | FR-017 | [rounds.md#v030](rounds.md#v030) | pending (the `ci` push run on the tagged commit was cancelled by later merges and is being re-run; the PR head it merges, #587 `23c23401`, passed the full `ci` run) |
 
 ## Change log
 

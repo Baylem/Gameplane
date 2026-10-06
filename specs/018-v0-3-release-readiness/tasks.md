@@ -78,7 +78,7 @@ description: "Task list for the v0.3 release readiness audit"
   - (c) `charts/gameplane/values.yaml:473` git module source is pinned to `ref: v0.2.0-beta.6`. S3
   - (d) the CI upgrade baseline is still `0.2.0-beta.5` in `deploy/kind/upgrade.sh:36`, `.github/workflows/ci.yaml:968-970` and `.claude/agents/ci-triager.md:65`. S3
   - (e) the `CLAUDE.md` repository map says "14 Go modules" and omits `gp-module/`. S4
-- [ ] T012 (2026-09-24: `audit018-admin` created via bootstrap-admin (OD-015). Recorded: roles, module sources, auth-provider and notification-sink names, and DB migration level 011 (inferred from a read-only probe of a migration-011 table; beta.8 ships up to 006, so OD-005 path (b)). Still missing: the API user list. Auto mode's safety check denied that call; fetch it in the default permission mode) Capture the baseline: run `audit/tools/snapshot.sh audit/evidence/baseline/`, then write `audit/kubelab-baseline.md` with the chart version, the image refs in use, the redacted `helm get values`, the module source, the ingress host and the API namespace. Record the API user list, role list, module-source list, auth-provider names and notification-sink names, fetched with a single admin login. Also record the API DB's highest applied migration and compare it with the highest migration file present at tag `v0.2.0-beta.8` (`git ls-tree v0.2.0-beta.8 api/internal/db/migrations/`). This comparison decides the OD-005 path used in T061. Check with `grep -iE 'secret|token|password' audit/kubelab-baseline.md`: it must show key names only
+- [~] T012 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). The API user list was never captured; RC-06 is recorded as not met. (2026-09-24: `audit018-admin` created via bootstrap-admin (OD-015). Recorded: roles, module sources, auth-provider and notification-sink names, and DB migration level 011 (inferred from a read-only probe of a migration-011 table; beta.8 ships up to 006, so OD-005 path (b)). Still missing: the API user list. Auto mode's safety check denied that call; fetch it in the default permission mode) Capture the baseline: run `audit/tools/snapshot.sh audit/evidence/baseline/`, then write `audit/kubelab-baseline.md` with the chart version, the image refs in use, the redacted `helm get values`, the module source, the ingress host and the API namespace. Record the API user list, role list, module-source list, auth-provider names and notification-sink names, fetched with a single admin login. Also record the API DB's highest applied migration and compare it with the highest migration file present at tag `v0.2.0-beta.8` (`git ls-tree v0.2.0-beta.8 api/internal/db/migrations/`). This comparison decides the OD-005 path used in T061. Check with `grep -iE 'secret|token|password' audit/kubelab-baseline.md`: it must show key names only
 - [X] T013 ⛔ approval. Prepare rc.1 (done 2026-09-23: PR #423; RC-TAG-1 logged, waiting on merge and tag approval):
   1. On branch `chore/018-rc1-changelog` off `master`, add a `## [0.3.0-rc.1]` section to `CHANGELOG.md` that summarises the unreleased entries.
   2. Open a PR with labels `type: chore` and `area: specs`.
@@ -166,15 +166,15 @@ description: "Task list for the v0.3 release readiness audit"
 
 ### Security boundaries: active violation attempts (FR-008, SC-007; need T015)
 
-- [ ] T046 [US2] (drafted 2026-09-24 but defective and unreviewed; DO NOT RUN. Held off-git with the INV-SEC rows in `audit/held/` per OD-019; the rewrite as control checks stays there too. 2026-09-24: an opus rewrite attempt was stopped by the auto-mode safety check before writing anything; redo it in the default permission mode) Write `audit/procedures/security.md` with one `### <slug>` per boundary, and add the `INV-SEC-NNN` rows to `audit/inventory.md`. The six boundaries:
+- [~] T046 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). The security procedure and INV-SEC rows stay held off-git (OD-019); RC-04 is recorded as not met. [US2] (drafted 2026-09-24 but defective and unreviewed; DO NOT RUN. Held off-git with the INV-SEC rows in `audit/held/` per OD-019; the rewrite as control checks stays there too. 2026-09-24: an opus rewrite attempt was stopped by the auto-mode safety check before writing anything; redo it in the default permission mode) Write `audit/procedures/security.md` with one `### <slug>` per boundary, and add the `INV-SEC-NNN` rows to `audit/inventory.md`. The six boundaries:
   - (a) login privacy: `api/internal/auth/local.go:105-173`, `/auth/providers`, and identical errors for an unknown user and a wrong password
   - (b) RBAC: `api/internal/rbac/rbac.go:54-254`. Viewer write → 403, the collaborator-only paths, cross-namespace access
   - (c) netguard: `netguard/netguard.go:77-145`. `audit018-` ModuleSource at `http://169.254.169.254/…` and `metadata.google.internal`, and an agent mod fetch to CGNAT `100.64.0.0/10`
   - (d) console guard: `gameaction/action.go:31-120`. CRLF inside an action param, and a param longer than 512 characters
   - (e) audit-chain tamper: `api/internal/audit/audit.go:240-520`, per OD-008/OD-009
   - (f) secret handling: the share token shown only on create and redacted in audit, and the client secret and registry API key never echoed
-- [ ] T047 [US2] Run the live violation attempts for boundaries (a), (b), (c), (d) and (f) from `audit/procedures/security.md` using `audit018-` users and resources. Save the redacted evidence to `audit/evidence/INV-SEC-NNN/` and update the outcomes in `audit/inventory.md`. Any boundary that doesn't hold is an S1 finding
-- [ ] T048 [US2] Run the live audit-chain tamper test for boundary (e) in a quiet window with no other admin activity (OD-008, OD-009, contracts/test-resources.md). For **each** variant — UPDATE an `audit018-` row, DELETE a middle `audit018-` row, truncate the tail:
+- [~] T047 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). RC-04 is recorded as not met. [US2] Run the live violation attempts for boundaries (a), (b), (c), (d) and (f) from `audit/procedures/security.md` using `audit018-` users and resources. Save the redacted evidence to `audit/evidence/INV-SEC-NNN/` and update the outcomes in `audit/inventory.md`. Any boundary that doesn't hold is an S1 finding
+- [~] T048 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). RC-04 is recorded as not met. [US2] Run the live audit-chain tamper test for boundary (e) in a quiet window with no other admin activity (OD-008, OD-009, contracts/test-resources.md). For **each** variant — UPDATE an `audit018-` row, DELETE a middle `audit018-` row, truncate the tail:
   1. Scale the API to 0.
   2. `sqlite3 .backup` to `~/gameplane-audit-018/db-snapshots/tamper-<variant>.db`.
   3. Scale the API up.
@@ -195,7 +195,7 @@ description: "Task list for the v0.3 release readiness audit"
 
 **Independent Test**: `grep -cE '\| (imported|open|fixing|fixed-unverified) \|' audit/findings.md` returns 0. Every `verified` row links a passing live repeat on a named `rc.N`. Every `out-of-scope` row cites a `docs/roadmap.md` line.
 
-- [ ] T049 [US3] Reproduce each `imported` finding live on rc.1 using its `### F-NNN` repro. Set it to `open`, or to `closed-already-fixed` when the repro passes, with evidence in `audit/evidence/F-NNN/`. Findings that can't be reproduced live (docs or CI-only) are checked by reading the current `master` file at the cited lines
+- [~] T049 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). The 25 `imported` findings stay `imported`; RC-03 is recorded as not met. [US3] Reproduce each `imported` finding live on rc.1 using its `### F-NNN` repro. Set it to `open`, or to `closed-already-fixed` when the repro passes, with evidence in `audit/evidence/F-NNN/`. Findings that can't be reproduced live (docs or CI-only) are checked by reading the current `master` file at the cited lines
 - [X] T050 [US3] (done 2026-09-24: fix plan in `audit/evidence/rc.1/fix-plan.md`, checked by opus; the held plan is off-git; sign-off requested in OD-024) Triage `audit/findings.md`:
   - Order the `open` findings S1 → S4, and within each severity put core paths first.
   - Close items as `not-a-defect` only with a written justification.
@@ -204,25 +204,25 @@ description: "Task list for the v0.3 release readiness audit"
 - [X] T051 [P] [US3] (done 2026-09-24: PR #422 merged, labels type: ci and area: e2e; F-029 fixed-unverified, Fix #422) Fix F-(d), the upgrade baseline, on branch `fix/018-upgrade-baseline`. Set `FROM_VERSION` default to `0.2.0-beta.8` in `deploy/kind/upgrade.sh:36`, `GAMEPLANE_UPGRADE_FROM: 0.2.0-beta.8` and its comment in `.github/workflows/ci.yaml:968-970`, and the text in `.claude/agents/ci-triager.md:65`. Open a PR labelled `type: ci` and `area: e2e` via the REST API (CLAUDE.md 14), and set the finding to `fixing` with the PR number
 - [X] T052 [P] [US3] (done 2026-09-24: PR #420 merged, labels type: fix and area: shared; bare versions plus the dependency marker (OD-011) and the fixture harness `make test-doc-versions` run in CI (OD-012); F-026 fixed-unverified, Fix #420) Fix F-(a), the doc-version checker, on branch `fix/018-doc-versions-checker`. Change `hack/check-doc-versions.sh` so it recognises `X.Y.Z` and `X.Y.Z-(beta|rc).N`, using the multi-digit `[0-9]+` everywhere, including lines 94, 103 and 151. It must still accept historical-marked lines and the current `appVersion`. Add a fixture case under the checker's existing test harness if one exists, otherwise log the test gap in `OPEN-DECISIONS.md` (tests need sign-off). Open a PR labelled `type: fix` and `area: shared`
 - [X] T053 [P] [US3] (done 2026-09-24: PR #421 merged, labels type: docs and area: shared; F-030 fixed-unverified, Fix #421) Fix F-(e), the repo map, on branch `docs/018-claude-md-gp-module`. Add `gp-module/` to the repository map in `CLAUDE.md` and correct the Go-module count to match `go.work`. Open a PR labelled `type: docs` and `area: shared`
-- [ ] T054 [US3] (logged 2026-09-23 in OPEN-DECISIONS.md § T054; the bump waits on the maintainer naming the tag) Fix F-(c), the module source ref: log in `OPEN-DECISIONS.md` that `charts/gameplane/values.yaml:473` `ref: v0.2.0-beta.6` needs a `gameplane-module` tag tested with v0.3.0. Once the maintainer names the tag, bump the ref on branch `fix/018-module-source-ref` and open a PR labelled `type: fix` and `area: chart`
-- [ ] T055 [US3] For each remaining `open` finding, in the order of `fix-plan.md`, run a fix wave in a `Workflow`:
+- [X] T054 (done 2026-10-06: the maintainer named `gameplane-module` tag `v0.3.0` (commit `b42eea2`); `charts/gameplane/values.yaml` `ref: v0.3.0` landed in #587 instead of a separate fix branch) [US3] (logged 2026-09-23 in OPEN-DECISIONS.md § T054; the bump waits on the maintainer naming the tag) Fix F-(c), the module source ref: log in `OPEN-DECISIONS.md` that `charts/gameplane/values.yaml:473` `ref: v0.2.0-beta.6` needs a `gameplane-module` tag tested with v0.3.0. Once the maintainer names the tag, bump the ref on branch `fix/018-module-source-ref` and open a PR labelled `type: fix` and `area: chart`
+- [~] T055 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). Remaining `open` findings stay open after v0.3.0; RC-03 is recorded as not met. [US3] For each remaining `open` finding, in the order of `fix-plan.md`, run a fix wave in a `Workflow`:
   - `haiku` makes the fix from a scout brief (CLAUDE.md 18), escalating a tier only on demonstrated failure; review runs one tier up.
   - Branch: `fix/018-F-NNN`.
   - Add a regression test: E2E in a `test/e2e/buckets.sh` bucket for user- or operator-facing paths. Never weaken an existing test.
   - Update the owning `specs.md` when behaviour changes.
   - Visual web fixes follow the blind design-first rule in the header.
   - Push the branch, open the PR with its `type:` and `area:` labels, and set the finding to `fixing`.
-- [ ] T056 [US3] Watch CI on every fix PR (`gh pr checks`) and fix failures with follow-up commits. When a PR is merged (after human approval), set its finding to `fixed-unverified` with `Fix` = the PR number, and delete the merged branch locally and on the remote
-- [ ] T057 [US3] ⛔ approval. Cut the next release candidate:
+- [~] T056 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). Fix PRs merged before the decision are recorded in `audit/findings.md`. [US3] Watch CI on every fix PR (`gh pr checks`) and fix failures with follow-up commits. When a PR is merged (after human approval), set its finding to `fixed-unverified` with `Fix` = the PR number, and delete the merged branch locally and on the remote
+- [~] T057 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). The maintainer chose to skip rc.2 and tag `v0.3.0` directly (T073). [US3] ⛔ approval. Cut the next release candidate:
   1. Add a `## [0.3.0-rc.N+1]` section to `CHANGELOG.md` on branch `chore/018-rcN-changelog` and open a PR.
   2. Log `RC-TAG-N+1: pending` in `OPEN-DECISIONS.md`.
   3. After merge and approval, tag and verify as in T014.
   4. Deploy as in T015, under a new `## rc.N+1` section in `audit/rounds.md`.
-- [ ] T058 [US3] Re-verify on rc.N+1:
+- [~] T058 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). No rc.N+1 was cut (T057). [US3] Re-verify on rc.N+1:
   - Repeat the live repro of every `fixed-unverified` finding. On a pass, set it to `verified` with `Re-verified` = `rc.N+1` and an evidence link. On a fail, set it back to `open`.
   - Regression sweep: reset to `untested`, and re-run, every `audit/inventory.md` row whose component had a merged fix.
   - Clean up as in T034.
-- [ ] T059 [US3] Loop: repeat T050 and T055–T058 until `grep -cE '\| (imported|open|fixing|fixed-unverified) \|' audit/findings.md` returns 0 **and** no inventory row is `fail` or `untested`. Record each round's totals in `audit/rounds.md`
+- [~] T059 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). The loop ended at the go decision with RC-03 not met. [US3] Loop: repeat T050 and T055–T058 until `grep -cE '\| (imported|open|fixing|fixed-unverified) \|' audit/findings.md` returns 0 **and** no inventory row is `fail` or `untested`. Record each round's totals in `audit/rounds.md`
 
 **Checkpoint**: Zero blocking findings, and every fix has been re-verified live.
 
@@ -240,13 +240,13 @@ description: "Task list for the v0.3 release readiness audit"
   - `### upgrade-to-rc`, `### restart` (API and operator), `### rollback`, `### restore-real-db`
 
   Add the rows `INV-UPG-001` to `INV-UPG-005` to `audit/inventory.md`
-- [ ] T061 [US4] Run the upgrade round on the latest RC:
+- [~] T061 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). RC-05 is recorded as not met; INV-UPG rows stay `untested`. [US4] Run the upgrade round on the latest RC:
   1. Take a real DB snapshot to `~/gameplane-audit-018/db-snapshots/upg-real.db`.
   2. Bring kubelab to public `v0.2.0-beta.8`. If T012 showed kubelab's migrations are ahead of beta.8, `helm uninstall` without deleting the CRDs or game PVCs, then reinstall beta.8 with a fresh API DB (OD-005 option b). Otherwise run a `helm upgrade` to beta.8.
   3. Seed, then upgrade to the RC.
   4. Verify that the `audit018-upg` server comes back Running, the marker is byte-identical, `audit018-admin` can log in, and audit `Verify` is ok. Check that pre-existing GameServers stayed running throughout.
   5. Save the evidence to `audit/evidence/INV-UPG-NNN/`. Any loss is an S1 finding.
-- [ ] T062 [US4] Restart and rollback on the upgraded install:
+- [~] T062 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). RC-05 is recorded as not met. [US4] Restart and rollback on the upgraded install:
   1. Restart the API and operator deployments, and verify the seeded state.
   2. `helm rollback <release> <beta.8-revision>`. If new migrations were applied, scale the API to 0, restore the pre-upgrade snapshot, and scale up.
   3. Verify that the previous release serves logins, lists `audit018-upg`, and the marker is intact.
@@ -254,14 +254,14 @@ description: "Task list for the v0.3 release readiness audit"
   5. Restore the real DB snapshot `upg-real.db` (contracts/rc-deploy.md §2a step 4), then run `audit/tools/snapshot-diff.sh`.
 
   Write the exact working rollback steps to `audit/evidence/INV-UPG-rollback/steps.md`
-- [ ] T063 [US4] Fix F-(b) with the rollback docs on branch `docs/018-install-rollback`: add a "Rolling back an upgrade" section to `docs/install.md` built from `audit/evidence/INV-UPG-rollback/steps.md`, including the DB-snapshot requirement for forward-only migrations. Open a PR labelled `type: docs` and `area: chart`
+- [~] T063 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). No upgrade round ran, so there are no rollback steps to document. [US4] Fix F-(b) with the rollback docs on branch `docs/018-install-rollback`: add a "Rolling back an upgrade" section to `docs/install.md` built from `audit/evidence/INV-UPG-rollback/steps.md`, including the DB-snapshot requirement for forward-only migrations. Open a PR labelled `type: docs` and `area: chart`
 - [X] T064 [P] [US4] (done 2026-09-24: audit/procedures/nodes.md with scheduling, drain and node-loss; INV-NODE-001..003 in inventory.md) Write `audit/procedures/nodes.md`:
   - `### scheduling`: several `audit018-` servers, recording each pod's node
   - `### drain`: `kubectl cordon <node>`, Eviction of the `audit018-` pod only, observe, `kubectl uncordon`. A full `kubectl drain` is never used.
   - `### node-loss`: stop `k3s-agent` for a few minutes on a worker holding no pre-existing stateful game server (OD-006), observe the `audit018-` server, restart `k3s-agent`, and verify pre-existing pods recovered
 
   Add the rows `INV-NODE-001` to `INV-NODE-003` to `audit/inventory.md`
-- [ ] T065 [US4] Run `audit/procedures/nodes.md` live:
+- [~] T065 **WITHDRAWN 2026-10-06, superseded by the v0.3.0 go decision** (maintainer decision 2026-10-05, T070, [report.md#decision](audit/report.md#decision): go with the not-met criteria accepted as known risk; `v0.3.0` shipped 2026-10-06, `audit/rounds.md` § v0.3.0). INV-NODE rows stay `untested`. [US4] Run `audit/procedures/nodes.md` live:
   - Pick the node-loss worker with `kubectl get pods -A -o wide`, avoiding any node that hosts a pre-existing GameServer pod, and record the node and time window.
   - Compare the observed behaviour (rescheduling, waiting, or a clear error state) with `docs/architecture.md` and `operator/specs.md`. A mismatch becomes a finding (FR-013).
   - Save the evidence to `audit/evidence/INV-NODE-NNN/`.
@@ -277,17 +277,17 @@ description: "Task list for the v0.3 release readiness audit"
 
 **Independent Test**: A reviewer who didn't run the audit reads `audit/report.md` alone and states the decision and its reasons correctly within 15 minutes (SC-008).
 
-- [ ] T066 [US5] Build `audit/report.md` in the section order from contracts/audit-records.md § report.md:
+- [X] T066 (done 2026-10-05: `audit/report.md`, merged in #586) [US5] Build `audit/report.md` in the section order from contracts/audit-records.md § report.md:
   - Totals: inventory by outcome, findings by severity and status, coverage percentage.
   - Open findings, which must be empty for a go.
   - Not live-verified: every `blocked` row, with its prerequisite and the alternative tested.
   - By component (from `audit/coverage.md`) and by area.
   - Proposed E2E additions: every procedure marked `Automatable? yes`, with its proposed bucket (FR-012).
   - The release-criteria table with `Met` filled from the evidence.
-- [ ] T067 [US5] Re-run the re-check command in `contracts/status-wording.md` on the current `master` and update that contract's location list with any new hits. Copy the final change set into the "Status-wording change set" section of `audit/report.md`
-- [ ] T068 [US5] Draft the release notes in `audit/evidence/release-notes-v0.3.0.md`: highlights from the CHANGELOG RC sections, the "Not live-verified" list copied word for word (FR-002, SC-001), and the pre-v1 caveats from `docs/roadmap.md` "Wanted for v1, not blocking"
-- [ ] T069 [US5] Cold-read check (`sonnet`, a fresh agent that has seen none of the audit): give it only `audit/report.md` and ask for the decision, the reasons, and the time taken. Record the answer in `audit/evidence/cold-read.md`. If it can't reach the right conclusion, revise `audit/report.md` and repeat
-- [ ] T070 [US5] ⛔ approval. Request the go/no-go decision from the maintainer. Record the maintainer's name, date and decision in `audit/report.md` § Decision, and set `Met` in `audit/release-criteria.md`
+- [X] T067 (done 2026-10-05: re-check recorded in `contracts/status-wording.md`, applied in #587) [US5] Re-run the re-check command in `contracts/status-wording.md` on the current `master` and update that contract's location list with any new hits. Copy the final change set into the "Status-wording change set" section of `audit/report.md`
+- [X] T068 (done 2026-10-05: `audit/evidence/release-notes-v0.3.0.md`, merged in #586) [US5] Draft the release notes in `audit/evidence/release-notes-v0.3.0.md`: highlights from the CHANGELOG RC sections, the "Not live-verified" list copied word for word (FR-002, SC-001), and the pre-v1 caveats from `docs/roadmap.md` "Wanted for v1, not blocking"
+- [X] T069 (done 2026-10-05: `audit/evidence/cold-read.md`, merged in #586) [US5] Cold-read check (`sonnet`, a fresh agent that has seen none of the audit): give it only `audit/report.md` and ask for the decision, the reasons, and the time taken. Record the answer in `audit/evidence/cold-read.md`. If it can't reach the right conclusion, revise `audit/report.md` and repeat
+- [X] T070 (done 2026-10-05: go, maintainer valgulnecron, recorded in `audit/report.md` § Decision and `audit/release-criteria.md`, merged in #586) [US5] ⛔ approval. Request the go/no-go decision from the maintainer. Record the maintainer's name, date and decision in `audit/report.md` § Decision, and set `Met` in `audit/release-criteria.md`
 
 **Checkpoint**: The decision is recorded. On a go, continue to Phase 8.
 
@@ -297,17 +297,17 @@ description: "Task list for the v0.3 release readiness audit"
 
 **Purpose**: Ship v0.3.0 with consistent status wording, and close out the audit.
 
-- [ ] T071 Apply `contracts/status-wording.md` in one commit on branch `chore/018-v0.3.0-status`:
+- [X] T071 (done 2026-10-05: #587, merged 2026-10-06) Apply `contracts/status-wording.md` in one commit on branch `chore/018-v0.3.0-status`:
   - `charts/gameplane/Chart.yaml:5-6` → `0.3.0`
   - `web/package.json:4` → `0.3.0`, and regenerate `web/package-lock.json` with `npm install --package-lock-only`
   - status wording in `README.md` (including the `#beta-status--limitations` anchor), `CLAUDE.md:6`, `docs/roadmap.md`, `docs/install.md`, `docs/dependencies.md`, `telemetry-receiver/README.md`, `web/specs.md:740`, every `*/specs.md` and `test/e2e/**/spec.md` status line, and the `.github/workflows/publish-edge.yaml:3` comment
   - leave everything under "Left as-is" untouched
 
   Re-run the contract's re-check command and confirm every remaining hit is on the allow-list
-- [ ] T072 Add a `## [0.3.0]` section to `CHANGELOG.md` in the same branch, moving the relevant "Unreleased" entries into it. Open a PR labelled `type: chore` and `area: shared` and wait for CI green and human approval
-- [ ] T073 ⛔ approval. After merge, tag `v0.3.0` (`git tag -a v0.3.0 <sha> -m "v0.3.0"`, annotated, unsigned, per OD-013). Check `release.yaml` is green, the images and chart are signed, the GitHub release is **not** marked prerelease, the notes come from the `## [0.3.0]` section, and the `0.3` image tag now exists. Record the results under `## v0.3.0` in `audit/rounds.md`
-- [ ] T074 ⛔ approval. Ask the maintainer whether kubelab stays on public `v0.3.0` or goes back to the baseline values (contracts/rc-deploy.md §4). Apply the answer, then run a final `audit/tools/cleanup-check.sh` and `audit/tools/snapshot-diff.sh audit/evidence/baseline <final>`, and record the result in `audit/rounds.md` (SC-006)
-- [ ] T075 Run the final validation greps from `quickstart.md` § Final validation and record the output in `audit/evidence/final-validation.txt`
+- [X] T072 (done 2026-10-05: `## [0.3.0]` in `CHANGELOG.md`, #587, merged 2026-10-06) Add a `## [0.3.0]` section to `CHANGELOG.md` in the same branch, moving the relevant "Unreleased" entries into it. Open a PR labelled `type: chore` and `area: shared` and wait for CI green and human approval
+- [X] T073 (done 2026-10-06: `v0.3.0` tagged on `040e10e`, release run 37411911079 green; recorded under `## v0.3.0` in `audit/rounds.md`) ⛔ approval. After merge, tag `v0.3.0` (`git tag -a v0.3.0 <sha> -m "v0.3.0"`, annotated, unsigned, per OD-013). Check `release.yaml` is green, the images and chart are signed, the GitHub release is **not** marked prerelease, the notes come from the `## [0.3.0]` section, and the `0.3` image tag now exists. Record the results under `## v0.3.0` in `audit/rounds.md`
+- [ ] T074 ⛔ approval. (2026-10-06: maintainer answered "stay on public `v0.3.0`"; upgrading kubelab and the final cleanup-check / snapshot-diff run on the maintainer's devbox) Ask the maintainer whether kubelab stays on public `v0.3.0` or goes back to the baseline values (contracts/rc-deploy.md §4). Apply the answer, then run a final `audit/tools/cleanup-check.sh` and `audit/tools/snapshot-diff.sh audit/evidence/baseline <final>`, and record the result in `audit/rounds.md` (SC-006)
+- [X] T075 (done 2026-10-06: `audit/evidence/final-validation.txt`; checks 1 and 2 not met, accepted at T070) Run the final validation greps from `quickstart.md` § Final validation and record the output in `audit/evidence/final-validation.txt`
 - [ ] T076 Mark every task in this file `[X]`, or withdrawn with a citation. Once this feature's PR is merged into `master`, `git mv specs/018-v0-3-release-readiness specs/done_018-v0-3-release-readiness` and update every in-repo reference in the same `docs:` commit (Constitution IV, CLAUDE.md 16)
 
 ---
