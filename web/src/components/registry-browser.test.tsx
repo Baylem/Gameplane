@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw";
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
 import { renderWithQuery } from "@/test/render";
@@ -18,6 +18,41 @@ const mockProject = (overrides: Partial<RegistryProject> = {}): RegistryProject 
 });
 
 describe("RegistryBrowser", () => {
+  it("keeps each retained result's provider for actions while a provider switch is pending", async () => {
+    let finishSearch!: () => void;
+    const pending = new Promise<void>((resolve) => { finishSearch = resolve; });
+    const searches: string[] = [];
+    const install = vi.fn();
+    server.use(
+      http.get("/servers/test/mods/registry/providers", () => HttpResponse.json([
+        { provider: "modrinth", available: true, mods: true, modpacks: true },
+        { provider: "curseforge", available: true, mods: true, modpacks: true },
+      ])),
+      http.get("/servers/test/mods/registry/search", async ({ request }) => {
+        const provider = new URL(request.url).searchParams.get("provider") ?? "";
+        searches.push(provider);
+        if (provider === "curseforge") {
+          await pending;
+          return HttpResponse.json([mockProject({ id: "same-id", title: "New provider project", provider: "curseforge" })]);
+        }
+        return HttpResponse.json(Array.from({ length: 24 }, (_, i) => mockProject({ id: `old-${i}`, title: `Old project ${i}` })));
+      }),
+    );
+    renderWithQuery(<RegistryBrowser name="test" type="modpack" renderItem={(p, provider) => (
+      <button onClick={() => install({ id: p.id, provider })}>{p.title}</button>
+    )} />);
+    await screen.findByRole("button", { name: "Old project 0" });
+    await userEvent.click(screen.getByRole("tab", { name: "CurseForge" }));
+    await waitFor(() => expect(searches).toContain("curseforge"));
+    expect(screen.getByRole("button", { name: "Load more" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("button", { name: "Old project 0" }));
+    expect(install).toHaveBeenLastCalledWith({ id: "old-0", provider: "modrinth" });
+    await act(async () => finishSearch());
+    await userEvent.click(await screen.findByRole("button", { name: "New provider project" }));
+    expect(install).toHaveBeenLastCalledWith({ id: "same-id", provider: "curseforge" });
+    expect(searches).toEqual(["modrinth", "curseforge"]);
+  });
+
   it("renders no provider UI when only one provider is available", async () => {
     server.use(
       http.get("/servers/test/mods/registry/providers", () =>
