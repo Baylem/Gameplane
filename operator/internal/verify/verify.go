@@ -54,24 +54,51 @@ func Build(ctx context.Context, c client.Client, namespace string, src *gameplan
 	if src.Spec.OCI == nil {
 		return nil, errors.New("spec.verify requires an oci source")
 	}
-	auth, err := authFor(ctx, c, namespace, src.Spec.OCI.PullSecretRef)
+	repository, err := name.NewRepository(src.Spec.OCI.URL)
+	if err != nil {
+		return nil, fmt.Errorf("parse OCI source registry: %w", err)
+	}
+	auth, err := authFor(ctx, c, namespace, src.Spec.OCI.PullSecretRef, repository.RegistryStr())
 	if err != nil {
 		return nil, err
 	}
 	insecure := src.Spec.OCI.Insecure
 	v := src.Spec.Verify
+	var verifier Verifier
 	switch {
 	case v.Key != nil:
 		pub, err := readKey(ctx, c, namespace, v.Key.Name)
 		if err != nil {
 			return nil, err
 		}
-		return newKeyed(ctx, pub, auth, insecure, v.RequireTransparencyLog)
+		verifier, err = newKeyed(ctx, pub, auth, insecure, v.RequireTransparencyLog)
 	case v.Keyless != nil:
-		return newKeyless(ctx, v.Keyless.Issuer, v.Keyless.Identity, auth, insecure)
+		verifier, err = newKeyless(ctx, v.Keyless.Issuer, v.Keyless.Identity, auth, insecure)
 	default:
 		return nil, errors.New("spec.verify must set key or keyless")
 	}
+	if err != nil {
+		return nil, err
+	}
+	return &registryVerifier{Verifier: verifier, registry: repository.RegistryStr()}, nil
+}
+
+// Catalog references may lag a source URL change. Never send credentials selected
+// for the current source to a different registry named by a stale catalog entry.
+type registryVerifier struct {
+	Verifier
+	registry string
+}
+
+func (v *registryVerifier) Verify(ctx context.Context, ref, digest string) error {
+	repository, err := name.NewRepository(ref)
+	if err != nil {
+		return fmt.Errorf("parse signature repository: %w", err)
+	}
+	if repository.RegistryStr() != v.registry {
+		return errors.New("signature repository does not match the source registry")
+	}
+	return v.Verifier.Verify(ctx, ref, digest)
 }
 
 // cosignVerifier adapts the cosign library to the Verifier interface.
@@ -262,9 +289,9 @@ func readKey(ctx context.Context, c client.Client, namespace, name string) ([]by
 
 // authFor resolves a registry pull secret (kubernetes.io/dockerconfigjson)
 // into a ggcr authenticator for fetching signatures, falling back to
-// anonymous. A source's pull secret holds creds for its own registry, so the
-// first auth entry is used without host matching.
-func authFor(ctx context.Context, c client.Client, namespace string, ref *corev1.LocalObjectReference) (authn.Authenticator, error) {
+// anonymous when the Secret has no entry for that registry. Docker configuration
+// Secrets may contain credentials for several independent registries.
+func authFor(ctx context.Context, c client.Client, namespace string, ref *corev1.LocalObjectReference, registry string) (authn.Authenticator, error) {
 	if ref == nil || ref.Name == "" {
 		return authn.Anonymous, nil
 	}
@@ -286,13 +313,15 @@ func authFor(ctx context.Context, c client.Client, namespace string, ref *corev1
 	if err := json.Unmarshal(cfg, &dc); err != nil {
 		return nil, fmt.Errorf("parse dockerconfigjson in %s: %w", ref.Name, err)
 	}
-	for _, e := range dc.Auths {
-		switch {
-		case e.Username != "" || e.Password != "":
-			return authn.FromConfig(authn.AuthConfig{Username: e.Username, Password: e.Password}), nil
-		case e.Auth != "":
-			return authn.FromConfig(authn.AuthConfig{Auth: e.Auth}), nil
-		}
+	e, ok := dc.Auths[registry]
+	if !ok {
+		return authn.Anonymous, nil
+	}
+	switch {
+	case e.Username != "" || e.Password != "":
+		return authn.FromConfig(authn.AuthConfig{Username: e.Username, Password: e.Password}), nil
+	case e.Auth != "":
+		return authn.FromConfig(authn.AuthConfig{Auth: e.Auth}), nil
 	}
 	return authn.Anonymous, nil
 }
