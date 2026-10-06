@@ -18,7 +18,7 @@ This test is part of the `bot-heavy` bucket and does not run by default in CI. T
 GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context-name> GAMEPLANE_E2E_GAME_BOT=1 GAMEPLANE_E2E_GAMES=farming-simulator-25 make test-e2e-keep
 ```
 
-**Status:** beta; probe depth measured: **QUERY** (GIANTS web portal HTTP response)  
+**Status:** pre-v1; probe depth measured: **QUERY** (GIANTS web portal HTTP response)  
 **Module / package:** `github.com/ValgulNecron/gameplane/test/e2e/internal/farming-simulator-25`  
 **Dependencies:** stdlib only  
 **Heavy game:** Yes (>30GB disk download, headless Wine/Proton)

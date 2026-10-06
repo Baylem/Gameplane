@@ -20,7 +20,7 @@ GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context-name> GAMEPLANE_E2E
 
 A successful run is the only event that licenses updating `Last Verified` to the current date.
 
-**Status:** beta (heavy-set, hand-run only)  
+**Status:** pre-v1 (heavy-set, hand-run only)  
 **Module:** `test/e2e/internal/valheim/`  
 **Depth:** QUERY
 
