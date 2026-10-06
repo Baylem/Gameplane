@@ -62,6 +62,7 @@ AREA_BY_DIR = {
     "tunnel": "area: optional-components",
     "audit-syslog-bridge": "area: optional-components",
     "telemetry-receiver": "area: optional-components",
+    "telemetryschema": "area: shared",
 }
 
 AREA_BY_FILE = {
