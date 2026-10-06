@@ -11,8 +11,9 @@ import (
 	"github.com/ValgulNecron/gameplane/api/internal/db"
 )
 
-// bareStore is a migrated store with no telemetry config row (telStore
-// seeds one; some branches need its absence).
+// bareStore is a migrated store with no telemetry config row. Migrate seeds
+// the fresh-install default; this helper removes it so some branches behave as
+// before.
 func bareStore(ctx context.Context, t *testing.T) *db.Store {
 	t.Helper()
 	store, err := db.Open(ctx, "sqlite", "file:"+filepath.Join(t.TempDir(), "t.db"))
@@ -22,6 +23,9 @@ func bareStore(ctx context.Context, t *testing.T) *db.Store {
 	t.Cleanup(func() { _ = store.Close() })
 	if err := store.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)
+	}
+	if _, err := store.DB.ExecContext(ctx, `DELETE FROM config WHERE key = 'telemetry'`); err != nil {
+		t.Fatalf("delete telemetry: %v", err)
 	}
 	return store
 }

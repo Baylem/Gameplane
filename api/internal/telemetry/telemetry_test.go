@@ -30,7 +30,7 @@ func telStore(t *testing.T, sendMetrics bool) *db.Store {
 	}
 	val, _ := json.Marshal(map[string]bool{"sendMetrics": sendMetrics})
 	if _, err := store.DB.ExecContext(context.Background(),
-		`INSERT INTO config(key, value, updated_at) VALUES ('telemetry', ?, ?)`,
+		`INSERT INTO config(key, value, updated_at) VALUES ('telemetry', ?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
 		string(val), "2026-01-01T00:00:00Z",
 	); err != nil {
 		t.Fatalf("seed config: %v", err)

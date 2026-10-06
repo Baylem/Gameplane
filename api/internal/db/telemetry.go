@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 )
 
 // telemetrySingletonID is the primary key of the one telemetry_state row.
@@ -268,13 +267,14 @@ func (s *Store) MarkNoticeShown(ctx context.Context, now string) error {
 	return nil
 }
 
-// InsertNoticeAck records that userID dismissed the notice with action (keep,
-// extended-off or all-off) at ackedAt (RFC 3339 UTC). The first dismissal stands; repeats are ignored.
+// InsertNoticeAck records that userID dismissed the notice with action
+// (keep, extended-off or all-off) at ackedAt (RFC 3339 UTC). The first
+// dismissal stands; repeats are ignored.
 func (s *Store) InsertNoticeAck(ctx context.Context, userID int64, action string, ackedAt string) error {
 	if _, err := s.DB.ExecContext(ctx,
 		`INSERT INTO telemetry_notice_acks(user_id, acked_at, action) VALUES (?, ?, ?)
 		 ON CONFLICT (user_id) DO NOTHING`,
-		strconv.FormatInt(userID, 10), ackedAt, action); err != nil {
+		userID, ackedAt, action); err != nil {
 		return fmt.Errorf("insert notice ack: %w", err)
 	}
 	return nil
@@ -284,7 +284,7 @@ func (s *Store) InsertNoticeAck(ctx context.Context, userID int64, action string
 func (s *Store) HasNoticeAck(ctx context.Context, userID int64) (bool, error) {
 	var one int
 	err := s.DB.QueryRowContext(ctx,
-		`SELECT 1 FROM telemetry_notice_acks WHERE user_id = ?`, strconv.FormatInt(userID, 10)).Scan(&one)
+		`SELECT 1 FROM telemetry_notice_acks WHERE user_id = ?`, userID).Scan(&one)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
 	}
@@ -302,7 +302,7 @@ func (s *Store) DeleteNoticeAcksForUser(ctx context.Context, ex Execer, userID i
 		ex = s.DB
 	}
 	if _, err := ex.ExecContext(ctx,
-		`DELETE FROM telemetry_notice_acks WHERE user_id = ?`, strconv.FormatInt(userID, 10)); err != nil {
+		`DELETE FROM telemetry_notice_acks WHERE user_id = ?`, userID); err != nil {
 		return fmt.Errorf("delete notice acks: %w", err)
 	}
 	return nil

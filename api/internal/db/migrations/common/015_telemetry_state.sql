@@ -20,11 +20,11 @@ CREATE TABLE telemetry_state (
     last_id_rotation_at      TEXT
 );
 
--- One row per admin who dismissed the consent notice. user_id is the users.id
--- value as text. Rows are deleted in Go when the user is removed, because the
--- shipped SQLite DSN runs with foreign keys off.
+-- One row per admin who dismissed the consent notice. user_id is users.id.
+-- Rows are deleted in Go when the user is removed, because the shipped
+-- SQLite DSN runs with foreign keys off.
 CREATE TABLE telemetry_notice_acks (
-    user_id  TEXT PRIMARY KEY,
+    user_id  BIGINT PRIMARY KEY,
     acked_at TEXT NOT NULL,
     action   TEXT NOT NULL
 );
