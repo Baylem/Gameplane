@@ -2317,7 +2317,7 @@ All access via Pencil MCP; `.pen` file not read/edited via shell; no git command
 
 ## Incremental export 2026-09-25 — Spec 018 design states: F-134 copy, H14 capture no-access, H31b owner-only gates
 
-Frames added to `design.pen` per the held design briefs `specs/018-v0-3-release-readiness/audit/held/briefs/H14-design.md` and `H31b-design.md` (OD-025 design pass), plus the F-134 identity-providers copy update (already applied to `Dpb9f` by an earlier session, re-exported here) and the `XR0f9` button-label fix the H31b brief left as the maintainer's call (approved 2026-09-25). All edits via the Pencil MCP `execute` tool; the `.pen` file was not read or edited via shell.
+Frames added to `design.pen` per the held design briefs `specs/done_018-v0-3-release-readiness/audit/held/briefs/H14-design.md` and `H31b-design.md` (OD-025 design pass), plus the F-134 identity-providers copy update (already applied to `Dpb9f` by an earlier session, re-exported here) and the `XR0f9` button-label fix the H31b brief left as the maintainer's call (approved 2026-09-25). All edits via the Pencil MCP `execute` tool; the `.pen` file was not read or edited via shell.
 
 | ID | Frame | Source | Change |
 |---|---|---|---|

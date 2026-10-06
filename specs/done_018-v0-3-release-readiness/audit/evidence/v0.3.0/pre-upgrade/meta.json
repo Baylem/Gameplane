@@ -1,0 +1,7 @@
+{
+  "capturedAt": "2026-10-06T22:03:58Z",
+  "release": "gameplane",
+  "apiNamespace": "gameplane-system",
+  "gamesNamespace": "gameplane-games",
+  "kubeContext": "default"
+}
