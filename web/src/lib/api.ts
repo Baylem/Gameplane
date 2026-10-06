@@ -293,7 +293,7 @@ function makeShares(request: typeof api) {
   // POST /shares/{token}/start (public, no auth, rate-limited, only if canStart=true).
   // Wakes a sleeping server if the link permits it. Returns 202 Accepted on success.
   // Returns the same response for invalid/expired/revoked/no-permission states (FR-005).
-  // Rate-limit errors (429) are also mapped to neutral.
+  // Transient failures propagate so callers can back off and offer a retry.
   start: async (token: string, signal?: AbortSignal): Promise<void> => {
     try {
       return await api<void>(`/shares/${encodeURIComponent(token)}/start`, {
@@ -301,8 +301,8 @@ function makeShares(request: typeof api) {
         signal,
       });
     } catch (err) {
-      if (err instanceof APIError && (err.status === 404 || err.status === 429)) {
-        // Map 404 and 429 to void (no error thrown). Callers see success either way.
+      if (err instanceof APIError && err.status === 404) {
+        // Keep invalid, expired, revoked and denied links indistinguishable.
         return;
       }
       throw err;

@@ -205,7 +205,7 @@ describe("SharePage", () => {
       expect(screen.getByRole("button", { name: /start server/i })).toBeInTheDocument();
     });
 
-    it("shows view-only when user tries to start but polling shows still asleep", async () => {
+    it("keeps Start available when an accepted wake is still asleep on the next poll", async () => {
       vi.useFakeTimers();
 
       vi.mocked(Shares.resolve)
@@ -243,11 +243,9 @@ describe("SharePage", () => {
         await vi.advanceTimersByTimeAsync(1);
       });
 
-      // Polling should show it's still asleep, so transition to view-only
-      expect(screen.getByText(/This server is asleep right now/)).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: /start server/i })
-      ).not.toBeInTheDocument();
+      // A phase cannot establish whether a link has permission to start.
+      expect(screen.getByRole("button", { name: /start server/i })).toBeEnabled();
+      expect(screen.queryByText(/ask the server owner/)).not.toBeInTheDocument();
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(60000);
@@ -817,7 +815,7 @@ describe("SharePage", () => {
       });
 
       vi.mocked(Shares.start).mockRejectedValue(
-        new APIError(429, "Rate limited")
+        new APIError(403, "private denial details")
       );
 
       renderWithRouter("test-token");
@@ -832,6 +830,47 @@ describe("SharePage", () => {
       await waitFor(() => {
         expect(screen.getByText("Link not available")).toBeInTheDocument();
       });
+      expect(screen.queryByText("private denial details")).not.toBeInTheDocument();
+    });
+
+    it.each([["30", 30000], ["Wed, 01 Jan 2025 00:00:30 GMT", 30000], ["1", 5000]] as const)("recovers a start 429 after Retry-After %s and an asleep poll without reloading", async (retryAfter, delay) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2025-01-01T00:00:00Z"));
+      vi.mocked(Shares.resolve).mockResolvedValue({ serverName: "mc-survival", status: "Suspended" });
+      vi.mocked(Shares.start)
+        .mockRejectedValueOnce(new APIError(429, "private rate limit detail", undefined, undefined, retryAfter))
+        .mockResolvedValue();
+      renderWithRouter("test-token");
+      await act(async () => {});
+      await act(async () => { fireEvent.click(screen.getByRole("button", { name: /start server/i })); });
+      expect(screen.getByRole("button", { name: /try again shortly/i })).toBeDisabled();
+      expect(screen.queryByText(/private rate limit detail|Link not available|The server is starting up/)).not.toBeInTheDocument();
+      await act(async () => { await vi.advanceTimersByTimeAsync(delay - 1); });
+      expect(screen.getByRole("button", { name: /try again shortly/i })).toBeDisabled();
+      expect(Shares.start).toHaveBeenCalledTimes(1);
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      expect(screen.getByRole("button", { name: /start server/i })).toBeEnabled();
+      await act(async () => { fireEvent.click(screen.getByRole("button", { name: /start server/i })); });
+      expect(Shares.start).toHaveBeenCalledTimes(2);
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+      expect(Shares.resolve).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole("button", { name: /start server/i })).toBeEnabled();
+    });
+
+    it("cancels a start cooldown when navigating to a different token", async () => {
+      vi.useFakeTimers();
+      vi.mocked(Shares.resolve).mockResolvedValue({ serverName: "mc-survival", status: "Suspended" });
+      vi.mocked(Shares.start).mockRejectedValueOnce(new APIError(429, "private detail", undefined, undefined, "30"));
+      const { rerender } = renderWithRouter("old-token");
+      await act(async () => {});
+      await act(async () => { fireEvent.click(screen.getByRole("button", { name: /start server/i })); });
+      expect(screen.getByRole("button", { name: /try again shortly/i })).toBeDisabled();
+      mockUseParams.mockReturnValue({ token: "new-token" });
+      rerender(<SharePage />);
+      await act(async () => {});
+      expect(screen.getByRole("button", { name: /start server/i })).toBeEnabled();
+      await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
+      expect(Shares.start).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -847,12 +847,11 @@ describe("Shares.start()", () => {
     expect(result).toBeUndefined();
   });
 
-  it("maps 429 (rate-limited) to void per FR-005", async () => {
+  it("propagates start rate limits and Retry-After without treating them as accepted", async () => {
     fetchMock.mockImplementation(
-      async () => new Response("rate limited", { status: 429 })
+      async () => new Response("rate limited", { status: 429, headers: { "Retry-After": "30" } })
     );
-    const result = await Shares.start("tok_ratelimit");
-    expect(result).toBeUndefined();
+    await expect(Shares.start("tok_ratelimit")).rejects.toMatchObject({ status: 429, retryAfter: "30" });
   });
 
   it("URL-encodes the token", async () => {
@@ -862,7 +861,7 @@ describe("Shares.start()", () => {
     expect(url).toBe("/shares/tok%40special/start");
   });
 
-  it("throws other non-404/429 errors", async () => {
+  it("throws other non-404 errors", async () => {
     fetchMock.mockImplementation(
       async () => new Response("server error", { status: 500 })
     );

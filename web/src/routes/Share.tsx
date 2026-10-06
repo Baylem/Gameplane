@@ -74,10 +74,17 @@ function ShareView({ token }: { token: string }) {
   const [state, setState] = useState<State>("loading");
   const [data, setData] = useState<ShareLinkPublic | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [startRetryDelay, setStartRetryDelay] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const startRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => startRequestRef.current?.abort(), []);
+
+  useEffect(() => {
+    if (startRetryDelay === null) return;
+    const timeout = setTimeout(() => setStartRetryDelay(null), startRetryDelay);
+    return () => clearTimeout(timeout);
+  }, [startRetryDelay]);
 
   // Public share links always render the Pink preset with no custom CSS
   // (FR-011), even for browsers with theme prefs cached from a logged-in
@@ -177,9 +184,9 @@ function ShareView({ token }: { token: string }) {
           result.status === "Suspended" ||
           result.status === "Stopped"
         ) {
-          // If it went back to asleep after trying to start, show view-only
-          // (means user doesn't have permission to start this server)
-          setState("asleep-viewonly");
+          // The wake may not have reached reconciliation yet. Server phase
+          // does not tell us whether this link has permission to start.
+          setState("asleep-start");
           setData(result);
           return;
         }
@@ -213,6 +220,7 @@ function ShareView({ token }: { token: string }) {
   }, [state, token]);
 
   const handleStart = async () => {
+    if (isStarting || startRetryDelay !== null) return;
     const controller = new AbortController();
     startRequestRef.current = controller;
     setIsStarting(true);
@@ -221,10 +229,16 @@ function ShareView({ token }: { token: string }) {
       if (controller.signal.aborted) return;
       // Transition to Starting state and start polling
       setState("starting");
-    } catch {
+    } catch (err) {
       if (controller.signal.aborted) return;
-      // On error, show invalid (rate-limited or link expired)
-      setState("invalid");
+      if (isTransient(err)) {
+        // A rejected wake has not started the server. Keep the last validated
+        // public view and let the visitor retry after the shared budget recovers.
+        setState("asleep-start");
+        setStartRetryDelay(retryDelay(err, 0));
+      } else {
+        setState("invalid");
+      }
     } finally {
       if (!controller.signal.aborted) setIsStarting(false);
     }
@@ -340,10 +354,10 @@ function ShareView({ token }: { token: string }) {
           <Button
             variant="primary"
             className="w-full"
-            isDisabled={isStarting}
+            isDisabled={isStarting || startRetryDelay !== null}
             onPress={handleStart}
           >
-            {isStarting ? "Starting..." : "Start server"}
+            {isStarting ? "Starting..." : startRetryDelay !== null ? "Try again shortly" : "Start server"}
           </Button>
         </Card>
       )}
