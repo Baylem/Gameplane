@@ -47,27 +47,103 @@ func TestDailyLimiterZeroMeansUnlimitedAndKeepsNoState(t *testing.T) {
 	}
 }
 
-func TestDailyLimiterSourceCapSharesOverflowBudget(t *testing.T) {
+func TestDailyLimiterLRUEviction(t *testing.T) {
 	l := newDailyLimiter(1)
-	l.max = 1
-	a, b := addr("192.0.2.1"), addr("192.0.2.2")
+	l.max = 2
+	a, b, c := addr("192.0.2.1"), addr("192.0.2.2"), addr("192.0.2.3")
+
+	// First two sources get tracked
 	if !l.take(a, limiterNow) {
-		t.Fatal("tracked source, first report")
+		t.Fatal("source a, first report")
 	}
-	// b is untracked and uses the overflow budget (same limit as a)
 	if !l.take(b, limiterNow) {
-		t.Fatal("overflow source, first report")
+		t.Fatal("source b, first report")
 	}
-	// Now the overflow budget is exhausted for the day
-	if l.take(b, limiterNow) {
-		t.Fatal("overflow source is limited after budget exhausted")
-	}
-	// The tracked source is still limited independently
+
+	// Touch a again to make it recently used
 	if l.take(a, limiterNow) {
-		t.Fatal("the tracked source is still limited")
+		t.Fatal("source a is limited after first report")
 	}
+
+	// Add c: b should be evicted (least recently used)
+	if !l.take(c, limiterNow) {
+		t.Fatal("source c gets tracked after eviction")
+	}
+
+	// Verify the map never exceeds the cap
 	if len(l.counts) != 2 {
-		t.Fatalf("tracked %d sources, want 2 (a and overflow)", len(l.counts))
+		t.Fatalf("counts map size = %d, want 2", len(l.counts))
+	}
+
+	// b should be evicted, so we can add it again
+	if !l.take(b, limiterNow) {
+		t.Fatal("evicted source b can be added again with fresh budget")
+	}
+}
+
+func TestDailyLimiterEvictedSourceHasFreshBudget(t *testing.T) {
+	l := newDailyLimiter(1)
+	l.max = 2
+	a, b, c := addr("192.0.2.1"), addr("192.0.2.2"), addr("192.0.2.3")
+
+	// Track a
+	if !l.take(a, limiterNow) {
+		t.Fatal("source a, first report")
+	}
+	// Track b and use its budget
+	if !l.take(b, limiterNow) {
+		t.Fatal("source b, first report")
+	}
+	if l.take(b, limiterNow) {
+		t.Fatal("source b is limited")
+	}
+	// Touch a so that b is the least recently used entry
+	if l.take(a, limiterNow) {
+		t.Fatal("source a is limited")
+	}
+
+	// Add c, evicting b
+	if !l.take(c, limiterNow) {
+		t.Fatal("source c gets tracked")
+	}
+
+	// Now b has a fresh budget if we add it again
+	if !l.take(b, limiterNow) {
+		t.Fatal("evicted source b starts with fresh budget")
+	}
+	if l.take(b, limiterNow) {
+		t.Fatal("fresh budget of b should be exhausted")
+	}
+}
+
+func TestDailyLimiterTrackedSourceKeepsSpentBudget(t *testing.T) {
+	l := newDailyLimiter(3)
+	l.max = 2
+	a, b, c := addr("192.0.2.1"), addr("192.0.2.2"), addr("192.0.2.3")
+
+	// Track a and spend one token
+	if !l.take(a, limiterNow) {
+		t.Fatal("source a, first report")
+	}
+	// Track b
+	if !l.take(b, limiterNow) {
+		t.Fatal("source b, first report")
+	}
+
+	// Touch a to make it recently used, then add c (evicting b)
+	if !l.take(a, limiterNow) {
+		t.Fatal("source a, second report")
+	}
+	if !l.take(c, limiterNow) {
+		t.Fatal("source c gets tracked")
+	}
+
+	// a should still have only one token left (not reset)
+	if !l.take(a, limiterNow) {
+		t.Fatal("source a should still have its second token")
+	}
+	if l.take(a, limiterNow) {
+		t.Fatal("source a's spent budget is kept")
 	}
 }
 
@@ -128,24 +204,102 @@ func TestBucketLimiterResetsAtUTCMidnight(t *testing.T) {
 	}
 }
 
-func TestBucketLimiterSourceCapSharesOverflowBudget(t *testing.T) {
-	l := newBucketLimiter(1, 1)
-	l.max = 1
-	a, b := addr("192.0.2.1"), addr("192.0.2.2")
+func TestBucketLimiterLRUEviction(t *testing.T) {
+	l := newBucketLimiter(1, 1) // one token per minute, burst 1
+	l.max = 2
+	a, b, c := addr("192.0.2.1"), addr("192.0.2.2"), addr("192.0.2.3")
+
+	// First two sources get tracked with burst 1 each
 	if !l.allow(a, limiterNow) {
-		t.Fatal("tracked source, first request")
+		t.Fatal("source a, first request")
 	}
-	// b is untracked and uses the overflow budget (same limit as a)
 	if !l.allow(b, limiterNow) {
-		t.Fatal("overflow source, first request")
+		t.Fatal("source b, first request")
 	}
-	// Overflow budget is exhausted
-	if l.allow(b, limiterNow) {
-		t.Fatal("overflow source is limited after burst exhausted")
-	}
-	// The tracked source is still limited independently
+
+	// Touch a to make it recently used, then add c (should evict b)
 	if l.allow(a, limiterNow) {
-		t.Fatal("the tracked source is still limited")
+		t.Fatal("source a is limited after using its burst")
+	}
+	if !l.allow(c, limiterNow) {
+		t.Fatal("source c gets tracked after evicting b")
+	}
+
+	// Verify the map never exceeds the cap
+	if len(l.buckets) != 2 {
+		t.Fatalf("buckets map size = %d, want 2", len(l.buckets))
+	}
+
+	// b should be evicted, so it can be added again
+	if !l.allow(b, limiterNow) {
+		t.Fatal("evicted source b can be added again with fresh burst")
+	}
+}
+
+func TestBucketLimiterEvictedSourceHasFreshBudget(t *testing.T) {
+	l := newBucketLimiter(1, 1) // one token per minute, burst 1
+	l.max = 2
+	a, b, c := addr("192.0.2.1"), addr("192.0.2.2"), addr("192.0.2.3")
+
+	// Track a and use its burst
+	if !l.allow(a, limiterNow) {
+		t.Fatal("source a, first request")
+	}
+	if l.allow(a, limiterNow) {
+		t.Fatal("source a is limited")
+	}
+
+	// Track b with its burst
+	if !l.allow(b, limiterNow) {
+		t.Fatal("source b, first request")
+	}
+	// Touch a so that b is the least recently used entry
+	if l.allow(a, limiterNow) {
+		t.Fatal("source a is still limited")
+	}
+
+	// Add c, evicting b
+	if !l.allow(c, limiterNow) {
+		t.Fatal("source c gets tracked")
+	}
+
+	// b starts with fresh burst
+	if !l.allow(b, limiterNow) {
+		t.Fatal("evicted source b starts with fresh burst")
+	}
+	if l.allow(b, limiterNow) {
+		t.Fatal("fresh burst of b should be exhausted")
+	}
+}
+
+func TestBucketLimiterTrackedSourceKeepsSpentBudget(t *testing.T) {
+	l := newBucketLimiter(60, 3) // one token per second, burst 3
+	l.max = 2
+	a, b, c := addr("192.0.2.1"), addr("192.0.2.2"), addr("192.0.2.3")
+
+	// Track a and spend one token
+	if !l.allow(a, limiterNow) {
+		t.Fatal("source a, first request")
+	}
+	// Track b with its burst
+	if !l.allow(b, limiterNow) {
+		t.Fatal("source b, first request")
+	}
+
+	// Touch a to make it recently used, then add c (evicting b)
+	if !l.allow(a, limiterNow) {
+		t.Fatal("source a, second request")
+	}
+	if !l.allow(c, limiterNow) {
+		t.Fatal("source c gets tracked")
+	}
+
+	// a should still have only one token left (not reset)
+	if !l.allow(a, limiterNow) {
+		t.Fatal("source a should still have its second token")
+	}
+	if l.allow(a, limiterNow) {
+		t.Fatal("source a's spent budget is kept")
 	}
 }
 
@@ -373,11 +527,11 @@ func TestSourceKeyIPv4MappedSharedWithIPv4(t *testing.T) {
 	}
 }
 
-func TestSourceKeyInvalidAddressUsesOverflow(t *testing.T) {
-	// Invalid addresses map to the overflow key
+func TestSourceKeyInvalidAddressUsesSentinel(t *testing.T) {
+	// Invalid addresses map to the sentinel key
 	k := sourceKey(netip.Addr{})
-	if k != overflowKey {
-		t.Fatalf("sourceKey(invalid) = %v, want %v", k, overflowKey)
+	if k != invalidKey {
+		t.Fatalf("sourceKey(invalid) = %v, want %v", k, invalidKey)
 	}
 }
 
@@ -420,82 +574,5 @@ func TestBucketLimiterIPv6SharingSameBudget(t *testing.T) {
 	}
 	if l.allow(a1, limiterNow) || l.allow(a2, limiterNow) {
 		t.Fatal("shared burst should be exhausted")
-	}
-}
-
-func TestDailyLimiterOverflowBehavior(t *testing.T) {
-	l := newDailyLimiter(1)
-	l.max = 2 // Low capacity to force overflow
-	a := addr("192.0.2.1")
-	b := addr("192.0.2.2")
-	c := addr("192.0.2.3")
-
-	// First two sources get tracked
-	if !l.take(a, limiterNow) {
-		t.Fatal("first source, first report")
-	}
-	if !l.take(b, limiterNow) {
-		t.Fatal("second source, first report")
-	}
-
-	// Third source overflows; it shares overflow budget with any other overflow sources
-	if !l.take(c, limiterNow) {
-		t.Fatal("overflow source, first report (uses shared overflow budget)")
-	}
-	if l.take(c, limiterNow) {
-		t.Fatal("overflow source should be limited after first report")
-	}
-
-	// The tracked sources are still independent
-	if l.take(a, limiterNow) {
-		t.Fatal("tracked source a should be limited")
-	}
-	if l.take(b, limiterNow) {
-		t.Fatal("tracked source b should be limited")
-	}
-
-	// At next UTC day, overflow source gets a fresh budget
-	if !l.take(c, limiterNow.Add(24*time.Hour)) {
-		t.Fatal("overflow source gets fresh budget at UTC midnight")
-	}
-}
-
-func TestBucketLimiterOverflowBehavior(t *testing.T) {
-	l := newBucketLimiter(60, 2) // one token per second, burst 2
-	l.max = 2                    // Low capacity to force overflow
-	a := addr("192.0.2.1")
-	b := addr("192.0.2.2")
-	c := addr("192.0.2.3")
-
-	// First two sources get tracked
-	if !l.allow(a, limiterNow) {
-		t.Fatal("first source, first request")
-	}
-	if !l.allow(b, limiterNow) {
-		t.Fatal("second source, first request")
-	}
-
-	// Third source overflows and takes from shared overflow budget
-	if !l.allow(c, limiterNow) {
-		t.Fatal("overflow source, first request (uses shared overflow budget)")
-	}
-	if !l.allow(c, limiterNow) {
-		t.Fatal("overflow source, second request (burst = 2)")
-	}
-	if l.allow(c, limiterNow) {
-		t.Fatal("overflow source should be limited after burst exhausted")
-	}
-
-	// The tracked sources are still independent
-	if !l.allow(a, limiterNow) || !l.allow(b, limiterNow) {
-		t.Fatal("tracked sources have a second token (burst = 2)")
-	}
-	if l.allow(a, limiterNow) || l.allow(b, limiterNow) {
-		t.Fatal("tracked sources should be limited after burst exhausted")
-	}
-
-	// After a second, the overflow bucket refills
-	if !l.allow(c, limiterNow.Add(time.Second)) {
-		t.Fatal("overflow bucket refills after 1 second")
 	}
 }

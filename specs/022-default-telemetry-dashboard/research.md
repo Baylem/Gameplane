@@ -123,7 +123,11 @@ Fallback for older receivers (FR-016, SC-013):
 - **Dashboard login.** 5 attempts per minute per source.
 - **Source IP.** This is the TCP peer address. `X-Forwarded-For` is trusted only when the peer falls inside `TRUSTED_PROXY_CIDRS` (default empty).
 - **Cleanup.** Daily counters reset at UTC midnight. Token buckets are purged after 10 idle minutes (daily counters are not, or an idle source would regain its budget).
-- **Capacity.** Each limiter tracks at most 100,000 sources. Beyond that, new sources share one overflow budget with the same limit as a single source, so a flood of addresses never bypasses the limits (security review of 4c742e7d).
+- **Capacity.** Each limiter tracks at most 100,000 sources and evicts the least-recently-used one to admit a new source. Two other designs were rejected:
+  - Letting sources past the cap through untracked was a bypass (security review of 4c742e7d).
+  - Pooling them into one overflow budget let an attacker who filled the table deny every new legitimate source (security review of de5d0974).
+
+  With eviction, a source's budget can only be reset by an attacker who controls more distinct IPv4 addresses or IPv6 /64s than the cap. At that scale per-source limiting no longer applies, and the dashboard token is high-entropy anyway.
 
 **Rationale**:
 - A default of 20 tolerates CGNAT and shared egress (several homelabs behind one address) while capping how much one source can distort a day.

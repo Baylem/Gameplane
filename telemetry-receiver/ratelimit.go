@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"net"
 	"net/http"
 	"net/netip"
@@ -18,15 +19,18 @@ const (
 	// limiterSweepEvery is how often the lazy idle sweep runs.
 	limiterSweepEvery = time.Minute
 	// limiterMaxSources bounds how many source prefixes one limiter tracks. When
-	// the map is full and a new key arrives, the request is accounted against a
-	// shared overflow entry that shares the same limits as a single source,
-	// avoiding unbounded memory growth from a flood of distinct addresses.
+	// the map reaches capacity, the least-recently-used entry is evicted and
+	// replaced with the new source. This keeps memory bounded without pooling
+	// requests together. Eviction only resets a source's budget for an attacker
+	// who controls more distinct /64-or-IPv4 sources than the cap, a scale where
+	// per-source limiting no longer applies anyway, and the dashboard token is
+	// high-entropy.
 	limiterMaxSources = 100_000
 )
 
-// overflowKey is a sentinel prefix used when a limiter is at capacity and a
-// new address arrives. All overflow traffic shares one rate budget.
-var overflowKey = netip.MustParsePrefix("192.0.2.0/24")
+// invalidKey is the single key that every invalid address maps to. It is an
+// ordinary tracked source with its own budget.
+var invalidKey = netip.MustParsePrefix("192.0.2.0/24")
 
 // sourceKey derives a rate-limit key from an address. IPv4 addresses and
 // IPv4-mapped IPv6 addresses (after Unmap) give a /32. Other IPv6 addresses
@@ -34,7 +38,7 @@ var overflowKey = netip.MustParsePrefix("192.0.2.0/24")
 // address rotation bypasses while keeping routing subnets together.
 func sourceKey(a netip.Addr) netip.Prefix {
 	if !a.IsValid() {
-		return overflowKey
+		return invalidKey
 	}
 	a = a.Unmap()
 	if a.Is4() {
@@ -42,7 +46,7 @@ func sourceKey(a netip.Addr) netip.Prefix {
 	}
 	p, err := a.WithZone("").Prefix(64)
 	if err != nil {
-		return overflowKey
+		return invalidKey
 	}
 	return p
 }
@@ -60,11 +64,22 @@ type dailyLimiter struct {
 	limit  int
 	max    int
 	day    string
-	counts map[netip.Prefix]int
+	counts map[netip.Prefix]*dailyEntry
+	lru    *list.List // tracks recency; elements are *netip.Prefix
+}
+
+type dailyEntry struct {
+	count   int
+	element *list.Element
 }
 
 func newDailyLimiter(limit int) *dailyLimiter {
-	return &dailyLimiter{limit: limit, max: limiterMaxSources, counts: make(map[netip.Prefix]int)}
+	return &dailyLimiter{
+		limit:  limit,
+		max:    limiterMaxSources,
+		counts: make(map[netip.Prefix]*dailyEntry),
+		lru:    list.New(),
+	}
 }
 
 // take records one accepted report from src at now. It returns false, and
@@ -77,18 +92,31 @@ func (l *dailyLimiter) take(src netip.Addr, now time.Time) bool {
 	defer l.mu.Unlock()
 	if day := dayString(now); day != l.day {
 		l.day = day
-		l.counts = make(map[netip.Prefix]int)
+		l.counts = make(map[netip.Prefix]*dailyEntry)
+		l.lru = list.New()
 	}
 	key := sourceKey(src)
-	n, tracked := l.counts[key]
-	if !tracked && len(l.counts) >= l.max {
-		key = overflowKey
-		n, _ = l.counts[key]
+	entry, tracked := l.counts[key]
+	if !tracked {
+		// If the map is full, evict the LRU entry
+		if len(l.counts) >= l.max {
+			lruKey := l.lru.Remove(l.lru.Back()).(*netip.Prefix)
+			delete(l.counts, *lruKey)
+		}
+		// Track the new source with a fresh budget
+		keyPtr := new(netip.Prefix)
+		*keyPtr = key
+		elem := l.lru.PushFront(keyPtr)
+		entry = &dailyEntry{count: 0, element: elem}
+		l.counts[key] = entry
+	} else {
+		// Move to front (most recently used)
+		l.lru.MoveToFront(entry.element)
 	}
-	if n >= l.limit {
+	if entry.count >= l.limit {
 		return false
 	}
-	l.counts[key] = n + 1
+	entry.count++
 	return true
 }
 
@@ -101,11 +129,13 @@ type bucketLimiter struct {
 	day       string
 	lastSweep time.Time
 	buckets   map[netip.Prefix]*bucket
+	lru       *list.List // tracks recency; elements are *netip.Prefix
 }
 
 type bucket struct {
-	tokens float64
-	last   time.Time
+	tokens  float64
+	last    time.Time
+	element *list.Element
 }
 
 // newBucketLimiter returns a limiter that refills perMinute tokens per
@@ -116,6 +146,7 @@ func newBucketLimiter(perMinute, burst int) *bucketLimiter {
 		burst:   float64(burst),
 		max:     limiterMaxSources,
 		buckets: make(map[netip.Prefix]*bucket),
+		lru:     list.New(),
 	}
 }
 
@@ -127,17 +158,20 @@ func (l *bucketLimiter) allow(src netip.Addr, now time.Time) bool {
 	key := sourceKey(src)
 	b, ok := l.buckets[key]
 	if !ok {
+		// If the map is full, evict the LRU entry
 		if len(l.buckets) >= l.max {
-			key = overflowKey
-			b = l.buckets[key]
-			if b == nil {
-				b = &bucket{tokens: l.burst, last: now}
-				l.buckets[key] = b
-			}
-		} else {
-			b = &bucket{tokens: l.burst, last: now}
-			l.buckets[key] = b
+			lruKey := l.lru.Remove(l.lru.Back()).(*netip.Prefix)
+			delete(l.buckets, *lruKey)
 		}
+		// Track the new source with a fresh bucket
+		keyPtr := new(netip.Prefix)
+		*keyPtr = key
+		elem := l.lru.PushFront(keyPtr)
+		b = &bucket{tokens: l.burst, last: now, element: elem}
+		l.buckets[key] = b
+	} else {
+		// Move to front (most recently used)
+		l.lru.MoveToFront(b.element)
 	}
 	if elapsed := now.Sub(b.last).Seconds(); elapsed > 0 {
 		b.tokens = min(l.burst, b.tokens+elapsed*l.rate)
@@ -156,6 +190,7 @@ func (l *bucketLimiter) sweep(now time.Time) {
 	if day := dayString(now); day != l.day {
 		l.day = day
 		l.buckets = make(map[netip.Prefix]*bucket)
+		l.lru = list.New()
 		l.lastSweep = now
 		return
 	}
@@ -165,6 +200,7 @@ func (l *bucketLimiter) sweep(now time.Time) {
 	l.lastSweep = now
 	for src, b := range l.buckets {
 		if now.Sub(b.last) >= limiterIdleTTL {
+			l.lru.Remove(b.element)
 			delete(l.buckets, src)
 		}
 	}
