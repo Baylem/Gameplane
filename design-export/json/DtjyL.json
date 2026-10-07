@@ -389,6 +389,9 @@
                               "ref": "d5N3W3",
                               "name": "resetIdBtn",
                               "descendants": {
+                                "X3iEI": {
+                                  "enabled": false
+                                },
                                 "i3zB62/zMNkR": {
                                   "content": "Reset ID"
                                 }

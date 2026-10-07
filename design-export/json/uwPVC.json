@@ -393,6 +393,9 @@
                               "name": "resetIdBtn",
                               "opacity": 0.5,
                               "descendants": {
+                                "X3iEI": {
+                                  "enabled": false
+                                },
                                 "i3zB62/zMNkR": {
                                   "content": "Reset ID"
                                 }

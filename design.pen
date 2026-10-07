@@ -124857,6 +124857,9 @@
                                   "ref": "d5N3W3",
                                   "name": "resetIdBtn",
                                   "descendants": {
+                                    "X3iEI": {
+                                      "enabled": false
+                                    },
                                     "i3zB62/zMNkR": {
                                       "content": "Reset ID"
                                     }
@@ -126730,6 +126733,9 @@
                                   "ref": "d5N3W3",
                                   "name": "resetIdBtn",
                                   "descendants": {
+                                    "X3iEI": {
+                                      "enabled": false
+                                    },
                                     "i3zB62/zMNkR": {
                                       "content": "Reset ID"
                                     }
@@ -127288,6 +127294,9 @@
                                   "name": "resetIdBtn",
                                   "opacity": 0.5,
                                   "descendants": {
+                                    "X3iEI": {
+                                      "enabled": false
+                                    },
                                     "i3zB62/zMNkR": {
                                       "content": "Reset ID"
                                     }
@@ -128856,6 +128865,9 @@
                                   "ref": "d5N3W3",
                                   "name": "resetIdBtn",
                                   "descendants": {
+                                    "X3iEI": {
+                                      "enabled": false
+                                    },
                                     "i3zB62/zMNkR": {
                                       "content": "Reset ID"
                                     }
