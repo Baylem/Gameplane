@@ -134,6 +134,7 @@ type proxy struct {
 	k         *kube.Client
 	transport agentTransport
 	gateway   *agentGatewayResolver
+	// remoteUID pins both local and remote operations to the resolved server.
 	remoteUID string
 	// stdin executes the stdin-transport branch of runAction. Defaults to
 	// k (see Mount) but is a separate interface field so tests can inject
@@ -153,7 +154,7 @@ func (p *proxy) wsProxy(agentPath string) http.HandlerFunc {
 			httperr.Write(w, req, err)
 			return
 		}
-		target := agentTarget{name: name, namespace: ns}
+		target := agentTarget{name: name, namespace: ns, uid: p.remoteUID}
 		// Validate before opening an upstream or upgrading the browser connection.
 		if err := target.validate(); err != nil {
 			httperr.WriteCode(w, req, http.StatusBadRequest, err)
@@ -226,7 +227,7 @@ func (p *proxy) httpProxyLimit(agentPath string, maxBody int64) http.HandlerFunc
 			httperr.Write(w, req, err)
 			return
 		}
-		target := agentTarget{name: name, namespace: ns}
+		target := agentTarget{name: name, namespace: ns, uid: p.remoteUID}
 		// Validate before opening an upstream or upgrading the browser connection.
 		if err := target.validate(); err != nil {
 			httperr.WriteCode(w, req, http.StatusBadRequest, err)

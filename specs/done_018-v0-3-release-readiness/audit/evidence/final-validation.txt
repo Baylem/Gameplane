@@ -1,0 +1,48 @@
+# T075 final validation (quickstart.md § Final validation)
+# master after v0.3.0 tag; run 2026-10-06
+
+$ grep -cE '\| (untested|fail) \|' inventory.md                               # expect 0
+8
+$ grep -cE '\| (imported|open|fixing|fixed-unverified) \|' findings.md        # expect 0
+291
+$ grep -cE '\| (not-started|in-review) \|' coverage.md                        # expect 0
+0
+$ grep -E '\| blocked \|' inventory.md   # each row must appear under "Not live-verified" in report.md
+INV-CRD-029
+INV-CRD-030
+INV-AUX-009
+INV-AUX-010
+INV-AUX-011
+INV-AUX-012
+INV-AUX-013
+INV-MOD-033
+INV-MOD-034
+INV-MOD-035
+INV-MOD-036
+INV-MOD-049
+INV-MOD-050
+INV-MOD-051
+INV-MOD-052
+INV-MOD-053
+INV-MOD-054
+INV-MOD-055
+INV-MOD-056
+
+# Cross-check: every blocked row ID above appears in report.md: 0 missing
+
+# Status breakdown of the blocking findings count:
+    229 | fixed-unverified |
+     25 | imported |
+     37 | open |
+
+# Untested inventory rows:
+INV-UPG-001
+INV-UPG-002
+INV-UPG-003
+INV-UPG-004
+INV-UPG-005
+INV-NODE-001
+INV-NODE-002
+INV-NODE-003
+
+# Result: checks 1 and 2 do not meet the expected values (RC-01 and RC-03, not met, accepted as known risk at the go decision: T070, report.md#decision). Checks 3 and 4 pass. No inventory row is `fail`.

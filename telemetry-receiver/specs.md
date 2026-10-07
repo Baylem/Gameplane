@@ -1,6 +1,6 @@
 # telemetry-receiver — Specification
 
-**Status:** beta (v0.2.0-beta.8)  
+**Status:** pre-v1 (v0.3.0)  
 **Module / package:** github.com/ValgulNecron/gameplane/telemetry-receiver  
 **Go version:** 1.26
 
@@ -12,7 +12,7 @@ Optional collector for the anonymous usage telemetry the API reports daily. Prov
 
 - **HTTP server**: three routes — `/ingest` (POST), `/metrics` (GET), `/healthz` (GET)
 - **Payload validation**: strict JSON schema (`{version, servers, templates}` only); keys matched exactly (case-sensitive) with duplicates rejected; rejects malformed JSON, exactly one JSON object required (trailing non-whitespace content rejected), missing or null required fields, unknown fields, negative counts, oversized bodies (>16 KiB)
-- **Version sanitization**: version strings matching `^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$` are passed through; anything else is bucketed as `"invalid"` to prevent label cardinality explosion
+- **Version sanitization**: invalid syntax is bucketed as `"invalid"`. Retain at most 128 distinct strings matching `^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$` per process; additional versions share `"other"`. The two bucket names are reserved, for at most 130 series. Retained labels are never evicted; restart resets the budget with the counters.
 - **Authentication**: optional constant-time token validation when `AUTH_TOKEN` is set
 - **Metrics aggregation**: three in-memory Prometheus metrics — `gameplane_telemetry_reports_total` (counter by version), `gameplane_telemetry_servers` (histogram), `gameplane_telemetry_templates` (histogram)
 - **Structured logging**: logs each accepted report via `log/slog` with version/servers/templates fields
@@ -50,7 +50,7 @@ telemetry-receiver/
 ### Ingest payload
 
 ```json
-{ "version": "0.2.0-beta.7", "servers": 3, "templates": 7 }
+{ "version": "0.3.0", "servers": 3, "templates": 7 }
 ```
 
 The body must be exactly one JSON object with all three required fields and no trailing non-whitespace content. Keys are matched exactly, case-sensitively; duplicate keys are rejected. Missing or null required fields and unknown fields are rejected (16 KiB body cap applies to the entire request).
@@ -62,7 +62,7 @@ The body must be exactly one JSON object with all three required fields and no t
 ### Prometheus metrics
 
 ```
-gameplane_telemetry_reports_total{version="0.2.0-beta.7"}  # counter, by version label
+gameplane_telemetry_reports_total{version="0.3.0"}  # counter, by version label
 gameplane_telemetry_servers_bucket{le="…"}                 # histogram (buckets: 0,1,2,5,10,25,50,100,250,+Inf)
 gameplane_telemetry_servers_sum                            # histogram sum
 gameplane_telemetry_servers_count                          # histogram count
@@ -74,7 +74,7 @@ gameplane_telemetry_templates_count                        # histogram count
 ## Key invariants
 
 - **No persistent storage**: all metrics are in-memory, ephemeral across restart
-- **Version label bounded**: hostile input (e.g., `<script>…</script>`, 200+ chars) becomes label `version="invalid"` — impossible for unvalidated input to explode label cardinality or leak into the metrics page
+- **Version label bounded**: malformed strings become `version="invalid"`; after 128 distinct valid versions, new versions become `version="other"`. Concurrent requests share the same budget, and all accepted reports remain counted.
 - **Strict validation**: body must be exactly one JSON object with all three required fields (no extras, no renames); keys matched exactly and case-sensitively with duplicates rejected; missing or null fields rejected; trailing non-whitespace content rejected; negative counts immediately rejected; body size capped at 16 KiB
 - **Request timing**: whole-request read is time-bounded (15 s read timeout, 10 s header timeout) to prevent clients holding connections open after sending a report
 - **Authentication is optional**: if `AUTH_TOKEN` is empty, `/ingest` is public; otherwise, the exact `Authorization` header must match (constant-time comparison defeats timing attacks)

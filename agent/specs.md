@@ -1,6 +1,6 @@
 # agent — Specification
 
-**Status:** beta (v0.2.0-beta.8)  
+**Status:** pre-v1 (v0.3.0)  
 **Module / package:** `github.com/ValgulNecron/gameplane/agent`
 
 ## Purpose
@@ -62,6 +62,21 @@ Per-package roles:
 
 - **`actions`**: Renders module-declared RCON command templates with user parameters; validates via `gameaction` package.
 - **`auth`**: Two modes: mTLS (agent listens TLS, requires client cert signed by `--tls-client-ca`), or shared-secret bearer token (fallback for dev).
+  mTLS validates the serving certificate/key and client CA at startup and
+  reloads them for every new TLS handshake. The operator mounts all three
+  files in one projected Secret; the loader pins its `..data` generation
+  before reading, so a concurrent projection update cannot mix material.
+  Invalid, missing or mismatched rotated material rejects new handshakes
+  until repaired, without falling back to cached credentials or trust.
+  Every decoded `CERTIFICATE` block in the client CA bundle must contain
+  valid DER, even when other CA certificates in that bundle are valid.
+  Fully valid bundles may contain multiple trusted CAs.
+  TLS remains at least 1.2 with a required verified client certificate.
+  The control server advertises HTTP/2 and HTTP/1.1 across TLS renewal.
+  Session tickets are disabled to reverify client trust on every new
+  connection. Established connections keep their existing TLS state.
+  Regular PEM files are also supported; replace the set consistently to
+  avoid temporary handshake failures during updates.
 - **`caps`**: Unmarshals JSON capabilities blob from `GAMEPLANE_CAPABILITIES` env; exposes `Spec` with `Players`, `Quiesce`, `Lifecycle`, `Actions`, `Status`, `Mods`.
 - **`console`**: Accepts `{ kind: "cmd", body: "<rcon cmd>" }` JSON over WebSocket, runs it via RCON, replies with `{ kind: "out"|"err", body: "<response>" }`. On an RCON failure the `err` body is the generic `upstream unavailable`; the detailed error is logged with every occurrence of the submitted command replaced by `<redacted>`, since RCON clients embed the command in their errors and it may carry a secret.
 - **`files`**: Walks the filesystem under `--data-root`, validates paths lexically, then performs every operation relative to a directory descriptor on the root with `openat(O_NOFOLLOW)` per component (no `..`, no symlink at any component), handles multipart uploads.
@@ -178,7 +193,8 @@ All endpoints on the `--addr` control mux, except `/healthz`, return `401 Unauth
 ## Key invariants
 
 - **Every protected request is authenticated**: The `auth` package gates all protected game-data routes (`/files`, `/logs`, `/console`, `/players`, RCON) with either mTLS verification or bearer-token matching. The documented public endpoints (`/healthz` on the control mux, `/metrics` on its separate listener) are the only exceptions; see above.
-- **File write permissions**: `files.write` and `files.savePart` preserve the existing target's permission bits when the target can be inspected; otherwise, they set the new file to `0o644` so the game container (different uid, shared fsGroup) can read it.
+- **File write access**: `files.write` and `files.savePart` publish replacements owned by the unprivileged agent. For a different original owner, a Linux POSIX access ACL preserves that exact UID's owner permissions. The original group and all existing effective named-user, named-group and other permissions are retained; widening the ACL mask never revives previously masked grants. Subsequent edits retain this ACL. New files use `0o644` and do not inherit extra named grants. Replacing another UID's file requires POSIX ACL support; preserving the original group requires that group to be available to the agent. Unsupported access metadata, a refused group change, or a detected concurrent regular-file replacement returns a conflict and leaves the previous file intact. This does not add privileges or grant access to other users. As with ordinary rename-based writes, an external process can still replace the destination after the final metadata check; callers must coordinate concurrent writers.
+- **Cross-UID file access regression**: The amd64 agent CI job runs `TestFileAccessAcrossUIDs` from a compiled test binary under a root harness. The harness launches capability-free agent UID 65532 and game UID 1000 subprocesses, checks writes and multipart uploads over real game-owned `0600`/`0644` files, verifies masked named-user/group access, and verifies atomic failure. The normal unprivileged suite skips this harness; production privileges are unchanged.
 - **Direct mod file permissions**: Non-extracted mod uploads and downloads are set to `mods.moduleFileMode` (`0o644`) before rename. Extracted mod files remain covered by the existing world-readable invariant.
 - **RCON is a lower-trust boundary**: The agent uses `netguard.IsAllowed()` for WebRcon dial operations (permissive, allows loopback and private addresses on the assumption game servers run inside the cluster), and `netguard.IsPublic()` (strict, permissive only for well-known registries) for mod-install downloads, assuming modules are less trusted than the operator.
 - **Gameaction validation is independent**: Both the API (stdin pod-attach) and the agent (RCON) call `gameaction.Resolve()` independently to validate action inputs (no control characters, 512-char cap, required-ness checks, etc.). Neither trusts the other. The players moderation endpoints (kick/ban reason) also call gameaction.CheckText, so moderation text follows the same character policy as actions.

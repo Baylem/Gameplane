@@ -5,9 +5,9 @@ A Kubernetes-native game server control panel. Open-source alternative to
 Docker — scales from a single-node k3s homelab to multi-node production
 clusters without changing the operational model.
 
-> Status: **beta** (`v0.2.0-beta.8`). The operator, API, agent, and dashboard
+> Status: **pre-v1 release** (`v0.3.0`). The operator, API, agent, and dashboard
 > are feature-complete for the v1 scope and stabilized for external testing.
-> See [Beta status & known limitations](#beta-status--limitations) before
+> See [Pre-v1 status & known limitations](#pre-v1-status--limitations) before
 > running it for anything you can't afford to lose.
 
 **Website:** <https://valgulnecron.github.io/gameplane-website/> — features,
@@ -34,9 +34,9 @@ Screenshots are captured against mocked data for consistency and reproducibility
 | ![Live console for a Minecraft server streaming startup, player join, and auto-save lines over WebSocket with Clear, Download, and Fullscreen controls](docs/img/server-console.jpg) | ![Admin Settings Mod registries section showing CurseForge and Steam Workshop configured and Nexus Mods not configured](docs/img/admin-mod-registries.jpg) |
 | Console — live output over WebSocket | Admin Settings — Mod registries |
 
-## Beta Status & Limitations
+## Pre-v1 Status & Limitations
 
-Gameplane is currently in **beta** (`v0.2.0-beta.8`). Core workflows — server deployment, live consoles, file management, backups/restores, game modules, multi-cluster management, and RBAC — work end-to-end and are verified by automated unit, integration, upgrade, and end-to-end test suites on every commit.
+Gameplane is a **pre-v1 release** (`v0.3.0`). Core workflows — server deployment, live consoles, file management, backups/restores, game modules, multi-cluster management, and RBAC — work end-to-end and are verified by automated unit, integration, upgrade, and end-to-end test suites on every commit.
 
 Here are a few items to keep in mind:
 
@@ -58,7 +58,7 @@ and Agones (a Kubernetes operator library). While not direct competitors,
 Agones is included as a reference point for teams building on Kubernetes
 primitives.
 
-Status: **beta** (`v0.2.0-beta.8`). The operator, API, agent, and dashboard
+Status: **pre-v1 release** (`v0.3.0`). The operator, API, agent, and dashboard
 are feature-complete for the v1 scope and stabilized for external testing.
 
 | Dimension | Gameplane | Pterodactyl | CubeCoders AMP | Agones |
@@ -213,7 +213,7 @@ helm upgrade --install gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
 ```
 
 The chart pins matching `ghcr.io/valgulnecron/gameplane/{operator,api,agent}`
-images by `appVersion`. To track the rolling beta instead of a tagged release,
+images by `appVersion`. To track the rolling edge build instead of a tagged release,
 add `--set image.tag=edge`. Then seed an admin user and log in — see
 [`docs/install.md`](docs/install.md) for the full flow, OIDC, Postgres, and
 values reference. For address pool configuration (pinning servers to specific

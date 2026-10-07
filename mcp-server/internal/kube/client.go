@@ -16,7 +16,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,13 +69,6 @@ var CRDKinds = map[string]CRDKind{
 // maxLogBytes bounds a single pod-logs response so a runaway container can't
 // stream an unbounded amount of text back through the tool result.
 const maxLogBytes = 256 << 10
-
-// maxLogReadBytes bounds how much of the log stream PodLogs reads into
-// memory before trimming to the newest maxLogBytes. It's a generous
-// multiple of maxLogBytes so a legitimate tailLines request (up to
-// maxTailLines lines) isn't cut short mid-read, while a container with
-// pathologically long lines still can't exhaust memory (F-204).
-const maxLogReadBytes = maxLogBytes * 16
 
 // truncatedLogNotice prefixes a PodLogs result when the requested tail
 // exceeded maxLogBytes and was trimmed to its newest bytes, so a caller
@@ -272,14 +264,13 @@ func (c *Client) PodLogs(ctx context.Context, namespace, pod, container string, 
 	}
 	defer func() { _ = stream.Close() }()
 
-	data, err := io.ReadAll(io.LimitReader(stream, maxLogReadBytes))
+	data, truncated, err := readLogTail(stream)
 	if err != nil {
 		return "", fmt.Errorf("read logs for pod %s/%s: %w", namespace, pod, err)
 	}
 	// Keep the newest maxLogBytes, not the oldest: the tail is what the
 	// CrashLoop advice in propose_fix actually needs (F-204).
-	if len(data) > maxLogBytes {
-		data = data[len(data)-maxLogBytes:]
+	if truncated {
 		return truncatedLogNotice + string(data), nil
 	}
 	return string(data), nil

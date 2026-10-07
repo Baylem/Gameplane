@@ -1,6 +1,6 @@
 # sentinel — Specification
 
-**Status:** beta (v0.2.0-beta.8)  
+**Status:** pre-v1 (v0.3.0)  
 **Module / command:** `github.com/ValgulNecron/gameplane/sentinel`  
 **Dependencies:** Kubernetes `client-go` (dynamic client, in-cluster config), `k8s.io/apimachinery`, gameproto
 

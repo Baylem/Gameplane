@@ -6,7 +6,9 @@ import (
 	"time"
 
 	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -26,12 +28,22 @@ import (
 func (r *BackupReconciler) reconcileVolumeSnapshot(
 	ctx context.Context, b *gameplanev1alpha1.Backup, gs *gameplanev1alpha1.GameServer,
 ) (ctrl.Result, error) {
+	if b.Annotations[backupSnapshotAbortAnnotation] == "true" {
+		return r.failVolumeSnapshot(ctx, b, "volume snapshot aborted after an API or creation failure")
+	}
+	// An uncached read verifies that the snapshot API is served before
+	// disabling autosave. Missing CRDs (including NoMatch) and authorization
+	// errors fail safely, including cleanup of previously quiesced Backups.
+	var existing snapshotv1.VolumeSnapshot
+	if err := r.backupAPIReader().Get(ctx, types.NamespacedName{Namespace: b.Namespace, Name: b.Name}, &existing); err != nil && !apierrors.IsNotFound(err) {
+		return r.abortVolumeSnapshot(ctx, b, fmt.Sprintf("volume snapshot API unavailable: %v", err))
+	}
 	// Quiesce first (idempotent across requeues). A CSI snapshot is only
 	// crash-consistent; flushing the game to disk first (RCON save-all,
 	// etc.) makes it application-consistent. No-op when the backup opts out
 	// or no agent mTLS is configured.
-	if err := r.maybeQuiesce(ctx, b); err != nil {
-		return ctrl.Result{}, err
+	if res, err := r.prepareBackupQuiesce(ctx, b); err != nil || res.RequeueAfter > 0 {
+		return res, err
 	}
 
 	pvcName := gs.Name + "-data"
@@ -51,7 +63,10 @@ func (r *BackupReconciler) reconcileVolumeSnapshot(
 		}
 		return controllerutil.SetControllerReference(b, vs, r.Scheme)
 	}); err != nil {
-		return ctrl.Result{}, err
+		// Do not retry creation indefinitely with saving disabled. Even an
+		// ambiguous transport failure is surfaced as Failed; cleanup retries
+		// independently until save-on is confirmed.
+		return r.abortVolumeSnapshot(ctx, b, fmt.Sprintf("volume snapshot creation failed: %v", err))
 	}
 
 	switch {
@@ -65,6 +80,17 @@ func (r *BackupReconciler) reconcileVolumeSnapshot(
 		// Still provisioning — mark Running once, then poll.
 		return r.markVolumeSnapshotRunning(ctx, b)
 	}
+}
+
+// An API/creation failure must restore saving even if an ambiguous request
+// created a snapshot. Persist that abort decision before terminal cleanup so
+// worker-drain checks cannot trap this failed/nonrestorable Backup forever.
+func (r *BackupReconciler) abortVolumeSnapshot(ctx context.Context, b *gameplanev1alpha1.Backup, msg string) (ctrl.Result, error) {
+	patchBackupAnnotations(b, map[string]string{backupSnapshotAbortAnnotation: "true"})
+	if err := r.Update(ctx, b); err != nil {
+		return ctrl.Result{}, err
+	}
+	return r.failVolumeSnapshot(ctx, b, msg)
 }
 
 // markVolumeSnapshotRunning flips the Backup to Running on first observation

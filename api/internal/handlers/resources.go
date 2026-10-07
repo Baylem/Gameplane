@@ -169,7 +169,14 @@ func getHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Handle
 			if !ok {
 				return
 			}
-			obj, err = k.Dynamic.Resource(gvr).Namespace(ns).Get(req.Context(), name, metav1.GetOptions{})
+			if gvr.Resource == "gameservers" {
+				obj, ok = authorizedServer(w, req, k, ns, name)
+				if !ok {
+					return
+				}
+			} else {
+				obj, err = k.Dynamic.Resource(gvr).Namespace(ns).Get(req.Context(), name, metav1.GetOptions{})
+			}
 		}
 		if err == nil && obj != nil && gvr.Resource == "gameservers" {
 			gateStaleAgent(obj)
@@ -192,6 +199,7 @@ func createHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 		}
 		// Record the creating user as the server's owner (informational).
 		if gvr.Resource == "gameservers" {
+			protectServerAnnotations(obj, nil)
 			stampOwner(obj, req)
 			stripRedactedConfig(obj)
 		}
@@ -271,27 +279,7 @@ func updateHandler(reg *kube.Registry, gvr schema.GroupVersionResource) http.Han
 				httperr.Write(w, req, getErr)
 				return
 			}
-			if live != nil {
-				// Copy ownership annotations from the live object.
-				liveAnn := live.GetAnnotations()
-				objAnn := obj.GetAnnotations()
-				if objAnn == nil {
-					objAnn = map[string]string{}
-				}
-				for _, key := range []string{
-					"gameplane.local/owner-id",
-					"gameplane.local/owner",
-					"gameplane.local/collaborators",
-					"gameplane.local/collaborator-names",
-				} {
-					if v, ok := liveAnn[key]; ok {
-						objAnn[key] = v
-					} else {
-						delete(objAnn, key)
-					}
-				}
-				obj.SetAnnotations(objAnn)
-			}
+			protectServerAnnotations(obj, live)
 			// The dashboard sends spec back wholesale, so password config values
 			// arrive as the redaction marker: keep the stored value for those.
 			cfgRules = newConfigRuleCache(k)
@@ -391,7 +379,23 @@ func deleteHandler(reg *kube.Registry, store *db.Store, gvr schema.GroupVersionR
 			if !ok {
 				return
 			}
-			err = k.Dynamic.Resource(gvr).Namespace(ns).Delete(req.Context(), name, metav1.DeleteOptions{})
+			options := metav1.DeleteOptions{}
+			if gvr == kube.GVRs["servers"] {
+				obj, ok := authorizedServer(w, req, k, ns, name)
+				if !ok {
+					return
+				}
+				// Repeat the owner-only check against the same snapshot used by
+				// the delete preconditions. Middleware authenticates production
+				// requests; direct handler fixtures may omit the caller.
+				if u := auth.UserFromContext(req.Context()); u != nil &&
+					!u.Can("*", true, scope.RequestedCluster(req), ns) && !isServerOwner(obj, u.ID) {
+					http.Error(w, "forbidden", http.StatusForbidden)
+					return
+				}
+				options.Preconditions = objectDeletePreconditions(obj)
+			}
+			err = k.Dynamic.Resource(gvr).Namespace(ns).Delete(req.Context(), name, options)
 		}
 		if err != nil {
 			httperr.Write(w, req, err)

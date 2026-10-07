@@ -1,5 +1,5 @@
 import { useResourceClient, useResourceAccess, useResourceTarget, resourceKey } from "@/lib/resourceTarget";
-import { useEffect, useRef, useState, Suspense, lazy } from "react";
+import { useEffect, useMemo, useRef, useState, Suspense, lazy } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Tabs } from "@heroui/react";
 import {
@@ -21,6 +21,8 @@ import {
 import type { GameServer } from "@/types";
 import { APIError } from "@/lib/api";
 import { errorText } from "@/lib/errors";
+import { mergeDraftOntoLatest, SettingsConflictError } from "@/lib/settingsMerge";
+import { validateConfig } from "@/lib/validation";
 
 
 import { GeneralSection } from "./settings/General";
@@ -88,7 +90,16 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
   const [conflict, setConflict] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [sectionValid, setSectionValid] = useState(true);
+  const [sectionValidity, setSectionValidity] = useState<Partial<Record<SectionKey, boolean>>>({});
+  const [draftRevision, setDraftRevision] = useState(0);
+  const savingRef = useRef(false);
+  const validityCallbacks = useMemo(() => {
+    const report = (key: SectionKey) => (valid: boolean) => {
+      if (savingRef.current) return;
+      setSectionValidity((previous) => previous[key] === valid ? previous : { ...previous, [key]: valid });
+    };
+    return { config: report("config"), networking: report("networking"), capture: report("capture"), placement: report("placement") };
+  }, []);
   // `dirty` (does draft differ from the last known-good server snapshot) is
   // read directly in JSX, so it's tracked as its own piece of state,
   // recomputed imperatively at every site that mutates `draft` or the
@@ -116,6 +127,8 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
     setDraft(clone);
     setConflict(false);
     setDirty(false);
+    setSectionValidity({});
+    setDraftRevision((revision) => revision + 1);
   }, [gs, draft]);
 
   useEffect(() => {
@@ -128,8 +141,21 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
     enabled: !!draft?.spec.templateRef.name,
   });
 
+  // Validate config from the shared draft even when its section is unmounted.
+  // Other sections retain their reported validity across navigation, including
+  // invalid editor text that has not yet been committed into the draft.
+  const draftValid = !!template &&
+    validateConfig(template.spec.configSchema ?? [], draft?.spec.config ?? {}).length === 0 &&
+    Object.values(sectionValidity).every(Boolean);
+
   const save = useMutation({
+    onMutate: () => { savingRef.current = true; },
+    onSettled: () => { savingRef.current = false; },
     mutationFn: async (next: GameServer) => {
+      if (!template || validateConfig(template.spec.configSchema ?? [], next.spec.config ?? {}).length > 0 ||
+        !Object.values(sectionValidity).every(Boolean)) {
+        throw new Error("Correct invalid settings before saving.");
+      }
       // Re-fetch latest to merge edits onto the freshest copy. This
       // keeps fields the UI doesn't model (e.g. operator-managed status,
       // newly-added spec keys) from being clobbered.
@@ -146,10 +172,12 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
       setConflict(false);
       setError(null);
       setSavedAt(Date.now());
+      setSectionValidity({});
+      setDraftRevision((revision) => revision + 1);
       return qc.invalidateQueries({ queryKey: resourceKey(resourceTarget, "server", name, ns) });
     },
     onError: (err) => {
-      if (err instanceof APIError && err.status === 409) {
+      if (err instanceof SettingsConflictError || (err instanceof APIError && err.status === 409)) {
         setConflict(true);
         setError(null);
       } else {
@@ -169,6 +197,8 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
     }
     setConflict(false);
     setError(null);
+    setSectionValidity({});
+    setDraftRevision((revision) => revision + 1);
   };
 
   const reload = async () => {
@@ -180,6 +210,8 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
       setDirty(false);
       setConflict(false);
       setError(null);
+      setSectionValidity({});
+      setDraftRevision((revision) => revision + 1);
       qc.setQueryData(resourceKey(resourceTarget, "server", name, ns), fresh);
     } catch (err) {
       setError(errMsg(err));
@@ -187,6 +219,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
   };
 
   const onChangeDraft = (next: GameServer) => {
+    if (savingRef.current) return;
     setDraft(next);
     setDirty(baselineRef.current ? isDirty(next, baselineRef.current) : false);
     if (savedAt) setSavedAt(null);
@@ -217,7 +250,6 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
           selectedKey={section}
           onSelectionChange={(k) => {
             setSection(k as SectionKey);
-            setSectionValid(true);
           }}
           orientation="vertical"
         >
@@ -232,30 +264,30 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
       </nav>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex-1 overflow-auto p-6 scrollbar-thin">
+        <fieldset key={draftRevision} disabled={save.isPending} inert={save.isPending} className="min-w-0 flex-1 overflow-auto border-0 p-6 scrollbar-thin">
           {section === "general"    && <GeneralSection    draft={draft} onChange={onChangeDraft} template={template} />}
           {section === "version"    && <VersionSection    draft={draft} onChange={onChangeDraft} template={template} />}
-          {section === "config"     && <GameConfigSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={setSectionValid} />}
+          {section === "config"     && <GameConfigSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={validityCallbacks.config} />}
           {section === "resources"  && <ResourcesSection  draft={draft} onChange={onChangeDraft} template={template} />}
-          {section === "networking" && <NetworkingSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={setSectionValid} />}
+          {section === "networking" && <NetworkingSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={validityCallbacks.networking} />}
           {section === "env"        && <EnvVarsSection    draft={draft} onChange={onChangeDraft} template={template} />}
           {section === "lifecycle"  && <LifecycleSection  draft={draft} onChange={onChangeDraft} template={template} />}
           {section === "backups"    && <BackupsSection    draft={draft} onChange={onChangeDraft} template={template} />}
-          {section === "capture"    && <NetworkCaptureSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={setSectionValid} />}
+          {section === "capture"    && <NetworkCaptureSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={validityCallbacks.capture} />}
           {section === "placement"  && (
             <Suspense fallback={<div className="text-sm text-muted">Loading…</div>}>
               <PlacementSection
                 draft={draft}
                 onChange={onChangeDraft}
                 template={template}
-                onValidityChange={setSectionValid}
+                onValidityChange={validityCallbacks.placement}
               />
             </Suspense>
           )}
           {section === "access"     && <AccessSection     gs={gs} />}
           {section === "sharelinks" && <ShareLinksSection name={name} ns={ns} />}
           {section === "danger"     && <DangerSection     name={name} ns={ns} />}
-        </div>
+        </fieldset>
 
         {section !== "danger" && section !== "access" && section !== "sharelinks" && (
           <footer className="flex items-center justify-between gap-4 border-t border-border bg-surface/30 px-6 py-3">
@@ -307,7 +339,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
               <Button
                 size="sm"
                 onPress={() => save.mutate(draft)}
-                isDisabled={!access?.canWrite || !dirty || !sectionValid || save.isPending}
+                isDisabled={!access?.canWrite || !dirty || !draftValid || save.isPending}
               >
                 {save.isPending ? "Saving…" : "Save changes"}
               </Button>
@@ -330,58 +362,6 @@ function serializeForDiff(gs: GameServer) {
   const meta = { ...gs.metadata };
   delete meta.resourceVersion;
   return { metadata: meta, spec: gs.spec };
-}
-
-// mergeDraftOntoLatest applies the user's edits (the diff between
-// `draft` and the originally-loaded `baseline`) onto the freshest
-// server-side object. Fields the UI doesn't touch are preserved.
-function mergeDraftOntoLatest(
-  draft: GameServer,
-  baseline: GameServer,
-  latest: GameServer,
-): GameServer {
-  // Start from the latest server-side object to keep its resourceVersion
-  // and any unknown fields.
-  const out = structuredClone(latest);
-
-  // Apply spec wholesale from draft — every spec field surfaced in the
-  // form is owned by the user. Anything we don't model in the draft we
-  // also don't render, so adopting draft.spec is the desired behavior.
-  out.spec = structuredClone(draft.spec);
-
-  // Apply user-editable metadata (labels + our annotations) without
-  // clobbering operator-managed annotations. We compute the diff between
-  // baseline and draft and apply it onto latest.
-  out.metadata = {
-    ...latest.metadata,
-    labels: structuredClone(draft.metadata.labels),
-    annotations: mergeAnnotations(
-      baseline.metadata.annotations ?? {},
-      draft.metadata.annotations ?? {},
-      latest.metadata.annotations ?? {},
-    ),
-  };
-
-  return out;
-}
-
-function mergeAnnotations(
-  baseline: Record<string, string>,
-  draft: Record<string, string>,
-  latest: Record<string, string>,
-): Record<string, string> | undefined {
-  const out: Record<string, string> = { ...latest };
-
-  // Keys the user added or changed: copy draft value over.
-  for (const [k, v] of Object.entries(draft)) {
-    if (baseline[k] !== v) out[k] = v;
-  }
-  // Keys the user removed: drop them from the merged set.
-  for (const k of Object.keys(baseline)) {
-    if (!(k in draft)) delete out[k];
-  }
-
-  return Object.keys(out).length ? out : undefined;
 }
 
 function errMsg(err: unknown): string {

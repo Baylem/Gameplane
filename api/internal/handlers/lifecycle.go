@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/ValgulNecron/gameplane/api/internal/httperr"
 	"github.com/ValgulNecron/gameplane/api/internal/kube"
@@ -106,7 +105,11 @@ func patchSuspend(reg *kube.Registry, suspend bool) http.HandlerFunc {
 		if !ok {
 			return
 		}
-		if err := patchServerSuspend(req.Context(), k, scope.RequestedCluster(req), ns, name, suspend); err != nil {
+		obj, ok := authorizedServer(w, req, k, ns, name)
+		if !ok {
+			return
+		}
+		if err := patchServerSuspend(req.Context(), k, obj, suspend); err != nil {
 			httperr.Write(w, req, err)
 			return
 		}
@@ -131,16 +134,16 @@ func restartHandler(reg *kube.Registry) http.HandlerFunc {
 		if !ok {
 			return
 		}
+		obj, ok := authorizedServer(w, req, k, ns, name)
+		if !ok {
+			return
+		}
 		token := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
-		patch, _ := json.Marshal(map[string]any{
+		if !patchAuthorizedServer(w, req, k, obj, map[string]any{
 			"metadata": map[string]any{
 				"annotations": map[string]any{restartRequestedAnnotation: token},
 			},
-		})
-		if _, err := k.Dynamic.Resource(kube.GVRs["servers"]).
-			Namespace(ns).
-			Patch(req.Context(), name, types.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
-			httperr.Write(w, req, err)
+		}) {
 			return
 		}
 		w.WriteHeader(http.StatusAccepted)
@@ -156,7 +159,8 @@ func restartHandler(reg *kube.Registry) http.HandlerFunc {
 // switch and the operator never writes it, so clearing it here would both lie
 // about intent and fail to touch the marker that actually keeps the server
 // down. Waking a server that isn't asleep is a harmless no-op, so this needs no
-// precondition check and can't race the operator putting it to sleep.
+// idle-state precondition check. The server identity is still checked and the
+// mutation is conditional on the snapshot that was read.
 func wakeHandler(reg *kube.Registry) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		k, ok := resolveCluster(w, req, reg)
@@ -168,16 +172,16 @@ func wakeHandler(reg *kube.Registry) http.HandlerFunc {
 		if !ok {
 			return
 		}
+		obj, ok := authorizedServer(w, req, k, ns, name)
+		if !ok {
+			return
+		}
 		token := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
-		patch, _ := json.Marshal(map[string]any{
+		if !patchAuthorizedServer(w, req, k, obj, map[string]any{
 			"metadata": map[string]any{
 				"annotations": map[string]any{idleWakeRequestedAnnotation: token},
 			},
-		})
-		if _, err := k.Dynamic.Resource(kube.GVRs["servers"]).
-			Namespace(ns).
-			Patch(req.Context(), name, types.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
-			httperr.Write(w, req, err)
+		}) {
 			return
 		}
 		w.WriteHeader(http.StatusAccepted)
@@ -204,11 +208,8 @@ func cloneHandler(reg *kube.Registry) http.HandlerFunc {
 			http.Error(w, "newName required", http.StatusBadRequest)
 			return
 		}
-		src, err := k.Dynamic.Resource(kube.GVRs["servers"]).
-			Namespace(ns).
-			Get(req.Context(), name, metav1.GetOptions{})
-		if err != nil {
-			httperr.Write(w, req, err)
+		src, ok := authorizedServer(w, req, k, ns, name)
+		if !ok {
 			return
 		}
 		clone := src.DeepCopy()

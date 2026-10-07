@@ -67,7 +67,7 @@ func TestAuthFor_Branches(t *testing.T) {
 	ref := &corev1.LocalObjectReference{Name: "ps"}
 
 	t.Run("missing secret errors", func(t *testing.T) {
-		_, err := authFor(context.Background(), fake.NewClientBuilder().Build(), "ns", ref)
+		_, err := authFor(context.Background(), fake.NewClientBuilder().Build(), "ns", ref, "ghcr.io")
 		if err == nil {
 			t.Fatal("expected error for a missing pull secret")
 		}
@@ -79,7 +79,7 @@ func TestAuthFor_Branches(t *testing.T) {
 			Data:       map[string][]byte{},
 		}
 		c := fake.NewClientBuilder().WithObjects(sec).Build()
-		a, err := authFor(context.Background(), c, "ns", ref)
+		a, err := authFor(context.Background(), c, "ns", ref, "ghcr.io")
 		if err != nil || a != authn.Anonymous {
 			t.Fatalf("a=%#v err=%v, want anonymous", a, err)
 		}
@@ -92,7 +92,7 @@ func TestAuthFor_Branches(t *testing.T) {
 			Data:       map[string][]byte{corev1.DockerConfigJsonKey: []byte("{not json")},
 		}
 		c := fake.NewClientBuilder().WithObjects(sec).Build()
-		if _, err := authFor(context.Background(), c, "ns", ref); err == nil {
+		if _, err := authFor(context.Background(), c, "ns", ref, "ghcr.io"); err == nil {
 			t.Fatal("expected error for malformed dockerconfigjson")
 		}
 	})
@@ -105,7 +105,7 @@ func TestAuthFor_Branches(t *testing.T) {
 			Data:       map[string][]byte{corev1.DockerConfigJsonKey: []byte(cfg)},
 		}
 		c := fake.NewClientBuilder().WithObjects(sec).Build()
-		a, err := authFor(context.Background(), c, "ns", ref)
+		a, err := authFor(context.Background(), c, "ns", ref, "ghcr.io")
 		if err != nil {
 			t.Fatalf("authFor: %v", err)
 		}
@@ -126,7 +126,7 @@ func TestAuthFor_Branches(t *testing.T) {
 			Data:       map[string][]byte{corev1.DockerConfigJsonKey: []byte(cfg)},
 		}
 		c := fake.NewClientBuilder().WithObjects(sec).Build()
-		a, err := authFor(context.Background(), c, "ns", ref)
+		a, err := authFor(context.Background(), c, "ns", ref, "ghcr.io")
 		if err != nil || a != authn.Anonymous {
 			t.Fatalf("a=%#v err=%v, want anonymous", a, err)
 		}

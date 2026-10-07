@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -428,16 +429,23 @@ func startShareHandler(reg *kube.Registry, store *db.Store) http.HandlerFunc {
 			return
 		}
 
-		// Stamp the wake annotation (same as wakeHandler).
+		// Bind the wake to the object checked above, including legacy links.
+		// Never retry against a server recreated under the same name.
 		wakeToken := strconv.FormatInt(time.Now().UTC().UnixNano(), 10)
-		patch, _ := json.Marshal(map[string]any{
+		patch, _ := json.Marshal(conditionObjectPatch(map[string]any{
 			"metadata": map[string]any{
 				"annotations": map[string]any{idleWakeRequestedAnnotation: wakeToken},
 			},
-		})
+		}, obj))
 		if _, err := k.Dynamic.Resource(kube.GVRs["servers"]).
 			Namespace(link.Namespace).
 			Patch(req.Context(), link.ServerName, types.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
+			if apierrors.IsConflict(err) || apierrors.IsInvalid(err) || apierrors.IsNotFound(err) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
+				return
+			}
 			httperr.Write(w, req, err)
 			return
 		}

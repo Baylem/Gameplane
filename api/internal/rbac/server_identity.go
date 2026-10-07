@@ -18,8 +18,9 @@ type serverIdentityKey struct{}
 // ErrServerIdentityChanged rejects a resource different from the one authorized.
 var ErrServerIdentityChanged = errors.New("authorized server identity changed")
 
-// BoundServerIdentity returns the immutable identity used by ownership fallback.
-// Namespace-wide permission grants are not restricted to a single resource UID.
+// BoundServerIdentity returns the immutable identity used by an ownership grant.
+// Namespace-wide permissions remain unbound unless an owner-only operation also
+// requires ownership of the individual server.
 func BoundServerIdentity(ctx context.Context) (ServerIdentity, bool) {
 	identity, ok := ctx.Value(serverIdentityKey{}).(ServerIdentity)
 	return identity, ok

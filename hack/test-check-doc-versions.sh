@@ -6,7 +6,7 @@
 # allowlisted ones. Each pass/* file must exit 0; each fail/* file must exit
 # non-zero with output matching the corresponding .expected file.
 #
-# See: specs/018-v0-3-release-readiness/OPEN-DECISIONS.md (OD-012)
+# See: specs/done_018-v0-3-release-readiness/OPEN-DECISIONS.md (OD-012)
 
 set -euo pipefail
 

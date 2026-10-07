@@ -20,7 +20,7 @@ GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CONTEXT=<context-name> GAMEPLANE_E2E
 
 A successful run is the only event that licenses updating `Last Verified` to the current date.
 
-**Status:** beta (v0.2.0-beta.8)  
+**Status:** pre-v1 (v0.3.0)  
 **Module / package:** `github.com/ValgulNecron/gameplane/test/e2e/internal/7-days-to-die`  
 **Dependencies:** stdlib + shared protocol family `a2s` (Go 1.25+); tested against vinanrra/7dtd-server:v0.9.3 (UNMEASURED against a real server — see "Measured connectivity")
 

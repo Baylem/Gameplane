@@ -154,10 +154,19 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 			// the caller holds the route's namespace permission.
 			if Namespaced(r.perm) && !u.Can("*", true, cl, ns) {
 				if name, verb, isExact, ok := parseServerPath(req.URL.Path); ok && ownerOnlyOperation(req.Method, verb, isExact) {
-					if !ownsServer(req.Context(), fetch, cl, ns, name, u.ID) {
+					if fetch == nil {
 						http.Error(w, "forbidden", http.StatusForbidden)
 						return
 					}
+					obj, err := fetch.GetServer(req.Context(), cl, ns, name)
+					if err != nil || obj == nil || ownershipRole(obj, u.ID) != roleOwner {
+						http.Error(w, "forbidden", http.StatusForbidden)
+						return
+					}
+					// This grant still depends on owning this exact object, even
+					// though the namespace permission check already passed.
+					identity := ServerIdentity{Cluster: cl, Namespace: ns, Name: name, UID: string(obj.GetUID())}
+					req = req.WithContext(context.WithValue(req.Context(), serverIdentityKey{}, identity))
 				}
 			}
 			next.ServeHTTP(w, req)
@@ -383,20 +392,6 @@ func parseServerPath(path string) (string, string, bool, bool) {
 func ownerOnlyOperation(method, verb string, isExact bool) bool {
 	return verb == "transfer" || verb == "collaborators" || verb == "wipe-data" ||
 		(method == http.MethodDelete && isExact)
-}
-
-// ownsServer reports whether userID is the recorded owner of the named
-// GameServer. A nil fetcher, a fetch error or a missing server count as
-// not owned, so the caller fails closed.
-func ownsServer(ctx context.Context, fetch ServerFetcher, cluster, ns, name string, userID int64) bool {
-	if fetch == nil {
-		return false
-	}
-	obj, err := fetch.GetServer(ctx, cluster, ns, name)
-	if err != nil || obj == nil {
-		return false
-	}
-	return ownershipRole(obj, userID) == roleOwner
 }
 
 // ownershipRole returns the ownership role of a user in the server:

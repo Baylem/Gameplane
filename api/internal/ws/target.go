@@ -53,6 +53,26 @@ func serverPod(ctx context.Context, k *kube.Client, ns, name string) (*corev1.Po
 	return serverPodForUID(ctx, k, ns, name, "")
 }
 
+// localAgentTarget binds a new local operation before opening its transport.
+// The agent independently enforces this UID on its versioned route.
+func localAgentTarget(ctx context.Context, k *kube.Client, target agentTarget) (agentTarget, error) {
+	if err := target.validate(); err != nil {
+		return agentTarget{}, apierrors.NewBadRequest(err.Error())
+	}
+	if k == nil || k.Dynamic == nil {
+		return agentTarget{}, apierrors.NewServiceUnavailable("cluster unavailable")
+	}
+	server, err := k.GetServer(ctx, target.namespace, target.name)
+	if err != nil {
+		return agentTarget{}, err
+	}
+	if err := rbac.ValidateServerIdentity(ctx, scope.DefaultCluster, target.namespace, target.name, string(server.GetUID())); err != nil || server.GetUID() == "" {
+		return agentTarget{}, apierrors.NewNotFound(kube.GVRs["servers"].GroupResource(), target.name)
+	}
+	target.uid = string(server.GetUID())
+	return target, nil
+}
+
 // serverPodForUID also binds ownership preflight to an earlier authorized or
 // resolved GameServer identity. A legitimate replacement's ownership chain must
 // not be accepted for an operation on the previous server.

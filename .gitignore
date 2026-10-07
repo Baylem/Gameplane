@@ -24,6 +24,7 @@ web/.turbo/
 web/coverage/
 web/playwright-report/
 web/test-results/
+web/website-screenshots/
 web/e2e/.portforward.pid
 *.log
 .npmrc.local
@@ -76,4 +77,4 @@ heroUI template.pen
 
 **/held
 # 018 held audit records are published once every held fix has a pull request.
-!specs/018-v0-3-release-readiness/audit/held
+!specs/done_018-v0-3-release-readiness/audit/held

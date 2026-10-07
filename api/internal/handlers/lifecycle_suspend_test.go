@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -203,18 +204,41 @@ func TestLifecycleSuspendPreservesRetryReadErrors(t *testing.T) {
 			reads, patches := 0, 0
 			dyn.PrependReactor("get", "gameservers", func(ktesting.Action) (bool, runtime.Object, error) {
 				reads++
-				if reads > 1 {
-					return true, nil, readErr
-				}
-				return false, nil, nil
+				return true, nil, readErr
 			})
 			dyn.PrependReactor("patch", "gameservers", func(ktesting.Action) (bool, runtime.Object, error) {
 				patches++
 				return true, nil, apierrors.NewConflict(kube.GVRs["servers"].GroupResource(), "alpha", errors.New("write conflict"))
 			})
-			err := patchServerSuspend(t.Context(), k, scope.DefaultCluster, scope.DefaultNamespace, "alpha", true)
-			if !errors.Is(err, readErr) || reads != 2 || patches != 1 {
+			err := patchServerSuspend(t.Context(), k, lifecycleSuspendServer(), true)
+			if !errors.Is(err, readErr) || reads != 1 || patches != 1 {
 				t.Fatalf("retry read error changed or retried: err=%v reads=%d patches=%d", err, reads, patches)
+			}
+		})
+	}
+}
+
+func TestLifecycleSuspendUnidentifiedFixtureCannotRetry(t *testing.T) {
+	for _, conflict := range []bool{false, true} {
+		t.Run(fmt.Sprintf("conflict-%t", conflict), func(t *testing.T) {
+			server := lifecycleSuspendServer()
+			server.SetUID("") // Real API objects always have a UID.
+			k := fakeKubeClient(server)
+			patches := 0
+			k.Dynamic.(*dynamicfake.FakeDynamicClient).PrependReactor("patch", "gameservers", func(ktesting.Action) (bool, runtime.Object, error) {
+				patches++
+				if conflict {
+					return true, nil, apierrors.NewConflict(kube.GVRs["servers"].GroupResource(), "alpha", errors.New("changed"))
+				}
+				return false, nil, nil
+			})
+			response := do(t, mountLifecycleRouter(k), http.MethodPost, "/servers/alpha:stop", nil)
+			want := http.StatusAccepted
+			if conflict {
+				want = http.StatusNotFound
+			}
+			if response.Code != want || patches != 1 {
+				t.Fatalf("unidentified fixture behavior: status=%d want=%d patches=%d", response.Code, want, patches)
 			}
 		})
 	}

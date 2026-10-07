@@ -355,32 +355,13 @@ func createTemp(dirFD int, prefix string) (*os.File, string, error) {
 	return nil, "", fmt.Errorf("create temp file: %w", unix.EEXIST)
 }
 
-// destMode returns the permission bits a new file at name should get: those of
-// the existing regular file, else 0o644 so the game container (a different
-// uid) can read it. A symlink at name is refused.
-func (h *handler) destMode(dirFD int, parents []string, name string) (os.FileMode, error) {
-	h.fire("stat", parents, name)
-	var st unix.Stat_t
-	err := unix.Fstatat(dirFD, name, &st, unix.AT_SYMLINK_NOFOLLOW)
-	if errors.Is(err, unix.ENOENT) {
-		return 0o644, nil
-	}
-	if err != nil {
-		return 0, fmt.Errorf("stat %q: %w", name, err)
-	}
-	if st.Mode&unix.S_IFMT == unix.S_IFLNK {
-		return 0, h.symlinkError(dirFD, parents, name)
-	}
-	return fileModeFromStat(st.Mode).Perm(), nil
-}
-
 // storeFile writes name inside dirFD atomically: fill streams the content
 // into a temp file created in dirFD, which is chmodded, fsynced and renamed
 // over name with renameat in the same directory. On any failure only the temp
 // file is removed; an existing name is left untouched. renameat replaces a
 // symlink that appears at name in the meantime instead of following it.
 func (h *handler) storeFile(dirFD int, parents []string, name, prefix string, fill func(io.Writer) error) error {
-	mode, err := h.destMode(dirFD, parents, name)
+	access, err := h.destAccess(dirFD, parents, name)
 	if err != nil {
 		return err
 	}
@@ -396,10 +377,13 @@ func (h *handler) storeFile(dirFD int, parents []string, name, prefix string, fi
 	if err = fill(tmp); err != nil {
 		return abort(err)
 	}
-	// Chmod before rename: preserve the existing file's mode when overwriting,
-	// else use 0o644 so the game container (a different uid) can read it.
-	if err = tmp.Chmod(mode); err != nil {
-		return abort(fmt.Errorf("chmod %q: %w", name, err))
+	if h.preserveAccess != nil {
+		err = h.preserveAccess(tmp, access)
+	} else {
+		err = access.apply(tmp)
+	}
+	if err != nil {
+		return abort(fmt.Errorf("%w: %w", errPreserveAccess, err))
 	}
 	if err = tmp.Sync(); err != nil {
 		return abort(fmt.Errorf("sync %q: %w", name, err))
@@ -408,6 +392,9 @@ func (h *handler) storeFile(dirFD int, parents []string, name, prefix string, fi
 		return abort(fmt.Errorf("close %q: %w", name, err))
 	}
 	h.fire("commit", parents, name)
+	if !access.unchanged(dirFD, name) {
+		return abort(fmt.Errorf("%w: destination changed during upload", errPreserveAccess))
+	}
 	if err = unix.Renameat(dirFD, tmpName, dirFD, name); err != nil {
 		return abort(fmt.Errorf("rename %q: %w", name, err))
 	}

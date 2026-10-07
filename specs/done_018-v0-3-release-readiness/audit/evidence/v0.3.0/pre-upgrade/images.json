@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "Deployment",
+    "name": "gameplane-api",
+    "namespace": "gameplane-system",
+    "generation": 13,
+    "uid": "58ee16c1-8b31-4707-8a77-cbfc3766c3f3",
+    "images": [
+      "gameplane-test/api:master-a6268cd"
+    ]
+  },
+  {
+    "kind": "Deployment",
+    "name": "gameplane-operator",
+    "namespace": "gameplane-system",
+    "generation": 10,
+    "uid": "4b4945eb-ddd6-4d49-873e-0c34617b6219",
+    "images": [
+      "gameplane-test/operator:master-a6268cd"
+    ]
+  },
+  {
+    "kind": "Deployment",
+    "name": "gameplane-test-restic",
+    "namespace": "gameplane-system",
+    "generation": 1,
+    "uid": "4713c36e-2317-4b17-8cdf-e6dff722b419",
+    "images": [
+      "restic/rest-server:0.14.0"
+    ]
+  },
+  {
+    "kind": "Deployment",
+    "name": "gameplane-web",
+    "namespace": "gameplane-system",
+    "generation": 12,
+    "uid": "c632b604-e696-487f-a5fd-b11fd7a4f34b",
+    "images": [
+      "gameplane-test/web:master-a6268cd"
+    ]
+  }
+]

@@ -1,6 +1,6 @@
 # tunnel — Specification
 
-**Status:** beta (v0.2.0-beta.8)  
+**Status:** pre-v1 (v0.3.0)  
 **Module / command:** `github.com/ValgulNecron/gameplane/tunnel`  
 **Dependencies:** stdlib only
 
@@ -146,7 +146,7 @@ Without tags, none of this runs. The auth key goes into the config and tailscale
 
 ## Known Gaps
 
-- **Tailscale doesn't forward tailnet traffic to the game (F-173):** `BACKING_SERVICE_DNS` and `BACKING_SERVICE_PORTS` are read and validated for presence when `TUNNEL_TYPE=tailscale`, but neither reaches `renderTailscaleConfig` or the `tailscaled` process. The rendered config carries only `version`, `hostname`, and `authKey` or `locked`. ACL tags are requested at registration through `tailscale up`; see "Tailscale Tag Application". The tunnel pod registers as a tailnet device, but nothing bridges an inbound tailnet connection to the backing Service — tailscaled's declarative `--config` file has no serve/forward field, and `tailscale serve` (the real mechanism) only proxies TCP/HTTP(S) to a local `127.0.0.1` target, never a remote host, and has no UDP support. Fixing this is an architecture decision (a local proxy + headless `tailscale serve`, TCP-only; a subnet route via `advertiseRoutes`, which needs tailnet ACL auto-approval and widens reachability into cluster-internal networking; or replacing subprocess `tailscaled` with an embedded `tsnet` listener, which would end this module's stdlib-only dependency policy), tracked pending a decision in `specs/018-v0-3-release-readiness/OPEN-DECISIONS.md`.
+- **Tailscale doesn't forward tailnet traffic to the game (F-173):** `BACKING_SERVICE_DNS` and `BACKING_SERVICE_PORTS` are read and validated for presence when `TUNNEL_TYPE=tailscale`, but neither reaches `renderTailscaleConfig` or the `tailscaled` process. The rendered config carries only `version`, `hostname`, and `authKey` or `locked`. ACL tags are requested at registration through `tailscale up`; see "Tailscale Tag Application". The tunnel pod registers as a tailnet device, but nothing bridges an inbound tailnet connection to the backing Service — tailscaled's declarative `--config` file has no serve/forward field, and `tailscale serve` (the real mechanism) only proxies TCP/HTTP(S) to a local `127.0.0.1` target, never a remote host, and has no UDP support. Fixing this is an architecture decision (a local proxy + headless `tailscale serve`, TCP-only; a subnet route via `advertiseRoutes`, which needs tailnet ACL auto-approval and widens reachability into cluster-internal networking; or replacing subprocess `tailscaled` with an embedded `tsnet` listener, which would end this module's stdlib-only dependency policy), tracked pending a decision in `specs/done_018-v0-3-release-readiness/OPEN-DECISIONS.md`.
 - **Single-use Tailscale auth keys and tag retries:** when `tags` is set, the supervisor logs in with `tailscale up`. If that tagged login is refused (missing `tagOwners`), or a restarted pod reuses a state file with different tags, the untagged fallback `up` reuses the same auth key; a single-use (ephemeral, non-reusable) key has already been consumed, so the fallback fails too. The failure is logged and the supervisor does not crash-loop, but the device stays logged out until a fresh key is stored. Use a reusable auth key when setting `tags`.
 
 ## CRD Integration

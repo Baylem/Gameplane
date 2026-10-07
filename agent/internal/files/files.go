@@ -51,6 +51,8 @@ type handler struct {
 	// dir is the slash-joined parent path below the root ("" for the root).
 	// Production code never sets it.
 	beforeOpen func(stage, dir, name string)
+	// Test seam for a filesystem that refuses access-metadata restoration.
+	preserveAccess func(*os.File, fileAccess) error
 }
 
 // Mount registers the file-browser HTTP handlers on the supplied router.
@@ -391,6 +393,8 @@ func (h *handler) del(w http.ResponseWriter, req *http.Request) {
 
 func httpErr(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, errPreserveAccess):
+		http.Error(w, "cannot preserve existing file access; the file changed or the filesystem does not support its group/POSIX ACL permissions", http.StatusConflict)
 	case errors.Is(err, os.ErrNotExist):
 		http.Error(w, "not found", http.StatusNotFound)
 	case errors.Is(err, os.ErrPermission):

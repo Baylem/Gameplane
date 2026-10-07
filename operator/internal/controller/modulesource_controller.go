@@ -10,9 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
@@ -178,7 +180,11 @@ func refreshInterval(src *gameplanev1alpha1.ModuleSource) time.Duration {
 
 func (r *ModuleSourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&gameplanev1alpha1.ModuleSource{}).
+		// Status writes must not bypass the scheduled refresh. Preserve
+		// annotation nudges and spec changes, and leave upload watches unfiltered.
+		For(&gameplanev1alpha1.ModuleSource{}, builder.WithPredicates(predicate.Or(
+			predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{},
+		))).
 		Watches(&corev1.ConfigMap{}, enqueueUploadSourcesForConfigMap(r.Client)).
 		Complete(r)
 }

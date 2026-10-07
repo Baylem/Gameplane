@@ -1,6 +1,6 @@
 # web — Specification
 
-**Status:** beta (v0.2.0-beta.8)  
+**Status:** pre-v1 (v0.3.0)  
 **Module / package:** @gameplane/web  
 **Build:** Vite 8.3 + React 19.3 + TypeScript 6.0 (strict)
 
@@ -288,6 +288,7 @@ Six of the nine ServerDetail tabs are rebuilt in this slice:
    - Folder rows carry a trash button (on row hover or focus on desktop, always visible on mobile) that opens the same delete confirmation without opening the folder
    - The new file/folder name prompt explains a rejected name inline ("Names can't contain "/" or be "." or "..".") and marks the input `aria-invalid`; Create stays disabled
    - Monaco editor unchanged
+   - File drafts bind to the selected path, resource target and selection generation. Selection clears content immediately and Save stays disabled until that file has loaded. Late reads and save completions cannot replace another selection's content or baseline, including reopening the same path. Saves capture their target, path, body and directory at click time; edits typed during a save remain dirty against the saved body. Changing server/namespace/cluster/UID starts a fresh file browser.
 
 6. **Players** (`web/src/routes/tabs/Players.tsx`, 386 lines)
    - Online player snapshot, ban list, whitelist management
@@ -532,7 +533,7 @@ Every file in slice 2b imports **only** from `@heroui/react` and `@/components/u
 - Validation (`validateStep`): tunnel credentials required if tunnel enabled; frp requires a server address, at least one complete port mapping, and port numbers in 1–65535 (server port too, when set); no client-side check on the LoadBalancer address/CIDR fields themselves
 
 **Step 5 — Review & Confirmation:**
-- Display-only summary of all prior steps' selections (name, template, version, config values, networking, tunnel). Values of password-type template config fields are shown as `********` (`maskPasswordConfig`, `web/src/lib/validation.ts`), never as typed text; the create payload is unchanged. The API never returns stored GameServer passwords (it sends the marker `__gameplane_redacted__`; see `api/specs.md`), so no screen may render a password-type `spec.config` value or that marker. The Settings tab's whole-`spec` PUT (`mergeDraftOntoLatest`) deliberately echoes the marker back: the API keeps the stored value for it.
+- Display-only summary of all prior steps' selections (name, template, version, config values, networking, tunnel). Values of password-type template config fields are shown as `********` (`maskPasswordConfig`, `web/src/lib/validation.ts`), never as typed text; the create payload is unchanged. The API never returns stored GameServer passwords (it sends the marker `__gameplane_redacted__`; see `api/specs.md`), so no screen may render a password-type `spec.config` value or that marker. The Settings tab's merged PUT (`mergeDraftOntoLatest`) preserves unchanged markers from the latest server: the API keeps the stored value for them.
 - "Create server" button triggers POST to `/servers` endpoint
 - Error display if creation fails (network error, validation error, server name conflict)
 - On success, redirect to ServerDetail page for new server
@@ -748,7 +749,7 @@ tsconfig.json               # TS strict, noUnusedLocals, noUnusedParameters, noF
 vitest.config.ts            # Coverage gates (lines 92 / functions 76 / branches 82 / statements 92)
 playwright.config.ts        # Mock + live test modes, serial execution (login state is shared)
 eslint.config.js            # Flat config: @typescript-eslint (strict), react-hooks, no-floating-promises
-package.json                # @gameplane/web v0.2.0-beta.8; dev: vite, npm scripts for build/test/lint
+package.json                # @gameplane/web v0.3.0; dev: vite, npm scripts for build/test/lint
 ```
 
 ## Routing & Pages
@@ -834,6 +835,18 @@ package.json                # @gameplane/web v0.2.0-beta.8; dev: vite, npm scrip
 **Split display across two routes (not one):**
 1. **Cluster.tsx** displays the **storage class card** — `gameDataStorageClass` value or "Cluster default" badge if unset; rendered with a contextual hint when unset
 2. **AdminSettings.tsx** displays the **OIDC provider and role mappings overrides** — all auth-related configuration
+
+Admin settings section drafts follow refreshed configuration while pristine,
+including delayed responses after navigation. Edits and staged Secret operations
+remain local until Save. If a refreshed section differs from the draft's baseline,
+Save reports a conflict before any Secret or config writes; the administrator can
+copy their edits and reopen the section to start from current values. A successful
+save rebases on refreshed config without discarding edits made during the request.
+Dedicated role-mapping resets update both the baseline and draft.
+If the refresh following a successful PUT fails, the submitted values remain the
+committed baseline and visible draft (preserving newer local edits). Stale cached
+values cannot reset that draft. Save requires a successful refresh before any
+further writes when the last configuration read failed.
 
 **Why the split:**  
 A StorageClass is a cluster infrastructure concern, not an authentication concern. Cluster.tsx is the natural home for infrastructure settings; AdminSettings.tsx owns auth-only config. This separation keeps concerns aligned with where users expect to find them.
@@ -940,6 +953,8 @@ namespace, name and UID before providing access through `ResourceTargetProvider`
 ## ServerDetail Settings Sub-sections
 
 Settings tab (`SettingsTab`, `web/src/routes/tabs/Settings.tsx`) displays 12 sections in a left sidebar (`SECTIONS` array; a 13th, Game configuration, is inserted after Version when the template declares a `configSchema`):
+
+Save fetches the latest server and applies only the changes from the original baseline to the draft (`web/src/lib/settingsMerge.ts`). Untouched spec fields, labels, annotations, status and resourceVersion survive concurrent edits. Nested object keys merge independently; arrays are atomic. Divergent changes to the same field, including deleting a concurrently modified field, show the existing reload prompt before any PUT. Clearing config/label/annotation maps removes baseline keys while preserving concurrently added keys. Save waits for the template and validates the entire draft's game configuration regardless of the selected section; section-reported editor validity is retained across navigation. Discard, reload and successful save reset editor state and validity.
 
 1. **General** — Server name, description, game-icon image field with placeholder from template's image or "(template image)" when no template
 2. **Version** — Template version selector (triggers container restart)

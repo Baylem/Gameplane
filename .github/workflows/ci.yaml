@@ -587,6 +587,14 @@ jobs:
           mkdir -p coverage
           go test -covermode=atomic -coverpkg=./... \
             -coverprofile=coverage/unit.out ./...
+      - name: agent file access across real UIDs
+        if: matrix.module == 'agent' && matrix.arch == 'amd64'
+        working-directory: agent
+        # Root only launches the test's unprivileged game/agent subprocesses.
+        # Keep sudo scoped to this compiled regression, never the general suite.
+        run: |
+          go test -c -o "$RUNNER_TEMP/agent-files.test" ./internal/files
+          sudo "$RUNNER_TEMP/agent-files.test" -test.run='^TestFileAccessAcrossUIDs$' -test.v -test.timeout=2m
       - name: setup-envtest binary cache
         if: matrix.module == 'operator' || matrix.module == 'api'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -640,20 +648,9 @@ jobs:
     defaults: { run: { working-directory: web } }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: nginx client_max_body_size matches ingress proxy-body-size
+      - name: dashboard nginx accepts default mod uploads within API request limit
         working-directory: .
-        run: |
-          set -eu
-          ingress_size=$(grep -oP 'proxy-body-size:\s*"\K[0-9]+(?=m")' charts/gameplane/values.yaml)
-          nginx_size=$(grep -oP 'client_max_body_size\s+\K[0-9]+(?=m;)' web/nginx.conf.template || true)
-          if [ -z "$nginx_size" ]; then
-            echo "client_max_body_size not set in web/nginx.conf.template" >&2
-            exit 1
-          fi
-          if [ "$nginx_size" -lt "$ingress_size" ]; then
-            echo "web/nginx.conf.template client_max_body_size (${nginx_size}m) is below the ingress proxy-body-size (${ingress_size}m)" >&2
-            exit 1
-          fi
+        run: python3 web/test-mod-upload-proxy.py
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with: { node-version: "24", cache: "npm", cache-dependency-path: web/package-lock.json }
       - run: npm ci

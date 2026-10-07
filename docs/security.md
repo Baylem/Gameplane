@@ -13,6 +13,19 @@ point. Assume:
 
 ## Authentication
 
+Operator-managed agent and capture-sidecar control traffic uses mTLS with TLS 1.2 or newer and a verified
+client certificate. Both servers reload their serving certificate, key and
+client CA on each new handshake, so operator Secret renewal takes effect
+once Kubernetes updates the mounted projection. Each server reads one pinned
+`..data` generation from the Secret rather than mixing files during a
+projection swap. Invalid rotated material rejects new handshakes until
+repaired; it never falls back to old trust. A decoded client-CA
+`CERTIFICATE` block with invalid DER rejects the entire bundle, even
+when it also contains valid CAs. Valid multi-CA bundles remain supported.
+TLS session tickets are
+disabled so new connections cannot resume authentication against a
+removed CA. Existing connections retain their established TLS state.
+
 Two modes, configurable independently:
 
 - **Local accounts** — argon2id (64 MiB, t=3, p=2) password hashing.
@@ -193,6 +206,14 @@ repeats the check, so a caller who is no longer the owner is refused, and
 after three conflicting attempts the request fails with 409. Backups,
 restore jobs, schedules, and events remain namespace-gated in this release.
 
+Generic GameServer create/update requests cannot set or remove annotations in
+the `gameplane.local` domain or its subdomains, except the user-editable
+`description` and unused legacy `grace-period-seconds` hints. The API strips supplied values
+on creation before assigning the owner, and preserves live values on updates.
+Wipe requests, controller acknowledgements and lifecycle guards therefore cannot
+be injected or erased through ordinary settings writes. Use the authorized
+lifecycle and ownership endpoints for those operations.
+
 ## GameServer config passwords
 
 `GameServer.spec.config` holds wizard values as stored in Kubernetes, including
@@ -203,6 +224,11 @@ never returns those in clear: every response that carries a GameServer
 non-empty password value with the marker `__gameplane_redacted__`, through one
 helper (`api/internal/handlers/config_redact.go`). If the GameTemplate cannot be
 read, every config value is redacted (fail closed).
+
+These responses also omit the `kubectl.kubernetes.io/last-applied-configuration`
+annotation, which can contain passwords from an older manifest even after they
+are removed from current config. This applies even to servers without config;
+the annotation remains stored in Kubernetes.
 
 On `PUT /servers/{name}` a password value equal to the marker keeps the stored
 value, a different non-empty value replaces it, and an empty string clears it
@@ -768,6 +794,12 @@ In a multi-cluster setup, each target cluster is referenced by a Secret
 containing its kubeconfig. Access to cluster credentials is protected
 by several layers:
 
+- **Embedded credentials only.** The API and operator reject token files,
+  client certificate/key files, CA files, `exec` authentication, and
+  `auth-provider` plugins before creating a client. This applies to every
+  entry, including unused contexts. Remote kubeconfigs must carry tokens
+  or certificate/key/CA data directly; they cannot read control-plane files
+  or run local authentication commands.
 - **Label guard.** The API only reads Secrets labelled
   `gameplane.local/cluster-kubeconfig=true` when registering a cluster
   via the dashboard or API. This prevents a user from pointing at an
