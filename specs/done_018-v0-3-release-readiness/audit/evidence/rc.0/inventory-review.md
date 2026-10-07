@@ -147,7 +147,7 @@ diffing against every anchor reference (script-verified, not sampled).
 Two **non-blocking** conventions notes, left as-is (out of this task's fix
 list, called out below under Problems):
 1. `procedures/agent.md`, `crd.md`, `modules.md`, `nodes.md`, `upgrade.md` use
-   `##` for every procedure heading; `api.md`, `aux.md`, `helm.md`,
+   `##` for every procedure heading; `api.md`, `auxiliary-services.md`, `helm.md`,
    `security.md`, `web.md` use `###`, matching
    `contracts/audit-records.md`'s "One anchor-addressable `### <slug>`" rule.
    Anchors resolve identically either way (GitHub slug generation ignores
