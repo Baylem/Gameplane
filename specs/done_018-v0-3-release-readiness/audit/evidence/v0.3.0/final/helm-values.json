@@ -1,0 +1,23 @@
+{
+  "crds": {
+    "autoApply": {
+      "enabled": false
+    }
+  },
+  "defaultModuleSource": {
+    "git": {
+      "ref": "main",
+      "url": "https://github.com/ValgulNecron/gameplane-module.git"
+    },
+    "type": "git"
+  },
+  "image": {
+    "pullPolicy": "IfNotPresent"
+  },
+  "ingress": {
+    "host": "gameplane.local"
+  },
+  "operator": {
+    "addressManager": "metallb"
+  }
+}

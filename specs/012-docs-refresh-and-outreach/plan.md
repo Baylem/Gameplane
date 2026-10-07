@@ -76,6 +76,15 @@ docs/
 ├── img/
 │   ├── [6 REFRESHED]: dashboard.jpg, servers-list.jpg, server-overview.jpg, mods-registry-browse.jpg, server-console.jpg, admin-mod-registries.jpg
 │   └── [5+ NEW]: login.jpg, create-server-template-select.jpg, server-detail-events.jpg, admin-settings-general.jpg, cluster-nodes.jpg, server-detail-logs.jpg (1920×1080 JPEG per FR-017 priority and OD-3a)
+
+web/
+├── website-screenshots/                     # NEW (OD-16): Five dashboard screenshots for gameplane-website (2880×1800 PNG per FR-026)
+│   ├── dashboard.png
+│   ├── servers.png
+│   ├── console.png
+│   ├── backups.png
+│   └── modules.png
+├── e2e/specs/websiteScreenshots.spec.ts    # NEW (OD-16): Dedicated Playwright spec capturing website screenshot set (1440×900 @2x)
 ├── architecture.md                          # AUDITED: version strings, feature descriptions, cross-references
 ├── contributing.md                          # MODIFIED: link to specs/012-docs-refresh-and-outreach/outreach.md (FR-025)
 ├── dependencies.md                          # AUDITED: snapshot date, version pins, accuracy
@@ -114,7 +123,7 @@ External source tracking (docs/comparison-sources.md) is a separate file rather 
 
 The outreach to-do list (specs/012-docs-refresh-and-outreach/outreach.md) lives in the spec folder, not docs/, because it is a project-internal tracking artifact, not user-facing documentation (FR-020, SC-012).
 
-Tooling decisions (OD-1 through OD-15): The maintainer ruled on 2026-09-02 that link checks (hack/check-links.sh), version checks (hack/check-doc-versions.sh with historical-reference markers), and screenshot capture (Playwright mock mode in web/e2e/specs/screenshots.spec.ts, CI dispatch only per OD-15) plus tag-triggered refresh workflow (.github/workflows/screenshot-refresh.yaml with workflow_dispatch trigger per OD-15) are adopted and run on CI. The PR credential for the tag-triggered workflow is a fine-grained PAT repository secret `SCREENSHOT_BOT_PAT` (OD-13, ruled 2026-09-02). All fifteen open decisions are now ruled. None of these are product code, CRDs, or chart changes — they are repository tooling, testing infrastructure, and roadmap/CHANGELOG edits, so the Out of Scope section of spec.md is not violated.
+Tooling decisions (OD-1 through OD-16): The maintainer ruled on 2026-09-02 that link checks (hack/check-links.sh), version checks (hack/check-doc-versions.sh with historical-reference markers), and screenshot capture (Playwright mock mode in web/e2e/specs/screenshots.spec.ts, CI dispatch only per OD-15) plus tag-triggered refresh workflow (.github/workflows/screenshot-refresh.yaml with workflow_dispatch trigger per OD-15) are adopted and run on CI. The PR credential for the tag-triggered workflow is a fine-grained PAT repository secret `SCREENSHOT_BOT_PAT` (OD-13, ruled 2026-09-02). On 2026-10-07, the maintainer extended the screenshot-refresh workflow to also capture and update website screenshots on gameplane-website repo (OD-16), using the SAME `SCREENSHOT_BOT_PAT` token extended to cover both repositories (ValgulNecron/Gameplane and ValgulNecron/gameplane-website, Contents + Pull requests read/write), replacing the originally separate `WEBSITE_SCREENSHOT_BOT_PAT` design. All sixteen open decisions are now ruled. None of these are product code, CRDs, or chart changes — they are repository tooling, testing infrastructure, and website automation, so the Out of Scope section of spec.md is not violated (website screenshot sync is the sole exception per OD-16).
 
 ## Complexity Tracking
 

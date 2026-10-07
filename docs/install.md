@@ -11,7 +11,7 @@
 
 The chart and its images are published to the GitHub Container Registry (GHCR)
 as OCI artifacts — no `helm repo add` needed. Install a tagged release straight
-from the registry (replace `<version>` with a release, e.g. `0.2.0-beta.8`):
+from the registry (replace `<version>` with a release, e.g. `0.3.0`):
 
 ```sh
 helm upgrade --install gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
@@ -31,7 +31,7 @@ belong to is enabled (and, for `sentinel` and `capture-sidecar`, only for
 GameServers that opt in). See each component's values block for its enable
 flag.
 
-### Edge channel (latest beta)
+### Edge channel (latest edge build)
 
 Every push to `master` publishes rolling `:edge` images. To track them, install
 the chart and point images at the edge tag:
@@ -161,6 +161,13 @@ Top-level knobs (see `values.yaml` for the full list):
   new OIDC users get `viewer`, existing users' roles are never re-evaluated,
   and existing OIDC setups continue unchanged
 - `ingress.host` — dashboard hostname
+- `ingress.annotations.nginx\.ingress\.kubernetes\.io/proxy-body-size` —
+  defaults to `512m`, matching the dashboard nginx and API mod-upload
+  request limit. The complete multipart request, including framing, must
+  fit; the agent defaults to 256 MiB per mod file. When upgrading with
+  reused values or custom annotations, replace an existing `64m` limit
+  with `512m` to permit those uploads. Other ingress controllers need
+  their equivalent body-size setting.
 - `gamesNamespace` — namespace where GameServers are created (default `gameplane-games`)
 - `networkPolicies.enabled` — default-deny in games namespace (recommended on)
   - `networkPolicies.kubeletCIDRs` — CIDRs for kubelet liveness/readiness probes (defaults to RFC1918 + link-local)
@@ -634,7 +641,7 @@ GameServers intact.
 `helm` instead of skipping existing CRDs, so a `helm install` over leftover
 CRDs updates them itself (stamp included) and the hook stays pre-upgrade
 only. The hook applies under the same `helm` field manager so that apply
-never conflicts with it. Releases up to `0.2.0-beta.8` applied under
+never conflicts with it. Releases up to and including `0.2.0-beta.8` applied under <!-- doc-versions: historical -->
 kubectl's default manager (`kubectl`); if CRDs such a release upgraded were
 left behind, a Helm 4 `helm install` stops with `conflict with "kubectl" …
 .spec.versions`. Re-run it with `--force-conflicts` to take them over:

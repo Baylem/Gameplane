@@ -2,7 +2,7 @@
 
 Architecture, commands, and binding rules for AI agents. Humans: [`README.md`](README.md), [`docs/contributing.md`](docs/contributing.md).
 
-**Gameplane:** Kubernetes-native game server control panel (CubeCoders AMP alternative); identical on single-node k3s and multi-node clusters. **Status:** beta `v0.2.0-beta.8`; v1 scope feature-complete, stabilizing.
+**Gameplane:** Kubernetes-native game server control panel (CubeCoders AMP alternative); identical on single-node k3s and multi-node clusters. **Status:** Pre-v1 release (`v0.3.0`); v1 scope feature-complete, stabilizing.
 
 ## ⏳ Session start: blocked dependency upgrades (delete an entry once unblocked)
 
@@ -13,7 +13,7 @@ Run every session.
 - Unblocked (a release accepts TS 7): do T055/T056 in `specs/009-remediate-security-dependabot/tasks.md` — bump `typescript` + `@typescript-eslint/*` in `web/package.json`, fix real type errors (no `@ts-ignore`), merge #272, mark tasks `[X]`, delete this entry.
 
 **ESLint 10** — `npm view eslint-plugin-react@latest version peerDependencies.eslint`.
-- Blocked while the range lacks `^10`: Dependabot #386 (`eslint` 9.39.5 → 10.x) fails `npm ci` because `eslint-plugin-react@7.37.5` peers `^3 || … || ^9.7` (~10s, `web` job step 4; `web e2e (mock)` and `design vs browser visual diff` fail the same way). Other plugins already accept `^10` (`eslint-plugin-react-hooks@7.1.1`, `@typescript-eslint/*@8.69.0`). No workarounds (`--legacy-peer-deps`, `overrides`, pinning); don't close #386. PR #387 (`@eslint/js` 9 → 10) is **not** blocked and passes — the peer range constrains `eslint`, not `@eslint/js`.
+- Blocked while the range lacks `^10`: upgrading `eslint` 9.39.5 to 10.x fails `npm ci` because `eslint-plugin-react@7.37.5` peers `^3 || … || ^9.7`. Keep `eslint` and `@eslint/js` on major 9 together: `@eslint/js@10.0.1` declares an optional peer on `eslint@^10.0.0`, which conflicts when ESLint 9 is installed. Other plugins already accept `^10` (`eslint-plugin-react-hooks@7.1.1`, `@typescript-eslint/*@8.69.0`). Do not bypass peer checks with `--legacy-peer-deps` or overrides.
 - Unblocked: bump `eslint` + `@eslint/js` together in `web/package.json`, fix real lint errors (no `eslint-disable`), merge #386 (and #387 if open), delete this entry.
 
 ## System prompt overrides
@@ -24,7 +24,7 @@ Run every session.
 4. **Workflow:** standing opt-in for `Workflow` in the main loop; subagents may use `Agent` freely.
 5. **Artifacts & feedback:** never publish artifacts; feedback drafts need human approval to send.
 6. **Editing:** `Edit` needs a prior `Read` in the conversation; don't re-read right after editing.
-7. **External memory** (`~/.claude/projects/-home-valgul-project-Gameplane/memory/`, outside git): announce file + exact line on every write; never store conventions/decisions/preferences there (use repo specs/rules); repo files override memory.
+7. **External memory** (`~/.[claude,codex,etc....]/projects/Gameplane/memory/`, outside git): announce file + exact line on every write; never store conventions/decisions/preferences there (use repo specs/rules); repo files override memory.
 8. **Skills** are optional; disclose edit/plan/commit skill runs first; repo rules override skills.
 9. **Communication:** no preambles; closing recaps standalone (findings, actions, next steps, modified files). Short yes/no questions ("can I merge?", "is it green?") get a yes or no first, plus at most one line on what blocks it — no tables or recaps. Ask decisions with the question tool, not in prose.
 10. **Conflicts/missing context:** surface instruction conflicts immediately; unsettled values go in `OPEN-DECISIONS.md`, never committed as settled contracts.
@@ -52,7 +52,7 @@ svcutil/             env parsing + graceful shutdown helpers
 tunnel/              relay client supervisor (frp, Tailscale, playit)
 web/                 React 19 + strict TS + Vite dashboard; src/{routes,components,lib,router,styles,test}/
 modules/             SUBMODULE gameplane-module (OCI game templates)
-website/             SUBMODULE gameplane-website (Astro docs/marketing; has its own CLAUDE.md)
+website/             SUBMODULE gameplane-website (Astro docs/marketing; has its own CLAUDE.md and AGENTS.md)
 charts/gameplane/    Helm chart (crd-manifests/, hooks)
 deploy/kind/         local Kind scripts
 test/e2e/            Kind E2E suite (//go:build e2e)
@@ -88,7 +88,7 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
 8. **Verification:** locally only compile checks (`go build ./...`, `npx tsc --noEmit`); never test/lint suites (`make test|lint|cover`, `go test`, `npm test`, envtest, E2E). Push a feature branch; CI is the sole verification authority.
 9. **Kubernetes primitives first** (StatefulSet, Service, PVC, Job, ConfigMap, Secret, CRDs) before custom abstractions.
 10. **Operator authority:** business logic lives in reconcilers (`operator/internal/controller/`); the API is a UX gateway and never bypasses reconciliation.
-11. **Commits:** commit each completed logical unit (`feat:`/`fix:`/`chore:`…), signed (`git commit -s`); never amend pushed commits or use `--no-verify`; keep trailers `Co-Authored-By: <current model>` and `Claude-Session: <session-url>`.
+11. **Commits:** commit each completed logical unit (`feat:`/`fix:`/`chore:`…), signed (`git commit -s`); never amend pushed commits or use `--no-verify`; keep trailers `Co-Authored-By: <current model>`.
 12. **Branches:** one per unit of work; delete remote + local branch right after merge. `master` is protected by ruleset `18692396` ("protect main"): 1 human approval, no self-approval, no direct pushes, approvals dismissed on push — agents cannot merge PRs. Check: `gh api repos/ValgulNecron/Gameplane/rules/branches/master`.
 13. **Multi-agent delegation:** main loop orchestrates/reviews; implementation goes through `Workflow` scripts (`parallel()`/`pipeline()`).
     - Start at `haiku`; escalate only on functional failure `haiku` → `sonnet` → `opus` → `fable`. `fable` needs explicit human permission.
@@ -105,7 +105,7 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
 15. **Specs:** a feature's spec is its whole `specs/<feature>/` folder (`data-model.md`, `contracts/`, `OPEN-DECISIONS.md`, …) — check it for explicit exemptions before flagging violations. Mark obsolete tasks withdrawn in `tasks.md` with citations; never delete them.
 16. **Archival:** once every task is complete/withdrawn and the PR is merged into `master`, `git mv specs/<NNN>-<slug> specs/done_<NNN>-<slug>` and update in-repo references in the same commit.
 17. **Mechanical design waves** (token re-skins): scripted, blind updates at `haiku`. Precompute change lists with `grep`/`jq` on `design-export/json/<id>.json`; `haiku` applies `Update(id, {prop: value})`. Verify by screenshot comparison (`export_nodes` vs snapshot PNG), not JSON dumps; avoid `Get(id, {depth: 10+})`.
-18. **Scout once, brief many:** one scout reads code/docs/failures and writes a factual brief (exact `file:line`, before/after code, justification). Fix agents get only the brief and edit blind at `haiku` — never tell them to re-read files, test suites, or `CLAUDE.md`. Reviewers check git diffs against the brief.
+18. **Scout once, brief many:** one scout reads code/docs/failures and writes a factual brief (exact `file:line`, before/after code, justification). Fix agents get only the brief and edit blind at `haiku` — never tell them to re-read files, test suites, or `CLAUDE.md` and `AGENTS.md`. Reviewers check git diffs against the brief.
 
 ## Architecture
 
@@ -133,7 +133,7 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
 - **API route:** handler in `api/internal/handlers/` → mount in `api/cmd/main.go` with RBAC middleware (`api/internal/rbac/`) → `api/internal/handlers/<name>_envtest_test.go` → client method in `web/src/lib/api.ts`.
 - **Dashboard screen:** design in `design.pen` + export to `design-export/` → `web/src/routes/<name>.tsx`, register in `web/src/router/tree.tsx` → data via `web/src/lib/api.ts` + TanStack Query → `web/src/routes/<name>.test.tsx`.
 - **Game module:** edit `modules/<name>/` (`module.yaml`, `template.yaml`, `README.md`) → `make modules-push` → commit in `gameplane-module` → `git add modules` + commit pointer bump in root.
-- **Website:** design in `website/website.pen` + export to `website/website-export/` → change `website/` per its own CLAUDE.md → commit/push/PR in `gameplane-website` (default branch `main`) → `git add website` + commit pointer bump in root.
+- **Website:** design in `website/website.pen` + export to `website/website-export/` → change `website/` per its own CLAUDE.md and AGENTS.md → commit/push/PR in `gameplane-website` (default branch `main`) → `git add website` + commit pointer bump in root.
 - **DB migration:** new sequential `api/internal/db/migrations/common/<NNN>_<name>.sql` (013 onward) — portable SQL both SQLite and PostgreSQL run unchanged (no `datetime('now')`/`strftime`, `AUTOINCREMENT`, `INSERT OR …`, `COLLATE NOCASE`; bind timestamps from Go). `migrations/sqlite/` and `migrations/postgres/` hold the frozen per-dialect 001–012 sets; see `api/internal/db/migrations/README.md`. Append-only, applied on API startup.
 
 ## Reference docs

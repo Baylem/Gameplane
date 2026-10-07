@@ -64,7 +64,7 @@ const CATEGORY_FILTERABLE_PROVIDERS = new Set(["modrinth", "hangar"]);
 // one registry), a debounced search, a sort control, optional category
 // chips, a paged result grid (load-more), and a default "popular" listing
 // when the search is empty. Each result is rendered by renderItem with the
-// active provider, so the caller's install action targets the right engine.
+// project's own provider, including retained results during a provider switch.
 export function RegistryBrowser({
   name,
   ns,
@@ -253,7 +253,7 @@ export function RegistryBrowser({
           <>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {items.map((p) => (
-                <div key={`${p.provider}:${p.id}`}>{renderItem(p, provider ?? p.provider)}</div>
+                <div key={`${p.provider}:${p.id}`}>{renderItem(p, p.provider)}</div>
               ))}
             </div>
             <div className="flex justify-center pt-3">
@@ -262,7 +262,7 @@ export function RegistryBrowser({
                 size="sm"
                 className={pillButtons ? "rounded-full" : undefined}
                 onPress={() => void q.fetchNextPage()}
-                isDisabled={!q.hasNextPage || q.isFetchingNextPage}
+                isDisabled={!q.hasNextPage || q.isFetchingNextPage || q.isPlaceholderData}
               >
                 {q.isFetchingNextPage ? "Loading…" : "Load more"}
               </Button>

@@ -150,6 +150,48 @@ function gsVer(version: string): GameServer {
 }
 
 describe("ModsTab", () => {
+  it("queries and installs a retained project's actual provider while switching registries", async () => {
+    let finishSearch!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => { finishSearch = resolve; });
+    const installs: unknown[] = [];
+    route({
+      providers: [{ provider: "modrinth", available: true, modpacks: false }, { provider: "curseforge", available: true, modpacks: false }],
+      registry: [{ id: "same-id", title: "Original Mod", provider: "modrinth" }],
+      versions: [{ id: "version-1", files: [{ filename: "original.jar", downloadUrl: "https://cdn.modrinth.com/original.jar", primary: true }] }],
+      onInstall: (body) => installs.push(body),
+    });
+    const original = fetchMock.getMockImplementation()!;
+    const versionRequests: URL[] = [];
+    let switched = false;
+    fetchMock.mockImplementation((url: string, options?: { method?: string; body?: string }) => {
+      const parsed = new URL(url, "http://localhost");
+      if (parsed.pathname.endsWith("/mods/registry/search") && parsed.searchParams.get("provider") === "curseforge") {
+        switched = true;
+        return pending;
+      }
+      if (parsed.pathname.endsWith("/versions")) versionRequests.push(parsed);
+      return original(url, options);
+    });
+    renderWithQuery(<ModsTab name="s1" tmpl={tmpl(withBrowse)} />);
+    const open = await screen.findByRole("button", { name: /install mod/i });
+    await waitFor(() => expect(open).toBeEnabled());
+    fireEvent.click(open);
+    await screen.findByText("Original Mod");
+    fireEvent.click(screen.getByRole("tab", { name: "CurseForge" }));
+    await waitFor(() => expect(switched).toBe(true));
+    fireEvent.click(screen.getByText("Original Mod"));
+    const install = await screen.findByRole("button", { name: "Install" });
+    expect(versionRequests).toHaveLength(1);
+    expect(versionRequests[0].searchParams.get("provider")).toBe("modrinth");
+    expect(versionRequests[0].pathname).toContain("/projects/same-id/versions");
+    fireEvent.click(install);
+    await waitFor(() => expect(installs).toEqual([{
+      url: "https://cdn.modrinth.com/original.jar", name: "original.jar",
+      meta: { provider: "modrinth", projectId: "same-id", projectName: "Original Mod", versionId: "version-1" },
+    }]));
+    await act(async () => finishSearch(jsonRes([{ id: "same-id", title: "New Mod", provider: "curseforge" }])));
+  });
+
   it("lists installed mods", async () => {
     route({ mods: [{ name: "sodium.jar", size: 1024 }, { name: "lithium.jar", size: 2048 }] });
     renderWithQuery(<ModsTab name="s1" tmpl={tmpl(withInstall)} />);
@@ -957,6 +999,34 @@ describe("ModsTab — id-managed mods (capabilities.mods.idList)", () => {
 
     await waitFor(() => expect(puts).toHaveLength(1));
     expect(puts[0]).toEqual([{ id: "889745", name: "Structures Plus (S+)" }, { id: "895711" }]);
+  });
+
+  it("locks ID-list editing and registry browsing until a pending save finishes", async () => {
+    let finishPut!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => { finishPut = resolve; });
+    routeIds({ ids: [{ id: "889745", name: "Existing mod" }] });
+    const original = fetchMock.getMockImplementation()!;
+    let submitted: ModID[] | undefined;
+    fetchMock.mockImplementation((url: string, options?: { method?: string; body?: string }) => {
+      if (url.includes("/mods/ids") && options?.method === "PUT") {
+        submitted = JSON.parse(options.body ?? "[]") as ModID[];
+        return pending;
+      }
+      if (url.includes("/mods/ids") && submitted) return Promise.resolve(jsonRes(submitted));
+      return original(url, options);
+    });
+    renderWithQuery(<ModsTab name="s1" tmpl={idTmpl({ registry: true })} />);
+    await screen.findByText("Existing mod");
+    fireEvent.change(screen.getByPlaceholderText(/paste a.*mod id/i), { target: { value: "895711" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(submitted).toBeDefined());
+    expect(screen.getByPlaceholderText(/paste a.*mod id/i)).toBeDisabled();
+    expect(screen.getByRole("button", { name: /browse curseforge/i })).toBeDisabled();
+    for (const button of screen.getAllByRole("button", { name: "Remove" })) expect(button).toBeDisabled();
+    await act(async () => finishPut(jsonRes(submitted)));
+    await waitFor(() => expect(screen.getByPlaceholderText(/paste a.*mod id/i)).toBeEnabled());
+    expect(screen.getByText("895711")).toBeInTheDocument();
   });
 
   it("marks a removal as pending and only applies it on save", async () => {

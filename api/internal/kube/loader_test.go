@@ -2,12 +2,43 @@ package kube
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+func TestConfigFromKubeconfig_RejectsLocalCredentialsInAllContexts(t *testing.T) {
+	for _, user := range []string{"selected", "other"} {
+		t.Run(user, func(t *testing.T) {
+			cfg := clientcmdapi.Config{
+				Clusters: map[string]*clientcmdapi.Cluster{"remote": {Server: "https://example.com:6443"}},
+				AuthInfos: map[string]*clientcmdapi.AuthInfo{
+					"selected": {Token: "embedded-token"},
+					"other":    {Token: "other-token"},
+				},
+				Contexts: map[string]*clientcmdapi.Context{
+					"selected": {Cluster: "remote", AuthInfo: "selected"},
+					"other":    {Cluster: "remote", AuthInfo: "other"},
+				},
+				CurrentContext: "selected",
+			}
+			cfg.AuthInfos[user].TokenFile = "/private/token"
+			data, err := clientcmd.Write(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := ConfigFromKubeconfig(data)
+			if err == nil || result != nil || !strings.Contains(err.Error(), "tokenFile") {
+				t.Fatalf("expected credential policy rejection, got config=%v error=%v", result, err)
+			}
+		})
+	}
+}
 
 func TestConfigFromKubeconfig_Valid(t *testing.T) {
 	validKubeconfig := []byte(`apiVersion: v1

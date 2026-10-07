@@ -1,6 +1,6 @@
 # api — Specification
 
-**Status:** beta (v0.2.0-beta.8)  
+**Status:** pre-v1 (v0.3.0)  
 **Module / package:** github.com/ValgulNecron/gameplane/api
 
 ## Purpose
@@ -473,6 +473,7 @@ audit:read, config:read, config:manage (cluster-scoped)
 - Per-cluster (multi-cluster; `*` = all clusters, but typically scoped to specific cluster)
 
 **Owner/collaborator fallback:**
+- Generic GameServer POST/PUT reserve annotations under `gameplane.local` and its subdomains for authorized API operations and controllers, except the editable `gameplane.local/description` and unused legacy `gameplane.local/grace-period-seconds` hints: POST strips protected supplied values before stamping the creator; PUT restores their live values, including omitted keys. This protects ownership, wipe/restart/wake requests, acknowledgements and lifecycle guards without restricting ordinary settings or other annotation domains. Dedicated lifecycle/ownership routes retain their existing authorization and confirmation checks.
 - When namespace permission is denied and request targets a GameServer, check if caller is owner or collaborator
 - Owner-only operations (`:transfer`, `:collaborators`, `:wipe-data`, bare DELETE) deny collaborators
 - Owner-only operations need the server's owner or an admin (a role holding `*` in the resolved cluster and namespace), whatever namespace permission the caller holds: the namespace `servers:write` permission alone does not grant them, and a server with no owner annotation (for example one created with kubectl or GitOps) is admin-only for them. `rbac.Middleware` enforces the rule for all four; the `:transfer`, `:collaborators` and `:wipe-data` handlers repeat the check (`requireOwnerOrAdmin` in `handlers/ownership.go`). Those three handlers pin their merge patch to the `resourceVersion` the check read (`patchServerAsOwner`); on a 409 Conflict they re-read the server and repeat the check (a caller who lost ownership meanwhile gets 403), retrying up to three times before returning 409. Other server writes keep their namespace permission rules.
@@ -623,6 +624,7 @@ Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); th
 - **Gateway-enabled agent routes:** the production mount enables selected-cluster RCON, game-file logs/downloads, files, players, status and agent-based mods through the optional gateway. RCON module actions use that gateway; stdin actions, Pod logs and PTY attach use the selected Kubernetes client. GET `/servers/{name}/mods/updates` uses `MountModUpdatesWithRegistry` so its template and agent reads target the same selected cluster. Consumers mounted without the remote resolver retain the legacy 501 guard; missing or invalid gateway configuration fails closed rather than using a local agent. Tests: `TestModUpdatesRoutesAgentAndTemplateToRemoteCluster`, `TestModUpdatesRemoteCannotUseLocalOnlyAgent` and `ws/gateway_client_test.go` cover remote routing and fail-closed behavior.
 
 ### GameServer config password redaction
+- Every covered response omits `metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"]`: this historical manifest can contain passwords absent from the current config or template. Omission applies even when current config is absent, empty, or malformed; stored Kubernetes metadata and other annotations remain unchanged.
 `GameServer.spec.config` stores wizard values in clear, including those of `type: password` fields in the template's `configSchema`. Anyone holding `servers:read` (or the owner/collaborator fallback) could therefore read every password. The API now redacts them; implementation and tests are in `api/internal/handlers/config_redact.go` and `config_redact_test.go`.
 - **Marker:** `__gameplane_redacted__`. On reads, each non-empty password-type value is replaced by the marker (an empty value stays empty so clients can show "not set"). The password-field set comes from the server's `GameTemplate.spec.configSchema` (read live and memoised only within one request, or within one SSE event, so a template edit applies to the very next response and event).
 - **Covered paths (one helper):** GET/POST/PUT `/servers` and `/servers/{name}` (including the create and update replies), `POST /servers/{name}:clone` reply (the clone itself stores the source's values verbatim), `GET /users/me/servers`, `GET /fleet/servers`, and the `/events` SSE stream (each watch event is redacted on a copy). Share links expose only name/status/address/player count; capture, mod, tunnel-credential, notification and WebSocket paths never carry `spec.config`; the audit log and its sinks record actor/method/path/target/status/ip/reason only and never request bodies.

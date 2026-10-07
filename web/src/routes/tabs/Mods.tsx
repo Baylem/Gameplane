@@ -517,6 +517,7 @@ function ModsByIdTab({
   // currently marked for removal just undoes the removal (the intuitive
   // outcome); adding an id already selected is a no-op.
   const addModID = (id: string, label?: string) => {
+    if (save.isPending) return;
     const trimmed = id.trim();
     if (!modIDPattern.test(trimmed)) return;
     setRows((prev) => {
@@ -535,6 +536,7 @@ function ModsByIdTab({
   // undo — it never reached the server); a "kept" row is marked
   // "removed" so it stays visible (dimmed, with Undo) until Save.
   const markRemoved = (id: string) => {
+    if (save.isPending) return;
     setRows((prev) =>
       prev.flatMap((r) => {
         if (r.id !== id) return [r];
@@ -545,6 +547,7 @@ function ModsByIdTab({
   };
 
   const undoRemove = (id: string) => {
+    if (save.isPending) return;
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, state: "kept" as const } : r)));
   };
 
@@ -650,6 +653,7 @@ function ModsByIdTab({
               variant="outline"
               size="sm"
               onPress={() => setBrowsing(true)}
+              isDisabled={save.isPending}
             >
               <Compass className="h-4 w-4" /> Browse {providerName ?? "registry"}
             </Button>
@@ -661,13 +665,13 @@ function ModsByIdTab({
             placeholder={`Paste a${providerName ? ` ${providerName}` : ""} mod ID…`}
             value={idInput}
             onChange={(e) => setIdInput(e.target.value)}
-            disabled={!canManage}
+            disabled={!canManage || save.isPending}
             className="w-56"
             spellCheck={false}
           />
           <Button
             size="sm"
-            isDisabled={!canManage || !modIDPattern.test(idInput.trim())}
+            isDisabled={!canManage || save.isPending || !modIDPattern.test(idInput.trim())}
             onPress={() => {
               addModID(idInput.trim());
               setIdInput("");
@@ -724,6 +728,7 @@ function ModsByIdTab({
                         variant="ghost"
                         size="sm"
                         onPress={() => undoRemove(r.id)}
+                        isDisabled={save.isPending}
                       >
                         <RotateCcw className="h-3 w-3" /> Undo
                       </Button>
@@ -732,6 +737,7 @@ function ModsByIdTab({
                         variant="ghost"
                         size="sm"
                         onPress={() => markRemoved(r.id)}
+                        isDisabled={save.isPending}
                       >
                         <X className="h-3 w-3" /> Remove
                       </Button>

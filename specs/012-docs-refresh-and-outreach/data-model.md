@@ -199,7 +199,7 @@ Per FR-009 and the scope, these 17 files are audited:
 ### Exclusions
 
 - docs/superpowers/** (dated design records; exempt per spec Out of Scope)
-- website/ (submodule; exempt per spec Out of Scope)
+- website/ (submodule; exempt per spec Out of Scope except website screenshot sync per OD-16)
 - modules/ (submodule; exempt per spec Out of Scope)
 
 ---

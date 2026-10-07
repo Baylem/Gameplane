@@ -1,17 +1,21 @@
 # Screenshot Refresh — Automatic dashboard UI updates on release
 #
 # Purpose: Regenerate dashboard screenshots (via Playwright mock mode with MSW) on
-# release tag push, and open a pull request with refreshed images. Screenshot captures
-# run in CI (not locally, per CLAUDE.md rule 8); all images are reproducible and
-# deterministic using mocked API data.
+# release tag push, and open pull requests with refreshed images. Captures run in CI
+# (not locally, per CLAUDE.md rule 8); all images are reproducible and deterministic
+# using mocked API data. Dashboard screenshots go to docs/img/*. Website screenshots
+# (1440x900 viewport, 2880x1800 PNG) are synced to gameplane-website repo as a separate PR.
 #
 # Triggers:
-# - on: push tags v* (automatic on release tag; opened PR triggers CI normally)
+# - on: push tags v* (automatic on release tag; opened PRs trigger CI normally)
 # - on: workflow_dispatch (manual on-demand capture; requires SCREENSHOT_BOT_PAT secret)
 #
-# Credential: Fine-grained Personal Access Token `SCREENSHOT_BOT_PAT` (this repo only,
-# Contents read/write, Pull requests read/write). Unlike GITHUB_TOKEN, PRs opened with
-# this PAT trigger CI workflows normally. See OD-13 (2026-09-02).
+# Credentials:
+# - SCREENSHOT_BOT_PAT: Fine-grained PAT scoped to Gameplane + gameplane-website
+#   (+ gameplane-module, unused), with Contents and Pull requests read/write.
+#   Used by both dashboard PR and website PR steps. The website step skips with a
+#   warning when the token cannot write to gameplane-website. See OD-13 and OD-16
+#   (amended 2026-10-07).
 #
 # Security: No dependency or browser caches are restored in this workflow: it publishes
 # runtime artifacts (screenshots) on a tag push, and zizmor's cache-poisoning audit
@@ -122,4 +126,95 @@ jobs:
               --head "$branch" \
               --title "chore: refresh dashboard screenshots (${REF_NAME})" \
               --body-file <(printf "Automated dashboard screenshot refresh on %s release tag.\n\nBase: %s\nTrigger: %s\n\nSee contract: specs/012-docs-refresh-and-outreach/contracts/screenshot-set.md (OD-3 Decision).\n" "$REF_NAME" "$base" "$EVENT_NAME")
+          fi
+
+      - name: open website screenshot pull request
+        working-directory: ${{ github.workspace }}
+        env:
+          WEBSITE_TOKEN: ${{ secrets.SCREENSHOT_BOT_PAT }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+          GIT_TERMINAL_PROMPT: "0"
+        run: |
+          set -euo pipefail
+
+          if [ -z "$WEBSITE_TOKEN" ]; then
+            echo "::notice title=website screenshots::SCREENSHOT_BOT_PAT is not set; skipping the website pull request"
+            exit 0
+          fi
+
+          # Check that all 5 required screenshot files exist
+          for png in dashboard servers console backups modules; do
+            if [ ! -f "web/website-screenshots/${png}.png" ]; then
+              echo "::error::Missing required screenshot: web/website-screenshots/${png}.png"
+              exit 1
+            fi
+          done
+
+          # Set up credential helper for secure token handling
+          website_repo_path="$RUNNER_TEMP/gameplane-website"
+          helper="$RUNNER_TEMP/git-credential-website"
+          cat >"$helper" <<'EOF'
+          #!/bin/sh
+          printf 'username=x-access-token\npassword=%s\n' "$WEBSITE_TOKEN"
+          EOF
+          chmod 0700 "$helper"
+
+          # Clone gameplane-website repo with credential helper
+          if ! git clone -c credential.helper="$helper" https://github.com/ValgulNecron/gameplane-website.git "$website_repo_path"; then
+            echo "::warning title=website screenshots::SCREENSHOT_BOT_PAT cannot read ValgulNecron/gameplane-website; skipping the website pull request"
+            exit 0
+          fi
+
+          # Configure credential helper for the cloned repo
+          git -C "$website_repo_path" config --local credential.helper "$helper"
+
+          # Preflight check: ensure the token has write access to gameplane-website
+          if ! out="$(git -C "$website_repo_path" push --dry-run origin "HEAD:refs/heads/chore/screenshot-refresh-preflight" 2>&1)"; then
+            echo "::debug::$out"
+            echo "::warning title=website screenshots::SCREENSHOT_BOT_PAT cannot push to ValgulNecron/gameplane-website (it needs Contents and Pull requests read/write on that repo); skipping the website pull request"
+            exit 0
+          fi
+
+          # Copy the 5 screenshot files
+          for png in dashboard servers console backups modules; do
+            cp "web/website-screenshots/${png}.png" "$website_repo_path/src/assets/screenshots/${png}.png"
+          done
+
+          # Check if there are any changes to commit
+          changes="$(git -C "$website_repo_path" status --porcelain -- src/assets/screenshots)"
+          if [ -z "$changes" ]; then
+            echo "no website screenshot changes"
+            exit 0
+          fi
+
+          # Set up git config in the website repo
+          git -C "$website_repo_path" config user.name gameplane-screenshot-bot
+          git -C "$website_repo_path" config user.email gameplane-screenshot-bot@users.noreply.github.com
+
+          # Prepare the branch and commit
+          base="main"
+          branch="chore/screenshot-refresh-${REF_NAME}"
+
+          git -C "$website_repo_path" checkout -b "$branch"
+          git -C "$website_repo_path" add src/assets/screenshots/dashboard.png src/assets/screenshots/servers.png src/assets/screenshots/console.png src/assets/screenshots/backups.png src/assets/screenshots/modules.png
+          git -C "$website_repo_path" commit -s -m "chore: refresh website screenshots (${REF_NAME})" -m "Generated by ValgulNecron/Gameplane .github/workflows/screenshot-refresh.yaml at ${SOURCE_SHA}."
+
+          # The bot branch is disposable: a re-run on the same ref replaces it.
+          git -C "$website_repo_path" push --force origin "HEAD:${branch}"
+
+          # Check for an existing PR and create or update it
+          export GH_TOKEN="$WEBSITE_TOKEN"
+          existing="$(gh pr list -R ValgulNecron/gameplane-website --head "$branch" --base "$base" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            echo "updated existing PR #$existing"
+          else
+            gh pr create \
+              -R ValgulNecron/gameplane-website \
+              --base "$base" \
+              --head "$branch" \
+              --title "chore: refresh website screenshots (${REF_NAME})" \
+              --body-file <(printf "Automated website screenshot refresh on %s.\n\nSource: %s @ %s\nTrigger: %s\n\nSee contract: specs/012-docs-refresh-and-outreach (website screenshot amendment, OD-16).\n" "$REF_NAME" "$SOURCE_REPO" "$SOURCE_SHA" "$EVENT_NAME")
           fi

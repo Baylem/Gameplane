@@ -1,9 +1,9 @@
 # Roadmap to v1
 
-Gameplane is currently **`v0.2.0-beta.8`**. The CRDs, operator, API, agent, and
+Gameplane is currently **`v0.3.0`**. The CRDs, operator, API, agent, and
 dashboard are feature-complete for the v1 scope and stabilized for external
 testing, but the project is not yet recommended for unattended production. This
-page tracks what stands between beta and a v1 GA release.
+page tracks what stands between v0.3 and a v1 GA release.
 
 It is a living document: items move out of it as they ship, and anything
 discovered along the way gets added. For what already works today, see
@@ -73,7 +73,7 @@ remaining gap and is a candidate future hardening, not yet implemented.
 
 Threat-model context lives in [`security.md`](security.md#audit-log-integrity).
 
-### Upgrade testing (`e2e upgrade` bucket) (shipped v0.2.0-beta.8)
+### Upgrade testing (`e2e upgrade` bucket) (shipped v0.2.0-beta.8) <!-- doc-versions: historical -->
 
 `helm upgrade` was the most dangerous operation a user performs and the only
 one CI never exercised. It now runs on every PR, on both amd64 and arm64:
@@ -97,7 +97,7 @@ while, but [`install.md`](install.md#helm-crd-caveat) still told users to run
 
 Not yet covered: upgrades skipping several releases at once, and Postgres [experimental].
 
-### Idle auto-sleep (backend PR #180, dashboard PR #182) (shipped v0.2.0-beta.8)
+### Idle auto-sleep (backend PR #180, dashboard PR #182) (shipped v0.2.0-beta.8) <!-- doc-versions: historical -->
 
 Opt-in per server (`spec.idle`): the operator scales a GameServer to zero once
 it has reported no online players for `afterMinutes`, and brings it back on a
@@ -140,7 +140,7 @@ browser would duplicate scheduling semantics the operator owns (rule 10).
 Persisting it on status is the right fix, and is a CRD change rather than a
 dashboard one.
 
-### Wake-on-connect for idle auto-sleep (shipped v0.2.0-beta.8)
+### Wake-on-connect for idle auto-sleep (shipped v0.2.0-beta.8) <!-- doc-versions: historical -->
 
 A sentinel [optional] component holds advertised ports while a server is asleep and wakes
 it on a genuine connection attempt. Opt-in per server via `spec.idle.wakeOnConnect`
@@ -186,7 +186,7 @@ A new optional component [optional] (distroless Docker image, Helm toggle) expos
 "Propose a fix" returns suggested YAML or `kubectl` invocations as text — no
 create/update/delete/patch tool exists. See [`mcp-server/README.md`](../mcp-server/README.md).
 
-### Module signing: active for official bundles (ECDSA P-256, Rekor-logged) (shipped v0.2.0-beta.8)
+### Module signing: active for official bundles (ECDSA P-256, Rekor-logged) (shipped v0.2.0-beta.8) <!-- doc-versions: historical -->
 
 The keyed-cosign signing mechanism is implemented and e2e-proven, and
 `ModuleSource.spec.verify` can require a valid signature. It is now **active**
@@ -201,7 +201,7 @@ fail-closed when the key is absent. The operator's verify path remains
 offline/keyed, preserving air-gapped functionality. See
 [Signing official bundles](module-authoring.md#signing-official-bundles).
 
-### Hermetic module images (gameplane-module#35, docs in #178) (shipped v0.2.0-beta.8)
+### Hermetic module images (gameplane-module#35, docs in #178) (shipped v0.2.0-beta.8) <!-- doc-versions: historical -->
 
 Every shipped module's default image is now pinned by digest, so a server
 binary can no longer change underneath a user on pod restart with no version
@@ -220,7 +220,7 @@ opt-out), and a monthly workflow refreshes the pins. Authoring rules live in
 
 ## Blocking v1
 
-Nothing hard-blocks v1 anymore. What stands between beta and a v1 GA is the
+Nothing hard-blocks v1 anymore. What stands between v0.3 and a v1 GA is the
 production-readiness hardening below — tracked items, not code gaps.
 
 ---

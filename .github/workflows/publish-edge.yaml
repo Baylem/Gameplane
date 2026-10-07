@@ -1,6 +1,6 @@
 name: publish-edge
 
-# Continuously publish beta images to GHCR on every push to master, so testers
+# Continuously publish edge images to GHCR on every push to master, so testers
 # can track the latest build without waiting for a tagged release. Tagged
 # releases (release.yaml, triggered by v* tags) remain the recommended,
 # version-pinned install path; this is the rolling "edge" channel.

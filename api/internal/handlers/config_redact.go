@@ -92,6 +92,9 @@ func (c *configRuleCache) rulesFor(ctx context.Context, templateName string) con
 // configRedactedMarker. Empty values are left empty. Callers that do not own gs
 // (watch events, objects returned by a client) must pass a copy.
 func (c *configRuleCache) redact(ctx context.Context, gs *unstructured.Unstructured) {
+	// kubectl apply stores a complete older manifest here, including passwords
+	// that may no longer exist in the current config or template schema.
+	unstructured.RemoveNestedField(gs.Object, "metadata", "annotations", "kubectl.kubernetes.io/last-applied-configuration")
 	raw, found, _ := unstructured.NestedFieldNoCopy(gs.Object, "spec", "config")
 	if !found || raw == nil {
 		return

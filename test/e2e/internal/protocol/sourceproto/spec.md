@@ -1,6 +1,6 @@
 # Source Engine Connectionless Protocol
 
-**Status:** Beta (implemented, not yet CI-verified)  
+**Status:** pre-v1 (implemented, not yet CI-verified)  
 **Module / package:** `test/e2e/internal/protocol/source`  
 **Dependencies:** stdlib only (Go 1.25+)
 

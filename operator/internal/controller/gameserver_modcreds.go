@@ -2,6 +2,8 @@ package controller
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -41,7 +43,7 @@ func modCredVolumeMounts(creds resolvedModCreds) []corev1.VolumeMount {
 		return nil
 	}
 	mounts := make([]corev1.VolumeMount, 0, len(creds.providers))
-	for provider := range creds.providers {
+	for _, provider := range slices.Sorted(maps.Keys(creds.providers)) {
 		mounts = append(mounts, corev1.VolumeMount{
 			Name:      modCredsVolumeName(provider),
 			MountPath: fmt.Sprintf("%s/%s", modAuthBaseMountPath, provider),
@@ -57,7 +59,8 @@ func modCredsVolumes(creds resolvedModCreds) []corev1.Volume {
 		return nil
 	}
 	volumes := make([]corev1.Volume, 0, len(creds.providers))
-	for provider, secretName := range creds.providers {
+	for _, provider := range slices.Sorted(maps.Keys(creds.providers)) {
+		secretName := creds.providers[provider]
 		optional := true
 		volumes = append(volumes, corev1.Volume{
 			Name: modCredsVolumeName(provider),
