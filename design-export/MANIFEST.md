@@ -2518,3 +2518,4 @@ T041 and T052 of `specs/022-default-telemetry-dashboard/`. New frames sit in an 
 
 - **JSON:** made with `Print(JSON.stringify(Get(id, {depth: 30, includePathGeometry: true})))`, length-checked against the canvas and re-serialized with `jq .`. Zero `"..."` elisions, and `jq empty` passes.
 - **Screenshots:** `Export(ids, "png", …, {scale: 2})`.
+- **Text wrap fix (2026-10-07, after review by the maintainer):** in `U8Zugm` the title (`p6wdYs`), destination suffix (`w4oMww`) and both field descriptions (`js01h`, `WW2ac`) now use `textGrowth: fixed-width` with `width: fill_container`, so long text wraps inside the banner instead of running past it (most visible on `woRBK`, the bundled host). Re-exported: JSON of `U8Zugm`; PNGs of `U8Zugm`, `jmcmS` and `woRBK`. The screens' JSON is unchanged (they hold only instance overrides).
