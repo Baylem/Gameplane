@@ -2,6 +2,7 @@ package controller
 
 import (
 	"testing"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -30,7 +31,7 @@ func TestRestoreFenceWriteRequeuesImmediatelyAndRechecksWriters(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !result.Requeue || result.RequeueAfter != 0 {
+			if result != (ctrl.Result{RequeueAfter: time.Nanosecond}) {
 				t.Fatalf("successful fence write must requeue immediately: %+v", result)
 			}
 			var ss appsv1.StatefulSet
@@ -58,7 +59,7 @@ func TestRestoreFenceWriteRequeuesImmediatelyAndRechecksWriters(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if result.Requeue || result.RequeueAfter <= 0 {
+			if result != (ctrl.Result{RequeueAfter: 5 * time.Second}) {
 				t.Fatalf("live writer should wait for drainage: %+v", result)
 			}
 			jobs := lifecycleJobs(t, r)
