@@ -11,6 +11,7 @@
 // When it is "sso-only", overrides /auth/providers to report no local-login
 // provider, so Login.tsx renders its SSO-only branch.
 
+import { http, HttpResponse } from "msw";
 import { setupWorker } from "msw/browser";
 import { handlers, buildScreenshotHandlers, buildSsoOnlyHandlers } from "./handlers";
 
@@ -24,6 +25,12 @@ function getHandlerSet(): Parameters<typeof setupWorker>[0][] {
       }
       if (dataset === "sso-only") {
         return buildSsoOnlyHandlers();
+      }
+      if (dataset === "telemetry-notice") {
+        return [http.get("/admin/telemetry/notice", () => HttpResponse.json({pending:true,destination:{kind:"default",host:"telemetry.example.org"}})), ...handlers];
+      }
+      if (dataset === "telemetry-notice-bundled") {
+        return [http.get("/admin/telemetry/notice", () => HttpResponse.json({pending:true,destination:{kind:"bundled",host:"gameplane-telemetry-receiver.gameplane.svc"}})), ...handlers];
       }
     }
   } catch {

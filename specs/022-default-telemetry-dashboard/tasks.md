@@ -239,8 +239,8 @@ description: "Task list for feature 022: default telemetry destination, extended
   The existing `api/internal/handlers/config_test.go:144-156` must pass unchanged.
 - [X] T041 [US1] Design the "Telemetry notice" banner in `design.pen` through Pencil MCP, with states for the default and the bundled destination. It lists the basic fields and the extended fields (stating that a random install ID is included), shows the destination host, offers the actions "Keep sharing", "Turn off extended" and "Turn off all", links to Admin Settings, and links to the data-handling statement. Ask the user to save, run the `design-export` skill (`design-export/json/<id>.json`, `design-export/screenshots/<id>.png`, `design-export/MANIFEST.md`), and commit the design and export together.
 - [X] T042 [P] [US1] In `web/src/lib/api.ts`, add `Telemetry.notice()` and `Telemetry.ack(action: "seen" | "keep" | "extended-off" | "all-off")` with response types from `contracts/api-telemetry-http.md`. Add an MSW default handler for `GET /admin/telemetry/notice` (`{pending:false}`) wherever the shared test handlers live (the same place the `/admin/config` defaults come from; `web/src/test/`).
-- [ ] T043 [US1] Create `web/src/components/ui/TelemetryNotice.tsx`, implementing the T041 design. It uses TanStack Query for `Telemetry.notice()` and posts `seen` once on mount with `void`. Each action calls `ack` and invalidates the `["telemetry"]` and `["admin-config"]` queries. Mount it in `web/src/components/AppLayout.tsx` beside the `SafeModeBanner` block (line 213), only for users who hold `config:manage`, using the existing permission helper the layout uses for admin navigation.
-- [ ] T044 [P] [US1] Create `web/src/components/ui/TelemetryNotice.test.tsx`, and add an `AppLayout` test case, covering:
+- [X] T043 [US1] Create `web/src/components/ui/TelemetryNotice.tsx`, implementing the T041 design. It uses TanStack Query for `Telemetry.notice()` and posts `seen` once on mount with `void`. Each action calls `ack` and invalidates the `["telemetry"]` and `["admin-config"]` queries. Mount it in `web/src/components/AppLayout.tsx` beside the `SafeModeBanner` block (line 213), only for users who hold `config:manage`, using the existing permission helper the layout uses for admin navigation.
+- [X] T044 [P] [US1] Create `web/src/components/ui/TelemetryNotice.test.tsx`, and add an `AppLayout` test case, covering:
   - it renders only while pending
   - `seen` is posted exactly once
   - each action posts the right body and hides the banner
@@ -295,8 +295,8 @@ description: "Task list for feature 022: default telemetry destination, extended
   - the new subtitle that names the install ID
 
   Ask the user to save, run `design-export`, and commit.
-- [ ] T053 [US2] Change `TelemetrySection` in `web/src/routes/AdminSettings.tsx` (lines 1545-1576) to query `Telemetry.get()` (new in `web/src/lib/api.ts`) and render the destination line and the `disabled` and `none` states from the T052 design. Keep the existing basic switch's accessible name "Enable telemetry" or "Disable telemetry".
-- [ ] T054 [P] [US2] *(API part done; web part pending)* Tests:
+- [X] T053 [US2] Change `TelemetrySection` in `web/src/routes/AdminSettings.tsx` (lines 1545-1576) to query `Telemetry.get()` (new in `web/src/lib/api.ts`) and render the destination line and the `disabled` and `none` states from the T052 design. Keep the existing basic switch's accessible name "Enable telemetry" or "Disable telemetry".
+- [X] T054 [P] [US2] Tests:
   - Create `web/src/routes/AdminSettings_telemetry.test.tsx` covering each destination state, and that the switches are disabled and saving is blocked when the operator has disabled telemetry.
   - Extend `api/internal/handlers/telemetry_envtest_test.go` with every `destination.kind` and `operatorDisabled`.
   - Add the MSW default for `GET /admin/telemetry`.
@@ -323,7 +323,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
   Never include `signing_secret`.
 - [X] T058 [P] [US3] In `web/src/lib/config.ts`, add `extended: boolean` to `TelemetryCfg` (line 86). In `web/src/lib/api.ts`, give `Telemetry.get()` its full response type and add `Telemetry.resetInstallId()`. In `web/src/test/factories.ts`, change the default at line 305 to `telemetry: { sendMetrics: false, extended: false }`.
-- [ ] T059 [US3] Finish `TelemetrySection` in `web/src/routes/AdminSettings.tsx` from the T052 design:
+- [X] T059 [US3] Finish `TelemetrySection` in `web/src/routes/AdminSettings.tsx` from the T052 design:
   - the extended switch (accessible name "Enable extended telemetry" or "Disable extended telemetry"), disabled and shown off while basic is off; turning basic off also clears extended in the form draft (FR-019, spec Q7)
   - the install-ID row with "Reset ID" and its confirm dialog
   - the preview JSON block
@@ -331,7 +331,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - the subtitle and helper copy from FR-019, replacing "No server names, player counts, or identifying data."
 
   Saves go through the existing `useSectionForm` and `PUT /admin/config/telemetry`.
-- [ ] T060 [P] [US3] *(API part done; web part pending)* Rewrite the T002-approved cases in `web/src/routes/AdminSettings.test.tsx` and `AdminSettings_sections.test.tsx` for two switches, and extend `AdminSettings_telemetry.test.tsx` with these cases: extended disabled and shown off while basic is off, turning basic off clears extended in the saved body, the reset flow, preview rendering, and status phrases. In `api/internal/handlers/telemetry_envtest_test.go`, add a case where the preview equals the body the reporter POSTs to an `httptest` receiver at the same instant, ignoring `ext.sentAt` (SC-006).
+- [X] T060 [P] [US3] Rewrite the T002-approved cases in `web/src/routes/AdminSettings.test.tsx` and `AdminSettings_sections.test.tsx` for two switches, and extend `AdminSettings_telemetry.test.tsx` with these cases: extended disabled and shown off while basic is off, turning basic off clears extended in the saved body, the reset flow, preview rendering, and status phrases. In `api/internal/handlers/telemetry_envtest_test.go`, add a case where the preview equals the body the reporter POSTs to an `httptest` receiver at the same instant, ignoring `ext.sentAt` (SC-006).
 - [X] T061 [US3] Add these subtests to `test/e2e/telemetry_e2e_test.go`, before the US2 subtests:
   - `extended_off_sends_basic_only`
   - `reset_id_counts_as_new_install`, asserted through the receiver's views once US5 lands (until then, through the `gameplane_telemetry_extended_reports_total` metric on port 8081 with the Bearer token)
@@ -469,9 +469,9 @@ description: "Task list for feature 022: default telemetry destination, extended
 
   Responses use fixed JSON bodies, and `gameplane_telemetry_refused_total{reason}` is incremented. Basic-only reports skip all of these checks.
 - [X] T084 [US7] In `api/internal/telemetry/telemetry.go`, handle a 409 `id_claimed` inside the same attempt: replace the install ID (keeping `signing_secret`), set `last_id_rotation_at`, re-`Collect`, re-sign and re-POST once. A second 409 is recorded as `failed`. A 403 is recorded as `failed` with normal backoff, and never rotates.
-- [ ] T085 [US7] In `TelemetrySection` in `web/src/routes/AdminSettings.tsx`, render the status variant "Install ID replaced on <date>: the destination reported it was in use by another key" when `status.lastIdRotationAt` is set, using the T052 design.
+- [X] T085 [US7] In `TelemetrySection` in `web/src/routes/AdminSettings.tsx`, render the status variant "Install ID replaced on <date>: the destination reported it was in use by another key" when `status.lastIdRotationAt` is set, using the T052 design.
 - [X] T086 [P] [US7] Create `telemetry-receiver/ingest_sign_test.go`, covering the full forgery matrix: another key gives 409; an unsigned report, a one-byte tamper, a stale `sentAt`, a future `sentAt` and a byte-identical replay each give 403. In every case, assert that every table's row counts are unchanged (SC-014). Cover claim expiry together with re-claim (FR-038).
-- [ ] T087 [P] [US7] *(API part done; web part pending)* Add cases to `api/internal/telemetry/telemetry_test.go`: a 409 then 204 sequence rotates the ID and sends with a new key in the same attempt (SC-015); 409 twice gives `failed`; 403 doesn't rotate. Add a web test case for the rotation status line in `web/src/routes/AdminSettings_telemetry.test.tsx`.
+- [X] T087 [P] [US7] Add cases to `api/internal/telemetry/telemetry_test.go`: a 409 then 204 sequence rotates the ID and sends with a new key in the same attempt (SC-015); 409 twice gives `failed`; 403 doesn't rotate. Add a web test case for the rotation status line in `web/src/routes/AdminSettings_telemetry.test.tsx`.
 - [X] T088 [US7] Create `test/e2e/telemetry_client_test.go`, a test-only helper that builds and signs reports with `telemetryschema` and a throwaway secret. Add these subtests to `TestTelemetryLifecycle`, before the US2 subtests:
   - `forged_other_key_gets_409`
   - `unsigned_tampered_replayed_get_403`, asserting that the views are unchanged
@@ -544,7 +544,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - the two listeners, the configuration table and the dashboard
   - invariants: "stores daily aggregates and expiring activity records only, never raw reports or addresses", "basic or extended report, both strictly validated", and "extended reports must be signed"
   - the dependency list (`modernc.org/sqlite` and `telemetryschema`)
-- [ ] T090 [P] Update `api/specs.md`: the Telemetry responsibility line at line 21, the new flags in the line 81 list, the `/admin/telemetry*` routes in the admin route list near line 171, and the migration 015 tables. Update `web/specs.md` for the notice banner and the Telemetry section.
+- [X] T090 [P] Update `api/specs.md`: the Telemetry responsibility line at line 21, the new flags in the line 81 list, the `/admin/telemetry*` routes in the admin route list near line 171, and the migration 015 tables. Update `web/specs.md` for the notice banner and the Telemetry section.
 - [X] T091 [P] Rewrite `docs/install.md` § Telemetry (from line 415) per FR-008:
   - new installs share basic and extended data by default after the notice
   - the exact fields of each tier, including the install ID and signing
@@ -555,7 +555,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 - [X] T092 [P] Add to the `docs/security.md` threat model: the public unauthenticated ingest and summary, the pseudonymous install ID, signing (what it does and doesn't stop: fabricated installs), dashboard authentication and the refusal invariant, source-address handling, and the pepper.
 - [X] T093 [P] Create `docs/telemetry-provider.md`, a runbook for running the project's receiver (OD-2): deploying the image, TLS termination, keeping `:8081` private, the `DASHBOARD_TOKEN` and `ID_PEPPER` Secrets and their rotation, `PUBLIC_SUMMARY=true`, `TRUSTED_PROXY_CIDRS`, retention (`RETENTION_DAYS`, `ACTIVITY_EXPIRY_DAYS`), scraping `/metrics` with the token, and backing up and restoring `telemetry.db`. Link it from `docs/install.md` § Telemetry and `telemetry-receiver/README.md`. (The README link lands with T089.)
 - [X] T094 [P] Add a `CHANGELOG.md` entry with the FR-008 upgrade notes, breaking-ish behaviour notes ("empty `api.telemetry.endpoint` now means the project default"; "the receiver's `/metrics` moved to the dashboard port and needs the dashboard token"), and links to the docs.
-- [ ] T095 *(constant in `web/src/lib/links.ts` done; wiring into the notice and settings section pending)* Add a single statement-URL constant for the data-handling statement (OD-2), for example in the module `web/src` already uses for docs links. If there is none, create `web/src/lib/links.ts`. Use it in `TelemetryNotice.tsx` and `TelemetrySection`.
+- [X] T095 Add a single statement-URL constant for the data-handling statement (OD-2), for example in the module `web/src` already uses for docs links. If there is none, create `web/src/lib/links.ts`. Use it in `TelemetryNotice.tsx` and `TelemetrySection`.
 - [ ] T096 Make the website changes in the `website/` submodule, following its own `CLAUDE.md` and PR flow (default branch `main`):
   - a data-handling statement page (OD-2: maintainers operate it; 24-month aggregates, OD-3; 90-day activity expiry, OD-4; signing; no raw reports or IPs)
   - updates to `src/content/docs/platform-settings-telemetry.mdx`, `helm-values-reference.mdx` and `air-gapped-installation.mdx` (set `api.telemetry.enabled=false`)

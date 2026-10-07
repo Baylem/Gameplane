@@ -34,6 +34,7 @@ import {
   useThemePreferences,
 } from "@/lib/useThemePreferences";
 import { SafeModeBanner } from "@/components/ui/SafeModeBanner";
+import { TelemetryNotice } from "@/components/ui/TelemetryNotice";
 
 // The localStorage key the theme boot script in index.html reads before
 // React mounts — must stay in sync (see index.html and theme-tokens.md).
@@ -158,6 +159,10 @@ export function AppLayout() {
     void navigate({ to: "/settings/theme" });
   };
 
+  const openTelemetrySettings = () => {
+    void navigate({ to: "/admin", search: { section: "telemetry" } });
+  };
+
   const navItems: SidebarNavGroup[] = [
     {
       label: "General",
@@ -244,6 +249,9 @@ export function AppLayout() {
           />
         }
       >
+        {/* First-login telemetry notice (spec 022 FR-004): admins only; the
+            API also answers {pending:false} to callers without config:manage. */}
+        {can(me, "config:manage") && <TelemetryNotice onOpenSettings={openTelemetrySettings} />}
         {centralManagement && (
           <div role="note" className="border-b border-border bg-surface px-4 py-3 text-sm text-muted sm:px-6">
             <strong className="font-medium text-foreground">Central management.</strong>{" "}
