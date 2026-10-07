@@ -7,6 +7,79 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Upgrade Notes
+
+- **Telemetry is on by default for new installs, after a first-login
+  notice:** a new install with a telemetry destination in effect now shares
+  basic and extended data by default. The first admin to sign in sees a
+  notice that lists every field of both tiers and names the destination;
+  nothing is sent before then. Basic is `version`, `servers` and
+  `templates`. Extended adds a random install ID, the Kubernetes minor
+  version, a distribution category, node architectures and a node-count
+  band, server counts per official module plus one `custom` count, feature
+  flags (wake-on-connect, tunnel types, packet capture, backups, single
+  sign-on, audit forwarding), a cluster-count band, the database kind, the
+  UI language, the install's public signing key and the send time. Each
+  tier has its own toggle in **Admin Settings → Telemetry**, which also
+  shows the destination, a preview of the next report and an install-ID
+  reset. The data-handling statement is at
+  <https://valgulnecron.github.io/gameplane-website/telemetry/>. See
+  [`docs/install.md`](docs/install.md#telemetry).
+- **Installs whose basic toggle was already on start sending to the
+  project's default receiver:** an install that saved **Send anonymous usage
+  metrics** while no destination was configured (so it had no effect) starts
+  sending basic reports to the project's default receiver after upgrade.
+  Extended stays off until an admin turns it on, and installs that never
+  saved a choice stay off. Installs already using a custom
+  `api.telemetry.endpoint` or the bundled receiver keep sending only there.
+  Set `api.telemetry.enabled=false` before upgrading to prevent any
+  sending.
+- **Empty `api.telemetry.endpoint` now means the project default:**
+  previously an empty endpoint meant "no telemetry". It now means the
+  project's default receiver, so the admin toggles have an effect on a stock
+  install. Set `api.telemetry.enabled=false` for a hard off (air-gapped
+  clusters, privacy-sensitive installs); it overrides the endpoint, the
+  bundled receiver and the admin toggles, and hides the notice.
+- **The receiver's `/metrics` moved to the dashboard port and needs the
+  dashboard token:** the receiver's Prometheus endpoint is no longer on
+  `:8080`; it is on `:8081` and accepts only
+  `Authorization: Bearer <DASHBOARD_TOKEN>`. Without
+  `api.telemetry.receiver.dashboard.tokenSecretRef.name` there is no
+  dashboard listener and no metrics endpoint, and the chart renders no
+  `ServiceMonitor` for the receiver. Update your Prometheus scrape config
+  or set the token Secret. See
+  [`docs/telemetry-provider.md`](docs/telemetry-provider.md).
+- **The bundled receiver now stores data:** with
+  `api.telemetry.receiver.persistence.enabled` (default `true`, 1Gi) it
+  keeps daily aggregates for 24 months and activity records for 90 days in
+  SQLite on a PVC, and runs a single replica with a `Recreate` strategy.
+  `helm upgrade --reuse-values` from 0.3.0 needs no new values; with no
+  `persistence` block the receiver keeps using an `emptyDir`, as before.
+
+### Added
+
+- **Extended telemetry tier:** a second, separately consented tier with a
+  random install ID, environment, game-usage and feature-adoption
+  categories. Every value comes from a fixed set, a band or a number; no
+  names, namespaces, hostnames, addresses, player counts or custom module
+  names. Reports are signed (Ed25519, key derived from a per-install secret
+  and the install ID); a receiver binds each ID to its first key and refuses
+  forged, stale and replayed reports. See
+  [`docs/security.md`](docs/security.md#telemetry).
+- **Telemetry receiver dashboard and public summary:** a private,
+  token-protected dashboard (`DASHBOARD_LISTEN_ADDR`, default `:8081`) with
+  7-, 30-, 90- and 365-day views, durable daily aggregates
+  (`RETENTION_DAYS`, default `730`, minimum `365`), per-install activity
+  records that expire (`ACTIVITY_EXPIRY_DAYS`, default `90`, minimum `31`),
+  a per-source daily ingest limit (`INGEST_SOURCE_DAILY_LIMIT`, default
+  `20`), `TRUSTED_PROXY_CIDRS`, an `ID_PEPPER` secret and an optional public
+  `GET /v1/summary` (`PUBLIC_SUMMARY=true`). Helm values:
+  `api.telemetry.enabled`, `api.telemetry.interval`,
+  `api.telemetry.receiver.{persistence,dashboard,publicSummary,pepperSecretRef,retentionDays,activityExpiryDays,ingestSourceDailyLimit,trustedProxyCIDRs}`.
+- **Provider runbook:** [`docs/telemetry-provider.md`](docs/telemetry-provider.md)
+  covers deploying the receiver, TLS, keeping `:8081` private, secrets and
+  rotation, retention, scraping `/metrics` and backing up `telemetry.db`.
+
 ## [0.3.0] — 2026-10-05
 
 The first Gameplane release without a pre-release suffix, a pre-v1 release. It

@@ -9,7 +9,8 @@ point. Assume:
 - cluster-internal attackers may land a pod in `gameplane-games` via a
   compromised game image (Minecraft plugins, Valheim mods, etc.),
 - the game pods themselves should be treated as low-trust,
-- a dashboard user with only `servers:read` must not be able to read game passwords (RCON, admin or server passwords) out of a GameServer.
+- a dashboard user with only `servers:read` must not be able to read game passwords (RCON, admin or server passwords) out of a GameServer,
+- a usage-telemetry receiver is reachable by anyone on the internet, so it must stay safe when fed hostile or invented reports, and must never reveal figures to an unauthenticated viewer (see [Telemetry](#telemetry)).
 
 ## Authentication
 
@@ -728,6 +729,120 @@ a self-hosted API-key reviewer:
 The review is advisory — a human reviewer must still validate changes before merge
 — and the tool can be disabled at any time via GitHub's app management UI.
 
+## Telemetry
+
+Usage telemetry has two ends, each with its own trust boundary. For what
+is sent and how to turn it off, see [install.md](install.md#telemetry).
+For running a receiver, see [telemetry-provider.md](telemetry-provider.md).
+The project's data-handling statement is at
+<https://valgulnecron.github.io/gameplane-website/telemetry/>.
+
+### Public unauthenticated ingest and summary
+
+A receiver's `/ingest` is open to the internet by design: installs have no
+project-issued credential, so it cannot require one. (A self-hosted
+receiver can require `AUTH_TOKEN`; the project's default receiver cannot.)
+Anyone can therefore post reports. Defences:
+
+- strict decoding: one JSON object, no duplicate or unknown keys, a 16 KiB
+  body cap, and every string matched against a pattern or a fixed list, so
+  hostile text can't create unbounded categories or reach the dashboard
+- a per-source daily limit on accepted reports (`INGEST_SOURCE_DAILY_LIMIT`,
+  default `20`, tolerant of shared NAT) and a rate limit on the public
+  summary, both held in memory only
+- only daily aggregates and expiring activity records are stored; raw
+  reports and source addresses are never written to disk
+
+`GET /v1/summary` is off unless `PUBLIC_SUMMARY=true`. It returns five
+fixed counts and nothing else: no breakdown, no per-day series, no install
+ID. It is cached and rate-limited so public polling can't degrade ingest.
+
+What this does not stop: someone can invent installs and send fabricated
+basic reports, within the per-source limits. Figures are approximate and
+self-reported, and the dashboard labels them that way.
+
+### The pseudonymous install ID
+
+The extended tier carries a random UUID. It is pseudonymous, not anonymous:
+it links one install's reports over time. It is never derived from the
+cluster, host, network or users; it is kept only on the install; an admin
+can reset it at any time (the install then looks new to the receiver, and
+the old ID lapses); and it is deleted when extended is turned off. The
+receiver stores only `HMAC-SHA256(pepper, installID)` and never stores an
+extended attribute (environment, games, features) next to it; those exist
+only as daily aggregates.
+
+### Signing: what it does and doesn't stop
+
+Every extended report is signed (Ed25519) with a key derived from a random
+secret kept in the install's database combined with the install ID. The
+secret and private key never leave the install. The receiver binds an
+install ID to the first valid key that uses it (the claim) and then
+refuses, changing no stored data:
+
+- a bad or missing signature (`403 bad_signature`)
+- a send time outside `[now - 36h, now + 1h]` (`403 stale`)
+- a different key for a claimed ID (`409 id_claimed`)
+- a send time not later than the last accepted one (`403 replay`)
+
+Signing stops impersonation of an existing install and replayed reports.
+It does not stop fabricated installs: anyone can generate a new ID and key
+pair, so a flood of invented installs is limited only by the per-source
+limits. A claim lasts as long as the activity record (90 days without a
+report by default), then the ID can be claimed again. If the receiver says
+an ID is claimed by another key, the install replaces its ID and resends
+once; any other refusal never rotates the ID.
+
+### Dashboard authentication and the refusal invariant
+
+The receiver's dashboard runs on its own listener (`:8081`), started only
+when `DASHBOARD_TOKEN` is set; with no token there is no dashboard. Keep
+that port off the public internet (the chart's NetworkPolicy admits only
+configured peers). It uses one operator token from a Secret:
+
+- browser login compares the token in constant time and sets an
+  `HttpOnly; Secure; SameSite=Strict` session cookie valid 12 hours; login
+  and logout also require a same-origin `Origin`; logins are limited to 5
+  per minute per source
+- scripts can send `Authorization: Bearer <token>`; `/metrics` accepts only
+  the Bearer token
+- the cookie key is derived from the token, so replacing the token
+  invalidates every session and loses no data
+- every dashboard response carries a strict `Content-Security-Policy`, with
+  no inline script or style, and `Cache-Control: no-store`
+
+**Refusal invariant:** an unauthenticated response never contains a figure,
+a date other than page chrome, a version, category or module name, or
+anything that varies with whether data exists. A wrong token gets the same
+"Invalid credentials" login page whether or not the receiver is empty, and
+an unauthenticated JSON request gets `401 {"error":"unauthorized"}`. CI
+compares the unauthenticated response against the login page of an empty
+receiver.
+
+### Source-address handling
+
+The receiver uses the TCP peer address as the source for limits. It trusts
+`X-Forwarded-For` only when the peer is inside `TRUSTED_PROXY_CIDRS`
+(empty by default), so a client can't pick its own source by setting the
+header. IPv4 addresses and IPv6 `/64` prefixes are treated as one source
+each. Sources live in memory only (capped at 100,000 per limiter,
+least-recently-used evicted), are never logged to the database, and
+counters reset at UTC midnight. If you run behind a proxy and leave
+`TRUSTED_PROXY_CIDRS` empty, every client shares the proxy's address and
+the per-source limits throttle everyone together.
+
+### The pepper
+
+`ID_PEPPER` keys the HMAC that turns an install ID into the stored
+activity-record key, so a stored value can't be matched to an ID taken
+from an install without the pepper. If unset, the receiver generates one
+on first start and keeps it in its database, so it is as exposed as the
+database file. Set it from a Secret to keep it out of backups of the
+database. Changing the pepper makes every existing record unmatchable: all
+installs look new for one day and their activity history is lost; no
+install is locked out. See
+[telemetry-provider.md](telemetry-provider.md#rotating-secrets).
+
 ## API cluster-wide pod list
 
 The API's `<release>-api-read` ClusterRole grants `list` on Pods in **every**
@@ -784,6 +899,11 @@ Secrets Gameplane reads or creates, by convention:
   `gameplane.local/notification-sink=true` in the control-plane namespace
   (user-supplied; referenced by name from Admin Settings → Notifications, read
   by the API at delivery time — see [notifications](notifications.md)).
+- telemetry receiver credentials — `api.telemetry.receiver.dashboard.tokenSecretRef`
+  (dashboard and `/metrics` token) and `api.telemetry.receiver.pepperSecretRef`
+  (install-ID pepper), both user-supplied and injected as env vars
+  (`DASHBOARD_TOKEN`, `ID_PEPPER`), never flags. See
+  [telemetry-provider.md](telemetry-provider.md#rotating-secrets).
 
 Rotation: deleting the `-rcon` secret triggers a reconciliation and
 generates a fresh password on the next pod restart.

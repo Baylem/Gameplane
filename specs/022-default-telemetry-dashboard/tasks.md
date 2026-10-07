@@ -486,16 +486,16 @@ description: "Task list for feature 022: default telemetry destination, extended
   - invariants: "stores daily aggregates and expiring activity records only, never raw reports or addresses", "basic or extended report, both strictly validated", and "extended reports must be signed"
   - the dependency list (`modernc.org/sqlite` and `telemetryschema`)
 - [ ] T090 [P] Update `api/specs.md`: the Telemetry responsibility line at line 21, the new flags in the line 81 list, the `/admin/telemetry*` routes in the admin route list near line 171, and the migration 015 tables. Update `web/specs.md` for the notice banner and the Telemetry section.
-- [ ] T091 [P] Rewrite `docs/install.md` § Telemetry (from line 415) per FR-008:
+- [X] T091 [P] Rewrite `docs/install.md` § Telemetry (from line 415) per FR-008:
   - new installs share basic and extended data by default after the notice
   - the exact fields of each tier, including the install ID and signing
   - who is affected on upgrade, with a warning for installs whose basic toggle was already on
   - `api.telemetry.enabled=false`, a custom endpoint, the bundled receiver, the dashboard token and the public summary
 
   Update `docs/architecture.md:408-410`.
-- [ ] T092 [P] Add to the `docs/security.md` threat model: the public unauthenticated ingest and summary, the pseudonymous install ID, signing (what it does and doesn't stop: fabricated installs), dashboard authentication and the refusal invariant, source-address handling, and the pepper.
-- [ ] T093 [P] Create `docs/telemetry-provider.md`, a runbook for running the project's receiver (OD-2): deploying the image, TLS termination, keeping `:8081` private, the `DASHBOARD_TOKEN` and `ID_PEPPER` Secrets and their rotation, `PUBLIC_SUMMARY=true`, `TRUSTED_PROXY_CIDRS`, retention (`RETENTION_DAYS`, `ACTIVITY_EXPIRY_DAYS`), scraping `/metrics` with the token, and backing up and restoring `telemetry.db`. Link it from `docs/install.md` § Telemetry and `telemetry-receiver/README.md`.
-- [ ] T094 [P] Add a `CHANGELOG.md` entry with the FR-008 upgrade notes, breaking-ish behaviour notes ("empty `api.telemetry.endpoint` now means the project default"; "the receiver's `/metrics` moved to the dashboard port and needs the dashboard token"), and links to the docs.
+- [X] T092 [P] Add to the `docs/security.md` threat model: the public unauthenticated ingest and summary, the pseudonymous install ID, signing (what it does and doesn't stop: fabricated installs), dashboard authentication and the refusal invariant, source-address handling, and the pepper.
+- [X] T093 [P] Create `docs/telemetry-provider.md`, a runbook for running the project's receiver (OD-2): deploying the image, TLS termination, keeping `:8081` private, the `DASHBOARD_TOKEN` and `ID_PEPPER` Secrets and their rotation, `PUBLIC_SUMMARY=true`, `TRUSTED_PROXY_CIDRS`, retention (`RETENTION_DAYS`, `ACTIVITY_EXPIRY_DAYS`), scraping `/metrics` with the token, and backing up and restoring `telemetry.db`. Link it from `docs/install.md` § Telemetry and `telemetry-receiver/README.md`. (The README link lands with T089.)
+- [X] T094 [P] Add a `CHANGELOG.md` entry with the FR-008 upgrade notes, breaking-ish behaviour notes ("empty `api.telemetry.endpoint` now means the project default"; "the receiver's `/metrics` moved to the dashboard port and needs the dashboard token"), and links to the docs.
 - [ ] T095 Add a single statement-URL constant for the data-handling statement (OD-2), for example in the module `web/src` already uses for docs links. If there is none, create `web/src/lib/links.ts`. Use it in `TelemetryNotice.tsx` and `TelemetrySection`.
 - [ ] T096 Make the website changes in the `website/` submodule, following its own `CLAUDE.md` and PR flow (default branch `main`):
   - a data-handling statement page (OD-2: maintainers operate it; 24-month aggregates, OD-3; 90-day activity expiry, OD-4; signing; no raw reports or IPs)
@@ -508,6 +508,12 @@ description: "Task list for feature 022: default telemetry destination, extended
   - the T002 sign-off list
   - that `telemetry-default-gate` is expected to fail until OD-1 is ruled
 - [ ] T099 Once OD-1 is ruled: set `DefaultEndpoint` in `api/internal/telemetry/destination.go`, mark OD-1 RULED in `specs/022-default-telemetry-dashboard/OPEN-DECISIONS.md`, update the destination copy in `design.pen` (with re-export) and the docs, confirm `telemetry-default-gate` passes, and mark the PR ready for review.
+  The docs written under T091-T094 name no receiver host. Once OD-1 is ruled, add the host to:
+  - `docs/install.md` § Telemetry: the sentence on an empty `api.telemetry.endpoint`, and the Upgrading admonition
+  - `docs/architecture.md`: the "API → telemetry-receiver" bullet
+  - `docs/telemetry-provider.md`: the intro paragraph and the "Public summary" paragraph
+  - `CHANGELOG.md` [Unreleased] > Upgrade Notes: the first three bullets
+  - the statement URL `https://valgulnecron.github.io/gameplane-website/telemetry/` (in `docs/install.md`, `docs/security.md`, `docs/telemetry-provider.md` and `CHANGELOG.md`) if the website gets a custom domain; it must match the T095 constant
 - [ ] T100 After merge: `git mv specs/022-default-telemetry-dashboard specs/done_022-default-telemetry-dashboard` and update in-repo references as a `docs:` commit (rule 16, constitution IV). Then delete the remote and local branch (rule 12).
 
 ---
