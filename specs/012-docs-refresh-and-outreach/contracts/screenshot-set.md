@@ -434,8 +434,8 @@ The `.github/workflows/screenshot-refresh.yaml` workflow includes a step that:
 2. Clones the gameplane-website repo
 3. Copies the five PNGs to `src/assets/screenshots/{dashboard,servers,console,backups,modules}.png`
 4. Opens or updates a pull request on gameplane-website main branch (never pushes directly to main)
-5. Uses the `WEBSITE_SCREENSHOT_BOT_PAT` fine-grained PAT secret (scoped to gameplane-website only)
-6. If the secret is unconfigured, logs a `::notice::` and exits 0 (keeping the run green)
+5. Uses the `SCREENSHOT_BOT_PAT` fine-grained PAT secret (scoped to both ValgulNecron/Gameplane and ValgulNecron/gameplane-website, Contents + Pull requests read/write)
+6. If the token cannot write to gameplane-website, logs a `::warning::` and exits 0 (keeping the run green); if the token is empty, logs a `::notice::` and exits 0
 
 ### Dummy Data (FR-019, OD-16)
 

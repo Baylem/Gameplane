@@ -235,7 +235,7 @@ This amendment extends the screenshot-refresh workflow to the public website rep
 
 **FR-027**: The workflow step MUST open or update a pull request on the gameplane-website main branch, copying the five captured PNGs to `src/assets/screenshots/{dashboard,servers,console,backups,modules}.png` in the website clone.
 
-**FR-028**: If the `WEBSITE_SCREENSHOT_BOT_PAT` repository secret is not configured, the website step MUST log a `::notice::` message and exit 0, keeping the overall workflow run green. The secret is fine-grained PAT scoped to gameplane-website only, with Contents + Pull requests write permission.
+**FR-028**: If the `SCREENSHOT_BOT_PAT` repository secret cannot write to gameplane-website, the website step MUST log a `::warning::` message and exit 0, keeping the overall workflow run green (skip and stay green behavior). If the secret is empty, the website step MUST log a `::notice::` message and exit 0. The secret is a fine-grained PAT with Contents + Pull requests read/write permission, scoped to both ValgulNecron/Gameplane and ValgulNecron/gameplane-website.
 
 **FR-029**: The workflow MUST NEVER push directly to the gameplane-website main branch. All changes MUST be submitted via pull request, which is the only path to main (main branch is protected and auto-deploys GitHub Pages).
 

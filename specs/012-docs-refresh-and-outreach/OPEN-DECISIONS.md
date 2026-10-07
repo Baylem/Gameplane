@@ -459,6 +459,8 @@ Should alt text for live-stream tabs (Console, Logs) explicitly note "mocked dat
 
 **Ruling (2026-09-02)**: Option (b) is chosen. The tag-triggered screenshot-refresh workflow opens its pull request with a fine-grained personal access token scoped to this repository with contents and pull-requests write permission, stored as a repository secret (PRs it opens trigger CI normally; the token is rotated like the other repository secrets). Secret name confirmed 2026-09-02: `SCREENSHOT_BOT_PAT`.
 
+**Amendment (2026-10-07)**: The `SCREENSHOT_BOT_PAT` secret has been extended to cover both the Gameplane repo (ValgulNecron/Gameplane) and the gameplane-website repo (ValgulNecron/gameplane-website), with Contents + Pull requests read/write permissions. The single token is now used by both the docs step (this repo) and the website step (gameplane-website), replacing the originally separate `WEBSITE_SCREENSHOT_BOT_PAT` design. When the token cannot write to gameplane-website, the website step logs a `::warning::` and exits 0 (skip and stay green). When the token is empty, the website step logs a `::notice::` and exits 0.
+
 ---
 
 ## New Decisions (OD-14, OD-15)
@@ -536,7 +538,7 @@ Should alt text for live-stream tabs (Console, Logs) explicitly note "mocked dat
 - OD-3c (ruled 2026-09-02): Screenshot refresh workflow exists for main repo docs/img/
 - Maintainer ruling 2026-10-07: Extend screenshot refresh to gameplane-website
 
-**Ruling (2026-10-07)**: The screenshot-refresh workflow EXTENDS to the gameplane-website repo. Maintained separately from the main-repo screenshots per the maintainer's contract ruling, this extends OD-3c/OD-13 and does NOT alter OD-13's token (this repo only). Website screenshot capture is governed by a NEW fine-grained PAT secret (`WEBSITE_SCREENSHOT_BOT_PAT`) scoped to gameplane-website only, with Contents + Pull requests write permission. When the secret is empty the website step logs a `::notice::` and exits 0, keeping the run green. The workflow ALWAYS opens or updates a PR against gameplane-website main and NEVER pushes to main (main auto-deploys GitHub Pages and is protected). The five website screenshots are captured by a separate Playwright spec (web/e2e/specs/websiteScreenshots.spec.ts), distinct from the dashboard-screenshots spec, at 1440×900 viewport with deviceScaleFactor 2 (= 2880×1800 PNG RGBA), output to web/website-screenshots/ (repo path; gitignored). The workflow copies these PNGs to the website clone at src/assets/screenshots/ ({dashboard,servers,console,backups,modules}.png) and opens/updates a PR on gameplane-website main.
+**Ruling (2026-10-07)**: The screenshot-refresh workflow EXTENDS to the gameplane-website repo. Website screenshot capture is governed by the SAME fine-grained PAT secret `SCREENSHOT_BOT_PAT` used for the main-repo docs step, which has been extended by the maintainer to cover both ValgulNecron/Gameplane and ValgulNecron/gameplane-website repositories with Contents + Pull requests write permission. This unified token eliminates the originally-planned separate `WEBSITE_SCREENSHOT_BOT_PAT` design. When the token cannot write to gameplane-website, the website step logs a `::warning::` and exits 0, keeping the run green (skip and stay green behavior per FR-028). When the token is empty, the website step logs a `::notice::` and exits 0. The workflow ALWAYS opens or updates a PR against gameplane-website main and NEVER pushes to main (main auto-deploys GitHub Pages and is protected). The five website screenshots are captured by a separate Playwright spec (web/e2e/specs/websiteScreenshots.spec.ts), distinct from the dashboard-screenshots spec, at 1440×900 viewport with deviceScaleFactor 2 (= 2880×1800 PNG RGBA), output to web/website-screenshots/ (repo path; gitignored). The workflow copies these PNGs to the website clone at src/assets/screenshots/ ({dashboard,servers,console,backups,modules}.png) and opens/updates a PR on gameplane-website main.
 
 **Blocks**:
 - .github/workflows/screenshot-refresh.yaml amendment (extend to website)
@@ -564,7 +566,7 @@ Should alt text for live-stream tabs (Console, Logs) explicitly note "mocked dat
 | OD-13 | Credential for the automatic screenshot-refresh pull request | OD-3c workflow credential | RULED |
 | OD-14 | Allowlist marker for historical version references | OD-1 script, SC-005 gate | RULED |
 | OD-15 | First screenshot capture path (CI dispatch only) | FR-015/016/017, capture task | RULED |
-| OD-16 | Website screenshot sync — credential and workflow scope | workflow-refresh amendment, websiteScreenshots.spec | RULED |
+| OD-16 | Website screenshot sync — unified-token credential and workflow scope (amended 2026-10-07) | workflow-refresh amendment, websiteScreenshots.spec; single `SCREENSHOT_BOT_PAT` token covers both repos | RULED |
 
 ---
 
