@@ -270,7 +270,8 @@ func (h *telemetryHandler) getNotice(w http.ResponseWriter, req *http.Request) {
 }
 
 func (h *telemetryHandler) postNotice(w http.ResponseWriter, req *http.Request) {
-	u := auth.UserFromContext(req.Context())
+	ctx := req.Context()
+	u := auth.UserFromContext(ctx)
 	if u == nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
@@ -288,7 +289,7 @@ func (h *telemetryHandler) postNotice(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "action must be one of seen|keep|extended-off|all-off", http.StatusBadRequest)
 		return
 	}
-	pending, err := h.pending(req.Context(), u)
+	pending, err := h.pending(ctx, u)
 	if err != nil {
 		httperr.Write(w, req, err)
 		return
@@ -301,8 +302,8 @@ func (h *telemetryHandler) postNotice(w http.ResponseWriter, req *http.Request) 
 		http.Error(w, "telemetry notice is not pending", http.StatusConflict)
 		return
 	}
-	err = inTx(req.Context(), h.db, func(tx *sql.Tx) error {
-		return h.apply(req.Context(), tx, u.ID, body.Action)
+	err = inTx(ctx, h.db, func(tx *sql.Tx) error {
+		return h.apply(ctx, tx, u.ID, body.Action)
 	})
 	switch {
 	case errors.Is(err, telemetry.ErrOperatorDisabled):

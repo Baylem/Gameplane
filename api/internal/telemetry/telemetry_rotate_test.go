@@ -40,7 +40,7 @@ func TestReporter_409RotatesTheIDAndResendsInTheSameAttempt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensure secret: %v", err)
 	}
-	r := testReporter(store, telKube(), srv.URL, clk)
+	r := testReporter(store, telKubeExt(), srv.URL, clk)
 
 	if err := sendNow(t, r); err != nil {
 		t.Fatalf("attempt: %v", err)
@@ -90,7 +90,7 @@ func TestReporter_SecondConflictIsFailedAndRotatesOnlyOnce(t *testing.T) {
 	got.setRespond(func(sentReport) int { return http.StatusConflict })
 	clk := newFakeClock()
 	store := telStoreExt(t, true, true)
-	r := testReporter(store, telKube(), srv.URL, clk)
+	r := testReporter(store, telKubeExt(), srv.URL, clk)
 
 	if err := sendNow(t, r); err == nil {
 		t.Fatal("two 409s in a row must fail the attempt")
@@ -112,7 +112,7 @@ func TestReporter_403NeverRotatesTheID(t *testing.T) {
 	srv, got := newSink(t)
 	got.setRespond(func(sentReport) int { return http.StatusForbidden })
 	store := telStoreExt(t, true, true)
-	r := testReporter(store, telKube(), srv.URL, newFakeClock())
+	r := testReporter(store, telKubeExt(), srv.URL, newFakeClock())
 
 	if err := sendNow(t, r); err == nil {
 		t.Fatal("a 403 must fail the attempt")
@@ -139,7 +139,7 @@ func TestReporter_RotationFailsWhenExtendedWentOffDuringTheSend(t *testing.T) {
 		}
 		return http.StatusConflict
 	})
-	r := testReporter(store, telKube(), srv.URL, newFakeClock())
+	r := testReporter(store, telKubeExt(), srv.URL, newFakeClock())
 
 	if err := sendNow(t, r); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("attempt error = %v, want the failed rotation (no ID to replace)", err)
@@ -155,7 +155,7 @@ func TestReporter_RotationFailsWhenExtendedWentOffDuringTheSend(t *testing.T) {
 
 func TestBuildReport_ExtendedFlagControlsTheExtPart(t *testing.T) {
 	store := telStoreExt(t, true, true)
-	deps := Deps{Kube: telKube(), Store: store, Version: "v1.2.3"}
+	deps := Deps{Kube: telKubeExt(), Store: store, Version: "v1.2.3"}
 	now := time.Date(2026, 10, 6, 9, 0, 0, 0, time.UTC)
 
 	basic, err := BuildReport(t.Context(), deps, false, now)

@@ -13,8 +13,27 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+
+	"github.com/ValgulNecron/gameplane/api/internal/kube"
 	"github.com/ValgulNecron/gameplane/telemetryschema"
 )
+
+// telKubeExt returns a fake Kubernetes client with all list kinds registered,
+// needed for tests that use extended telemetry.
+func telKubeExt(objs ...runtime.Object) *kube.Client {
+	gvkr := map[schema.GroupVersionResource]string{
+		kube.GVRs["servers"]:   "GameServerList",
+		kube.GVRs["templates"]: "GameTemplateList",
+		kube.GVRs["schedules"]: "BackupScheduleList",
+		kube.GVRCluster:        "ClusterList",
+		kube.GVRModuleSource:   "ModuleSourceList",
+	}
+	dyn := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), gvkr, objs...)
+	return &kube.Client{Dynamic: dyn}
+}
 
 // Spec 022 US7 (T105, T106): before each POST the reporter asks the provider
 // for a proof-of-work challenge, solves it and sends the solution; a provider
@@ -371,7 +390,7 @@ func TestReporter_409RotationResendCarriesAFreshChallenge(t *testing.T) {
 		return http.StatusNoContent
 	}
 	store := telStoreExt(t, true, true)
-	r := testReporter(store, telKube(), srv.URL, clk)
+	r := testReporter(store, telKubeExt(), srv.URL, clk)
 
 	if err := sendNow(t, r); err != nil {
 		t.Fatalf("attempt: %v", err)
@@ -403,7 +422,7 @@ func TestReporter_400FallbackResendCarriesAFreshChallenge(t *testing.T) {
 		}
 		return http.StatusNoContent
 	}
-	r := testReporter(telStoreExt(t, true, true), telKube(), srv.URL, clk)
+	r := testReporter(telStoreExt(t, true, true), telKubeExt(), srv.URL, clk)
 
 	if err := sendNow(t, r); err != nil {
 		t.Fatalf("attempt: %v", err)
