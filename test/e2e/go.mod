@@ -6,6 +6,10 @@ require github.com/ValgulNecron/gameplane/gp-module v0.0.0
 
 replace github.com/ValgulNecron/gameplane/gp-module => ../../gp-module
 
+require github.com/ValgulNecron/gameplane/telemetryschema v0.0.0
+
+replace github.com/ValgulNecron/gameplane/telemetryschema => ../../telemetryschema
+
 require (
 	github.com/coder/websocket v1.8.15
 	github.com/gopacket/gopacket v1.7.4

@@ -158,3 +158,19 @@ func (s *Store) SetExtUnsupported(ctx context.Context, until, endpoint string) e
 	}
 	return requireOneRow(res, "set ext unsupported")
 }
+
+// RotateInstallID replaces the install ID with id and stamps
+// last_id_rotation_at with at (RFC 3339 UTC), after the receiver reported the
+// old ID as claimed by another key (FR-037). The signing secret is untouched.
+// It changes nothing, and wraps sql.ErrNoRows, when there is no install ID to
+// replace, for example because the extended tier was turned off meanwhile.
+func (s *Store) RotateInstallID(ctx context.Context, id, at string) error {
+	res, err := s.DB.ExecContext(ctx,
+		`UPDATE telemetry_state SET install_id = ?, last_id_rotation_at = ?
+		  WHERE id = ? AND install_id IS NOT NULL`,
+		id, at, telemetrySingletonID)
+	if err != nil {
+		return fmt.Errorf("rotate install id: %w", err)
+	}
+	return requireOneRow(res, "rotate install id")
+}

@@ -195,22 +195,22 @@ test-e2e: ## Run E2E tests (CLUSTER=kind spins an ephemeral cluster; CLUSTER=rem
 ifeq ($(CLUSTER),remote)
 	cd test/e2e && GAMEPLANE_E2E_REUSE_CLUSTER=1 \
 		GAMEPLANE_E2E_CONTEXT=$(REMOTE_CONTEXT) KUBECONFIG=$(REMOTE_KUBECONFIG) \
-		go test -tags=e2e -timeout 35m -v ./...
+		go test -tags=e2e -timeout 50m -v ./...
 else
 	$(MAKE) e2e-images
 	cd test/e2e && GAMEPLANE_E2E_CLUSTER=$(KIND_E2E_CLUSTER) GAMEPLANE_E2E_TAG=$(KIND_E2E_TAG) \
-		go test -tags=e2e -timeout 35m -v ./...
+		go test -tags=e2e -timeout 50m -v ./...
 endif
 
 .PHONY: test-e2e-keep
 test-e2e-keep: ## Re-run E2E tests against an already-up cluster (skip create/destroy)
 	cd test/e2e && GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CLUSTER=$(KIND_E2E_CLUSTER) \
-		go test -tags=e2e -timeout 35m -v ./...
+		go test -tags=e2e -timeout 50m -v ./...
 
 .PHONY: test-e2e-bucket
 test-e2e-bucket: ## Run one CI e2e bucket against an already-up cluster (BUCKET=operator|api-auth|api-roles|api-rbac|api-agent|api-mods|ratelimit|bot-fast|bot-heavy|multicluster|upgrade). BUCKET=multicluster additionally needs a second kind cluster up and GAMEPLANE_E2E_CLUSTER_B set to its name (default gameplane-e2e-b).
 	cd test/e2e && GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CLUSTER=$(KIND_E2E_CLUSTER) \
-		go test -tags=e2e -timeout 35m -v -run "$$(./buckets.sh regex $(BUCKET))" ./...
+		go test -tags=e2e -timeout 50m -v -run "$$(./buckets.sh regex $(BUCKET))" ./...
 
 .PHONY: e2e-up
 e2e-up: e2e-images ## Bring up the e2e kind cluster + install chart (no tests)

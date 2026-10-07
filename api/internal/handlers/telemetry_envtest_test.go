@@ -4,9 +4,13 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -414,5 +418,354 @@ func TestTelemetryConfig_PutNeedsManagePermission(t *testing.T) {
 		map[string]bool{"sendMetrics": false, "extended": false})
 	if rr.Code != http.StatusForbidden {
 		t.Fatalf("PUT without config:manage = %d, want 403", rr.Code)
+	}
+}
+
+// ---- GET /admin/telemetry and POST /admin/telemetry/install-id (US2, US3) ----
+
+// newTelemetryRouterFor is newTelemetryRouter with explicit settings, for
+// tests that also need the reporter's Deps (version) or its destination URL.
+func newTelemetryRouterFor(t *testing.T, settings TelemetrySettings) (*chi.Mux, *db.Store) {
+	t.Helper()
+	store, err := db.Open(context.Background(), "sqlite",
+		"file:"+uniqueResourceName("telemetry")+"?mode=memory&cache=shared&_pragma=journal_mode(WAL)")
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if err := store.Migrate(context.Background()); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	r := chi.NewRouter()
+	r.Use(rbac.Middleware(kube.NewRegistry("default")))
+	MountConfigWithTelemetry(r, store, nil, false, "", nil, settings)
+	MountTelemetry(r, store, settings)
+	return r, store
+}
+
+// getTelemetry calls GET /admin/telemetry as u and decodes the object. The
+// raw body is returned too, for checks on what must not appear in it.
+func getTelemetry(t *testing.T, r http.Handler, u *auth.User) (map[string]any, string) {
+	t.Helper()
+	rr := doConfigAsUser(t, r, u, http.MethodGet, "/admin/telemetry", nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("GET /admin/telemetry = %d, want 200; body=%s", rr.Code, rr.Body.String())
+	}
+	var out map[string]any
+	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode %q: %v", rr.Body.String(), err)
+	}
+	return out, rr.Body.String()
+}
+
+func putTelemetryConsent(t *testing.T, r http.Handler, sendMetrics, extended bool) {
+	t.Helper()
+	rr := doConfigAsUser(t, r, telemetryAdmin(1), http.MethodPut, "/admin/config/telemetry",
+		map[string]bool{"sendMetrics": sendMetrics, "extended": extended})
+	if rr.Code != http.StatusOK {
+		t.Fatalf("PUT telemetry {%v,%v} = %d; body=%s", sendMetrics, extended, rr.Code, rr.Body.String())
+	}
+}
+
+// previewExt returns the preview's ext object, or nil when there is none.
+func previewExt(t *testing.T, got map[string]any) map[string]any {
+	t.Helper()
+	preview, ok := got["preview"].(map[string]any)
+	if !ok {
+		t.Fatalf("preview = %v, want an object", got["preview"])
+	}
+	ext, _ := preview["ext"].(map[string]any)
+	return ext
+}
+
+func TestTelemetryGet_EveryDestinationKind(t *testing.T) {
+	cases := []struct {
+		name         string
+		dest         telemetry.Destination
+		host         any // the expected destination.host, nil for JSON null
+		disabled     bool
+		wantsPreview bool
+	}{
+		{"default", telemetry.Destination{Kind: telemetry.KindDefault, URL: "https://telemetry.example.org/ingest?k=secret", Host: "telemetry.example.org"}, "telemetry.example.org", false, true},
+		{"custom", telemetry.Destination{Kind: telemetry.KindCustom, URL: "http://custom.test:9000/ingest", Host: "custom.test:9000"}, "custom.test:9000", false, true},
+		{"bundled", telemetryBundledDest, "receiver.test:8080", false, true},
+		{"disabled", telemetry.Destination{Kind: telemetry.KindDisabled}, nil, true, false},
+		{"none", telemetry.Destination{Kind: telemetry.KindNone}, nil, false, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r, _ := newTelemetryRouter(t, tc.dest)
+			got, raw := getTelemetry(t, r, telemetryAdmin(1))
+
+			dest, _ := got["destination"].(map[string]any)
+			if dest["kind"] != tc.dest.Kind || dest["host"] != tc.host {
+				t.Fatalf("destination = %v, want kind %q and host %v (never the path or query)", dest, tc.dest.Kind, tc.host)
+			}
+			if strings.Contains(raw, "secret") || strings.Contains(raw, "/ingest") {
+				t.Fatalf("body leaks the destination URL: %s", raw)
+			}
+			if got["operatorDisabled"] != tc.disabled {
+				t.Fatalf("operatorDisabled = %v, want %v", got["operatorDisabled"], tc.disabled)
+			}
+			// The stored choice is reported even when the operator's setting
+			// overrides it.
+			consent, _ := got["consent"].(map[string]any)
+			if consent["basic"] != true || consent["extended"] != true || consent["source"] != "default" {
+				t.Fatalf("consent = %v, want the fresh-install default", consent)
+			}
+			if tc.wantsPreview {
+				preview, ok := got["preview"].(map[string]any)
+				if !ok || preview["servers"] != float64(0) || preview["templates"] != float64(0) {
+					t.Fatalf("preview = %v, want a basic report with zero counts", got["preview"])
+				}
+				// A fresh install has no ID until the notice is seen, so the
+				// preview carries no ext part yet.
+				if _, hasExt := preview["ext"]; hasExt || got["installId"] != nil {
+					t.Fatalf("preview ext / installId = %v / %v, want none before an ID exists", preview["ext"], got["installId"])
+				}
+			} else if got["preview"] != nil {
+				t.Fatalf("preview = %v, want null for kind %s", got["preview"], tc.name)
+			}
+			status, _ := got["status"].(map[string]any)
+			if status["lastOutcome"] != "never" || status["lastAttemptAt"] != nil ||
+				status["lastSuccessAt"] != nil || status["lastIdRotationAt"] != nil {
+				t.Fatalf("status = %v, want never with every timestamp null", status)
+			}
+		})
+	}
+}
+
+func TestTelemetryGet_InstallIDAndPreviewFollowTheTiers(t *testing.T) {
+	r, store := newTelemetryRouter(t, telemetryBundledDest)
+	admin := telemetryAdmin(1)
+
+	putTelemetryConsent(t, r, true, true)
+	got, _ := getTelemetry(t, r, admin)
+	id := telemetryState(t, store).InstallID
+	if id == "" || got["installId"] != id {
+		t.Fatalf("installId = %v, want the stored id %q while extended is on", got["installId"], id)
+	}
+	ext := previewExt(t, got)
+	if ext == nil || ext["installId"] != id || ext["key"] == "" || ext["sentAt"] == "" {
+		t.Fatalf("preview ext = %v, want the id, the public key and a send time", ext)
+	}
+
+	putTelemetryConsent(t, r, true, false)
+	got, _ = getTelemetry(t, r, admin)
+	if got["installId"] != nil || previewExt(t, got) != nil {
+		t.Fatalf("installId / ext = %v / %v, want none while extended is off (FR-012)", got["installId"], previewExt(t, got))
+	}
+
+	putTelemetryConsent(t, r, false, false)
+	got, _ = getTelemetry(t, r, admin)
+	if got["preview"] != nil {
+		t.Fatalf("preview = %v, want null while basic is off", got["preview"])
+	}
+}
+
+func TestTelemetryGet_PreviewHonoursTheFallbackMarker(t *testing.T) {
+	dest := telemetry.Destination{Kind: telemetry.KindCustom, URL: "http://old.test/ingest", Host: "old.test"}
+	r, store := newTelemetryRouter(t, dest)
+	putTelemetryConsent(t, r, true, true)
+	if err := store.SetExtUnsupported(context.Background(),
+		time.Now().Add(24*time.Hour).UTC().Format(time.RFC3339), dest.URL); err != nil {
+		t.Fatalf("set marker: %v", err)
+	}
+	got, _ := getTelemetry(t, r, telemetryAdmin(1))
+	if previewExt(t, got) != nil {
+		t.Fatal("the preview must be basic only while the endpoint is marked as not understanding ext")
+	}
+	if consent, _ := got["consent"].(map[string]any); consent["extended"] != true || got["installId"] == nil {
+		t.Fatalf("consent / installId = %v / %v, the stored choice and the ID are unaffected", got["consent"], got["installId"])
+	}
+}
+
+func TestTelemetryGet_StatusReportsTheStoredDelivery(t *testing.T) {
+	r, store := newTelemetryRouter(t, telemetryBundledDest)
+	putTelemetryConsent(t, r, true, true)
+	st := telemetryState(t, store)
+	st.LastAttemptAt = "2026-10-06T09:12:44Z"
+	st.LastSuccessAt = "2026-10-05T09:12:44Z"
+	st.LastOutcome = "failed"
+	st.LastIDRotationAt = "2026-10-04T08:00:00Z"
+	if err := store.UpdateTelemetryState(context.Background(), st); err != nil {
+		t.Fatalf("update state: %v", err)
+	}
+
+	got, _ := getTelemetry(t, r, telemetryAdmin(1))
+	status, _ := got["status"].(map[string]any)
+	want := map[string]any{
+		"lastAttemptAt":    "2026-10-06T09:12:44Z",
+		"lastSuccessAt":    "2026-10-05T09:12:44Z",
+		"lastOutcome":      "failed",
+		"lastIdRotationAt": "2026-10-04T08:00:00Z",
+	}
+	if !reflect.DeepEqual(status, want) {
+		t.Fatalf("status = %v, want %v", status, want)
+	}
+}
+
+func TestTelemetryGet_NeverExposesTheSigningSecret(t *testing.T) {
+	r, store := newTelemetryRouter(t, telemetryBundledDest)
+	putTelemetryConsent(t, r, true, true)
+	secret, err := store.EnsureSigningSecret(context.Background())
+	if err != nil || len(secret) == 0 {
+		t.Fatalf("signing secret = %x, %v, want one created by the save", secret, err)
+	}
+	_, raw := getTelemetry(t, r, telemetryAdmin(1))
+	for _, enc := range []string{
+		base64.StdEncoding.EncodeToString(secret), base64.RawURLEncoding.EncodeToString(secret),
+		base64.RawStdEncoding.EncodeToString(secret), hex.EncodeToString(secret), "signing",
+	} {
+		if strings.Contains(raw, enc) {
+			t.Fatalf("GET /admin/telemetry leaks the signing secret (%q): %s", enc, raw)
+		}
+	}
+}
+
+func TestTelemetryGet_NeedsConfigRead(t *testing.T) {
+	r, _ := newTelemetryRouter(t, telemetryBundledDest)
+	if got, _ := getTelemetry(t, r, telemetryReader()); got["destination"] == nil {
+		t.Fatalf("a config:read holder must get the status, got %v", got)
+	}
+	if rr := doConfigAsUser(t, r, configOperatorUser(), http.MethodGet, "/admin/telemetry", nil); rr.Code != http.StatusForbidden {
+		t.Fatalf("operator GET = %d, want 403", rr.Code)
+	}
+}
+
+func TestTelemetryInstallID_ResetReplacesTheIDAndKeepsTheRest(t *testing.T) {
+	r, store := newTelemetryRouter(t, telemetryBundledDest)
+	admin := telemetryAdmin(1)
+	putTelemetryConsent(t, r, true, true)
+	before := telemetryState(t, store)
+	secretBefore, err := store.EnsureSigningSecret(context.Background())
+	if err != nil {
+		t.Fatalf("secret: %v", err)
+	}
+
+	rr := doConfigAsUser(t, r, admin, http.MethodPost, "/admin/telemetry/install-id", nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("reset = %d, want 200; body=%s", rr.Code, rr.Body.String())
+	}
+	var resp map[string]string
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil || len(resp) != 1 {
+		t.Fatalf("reset body = %q (%v), want exactly {installId}", rr.Body.String(), err)
+	}
+	after := telemetryState(t, store)
+	if resp["installId"] == "" || resp["installId"] == before.InstallID || after.InstallID != resp["installId"] {
+		t.Fatalf("ids: response %q stored %q before %q, want a new id stored and returned", resp["installId"], after.InstallID, before.InstallID)
+	}
+	if after.ConsentSource != before.ConsentSource || after.NextDueAt != before.NextDueAt || after.LastIDRotationAt != "" {
+		t.Fatalf("state = %+v, want the source, the schedule and the rotation stamp unchanged (was %+v)", after, before)
+	}
+	if secretAfter, err := store.EnsureSigningSecret(context.Background()); err != nil || string(secretAfter) != string(secretBefore) {
+		t.Fatalf("a reset must keep the signing secret: %v", err)
+	}
+	got, _ := getTelemetry(t, r, admin)
+	if got["installId"] != resp["installId"] || previewExt(t, got)["installId"] != resp["installId"] {
+		t.Fatalf("GET after reset = %v, want the preview to show the new id at once", got)
+	}
+}
+
+func TestTelemetryInstallID_CreatesTheFirstIDOnAFreshInstall(t *testing.T) {
+	r, store := newTelemetryRouter(t, telemetryBundledDest)
+	// Fresh install: extended is on in the stored choice but no ID exists yet.
+	if rr := doConfigAsUser(t, r, telemetryAdmin(1), http.MethodPost, "/admin/telemetry/install-id", nil); rr.Code != http.StatusOK {
+		t.Fatalf("reset = %d, want 200; body=%s", rr.Code, rr.Body.String())
+	}
+	if st := telemetryState(t, store); st.InstallID == "" || st.ConsentSource != db.TelemetryConsentDefault {
+		t.Fatalf("state = %+v, want an ID and the source still default", st)
+	}
+}
+
+func TestTelemetryInstallID_RefusedWhenExtendedOffOrOperatorDisabled(t *testing.T) {
+	t.Run("extended off", func(t *testing.T) {
+		r, store := newTelemetryRouter(t, telemetryBundledDest)
+		putTelemetryConsent(t, r, true, false)
+		rr := doConfigAsUser(t, r, telemetryAdmin(1), http.MethodPost, "/admin/telemetry/install-id", nil)
+		if rr.Code != http.StatusConflict {
+			t.Fatalf("reset = %d, want 409; body=%s", rr.Code, rr.Body.String())
+		}
+		if telemetryState(t, store).InstallID != "" {
+			t.Fatal("a refused reset must not create an ID")
+		}
+	})
+	t.Run("basic off", func(t *testing.T) {
+		r, _ := newTelemetryRouter(t, telemetryBundledDest)
+		putTelemetryConsent(t, r, false, true)
+		if rr := doConfigAsUser(t, r, telemetryAdmin(1), http.MethodPost, "/admin/telemetry/install-id", nil); rr.Code != http.StatusConflict {
+			t.Fatalf("reset = %d, want 409", rr.Code)
+		}
+	})
+	t.Run("operator disabled", func(t *testing.T) {
+		r, _ := newTelemetryRouter(t, telemetry.Destination{Kind: telemetry.KindDisabled})
+		rr := doConfigAsUser(t, r, telemetryAdmin(1), http.MethodPost, "/admin/telemetry/install-id", nil)
+		if rr.Code != http.StatusConflict || !strings.Contains(rr.Body.String(), "disabled by the operator") {
+			t.Fatalf("reset = %d %q, want 409 with the operator message", rr.Code, rr.Body.String())
+		}
+	})
+	t.Run("needs config:manage", func(t *testing.T) {
+		r, _ := newTelemetryRouter(t, telemetryBundledDest)
+		if rr := doConfigAsUser(t, r, telemetryReader(), http.MethodPost, "/admin/telemetry/install-id", nil); rr.Code != http.StatusForbidden {
+			t.Fatalf("reset by a reader = %d, want 403", rr.Code)
+		}
+	})
+}
+
+// SC-006: the preview is the body the reporter POSTs, apart from the send time.
+func TestTelemetryPreview_EqualsTheBodyTheReporterPosts(t *testing.T) {
+	for _, extended := range []bool{true, false} {
+		name := "basic only"
+		if extended {
+			name = "with the extended part"
+		}
+		t.Run(name, func(t *testing.T) {
+			bodies := make(chan []byte, 4)
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				b, _ := io.ReadAll(req.Body)
+				bodies <- b
+				w.WriteHeader(http.StatusNoContent)
+			}))
+			t.Cleanup(srv.Close)
+			dest := telemetry.Destination{Kind: telemetry.KindCustom, URL: srv.URL, Host: "receiver.test"}
+			r, store := newTelemetryRouterFor(t, TelemetrySettings{
+				Dest: dest, Interval: time.Hour, Deps: telemetry.Deps{Version: "v9.9.9"},
+			})
+			putTelemetryConsent(t, r, true, extended)
+
+			got, _ := getTelemetry(t, r, telemetryAdmin(1))
+			// The reporter runs two hours ahead, so the saved slot is due.
+			rep := telemetry.New(telemetry.Config{
+				Dest: dest, Interval: time.Hour,
+				Deps: telemetry.Deps{Store: store, Version: "v9.9.9"},
+				Now:  func() time.Time { return time.Now().Add(2 * time.Hour) },
+				Rand: func(int64) int64 { return 0 },
+			})
+			if err := rep.Tick(context.Background()); err != nil {
+				t.Fatalf("tick: %v", err)
+			}
+			var posted map[string]any
+			select {
+			case b := <-bodies:
+				if err := json.Unmarshal(b, &posted); err != nil {
+					t.Fatalf("decode posted body %q: %v", b, err)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("the reporter posted nothing")
+			}
+
+			preview, _ := got["preview"].(map[string]any)
+			for _, m := range []map[string]any{preview, posted} {
+				if ext, ok := m["ext"].(map[string]any); ok {
+					delete(ext, "sentAt")
+				}
+			}
+			if !reflect.DeepEqual(preview, posted) {
+				t.Fatalf("preview != posted body (ignoring ext.sentAt):\npreview %v\nposted  %v", preview, posted)
+			}
+			if _, hasExt := posted["ext"]; hasExt != extended || posted["version"] != "v9.9.9" {
+				t.Fatalf("posted = %v, want ext present = %v and the configured version", posted, extended)
+			}
+		})
 	}
 }

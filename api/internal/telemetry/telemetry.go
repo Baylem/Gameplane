@@ -171,7 +171,14 @@ func (r *Reporter) jitter(d time.Duration) time.Duration {
 // extWithheld reports whether the extended part is withheld because this
 // endpoint answered 400 to it within the last 7 days.
 func (r *Reporter) extWithheld(st db.TelemetryState, now time.Time) bool {
-	if st.ExtUnsupportedEndpoint != r.dest.URL {
+	return ExtWithheld(st, r.dest.URL, now)
+}
+
+// ExtWithheld reports whether the extended part is withheld from endpoint
+// because it answered 400 to it within the last 7 days. The reporter and the
+// admin preview both use it, so the preview shows what would be sent.
+func ExtWithheld(st db.TelemetryState, endpoint string, now time.Time) bool {
+	if st.ExtUnsupportedEndpoint != endpoint {
 		return false
 	}
 	until, err := time.Parse(time.RFC3339, st.ExtUnsupportedUntil)
@@ -196,14 +203,18 @@ func (r *Reporter) attempt(ctx context.Context, st db.TelemetryState, c Consent,
 	status, err := r.send(ctx, rep)
 	if err == nil && status == http.StatusBadRequest && rep.Ext != nil {
 		// The endpoint doesn't understand the extended part: re-send the
-		// basic report once and stop sending ext to it for a week. A 409
-		// (ID rotation) branch joins this switch in US7.
+		// basic report once and stop sending ext to it for a week.
 		basic := rep
 		basic.Ext = nil
 		status, err = r.send(ctx, basic)
 		if mErr := r.store.SetExtUnsupported(ctx, stamp(now.Add(extFallbackFor)), r.dest.URL); mErr != nil {
 			slog.Warn("telemetry fallback marker", "err", mErr)
 		}
+	} else if err == nil && status == http.StatusConflict && rep.Ext != nil {
+		// The receiver says another key claimed this install ID (FR-037):
+		// replace the ID, keep the signing secret, and re-send once. A second
+		// 409 falls through to the failure below. A 403 never gets here.
+		status, err = r.rotateAndResend(ctx, now)
 	}
 	if err == nil && (status < 200 || status > 299) {
 		err = fmt.Errorf("telemetry endpoint returned %d", status)
@@ -255,14 +266,39 @@ func (r *Reporter) build(ctx context.Context, st db.TelemetryState, extended boo
 			return telemetryschema.Report{}, fmt.Errorf("telemetry build: %w", err)
 		}
 	}
-	deps := r.deps
-	deps.Extended = extended
-	deps.Now = func() time.Time { return now }
-	rep, err := Collect(ctx, deps)
+	rep, err := BuildReport(ctx, r.deps, extended, now)
 	if err != nil {
 		return telemetryschema.Report{}, fmt.Errorf("telemetry build: %w", err)
 	}
 	return rep, nil
+}
+
+// BuildReport collects the report for deps at now, with the extended part
+// when extended is true. The reporter and the admin preview both call it, so
+// the preview is the report that would be sent (SC-006).
+func BuildReport(ctx context.Context, deps Deps, extended bool, now time.Time) (telemetryschema.Report, error) {
+	deps.Extended = extended
+	deps.Now = func() time.Time { return now }
+	return Collect(ctx, deps)
+}
+
+// rotateAndResend handles a 409 id_claimed: it replaces the install ID (the
+// signing secret is kept, so the new ID gets a new, unlinkable key), records
+// last_id_rotation_at, rebuilds and re-signs the extended report, and POSTs it
+// once. It returns that POST's status.
+func (r *Reporter) rotateAndResend(ctx context.Context, now time.Time) (int, error) {
+	id, err := NewInstallID()
+	if err != nil {
+		return 0, fmt.Errorf("telemetry rotate: %w", err)
+	}
+	if err := r.store.RotateInstallID(ctx, id, stamp(now)); err != nil {
+		return 0, fmt.Errorf("telemetry rotate: %w", err)
+	}
+	rep, err := BuildReport(ctx, r.deps, true, now)
+	if err != nil {
+		return 0, fmt.Errorf("telemetry rotate: %w", err)
+	}
+	return r.send(ctx, rep)
 }
 
 // send encodes rep and POSTs it, signing the exact body bytes when rep

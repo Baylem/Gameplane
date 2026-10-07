@@ -286,7 +286,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - a custom endpoint renders without `BUNDLED`
   - defaults render no endpoint
   - `charts/gameplane/testdata/upgrade-from-v0.2.0-beta.8-values.yaml` renders with `--reuse-values` semantics without failing
-- [ ] T051 [US2] Add `GET /admin/telemetry` to `api/internal/handlers/telemetry.go`. It returns `destination`, `operatorDisabled` and `consent`, with `installId`, `preview` and `status` set to `null` until T057.
+- [X] T051 [US2] Add `GET /admin/telemetry` to `api/internal/handlers/telemetry.go`. It returns `destination`, `operatorDisabled` and `consent`, with `installId`, `preview` and `status` set to `null` until T057.
 - [ ] T052 [US2] Design the Telemetry section of Admin Settings in `design.pen` through Pencil MCP, as one frame per destination state: `default`, `custom`, `bundled`, `disabled` (both switches disabled, with a "disabled by the operator" message) and `none`. Include, for use by US3 and US7:
   - the basic switch and the extended switch
   - the install-ID row with a "Reset ID" action and a confirm dialog
@@ -296,11 +296,11 @@ description: "Task list for feature 022: default telemetry destination, extended
 
   Ask the user to save, run `design-export`, and commit.
 - [ ] T053 [US2] Change `TelemetrySection` in `web/src/routes/AdminSettings.tsx` (lines 1545-1576) to query `Telemetry.get()` (new in `web/src/lib/api.ts`) and render the destination line and the `disabled` and `none` states from the T052 design. Keep the existing basic switch's accessible name "Enable telemetry" or "Disable telemetry".
-- [ ] T054 [P] [US2] Tests:
+- [ ] T054 [P] [US2] *(API part done; web part pending)* Tests:
   - Create `web/src/routes/AdminSettings_telemetry.test.tsx` covering each destination state, and that the switches are disabled and saving is blocked when the operator has disabled telemetry.
   - Extend `api/internal/handlers/telemetry_envtest_test.go` with every `destination.kind` and `operatorDisabled`.
   - Add the MSW default for `GET /admin/telemetry`.
-- [ ] T055 [US2] Add these subtests to `test/e2e/telemetry_e2e_test.go`:
+- [X] T055 [US2] Add these subtests to `test/e2e/telemetry_e2e_test.go`:
   - `custom_destination_receives_only`: deploy a second receiver Deployment and Service with a unique name in the release namespace, `helm upgrade --reuse-values --set api.telemetry.endpoint=<it>`, and assert that its counter rises and the bundled receiver's doesn't.
   - `old_receiver_gets_basic`: the custom destination runs the beta.8 image `ghcr.io/valgulnecron/gameplane/telemetry-receiver:<beta.8 release tag>`. The scout confirms the tag format from `.github/workflows/release.yaml`. Assert that reports are accepted (FR-016, SC-013).
   - `operator_disabled_sends_nothing`: this must be the **last** subtest. Run `--set api.telemetry.enabled=false` and assert zero new reports over 3 intervals, `PUT /admin/config/telemetry` returning 409, and the notice not pending.
@@ -315,8 +315,8 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Independent Test**: For each destination, with extended on and off, the preview matches what the receiver recorded. A reset shows a new ID. Turning extended off removes the ID.
 
-- [ ] T056 [US3] Add `POST /admin/telemetry/install-id` to `api/internal/handlers/telemetry.go`. It rotates through `SetInstallID(newUUIDv4)`, returns `200 {"installId"}`, and returns `409` when extended is off.
-- [ ] T057 [US3] Complete `GET /admin/telemetry`:
+- [X] T056 [US3] Add `POST /admin/telemetry/install-id` to `api/internal/handlers/telemetry.go`. It rotates through `SetInstallID(newUUIDv4)`, returns `200 {"installId"}`, and returns `409` when extended is off.
+- [X] T057 [US3] Complete `GET /admin/telemetry`:
   - `installId` (null when extended is off)
   - `preview`, which is the `Collect` output and null when basic is off or the kind is `disabled` or `none`
   - `status` with `lastAttemptAt`, `lastSuccessAt`, `lastOutcome` and `lastIdRotationAt`
@@ -331,8 +331,8 @@ description: "Task list for feature 022: default telemetry destination, extended
   - the subtitle and helper copy from FR-019, replacing "No server names, player counts, or identifying data."
 
   Saves go through the existing `useSectionForm` and `PUT /admin/config/telemetry`.
-- [ ] T060 [P] [US3] Rewrite the T002-approved cases in `web/src/routes/AdminSettings.test.tsx` and `AdminSettings_sections.test.tsx` for two switches, and extend `AdminSettings_telemetry.test.tsx` with these cases: extended disabled and shown off while basic is off, turning basic off clears extended in the saved body, the reset flow, preview rendering, and status phrases. In `api/internal/handlers/telemetry_envtest_test.go`, add a case where the preview equals the body the reporter POSTs to an `httptest` receiver at the same instant, ignoring `ext.sentAt` (SC-006).
-- [ ] T061 [US3] Add these subtests to `test/e2e/telemetry_e2e_test.go`, before the US2 subtests:
+- [ ] T060 [P] [US3] *(API part done; web part pending)* Rewrite the T002-approved cases in `web/src/routes/AdminSettings.test.tsx` and `AdminSettings_sections.test.tsx` for two switches, and extend `AdminSettings_telemetry.test.tsx` with these cases: extended disabled and shown off while basic is off, turning basic off clears extended in the saved body, the reset flow, preview rendering, and status phrases. In `api/internal/handlers/telemetry_envtest_test.go`, add a case where the preview equals the body the reporter POSTs to an `httptest` receiver at the same instant, ignoring `ext.sentAt` (SC-006).
+- [X] T061 [US3] Add these subtests to `test/e2e/telemetry_e2e_test.go`, before the US2 subtests:
   - `extended_off_sends_basic_only`
   - `reset_id_counts_as_new_install`, asserted through the receiver's views once US5 lands (until then, through the `gameplane_telemetry_extended_reports_total` metric on port 8081 with the Bearer token)
   - `preview_matches_received`, comparing the preview's version, servers and templates with the receiver's recorded latest-day values
@@ -395,7 +395,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - the ingest 429 response
   - `X-Forwarded-For` honoured only from trusted peers
   - `GET /metrics` returns `404` on the public listener, `401` on the dashboard listener without the Bearer token, and `200` with it
-- [ ] T071 [US4] Add these subtests to `test/e2e/telemetry_e2e_test.go`:
+- [X] T071 [US4] Add these subtests to `test/e2e/telemetry_e2e_test.go`:
   - `dashboard_refuses_unauthenticated`, where `/` returns 303 to a login page that contains no digits from the data and `/api/v1/views` returns 401
   - `dashboard_shows_reports`, which signs in with the Secret's token through `Env.PortForward` on 8081 (setting the `Cookie` header by hand, since the session cookie is `Secure` and the port-forward is plain HTTP). Views end at yesterday (UTC), so same-day reports from earlier subtests are not in them: it asserts that `/api/v1/views` returns `200` with `asOf` = yesterday and a well-formed body, and that `/metrics` (Bearer) counts the earlier reports. The exact figures are covered by `views_test.go`.
 
@@ -430,7 +430,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - **Dedupe**: same ID, same day.
   - **Schema check**: `activity` has exactly the columns `id_hmac, key_fp, first_seen, last_seen, last_sent_at, last_version` (FR-014, SC-012).
   - **Performance**: seed 365 days at 10,000 reports per day as aggregates, and assert `BuildViews(365)` takes under 3 s (SC-010).
-- [ ] T078 [US5] Add the subtest `extended_counted_once_per_day` to `test/e2e/telemetry_e2e_test.go`. Two reports from the same ID on the same day give `active1d = 1` and duplicates ≥ 1. After `extended_off_sends_basic_only` (T061), `ext_reports` doesn't increase.
+- [X] T078 [US5] Add the subtest `extended_counted_once_per_day` to `test/e2e/telemetry_e2e_test.go`. Two reports from the same ID on the same day give `active1d = 1` and duplicates ≥ 1. After `extended_off_sends_basic_only` (T061), `ext_reports` doesn't increase.
 
 **Checkpoint**: extended data is collected and visible. Signature enforcement follows in US7.
 
@@ -451,7 +451,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   `reportsTotal` comes from `meta.reports_total`.
 - [X] T080 [P] [US6] In `charts/gameplane/templates/telemetry-receiver.yaml`, render `PUBLIC_SUMMARY` from `publicSummary.enabled` (`hasKey` guard, default false).
 - [X] T081 [P] [US6] Create `telemetry-receiver/summary_test.go`, covering exactly five keys (decode into a map and assert its length), 404 when disabled, the headers, ETag and 304, the limiter, and that `reportsTotal` is unchanged after a retention sweep.
-- [ ] T082 [US6] Add the subtest `public_summary_five_keys` to `test/e2e/telemetry_e2e_test.go`, through `Env.PortForward` on 8080.
+- [X] T082 [US6] Add the subtest `public_summary_five_keys` to `test/e2e/telemetry_e2e_test.go`, through `Env.PortForward` on 8080.
 
 ---
 
@@ -468,11 +468,11 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `sentAt > last_sent_at`, which fails with 403 `replay`
 
   Responses use fixed JSON bodies, and `gameplane_telemetry_refused_total{reason}` is incremented. Basic-only reports skip all of these checks.
-- [ ] T084 [US7] In `api/internal/telemetry/telemetry.go`, handle a 409 `id_claimed` inside the same attempt: replace the install ID (keeping `signing_secret`), set `last_id_rotation_at`, re-`Collect`, re-sign and re-POST once. A second 409 is recorded as `failed`. A 403 is recorded as `failed` with normal backoff, and never rotates.
+- [X] T084 [US7] In `api/internal/telemetry/telemetry.go`, handle a 409 `id_claimed` inside the same attempt: replace the install ID (keeping `signing_secret`), set `last_id_rotation_at`, re-`Collect`, re-sign and re-POST once. A second 409 is recorded as `failed`. A 403 is recorded as `failed` with normal backoff, and never rotates.
 - [ ] T085 [US7] In `TelemetrySection` in `web/src/routes/AdminSettings.tsx`, render the status variant "Install ID replaced on <date>: the destination reported it was in use by another key" when `status.lastIdRotationAt` is set, using the T052 design.
 - [X] T086 [P] [US7] Create `telemetry-receiver/ingest_sign_test.go`, covering the full forgery matrix: another key gives 409; an unsigned report, a one-byte tamper, a stale `sentAt`, a future `sentAt` and a byte-identical replay each give 403. In every case, assert that every table's row counts are unchanged (SC-014). Cover claim expiry together with re-claim (FR-038).
-- [ ] T087 [P] [US7] Add cases to `api/internal/telemetry/telemetry_test.go`: a 409 then 204 sequence rotates the ID and sends with a new key in the same attempt (SC-015); 409 twice gives `failed`; 403 doesn't rotate. Add a web test case for the rotation status line in `web/src/routes/AdminSettings_telemetry.test.tsx`.
-- [ ] T088 [US7] Create `test/e2e/telemetry_client_test.go`, a test-only helper that builds and signs reports with `telemetryschema` and a throwaway secret. Add these subtests to `TestTelemetryLifecycle`, before the US2 subtests:
+- [ ] T087 [P] [US7] *(API part done; web part pending)* Add cases to `api/internal/telemetry/telemetry_test.go`: a 409 then 204 sequence rotates the ID and sends with a new key in the same attempt (SC-015); 409 twice gives `failed`; 403 doesn't rotate. Add a web test case for the rotation status line in `web/src/routes/AdminSettings_telemetry.test.tsx`.
+- [X] T088 [US7] Create `test/e2e/telemetry_client_test.go`, a test-only helper that builds and signs reports with `telemetryschema` and a throwaway secret. Add these subtests to `TestTelemetryLifecycle`, before the US2 subtests:
   - `forged_other_key_gets_409`
   - `unsigned_tampered_replayed_get_403`, asserting that the views are unchanged
   - `claimed_id_rotates_and_recovers`: reset the ID, claim the new ID with the helper's key, wait one interval, then assert that `lastIdRotationAt` is set, `installId` has changed, and `lastOutcome = "ok"`

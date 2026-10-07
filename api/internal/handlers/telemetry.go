@@ -15,6 +15,7 @@ import (
 	"github.com/ValgulNecron/gameplane/api/internal/db"
 	"github.com/ValgulNecron/gameplane/api/internal/httperr"
 	"github.com/ValgulNecron/gameplane/api/internal/telemetry"
+	"github.com/ValgulNecron/gameplane/telemetryschema"
 )
 
 // Notice actions accepted by POST /admin/telemetry/notice.
@@ -39,13 +40,27 @@ type TelemetrySettings struct {
 	Dest telemetry.Destination
 	// Interval is the spacing between reports; zero means 24h.
 	Interval time.Duration
+	// Deps is what GET /admin/telemetry collects the preview from; it is the
+	// same value the reporter uses. A nil Deps.Store is filled with the
+	// handler's store.
+	Deps telemetry.Deps
 }
 
-// MountTelemetry exposes the first-login telemetry notice at
+// errExtendedOff is returned when an install-ID reset is asked for while the
+// extended tier is off: there is no ID to reset.
+var errExtendedOff = errors.New("extended telemetry is off: there is no install id to reset")
+
+// MountTelemetry exposes the telemetry status at /admin/telemetry, the install
+// ID reset at /admin/telemetry/install-id and the first-login notice at
 // /admin/telemetry/notice (spec 022, contracts/api-telemetry-http.md).
 func MountTelemetry(r chi.Router, store *db.Store, settings TelemetrySettings) {
+	if settings.Deps.Store == nil {
+		settings.Deps.Store = store
+	}
 	h := &telemetryHandler{db: store, settings: settings}
 	r.Route("/admin/telemetry", func(r chi.Router) {
+		r.Get("/", h.getTelemetry)
+		r.Post("/install-id", h.postInstallID)
 		r.Get("/notice", h.getNotice)
 		r.Post("/notice", h.postNotice)
 	})
@@ -61,6 +76,143 @@ type telemetryHandler struct {
 type noticeDestination struct {
 	Kind string `json:"kind"`
 	Host string `json:"host"`
+}
+
+// telemetryDestination is noticeDestination for GET /admin/telemetry: host is
+// null for the disabled and none kinds.
+type telemetryDestination struct {
+	Kind string  `json:"kind"`
+	Host *string `json:"host"`
+}
+
+type telemetryConsent struct {
+	Basic    bool   `json:"basic"`
+	Extended bool   `json:"extended"`
+	Source   string `json:"source"`
+}
+
+// telemetryStatus is the delivery status. It never carries a failure detail,
+// and the state's signing secret is not reachable from it.
+type telemetryStatus struct {
+	LastAttemptAt    *string `json:"lastAttemptAt"`
+	LastSuccessAt    *string `json:"lastSuccessAt"`
+	LastOutcome      string  `json:"lastOutcome"`
+	LastIDRotationAt *string `json:"lastIdRotationAt"`
+}
+
+type telemetryResponse struct {
+	Destination      telemetryDestination `json:"destination"`
+	OperatorDisabled bool                 `json:"operatorDisabled"`
+	Consent          telemetryConsent     `json:"consent"`
+	InstallID        *string              `json:"installId"`
+	// Preview is the exact report body the reporter would POST now, or null.
+	Preview json.RawMessage `json:"preview"`
+	Status  telemetryStatus `json:"status"`
+}
+
+// nullString returns nil for the empty string, so it encodes as JSON null.
+func nullString(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
+}
+
+// destSends reports whether the destination can receive reports at all.
+func destSends(d telemetry.Destination) bool {
+	return d.Kind != telemetry.KindDisabled && d.Kind != telemetry.KindNone
+}
+
+// getTelemetry serves GET /admin/telemetry (config:read). The preview is
+// built by telemetry.BuildReport, the function the reporter uses, and encoded
+// by telemetryschema.Encode, so it is byte-for-byte what would be POSTed,
+// apart from ext.sentAt (SC-006).
+func (h *telemetryHandler) getTelemetry(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	st, err := h.db.GetTelemetryState(ctx)
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
+	}
+	c, err := telemetry.ReadConsent(ctx, h.db)
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
+	}
+	dest := h.settings.Dest
+	resp := telemetryResponse{
+		Destination:      telemetryDestination{Kind: dest.Kind},
+		OperatorDisabled: dest.Kind == telemetry.KindDisabled,
+		Consent:          telemetryConsent{Basic: c.Basic, Extended: c.Extended, Source: st.ConsentSource},
+		Status: telemetryStatus{
+			LastAttemptAt:    nullString(st.LastAttemptAt),
+			LastSuccessAt:    nullString(st.LastSuccessAt),
+			LastOutcome:      st.LastOutcome,
+			LastIDRotationAt: nullString(st.LastIDRotationAt),
+		},
+	}
+	if destSends(dest) {
+		resp.Destination.Host = nullString(dest.Host)
+	}
+	if c.Extended {
+		resp.InstallID = nullString(st.InstallID)
+	}
+	if c.Basic && destSends(dest) {
+		now := time.Now().UTC()
+		extended := c.Extended && st.InstallID != "" && !telemetry.ExtWithheld(st, dest.URL, now)
+		rep, err := telemetry.BuildReport(ctx, h.settings.Deps, extended, now)
+		if err != nil {
+			httperr.Write(w, req, err)
+			return
+		}
+		body, err := telemetryschema.Encode(rep)
+		if err != nil {
+			httperr.Write(w, req, err)
+			return
+		}
+		resp.Preview = body
+	}
+	writeJSON(w, resp)
+}
+
+// postInstallID serves POST /admin/telemetry/install-id (config:manage). It
+// replaces the install ID, keeps the signing secret (so the new ID gets a new
+// key) and the schedule, and returns the new ID. It returns 409 when extended
+// is off or the operator disabled telemetry.
+func (h *telemetryHandler) postInstallID(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	var id string
+	err := inTx(ctx, h.db, func(tx *sql.Tx) error {
+		if h.settings.Dest.Kind == telemetry.KindDisabled {
+			return telemetry.ErrOperatorDisabled
+		}
+		c, err := telemetry.ReadConsentTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if !c.Extended {
+			return errExtendedOff
+		}
+		st, err := db.GetTelemetryStateTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if id, err = telemetry.NewInstallID(); err != nil {
+			return err
+		}
+		if err := db.EnsureSigningSecretTx(ctx, tx); err != nil {
+			return err
+		}
+		return db.UpdateTelemetryConsentTx(ctx, tx, st.ConsentSource, id, st.NextDueAt)
+	})
+	switch {
+	case errors.Is(err, telemetry.ErrOperatorDisabled), errors.Is(err, errExtendedOff):
+		http.Error(w, err.Error(), http.StatusConflict)
+	case err != nil:
+		httperr.Write(w, req, err)
+	default:
+		writeJSON(w, map[string]string{"installId": id})
+	}
 }
 
 type noticeFields struct {

@@ -337,6 +337,21 @@ func main() {
 	// Public share link endpoints (unauthenticated, token-guessable)
 	handlers.MountPublicShares(r, reg, store, auth.ShareLimiter)
 
+	// What the telemetry reporter and the admin preview both collect from.
+	telemetryDeps := telemetry.Deps{
+		Kube:    k8s,
+		Store:   store,
+		Version: Version,
+		Flags: telemetry.Flags{
+			CaptureEnabled:       cfg.captureFeatureEnabled,
+			OIDCConfigured:       cfg.oidcIssuer != "",
+			AuditWebhook:         cfg.auditWebhookURL != "",
+			AuditS3:              cfg.auditS3Endpoint != "" && cfg.auditS3Bucket != "",
+			DBDriver:             cfg.dbDriver,
+			OfficialModuleSource: cfg.officialModuleSource,
+		},
+	}
+
 	// Protected API
 	r.Group(func(p chi.Router) {
 		p.Use(sessions.Authenticate)
@@ -356,7 +371,7 @@ func main() {
 		handlers.MountUsers(p, store, sessions, reg)
 		handlers.MountRoles(p, store)
 		handlers.MountAudit(p, auditor)
-		telemetrySettings := handlers.TelemetrySettings{Dest: telemetryDest, Interval: cfg.telemetryInterval}
+		telemetrySettings := handlers.TelemetrySettings{Dest: telemetryDest, Interval: cfg.telemetryInterval, Deps: telemetryDeps}
 		handlers.MountConfigWithTelemetry(p, store, auditor, oidcAuth != nil, cfg.gameDataStorageClass, helmPolicy, telemetrySettings)
 		handlers.MountTelemetry(p, store, telemetrySettings)
 		handlers.MountNotifications(p, notifier, k8s, cfg.namespace)
@@ -411,19 +426,7 @@ func main() {
 		Dest:     telemetryDest,
 		Interval: cfg.telemetryInterval,
 		Auth:     cfg.telemetryAuth,
-		Deps: telemetry.Deps{
-			Kube:    k8s,
-			Store:   store,
-			Version: Version,
-			Flags: telemetry.Flags{
-				CaptureEnabled:       cfg.captureFeatureEnabled,
-				OIDCConfigured:       cfg.oidcIssuer != "",
-				AuditWebhook:         cfg.auditWebhookURL != "",
-				AuditS3:              cfg.auditS3Endpoint != "" && cfg.auditS3Bucket != "",
-				DBDriver:             cfg.dbDriver,
-				OfficialModuleSource: cfg.officialModuleSource,
-			},
-		},
+		Deps:     telemetryDeps,
 	}).Run(ctx)
 
 	// Opt-in audit-event retention. Off by default (0 days = keep forever);

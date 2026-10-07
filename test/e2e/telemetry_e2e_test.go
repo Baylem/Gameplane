@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -32,10 +33,16 @@ const (
 // cluster (research R17): a fresh install has a pending notice, "seen" opens
 // the gate and the first report reaches the bundled receiver, "all-off" stops
 // reports, turning telemetry back on resumes them, and an API restart does
-// not bring a report forward. The subtests share state, so they run in order.
+// not bring a report forward. The later subtests cover the extended tier, the
+// install-ID reset, forged and replayed reports, the private dashboard, the
+// public summary and the operator's redirect and disable switches (US2 to US7).
+// The subtests share state, so they run in order; the US2 ones come last
+// because they point the API away from the bundled receiver, and
+// operator_disabled_sends_nothing is the very last.
 //
 // It is the bucket's only test because it runs `helm upgrade` on the cluster.
-// Admin logins: one (the test never restarts into a second session).
+// Admin logins: one. After every API pod replacement the client gets a new
+// port-forward (reconnectAPIClient) and keeps its session.
 func TestTelemetryLifecycle(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -58,7 +65,18 @@ func TestTelemetryLifecycle(t *testing.T) {
 	// The bucket's one admin login. Logging in does not show the notice:
 	// only the notice POST (the dashboard rendering it) records that.
 	cli := envInstance.APIClient(t, telemetryAdminUser, telemetryAdminPass)
-	defer cli.Close()
+	defer func() { cli.Close() }() // cli is replaced after API pod restarts
+
+	// The receiver's public port takes the test client's reports and serves
+	// the public summary; the dashboard port (above) serves /metrics and the
+	// views, so every figure below comes from the receiver itself.
+	ingestPort, stopIngest := envInstance.PortForward(t, "gameplane-system", "svc/gameplane-telemetry-receiver", 8080)
+	defer stopIngest()
+	tc := newTelemetryTestClient(t, ingestPort)
+	rx := receiverScrape{port: metricsPort, token: telemetryDashToken}
+	// The login page is captured while the receiver is still empty: a later
+	// unauthenticated response must be identical to it (FR-023, SC-011).
+	loginBaseline := dashboardLoginPage(t, metricsPort)
 
 	t.Run("notice_pending_on_fresh_install", func(t *testing.T) {
 		resp, body, err := cli.Get("/admin/telemetry/notice")
@@ -133,6 +151,7 @@ func TestTelemetryLifecycle(t *testing.T) {
 			"--namespace", "gameplane-system", "--timeout=3m"); err != nil {
 			t.Fatalf("wait for API rollout: %v\n%s", err, out)
 		}
+		cli = reconnectAPIClient(t, cli)
 
 		// The schedule is persisted: the restarted API reports one interval
 		// after the previous report, not at once. Allow 5s for the two
@@ -145,6 +164,398 @@ func TestTelemetryLifecycle(t *testing.T) {
 			t.Fatalf("next report arrived %v after the previous one, want at least %v (the API restart must not send early)",
 				gap, telemetryInterval)
 		}
+	})
+
+	// reportsMore waits until the bundled receiver has counted more reports
+	// than it had when the wait began.
+	reportsMore := func(t *testing.T) {
+		t.Helper()
+		waitForMore(t, func() float64 { return rx.get(t, metricReports, "") }, 4*telemetryInterval, metricReports)
+	}
+
+	// ---- US3: tiers, reset, preview ---------------------------------------
+
+	t.Run("extended_off_sends_basic_only", func(t *testing.T) {
+		putTelemetryConsent(t, cli, true, false)
+		v := getTelemetryView(t, cli)
+		if v.InstallID != nil || v.Consent.Extended || v.Preview == nil || v.Preview.Ext != nil {
+			t.Fatalf("view after extended off = %+v, want no install id and a basic-only preview", v)
+		}
+		time.Sleep(10 * time.Second) // let a report already in flight land
+		extBase, dupBase := rx.get(t, metricExtended, ""), rx.get(t, metricDuplicates, "")
+		reportsMore(t)
+		// An extended report would count as a new install or as a duplicate.
+		if got := rx.get(t, metricExtended, ""); got != extBase {
+			t.Fatalf("%s = %v, want it to stay at %v while extended is off", metricExtended, got, extBase)
+		}
+		if got := rx.get(t, metricDuplicates, ""); got != dupBase {
+			t.Fatalf("%s = %v, want it to stay at %v while extended is off", metricDuplicates, got, dupBase)
+		}
+	})
+
+	t.Run("reset_id_counts_as_new_install", func(t *testing.T) {
+		putTelemetryConsent(t, cli, true, true) // creates install ID A
+		a := getTelemetryView(t, cli).InstallID
+		if a == nil {
+			t.Fatal("no install id after turning extended on")
+		}
+		// A's first extended report is a new install. Its next ones the same
+		// day would be duplicates, and the counter would not rise.
+		waitForMore(t, func() float64 { return rx.get(t, metricExtended, "") }, 4*telemetryInterval, metricExtended)
+
+		b := resetInstallID(t, cli)
+		if b == *a {
+			t.Fatalf("reset returned the same id %q", b)
+		}
+		dupBase := rx.get(t, metricDuplicates, "")
+		waitForMore(t, func() float64 { return rx.get(t, metricExtended, "") }, 4*telemetryInterval, metricExtended)
+		if got := rx.get(t, metricDuplicates, ""); got != dupBase {
+			t.Fatalf("%s rose from %v to %v: the reset ID was treated as the old install", metricDuplicates, dupBase, got)
+		}
+		v := getTelemetryView(t, cli)
+		if v.InstallID == nil || *v.InstallID != b || v.Preview == nil || v.Preview.Ext == nil || v.Preview.Ext.InstallID != b {
+			t.Fatalf("view after reset = %+v, want the new id %q in installId and in the preview", v, b)
+		}
+	})
+
+	t.Run("preview_matches_received", func(t *testing.T) {
+		v := getTelemetryView(t, cli)
+		if v.Preview == nil {
+			t.Fatal("no preview while basic is on")
+		}
+		// Views end at yesterday, so the receiver's same-day record is read
+		// from its fleet histograms and version label: the next report's
+		// servers and templates must equal the preview's.
+		serversCount0 := rx.get(t, "gameplane_telemetry_servers_count", "")
+		serversSum0 := rx.get(t, "gameplane_telemetry_servers_sum", "")
+		templatesSum0 := rx.get(t, "gameplane_telemetry_templates_sum", "")
+		versionLabel := fmt.Sprintf("version=%q", v.Preview.Version)
+		version0 := rx.get(t, metricReports, versionLabel)
+		reportsMore(t)
+		n := rx.get(t, "gameplane_telemetry_servers_count", "") - serversCount0
+		if n < 1 {
+			t.Fatalf("no report recorded: servers histogram count rose by %v", n)
+		}
+		if got := (rx.get(t, "gameplane_telemetry_servers_sum", "") - serversSum0) / n; got != float64(v.Preview.Servers) {
+			t.Fatalf("receiver recorded %v servers per report, preview says %d", got, v.Preview.Servers)
+		}
+		if got := (rx.get(t, "gameplane_telemetry_templates_sum", "") - templatesSum0) / n; got != float64(v.Preview.Templates) {
+			t.Fatalf("receiver recorded %v templates per report, preview says %d", got, v.Preview.Templates)
+		}
+		if got := rx.get(t, metricReports, versionLabel); got <= version0 {
+			t.Fatalf("%s{%s} = %v, want more than %v: the receiver did not record the preview's version", metricReports, versionLabel, got, version0)
+		}
+	})
+
+	// ---- US7: forged, tampered and replayed reports, claimed IDs -----------
+
+	t.Run("forged_other_key_gets_409", func(t *testing.T) {
+		// The install's current ID was claimed by its own key when the
+		// receiver accepted the previous subtests' reports.
+		v := getTelemetryView(t, cli)
+		if v.InstallID == nil {
+			t.Fatal("no install id: extended must be on")
+		}
+		asOf, viewsBefore := dashboardViews(t, metricsPort)
+		refusedBase := rx.get(t, metricRefused, `reason="id_claimed"`)
+
+		status, code := tc.send(t, tc.report(t, *v.InstallID, "e2e-forged", 7, time.Now()))
+		if status != http.StatusConflict || code != "id_claimed" {
+			t.Fatalf("report under the install's ID with another key = %d %q, want 409 id_claimed", status, code)
+		}
+		if got := rx.get(t, metricRefused, `reason="id_claimed"`); got != refusedBase+1 {
+			t.Fatalf("%s{id_claimed} = %v, want %v", metricRefused, got, refusedBase+1)
+		}
+		if got := rx.get(t, metricReports, `version="e2e-forged"`); got != 0 {
+			t.Fatalf("the refused report was counted: %v", got)
+		}
+		requireViewsUnchanged(t, metricsPort, asOf, viewsBefore)
+	})
+
+	t.Run("unsigned_tampered_replayed_get_403", func(t *testing.T) {
+		id := newTestInstallID(t)
+		sentAt := time.Now()
+		body, sig := tc.sign(t, tc.report(t, id, "e2e-signed", 4, sentAt))
+		if status, code := tc.post(t, body, sig); status != http.StatusNoContent {
+			t.Fatalf("the test client's own signed report = %d %q, want 204", status, code)
+		}
+		accepted := rx.get(t, metricReports, `version="e2e-signed"`)
+		if accepted != 1 {
+			t.Fatalf("accepted reports with the test version = %v, want 1", accepted)
+		}
+		asOf, viewsBefore := dashboardViews(t, metricsPort)
+		badBase := rx.get(t, metricRefused, `reason="bad_signature"`)
+		replayBase := rx.get(t, metricRefused, `reason="replay"`)
+
+		// Unsigned: the send time is newer, so only the missing header can fail it.
+		unsigned, _ := tc.sign(t, tc.report(t, id, "e2e-signed", 4, sentAt.Add(2*time.Second)))
+		if status, code := tc.post(t, unsigned, ""); status != http.StatusForbidden || code != "bad_signature" {
+			t.Fatalf("unsigned extended report = %d %q, want 403 bad_signature", status, code)
+		}
+		// Tampered: a valid signature for 4 servers on a body that says 5.
+		signed, tamperedSig := tc.sign(t, tc.report(t, id, "e2e-signed", 4, sentAt.Add(3*time.Second)))
+		tampered := bytes.Replace(signed, []byte(`"servers":4`), []byte(`"servers":5`), 1)
+		if bytes.Equal(tampered, signed) {
+			t.Fatalf("test bug: the body %s has no servers field to tamper with", signed)
+		}
+		if status, code := tc.post(t, tampered, tamperedSig); status != http.StatusForbidden || code != "bad_signature" {
+			t.Fatalf("tampered report = %d %q, want 403 bad_signature", status, code)
+		}
+		// Replayed: the accepted report, byte for byte.
+		if status, code := tc.post(t, body, sig); status != http.StatusForbidden || code != "replay" {
+			t.Fatalf("replayed report = %d %q, want 403 replay", status, code)
+		}
+
+		if got := rx.get(t, metricRefused, `reason="bad_signature"`); got != badBase+2 {
+			t.Fatalf("%s{bad_signature} = %v, want %v", metricRefused, got, badBase+2)
+		}
+		if got := rx.get(t, metricRefused, `reason="replay"`); got != replayBase+1 {
+			t.Fatalf("%s{replay} = %v, want %v", metricRefused, got, replayBase+1)
+		}
+		if got := rx.get(t, metricReports, `version="e2e-signed"`); got != accepted {
+			t.Fatalf("reports with the test version = %v, want %v: a refused report was counted (SC-014)", got, accepted)
+		}
+		requireViewsUnchanged(t, metricsPort, asOf, viewsBefore)
+	})
+
+	t.Run("claimed_id_rotates_and_recovers", func(t *testing.T) {
+		a := getTelemetryView(t, cli).InstallID
+		if a == nil {
+			t.Fatal("no install id: extended must be on")
+		}
+		// Sync on a report the install has just sent: its next one is about
+		// one interval away, which leaves time to claim the new ID first.
+		reportsMore(t)
+		b := resetInstallID(t, cli)
+		if status, code := tc.send(t, tc.report(t, b, "e2e-claim", 1, time.Now())); status != http.StatusNoContent {
+			t.Fatalf("the test client's claim on the new ID = %d %q, want 204", status, code)
+		}
+		refusedBase := rx.get(t, metricRefused, `reason="id_claimed"`)
+
+		// The install's next attempt gets 409, replaces the ID and re-sends.
+		envInstance.Eventually(t, 4*telemetryInterval, func() (bool, string) {
+			v := getTelemetryView(t, cli)
+			ok := v.Status.LastIDRotationAt != nil && v.InstallID != nil && *v.InstallID != b && v.Status.LastOutcome == "ok"
+			return ok, fmt.Sprintf("view = %+v, want a rotation stamp, an id other than %q and outcome ok", v, b)
+		})
+		v := getTelemetryView(t, cli)
+		if *v.InstallID == *a || v.Preview == nil || v.Preview.Ext == nil || v.Preview.Ext.InstallID != *v.InstallID {
+			t.Fatalf("view = %+v, want a third id shown in installId and the preview", v)
+		}
+		if got := rx.get(t, metricRefused, `reason="id_claimed"`); got != refusedBase+1 {
+			t.Fatalf("%s{id_claimed} = %v, want %v (one 409 for the claimed ID)", metricRefused, got, refusedBase+1)
+		}
+	})
+
+	// ---- US4: the private dashboard ----------------------------------------
+
+	t.Run("dashboard_refuses_unauthenticated", func(t *testing.T) {
+		resp, body := dashboardRequest(t, metricsPort, http.MethodGet, "/", nil, nil)
+		if resp.StatusCode != http.StatusSeeOther || resp.Header.Get("Location") != "/login" {
+			t.Fatalf("GET / = %d to %q, want 303 to /login", resp.StatusCode, resp.Header.Get("Location"))
+		}
+		if strings.ContainsAny(string(body), "0123456789") {
+			t.Fatalf("the redirect body contains digits: %q", body)
+		}
+		resp, body = dashboardRequest(t, metricsPort, http.MethodGet, "/login", nil, nil)
+		if resp.StatusCode != http.StatusOK || !bytes.Equal(body, loginBaseline) {
+			t.Fatalf("GET /login = %d, want 200 and the page captured from the empty receiver (no figures)", resp.StatusCode)
+		}
+		for _, path := range []string{"/api/v1/views", "/metrics"} {
+			resp, body = dashboardRequest(t, metricsPort, http.MethodGet, path, nil, nil)
+			if resp.StatusCode != http.StatusUnauthorized || strings.TrimSpace(string(body)) != `{"error":"unauthorized"}` {
+				t.Fatalf("GET %s without credentials = %d %q, want 401 and the fixed body", path, resp.StatusCode, body)
+			}
+		}
+	})
+
+	t.Run("dashboard_shows_reports", func(t *testing.T) {
+		cookie := dashboardLogin(t, metricsPort, telemetryDashToken)
+		before := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+		resp, body := dashboardRequest(t, metricsPort, http.MethodGet, "/api/v1/views", map[string]string{"Cookie": cookie}, nil)
+		after := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("GET /api/v1/views with the session = %d: %s", resp.StatusCode, body)
+		}
+		var views map[string]json.RawMessage
+		if err := json.Unmarshal(body, &views); err != nil {
+			t.Fatalf("decode views %q: %v", body, err)
+		}
+		for _, key := range []string{"range", "asOf", "empty", "basic", "extended"} {
+			if _, ok := views[key]; !ok {
+				t.Fatalf("views has no %q key: %s", key, body)
+			}
+		}
+		var asOf string
+		var empty bool
+		if json.Unmarshal(views["asOf"], &asOf) != nil || (asOf != before && asOf != after) {
+			t.Fatalf("asOf = %s, want yesterday (UTC), %s: views end at the last complete day", views["asOf"], after)
+		}
+		if json.Unmarshal(views["empty"], &empty) != nil || (empty != (string(views["basic"]) == "null")) {
+			t.Fatalf("empty = %s with basic = %s, want basic null exactly when empty", views["empty"], views["basic"])
+		}
+		// The page itself renders for a signed-in browser, and the Bearer
+		// token reads the same JSON.
+		if resp, _ := dashboardRequest(t, metricsPort, http.MethodGet, "/", map[string]string{"Cookie": cookie}, nil); resp.StatusCode != http.StatusOK {
+			t.Fatalf("GET / with the session = %d, want 200", resp.StatusCode)
+		}
+		bearer := map[string]string{"Authorization": "Bearer " + telemetryDashToken}
+		if resp, _ := dashboardRequest(t, metricsPort, http.MethodGet, "/api/v1/views", bearer, nil); resp.StatusCode != http.StatusOK {
+			t.Fatalf("GET /api/v1/views with the Bearer token = %d, want 200", resp.StatusCode)
+		}
+		// Same-day reports are not in the views, so the earlier reports are
+		// counted through /metrics. The exact figures are views_test.go's.
+		if got := rx.get(t, metricReports, ""); got < 3 {
+			t.Fatalf("%s = %v, want at least 3 reports from the earlier subtests", metricReports, got)
+		}
+	})
+
+	// ---- US5: one extended report per install per day ----------------------
+
+	t.Run("extended_counted_once_per_day", func(t *testing.T) {
+		// Pause the install's extended reports (its own would count as
+		// duplicates and move the same counters), measure the test client
+		// alone, then turn the tier back on.
+		putTelemetryConsent(t, cli, true, false)
+		defer putTelemetryConsent(t, cli, true, true)
+		time.Sleep(10 * time.Second) // let a report already in flight land
+		keepClearOfUTCMidnight(t, 2*time.Minute)
+
+		id := newTestInstallID(t)
+		now := time.Now()
+		extBase, dupBase := rx.get(t, metricExtended, ""), rx.get(t, metricDuplicates, "")
+		for i, sentAt := range []time.Time{now.Add(-2 * time.Minute), now.Add(-time.Minute)} {
+			if status, code := tc.send(t, tc.report(t, id, "e2e-once", 2, sentAt)); status != http.StatusNoContent {
+				t.Fatalf("report %d from one ID = %d %q, want 204 (a same-day duplicate is accepted)", i+1, status, code)
+			}
+		}
+		if got := rx.get(t, metricExtended, ""); got != extBase+1 {
+			t.Fatalf("%s = %v, want %v: two reports from one ID on one day count once", metricExtended, got, extBase+1)
+		}
+		if got := rx.get(t, metricDuplicates, ""); got != dupBase+1 {
+			t.Fatalf("%s = %v, want %v", metricDuplicates, got, dupBase+1)
+		}
+	})
+
+	// ---- US6: the public summary -------------------------------------------
+
+	t.Run("public_summary_five_keys", func(t *testing.T) {
+		resp, body := dashboardRequest(t, ingestPort, http.MethodGet, "/v1/summary", nil, nil)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("GET /v1/summary = %d: %s", resp.StatusCode, body)
+		}
+		var summary map[string]json.RawMessage
+		if err := json.Unmarshal(body, &summary); err != nil {
+			t.Fatalf("decode summary %q: %v", body, err)
+		}
+		if len(summary) != 5 {
+			t.Fatalf("summary = %s, want exactly five keys", body)
+		}
+		for _, key := range []string{"asOf", "reportsLatestDay", "reports30d", "reportsTotal", "activeInstalls30d"} {
+			if _, ok := summary[key]; !ok {
+				t.Fatalf("summary has no %q key: %s", key, body)
+			}
+		}
+		if resp.Header.Get("Content-Type") != "application/json" || resp.Header.Get("Access-Control-Allow-Origin") != "*" ||
+			!strings.Contains(resp.Header.Get("Cache-Control"), "max-age=3600") || resp.Header.Get("ETag") == "" {
+			t.Fatalf("summary headers = %v, want JSON, CORS *, a one-hour cache and an ETag", resp.Header)
+		}
+		// Operational metrics are never on the public listener (FR-030).
+		if resp, _ := dashboardRequest(t, ingestPort, http.MethodGet, "/metrics", nil, nil); resp.StatusCode != http.StatusNotFound {
+			t.Fatalf("GET /metrics on the public listener = %d, want 404", resp.StatusCode)
+		}
+	})
+
+	// ---- US2: the operator's destination and disable switches --------------
+	// These point the API away from the bundled receiver, so they come last.
+
+	var oldReceiver struct {
+		name string
+	}
+
+	t.Run("custom_destination_receives_only", func(t *testing.T) {
+		image := bundledReceiverImage(ctx, t)
+		name := deployTelemetryReceiver(ctx, t, "custom", image, true)
+		bundledBefore := rx.get(t, metricReports, "")
+
+		endpoint := fmt.Sprintf("%s.gameplane-system.svc:8080", name)
+		helmUpgradeReuse(ctx, t, "api.telemetry.endpoint=http://"+endpoint+"/ingest")
+		cli = reconnectAPIClient(t, cli)
+
+		v := getTelemetryView(t, cli)
+		if v.Destination.Kind != "custom" || v.Destination.Host == nil || *v.Destination.Host != endpoint {
+			t.Fatalf("destination = %+v, want kind custom at %s", v.Destination, endpoint)
+		}
+		port, stop := envInstance.PortForward(t, "gameplane-system", "svc/"+name, 8081)
+		defer stop()
+		envInstance.Eventually(t, 4*telemetryInterval, func() (bool, string) {
+			got := receiverMetric(t, port, telemetryDashToken, metricReports, "")
+			return got >= 1, fmt.Sprintf("custom receiver %s = %v, want at least 1", metricReports, got)
+		})
+		// With an explicit endpoint the chart no longer deploys the bundled
+		// receiver. If a later chart keeps it, its counter must stay put.
+		if out, err := envInstance.Kubectl(ctx, "get", "deploy/gameplane-telemetry-receiver",
+			"--namespace", "gameplane-system"); err == nil {
+			if got := rx.get(t, metricReports, ""); got != bundledBefore {
+				t.Fatalf("bundled receiver %s = %v, want it to stay at %v", metricReports, got, bundledBefore)
+			}
+		} else if !strings.Contains(out, "NotFound") {
+			t.Fatalf("kubectl get bundled receiver: %v\n%s", err, out)
+		}
+	})
+
+	t.Run("old_receiver_gets_basic", func(t *testing.T) {
+		// The beta.8 receiver rejects any field beyond the basic three with 400
+		// and exposes /metrics unauthenticated on its one port (FR-016, SC-013).
+		name := deployTelemetryReceiver(ctx, t, "old", betaReceiverImage, false)
+		port, stop := envInstance.PortForward(t, "gameplane-system", "svc/"+name, 8080)
+		defer stop()
+		oldReceiver.name = name
+
+		helmUpgradeReuse(ctx, t, fmt.Sprintf("api.telemetry.endpoint=http://%s.gameplane-system.svc:8080/ingest", name))
+		cli = reconnectAPIClient(t, cli)
+		envInstance.Eventually(t, 4*telemetryInterval, func() (bool, string) {
+			got := receiverMetric(t, port, "", metricReports, "")
+			return got >= 1, fmt.Sprintf("old receiver %s = %v, want a basic report accepted after the extended one got 400", metricReports, got)
+		})
+		v := getTelemetryView(t, cli)
+		if v.Status.LastOutcome != "ok" {
+			t.Fatalf("status = %+v, want outcome ok: the basic re-send was accepted", v.Status)
+		}
+		// The fallback marker holds the extended part back for a week, so the
+		// preview (the next report) is basic only although extended is on.
+		if !v.Consent.Extended || v.Preview == nil || v.Preview.Ext != nil {
+			t.Fatalf("view = %+v, want extended on and a basic-only preview for the old receiver", v)
+		}
+	})
+
+	t.Run("operator_disabled_sends_nothing", func(t *testing.T) {
+		helmUpgradeReuse(ctx, t, "api.telemetry.enabled=false")
+		cli = reconnectAPIClient(t, cli)
+
+		v := getTelemetryView(t, cli)
+		if !v.OperatorDisabled || v.Destination.Kind != "disabled" || v.Destination.Host != nil || v.Preview != nil {
+			t.Fatalf("view = %+v, want operatorDisabled, kind disabled, no host and no preview", v)
+		}
+		resp, body, err := cli.Do(http.MethodPut, "/admin/config/telemetry", map[string]bool{"sendMetrics": true, "extended": true})
+		if err != nil || resp.StatusCode != http.StatusConflict {
+			t.Fatalf("PUT telemetry while disabled: %v status %v body %s, want 409", err, statusOf(resp), body)
+		}
+		resp, body, err = cli.Get("/admin/telemetry/notice")
+		if err != nil || resp.StatusCode != http.StatusOK || !strings.Contains(string(body), `"pending":false`) {
+			t.Fatalf("GET notice while disabled: %v status %v body %s, want pending false", err, statusOf(resp), body)
+		}
+
+		// The old receiver's forward from old_receiver_gets_basic died with
+		// that subtest; open one for this subtest.
+		port, stop := envInstance.PortForward(t, "gameplane-system", "svc/"+oldReceiver.name, 8080)
+		defer stop()
+		time.Sleep(10 * time.Second) // let a report from the replaced pod land
+		settled := receiverMetric(t, port, "", metricReports, "")
+		envInstance.Consistently(t, 3*telemetryInterval, 10*time.Second, func() (bool, string) {
+			got := receiverMetric(t, port, "", metricReports, "")
+			return got == settled, fmt.Sprintf("%s = %v, want it to stay at %v while the operator disabled telemetry", metricReports, got, settled)
+		})
 	})
 }
 
