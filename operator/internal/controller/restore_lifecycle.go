@@ -71,8 +71,25 @@ func (r *RestoreReconciler) bindRestoreTarget(ctx context.Context, rs *gameplane
 // is written in that same update; a crash cannot leave a lock without suspension.
 func (r *RestoreReconciler) claimRestoreTarget(ctx context.Context, rs *gameplanev1alpha1.Restore, gs *gameplanev1alpha1.GameServer) (bool, error) {
 	owner := restoreIdentityJSON(rs.Name, rs.UID)
-	if gs.Annotations[restoreGuardAnnotation] == "" && gs.Annotations[WipeRequestedAnnotation] != gs.Annotations[WipeCompletedAnnotation] {
-		return false, nil // Let a previously requested wipe finish first.
+	if req := gs.Annotations[WipeRequestedAnnotation]; gs.Annotations[restoreGuardAnnotation] == "" && req != "" && req != gs.Annotations[WipeCompletedAnnotation] {
+		message := "Waiting for pending data wipe to finish before restoring"
+		var job batchv1.Job
+		err := r.apiReader().Get(ctx, types.NamespacedName{Namespace: gs.Namespace, Name: gs.Name + "-wipe"}, &job)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return false, err
+		}
+		// DataWipe=False may describe an older token. Use the current owned
+		// Job only to explain the wait, never to bypass wipe exclusion.
+		if err == nil && metav1.IsControlledBy(&job, gs) && job.Labels[wipeTokenLabel] == req && jobPermanentlyFailed(&job) {
+			message = "Restore blocked by failed data wipe; inspect the wipe Job logs and resolve the wipe failure before retrying the restore"
+		}
+		if rs.Status.Message != message {
+			rs.Status.Message = message
+			if err := r.Status().Update(ctx, rs); err != nil {
+				return false, err
+			}
+		}
+		return false, nil
 	}
 	if guard := gs.Annotations[restoreGuardAnnotation]; guard != "" && guard != owner {
 		identity, err := parseRestoreIdentity(guard)

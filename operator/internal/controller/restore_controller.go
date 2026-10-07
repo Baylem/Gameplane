@@ -161,6 +161,12 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if !claimed {
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
+	if rs.Status.Message != "" {
+		rs.Status.Message = ""
+		if err := r.Status().Update(ctx, &rs); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	// A missing template is not fatal: it only refines the FSGroup, and
 	// buildBackupPodSecurityContext falls back to 65532 for a zero template.
