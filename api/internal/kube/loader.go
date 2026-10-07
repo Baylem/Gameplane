@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 
-	remoteconfig "github.com/ValgulNecron/gameplane/api/internal/kubeconfig"
+	remoteconfig "github.com/GameplanePanel/gameplane/api/internal/kubeconfig"
 )
 
 // ClusterKubeconfigLabel marks a Secret as containing a kubeconfig for a remote cluster.

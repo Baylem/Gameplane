@@ -320,7 +320,7 @@ export const handlers = [
             displayName: "Valheim",
             game: "valheim",
             version: "0.218",
-            image: "ghcr.io/valgulnecron/gameplane/valheim:0.218",
+            image: "ghcr.io/gameplanepanel/gameplane/valheim:0.218",
           },
         }),
       ],

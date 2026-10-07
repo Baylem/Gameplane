@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ValgulNecron/gameplane/api/internal/gatewayprotocol"
-	"github.com/ValgulNecron/gameplane/api/internal/kube"
+	"github.com/GameplanePanel/gameplane/api/internal/gatewayprotocol"
+	"github.com/GameplanePanel/gameplane/api/internal/kube"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

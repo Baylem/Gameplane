@@ -292,7 +292,7 @@
                                   "type": "text",
                                   "id": "oEA15",
                                   "fill": "$muted",
-                                  "content": "https://github.com/ValgulNecron/gameplane-module.git@main",
+                                  "content": "https://github.com/GameplanePanel/module.git@main",
                                   "fontFamily": "$typography/font-mono",
                                   "fontSize": 12,
                                   "fontWeight": "normal"

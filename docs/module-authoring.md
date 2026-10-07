@@ -29,7 +29,7 @@ make module-new NAME=cs2-match ARCHETYPE=steamcmd
 bin/gp-module init cs2-match \
   --archetype=steamcmd \
   --display-name="Counter-Strike 2 Match" \
-  --image="ghcr.io/valgulnecron/cs2:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7" \
+  --image="ghcr.io/gameplanepanel/cs2:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7" \
   --ports="27015/udp" \
   --categories="Shooter,Co-op"
 ```
@@ -74,7 +74,7 @@ make module-package MODULE=cs2-match OUTPUT=dist/cs2-match.tar.gz
 
 # Push OCI artifact to registry
 bin/gp-module package modules/cs2-match \
-  --registry=ghcr.io/valgulnecron/gameplane-modules \
+  --registry=ghcr.io/gameplanepanel/gameplane-modules \
   --tag=1.0.0 \
   --tag-latest
 ```
@@ -93,7 +93,7 @@ In the Gameplane web dashboard:
 
 ## Source layout
 
-The official modules live in the standalone **`gameplane-module`** repo, which
+The official modules live in the standalone **`GameplanePanel/module`** repo, which
 the main repo checks out as the `modules/` submodule. Whether you work in that
 repo directly or through the submodule, a module lives on disk as a directory:
 
@@ -106,7 +106,7 @@ modules/<name>/
 ```
 
 `modules/build.sh` and `make modules-push` are unchanged by the split — the
-submodule mounts the `gameplane-module` repo root at `modules/`, so the paths
+submodule mounts the `GameplanePanel/module` repo root at `modules/`, so the paths
 below still resolve.
 
 ### Module documentation (`specs.md`)
@@ -120,7 +120,7 @@ game-specific implementation notes (workarounds, quirks, gotchas the template
 handles). Follow the structure documented in
 `../specs/done_011-add-missing-module-specs/contracts/specs-md-structure.md`. Enforcement
 (validation that specs.md exists and conforms to the structure) lives in the
-gameplane-module repo's own CI, not in this repo's `make check-specs`.
+GameplanePanel/module repo's own CI, not in this repo's `make check-specs`.
 
 ### Editor schemas
 
@@ -224,7 +224,7 @@ Then:
 
 ```sh
 # push every bundle in modules/ to a registry
-make modules-push REGISTRY=ghcr.io/valgulnecron/gameplane-modules
+make modules-push REGISTRY=ghcr.io/gameplanepanel/gameplane-modules
 
 # push a single module to a local kind registry
 modules/build.sh push --registry localhost:5001 --name minecraft-java
@@ -235,7 +235,7 @@ Under the hood `build.sh` runs:
 ```sh
 oras push \
   --artifact-type application/vnd.gameplane.module.v1+json \
-  ghcr.io/valgulnecron/gameplane-modules/minecraft-java:1.0.0 \
+  ghcr.io/gameplanepanel/gameplane-modules/minecraft-java:1.0.0 \
   module.yaml:application/vnd.gameplane.module.metadata.v1+yaml \
   template.yaml:application/vnd.gameplane.module.template.v1+yaml \
   README.md:application/vnd.gameplane.module.readme.v1+md \
@@ -310,7 +310,7 @@ binaryData:        # or stringData for plain YAML
 ## Installing a module
 
 Once a `ModuleSource` is configured (Helm chart ships a default one
-pointing at `ghcr.io/valgulnecron/gameplane-modules`), modules show up in the
+pointing at `ghcr.io/gameplanepanel/gameplane-modules`), modules show up in the
 **Modules** page of the dashboard. Click **Install** to create a
 `Module` resource:
 
@@ -365,7 +365,7 @@ kind: ModuleSource
 metadata: { name: trusted }
 spec:
   type: oci
-  oci: { url: ghcr.io/valgulnecron/gameplane-modules, modules: [{ name: minecraft-java }] }
+  oci: { url: ghcr.io/gameplanepanel/gameplane-modules, modules: [{ name: minecraft-java }] }
   verify:
     key: { name: cosign-pub }    # Secret in the operator namespace,
                                  # public key under data "cosign.pub"
@@ -615,7 +615,7 @@ index digest covering every published platform, so a pinned module still runs
 on both amd64 and arm64.
 
 Because pinning stops upstream releases from arriving on their own, the
-`gameplane-module` repo runs `refresh-pins.yml` monthly to re-resolve every
+`GameplanePanel/module` repo runs `refresh-pins.yml` monthly to re-resolve every
 pin and open a PR. It never auto-merges: each changed digest is a game binary
 that changes for every server on its next restart, which is exactly the event
 worth a human's attention.

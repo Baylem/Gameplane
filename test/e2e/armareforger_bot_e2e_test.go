@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/test/e2e/internal/protocol/joindepth"
+	"github.com/GameplanePanel/gameplane/test/e2e/internal/protocol/joindepth"
 )
 
 // TestGameServer_ArmaReforgerBot_Query boots an Arma Reforger dedicated server
@@ -25,7 +25,7 @@ func TestGameServer_ArmaReforgerBot_Query(t *testing.T) {
 		Game:        "arma-reforger",
 		Template:    fmt.Sprintf("e2e-arma-reforger-bot-%d", time.Now().UnixNano()),
 		DisplayName: "E2E Arma Reforger",
-		Image:       "ghcr.io/valgulnecron/gameplane/arma-reforger:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+		Image:       "ghcr.io/gameplanepanel/gameplane/arma-reforger:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 		Env: map[string]string{
 			"SERVER_NAME": "Gameplane E2E Arma Reforger",
 		},

@@ -467,7 +467,7 @@ const crdBundleStampAnnotation = "gameplane.local/crd-bundle-sha256"
 // FROM_VERSION in deploy/kind/upgrade.sh: the published chart the upgrade
 // cluster was installed from. CI sets GAMEPLANE_UPGRADE_FROM for both.
 const (
-	upgradeFromChartRef       = "oci://ghcr.io/valgulnecron/charts/gameplane"
+	upgradeFromChartRef       = "oci://ghcr.io/gameplanepanel/charts/gameplane"
 	defaultUpgradeFromVersion = "0.2.0-beta.8"
 )
 

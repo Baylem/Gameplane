@@ -1,7 +1,7 @@
 # agent — Specification
 
 **Status:** pre-v1 (v0.3.0)  
-**Module / package:** `github.com/ValgulNecron/gameplane/agent`
+**Module / package:** `github.com/GameplanePanel/gameplane/agent`
 
 ## Purpose
 

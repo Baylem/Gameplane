@@ -1,7 +1,7 @@
 # gp-module — Specification
 
 **Status:** Active Development  
-**Module / command:** `github.com/ValgulNecron/gameplane/gp-module`  
+**Module / command:** `github.com/GameplanePanel/gameplane/gp-module`  
 **Dependencies:** `gopkg.in/yaml.v3`, `k8s.io/apimachinery` (Go 1.26+)
 
 ## Purpose

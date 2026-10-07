@@ -8,8 +8,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/ValgulNecron/gameplane/api/internal/auth"
-	"github.com/ValgulNecron/gameplane/api/internal/scope"
+	"github.com/GameplanePanel/gameplane/api/internal/auth"
+	"github.com/GameplanePanel/gameplane/api/internal/scope"
 )
 
 // These tests sweep the validation / error branches of the user handlers

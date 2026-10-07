@@ -37,7 +37,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "minecraft",
       version: "1.21",
       description: "Official Minecraft Java Edition server",
-      image: "ghcr.io/valgulnecron/gameplane/minecraft:1.21",
+      image: "ghcr.io/gameplanepanel/gameplane/minecraft:1.21",
       versions: [
         { id: "1.21", displayName: "1.21 (Vanilla)", default: true, gameVersion: "1.21" },
       ],
@@ -114,7 +114,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "satisfactory",
       version: "1.0",
       description: "Satisfactory dedicated server",
-      image: "ghcr.io/valgulnecron/gameplane/satisfactory:1.0",
+      image: "ghcr.io/gameplanepanel/gameplane/satisfactory:1.0",
     },
   }),
   makeTemplate({
@@ -124,7 +124,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "valheim",
       version: "0.218",
       description: "Norse exploration and survival game",
-      image: "ghcr.io/valgulnecron/gameplane/valheim:0.218",
+      image: "ghcr.io/gameplanepanel/gameplane/valheim:0.218",
       capabilities: {
         mods: {
           path: "BepInEx/plugins",
@@ -142,7 +142,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "terraria",
       version: "1.4.4",
       description: "2D sandbox with mining and exploration",
-      image: "ghcr.io/valgulnecron/gameplane/terraria:1.4.4",
+      image: "ghcr.io/gameplanepanel/gameplane/terraria:1.4.4",
     },
   }),
   makeTemplate({
@@ -152,7 +152,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "rust",
       version: "2026.01",
       description: "Survival multiplayer game",
-      image: "ghcr.io/valgulnecron/gameplane/rust:2026.01",
+      image: "ghcr.io/gameplanepanel/gameplane/rust:2026.01",
     },
   }),
   makeTemplate({
@@ -162,7 +162,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "palworld",
       version: "0.3.5",
       description: "Pokemon-like survival crafting MMO",
-      image: "ghcr.io/valgulnecron/gameplane/palworld:0.3.5",
+      image: "ghcr.io/gameplanepanel/gameplane/palworld:0.3.5",
     },
   }),
   makeTemplate({
@@ -172,7 +172,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "factorio",
       version: "1.1.105",
       description: "Industrial automation and logistics",
-      image: "ghcr.io/valgulnecron/gameplane/factorio:1.1.105",
+      image: "ghcr.io/gameplanepanel/gameplane/factorio:1.1.105",
     },
   }),
   makeTemplate({
@@ -182,7 +182,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "cs2",
       version: "2026.02",
       description: "Competitive tactical first-person shooter",
-      image: "ghcr.io/valgulnecron/gameplane/cs2:2026.02",
+      image: "ghcr.io/gameplanepanel/gameplane/cs2:2026.02",
     },
   }),
   makeTemplate({
@@ -192,7 +192,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "ark",
       version: "1.30.2",
       description: "Dinosaur survival game",
-      image: "ghcr.io/valgulnecron/gameplane/ark:1.30.2",
+      image: "ghcr.io/gameplanepanel/gameplane/ark:1.30.2",
     },
   }),
   makeTemplate({
@@ -202,7 +202,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "minecraft",
       version: "1.21",
       description: "Minecraft server with mod list support",
-      image: "ghcr.io/valgulnecron/gameplane/minecraft:1.21",
+      image: "ghcr.io/gameplanepanel/gameplane/minecraft:1.21",
       capabilities: {
         mods: {
           path: "mods",
@@ -221,7 +221,7 @@ export const screenshotTemplates: GameTemplate[] = [
       game: "minecraft",
       version: "1.21",
       description: "Minecraft server with mod support (Fabric/Forge)",
-      image: "ghcr.io/valgulnecron/gameplane/minecraft:1.21",
+      image: "ghcr.io/gameplanepanel/gameplane/minecraft:1.21",
       versions: [
         { id: "1.21", displayName: "1.21 (Vanilla)", default: true, gameVersion: "1.21" },
         { id: "1.21-fabric", displayName: "1.21 (Fabric)", loader: "fabric" },
@@ -702,7 +702,7 @@ export const screenshotEvents: ServerEvent[] = [
     time: "2026-09-02T15:36:15Z",
     type: "Normal",
     reason: "Pulling",
-    message: 'Pulling image "ghcr.io/valgulnecron/gameplane/rust:2026.01"',
+    message: 'Pulling image "ghcr.io/gameplanepanel/gameplane/rust:2026.01"',
     source: "kubelet",
     object: "test-server-04",
     count: 1,
@@ -712,7 +712,7 @@ export const screenshotEvents: ServerEvent[] = [
     time: "2026-09-02T15:37:30Z",
     type: "Normal",
     reason: "Pulled",
-    message: 'Successfully pulled image "ghcr.io/valgulnecron/gameplane/rust:2026.01" in 1m15s',
+    message: 'Successfully pulled image "ghcr.io/gameplanepanel/gameplane/rust:2026.01" in 1m15s',
     source: "kubelet",
     object: "test-server-04",
     count: 1,
@@ -742,7 +742,7 @@ export const screenshotEvents: ServerEvent[] = [
     time: "2026-09-02T15:40:22Z",
     type: "Warning",
     reason: "ImagePullBackOff",
-    message: 'Back-off pulling image "ghcr.io/valgulnecron/gameplane/rust:2026.01"',
+    message: 'Back-off pulling image "ghcr.io/gameplanepanel/gameplane/rust:2026.01"',
     source: "kubelet",
     object: "test-server-04",
     count: 3,

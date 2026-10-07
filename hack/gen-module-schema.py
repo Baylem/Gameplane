@@ -7,7 +7,7 @@ guess a schema from their schema store and mis-flag valid fields; a
 `# yaml-language-server: $schema=` modeline in each template.yaml points at the
 file this writes.
 
-Output goes into the gameplane-module submodule so it lives with the files it
+Output goes into the GameplanePanel/module submodule so it lives with the files it
 validates (and resolves for a standalone checkout of that repo too). Re-run
 after CRD changes:  make module-schema
 
