@@ -64,27 +64,35 @@ matrix_block=$(awk '
   in_matrix { print }
 ' "$workflow")
 
-if [[ -z "$matrix_block" ]]; then
-	echo "✗ Error: could not find the images job'\''s matrix include: list in $workflow" >&2
-	exit 1
-fi
-
-component=""
 declare -a dockerfiles=()
-while IFS= read -r line; do
-	if [[ "$line" =~ component:\ *([A-Za-z0-9_-]+) ]]; then
-		if [[ -n "$component" && -z "${pending_dockerfile:-}" ]]; then
-			dockerfiles+=("$component/Dockerfile")
-		fi
-		component="${BASH_REMATCH[1]}"
-		pending_dockerfile=""
-	elif [[ "$line" =~ dockerfile:\ *([A-Za-z0-9_./-]+) ]]; then
-		pending_dockerfile="${BASH_REMATCH[1]}"
-		dockerfiles+=("$pending_dockerfile")
+if grep -qF 'matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}' "$workflow"; then
+    # The runtime selector owns the full catalog. Audit all images, not just
+    # those selected by one commit, so new COPY inputs still need a trigger.
+    catalog=$(python3 hack/ci_scope.py dockerfiles)
+    mapfile -t dockerfiles <<<"$catalog"
+else
+	if [[ -z "$matrix_block" ]]; then
+		echo "✗ Error: could not find the images job'\''s matrix include: list in $workflow" >&2
+		exit 1
 	fi
-done <<<"$matrix_block"
-if [[ -n "$component" && -z "${pending_dockerfile:-}" ]]; then
-	dockerfiles+=("$component/Dockerfile")
+
+	component=""
+	while IFS= read -r line; do
+		if [[ "$line" =~ component:\ *([A-Za-z0-9_-]+) ]]; then
+			if [[ -n "$component" && -z "${pending_dockerfile:-}" ]]; then
+				dockerfiles+=("$component/Dockerfile")
+			fi
+			component="${BASH_REMATCH[1]}"
+			pending_dockerfile=""
+		elif [[ "$line" =~ dockerfile:\ *([A-Za-z0-9_./-]+) ]]; then
+			pending_dockerfile="${BASH_REMATCH[1]}"
+			dockerfiles+=("$pending_dockerfile")
+		fi
+	done <<<"$matrix_block"
+	if [[ -n "$component" && -z "${pending_dockerfile:-}" ]]; then
+		dockerfiles+=("$component/Dockerfile")
+	fi
+
 fi
 
 if [[ "${#dockerfiles[@]}" -eq 0 ]]; then
