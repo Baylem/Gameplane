@@ -72,6 +72,15 @@ def affected_modules(root, paths):
 
     selected = {m for m in modules for p in paths
                 if p.startswith(m + "/") and not p.endswith(".md")}
+    # File reads in tests do not appear in the Go import graph. Seed their
+    # consumers before the empty-selection return and dependency closure.
+    file_consumers = {
+        "operator/config/crd": {"api"},  # API envtest CRDDirectoryPaths
+        "modules": {"gp-module"},  # validator TestValidate_RealModuleCS2
+    }
+    for directory, consumers in file_consumers.items():
+        if any(p == directory or p.startswith(directory + "/") for p in paths):
+            selected.update(consumers & modules.keys())
     if not selected:
         return []
     dependencies = {}
@@ -201,7 +210,10 @@ def main():
         images = select_images(ROOT, EDGE_IMAGES, paths)
         emit({"matrix": {"include": images}, "images": bool(images)})
         return
-    paths = changed_paths(ROOT, args.base, args.head)
+    # PRs use affected work; every master push is the full-suite backstop.
+    full = (os.environ.get("GITHUB_EVENT_NAME") == "push"
+            and os.environ.get("GITHUB_REF") == "refs/heads/master")
+    paths = None if full else changed_paths(ROOT, args.base, args.head)
     selected = affected_modules(ROOT, paths)
     modules = sorted(workspace_modules(ROOT))
     emit({

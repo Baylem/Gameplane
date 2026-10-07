@@ -3,9 +3,11 @@ name: ci
 on:
   push:
     branches: [master]
+    # Every master push runs the full suite, including docs/submodule changes.
+  pull_request:
     # Docs-only changes can't affect anything the suites test — don't spend
     # kind minutes on a markdown diff. Any non-ignored file in the change
-    # set still triggers the full run. "website" (no slash) matches the
+    # set still triggers the workflow. "website" (no slash) matches the
     # submodule gitlink itself — a plain submodule pointer bump; the /**
     # variant covers any future in-tree files under that path.
     # paths + negations (not paths-ignore, which cannot re-include) so that a
@@ -13,25 +15,6 @@ on:
     # Docs re-inclusion entries run the dedicated documentation gates (check-links,
     # check-doc-versions) on docs-only changes so stale versions and broken links
     # are caught without running unrelated test suites.
-    paths:
-      - "**"
-      - "!**.md"
-      - "!docs/**"
-      - "!design.pen"
-      - "!website"
-      - "!website/**"
-      - "!LICENSE"
-      - "**/specs.md"
-      - "README.md"
-      - "docs/**"
-      - "audit-syslog-bridge/README.md"
-      - "mcp-server/README.md"
-      - "telemetry-receiver/README.md"
-      - "CHANGELOG.md"
-      - "CLAUDE.md"
-      - "LICENSE"
-      - "specs/**/outreach.md"
-  pull_request:
     paths:
       - "**"
       - "!**.md"
@@ -83,8 +66,8 @@ jobs:
   # heavy jobs below can skip when they can't be affected (a web-only PR drops
   # from ~22 jobs to a handful). Any shared/CI-config path (this workflow, the
   # composite actions, the Makefile, go.work, buckets.sh) forces EVERYTHING on
-  # via the `ci` fail-safe, and dorny/paths-filter fails open on an unknown push
-  # base, so nothing is skipped by accident.
+  # via the `ci` fail-safe. Master pushes and unknown diff bases also select
+  # the full suite through ci_scope.py's `all` output.
   changes:
     name: detect changes
     runs-on: ubuntu-latest
@@ -166,9 +149,8 @@ jobs:
             # smoke-tests deploy/kind/**'s pinned dev ingress-nginx manifest
             # on a real Kind cluster, and must NOT run on every e2e-affecting
             # change (a Go or chart edit does not touch that manifest pin).
-            # No `ci` fail-safe either — the workflow file itself is listed
-            # directly below, which is what "or the workflow file itself
-            # changes" means for this gate.
+            # On PRs there is no `ci` fail-safe either — the workflow file
+            # itself is listed directly below. Master pushes always run it.
             kindsmoke:
               - 'deploy/kind/**'
               - '.github/workflows/ci.yaml'
@@ -270,7 +252,7 @@ jobs:
           GITHUB: ${{ steps.filter.outputs.github }}
           SPECS: ${{ steps.filter.outputs.specs }}
           DOCS: ${{ steps.filter.outputs.docs }}
-          KINDSMOKE: ${{ steps.filter.outputs.kindsmoke }}
+          KINDSMOKE: ${{ steps.filter.outputs.kindsmoke == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
         run: |
           gov=false;  { [ "$GO" = true ]     || [ "$CI" = true ]; } && gov=true
           webv=false; { [ "$WEB" = true ]    || [ "$CI" = true ]; } && webv=true
@@ -280,10 +262,8 @@ jobs:
           ghv=false;  { [ "$GITHUB" = true ] || [ "$CI" = true ]; } && ghv=true
           specsv=false; { [ "$SPECS" = true ] || [ "$CI" = true ]; } && specsv=true
           docsv=false; { [ "$DOCS" = true ] || [ "$CI" = true ]; } && docsv=true
-          # Deliberately NOT ORed with `ci`: this gate is meant to stay
-          # narrow (see the `kindsmoke` filter comment above), so a change
-          # to unrelated CI config (Makefile, go.work, .golangci.yml, ...)
-          # must not pull in a Kind cluster boot for it.
+          # Keep this gate narrow on PRs; KINDSMOKE also enables it for every
+          # master push, independently of its file filter.
           ksv=false; [ "$KINDSMOKE" = true ] && ksv=true
           {
             echo "go=$gov"
@@ -568,6 +548,10 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: initialize validator module fixtures
+        if: matrix.module == 'gp-module'
+        # The real-module test reads modules/cs2 from disk.
+        run: git submodule update --init modules
       - uses: ./.github/actions/go-cache
         with:
           key-suffix: ${{ matrix.module }}
