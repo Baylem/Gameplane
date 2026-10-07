@@ -11,8 +11,8 @@ api:
     # toggles say. This is the single setting for air-gapped and
     # privacy-sensitive clusters (FR-005, SC-004).
     enabled: true
-    # Empty = the project's default provider (compiled into the API; unset
-    # until OPEN-DECISIONS OD-1 is ruled). Set a URL to send reports to your
+    # Empty = the project's default provider (https://telemetry.gameplane.net/ingest,
+    # compiled into the API; OD-1 ruled 2026-10-07). Set a URL to send reports to your
     # own receiver instead (FR-005, FR-006).
     endpoint: ""
     authSecretRef: { name: "", key: token }   # unchanged
@@ -54,7 +54,7 @@ All new keys are read with `hasKey` or `dig` guards (the F-214 precedent), so `h
 | `enabled: false` | `--telemetry-disabled` | `disabled` |
 | `endpoint: ""`, `receiver.enabled: true` | `--telemetry-endpoint=http://gameplane-telemetry-receiver.<ns>.svc:8080/ingest`, `GAMEPLANE_TELEMETRY_BUNDLED=true` | `bundled` |
 | `endpoint: "https://…"` | `--telemetry-endpoint=https://…` | `custom` |
-| `endpoint: ""`, `receiver.enabled: false` | *(no endpoint argument)* | `default`, or `none` while `DefaultEndpoint` is empty |
+| `endpoint: ""`, `receiver.enabled: false` | *(no endpoint argument)* | `default` (OD-1 ruled 2026-10-07) |
 | `defaultModuleSource.enabled: true` | `--official-module-source=<defaultModuleSource.name>` | — |
 | `interval` set | `GAMEPLANE_TELEMETRY_INTERVAL=<interval>` | — |
 
@@ -64,7 +64,7 @@ All new keys are read with `hasKey` or `dig` guards (the F-214 precedent), so `h
 
 | Flag | Env | Default | Change |
 |---|---|---|---|
-| `--telemetry-endpoint` | `GAMEPLANE_TELEMETRY_ENDPOINT` | `""` | **Semantics change**: empty now means "use `telemetry.DefaultEndpoint`" rather than "off". This is identical in behaviour while the constant is empty. |
+| `--telemetry-endpoint` | `GAMEPLANE_TELEMETRY_ENDPOINT` | `""` | **Semantics change**: empty now means "use `telemetry.DefaultEndpoint`" (https://telemetry.gameplane.net/ingest, OD-1 ruled 2026-10-07) rather than "off". |
 | `--telemetry-disabled` | `GAMEPLANE_TELEMETRY_DISABLED` | `false` | New. |
 | — | `GAMEPLANE_TELEMETRY_BUNDLED` | `false` | New. Set only by the chart. |
 | `--telemetry-interval` | `GAMEPLANE_TELEMETRY_INTERVAL` | `24h` | New. Minimum `1m`; lower values are a startup error. |

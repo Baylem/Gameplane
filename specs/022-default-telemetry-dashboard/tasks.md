@@ -25,7 +25,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 - **Design first.** Any task that changes `design.pen` or `telemetry-receiver/telemetry-dashboard.pen` uses Pencil MCP only, never generic file tools (rule 2). Ask the user to open the file and save in the Pencil UI, then run the `design-export` skill, and commit the export with the design (rule 1). The receiver file exports to `telemetry-receiver/design-export/{json,screenshots}/`.
 - **Commits.** Commit each logical unit signed (`git commit -s`) with conventional prefixes and the `Co-Authored-By` / `Claude-Session` trailers. Never amend pushed commits (rule 11).
 - **Tests.** Don't delete or weaken a test. Tests whose behaviour this feature intentionally changes are listed in T002 and need sign-off first (system override 1).
-- **Merge gate.** The PR stays a **draft** until OPEN-DECISIONS OD-1 is ruled (plan.md, Merge gate).
+- **Merge gate.** OPEN-DECISIONS OD-1 was ruled (2026-10-07): the default domain is telemetry.gameplane.net, and the merge gate is satisfied (plan.md, Merge gate).
 
 ---
 

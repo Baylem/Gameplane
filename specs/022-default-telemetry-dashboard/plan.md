@@ -8,7 +8,7 @@
 
 Telemetry gets a compiled-in default destination and two consent tiers, and the receiver becomes a small provider with durable aggregates, a private dashboard and a public summary.
 
-**Destination.** The API gains one authoritative default destination, `telemetry.DefaultEndpoint`. It is empty until OD-1 is ruled, so behaviour is unchanged until then. An operator can still choose a custom destination, the bundled receiver, or a hard **disable** (`api.telemetry.enabled=false`).
+**Destination.** The API gains one authoritative default destination, `telemetry.DefaultEndpoint`. It is set to https://telemetry.gameplane.net/ingest (OD-1, ruled 2026-10-07). An operator can still choose a custom destination, the bundled receiver, or a hard **disable** (`api.telemetry.enabled=false`).
 
 **Consent.** Consent splits into a **basic** tier and an **extended** tier:
 - **Fresh installs** (detected inside `Store.Migrate`) seed both tiers on, but nothing is sent until an admin's dashboard has displayed the first-login notice.
@@ -83,7 +83,7 @@ The Admin Settings Telemetry section and the new notice banner are designed in `
 - 1 new Go module.
 - 1 new protocol element: signed extended reports with a claim on first use (R20).
 
-No NEEDS CLARIFICATION remains. Every technical unknown is resolved in [research.md](research.md) (R1–R20). OD-2, OD-3 and OD-4 are ruled (2026-10-06). OD-1, the domain, is still open: implementation proceeds with the default blank, and the feature PR can't merge until OD-1 is ruled (see Merge gate).
+No NEEDS CLARIFICATION remains. Every technical unknown is resolved in [research.md](research.md) (R1–R20). OD-1 (the domain) is ruled (2026-10-07): telemetry.gameplane.net. OD-2, OD-3 and OD-4 are ruled (2026-10-06).
 
 ## Constitution Check
 
@@ -100,7 +100,7 @@ No NEEDS CLARIFICATION remains. Every technical unknown is resolved in [research
 | CLAUDE.md core rule 3: login privacy | Unauthenticated views reveal nothing. | — | **PASS**: the receiver's refusal invariant (contracts/receiver-http.md). The Gameplane `/login` is untouched, and the notice appears only after authentication. |
 | CLAUDE.md core rule 9: K8s primitives first | — | — | **PASS**: PVC for receiver data; Secrets for the dashboard token and pepper; NetworkPolicy for the dashboard port. |
 | CLAUDE.md core rule 10: operator authority | — | — | **PASS**: the reporter only reads CRs; nothing bypasses reconciliation. This is the reporter's existing placement in the API. |
-| CLAUDE.md system override 10: unsettled values | — | — | **PASS**: the domain stays empty (OD-1). Retention (730 days) and activity expiry (90 days) are ruled values (OD-3, OD-4). |
+| CLAUDE.md system override 10: unsettled values | — | — | **PASS**: the domain is ruled (OD-1). Retention (730 days) and activity expiry (90 days) are ruled values (OD-3, OD-4). |
 
 **Result**: no violations. The one structural addition, a 16th Go module, is recorded under Complexity Tracking as a deliberate cost rather than a violation.
 
@@ -111,7 +111,7 @@ No NEEDS CLARIFICATION remains. Every technical unknown is resolved in [research
 ```text
 specs/022-default-telemetry-dashboard/
 ├── spec.md
-├── OPEN-DECISIONS.md        # OD-1 open (blocks merge); OD-2..OD-4 ruled
+├── OPEN-DECISIONS.md        # OD-1..OD-5 ruled
 ├── plan.md                  # this file
 ├── research.md              # R1–R20
 ├── data-model.md
@@ -222,12 +222,9 @@ Slices 2 and 3 can run in parallel once slice 1 is committed. Slice 4 needs slic
 
 - **019 localization-language-packs** (Draft) owns adding languages to the `telemetryschema` `language` enumeration and wiring the configured default. Until then `language` is always `en` (R19).
 
-## Merge gate (OD-1, user ruling 2026-10-06)
+## Merge gate (OD-1, ruled 2026-10-07)
 
-The domain isn't decided. Implementation proceeds with `telemetry.DefaultEndpoint = ""`, but **the feature PR MUST NOT merge until OD-1 is ruled** and the constant is set. This is enforced in two ways:
-
-- **Draft PR.** The PR stays a **draft** until then. GitHub does not allow merging drafts, and the `master` ruleset (`18692396`) has no required status checks, so a failing check alone wouldn't block the merge.
-- **CI job `telemetry-default-gate`.** It fails while `DefaultEndpoint` is empty or isn't `https`. It runs as its own job, so its failure never hides the results of other jobs. After merge it keeps enforcing FR-002 and FR-009.
+OD-1 is ruled: the domain is telemetry.gameplane.net, and `telemetry.DefaultEndpoint = "https://telemetry.gameplane.net/ingest"`. The merge gate is satisfied. The CI job `telemetry-default-gate` keeps enforcing that the default stays an https URL (FR-002, FR-009).
 
 ## Release checklist
 

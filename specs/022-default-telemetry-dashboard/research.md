@@ -270,7 +270,7 @@ Fallback for older receivers (FR-016, SC-013):
 | `telemetry.DefaultEndpoint != ""` | `default` | the constant |
 | otherwise | `none` | none |
 
-- `telemetry.DefaultEndpoint` is a Go constant in `api/internal/telemetry`, and is **`""` until OD-1 is ruled**. The feature PR can't merge while it is empty (plan.md, Merge gate). That makes it the single authoritative place FR-002 asks for. The chart never repeats the URL.
+- `telemetry.DefaultEndpoint` is a Go constant in `api/internal/telemetry`, set to `"https://telemetry.gameplane.net/ingest"` (OD-1, ruled 2026-10-07). That makes it the single authoritative place FR-002 asks for. The chart never repeats the URL.
 - The `default` kind requires an `https` scheme; a non-https default is a startup error. TLS uses the system roots with full verification, as FR-009 requires.
 - `custom` and `bundled` keep today's behaviour: any scheme, because the bundled receiver is plain in-cluster HTTP.
 - The chart's new value `api.telemetry.enabled` (default `true`) renders `--telemetry-disabled` when false. The template uses `hasKey`, because `--reuse-values` from beta.8 lacks the key (F-214 precedent at `api.yaml:394-399`).

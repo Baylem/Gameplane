@@ -41,7 +41,7 @@ Today an install sends anonymous usage reports (`{version, servers, templates}`,
 
 So telemetry only works when someone adds a destination. This feature makes five changes:
 
-- It gives gate 2 a default: the project-operated telemetry provider at a domain that hasn't been chosen yet (OPEN-DECISIONS OD-1).
+- It gives gate 2 a default: the project-operated telemetry provider at https://telemetry.gameplane.net/ingest (OPEN-DECISIONS OD-1, ruled 2026-10-07).
 - It turns telemetry on by default for **new** installs (Q1).
 - It adds an **extended** tier of richer, still name-free data, behind its own toggle (Q3, Q4).
 - It adds a private dashboard and a minimal public summary API on the provider (Q2).
@@ -231,7 +231,7 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 - **Claim expiry.** When an ID's activity record expires after 90 days without reports (OD-4), its claim goes with it. An install that returns after that is treated as new, and its own key claims the ID again.
 - **Restored database.** Restoring the install's database from a backup restores the same secret and ID, and so the same key, and reports keep being accepted. Losing the database makes the install new (Edge Cases: new vs. existing install), with a new ID and secret.
 - **Malicious values.** Malicious version strings, and malicious values in any other field, fall into "Invalid" or "other" buckets. Hostile input can't create unbounded dashboard categories or inject content into the dashboard.
-- **Default domain not decided at release time.** A build MUST NOT ship with a placeholder destination (FR-002). Until OD-1 is ruled, the default stays unset. In that case new installs have no destination, the reporter never runs, and the US1 notice is not shown.
+- **Default domain decided.** A build MUST NOT ship with a placeholder destination (FR-002). OD-1 is ruled (2026-10-07), and the default is set to https://telemetry.gameplane.net/ingest.
 - **Explicit disable conflicts with the admin toggles.** The operator's install-time disable always wins over both tiers.
 - **Lost or leaked dashboard access.** The provider operator can replace the dashboard access credential without losing any stored data.
 
@@ -242,7 +242,7 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 **Default destination & consent**
 
 - **FR-001**: When the operator has not configured a telemetry destination, the system MUST use the project's default telemetry provider as the destination.
-- **FR-002**: The default destination MUST be defined in exactly one authoritative place, and MUST NOT ship as a placeholder or unresolvable value. Until OD-1 is ruled, the default MUST be unset, which keeps today's behavior.
+- **FR-002**: The default destination MUST be defined in exactly one authoritative place, and MUST NOT ship as a placeholder or unresolvable value. OD-1 is ruled (2026-10-07), and the default is set to https://telemetry.gameplane.net/ingest.
 - **FR-003**: Telemetry MUST have two tiers with independent admin controls: **basic** and **extended**. Extended can only be on while basic is on, and turning basic off turns extended off. The tier defaults are:
   - On a **new** install with a destination in effect, both tiers MUST default to **on**.
   - On an install that existed before this feature, a saved basic choice MUST be kept, and if no choice was ever saved, basic MUST stay **off**.
@@ -424,7 +424,7 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 
 ## Assumptions
 
-- The default provider is operated by the Gameplane project. Its maintainers run it, and its data-handling statement is a page on the project website (OD-2, ruled). The domain (OD-1) is still open. Implementation proceeds with the default unset (FR-002), and the feature PR doesn't merge until OD-1 is ruled.
+- The default provider is operated by the Gameplane project. Its maintainers run it at https://telemetry.gameplane.net/ingest, and its data-handling statement is a page on the project website at https://gameplane.net/telemetry/ (OD-1 and OD-2, ruled 2026-10-07).
 - "Telemetry provider" means the receiving service, whether that is the project-run default or a self-hosted or bundled receiver. All of them speak the same report format.
 - Unique-install figures are available only for installs that share extended data, because only extended reports carry an install ID. Basic-only installs are counted as reports per day.
 - The install ID is pseudonymous rather than anonymous: it links one install's reports over time. That is why it's confined to the extended tier, never linked to stored extended attributes (FR-014), resettable, and deleted when extended is turned off (FR-012). Signing protects existing IDs from impersonation. Fabricated new installs can only be limited by per-source limits, because there's no way to tell a real install from an invented one without a project-issued secret.

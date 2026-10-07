@@ -53,6 +53,6 @@
   - Q10: the provider dashboard is designed in `telemetry-receiver/telemetry-dashboard.pen`.
 
   No new markers; all items still pass.
-- The domain is deliberately left unsettled in OPEN-DECISIONS OD-1, as CLAUDE.md rule 10 requires. It is not a clarification marker. The user ruled on 2026-10-06 that the feature PR is blocked until OD-1 is ruled.
+- The domain (OD-1) has been ruled (2026-10-07): telemetry.gameplane.net. The data-handling statement URL (OD-2 dependent, T096 on website side) is https://gameplane.net/telemetry/.
 - The Assumptions section cites repo process (Pencil design-first, E2E coverage, `telemetry-receiver/specs.md` upkeep) as governance constraints. These describe process, not implementation, and are kept on purpose.
 - Size bands in US4 scenario 3 restate the provider's existing published buckets, so they are a product contract rather than an implementation choice.

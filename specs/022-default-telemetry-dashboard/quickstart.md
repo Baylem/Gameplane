@@ -143,13 +143,9 @@ This is automated in the `telemetry` bucket, against a custom receiver deployed 
 4. Start the receiver with a 31-character `DASHBOARD_TOKEN`.
    - **Expect** it to exit at startup with an error naming the 32-character minimum.
 
-## Merge gate (OD-1)
+## Merge gate (OD-1, ruled 2026-10-07)
 
-The feature PR stays a **draft** until OD-1 is ruled. The CI job `telemetry-default-gate` fails while `telemetry.DefaultEndpoint` is empty or isn't `https`. To unblock:
-
-- record the domain as RULED in OPEN-DECISIONS OD-1
-- set `DefaultEndpoint`
-- update the destination copy in the designs and docs
+OD-1 is ruled: the domain is telemetry.gameplane.net. The merge gate is satisfied. The CI job `telemetry-default-gate` keeps enforcing that the default stays an https URL.
 
 ## Release checklist
 
