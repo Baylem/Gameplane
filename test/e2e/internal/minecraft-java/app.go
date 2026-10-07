@@ -13,8 +13,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/test/e2e/internal/minecraft-java/minecraftproto"
-	"github.com/ValgulNecron/gameplane/test/e2e/internal/protocol/joindepth"
+	"github.com/GameplanePanel/gameplane/test/e2e/internal/minecraft-java/minecraftproto"
+	"github.com/GameplanePanel/gameplane/test/e2e/internal/protocol/joindepth"
 )
 
 func main() {

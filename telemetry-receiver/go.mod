@@ -1,4 +1,4 @@
-module github.com/ValgulNecron/gameplane/telemetry-receiver
+module github.com/GameplanePanel/gameplane/telemetry-receiver
 
 go 1.26.0
 

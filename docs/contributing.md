@@ -141,14 +141,14 @@ the same review, lint, and test gates below.
 4. Sign commits (`git commit -s`)
 5. **PR labels**: every PR must carry at least one `type:` and one `area:` label. CodeRabbit (see Code review below) applies them automatically, and the `auto-label` workflow (`hack/auto_label.py`, every 15 minutes) fills in a missing `type:` from the conventional-commit title prefix and a missing `area:` from the changed paths; `type: security` is never derived. You are responsible for verifying they are correct. The `type:` taxonomy is `feature` / `fix` / `refactor` / `test` / `ci` / `chore` / `docs` / `security`. The `area:` taxonomy is `operator` / `api` / `agent` / `web` / `modules` / `chart` / `e2e` / `specs` / `shared` / `optional-components`. A breaking CRD, API, or chart-value change also takes `breaking`. The `status:` labels (`blocked`, `needs-maintainer`, `in-progress`) are optional. A PR spanning several components takes several `area:` labels rather than being left unlabelled.
 
-Game-module changes (`modules/`) belong in the separate **`gameplane-module`**
+Game-module changes (`modules/`) belong in the separate **`GameplanePanel/module`**
 repo, which this repo vendors as a submodule. Open the module PR there; once it
 merges, bump the submodule pointer here (`git add modules`) in a follow-up PR.
 
 `.gitmodules` points both submodules (`modules/`, `website/`) at the upstream
 GitHub URLs, so a fork of this repo clones them without forking them too. To
 work on your own fork of a submodule, repoint it locally:
-`git submodule set-url modules https://github.com/<you>/gameplane-module.git`
+`git submodule set-url modules https://github.com/<you>/module.git`
 (don't commit that change).
 
 ## Code review

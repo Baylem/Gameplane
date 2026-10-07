@@ -16,7 +16,7 @@
 # via the shared pod network namespace; port mapping is not applicable.
 
 # Base image reference. Allows CI to inject the exact digest.
-# CI passes: --build-arg STEAMCMD_BASE_IMAGE=ghcr.io/valgulnecron/gameplane/common-steamcmd@sha256:...
+# CI passes: --build-arg STEAMCMD_BASE_IMAGE=ghcr.io/gameplanepanel/gameplane/common-steamcmd@sha256:...
 ARG STEAMCMD_BASE_IMAGE=gameplane-steamcmd-base:latest
 FROM ${STEAMCMD_BASE_IMAGE}
 
@@ -34,4 +34,4 @@ ARG VERSION=dev
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.title="Gameplane Nuclear Option Server"
 LABEL org.opencontainers.image.description="Nuclear Option dedicated server for Gameplane"
-LABEL org.opencontainers.image.source="https://github.com/valgulnecron/gameplane"
+LABEL org.opencontainers.image.source="https://github.com/gameplanepanel/gameplane"

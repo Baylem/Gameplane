@@ -1,10 +1,10 @@
-module github.com/ValgulNecron/gameplane/test/e2e
+module github.com/GameplanePanel/gameplane/test/e2e
 
 go 1.26.0
 
-require github.com/ValgulNecron/gameplane/gp-module v0.0.0
+require github.com/GameplanePanel/gameplane/gp-module v0.0.0
 
-replace github.com/ValgulNecron/gameplane/gp-module => ../../gp-module
+replace github.com/GameplanePanel/gameplane/gp-module => ../../gp-module
 
 require (
 	github.com/coder/websocket v1.8.15

@@ -1,4 +1,4 @@
-module github.com/ValgulNecron/gameplane/gp-module
+module github.com/GameplanePanel/gameplane/gp-module
 
 go 1.26.0
 

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/test/e2e/internal/protocol/joindepth"
+	"github.com/GameplanePanel/gameplane/test/e2e/internal/protocol/joindepth"
 )
 
 // TestGameServer_SquadBot_Query boots a Squad dedicated server
@@ -25,7 +25,7 @@ func TestGameServer_SquadBot_Query(t *testing.T) {
 		Game:        "squad",
 		Template:    fmt.Sprintf("e2e-squad-bot-%d", time.Now().UnixNano()),
 		DisplayName: "E2E Squad",
-		Image:       "ghcr.io/valgulnecron/gameplane/squad:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+		Image:       "ghcr.io/gameplanepanel/gameplane/squad:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 		Env: map[string]string{
 			"SERVER_NAME":   "Gameplane E2E Squad",
 			"RCON_PASSWORD": "secret-rcon-password",

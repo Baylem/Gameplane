@@ -24,10 +24,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ValgulNecron/gameplane/agent/internal/caps"
-	"github.com/ValgulNecron/gameplane/agent/internal/httpjson"
-	"github.com/ValgulNecron/gameplane/agent/internal/rcon"
-	"github.com/ValgulNecron/gameplane/gameaction"
+	"github.com/GameplanePanel/gameplane/agent/internal/caps"
+	"github.com/GameplanePanel/gameplane/agent/internal/httpjson"
+	"github.com/GameplanePanel/gameplane/agent/internal/rcon"
+	"github.com/GameplanePanel/gameplane/gameaction"
 )
 
 // Rcon is the interface to the game's remote console.

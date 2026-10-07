@@ -1,18 +1,18 @@
-module github.com/ValgulNecron/gameplane/agent
+module github.com/GameplanePanel/gameplane/agent
 
 go 1.26.0
 
-require github.com/ValgulNecron/gameplane/netguard v0.0.0
+require github.com/GameplanePanel/gameplane/netguard v0.0.0
 
 // netguard is an in-repo module (no published version); resolve it locally
 // both inside the workspace (go.work) and in standalone module/Docker builds.
-replace github.com/ValgulNecron/gameplane/netguard => ../netguard
+replace github.com/GameplanePanel/gameplane/netguard => ../netguard
 
-require github.com/ValgulNecron/gameplane/gameaction v0.0.0
+require github.com/GameplanePanel/gameplane/gameaction v0.0.0
 
 // gameaction is an in-repo module (no published version); resolve it locally
 // both inside the workspace (go.work) and in standalone module/Docker builds.
-replace github.com/ValgulNecron/gameplane/gameaction => ../gameaction
+replace github.com/GameplanePanel/gameplane/gameaction => ../gameaction
 
 require (
 	github.com/coder/websocket v1.8.15

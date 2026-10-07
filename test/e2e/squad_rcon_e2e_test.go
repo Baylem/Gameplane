@@ -41,7 +41,7 @@ func TestGameServer_Squad_RCON(t *testing.T) {
 			"displayName": "E2E Squad RCON",
 			"game":        "squad",
 			"version":     "1.0.0",
-			"image":       "ghcr.io/valgulnecron/gameplane/squad:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+			"image":       "ghcr.io/gameplanepanel/gameplane/squad:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 			"env": []any{
 				map[string]any{"name": "HOME", "value": "/serverdata"},
 				map[string]any{"name": "RCON_PASSWORD", "value": "secret-rcon-password"},

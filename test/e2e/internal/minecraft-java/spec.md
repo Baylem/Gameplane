@@ -11,7 +11,7 @@
 - **Blocker Class**: —
 
 **Status:** pre-v1 (v0.3.0)  
-**Module / package:** `github.com/ValgulNecron/gameplane/test/e2e/internal/minecraft-java`  
+**Module / package:** `github.com/GameplanePanel/gameplane/test/e2e/internal/minecraft-java`  
 **Dependencies:** stdlib only (Go 1.25+); tested against Minecraft 1.21.4; image: `itzg/minecraft-server:java21`
 
 ## Purpose
@@ -54,7 +54,7 @@ test/e2e/internal/minecraft-java/
 └── spec.md                     # This file
 ```
 
-- **`protocol/`** — a subpackage (`github.com/ValgulNecron/gameplane/test/e2e/internal/minecraft-java/minecraftproto`) implementing the wire protocol. Stdlib only, no external imports.
+- **`protocol/`** — a subpackage (`github.com/GameplanePanel/gameplane/test/e2e/internal/minecraft-java/minecraftproto`) implementing the wire protocol. Stdlib only, no external imports.
 - **`app.go`** — the main function that runs as a Kubernetes Job. Imports the protocol package and uses the shared `probe` package for retry logic and test framework integration.
 
 ## External interface / contracts
@@ -125,7 +125,7 @@ type LoginResult struct {
 - Treats `NeedsAuth` as a fatal failure (returns `probe.Partial` because the server is online-mode, not offline-mode as expected).
 - Returns `probe.Joined` on login success.
 
-### Shared Probe Package (`github.com/ValgulNecron/gameplane/test/e2e/internal/probe`)
+### Shared Probe Package (`github.com/GameplanePanel/gameplane/test/e2e/internal/probe`)
 
 (Defined by parallel agent; app.go is coded against this contract.)
 
@@ -155,7 +155,7 @@ func Main(f Flags, run func(context.Context) (Depth, error))
 
 ## Dependencies
 
-**Internal:** `github.com/ValgulNecron/gameplane/test/e2e/internal/probe` (shared probe harness).
+**Internal:** `github.com/GameplanePanel/gameplane/test/e2e/internal/probe` (shared probe harness).
 
 **External:** stdlib only (`bufio`, `bytes`, `compress/zlib`, `context`, `crypto/rand`, `encoding/binary`, `encoding/json`, `errors`, `flag`, `fmt`, `io`, `log`, `net`, `strconv`, `strings`, `time`).
 

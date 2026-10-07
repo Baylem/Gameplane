@@ -9,7 +9,7 @@
 
 **Purpose**: Initialize the `gp-module` Go module and workspace integration.
 
-- [X] T001 Initialize `gp-module/go.mod` (Go 1.26.0, `github.com/ValgulNecron/gameplane/gp-module`) and add `./gp-module` to `go.work`
+- [X] T001 Initialize `gp-module/go.mod` (Go 1.26.0, `github.com/GameplanePanel/gameplane/gp-module`) and add `./gp-module` to `go.work`
 - [X] T002 Add `gp-module` to `GO_MODULES` in `Makefile` and configure `gp-module` and `module-*` convenience targets
 - [X] T003 [P] Create `gp-module/.testcoverage.yml` defining package coverage threshold gates
 - [X] T004 [P] Create `gp-module/specs.md` architecture specification satisfying Constitution Principle IV and passing `hack/check-specs.sh`

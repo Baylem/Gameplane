@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ValgulNecron/gameplane/api/internal/db"
-	"github.com/ValgulNecron/gameplane/api/internal/rbac"
+	"github.com/GameplanePanel/gameplane/api/internal/db"
+	"github.com/GameplanePanel/gameplane/api/internal/rbac"
 )
 
 // remoteWidePermissionsAllowed keeps supplemental remote grants away from

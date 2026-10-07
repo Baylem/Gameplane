@@ -14,14 +14,14 @@ as OCI artifacts — no `helm repo add` needed. Install a tagged release straigh
 from the registry (replace `<version>` with a release, e.g. `0.3.0`):
 
 ```sh
-helm upgrade --install gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
+helm upgrade --install gameplane oci://ghcr.io/gameplanepanel/charts/gameplane \
   --version <version> \
   --namespace gameplane-system --create-namespace \
   --set ingress.host=gameplane.your-domain.test
 ```
 
 The chart's `appVersion` pins matching component images under
-`ghcr.io/valgulnecron/gameplane/<name>:<version>`, so no image overrides are
+`ghcr.io/gameplanepanel/gameplane/<name>:<version>`, so no image overrides are
 needed for a released version. A default install pulls four of them:
 `operator`, `api`, `web`, and `agent` (the last is pulled per-GameServer, on
 demand). The remaining eight — `audit-syslog-bridge`, `telemetry-receiver`,
@@ -37,7 +37,7 @@ Every push to `master` publishes rolling `:edge` images. To track them, install
 the chart and point images at the edge tag:
 
 ```sh
-helm upgrade --install gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
+helm upgrade --install gameplane oci://ghcr.io/gameplanepanel/charts/gameplane \
   --version <version> --set image.tag=edge \
   --namespace gameplane-system --create-namespace \
   --set ingress.host=gameplane.your-domain.test
@@ -55,7 +55,7 @@ Sigstore Rekor transparency log:
 
 ```sh
 cosign verify --key cosign.pub \
-  ghcr.io/valgulnecron/gameplane/operator:<version>
+  ghcr.io/gameplanepanel/gameplane/operator:<version>
 ```
 
 Pre-rotation releases (v0.2.0-beta.7 and earlier) used the retired Ed25519 key <!-- doc-versions: historical -->
@@ -193,13 +193,13 @@ Top-level knobs (see `values.yaml` for the full list):
   - `defaultModuleSource.enabled` — whether to create the default `ModuleSource` (default `true`; disable when managing sources via GitOps)
   - `defaultModuleSource.name` — name of the `ModuleSource` resource (default `default`)
   - `defaultModuleSource.refreshInterval` — how often the catalog is re-indexed (default `1h`)
-  - `defaultModuleSource.type` — source type: `oci` (default, pulls pre-built bundles from a registry) or `git` (index the public `gameplane-module` repo)
+  - `defaultModuleSource.type` — source type: `oci` (default, pulls pre-built bundles from a registry) or `git` (index the public `GameplanePanel/module` repo)
   - `defaultModuleSource.git.*` — git configuration (when `type: git`)
-    - `git.url` — repository URL (default `https://github.com/ValgulNecron/gameplane-module.git`)
+    - `git.url` — repository URL (default `https://github.com/GameplanePanel/module.git`)
     - `git.ref` — git branch/tag (default `main`)
     - `git.subPath` — module subdirectory within the repository (default `""`, empty means root)
   - `defaultModuleSource.oci.*` — OCI registry configuration (when `type: oci`)
-    - `oci.url` — OCI registry URL (e.g., `ghcr.io/valgulnecron/gameplane-modules`)
+    - `oci.url` — OCI registry URL (e.g., `ghcr.io/gameplanepanel/gameplane-modules`)
     - `oci.insecure` — use plain HTTP (no TLS) for local registries such as kind/k3d; TLS verification is never skipped
     - `oci.modules` — which modules to pull from the registry
     - `oci.pullSecretName` — optional kubernetes.io/dockerconfigjson Secret for private registries
@@ -213,7 +213,7 @@ Top-level knobs (see `values.yaml` for the full list):
 - `serviceMonitors.enabled` / `prometheusRules.enabled` / `grafanaDashboards.enabled`
   — opt-in Prometheus Operator integration (see [Observability](#observability))
 - `operator.sentinelImage` — the optional sentinel [optional] component for wake-on-connect (default
-  `ghcr.io/valgulnecron/gameplane/sentinel:<version>`). The sentinel holds
+  `ghcr.io/gameplanepanel/gameplane/sentinel:<version>`). The sentinel holds
   advertised ports while a GameServer is asleep and wakes it on a genuine
   connection attempt; opt-in per server via `spec.idle.wakeOnConnect` (default
   false). Runs as a small 1-replica Deployment per armed server; costs one pod
@@ -456,7 +456,7 @@ The chart ships two `ModuleSource`s: `default` (pulls pre-built bundles from the
 official registry) and `uploads` (dashboard bundle uploads). The default uses
 `type: oci` for zero-configuration access to versioned, optionally signed bundles;
 `type: git` is available to track an unreleased branch directly from the
-`gameplane-module` repository. Install games from the dashboard's **Modules** page,
+`GameplanePanel/module` repository. Install games from the dashboard's **Modules** page,
 or add more sources — git repositories, http archives, a local directory — under
 **Modules → Manage sources** (admin) or by applying `ModuleSource` CRs. See
 `docs/module-authoring.md` for the source types and the bundle format.
@@ -663,7 +663,7 @@ supports the same RBAC model.
 ## Upgrading
 
 ```sh
-helm upgrade gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
+helm upgrade gameplane oci://ghcr.io/gameplanepanel/charts/gameplane \
   --version <new-version> \
   --namespace gameplane-system \
   --reuse-values

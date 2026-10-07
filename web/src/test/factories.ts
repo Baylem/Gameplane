@@ -108,7 +108,7 @@ export function makeTemplate(over: TemplateOverride = {}): GameTemplate {
       displayName: "Minecraft (Vanilla)",
       game: "minecraft",
       version: "1.21",
-      image: "ghcr.io/valgulnecron/gameplane/minecraft:1.21",
+      image: "ghcr.io/gameplanepanel/gameplane/minecraft:1.21",
       consoleMode: "rcon",
       rcon: { protocol: "source" },
       logPath: "/data/logs/latest.log",
@@ -252,7 +252,7 @@ export function makeModuleSource(over: Partial<ModuleSource> = {}): ModuleSource
     spec: {
       type: "oci",
       oci: {
-        url: "ghcr.io/valgulnecron/gameplane/modules",
+        url: "ghcr.io/gameplanepanel/gameplane/modules",
         modules: [{ name: "minecraft-vanilla" }],
       },
     },

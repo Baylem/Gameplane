@@ -1,7 +1,7 @@
 # telemetry-receiver — Specification
 
 **Status:** pre-v1 (v0.3.0)  
-**Module / package:** github.com/ValgulNecron/gameplane/telemetry-receiver  
+**Module / package:** github.com/GameplanePanel/gameplane/telemetry-receiver  
 **Go version:** 1.26
 
 ## Purpose

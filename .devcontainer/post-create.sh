@@ -22,7 +22,7 @@ LOCAL_BIN_DIR="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN_DIR"
 case ":$PATH:" in *":$LOCAL_BIN_DIR:"*) ;; *) export PATH="$LOCAL_BIN_DIR:$PATH" ;; esac
 
-# ---------- submodules (modules/ lives in the gameplane-module repo) ----------
+# ---------- submodules (modules/ lives in the GameplanePanel/module repo) ----------
 # The game-module bundles are a git submodule at modules/; init them so
 # `make modules-push` / `make dev-up` find modules/build.sh and the bundles.
 if [ -f .gitmodules ]; then

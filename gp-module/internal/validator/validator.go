@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ValgulNecron/gameplane/gp-module/internal/common"
+	"github.com/GameplanePanel/gameplane/gp-module/internal/common"
 )
 
 // ValidateOptions controls validation flags and strictness.

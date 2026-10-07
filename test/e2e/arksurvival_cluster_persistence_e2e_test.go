@@ -43,7 +43,7 @@ func TestGameServer_ArkSurvival_ClusterPersistence(t *testing.T) {
 			"displayName": "E2E ARK Cluster Shard",
 			"game":        "ark-survival-evolved",
 			"version":     "1.0.0",
-			"image":       "ghcr.io/valgulnecron/gameplane/ark-survival-evolved:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+			"image":       "ghcr.io/gameplanepanel/gameplane/ark-survival-evolved:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 			"ports": []any{
 				map[string]any{"name": "game", "containerPort": int64(7777), "protocol": "UDP", "advertise": true},
 				map[string]any{"name": "query", "containerPort": int64(27015), "protocol": "UDP", "advertise": true},

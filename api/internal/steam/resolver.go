@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"sort"
 
-	"github.com/ValgulNecron/gameplane/netguard"
+	"github.com/GameplanePanel/gameplane/netguard"
 )
 
 // Resolver resolves Steam IDs to display names via the Steam Web API.

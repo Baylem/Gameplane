@@ -10,9 +10,9 @@ clusters without changing the operational model.
 > See [Pre-v1 status & known limitations](#pre-v1-status--limitations) before
 > running it for anything you can't afford to lose.
 
-**Website:** <https://valgulnecron.github.io/gameplane-website/> — features,
+**Website:** <https://gameplanepanel.github.io/website/> — features,
 docs, and comparisons. Source lives in
-[`gameplane-website`](https://github.com/ValgulNecron/gameplane-website),
+[`GameplanePanel/website`](https://github.com/GameplanePanel/website),
 mounted here as the `website/` submodule.
 
 ## Screenshots
@@ -206,13 +206,13 @@ The Helm chart and component images are published to the GitHub Container
 Registry as OCI artifacts — no `helm repo add` required:
 
 ```sh
-helm upgrade --install gameplane oci://ghcr.io/valgulnecron/charts/gameplane \
+helm upgrade --install gameplane oci://ghcr.io/gameplanepanel/charts/gameplane \
   --version <version> \
   --namespace gameplane-system --create-namespace \
   --set ingress.host=gameplane.your-domain.test
 ```
 
-The chart pins matching `ghcr.io/valgulnecron/gameplane/{operator,api,agent}`
+The chart pins matching `ghcr.io/gameplanepanel/gameplane/{operator,api,agent}`
 images by `appVersion`. To track the rolling edge build instead of a tagged release,
 add `--set image.tag=edge`. Then seed an admin user and log in — see
 [`docs/install.md`](docs/install.md) for the full flow, OIDC, Postgres, and
@@ -226,7 +226,7 @@ transparency log:
 
 ```sh
 cosign verify --key cosign.pub \
-  ghcr.io/valgulnecron/gameplane/operator:<version>
+  ghcr.io/gameplanepanel/gameplane/operator:<version>
 ```
 
 Pre-rotation releases (v0.2.0-beta.7 and earlier) were signed with the retired <!-- doc-versions: historical -->
@@ -239,7 +239,7 @@ Ed25519 key and do not have transparency log entries — verify them with
 Requires: Go 1.26+, Node 20+, Docker, kind, kubectl, helm,
 [oras](https://oras.land/docs/installation) (>= 1.2.0).
 
-The game modules live in the separate `gameplane-module` repo, wired in here
+The game modules live in the separate `GameplanePanel/module` repo, wired in here
 as the `modules/` submodule — clone with submodules (or initialize them after):
 
 ```sh

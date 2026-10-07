@@ -1,7 +1,7 @@
 # api — Specification
 
 **Status:** pre-v1 (v0.3.0)  
-**Module / package:** github.com/ValgulNecron/gameplane/api
+**Module / package:** github.com/GameplanePanel/gameplane/api
 
 ## Purpose
 
@@ -504,8 +504,8 @@ audit:read, config:read, config:manage (cluster-scoped)
 ## Dependencies
 
 **Internal (same workspace via go.work):**
-- `github.com/ValgulNecron/gameplane/netguard` — dial-time address guard for outbound HTTP: mod-registry browse/search and the Steam name resolver use `IsPublic`; notification sinks use `IsAllowed`
-- `github.com/ValgulNecron/gameplane/gameaction` — console-injection guard + command-template renderer
+- `github.com/GameplanePanel/gameplane/netguard` — dial-time address guard for outbound HTTP: mod-registry browse/search and the Steam name resolver use `IsPublic`; notification sinks use `IsAllowed`
+- `github.com/GameplanePanel/gameplane/gameaction` — console-injection guard + command-template renderer
 
 **External (go.mod):**
 - `github.com/go-chi/chi/v5` v5.1.0 — HTTP router, middleware

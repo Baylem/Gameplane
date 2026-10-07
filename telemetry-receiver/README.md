@@ -57,7 +57,7 @@ URL). See `docs/install.md`.
 ```sh
 docker run --rm -p 8080:8080 \
   -e AUTH_TOKEN='Bearer …' \
-  ghcr.io/valgulnecron/gameplane/telemetry-receiver:edge
+  ghcr.io/gameplanepanel/gameplane/telemetry-receiver:edge
 ```
 
 Point any Gameplane install at it with
