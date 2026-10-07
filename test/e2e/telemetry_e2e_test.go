@@ -48,6 +48,7 @@ const (
 func TestTelemetryLifecycle(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
+	parent := t // owns cleanups for resources that must outlive a subtest
 
 	// ---- setup: dashboard token, chart values, one admin ------------------
 
@@ -63,6 +64,12 @@ func TestTelemetryLifecycle(t *testing.T) {
 	metricsPort, stopMetrics := detachedPortForward(ctx, t, "gameplane-system", "svc/gameplane-telemetry-receiver", 8081)
 	defer stopMetrics()
 	reports := func() float64 { return receiverReportsTotal(ctx, t, metricsPort) }
+	// arrivals counts every report the receiver accepted: new ones (reports_total)
+	// plus same-day duplicates of an already counted extended install ID, which the
+	// receiver acknowledges with 204 but does not add to reports_total.
+	arrivals := func() float64 {
+		return reports() + receiverMetric(ctx, t, metricsPort, telemetryDashToken, metricDuplicates, "")
+	}
 
 	// The bucket's one admin login. Logging in does not show the notice:
 	// only the notice POST (the dashboard rendering it) records that.
@@ -133,16 +140,18 @@ func TestTelemetryLifecycle(t *testing.T) {
 	})
 
 	t.Run("api_restart_does_not_resend_early", func(t *testing.T) {
-		// Wait for a report and note when it was first seen.
-		seen := reports()
+		// Wait for a report and note when it was first seen. The install keeps
+		// one ID, so after its first report the receiver counts the rest as
+		// same-day duplicates; arrivals() includes those.
+		seen := arrivals()
 		sawAt := time.Now()
 		envInstance.Eventually(t, 3*telemetryInterval, func() (bool, string) {
-			got := reports()
+			got := arrivals()
 			if got > seen {
 				seen, sawAt = got, time.Now()
 				return true, ""
 			}
-			return false, fmt.Sprintf("reports_total = %v, waiting for a report", got)
+			return false, fmt.Sprintf("reports + duplicates = %v, waiting for a report", got)
 		})
 
 		if out, err := envInstance.Kubectl(ctx, "rollout", "restart", "deploy/gameplane-api",
@@ -159,8 +168,8 @@ func TestTelemetryLifecycle(t *testing.T) {
 		// after the previous report, not at once. Allow 5s for the two
 		// one-second polling observations.
 		envInstance.Eventually(t, 4*telemetryInterval, func() (bool, string) {
-			got := reports()
-			return got > seen, fmt.Sprintf("reports_total = %v, waiting for the next report", got)
+			got := arrivals()
+			return got > seen, fmt.Sprintf("reports + duplicates = %v, waiting for the next report", got)
 		})
 		if gap := time.Since(sawAt); gap < telemetryInterval-5*time.Second {
 			t.Fatalf("next report arrived %v after the previous one, want at least %v (the API restart must not send early)",
@@ -168,9 +177,16 @@ func TestTelemetryLifecycle(t *testing.T) {
 		}
 	})
 
-	// reportsMore waits until the bundled receiver has counted more reports
-	// than it had when the wait began.
+	// reportsMore waits until the bundled receiver has accepted another report,
+	// counted or a same-day duplicate.
 	reportsMore := func(t *testing.T) {
+		t.Helper()
+		waitForMore(t, arrivals, 4*telemetryInterval, "reports + duplicates")
+	}
+
+	// newReportsMore waits for a report the receiver counts in reports_total
+	// and in the fleet histograms, which a same-day duplicate does not touch.
+	newReportsMore := func(t *testing.T) {
 		t.Helper()
 		waitForMore(t, func() float64 { return rx.get(ctx, t, metricReports, "") }, 4*telemetryInterval, metricReports)
 	}
@@ -221,6 +237,10 @@ func TestTelemetryLifecycle(t *testing.T) {
 	})
 
 	t.Run("preview_matches_received", func(t *testing.T) {
+		// A new install ID makes the next extended report a new install, so the
+		// receiver counts it and records its fleet histograms; the ID from
+		// reset_id_counts_as_new_install was already counted today.
+		resetInstallID(ctx, t, cli)
 		v := getTelemetryView(ctx, t, cli)
 		if v.Preview == nil {
 			t.Fatal("no preview while basic is on")
@@ -233,7 +253,7 @@ func TestTelemetryLifecycle(t *testing.T) {
 		templatesSum0 := rx.get(ctx, t, "gameplane_telemetry_templates_sum", "")
 		versionLabel := fmt.Sprintf("version=%q", v.Preview.Version)
 		version0 := rx.get(ctx, t, metricReports, versionLabel)
-		reportsMore(t)
+		newReportsMore(t)
 		n := rx.get(ctx, t, "gameplane_telemetry_servers_count", "") - serversCount0
 		if n < 1 {
 			t.Fatalf("no report recorded: servers histogram count rose by %v", n)
@@ -584,7 +604,7 @@ func TestTelemetryLifecycle(t *testing.T) {
 	t.Run("old_receiver_gets_basic", func(t *testing.T) {
 		// The beta.8 receiver rejects any field beyond the basic three with 400
 		// and exposes /metrics unauthenticated on its one port (FR-016, SC-013).
-		name := deployTelemetryReceiver(ctx, t, "old", betaReceiverImage, false)
+		name := deployTelemetryReceiverKept(ctx, t, parent, "old", betaReceiverImage, false)
 		port, stop := detachedPortForward(ctx, t, "gameplane-system", "svc/"+name, 8080)
 		defer stop()
 		oldReceiver.name = name

@@ -285,6 +285,14 @@ func bundledReceiverImage(ctx context.Context, t *testing.T) string {
 // (for example INGEST_POW=true).
 func deployTelemetryReceiver(ctx context.Context, t *testing.T, kind, image string, dashboard bool, extraEnv ...string) string {
 	t.Helper()
+	return deployTelemetryReceiverKept(ctx, t, t, kind, image, dashboard, extraEnv...)
+}
+
+// deployTelemetryReceiverKept is deployTelemetryReceiver with the cleanup that
+// deletes the Deployment and Service registered on cleanupOn instead of t, for
+// a receiver a later subtest still needs. Failures are reported on t.
+func deployTelemetryReceiverKept(ctx context.Context, t, cleanupOn *testing.T, kind, image string, dashboard bool, extraEnv ...string) string {
+	t.Helper()
 	var suffix [4]byte
 	if _, err := rand.Read(suffix[:]); err != nil {
 		t.Fatalf("random name: %v", err)
@@ -349,7 +357,7 @@ spec:
 	if out, err := envInstance.KubectlWithStdin(ctx, manifest, "apply", "-f", "-"); err != nil {
 		t.Fatalf("apply receiver %s: %v\n%s", name, err, out)
 	}
-	t.Cleanup(func() {
+	cleanupOn.Cleanup(func() {
 		_, _ = envInstance.Kubectl(context.WithoutCancel(ctx), "delete", "deploy/"+name, "svc/"+name,
 			"--namespace", "gameplane-system", "--ignore-not-found")
 	})
