@@ -1778,7 +1778,6 @@ function TelemetrySection({ initial }: { initial?: TelemetryCfg }) {
           isDisabled={!installId || operatorDisabled || reset.isPending}
           onPress={() => setConfirmingReset(true)}
         >
-          <Plus className="mr-1.5 h-4 w-4" />
           Reset ID
         </Button>
       </div>

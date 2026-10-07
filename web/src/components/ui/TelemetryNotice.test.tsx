@@ -121,4 +121,11 @@ describe("TelemetryNotice", () => {
     renderWithQuery(<TelemetryNotice onOpenSettings={() => {}} />);
     expect(await screen.findByText("Anonymous usage metrics are on for this install.")).toBeInTheDocument();
   });
+
+  it("renders the banner when destination is absent", async () => {
+    setup(undefined);
+    renderWithQuery(<TelemetryNotice onOpenSettings={() => {}} />);
+    expect(await screen.findByText("Anonymous usage metrics are on for this install.")).toBeInTheDocument();
+    expect(screen.queryByText(/Reports are sent to/)).not.toBeInTheDocument();
+  });
 });
