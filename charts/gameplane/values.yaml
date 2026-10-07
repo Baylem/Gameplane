@@ -302,6 +302,18 @@ api:
       ingestSourceDailyLimit: 20
       # CIDRs whose X-Forwarded-For header is trusted for the source address.
       trustedProxyCIDRs: []
+      # Proof-of-work on report ingestion (spec 022 FR-039, OD-5). Off by
+      # default; a provider turns it on for a public endpoint. While on,
+      # every report must carry a solved challenge from GET /v1/challenge.
+      # The difficulty is 0 bits (or minBits) up to targetPerMinute
+      # challenges a minute, rises with the request rate up to maxBits, and
+      # falls one bit every 5 minutes. Installs refuse challenges above 26
+      # bits, so maxBits may not exceed 26.
+      ingestPow:
+        enabled: false
+        targetPerMinute: 60
+        minBits: 0
+        maxBits: 22
 
   oidc:
     enabled: false

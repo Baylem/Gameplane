@@ -28,6 +28,25 @@
 {{- if and (hasKey $r "activityExpiryDays") (lt (int $r.activityExpiryDays) 31) }}
 {{- fail "api.telemetry.receiver.activityExpiryDays must be at least 31 (spec 022 OD-4)" }}
 {{- end }}
+{{- /*
+  Proof-of-work (spec 022 FR-039, R21, OD-5). The whole block may be absent
+  after --reuse-values from a release before it (F-214); absent keys fall
+  back to the values.yaml defaults, with proof-of-work off.
+*/}}
+{{- $pow := $r.ingestPow | default dict }}
+{{- $powEnabled := ternary $pow.enabled false (hasKey $pow "enabled") }}
+{{- $powTarget := ternary $pow.targetPerMinute 60 (hasKey $pow "targetPerMinute") }}
+{{- $powMin := ternary $pow.minBits 0 (hasKey $pow "minBits") }}
+{{- $powMax := ternary $pow.maxBits 22 (hasKey $pow "maxBits") }}
+{{- if lt (int64 $powTarget) 1 }}
+{{- fail "api.telemetry.receiver.ingestPow.targetPerMinute must be at least 1 (spec 022 OD-5)" }}
+{{- end }}
+{{- if gt (int64 $powMax) 26 }}
+{{- fail "api.telemetry.receiver.ingestPow.maxBits must be at most 26, the hardest challenge an install solves (spec 022 OD-5)" }}
+{{- end }}
+{{- if lt (int64 $powMax) (int64 $powMin) }}
+{{- fail "api.telemetry.receiver.ingestPow.maxBits must be at least minBits (spec 022 OD-5)" }}
+{{- end }}
 {{- if $persistenceEnabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -95,6 +114,14 @@ spec:
             - name: TRUSTED_PROXY_CIDRS
               value: {{ join "," . | quote }}
             {{- end }}
+            - name: INGEST_POW
+              value: {{ $powEnabled | quote }}
+            - name: INGEST_POW_TARGET_PER_MIN
+              value: {{ $powTarget | int64 | quote }}
+            - name: INGEST_POW_MIN_BITS
+              value: {{ $powMin | int64 | quote }}
+            - name: INGEST_POW_MAX_BITS
+              value: {{ $powMax | int64 | quote }}
             {{- if $dashboardToken.name }}
             # The dashboard listener only starts when this is set.
             - name: DASHBOARD_TOKEN

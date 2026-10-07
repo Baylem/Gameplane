@@ -911,6 +911,56 @@ jobs:
             exit 1
           fi
           grep -q -- '--official-module-source=default' /tmp/api-telemetry-default.yaml
+      - name: telemetry receiver proof-of-work render (spec 022 FR-039, OD-5)
+        # api.telemetry.receiver.ingestPow renders INGEST_POW*: off with the
+        # OD-5 defaults, the configured values when enabled, and a failed
+        # render for a value the receiver would refuse to start with (the
+        # difficulty cap is the hardest challenge an install solves).
+        run: |
+          pow_env() {
+            # pow_env FILE WANT...: INGEST_POW, _TARGET_PER_MIN, _MIN_BITS and
+            # _MAX_BITS of the rendered receiver Deployment must equal WANT.
+            python3 - "$@" <<'PY'
+          import sys, yaml
+          path, *want = sys.argv[1:]
+          docs = [d for d in yaml.safe_load_all(open(path)) if d]
+          env = {e['name']: e['value'] for d in docs if d['kind'] == 'Deployment'
+                 for e in d['spec']['template']['spec']['containers'][0]['env'] if 'value' in e}
+          got = [env[k] for k in ('INGEST_POW', 'INGEST_POW_TARGET_PER_MIN', 'INGEST_POW_MIN_BITS', 'INGEST_POW_MAX_BITS')]
+          assert got == want, f"INGEST_POW env = {got}, want {want}"
+          PY
+          }
+          pow_fails() {
+            # pow_fails MESSAGE --set ...: the render must fail with MESSAGE.
+            message="$1"; shift
+            if helm template gameplane charts/gameplane --set api.telemetry.receiver.enabled=true "$@" \
+                 --show-only templates/telemetry-receiver.yaml > /dev/null 2> /tmp/pow-fail.err; then
+              echo "::error::receiver rendered for $*"
+              exit 1
+            fi
+            if ! grep -q -- "$message" /tmp/pow-fail.err; then
+              echo "::error::render for $* failed without '$message'"
+              cat /tmp/pow-fail.err
+              exit 1
+            fi
+          }
+          pow=api.telemetry.receiver.ingestPow
+          # Defaults: proof-of-work off, with the OD-5 values.
+          helm template gameplane charts/gameplane \
+            --set api.telemetry.receiver.enabled=true \
+            --show-only templates/telemetry-receiver.yaml > /tmp/pow-default.yaml
+          pow_env /tmp/pow-default.yaml false 60 0 22
+          # Enabled with its own values.
+          helm template gameplane charts/gameplane \
+            --set api.telemetry.receiver.enabled=true \
+            --set $pow.enabled=true --set $pow.targetPerMinute=30 \
+            --set $pow.minBits=8 --set $pow.maxBits=26 \
+            --show-only templates/telemetry-receiver.yaml > /tmp/pow-enabled.yaml
+          pow_env /tmp/pow-enabled.yaml true 30 8 26
+          # Values the receiver would refuse to start with fail the render.
+          pow_fails 'ingestPow.targetPerMinute must be at least 1' --set $pow.targetPerMinute=0
+          pow_fails 'ingestPow.maxBits must be at most 26' --set $pow.maxBits=27
+          pow_fails 'ingestPow.maxBits must be at least minBits' --set $pow.minBits=10 --set $pow.maxBits=9
       - name: games Namespace carries the keep policy
         # F-212: `helm uninstall` used to delete the games Namespace and
         # every GameServer/StatefulSet/PVC in it. Assert the Namespace is
@@ -1000,6 +1050,17 @@ jobs:
           assert ('Deployment', 'gameplane-telemetry-receiver') in resources
           assert ('PersistentVolumeClaim', 'gameplane-telemetry-receiver-data') not in resources, "--reuse-values added receiver storage"
           assert ('ServiceMonitor', 'gameplane-telemetry-receiver') not in resources, "receiver ServiceMonitor rendered without a dashboard token"
+          PY
+          # Spec 022 FR-039: beta.8's values have no ingestPow block, so the
+          # receiver renders the OD-5 defaults, with proof-of-work off.
+          python3 - <<'PY'
+          import yaml
+          docs = [d for d in yaml.safe_load_all(open('/tmp/rendered-reuse-values-receiver.yaml')) if d]
+          env = {e['name']: e['value'] for d in docs
+                 if d['kind'] == 'Deployment' and d['metadata']['name'] == 'gameplane-telemetry-receiver'
+                 for e in d['spec']['template']['spec']['containers'][0]['env'] if 'value' in e}
+          got = [env[k] for k in ('INGEST_POW', 'INGEST_POW_TARGET_PER_MIN', 'INGEST_POW_MIN_BITS', 'INGEST_POW_MAX_BITS')]
+          assert got == ['false', '60', '0', '22'], f"--reuse-values changed the INGEST_POW defaults: {got}"
           PY
       - name: crd-manifests in sync with crds
         # The CRD-apply hook serves CRDs from crd-manifests/ (crds/ isn't
