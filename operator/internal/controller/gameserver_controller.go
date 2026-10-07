@@ -239,6 +239,14 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if err := r.Get(ctx, req.NamespacedName, &gs); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	// Refresh and recover wipe ownership before deriving config or idle state.
+	// A later refresh would mix an older idle calculation with a newer status
+	// patch base and could overwrite a concurrent idle-clock update.
+	if changed, err := r.ensureWipeGuard(ctx, &gs); err != nil {
+		return requeueOnConflict(ctrl.Result{}, err)
+	} else if changed {
+		return ctrl.Result{Requeue: true}, nil
+	}
 
 	// Resolve the template this GameServer points at. Templates are
 	// cluster-scoped so no namespace is needed.
@@ -372,13 +380,6 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	// Persist wipe ownership before any workload mutation, including recovery
-	// from legacy workers after restart. Acquisition gets its own reconcile.
-	if changed, err := r.ensureWipeGuard(ctx, &gs); err != nil {
-		return requeueOnConflict(ctrl.Result{}, err)
-	} else if changed {
-		return ctrl.Result{Requeue: true}, nil
-	}
 	replicas, stopRequeue, err := r.desiredReplicas(ctx, &gs, &tmpl, idle)
 	if err != nil {
 		logger.Error(err, "compute desired replicas")

@@ -156,9 +156,12 @@ func TestWipeSuccessWaitsForWorkerAndChecksCurrentRequest(t *testing.T) {
 	r.Client = interceptor.NewClient(c, interceptor.Funcs{
 		Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 			if update, ok := obj.(*gameplanev1alpha1.GameServer); ok && update.Annotations[WipeCompletedAnnotation] == "old" {
-				current := wipeCurrent(t, c, gs)
+				var current gameplanev1alpha1.GameServer
+				if err := c.Get(ctx, client.ObjectKeyFromObject(gs), &current); err != nil {
+					return err
+				}
 				current.Annotations[WipeRequestedAnnotation] = "next"
-				if err := c.Update(ctx, current); err != nil {
+				if err := c.Update(ctx, &current); err != nil {
 					return err
 				}
 			}
@@ -326,11 +329,14 @@ func TestWipeStatefulSetFenceConflictsWithInFlightStaleUpdate(t *testing.T) {
 		Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
 			if workload, ok := obj.(*appsv1.StatefulSet); ok && workload.Spec.Replicas != nil && *workload.Spec.Replicas == 1 && !intercepted {
 				intercepted = true
-				current := wipeCurrent(t, c, gs)
+				var current gameplanev1alpha1.GameServer
+				if err := c.Get(ctx, client.ObjectKeyFromObject(gs), &current); err != nil {
+					return err
+				}
 				current.Annotations[WipeRequestedAnnotation] = "wipe"
 				current.Annotations[wipeGuardAnnotation] = "wipe"
 				current.Spec.Suspend = true
-				if err := c.Update(ctx, current); err != nil {
+				if err := c.Update(ctx, &current); err != nil {
 					return err
 				}
 				var fenced appsv1.StatefulSet
