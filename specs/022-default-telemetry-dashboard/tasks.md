@@ -561,7 +561,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - updates to `src/content/docs/platform-settings-telemetry.mdx`, `helm-values-reference.mdx` and `air-gapped-installation.mdx` (set `api.telemetry.enabled=false`)
 
   Then commit the submodule pointer bump in the root.
-- [ ] T097 Run the `security-review` skill over the branch diff and fix the confirmed findings through a small fix workflow.
+- [X] T097 Run the `security-review` skill over the branch diff and fix the confirmed findings through a small fix workflow. (2026-10-08: no confirmed findings; one candidate rejected at confidence 4/10.)
 - [X] T098 Push the branch and open the PR **as a draft**, using the `ship-branch` skill. Add labels through REST (rule 14): `type: feature`, `area: api`, `area: web`, `area: chart`, `area: e2e`, `area: shared` and `area: specs`. The PR body states:
   - the OD-1 merge gate
   - the T002 sign-off list
