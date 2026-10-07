@@ -11,13 +11,11 @@
 # - on: workflow_dispatch (manual on-demand capture; requires SCREENSHOT_BOT_PAT secret)
 #
 # Credentials:
-# - SCREENSHOT_BOT_PAT: Fine-grained PAT (this repo only, Contents read/write,
-#   Pull requests read/write). PRs opened with this PAT trigger CI workflows normally.
-#   See OD-13 (2026-09-02).
-# - WEBSITE_SCREENSHOT_BOT_PAT: Fine-grained PAT (gameplane-website repo only,
-#   Contents read/write, Pull requests read/write). If unset, the website step logs a
-#   ::notice and skips cleanly. See specs/012-docs-refresh-and-outreach (website
-#   screenshot amendment, OD-16).
+# - SCREENSHOT_BOT_PAT: Fine-grained PAT scoped to Gameplane + gameplane-website
+#   (+ gameplane-module, unused), with Contents and Pull requests read/write.
+#   Used by both dashboard PR and website PR steps. The website step skips with a
+#   warning when the token cannot write to gameplane-website. See OD-13 and OD-16
+#   (amended 2026-10-07).
 #
 # Security: No dependency or browser caches are restored in this workflow: it publishes
 # runtime artifacts (screenshots) on a tag push, and zizmor's cache-poisoning audit
@@ -133,16 +131,17 @@ jobs:
       - name: open website screenshot pull request
         working-directory: ${{ github.workspace }}
         env:
-          WEBSITE_TOKEN: ${{ secrets.WEBSITE_SCREENSHOT_BOT_PAT }}
+          WEBSITE_TOKEN: ${{ secrets.SCREENSHOT_BOT_PAT }}
           REF_NAME: ${{ github.ref_name }}
           EVENT_NAME: ${{ github.event_name }}
           SOURCE_REPO: ${{ github.repository }}
           SOURCE_SHA: ${{ github.sha }}
+          GIT_TERMINAL_PROMPT: "0"
         run: |
           set -euo pipefail
 
           if [ -z "$WEBSITE_TOKEN" ]; then
-            echo "::notice title=website screenshots::WEBSITE_SCREENSHOT_BOT_PAT is not set; skipping the website pull request"
+            echo "::notice title=website screenshots::SCREENSHOT_BOT_PAT is not set; skipping the website pull request"
             exit 0
           fi
 
@@ -164,10 +163,20 @@ jobs:
           chmod 0700 "$helper"
 
           # Clone gameplane-website repo with credential helper
-          git clone \
-            -c credential.helper="$helper" \
-            https://github.com/ValgulNecron/gameplane-website.git \
-            "$website_repo_path"
+          if ! git clone -c credential.helper="$helper" https://github.com/ValgulNecron/gameplane-website.git "$website_repo_path"; then
+            echo "::warning title=website screenshots::SCREENSHOT_BOT_PAT cannot read ValgulNecron/gameplane-website; skipping the website pull request"
+            exit 0
+          fi
+
+          # Configure credential helper for the cloned repo
+          git -C "$website_repo_path" config --local credential.helper "$helper"
+
+          # Preflight check: ensure the token has write access to gameplane-website
+          if ! out="$(git -C "$website_repo_path" push --dry-run origin "HEAD:refs/heads/chore/screenshot-refresh-preflight" 2>&1)"; then
+            echo "::debug::$out"
+            echo "::warning title=website screenshots::SCREENSHOT_BOT_PAT cannot push to ValgulNecron/gameplane-website (it needs Contents and Pull requests read/write on that repo); skipping the website pull request"
+            exit 0
+          fi
 
           # Copy the 5 screenshot files
           for png in dashboard servers console backups modules; do
@@ -184,7 +193,6 @@ jobs:
           # Set up git config in the website repo
           git -C "$website_repo_path" config user.name gameplane-screenshot-bot
           git -C "$website_repo_path" config user.email gameplane-screenshot-bot@users.noreply.github.com
-          git -C "$website_repo_path" config --local credential.helper "$helper"
 
           # Prepare the branch and commit
           base="main"
