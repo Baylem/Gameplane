@@ -14,7 +14,7 @@ image:
   # Component images are published to {registry}/{operator,api,agent} by the
   # release workflow. The release matches this default; override only to pin a
   # mirror or fork.
-  registry: ghcr.io/gameplanepanel/gameplane
+  registry: ghcr.io/valgulnecron/gameplane
   # Empty tag => the chart's appVersion (so chart vX pulls images vX). Set to a
   # channel like "edge" to track the rolling images published on every main push.
   tag: ""
@@ -418,7 +418,7 @@ defaultModuleSource:
   #         track an unreleased branch, not for a stable install.
   type: oci
   git:
-    url: https://github.com/GameplanePanel/module.git
+    url: https://github.com/ValgulNecron/gameplane-module.git
     # Pinned to the module-repo tag validated against this chart's backend
     # release, not "main": a git source only ever offers the module version
     # present at its ref, so tracking main means a module version bump
@@ -431,7 +431,7 @@ defaultModuleSource:
     ref: v0.2.0-beta.6
     subPath: ""           # module directories live at the repo root
   oci:
-    url: ghcr.io/gameplanepanel/gameplane-modules
+    url: ghcr.io/valgulnecron/gameplane-modules
     insecure: false       # set true for plain-HTTP local registries
     # The official catalog. Each name is an OCI repo under url/ above; the
     # operator discovers that module's versions from its tags.
