@@ -24,7 +24,9 @@ const (
 	// mounts it as DASHBOARD_TOKEN and serves /metrics on port 8081 behind it
 	// (spec 022 Q8, T067).
 	telemetryDashSecret = "telemetry-dashboard"
-	telemetryDashToken  = "e2e-telemetry-dashboard-token"
+	// telemetryDashToken is at least 32 characters: the receiver refuses to
+	// start with a shorter DASHBOARD_TOKEN (spec 022 FR-041).
+	telemetryDashToken = "e2e-telemetry-dashboard-token-0123456789"
 	// telemetryInterval is api.telemetry.interval for this bucket's cluster.
 	telemetryInterval = time.Minute
 )
@@ -472,9 +474,13 @@ func TestTelemetryLifecycle(t *testing.T) {
 	var oldReceiver struct {
 		name string
 	}
+	// receiverImage is the image the bundled receiver ran, read before the
+	// chart stops deploying it; the proof-of-work subtests reuse it.
+	var receiverImage string
 
 	t.Run("custom_destination_receives_only", func(t *testing.T) {
 		image := bundledReceiverImage(ctx, t)
+		receiverImage = image
 		name := deployTelemetryReceiver(ctx, t, "custom", image, true)
 		bundledBefore := rx.get(t, metricReports, "")
 
@@ -502,6 +508,77 @@ func TestTelemetryLifecycle(t *testing.T) {
 		} else if !strings.Contains(out, "NotFound") {
 			t.Fatalf("kubectl get bundled receiver: %v\n%s", err, out)
 		}
+	})
+
+	t.Run("pow_receiver_accepts_solved_reports", func(t *testing.T) {
+		// MIN_BITS=8 makes the install really solve a challenge before every
+		// report (spec 022 S10). The deploy cleanup runs when this subtest
+		// ends, so the next subtest deploys its own receiver.
+		name := deployTelemetryReceiver(ctx, t, "pow", receiverImage, true,
+			"INGEST_POW=true", "INGEST_POW_MIN_BITS=8", "INGEST_POW_TARGET_PER_MIN=60")
+		helmUpgradeReuse(ctx, t, fmt.Sprintf("api.telemetry.endpoint=http://%s.gameplane-system.svc:8080/ingest", name))
+		cli = reconnectAPIClient(t, cli)
+
+		port, stop := envInstance.PortForward(t, "gameplane-system", "svc/"+name, 8081)
+		defer stop()
+		challenges := func() float64 {
+			return receiverMetric(t, port, telemetryDashToken, metricPoWChallenges, "")
+		}
+		waitForMore(t, challenges, 4*telemetryInterval, metricPoWChallenges)
+		envInstance.Eventually(t, 4*telemetryInterval, func() (bool, string) {
+			got := receiverMetric(t, port, telemetryDashToken, metricReports, "")
+			outcome := getTelemetryView(t, cli).Status.LastOutcome
+			return got >= 1 && outcome == "ok",
+				fmt.Sprintf("%s = %v, lastOutcome = %q, want a solved report accepted and outcome ok", metricReports, got, outcome)
+		})
+	})
+
+	t.Run("pow_refuses_missing_and_invalid", func(t *testing.T) {
+		name := deployTelemetryReceiver(ctx, t, "powrefuse", receiverImage, true,
+			"INGEST_POW=true", "INGEST_POW_MIN_BITS=8", "INGEST_POW_TARGET_PER_MIN=60")
+		ingestPort, stopIngest := envInstance.PortForward(t, "gameplane-system", "svc/"+name, 8080)
+		defer stopIngest()
+		metricsPort, stopMetrics := envInstance.PortForward(t, "gameplane-system", "svc/"+name, 8081)
+		defer stopMetrics()
+		powRx := receiverScrape{port: metricsPort, token: telemetryDashToken}
+		pc := newTelemetryTestClient(t, ingestPort)
+		const version = "e2e-pow"
+		versionLabel := `version="` + version + `"`
+		id := newTestInstallID(t)
+		body, sig := pc.sign(t, pc.report(t, id, version, 3, time.Now()))
+		requiredBase := powRx.get(t, metricRefused, `reason="pow_required"`)
+		invalidBase := powRx.get(t, metricRefused, `reason="pow_invalid"`)
+
+		// No header: 428 pow_required, and nothing is counted.
+		if status, code := pc.postPoW(t, body, sig, ""); status != http.StatusPreconditionRequired || code != "pow_required" {
+			t.Fatalf("report with no proof of work = %d %q, want 428 pow_required", status, code)
+		}
+		if got := powRx.get(t, metricRefused, `reason="pow_required"`); got != requiredBase+1 {
+			t.Fatalf("%s{pow_required} = %v, want %v", metricRefused, got, requiredBase+1)
+		}
+
+		// A solved challenge is accepted once.
+		solved := pc.solvedPoW(t, 8)
+		if status, code := pc.postPoW(t, body, sig, solved); status != http.StatusNoContent {
+			t.Fatalf("report with a solved challenge = %d %q, want 204", status, code)
+		}
+		if got := powRx.get(t, metricReports, versionLabel); got != 1 {
+			t.Fatalf("%s{%s} = %v, want 1", metricReports, versionLabel, got)
+		}
+
+		// The same solution again: 428 pow_invalid, and nothing changes.
+		asOf, viewsBefore := dashboardViews(t, metricsPort)
+		again, againSig := pc.sign(t, pc.report(t, id, version, 3, time.Now().Add(2*time.Second)))
+		if status, code := pc.postPoW(t, again, againSig, solved); status != http.StatusPreconditionRequired || code != "pow_invalid" {
+			t.Fatalf("report with a used solution = %d %q, want 428 pow_invalid", status, code)
+		}
+		if got := powRx.get(t, metricRefused, `reason="pow_invalid"`); got != invalidBase+1 {
+			t.Fatalf("%s{pow_invalid} = %v, want %v", metricRefused, got, invalidBase+1)
+		}
+		if got := powRx.get(t, metricReports, versionLabel); got != 1 {
+			t.Fatalf("%s{%s} = %v after the refusals, want it unchanged at 1", metricReports, versionLabel, got)
+		}
+		requireViewsUnchanged(t, metricsPort, asOf, viewsBefore)
 	})
 
 	t.Run("old_receiver_gets_basic", func(t *testing.T) {

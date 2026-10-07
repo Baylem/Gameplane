@@ -199,8 +199,10 @@ func bundledReceiverImage(ctx context.Context, t *testing.T) string {
 // Service with a unique name in the release namespace and waits for it. With
 // dashboard set it is a current receiver with the dashboard token Secret
 // mounted (so /metrics is on port 8081), no per-source limit and an emptyDir
-// store; otherwise it is run as an old image does, on port 8080 alone.
-func deployTelemetryReceiver(ctx context.Context, t *testing.T, kind, image string, dashboard bool) string {
+// store; otherwise it is run as an old image does, on port 8080 alone. Each
+// extraEnv entry is a "NAME=value" pair added to the container's environment
+// (for example INGEST_POW=true).
+func deployTelemetryReceiver(ctx context.Context, t *testing.T, kind, image string, dashboard bool, extraEnv ...string) string {
 	t.Helper()
 	var suffix [4]byte
 	if _, err := rand.Read(suffix[:]); err != nil {
@@ -219,6 +221,10 @@ func deployTelemetryReceiver(ctx context.Context, t *testing.T, kind, image stri
 		mounts = "          volumeMounts:\n            - { name: data, mountPath: /data }\n"
 		ports += "            - { name: dashboard, containerPort: 8081 }\n"
 		svcPorts += "    - { name: dashboard, port: 8081, targetPort: dashboard }\n"
+	}
+	for _, kv := range extraEnv {
+		name, value, _ := strings.Cut(kv, "=")
+		env += fmt.Sprintf("            - { name: %s, value: %q }\n", name, value)
 	}
 	manifest := fmt.Sprintf(`apiVersion: apps/v1
 kind: Deployment
