@@ -35,7 +35,7 @@ func newServerObj(ns, name string) *unstructured.Unstructured {
 }
 
 func TestLifecycle_StartStop(t *testing.T) {
-	k := fakeKubeClient(newServerObj("gameplane-games", "alpha"))
+	k := fakeKubeClient(lifecycleSuspendServer())
 	r := mountLifecycleRouter(k)
 
 	for _, verb := range []string{"start", "stop"} {

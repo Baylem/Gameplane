@@ -106,11 +106,7 @@ func patchSuspend(reg *kube.Registry, suspend bool) http.HandlerFunc {
 		if !ok {
 			return
 		}
-		body, _ := json.Marshal(map[string]any{"spec": map[string]any{"suspend": suspend}})
-		_, err := k.Dynamic.Resource(kube.GVRs["servers"]).
-			Namespace(ns).
-			Patch(req.Context(), name, types.MergePatchType, body, metav1.PatchOptions{})
-		if err != nil {
+		if err := patchServerSuspend(req.Context(), k, scope.RequestedCluster(req), ns, name, suspend); err != nil {
 			httperr.Write(w, req, err)
 			return
 		}
