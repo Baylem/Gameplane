@@ -374,7 +374,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `/static/*`
 
   The cookie is `gp_telemetry_session` = `expiry || HMAC(K, expiry)`, where `K = HMAC-SHA256(DASHBOARD_TOKEN, "gameplane-telemetry-session")`, with `HttpOnly; Secure; SameSite=Strict; Max-Age=43200`. Unauthenticated HTML requests get `303` to `/login`, and unauthenticated JSON requests get `401 {"error":"unauthorized"}`. Every response carries the CSP, `nosniff`, `no-referrer` and `no-store` headers.
-- [ ] T068 [US4] Create `telemetry-receiver/web/`, embedded with `go:embed`: `layout.html`, `login.html` and `overview.html` (basic section), `style.css`, and inline-SVG chart partials (columns for reports per day, horizontal bars for versions, a histogram for fleet sizes), following the T066 design (pink theme, dark first, light values from the same tokens). No inline `style` attributes or `<style>` blocks: the CSP sets `style-src 'self'`. Include the logo PNG from `website/design-assets/gameplane-icon.png` as a static asset. There is no JavaScript, and the range is chosen with links.
+- [X] T068 [US4] Create `telemetry-receiver/web/`, embedded with `go:embed`: `layout.html`, `login.html` and `overview.html` (basic section), `style.css`, and inline-SVG chart partials (columns for reports per day, horizontal bars for versions, a histogram for fleet sizes), following the T066 design (pink theme, dark first, light values from the same tokens). No inline `style` attributes or `<style>` blocks: the CSP sets `style-src 'self'`. Include the logo PNG from `website/design-assets/gameplane-icon.png` as a static asset. There is no JavaScript, and the range is chosen with links.
 - [X] T069 [US4] Change the chart for the dashboard, in `charts/gameplane/templates/telemetry-receiver.yaml`:
   - `DASHBOARD_TOKEN` from `dashboard.tokenSecretRef` when it is named
   - Service port `dashboard` (8081) when the token is named
@@ -409,13 +409,13 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Independent Test**: A synthetic population (known IDs, environments, games and features over several weeks, with resets, upgrades and lapses) produces exact extended figures, and a 30-day unique count within 1% (SC-008).
 
-- [ ] T072 [US5] In `telemetry-receiver/ingest.go`, accept `ext`, removing the T017 reject-on-ext in the `decodePayload` wrapper's caller. Keep the wrapper's tested behaviour for the basic path. With `id_hmac = HMAC-SHA256(pepper, installId)` (research R5):
+- [X] T072 [US5] In `telemetry-receiver/ingest.go`, accept `ext`, removing the T017 reject-on-ext in the `decodePayload` wrapper's caller. Keep the wrapper's tested behaviour for the basic path. With `id_hmac = HMAC-SHA256(pepper, installId)` (research R5):
   - **Record absent**: insert the record, `new_installs++`, `active_installs++`.
   - **`last_seen < today`**: update the record, `active_installs++`.
   - **Same day**: a duplicate. Increment `daily_basic.duplicates` and `gameplane_telemetry_duplicates_total`, and write nothing else.
   - **Non-duplicate**: write `daily_ext.ext_reports`, `daily_dim` (every dimension listed in data-model § Receiver) and `daily_game` (`installs++`, `servers += n`, with `custom` for the rest), and increment `gameplane_telemetry_extended_reports_total`.
-- [ ] T073 [US5] Extend the lifecycle job in `telemetry-receiver/store.go`. For each finalised day D, set `lapsed_installs[D] = count(activity where last_seen = D − 30)`, then delete activity rows with `last_seen < today − ACTIVITY_EXPIRY_DAYS`.
-- [ ] T074 [US5] In `telemetry-receiver/views.go`, add the `extended` block:
+- [X] T073 [US5] Extend the lifecycle job in `telemetry-receiver/store.go`. For each finalised day D, set `lapsed_installs[D] = count(activity where last_seen = D − 30)`, then delete activity rows with `last_seen < today − ACTIVITY_EXPIRY_DAYS`.
+- [X] T074 [US5] In `telemetry-receiver/views.go`, add the `extended` block:
   - coverage
   - `installs.active1d`, `active7d` and `active30d`
   - `newPerDay` and `lapsedPerDay`
@@ -424,8 +424,8 @@ description: "Task list for feature 022: default telemetry destination, extended
 
   The block is `null` when the range has no extended reports.
 - [X] T075 [US5] In `telemetry-receiver/telemetry-dashboard.pen`, add the overview's extended section: install KPIs, new and lapsed trends, environment, game and feature breakdowns, and the coverage note. Load the `dataviz` skill for charts and categorical colours. Ask the user to open that file, then save it, run `design-export` into `telemetry-receiver/design-export/`, and commit.
-- [ ] T076 [US5] Add `telemetry-receiver/web/overview_extended.html` and its chart partials, following the T075 design. When `extended` is null, render the "no reports in this range included extended data" message.
-- [ ] T077 [P] [US5] Create `telemetry-receiver/population_test.go`, `ingest_ext_test.go` and `views_perf_test.go`:
+- [X] T076 [US5] Add `telemetry-receiver/web/overview_extended.html` and its chart partials, following the T075 design. When `extended` is null, render the "no reports in this range included extended data" message.
+- [X] T077 [P] [US5] Create `telemetry-receiver/population_test.go`, `ingest_ext_test.go` and `views_perf_test.go`:
   - **Synthetic population** with a fake clock: resets, upgrades and lapses. Assert exact new, lapsed and active counts, and a 30-day unique count within 1% (SC-008).
   - **Dedupe**: same ID, same day.
   - **Schema check**: `activity` has exactly the columns `id_hmac, key_fp, first_seen, last_seen, last_sent_at, last_version` (FR-014, SC-012).
@@ -442,7 +442,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Independent Test**: With the summary enabled, the response has exactly five keys, plus cache and CORS headers. When disabled it returns 404. Heavy polling doesn't slow ingest.
 
-- [ ] T079 [US6] Create `telemetry-receiver/summary.go` with `GET /v1/summary` on the public listener, exactly as in `contracts/receiver-http.md`:
+- [X] T079 [US6] Create `telemetry-receiver/summary.go` with `GET /v1/summary` on the public listener, exactly as in `contracts/receiver-http.md`:
   - `404` unless `PUBLIC_SUMMARY=true`
   - a snapshot recomputed at most every 5 minutes
   - `Cache-Control: public, max-age=3600`, `ETag` with 304 support, and `Access-Control-Allow-Origin: *`
@@ -450,7 +450,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
   `reportsTotal` comes from `meta.reports_total`.
 - [X] T080 [P] [US6] In `charts/gameplane/templates/telemetry-receiver.yaml`, render `PUBLIC_SUMMARY` from `publicSummary.enabled` (`hasKey` guard, default false).
-- [ ] T081 [P] [US6] Create `telemetry-receiver/summary_test.go`, covering exactly five keys (decode into a map and assert its length), 404 when disabled, the headers, ETag and 304, the limiter, and that `reportsTotal` is unchanged after a retention sweep.
+- [X] T081 [P] [US6] Create `telemetry-receiver/summary_test.go`, covering exactly five keys (decode into a map and assert its length), 404 when disabled, the headers, ETag and 304, the limiter, and that `reportsTotal` is unchanged after a retention sweep.
 - [ ] T082 [US6] Add the subtest `public_summary_five_keys` to `test/e2e/telemetry_e2e_test.go`, through `Env.PortForward` on 8080.
 
 ---
@@ -461,7 +461,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Independent Test**: Every forgery case is refused with no figure changed (SC-014). An install whose ID was claimed first by someone else rotates its ID and is accepted in the same attempt (SC-015).
 
-- [ ] T083 [US7] In `telemetry-receiver/ingest.go`, add the checks in the order of the `contracts/report-schema.md` § Signature and claim table, **before** the limiter counts the report as accepted and before any write:
+- [X] T083 [US7] In `telemetry-receiver/ingest.go`, add the checks in the order of the `contracts/report-schema.md` § Signature and claim table, **before** the limiter counts the report as accepted and before any write:
   - `telemetryschema.Verify`, which fails with 403 `bad_signature`
   - the window `[now−36h, now+1h]`, which fails with 403 `stale`
   - the claim: insert with `key_fp` and `last_sent_at`, or compare `key_fp`, which fails with 409 `id_claimed`
@@ -470,7 +470,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   Responses use fixed JSON bodies, and `gameplane_telemetry_refused_total{reason}` is incremented. Basic-only reports skip all of these checks.
 - [ ] T084 [US7] In `api/internal/telemetry/telemetry.go`, handle a 409 `id_claimed` inside the same attempt: replace the install ID (keeping `signing_secret`), set `last_id_rotation_at`, re-`Collect`, re-sign and re-POST once. A second 409 is recorded as `failed`. A 403 is recorded as `failed` with normal backoff, and never rotates.
 - [ ] T085 [US7] In `TelemetrySection` in `web/src/routes/AdminSettings.tsx`, render the status variant "Install ID replaced on <date>: the destination reported it was in use by another key" when `status.lastIdRotationAt` is set, using the T052 design.
-- [ ] T086 [P] [US7] Create `telemetry-receiver/ingest_sign_test.go`, covering the full forgery matrix: another key gives 409; an unsigned report, a one-byte tamper, a stale `sentAt`, a future `sentAt` and a byte-identical replay each give 403. In every case, assert that every table's row counts are unchanged (SC-014). Cover claim expiry together with re-claim (FR-038).
+- [X] T086 [P] [US7] Create `telemetry-receiver/ingest_sign_test.go`, covering the full forgery matrix: another key gives 409; an unsigned report, a one-byte tamper, a stale `sentAt`, a future `sentAt` and a byte-identical replay each give 403. In every case, assert that every table's row counts are unchanged (SC-014). Cover claim expiry together with re-claim (FR-038).
 - [ ] T087 [P] [US7] Add cases to `api/internal/telemetry/telemetry_test.go`: a 409 then 204 sequence rotates the ID and sends with a new key in the same attempt (SC-015); 409 twice gives `failed`; 403 doesn't rotate. Add a web test case for the rotation status line in `web/src/routes/AdminSettings_telemetry.test.tsx`.
 - [ ] T088 [US7] Create `test/e2e/telemetry_client_test.go`, a test-only helper that builds and signs reports with `telemetryschema` and a throwaway secret. Add these subtests to `TestTelemetryLifecycle`, before the US2 subtests:
   - `forged_other_key_gets_409`

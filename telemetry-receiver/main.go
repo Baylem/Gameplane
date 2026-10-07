@@ -49,8 +49,9 @@ const (
 
 // Route label values of gameplane_telemetry_rate_limited_total.
 const (
-	routeIngest = "ingest"
-	routeLogin  = "login"
+	routeIngest  = "ingest"
+	routeLogin   = "login"
+	routeSummary = "summary"
 )
 
 // maxVersionLabels bounds how many different valid version labels are
@@ -177,7 +178,8 @@ type payload struct {
 
 // errInvalidPayload is returned by decodePayload for any body that
 // telemetryschema.Decode rejects, and for any report that carries the
-// extended tier, which the receiver does not accept yet.
+// extended tier. The ingest handler no longer calls decodePayload: it decodes
+// with telemetryschema.Decode directly and accepts ext (T072).
 var errInvalidPayload = errors.New("invalid payload")
 
 // decodePayload parses a body that has already been read in full. It is a
@@ -185,8 +187,8 @@ var errInvalidPayload = errors.New("invalid payload")
 // rules (exactly one object, exact case-sensitive keys, no duplicates or
 // nulls, nothing trailing). Every failure, including an unsupported
 // schema, is reported as errInvalidPayload with the cause kept in the
-// chain. Reports carrying ext are rejected too, which preserves the
-// receiver's behaviour until it accepts the extended tier (T072).
+// chain. Reports carrying ext are rejected too: this wrapper keeps the
+// basic-only parse that main_test.go covers.
 func decodePayload(body []byte) (payload, error) {
 	rep, info, err := telemetryschema.Decode(body)
 	if err != nil {
@@ -210,11 +212,21 @@ type server struct {
 	now func() time.Time
 	// daily is the per-source accepted-reports-per-UTC-day counter (T062).
 	daily *dailyLimiter
+	// summaryLimiter and summaryCache serve GET /v1/summary (T079).
+	summaryLimiter *bucketLimiter
+	summaries      summaryCache
 
 	reports     *prometheus.CounterVec
 	servers     prometheus.Histogram
 	templates   prometheus.Histogram
 	rateLimited *prometheus.CounterVec
+	// duplicates counts same-day repeat extended reports (T072).
+	duplicates prometheus.Counter
+	// extReports counts extended reports that changed the aggregates (T072).
+	extReports prometheus.Counter
+	// refused counts reports refused by the signature, window, claim or
+	// replay checks, by reason (T083).
+	refused *prometheus.CounterVec
 }
 
 // newServer builds a server backed by a private in-memory store, whatever
@@ -236,12 +248,13 @@ func newServer(cfg config) *server {
 func newServerWithStore(cfg config, st *store) *server {
 	reg := prometheus.NewRegistry()
 	s := &server{
-		cfg:      cfg,
-		reg:      reg,
-		store:    st,
-		versions: make(map[string]struct{}),
-		now:      time.Now,
-		daily:    newDailyLimiter(cfg.ingestSourceDailyLimit),
+		cfg:            cfg,
+		reg:            reg,
+		store:          st,
+		versions:       make(map[string]struct{}),
+		now:            time.Now,
+		daily:          newDailyLimiter(cfg.ingestSourceDailyLimit),
+		summaryLimiter: newBucketLimiter(summaryPerMinute, summaryBurst),
 		reports: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "gameplane_telemetry_reports_total",
 			Help: "Telemetry reports accepted, by reported Gameplane version.",
@@ -262,12 +275,28 @@ func newServerWithStore(cfg config, st *store) *server {
 			Name: "gameplane_telemetry_rate_limited_total",
 			Help: "Requests refused by a per-source limit, by route.",
 		}, []string{"route"}),
+		duplicates: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "gameplane_telemetry_duplicates_total",
+			Help: "Extended reports that repeated an install's report of the same UTC day.",
+		}),
+		extReports: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "gameplane_telemetry_extended_reports_total",
+			Help: "Extended reports that were counted in the aggregates.",
+		}),
+		refused: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "gameplane_telemetry_refused_total",
+			Help: "Extended reports refused by the signature, window, claim or replay checks, by reason.",
+		}, []string{"reason"}),
 	}
-	reg.MustRegister(s.reports, s.servers, s.templates, s.rateLimited)
+	reg.MustRegister(s.reports, s.servers, s.templates, s.rateLimited, s.duplicates, s.extReports, s.refused)
+	for _, reason := range []string{refuseBadSignature, refuseStale, refuseIDClaimed, refuseReplay} {
+		s.refused.WithLabelValues(reason)
+	}
 	// Make the series visible from the start, so a scrape shows 0 rather
 	// than nothing.
 	s.rateLimited.WithLabelValues(routeIngest)
 	s.rateLimited.WithLabelValues(routeLogin)
+	s.rateLimited.WithLabelValues(routeSummary)
 	return s
 }
 
@@ -277,6 +306,7 @@ func (s *server) routes() http.Handler {
 		_, _ = io.WriteString(w, "ok")
 	})
 	mux.HandleFunc("POST /ingest", s.ingest)
+	mux.HandleFunc("GET /v1/summary", s.summary)
 	return mux
 }
 

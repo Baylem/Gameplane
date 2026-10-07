@@ -48,15 +48,22 @@ func (s *server) ingest(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
-	p, err := decodePayload(body)
+	rep, _, err := telemetryschema.Decode(body)
 	if err != nil {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
-	if p.Servers < 0 || p.Templates < 0 {
+	if rep.Servers < 0 || rep.Templates < 0 {
 		http.Error(w, "invalid payload", http.StatusBadRequest)
 		return
 	}
+	// A report whose ext part was dropped by Decode (bad install ID) comes
+	// back with Ext == nil and is counted as basic.
+	if rep.Ext != nil {
+		s.ingestExtended(w, req, body, rep)
+		return
+	}
+	p := payload{Version: rep.Version, Servers: rep.Servers, Templates: rep.Templates}
 	// The per-source daily limit counts accepted reports only, so it sits
 	// after validation: a malformed request never uses up a source's budget.
 	// The address is used for the counter and then dropped (FR-014).
@@ -108,37 +115,43 @@ func (s *server) versionLabel(version string) string {
 // (versionLabel). Nothing identifying the report or its source is stored.
 func (s *store) recordBasic(ctx context.Context, day, version string, servers, templates int) error {
 	return s.writeTx(ctx, func(tx *sql.Tx) error {
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO daily_basic (day, reports, servers_sum, templates_sum) VALUES (?, 1, ?, ?)
-			 ON CONFLICT (day) DO UPDATE SET
-			   reports = reports + 1,
-			   servers_sum = servers_sum + excluded.servers_sum,
-			   templates_sum = templates_sum + excluded.templates_sum`,
-			day, min(servers, maxSummedCount), min(templates, maxSummedCount)); err != nil {
-			return fmt.Errorf("record daily_basic: %w", err)
-		}
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO daily_version (day, version, reports) VALUES (?, ?, 1)
-			 ON CONFLICT (day, version) DO UPDATE SET reports = reports + 1`,
-			day, version); err != nil {
-			return fmt.Errorf("record daily_version: %w", err)
-		}
-		for _, f := range []struct {
-			metric string
-			n      int
-		}{{fleetMetricServers, servers}, {fleetMetricTemplates, templates}} {
-			if _, err := tx.ExecContext(ctx,
-				`INSERT INTO daily_fleet (day, metric, value, reports) VALUES (?, ?, ?, 1)
-				 ON CONFLICT (day, metric, value) DO UPDATE SET reports = reports + 1`,
-				day, f.metric, min(f.n, fleetCap)); err != nil {
-				return fmt.Errorf("record daily_fleet %s: %w", f.metric, err)
-			}
-		}
-		if _, err := tx.ExecContext(ctx,
-			`UPDATE meta SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = ?`,
-			metaReportsTotal); err != nil {
-			return fmt.Errorf("record reports_total: %w", err)
-		}
-		return nil
+		return writeBasic(ctx, tx, day, version, servers, templates)
 	})
+}
+
+// writeBasic is the transaction body of recordBasic, shared with the
+// extended path, which also counts the basic part of its report.
+func writeBasic(ctx context.Context, tx *sql.Tx, day, version string, servers, templates int) error {
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO daily_basic (day, reports, servers_sum, templates_sum) VALUES (?, 1, ?, ?)
+		 ON CONFLICT (day) DO UPDATE SET
+		   reports = reports + 1,
+		   servers_sum = servers_sum + excluded.servers_sum,
+		   templates_sum = templates_sum + excluded.templates_sum`,
+		day, min(servers, maxSummedCount), min(templates, maxSummedCount)); err != nil {
+		return fmt.Errorf("record daily_basic: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO daily_version (day, version, reports) VALUES (?, ?, 1)
+		 ON CONFLICT (day, version) DO UPDATE SET reports = reports + 1`,
+		day, version); err != nil {
+		return fmt.Errorf("record daily_version: %w", err)
+	}
+	for _, f := range []struct {
+		metric string
+		n      int
+	}{{fleetMetricServers, servers}, {fleetMetricTemplates, templates}} {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO daily_fleet (day, metric, value, reports) VALUES (?, ?, ?, 1)
+			 ON CONFLICT (day, metric, value) DO UPDATE SET reports = reports + 1`,
+			day, f.metric, min(f.n, fleetCap)); err != nil {
+			return fmt.Errorf("record daily_fleet %s: %w", f.metric, err)
+		}
+	}
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE meta SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT) WHERE key = ?`,
+		metaReportsTotal); err != nil {
+		return fmt.Errorf("record reports_total: %w", err)
+	}
+	return nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -24,7 +25,7 @@ import (
 )
 
 // webFS holds the dashboard templates and static files (no JavaScript).
-// T068 replaces the placeholder files in web/.
+// The templates and static files are described in specs 022 T068 and T076.
 //
 //go:embed web
 var webFS embed.FS
@@ -77,8 +78,12 @@ func (s *server) dashboardRoutes() http.Handler {
 		static: static,
 		logins: newBucketLimiter(loginPerMinute, loginPerMinute),
 	}
-	for _, page := range []string{"login", "overview"} {
-		d.pages[page] = template.Must(template.New(page).ParseFS(webFS, "web/layout.html", "web/"+page+".html"))
+	pageFiles := map[string][]string{
+		"login":    {"web/layout.html", "web/login.html"},
+		"overview": {"web/layout.html", "web/charts.html", "web/overview.html", "web/overview_extended.html"},
+	}
+	for page, files := range pageFiles {
+		d.pages[page] = template.Must(template.New(page).Funcs(pageFuncs).ParseFS(webFS, files...))
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /login", d.loginPage)
@@ -269,7 +274,25 @@ func (d *dashboard) overview(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	d.render(w, http.StatusOK, "overview", v)
+	total, since := d.collectionMeta(r.Context())
+	d.render(w, http.StatusOK, "overview", newOverviewPage(v, r.URL.Query().Get("view") == "table", total, since))
+}
+
+// collectionMeta reads the running report total and the collection start day
+// for the overview tiles. A missing or unreadable value shows as 0 or empty
+// rather than failing the page.
+func (d *dashboard) collectionMeta(ctx context.Context) (int64, string) {
+	var total int64
+	if raw, ok, err := d.s.store.metaGet(ctx, metaReportsTotal); err == nil && ok {
+		total, _ = strconv.ParseInt(raw, 10, 64)
+	}
+	var since string
+	if raw, ok, err := d.s.store.metaGet(ctx, metaCollectionStart); err == nil && ok {
+		if t, err := time.Parse(time.RFC3339, raw); err == nil {
+			since = dayString(t)
+		}
+	}
+	return total, since
 }
 
 func (d *dashboard) apiViews(w http.ResponseWriter, r *http.Request) {

@@ -113,6 +113,9 @@ type store struct {
 	pepper []byte
 	// mem reports whether the store is a private in-memory database.
 	mem bool
+	// activityExpiryDays is ACTIVITY_EXPIRY_DAYS; zero (the zero config)
+	// disables the activity-record expiry (T073).
+	activityExpiryDays int
 }
 
 // storeDSN builds the modernc.org/sqlite DSN for the on-disk database: WAL
@@ -157,7 +160,7 @@ func openStore(ctx context.Context, cfg config) (*store, error) {
 			return nil, fmt.Errorf("open store in %s: %w", cfg.dataDir, err)
 		}
 	}
-	st := &store{db: db, mem: mem}
+	st := &store{db: db, mem: mem, activityExpiryDays: cfg.activityExpiryDays}
 	if err := st.init(ctx, cfg.idPepper); err != nil {
 		return nil, errors.Join(err, db.Close())
 	}
@@ -318,8 +321,9 @@ func pendingDays(through string, now time.Time) []string {
 // lifecycleOnce runs one pass of the lifecycle job. It is idempotent: it
 // finalises the completed days after meta.rollover_through, then deletes
 // daily_* rows older than retentionDays. A retentionDays of zero or less
-// (the zero config) deletes nothing. US5 adds the lapsed-install and
-// activity-expiry steps inside the loop over pending days.
+// (the zero config) deletes nothing. For every finalised day D it records
+// lapsed_installs[D] (activity records last seen on D - 30), then it expires
+// activity records older than activityExpiryDays (T073).
 func (s *store) lifecycleOnce(ctx context.Context, now time.Time, retentionDays int) error {
 	through, _, err := s.metaGet(ctx, metaRolloverThrough)
 	if err != nil {
@@ -338,6 +342,17 @@ func (s *store) lifecycleOnce(ctx context.Context, now time.Time, retentionDays 
 				return fmt.Errorf("advance rollover_through: %w", err)
 			}
 		}
+		for _, day := range days {
+			if err := recordLapsed(ctx, tx, day); err != nil {
+				return err
+			}
+		}
+		if s.activityExpiryDays > 0 {
+			expiry := dayString(now.AddDate(0, 0, -s.activityExpiryDays))
+			if _, err := tx.ExecContext(ctx, `DELETE FROM activity WHERE last_seen < ?`, expiry); err != nil {
+				return fmt.Errorf("expire activity records: %w", err)
+			}
+		}
 		if retentionDays <= 0 {
 			return nil
 		}
@@ -348,6 +363,35 @@ func (s *store) lifecycleOnce(ctx context.Context, now time.Time, retentionDays 
 		}
 		return nil
 	})
+}
+
+// lapsedWindowDays is how long an install must stay silent to count as lapsed.
+const lapsedWindowDays = 30
+
+// recordLapsed sets daily_ext[day].lapsed_installs to the number of activity
+// records whose last report was lapsedWindowDays before day. It writes nothing
+// when that number is 0, so quiet days leave no row, and it is idempotent.
+func recordLapsed(ctx context.Context, tx *sql.Tx, day string) error {
+	d, err := time.Parse(time.DateOnly, day)
+	if err != nil {
+		return fmt.Errorf("lapsed installs: bad day %q: %w", day, err)
+	}
+	var n int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT count(*) FROM activity WHERE last_seen = ?`,
+		dayString(d.AddDate(0, 0, -lapsedWindowDays))).Scan(&n); err != nil {
+		return fmt.Errorf("count lapsed installs: %w", err)
+	}
+	if n == 0 {
+		return nil
+	}
+	if _, err := tx.ExecContext(ctx,
+		`INSERT INTO daily_ext (day, lapsed_installs) VALUES (?, ?)
+		 ON CONFLICT (day) DO UPDATE SET lapsed_installs = excluded.lapsed_installs`,
+		day, n); err != nil {
+		return fmt.Errorf("record lapsed installs: %w", err)
+	}
+	return nil
 }
 
 // runLifecycle runs lifecycleOnce immediately and then every
