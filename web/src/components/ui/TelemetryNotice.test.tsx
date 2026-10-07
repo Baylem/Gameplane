@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
@@ -10,12 +11,12 @@ import { TelemetryNotice } from "./TelemetryNotice";
 type Dest = { kind: string; host: string | null };
 
 // Serves a pending notice until any non-"seen" ack lands, recording bodies.
-function setup(dest: Dest | undefined = { kind: "default", host: "telemetry.example.org" }, ackStatus = 204) {
+function setup(dest: Dest | null = { kind: "default", host: "telemetry.example.org" }, ackStatus = 204) {
   const bodies: { action: string }[] = [];
   let pending = true;
   server.use(
     http.get("/admin/telemetry/notice", () =>
-      HttpResponse.json(pending ? { pending: true, destination: dest } : { pending: false }),
+      HttpResponse.json(pending ? { pending: true, destination: dest ?? undefined } : { pending: false }),
     ),
     http.post("/admin/telemetry/notice", async ({ request }) => {
       const body = (await request.json()) as { action: string };
@@ -39,12 +40,16 @@ describe("TelemetryNotice", () => {
 
   it("renders the pending notice and posts seen exactly once", async () => {
     const bodies = setup();
-    const { rerender } = renderWithQuery(<TelemetryNotice onOpenSettings={() => {}} />);
+    const { client, rerender } = renderWithQuery(<TelemetryNotice onOpenSettings={() => {}} />);
     expect(await screen.findByText("Anonymous usage metrics are on for this install.")).toBeInTheDocument();
     expect(screen.getByText("telemetry.example.org")).toBeInTheDocument();
     expect(screen.getByText(/the Gameplane project's telemetry service/)).toBeInTheDocument();
     await waitFor(() => expect(bodies).toEqual([{ action: "seen" }]));
-    rerender(<TelemetryNotice onOpenSettings={() => {}} />);
+    rerender(
+      <QueryClientProvider client={client}>
+        <TelemetryNotice onOpenSettings={() => {}} />
+      </QueryClientProvider>,
+    );
     await new Promise((r) => setTimeout(r, 50));
     expect(bodies).toEqual([{ action: "seen" }]);
   });
@@ -123,7 +128,7 @@ describe("TelemetryNotice", () => {
   });
 
   it("renders the banner when destination is absent", async () => {
-    setup(undefined);
+    setup(null);
     renderWithQuery(<TelemetryNotice onOpenSettings={() => {}} />);
     expect(await screen.findByText("Anonymous usage metrics are on for this install.")).toBeInTheDocument();
     expect(screen.queryByText(/Reports are sent to/)).not.toBeInTheDocument();

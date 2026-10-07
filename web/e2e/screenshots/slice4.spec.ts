@@ -371,7 +371,7 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
   test("uoxQW: Admin Settings — Telemetry", async ({ page }) => {
     await page.goto("/admin");
     await clickSection(page, "Telemetry");
-    await expect(page.getByText(/send anonymous usage metrics/i)).toBeVisible({
+    await expect(page.getByText(/send basic usage metrics/i)).toBeVisible({
       timeout: 10_000,
     });
     await page.waitForTimeout(200);
