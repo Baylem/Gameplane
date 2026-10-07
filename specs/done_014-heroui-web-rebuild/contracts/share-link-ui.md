@@ -24,10 +24,12 @@ Multi-cluster: the authenticated calls thread `?cluster=` like every other endpo
 - Empty state per `dQV9N`.
 - Visible only with the same permission the API enforces for creation; viewers see the list read-only if the API allows the list call, otherwise the section is hidden. Determined from the handler, not assumed.
 
-### Public share page (`C2LQE4 q31B6w qFLfB EcoGD epZO2`)
+### Public share page (`C2LQE4 q31B6w FBiMN EcoGD epZO2`)
 
 - Route path `/share/$token` per OD-1 (Settled 2026-09-03), registered in `web/src/router/tree.tsx` outside the authenticated layout, no sidebar, no top bar.
-- States from the resolve response: **Up** (address, port, players if exposed), **Asleep and can start** (Start button → `POST …/start` → **Starting** with polling), **Asleep view only**, **Invalid or expired** (neutral copy, no hint whether the token ever existed).
+- States: **Up** (address, port, players if exposed), **Asleep with Start available** (`q31B6w`; Start button → `POST …/start` → **Starting** with polling), **Asleep during Start cooldown** (`FBiMN`), **Starting**, **Invalid or expired** (neutral copy, no hint whether the token ever existed).
+- Resolve does not expose start capability. An asleep response, including a poll after an accepted Start, retains the Start action; it must not infer denied permission from server phase. `qFLfB` is a historical view-only reference, retired from the live state contract.
+- A transient Start failure (429, 5xx, or network failure) retains the resolved Asleep card and temporarily disables Start. During cooldown the button reads **Try again shortly**, has 0.5 opacity, and has no icon. Respect Retry-After, then restore the enabled Start action without exposing error details.
 - Starting polls wait at least five seconds after each request completes; requests never overlap. Transient 429, 5xx and network failures retain the last resolved public Starting view (or the loading spinner on initial resolve), back off from ten seconds to a sixty-second ceiling, and honor a larger Retry-After in seconds or HTTP-date form. Success resets backoff; a neutral invalid response stops polling. Token changes and unmount abort requests and ignore stale responses.
 - Honours the stored appearance preference; no toggle.
 
@@ -35,7 +37,7 @@ Multi-cluster: the authenticated calls thread `?cluster=` like every other endpo
 
 - The public page renders only what the resolve response returns for that token. It never shows cluster name, namespace, version, other servers, user names or counts.
 - Invalid, expired and revoked tokens produce the same page and the same copy.
-- No telemetry and no raw error details. Permanent invalid/auth responses use neutral unavailable copy. A transient rate-limit/service/network failure preserves only the loading spinner or the already-resolved public Starting view while retrying; it does not declare the link invalid.
+- No telemetry and no raw error details. Permanent invalid/auth responses use neutral unavailable copy. Transient resolve failures preserve the loading spinner or the already-resolved public Starting view while retrying. Transient Start failures preserve the resolved Asleep card with the cooldown button; neither declares the link invalid.
 - The public route is excluded from the authenticated `AppLayout` and from the 401 redirect logic.
 
 ## Tests

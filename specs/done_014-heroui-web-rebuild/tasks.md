@@ -375,7 +375,7 @@
 
 **Goal**: Implement User Story 5: public share-link surfaces (Settings section with create/list/revoke dialogs, public page in five states) built directly on HeroUI, per contracts/share-link-ui.md, in branch 014g-share-links-retire.
 
-**Independent Test**: Create a share link for a server, open it signed out in each of the five states (Up, Asleep with start available, Asleep view-only, Starting, Invalid or expired), and confirm each matches its design frame per contracts/screen-verification.md; then revoke the link and verify the page renders the neutral invalid state.
+**Independent Test**: Create a share link for a server, open it signed out in each of the five states (Up, Asleep with start available, Asleep view-only, Starting, Invalid or expired), and confirm each matches its design frame per contracts/screen-verification.md; then revoke the link and verify the page renders the neutral invalid state. **Current-state amendment (PR #584):** replace Asleep view-only with Asleep during Start cooldown (FBiMN); qFLfB is historical because resolve does not expose start capability.
 
 ### Design: Settings section and dialogs
 
@@ -387,7 +387,7 @@
 ### Design: Public share page states
 
 - [X] T168 [US5] Redraw public share page Up state (node id C2LQE4) from HeroUI definitions: server status, address/port display, players list if exposed; use Card/Default, Chip, Badge from LtgNm; no cluster/namespace/version shown per FR-005. — done 2026-09-06 (design waves 2a–5 + fix waves 1–9; exports refreshed)
-- [X] T169 [US5] Redraw public share page Asleep states (node ids q31B6w qFLfB): q31B6w showing server asleep with Start button, qFLfB as view-only variant without button; both from HeroUI Button/Primary, Card, Alert definitions. — done 2026-09-06 (design waves 2a–5 + fix waves 1–9; exports refreshed)
+- [X] T169 [US5] Redraw public share page Asleep states (node ids q31B6w qFLfB): q31B6w showing server asleep with Start button, qFLfB as view-only variant without button; both from HeroUI Button/Primary, Card, Alert definitions. — done 2026-09-06 (design waves 2a–5 + fix waves 1–9; exports refreshed) — Follow-up PR #584: qFLfB is retained as a historical reference; FBiMN adds the transient Start cooldown. q31B6w remains the current asleep state.
 - [X] T170 [US5] Redraw public share page Starting and Invalid states (node ids EcoGD epZO2): EcoGD showing Starting with spinner and polling indicator (use Spinner definition), epZO2 as Invalid/expired with neutral copy and no detail beyond 'link unavailable'. — done 2026-09-06 (design waves 2a–5 + fix waves 1–9; exports refreshed)
 - [X] T171 [US5] Export public share page frames to design-export/json/{C2LQE4,q31B6w,qFLfB,EcoGD,epZO2}.json (depth ≥ 12, no '...' markers) and design-export/screenshots/{C2LQE4,q31B6w,qFLfB,EcoGD,epZO2}.png; update design-export/MANIFEST.md with one row per id. — done 2026-09-06 (design waves 2a–5 + fix waves 1–9; exports refreshed)
 
@@ -408,9 +408,9 @@
 
 ### UI: Public share page with five states
 
-- [X] T181 [US5] Create web/src/routes/Share.tsx as a public route outside the authenticated layout with no sidebar or top bar, importing from @heroui/react and @/components/hero/; fetch the share token from URL params; call resolve endpoint; render states: Up (address/port/players), Asleep-can-start (Start button), Asleep-view-only, Starting (with polling), Invalid/expired (neutral copy).
+- [X] T181 [US5] Create web/src/routes/Share.tsx as a public route outside the authenticated layout with no sidebar or top bar, importing from @heroui/react and @/components/hero/; fetch the share token from URL params; call resolve endpoint; render states: Up (address/port/players), Asleep-can-start (Start button), Asleep-view-only, Starting (with polling), Invalid/expired (neutral copy). — Follow-up PR #584: the view-only clause is retired; resolve does not expose start capability. Current states use q31B6w and cooldown FBiMN per contracts/share-link-ui.md.
 - [X] T182 [US5] Implement Up state in Share.tsx rendering Card with server status, address, port, optional players list from the resolve response; use Chip for status, Link for address if clickable per design; respect FR-005 privacy (no cluster/namespace/version/user names).
-- [X] T183 [US5] Implement Asleep states in Share.tsx: one with Start button (async, transitions to Starting with polling) and one view-only without button; both show server name and 'asleep' message; use Button/Primary for Start, Spinner during async transition.
+- [X] T183 [US5] Implement Asleep states in Share.tsx: one with Start button (async, transitions to Starting with polling) and one view-only without button; both show server name and 'asleep' message; use Button/Primary for Start, Spinner during async transition. — Follow-up PR #584: the view-only branch is retired. Asleep polls retain Start; transient Start failures temporarily disable it with “Try again shortly” (FBiMN).
 - [X] T184 [US5] Implement Starting state in Share.tsx with Spinner and 'server starting' message; poll the resolve endpoint until server is up or link expires, then transition to Up or Invalid; implement polling cancellation on unmount.
 - [X] T185 [US5] Implement Invalid/expired state in Share.tsx showing neutral copy 'This link is not available' without revealing whether the token was valid, revoked, or expired; map all error states (404, rate-limit 429, any auth error) to the same neutral message per FR-005.
   - **Withdrawn in part (2026-10-05 review fix):** Mapping transient failures to Invalid is superseded by the [share-link retry contract](contracts/share-link-ui.md) and [web Share route contract](../../web/specs.md). Invalid/auth responses retain neutral unavailable copy; transient initial failures retain loading, and active polls retain the last public Starting view while backing off without exposing error detail.
@@ -423,9 +423,9 @@
 
 ### Testing: Playwright mock and live specs
 
-- [X] T189 [US5] Create web/e2e/specs/slice5.spec.ts for mock mode covering ShareLinks section: list state, create dialog open/close/submit, created dialog showing URL, revoke dialog and confirmation; and public page states (Up, Asleep-can-start with Start action, Asleep-view-only, Starting with polling, Invalid/expired); use MSW fixtures matching design data.
+- [X] T189 [US5] Create web/e2e/specs/slice5.spec.ts for mock mode covering ShareLinks section: list state, create dialog open/close/submit, created dialog showing URL, revoke dialog and confirmation; and public page states (Up, Asleep-can-start with Start action, Asleep-view-only, Starting with polling, Invalid/expired); use MSW fixtures matching design data. — Follow-up PR #584: the inferred view-only scenario now verifies Start recovery after a still-asleep poll; cooldown coverage exercises transient Start errors.
 - [X] T190 [US5] Add share-link live E2E specs to web/e2e/specs/live/ (this is the feature's E2E tier per OD-3, Settled 2026-09-03 — no corresponding Go test/e2e/ test is added) covering: create a link, open it signed out in all reachable states, revoke it on the authenticated side, reopen signed out and verify Invalid state; include start action on a test server if available; file may be 'shareLinksFlow.spec.ts'.
-- [X] T191 [US5] Add all seven share-link screen ids (xCJlu, dQV9N, atqRh, VM7ro, S7SCDc, C2LQE4, q31B6w, qFLfB, EcoGD, epZO2) to web/e2e/specs/screenshots.spec.ts with routes and fixture data to reach each state; set viewport 1440×900, deviceScaleFactor: 2, dark appearance; update existing Playwright screenshot project to always() upload artifacts.
+- [X] T191 [US5] Add all seven share-link screen ids (xCJlu, dQV9N, atqRh, VM7ro, S7SCDc, C2LQE4, q31B6w, qFLfB, EcoGD, epZO2) to web/e2e/specs/screenshots.spec.ts with routes and fixture data to reach each state; set viewport 1440×900, deviceScaleFactor: 2, dark appearance; update existing Playwright screenshot project to always() upload artifacts. — Follow-up PR #584: qFLfB is historical; web/e2e/screenshots/slice5.spec.ts captures q31B6w after recovery and FBiMN after a 429 Start response. FBiMN visual comparison is pending CI.
 
 ### Verification and module spec
 
