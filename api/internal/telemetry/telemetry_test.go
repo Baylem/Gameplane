@@ -143,6 +143,12 @@ func newSink(t *testing.T) (*httptest.Server, *sink) {
 	t.Helper()
 	s := &sink{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			// The reporter asks for a proof-of-work challenge before each POST
+			// (spec 022 T105); this provider offers none.
+			http.NotFound(w, r)
+			return
+		}
 		body, _ := io.ReadAll(r.Body)
 		rec := sentReport{
 			body:        body,

@@ -16,11 +16,13 @@ package telemetry
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/ValgulNecron/gameplane/api/internal/db"
@@ -39,7 +41,22 @@ const (
 	// outcomeOK and outcomeFailed are the telemetry_state.last_outcome values.
 	outcomeOK     = "ok"
 	outcomeFailed = "failed"
+	// challengeTimeout bounds the request for a proof-of-work challenge
+	// (research R21).
+	challengeTimeout = 10 * time.Second
+	// solveMargin is how long before a challenge expires the solver must
+	// give up.
+	solveMargin = 30 * time.Second
+	// challengeTTL is how long a challenge lives when the provider's
+	// expiresAt is missing or unreadable (the receiver's fixed lifetime).
+	challengeTTL = 15 * time.Minute
+	// maxChallengeBody bounds how much of a challenge response is read.
+	maxChallengeBody = 4096
 )
+
+// errPoWDifficulty is wrapped by the failure for a challenge whose difficulty
+// is outside 0 to telemetryschema.MaxPoWBits (FR-040).
+var errPoWDifficulty = errors.New("challenge difficulty out of range")
 
 // Config configures a Reporter.
 type Config struct {
@@ -324,8 +341,30 @@ func (r *Reporter) send(ctx context.Context, rep telemetryschema.Report) (int, e
 	return r.post(ctx, body, sig)
 }
 
-// post sends one request and returns the status code.
+// post sends one report and returns the status code. When the destination
+// offers proof-of-work challenges (research R21) each request carries a solved
+// one: the challenge is fetched fresh for every request, because challenges
+// are single use. A 428 gets one new challenge and one resend; a second 428 is
+// returned to the caller, which records it as a failed attempt. An error
+// means no request got an answer, or the challenge could not be solved.
 func (r *Reporter) post(ctx context.Context, body []byte, sig string) (int, error) {
+	status := 0
+	for range 2 {
+		header, err := r.solveChallenge(ctx)
+		if err != nil {
+			return 0, err
+		}
+		status, err = r.postOnce(ctx, body, sig, header)
+		if err != nil || status != http.StatusPreconditionRequired {
+			return status, err
+		}
+	}
+	return status, nil
+}
+
+// postOnce sends one request, with the proof-of-work header when pow is not
+// empty, and returns the status code.
+func (r *Reporter) postOnce(ctx context.Context, body []byte, sig, pow string) (int, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.dest.URL, bytes.NewReader(body))
 	if err != nil {
 		return 0, fmt.Errorf("telemetry post: %w", err)
@@ -337,6 +376,9 @@ func (r *Reporter) post(ctx context.Context, body []byte, sig string) (int, erro
 	if sig != "" {
 		req.Header.Set(telemetryschema.SignatureHeader, sig)
 	}
+	if pow != "" {
+		req.Header.Set(telemetryschema.PoWHeader, pow)
+	}
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("telemetry post: %w", err)
@@ -344,4 +386,85 @@ func (r *Reporter) post(ctx context.Context, body []byte, sig string) (int, erro
 	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
 	return resp.StatusCode, nil
+}
+
+// challengeReply is the body of the provider's GET /v1/challenge.
+type challengeReply struct {
+	Challenge string `json:"challenge"`
+	Bits      int    `json:"bits"`
+	ExpiresAt string `json:"expiresAt"`
+}
+
+// challengeURL is the endpoint with its last path segment replaced by
+// v1/challenge: https://host/prefix/ingest becomes
+// https://host/prefix/v1/challenge. A query or fragment is dropped.
+func challengeURL(endpoint string) (string, error) {
+	base, err := url.Parse(endpoint)
+	if err != nil {
+		return "", fmt.Errorf("telemetry challenge url: %w", err)
+	}
+	return base.ResolveReference(&url.URL{Path: "v1/challenge"}).String(), nil
+}
+
+// solveChallenge returns the proof-of-work header value for the next
+// request, or "" when the destination does not offer challenges (FR-040).
+// It fails, without any POST, when the challenge is harder than
+// telemetryschema.MaxPoWBits or cannot be solved before it expires. Solving
+// runs on the calling goroutine, which is the reporter's own.
+func (r *Reporter) solveChallenge(ctx context.Context) (string, error) {
+	ch, ok := r.fetchChallenge(ctx)
+	if !ok {
+		if err := ctx.Err(); err != nil {
+			return "", fmt.Errorf("telemetry challenge: %w", err)
+		}
+		return "", nil
+	}
+	if ch.Bits < 0 || ch.Bits > telemetryschema.MaxPoWBits {
+		return "", fmt.Errorf("telemetry pow: %w: %d bits, the cap is %d", errPoWDifficulty, ch.Bits, telemetryschema.MaxPoWBits)
+	}
+	left := challengeTTL
+	if exp, perr := time.Parse(time.RFC3339, ch.ExpiresAt); perr == nil {
+		left = exp.Sub(r.now())
+	}
+	budget := left - solveMargin
+	if budget <= 0 {
+		return "", errors.New("telemetry pow: challenge expires too soon to solve")
+	}
+	solveCtx, cancel := context.WithTimeout(ctx, budget)
+	defer cancel()
+	nonce, err := telemetryschema.SolvePoW(solveCtx, ch.Challenge, ch.Bits)
+	if err != nil {
+		return "", fmt.Errorf("telemetry pow: %w", err)
+	}
+	return telemetryschema.FormatPoW(ch.Challenge, nonce), nil
+}
+
+// fetchChallenge asks the destination for a challenge. ok is false when it
+// offers none: any answer other than a readable 200 means the provider does
+// not require proof-of-work, and so does a request that fails (the POST that
+// follows meets the same failure and reports it). The request is a plain GET
+// without the Authorization header, with a 10-second timeout.
+func (r *Reporter) fetchChallenge(ctx context.Context) (ch challengeReply, ok bool) {
+	target, err := challengeURL(r.dest.URL)
+	if err != nil {
+		return ch, false
+	}
+	cctx, cancel := context.WithTimeout(ctx, challengeTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(cctx, http.MethodGet, target, nil)
+	if err != nil {
+		return ch, false
+	}
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return ch, false
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return ch, false
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxChallengeBody)).Decode(&ch); err != nil || ch.Challenge == "" {
+		return challengeReply{}, false
+	}
+	return ch, true
 }

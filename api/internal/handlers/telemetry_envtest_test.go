@@ -722,6 +722,12 @@ func TestTelemetryPreview_EqualsTheBodyTheReporterPosts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			bodies := make(chan []byte, 4)
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				if req.Method == http.MethodGet {
+					// The reporter asks for a proof-of-work challenge first (spec 022
+					// T105); this provider offers none.
+					http.NotFound(w, req)
+					return
+				}
 				b, _ := io.ReadAll(req.Body)
 				bodies <- b
 				w.WriteHeader(http.StatusNoContent)
