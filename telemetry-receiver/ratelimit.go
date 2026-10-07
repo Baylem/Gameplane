@@ -100,8 +100,9 @@ func (l *dailyLimiter) take(src netip.Addr, now time.Time) bool {
 	if !tracked {
 		// If the map is full, evict the LRU entry
 		if len(l.counts) >= l.max {
-			lruKey := l.lru.Remove(l.lru.Back()).(*netip.Prefix)
-			delete(l.counts, *lruKey)
+			if lruKey, ok := l.lru.Remove(l.lru.Back()).(*netip.Prefix); ok {
+				delete(l.counts, *lruKey)
+			}
 		}
 		// Track the new source with a fresh budget
 		keyPtr := new(netip.Prefix)
@@ -160,8 +161,9 @@ func (l *bucketLimiter) allow(src netip.Addr, now time.Time) bool {
 	if !ok {
 		// If the map is full, evict the LRU entry
 		if len(l.buckets) >= l.max {
-			lruKey := l.lru.Remove(l.lru.Back()).(*netip.Prefix)
-			delete(l.buckets, *lruKey)
+			if lruKey, ok := l.lru.Remove(l.lru.Back()).(*netip.Prefix); ok {
+				delete(l.buckets, *lruKey)
+			}
 		}
 		// Track the new source with a fresh bucket
 		keyPtr := new(netip.Prefix)

@@ -56,7 +56,7 @@ func bandReports(d FleetDistribution) []int64 {
 }
 
 func TestBuildViewsExactFiguresPerRange(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	seedViews(t, st)
 	cases := []struct {
 		rangeDays     int
@@ -141,7 +141,7 @@ func TestBuildViewsExactFiguresPerRange(t *testing.T) {
 }
 
 func TestBuildViewsReportsPerDayIsDense(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	seedViews(t, st)
 	v, err := BuildViews(context.Background(), st, 7, viewsNow)
 	if err != nil {
@@ -157,7 +157,7 @@ func TestBuildViewsReportsPerDayIsDense(t *testing.T) {
 }
 
 func TestBuildViewsInvalidRangeFallsBackTo30(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	seedViews(t, st)
 	for _, n := range []int{0, -7, 5, 31, 366, 1000} {
 		v, err := BuildViews(context.Background(), st, n, viewsNow)
@@ -171,7 +171,7 @@ func TestBuildViewsInvalidRangeFallsBackTo30(t *testing.T) {
 }
 
 func TestBuildViewsEmptyState(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	check := func(label string) {
 		t.Helper()
 		for _, r := range validRanges {
@@ -204,7 +204,7 @@ func TestBuildViewsEmptyState(t *testing.T) {
 }
 
 func TestBuildViewsTopTenVersionsThenOtherAndInvalid(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	ctx := context.Background()
 	day := viewsDay(1)
 	// Twelve named versions with 12, 11, ... 1 reports, plus other and
@@ -244,7 +244,7 @@ func TestBuildViewsTopTenVersionsThenOtherAndInvalid(t *testing.T) {
 }
 
 func TestBuildViewsOmitsOtherAndInvalidWithoutReports(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	if err := st.recordBasic(context.Background(), viewsDay(0), "1.0.0", 1, 1); err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +258,7 @@ func TestBuildViewsOmitsOtherAndInvalidWithoutReports(t *testing.T) {
 }
 
 func TestBuildViewsLatestDayZeroWhenAsOfHasNoRow(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	if err := st.recordBasic(context.Background(), viewsDay(3), "1.0.0", 4, 9); err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +274,7 @@ func TestBuildViewsLatestDayZeroWhenAsOfHasNoRow(t *testing.T) {
 func TestBuildViewsReadErrors(t *testing.T) {
 	for _, drop := range []string{"daily_basic", "daily_version", "daily_fleet"} {
 		t.Run(drop, func(t *testing.T) {
-			st := openTestStore(t, config{})
+			st := openTestStore(t.Context(), t, config{})
 			if err := st.recordBasic(context.Background(), viewsDay(0), "1.0.0", 1, 1); err != nil {
 				t.Fatal(err)
 			}

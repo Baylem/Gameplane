@@ -180,7 +180,7 @@ func TestSummaryTotalSurvivesARetentionSweep(t *testing.T) {
 	if err := s.store.lifecycleOnce(context.Background(), *clock, 365); err != nil {
 		t.Fatal(err)
 	}
-	if got := countRows(t, s.store, `SELECT count(*) FROM daily_basic`); got != 0 {
+	if got := countRows(t.Context(), t, s.store, `SELECT count(*) FROM daily_basic`); got != 0 {
 		t.Fatalf("daily_basic rows after the sweep = %d, want 0", got)
 	}
 	after := getSummary(t, s, "192.0.2.1:1000", nil)

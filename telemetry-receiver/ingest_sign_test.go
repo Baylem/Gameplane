@@ -67,15 +67,15 @@ func TestForgeryMatrixIsRefusedWithoutChangingAnyTable(t *testing.T) {
 				return body, otherSig
 			}},
 		{"sentAt more than 36 hours old", http.StatusForbidden, refuseStale,
-			func(t *testing.T, in extInstall, _, _ string, now time.Time) (string, string) {
+			func(t *testing.T, _ extInstall, _, _ string, now time.Time) (string, string) {
 				return newExtInstall(7).report(t, now.Add(-36*time.Hour-time.Second), nil)
 			}},
 		{"sentAt more than an hour ahead", http.StatusForbidden, refuseStale,
-			func(t *testing.T, in extInstall, _, _ string, now time.Time) (string, string) {
+			func(t *testing.T, _ extInstall, _, _ string, now time.Time) (string, string) {
 				return newExtInstall(7).report(t, now.Add(time.Hour+time.Second), nil)
 			}},
 		{"a bad signature wins over a stale sentAt", http.StatusForbidden, refuseBadSignature,
-			func(t *testing.T, in extInstall, _, _ string, now time.Time) (string, string) {
+			func(t *testing.T, _ extInstall, _, _ string, now time.Time) (string, string) {
 				body, _ := newExtInstall(7).report(t, now.Add(-48*time.Hour), nil)
 				return body, ""
 			}},
@@ -184,7 +184,7 @@ func TestClaimExpiresWithTheActivityRecordAndCanBeReclaimed(t *testing.T) {
 	if err := s.store.lifecycleOnce(t.Context(), *clock, 730); err != nil {
 		t.Fatalf("lifecycleOnce: %v", err)
 	}
-	if got := countRows(t, s.store, `SELECT count(*) FROM activity`); got != 0 {
+	if got := countRows(t.Context(), t, s.store, `SELECT count(*) FROM activity`); got != 0 {
 		t.Fatalf("activity rows after expiry = %d, want 0", got)
 	}
 	body, sig = other.report(t, *clock, nil)

@@ -21,9 +21,9 @@ var wantTables = []string{
 	"daily_ext", "daily_dim", "daily_game", "activity",
 }
 
-func openTestStore(t *testing.T, cfg config) *store {
+func openTestStore(ctx context.Context, t *testing.T, cfg config) *store {
 	t.Helper()
-	st, err := openStore(context.Background(), cfg)
+	st, err := openStore(ctx, cfg)
 	if err != nil {
 		t.Fatalf("openStore: %v", err)
 	}
@@ -43,25 +43,25 @@ func mustMeta(t *testing.T, st *store, key string) string {
 	return v
 }
 
-func countRows(t *testing.T, st *store, query string, args ...any) int {
+func countRows(ctx context.Context, t *testing.T, st *store, query string, args ...any) int {
 	t.Helper()
 	var n int
-	if err := st.db.QueryRowContext(context.Background(), query, args...).Scan(&n); err != nil {
+	if err := st.db.QueryRowContext(ctx, query, args...).Scan(&n); err != nil {
 		t.Fatalf("count (%s): %v", query, err)
 	}
 	return n
 }
 
 func TestStoreCreatesSchemaAndMeta(t *testing.T) {
-	st := openTestStore(t, config{dataDir: t.TempDir()})
+	st := openTestStore(t.Context(), t, config{dataDir: t.TempDir()})
 	for _, name := range wantTables {
-		if n := countRows(t, st, `SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, name); n != 1 {
+		if n := countRows(t.Context(), t, st, `SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?`, name); n != 1 {
 			t.Errorf("table %s: found %d, want 1", name, n)
 		}
 	}
 	// The activity claim columns the spec calls out by name.
 	for _, col := range []string{"key_fp", "last_sent_at"} {
-		if n := countRows(t, st, `SELECT count(*) FROM pragma_table_info('activity') WHERE name = ?`, col); n != 1 {
+		if n := countRows(t.Context(), t, st, `SELECT count(*) FROM pragma_table_info('activity') WHERE name = ?`, col); n != 1 {
 			t.Errorf("activity.%s: found %d, want 1", col, n)
 		}
 	}
@@ -86,7 +86,7 @@ func TestStoreCreatesSchemaAndMeta(t *testing.T) {
 
 func TestStoreUsesWALOnDisk(t *testing.T) {
 	dir := t.TempDir()
-	st := openTestStore(t, config{dataDir: dir})
+	st := openTestStore(t.Context(), t, config{dataDir: dir})
 	var mode string
 	if err := st.db.QueryRowContext(context.Background(), `PRAGMA journal_mode`).Scan(&mode); err != nil {
 		t.Fatalf("read journal_mode: %v", err)
@@ -101,7 +101,7 @@ func TestStoreUsesWALOnDisk(t *testing.T) {
 
 func TestStoreCreatesMissingDataDir(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "a", "b")
-	st := openTestStore(t, config{dataDir: dir})
+	st := openTestStore(t.Context(), t, config{dataDir: dir})
 	if st.mem {
 		t.Error("store with DATA_DIR set must not be in-memory")
 	}
@@ -138,7 +138,7 @@ func TestStoreReopenKeepsAggregatesAndPepper(t *testing.T) {
 		t.Fatalf("close: %v", err)
 	}
 
-	second := openTestStore(t, config{dataDir: dir})
+	second := openTestStore(t.Context(), t, config{dataDir: dir})
 	if got := string(second.pepper); got != pepper {
 		t.Errorf("pepper changed across restart: %q -> %q", pepper, got)
 	}
@@ -148,39 +148,39 @@ func TestStoreReopenKeepsAggregatesAndPepper(t *testing.T) {
 	if got := mustMeta(t, second, "reports_total"); got != "42" {
 		t.Errorf("reports_total = %q after restart, want 42 (initialisation must not reset it)", got)
 	}
-	if n := countRows(t, second, `SELECT reports FROM daily_basic WHERE day = ?`, "2026-10-05"); n != 7 {
+	if n := countRows(t.Context(), t, second, `SELECT reports FROM daily_basic WHERE day = ?`, "2026-10-05"); n != 7 {
 		t.Errorf("daily_basic reports = %d after restart, want 7", n)
 	}
-	if n := countRows(t, second, `SELECT count(*) FROM activity WHERE id_hmac = ?`, "abc123"); n != 1 {
+	if n := countRows(t.Context(), t, second, `SELECT count(*) FROM activity WHERE id_hmac = ?`, "abc123"); n != 1 {
 		t.Errorf("activity rows = %d after restart, want 1", n)
 	}
 }
 
 func TestStoreEnvPepperIsUsedAndNotStored(t *testing.T) {
 	dir := t.TempDir()
-	st := openTestStore(t, config{dataDir: dir, idPepper: "from-secret"})
+	st := openTestStore(t.Context(), t, config{dataDir: dir, idPepper: "from-secret"})
 	if got := string(st.pepper); got != "from-secret" {
 		t.Errorf("pepper = %q, want the configured value", got)
 	}
-	if n := countRows(t, st, `SELECT count(*) FROM meta WHERE key = 'pepper'`); n != 0 {
+	if n := countRows(t.Context(), t, st, `SELECT count(*) FROM meta WHERE key = 'pepper'`); n != 0 {
 		t.Errorf("meta holds %d pepper rows, want 0 when ID_PEPPER is set", n)
 	}
 }
 
 func TestStoreInMemoryIsPrivatePerStore(t *testing.T) {
 	ctx := context.Background()
-	a := openTestStore(t, config{})
-	b := openTestStore(t, config{})
+	a := openTestStore(t.Context(), t, config{})
+	b := openTestStore(t.Context(), t, config{})
 	if !a.mem || !b.mem {
 		t.Fatal("DATA_DIR empty must give in-memory stores")
 	}
 	if err := a.exec(ctx, `INSERT INTO daily_basic (day, reports) VALUES (?, ?)`, "2026-10-05", 1); err != nil {
 		t.Fatalf("insert into a: %v", err)
 	}
-	if n := countRows(t, a, `SELECT count(*) FROM daily_basic`); n != 1 {
+	if n := countRows(t.Context(), t, a, `SELECT count(*) FROM daily_basic`); n != 1 {
 		t.Errorf("store a has %d rows, want 1", n)
 	}
-	if n := countRows(t, b, `SELECT count(*) FROM daily_basic`); n != 0 {
+	if n := countRows(t.Context(), t, b, `SELECT count(*) FROM daily_basic`); n != 0 {
 		t.Errorf("store b sees %d rows from store a, want 0 (no shared cache)", n)
 	}
 	if string(a.pepper) == string(b.pepper) {
@@ -208,7 +208,7 @@ func TestNewServerOpensPrivateMemoryStore(t *testing.T) {
 
 func TestStoreSerialisesConcurrentWriters(t *testing.T) {
 	ctx := context.Background()
-	st := openTestStore(t, config{dataDir: t.TempDir()})
+	st := openTestStore(t.Context(), t, config{dataDir: t.TempDir()})
 	const writers = 20
 	var wg sync.WaitGroup
 	errs := make(chan error, writers)
@@ -232,7 +232,7 @@ func TestStoreSerialisesConcurrentWriters(t *testing.T) {
 }
 
 func TestStoreMetaGetMissingKey(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	v, ok, err := st.metaGet(context.Background(), "no-such-key")
 	if err != nil || ok || v != "" {
 		t.Errorf("metaGet(missing) = %q, %v, %v; want empty, false, nil", v, ok, err)
@@ -368,13 +368,13 @@ func TestRunRejectsInvalidConfig(t *testing.T) {
 	}
 }
 
-func TestDashboardRoutesScaffoldIsEmpty(t *testing.T) {
+func TestDashboardRoutesRedirectUnauthenticatedToLogin(t *testing.T) {
 	s := newServer(config{})
 	t.Cleanup(func() { _ = s.store.close() })
 	rec := httptest.NewRecorder()
-	s.dashboardRoutes().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("dashboard scaffold / = %d, want 404", rec.Code)
+	s.dashboardRoutes().ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/login" {
+		t.Fatalf("dashboard / = %d with Location %q, want 303 to /login", rec.Code, rec.Header().Get("Location"))
 	}
 }
 
@@ -404,7 +404,7 @@ func TestServeStartsDashboardOnlyWithToken(t *testing.T) {
 		})
 	}()
 
-	// The scaffold has no routes, so a live dashboard listener answers 404.
+	// Live dashboard listener serves the login page after redirecting unauthenticated requests.
 	var status int
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
@@ -420,8 +420,8 @@ func TestServeStartsDashboardOnlyWithToken(t *testing.T) {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	if status != http.StatusNotFound {
-		t.Fatalf("dashboard listener status = %d, want 404 from the empty scaffold", status)
+	if status != http.StatusOK {
+		t.Fatalf("dashboard listener status = %d, want 200 (login page after redirect)", status)
 	}
 	cancel()
 	select {

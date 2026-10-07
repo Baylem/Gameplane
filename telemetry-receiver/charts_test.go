@@ -80,7 +80,7 @@ func TestNewColumnChartLayout(t *testing.T) {
 }
 
 func TestNewBarChartLayoutAndClamping(t *testing.T) {
-	c := newBarChart("Versions", seriesPink, "Version", "Reports", true,
+	c := newBarChart("Versions", "Version", "Reports", true,
 		[]barItem{{"0.3.0", "812", 1}, {"dev", "4", 0.25}, {"bad", "x", 7}, {"neg", "y", -1}})
 	if len(c.Bars) != 4 || c.H != 4*barRowH || !c.Track {
 		t.Fatalf("bars %d height %v track %v", len(c.Bars), c.H, c.Track)

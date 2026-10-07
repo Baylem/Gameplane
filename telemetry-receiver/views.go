@@ -168,7 +168,7 @@ type LatestDayRow struct {
 func normalizeRange(days int) int {
 	for _, r := range validRanges {
 		if days == r {
-			return days
+			return r
 		}
 	}
 	return defaultRange

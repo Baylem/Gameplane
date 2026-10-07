@@ -91,7 +91,7 @@ func buildExtendedCharts(v Views, table bool) *extCharts {
 	for i, r := range e.VersionsByInstall.Items {
 		labels[i], counts[i] = r.Label, r.Installs
 	}
-	c.VersionsInstall = newBarChart("Versions by install", seriesPink, "Version", "Installs", false, countBars(labels, counts))
+	c.VersionsInstall = newBarChart("Versions by install", "Version", "Installs", false, countBars(labels, counts))
 	for _, bc := range []*barChart{&c.K8s, &c.Distro, &c.Arch, &c.Nodes, &c.Games, &c.Features, &c.VersionsInstall} {
 		bc.Table = table
 	}
@@ -115,7 +115,7 @@ func shareChart(name, labelHead string, rows []ShareRow, track bool) barChart {
 		}
 		items[i] = barItem{Label: displayLabel(r.Label), Value: percentString(r.Share), Frac: frac}
 	}
-	return newBarChart(name, seriesPink, labelHead, "Share of install-days", track, items)
+	return newBarChart(name, labelHead, "Share of install-days", track, items)
 }
 
 // displayLabel shows a node or cluster band with an en dash: "2-3" as "2–3".

@@ -167,7 +167,7 @@ func TestIngestExtendedFirstReportCountsEverything(t *testing.T) {
 		{"game custom servers", `SELECT servers FROM daily_game WHERE day = ? AND module = 'custom'`, []any{day}, 1},
 		{"activity rows", `SELECT count(*) FROM activity`, nil, 1},
 	} {
-		if got := countRows(t, st, c.query, c.args...); got != c.want {
+		if got := countRows(t.Context(), t, st, c.query, c.args...); got != c.want {
 			t.Errorf("%s = %d, want %d", c.name, got, c.want)
 		}
 	}
@@ -175,7 +175,7 @@ func TestIngestExtendedFirstReportCountsEverything(t *testing.T) {
 		t.Errorf("reports_total = %s, want 1", got)
 	}
 	// Only the transformed ID is stored, and the claim is the key fingerprint.
-	if got := countRows(t, st, `SELECT count(*) FROM activity WHERE id_hmac = ?`, in.id); got != 0 {
+	if got := countRows(t.Context(), t, st, `SELECT count(*) FROM activity WHERE id_hmac = ?`, in.id); got != 0 {
 		t.Errorf("the raw install ID is stored: %d rows", got)
 	}
 	var keyFP, firstSeen, lastSeen, lastSent, lastVersion string
@@ -233,7 +233,7 @@ func TestIngestExtendedSameDayRepeatIsADuplicate(t *testing.T) {
 	}
 	st := s.store
 	day := "2026-10-07"
-	if got := countRows(t, st, `SELECT duplicates FROM daily_basic WHERE day = ?`, day); got != 1 {
+	if got := countRows(t.Context(), t, st, `SELECT duplicates FROM daily_basic WHERE day = ?`, day); got != 1 {
 		t.Errorf("duplicates = %d, want 1", got)
 	}
 	// Nothing else changed: the repeat's version and servers were not counted.
@@ -250,7 +250,7 @@ func TestIngestExtendedSameDayRepeatIsADuplicate(t *testing.T) {
 		{"daily_dim k8s", `SELECT installs FROM daily_dim WHERE dim = 'k8s'`, 1},
 		{"activity rows", `SELECT count(*) FROM activity`, 1},
 	} {
-		if got := countRows(t, st, c.query); got != c.want {
+		if got := countRows(t.Context(), t, st, c.query); got != c.want {
 			t.Errorf("%s = %d, want %d", c.name, got, c.want)
 		}
 	}
@@ -278,13 +278,13 @@ func TestIngestExtendedReturningInstallOnALaterDay(t *testing.T) {
 		t.Fatalf("day 2: %d", w.Code)
 	}
 	st := s.store
-	if got := countRows(t, st, `SELECT new_installs FROM daily_ext WHERE day = '2026-10-08'`); got != 0 {
+	if got := countRows(t.Context(), t, st, `SELECT new_installs FROM daily_ext WHERE day = '2026-10-08'`); got != 0 {
 		t.Errorf("new_installs on day 2 = %d, want 0", got)
 	}
-	if got := countRows(t, st, `SELECT active_installs FROM daily_ext WHERE day = '2026-10-08'`); got != 1 {
+	if got := countRows(t.Context(), t, st, `SELECT active_installs FROM daily_ext WHERE day = '2026-10-08'`); got != 1 {
 		t.Errorf("active_installs on day 2 = %d, want 1", got)
 	}
-	if got := countRows(t, st, `SELECT count(*) FROM activity`); got != 1 {
+	if got := countRows(t.Context(), t, st, `SELECT count(*) FROM activity`); got != 1 {
 		t.Errorf("activity rows = %d, want 1", got)
 	}
 	var first, last, version string
@@ -310,11 +310,11 @@ func TestIngestExtendedWithUnusableInstallIDIsCountedAsBasic(t *testing.T) {
 		t.Fatalf("status = %d, want 204 (%s)", w.Code, w.Body)
 	}
 	st := s.store
-	if got := countRows(t, st, `SELECT reports FROM daily_basic`); got != 1 {
+	if got := countRows(t.Context(), t, st, `SELECT reports FROM daily_basic`); got != 1 {
 		t.Errorf("daily_basic.reports = %d, want 1", got)
 	}
 	for _, table := range []string{"daily_ext", "daily_dim", "daily_game", "activity"} {
-		if got := countRows(t, st, "SELECT count(*) FROM "+table); got != 0 {
+		if got := countRows(t.Context(), t, st, "SELECT count(*) FROM "+table); got != 0 {
 			t.Errorf("%s has %d rows, want 0", table, got)
 		}
 	}
@@ -361,7 +361,7 @@ func TestIngestExtendedCountsAgainstTheSourceLimit(t *testing.T) {
 		t.Errorf("rate_limited_total{ingest} = %v, want 1", got)
 	}
 	// The limited report left no activity record.
-	if got := countRows(t, s.store, `SELECT count(*) FROM activity`); got != 1 {
+	if got := countRows(t.Context(), t, s.store, `SELECT count(*) FROM activity`); got != 1 {
 		t.Errorf("activity rows = %d, want 1", got)
 	}
 }
@@ -376,7 +376,7 @@ func TestIngestExtendedStoreFailureIs500AndRollsBack(t *testing.T) {
 		t.Fatalf("status = %d, want 500", w.Code)
 	}
 	for _, q := range []string{`SELECT count(*) FROM activity`, `SELECT count(*) FROM daily_basic`, `SELECT count(*) FROM daily_ext`} {
-		if got := countRows(t, s.store, q); got != 0 {
+		if got := countRows(t.Context(), t, s.store, q); got != 0 {
 			t.Errorf("%s = %d after a failed report, want 0 (rolled back)", q, got)
 		}
 	}
@@ -386,7 +386,7 @@ func TestIngestExtendedStoreFailureIs500AndRollsBack(t *testing.T) {
 }
 
 func TestActivityTableHasExactlyTheSixColumns(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	rows, err := st.db.QueryContext(context.Background(), `SELECT name FROM pragma_table_info('activity') ORDER BY cid`)
 	if err != nil {
 		t.Fatal(err)

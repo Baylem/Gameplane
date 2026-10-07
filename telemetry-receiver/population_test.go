@@ -160,19 +160,19 @@ func TestPopulationProducesExactNewLapsedAndActiveCounts(t *testing.T) {
 
 	// Dedupe: one counted report per install per day, repeats only counted
 	// in duplicates.
-	if got := countRows(t, st, `SELECT COALESCE(SUM(duplicates), 0) FROM daily_basic`); got != wantDuplicates {
+	if got := countRows(t.Context(), t, st, `SELECT COALESCE(SUM(duplicates), 0) FROM daily_basic`); got != wantDuplicates {
 		t.Errorf("duplicates = %d, want %d", got, wantDuplicates)
 	}
-	if got := countRows(t, st, `SELECT COALESCE(SUM(reports), 0) FROM daily_basic`); got != wantFresh {
+	if got := countRows(t.Context(), t, st, `SELECT COALESCE(SUM(reports), 0) FROM daily_basic`); got != wantFresh {
 		t.Errorf("reports = %d, want %d", got, wantFresh)
 	}
-	if got := countRows(t, st, `SELECT COALESCE(SUM(ext_reports), 0) FROM daily_ext`); got != wantFresh {
+	if got := countRows(t.Context(), t, st, `SELECT COALESCE(SUM(ext_reports), 0) FROM daily_ext`); got != wantFresh {
 		t.Errorf("ext_reports = %d, want %d", got, wantFresh)
 	}
 	if got := mustMeta(t, st, "reports_total"); got != fmt.Sprint(wantFresh) {
 		t.Errorf("reports_total = %s, want %d", got, wantFresh)
 	}
-	if got := countRows(t, st, `SELECT count(*) FROM activity`); got != len(pop) {
+	if got := countRows(t.Context(), t, st, `SELECT count(*) FROM activity`); got != len(pop) {
 		t.Errorf("activity rows = %d, want %d (nothing expires inside %d days)", got, len(pop), popExpiry)
 	}
 
@@ -256,7 +256,7 @@ func TestPopulationProducesExactNewLapsedAndActiveCounts(t *testing.T) {
 }
 
 func TestLifecycleLapsedIsIdempotentAndWritesNothingForQuietDays(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	ctx := context.Background()
 	// One install last seen on 2026-09-06: lapsed on 2026-10-06 (30 days).
 	if _, err := st.db.ExecContext(ctx,
@@ -269,16 +269,15 @@ func TestLifecycleLapsedIsIdempotentAndWritesNothingForQuietDays(t *testing.T) {
 			t.Fatalf("lifecycleOnce: %v", err)
 		}
 	}
-	if got := countRows(t, st, `SELECT lapsed_installs FROM daily_ext WHERE day = '2026-10-06'`); got != 1 {
+	if got := countRows(t.Context(), t, st, `SELECT lapsed_installs FROM daily_ext WHERE day = '2026-10-06'`); got != 1 {
 		t.Errorf("lapsed_installs[2026-10-06] = %d, want 1", got)
 	}
-	if got := countRows(t, st, `SELECT count(*) FROM daily_ext`); got != 1 {
+	if got := countRows(t.Context(), t, st, `SELECT count(*) FROM daily_ext`); got != 1 {
 		t.Errorf("daily_ext rows = %d, want 1 (quiet days write nothing)", got)
 	}
 }
 
 func TestLifecycleExpiresActivityRecordsAndTheirClaims(t *testing.T) {
-	ctx := context.Background()
 	for _, tc := range []struct {
 		name       string
 		expiryDays int
@@ -288,28 +287,37 @@ func TestLifecycleExpiresActivityRecordsAndTheirClaims(t *testing.T) {
 		{"expiry 0 keeps every record", 0, 3},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			st := openTestStore(t, config{activityExpiryDays: tc.expiryDays})
-			// lifecycleNow is 2026-10-07: with expiry 31 the cutoff is
-			// 2026-09-06, which is kept; the day before it is deleted.
-			for id, lastSeen := range map[string]string{"a": "2026-09-05", "b": "2026-09-06", "c": "2026-10-06"} {
-				if _, err := st.db.ExecContext(ctx,
-					`INSERT INTO activity (id_hmac, key_fp, first_seen, last_seen, last_sent_at, last_version)
-					 VALUES (?, 'k', '2026-01-01', ?, '2026-01-01T00:00:00Z', '1.0.0')`, id, lastSeen); err != nil {
-					t.Fatal(err)
-				}
-			}
-			if err := st.lifecycleOnce(ctx, lifecycleNow, 365); err != nil {
-				t.Fatalf("lifecycleOnce: %v", err)
-			}
-			if got := countRows(t, st, `SELECT count(*) FROM activity`); got != tc.wantRows {
-				t.Errorf("activity rows = %d, want %d", got, tc.wantRows)
-			}
-			if tc.expiryDays > 0 {
-				if got := countRows(t, st, `SELECT count(*) FROM activity WHERE id_hmac = 'a'`); got != 0 {
-					t.Error("the record last seen before the cutoff was kept")
-				}
-			}
+			expiresActivityCase(t, tc)
 		})
+	}
+}
+
+func expiresActivityCase(t *testing.T, tc struct {
+	name       string
+	expiryDays int
+	wantRows   int
+}) {
+	ctx := t.Context()
+	st := openTestStore(t.Context(), t, config{activityExpiryDays: tc.expiryDays})
+	// lifecycleNow is 2026-10-07: with expiry 31 the cutoff is
+	// 2026-09-06, which is kept; the day before it is deleted.
+	for id, lastSeen := range map[string]string{"a": "2026-09-05", "b": "2026-09-06", "c": "2026-10-06"} {
+		if _, err := st.db.ExecContext(ctx,
+			`INSERT INTO activity (id_hmac, key_fp, first_seen, last_seen, last_sent_at, last_version)
+			 VALUES (?, 'k', '2026-01-01', ?, '2026-01-01T00:00:00Z', '1.0.0')`, id, lastSeen); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := st.lifecycleOnce(ctx, lifecycleNow, 365); err != nil {
+		t.Fatalf("lifecycleOnce: %v", err)
+	}
+	if got := countRows(t.Context(), t, st, `SELECT count(*) FROM activity`); got != tc.wantRows {
+		t.Errorf("activity rows = %d, want %d", got, tc.wantRows)
+	}
+	if tc.expiryDays > 0 {
+		if got := countRows(t.Context(), t, st, `SELECT count(*) FROM activity WHERE id_hmac = 'a'`); got != 0 {
+			t.Error("the record last seen before the cutoff was kept")
+		}
 	}
 }
 
@@ -375,7 +383,7 @@ func TestBuildViewsExtendedSharesGamesAndFeatures(t *testing.T) {
 		t.Errorf("tunnels = %+v", e.Tunnels)
 	}
 	// A range without extended reports has no extended block at all.
-	empty, err := BuildViews(ctx, openTestStoreWithBasic(t), 30, *clock)
+	empty, err := BuildViews(ctx, openTestStoreWithBasic(ctx, t), 30, *clock)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,10 +394,10 @@ func TestBuildViewsExtendedSharesGamesAndFeatures(t *testing.T) {
 
 // openTestStoreWithBasic returns a store holding one basic report on
 // 2026-10-07 and nothing extended.
-func openTestStoreWithBasic(t *testing.T) *store {
+func openTestStoreWithBasic(ctx context.Context, t *testing.T) *store {
 	t.Helper()
-	st := openTestStore(t, config{})
-	if err := st.recordBasic(context.Background(), "2026-10-07", "1.0.0", 1, 1); err != nil {
+	st := openTestStore(ctx, t, config{})
+	if err := st.recordBasic(ctx, "2026-10-07", "1.0.0", 1, 1); err != nil {
 		t.Fatal(err)
 	}
 	return st

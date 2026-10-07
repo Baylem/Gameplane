@@ -18,7 +18,8 @@ func addr(s string) netip.Addr { return netip.MustParseAddr(s) }
 func TestDailyLimiterCapsPerSourcePerUTCDay(t *testing.T) {
 	l := newDailyLimiter(2)
 	a, b := addr("192.0.2.1"), addr("192.0.2.2")
-	if !l.take(a, limiterNow) || !l.take(a, limiterNow) {
+	first, second := l.take(a, limiterNow), l.take(a, limiterNow)
+	if !first || !second {
 		t.Fatal("first two reports from a source must be accepted")
 	}
 	if l.take(a, limiterNow) {
@@ -150,7 +151,8 @@ func TestDailyLimiterTrackedSourceKeepsSpentBudget(t *testing.T) {
 func TestBucketLimiterBurstRefillAndSeparateSources(t *testing.T) {
 	l := newBucketLimiter(60, 2) // one token per second, burst 2
 	a, b := addr("192.0.2.1"), addr("192.0.2.2")
-	if !l.allow(a, limiterNow) || !l.allow(a, limiterNow) {
+	first, second := l.allow(a, limiterNow), l.allow(a, limiterNow)
+	if !first || !second {
 		t.Fatal("the burst of 2 must be allowed")
 	}
 	if l.allow(a, limiterNow) {
@@ -167,7 +169,8 @@ func TestBucketLimiterBurstRefillAndSeparateSources(t *testing.T) {
 	}
 	// The bucket never holds more than the burst, however long it idles.
 	later := limiterNow.Add(5 * time.Second)
-	if !l.allow(a, later) || !l.allow(a, later) || l.allow(a, later) {
+	first, second, third := l.allow(a, later), l.allow(a, later), l.allow(a, later)
+	if !first || !second || third {
 		t.Fatal("after a long idle the bucket holds exactly the burst")
 	}
 }
@@ -412,7 +415,7 @@ func TestIngestRateLimitReturns429(t *testing.T) {
 	if got := mustMeta(t, s.store, "reports_total"); got != "2" {
 		t.Fatalf("reports_total = %s, want 2", got)
 	}
-	if got := countRows(t, s.store, `SELECT reports FROM daily_basic WHERE day = ?`, "2026-10-07"); got != 2 {
+	if got := countRows(t.Context(), t, s.store, `SELECT reports FROM daily_basic WHERE day = ?`, "2026-10-07"); got != 2 {
 		t.Fatalf("daily_basic.reports = %d, want 2", got)
 	}
 	if got := counterValue(t, s, "gameplane_telemetry_reports_total", "version", "1.0.0"); got != 2 {

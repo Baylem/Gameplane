@@ -12,7 +12,7 @@ import (
 // per day as aggregates and asserts that the heaviest range builds in under
 // three seconds (SC-010).
 func TestBuildViewsOverAYearOfAggregatesIsFast(t *testing.T) {
-	st := openTestStore(t, config{activityExpiryDays: 90})
+	st := openTestStore(t.Context(), t, config{activityExpiryDays: 90})
 	ctx := context.Background()
 	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
 	const days, perDay = 365, 10000

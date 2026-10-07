@@ -163,12 +163,12 @@ func TestDashboardLoginFlow(t *testing.T) {
 		!strings.Contains(page.Header().Get("Content-Type"), "text/html") {
 		t.Fatalf("login page: %d %q", page.Code, page.Body)
 	}
-	if strings.Contains(page.Body.String(), invalidCredentials) {
+	if strings.Contains(page.Body.String(), loginFailedMessage) {
 		t.Fatal("a fresh login page must not show the error")
 	}
 
 	bad := doDash(t, h, dashReq{method: http.MethodPost, path: "/login", header: sameOriginHeader(), body: loginForm("wrong")})
-	if bad.Code != http.StatusUnauthorized || !strings.Contains(bad.Body.String(), invalidCredentials) {
+	if bad.Code != http.StatusUnauthorized || !strings.Contains(bad.Body.String(), loginFailedMessage) {
 		t.Fatalf("wrong token: %d %q", bad.Code, bad.Body)
 	}
 	if len(bad.Result().Cookies()) != 0 {

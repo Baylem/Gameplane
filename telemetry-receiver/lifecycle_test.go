@@ -62,13 +62,13 @@ func dailyRows(t *testing.T, st *store, day string) int {
 	t.Helper()
 	total := 0
 	for _, table := range dailyTables {
-		total += countRows(t, st, "SELECT count(*) FROM "+table+" WHERE day = ?", day)
+		total += countRows(t.Context(), t, st, "SELECT count(*) FROM "+table+" WHERE day = ?", day)
 	}
 	return total
 }
 
 func TestLifecycleDeletesDailyRowsOlderThanRetention(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	ctx := context.Background()
 	// With retention 365 and today 2026-10-07 the cutoff is 2025-10-07:
 	// that day is kept, the day before it is deleted.
@@ -92,7 +92,7 @@ func TestLifecycleDeletesDailyRowsOlderThanRetention(t *testing.T) {
 	if got := dailyRows(t, st, "2026-10-06"); got != len(dailyTables) {
 		t.Errorf("recent rows = %d, want %d", got, len(dailyTables))
 	}
-	if got := countRows(t, st, `SELECT count(*) FROM activity`); got != 1 {
+	if got := countRows(t.Context(), t, st, `SELECT count(*) FROM activity`); got != 1 {
 		t.Errorf("the retention sweep touched activity: %d rows", got)
 	}
 	if got := mustMeta(t, st, "reports_total"); got != "0" {
@@ -101,7 +101,7 @@ func TestLifecycleDeletesDailyRowsOlderThanRetention(t *testing.T) {
 }
 
 func TestLifecycleIsIdempotentAndResumesFromRolloverMarker(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	ctx := context.Background()
 	if _, ok, err := st.metaGet(ctx, "rollover_through"); err != nil || ok {
 		t.Fatalf("rollover_through before the first run: ok=%v err=%v, want unset", ok, err)
@@ -135,7 +135,7 @@ func TestLifecycleIsIdempotentAndResumesFromRolloverMarker(t *testing.T) {
 }
 
 func TestLifecycleWithoutRetentionDeletesNothing(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	ctx := context.Background()
 	seedAllDaily(t, st, "2001-01-01")
 	for _, retention := range []int{0, -1} {
@@ -152,7 +152,7 @@ func TestLifecycleWithoutRetentionDeletesNothing(t *testing.T) {
 }
 
 func TestLifecycleFailsOnClosedStore(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	if err := st.close(); err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func TestLifecycleFailsOnClosedStore(t *testing.T) {
 }
 
 func TestRunLifecycleRunsImmediatelyAndStopsOnCancel(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	seedAllDaily(t, st, "2020-01-01")
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -187,7 +187,7 @@ func TestRunLifecycleRunsImmediatelyAndStopsOnCancel(t *testing.T) {
 }
 
 func TestRunLifecycleLogsFailuresAndKeepsGoing(t *testing.T) {
-	st := openTestStore(t, config{})
+	st := openTestStore(t.Context(), t, config{})
 	if err := st.close(); err != nil {
 		t.Fatal(err)
 	}

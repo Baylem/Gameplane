@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"log/slog"
 	"mime"
@@ -46,20 +47,26 @@ const (
 	// dashboardCSP is sent on every dashboard response.
 	dashboardCSP = "default-src 'none'; style-src 'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
 
-	// invalidCredentials is the only login failure message; it never says
+	// loginFailedMessage is the only login failure message; it never says
 	// whether the token was close, missing or unconfigured.
-	invalidCredentials = "Invalid credentials"
+	loginFailedMessage = "Invalid credentials"
 	unauthorizedBody   = `{"error":"unauthorized"}`
 )
 
+// staticFile holds a preloaded static file with its content type.
+type staticFile struct {
+	ctype string
+	data  []byte
+}
+
 // dashboard serves the private dashboard listener.
 type dashboard struct {
-	s      *server
-	token  string
-	key    []byte
-	pages  map[string]*template.Template
-	static fs.FS
-	logins *bucketLimiter
+	s           *server
+	token       string
+	key         []byte
+	pages       map[string]*template.Template
+	staticFiles map[string]staticFile
+	logins      *bucketLimiter
 }
 
 // dashboardRoutes returns the handler of the dashboard listener. It is only
@@ -70,13 +77,32 @@ func (s *server) dashboardRoutes() http.Handler {
 	if err != nil {
 		panic(fmt.Sprintf("telemetry-receiver: embedded static files: %v", err))
 	}
+	staticFiles := make(map[string]staticFile)
+	entries, err := fs.ReadDir(static, ".")
+	if err != nil {
+		panic(fmt.Sprintf("telemetry-receiver: read static files: %v", err))
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			name := entry.Name()
+			data, err := fs.ReadFile(static, name)
+			if err != nil {
+				panic(fmt.Sprintf("telemetry-receiver: read static file %s: %v", name, err))
+			}
+			ctype := mime.TypeByExtension(path.Ext(name))
+			if ctype == "" {
+				ctype = "application/octet-stream"
+			}
+			staticFiles[name] = staticFile{ctype: ctype, data: data}
+		}
+	}
 	d := &dashboard{
-		s:      s,
-		token:  s.cfg.dashboardToken,
-		key:    sessionKey(s.cfg.dashboardToken),
-		pages:  make(map[string]*template.Template),
-		static: static,
-		logins: newBucketLimiter(loginPerMinute, loginPerMinute),
+		s:           s,
+		token:       s.cfg.dashboardToken,
+		key:         sessionKey(s.cfg.dashboardToken),
+		pages:       make(map[string]*template.Template),
+		staticFiles: staticFiles,
+		logins:      newBucketLimiter(loginPerMinute, loginPerMinute),
 	}
 	pageFiles := map[string][]string{
 		"login":    {"web/layout.html", "web/login.html"},
@@ -222,7 +248,7 @@ func (d *dashboard) loginSubmit(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxLoginBody)
 	if err := r.ParseForm(); err != nil || d.token == "" || !tokenEqual(r.PostForm.Get("token"), d.token) {
-		d.render(w, http.StatusUnauthorized, "login", loginData{Error: invalidCredentials})
+		d.render(w, http.StatusUnauthorized, "login", loginData{Error: loginFailedMessage})
 		return
 	}
 	now := d.s.now()
@@ -326,20 +352,16 @@ func (d *dashboard) metrics(w http.ResponseWriter, r *http.Request) {
 	promhttp.HandlerFor(d.s.reg, promhttp.HandlerOpts{}).ServeHTTP(w, r)
 }
 
-// serveStatic serves one embedded static file. It reads the file itself
-// rather than using http.ServeFileFS, whose error responses drop the
+// serveStatic serves one preloaded embedded static file with io.Copy rather
+// than http.ServeContent or http.ServeFileFS, whose error responses drop the
 // Cache-Control header that every dashboard response must carry.
 func (d *dashboard) serveStatic(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("file")
-	data, err := fs.ReadFile(d.static, name)
-	if err != nil {
+	f, ok := d.staticFiles[name]
+	if !ok {
 		http.NotFound(w, r)
 		return
 	}
-	ctype := mime.TypeByExtension(path.Ext(name))
-	if ctype == "" {
-		ctype = "application/octet-stream"
-	}
-	w.Header().Set("Content-Type", ctype)
-	_, _ = w.Write(data)
+	w.Header().Set("Content-Type", f.ctype)
+	_, _ = io.Copy(w, bytes.NewReader(f.data))
 }

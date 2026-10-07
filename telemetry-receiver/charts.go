@@ -94,14 +94,14 @@ type point struct {
 
 // niceScale returns a tick step and the axis top (step * colTickCount) for a
 // maximum value: the smallest 1, 2 or 5 times a power of ten whose top covers
-// max.
-func niceScale(max int64) (step, top int64) {
-	if max < 1 {
+// maxV.
+func niceScale(maxV int64) (step, top int64) {
+	if maxV < 1 {
 		return 1, colTickCount
 	}
 	for mag := int64(1); ; mag *= 10 {
 		for _, m := range []int64{1, 2, 5} {
-			if s := m * mag; s*colTickCount >= max {
+			if s := m * mag; s*colTickCount >= maxV {
 				return s, s * colTickCount
 			}
 		}
@@ -218,9 +218,9 @@ type barChart struct {
 }
 
 // newBarChart lays out items, top to bottom, with a value column on the right.
-func newBarChart(name, class, labelHead, valueHead string, track bool, items []barItem) barChart {
+func newBarChart(name, labelHead, valueHead string, track bool, items []barItem) barChart {
 	c := barChart{
-		Name: name, Class: class, Head1: labelHead, Head2: valueHead, Track: track,
+		Name: name, Class: seriesPink, Head1: labelHead, Head2: valueHead, Track: track,
 		W: barChartW, H: barRowH * float64(len(items)), BarX: barLabelW, TrackW: barMaxW,
 		ValueX: barValueX, BarY: (barRowH - barHeight) / 2, BarH: barHeight,
 	}
@@ -347,7 +347,7 @@ func newOverviewPage(v Views, table bool, total int64, since string) overviewPag
 	for i, r := range b.Versions {
 		labels[i], counts[i] = r.Label, r.Reports
 	}
-	p.VersionsChart = newBarChart("Versions", seriesPink, "Version", "Reports", false, countBars(labels, counts))
+	p.VersionsChart = newBarChart("Versions", "Version", "Reports", false, countBars(labels, counts))
 	p.VersionsChart.Table = table
 	p.ServersChart = fleetChart("Servers per install", "Game servers", b.Fleet.Servers, table)
 	p.TemplatesChart = fleetChart("Templates per install", "Templates", b.Fleet.Templates, table)

@@ -282,7 +282,7 @@ func TestPoWRefusalsChangeNoTable(t *testing.T) {
 		{"no nonce separator", refusePoWInvalid,
 			func(*testing.T, *server, *time.Time) string { return "garbage" }},
 		{"nonce is not decimal", refusePoWInvalid,
-			func(t *testing.T, s *server, _ *time.Time) string {
+			func(_ *testing.T, s *server, _ *time.Time) string {
 				token, _, _ := s.pow.issue(s.now())
 				return token + ":abc"
 			}},
@@ -321,7 +321,7 @@ func TestPoWRefusalsChangeNoTable(t *testing.T) {
 				return powSolved(t, other)
 			}},
 		{"nonce does not meet the difficulty", refusePoWInvalid,
-			func(t *testing.T, s *server, _ *time.Time) string {
+			func(_ *testing.T, s *server, _ *time.Time) string {
 				token, bits, _ := s.pow.issue(s.now())
 				for nonce := uint64(0); ; nonce++ {
 					if !telemetryschema.PoWOK(token, nonce, bits) {
