@@ -372,6 +372,13 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	// Persist wipe ownership before any workload mutation, including recovery
+	// from legacy workers after restart. Acquisition gets its own reconcile.
+	if changed, err := r.ensureWipeGuard(ctx, &gs); err != nil {
+		return requeueOnConflict(ctrl.Result{}, err)
+	} else if changed {
+		return ctrl.Result{Requeue: true}, nil
+	}
 	replicas, stopRequeue, err := r.desiredReplicas(ctx, &gs, &tmpl, idle)
 	if err != nil {
 		logger.Error(err, "compute desired replicas")
@@ -397,7 +404,15 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		logger.Error(err, "reconcile BackupSchedule")
 		return ctrl.Result{}, err
 	}
-	if err := r.reconcileWipe(ctx, &gs, &tmpl); err != nil {
+	// Preflight already recovered legacy workers. An ordinary pass needs only
+	// finished-Job cleanup; avoid repeating namespace inventories here.
+	var wipeErr error
+	if gs.Annotations[wipeGuardAnnotation] != "" || pendingWipe(&gs) {
+		wipeErr = r.reconcileWipe(ctx, &gs, &tmpl)
+	} else {
+		wipeErr = r.deleteWipeJob(ctx, &gs, gs.Name+"-wipe")
+	}
+	if err := wipeErr; err != nil {
 		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -1176,6 +1191,13 @@ func (r *GameServerReconciler) desiredReplicas(
 	ctx context.Context, gs *gameplanev1alpha1.GameServer, tmpl *gameplanev1alpha1.GameTemplate,
 	idle idleState,
 ) (int32, time.Duration, error) {
+	if gs.Annotations[wipeGuardAnnotation] != "" || pendingWipe(gs) {
+		replicas, poll, err := r.softStop(ctx, gs, tmpl)
+		if poll == 0 || poll > wipeDrainPoll {
+			poll = wipeDrainPoll
+		}
+		return replicas, poll, err
+	}
 	// Restore owns the data PVC until its workers have drained. Keep the
 	// workload stopped even if a concurrent power request clears suspend.
 	if gs.Annotations[restoreGuardAnnotation] != "" {
@@ -1408,24 +1430,46 @@ func (r *GameServerReconciler) reconcileStatefulSet(
 			"gameplane.local/template":   tmpl.Name,
 		}
 		actualReplicas := replicas
-		if ss.Annotations[restoreGuardAnnotation] != "" {
+		if ss.Annotations[restoreGuardAnnotation] != "" || ss.Annotations[wipeGuardAnnotation] != "" {
 			actualReplicas = 0
-		} else if ss.ResourceVersion == "" && r.APIReader != nil {
-			// A new StatefulSet can be created from a stale GameServer cache
-			// snapshot. Consult the live object before starting its first pod.
-			var live gameplanev1alpha1.GameServer
-			if err := r.APIReader.Get(ctx, client.ObjectKeyFromObject(gs), &live); err != nil {
-				return err
-			}
-			if live.UID != gs.UID {
-				return fmt.Errorf("GameServer changed identity before StatefulSet creation")
-			}
-			if guard := live.Annotations[restoreGuardAnnotation]; guard != "" {
+		}
+		// Both creates and updates can originate from stale cache snapshots.
+		// Read live ownership even after a marker was cleared for release: a
+		// conflicting GameServer release must still keep this workload fenced.
+		var live gameplanev1alpha1.GameServer
+		if err := r.wipeReader().Get(ctx, client.ObjectKeyFromObject(gs), &live); err != nil {
+			return err
+		}
+		if live.UID != gs.UID {
+			return fmt.Errorf("GameServer changed identity before StatefulSet mutation")
+		}
+		for _, annotation := range []string{restoreGuardAnnotation, wipeGuardAnnotation} {
+			if guard := live.Annotations[annotation]; guard != "" {
 				actualReplicas = 0
 				if ss.Annotations == nil {
 					ss.Annotations = make(map[string]string)
 				}
-				ss.Annotations[restoreGuardAnnotation] = guard
+				ss.Annotations[annotation] = guard
+			}
+		}
+		if pendingWipe(&live) {
+			actualReplicas = 0
+		}
+		if live.Annotations[wipeGuardAnnotation] == "" && !pendingWipe(&live) {
+			workers, err := wipeWorkers(ctx, r.wipeReader(), &live)
+			if err != nil {
+				return err
+			}
+			if workers.busy {
+				actualReplicas = 0
+			} else {
+				// A callback may have restamped the marker between workload
+				// cleanup and the checked GameServer release. Recover that
+				// interrupted release once the live guard and workers are gone.
+				delete(ss.Annotations, wipeGuardAnnotation)
+				if ss.Annotations[restoreGuardAnnotation] == "" {
+					actualReplicas = replicas
+				}
 			}
 		}
 		ss.Spec.Replicas = &actualReplicas
