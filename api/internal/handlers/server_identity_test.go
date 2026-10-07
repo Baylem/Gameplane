@@ -254,7 +254,7 @@ func assertIdentityPatch(t *testing.T, a ktesting.Action, uid, rv string) {
 	}
 }
 
-func TestServerIdentity_LifecycleConflictDoesNotRetry(t *testing.T) {
+func TestServerIdentity_LifecycleGrantChangeDoesNotRetry(t *testing.T) {
 	for _, suffix := range []string{":start", ":stop", ":restart", ":wake"} {
 		t.Run(suffix, func(t *testing.T) {
 			gs := identityServer("authorized")
@@ -263,6 +263,14 @@ func TestServerIdentity_LifecycleConflictDoesNotRetry(t *testing.T) {
 			k.Dynamic.(*dynamicfake.FakeDynamicClient).PrependReactor("patch", "gameservers", func(a ktesting.Action) (bool, runtime.Object, error) {
 				calls++
 				assertIdentityPatch(t, a, "authorized", "10")
+				// Status-only conflicts may retry start/stop, but an ownership
+				// change must never carry the old grant into another attempt.
+				changed := gs.DeepCopy()
+				changed.SetResourceVersion("11")
+				changed.SetAnnotations(map[string]string{ownerIDAnnotation: "99"})
+				if err := k.Dynamic.(*dynamicfake.FakeDynamicClient).Tracker().Update(kube.GVRs["servers"], changed, scope.DefaultNamespace); err != nil {
+					t.Fatal(err)
+				}
 				return true, nil, apierrors.NewConflict(kube.GVRs["servers"].GroupResource(), "alpha", errors.New("changed after read"))
 			})
 			rr := doWithUser(t, identityRouter(k, gs), "POST", "/servers/alpha"+suffix, nil, &auth.User{ID: 42})

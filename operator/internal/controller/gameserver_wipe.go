@@ -45,13 +45,33 @@ fi`
 func (r *GameServerReconciler) reconcileWipe(
 	ctx context.Context, gs *gameplanev1alpha1.GameServer, tmpl *gameplanev1alpha1.GameTemplate,
 ) error {
+	// A previous acknowledgement may be newer than this cache snapshot.
+	// Refresh the request and guard before any wipe side effect, so a stale
+	// pending token cannot recreate a writer after a restore acquires it.
+	reader := r.APIReader
+	if reader == nil {
+		reader = r.Client
+	}
+	var live gameplanev1alpha1.GameServer
+	if err := reader.Get(ctx, client.ObjectKeyFromObject(gs), &live); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+	if live.UID != gs.UID {
+		return nil
+	}
+	gs = &live
+	// A restic restore has exclusive access to this data volume. Do not
+	// create a wipe Job or acknowledge a wipe by resuming the server yet.
+	if gs.Annotations[restoreGuardAnnotation] != "" {
+		return nil
+	}
 	req := gs.Annotations[WipeRequestedAnnotation]
 	done := gs.Annotations[WipeCompletedAnnotation]
 	jobName := gs.Name + "-wipe"
 
 	if req == "" || req == done {
 		// Nothing pending — clean up any finished wipe Job left behind.
-		return r.deleteWipeJob(ctx, gs.Namespace, jobName)
+		return r.deleteWipeJob(ctx, gs, jobName)
 	}
 
 	// Only wipe while suspended; otherwise the game pod still mounts the
@@ -100,16 +120,20 @@ func (r *GameServerReconciler) reconcileWipe(
 		return err
 	}
 
+	if !metav1.IsControlledBy(&job, gs) {
+		return fmt.Errorf("wipe Job %s/%s is not controlled by this GameServer", gs.Namespace, jobName)
+	}
+
 	// A leftover Job from a previous request — replace it.
 	if job.Labels[wipeTokenLabel] != req {
-		return r.deleteWipeJob(ctx, gs.Namespace, jobName)
+		return r.deleteWipeJob(ctx, gs, jobName)
 	}
 	// The current request finished successfully — ack and clean up.
 	if job.Status.Succeeded > 0 {
 		if err := r.ackWipe(ctx, gs, req); err != nil {
 			return err
 		}
-		return r.deleteWipeJob(ctx, gs.Namespace, jobName)
+		return r.deleteWipeJob(ctx, gs, jobName)
 	}
 	// The Job exhausted its retries without succeeding (e.g. a permission
 	// error the wipe container's uid can't get past) — report the failure
@@ -230,13 +254,17 @@ func (r *GameServerReconciler) ackWipe(ctx context.Context, gs *gameplanev1alpha
 	return nil
 }
 
-func (r *GameServerReconciler) deleteWipeJob(ctx context.Context, ns, name string) error {
+func (r *GameServerReconciler) deleteWipeJob(ctx context.Context, gs *gameplanev1alpha1.GameServer, name string) error {
 	var job batchv1.Job
-	if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: ns}, &job); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: name, Namespace: gs.Namespace}, &job); err != nil {
 		return client.IgnoreNotFound(err)
 	}
+	if !metav1.IsControlledBy(&job, gs) {
+		return nil
+	}
 	policy := metav1.DeletePropagationBackground
-	return client.IgnoreNotFound(r.Delete(ctx, &job, &client.DeleteOptions{PropagationPolicy: &policy}))
+	uid := job.UID
+	return client.IgnoreNotFound(r.Delete(ctx, &job, &client.DeleteOptions{PropagationPolicy: &policy, Preconditions: &metav1.Preconditions{UID: &uid}}))
 }
 
 // jobPermanentlyFailed reports whether job has given up (batch/v1 sets

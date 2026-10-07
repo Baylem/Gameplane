@@ -109,7 +109,8 @@ func patchSuspend(reg *kube.Registry, suspend bool) http.HandlerFunc {
 		if !ok {
 			return
 		}
-		if !patchAuthorizedServer(w, req, k, obj, map[string]any{"spec": map[string]any{"suspend": suspend}}) {
+		if err := patchServerSuspend(req.Context(), k, obj, suspend); err != nil {
+			httperr.Write(w, req, err)
 			return
 		}
 		w.WriteHeader(http.StatusAccepted)
