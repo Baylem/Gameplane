@@ -797,12 +797,16 @@ jobs:
         # telemetry-receiver needs its own ServiceMonitor, and both it and
         # the agent PodMonitor need a NetworkPolicy exception for the
         # configured Prometheus namespace once one is set via
-        # serviceMonitors.scrapeNamespaceSelector.
+        # serviceMonitors.scrapeNamespaceSelector. Spec 022: the receiver
+        # serves /metrics only on its dashboard port 8081 behind a Bearer
+        # token, so its ServiceMonitor and NetworkPolicy rule need
+        # api.telemetry.receiver.dashboard.tokenSecretRef.name.
         run: |
           scrape_ns='serviceMonitors.scrapeNamespaceSelector={"matchLabels":{"kubernetes.io/metadata.name":"monitoring"}}'
           helm template gameplane charts/gameplane \
             --set serviceMonitors.enabled=true \
             --set api.telemetry.receiver.enabled=true \
+            --set api.telemetry.receiver.dashboard.tokenSecretRef.name=receiver-dashboard \
             --set-json "$scrape_ns" \
             --show-only templates/servicemonitors.yaml > /tmp/servicemonitors.yaml
           awk '/kind: PodMonitor/,0' /tmp/servicemonitors.yaml | grep -q 'port: metrics'
@@ -815,6 +819,24 @@ jobs:
             exit 1
           fi
           grep -q 'name: gameplane-telemetry-receiver' /tmp/servicemonitors.yaml
+          # The receiver serves /metrics only on its dashboard listener (8081)
+          # behind the dashboard token, so the ServiceMonitor scrapes that
+          # port with the token Secret as bearerTokenSecret.
+          awk '/name: gameplane-telemetry-receiver/,/^---$/' /tmp/servicemonitors.yaml > /tmp/receiver-servicemonitor.yaml
+          grep -q 'port: dashboard' /tmp/receiver-servicemonitor.yaml
+          grep -q 'bearerTokenSecret:' /tmp/receiver-servicemonitor.yaml
+          grep -q 'name: receiver-dashboard' /tmp/receiver-servicemonitor.yaml
+          # No dashboard token: no receiver ServiceMonitor (it could only scrape
+          # a permanently-down target); NOTES.txt carries the warning.
+          helm template gameplane charts/gameplane \
+            --set serviceMonitors.enabled=true \
+            --set api.telemetry.receiver.enabled=true \
+            --set-json "$scrape_ns" \
+            --show-only templates/servicemonitors.yaml > /tmp/servicemonitors-notoken.yaml
+          if grep -q 'name: gameplane-telemetry-receiver' /tmp/servicemonitors-notoken.yaml; then
+            echo "::error::receiver ServiceMonitor rendered without api.telemetry.receiver.dashboard.tokenSecretRef.name"
+            exit 1
+          fi
           helm template gameplane charts/gameplane \
             --set serviceMonitors.enabled=true \
             --set-json "$scrape_ns" \
@@ -824,12 +846,24 @@ jobs:
           helm template gameplane charts/gameplane \
             --set serviceMonitors.enabled=true \
             --set api.telemetry.receiver.enabled=true \
+            --set api.telemetry.receiver.dashboard.tokenSecretRef.name=receiver-dashboard \
             --set-json "$scrape_ns" \
             --show-only templates/telemetry-receiver.yaml > /tmp/telemetry-receiver-scrape.yaml
-          awk '/kind: NetworkPolicy/,0' /tmp/telemetry-receiver-scrape.yaml \
+          awk '/kind: NetworkPolicy/,/^---$/' /tmp/telemetry-receiver-scrape.yaml > /tmp/telemetry-receiver-netpol.yaml
+          # The Prometheus namespace is admitted on the dashboard port 8081,
+          # not on the public ingest port 8080 (which admits only the API).
+          awk '/namespaceSelector:/,0' /tmp/telemetry-receiver-netpol.yaml \
             | grep -q 'kubernetes.io/metadata.name: monitoring'
+          awk '/namespaceSelector:/,0' /tmp/telemetry-receiver-netpol.yaml \
+            | grep -q 'port: 8081'
+          if awk '/namespaceSelector:/,0' /tmp/telemetry-receiver-netpol.yaml | grep -q 'port: 8080'; then
+            echo "::error::the Prometheus namespace must not be admitted on the receiver ingest port 8080"
+            exit 1
+          fi
           awk '/kind: Service/,/^---$/' /tmp/telemetry-receiver-scrape.yaml \
             | grep -q 'app.kubernetes.io/name: gameplane-telemetry-receiver'
+          awk '/kind: Service/,/^---$/' /tmp/telemetry-receiver-scrape.yaml \
+            | grep -q 'name: dashboard'
           # scrapeNamespaceSelector unset (the chart default): neither
           # exception renders, matching the pre-fix behavior.
           helm template gameplane charts/gameplane \
@@ -839,6 +873,44 @@ jobs:
             echo "::error::allow-prometheus-to-agent rendered without serviceMonitors.scrapeNamespaceSelector set"
             exit 1
           fi
+      - name: telemetry install values render (spec 022 FR-005, FR-006)
+        # api.telemetry.enabled=false renders --telemetry-disabled; the bundled
+        # receiver auto-wires the API and marks it bundled; a custom endpoint
+        # is used as-is without the bundled marker; defaults render no endpoint.
+        run: |
+          # api.telemetry.enabled=false is the hard off switch.
+          helm template gameplane charts/gameplane \
+            --set api.telemetry.enabled=false \
+            --show-only templates/api.yaml > /tmp/api-telemetry-off.yaml
+          grep -q -- '--telemetry-disabled' /tmp/api-telemetry-off.yaml
+          # The bundled receiver auto-wires the API and marks it bundled.
+          helm template gameplane charts/gameplane \
+            --set api.telemetry.receiver.enabled=true \
+            --show-only templates/api.yaml > /tmp/api-telemetry-bundled.yaml
+          grep -q -- '--telemetry-endpoint=http://gameplane-telemetry-receiver' /tmp/api-telemetry-bundled.yaml
+          grep -q 'GAMEPLANE_TELEMETRY_BUNDLED' /tmp/api-telemetry-bundled.yaml
+          if grep -q -- '--telemetry-disabled' /tmp/api-telemetry-bundled.yaml; then
+            echo "::error::--telemetry-disabled rendered with api.telemetry.enabled left at its default"
+            exit 1
+          fi
+          # A custom endpoint is used as-is and is never marked bundled.
+          helm template gameplane charts/gameplane \
+            --set api.telemetry.endpoint=https://telemetry.example.com/ingest \
+            --set api.telemetry.receiver.enabled=true \
+            --show-only templates/api.yaml > /tmp/api-telemetry-custom.yaml
+          grep -q -- '--telemetry-endpoint=https://telemetry.example.com/ingest' /tmp/api-telemetry-custom.yaml
+          if grep -q 'GAMEPLANE_TELEMETRY_BUNDLED' /tmp/api-telemetry-custom.yaml; then
+            echo "::error::GAMEPLANE_TELEMETRY_BUNDLED rendered for a custom telemetry endpoint"
+            exit 1
+          fi
+          # Defaults render no endpoint (the API falls back to its compiled-in default).
+          helm template gameplane charts/gameplane \
+            --show-only templates/api.yaml > /tmp/api-telemetry-default.yaml
+          if grep -q -- '--telemetry-endpoint' /tmp/api-telemetry-default.yaml; then
+            echo "::error::default values rendered a --telemetry-endpoint"
+            exit 1
+          fi
+          grep -q -- '--official-module-source=default' /tmp/api-telemetry-default.yaml
       - name: games Namespace carries the keep policy
         # F-212: `helm uninstall` used to delete the games Namespace and
         # every GameServer/StatefulSet/PVC in it. Assert the Namespace is
@@ -912,6 +984,22 @@ jobs:
           assert ('Deployment', 'gameplane-gateway') not in resources
           assert ('NetworkPolicy', 'allow-api-to-agent') in resources
           assert ('NetworkPolicy', 'allow-api-to-capture') not in resources, "legacy values without capture enabled its ingress"
+          PY
+          # Spec 022: with the bundled receiver and ServiceMonitors switched on
+          # over beta.8's values (no persistence, dashboard, interval or enabled
+          # keys), the chart still renders: no receiver PVC is added, no
+          # receiver ServiceMonitor renders without a token, and the API
+          # keeps working without api.telemetry.enabled.
+          helm template gameplane charts/gameplane \
+            --set api.telemetry.receiver.enabled=true \
+            --set serviceMonitors.enabled=true > /tmp/rendered-reuse-values-receiver.yaml
+          python3 - <<'PY'
+          import yaml
+          docs = [d for d in yaml.safe_load_all(open('/tmp/rendered-reuse-values-receiver.yaml')) if d]
+          resources = {(d['kind'], d['metadata']['name']) for d in docs}
+          assert ('Deployment', 'gameplane-telemetry-receiver') in resources
+          assert ('PersistentVolumeClaim', 'gameplane-telemetry-receiver-data') not in resources, "--reuse-values added receiver storage"
+          assert ('ServiceMonitor', 'gameplane-telemetry-receiver') not in resources, "receiver ServiceMonitor rendered without a dashboard token"
           PY
       - name: crd-manifests in sync with crds
         # The CRD-apply hook serves CRDs from crd-manifests/ (crds/ isn't
@@ -1189,8 +1277,8 @@ jobs:
             job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
           - bucket: telemetry
             parallel: 1
-            test_timeout: 25m
-            job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+            test_timeout: 45m # the lifecycle test waits on 1m report intervals for every subtest
+            job_timeout: 75 # Boots a kind cluster, installs the chart, runs the bucket's suite.
     env:
       CLUSTER: gameplane-e2e
       CTX: kind-gameplane-e2e

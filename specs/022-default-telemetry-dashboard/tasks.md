@@ -273,14 +273,14 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Independent Test**: With `api.telemetry.enabled=false`, no report arrives over 3 intervals, the settings show "disabled by the operator", and `PUT` returns 409. With a custom endpoint, reports arrive only there. An old (beta.8) receiver still gets basic reports.
 
-- [ ] T049 [US2] Change the chart:
+- [X] T049 [US2] Change the chart:
   - `charts/gameplane/values.yaml`: add `api.telemetry.enabled: true` and `api.telemetry.interval: 24h`, with comments from `contracts/install-config.md`. Rewrite the comment block at lines 231-235 to say that an empty endpoint means the project default.
   - `charts/gameplane/templates/api.yaml` (lines 323-329):
     - render `--telemetry-disabled` when `enabled` is false (`hasKey` guard, default true)
     - render `GAMEPLANE_TELEMETRY_BUNDLED=true` when auto-wiring the receiver
     - render `--official-module-source={{ .Values.defaultModuleSource.name }}` when `defaultModuleSource.enabled`
     - render `GAMEPLANE_TELEMETRY_INTERVAL` from `api.telemetry.interval`
-- [ ] T050 [P] [US2] Add `helm template` assertions to `.github/workflows/ci.yaml` (next to lines 775-804):
+- [X] T050 [P] [US2] Add `helm template` assertions to `.github/workflows/ci.yaml` (next to lines 775-804):
   - `enabled=false` renders `--telemetry-disabled`
   - the receiver renders `--telemetry-endpoint=http://gameplane-telemetry-receiver…` and `GAMEPLANE_TELEMETRY_BUNDLED`
   - a custom endpoint renders without `BUNDLED`
@@ -375,7 +375,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
   The cookie is `gp_telemetry_session` = `expiry || HMAC(K, expiry)`, where `K = HMAC-SHA256(DASHBOARD_TOKEN, "gameplane-telemetry-session")`, with `HttpOnly; Secure; SameSite=Strict; Max-Age=43200`. Unauthenticated HTML requests get `303` to `/login`, and unauthenticated JSON requests get `401 {"error":"unauthorized"}`. Every response carries the CSP, `nosniff`, `no-referrer` and `no-store` headers.
 - [ ] T068 [US4] Create `telemetry-receiver/web/`, embedded with `go:embed`: `layout.html`, `login.html` and `overview.html` (basic section), `style.css`, and inline-SVG chart partials (columns for reports per day, horizontal bars for versions, a histogram for fleet sizes), following the T066 design (pink theme, dark first, light values from the same tokens). No inline `style` attributes or `<style>` blocks: the CSP sets `style-src 'self'`. Include the logo PNG from `website/design-assets/gameplane-icon.png` as a static asset. There is no JavaScript, and the range is chosen with links.
-- [ ] T069 [US4] Change the chart for the dashboard, in `charts/gameplane/templates/telemetry-receiver.yaml`:
+- [X] T069 [US4] Change the chart for the dashboard, in `charts/gameplane/templates/telemetry-receiver.yaml`:
   - `DASHBOARD_TOKEN` from `dashboard.tokenSecretRef` when it is named
   - Service port `dashboard` (8081) when the token is named
   - a NetworkPolicy rule for port 8081 admitting `dashboard.ingressFrom` peers; move the `serviceMonitors.scrapeNamespaceSelector` rule (`telemetry-receiver.yaml:107-116`) from port 8080 to 8081
@@ -449,7 +449,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - a token bucket of 60 per minute with burst 10 per source (`429` plus the `route="summary"` metric)
 
   `reportsTotal` comes from `meta.reports_total`.
-- [ ] T080 [P] [US6] In `charts/gameplane/templates/telemetry-receiver.yaml`, render `PUBLIC_SUMMARY` from `publicSummary.enabled` (`hasKey` guard, default false).
+- [X] T080 [P] [US6] In `charts/gameplane/templates/telemetry-receiver.yaml`, render `PUBLIC_SUMMARY` from `publicSummary.enabled` (`hasKey` guard, default false).
 - [ ] T081 [P] [US6] Create `telemetry-receiver/summary_test.go`, covering exactly five keys (decode into a map and assert its length), 404 when disabled, the headers, ETag and 304, the limiter, and that `reportsTotal` is unchanged after a retention sweep.
 - [ ] T082 [US6] Add the subtest `public_summary_five_keys` to `test/e2e/telemetry_e2e_test.go`, through `Env.PortForward` on 8080.
 

@@ -123,6 +123,9 @@ spec:
             {{- end }}
           ports:
             - { name: http, containerPort: 8080 }
+            {{- if $dashboardToken.name }}
+            - { name: dashboard, containerPort: 8081 }
+            {{- end }}
           livenessProbe:  { httpGet: { path: /healthz, port: http }, initialDelaySeconds: 5 }
           readinessProbe: { httpGet: { path: /healthz, port: http }, initialDelaySeconds: 2 }
           resources: {{ toYaml $r.resources | nindent 12 }}
@@ -157,6 +160,9 @@ spec:
   selector: { app.kubernetes.io/name: gameplane-telemetry-receiver }
   ports:
     - { name: http, port: 8080, targetPort: http }
+    {{- if $dashboardToken.name }}
+    - { name: dashboard, port: 8081, targetPort: dashboard }
+    {{- end }}
 {{- if .Values.networkPolicies.enabled }}
 ---
 apiVersion: networking.k8s.io/v1
@@ -179,17 +185,20 @@ spec:
         - protocol: TCP
           port: 8080
     {{- /*
-      F-217: /metrics shares this listener/port with /ingest, and until now
-      the only ingress rule was "from the API pod", so no in-cluster
-      Prometheus could ever reach /metrics regardless of the ServiceMonitor
-      above. /ingest still requires AUTH_TOKEN (see the receiver's
-      Deployment env above), so widening this rule to the operator's
-      configured Prometheus namespace doesn't expose it to unauthenticated
-      writes — it only lets that namespace's pods reach the port at all.
-      Rendered only once an operator actually names their Prometheus
-      namespace via serviceMonitors.scrapeNamespaceSelector; left empty,
-      this stays exactly as restrictive as before.
+      Port 8080 (/ingest) admits only the API pod. /metrics lives on the
+      dashboard listener (8081) behind Bearer auth, so the dashboard port is
+      opened only when a dashboard token is named: first to the operator's
+      dashboard.ingressFrom peers, then (F-217) to the Prometheus namespace
+      named via serviceMonitors.scrapeNamespaceSelector. With no peers
+      configured, port-forward still works.
     */}}
+    {{- if $dashboardToken.name }}
+    {{- with $dashboard.ingressFrom }}
+    - from: {{- toYaml . | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: 8081
+    {{- end }}
     {{- with .Values.serviceMonitors.scrapeNamespaceSelector }}
     {{- if $.Values.serviceMonitors.enabled }}
     - from:
@@ -197,7 +206,8 @@ spec:
             {{- toYaml . | nindent 12 }}
       ports:
         - protocol: TCP
-          port: 8080
+          port: 8081
+    {{- end }}
     {{- end }}
     {{- end }}
 {{- end }}

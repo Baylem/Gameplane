@@ -234,15 +234,23 @@ api:
         accessKeyKey: access-key   # key containing the access key ID
         secretKeyKey: secret-key    # key containing the secret access key
 
-  # Anonymous usage telemetry ({version, servers, templates} once a day —
-  # see docs/install.md). Two independent gates: the admin toggle in the
-  # dashboard decides WHETHER anything is sent, this block decides WHERE.
-  # With endpoint empty and receiver.enabled false (the defaults),
-  # telemetry is off entirely.
+  # Anonymous usage telemetry (see docs/install.md). Two independent gates:
+  # the admin switches in the dashboard decide WHETHER anything is sent, this
+  # block decides WHETHER it may be sent at all (enabled) and WHERE it goes
+  # (endpoint, receiver).
   telemetry:
-    # External receiver URL, e.g. https://telemetry.example.com/ingest.
-    # Setting it disables the receiver auto-wiring below.
+    # false = hard off: the API never sends telemetry, whatever the admin
+    # switches say. This is the single setting for air-gapped and
+    # privacy-sensitive clusters. The bundled receiver, if enabled below, is
+    # still deployed.
+    enabled: true
+    # Where reports are sent. Empty means the project's default provider
+    # (compiled into the API); set a URL such as
+    # https://telemetry.example.com/ingest to send reports to your own
+    # receiver instead. Setting it disables the receiver auto-wiring below.
     endpoint: ""
+    # Testing only: the spacing between reports. Don't change in production.
+    interval: 24h
     # Optional shared ingest token, sourced from a Secret (never a flag).
     # The API sends it verbatim as the Authorization header and the
     # bundled receiver requires it — recommended when the receiver is
@@ -274,7 +282,8 @@ api:
           name: ""
           key: token
         # Extra NetworkPolicy peers allowed to reach the dashboard port
-        # (port-forward works without any). Not rendered yet.
+        # (port-forward works without any). Each item is a NetworkPolicyPeer,
+        # e.g. {namespaceSelector: {matchLabels: {team: ops}}}.
         ingressFrom: []
       # Serve the public aggregate counters on GET /v1/summary.
       publicSummary:
@@ -554,8 +563,11 @@ serviceMonitors:
   # expressions/labels) identifying the namespace your Prometheus runs in.
   # Only used, when non-empty, to open NetworkPolicy exceptions so that
   # Prometheus can reach the agent's metrics port 9090 (F-216; rationale in
-  # agent/specs.md) and the telemetry-receiver's /metrics on its normal
-  # port (F-217) when networkPolicies.enabled is also true. Required
+  # agent/specs.md) and the telemetry-receiver's /metrics on its
+  # dashboard port 8081 (F-217; /metrics is served there with Bearer auth,
+  # so the receiver ServiceMonitor also needs
+  # api.telemetry.receiver.dashboard.tokenSecretRef.name) when
+  # networkPolicies.enabled is also true. Required
   # alongside enabled: true whenever networkPolicies.enabled is also true;
   # left empty, both stay unreachable to Prometheus even though their
   # ServiceMonitor/PodMonitor objects are rendered. Example:
