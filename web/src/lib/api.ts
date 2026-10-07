@@ -240,7 +240,67 @@ export interface TelemetryNotice {
   fields?: { basic: string[]; extended: string[] };
 }
 
+// GET /admin/telemetry (contracts/api-telemetry-http.md; api/internal/handlers/telemetry.go).
+export interface TelemetryConsent {
+  basic: boolean;
+  extended: boolean;
+  source: "default" | "legacy" | "admin";
+}
+
+export interface TelemetryStatus {
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  lastOutcome: "never" | "ok" | "failed";
+  lastIdRotationAt: string | null;
+}
+
+export interface TelemetryPreviewExt {
+  schema: number;
+  installId: string;
+  env: { k8s: string; distro: string; arch: string[]; nodes: string };
+  games: { official: Record<string, number>; custom: number };
+  features: {
+    wakeOnConnect: boolean;
+    tunnels: string[];
+    capture: boolean;
+    backups: boolean;
+    sso: boolean;
+    auditForwarding: boolean;
+    clusters: string;
+    db: string;
+    language: string;
+  };
+  key: string;
+  sentAt: string;
+}
+
+// The exact report the reporter would send now (telemetryschema.Report).
+export interface TelemetryPreview {
+  version: string;
+  servers: number;
+  templates: number;
+  ext?: TelemetryPreviewExt;
+}
+
+export interface TelemetryInfo {
+  destination: TelemetryDestination;
+  // When true the stored consent is reported but has no effect.
+  operatorDisabled: boolean;
+  consent: TelemetryConsent;
+  // null whenever extended is off.
+  installId: string | null;
+  // null when basic is off or the destination is disabled/none.
+  preview: TelemetryPreview | null;
+  status: TelemetryStatus;
+}
+
 export const Telemetry = {
+  // GET /admin/telemetry (config:read).
+  get: () => api<TelemetryInfo>("/admin/telemetry"),
+  // POST /admin/telemetry/install-id (config:manage) — rotates the install ID.
+  // 409 when extended is off or the operator disabled telemetry.
+  resetInstallId: () =>
+    api<{ installId: string }>("/admin/telemetry/install-id", { method: "POST" }),
   // GET /admin/telemetry/notice — the first-login notice for the caller.
   notice: () => api<TelemetryNotice>("/admin/telemetry/notice"),
   // POST /admin/telemetry/notice — "seen" records that the notice was rendered

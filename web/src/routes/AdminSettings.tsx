@@ -1542,7 +1542,7 @@ function NotificationsSection({ initial }: { initial?: NotificationsCfg }) {
   );
 }
 
-const defaultTelemetry: TelemetryCfg = { sendMetrics: false };
+const defaultTelemetry: TelemetryCfg = { sendMetrics: false, extended: false };
 
 function TelemetrySection({ initial }: { initial?: TelemetryCfg }) {
   const f = useSectionForm<TelemetryCfg>(initial ?? defaultTelemetry, "telemetry");

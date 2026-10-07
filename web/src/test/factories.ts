@@ -302,7 +302,7 @@ export function makeConfig(over: Partial<AllConfig> = {}): AllConfig {
     },
     auth: { providers: [{ name: "local", kind: "local", enabled: true }] },
     notifications: { sinks: [] },
-    telemetry: { sendMetrics: false },
+    telemetry: { sendMetrics: false, extended: false },
     ...over,
   };
 }

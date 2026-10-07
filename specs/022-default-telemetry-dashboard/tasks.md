@@ -322,7 +322,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `status` with `lastAttemptAt`, `lastSuccessAt`, `lastOutcome` and `lastIdRotationAt`
 
   Never include `signing_secret`.
-- [ ] T058 [P] [US3] In `web/src/lib/config.ts`, add `extended: boolean` to `TelemetryCfg` (line 86). In `web/src/lib/api.ts`, give `Telemetry.get()` its full response type and add `Telemetry.resetInstallId()`. In `web/src/test/factories.ts`, change the default at line 305 to `telemetry: { sendMetrics: false, extended: false }`.
+- [X] T058 [P] [US3] In `web/src/lib/config.ts`, add `extended: boolean` to `TelemetryCfg` (line 86). In `web/src/lib/api.ts`, give `Telemetry.get()` its full response type and add `Telemetry.resetInstallId()`. In `web/src/test/factories.ts`, change the default at line 305 to `telemetry: { sendMetrics: false, extended: false }`.
 - [ ] T059 [US3] Finish `TelemetrySection` in `web/src/routes/AdminSettings.tsx` from the T052 design:
   - the extended switch (accessible name "Enable extended telemetry" or "Disable extended telemetry"), disabled and shown off while basic is off; turning basic off also clears extended in the form draft (FR-019, spec Q7)
   - the install-ID row with "Reset ID" and its confirm dialog
@@ -555,14 +555,14 @@ description: "Task list for feature 022: default telemetry destination, extended
 - [X] T092 [P] Add to the `docs/security.md` threat model: the public unauthenticated ingest and summary, the pseudonymous install ID, signing (what it does and doesn't stop: fabricated installs), dashboard authentication and the refusal invariant, source-address handling, and the pepper.
 - [X] T093 [P] Create `docs/telemetry-provider.md`, a runbook for running the project's receiver (OD-2): deploying the image, TLS termination, keeping `:8081` private, the `DASHBOARD_TOKEN` and `ID_PEPPER` Secrets and their rotation, `PUBLIC_SUMMARY=true`, `TRUSTED_PROXY_CIDRS`, retention (`RETENTION_DAYS`, `ACTIVITY_EXPIRY_DAYS`), scraping `/metrics` with the token, and backing up and restoring `telemetry.db`. Link it from `docs/install.md` § Telemetry and `telemetry-receiver/README.md`. (The README link lands with T089.)
 - [X] T094 [P] Add a `CHANGELOG.md` entry with the FR-008 upgrade notes, breaking-ish behaviour notes ("empty `api.telemetry.endpoint` now means the project default"; "the receiver's `/metrics` moved to the dashboard port and needs the dashboard token"), and links to the docs.
-- [ ] T095 Add a single statement-URL constant for the data-handling statement (OD-2), for example in the module `web/src` already uses for docs links. If there is none, create `web/src/lib/links.ts`. Use it in `TelemetryNotice.tsx` and `TelemetrySection`.
+- [ ] T095 *(constant in `web/src/lib/links.ts` done; wiring into the notice and settings section pending)* Add a single statement-URL constant for the data-handling statement (OD-2), for example in the module `web/src` already uses for docs links. If there is none, create `web/src/lib/links.ts`. Use it in `TelemetryNotice.tsx` and `TelemetrySection`.
 - [ ] T096 Make the website changes in the `website/` submodule, following its own `CLAUDE.md` and PR flow (default branch `main`):
   - a data-handling statement page (OD-2: maintainers operate it; 24-month aggregates, OD-3; 90-day activity expiry, OD-4; signing; no raw reports or IPs)
   - updates to `src/content/docs/platform-settings-telemetry.mdx`, `helm-values-reference.mdx` and `air-gapped-installation.mdx` (set `api.telemetry.enabled=false`)
 
   Then commit the submodule pointer bump in the root.
 - [ ] T097 Run the `security-review` skill over the branch diff and fix the confirmed findings through a small fix workflow.
-- [ ] T098 Push the branch and open the PR **as a draft**, using the `ship-branch` skill. Add labels through REST (rule 14): `type: feature`, `area: api`, `area: web`, `area: chart`, `area: e2e`, `area: shared` and `area: specs`. The PR body states:
+- [X] T098 Push the branch and open the PR **as a draft**, using the `ship-branch` skill. Add labels through REST (rule 14): `type: feature`, `area: api`, `area: web`, `area: chart`, `area: e2e`, `area: shared` and `area: specs`. The PR body states:
   - the OD-1 merge gate
   - the T002 sign-off list
   - that `telemetry-default-gate` is expected to fail until OD-1 is ruled
