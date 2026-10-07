@@ -47,10 +47,11 @@ Notes:
   warning, and loses it all on restart. Always set it for a real provider.
 - Run **one replica** only. The database is a single SQLite file; two
   processes on it will conflict. Use a recreate rollout, not a rolling one.
-- Kubernetes: the chart's receiver
-  (`api.telemetry.receiver.enabled=true`) renders all of this, including a
-  PVC at `/data`, a `Recreate` strategy and NetworkPolicies. A standalone
-  provider can use the same Deployment shape or the chart.
+- Kubernetes: see [Deploy on Kubernetes](#deploy-on-kubernetes) for complete
+  manifests for a standalone provider. The chart's receiver
+  (`api.telemetry.receiver.enabled=true`) renders the same Deployment shape,
+  with a PVC at `/data`, a `Recreate` strategy and NetworkPolicies, and is
+  the right choice for a receiver bundled next to one Gameplane install.
 
 ### Configuration
 
@@ -76,6 +77,351 @@ A value below a minimum, a malformed `TRUSTED_PROXY_CIDRS` entry, an
 unparsable number, a `DASHBOARD_TOKEN` shorter than 32 characters or an
 `INGEST_POW_MAX_BITS` outside its range stops the receiver at start with an
 error.
+
+## Deploy on Kubernetes
+
+This section sets up a standalone provider in its own namespace, `gameplane-telemetry`. It follows the shape of the project's provider at `telemetry.gameplane.net`: Cloudflare's proxy in front, Traefik on k3s as the ingress, a certificate from cert-manager through a Cloudflare DNS-01 challenge, a private dashboard and proof-of-work.
+
+Other ingress controllers and CDNs work the same way. The parts to adapt are the Ingress annotations, the NetworkPolicy peer and `TRUSTED_PROXY_CIDRS`. The repository ships no manifests for this, so copy the ones below. For a receiver that serves a single Gameplane install, use the chart instead (`api.telemetry.receiver.enabled=true`).
+
+### Prerequisites
+
+- k3s (or any cluster) with Traefik as the ingress controller in `kube-system`, configured to trust Cloudflare's forwarded headers. `forwardedHeaders.trustedIPs` on the `web` and `websecure` entry points must list Cloudflare's ranges, and Traefik must see Cloudflare's address as the peer (for example `service.spec.externalTrafficPolicy: Local` with ServiceLB). The [client address check](#check-the-client-address) below confirms both.
+- cert-manager.
+- The zone (`gameplane.net` here) on Cloudflare, and a Cloudflare API token with Zone:DNS:Edit and Zone:Zone:Read on it.
+- A CNI that enforces NetworkPolicies (the kube-router that ships with k3s does).
+
+### 1. Namespace, secrets and trusted proxies
+
+```sh
+kubectl create namespace gameplane-telemetry
+
+# Dashboard token: 32 random bytes = 44 base64 characters (the receiver refuses fewer than 32).
+kubectl -n gameplane-telemetry create secret generic telemetry-dashboard \
+  --from-literal=token="$(openssl rand -base64 32)"
+
+# ID pepper: set it before the first report and never lose it (see Rotating secrets).
+kubectl -n gameplane-telemetry create secret generic telemetry-pepper \
+  --from-literal=pepper="$(openssl rand -base64 32)"
+
+# Trusted proxies: the cluster's pod CIDR (where Traefik runs) plus Cloudflare's published ranges.
+# CHANGE ME if your cluster is not on the k3s default.
+# Check with: kubectl get nodes -o jsonpath='{.items[*].spec.podCIDR}'
+POD_CIDR=10.42.0.0/16
+CF_RANGES=$( { curl -fsS https://www.cloudflare.com/ips-v4; echo; curl -fsS https://www.cloudflare.com/ips-v6; } | grep . | paste -sd, - )
+kubectl -n gameplane-telemetry create configmap telemetry-trusted-proxies \
+  --from-literal=cidrs="${POD_CIDR},${CF_RANGES}" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Check the result: the pod CIDR first, then Cloudflare's IPv4 and IPv6 ranges
+# (for example 10.42.0.0/16,173.245.48.0/20,...,2400:cb00::/32,...).
+kubectl -n gameplane-telemetry get configmap telemetry-trusted-proxies -o jsonpath='{.data.cidrs}'; echo
+```
+
+The list is a static copy. Cloudflare changes its ranges rarely; when it does, rerun the last two commands and restart the receiver with `kubectl -n gameplane-telemetry rollout restart deploy/telemetry-receiver`, because the variable is read at start. Update Traefik's `forwardedHeaders.trustedIPs` the same way. If you prefer, set `TRUSTED_PROXY_CIDRS` as a literal `value:` in the Deployment instead of the ConfigMap reference; the receiver reads only the environment variable. [How the client address is resolved](#5-how-the-client-address-is-resolved) explains why the list matters. For the token and pepper, see [Secrets](#secrets) and [Rotating secrets](#rotating-secrets).
+
+### 2. Certificate issuer (cert-manager DNS-01 through Cloudflare)
+
+Skip this step if you already have a ClusterIssuer for the zone. Otherwise store the Cloudflare API token and create the issuer:
+
+```sh
+# CHANGE ME: your Cloudflare API token.
+kubectl -n cert-manager create secret generic cloudflare-api-token \
+  --from-literal=api-token='<cloudflare-api-token>'
+```
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-cloudflare
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: you@example.com              # CHANGE ME
+    privateKeySecretRef:
+      name: letsencrypt-cloudflare-account
+    solvers:
+      - dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
+        selector:
+          dnsZones: [gameplane.net]     # CHANGE ME: your zone
+```
+
+DNS-01 works with the Cloudflare proxy on, because validation never goes through the proxied hostname.
+
+### 3. Receiver, Service, Ingress and NetworkPolicy
+
+Save the following as `telemetry-provider.yaml` and apply it with `kubectl apply -f telemetry-provider.yaml`. It holds five documents: the volume, the receiver, its Service, the Ingress and the NetworkPolicy.
+
+```yaml
+# 1. Storage: the SQLite database lives here (/data/telemetry.db).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: telemetry-receiver-data
+  namespace: gameplane-telemetry
+spec:
+  accessModes: [ReadWriteOnce]
+  # storageClassName: fast-ssd   # CHANGE ME, or omit to use the cluster default
+  resources:
+    requests:
+      storage: 1Gi
+---
+# 2. The receiver. One replica and Recreate: one process owns the SQLite file.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telemetry-receiver
+  namespace: gameplane-telemetry
+  labels:
+    app.kubernetes.io/name: telemetry-receiver
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: telemetry-receiver
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: telemetry-receiver
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: receiver
+          image: ghcr.io/valgulnecron/gameplane/telemetry-receiver:edge   # CHANGE ME: pin a release tag
+          imagePullPolicy: Always   # edge moves; use IfNotPresent once you pin a release tag
+          env:
+            - { name: LISTEN_ADDR, value: ":8080" }
+            - { name: DATA_DIR, value: "/data" }
+            - name: DASHBOARD_TOKEN
+              valueFrom:
+                secretKeyRef: { name: telemetry-dashboard, key: token }
+            - name: ID_PEPPER
+              valueFrom:
+                secretKeyRef: { name: telemetry-pepper, key: pepper }
+            - name: TRUSTED_PROXY_CIDRS
+              valueFrom:
+                configMapKeyRef: { name: telemetry-trusted-proxies, key: cidrs }
+            - { name: PUBLIC_SUMMARY, value: "true" }
+            - { name: RETENTION_DAYS, value: "730" }
+            - { name: ACTIVITY_EXPIRY_DAYS, value: "90" }
+            - { name: INGEST_SOURCE_DAILY_LIMIT, value: "20" }
+            - { name: INGEST_POW, value: "true" }
+            - { name: INGEST_POW_TARGET_PER_MIN, value: "60" }
+            - { name: INGEST_POW_MIN_BITS, value: "0" }
+            - { name: INGEST_POW_MAX_BITS, value: "22" }
+          ports:
+            - { name: http, containerPort: 8080 }
+            - { name: dashboard, containerPort: 8081 }
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 2
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: telemetry-receiver-data
+---
+# 3. Service: ingest is public (through the Ingress), the dashboard stays cluster-internal.
+apiVersion: v1
+kind: Service
+metadata:
+  name: telemetry-receiver
+  namespace: gameplane-telemetry
+  labels:
+    app.kubernetes.io/name: telemetry-receiver
+spec:
+  selector:
+    app.kubernetes.io/name: telemetry-receiver
+  ports:
+    - { name: ingest, port: 8080, targetPort: http }
+    - { name: dashboard, port: 8081, targetPort: dashboard }
+---
+# 4. Ingress for Traefik: publishes only the public listener's routes, never :8081.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: telemetry-receiver
+  namespace: gameplane-telemetry
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [telemetry.gameplane.net]            # CHANGE ME
+      secretName: telemetry-gameplane-net-tls
+  rules:
+    - host: telemetry.gameplane.net               # CHANGE ME
+      http:
+        paths:
+          - { path: /ingest,       pathType: Exact, backend: { service: { name: telemetry-receiver, port: { name: ingest } } } }
+          - { path: /v1/challenge, pathType: Exact, backend: { service: { name: telemetry-receiver, port: { name: ingest } } } }
+          - { path: /v1/summary,   pathType: Exact, backend: { service: { name: telemetry-receiver, port: { name: ingest } } } }
+          - { path: /healthz,      pathType: Exact, backend: { service: { name: telemetry-receiver, port: { name: ingest } } } }
+---
+# 5. NetworkPolicy: 8080 only from the Traefik pods, 8081 only from the
+#    monitoring namespace (kubectl port-forward is not affected), no egress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: telemetry-receiver
+  namespace: gameplane-telemetry
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: telemetry-receiver
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - { protocol: TCP, port: 8080 }
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring   # CHANGE ME, or remove this rule
+      ports:
+        - { protocol: TCP, port: 8081 }
+  # The receiver makes no outbound connections: no DNS, no Kubernetes API, no other service.
+  egress: []
+```
+
+Key points:
+
+- Values to change are marked `# CHANGE ME`: the image tag, the storage class, the hostname (in the Ingress `tls` and `rules`), the ClusterIssuer email and zone, the Cloudflare API token, the monitoring namespace, and `POD_CIDR` if your cluster is not on the k3s default. Also replace `telemetry.gameplane.net` in the Cloudflare rule and in the Verify commands.
+- The provider features (dashboard, signed extended reports, proof-of-work) ship in the first release after v0.3.0. Pin that release or a later one. A v0.3.0 or older receiver has no dashboard and no `/v1/challenge`, and answers 400 to extended reports, so installs fall back to basic-only reports for 7 days.
+- `edge` follows master. If you run it, keep `imagePullPolicy: Always` so that a restart pulls the latest build; with `IfNotPresent` a node keeps the image it already has.
+- One replica with `Recreate`, because SQLite has a single writer. `fsGroup: 65532` makes `/data` writable for the distroless nonroot user.
+- `AUTH_TOKEN` is deliberately unset: a public provider accepts reports from any install.
+- `ID_PEPPER` is recommended. Without it the receiver generates a pepper and stores it in the database, so it is lost with the volume.
+- Proof-of-work is on with the defaults (target 60 challenges per minute, 0 to 22 bits). See [Proof-of-work on ingest](#proof-of-work-on-ingest) to tune it.
+- `PUBLIC_SUMMARY` is on, so `/v1/summary` is routed. If you turn it off, remove that path from the Ingress.
+- If the probes fail after the NetworkPolicy is applied (some CNIs block the node's own probe traffic), add an `ipBlock` for your node addresses to the 8080 rule.
+
+### 4. Cloudflare settings
+
+1. DNS: add an `A` record (and an `AAAA` record if you have IPv6) named `telemetry` that points at the cluster's public address, set to **Proxied** (orange cloud).
+2. SSL/TLS encryption mode: **Full (strict)**. The origin presents the cert-manager certificate.
+3. Bot protection: installs send plain HTTP POSTs with no browser, so a challenge page breaks them (they record `failed` and retry). Keep **Bot Fight Mode** off for the zone, because on the Free plan it cannot be skipped per hostname. Add a WAF custom rule `(http.host eq "telemetry.gameplane.net")` with the action **Skip** for Super Bot Fight Mode, Browser Integrity Check and Security Level (and managed rules, if they challenge it).
+4. Caching: add no "Cache Everything" rule for this hostname. `/v1/challenge` sends `Cache-Control: no-store`, and `/ingest` is a POST.
+5. Managed Transforms: keep **Remove visitor IP headers** off. It strips `X-Forwarded-For`, and every install would then share one source address.
+6. Optional: add a Cloudflare rate-limiting rule on `/ingest` as a first line of defense in front of proof-of-work.
+7. Optional: allow only Cloudflare's ranges to reach port 443 on the origin (host firewall, or Authenticated Origin Pulls), so that nobody can bypass the rules above.
+
+### 5. How the client address is resolved
+
+The receiver rate-limits per source address, so it needs the install's address, not the proxy's. An install connects to Cloudflare, which adds `X-Forwarded-For: <install>`. Traefik trusts Cloudflare's ranges, keeps that header and appends the Cloudflare edge address, so the receiver sees `X-Forwarded-For: <install>, <cloudflare>`. The TCP peer of the receiver is the Traefik pod, inside the pod CIDR.
+
+When the peer is inside `TRUSTED_PROXY_CIDRS`, the receiver takes the right-most `X-Forwarded-For` entry that is not itself trusted. That is why the list needs both the pod CIDR (for Traefik) and Cloudflare's ranges (to skip the edge address). Without Cloudflare's ranges, every install is attributed to one of a handful of edge addresses, and the per-source limits (20 reports a day, and the `/v1/challenge` burst) throttle all installs together.
+
+A client outside Cloudflare's ranges cannot choose its source address. Anything it puts in `X-Forwarded-For` stays to the left of the real entry and is ignored, and proof-of-work still applies to every request. A request that bypasses Cloudflare reaches Traefik from an untrusted address, so Traefik drops its `X-Forwarded-For`. An unparsable header falls back to the peer address. The address is used only in memory for rate limiting and is never stored; see [Source addresses and `TRUSTED_PROXY_CIDRS`](#source-addresses-and-trusted_proxy_cidrs).
+
+For a provider without a CDN, trust only the ingress controller's pod CIDR.
+
+### 6. Verify
+
+```sh
+kubectl -n gameplane-telemetry rollout status deploy/telemetry-receiver
+# Expect READY True.
+kubectl -n gameplane-telemetry get certificate telemetry-gameplane-net-tls
+# Expect: ok
+curl -fsS https://telemetry.gameplane.net/healthz
+# The public counters.
+curl -fsS https://telemetry.gameplane.net/v1/summary
+# A challenge (proof-of-work is on).
+curl -fsS https://telemetry.gameplane.net/v1/challenge
+# Expect 404: the metrics port 8081 is not routed.
+curl -sS -o /dev/null -w '%{http_code}\n' https://telemetry.gameplane.net/metrics
+```
+
+#### Check the client address
+
+The receiver never logs addresses, so check what Traefik forwards with a throwaway echo service on the same host, then delete it:
+
+```sh
+kubectl -n gameplane-telemetry create deployment whoami --image=traefik/whoami
+kubectl -n gameplane-telemetry expose deployment whoami --port 80
+kubectl -n gameplane-telemetry create ingress whoami --class=traefik \
+  --rule="telemetry.gameplane.net/whoami-check=whoami:80,tls=telemetry-gameplane-net-tls" \
+  --annotation traefik.ingress.kubernetes.io/router.entrypoints=websecure
+kubectl -n gameplane-telemetry rollout status deploy/whoami
+# If Traefik answers 404, it has not picked up the route yet: retry after a few seconds.
+curl -fsS https://telemetry.gameplane.net/whoami-check | grep -i x-forwarded-for
+# expect: X-Forwarded-For: <your public IP>, <a Cloudflare address>
+kubectl -n gameplane-telemetry delete ingress,service,deployment whoami
+```
+
+The NetworkPolicy selects only the receiver pods, so the whoami pod is reachable. If the first entry is not your public address, or only one address appears, Traefik is not trusting Cloudflare or does not see Cloudflare's address as the peer. Fix that before going live.
+
+#### Open the dashboard
+
+The dashboard on `:8081` is never routed. Reach it with a port-forward and sign in with the dashboard token:
+
+```sh
+kubectl -n gameplane-telemetry port-forward svc/telemetry-receiver 8081:8081
+# in another terminal, print the token:
+kubectl -n gameplane-telemetry get secret telemetry-dashboard -o jsonpath='{.data.token}' | base64 -d
+```
+
+Open `http://localhost:8081`. The session cookie is `Secure`, and browsers treat `localhost` as a secure origin, so sign-in works over plain HTTP there.
+
+### 7. Scrape metrics (optional)
+
+This needs the Prometheus Operator. The ServiceMonitor reads the same token Secret, and the NetworkPolicy above admits the `monitoring` namespace on 8081 only.
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: telemetry-receiver
+  namespace: gameplane-telemetry
+  # labels: { release: my-prometheus }   # CHANGE ME, if your Prometheus selects ServiceMonitors by label
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: telemetry-receiver
+  endpoints:
+    - port: dashboard
+      interval: 30s
+      path: /metrics
+      bearerTokenSecret:
+        name: telemetry-dashboard
+        key: token
+```
+
+### Upgrade and back up
+
+**Upgrade:** change the image tag in the manifest and run `kubectl apply -f telemetry-provider.yaml`. On `edge` with `imagePullPolicy: Always`, run `kubectl -n gameplane-telemetry rollout restart deploy/telemetry-receiver` instead. The Recreate strategy stops the old pod before the new one starts, so ingest returns 503 for a few seconds. Installs retry the next day or on their own backoff.
+
+**Back up first:** take a snapshot of the PVC, or stop the receiver (`kubectl -n gameplane-telemetry scale deploy/telemetry-receiver --replicas=0`) and copy the `/data` folder. See [Back up and restore `telemetry.db`](#back-up-and-restore-telemetrydb) for details.
+
+**Secret rotation:** update the Secret, then restart with `kubectl -n gameplane-telemetry rollout restart deploy/telemetry-receiver`. See [Rotating secrets](#rotating-secrets) for the effects.
 
 ## TLS in front of `:8080`
 
@@ -251,7 +597,7 @@ to the proxy's address range (comma-separated, for example
 `10.0.0.0/8,192.168.0.0/16`, using your real range). The receiver then
 reads `X-Forwarded-For`, but only when the peer is inside those ranges, so a
 client can't forge its source. Leave it empty if the receiver is directly
-exposed. Addresses are held in memory only, and never stored.
+exposed. Addresses are held in memory only, and never stored. Behind a CDN such as Cloudflare, add the CDN's published ranges too (see [How the client address is resolved](#5-how-the-client-address-is-resolved)).
 
 ## Retention
 
