@@ -1444,6 +1444,16 @@ func (r *GameServerReconciler) reconcileStatefulSet(
 		if live.UID != gs.UID {
 			return fmt.Errorf("GameServer changed identity before StatefulSet mutation")
 		}
+		if owner := metav1.GetControllerOf(ss); owner != nil && owner.UID != live.UID {
+			return fmt.Errorf("StatefulSet belongs to a different GameServer identity")
+		}
+		if live.Annotations[restoreGuardAnnotation] == "" {
+			// Restore cleanup can race a callback that restamps the workload
+			// before the checked GameServer release. That release guarantees
+			// worker drain, so the same live owner's absent guard permits
+			// removing the stale marker without changing requested replicas.
+			delete(ss.Annotations, restoreGuardAnnotation)
+		}
 		for _, annotation := range []string{restoreGuardAnnotation, wipeGuardAnnotation} {
 			if guard := live.Annotations[annotation]; guard != "" {
 				actualReplicas = 0
