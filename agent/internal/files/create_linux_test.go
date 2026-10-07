@@ -59,9 +59,10 @@ func TestCreateHTTPRefusesExistingEntries(t *testing.T) {
 				t.Fatalf("existing entry metadata changed: before=%+v after=%+v err=%v", before, after, err)
 			}
 			contentPath, want := target, "keep this content"
-			if kind == "directory" {
+			switch kind {
+			case "directory":
 				contentPath, want = filepath.Join(target, "child"), "keep child"
-			} else if kind == "symlink" {
+			case "symlink":
 				contentPath, want = filepath.Join(root, ".secret"), "keep secret"
 				if link, err := os.Readlink(target); err != nil || link != ".secret" {
 					t.Fatalf("symlink changed: %q %v", link, err)
@@ -145,18 +146,19 @@ func TestCreateFailureDoesNotPublish(t *testing.T) {
 		t.Run(failure, func(t *testing.T) {
 			h, root, _ := raceHandler(t)
 			body := &errAfterReader{n: 4}
-			if failure == "metadata" {
+			switch failure {
+			case "metadata":
 				h.preserveAccess = func(*os.File, fileAccess) error { return errors.New("metadata failure") }
 				rr := serve(t, h.create, http.MethodPost, "/files/create?path=/new.txt", strings.NewReader("payload"))
 				if rr.Code != http.StatusConflict {
 					t.Fatalf("status=%d", rr.Code)
 				}
-			} else if failure == "body limit" {
+			case "body limit":
 				rr := serve(t, h.create, http.MethodPost, "/files/create?path=/new.txt", bytes.NewReader(bytes.Repeat([]byte("a"), maxWriteBytes+1)))
 				if rr.Code != http.StatusInternalServerError {
 					t.Fatalf("oversized body status=%d", rr.Code)
 				}
-			} else {
+			default:
 				rr := serve(t, h.create, http.MethodPost, "/files/create?path=/new.txt", body)
 				if rr.Code != http.StatusInternalServerError {
 					t.Fatalf("failed body status=%d", rr.Code)
