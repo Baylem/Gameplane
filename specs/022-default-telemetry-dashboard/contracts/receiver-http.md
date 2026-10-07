@@ -58,7 +58,7 @@ The public listener answers `404` for `/metrics`. Operational metrics live only 
 - `gameplane_telemetry_duplicates_total`
 - `gameplane_telemetry_rate_limited_total{route}`
 - `gameplane_telemetry_extended_reports_total`
-- `gameplane_telemetry_refused_total{reason="bad_signature"|"stale"|"id_claimed"|"replay"|"pow_required"|"pow_invalid"}`
+- `gameplane_telemetry_refused_total{reason="bad_signature"|"stale"|"id_claimed"|"replay"|"pow_required"|"pow_invalid"|"pow_busy"}`
 - `gameplane_telemetry_pow_bits` (gauge: the difficulty a challenge issued now would carry)
 - `gameplane_telemetry_pow_challenges_total`
 

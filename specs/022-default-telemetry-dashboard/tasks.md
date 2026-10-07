@@ -531,7 +531,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `pow_refuses_missing_and_invalid`: a POST with no header gets 428 `pow_required`, a reused solution gets 428 `pow_invalid`, and the reports counter is unchanged
 
   Extend the deploy helper with the extra env rather than duplicating it.
-- [ ] T109 [P] [US7] Update the docs:
+- [X] T109 [P] [US7] Update the docs:
   - `docs/telemetry-provider.md`: turning on `INGEST_POW` for the project's provider, tuning `INGEST_POW_TARGET_PER_MIN` from `/metrics`, reading `gameplane_telemetry_pow_bits`, and generating `DASHBOARD_TOKEN` from 32 random bytes with its 32-character minimum
   - `docs/security.md` § Telemetry: proof-of-work, what it does and doesn't stop, and the credential minimum
   - `CHANGELOG.md` [Unreleased]: the new receiver settings, and the token minimum as an upgrade note
@@ -540,7 +540,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 ## Phase 10: Polish and cross-cutting concerns
 
-- [ ] T089 [P] Rewrite `telemetry-receiver/specs.md` and `telemetry-receiver/README.md` to match the shipped behaviour:
+- [X] T089 [P] Rewrite `telemetry-receiver/specs.md` and `telemetry-receiver/README.md` to match the shipped behaviour:
   - the two listeners, the configuration table and the dashboard
   - invariants: "stores daily aggregates and expiring activity records only, never raw reports or addresses", "basic or extended report, both strictly validated", and "extended reports must be signed"
   - the dependency list (`modernc.org/sqlite` and `telemetryschema`)

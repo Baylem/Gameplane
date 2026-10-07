@@ -750,6 +750,8 @@ Anyone can therefore post reports. Defences:
 - a per-source daily limit on accepted reports (`INGEST_SOURCE_DAILY_LIMIT`,
   default `20`, tolerant of shared NAT) and a rate limit on the public
   summary, both held in memory only
+- optional proof-of-work (`INGEST_POW`, off by default; see below), which
+  raises the cost of bulk reports in proportion to the request rate
 - only daily aggregates and expiring activity records are stored; raw
   reports and source addresses are never written to disk
 
@@ -760,6 +762,42 @@ ID. It is cached and rate-limited so public polling can't degrade ingest.
 What this does not stop: someone can invent installs and send fabricated
 basic reports, within the per-source limits. Figures are approximate and
 self-reported, and the dashboard labels them that way.
+
+### Proof-of-work on ingest
+
+When a receiver sets `INGEST_POW=true`, `/ingest` requires a solved
+challenge from `GET /v1/challenge` in the `Gameplane-Telemetry-PoW` header.
+Challenges are HMAC-signed with a key held only in the receiver's memory,
+expire after 15 minutes and work once. The difficulty is `INGEST_POW_MIN_BITS` (default zero) while at most
+than `INGEST_POW_TARGET_PER_MIN` challenges a minute are issued, then rises
+with the rate (up to `INGEST_POW_MAX_BITS`, at most 26) and falls one bit per
+five minutes. The check runs before the body is read, so a refused report
+costs the receiver one HMAC and one hash, and it answers `428`
+(`pow_required` or `pow_invalid`) or, when its used-challenge set (1,000,000
+entries) is full, `503 pow_busy`. Challenge requests have their own
+per-source limit.
+
+What it stops: cheap bulk fabrication. The work a flood must do grows
+faster than its rate, while an install sending one report a day pays
+nothing under normal load and a few seconds during a flood. It also
+needs no per-install secret, so it works against an attacker who holds many
+source addresses, which the per-source limits do not.
+
+What it does not stop:
+- a determined or well-resourced sender: SHA-256 is cheap on GPUs and
+  dedicated hardware, so it deters volume, not a patient attacker
+- fabricated installs: solving a challenge proves work was done, not that an
+  install exists, so invented installs remain possible and figures stay
+  approximate
+- many sources raising the difficulty for everyone: the difficulty is
+  global and capped by `INGEST_POW_MAX_BITS`; the per-source challenge limit
+  only stops a single source doing it alone
+- anything on the dashboard login: it has no proof-of-work (the dashboard
+  uses no JavaScript); its defence is the credential minimum below
+
+Proof-of-work does not replace signing or the per-source daily limit; all
+three apply. A restart drops the challenge key and the used set, so
+outstanding challenges fail once and installs retry with a new one.
 
 ### The pseudonymous install ID
 
@@ -798,7 +836,11 @@ once; any other refusal never rotates the ID.
 The receiver's dashboard runs on its own listener (`:8081`), started only
 when `DASHBOARD_TOKEN` is set; with no token there is no dashboard. Keep
 that port off the public internet (the chart's NetworkPolicy admits only
-configured peers). It uses one operator token from a Secret:
+configured peers). It uses one operator token from a Secret, which must be
+at least 32 characters (generate it from 32 random bytes); the receiver
+refuses to start with a shorter one. Per-source login limits can be
+outrun by anyone holding many IPv6 `/64`s, so the token's length, not the
+limiter, is what makes guessing infeasible:
 
 - browser login compares the token in constant time and sets an
   `HttpOnly; Secure; SameSite=Strict` session cookie valid 12 hours; login
@@ -900,7 +942,7 @@ Secrets Gameplane reads or creates, by convention:
   (user-supplied; referenced by name from Admin Settings → Notifications, read
   by the API at delivery time — see [notifications](notifications.md)).
 - telemetry receiver credentials — `api.telemetry.receiver.dashboard.tokenSecretRef`
-  (dashboard and `/metrics` token) and `api.telemetry.receiver.pepperSecretRef`
+  (dashboard and `/metrics` token, at least 32 characters) and `api.telemetry.receiver.pepperSecretRef`
   (install-ID pepper), both user-supplied and injected as env vars
   (`DASHBOARD_TOKEN`, `ID_PEPPER`), never flags. See
   [telemetry-provider.md](telemetry-provider.md#rotating-secrets).

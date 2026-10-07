@@ -55,6 +55,15 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   SQLite on a PVC, and runs a single replica with a `Recreate` strategy.
   `helm upgrade --reuse-values` from 0.3.0 needs no new values; with no
   `persistence` block the receiver keeps using an `emptyDir`, as before.
+- **The receiver's `DASHBOARD_TOKEN` must be at least 32 characters:** a
+  receiver with `DASHBOARD_TOKEN` set to a shorter value now exits at
+  startup (`DASHBOARD_TOKEN must be at least 32 characters`). Replace the
+  Secret behind `api.telemetry.receiver.dashboard.tokenSecretRef` with a
+  value generated from 32 random bytes, for example
+  `openssl rand -base64 32`, before upgrading. Replacing the token
+  invalidates browser sessions and loses no data. Receivers with no token
+  (no dashboard) are unaffected. See
+  [`docs/telemetry-provider.md`](docs/telemetry-provider.md#secrets).
 
 ### Added
 
@@ -76,6 +85,21 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   `GET /v1/summary` (`PUBLIC_SUMMARY=true`). Helm values:
   `api.telemetry.enabled`, `api.telemetry.interval`,
   `api.telemetry.receiver.{persistence,dashboard,publicSummary,pepperSecretRef,retentionDays,activityExpiryDays,ingestSourceDailyLimit,trustedProxyCIDRs}`.
+- **Proof-of-work on telemetry ingestion (off by default):** a receiver with
+  `INGEST_POW=true` serves `GET /v1/challenge` and requires a solved
+  challenge on `/ingest` (`428 pow_required` / `pow_invalid`, `503 pow_busy`
+  when its used-challenge set is full). The difficulty is zero up to
+  `INGEST_POW_TARGET_PER_MIN` challenges a minute (default `60`), then rises
+  with the rate between `INGEST_POW_MIN_BITS` (default `0`) and
+  `INGEST_POW_MAX_BITS` (default `22`, at most `26`), and decays one bit
+  every five minutes. New metrics: `gameplane_telemetry_pow_challenges_total`
+  and `gameplane_telemetry_pow_bits`; `gameplane_telemetry_refused_total`
+  gains the reasons `pow_required`, `pow_invalid` and `pow_busy`, and
+  `gameplane_telemetry_rate_limited_total` the route `challenge`. Helm values:
+  `api.telemetry.receiver.ingestPow.{enabled,targetPerMinute,minBits,maxBits}`.
+  The API reporter solves a challenge when its destination offers one and
+  sends without it otherwise. See
+  [`docs/telemetry-provider.md`](docs/telemetry-provider.md#proof-of-work-on-ingest).
 - **Provider runbook:** [`docs/telemetry-provider.md`](docs/telemetry-provider.md)
   covers deploying the receiver, TLS, keeping `:8081` private, secrets and
   rotation, retention, scraping `/metrics` and backing up `telemetry.db`.
