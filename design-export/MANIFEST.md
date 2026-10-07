@@ -2499,3 +2499,12 @@ Server Settings gets a "Game configuration" section (edit `spec.config` from the
 - **JSON:** made with `Print(JSON.stringify(Get(id, {depth: 30, includePathGeometry: true})))` and re-serialized with `jq .`. Zero `"..."` elisions, and `jq empty` passes.
 - **Screenshots:** `Export(ids, "png", …, {scale: 2})`.
 - **Re-exported for the sub-nav change:** PNGs of `swxkJ`, `E0ypH`, `J5pjJ3`, `ugDSa`, `i1bLR`, `KaRFX`, `Y5cmvI`, `VfB0Y`, `i8wib`, `xCJlu`, `RodrS`, `VctzT`, `iLm38`, `QpEvu`, `XR0f9`, `nGJE1`, `dhPtX`, `tSOeI`, `y3YcQ`, `EKJyM`, `IMSD5`, `gWqMD` and `EV8mp`; JSON of `Y5cmvI` and `J5pjJ3` (they were out of date with the canvas).
+
+## Share Start recovery (PR #584, 2026-10-07)
+
+| Object ID | Name | Change |
+| --- | --- | --- |
+| `FBiMN` | Screen/Share Link — Asleep (Start cooldown) | New copy of `q31B6w`. The Start button is disabled at 0.5 opacity, reads "Try again shortly", and has no icon. The resolved Asleep card remains visible after a transient Start failure. |
+| `qFLfB` | Historical/Share Link — Asleep (view only) | Retained with historical name and context. Resolve does not expose start capability, so an asleep poll cannot select this state. |
+
+`q31B6w` is unchanged. Both listed frames have MCP `Get` JSON exports (depth 30, path geometry included) and 2× PNG exports. The cooldown card was visually checked with `TakeScreenshot`; no clipping was reported. Browser capture for `FBiMN` uses a mocked 429 Start response with Retry-After; visual comparison remains pending CI.

@@ -60,13 +60,15 @@ export class APIError extends Error {
   status: number;
   body: string;
   isHTML: boolean;
-  constructor(status: number, body: string, statusText?: string, contentType?: string) {
+  retryAfter: string | null;
+  constructor(status: number, body: string, statusText?: string, contentType?: string, retryAfter: string | null = null) {
     const isHTML = body.trimStart().startsWith("<") || (contentType?.includes("text/html") ?? false);
     const message = isHTML ? `${status} ${statusText || ""}`.trim() : `${status}: ${body}`;
     super(message);
     this.status = status;
     this.body = body;
     this.isHTML = isHTML;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -105,7 +107,7 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new APIError(res.status, text, res.statusText, res.headers.get("content-type") ?? undefined);
+    throw new APIError(res.status, text, res.statusText, res.headers.get("content-type") ?? undefined, res.headers.get("retry-after"));
   }
   if (res.status === 204) return undefined as T;
   // Some 2xx responses (e.g. 202 Accepted from fire-and-forget actions) carry
@@ -241,8 +243,8 @@ export type ShareLinkCreateBody = { canStart: boolean } & (
 
 // Share link management. Authenticated operations (create, list, revoke) require
 // an active session and server ownership; public operations (resolve, start) are
-// rate-limited but require no auth. All operations map rate-limit and invalid-link
-// errors to neutral responses per FR-005 (privacy: no error detail).
+// rate-limited but require no auth. Invalid links remain neutral; resolve keeps
+// transient failures available for retry without exposing details in public UI.
 function makeShares(request: typeof api) {
   const api = request;
   return {
@@ -271,15 +273,14 @@ function makeShares(request: typeof api) {
   // GET /shares/{token} (public, no auth, rate-limited).
   // Resolves a share link token to its public view: server name, status, address,
   // player count (if exposed). Returns the same response for invalid, expired, and
-  // revoked tokens — callers cannot distinguish (FR-005 privacy rule). Rate-limit
-  // errors (429) are also mapped to the same neutral response.
-  resolve: async (token: string): Promise<ShareLinkPublic> => {
+  // revoked tokens — callers cannot distinguish (FR-005 privacy rule). Transient
+  // errors propagate so polling can retain its last public state and back off.
+  resolve: async (token: string, signal?: AbortSignal): Promise<ShareLinkPublic> => {
     try {
-      return await api<ShareLinkPublic>(`/shares/${encodeURIComponent(token)}`);
+      return await api<ShareLinkPublic>(`/shares/${encodeURIComponent(token)}`, { signal });
     } catch (err) {
-      if (err instanceof APIError && (err.status === 404 || err.status === 429)) {
-        // Map 404 (invalid/expired/revoked) and 429 (rate-limited) to a neutral response.
-        // This prevents callers from distinguishing between missing and rate-limited states.
+      if (err instanceof APIError && err.status === 404) {
+        // Invalid, expired and revoked tokens have the same neutral response.
         return {
           serverName: "",
           status: "Unknown",
@@ -292,15 +293,16 @@ function makeShares(request: typeof api) {
   // POST /shares/{token}/start (public, no auth, rate-limited, only if canStart=true).
   // Wakes a sleeping server if the link permits it. Returns 202 Accepted on success.
   // Returns the same response for invalid/expired/revoked/no-permission states (FR-005).
-  // Rate-limit errors (429) are also mapped to neutral.
-  start: async (token: string): Promise<void> => {
+  // Transient failures propagate so callers can back off and offer a retry.
+  start: async (token: string, signal?: AbortSignal): Promise<void> => {
     try {
       return await api<void>(`/shares/${encodeURIComponent(token)}/start`, {
         method: "POST",
+        signal,
       });
     } catch (err) {
-      if (err instanceof APIError && (err.status === 404 || err.status === 429)) {
-        // Map 404 and 429 to void (no error thrown). Callers see success either way.
+      if (err instanceof APIError && err.status === 404) {
+        // Keep invalid, expired, revoked and denied links indistinguishable.
         return;
       }
       throw err;
