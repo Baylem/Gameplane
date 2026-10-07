@@ -1230,7 +1230,7 @@ jobs:
         # t.Parallel(); `parallel` bounds in-flight tests per bucket
         # (operator does zero logins and is wait-dominated, so it runs
         # wide; the api buckets stay within the login limiter's budget).
-        # The arm64 job below uses the same steps and per-bucket settings.
+        # Mirrors e2e-go's steps and per-bucket settings.
         bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods]
         arch: [arm64]
         include:
