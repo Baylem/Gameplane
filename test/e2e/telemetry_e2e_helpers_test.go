@@ -37,9 +37,9 @@ type receiverScrape struct {
 	token string
 }
 
-func (r receiverScrape) get(t *testing.T, name, labelFilter string) float64 {
+func (r receiverScrape) get(ctx context.Context, t *testing.T, name, labelFilter string) float64 {
 	t.Helper()
-	return receiverMetric(t, r.port, r.token, name, labelFilter)
+	return receiverMetric(ctx, t, r.port, r.token, name, labelFilter)
 }
 
 // waitForMore waits until count() is greater than it was at the call.
@@ -78,11 +78,11 @@ type telemetryView struct {
 	} `json:"status"`
 }
 
-func getTelemetryView(t *testing.T, cli *APIClient) telemetryView {
+func getTelemetryView(ctx context.Context, t *testing.T, cli *APIClient) telemetryView {
 	t.Helper()
-	resp, body, err := cli.Get("/admin/telemetry")
-	if err != nil || resp.StatusCode != http.StatusOK {
-		t.Fatalf("GET /admin/telemetry: %v status %v body %s", err, statusOf(resp), body)
+	status, body, err := tlDo(ctx, cli, http.MethodGet, "/admin/telemetry", nil)
+	if err != nil || status != http.StatusOK {
+		t.Fatalf("GET /admin/telemetry: %v status %v body %s", err, status, body)
 	}
 	var v telemetryView
 	if err := json.Unmarshal(body, &v); err != nil {
@@ -91,21 +91,21 @@ func getTelemetryView(t *testing.T, cli *APIClient) telemetryView {
 	return v
 }
 
-func putTelemetryConsent(t *testing.T, cli *APIClient, basic, extended bool) {
+func putTelemetryConsent(ctx context.Context, t *testing.T, cli *APIClient, basic, extended bool) {
 	t.Helper()
-	resp, body, err := cli.Do(http.MethodPut, "/admin/config/telemetry",
+	status, body, err := tlDo(ctx, cli, http.MethodPut, "/admin/config/telemetry",
 		map[string]bool{"sendMetrics": basic, "extended": extended})
-	if err != nil || resp.StatusCode != http.StatusOK {
-		t.Fatalf("PUT telemetry {%v,%v}: %v status %v body %s", basic, extended, err, statusOf(resp), body)
+	if err != nil || status != http.StatusOK {
+		t.Fatalf("PUT telemetry {%v,%v}: %v status %v body %s", basic, extended, err, status, body)
 	}
 }
 
 // resetInstallID calls POST /admin/telemetry/install-id and returns the new ID.
-func resetInstallID(t *testing.T, cli *APIClient) string {
+func resetInstallID(ctx context.Context, t *testing.T, cli *APIClient) string {
 	t.Helper()
-	resp, body, err := cli.Post("/admin/telemetry/install-id", nil)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		t.Fatalf("POST install-id: %v status %v body %s", err, statusOf(resp), body)
+	status, body, err := tlDo(ctx, cli, http.MethodPost, "/admin/telemetry/install-id", nil)
+	if err != nil || status != http.StatusOK {
+		t.Fatalf("POST install-id: %v status %v body %s", err, status, body)
 	}
 	var out struct {
 		InstallID string `json:"installId"`
@@ -120,12 +120,12 @@ func resetInstallID(t *testing.T, cli *APIClient) string {
 // subtest. PortForward binds kubectl to t.Context(), which is cancelled when
 // the subtest returns, so a client kept by later subtests would lose its
 // tunnel. The caller owns the returned stop func (APIClient.Close).
-func detachedPortForward(t *testing.T, ns, target string, remotePort int) (int, func()) {
+func detachedPortForward(ctx context.Context, t *testing.T, ns, target string, remotePort int) (int, func()) {
 	t.Helper()
 	const attempts = 4
 	var lastErr error
 	for attempt := 1; attempt <= attempts; attempt++ {
-		local, stop, err := envInstance.tryPortForward(context.Background(), ns, target, remotePort)
+		local, stop, err := envInstance.tryPortForward(ctx, ns, target, remotePort)
 		if err == nil {
 			return local, stop
 		}
@@ -142,19 +142,22 @@ func detachedPortForward(t *testing.T, ns, target string, remotePort int) (int, 
 // flags). The session lives in the database and the cookie jar and CSRF token
 // are reused, so no login is spent; if the session did not survive, it logs in
 // once more.
-func reconnectAPIClient(t *testing.T, old *APIClient) *APIClient {
+func reconnectAPIClient(ctx context.Context, t *testing.T, old *APIClient) *APIClient {
 	t.Helper()
-	local, stop := detachedPortForward(t, "gameplane-system", "svc/gameplane-api", 80)
+	local, stop := detachedPortForward(ctx, t, "gameplane-system", "svc/gameplane-api", 80)
 	old.Close()
 	cli := &APIClient{BaseURL: fmt.Sprintf("http://127.0.0.1:%d", local), CSRF: old.CSRF, HTTP: old.HTTP, stop: stop}
 	var last string
 	for deadline := time.Now().Add(30 * time.Second); time.Now().Before(deadline); time.Sleep(time.Second) {
-		resp, body, err := cli.Get("/admin/telemetry")
-		if err == nil && resp.StatusCode == http.StatusOK {
+		status, body, err := tlDo(ctx, cli, http.MethodGet, "/admin/telemetry", nil)
+		if err == nil && status == http.StatusOK {
 			return cli
 		}
-		last = fmt.Sprintf("%v status %v body %s", err, statusOf(resp), body)
-		if err == nil && resp.StatusCode == http.StatusUnauthorized {
+		last = fmt.Sprintf("%v status %v body %s", err, status, body)
+		if err != nil {
+			continue
+		}
+		if status == http.StatusUnauthorized {
 			break
 		}
 	}
@@ -162,10 +165,88 @@ func reconnectAPIClient(t *testing.T, old *APIClient) *APIClient {
 	cli.Close()
 	// APIClient logs in over a forward bound to this subtest; keep its
 	// session and cookie jar but move it onto a forward that outlives it.
-	fresh := envInstance.APIClient(t, telemetryAdminUser, telemetryAdminPass)
-	fresh.Close()
-	local, stop = detachedPortForward(t, "gameplane-system", "svc/gameplane-api", 80)
-	return &APIClient{BaseURL: fmt.Sprintf("http://127.0.0.1:%d", local), CSRF: fresh.CSRF, HTTP: fresh.HTTP, stop: stop}
+	return telemetryLogin(ctx, t, telemetryAdminUser, telemetryAdminPass)
+}
+
+// telemetryLogin logs in over a port-forward bound to ctx rather than to a
+// subtest, so the returned client outlives the subtest that made it. It
+// retries on 429 like Env.APIClient. The caller owns Close.
+func telemetryLogin(ctx context.Context, t *testing.T, username, password string) *APIClient {
+	t.Helper()
+	local, stop := detachedPortForward(ctx, t, "gameplane-system", "svc/gameplane-api", 80)
+	base := fmt.Sprintf("http://127.0.0.1:%d", local)
+	hc := &http.Client{Jar: newInsecureCookieJar(), Timeout: 90 * time.Second}
+	payload, err := json.Marshal(map[string]string{"username": username, "password": password})
+	if err != nil {
+		stop()
+		t.Fatalf("marshal login: %v", err)
+	}
+	delay := 2 * time.Second
+	for attempt := 0; attempt < 7; attempt++ {
+		req, rerr := http.NewRequestWithContext(ctx, http.MethodPost, base+"/auth/login", bytes.NewReader(payload))
+		if rerr != nil {
+			stop()
+			t.Fatalf("new login request: %v", rerr)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, derr := hc.Do(req)
+		if derr != nil {
+			stop()
+			t.Fatalf("login: %v", derr)
+		}
+		raw, _ := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if resp.StatusCode == http.StatusTooManyRequests {
+			time.Sleep(delay)
+			delay = min(delay*2, 30*time.Second)
+			continue
+		}
+		if resp.StatusCode != http.StatusOK {
+			stop()
+			t.Fatalf("login %d: %s", resp.StatusCode, raw)
+		}
+		var lr struct {
+			CSRF string `json:"csrf"`
+		}
+		if jerr := json.Unmarshal(raw, &lr); jerr != nil {
+			stop()
+			t.Fatalf("decode login response: %v\n%s", jerr, raw)
+		}
+		return &APIClient{BaseURL: base, CSRF: lr.CSRF, HTTP: hc, stop: stop}
+	}
+	stop()
+	t.Fatalf("login rate-limited after every attempt")
+	return nil
+}
+
+// tlDo performs an authenticated request like APIClient.Do, bound to ctx. It
+// closes the response body itself and returns the status and body bytes.
+func tlDo(ctx context.Context, c *APIClient, method, path string, body any) (int, []byte, error) {
+	var br io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return 0, nil, fmt.Errorf("marshal body: %w", err)
+		}
+		br = bytes.NewReader(b)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, br)
+	if err != nil {
+		return 0, nil, fmt.Errorf("new request: %w", err)
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	if isMutation(method) {
+		req.Header.Set("X-Gameplane-CSRF", c.CSRF)
+	}
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return 0, nil, fmt.Errorf("do %s %s: %w", method, path, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	rb, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, rb, nil
 }
 
 // helmUpgradeReuse runs `helm upgrade --reuse-values` with the given --set
@@ -269,7 +350,7 @@ spec:
 		t.Fatalf("apply receiver %s: %v\n%s", name, err, out)
 	}
 	t.Cleanup(func() {
-		_, _ = envInstance.Kubectl(context.Background(), "delete", "deploy/"+name, "svc/"+name,
+		_, _ = envInstance.Kubectl(context.WithoutCancel(ctx), "delete", "deploy/"+name, "svc/"+name,
 			"--namespace", "gameplane-system", "--ignore-not-found")
 	})
 	if out, err := envInstance.Kubectl(ctx, "rollout", "status", "deploy/"+name,
@@ -283,13 +364,13 @@ spec:
 // redirects, so a 303 can be asserted. headers are added as given (the
 // session cookie is Secure and the port-forward is plain HTTP, so a client
 // with a jar would never send it back); form, when non-nil, is the POST body.
-func dashboardRequest(t *testing.T, port int, method, path string, headers map[string]string, form url.Values) (*http.Response, []byte) {
+func dashboardRequest(ctx context.Context, t *testing.T, port int, method, path string, headers map[string]string, form url.Values) (dashResponse, []byte) {
 	t.Helper()
 	var body io.Reader
 	if form != nil {
 		body = strings.NewReader(form.Encode())
 	}
-	req, err := http.NewRequestWithContext(t.Context(), method, fmt.Sprintf("http://127.0.0.1:%d%s", port, path), body)
+	req, err := http.NewRequestWithContext(ctx, method, fmt.Sprintf("http://127.0.0.1:%d%s", port, path), body)
 	if err != nil {
 		t.Fatalf("new request %s %s: %v", method, path, err)
 	}
@@ -309,16 +390,27 @@ func dashboardRequest(t *testing.T, port int, method, path string, headers map[s
 	}
 	defer func() { _ = resp.Body.Close() }()
 	raw, _ := io.ReadAll(resp.Body)
-	return resp, raw
+	return dashResponse{StatusCode: resp.StatusCode, Header: resp.Header, cookies: resp.Cookies()}, raw
 }
+
+// dashResponse is the part of a dashboard response the subtests inspect. The
+// body is read and closed by dashboardRequest.
+type dashResponse struct {
+	StatusCode int
+	Header     http.Header
+	cookies    []*http.Cookie
+}
+
+// Cookies returns the cookies the response set.
+func (r dashResponse) Cookies() []*http.Cookie { return r.cookies }
 
 // dashboardLoginPage returns the dashboard's /login page, retrying while the
 // dashboard listener starts.
-func dashboardLoginPage(t *testing.T, port int) []byte {
+func dashboardLoginPage(ctx context.Context, t *testing.T, port int) []byte {
 	t.Helper()
 	var page []byte
 	envInstance.Eventually(t, time.Minute, func() (bool, string) {
-		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/login", port), nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/login", port), nil)
 		if err != nil {
 			return false, err.Error()
 		}
@@ -335,9 +427,9 @@ func dashboardLoginPage(t *testing.T, port int) []byte {
 
 // dashboardLogin signs in with the dashboard token (the form POST needs a
 // same-origin Origin header) and returns the Cookie header value to send.
-func dashboardLogin(t *testing.T, port int, token string) string {
+func dashboardLogin(ctx context.Context, t *testing.T, port int, token string) string {
 	t.Helper()
-	resp, body := dashboardRequest(t, port, http.MethodPost, "/login",
+	resp, body := dashboardRequest(ctx, t, port, http.MethodPost, "/login",
 		map[string]string{"Origin": fmt.Sprintf("http://127.0.0.1:%d", port)}, url.Values{"token": {token}})
 	if resp.StatusCode != http.StatusSeeOther {
 		t.Fatalf("POST /login = %d, want 303; body %s", resp.StatusCode, body)
@@ -353,9 +445,9 @@ func dashboardLogin(t *testing.T, port int, token string) string {
 
 // dashboardViews returns the views' asOf day and raw JSON, read with the
 // dashboard token.
-func dashboardViews(t *testing.T, port int) (asOf string, raw []byte) {
+func dashboardViews(ctx context.Context, t *testing.T, port int) (asOf string, raw []byte) {
 	t.Helper()
-	resp, body := dashboardRequest(t, port, http.MethodGet, "/api/v1/views",
+	resp, body := dashboardRequest(ctx, t, port, http.MethodGet, "/api/v1/views",
 		map[string]string{"Authorization": "Bearer " + telemetryDashToken}, nil)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("GET /api/v1/views = %d: %s", resp.StatusCode, body)
@@ -371,9 +463,9 @@ func dashboardViews(t *testing.T, port int) (asOf string, raw []byte) {
 
 // requireViewsUnchanged fails when the views differ from before. If the UTC
 // day rolled over in between, asOf moved and the comparison is skipped.
-func requireViewsUnchanged(t *testing.T, port int, asOf string, before []byte) {
+func requireViewsUnchanged(ctx context.Context, t *testing.T, port int, asOf string, before []byte) {
 	t.Helper()
-	nowAsOf, after := dashboardViews(t, port)
+	nowAsOf, after := dashboardViews(ctx, t, port)
 	if nowAsOf == asOf && !bytes.Equal(before, after) {
 		t.Fatalf("a refused report changed the views (SC-014):\nbefore %s\nafter  %s", before, after)
 	}

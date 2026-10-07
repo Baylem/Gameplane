@@ -60,9 +60,9 @@ func TestTelemetryLifecycle(t *testing.T) {
 
 	// The receiver's dashboard port carries /metrics. It is not restarted
 	// again, so one port-forward serves the whole test.
-	metricsPort, stopMetrics := envInstance.PortForward(t, "gameplane-system", "svc/gameplane-telemetry-receiver", 8081)
+	metricsPort, stopMetrics := detachedPortForward(ctx, t, "gameplane-system", "svc/gameplane-telemetry-receiver", 8081)
 	defer stopMetrics()
-	reports := func() float64 { return receiverReportsTotal(t, metricsPort) }
+	reports := func() float64 { return receiverReportsTotal(ctx, t, metricsPort) }
 
 	// The bucket's one admin login. Logging in does not show the notice:
 	// only the notice POST (the dashboard rendering it) records that.
@@ -72,18 +72,18 @@ func TestTelemetryLifecycle(t *testing.T) {
 	// The receiver's public port takes the test client's reports and serves
 	// the public summary; the dashboard port (above) serves /metrics and the
 	// views, so every figure below comes from the receiver itself.
-	ingestPort, stopIngest := envInstance.PortForward(t, "gameplane-system", "svc/gameplane-telemetry-receiver", 8080)
+	ingestPort, stopIngest := detachedPortForward(ctx, t, "gameplane-system", "svc/gameplane-telemetry-receiver", 8080)
 	defer stopIngest()
 	tc := newTelemetryTestClient(t, ingestPort)
 	rx := receiverScrape{port: metricsPort, token: telemetryDashToken}
 	// The login page is captured while the receiver is still empty: a later
 	// unauthenticated response must be identical to it (FR-023, SC-011).
-	loginBaseline := dashboardLoginPage(t, metricsPort)
+	loginBaseline := dashboardLoginPage(ctx, t, metricsPort)
 
 	t.Run("notice_pending_on_fresh_install", func(t *testing.T) {
-		resp, body, err := cli.Get("/admin/telemetry/notice")
-		if err != nil || resp.StatusCode != http.StatusOK {
-			t.Fatalf("GET notice: %v status %v body %s", err, statusOf(resp), body)
+		status, body, err := tlDo(ctx, cli, http.MethodGet, "/admin/telemetry/notice", nil)
+		if err != nil || status != http.StatusOK {
+			t.Fatalf("GET notice: %v status %v body %s", err, status, body)
 		}
 		var n struct {
 			Pending     bool `json:"pending"`
@@ -104,7 +104,7 @@ func TestTelemetryLifecycle(t *testing.T) {
 	})
 
 	t.Run("seen_opens_gate_and_first_report_arrives", func(t *testing.T) {
-		postNoticeAction(t, cli, "seen", http.StatusNoContent)
+		postNoticeAction(ctx, t, cli, "seen", http.StatusNoContent)
 		envInstance.Eventually(t, 3*telemetryInterval, func() (bool, string) {
 			got := reports()
 			return got >= 1, fmt.Sprintf("reports_total = %v, want at least 1", got)
@@ -112,7 +112,7 @@ func TestTelemetryLifecycle(t *testing.T) {
 	})
 
 	t.Run("all_off_stops_reports", func(t *testing.T) {
-		postNoticeAction(t, cli, "all-off", http.StatusNoContent)
+		postNoticeAction(ctx, t, cli, "all-off", http.StatusNoContent)
 		time.Sleep(20 * time.Second) // let a report already in flight land
 		settled := reports()
 		envInstance.Consistently(t, 3*telemetryInterval, 10*time.Second, func() (bool, string) {
@@ -121,10 +121,10 @@ func TestTelemetryLifecycle(t *testing.T) {
 		})
 
 		// Turn telemetry back on through the settings route.
-		resp, body, err := cli.Do(http.MethodPut, "/admin/config/telemetry",
+		status, body, err := tlDo(ctx, cli, http.MethodPut, "/admin/config/telemetry",
 			map[string]bool{"sendMetrics": true, "extended": true})
-		if err != nil || resp.StatusCode != http.StatusOK {
-			t.Fatalf("PUT telemetry on: %v status %v body %s", err, statusOf(resp), body)
+		if err != nil || status != http.StatusOK {
+			t.Fatalf("PUT telemetry on: %v status %v body %s", err, status, body)
 		}
 		envInstance.Eventually(t, 3*telemetryInterval, func() (bool, string) {
 			got := reports()
@@ -153,7 +153,7 @@ func TestTelemetryLifecycle(t *testing.T) {
 			"--namespace", "gameplane-system", "--timeout=3m"); err != nil {
 			t.Fatalf("wait for API rollout: %v\n%s", err, out)
 		}
-		cli = reconnectAPIClient(t, cli)
+		cli = reconnectAPIClient(ctx, t, cli)
 
 		// The schedule is persisted: the restarted API reports one interval
 		// after the previous report, not at once. Allow 5s for the two
@@ -172,79 +172,79 @@ func TestTelemetryLifecycle(t *testing.T) {
 	// than it had when the wait began.
 	reportsMore := func(t *testing.T) {
 		t.Helper()
-		waitForMore(t, func() float64 { return rx.get(t, metricReports, "") }, 4*telemetryInterval, metricReports)
+		waitForMore(t, func() float64 { return rx.get(ctx, t, metricReports, "") }, 4*telemetryInterval, metricReports)
 	}
 
 	// ---- US3: tiers, reset, preview ---------------------------------------
 
 	t.Run("extended_off_sends_basic_only", func(t *testing.T) {
-		putTelemetryConsent(t, cli, true, false)
-		v := getTelemetryView(t, cli)
+		putTelemetryConsent(ctx, t, cli, true, false)
+		v := getTelemetryView(ctx, t, cli)
 		if v.InstallID != nil || v.Consent.Extended || v.Preview == nil || v.Preview.Ext != nil {
 			t.Fatalf("view after extended off = %+v, want no install id and a basic-only preview", v)
 		}
 		time.Sleep(10 * time.Second) // let a report already in flight land
-		extBase, dupBase := rx.get(t, metricExtended, ""), rx.get(t, metricDuplicates, "")
+		extBase, dupBase := rx.get(ctx, t, metricExtended, ""), rx.get(ctx, t, metricDuplicates, "")
 		reportsMore(t)
 		// An extended report would count as a new install or as a duplicate.
-		if got := rx.get(t, metricExtended, ""); got != extBase {
+		if got := rx.get(ctx, t, metricExtended, ""); got != extBase {
 			t.Fatalf("%s = %v, want it to stay at %v while extended is off", metricExtended, got, extBase)
 		}
-		if got := rx.get(t, metricDuplicates, ""); got != dupBase {
+		if got := rx.get(ctx, t, metricDuplicates, ""); got != dupBase {
 			t.Fatalf("%s = %v, want it to stay at %v while extended is off", metricDuplicates, got, dupBase)
 		}
 	})
 
 	t.Run("reset_id_counts_as_new_install", func(t *testing.T) {
-		putTelemetryConsent(t, cli, true, true) // creates install ID A
-		a := getTelemetryView(t, cli).InstallID
+		putTelemetryConsent(ctx, t, cli, true, true) // creates install ID A
+		a := getTelemetryView(ctx, t, cli).InstallID
 		if a == nil {
 			t.Fatal("no install id after turning extended on")
 		}
 		// A's first extended report is a new install. Its next ones the same
 		// day would be duplicates, and the counter would not rise.
-		waitForMore(t, func() float64 { return rx.get(t, metricExtended, "") }, 4*telemetryInterval, metricExtended)
+		waitForMore(t, func() float64 { return rx.get(ctx, t, metricExtended, "") }, 4*telemetryInterval, metricExtended)
 
-		b := resetInstallID(t, cli)
+		b := resetInstallID(ctx, t, cli)
 		if b == *a {
 			t.Fatalf("reset returned the same id %q", b)
 		}
-		dupBase := rx.get(t, metricDuplicates, "")
-		waitForMore(t, func() float64 { return rx.get(t, metricExtended, "") }, 4*telemetryInterval, metricExtended)
-		if got := rx.get(t, metricDuplicates, ""); got != dupBase {
+		dupBase := rx.get(ctx, t, metricDuplicates, "")
+		waitForMore(t, func() float64 { return rx.get(ctx, t, metricExtended, "") }, 4*telemetryInterval, metricExtended)
+		if got := rx.get(ctx, t, metricDuplicates, ""); got != dupBase {
 			t.Fatalf("%s rose from %v to %v: the reset ID was treated as the old install", metricDuplicates, dupBase, got)
 		}
-		v := getTelemetryView(t, cli)
+		v := getTelemetryView(ctx, t, cli)
 		if v.InstallID == nil || *v.InstallID != b || v.Preview == nil || v.Preview.Ext == nil || v.Preview.Ext.InstallID != b {
 			t.Fatalf("view after reset = %+v, want the new id %q in installId and in the preview", v, b)
 		}
 	})
 
 	t.Run("preview_matches_received", func(t *testing.T) {
-		v := getTelemetryView(t, cli)
+		v := getTelemetryView(ctx, t, cli)
 		if v.Preview == nil {
 			t.Fatal("no preview while basic is on")
 		}
 		// Views end at yesterday, so the receiver's same-day record is read
 		// from its fleet histograms and version label: the next report's
 		// servers and templates must equal the preview's.
-		serversCount0 := rx.get(t, "gameplane_telemetry_servers_count", "")
-		serversSum0 := rx.get(t, "gameplane_telemetry_servers_sum", "")
-		templatesSum0 := rx.get(t, "gameplane_telemetry_templates_sum", "")
+		serversCount0 := rx.get(ctx, t, "gameplane_telemetry_servers_count", "")
+		serversSum0 := rx.get(ctx, t, "gameplane_telemetry_servers_sum", "")
+		templatesSum0 := rx.get(ctx, t, "gameplane_telemetry_templates_sum", "")
 		versionLabel := fmt.Sprintf("version=%q", v.Preview.Version)
-		version0 := rx.get(t, metricReports, versionLabel)
+		version0 := rx.get(ctx, t, metricReports, versionLabel)
 		reportsMore(t)
-		n := rx.get(t, "gameplane_telemetry_servers_count", "") - serversCount0
+		n := rx.get(ctx, t, "gameplane_telemetry_servers_count", "") - serversCount0
 		if n < 1 {
 			t.Fatalf("no report recorded: servers histogram count rose by %v", n)
 		}
-		if got := (rx.get(t, "gameplane_telemetry_servers_sum", "") - serversSum0) / n; got != float64(v.Preview.Servers) {
+		if got := (rx.get(ctx, t, "gameplane_telemetry_servers_sum", "") - serversSum0) / n; got != float64(v.Preview.Servers) {
 			t.Fatalf("receiver recorded %v servers per report, preview says %d", got, v.Preview.Servers)
 		}
-		if got := (rx.get(t, "gameplane_telemetry_templates_sum", "") - templatesSum0) / n; got != float64(v.Preview.Templates) {
+		if got := (rx.get(ctx, t, "gameplane_telemetry_templates_sum", "") - templatesSum0) / n; got != float64(v.Preview.Templates) {
 			t.Fatalf("receiver recorded %v templates per report, preview says %d", got, v.Preview.Templates)
 		}
-		if got := rx.get(t, metricReports, versionLabel); got <= version0 {
+		if got := rx.get(ctx, t, metricReports, versionLabel); got <= version0 {
 			t.Fatalf("%s{%s} = %v, want more than %v: the receiver did not record the preview's version", metricReports, versionLabel, got, version0)
 		}
 	})
@@ -254,44 +254,44 @@ func TestTelemetryLifecycle(t *testing.T) {
 	t.Run("forged_other_key_gets_409", func(t *testing.T) {
 		// The install's current ID was claimed by its own key when the
 		// receiver accepted the previous subtests' reports.
-		v := getTelemetryView(t, cli)
+		v := getTelemetryView(ctx, t, cli)
 		if v.InstallID == nil {
 			t.Fatal("no install id: extended must be on")
 		}
-		asOf, viewsBefore := dashboardViews(t, metricsPort)
-		refusedBase := rx.get(t, metricRefused, `reason="id_claimed"`)
+		asOf, viewsBefore := dashboardViews(ctx, t, metricsPort)
+		refusedBase := rx.get(ctx, t, metricRefused, `reason="id_claimed"`)
 
-		status, code := tc.send(t, tc.report(t, *v.InstallID, "e2e-forged", 7, time.Now()))
+		status, code := tc.send(ctx, t, tc.report(t, *v.InstallID, "e2e-forged", 7, time.Now()))
 		if status != http.StatusConflict || code != "id_claimed" {
 			t.Fatalf("report under the install's ID with another key = %d %q, want 409 id_claimed", status, code)
 		}
-		if got := rx.get(t, metricRefused, `reason="id_claimed"`); got != refusedBase+1 {
+		if got := rx.get(ctx, t, metricRefused, `reason="id_claimed"`); got != refusedBase+1 {
 			t.Fatalf("%s{id_claimed} = %v, want %v", metricRefused, got, refusedBase+1)
 		}
-		if got := rx.get(t, metricReports, `version="e2e-forged"`); got != 0 {
+		if got := rx.get(ctx, t, metricReports, `version="e2e-forged"`); got != 0 {
 			t.Fatalf("the refused report was counted: %v", got)
 		}
-		requireViewsUnchanged(t, metricsPort, asOf, viewsBefore)
+		requireViewsUnchanged(ctx, t, metricsPort, asOf, viewsBefore)
 	})
 
 	t.Run("unsigned_tampered_replayed_get_403", func(t *testing.T) {
 		id := newTestInstallID(t)
 		sentAt := time.Now()
 		body, sig := tc.sign(t, tc.report(t, id, "e2e-signed", 4, sentAt))
-		if status, code := tc.post(t, body, sig); status != http.StatusNoContent {
+		if status, code := tc.post(ctx, t, body, sig); status != http.StatusNoContent {
 			t.Fatalf("the test client's own signed report = %d %q, want 204", status, code)
 		}
-		accepted := rx.get(t, metricReports, `version="e2e-signed"`)
+		accepted := rx.get(ctx, t, metricReports, `version="e2e-signed"`)
 		if accepted != 1 {
 			t.Fatalf("accepted reports with the test version = %v, want 1", accepted)
 		}
-		asOf, viewsBefore := dashboardViews(t, metricsPort)
-		badBase := rx.get(t, metricRefused, `reason="bad_signature"`)
-		replayBase := rx.get(t, metricRefused, `reason="replay"`)
+		asOf, viewsBefore := dashboardViews(ctx, t, metricsPort)
+		badBase := rx.get(ctx, t, metricRefused, `reason="bad_signature"`)
+		replayBase := rx.get(ctx, t, metricRefused, `reason="replay"`)
 
 		// Unsigned: the send time is newer, so only the missing header can fail it.
 		unsigned, _ := tc.sign(t, tc.report(t, id, "e2e-signed", 4, sentAt.Add(2*time.Second)))
-		if status, code := tc.post(t, unsigned, ""); status != http.StatusForbidden || code != "bad_signature" {
+		if status, code := tc.post(ctx, t, unsigned, ""); status != http.StatusForbidden || code != "bad_signature" {
 			t.Fatalf("unsigned extended report = %d %q, want 403 bad_signature", status, code)
 		}
 		// Tampered: a valid signature for 4 servers on a body that says 5.
@@ -300,51 +300,51 @@ func TestTelemetryLifecycle(t *testing.T) {
 		if bytes.Equal(tampered, signed) {
 			t.Fatalf("test bug: the body %s has no servers field to tamper with", signed)
 		}
-		if status, code := tc.post(t, tampered, tamperedSig); status != http.StatusForbidden || code != "bad_signature" {
+		if status, code := tc.post(ctx, t, tampered, tamperedSig); status != http.StatusForbidden || code != "bad_signature" {
 			t.Fatalf("tampered report = %d %q, want 403 bad_signature", status, code)
 		}
 		// Replayed: the accepted report, byte for byte.
-		if status, code := tc.post(t, body, sig); status != http.StatusForbidden || code != "replay" {
+		if status, code := tc.post(ctx, t, body, sig); status != http.StatusForbidden || code != "replay" {
 			t.Fatalf("replayed report = %d %q, want 403 replay", status, code)
 		}
 
-		if got := rx.get(t, metricRefused, `reason="bad_signature"`); got != badBase+2 {
+		if got := rx.get(ctx, t, metricRefused, `reason="bad_signature"`); got != badBase+2 {
 			t.Fatalf("%s{bad_signature} = %v, want %v", metricRefused, got, badBase+2)
 		}
-		if got := rx.get(t, metricRefused, `reason="replay"`); got != replayBase+1 {
+		if got := rx.get(ctx, t, metricRefused, `reason="replay"`); got != replayBase+1 {
 			t.Fatalf("%s{replay} = %v, want %v", metricRefused, got, replayBase+1)
 		}
-		if got := rx.get(t, metricReports, `version="e2e-signed"`); got != accepted {
+		if got := rx.get(ctx, t, metricReports, `version="e2e-signed"`); got != accepted {
 			t.Fatalf("reports with the test version = %v, want %v: a refused report was counted (SC-014)", got, accepted)
 		}
-		requireViewsUnchanged(t, metricsPort, asOf, viewsBefore)
+		requireViewsUnchanged(ctx, t, metricsPort, asOf, viewsBefore)
 	})
 
 	t.Run("claimed_id_rotates_and_recovers", func(t *testing.T) {
-		a := getTelemetryView(t, cli).InstallID
+		a := getTelemetryView(ctx, t, cli).InstallID
 		if a == nil {
 			t.Fatal("no install id: extended must be on")
 		}
 		// Sync on a report the install has just sent: its next one is about
 		// one interval away, which leaves time to claim the new ID first.
 		reportsMore(t)
-		b := resetInstallID(t, cli)
-		if status, code := tc.send(t, tc.report(t, b, "e2e-claim", 1, time.Now())); status != http.StatusNoContent {
+		b := resetInstallID(ctx, t, cli)
+		if status, code := tc.send(ctx, t, tc.report(t, b, "e2e-claim", 1, time.Now())); status != http.StatusNoContent {
 			t.Fatalf("the test client's claim on the new ID = %d %q, want 204", status, code)
 		}
-		refusedBase := rx.get(t, metricRefused, `reason="id_claimed"`)
+		refusedBase := rx.get(ctx, t, metricRefused, `reason="id_claimed"`)
 
 		// The install's next attempt gets 409, replaces the ID and re-sends.
 		envInstance.Eventually(t, 4*telemetryInterval, func() (bool, string) {
-			v := getTelemetryView(t, cli)
+			v := getTelemetryView(ctx, t, cli)
 			ok := v.Status.LastIDRotationAt != nil && v.InstallID != nil && *v.InstallID != b && v.Status.LastOutcome == "ok"
 			return ok, fmt.Sprintf("view = %+v, want a rotation stamp, an id other than %q and outcome ok", v, b)
 		})
-		v := getTelemetryView(t, cli)
+		v := getTelemetryView(ctx, t, cli)
 		if *v.InstallID == *a || v.Preview == nil || v.Preview.Ext == nil || v.Preview.Ext.InstallID != *v.InstallID {
 			t.Fatalf("view = %+v, want a third id shown in installId and the preview", v)
 		}
-		if got := rx.get(t, metricRefused, `reason="id_claimed"`); got != refusedBase+1 {
+		if got := rx.get(ctx, t, metricRefused, `reason="id_claimed"`); got != refusedBase+1 {
 			t.Fatalf("%s{id_claimed} = %v, want %v (one 409 for the claimed ID)", metricRefused, got, refusedBase+1)
 		}
 	})
@@ -352,19 +352,19 @@ func TestTelemetryLifecycle(t *testing.T) {
 	// ---- US4: the private dashboard ----------------------------------------
 
 	t.Run("dashboard_refuses_unauthenticated", func(t *testing.T) {
-		resp, body := dashboardRequest(t, metricsPort, http.MethodGet, "/", nil, nil)
+		resp, body := dashboardRequest(ctx, t, metricsPort, http.MethodGet, "/", nil, nil)
 		if resp.StatusCode != http.StatusSeeOther || resp.Header.Get("Location") != "/login" {
 			t.Fatalf("GET / = %d to %q, want 303 to /login", resp.StatusCode, resp.Header.Get("Location"))
 		}
 		if strings.ContainsAny(string(body), "0123456789") {
 			t.Fatalf("the redirect body contains digits: %q", body)
 		}
-		resp, body = dashboardRequest(t, metricsPort, http.MethodGet, "/login", nil, nil)
+		resp, body = dashboardRequest(ctx, t, metricsPort, http.MethodGet, "/login", nil, nil)
 		if resp.StatusCode != http.StatusOK || !bytes.Equal(body, loginBaseline) {
 			t.Fatalf("GET /login = %d, want 200 and the page captured from the empty receiver (no figures)", resp.StatusCode)
 		}
 		for _, path := range []string{"/api/v1/views", "/metrics"} {
-			resp, body = dashboardRequest(t, metricsPort, http.MethodGet, path, nil, nil)
+			resp, body = dashboardRequest(ctx, t, metricsPort, http.MethodGet, path, nil, nil)
 			if resp.StatusCode != http.StatusUnauthorized || strings.TrimSpace(string(body)) != `{"error":"unauthorized"}` {
 				t.Fatalf("GET %s without credentials = %d %q, want 401 and the fixed body", path, resp.StatusCode, body)
 			}
@@ -372,9 +372,9 @@ func TestTelemetryLifecycle(t *testing.T) {
 	})
 
 	t.Run("dashboard_shows_reports", func(t *testing.T) {
-		cookie := dashboardLogin(t, metricsPort, telemetryDashToken)
+		cookie := dashboardLogin(ctx, t, metricsPort, telemetryDashToken)
 		before := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
-		resp, body := dashboardRequest(t, metricsPort, http.MethodGet, "/api/v1/views", map[string]string{"Cookie": cookie}, nil)
+		resp, body := dashboardRequest(ctx, t, metricsPort, http.MethodGet, "/api/v1/views", map[string]string{"Cookie": cookie}, nil)
 		after := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("GET /api/v1/views with the session = %d: %s", resp.StatusCode, body)
@@ -398,16 +398,16 @@ func TestTelemetryLifecycle(t *testing.T) {
 		}
 		// The page itself renders for a signed-in browser, and the Bearer
 		// token reads the same JSON.
-		if resp, _ := dashboardRequest(t, metricsPort, http.MethodGet, "/", map[string]string{"Cookie": cookie}, nil); resp.StatusCode != http.StatusOK {
+		if resp, _ := dashboardRequest(ctx, t, metricsPort, http.MethodGet, "/", map[string]string{"Cookie": cookie}, nil); resp.StatusCode != http.StatusOK {
 			t.Fatalf("GET / with the session = %d, want 200", resp.StatusCode)
 		}
 		bearer := map[string]string{"Authorization": "Bearer " + telemetryDashToken}
-		if resp, _ := dashboardRequest(t, metricsPort, http.MethodGet, "/api/v1/views", bearer, nil); resp.StatusCode != http.StatusOK {
+		if resp, _ := dashboardRequest(ctx, t, metricsPort, http.MethodGet, "/api/v1/views", bearer, nil); resp.StatusCode != http.StatusOK {
 			t.Fatalf("GET /api/v1/views with the Bearer token = %d, want 200", resp.StatusCode)
 		}
 		// Same-day reports are not in the views, so the earlier reports are
 		// counted through /metrics. The exact figures are views_test.go's.
-		if got := rx.get(t, metricReports, ""); got < 3 {
+		if got := rx.get(ctx, t, metricReports, ""); got < 3 {
 			t.Fatalf("%s = %v, want at least 3 reports from the earlier subtests", metricReports, got)
 		}
 	})
@@ -418,23 +418,23 @@ func TestTelemetryLifecycle(t *testing.T) {
 		// Pause the install's extended reports (its own would count as
 		// duplicates and move the same counters), measure the test client
 		// alone, then turn the tier back on.
-		putTelemetryConsent(t, cli, true, false)
-		defer putTelemetryConsent(t, cli, true, true)
+		putTelemetryConsent(ctx, t, cli, true, false)
+		defer putTelemetryConsent(ctx, t, cli, true, true)
 		time.Sleep(10 * time.Second) // let a report already in flight land
 		keepClearOfUTCMidnight(t, 2*time.Minute)
 
 		id := newTestInstallID(t)
 		now := time.Now()
-		extBase, dupBase := rx.get(t, metricExtended, ""), rx.get(t, metricDuplicates, "")
+		extBase, dupBase := rx.get(ctx, t, metricExtended, ""), rx.get(ctx, t, metricDuplicates, "")
 		for i, sentAt := range []time.Time{now.Add(-2 * time.Minute), now.Add(-time.Minute)} {
-			if status, code := tc.send(t, tc.report(t, id, "e2e-once", 2, sentAt)); status != http.StatusNoContent {
+			if status, code := tc.send(ctx, t, tc.report(t, id, "e2e-once", 2, sentAt)); status != http.StatusNoContent {
 				t.Fatalf("report %d from one ID = %d %q, want 204 (a same-day duplicate is accepted)", i+1, status, code)
 			}
 		}
-		if got := rx.get(t, metricExtended, ""); got != extBase+1 {
+		if got := rx.get(ctx, t, metricExtended, ""); got != extBase+1 {
 			t.Fatalf("%s = %v, want %v: two reports from one ID on one day count once", metricExtended, got, extBase+1)
 		}
-		if got := rx.get(t, metricDuplicates, ""); got != dupBase+1 {
+		if got := rx.get(ctx, t, metricDuplicates, ""); got != dupBase+1 {
 			t.Fatalf("%s = %v, want %v", metricDuplicates, got, dupBase+1)
 		}
 	})
@@ -442,7 +442,7 @@ func TestTelemetryLifecycle(t *testing.T) {
 	// ---- US6: the public summary -------------------------------------------
 
 	t.Run("public_summary_five_keys", func(t *testing.T) {
-		resp, body := dashboardRequest(t, ingestPort, http.MethodGet, "/v1/summary", nil, nil)
+		resp, body := dashboardRequest(ctx, t, ingestPort, http.MethodGet, "/v1/summary", nil, nil)
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("GET /v1/summary = %d: %s", resp.StatusCode, body)
 		}
@@ -463,7 +463,7 @@ func TestTelemetryLifecycle(t *testing.T) {
 			t.Fatalf("summary headers = %v, want JSON, CORS *, a one-hour cache and an ETag", resp.Header)
 		}
 		// Operational metrics are never on the public listener (FR-030).
-		if resp, _ := dashboardRequest(t, ingestPort, http.MethodGet, "/metrics", nil, nil); resp.StatusCode != http.StatusNotFound {
+		if resp, _ := dashboardRequest(ctx, t, ingestPort, http.MethodGet, "/metrics", nil, nil); resp.StatusCode != http.StatusNotFound {
 			t.Fatalf("GET /metrics on the public listener = %d, want 404", resp.StatusCode)
 		}
 	})
@@ -482,27 +482,27 @@ func TestTelemetryLifecycle(t *testing.T) {
 		image := bundledReceiverImage(ctx, t)
 		receiverImage = image
 		name := deployTelemetryReceiver(ctx, t, "custom", image, true)
-		bundledBefore := rx.get(t, metricReports, "")
+		bundledBefore := rx.get(ctx, t, metricReports, "")
 
 		endpoint := fmt.Sprintf("%s.gameplane-system.svc:8080", name)
 		helmUpgradeReuse(ctx, t, "api.telemetry.endpoint=http://"+endpoint+"/ingest")
-		cli = reconnectAPIClient(t, cli)
+		cli = reconnectAPIClient(ctx, t, cli)
 
-		v := getTelemetryView(t, cli)
+		v := getTelemetryView(ctx, t, cli)
 		if v.Destination.Kind != "custom" || v.Destination.Host == nil || *v.Destination.Host != endpoint {
 			t.Fatalf("destination = %+v, want kind custom at %s", v.Destination, endpoint)
 		}
-		port, stop := envInstance.PortForward(t, "gameplane-system", "svc/"+name, 8081)
+		port, stop := detachedPortForward(ctx, t, "gameplane-system", "svc/"+name, 8081)
 		defer stop()
 		envInstance.Eventually(t, 4*telemetryInterval, func() (bool, string) {
-			got := receiverMetric(t, port, telemetryDashToken, metricReports, "")
+			got := receiverMetric(ctx, t, port, telemetryDashToken, metricReports, "")
 			return got >= 1, fmt.Sprintf("custom receiver %s = %v, want at least 1", metricReports, got)
 		})
 		// With an explicit endpoint the chart no longer deploys the bundled
 		// receiver. If a later chart keeps it, its counter must stay put.
 		if out, err := envInstance.Kubectl(ctx, "get", "deploy/gameplane-telemetry-receiver",
 			"--namespace", "gameplane-system"); err == nil {
-			if got := rx.get(t, metricReports, ""); got != bundledBefore {
+			if got := rx.get(ctx, t, metricReports, ""); got != bundledBefore {
 				t.Fatalf("bundled receiver %s = %v, want it to stay at %v", metricReports, got, bundledBefore)
 			}
 		} else if !strings.Contains(out, "NotFound") {
@@ -517,17 +517,17 @@ func TestTelemetryLifecycle(t *testing.T) {
 		name := deployTelemetryReceiver(ctx, t, "pow", receiverImage, true,
 			"INGEST_POW=true", "INGEST_POW_MIN_BITS=8", "INGEST_POW_TARGET_PER_MIN=60")
 		helmUpgradeReuse(ctx, t, fmt.Sprintf("api.telemetry.endpoint=http://%s.gameplane-system.svc:8080/ingest", name))
-		cli = reconnectAPIClient(t, cli)
+		cli = reconnectAPIClient(ctx, t, cli)
 
-		port, stop := envInstance.PortForward(t, "gameplane-system", "svc/"+name, 8081)
+		port, stop := detachedPortForward(ctx, t, "gameplane-system", "svc/"+name, 8081)
 		defer stop()
 		challenges := func() float64 {
-			return receiverMetric(t, port, telemetryDashToken, metricPoWChallenges, "")
+			return receiverMetric(ctx, t, port, telemetryDashToken, metricPoWChallenges, "")
 		}
 		waitForMore(t, challenges, 4*telemetryInterval, metricPoWChallenges)
 		envInstance.Eventually(t, 4*telemetryInterval, func() (bool, string) {
-			got := receiverMetric(t, port, telemetryDashToken, metricReports, "")
-			outcome := getTelemetryView(t, cli).Status.LastOutcome
+			got := receiverMetric(ctx, t, port, telemetryDashToken, metricReports, "")
+			outcome := getTelemetryView(ctx, t, cli).Status.LastOutcome
 			return got >= 1 && outcome == "ok",
 				fmt.Sprintf("%s = %v, lastOutcome = %q, want a solved report accepted and outcome ok", metricReports, got, outcome)
 		})
@@ -536,9 +536,9 @@ func TestTelemetryLifecycle(t *testing.T) {
 	t.Run("pow_refuses_missing_and_invalid", func(t *testing.T) {
 		name := deployTelemetryReceiver(ctx, t, "powrefuse", receiverImage, true,
 			"INGEST_POW=true", "INGEST_POW_MIN_BITS=8", "INGEST_POW_TARGET_PER_MIN=60")
-		ingestPort, stopIngest := envInstance.PortForward(t, "gameplane-system", "svc/"+name, 8080)
+		ingestPort, stopIngest := detachedPortForward(ctx, t, "gameplane-system", "svc/"+name, 8080)
 		defer stopIngest()
-		metricsPort, stopMetrics := envInstance.PortForward(t, "gameplane-system", "svc/"+name, 8081)
+		metricsPort, stopMetrics := detachedPortForward(ctx, t, "gameplane-system", "svc/"+name, 8081)
 		defer stopMetrics()
 		powRx := receiverScrape{port: metricsPort, token: telemetryDashToken}
 		pc := newTelemetryTestClient(t, ingestPort)
@@ -546,56 +546,56 @@ func TestTelemetryLifecycle(t *testing.T) {
 		versionLabel := `version="` + version + `"`
 		id := newTestInstallID(t)
 		body, sig := pc.sign(t, pc.report(t, id, version, 3, time.Now()))
-		requiredBase := powRx.get(t, metricRefused, `reason="pow_required"`)
-		invalidBase := powRx.get(t, metricRefused, `reason="pow_invalid"`)
+		requiredBase := powRx.get(ctx, t, metricRefused, `reason="pow_required"`)
+		invalidBase := powRx.get(ctx, t, metricRefused, `reason="pow_invalid"`)
 
 		// No header: 428 pow_required, and nothing is counted.
-		if status, code := pc.postPoW(t, body, sig, ""); status != http.StatusPreconditionRequired || code != "pow_required" {
+		if status, code := pc.postPoW(ctx, t, body, sig, ""); status != http.StatusPreconditionRequired || code != "pow_required" {
 			t.Fatalf("report with no proof of work = %d %q, want 428 pow_required", status, code)
 		}
-		if got := powRx.get(t, metricRefused, `reason="pow_required"`); got != requiredBase+1 {
+		if got := powRx.get(ctx, t, metricRefused, `reason="pow_required"`); got != requiredBase+1 {
 			t.Fatalf("%s{pow_required} = %v, want %v", metricRefused, got, requiredBase+1)
 		}
 
 		// A solved challenge is accepted once.
-		solved := pc.solvedPoW(t, 8)
-		if status, code := pc.postPoW(t, body, sig, solved); status != http.StatusNoContent {
+		solved := pc.solvedPoW(ctx, t, 8)
+		if status, code := pc.postPoW(ctx, t, body, sig, solved); status != http.StatusNoContent {
 			t.Fatalf("report with a solved challenge = %d %q, want 204", status, code)
 		}
-		if got := powRx.get(t, metricReports, versionLabel); got != 1 {
+		if got := powRx.get(ctx, t, metricReports, versionLabel); got != 1 {
 			t.Fatalf("%s{%s} = %v, want 1", metricReports, versionLabel, got)
 		}
 
 		// The same solution again: 428 pow_invalid, and nothing changes.
-		asOf, viewsBefore := dashboardViews(t, metricsPort)
+		asOf, viewsBefore := dashboardViews(ctx, t, metricsPort)
 		again, againSig := pc.sign(t, pc.report(t, id, version, 3, time.Now().Add(2*time.Second)))
-		if status, code := pc.postPoW(t, again, againSig, solved); status != http.StatusPreconditionRequired || code != "pow_invalid" {
+		if status, code := pc.postPoW(ctx, t, again, againSig, solved); status != http.StatusPreconditionRequired || code != "pow_invalid" {
 			t.Fatalf("report with a used solution = %d %q, want 428 pow_invalid", status, code)
 		}
-		if got := powRx.get(t, metricRefused, `reason="pow_invalid"`); got != invalidBase+1 {
+		if got := powRx.get(ctx, t, metricRefused, `reason="pow_invalid"`); got != invalidBase+1 {
 			t.Fatalf("%s{pow_invalid} = %v, want %v", metricRefused, got, invalidBase+1)
 		}
-		if got := powRx.get(t, metricReports, versionLabel); got != 1 {
+		if got := powRx.get(ctx, t, metricReports, versionLabel); got != 1 {
 			t.Fatalf("%s{%s} = %v after the refusals, want it unchanged at 1", metricReports, versionLabel, got)
 		}
-		requireViewsUnchanged(t, metricsPort, asOf, viewsBefore)
+		requireViewsUnchanged(ctx, t, metricsPort, asOf, viewsBefore)
 	})
 
 	t.Run("old_receiver_gets_basic", func(t *testing.T) {
 		// The beta.8 receiver rejects any field beyond the basic three with 400
 		// and exposes /metrics unauthenticated on its one port (FR-016, SC-013).
 		name := deployTelemetryReceiver(ctx, t, "old", betaReceiverImage, false)
-		port, stop := envInstance.PortForward(t, "gameplane-system", "svc/"+name, 8080)
+		port, stop := detachedPortForward(ctx, t, "gameplane-system", "svc/"+name, 8080)
 		defer stop()
 		oldReceiver.name = name
 
 		helmUpgradeReuse(ctx, t, fmt.Sprintf("api.telemetry.endpoint=http://%s.gameplane-system.svc:8080/ingest", name))
-		cli = reconnectAPIClient(t, cli)
+		cli = reconnectAPIClient(ctx, t, cli)
 		envInstance.Eventually(t, 4*telemetryInterval, func() (bool, string) {
-			got := receiverMetric(t, port, "", metricReports, "")
+			got := receiverMetric(ctx, t, port, "", metricReports, "")
 			return got >= 1, fmt.Sprintf("old receiver %s = %v, want a basic report accepted after the extended one got 400", metricReports, got)
 		})
-		v := getTelemetryView(t, cli)
+		v := getTelemetryView(ctx, t, cli)
 		if v.Status.LastOutcome != "ok" {
 			t.Fatalf("status = %+v, want outcome ok: the basic re-send was accepted", v.Status)
 		}
@@ -608,29 +608,29 @@ func TestTelemetryLifecycle(t *testing.T) {
 
 	t.Run("operator_disabled_sends_nothing", func(t *testing.T) {
 		helmUpgradeReuse(ctx, t, "api.telemetry.enabled=false")
-		cli = reconnectAPIClient(t, cli)
+		cli = reconnectAPIClient(ctx, t, cli)
 
-		v := getTelemetryView(t, cli)
+		v := getTelemetryView(ctx, t, cli)
 		if !v.OperatorDisabled || v.Destination.Kind != "disabled" || v.Destination.Host != nil || v.Preview != nil {
 			t.Fatalf("view = %+v, want operatorDisabled, kind disabled, no host and no preview", v)
 		}
-		resp, body, err := cli.Do(http.MethodPut, "/admin/config/telemetry", map[string]bool{"sendMetrics": true, "extended": true})
-		if err != nil || resp.StatusCode != http.StatusConflict {
-			t.Fatalf("PUT telemetry while disabled: %v status %v body %s, want 409", err, statusOf(resp), body)
+		status, body, err := tlDo(ctx, cli, http.MethodPut, "/admin/config/telemetry", map[string]bool{"sendMetrics": true, "extended": true})
+		if err != nil || status != http.StatusConflict {
+			t.Fatalf("PUT telemetry while disabled: %v status %v body %s, want 409", err, status, body)
 		}
-		resp, body, err = cli.Get("/admin/telemetry/notice")
-		if err != nil || resp.StatusCode != http.StatusOK || !strings.Contains(string(body), `"pending":false`) {
-			t.Fatalf("GET notice while disabled: %v status %v body %s, want pending false", err, statusOf(resp), body)
+		status, body, err = tlDo(ctx, cli, http.MethodGet, "/admin/telemetry/notice", nil)
+		if err != nil || status != http.StatusOK || !strings.Contains(string(body), `"pending":false`) {
+			t.Fatalf("GET notice while disabled: %v status %v body %s, want pending false", err, status, body)
 		}
 
 		// The old receiver's forward from old_receiver_gets_basic died with
 		// that subtest; open one for this subtest.
-		port, stop := envInstance.PortForward(t, "gameplane-system", "svc/"+oldReceiver.name, 8080)
+		port, stop := detachedPortForward(ctx, t, "gameplane-system", "svc/"+oldReceiver.name, 8080)
 		defer stop()
 		time.Sleep(10 * time.Second) // let a report from the replaced pod land
-		settled := receiverMetric(t, port, "", metricReports, "")
+		settled := receiverMetric(ctx, t, port, "", metricReports, "")
 		envInstance.Consistently(t, 3*telemetryInterval, 10*time.Second, func() (bool, string) {
-			got := receiverMetric(t, port, "", metricReports, "")
+			got := receiverMetric(ctx, t, port, "", metricReports, "")
 			return got == settled, fmt.Sprintf("%s = %v, want it to stay at %v while the operator disabled telemetry", metricReports, got, settled)
 		})
 	})
@@ -658,28 +658,20 @@ func helmUpgradeTelemetry(ctx context.Context, t *testing.T) {
 }
 
 // postNoticeAction POSTs one notice action and requires the given status.
-func postNoticeAction(t *testing.T, cli *APIClient, action string, want int) {
+func postNoticeAction(ctx context.Context, t *testing.T, cli *APIClient, action string, want int) {
 	t.Helper()
-	resp, body, err := cli.Post("/admin/telemetry/notice", map[string]string{"action": action})
-	if err != nil || resp.StatusCode != want {
-		t.Fatalf("POST notice %q: %v status %v body %s, want %d", action, err, statusOf(resp), body, want)
+	status, body, err := tlDo(ctx, cli, http.MethodPost, "/admin/telemetry/notice", map[string]string{"action": action})
+	if err != nil || status != want {
+		t.Fatalf("POST notice %q: %v status %v body %s, want %d", action, err, status, body, want)
 	}
-}
-
-// statusOf returns the response status, or 0 for a failed request.
-func statusOf(resp *http.Response) int {
-	if resp == nil {
-		return 0
-	}
-	return resp.StatusCode
 }
 
 // receiverReportsTotal sums gameplane_telemetry_reports_total over every
 // version label, read from the receiver's dashboard port with the dashboard
 // token. It fails the test when /metrics is unreachable.
-func receiverReportsTotal(t *testing.T, port int) float64 {
+func receiverReportsTotal(ctx context.Context, t *testing.T, port int) float64 {
 	t.Helper()
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet,
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		fmt.Sprintf("http://127.0.0.1:%d/metrics", port), nil)
 	if err != nil {
 		t.Fatalf("new metrics request: %v", err)

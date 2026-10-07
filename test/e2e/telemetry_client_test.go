@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -101,9 +102,9 @@ func (c *telemetryTestClient) sign(t *testing.T, rep telemetryschema.Report) (bo
 
 // post sends body with signature (omitted when empty) and returns the status
 // and the "error" code of the receiver's fixed JSON refusal body ("" for 204).
-func (c *telemetryTestClient) post(t *testing.T, body []byte, signature string) (status int, code string) {
+func (c *telemetryTestClient) post(ctx context.Context, t *testing.T, body []byte, signature string) (status int, code string) {
 	t.Helper()
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, c.ingestURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.ingestURL, bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("new ingest request: %v", err)
 	}
@@ -125,10 +126,10 @@ func (c *telemetryTestClient) post(t *testing.T, body []byte, signature string) 
 }
 
 // send signs rep and POSTs it.
-func (c *telemetryTestClient) send(t *testing.T, rep telemetryschema.Report) (status int, code string) {
+func (c *telemetryTestClient) send(ctx context.Context, t *testing.T, rep telemetryschema.Report) (status int, code string) {
 	t.Helper()
 	body, sig := c.sign(t, rep)
-	return c.post(t, body, sig)
+	return c.post(ctx, t, body, sig)
 }
 
 // receiverMetric sums the samples of one metric family from a receiver's
@@ -137,9 +138,9 @@ func (c *telemetryTestClient) send(t *testing.T, rep telemetryschema.Report) (st
 // `reason="id_claimed"`; empty matches all) are counted. token, when set, is
 // sent as a Bearer token (the dashboard listener needs it; an old receiver's
 // public listener does not). A family that has no sample yet sums to 0.
-func receiverMetric(t *testing.T, port int, token, name, labelFilter string) float64 {
+func receiverMetric(ctx context.Context, t *testing.T, port int, token, name, labelFilter string) float64 {
 	t.Helper()
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet,
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		fmt.Sprintf("http://127.0.0.1:%d/metrics", port), nil)
 	if err != nil {
 		t.Fatalf("new metrics request: %v", err)

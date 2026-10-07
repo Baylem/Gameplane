@@ -217,6 +217,7 @@ func TestUpgrade_FromPreviousRelease(t *testing.T) {
 	if err != nil || resp.StatusCode != 200 {
 		t.Fatalf("GET /admin/telemetry/notice after upgrade: %v status %d body %s", err, resp.StatusCode, body)
 	}
+	resp.Body.Close()
 	var notice struct {
 		Pending bool `json:"pending"`
 	}
@@ -230,6 +231,7 @@ func TestUpgrade_FromPreviousRelease(t *testing.T) {
 	if err != nil || resp.StatusCode != 200 {
 		t.Fatalf("GET /admin/config after upgrade: %v status %d body %s", err, resp.StatusCode, body)
 	}
+	resp.Body.Close()
 	var cfgAll struct {
 		Telemetry *struct {
 			SendMetrics bool `json:"sendMetrics"`

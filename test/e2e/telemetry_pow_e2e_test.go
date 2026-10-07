@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -21,10 +22,10 @@ const metricPoWChallenges = "gameplane_telemetry_pow_challenges_total"
 
 // challenge fetches a challenge from the receiver's public port and returns
 // its token and difficulty.
-func (c *telemetryTestClient) challenge(t *testing.T) (token string, bits int) {
+func (c *telemetryTestClient) challenge(ctx context.Context, t *testing.T) (token string, bits int) {
 	t.Helper()
 	url := strings.TrimSuffix(c.ingestURL, "/ingest") + "/v1/challenge"
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		t.Fatalf("new challenge request: %v", err)
 	}
@@ -46,13 +47,13 @@ func (c *telemetryTestClient) challenge(t *testing.T) (token string, bits int) {
 
 // solvedPoW fetches a challenge, requires at least wantBits of difficulty and
 // returns the solved header value.
-func (c *telemetryTestClient) solvedPoW(t *testing.T, wantBits int) string {
+func (c *telemetryTestClient) solvedPoW(ctx context.Context, t *testing.T, wantBits int) string {
 	t.Helper()
-	token, bits := c.challenge(t)
+	token, bits := c.challenge(ctx, t)
 	if bits < wantBits {
 		t.Fatalf("challenge difficulty = %d bits, want at least %d (INGEST_POW_MIN_BITS)", bits, wantBits)
 	}
-	nonce, err := telemetryschema.SolvePoW(t.Context(), token, bits)
+	nonce, err := telemetryschema.SolvePoW(ctx, token, bits)
 	if err != nil {
 		t.Fatalf("solve a %d-bit challenge: %v", bits, err)
 	}
@@ -60,9 +61,9 @@ func (c *telemetryTestClient) solvedPoW(t *testing.T, wantBits int) string {
 }
 
 // postPoW is post with the proof-of-work header (omitted when pow is empty).
-func (c *telemetryTestClient) postPoW(t *testing.T, body []byte, signature, pow string) (status int, code string) {
+func (c *telemetryTestClient) postPoW(ctx context.Context, t *testing.T, body []byte, signature, pow string) (status int, code string) {
 	t.Helper()
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, c.ingestURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.ingestURL, bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("new ingest request: %v", err)
 	}
