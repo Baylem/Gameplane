@@ -174,7 +174,7 @@ func TestDownload_PinsOpenedFileAcrossPathSwap(t *testing.T) {
 			t.Fatal(err)
 		}
 	}}
-	newHandler(root, path).download(w, httptest.NewRequest(http.MethodGet, "/logs/download", nil))
+	newHandler(root, path).download(w, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/logs/download", nil))
 	if w.Code != http.StatusOK || w.Body.String() != "original log\n" {
 		t.Fatalf("status=%d body=%q", w.Code, w.Body.String())
 	}
