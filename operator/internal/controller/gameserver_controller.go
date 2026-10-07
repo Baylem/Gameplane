@@ -1940,7 +1940,10 @@ func (r *GameServerReconciler) stopActiveCaptures(ctx context.Context, gs *gamep
 // function never clobbers fields other reconcile steps concurrently own
 // (e.g. the agent sidecar's status.agent heartbeat).
 func (r *GameServerReconciler) patchCaptureStatus(ctx context.Context, gs, base *gameplanev1alpha1.GameServer) error {
-	if err := r.Status().Patch(ctx, gs, client.MergeFrom(base)); err != nil {
+	// Patch responses contain the full GameServer, even for a no-op patch.
+	// Keep the caller's snapshot coherent with its already-derived idle state
+	// so a fresh response cannot turn an older idle clock into a stale write.
+	if err := r.Status().Patch(ctx, gs.DeepCopy(), client.MergeFrom(base)); err != nil {
 		return fmt.Errorf("patch capture status for %s: %w", gs.Name, err)
 	}
 	return nil
