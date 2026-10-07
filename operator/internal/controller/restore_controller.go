@@ -180,9 +180,12 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			gs.Status.Phase != gameplanev1alpha1.GameServerPhaseStopped {
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
-		stopped, err := r.restoreTargetStopped(ctx, &gs)
+		stopped, progressed, err := r.restoreTargetStopped(ctx, &gs)
 		if err != nil {
 			return ctrl.Result{}, err
+		}
+		if progressed {
+			return ctrl.Result{Requeue: true}, nil
 		}
 		if !stopped {
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
@@ -202,9 +205,12 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if apierrors.IsNotFound(err) {
 		// Recheck after transitioning to Running, including recovery from a
 		// crash between status persistence and Job creation.
-		stopped, err := r.restoreTargetStopped(ctx, &gs)
+		stopped, progressed, err := r.restoreTargetStopped(ctx, &gs)
 		if err != nil {
 			return ctrl.Result{}, err
+		}
+		if progressed {
+			return ctrl.Result{Requeue: true}, nil
 		}
 		if !stopped {
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil

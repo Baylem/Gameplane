@@ -140,26 +140,28 @@ func podMountsRestoreTarget(pod *corev1.Pod, serverName string) bool {
 
 // restoreTargetStopped checks the workload itself, not its readiness-derived
 // GameServer phase. All safety reads bypass the informer cache.
-func (r *RestoreReconciler) restoreTargetStopped(ctx context.Context, gs *gameplanev1alpha1.GameServer) (bool, error) {
+// A successful fence write reports progress, so callers immediately requeue
+// for fresh safety reads instead of waiting for the external-work polling timer.
+func (r *RestoreReconciler) restoreTargetStopped(ctx context.Context, gs *gameplanev1alpha1.GameServer) (stopped, progressed bool, err error) {
 	var ss appsv1.StatefulSet
-	err := r.apiReader().Get(ctx, client.ObjectKeyFromObject(gs), &ss)
+	err = r.apiReader().Get(ctx, client.ObjectKeyFromObject(gs), &ss)
 	if apierrors.IsNotFound(err) {
 		// An absent object cannot fence an in-flight StatefulSet Create
 		// computed before acquisition. Wait for the workload reconciler.
-		return false, nil
+		return false, false, nil
 	}
 	if err != nil {
-		return false, err
+		return false, false, err
 	}
 	if !metav1.IsControlledBy(&ss, gs) {
-		return false, fmt.Errorf("target StatefulSet is not controlled by the bound GameServer")
+		return false, false, fmt.Errorf("target StatefulSet is not controlled by the bound GameServer")
 	}
 	if ss.Spec.Replicas == nil || *ss.Spec.Replicas != 0 || ss.Status.Replicas != 0 || ss.Status.ObservedGeneration < ss.Generation {
-		return false, nil
+		return false, false, nil
 	}
 	var pods corev1.PodList
 	if err := r.apiReader().List(ctx, &pods, client.InNamespace(gs.Namespace)); err != nil {
-		return false, err
+		return false, false, err
 	}
 	for i := range pods.Items {
 		pod := &pods.Items[i]
@@ -169,21 +171,21 @@ func (r *RestoreReconciler) restoreTargetStopped(ctx context.Context, gs *gamepl
 		controller := metav1.GetControllerOf(pod)
 		owned := controller != nil && ((controller.Kind == "StatefulSet" && controller.Name == gs.Name) || (controller.Kind == "GameServer" && controller.UID == gs.UID))
 		if owned || pod.Name == gs.Name+"-0" || podMountsRestoreTarget(pod, gs.Name) {
-			return false, nil
+			return false, false, nil
 		}
 	}
 	// A writer Job may not have scheduled a pod yet. Waiting only for
 	// existing pods would allow that Job to mount the PVC after our check.
 	var jobs batchv1.JobList
 	if err := r.apiReader().List(ctx, &jobs, client.InNamespace(gs.Namespace)); err != nil {
-		return false, err
+		return false, false, err
 	}
 	for i := range jobs.Items {
 		job := &jobs.Items[i]
 		if (job.Status.Succeeded == 0 && !jobPermanentlyFailed(job)) || job.Status.Active > 0 || !job.DeletionTimestamp.IsZero() {
 			pod := &corev1.Pod{Spec: job.Spec.Template.Spec}
 			if podMountsRestoreTarget(pod, gs.Name) {
-				return false, nil
+				return false, false, nil
 			}
 		}
 	}
@@ -196,11 +198,11 @@ func (r *RestoreReconciler) restoreTargetStopped(ctx context.Context, gs *gamepl
 		}
 		ss.Annotations[restoreGuardAnnotation] = gs.Annotations[restoreGuardAnnotation]
 		if err := r.Update(ctx, &ss); err != nil {
-			return false, err
+			return false, false, err
 		}
-		return false, nil
+		return false, true, nil
 	}
-	return true, nil
+	return true, false, nil
 }
 
 // restoreWorkersLive checks Jobs by controller UID and also their labelled pods,
