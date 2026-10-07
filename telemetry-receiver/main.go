@@ -27,6 +27,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ValgulNecron/gameplane/telemetryschema"
 	"github.com/prometheus/client_golang/prometheus"
@@ -67,6 +68,9 @@ const (
 	defaultActivityExpiryDays     = 90
 	minRetentionDays              = 365
 	minActivityExpiryDays         = 31
+	// minDashboardTokenLen is the shortest DASHBOARD_TOKEN run accepts
+	// (spec 022 FR-041, research R8).
+	minDashboardTokenLen = 32
 )
 
 // config holds the receiver's settings. The zero value is valid and means
@@ -93,6 +97,13 @@ type config struct {
 	// idPepper is the HMAC pepper for install IDs; empty means the store
 	// generates one and keeps it in meta.
 	idPepper string
+	// ingestPoW requires proof-of-work on /ingest and serves /v1/challenge
+	// (spec 022 R21). powTargetPerMin, powMinBits and powMaxBits are the
+	// normal challenge rate and the lowest and highest difficulty.
+	ingestPoW       bool
+	powTargetPerMin int
+	powMinBits      int
+	powMaxBits      int
 
 	// loadErrs collects environment values that could not be parsed, so that
 	// validate can report them as startup errors.
@@ -110,10 +121,14 @@ func loadConfig() config {
 		dataDir:         envOr("DATA_DIR", ""),
 		publicSummary:   strings.EqualFold(strings.TrimSpace(envOr("PUBLIC_SUMMARY", "")), "true"),
 		idPepper:        envOr("ID_PEPPER", ""),
+		ingestPoW:       strings.EqualFold(strings.TrimSpace(envOr("INGEST_POW", "")), "true"),
 	}
 	cfg.ingestSourceDailyLimit = cfg.envInt("INGEST_SOURCE_DAILY_LIMIT", defaultIngestSourceDailyLimit)
 	cfg.retentionDays = cfg.envInt("RETENTION_DAYS", defaultRetentionDays)
 	cfg.activityExpiryDays = cfg.envInt("ACTIVITY_EXPIRY_DAYS", defaultActivityExpiryDays)
+	cfg.powTargetPerMin = cfg.envInt("INGEST_POW_TARGET_PER_MIN", defaultPoWTargetPerMin)
+	cfg.powMinBits = cfg.envInt("INGEST_POW_MIN_BITS", defaultPoWMinBits)
+	cfg.powMaxBits = cfg.envInt("INGEST_POW_MAX_BITS", defaultPoWMaxBits)
 	for _, raw := range strings.Split(envOr("TRUSTED_PROXY_CIDRS", ""), ",") {
 		raw = strings.TrimSpace(raw)
 		if raw == "" {
@@ -159,7 +174,29 @@ func (c config) validate() error {
 	if c.ingestSourceDailyLimit < 0 {
 		errs = append(errs, fmt.Errorf("INGEST_SOURCE_DAILY_LIMIT must not be negative, got %d", c.ingestSourceDailyLimit))
 	}
+	if c.powTargetPerMin < 1 {
+		errs = append(errs, fmt.Errorf("INGEST_POW_TARGET_PER_MIN must be at least 1, got %d", c.powTargetPerMin))
+	}
+	if c.powMinBits < 0 {
+		errs = append(errs, fmt.Errorf("INGEST_POW_MIN_BITS must not be negative, got %d", c.powMinBits))
+	}
+	if c.powMaxBits < c.powMinBits || c.powMaxBits > telemetryschema.MaxPoWBits {
+		errs = append(errs, fmt.Errorf("INGEST_POW_MAX_BITS must be between INGEST_POW_MIN_BITS (%d) and %d, got %d",
+			c.powMinBits, telemetryschema.MaxPoWBits, c.powMaxBits))
+	}
 	return errors.Join(errs...)
+}
+
+// validateDashboardToken refuses a dashboard credential that is set but
+// shorter than minDashboardTokenLen characters (spec 022 FR-041). run calls
+// it next to validate; it is separate so that validate, which tests call on
+// configs with placeholder tokens, keeps its behavior.
+func (c config) validateDashboardToken() error {
+	if n := utf8.RuneCountInString(c.dashboardToken); c.dashboardToken != "" && n < minDashboardTokenLen {
+		return fmt.Errorf("DASHBOARD_TOKEN must be at least %d characters, got %d (generate one from 32 random bytes)",
+			minDashboardTokenLen, n)
+	}
+	return nil
 }
 
 func envOr(key, fallback string) string {
@@ -227,6 +264,12 @@ type server struct {
 	// refused counts reports refused by the signature, window, claim or
 	// replay checks, by reason (T083).
 	refused *prometheus.CounterVec
+
+	// pow, powLimiter and powChallenges are the proof-of-work state (T102).
+	// pow and powLimiter are nil unless INGEST_POW is on (initPoW).
+	pow           *powState
+	powLimiter    *bucketLimiter
+	powChallenges prometheus.Counter
 }
 
 // newServer builds a server backed by a private in-memory store, whatever
@@ -289,6 +332,7 @@ func newServerWithStore(cfg config, st *store) *server {
 		}, []string{"reason"}),
 	}
 	reg.MustRegister(s.reports, s.servers, s.templates, s.rateLimited, s.duplicates, s.extReports, s.refused)
+	s.initPoW()
 	for _, reason := range []string{refuseBadSignature, refuseStale, refuseIDClaimed, refuseReplay} {
 		s.refused.WithLabelValues(reason)
 	}
@@ -307,6 +351,7 @@ func (s *server) routes() http.Handler {
 	})
 	mux.HandleFunc("POST /ingest", s.ingest)
 	mux.HandleFunc("GET /v1/summary", s.summary)
+	mux.HandleFunc("GET /v1/challenge", s.challenge)
 	return mux
 }
 
@@ -321,7 +366,7 @@ func newHTTPServer(addr string, h http.Handler) *http.Server {
 }
 
 func run(cfg config) error {
-	if err := cfg.validate(); err != nil {
+	if err := errors.Join(cfg.validate(), cfg.validateDashboardToken()); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

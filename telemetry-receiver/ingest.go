@@ -36,6 +36,11 @@ func (s *server) ingest(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+	// Proof-of-work comes after AUTH_TOKEN and before the body is read, so a
+	// refused report costs one HMAC and one hash (spec 022 R21).
+	if !s.requirePoW(w, req) {
+		return
+	}
 	// Read the whole body first so the size limit applies to all of it, not
 	// just to the part a JSON decoder happens to consume.
 	body, err := io.ReadAll(http.MaxBytesReader(w, req.Body, maxBody))
