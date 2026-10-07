@@ -1998,7 +1998,7 @@ Fixed the sample container image reference in `O5kaV` (Screen/Dialog/Build Modul
 
 | Node | Previous value | New value | Why |
 |---|---|---|---|
-| `NQ8y0` (image sample string) | `ghcr.io/gameplanepanel/cs2:latest@sha256:4b9a8e23...4d4e5` (wrong repo slug "cs2", digest truncated to 40 hex chars) | `ghcr.io/gameplanepanel/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7` (correct slug, full 64-char digest) | The design sample (`NQ8y0`) was corrected to match the already-correct `ARCHETYPE_PRESETS.steamcmd.defaultImage` in `web/src/components/modules/BuildModuleDialog.tsx`; the component's preset was never changed by this work. |
+| `NQ8y0` (image sample string) | `ghcr.io/valgulnecron/cs2:latest@sha256:4b9a8e23...4d4e5` (wrong repo slug "cs2", digest truncated to 40 hex chars) | `ghcr.io/valgulnecron/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7` (correct slug, full 64-char digest) | The design sample (`NQ8y0`) was corrected to match the already-correct `ARCHETYPE_PRESETS.steamcmd.defaultImage` in `web/src/components/modules/BuildModuleDialog.tsx`; the component's preset was never changed by this work. |
 
 **Port rows unchanged:** `f4U7oU` (port 1 name: "game"), `b4CUxa` (port 1 number: 27015), `bcGo3` (port 1 protocol: UDP), `prNFB` (port 2 number: 27015), `evKQq` (port 2 protocol: TCP), and `q96ywV` (storage mount: /home/steam/cs2-data) were examined and deliberately left as-is — they correctly represent a running server configuration. All other siblings (`IVUPC` storage capacity: 20Gi) unchanged.
 
@@ -2008,7 +2008,7 @@ Fixed the sample container image reference in `O5kaV` (Screen/Dialog/Build Modul
 
 - **JSON:** `Get("O5kaV", {depth: 30})` via the Pencil `execute` tool, zero `"..."` elision markers. Re-serialized with `json.dump(indent=2, ensure_ascii=False)` + trailing newline; `python3 -m json.tool` passes.
 - **Screenshot:** `export_nodes` at 2× scale → `design-export/screenshots/O5kaV.png` 1600×1070 RGBA non-empty PNG (verified via PIL: 192052 bytes).
-- **Content check:** the full pinned image reference `ghcr.io/gameplanepanel/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7` found exactly once, in `design-export/json/O5kaV.json` only. Port and storage values confirmed unchanged via grep.
+- **Content check:** the full pinned image reference `ghcr.io/valgulnecron/cs2-server:latest@sha256:4b9a8e23f0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7` found exactly once, in `design-export/json/O5kaV.json` only. Port and storage values confirmed unchanged via grep.
 - **No `.pen` file was Read/Grep/cat/sed** — all access via Pencil MCP `execute`/`export_nodes`, per Rule 2.
 - No git add/commit performed (task instructions: export and manifest correction only).
 

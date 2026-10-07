@@ -122,7 +122,7 @@
               "width": "fill_container",
               "descendants": {
                 "PJERm": {
-                  "content": "ghcr.io/gameplanepanel/gameplane-modules",
+                  "content": "ghcr.io/valgulnecron/gameplane-modules",
                   "fill": "$field/placeholder"
                 }
               }
