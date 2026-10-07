@@ -566,7 +566,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - the OD-1 merge gate
   - the T002 sign-off list
   - that `telemetry-default-gate` is expected to fail until OD-1 is ruled
-- [ ] T099 Once OD-1 is ruled: set `DefaultEndpoint` in `api/internal/telemetry/destination.go`, mark OD-1 RULED in `specs/022-default-telemetry-dashboard/OPEN-DECISIONS.md`, update the destination copy in `design.pen` (with re-export) and the docs, confirm `telemetry-default-gate` passes, and mark the PR ready for review.
+- [X] T099 Once OD-1 is ruled: set `DefaultEndpoint` in `api/internal/telemetry/destination.go`, mark OD-1 RULED in `specs/022-default-telemetry-dashboard/OPEN-DECISIONS.md`, update the destination copy in `design.pen` (with re-export) and the docs, confirm `telemetry-default-gate` passes, and mark the PR ready for review.
   The docs written under T091-T094 name no receiver host. Once OD-1 is ruled, add the host to:
   - `docs/install.md` § Telemetry: the sentence on an empty `api.telemetry.endpoint`, and the Upgrading admonition
   - `docs/architecture.md`: the "API → telemetry-receiver" bullet
