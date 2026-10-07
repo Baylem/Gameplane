@@ -169,9 +169,9 @@
                                 {
                                   "type": "text",
                                   "id": "i6gVPJ",
-                                  "name": "host (SAMPLE, OD-1 unruled)",
+                                  "name": "host",
                                   "fill": "$foreground/foreground",
-                                  "content": "Sending to telemetry.example.org",
+                                  "content": "Sending to telemetry.gameplane.net",
                                   "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "600"

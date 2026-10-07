@@ -1,8 +1,8 @@
 # Running a telemetry provider
 
 This is the runbook for running a Gameplane telemetry receiver for other
-installs: the project maintainers' own default receiver, or one you host
-yourself. It covers deployment, TLS, secrets, retention, metrics and
+installs: the project maintainers' own default receiver
+(`telemetry.gameplane.net`), or one you host yourself. It covers deployment, TLS, secrets, retention, metrics and
 backups. It is a runbook only; the repository ships no infrastructure
 code for the project's receiver.
 
@@ -11,7 +11,7 @@ threat model, see [security.md](security.md#telemetry). For the receiver's
 behaviour and metrics, see
 [`telemetry-receiver/README.md`](../telemetry-receiver/README.md). The
 project's data-handling statement is at
-<https://valgulnecron.github.io/gameplane-website/telemetry/>.
+<https://gameplane.net/telemetry/>.
 
 ## Listeners at a glance
 
@@ -163,7 +163,8 @@ and returns exactly five keys:
 It is served from a snapshot refreshed at most every 5 minutes, with
 `Cache-Control: public, max-age=3600`, an `ETag` and
 `Access-Control-Allow-Origin: *`, and is rate-limited per source. The
-project's default receiver enables it; it is off by default elsewhere.
+project's default receiver (`https://telemetry.gameplane.net/v1/summary`)
+enables it; it is off by default elsewhere.
 
 ## Proof-of-work on ingest
 

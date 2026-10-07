@@ -735,7 +735,7 @@ Usage telemetry has two ends, each with its own trust boundary. For what
 is sent and how to turn it off, see [install.md](install.md#telemetry).
 For running a receiver, see [telemetry-provider.md](telemetry-provider.md).
 The project's data-handling statement is at
-<https://valgulnecron.github.io/gameplane-website/telemetry/>.
+<https://gameplane.net/telemetry/>.
 
 ### Public unauthenticated ingest and summary
 

@@ -122919,7 +122919,7 @@
                   "id": "jhnKn",
                   "name": "host",
                   "fill": "$accent/soft-foreground",
-                  "content": "telemetry.example.org",
+                  "content": "telemetry.gameplane.net",
                   "lineHeight": 1.5,
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 13,
@@ -123178,8 +123178,8 @@
                   "width": "fill_container",
                   "descendants": {
                     "jhnKn": {
-                      "content": "telemetry.example.org",
-                      "name": "host (SAMPLE, OD-1 unruled)"
+                      "content": "telemetry.gameplane.net",
+                      "name": "host"
                     },
                     "w4oMww": {
                       "content": ", the Gameplane project's telemetry service."
@@ -124637,9 +124637,9 @@
                                     {
                                       "type": "text",
                                       "id": "i6gVPJ",
-                                      "name": "host (SAMPLE, OD-1 unruled)",
+                                      "name": "host",
                                       "fill": "$foreground/foreground",
-                                      "content": "Sending to telemetry.example.org",
+                                      "content": "Sending to telemetry.gameplane.net",
                                       "fontFamily": "Inter",
                                       "fontSize": 14,
                                       "fontWeight": "600"
@@ -128638,7 +128638,7 @@
                                       "id": "J98Oe",
                                       "name": "destTitle",
                                       "fill": "$foreground/foreground",
-                                      "content": "Sending to telemetry.example.org",
+                                      "content": "Sending to telemetry.gameplane.net",
                                       "fontFamily": "Inter",
                                       "fontSize": 14,
                                       "fontWeight": "600"

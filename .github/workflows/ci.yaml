@@ -541,7 +541,7 @@ jobs:
 
   # Merge gate for spec 022: the project default telemetry destination
   # (DefaultEndpoint in api/internal/telemetry/destination.go) must be an https
-  # URL. Expected to fail until OPEN-DECISIONS OD-1 is ruled. Deliberately
+  # URL. OPEN-DECISIONS OD-1 is ruled, so it passes; it keeps FR-002 enforced. Deliberately
   # separate: not part of `make lint`, and not in the `report` job's needs.
   telemetry-default-gate:
     name: telemetry default gate

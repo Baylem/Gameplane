@@ -411,7 +411,7 @@ for the registration flow.
   signature). New installs send both by default after a first-login notice;
   each tier has its own admin toggle, and `api.telemetry.enabled=false`
   disables sending entirely. An empty `api.telemetry.endpoint` means the
-  project's default receiver; the bundled receiver
+  project's default receiver (`telemetry.gameplane.net`); the bundled receiver
   (`api.telemetry.receiver.enabled`) and any other URL replace it. The
   receiver keeps daily aggregates in SQLite, serves a token-protected
   dashboard on a separate port, and can expose a public five-count summary.

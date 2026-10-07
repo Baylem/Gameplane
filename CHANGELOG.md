@@ -11,7 +11,8 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 - **Telemetry is on by default for new installs, after a first-login
   notice:** a new install with a telemetry destination in effect now shares
-  basic and extended data by default. The first admin to sign in sees a
+  basic and extended data by default; the stock destination is the project's
+  receiver at telemetry.gameplane.net. The first admin to sign in sees a
   notice that lists every field of both tiers and names the destination;
   nothing is sent before then. Basic is `version`, `servers` and
   `templates`. Extended adds a random install ID, the Kubernetes minor
@@ -23,21 +24,22 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   tier has its own toggle in **Admin Settings → Telemetry**, which also
   shows the destination, a preview of the next report and an install-ID
   reset. The data-handling statement is at
-  <https://valgulnecron.github.io/gameplane-website/telemetry/>. See
+  <https://gameplane.net/telemetry/>. See
   [`docs/install.md`](docs/install.md#telemetry).
 - **Installs whose basic toggle was already on start sending to the
   project's default receiver:** an install that saved **Send anonymous usage
   metrics** while no destination was configured (so it had no effect) starts
-  sending basic reports to the project's default receiver after upgrade.
+  sending basic reports to the project's default receiver
+  (telemetry.gameplane.net) after upgrade.
   Extended stays off until an admin turns it on, and installs that never
   saved a choice stay off. Installs already using a custom
   `api.telemetry.endpoint` or the bundled receiver keep sending only there.
   Set `api.telemetry.enabled=false` before upgrading to prevent any
   sending.
 - **Empty `api.telemetry.endpoint` now means the project default:**
-  previously an empty endpoint meant "no telemetry". It now means the
-  project's default receiver, so the admin toggles have an effect on a stock
-  install. Set `api.telemetry.enabled=false` for a hard off (air-gapped
+  It now means the project's default receiver
+  (https://telemetry.gameplane.net/ingest), so the admin toggles have an
+  effect on a stock install. Set `api.telemetry.enabled=false` for a hard off (air-gapped
   clusters, privacy-sensitive installs); it overrides the endpoint, the
   bundled receiver and the admin toggles, and hides the notice.
 - **The receiver's `/metrics` moved to the dashboard port and needs the

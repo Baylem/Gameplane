@@ -68,7 +68,7 @@
               "id": "jhnKn",
               "name": "host",
               "fill": "$accent/soft-foreground",
-              "content": "telemetry.example.org",
+              "content": "telemetry.gameplane.net",
               "lineHeight": 1.5,
               "fontFamily": "$typography/font-sans",
               "fontSize": 13,

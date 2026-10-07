@@ -475,13 +475,13 @@ toggles.
 The project's data-handling statement, including how long the project
 keeps data (daily aggregates for 24 months; per-install activity records
 expire after 90 days without a report) is at
-<https://valgulnecron.github.io/gameplane-website/telemetry/>.
+<https://gameplane.net/telemetry/>.
 
 > **Upgrading?** Installs that already had **Send anonymous usage
 > metrics** switched on, while no destination was configured, saved that
 > choice but it had no effect. After upgrading to the release that adds
-> the project's default receiver, those installs start sending **basic**
-> reports to it. Extended stays off until an admin turns it on. If you do
+> the project's default receiver (`telemetry.gameplane.net`), those installs
+> start sending **basic** reports to it. Extended stays off until an admin turns it on. If you do
 > not want that, set `api.telemetry.enabled=false` before you upgrade, or
 > turn the toggle off in Admin Settings. Installs that already pointed at
 > a custom `api.telemetry.endpoint` or the bundled receiver keep sending
@@ -500,9 +500,10 @@ expire after 90 days without a report) is at
   ```
 
 - `api.telemetry.endpoint` — when empty (the default), reports go to the
-  project's default receiver. Set a URL to send them to your own receiver
-  instead (e.g. `https://telemetry.example.com/ingest`); it replaces the
-  default and never also sends to it. An install whose endpoint was already
+  project's default receiver, `https://telemetry.gameplane.net/ingest`. Set a
+  URL to send them to your own receiver instead (e.g.
+  `https://telemetry.example.com/ingest`); it replaces the default and never
+  also sends to it. An install whose endpoint was already
   set keeps working unchanged.
 - `api.telemetry.receiver.enabled` — deploy the bundled
   [telemetry-receiver](../telemetry-receiver/README.md) [optional] next to

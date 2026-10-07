@@ -1,6 +1,6 @@
 # Open Decisions
 
-**Status**: 1 open (OD-1); 4 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-5 on 2026-10-07).
+**Status**: 0 open; 5 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07).
 
 Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract in code, chart defaults or docs until it is ruled here.
 
@@ -8,7 +8,7 @@ Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract
 
 ### OD-1: Default telemetry domain
 
-**Status**: OPEN. **Blocks merge of this feature's PR.**
+**Status**: RULED (2026-10-07, user)
 
 **Question**: Which domain (and ingest path) is the project's default telemetry destination?
 
@@ -22,7 +22,13 @@ Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract
 
 **Recommended default**: (1). A host users already know from the docs looks more trustworthy in the first-login notice and the Admin Settings destination line (FR-004, FR-017), and there is only one domain to register and renew.
 
-**Interim ruling (2026-10-06, user)**: The domain is not decided yet.
+**Ruling (2026-10-07, user)**: the project domain is `gameplane.net`. The default telemetry destination host is `telemetry.gameplane.net`, so `telemetry.DefaultEndpoint = "https://telemetry.gameplane.net/ingest"` (the receiver serves `POST /ingest`, `GET /v1/challenge` and `GET /v1/summary`). The website moves to `gameplane.net`, so the data-handling statement URL (OD-2) is `https://gameplane.net/telemetry/`. The website-side changes (`CUSTOM_DOMAIN`, the statement page) belong to T096 in the `website` submodule.
+
+**Consequences**:
+- `DefaultEndpoint` is set, so `telemetry-default-gate` passes and the feature PR can leave draft once the other gates are green.
+- The destination copy in the designs and the docs name `telemetry.gameplane.net`; the bundled and custom sample hosts stay samples.
+
+**Superseded interim ruling (2026-10-06, user)**: The domain is not decided yet.
 - Implementation proceeds with `telemetry.DefaultEndpoint` left **blank**, as FR-002 allows.
 - The feature's PR **MUST NOT merge until a domain is chosen**, recorded here as RULED, and set in `DefaultEndpoint`.
 

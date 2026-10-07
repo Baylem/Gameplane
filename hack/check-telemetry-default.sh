@@ -3,9 +3,9 @@
 # destination is set to an https URL (spec 022, research R13).
 #
 # api/internal/telemetry/destination.go holds DefaultEndpoint, the one place
-# the project URL lives. It stays empty until OPEN-DECISIONS OD-1 is ruled, so
-# this check is EXPECTED to fail until then. It is the merge gate for the
-# feature PR and runs as its own CI job (telemetry-default-gate); it is
+# the project URL lives. OPEN-DECISIONS OD-1 is ruled (2026-10-07), so this
+# check passes; it keeps enforcing that the default stays an https URL (FR-002,
+# FR-009). It runs as its own CI job (telemetry-default-gate); it is
 # deliberately not part of `make lint`.
 #
 # Exit codes:
@@ -34,7 +34,7 @@ https://?*)
 	echo "check-telemetry-default: DefaultEndpoint is set ($value)"
 	;;
 "")
-	echo "check-telemetry-default: DefaultEndpoint is empty; rule OPEN-DECISIONS OD-1 and set it before merging" >&2
+	echo "check-telemetry-default: DefaultEndpoint is empty; it must be the project's https ingest URL (OPEN-DECISIONS OD-1)" >&2
 	exit 1
 	;;
 *)

@@ -245,7 +245,7 @@ api:
     # still deployed.
     enabled: true
     # Where reports are sent. Empty means the project's default provider
-    # (compiled into the API); set a URL such as
+    # (https://telemetry.gameplane.net/ingest, compiled into the API); set a URL such as
     # https://telemetry.example.com/ingest to send reports to your own
     # receiver instead. Setting it disables the receiver auto-wiring below.
     endpoint: ""
