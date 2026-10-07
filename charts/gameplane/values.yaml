@@ -434,7 +434,9 @@ ingress:
   # Sensible default annotations for nginx-ingress. Override to swap in
   # cert-manager cluster-issuer, tune limits, etc.
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+    # Complete request cap, matching the API mod-upload route and web nginx.
+    # Includes multipart framing; the agent defaults to 256 MiB per file.
+    nginx.ingress.kubernetes.io/proxy-body-size: "512m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"  # long-lived WS
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/limit-rps: "20"

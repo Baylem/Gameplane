@@ -22,7 +22,7 @@ const linkClass =
   "text-xs font-semibold text-accent-soft-foreground underline-offset-2 hover:underline";
 
 /**
- * First-login telemetry notice (spec 022 FR-004, design frame U8Zugm). Mount
+ * First-login telemetry notice (spec 022 FR-004, design frame lh8p8). Mount
  * only for users holding config:manage. Renders while the notice is pending;
  * posts "seen" once on mount; every action acks, then hides the banner.
  */

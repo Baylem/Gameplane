@@ -1,8 +1,5 @@
 name: go module + build cache
-description: >
-  Cache Go modules and build artifacts. setup-go's built-in cache keys off a
-  repo-root go.sum, which this go.work workspace doesn't have — use an explicit
-  per-module cache instead so each matrix leg (or job) saves its own build cache.
+description: Cache workspace dependencies separately from per-job Go build artifacts.
 
 inputs:
   key-suffix:
@@ -20,15 +17,24 @@ runs:
   using: composite
   steps:
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      id: go
       with:
         go-version: ${{ inputs.go-version }}
         cache: false
-    - name: go module + build cache
+    - name: Go dependency cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        path: |
-          ~/go/pkg/mod
-          ~/.cache/go-build
-        key: go-${{ runner.os }}-${{ runner.arch }}-${{ inputs.key-suffix }}-${{ hashFiles('**/go.sum', 'go.work.sum') }}
+        path: ~/go/pkg/mod
+        key: go-mod-v2-${{ runner.os }}-${{ steps.go.outputs.go-version }}-${{ hashFiles('**/go.mod', '**/go.sum', 'go.work', 'go.work.sum') }}
         restore-keys: |
-          go-${{ runner.os }}-${{ runner.arch }}-${{ inputs.key-suffix }}-
+          go-mod-v2-${{ runner.os }}-${{ steps.go.outputs.go-version }}-
+    - name: Go build cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/go-build
+        # A source change creates a new entry; exact dependency-only keys kept
+        # restoring the first build forever. Include the resolved Go version,
+        # architecture and job flags (key-suffix) before falling back.
+        key: go-build-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ inputs.key-suffix }}-${{ hashFiles('**/*.go', '**/go.mod', '**/go.sum', 'go.work', 'go.work.sum', '.golangci.yml') }}
+        restore-keys: |
+          go-build-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-${{ inputs.key-suffix }}-

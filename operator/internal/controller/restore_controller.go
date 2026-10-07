@@ -24,10 +24,10 @@ import (
 // to serialize I/O against its data PVC.
 type RestoreReconciler struct {
 	client.Client
-	// APIReader bypasses the informer cache — used to re-verify a ref
-	// copy's live ownership right before accepting it as already made
-	// (see ensureOwnedRefCopies). Wired from mgr.GetAPIReader() in
-	// cmd/main.go, mirroring GameServerReconciler.APIReader. May be nil
+	// APIReader bypasses the informer cache for target/guard ownership,
+	// workload and worker drainage, and reference-copy ownership checks.
+	// Wired from mgr.GetAPIReader() in cmd/main.go, mirroring
+	// GameServerReconciler.APIReader. May be nil
 	// (e.g. in unit tests that construct a RestoreReconciler directly);
 	// apiReader() falls back to Client in that case.
 	APIReader client.Reader
@@ -52,6 +52,9 @@ func (r *RestoreReconciler) apiReader() client.Reader {
 	return r.Client
 }
 
+// Writes to Restore status/finalizers, GameServers and StatefulSets are scoped
+// to managed namespaces by role_namespace.yaml and the Helm chart's Role.
+// These generated ClusterRole markers deliberately grant reads only.
 // +kubebuilder:rbac:groups=gameplane.local,resources=restores,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gameplane.local,resources=gameservers,verbs=get;list;watch
 // +kubebuilder:rbac:groups=gameplane.local,resources=backups,verbs=get;list;watch
@@ -59,12 +62,12 @@ func (r *RestoreReconciler) apiReader() client.Reader {
 
 func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var rs gameplanev1alpha1.Restore
-	if err := r.Get(ctx, req.NamespacedName, &rs); err != nil {
+	if err := r.apiReader().Get(ctx, req.NamespacedName, &rs); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	if rs.Status.Phase == gameplanev1alpha1.RestorePhaseSucceeded ||
+	if !rs.DeletionTimestamp.IsZero() || rs.Status.Phase == gameplanev1alpha1.RestorePhaseSucceeded ||
 		rs.Status.Phase == gameplanev1alpha1.RestorePhaseFailed {
-		return ctrl.Result{}, nil
+		return r.cleanupRestore(ctx, &rs)
 	}
 
 	// Pin the snapshotID at first observation so retention can't pull
@@ -122,17 +125,47 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{}, err
 	}
-	if src.Spec.Strategy == "volume-snapshot" {
+	if src.Spec.Strategy == "volume-snapshot" && rs.Annotations[restoreTargetAnnotation] == "" {
 		return r.reconcileVolumeSnapshotRestore(ctx, &rs, &src)
 	}
 
 	var gs gameplanev1alpha1.GameServer
 	gsKey := types.NamespacedName{Name: rs.Spec.ServerRef.Name, Namespace: rs.Namespace}
-	if err := r.Get(ctx, gsKey, &gs); err != nil {
+	if err := r.apiReader().Get(ctx, gsKey, &gs); err != nil {
 		if apierrors.IsNotFound(err) {
 			return r.fail(ctx, &rs, fmt.Sprintf("target server %q not found", rs.Spec.ServerRef.Name))
 		}
 		return ctrl.Result{}, err
+	}
+	if !gs.DeletionTimestamp.IsZero() {
+		return r.fail(ctx, &rs, "target server is being deleted")
+	}
+	changed, err := r.bindRestoreTarget(ctx, &rs, &gs)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if changed {
+		return ctrl.Result{Requeue: true}, nil
+	}
+	target, err := parseRestoreIdentity(rs.Annotations[restoreTargetAnnotation])
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if target.Name != gs.Name || target.UID != gs.UID {
+		return r.fail(ctx, &rs, "target server changed identity during restore")
+	}
+	claimed, err := r.claimRestoreTarget(ctx, &rs, &gs)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if !claimed {
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+	if rs.Status.Message != "" {
+		rs.Status.Message = ""
+		if err := r.Status().Update(ctx, &rs); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// A missing template is not fatal: it only refines the FSGroup, and
@@ -143,15 +176,18 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if rs.Status.Phase == gameplanev1alpha1.RestorePhaseSuspending {
-		if !gs.Spec.Suspend {
-			gs.Spec.Suspend = true
-			if err := r.Update(ctx, &gs); err != nil {
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-		}
 		if gs.Status.Phase != gameplanev1alpha1.GameServerPhaseSuspended &&
 			gs.Status.Phase != gameplanev1alpha1.GameServerPhaseStopped {
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		}
+		stopped, progressed, err := r.restoreTargetStopped(ctx, &gs)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if progressed {
+			return ctrl.Result{RequeueAfter: time.Nanosecond}, nil
+		}
+		if !stopped {
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 		rs.Status.Phase = gameplanev1alpha1.RestorePhaseRunning
@@ -165,28 +201,54 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// above before the volume-snapshot branch.
 	backoff, deadline := resolveJobLimits(r.JobBackoffLimit, r.JobActiveDeadlineSeconds)
 	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: "restore-" + rs.Name, Namespace: rs.Namespace}}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
-		if job.CreationTimestamp.IsZero() {
-			job.Spec.BackoffLimit = &backoff
-			job.Spec.ActiveDeadlineSeconds = &deadline
-			job.Spec.Template.Labels = map[string]string{backupRestoreJobLabel: backupRestoreJobValue}
-			job.Spec.Template.Spec = r.buildRestorePodSpec(&rs, &src, &tmpl)
-			job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
+	err = r.apiReader().Get(ctx, client.ObjectKeyFromObject(job), job)
+	if apierrors.IsNotFound(err) {
+		// Recheck after transitioning to Running, including recovery from a
+		// crash between status persistence and Job creation.
+		stopped, progressed, err := r.restoreTargetStopped(ctx, &gs)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
-		return controllerutil.SetControllerReference(&rs, job, r.Scheme)
-	})
-	if err != nil {
+		if progressed {
+			return ctrl.Result{RequeueAfter: time.Nanosecond}, nil
+		}
+		if !stopped {
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		}
+		if src.Spec.RepoRef == nil {
+			return r.fail(ctx, &rs, "source backup has no restic repository")
+		}
+		job.Spec.BackoffLimit = &backoff
+		job.Spec.ActiveDeadlineSeconds = &deadline
+		job.Annotations = map[string]string{restoreTargetAnnotation: rs.Annotations[restoreTargetAnnotation]}
+		job.Spec.Template.Labels = map[string]string{backupRestoreJobLabel: backupRestoreJobValue, restoreUIDLabel: string(rs.UID)}
+		job.Spec.Template.Spec = r.buildRestorePodSpec(&rs, &src, &tmpl)
+		job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
+		if err := controllerutil.SetControllerReference(&rs, job, r.Scheme); err != nil {
+			return ctrl.Result{}, err
+		}
+		if err := r.Create(ctx, job); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, err
+		}
+	} else if err != nil {
 		return ctrl.Result{}, err
+	} else if !metav1.IsControlledBy(job, &rs) || job.Annotations[restoreTargetAnnotation] != rs.Annotations[restoreTargetAnnotation] {
+		// Legacy Jobs have no pinned target identity or durable workload
+		// fence. Cancel and drain owned workers rather than accept them.
+		return r.fail(ctx, &rs, "restore Job does not belong to this Restore and target")
 	}
 
 	switch {
 	case job.Status.Succeeded > 0:
-		// Resume the GameServer.
-		if gs.Spec.Suspend {
-			gs.Spec.Suspend = false
-			if err := r.Update(ctx, &gs); err != nil {
-				return ctrl.Result{}, err
-			}
+		busy, err := r.restoreWorkersLive(ctx, rs.Namespace, restoreIdentity{Name: rs.Name, UID: rs.UID}, false)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if busy {
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 		now := metav1.Now()
 		rs.Status.Phase = gameplanev1alpha1.RestorePhaseSucceeded
@@ -209,7 +271,7 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if err := r.Status().Update(ctx, &rs); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, nil
+		return r.cleanupRestore(ctx, &rs)
 
 	case jobPermanentlyFailed(job):
 		// Leave the server suspended; surface the failure.
@@ -243,7 +305,7 @@ func (r *RestoreReconciler) fail(ctx context.Context, rs *gameplanev1alpha1.Rest
 	if err := r.Status().Update(ctx, rs); err != nil {
 		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, nil
+	return r.cleanupRestore(ctx, rs)
 }
 
 func (r *RestoreReconciler) SetupWithManager(mgr ctrl.Manager) error {

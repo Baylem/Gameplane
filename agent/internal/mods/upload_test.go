@@ -74,6 +74,81 @@ func TestUpload_HappyPath(t *testing.T) {
 	}
 }
 
+func TestUploadLargeFileWithoutSystemTemp(t *testing.T) {
+	root := t.TempDir()
+	// Multipart FormFile spills files above 32 MiB to the system temp directory.
+	// The sidecar has a read-only root; only the mounted mods directory is writable.
+	t.Setenv("TMPDIR", filepath.Join(root, "unavailable"))
+	srv := newSrv(t, root, modsSpec("mods", nil))
+	payload := bytes.Repeat([]byte("M"), 33<<20)
+	status, body := postUpload(t, srv, "file", "large.jar", payload)
+	if status != http.StatusOK {
+		t.Fatalf("status=%d body=%s", status, body)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "mods", "large.jar"))
+	if err != nil || !bytes.Equal(data, payload) {
+		t.Fatalf("uploaded content differs: err=%v size=%d", err, len(data))
+	}
+}
+
+func TestUploadRejectsOversizedTrailingFields(t *testing.T) {
+	root := t.TempDir()
+	h := newHandler(root, modsSpec("mods", &caps.ModInstall{AllowedHosts: []string{"cdn.example.com"}, MaxSizeMB: 1}))
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	file, err := mw.CreateFormFile("file", "small.jar")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = file.Write([]byte("valid mod"))
+	field, err := mw.CreateFormField("extra")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = field.Write(bytes.Repeat([]byte("x"), 3<<20))
+	_ = mw.Close()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mods/upload", &body)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	w := httptest.NewRecorder()
+	h.upload(w, req)
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	entries, err := os.ReadDir(filepath.Join(root, "mods"))
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("rejected upload left files: entries=%v err=%v", entries, err)
+	}
+}
+
+func TestUploadRejectsTooManyMultipartParts(t *testing.T) {
+	root := t.TempDir()
+	h := newHandler(root, modsSpec("mods", nil))
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	file, err := mw.CreateFormFile("file", "small.jar")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = file.Write([]byte("mod"))
+	for range 1000 {
+		if err := mw.WriteField("extra", ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_ = mw.Close()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mods/upload", &body)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	w := httptest.NewRecorder()
+	h.upload(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	entries, err := os.ReadDir(filepath.Join(root, "mods"))
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("rejected upload left files: entries=%v err=%v", entries, err)
+	}
+}
+
 func TestUpload_ExtractArchive(t *testing.T) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
@@ -90,6 +165,13 @@ func TestUpload_ExtractArchive(t *testing.T) {
 		t.Fatalf("status=%d body=%s", status, body)
 	}
 	dll := filepath.Join(root, "plugins", "Owner-Cool-1.0.0", "plugins", "Cool.dll")
+	info, err := os.Stat(filepath.Join(root, "plugins", "Owner-Cool-1.0.0"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != moduleDirMode {
+		t.Fatalf("archive root mode=%o, want %o", info.Mode().Perm(), moduleDirMode)
+	}
 	if data, err := os.ReadFile(dll); err != nil || string(data) != "DLL" {
 		t.Fatalf("extracted = %q err=%v", data, err)
 	}

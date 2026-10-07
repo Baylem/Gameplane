@@ -838,6 +838,18 @@ package.json                # @gameplane/web v0.3.0; dev: vite, npm scripts for 
 1. **Cluster.tsx** displays the **storage class card** — `gameDataStorageClass` value or "Cluster default" badge if unset; rendered with a contextual hint when unset
 2. **AdminSettings.tsx** displays the **OIDC provider and role mappings overrides** — all auth-related configuration
 
+Admin settings section drafts follow refreshed configuration while pristine,
+including delayed responses after navigation. Edits and staged Secret operations
+remain local until Save. If a refreshed section differs from the draft's baseline,
+Save reports a conflict before any Secret or config writes; the administrator can
+copy their edits and reopen the section to start from current values. A successful
+save rebases on refreshed config without discarding edits made during the request.
+Dedicated role-mapping resets update both the baseline and draft.
+If the refresh following a successful PUT fails, the submitted values remain the
+committed baseline and visible draft (preserving newer local edits). Stale cached
+values cannot reset that draft. Save requires a successful refresh before any
+further writes when the last configuration read failed.
+
 **Why the split:**  
 A StorageClass is a cluster infrastructure concern, not an authentication concern. Cluster.tsx is the natural home for infrastructure settings; AdminSettings.tsx owns auth-only config. This separation keeps concerns aligned with where users expect to find them.
 
@@ -906,7 +918,8 @@ The warning is shown regardless of how many groups are being added (single or mu
 13. **Share** (`/share/$token`) → `SharePage` (public route, outside AppLayout)
     - Public, unauthenticated, no sidebar or top bar
     - Resolves a share link token to its public view (server name, status, address, player count if exposed)
-    - Rate-limited; all errors (404, 429, auth) map to neutral "Link not available" message per FR-005
+    - Rate-limited; invalid links and auth failures show neutral "Link not available" copy per FR-005, without raw error detail
+    - Starting polls wait at least five seconds after each completed request, with one request in flight. Transient 429/5xx/network failures retain the last public Starting view (or loading spinner during initial resolve) and retry with 10/20/40/60-second bounded backoff; a larger Retry-After (seconds or HTTP date) is honored. Successful Starting/Pending responses reset the delay; Running, asleep, or neutral invalid responses stop polling. Token changes/unmount abort requests and ignore stale completions. `Shares.resolve` propagates transient errors with `APIError.retryAfter`, while invalid/expired/revoked 404s remain the same neutral response.
     - Five states: loading (spinner), up (server online), asleep-start (sleeping, can start), asleep-viewonly (sleeping, view-only), starting ("starting up" copy, shown both after a visitor's Start and for an ordinary start), invalid (link unavailable)
     - Respects stored appearance preference (light/dark/system); no theme toggle shown
     - Uses HeroUI Card, Button, Chip, Spinner; brand header with ShieldCheck icon; address copy button

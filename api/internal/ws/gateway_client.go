@@ -209,7 +209,23 @@ func (p *proxy) agentRoute(handler func(*proxy) http.HandlerFunc) http.HandlerFu
 	return func(w http.ResponseWriter, req *http.Request) {
 		cluster := strings.TrimSpace(req.URL.Query().Get("cluster"))
 		if cluster == "" || cluster == scope.DefaultCluster {
-			handler(p)(w, req)
+			if p.k == nil || p.k.Dynamic == nil {
+				http.Error(w, "cluster unavailable", http.StatusServiceUnavailable)
+				return
+			}
+			ns, err := scope.Resolve(req)
+			if err != nil {
+				httperr.Write(w, req, err)
+				return
+			}
+			target, err := localAgentTarget(req.Context(), p.k, agentTarget{name: chi.URLParam(req, "name"), namespace: ns})
+			if err != nil {
+				httperr.Write(w, req, err)
+				return
+			}
+			selected := *p
+			selected.remoteUID = target.uid
+			handler(&selected)(w, req)
 			return
 		}
 		if p.gateway == nil || p.gateway.registry == nil {

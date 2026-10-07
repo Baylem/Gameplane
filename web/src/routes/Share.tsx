@@ -6,7 +6,7 @@ import {
   Spinner,
 } from "@heroui/react";
 import { ShieldCheck, Copy, Check } from "lucide-react";
-import { Shares } from "@/lib/api";
+import { APIError, Shares } from "@/lib/api";
 import { enforceUnauthenticatedTheme } from "@/lib/enforceUnauthenticatedTheme";
 import type { ShareLinkPublic } from "@/types";
 import type { AppearanceMode } from "@/components/ui/AppearanceToggle";
@@ -43,13 +43,48 @@ function applyTheme(mode: AppearanceMode) {
 
 type State = "loading" | "up" | "asleep-start" | "asleep-viewonly" | "starting" | "invalid";
 
+// Public endpoints share a 20/minute per-IP budget. Five seconds between
+// completed requests leaves room for the initial resolve and Start action.
+const POLL_INTERVAL_MS = 5000;
+const MAX_BACKOFF_MS = 60000;
+
+function isTransient(err: unknown): boolean {
+  return !(err instanceof APIError) || err.status === 429 || (err.status >= 500 && err.status < 600);
+}
+
+function retryDelay(err: unknown, failures: number): number {
+  const backoff = Math.min(MAX_BACKOFF_MS, POLL_INTERVAL_MS * 2 ** Math.min(failures, 4));
+  if (!(err instanceof APIError) || !err.retryAfter?.trim()) return backoff;
+  const header = err.retryAfter.trim();
+  const seconds = Number(header);
+  const retryAfter = Number.isFinite(seconds) && seconds >= 0
+    ? seconds * 1000 : Date.parse(header) - Date.now();
+  // Do not let an oversized Retry-After overflow the browser's timer and cause
+  // an immediate retry. HTTP-date and delta-seconds forms are both accepted.
+  return Number.isFinite(retryAfter)
+    ? Math.min(2147483647, Math.max(backoff, retryAfter)) : backoff;
+}
+
 export function SharePage() {
   const { token } = useParams({ from: "/share/$token" });
+  return <ShareView key={token} token={token} />;
+}
+
+function ShareView({ token }: { token: string }) {
   const [state, setState] = useState<State>("loading");
   const [data, setData] = useState<ShareLinkPublic | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [startRetryDelay, setStartRetryDelay] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
-  const pollingRef = useRef<number | null>(null);
+  const startRequestRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => startRequestRef.current?.abort(), []);
+
+  useEffect(() => {
+    if (startRetryDelay === null) return;
+    const timeout = setTimeout(() => setStartRetryDelay(null), startRetryDelay);
+    return () => clearTimeout(timeout);
+  }, [startRetryDelay]);
 
   // Public share links always render the Pink preset with no custom CSS
   // (FR-011), even for browsers with theme prefs cached from a logged-in
@@ -66,10 +101,13 @@ export function SharePage() {
   // Initial resolve + polling for Starting state
   useEffect(() => {
     let active = true;
+    let failures = 0;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const controller = new AbortController();
 
     const resolve = async () => {
       try {
-        const result = await Shares.resolve(token);
+        const result = await Shares.resolve(token, controller.signal);
         if (!active) return;
 
         // Check for neutral/error response (serverName is empty, indicating resolve returned an error)
@@ -93,10 +131,16 @@ export function SharePage() {
           // Any other state treats as invalid
           setState("invalid");
         }
-      } catch {
+      } catch (err) {
         if (!active) return;
-        // All errors (404, 429, auth) map to invalid per FR-005
-        setState("invalid");
+        if (!isTransient(err)) {
+          setState("invalid");
+          return;
+        }
+        // The per-IP bucket may already be busy before the first load. Keep
+        // the loading UI rather than declaring a valid token unavailable.
+        failures++;
+        timeout = setTimeout(() => void resolve(), retryDelay(err, failures));
       }
     };
 
@@ -104,64 +148,99 @@ export function SharePage() {
 
     return () => {
       active = false;
+      if (timeout !== undefined) clearTimeout(timeout);
+      controller.abort();
     };
   }, [token]);
 
   // Polling when Starting
   useEffect(() => {
     if (state !== "starting") return;
+    let active = true;
+    let failures = 0;
+    let timeout: ReturnType<typeof setTimeout>;
+    const controller = new AbortController();
+
+    const schedule = (delay: number) => {
+      timeout = setTimeout(() => void poll(), delay);
+    };
 
     const poll = async () => {
       try {
-        const result = await Shares.resolve(token);
+        const result = await Shares.resolve(token, controller.signal);
+        if (!active) return;
 
         // Check for neutral/error response
         if (!result.serverName) {
           setState("invalid");
-          if (pollingRef.current) clearInterval(pollingRef.current);
           return;
         }
 
         if (result.status === "Running") {
           setData(result);
           setState("up");
-          if (pollingRef.current) clearInterval(pollingRef.current);
+          return;
         } else if (
           result.status === "Suspended" ||
           result.status === "Stopped"
         ) {
-          // If it went back to asleep after trying to start, show view-only
-          // (means user doesn't have permission to start this server)
-          setState("asleep-viewonly");
+          // The wake may not have reached reconciliation yet. Server phase
+          // does not tell us whether this link has permission to start.
+          setState("asleep-start");
           setData(result);
-          if (pollingRef.current) clearInterval(pollingRef.current);
+          return;
         }
-        // If still Starting/Pending, keep polling
-      } catch {
-        // On error during polling, show invalid (link expired/revoked)
-        setState("invalid");
-        if (pollingRef.current) clearInterval(pollingRef.current);
+        if (result.status !== "Starting" && result.status !== "Pending") {
+          setState("invalid");
+          return;
+        }
+        setData(result);
+        failures = 0;
+        schedule(POLL_INTERVAL_MS);
+      } catch (err) {
+        if (!active) return;
+        if (!isTransient(err)) {
+          setState("invalid");
+          return;
+        }
+        // Keep the last validated public view. A busy API or interrupted
+        // connection does not mean that this token was revoked or expired.
+        failures++;
+        schedule(retryDelay(err, failures));
       }
     };
 
-    pollingRef.current = window.setInterval(poll, 2000) as unknown as number;
+    schedule(POLL_INTERVAL_MS);
 
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
+      active = false;
+      clearTimeout(timeout);
+      controller.abort();
     };
   }, [state, token]);
 
   const handleStart = async () => {
+    if (isStarting || startRetryDelay !== null) return;
+    const controller = new AbortController();
+    startRequestRef.current = controller;
     setIsStarting(true);
     try {
-      await Shares.start(token);
+      await Shares.start(token, controller.signal);
+      if (controller.signal.aborted) return;
       // Transition to Starting state and start polling
       setState("starting");
-    } catch {
-      // On error, show invalid (rate-limited or link expired)
-      setState("invalid");
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      if (isTransient(err)) {
+        // A rejected wake has not started the server. Keep the last validated
+        // public view and let the visitor retry after the shared budget recovers.
+        setState("asleep-start");
+        setStartRetryDelay(retryDelay(err, 0));
+      } else {
+        setState("invalid");
+      }
     } finally {
-      setIsStarting(false);
+      if (!controller.signal.aborted) setIsStarting(false);
     }
   };
 
@@ -275,10 +354,10 @@ export function SharePage() {
           <Button
             variant="primary"
             className="w-full"
-            isDisabled={isStarting}
+            isDisabled={isStarting || startRetryDelay !== null}
             onPress={handleStart}
           >
-            {isStarting ? "Starting..." : "Start server"}
+            {isStarting ? "Starting..." : startRetryDelay !== null ? "Try again shortly" : "Start server"}
           </Button>
         </Card>
       )}

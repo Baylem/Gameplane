@@ -15,6 +15,10 @@ import { captureLocator } from "./capture";
 // (specs/done_014-heroui-web-rebuild/contracts/share-link-ui.md): five Settings ·
 // Share links frames (xCJlu, dQV9N, atqRh, VM7ro, S7SCDc) and five public
 // /share/$token page states (C2LQE4, q31B6w, qFLfB, EcoGD, epZO2).
+// qFLfB is a historical view-only design: server phase cannot establish
+// permission. Its former inferred-permission scenario now verifies recovery
+// against q31B6w. FBiMN captures the transient Start cooldown, keeping five
+// reachable public states under browser capture.
 //
 // T179 mounted ShareLinksSection into Settings.tsx's SECTIONS ("Share
 // links" in the vertical Tabs nav). The two full-page Settings frames,
@@ -40,6 +44,7 @@ import { captureLocator } from "./capture";
 interface ScriptedResponse {
   status: number;
   body?: unknown;
+  headers?: Record<string, string>;
 }
 
 // Local-time "YYYY-MM-DD" for `days` days from now, matching the format the
@@ -63,7 +68,7 @@ async function mockShareResolve(
   await page.addInitScript((responsesJson: string) => {
     const table = JSON.parse(responsesJson) as Record<
       string,
-      { status: number; body?: unknown } | { status: number; body?: unknown }[]
+      ScriptedResponse | ScriptedResponse[]
     >;
     const calls: Record<string, number> = {};
     const originalFetch = window.fetch.bind(window);
@@ -82,7 +87,7 @@ async function mockShareResolve(
           return Promise.resolve(
             new Response(step.body !== undefined ? JSON.stringify(step.body) : null, {
               status: step.status,
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...step.headers },
             }),
           );
         }
@@ -324,37 +329,51 @@ test.describe("Slice 5: Share links — public page (Desktop — 1440x900) @scre
     await capture(page, "C2LQE4");
   });
 
-  test("q31B6w: Share page — Asleep, can start", async ({ page }) => {
+  test("q31B6w: Share page — Asleep, can start before and after a pending wake", async ({ page }) => {
     await mockShareResolve(page, {
       "shot-asleep-start": {
         status: 200,
         body: { serverName: "mc-survival", status: "Suspended" },
       },
+      "shot-asleep-start:start": { status: 202, body: {} },
     });
     await page.goto("/share/shot-asleep-start");
     await expect(page.getByRole("heading", { name: "mc-survival" })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByRole("button", { name: /start server/i })).toBeVisible();
+    const startButton = page.getByRole("button", { name: /start server/i });
+    await expect(startButton).toBeVisible();
+    await expect(startButton).toBeEnabled();
+    await startButton.click();
+    await expect(page.getByText(/starting up/i)).toBeVisible();
+    await expect(page.getByText("Asleep", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(startButton).toBeVisible();
+    await expect(startButton).toBeEnabled();
+    await expect(page.getByText(/check back later/i)).toHaveCount(0);
+    // The old qFLfB view-only scenario inferred permission from phase. A
+    // still-asleep poll must retain retry, matching the existing q31B6w
+    // reference. Capture once after recovery to avoid duplicate output IDs.
     await page.waitForTimeout(200);
     await capture(page, "q31B6w");
   });
 
-  test("qFLfB: Share page — Asleep, view-only", async ({ page }) => {
+  test("FBiMN: Share page — Asleep, Start cooldown", async ({ page }) => {
     await mockShareResolve(page, {
-      "shot-asleep-view": [
-        { status: 200, body: { serverName: "mc-survival", status: "Suspended" } },
-        { status: 200, body: { serverName: "mc-survival", status: "Suspended" } },
-      ],
-      "shot-asleep-view:start": { status: 202, body: {} },
+      "shot-start-cooldown": {
+        status: 200,
+        body: { serverName: "mc-survival", status: "Suspended" },
+      },
+      "shot-start-cooldown:start": { status: 429, headers: { "Retry-After": "120" } },
     });
-    await page.goto("/share/shot-asleep-view");
-    const startButton = page.getByRole("button", { name: /start server/i });
-    await expect(startButton).toBeVisible({ timeout: 10_000 });
-    await startButton.click();
-    await expect(page.getByText(/check back later/i)).toBeVisible({ timeout: 15_000 });
+    await page.goto("/share/shot-start-cooldown");
+    await expect(page.getByRole("heading", { name: "mc-survival" })).toBeVisible({
+      timeout: 10_000,
+    });
+    await page.getByRole("button", { name: /start server/i }).click();
+    await expect(page.getByText("Asleep", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Try again shortly", exact: true })).toBeDisabled();
     await page.waitForTimeout(200);
-    await capture(page, "qFLfB");
+    await capture(page, "FBiMN");
   });
 
   test("EcoGD: Share page — Starting", async ({ page }) => {

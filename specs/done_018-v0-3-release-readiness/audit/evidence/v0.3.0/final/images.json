@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "Deployment",
+    "name": "gameplane-api",
+    "namespace": "gameplane-system",
+    "generation": 15,
+    "uid": "58ee16c1-8b31-4707-8a77-cbfc3766c3f3",
+    "images": [
+      "ghcr.io/valgulnecron/gameplane/api:0.3.0"
+    ]
+  },
+  {
+    "kind": "Deployment",
+    "name": "gameplane-operator",
+    "namespace": "gameplane-system",
+    "generation": 11,
+    "uid": "4b4945eb-ddd6-4d49-873e-0c34617b6219",
+    "images": [
+      "ghcr.io/valgulnecron/gameplane/operator:0.3.0"
+    ]
+  },
+  {
+    "kind": "Deployment",
+    "name": "gameplane-test-restic",
+    "namespace": "gameplane-system",
+    "generation": 1,
+    "uid": "4713c36e-2317-4b17-8cdf-e6dff722b419",
+    "images": [
+      "restic/rest-server:0.14.0"
+    ]
+  },
+  {
+    "kind": "Deployment",
+    "name": "gameplane-web",
+    "namespace": "gameplane-system",
+    "generation": 13,
+    "uid": "c632b604-e696-487f-a5fd-b11fd7a4f34b",
+    "images": [
+      "ghcr.io/valgulnecron/gameplane/web:0.3.0"
+    ]
+  }
+]

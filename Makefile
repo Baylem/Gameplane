@@ -461,3 +461,7 @@ clean: ## Remove build artifacts
 	rm -rf bin dist
 	@for m in $(GO_MODULES); do rm -rf $$m/bin; done
 	rm -rf web/dist web/.vite
+
+.PHONY: test-ci-scope
+test-ci-scope: ## Verify dependency-aware CI and image selection (CI only)
+	python3 -m unittest discover -s hack -p 'test_ci_scope.py' -v

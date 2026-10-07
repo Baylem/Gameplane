@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+
+	"github.com/ValgulNecron/gameplane/api/internal/gatewayprotocol"
+	"github.com/ValgulNecron/gameplane/api/internal/scope"
 )
 
 // agentTarget identifies a server within the cluster served by a transport.
@@ -17,6 +20,7 @@ import (
 type agentTarget struct {
 	name      string
 	namespace string
+	uid       string
 }
 
 func (t agentTarget) validate() error {
@@ -89,6 +93,15 @@ func newDirectAgentTransport(tlsCfg *tls.Config, timeout time.Duration) *directA
 func (t *directAgentTransport) endpoint(target agentTarget, scheme, path, rawQuery string) (string, error) {
 	if err := target.validate(); err != nil {
 		return "", err
+	}
+	if target.uid != "" {
+		// Reuse the agent's existing UID guard, including when service DNS
+		// changes to a replacement pod after the API's authorization read.
+		if _, err := gatewayprotocol.Path(gatewayprotocol.Target{Cluster: scope.DefaultCluster,
+			Namespace: target.namespace, Name: target.name, UID: target.uid}, path); err != nil {
+			return "", err
+		}
+		path = "/v1/targets/" + target.uid + path
 	}
 	// Paths originate from registered operations, not from user input. Keeping
 	// query and path separate prevents a query from replacing the authority.

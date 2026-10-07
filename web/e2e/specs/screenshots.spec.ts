@@ -125,18 +125,18 @@ test.describe("@screenshots dashboard gallery", () => {
   test("mods-registry-browse", async ({ page }) => {
     await loginAsAdmin(page);
 
-    // MODS REGISTRY BROWSER (/servers/test-server-02 — Valheim, Thunderstore)
-    // test-server-02's template (valheim-default) declares capabilities.mods
-    // with a Thunderstore registry, which is what makes the Mods tab visible
+    // MODS REGISTRY BROWSER (/servers/test-server-02 — Minecraft (Fabric), Modrinth)
+    // test-server-02's template (minecraft-modded) declares capabilities.mods
+    // with a Modrinth registry, which is what makes the Mods tab visible
     // (ServerDetail hides it otherwise). "Install mod" opens the install page,
     // whose default mode is "Browse registry" when the template declares one.
     await page.goto("/servers/test-server-02");
     await clickTab(page, "Mods");
-    // Installed-mods header ("3 installed") proves the tab body loaded.
+    // Installed-mods header ("0 installed") proves the tab body loaded.
     await expect(page.getByText(/\d+ installed/)).toBeVisible();
     await clickTab(page, "Install mod");
-    // First registry card from the mocked Thunderstore search.
-    await expect(page.getByText("BepInExPack_Valheim").first()).toBeVisible({ timeout: 15_000 });
+    // First registry card from the mocked Modrinth search.
+    await expect(page.getByText("Fabulously Optimized").first()).toBeVisible({ timeout: 15_000 });
     await page.waitForTimeout(250);
     await shoot(page, "mods-registry-browse");
   });
@@ -148,8 +148,8 @@ test.describe("@screenshots dashboard gallery", () => {
     await page.goto("/servers/mc-survival");
     // Click Console tab to navigate to the correct tab
     await clickTab(page, "Console");
-    // Wait for actual console output from the WebSocket mock stream
-    await expect(page.getByText("joined the game").first()).toBeVisible({
+    // Wait for the connect line the terminal writes when the mocked WebSocket opens
+    await expect(page.getByText("— connected —").first()).toBeVisible({
       timeout: 15_000,
     });
     await shoot(page, "server-console");
@@ -221,8 +221,8 @@ test.describe("@screenshots dashboard gallery", () => {
     await page.goto("/servers/mc-survival");
     // Click Logs tab to navigate to the correct tab
     await clickTab(page, "Logs");
-    // Wait for actual log output from the WebSocket mock stream
-    await expect(page.getByText("joined the game").first()).toBeVisible({
+    // Wait for a line from the mocked log stream
+    await expect(page.getByText(/Done \(14\.618s\)/).first()).toBeVisible({
       timeout: 15_000,
     });
     await shoot(page, "server-detail-logs", 65);

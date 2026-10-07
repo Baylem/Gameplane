@@ -63,6 +63,9 @@ def capture_control_policy(objects, api_enabled=True, namespace="gameplane-syste
 
 def main():
     defaults = render()
+    ingress = one(defaults, "Ingress", "gameplane")
+    assert ingress["metadata"]["annotations"]["nginx.ingress.kubernetes.io/proxy-body-size"] == "512m"
+    assert ingress["spec"]["rules"][0]["http"]["paths"][0]["backend"]["service"]["name"] == "gameplane-web"
     assert not any(obj["metadata"]["name"] == "gameplane-gateway" for obj in defaults)
     one(defaults, "Deployment", "gameplane-api")
     one(defaults, "PersistentVolumeClaim", "gameplane-api-data")

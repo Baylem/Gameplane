@@ -1403,6 +1403,12 @@ capabilities:
   agent as multipart. Same filename/extension/size checks; works even
   without an `install` block, since an upload carries no SSRF risk —
   handy for locally built mods (e.g. `.pak` files on Palworld).
+  The default per-file limit is 256 MiB; a module's `maxSizeMB` overrides
+  it. The dashboard nginx, default ingress and API allow a complete
+  multipart upload request of up to 512 MiB, including framing. A file
+  configured at 512 MiB cannot use all of that limit in a local upload;
+  larger module limits remain usable for URL installs. Custom ingress
+  limits can further restrict uploads.
 - **Extract mode** (`extract: true`) unpacks downloaded/uploaded `.zip`
   archives into a per-mod folder (BepInEx-style layouts); listing and
   removal then operate on folders. Zip-slip and total-size are guarded.

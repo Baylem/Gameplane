@@ -42,6 +42,9 @@ on:
       - "**/Dockerfile"
       - "**/Dockerfile.*"
       - ".github/workflows/publish-edge.yaml"
+      - "hack/ci_scope.py"
+      - ".dockerignore"
+      - "cosign.pub"
   workflow_dispatch: {}
 
 permissions:
@@ -53,7 +56,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: select edge images
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      matrix: ${{ steps.scope.outputs.matrix }}
+      images: ${{ steps.scope.outputs.images }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: include changes since the last successful publish
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.sha }}
+        run: python3 hack/ci_scope.py images --head "$HEAD_SHA"
+
   images:
+    needs: [changes]
+    if: needs.changes.outputs.images == 'true'
     name: build & push edge image
     runs-on: ubuntu-latest
     # 35 min: observed max 31 minutes across 142 job samples on 2026-08-30,
@@ -67,23 +93,8 @@ jobs:
     environment: release-signing
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - component: operator
-          - component: api
-          - component: web
-          - component: agent
-          - component: audit-syslog-bridge
-          - component: telemetry-receiver
-          - component: sentinel
-          - component: capture-sidecar
-          - component: mcp-server
-          - component: tunnel-frp
-            dockerfile: tunnel/Dockerfile.frp
-          - component: tunnel-tailscale
-            dockerfile: tunnel/Dockerfile.tailscale
-          - component: tunnel-playit
-            dockerfile: tunnel/Dockerfile.playit
+      # The catalog and COPY-input selector share one source of truth.
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Signing is mandatory for the official edge channel: fail before anything

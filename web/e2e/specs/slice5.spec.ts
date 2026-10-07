@@ -53,6 +53,7 @@ async function mockShareResolve(
     const phases: Record<string, number> = {};
     // Track whether a start was just called, so next resolve advances the phase
     const pendingAdvance: Record<string, boolean> = {};
+    const startCalls: Record<string, number> = {};
     const originalFetch = window.fetch.bind(window);
     window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
@@ -65,7 +66,11 @@ async function mockShareResolve(
           const startKey = `${token}:start`;
           const startEntry = table[startKey];
           if (startEntry) {
-            const step = Array.isArray(startEntry) ? startEntry[0] : startEntry;
+            const count = (startCalls[token] ?? 0) + 1;
+            startCalls[token] = count;
+            document.documentElement.dataset.shareStartCount = String(count);
+            document.documentElement.dataset.shareStartMethod = init?.method ?? "GET";
+            const step = Array.isArray(startEntry) ? startEntry[Math.min(count - 1, startEntry.length - 1)] : startEntry;
             pendingAdvance[token] = true;
             return Promise.resolve(
               new Response(step.body !== undefined ? JSON.stringify(step.body) : null, {
@@ -212,7 +217,7 @@ test.describe("Slice 5: Share links — public page (mock mode)", () => {
     await expect(page.getByText("Starting...").first()).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/starting up/i)).toBeVisible();
 
-    // Polling runs every 2s in SharePage; allow a few intervals to land.
+    // Polling waits five seconds after each completed request.
     await expect(page.getByText("Online")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("play.gameplane.example:25565")).toBeVisible();
   });
@@ -232,28 +237,43 @@ test.describe("Slice 5: Share links — public page (mock mode)", () => {
     await expectNoPrivacyLeak(page);
   });
 
-  test("Asleep view-only: reached when a Start attempt polls back to still-asleep", async ({
+  test("Asleep after Start: offers retry and sends a second Start request without reloading", async ({
     page,
   }) => {
-    // SharePage.tsx always shows the Start button on the initial Asleep
-    // resolve; the view-only copy only appears once a Start attempt's
-    // polling still finds the server asleep (see the component's own
-    // comment on this — there is no direct "no permission" signal on the
-    // resolve response itself).
+    // An accepted wake can still be asleep before reconciliation runs.
+    // That phase cannot establish whether the link has Start permission.
     await mockShareResolve(page, {
-      "tok-no-perm": [
+      "tok-retry": [
         { status: 200, body: { serverName: "mc-survival", status: "Suspended" } },
         { status: 200, body: { serverName: "mc-survival", status: "Suspended" } },
+        { status: 200, body: { serverName: "mc-survival", status: "Running" } },
       ],
-      "tok-no-perm:start": { status: 202, body: {} }, // see the tok-wake test's comment on why body: {}
+      "tok-retry:start": { status: 202, body: {} }, // see the tok-wake test's comment on why body: {}
     });
-    await page.goto("/share/tok-no-perm");
+    await page.goto("/share/tok-retry");
     const startButton = page.getByRole("button", { name: /start server/i });
     await expect(startButton).toBeVisible({ timeout: 10_000 });
+    await expectNoPrivacyLeak(page);
     await startButton.click();
+    await expect(page.locator("html")).toHaveAttribute("data-share-start-count", "1");
+    await expect(page.locator("html")).toHaveAttribute("data-share-start-method", "POST");
+    await expect(page.getByText(/starting up/i)).toBeVisible();
+    await expectNoPrivacyLeak(page);
 
-    await expect(page.getByText(/check back later/i)).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: /start server/i })).toHaveCount(0);
+    await expect(page.getByText("Asleep", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(startButton).toBeVisible();
+    await expect(startButton).toBeEnabled();
+    await expect(page.getByText(/check back later/i)).toHaveCount(0);
+    await expectNoPrivacyLeak(page);
+    await startButton.click();
+    await expect(page.locator("html")).toHaveAttribute("data-share-start-count", "2");
+    await expect(page.locator("html")).toHaveAttribute("data-share-start-method", "POST");
+    await expect(page.getByText(/starting up/i)).toBeVisible();
+    await expectNoPrivacyLeak(page);
+    await expect(page.getByText("Online", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "mc-survival" })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-share-start-count", "2");
+    await expect(page.getByRole("heading", { name: /link not available/i })).toHaveCount(0);
     await expectNoPrivacyLeak(page);
   });
 
@@ -269,18 +289,53 @@ test.describe("Slice 5: Share links — public page (mock mode)", () => {
     await expectNoPrivacyLeak(page);
   });
 
-  test("Invalid/expired: a rate-limited (429) resolve renders the identical neutral copy", async ({
-    page,
-  }) => {
-    // FR-005: invalid, expired, and rate-limited must be indistinguishable.
-    await mockShareResolve(page, { "tok-limited": { status: 429 } });
-    await page.goto("/share/tok-limited");
-    await expect(page.getByRole("heading", { name: /link not available/i })).toBeVisible({
-      timeout: 10_000,
+  test("Initial rate limit: stays loading until Retry-After, then recovers", async ({ page }) => {
+    await page.clock.install();
+    // Keep the response rate-limited until the test explicitly restores it.
+    // This also handles StrictMode's aborted initial resolve without consuming
+    // a scripted recovery response before the active request can retry.
+    await page.addInitScript(() => {
+      let recovered = false;
+      let resolveCount = 0;
+      window.addEventListener("share-resolve-recovered", () => {
+        recovered = true;
+      });
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (/\/shares\/tok-limited(?:\?|$)/.test(url)) {
+          document.documentElement.dataset.shareResolveCount = String(++resolveCount);
+          return Promise.resolve(new Response(
+            recovered ? JSON.stringify({ serverName: "mc-survival", status: "Running" }) : null,
+            {
+              status: recovered ? 200 : 429,
+              headers: { "Content-Type": "application/json", "Retry-After": "60" },
+            },
+          ));
+        }
+        return originalFetch(input, init);
+      };
     });
-    await expect(
-      page.getByText(/this link may be invalid, expired, or revoked/i),
-    ).toBeVisible();
+    await page.goto("/share/tok-limited");
+    await expect(page.getByRole("status", { name: "Loading" })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-share-resolve-count", /[1-9]\d*/);
+    // Let bootstrap finish before pausing, then drive retry timers explicitly.
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+    const initialResolveCount = Number(await page.locator("html").getAttribute("data-share-resolve-count"));
+    await page.clock.runFor(10000);
+    await expect(page.locator("html")).toHaveAttribute("data-share-resolve-count", String(initialResolveCount));
+    await expect(page.getByRole("status", { name: "Loading" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /link not available/i })).not.toBeVisible();
+    await expectNoPrivacyLeak(page);
+
+    await page.evaluate(() => window.dispatchEvent(new Event("share-resolve-recovered")));
+    await page.clock.runFor(60000);
+    await expect(page.getByRole("heading", { name: "mc-survival" })).toBeVisible();
+    await expect(page.getByText("Online", { exact: true })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-share-resolve-count", String(initialResolveCount + 1),
+    );
+    await expect(page.getByRole("heading", { name: /link not available/i })).not.toBeVisible();
     await expectNoPrivacyLeak(page);
   });
 

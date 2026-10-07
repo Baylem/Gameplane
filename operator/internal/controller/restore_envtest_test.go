@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -152,8 +153,8 @@ func TestRestore_SuspendsTargetGameServer(t *testing.T) {
 }
 
 // TestRestore_AdvancesToRunningOnceSuspended — Restore waits in
-// Suspending until GameServer.Status.Phase reports Suspended, then
-// advances to Running and creates the restore Job.
+// Suspending until GameServer.Status.Phase reports Suspended and the
+// owned StatefulSet is observed at zero, then creates the restore Job.
 func TestRestore_AdvancesToRunningOnceSuspended(t *testing.T) {
 	ns := newNamespace(t)
 	startMgr(t, ns, withRestoreReconciler())
@@ -187,6 +188,8 @@ func TestRestore_AdvancesToRunningOnceSuspended(t *testing.T) {
 		return true, ""
 	})
 
+	// Model the workload controller having observed scale-to-zero.
+	createStoppedRestoreStatefulSet(t, ns, "smp")
 	// Bump GameServer status into Suspended, expect the Job to materialize.
 	markGameServerPhase(t, ns, "smp", gameplanev1alpha1.GameServerPhaseSuspended)
 
@@ -338,6 +341,7 @@ func bootstrapRestoreToRunning(t *testing.T, ns string) {
 		return getGameServer(t, ns, "smp").Spec.Suspend, "waiting for spec.suspend"
 	})
 	markGameServerPhase(t, ns, "smp", gameplanev1alpha1.GameServerPhaseSuspended)
+	createStoppedRestoreStatefulSet(t, ns, "smp")
 
 	eventually(t, func() (bool, string) {
 		_, ok := getJob(t, ns, "restore-rs-1")
@@ -347,6 +351,27 @@ func bootstrapRestoreToRunning(t *testing.T, ns string) {
 		r := getRestore(t, ns, "rs-1")
 		return r.Status.Phase == gameplanev1alpha1.RestorePhaseRunning, describeRestoreStatus(r)
 	})
+}
+
+// These tests run the Restore controller alone; model the StatefulSet
+// controller's observed scale-down explicitly instead of assuming its absence
+// makes it safe to start a destructive restore.
+func createStoppedRestoreStatefulSet(t *testing.T, ns, name string) {
+	t.Helper()
+	gs := getGameServer(t, ns, name)
+	zero := int32(0)
+	labels := map[string]string{"app": name}
+	ss := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns, OwnerReferences: []metav1.OwnerReference{{APIVersion: gameplanev1alpha1.GroupVersion.String(), Kind: "GameServer", Name: name, UID: gs.UID, Controller: ownerBoolPtr(true)}}},
+		Spec:       appsv1.StatefulSetSpec{Replicas: &zero, ServiceName: name, Selector: &metav1.LabelSelector{MatchLabels: labels}, Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: labels}, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "game", Image: "busybox"}}}}},
+	}
+	if err := k8sClient.Create(context.Background(), ss); err != nil {
+		t.Fatal(err)
+	}
+	ss.Status.ObservedGeneration = ss.Generation
+	if err := k8sClient.Status().Update(context.Background(), ss); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func sprintArgs(a []string) string {
@@ -441,6 +466,7 @@ func TestRestore_UsesTemplateSecurityContext(t *testing.T) {
 	})
 	markGameServerPhase(t, ns, "smp", gameplanev1alpha1.GameServerPhaseSuspended)
 
+	createStoppedRestoreStatefulSet(t, ns, "smp")
 	var ps corev1.PodSpec
 	eventually(t, func() (bool, string) {
 		j, ok := getJob(t, ns, "restore-rs-1")
