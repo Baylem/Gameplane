@@ -16,6 +16,7 @@ Shared telemetry report contract used by `api` (reporter and preview) and `telem
 4. Encode reports deterministically.
 5. Hold the embedded official module catalog.
 6. Derive signing keys, sign report bodies and verify signatures.
+7. Define the proof-of-work header, and check and solve report-ingestion challenges, so the receiver and the reporter share one definition.
 
 ## Non-goals / boundaries
 
@@ -23,6 +24,7 @@ Shared telemetry report contract used by `api` (reporter and preview) and `telem
 - Does **not** enforce the 16 KiB body limit, the `sentAt` freshness window, install-ID claims, replay protection or rate limits. Those are the receiver's checks.
 - Does **not** store the signing secret or the signing key. The API stores the secret and recomputes the key on every send.
 - Does **not** decide what an install reports. The API collects the values and builds a `Report`.
+- Does **not** issue challenges, hold the receiver's MAC key, remember used challenges or choose a difficulty. Those are the receiver's; this package only checks and solves a challenge it is given.
 
 ## Directory & package layout
 
@@ -35,6 +37,7 @@ telemetryschema/
 ├── catalog.go        # IsOfficial, Catalog (embeds catalog.txt)
 ├── catalog.txt       # official module names, one per line (generated from the chart)
 ├── sign.go           # NewSecret, DeriveKey, PublicKeyString, Sign, Verify, KeyFingerprint
+├── pow.go            # PoWHeader, MaxPoWBits, PoWOK, SolvePoW, FormatPoW, ParsePoW
 ├── *_test.go         # unit tests
 ├── go.mod            # module, stdlib-only, no requires
 └── .testcoverage.yml # 90% coverage gate
@@ -105,6 +108,19 @@ JSON tags are the camelCase names in the contract (`installId`, `wakeOnConnect`,
 - `Verify(header, publicKey, body)` returns nil, or an error wrapping `ErrBadSignature` for a missing or malformed header, a malformed key, or a signature that does not match.
 - `KeyFingerprint(publicKey)` is the hex SHA-256 of the raw public key (the receiver's claim, `key_fp`), or `""` for a malformed key.
 
+### Proof-of-work
+
+The wire contract is research R21 and [`contracts/receiver-http.md`](../specs/022-default-telemetry-dashboard/contracts/receiver-http.md). When a receiver requires proof-of-work, every report carries `Gameplane-Telemetry-PoW: <challenge>:<nonce>`.
+
+| Name | Behavior |
+|---|---|
+| `PoWHeader` | `Gameplane-Telemetry-PoW`. |
+| `MaxPoWBits` | 26 (OD-5): the hardest challenge an install solves. |
+| `PoWOK(challenge, nonce, bits)` | `SHA-256(challenge + ":" + decimal nonce)` has at least `bits` leading zero bits. 0 or fewer bits is always satisfied. |
+| `SolvePoW(ctx, challenge, bits)` | Smallest nonce for which `PoWOK` holds. One goroutine; checks `ctx` every 4,096 attempts and returns an error wrapping its error. Errors, wrapping `ErrPoWDifficulty`, when `bits` is below 0 or above `MaxPoWBits`. |
+| `FormatPoW(challenge, nonce)` | The header value `<challenge>:<nonce>`. |
+| `ParsePoW(header)` | Splits at the last `:`. The nonce must be plain decimal (digits only, no leading zeros, within `uint64`); the challenge must be 1 to `MaxChallengeLen` (256) bytes. Every failure wraps `ErrBadPoW`. |
+
 ### Compatibility
 
 | Install to receiver | Result |
@@ -127,4 +143,4 @@ A module added to the chart catalog after a receiver was built counts as `custom
 
 ## Testing & coverage
 
-Unit tests only (`decode_test.go`, `enums_test.go`, `catalog_test.go`, `sign_test.go`). They cover every reject case of the receiver's original decoder, every `ext` rule, the band boundaries, catalog membership, a fixed key-derivation vector, the sign and verify round trip, single-byte tampering, malformed headers and keys, and different IDs deriving different keys. Coverage gate: 90% total, set in `.testcoverage.yml` and enforced by `make cover-go-check`.
+Unit tests only (`decode_test.go`, `enums_test.go`, `catalog_test.go`, `sign_test.go`, `pow_test.go`). They cover every reject case of the receiver's original decoder, every `ext` rule, the band boundaries, catalog membership, a fixed key-derivation vector, the sign and verify round trip, single-byte tampering, malformed headers and keys, and different IDs deriving different keys. `pow_test.go` pins fixed hash vectors (the hash input, the bit count and the smallest-nonce search order), the solver's difficulty and context errors, and every malformed-header case of `ParsePoW`. Coverage gate: 90% total, set in `.testcoverage.yml` and enforced by `make cover-go-check`.
