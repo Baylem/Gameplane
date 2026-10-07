@@ -2499,3 +2499,22 @@ Server Settings gets a "Game configuration" section (edit `spec.config` from the
 - **JSON:** made with `Print(JSON.stringify(Get(id, {depth: 30, includePathGeometry: true})))` and re-serialized with `jq .`. Zero `"..."` elisions, and `jq empty` passes.
 - **Screenshots:** `Export(ids, "png", …, {scale: 2})`.
 - **Re-exported for the sub-nav change:** PNGs of `swxkJ`, `E0ypH`, `J5pjJ3`, `ugDSa`, `i1bLR`, `KaRFX`, `Y5cmvI`, `VfB0Y`, `i8wib`, `xCJlu`, `RodrS`, `VctzT`, `iLm38`, `QpEvu`, `XR0f9`, `nGJE1`, `dhPtX`, `tSOeI`, `y3YcQ`, `EKJyM`, `IMSD5`, `gWqMD` and `EV8mp`; JSON of `Y5cmvI` and `J5pjJ3` (they were out of date with the canvas).
+
+## Spec 022 telemetry notice and settings (2026-10-07)
+
+T041 and T052 of `specs/022-default-telemetry-dashboard/`. New frames sit in an empty region below the Admin Settings row (x 11480–21120, y 25404–28584); no existing frame changed. Destination hosts are samples while OD-1 is unruled: their text nodes are named `host (SAMPLE, OD-1 unruled)` (default) and `host (SAMPLE)` (bundled).
+
+| Object ID | Name | Change |
+| --- | --- | --- |
+| `U8Zugm` | Gameplane/Telemetry Notice Banner | **New** reusable component, modelled on the Safe Mode Banner (`DAz77`) in the accent tone with a lucide `info` icon. Headline "Anonymous usage metrics are on for this install.", the destination host line, a basic field column and an extended field column that says a random install ID is included, the actions "Keep sharing", "Turn off extended" and "Turn off all", and the links "Open Telemetry settings" and "Data-handling statement" (`TELEMETRY_STATEMENT_URL`). No dismiss button. |
+| `jmcmS` | Screen/Dashboard Home — Telemetry notice (default) | **New.** Copy of `j24cXg` (1380 tall) with the banner at the top of the body, default destination (sample host `telemetry.example.org`). |
+| `woRBK` | Screen/Dashboard Home — Telemetry notice (bundled) | **New.** As `jmcmS`, bundled in-cluster receiver (sample host `gameplane-telemetry-receiver.gameplane.svc`). |
+| `TEBym` | Screen/Admin Settings — Telemetry (default) | **New.** Copy of `uoxQW`. Subtitle names the install ID. Destination line, basic and extended switches on, install-ID row with "Reset ID", read-only next-report preview JSON, status "ok". |
+| `DtjyL` | Screen/Admin Settings — Telemetry (custom) | **New.** Custom destination; status "failed" plus the line "Install ID replaced on Oct 4, 2026: the destination reported it was in use by another key." |
+| `uwPVC` | Screen/Admin Settings — Telemetry (bundled) | **New.** Bundled destination; basic on, extended off, install-ID row dimmed ("No install ID while extended metrics are off."), Reset ID dimmed; status "never". |
+| `Rvv6z` | Screen/Admin Settings — Telemetry (disabled) | **New.** Both switches off and dimmed, warning message "Telemetry is disabled by the operator.", Save dimmed. |
+| `RT8lU` | Screen/Admin Settings — Telemetry (none) | **New.** No destination; basic switch off and enabled, extended dimmed; no preview or status. |
+| `oqm73` | Screen/Admin Settings — Telemetry (Reset ID confirm) | **New.** Copy of `TEBym` with a 40% scrim and an AlertDialog/Danger instance: "Reset install ID?", Cancel / Reset ID. |
+
+- **JSON:** made with `Print(JSON.stringify(Get(id, {depth: 30, includePathGeometry: true})))`, length-checked against the canvas and re-serialized with `jq .`. Zero `"..."` elisions, and `jq empty` passes.
+- **Screenshots:** `Export(ids, "png", …, {scale: 2})`.
