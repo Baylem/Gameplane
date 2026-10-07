@@ -27,6 +27,11 @@
 - Q10: Where is the provider dashboard designed? → A: **In its own Pencil file**, `telemetry-receiver/telemetry-dashboard.pen`, which starts from a copy of the HeroUI design. It follows the pink theme the main app and website share (`web/src/styles/globals.css` tokens, Geist and JetBrains Mono), dark first (user direction, 2026-10-07).
 - Q6: What happens when a report's signature is wrong, or its ID is already claimed by another key? → A: **The provider refuses it and counts nothing.** When the refusal says the ID belongs to another key, the install automatically replaces its ID (and with it the key) and resends.
 
+### Session 2026-10-07
+
+- Q11: Per-source limits can be outrun by anyone holding many IPv6 /64s. What protects the dashboard credential? → A: **The provider refuses to start with a dashboard credential shorter than 32 characters**, so guessing it stays infeasible however many sources an attacker controls. Per-source limits remain a cost, not a bound (security review of 0819cec1).
+- Q12: Should sending a report cost the sender work, as Anubis does for browsers? → A: **Yes, for report ingestion only (not the dashboard login), as an Anubis-style proof-of-work.** It is off by default, including in the bundled receiver, and the project's provider turns it on through the runbook. When it is on, the difficulty follows the request rate: none while traffic is normal or absent, rising fast as requests flood in, and falling slowly once they stop. Default values are ruled in OD-5.
+
 ## Context
 
 Today an install sends anonymous usage reports (`{version, servers, templates}`, about once a day) only if **two** gates are both open:
@@ -220,7 +225,7 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 - **No route to the internet** (air-gapped cluster or restrictive egress). Delivery fails quietly. No user-facing error appears beyond the US3 status line, retries are bounded so a failure never becomes a request storm, and the rest of the product is unaffected.
 - **Frequent restarts.** An install whose control plane restarts more often than once a day must still report about daily, and must never send more than one report per day (FR-007). Repeated restarts must not inflate counts.
 - **Default provider unreachable or rejecting reports.** The install backs off and retries at the next cycle. Reports are never queued and replayed in bulk.
-- **Spoofed or flooded reports.** The default provider accepts reports from anyone on the internet without a shared secret. Signing (FR-035–FR-038) stops anyone from reporting under an ID that another key has claimed. It can't stop someone from inventing new IDs and keys, so fabricated installs and basic reports remain possible. The provider limits how many reports a single source can submit. Dashboard and public-summary figures are presented as approximate and self-reported.
+- **Spoofed or flooded reports.** The default provider accepts reports from anyone on the internet without a shared secret. Signing (FR-035–FR-038) stops anyone from reporting under an ID that another key has claimed. It can't stop someone from inventing new IDs and keys, so fabricated installs and basic reports remain possible. The provider limits how many reports a single source can submit. When the provider turns on proof-of-work (FR-039), every report also costs its sender work that grows with the request rate, so a flood becomes expensive however many addresses it comes from; it deters cheap bulk fabrication, not a well-resourced attacker. Dashboard and public-summary figures are presented as approximate and self-reported.
 - **ID seen before its first report.** If someone copies an ID from the Admin Settings preview and claims it before the install's first report, the install's report is refused as already claimed. The install then replaces its ID automatically (FR-037), and the forger is left holding an ID nobody uses.
 - **Install clock wrong.** A report whose send time falls outside the accepted window is refused. The install keeps its ID, backs off as for any failed delivery, and Admin Settings shows the failure. The ID is never rotated for this reason.
 - **Claim expiry.** When an ID's activity record expires after 90 days without reports (OD-4), its claim goes with it. An install that returns after that is treated as new, and its own key claims the ID again.
@@ -366,6 +371,12 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 - **FR-037**: When the provider refuses a report because its ID is claimed by another key, the install MUST replace its ID, and so its key, and resend once in the same attempt. Admin Settings MUST show when the ID was last replaced for this reason. A refusal for any other reason MUST NOT trigger a replacement.
 - **FR-038**: A claim MUST last exactly as long as the ID's activity record, and expire with it (FR-015, OD-4). Basic-only reports carry no ID and need no signature.
 
+**Report cost and credential strength**
+
+- **FR-039**: A provider MUST be able to require proof-of-work for report ingestion. When it does, every report MUST present a single-use challenge issued by the provider within the last 15 minutes, with a solution of the difficulty that challenge states. The provider MUST refuse, without changing any aggregate or activity record, a report whose challenge is missing, forged, expired, already used or unsolved. The difficulty MUST follow recent challenge demand: none at or below a configured normal rate, rising from the very next challenge when demand exceeds it, and falling back slowly once demand subsides. Proof-of-work MUST be off unless the provider operator enables it; the bundled receiver keeps it off by default, and the project's default provider enables it (OD-2 runbook). Defaults are OD-5.
+- **FR-040**: When its provider offers challenges, the install MUST obtain and solve one before each report. When the provider doesn't offer them, the install MUST send without proof-of-work, so older and self-hosted providers keep working. The install MUST refuse to solve a challenge harder than a fixed cap (OD-5) and record the attempt as failed. When the provider refuses a report for its proof-of-work, the install MUST obtain a new challenge and resend once in the same attempt. Solving MUST NOT block the API's request handling.
+- **FR-041**: The provider MUST refuse to start when a dashboard credential is set but shorter than 32 characters.
+
 ### Key Entities
 
 - **Basic report**: one anonymous sample from one install, carrying version, server count, and template count. Unchanged by this feature.
@@ -409,6 +420,7 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 - **SC-013**: An install on this version that reports to a provider older than this feature still has 100% of its basic reports accepted.
 - **SC-014**: In a test of every forgery case in US7 scenarios 1–3 against a claimed ID, 100% of forged reports are refused and 0 figures change.
 - **SC-015**: An install whose ID was claimed by another key has a report accepted under a new ID within the same delivery attempt in 100% of tested cases.
+- **SC-016**: With proof-of-work on, a challenge issued while demand is at or below the normal rate requires no work, and a challenge issued while demand is 1,000 times the normal rate requires at least 2^20 hash attempts on average (FR-039).
 
 ## Assumptions
 

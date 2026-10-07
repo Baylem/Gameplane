@@ -1,6 +1,6 @@
 # Contract: telemetry-receiver HTTP surface
 
-**Requirements**: FR-014, FR-016, FR-020–FR-033, FR-035–FR-038. **Research**: R3, R5–R9, R20.
+**Requirements**: FR-014, FR-016, FR-020–FR-033, FR-035–FR-039, FR-041. **Research**: R3, R5–R9, R20, R21.
 
 The receiver runs two listeners. The dashboard listener is never started unless `DASHBOARD_TOKEN` is set.
 
@@ -8,8 +8,9 @@ The receiver runs two listeners. The dashboard listener is never started unless 
 
 | Route | Method | Auth | Success | Failures |
 |---|---|---|---|---|
-| `/ingest` | POST | `AUTH_TOKEN` when set (unchanged). Reports with `ext` also need a valid `Gameplane-Telemetry-Signature`. | `204`, including for same-day duplicates (counted only in `duplicates`) | `400` structural error ([report-schema.md](report-schema.md)); `401` bad or missing token; `403` `bad_signature`, `stale` or `replay`; `409` `id_claimed`; `413` body over 16 KiB; `429` per-source daily limit reached |
+| `/ingest` | POST | `AUTH_TOKEN` when set (unchanged). When `INGEST_POW=true`, a valid `Gameplane-Telemetry-PoW` header, checked before the body is read (R21). Reports with `ext` also need a valid `Gameplane-Telemetry-Signature`. | `204`, including for same-day duplicates (counted only in `duplicates`) | `400` structural error ([report-schema.md](report-schema.md)); `401` bad or missing token; `403` `bad_signature`, `stale` or `replay`; `409` `id_claimed`; `413` body over 16 KiB; `428` `pow_required` or `pow_invalid`; `429` per-source daily limit reached; `503` `pow_busy` with `Retry-After: 60` |
 | `/v1/summary` | GET | none | `200` JSON (below) | `404` when `PUBLIC_SUMMARY` is not `true`; `429` per-source rate limit |
+| `/v1/challenge` | GET | none | `200` JSON (below) | `404` when `INGEST_POW` is not `true`; `429` per-source rate limit (10 per minute, burst 5) |
 | `/healthz` | GET | none | `200 ok` | — |
 
 ### `GET /v1/summary` response (FR-029, FR-030)
@@ -36,12 +37,30 @@ The receiver runs two listeners. The dashboard listener is never started unless 
 
 The public listener answers `404` for `/metrics`. Operational metrics live only on the dashboard listener, behind the token (FR-030).
 
+### `GET /v1/challenge` response (FR-039, R21)
+
+```json
+{
+  "challenge": "AQAAAABpA2yQEp3x0b1f7a9c2e4d6b8a0c1e3f5.Zk9xQ2...",
+  "bits": 7,
+  "expiresAt": "2026-10-07T12:15:00Z"
+}
+```
+
+- `challenge` is opaque to the sender: `base64url(payload) "." base64url(mac)` (R21).
+- `bits` is the difficulty, from `INGEST_POW_MIN_BITS` up to `INGEST_POW_MAX_BITS`. It is also inside the MAC'd payload, which is what `/ingest` checks.
+- `expiresAt` is 15 minutes after issue.
+- The response carries `Cache-Control: no-store`.
+- The sender solves it and sends `Gameplane-Telemetry-PoW: <challenge>:<nonce>` on `/ingest`, where `nonce` is decimal and `SHA-256(challenge ":" nonce)` starts with at least `bits` zero bits. Each challenge is accepted once.
+
 ### New `/metrics` series (operations only)
 
 - `gameplane_telemetry_duplicates_total`
 - `gameplane_telemetry_rate_limited_total{route}`
 - `gameplane_telemetry_extended_reports_total`
-- `gameplane_telemetry_refused_total{reason="bad_signature"|"stale"|"id_claimed"|"replay"}`
+- `gameplane_telemetry_refused_total{reason="bad_signature"|"stale"|"id_claimed"|"replay"|"pow_required"|"pow_invalid"}`
+- `gameplane_telemetry_pow_bits` (gauge: the difficulty a challenge issued now would carry)
+- `gameplane_telemetry_pow_challenges_total`
 
 The existing series keep their names and in-memory semantics.
 
@@ -115,7 +134,7 @@ An E2E check (R17) compares the unauthenticated response against the login page 
 |---|---|---|
 | `LISTEN_ADDR` | `:8080` | Public listener. |
 | `DASHBOARD_LISTEN_ADDR` | `:8081` | Dashboard listener. |
-| `DASHBOARD_TOKEN` | *(empty)* | Dashboard credential, from a Secret. Empty means no dashboard listener. |
+| `DASHBOARD_TOKEN` | *(empty)* | Dashboard credential, from a Secret. Empty means no dashboard listener. When set it must be at least 32 characters, or the receiver exits at startup (FR-041). |
 | `AUTH_TOKEN` | *(empty)* | Ingest token (unchanged). |
 | `DATA_DIR` | *(empty)* | SQLite directory. Empty means in-memory, and a startup warning is logged. |
 | `PUBLIC_SUMMARY` | `false` | Enables `/v1/summary`. |
@@ -124,3 +143,7 @@ An E2E check (R17) compares the unauthenticated response against the login page 
 | `RETENTION_DAYS` | `730` (OD-3) | Daily aggregate retention. Minimum 365. |
 | `ACTIVITY_EXPIRY_DAYS` | `90` (OD-4) | Activity record expiry. Minimum 31. |
 | `ID_PEPPER` | *(empty)* | HMAC pepper for install IDs, from a Secret. Empty means one is generated and kept in `meta`. |
+| `INGEST_POW` | `false` (OD-5) | Requires proof-of-work on `/ingest` and serves `/v1/challenge` (R21). |
+| `INGEST_POW_TARGET_PER_MIN` | `60` (OD-5) | Normal challenge rate; no work is required at or below it. Must be at least 1. |
+| `INGEST_POW_MIN_BITS` | `0` (OD-5) | Lowest difficulty issued. |
+| `INGEST_POW_MAX_BITS` | `22` (OD-5) | Highest difficulty issued. At least `INGEST_POW_MIN_BITS` and at most `MaxPoWBits` (26); an out-of-range value stops startup. |

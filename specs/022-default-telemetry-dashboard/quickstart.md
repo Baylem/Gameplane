@@ -131,6 +131,18 @@ This is automated in the `telemetry` bucket with a test-only signing client buil
 3. Reset the install ID, and immediately claim the new ID with the test client's own key before the install reports.
    - **Expect** the install's next attempt to get a 409, replace its ID and have the resend accepted. `GET /admin/telemetry` then shows a new `installId` and a set `status.lastIdRotationAt`.
 
+### S10: proof-of-work follows the request rate (FR-039–FR-041, SC-016)
+
+This is automated in the `telemetry` bucket, against a custom receiver deployed with `INGEST_POW=true`, `INGEST_POW_MIN_BITS=8` (so solving really happens) and `INGEST_POW_TARGET_PER_MIN=60`.
+
+1. Point the API at that receiver and wait one interval.
+   - **Expect** `gameplane_telemetry_pow_challenges_total` to rise and the report to be accepted (`lastOutcome = "ok"`).
+2. POST `/ingest` with no `Gameplane-Telemetry-PoW` header, then with a used or tampered one.
+   - **Expect** `428` with `pow_required`, then `pow_invalid`, and no figure changed.
+3. Unit tests cover the curve: at or below the normal rate a challenge carries `INGEST_POW_MIN_BITS`; at 1,000 times the rate it carries at least 20 bits; the difficulty falls one bit per 5 minutes after the flood stops.
+4. Start the receiver with a 31-character `DASHBOARD_TOKEN`.
+   - **Expect** it to exit at startup with an error naming the 32-character minimum.
+
 ## Merge gate (OD-1)
 
 The feature PR stays a **draft** until OD-1 is ruled. The CI job `telemetry-default-gate` fails while `telemetry.DefaultEndpoint` is empty or isn't `https`. To unblock:

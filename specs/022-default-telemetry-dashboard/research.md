@@ -127,7 +127,7 @@ Fallback for older receivers (FR-016, SC-013):
   - Letting sources past the cap through untracked was a bypass (security review of 4c742e7d).
   - Pooling them into one overflow budget let an attacker who filled the table deny every new legitimate source (security review of de5d0974).
 
-  With eviction, a source's budget can only be reset by an attacker who controls more distinct IPv4 addresses or IPv6 /64s than the cap. At that scale per-source limiting no longer applies, and the dashboard token is high-entropy anyway.
+  With eviction, a source's budget can only be reset by an attacker who controls more distinct IPv4 addresses or IPv6 /64s than the cap. At that scale per-source limiting no longer applies. The dashboard token is at least 32 characters (R8), which keeps guessing it infeasible at any rate, and proof-of-work (R21) is the cost that does scale with volume.
 
 **Rationale**:
 - A default of 20 tolerates CGNAT and shared egress (several homelabs behind one address) while capping how much one source can distort a day.
@@ -159,6 +159,7 @@ Fallback for older receivers (FR-016, SC-013):
 
 **Decision**: There is one operator credential, `DASHBOARD_TOKEN`, which comes from a Secret.
 - **No token.** If `DASHBOARD_TOKEN` is unset, the dashboard listener **is not started** at all, so the dashboard is unavailable rather than open.
+- **Strength (FR-041, Q11).** The receiver exits at startup when `DASHBOARD_TOKEN` is set but shorter than 32 characters, the same way it refuses retention below the minimum. The runbook generates the token from 32 random bytes. Per-source login limits (R6) can be outrun by anyone holding many IPv6 /64s, so the token's length, not the limiter, is what makes guessing infeasible (security review of 0819cec1).
 - **Browser login.** `POST /login` compares the token in constant time. On success it sets a cookie containing `expiry || HMAC-SHA256(K, expiry)`, where `K = HMAC-SHA256(DASHBOARD_TOKEN, "gameplane-telemetry-session")`. The cookie is `HttpOnly; Secure; SameSite=Strict; Path=/` with a 12 h lifetime. Because `K` is derived from the token, replacing the token invalidates every session, and the stored data is untouched.
 - **CSRF.** `POST /login` and `POST /logout` require a same-origin `Origin` (or `Referer`) header in addition to SameSite.
 - **Scripts.** The JSON views endpoint also accepts `Authorization: Bearer <token>`.
@@ -431,3 +432,42 @@ No new RBAC is needed; every source is already readable (see the baseline facts)
 - *HMAC with a key shared with the provider.* The provider would then hold the secret and could forge reports itself, and the secret would have to be distributed.
 - *Counting only the basic part on a mismatch.* An impersonator would still inflate basic counts (Q6).
 - *Mutual TLS client certificates.* This needs a CA and per-install issuance, and breaks for plain-HTTP bundled receivers.
+
+## R21. Proof-of-work on report ingestion (FR-039, FR-040, Q12, OD-5)
+
+**Decision**: An Anubis-style challenge round trip on the public listener, off by default (`INGEST_POW=false`).
+- **Challenge.** `GET /v1/challenge` returns `{"challenge": "<token>", "bits": n, "expiresAt": "<RFC 3339>"}` with `Cache-Control: no-store`, or `404` when proof-of-work is off. The token is `base64url(payload) "." base64url(mac)`, unpadded:
+  - `payload` is the version byte `1`, the issue time (Unix seconds, 8 bytes big-endian), `bits` (1 byte) and 16 random bytes.
+  - `mac` is the first 16 bytes of `HMAC-SHA256(K, payload)`. `K` is 32 random bytes generated at process start and kept only in memory.
+
+  A challenge expires 15 minutes after it is issued. A restart invalidates outstanding challenges, and senders recover through the one resend of FR-040.
+- **Solution.** The sender finds a decimal `nonce` (an unsigned 64-bit integer) such that `SHA-256(token ":" nonce)` starts with at least `bits` zero bits, and sends the header `Gameplane-Telemetry-PoW: <token>:<nonce>` with the report. `telemetryschema` owns the hash check and the solver, so both sides share one definition, and caps `bits` at `MaxPoWBits = 26` (OD-5).
+- **Verification.** It runs on `/ingest` after `AUTH_TOKEN` and before the body is read, so a refused report costs the provider one HMAC and one hash. The checks run in this order: header present and well formed, MAC valid, not expired, enough leading zero bits (as stated inside the token, so a sender can't lower it), not already used. A missing header gives **428** `{"error":"pow_required"}`; any other failure gives **428** `{"error":"pow_invalid"}`; both increment `gameplane_telemetry_refused_total{reason}`. A challenge is marked used as soon as its solution verifies, whatever happens to the report afterwards. Used challenges are remembered in memory until they expire. The set holds at most 1,000,000 entries; when it is full, new reports get **503** `{"error":"pow_busy"}` with `Retry-After: 60`.
+- **Adaptive difficulty.** Each challenge's `bits` is computed when it is issued, from `r`, the number of challenges issued in the trailing 60 seconds including this one, and the normal rate `T` (`INGEST_POW_TARGET_PER_MIN`):
+  - `target` is `0` when `r ≤ T`, and otherwise `min(MAX, ceil(2 · log2(r / T)))`.
+  - The issued difficulty is `max(MIN, target, peak − ⌊(now − peakAt) / 5 min⌋)`. `peak` and `peakAt` record the last time `target` exceeded the decayed value. So increases apply to the very next challenge, and decreases come at one bit per 5 minutes.
+  - The sender's expected work is `2^bits` hashes. A flood's total cost therefore grows roughly with the cube of its rate (`r · (r/T)²`), while normal traffic pays nothing. Ten times the normal rate gives 7 bits, a hundred times gives 14, and a thousand times gives 20 (SC-016).
+  - `gameplane_telemetry_pow_bits` (a gauge) exposes the current difficulty, and `gameplane_telemetry_pow_challenges_total` counts issued challenges.
+- **Challenge rate limit.** `/v1/challenge` has its own per-source token bucket (10 per minute, burst 5, keyed as in R6), so one source can't raise the difficulty for everyone. Many sources still can, up to `MAX`. That costs legitimate installs at most a few seconds of work per daily report, and it decays once the flood stops.
+- **Sender (the API reporter).**
+  - Before each POST, it requests the challenge URL: the endpoint URL with its last path segment replaced by `v1/challenge` (`https://host/prefix/ingest` becomes `https://host/prefix/v1/challenge`).
+  - Any response other than `200` means the provider doesn't require proof-of-work, and the report is sent without it (FR-040, SC-013).
+  - A `200` with `bits` above `MaxPoWBits` is recorded as `failed` with normal backoff.
+  - Solving runs in the reporter goroutine on one core, with a deadline 30 seconds before the challenge expires.
+  - A **428** response gets one new challenge and one resend in the same attempt; a second 428 is `failed`. The 409 rotation resend (R20) also fetches a fresh challenge, because challenges are single use.
+- **Configuration.** `INGEST_POW` (default `false`), `INGEST_POW_TARGET_PER_MIN` (`60`), `INGEST_POW_MIN_BITS` (`0`) and `INGEST_POW_MAX_BITS` (`22`, at most `MaxPoWBits`), per OD-5. The Helm values `api.telemetry.receiver.ingestPow.{enabled,targetPerMinute,minBits,maxBits}` render them through `hasKey` guards (F-214), with `enabled: false`.
+
+**Rationale**:
+- The cost lands on what an attacker scales (reports), not on addresses, which a /48 holder has in abundance (R6).
+- Legitimate senders are servers reporting once a day, so a few seconds of work during a flood goes unnoticed, and under normal load there is none.
+- Issuing challenges is stateless (MAC'd), so the challenge endpoint can't exhaust memory. Only verified solutions, each of which cost work, occupy memory.
+- The provider chooses the difficulty, so an operator under attack can respond by lowering `T` or raising `MIN`, without any install upgrading.
+- Before this feature there was no default destination, so no existing install reports to the project's provider and none needs exempting. Self-hosted providers keep proof-of-work off by default, so older installs pointed at them keep working.
+
+**What it does not solve**: SHA-256 proof-of-work is cheap on GPUs and dedicated hardware. It deters cheap bulk fabrication, not a determined, well-resourced attacker. Fabricated installs remain possible (R20), and dashboard figures stay labelled approximate.
+
+**Alternatives considered**:
+- *Proof-of-work bound to the report body, with no round trip (hashcash).* It saves a request, but replay protection still needs provider state, and raising the difficulty would need a client upgrade.
+- *A memory-hard function such as Argon2.* It resists GPUs better, but `telemetryschema` must stay stdlib-only, and a Raspberry Pi install would pay far more.
+- *Proof-of-work on the dashboard login.* It needs JavaScript, which the dashboard's CSP forbids (R7), and the 32-character credential (R8) already makes guessing infeasible.
+- *A fixed difficulty.* Either every install pays all the time, or the difficulty is too low to matter under attack.

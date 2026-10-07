@@ -38,9 +38,14 @@ api:
       activityExpiryDays: 90      # NEW (OD-4)
       ingestSourceDailyLimit: 20  # NEW (R6)
       trustedProxyCIDRs: []       # NEW (R6)
+      ingestPow:                  # NEW (FR-039, R21, OD-5)
+        enabled: false            # the project's provider turns it on (runbook)
+        targetPerMinute: 60
+        minBits: 0
+        maxBits: 22
 ```
 
-All new keys are read with `hasKey` or `dig` guards (the F-214 precedent), so `helm upgrade --reuse-values` from beta.8 needs no new values and adds no storage: an absent `persistence` block counts as disabled (an `emptyDir`), and other absent keys fall back to the defaults above. `retentionDays` below 365 or `activityExpiryDays` below 31 fails rendering, so a bad value never reaches a crash-looping pod.
+All new keys are read with `hasKey` or `dig` guards (the F-214 precedent), so `helm upgrade --reuse-values` from beta.8 needs no new values and adds no storage: an absent `persistence` block counts as disabled (an `emptyDir`), and other absent keys fall back to the defaults above. `retentionDays` below 365 or `activityExpiryDays` below 31 fails rendering, so a bad value never reaches a crash-looping pod. Likewise, `ingestPow.targetPerMinute` below 1, or `ingestPow.maxBits` below `minBits` or above 26, fails rendering.
 
 ## How values render
 
@@ -72,7 +77,7 @@ All new keys are read with `hasKey` or `dig` guards (the F-214 precedent), so `h
 
 - **Workload.** The Deployment keeps `replicas: {{ $r.replicas }}`, adds `strategy: Recreate`, and fails rendering when `replicas > 1 && persistence.enabled`.
 - **Volumes.** When `persistence.enabled`, a PVC `gameplane-telemetry-receiver-data` is mounted at `/data`. Otherwise an `emptyDir` is mounted there and the template adds a NOTES warning. In both cases the root filesystem stays read-only.
-- **Environment.** `DATA_DIR=/data`, `DASHBOARD_TOKEN` and `ID_PEPPER` from their `secretKeyRef`s when named, `PUBLIC_SUMMARY`, `RETENTION_DAYS`, `ACTIVITY_EXPIRY_DAYS`, `INGEST_SOURCE_DAILY_LIMIT` and `TRUSTED_PROXY_CIDRS`.
+- **Environment.** `DATA_DIR=/data`, `DASHBOARD_TOKEN` and `ID_PEPPER` from their `secretKeyRef`s when named, `PUBLIC_SUMMARY`, `RETENTION_DAYS`, `ACTIVITY_EXPIRY_DAYS`, `INGEST_SOURCE_DAILY_LIMIT`, `TRUSTED_PROXY_CIDRS`, and `INGEST_POW`, `INGEST_POW_TARGET_PER_MIN`, `INGEST_POW_MIN_BITS` and `INGEST_POW_MAX_BITS`.
 - **Service.** Adds port `dashboard` (8081 → 8081) when the dashboard token is named.
 - **NetworkPolicy.** Port 8080 admits only the API pod. Port 8081 admits `dashboard.ingressFrom` peers, plus the Prometheus namespace when `serviceMonitors.scrapeNamespaceSelector` is set; that rule moves from 8080 to 8081, because `/metrics` now lives there. With no peers configured, port-forward still works.
 - **ServiceMonitor** (`templates/servicemonitors.yaml`). It renders only when `dashboard.tokenSecretRef.name` is set, and scrapes port `dashboard`, path `/metrics`, with `bearerTokenSecret` pointing at that Secret. When `serviceMonitors.enabled` and the receiver are on without a token, NOTES prints a warning and no ServiceMonitor is rendered.

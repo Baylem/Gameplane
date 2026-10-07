@@ -1,6 +1,6 @@
 # Open Decisions
 
-**Status**: 1 open (OD-1), 3 ruled (OD-2, OD-3, OD-4) on 2026-10-06.
+**Status**: 1 open (OD-1); 4 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-5 on 2026-10-07).
 
 Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract in code, chart defaults or docs until it is ruled here.
 
@@ -73,3 +73,26 @@ Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract
 **Question**: How long after an install's last report does the provider delete its activity record? An activity record holds the transformed install ID, the first-seen date, the last-seen date and the last version (FR-015).
 
 **Ruling**: **90 days**. `ACTIVITY_EXPIRY_DAYS` defaults to `90`, the Helm value `api.telemetry.receiver.activityExpiryDays` defaults to `90`, and the enforced minimum is 31, because the expiry must stay longer than the 30-day lapsed window (US5). This keeps new and lapsed counts accurate for installs that go quiet for a season, and the period appears in the OD-2 statement.
+
+---
+
+### OD-5: Proof-of-work defaults
+
+**Status**: RULED (2026-10-07, user)
+
+**Question**: Which defaults does the receiver's proof-of-work use (FR-039, FR-040, research R21)? The user set its shape on 2026-10-07 (spec Q12): off by default and turned on by the runbook for the project's provider, with a difficulty of zero while traffic is normal or absent, rising fast with the request rate and falling slowly.
+
+**Ruling**: the "gentler ceiling" option.
+
+| Setting | Value | Effect |
+|---|---|---|
+| `INGEST_POW` | `false` | Off in the binary and in the bundled receiver; the runbook turns it on for the project's provider. |
+| `INGEST_POW_TARGET_PER_MIN` | `60` | The normal challenge rate. No work is required at or below it. |
+| `INGEST_POW_MIN_BITS` | `0` | No work under normal load. |
+| `INGEST_POW_MAX_BITS` | `22` | The ceiling during a flood: about 4.2 million hashes, under a second on a desktop and roughly 5–8 seconds on a Raspberry Pi 4 (estimates). |
+| `MaxPoWBits` (install cap) | `26` | The install refuses harder challenges (about 67 million hashes, a minute or two on a Raspberry Pi 4), so a misconfigured provider can't burn an install's CPU. |
+| Curve | `ceil(2 · log2(r / T))` | 10× the normal rate gives 7 bits, 100× gives 14, 1,000× gives 20. |
+| Decay | 1 bit per 5 minutes | From 22 bits back to 0 in under 2 hours. |
+| Challenge lifetime | 15 minutes | Longer than a Raspberry Pi 4 needs at the 26-bit cap. |
+| Challenge requests per source | 10 per minute, burst 5 | One source can't raise the difficulty for everyone. |
+| Used-challenge memory | 1,000,000 entries | Filling it needs that many solved challenges within 15 minutes. |

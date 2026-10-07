@@ -209,8 +209,9 @@ Every `value` is a `telemetryschema` enumeration member or `other`, so the row c
 ### Invariants
 
 - **Nothing raw is stored.** There are no raw reports, source addresses or untransformed install IDs (FR-014, SC-012). Source addresses exist only in the in-memory limiters (R6).
+- **Proof-of-work state is memory only.** The challenge MAC key, the issue-rate window and the used-challenge set (R21) are never written to the database, and a restart discards them.
 - **Extended attributes are never keyed by ID.** `activity` has no column for any of them (FR-014).
-- **Refused reports leave no trace.** A report refused by the signature, window, claim or replay checks changes no table (FR-036). Only the in-memory limiter and the `rate_limited` and `refused` metrics see it.
+- **Refused reports leave no trace.** A report refused by the proof-of-work, signature, window, claim or replay checks changes no table (FR-036, FR-039). Only the in-memory limiter and the `rate_limited` and `refused` metrics see it.
 - **No full public keys are stored.** `key_fp` is enough to check the claim, because the key arrives with every report.
 - **One extended contribution per install per day.** At most one extended report per `id_hmac` per day changes any aggregate (R5).
 - **The running total never decreases.** `reports_total` is only ever incremented, so retention sweeps don't change the public "total since collection began".
