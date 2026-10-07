@@ -184,7 +184,9 @@ func (s *store) recordExtended(ctx context.Context, r extRecord) (extOutcome, er
 	outcome := extNew
 	err := s.writeTx(ctx, func(tx *sql.Tx) error {
 		keyFP := telemetryschema.KeyFingerprint(r.Ext.Key)
-		sentAt := r.Ext.SentAt.UTC().Format(time.RFC3339)
+		// Full precision: a report sent at a fractional second must not look
+		// later than its own stored send time when replayed.
+		sentAt := r.Ext.SentAt.UTC().Format(time.RFC3339Nano)
 		row, found, err := lookupActivity(ctx, tx, r.IDHMAC)
 		if err != nil {
 			return err
@@ -203,6 +205,14 @@ func (s *store) recordExtended(ctx context.Context, r extRecord) (extOutcome, er
 			}
 			if row.LastSeen >= r.Day {
 				outcome = extDuplicate
+				// A duplicate changes no aggregate, but its send time still
+				// becomes the latest accepted one; otherwise a captured
+				// duplicate could be replayed later the same day, or the next
+				// day as that day's report.
+				if _, err := tx.ExecContext(ctx,
+					`UPDATE activity SET last_sent_at = ? WHERE id_hmac = ?`, sentAt, r.IDHMAC); err != nil {
+					return fmt.Errorf("update activity send time: %w", err)
+				}
 				if _, err := tx.ExecContext(ctx,
 					`INSERT INTO daily_basic (day, duplicates) VALUES (?, 1)
 					 ON CONFLICT (day) DO UPDATE SET duplicates = duplicates + 1`, r.Day); err != nil {
@@ -333,13 +343,19 @@ func (s *server) precheckClaim(ctx context.Context, idHMAC string, ext *telemetr
 // checkClaim decides whether a report may use an existing activity record, in
 // contract order: errIDClaimed when the record belongs to another key
 // (key_fp differs), then errReplay when sentAt is not later than the last
-// accepted sentAt.
+// accepted sentAt. An unreadable stored send time is an error, never an
+// acceptance.
 func checkClaim(row activityRow, keyFP string, sentAt time.Time) error {
 	if row.KeyFP != keyFP {
 		return errIDClaimed
 	}
-	last, err := time.Parse(time.RFC3339, row.LastSentAt)
-	if err == nil && !sentAt.After(last) {
+	last, err := time.Parse(time.RFC3339Nano, row.LastSentAt)
+	if err != nil {
+		// Fail closed: an unreadable send time must not switch the replay
+		// check off for this ID.
+		return fmt.Errorf("activity last_sent_at %q: %w", row.LastSentAt, err)
+	}
+	if !sentAt.After(last) {
 		return errReplay
 	}
 	return nil
