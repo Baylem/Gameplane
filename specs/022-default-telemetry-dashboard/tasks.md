@@ -485,14 +485,14 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Independent Test**: Against a receiver with `INGEST_POW=true`, the install's reports are accepted after solving challenges, reports without a valid solution get 428 and change nothing, and the difficulty follows the curve in research R21 (SC-016). A receiver with a 31-character `DASHBOARD_TOKEN` refuses to start (quickstart S10).
 
-- [ ] T101 [P] [US7] Create `telemetryschema/pow.go` (stdlib only):
+- [X] T101 [P] [US7] Create `telemetryschema/pow.go` (stdlib only):
   - `PoWHeader = "Gameplane-Telemetry-PoW"` and `MaxPoWBits = 26` (OD-5)
   - `PoWOK(challenge string, nonce uint64, bits int) bool`: `SHA-256(challenge + ":" + decimal nonce)` starts with at least `bits` zero bits
   - `SolvePoW(ctx, challenge string, bits int) (uint64, error)`: single goroutine, checks `ctx` periodically, and errors when `bits` is negative or above `MaxPoWBits`
   - `FormatPoW(challenge string, nonce uint64) string` and `ParsePoW(header string) (string, uint64, error)`: split at the last `:`; the nonce is plain decimal; reject an empty or over-long challenge
 
   Add `telemetryschema/pow_test.go` (coverage gate 90) and the PoW row to `telemetryschema/specs.md`.
-- [ ] T102 [US7] In `telemetry-receiver`, create `pow.go` per research R21:
+- [X] T102 [US7] In `telemetry-receiver`, create `pow.go` per research R21:
   - challenge issue and MAC
   - the adaptive difficulty (60-second issue window, `ceil(2·log2(r/T))`, peak decay of one bit per 5 minutes)
   - verification order, and the used-challenge set with expiry, a 1,000,000-entry cap and `pow_busy`
@@ -500,8 +500,8 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `gameplane_telemetry_pow_bits`, `gameplane_telemetry_pow_challenges_total`, and the `pow_required`/`pow_invalid` refusal reasons
 
   Parse `INGEST_POW*` in `main.go` with the OD-5 defaults, and exit at startup on out-of-range values. In `ingest.go`, check proof-of-work after `AUTH_TOKEN` and before the body is read, only when `INGEST_POW=true`.
-- [ ] T103 [US7] In `telemetry-receiver/main.go`, exit at startup when `DASHBOARD_TOKEN` is set but shorter than 32 characters (FR-041), with an error naming the minimum. If an existing test starts the receiver with a shorter token, stop and ask for sign-off rather than changing it. Raise the E2E dashboard token constant to at least 32 characters.
-- [ ] T104 [P] [US7] Create `telemetry-receiver/pow_test.go`, covering:
+- [X] T103 [US7] In `telemetry-receiver/main.go`, exit at startup when `DASHBOARD_TOKEN` is set but shorter than 32 characters (FR-041), with an error naming the minimum. If an existing test starts the receiver with a shorter token, stop and ask for sign-off rather than changing it. Raise the E2E dashboard token constant to at least 32 characters.
+- [X] T104 [P] [US7] Create `telemetry-receiver/pow_test.go`, covering:
   - the curve: at or below `T` a challenge carries `MIN`; at 10×, 100× and 1,000× it carries 7, 14 and 20 bits, capped at `MAX`; it decays one bit per 5 minutes (SC-016)
   - a tampered MAC, a wrong difficulty, an expired challenge, a reused challenge and a missing header each give 428 with the right reason and change no table
   - `pow_busy` at a test-lowered cap
@@ -509,24 +509,24 @@ description: "Task list for feature 022: default telemetry destination, extended
   - PoW checked before the body is read and after `AUTH_TOKEN`
 
   Add config tests for the `INGEST_POW*` ranges and the token minimum.
-- [ ] T105 [US7] In `api/internal/telemetry/telemetry.go`, per research R21:
+- [X] T105 [US7] In `api/internal/telemetry/telemetry.go`, per research R21:
   - before each POST, request the challenge URL (the endpoint with its last path segment replaced by `v1/challenge`), solve with `telemetryschema.SolvePoW` under a deadline 30 seconds before `expiresAt`, and send `PoWHeader`
   - send without the header on any non-200
   - record `failed` (normal backoff) when `bits` exceeds `MaxPoWBits`
   - on 428, get one new challenge and resend once in the same attempt; a second 428 is `failed`
   - the 409 rotation resend (T084) fetches a fresh challenge
-- [ ] T106 [P] [US7] Create `api/internal/telemetry/telemetry_pow_test.go`, covering:
+- [X] T106 [P] [US7] Create `api/internal/telemetry/telemetry_pow_test.go`, covering:
   - challenge URL derivation (with and without a path prefix)
   - a 404 provider gets reports with no header
   - a challenge provider gets a header that `telemetryschema.PoWOK` accepts
   - 428 then 204 resends once with a new challenge; 428 twice is `failed`
   - `bits = 27` is `failed` with no POST
   - the 409 rotation resend carries a fresh challenge
-- [ ] T107 [P] [US7] In the chart:
+- [X] T107 [P] [US7] In the chart:
   - add `api.telemetry.receiver.ingestPow.{enabled,targetPerMinute,minBits,maxBits}` (defaults `false`, `60`, `0`, `22`) to `values.yaml`, rendered as `INGEST_POW*` in `templates/telemetry-receiver.yaml` through `hasKey` guards (F-214)
   - fail rendering when `targetPerMinute < 1`, or `maxBits < minBits` or `maxBits > 26`
   - add `helm template` assertions for the default, an enabled render and each failure to `.github/workflows/ci.yaml`
-- [ ] T108 [US7] Add the S10 subtests to `TestTelemetryLifecycle`, after `custom_destination_receives_only` and before `old_receiver_gets_basic`:
+- [X] T108 [US7] Add the S10 subtests to `TestTelemetryLifecycle`, after `custom_destination_receives_only` and before `old_receiver_gets_basic`:
   - `pow_receiver_accepts_solved_reports`: deploy a custom receiver with `INGEST_POW=true`, `INGEST_POW_MIN_BITS=8` and the dashboard token, point the API at it, then assert that `gameplane_telemetry_pow_challenges_total` rises and `lastOutcome = "ok"`
   - `pow_refuses_missing_and_invalid`: a POST with no header gets 428 `pow_required`, a reused solution gets 428 `pow_invalid`, and the reports counter is unchanged
 
