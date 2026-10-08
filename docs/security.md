@@ -925,9 +925,12 @@ cluster, don't enable `mcpServer` there.
 Combined installations store management credentials in Kubernetes Secrets.
 Standalone panels store their labelled management credentials, including remote
 kubeconfigs, gateway keys, OIDC client secrets, notification credentials, and mod
-registry keys, as AES-GCM ciphertext in SQL. They use a persistent 32-byte key at
-`/data/panel.key` by default. Back up that key with the database and restrict
-access to both; encryption does not protect credentials from someone who can
+registry keys, as AES-GCM ciphertext in SQL. They use a persistent 32-byte key.
+The supplied standalone profiles mount it separately at `/keys/panel.key`;
+custom deployments retain the legacy `/data/panel.key` default. Keep protected
+key backups separate from database backups. Provisioned-key mode requires an
+existing read-only key file or Kubernetes Secret and never creates a replacement.
+Startup validates file ownership, permissions, type and size. Encryption does not protect credentials from someone who can
 read both files or control the running API. A missing key with existing
 credentials, a wrong key, or corrupted credential data prevents API startup.
 See [standalone storage and recovery](standalone-panel.md#storage-and-recovery).

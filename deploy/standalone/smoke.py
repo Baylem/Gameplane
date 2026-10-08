@@ -75,7 +75,7 @@ def assert_empty(cookie):
 def key_digest(container):
     with tempfile.TemporaryDirectory() as directory:
         key = Path(directory) / "panel.key"
-        subprocess.run(["docker", "cp", container + ":/data/panel.key", str(key)], check=True)
+        subprocess.run(["docker", "cp", container + ":/keys/panel.key", str(key)], check=True)
         return hashlib.sha256(key.read_bytes()).digest()
 
 
@@ -131,7 +131,7 @@ def main():
     assert set(config["services"]) == {"gameplane-api", "web"}
     api = config["services"]["gameplane-api"]
     assert "KUBECONFIG" not in api.get("environment", {})
-    assert {volume["target"] for volume in api["volumes"]} == {"/data"}
+    assert {volume["target"] for volume in api["volumes"]} == {"/data", "/keys"}
     assert not api.get("ports")
     assert api["read_only"] is True
     assert api["environment"]["GAMEPLANE_STANDALONE"] == "true"

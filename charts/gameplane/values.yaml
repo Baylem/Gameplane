@@ -159,8 +159,18 @@ api:
     # image is built without it). Example:
     # dsn: "postgres://gameplane:***@postgres/gameplane?sslmode=require"
 
-  # PVC for SQLite and, in standalone mode, the credential encryption key.
-  # Standalone mode keeps this volume even with PostgreSQL; back up panel.key.
+  # Standalone encryption keys use separate storage configured under panelKey.
+  panelKey:
+    # Mount a pre-provisioned 32-byte key read-only. No key is generated in this mode.
+    # Use a separate Secret and backup/access policy from the database.
+    existingSecret: ""
+    secretKey: panel.key
+    storage:
+      size: 1Mi
+      storageClassName: ""
+      existingClaim: ""
+
+  # Database PVC. Back up its contents separately from the encryption key.
   storage:
     size: 2Gi
     storageClassName: ""

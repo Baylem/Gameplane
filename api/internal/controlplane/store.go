@@ -45,11 +45,16 @@ type objects struct {
 // survive alongside the database; a missing key with existing secrets is fatal.
 // Kubernetes workload clients are intentionally absent from the result.
 func New(ctx context.Context, store *db.Store, keyFile string) (*kube.Client, error) {
+	return NewWithOptions(ctx, store, KeyOptions{File: keyFile})
+}
+
+// NewWithOptions opens standalone management storage with explicit key custody.
+func NewWithOptions(ctx context.Context, store *db.Store, opts KeyOptions) (*kube.Client, error) {
 	var count int
 	if err := store.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM management_objects WHERE kind = 'secrets'`).Scan(&count); err != nil {
 		return nil, fmt.Errorf("inspect management credentials: %w", err)
 	}
-	key, err := loadKey(keyFile, count != 0)
+	key, err := loadConfiguredKey(opts, count != 0)
 	if err != nil {
 		return nil, err
 	}
