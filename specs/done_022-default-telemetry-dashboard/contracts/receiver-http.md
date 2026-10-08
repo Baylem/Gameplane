@@ -125,6 +125,7 @@ An E2E check (R17) compares the unauthenticated response against the login page 
 }
 ```
 
+- `asOf` is today, the current UTC day, which is still in progress (OD-6). Every range ends on it, its figures change until the day closes, and its lapsed-installs value stays `0` until the lifecycle job finalises the day. `/v1/summary` keeps the latest complete day.
 - When the range has no data: `empty: true`, with `basic` and `extended` set to `null`. The HTML renders the empty state (FR-027).
 - When there is basic data but no extended reports: `extended: null`, and the HTML explains that no reports in the range included extended data.
 

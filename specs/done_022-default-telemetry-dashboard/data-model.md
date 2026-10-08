@@ -224,14 +224,14 @@ Every `value` is a `telemetryschema` enumeration member or `other`, so the row c
 
 ### Derived views (computed at read time, [contracts/receiver-http.md](contracts/receiver-http.md))
 
-The range R is 7, 30, 90 or 365 days and ends on the latest complete day.
+The range R is 7, 30, 90 or 365 days and ends on today, the current UTC day, which is still in progress (OD-6). Today's figures change until the day closes, and its lapsed-installs value stays 0 until the lifecycle job finalises the day.
 
 | View | Computation |
 |---|---|
 | Reports per day | `daily_basic.reports` series over R |
 | Version adoption (reports) | `daily_version` summed over R. Top 10 by count, then `Other` (the rest) and `Invalid`. |
 | Fleet distribution and median | `daily_fleet` summed over R. Bands `0,1,2,5,10,25,50,100,250,250+` are applied at read. The exact median comes from the cumulative counts. |
-| Latest-day totals | `daily_basic.servers_sum`, `templates_sum` for the latest complete day |
+| Latest-day totals | `daily_basic.servers_sum`, `templates_sum` for today (the as-of day, in progress) |
 | Unique active installs | `count(activity where last_seen ≥ asOf − {0, 6, 29})` |
 | New and lapsed installs | `daily_ext.new_installs` and `lapsed_installs` series over R |
 | Version adoption (installs) | `activity.last_version` for records with `last_seen` inside `min(R, ACTIVITY_EXPIRY_DAYS)`. The window used is shown. |
@@ -239,4 +239,4 @@ The range R is 7, 30, 90 or 365 days and ends on the latest complete day.
 | Extended coverage (FR-026) | Σ `ext_reports` ÷ Σ `reports` over R |
 | Public summary (FR-029) | `reports` for asOf; Σ `reports` over the 30 days ending asOf; `meta.reports_total`; `count(activity where last_seen ≥ asOf − 29)`; `asOf` |
 
-`asOf` is the latest complete UTC day, which is yesterday. When no `daily_basic` row exists in R, every view returns its empty state instead of zeros (FR-027).
+For the dashboard, `asOf` is today (the current UTC day, in progress); the public summary keeps the latest complete day. When no `daily_basic` row exists in R, every view returns its empty state instead of zeros (FR-027).

@@ -361,7 +361,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - fleet bands and the exact median
   - `latestDay` totals
   - `empty`
-  - `asOf` = yesterday (UTC)
+  - `asOf` = yesterday (UTC). **Superseded 2026-10-08 (OD-6):** the dashboard ends on today (UTC, in progress); `/v1/summary` keeps yesterday.
 
   Invalid ranges fall back to 30.
 - [X] T066 [US4] Load the `dataviz` skill, then design the receiver pages in `telemetry-receiver/telemetry-dashboard.pen` (seeded with a copy of the HeroUI design, spec Q10) through Pencil MCP: the login page (also used for the refusal, with "Invalid credentials"), the overview's basic section with the range selector (7, 30, 90, 365), the empty state, and the "approximate, self-reported" labelling (FR-026). Ask the user to open that file, then save it, run `design-export` into `telemetry-receiver/design-export/`, and commit.
@@ -397,7 +397,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `GET /metrics` returns `404` on the public listener, `401` on the dashboard listener without the Bearer token, and `200` with it
 - [X] T071 [US4] Add these subtests to `test/e2e/telemetry_e2e_test.go`:
   - `dashboard_refuses_unauthenticated`, where `/` returns 303 to a login page that contains no digits from the data and `/api/v1/views` returns 401
-  - `dashboard_shows_reports`, which signs in with the Secret's token through `Env.PortForward` on 8081 (setting the `Cookie` header by hand, since the session cookie is `Secure` and the port-forward is plain HTTP). Views end at yesterday (UTC), so same-day reports from earlier subtests are not in them: it asserts that `/api/v1/views` returns `200` with `asOf` = yesterday and a well-formed body, and that `/metrics` (Bearer) counts the earlier reports. The exact figures are covered by `views_test.go`.
+  - `dashboard_shows_reports`, which signs in with the Secret's token through `Env.PortForward` on 8081 (setting the `Cookie` header by hand, since the session cookie is `Secure` and the port-forward is plain HTTP). Views end at yesterday (UTC), so same-day reports from earlier subtests are not in them: it asserts that `/api/v1/views` returns `200` with `asOf` = yesterday (**superseded 2026-10-08, OD-6:** views end on today and the check asserts `asOf` = today) and a well-formed body, and that `/metrics` (Bearer) counts the earlier reports. The exact figures are covered by `views_test.go`.
 
 **Checkpoint**: the provider keeps history and shows basic views privately.
 

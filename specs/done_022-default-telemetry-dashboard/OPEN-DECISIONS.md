@@ -1,6 +1,6 @@
 # Open Decisions
 
-**Status**: 0 open; 5 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07).
+**Status**: 0 open; 6 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07, OD-6 on 2026-10-08).
 
 Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract in code, chart defaults or docs until it is ruled here.
 
@@ -102,3 +102,11 @@ Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract
 | Challenge lifetime | 15 minutes | Longer than a Raspberry Pi 4 needs at the 26-bit cap. |
 | Challenge requests per source | 10 per minute, burst 5 | One source can't raise the difficulty for everyone. |
 | Used-challenge memory | 1,000,000 entries | Filling it needs that many solved challenges within 15 minutes. |
+
+### OD-6: Dashboard as-of day
+
+**Status**: RULED (2026-10-08, user)
+
+**Question**: The receiver dashboard's ranges ended on the latest complete UTC day (yesterday), so a provider saw "No reports yet" for up to a day after its first accepted report, and today's reports never showed until the day closed.
+
+**Ruling**: the dashboard shows all data. Every range (7, 30, 90 or 365 days) ends on today, the current UTC day, which is still in progress and labelled so. The empty state appears only when the range holds no report at all. Today's lapsed-installs value stays `0` until the lifecycle job finalises the day. The public `GET /v1/summary` is unchanged and keeps the latest complete day.

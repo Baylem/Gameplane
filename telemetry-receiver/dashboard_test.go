@@ -17,7 +17,7 @@ const (
 	dashOrigin = "http://example.com" // httptest.NewRequest uses Host example.com
 )
 
-var dashNow = time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+var dashNow = time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
 
 // newDash builds a receiver with a fixed clock and returns it with its
 // dashboard handler.
@@ -31,8 +31,8 @@ func newDash(t *testing.T, cfg config) (*server, http.Handler) {
 	return s, s.dashboardRoutes()
 }
 
-// seedDash stores reports on the latest complete day (2026-10-06) and the
-// day before it.
+// seedDash stores reports on today (2026-10-06, the as-of day) and the day
+// before it.
 func seedDash(t *testing.T, s *server) {
 	t.Helper()
 	for _, r := range []struct {

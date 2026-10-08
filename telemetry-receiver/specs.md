@@ -18,7 +18,7 @@ Optional collector for the usage telemetry that Gameplane installs report daily.
 - **Proof-of-work (optional)**: with `INGEST_POW=true`, `/ingest` requires a solved challenge from `/v1/challenge` before the body is read; difficulty adapts to the challenge rate
 - **Aggregation and storage**: daily aggregates and expiring per-install activity records in SQLite (`$DATA_DIR/telemetry.db`); an install ID is stored only as `HMAC-SHA256(pepper, installID)`
 - **Per-source limits**: accepted reports per source per UTC day (`INGEST_SOURCE_DAILY_LIMIT`), login attempts, summary reads and challenge requests, all held in memory; source addresses come from the TCP peer, or from `X-Forwarded-For` only when the peer is inside `TRUSTED_PROXY_CIDRS`
-- **Dashboard**: server-rendered HTML with inline SVG charts and no JavaScript, behind one operator token; the same view model is served as JSON at `/api/v1/views`
+- **Dashboard**: server-rendered HTML with inline SVG charts and no JavaScript, behind one operator token; the same view model is served as JSON at `/api/v1/views`. Every range ends on today (UTC), which is still in progress
 - **Public summary (optional)**: `GET /v1/summary` returns five counts when `PUBLIC_SUMMARY=true`
 - **Version sanitization**: invalid syntax is bucketed as `"invalid"`. Retain at most 128 distinct strings matching `^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$` per process for the Prometheus label; additional versions share `"other"`. The two bucket names are reserved, for at most 130 series. Retained labels are never evicted; restart resets the budget with the counters.
 - **Metrics**: Prometheus series on the dashboard listener only, behind the token

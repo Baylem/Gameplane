@@ -178,7 +178,7 @@ func TestPopulationProducesExactNewLapsedAndActiveCounts(t *testing.T) {
 
 	// The views at the end of day 59: active counts and the 30-day unique
 	// count (SC-008 allows 1%; the distinct count is exact).
-	*clock = popDay(popDays).Add(12 * time.Hour)
+	*clock = popDay(popDays - 1).Add(12 * time.Hour) // today (asOf) is day 59
 	v, err := BuildViews(ctx, st, 30, *clock)
 	if err != nil {
 		t.Fatalf("BuildViews: %v", err)
@@ -341,7 +341,7 @@ func TestBuildViewsExtendedSharesGamesAndFeatures(t *testing.T) {
 			t.Fatalf("status = %d (%s)", w.Code, w.Body)
 		}
 	}
-	*clock = extStart.Add(24 * time.Hour) // asOf is 2026-10-07
+	*clock = extStart.Add(24 * time.Hour) // asOf is 2026-10-08 (today); the reports are on 2026-10-07
 	v, err := BuildViews(ctx, s.store, 7, *clock)
 	if err != nil {
 		t.Fatal(err)

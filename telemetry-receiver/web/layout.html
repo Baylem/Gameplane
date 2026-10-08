@@ -24,7 +24,7 @@
 {{if .Empty}}<span class="pill">No data yet</span>{{else}}<span class="pill">Approximate &middot; self-reported</span>{{end}}
 </div>
 <div class="topbar-end">
-{{if not .Empty}}<span class="asof">Data through {{.AsOf}} (UTC)</span>{{end}}
+{{if not .Empty}}<span class="asof">Data through {{.AsOf}} (UTC, today in progress)</span>{{end}}
 <form method="post" action="/logout"><button type="submit" class="btn btn-quiet">Sign out</button></form>
 </div>
 </header>

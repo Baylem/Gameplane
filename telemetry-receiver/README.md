@@ -67,7 +67,8 @@ public provider turns it on. See
 ### Dashboard
 
 Server-rendered HTML with inline SVG charts, no JavaScript, for the last 7,
-30, 90 or 365 days (`?range=`). It needs the dashboard token: a browser
+30, 90 or 365 days (`?range=`), ending on today (UTC), which is still in
+progress. It needs the dashboard token: a browser
 logs in at `/login` and gets a 12-hour session cookie; scripts can send
 `Authorization: Bearer <token>` to `/api/v1/views`. `/metrics` accepts only
 the Bearer token. An unauthenticated request never sees a figure: the HTML
