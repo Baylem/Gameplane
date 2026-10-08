@@ -33,6 +33,7 @@ def main():
         deployment = one(objects, "Deployment", "gameplane-api")
         pod = deployment["spec"]["template"]["spec"]
         assert pod["automountServiceAccountToken"] is False
+        assert pod["securityContext"]["fsGroupChangePolicy"] == "OnRootMismatch"
         assert "annotations" not in deployment["spec"]["template"]["metadata"]
         container = pod["containers"][0]
         assert "--standalone" in container["args"]

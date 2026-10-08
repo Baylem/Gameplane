@@ -264,6 +264,10 @@ spec:
         runAsNonRoot: true
         runAsUser: 65532
         fsGroup: 65532
+        {{- if .Values.api.standalone }}
+        # Avoid widening a generated 0600 key to 0660 on each PVC remount.
+        fsGroupChangePolicy: OnRootMismatch
+        {{- end }}
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: api
