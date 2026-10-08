@@ -49,7 +49,7 @@ func TestRemoteResponseBoundsVersionBeforeBuffering(t *testing.T) {
 			transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: 200, Header: header, Body: body, ContentLength: -1}, nil
 			}))
-			req, err := http.NewRequest(http.MethodGet, "https://cluster.example/version", nil)
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://cluster.example/version", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -88,7 +88,7 @@ func TestRemoteResponseWatchBoundsIndividualEvents(t *testing.T) {
 			transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: 200, Header: http.Header{}, Body: body}, nil
 			}))
-			req, err := http.NewRequest(http.MethodGet, "https://cluster.example/apis/gameplane.local/v1alpha1/gameservers?watch=true", nil)
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://cluster.example/apis/gameplane.local/v1alpha1/gameservers?watch=true", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -115,7 +115,7 @@ func TestRemoteResponseLeavesUserLogStreamsUnbounded(t *testing.T) {
 	transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(payload))}, nil
 	}))
-	req, err := http.NewRequest(http.MethodGet, "https://cluster.example/api/v1/namespaces/games/pods/game/log?follow=true", nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://cluster.example/api/v1/namespaces/games/pods/game/log?follow=true", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,12 +139,15 @@ func TestRemoteResponseRejectsUnsolicitedUpgradeWithoutReading(t *testing.T) {
 			transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: http.StatusSwitchingProtocols, Header: http.Header{"Connection": {"Upgrade"}, "Upgrade": {"h2c"}}, Body: body}, nil
 			}))
-			req, err := http.NewRequest(http.MethodGet, "https://cluster.example"+path, nil)
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://cluster.example"+path, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			resp, err := transport.RoundTrip(req)
 			if err == nil || resp != nil || body.read != 0 || !body.closed {
+				if resp != nil && resp.Body != nil {
+					_ = resp.Body.Close()
+				}
 				t.Fatalf("unsolicited upgrade was not closed before buffering: response=%v error=%v read=%d closed=%v", resp, err, body.read, body.closed)
 			}
 		})
@@ -156,7 +159,7 @@ func TestRemoteResponsePreservesRequestedUpgrade(t *testing.T) {
 	transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: http.StatusSwitchingProtocols, Header: http.Header{}, Body: body}, nil
 	}))
-	req, err := http.NewRequest(http.MethodPost, "https://cluster.example/api/v1/namespaces/games/pods/game/exec", nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "https://cluster.example/api/v1/namespaces/games/pods/game/exec", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,6 +174,56 @@ func TestRemoteResponsePreservesRequestedUpgrade(t *testing.T) {
 	}
 }
 
+func TestRemoteResponsePreservesSPDYNegotiatedUpgrade(t *testing.T) {
+	body := &countedResponse{Reader: strings.NewReader("upgraded stream")}
+	transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusSwitchingProtocols, Header: http.Header{}, Body: body}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "https://cluster.example/api/v1/namespaces/games/pods/game/attach", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// client-go adds Upgrade to a cloned request inside its SPDY round tripper;
+	// the outer wrappers receive only the explicit stream negotiation header.
+	req.Header.Add("X-Stream-Protocol-Version", "v4.channel.k8s.io")
+	resp, err := transport.RoundTrip(req)
+	if err != nil || resp == nil || resp.Body != body || body.closed {
+		t.Fatalf("SPDY negotiation was rejected: response=%v error=%v closed=%v", resp, err, body.closed)
+	}
+	if err := resp.Body.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRemoteResponseBoundsPreUpgradeErrors(t *testing.T) {
+	for _, subresource := range []string{"exec", "attach", "portforward"} {
+		for _, status := range []int{http.StatusOK, http.StatusBadRequest} {
+			t.Run(subresource+"/"+http.StatusText(status), func(t *testing.T) {
+				body := &countedResponse{Reader: strings.NewReader(strings.Repeat("x", remoteResponseLimit+1024))}
+				transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
+					return &http.Response{StatusCode: status, Header: http.Header{}, Body: body}, nil
+				}))
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "https://cluster.example/api/v1/namespaces/games/pods/game/"+subresource, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				req.Header.Set("Upgrade", "SPDY/3.1")
+				resp, err := transport.RoundTrip(req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				_, err = io.Copy(io.Discard, resp.Body)
+				if !errors.Is(err, errRemoteResponseTooLarge) || body.read > remoteResponseLimit+1 {
+					t.Fatalf("pre-upgrade error bypassed observation bound: read=%d error=%v", body.read, err)
+				}
+				if err := resp.Body.Close(); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	}
+}
+
 func TestRemoteResponseBoundsResourcesNamedLikeStreams(t *testing.T) {
 	for _, name := range []string{"log", "exec", "attach", "portforward"} {
 		t.Run(name, func(t *testing.T) {
@@ -178,7 +231,7 @@ func TestRemoteResponseBoundsResourcesNamedLikeStreams(t *testing.T) {
 			transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
 				return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: body}, nil
 			}))
-			req, err := http.NewRequest(http.MethodGet, "https://cluster.example/apis/gameplane.local/v1alpha1/namespaces/games/gametemplates/"+name, nil)
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://cluster.example/apis/gameplane.local/v1alpha1/namespaces/games/gametemplates/"+name, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -202,7 +255,7 @@ func TestRemoteResponsePreservesPrefixedPodLogStream(t *testing.T) {
 	transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: body}, nil
 	}))
-	req, err := http.NewRequest(http.MethodGet, "https://cluster.example/kubernetes/workload/api/v1/namespaces/games/pods/game/log?follow=true", nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://cluster.example/kubernetes/workload/api/v1/namespaces/games/pods/game/log?follow=true", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
