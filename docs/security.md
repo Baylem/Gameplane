@@ -930,7 +930,8 @@ The supplied standalone profiles mount it separately at `/keys/panel.key`;
 custom deployments retain the legacy `/data/panel.key` default. Keep protected
 key backups separate from database backups. Provisioned-key mode requires an
 existing read-only key file or Kubernetes Secret and never creates a replacement.
-Startup validates file ownership, permissions, type and size. Encryption does not protect credentials from someone who can
+Startup validates file ownership, permissions, type and size, and rejects extended
+access ACLs that could grant additional readers. Encryption does not protect credentials from someone who can
 read both files or control the running API. A missing key with existing
 credentials, a wrong key, or corrupted credential data prevents API startup.
 See [standalone storage and recovery](standalone-panel.md#storage-and-recovery).

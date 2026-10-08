@@ -11,11 +11,19 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func validateKeyPlatform() error { return nil }
+func validateKeyPlatform() error { return validateKeyACLPlatform() }
 
 func openKeyHandle(root *os.Root, name string) (*os.File, error) {
 	// FIFOs must not block startup before regular-file validation can run.
-	return root.OpenFile(name, os.O_RDONLY|unix.O_NONBLOCK, 0)
+	f, err := root.OpenFile(name, os.O_RDONLY|unix.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateKeyACL(f); err != nil {
+		_ = f.Close()
+		return nil, err
+	}
+	return f, nil
 }
 
 func validateKeyFile(info os.FileInfo) error {
