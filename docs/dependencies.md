@@ -1,9 +1,9 @@
 # Dependency report
 
 This is a component-by-component inventory of Gameplane's third-party
-dependencies and why each one is there. It covers all 15 Go modules that
-share `go.work` (`netguard`, `gameaction`, `gameproto`, `svcutil`,
-`operator`, `api`, `agent`, `audit-syslog-bridge` [optional],
+dependencies and why each one is there. It covers all 16 Go modules that
+share `go.work` (`netguard`, `gameaction`, `gameproto`, `telemetryschema`,
+`svcutil`, `operator`, `api`, `agent`, `audit-syslog-bridge` [optional],
 `telemetry-receiver` [optional], `sentinel` [optional],
 `capture-sidecar` [optional], `tunnel` [optional], `gp-module`,
 `mcp-server` [optional], `test/e2e`), the
@@ -39,6 +39,7 @@ were added and verified on **2026-09-26**.
 | `netguard/` | Go | 0 (stdlib only) | Shared SSRF dial-guard used by the operator and agent |
 | `gameaction/` | Go | 0 (stdlib only) | Shared console-injection guard + command-template renderer used by the agent and API |
 | `gameproto/` | Go | 0 (stdlib only) | Shared Minecraft/Terraria handshake classifier used by sentinel |
+| `telemetryschema/` | Go | 0 (stdlib only) | Shared telemetry report contract (types, strict decoder, official module catalog, report signing) used by the API reporter and the telemetry receiver |
 | `svcutil/` | Go | 0 (stdlib only) | Shared env-parsing + graceful-shutdown helpers (no active importers yet) |
 | `operator/` | Go | 19 | controller-runtime reconciler for the 8 CRDs; module OCI pull/verify, git/OCI fetch, restic-backup scheduling |
 | `api/` | Go | 17 | chi REST + WebSocket gateway: auth (local + OIDC), RBAC, K8s client, SQLite/Postgres persistence, notifications |
@@ -102,6 +103,22 @@ Imported by:
 - `sentinel/` — to hold a client's connection open while the sentinel wakes the target `GameServer`'s pod, replaying the buffered handshake once the pod is ready.
 
 Also a local `replace` module (`replace github.com/GameplanePanel/gameplane/gameproto => ../gameproto` in `sentinel/go.mod`); same Dockerfile `COPY` requirement as netguard.
+
+### telemetryschema
+
+`telemetryschema/go.mod` has **no `require` block at all** — it imports only the
+Go standard library (`bytes`, `crypto/ed25519`, `crypto/hkdf`, `crypto/rand`,
+`crypto/sha256`, `embed`, `encoding/base64`, `encoding/hex`, `encoding/json`,
+`errors`, `fmt`, `io`, `math`, `regexp`, `slices`, `sort`, `strings`, `time`). It
+is the shared telemetry report contract: the basic and extended report types,
+the fixed category enumerations and band functions, the strict decoder, the
+embedded official-module catalog, and Ed25519 report signing.
+
+Imported by (spec 022, in progress):
+- `telemetry-receiver/` — to decode and validate reports (`Decode`) and to verify signatures (`Verify`).
+- `api/` — to build, encode and sign the reporter's payload and the admin preview.
+
+Both importers use a local `replace` module (`replace github.com/GameplanePanel/gameplane/telemetryschema => ../telemetryschema`); the same Dockerfile `COPY` requirement as netguard applies.
 
 ### svcutil
 

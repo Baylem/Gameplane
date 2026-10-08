@@ -767,6 +767,22 @@ export const handlers = [
   ),
   http.get("/admin/config", () => HttpResponse.json(makeConfig())),
   http.put("/admin/config/:section", () => new HttpResponse(null, { status: 204 })),
+  // First-login telemetry notice (spec 022): not pending by default, so
+  // tests that render the app shell as an admin see no banner.
+  http.get("/admin/telemetry/notice", () => HttpResponse.json({ pending: false })),
+  http.post("/admin/telemetry/notice", () => new HttpResponse(null, { status: 204 })),
+  // Admin Settings -> Telemetry (spec 022): matches the default config
+  // (basic off, extended off), so the section renders the default destination.
+  http.get("/admin/telemetry", () =>
+    HttpResponse.json({
+      destination: { kind: "default", host: "telemetry.example.org" },
+      operatorDisabled: false,
+      consent: { basic: false, extended: false, source: "default" },
+      installId: null,
+      preview: null,
+      status: { lastAttemptAt: null, lastSuccessAt: null, lastOutcome: "never", lastIdRotationAt: null },
+    }),
+  ),
   http.post("/admin/notifications/sinks/:name/test", () =>
     HttpResponse.json({ delivered: true }),
   ),

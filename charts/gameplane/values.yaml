@@ -234,15 +234,23 @@ api:
         accessKeyKey: access-key   # key containing the access key ID
         secretKeyKey: secret-key    # key containing the secret access key
 
-  # Anonymous usage telemetry ({version, servers, templates} once a day —
-  # see docs/install.md). Two independent gates: the admin toggle in the
-  # dashboard decides WHETHER anything is sent, this block decides WHERE.
-  # With endpoint empty and receiver.enabled false (the defaults),
-  # telemetry is off entirely.
+  # Anonymous usage telemetry (see docs/install.md). Two independent gates:
+  # the admin switches in the dashboard decide WHETHER anything is sent, this
+  # block decides WHETHER it may be sent at all (enabled) and WHERE it goes
+  # (endpoint, receiver).
   telemetry:
-    # External receiver URL, e.g. https://telemetry.example.com/ingest.
-    # Setting it disables the receiver auto-wiring below.
+    # false = hard off: the API never sends telemetry, whatever the admin
+    # switches say. This is the single setting for air-gapped and
+    # privacy-sensitive clusters. The bundled receiver, if enabled below, is
+    # still deployed.
+    enabled: true
+    # Where reports are sent. Empty means the project's default provider
+    # (https://telemetry.gameplane.net/ingest, compiled into the API); set a URL such as
+    # https://telemetry.example.com/ingest to send reports to your own
+    # receiver instead. Setting it disables the receiver auto-wiring below.
     endpoint: ""
+    # Testing only: the spacing between reports. Don't change in production.
+    interval: 24h
     # Optional shared ingest token, sourced from a Secret (never a flag).
     # The API sends it verbatim as the Authorization header and the
     # bundled receiver requires it — recommended when the receiver is
@@ -256,8 +264,56 @@ api:
     # pointed at it automatically.
     receiver:
       enabled: false
+      # Must stay 1 while persistence is enabled: the SQLite file on the PVC
+      # has a single writer, so the template fails the render otherwise.
       replicas: 1
       resources: {}
+      # Aggregate storage (SQLite on a PVC mounted at /data). With
+      # persistence disabled an emptyDir is used instead and every
+      # aggregate is lost when the pod restarts.
+      persistence:
+        enabled: true
+        size: 1Gi
+        storageClassName: ""
+      # Private dashboard (spec 022). The dashboard listener only starts when
+      # tokenSecretRef.name names a Secret holding the dashboard token.
+      dashboard:
+        tokenSecretRef:
+          name: ""
+          key: token
+        # Extra NetworkPolicy peers allowed to reach the dashboard port
+        # (port-forward works without any). Each item is a NetworkPolicyPeer,
+        # e.g. {namespaceSelector: {matchLabels: {team: ops}}}.
+        ingressFrom: []
+      # Serve the public aggregate counters on GET /v1/summary.
+      publicSummary:
+        enabled: false
+      # Optional HMAC pepper for install IDs, sourced from a Secret. Empty
+      # name = the receiver generates one and keeps it in its database.
+      pepperSecretRef:
+        name: ""
+        key: pepper
+      # Daily aggregate retention in days. Minimum 365 (the receiver
+      # refuses to start below that).
+      retentionDays: 730
+      # Per-install activity record expiry in days. Minimum 31.
+      activityExpiryDays: 90
+      # Accepted reports per source address per UTC day; 0 = unlimited.
+      ingestSourceDailyLimit: 20
+      # CIDRs whose X-Forwarded-For header is trusted for the source address.
+      trustedProxyCIDRs: []
+      # Proof-of-work on report ingestion (spec 022 FR-039, OD-5). Off by
+      # default; a provider turns it on for a public endpoint. While on,
+      # every report must carry a solved challenge from GET /v1/challenge.
+      # The difficulty is 0 bits (or minBits) up to targetPerMinute
+      # challenges a minute, rises with the request rate up to maxBits, and
+      # falls one bit every 5 minutes. Installs refuse challenges above 26
+      # bits, so maxBits may not exceed 26.
+      ingestPow:
+        enabled: false
+        targetPerMinute: 60
+        minBits: 0
+        maxBits: 22
 
   oidc:
     enabled: false
@@ -521,8 +577,11 @@ serviceMonitors:
   # expressions/labels) identifying the namespace your Prometheus runs in.
   # Only used, when non-empty, to open NetworkPolicy exceptions so that
   # Prometheus can reach the agent's metrics port 9090 (F-216; rationale in
-  # agent/specs.md) and the telemetry-receiver's /metrics on its normal
-  # port (F-217) when networkPolicies.enabled is also true. Required
+  # agent/specs.md) and the telemetry-receiver's /metrics on its
+  # dashboard port 8081 (F-217; /metrics is served there with Bearer auth,
+  # so the receiver ServiceMonitor also needs
+  # api.telemetry.receiver.dashboard.tokenSecretRef.name) when
+  # networkPolicies.enabled is also true. Required
   # alongside enabled: true whenever networkPolicies.enabled is also true;
   # left empty, both stay unreachable to Prometheus even though their
   # ServiceMonitor/PodMonitor objects are rendered. Example:

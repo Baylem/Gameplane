@@ -21,6 +21,7 @@ import (
 	"github.com/GameplanePanel/gameplane/api/internal/httperr"
 	"github.com/GameplanePanel/gameplane/api/internal/notify"
 	"github.com/GameplanePanel/gameplane/api/internal/registry"
+	"github.com/GameplanePanel/gameplane/api/internal/telemetry"
 )
 
 // MountConfig exposes the admin config store at /admin/config.
@@ -44,12 +45,21 @@ import (
 // in installTimeSettings.oidcHelmProvider (the raw seed, not merged with
 // helmOverride overrides). Passed as *auth.ProviderPolicy from main.go.
 func MountConfig(r chi.Router, store *db.Store, auditor *audit.Auditor, helmOIDCPresent bool, gameDataStorageClass string, helmPolicy *auth.ProviderPolicy) {
+	MountConfigWithTelemetry(r, store, auditor, helmOIDCPresent, gameDataStorageClass, helmPolicy, TelemetrySettings{})
+}
+
+// MountConfigWithTelemetry is MountConfig with the install's telemetry
+// setting, which the "telemetry" section's save hook needs to refuse a save
+// when the operator disabled telemetry and to schedule the first report.
+// MountConfig passes the zero value (no destination restriction, 24h).
+func MountConfigWithTelemetry(r chi.Router, store *db.Store, auditor *audit.Auditor, helmOIDCPresent bool, gameDataStorageClass string, helmPolicy *auth.ProviderPolicy, tel TelemetrySettings) {
 	h := &configHandler{
 		db:                   store,
 		auditor:              auditor,
 		validators:           newValidators(helmOIDCPresent),
 		gameDataStorageClass: gameDataStorageClass,
 		helmPolicy:           helmPolicy,
+		telemetry:            tel,
 	}
 	r.Route("/admin/config", func(r chi.Router) {
 		r.Get("/", h.getAll)
@@ -64,6 +74,7 @@ type configHandler struct {
 	validators           map[string]func([]byte) (json.RawMessage, error)
 	gameDataStorageClass string
 	helmPolicy           *auth.ProviderPolicy
+	telemetry            TelemetrySettings
 }
 
 func (h *configHandler) getAll(w http.ResponseWriter, req *http.Request) {
@@ -132,7 +143,18 @@ func (h *configHandler) put(w http.ResponseWriter, req *http.Request) {
 		auditEvents = h.detectAuthAuditEvents(req.Context(), canon)
 	}
 
-	if _, err := h.db.DB.ExecContext(req.Context(),
+	if section == "telemetry" {
+		// The telemetry section's post-save hook runs in the same
+		// transaction as the config write (see saveTelemetry).
+		if err := h.saveTelemetry(req.Context(), canon); err != nil {
+			if errors.Is(err, telemetry.ErrOperatorDisabled) {
+				http.Error(w, err.Error(), http.StatusConflict)
+				return
+			}
+			httperr.Write(w, req, err)
+			return
+		}
+	} else if _, err := h.db.DB.ExecContext(req.Context(),
 		`INSERT INTO config(key, value, updated_at)
 		 VALUES (?, ?, ?)
 		 ON CONFLICT(key) DO UPDATE SET
@@ -156,6 +178,22 @@ func (h *configHandler) put(w http.ResponseWriter, req *http.Request) {
 	}
 
 	writeJSON(w, map[string]any{"section": section, "value": canon})
+}
+
+// saveTelemetry persists the validated telemetry section through
+// telemetry.ApplyConsent, so one transaction writes the config row, sets
+// consent_source to "admin", creates or clears the install ID and opens or
+// closes the report schedule. It returns telemetry.ErrOperatorDisabled when
+// the operator disabled telemetry at install time.
+func (h *configHandler) saveTelemetry(ctx context.Context, canon json.RawMessage) error {
+	var c telemetryCfg
+	if err := json.Unmarshal(canon, &c); err != nil {
+		return fmt.Errorf("decode telemetry config: %w", err)
+	}
+	return inTx(ctx, h.db, func(tx *sql.Tx) error {
+		return telemetry.ApplyConsent(ctx, tx, h.telemetry.Dest, h.telemetry.Interval,
+			c.SendMetrics, c.Extended, db.TelemetryConsentAdmin)
+	})
 }
 
 // resetRoleMapping removes a single role's override from helmOverride.roleMappings
@@ -723,12 +761,18 @@ func validateNotifications(body []byte) (json.RawMessage, error) {
 
 type telemetryCfg struct {
 	SendMetrics bool `json:"sendMetrics"`
+	Extended    bool `json:"extended"`
 }
 
 func validateTelemetry(body []byte) (json.RawMessage, error) {
 	var c telemetryCfg
 	if err := json.Unmarshal(body, &c); err != nil {
 		return nil, fmt.Errorf("invalid json: %w", err)
+	}
+	// Turning basic off turns extended off with it, and the save succeeds
+	// (FR-003, spec Q7).
+	if !c.SendMetrics {
+		c.Extended = false
 	}
 	return json.Marshal(c)
 }

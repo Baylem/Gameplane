@@ -5,10 +5,13 @@ import {
   Archive,
   Bell,
   BellRing,
+  CircleHelp,
   CircleSlash2,
   Cog,
   Flame,
   Gamepad2,
+  Globe,
+  House,
   Key,
   Lock,
   Mail,
@@ -42,6 +45,8 @@ import { SlackIcon } from "@/components/ui/SlackIcon";
 import { SettingsNav, type SettingsSectionKey } from "@/components/ui/SettingsNav";
 import { cn, formatRelative } from "@/lib/utils";
 import { errorText } from "@/lib/errors";
+import { Telemetry, type TelemetryInfo } from "@/lib/api";
+import { TELEMETRY_STATEMENT_URL } from "@/lib/links";
 import { Auth, AuthProviders, BackupDestinations, Cluster, ModRegistries, Notifications, type SinkSecretBody } from "@/lib/endpoints";
 import { can, useMe } from "@/lib/auth";
 import type { ClusterInfo } from "@/types";
@@ -1445,7 +1450,7 @@ function TestButton({ dirty, disabled, onPress, children }: { dirty: boolean; di
   );
 }
 
-function TelemetrySwitch({ isSelected, onChange, ariaLabel }: { isSelected: boolean; onChange: (value: boolean) => void; ariaLabel: string }) {
+function TelemetrySwitch({ isSelected, onChange, ariaLabel, isDisabled }: { isSelected: boolean; onChange: (value: boolean) => void; ariaLabel: string; isDisabled?: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (containerRef.current) {
@@ -1461,6 +1466,7 @@ function TelemetrySwitch({ isSelected, onChange, ariaLabel }: { isSelected: bool
       <Switch
         aria-label={ariaLabel}
         isSelected={isSelected}
+        isDisabled={isDisabled}
         onChange={onChange}
       >
         <Switch.Content>
@@ -1612,34 +1618,254 @@ function NotificationsSection({ initial }: { initial?: NotificationsCfg }) {
   );
 }
 
-const defaultTelemetry: TelemetryCfg = { sendMetrics: false };
+const defaultTelemetry: TelemetryCfg = { sendMetrics: false, extended: false };
+
+const TELEMETRY_KEY = ["telemetry"] as const;
+
+// Intl output is "Oct 6, 2026, 09:12" for these options; the section always
+// renders UTC so the text matches what the receiver stores.
+function formatUtc(iso: string, withTime: boolean): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const text = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    ...(withTime ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" as const } : {}),
+    timeZone: "UTC",
+  }).format(d);
+  return withTime ? `${text} UTC` : text;
+}
+
+const destinationCopy: Record<
+  Exclude<TelemetryInfo["destination"]["kind"], "disabled" | "none">,
+  { detail: string; badge: string }
+> = {
+  default: { detail: "The Gameplane project's telemetry service.", badge: "Project default" },
+  custom: {
+    detail: "Custom destination set by your operator. Nothing is sent to the Gameplane project.",
+    badge: "Custom",
+  },
+  bundled: {
+    detail: "The receiver bundled with this install. Reports stay inside your cluster.",
+    badge: "Bundled",
+  },
+};
+
+function TelemetryDestinationBlock({ info }: { info: TelemetryInfo }) {
+  const kind = info.destination.kind;
+  if (info.operatorDisabled || kind === "disabled") {
+    return (
+      <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-warning/10 p-3">
+        <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-warning-soft-foreground" />
+        <div className="flex-1">
+          <div className="text-sm font-medium">Telemetry is disabled by the operator.</div>
+          <div className="pt-0.5 text-xs text-muted">
+            No data of either kind is sent and no telemetry destination is contacted, whatever the
+            switches below say. Only an operator can change this, at install time.
+          </div>
+        </div>
+        <span className="rounded bg-warning/20 px-2 py-0.5 text-xs text-warning-soft-foreground">Disabled</span>
+      </div>
+    );
+  }
+  if (kind === "none") {
+    return (
+      <div className="flex items-start gap-3 rounded-md bg-surface p-3">
+        <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+        <div className="flex-1">
+          <div className="text-sm font-medium">No telemetry destination configured.</div>
+          <div className="pt-0.5 text-xs text-muted">
+            Nothing is sent. An operator can set a custom or bundled destination at install time.
+          </div>
+        </div>
+        <span className="rounded bg-background px-2 py-0.5 text-xs">No destination</span>
+      </div>
+    );
+  }
+  const copy = destinationCopy[kind];
+  const Icon = kind === "bundled" ? House : kind === "custom" ? CircleHelp : Globe;
+  return (
+    <div className="flex items-start gap-3 rounded-md bg-surface p-3">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+      <div className="flex-1">
+        <div className="text-sm font-medium">Sending to {info.destination.host}</div>
+        <div className="pt-0.5 text-xs text-muted">{copy.detail}</div>
+      </div>
+      <span className="rounded bg-background px-2 py-0.5 text-xs">{copy.badge}</span>
+      <a
+        href={TELEMETRY_STATEMENT_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="text-xs text-accent hover:underline"
+      >
+        Data-handling statement
+      </a>
+    </div>
+  );
+}
+
+function TelemetryPreviewBlock({ info }: { info: TelemetryInfo }) {
+  let empty: string | null = null;
+  if (info.operatorDisabled || info.destination.kind === "disabled") {
+    empty = "Nothing to preview: telemetry is disabled by the operator.";
+  } else if (info.destination.kind === "none") {
+    empty = "Nothing to preview: no destination is configured.";
+  } else if (!info.preview) {
+    empty = "Nothing to preview: basic usage metrics are off.";
+  }
+  return (
+    <div className="space-y-1.5">
+      <div className="text-sm font-medium">Next report preview</div>
+      <div className="text-xs text-muted">Exactly what the next report contains. Read-only.</div>
+      {empty || !info.preview ? (
+        <div className="rounded-md border border-border p-3 text-xs text-muted">{empty}</div>
+      ) : (
+        <pre
+          role="region"
+          aria-label="Next report JSON"
+          tabIndex={0}
+          className="overflow-x-auto rounded-md border border-border bg-background p-3 font-mono text-xs"
+        >
+          {JSON.stringify(info.preview, null, 2)}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+function TelemetryStatusLines({ info }: { info: TelemetryInfo }) {
+  const { status } = info;
+  let text: string;
+  if (status.lastOutcome === "ok") {
+    text = `Last report sent successfully on ${status.lastSuccessAt ? formatUtc(status.lastSuccessAt, true) : "an earlier attempt"}.`;
+  } else if (status.lastOutcome === "failed") {
+    text = status.lastSuccessAt
+      ? `Last attempt failed, will retry. Last successful report: ${formatUtc(status.lastSuccessAt, true)}.`
+      : "Last attempt failed, will retry. No report has been delivered yet.";
+  } else {
+    text = "No report sent yet.";
+  }
+  return (
+    <div className="space-y-1 text-xs text-muted">
+      <div>{text}</div>
+      {status.lastIdRotationAt && (
+        <div>
+          Install ID replaced on {formatUtc(status.lastIdRotationAt, false)}: the destination
+          reported it was in use by another key.
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TelemetrySection({ initial }: { initial?: TelemetryCfg }) {
   const f = useSectionForm<TelemetryCfg>(initial ?? defaultTelemetry, "telemetry");
+  const qc = useQueryClient();
+  const infoQ = useQuery({ queryKey: TELEMETRY_KEY, queryFn: () => Telemetry.get() });
+  const info = infoQ.data;
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const reset = useMutation({
+    mutationFn: () => Telemetry.resetInstallId(),
+    onSuccess: () => {
+      setConfirmingReset(false);
+      return qc.invalidateQueries({ queryKey: TELEMETRY_KEY });
+    },
+    onError: () => setConfirmingReset(false),
+  });
+  // A saved change alters the preview, the install ID and the status.
+  useEffect(() => {
+    if (f.saved) void qc.invalidateQueries({ queryKey: TELEMETRY_KEY });
+  }, [f.saved, qc]);
+
+  const operatorDisabled = info?.operatorDisabled === true || info?.destination.kind === "disabled";
+  // The operator switch overrides stored consent: show both off and inert.
+  const basicOn = !operatorDisabled && f.draft.sendMetrics;
+  const extendedOn = basicOn && f.draft.extended;
+  const installId = info?.installId ?? null;
+
   return (
     <SectionCard
       title="Telemetry"
-      subtitle="Anonymous usage metrics help us prioritize work."
+      subtitle="Anonymous usage metrics help us prioritize work. Extended metrics include a random install ID."
       footer={
         <>
           <SaveStatus pending={f.pending} error={f.error} saved={f.saved} />
-          <Button onPress={f.save} isDisabled={f.pending}>Save changes</Button>
+          <Button onPress={f.save} isDisabled={f.pending || operatorDisabled}>Save changes</Button>
         </>
       }
     >
+      {info && <TelemetryDestinationBlock info={info} />}
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-sm">Send anonymous usage metrics</div>
+          <div className="text-sm">Send basic usage metrics</div>
           <div className="pt-0.5 text-xs text-muted">
-            No server names, player counts, or identifying data.
+            Gameplane version, number of servers and number of templates.
           </div>
         </div>
         <TelemetrySwitch
-          ariaLabel={f.draft.sendMetrics ? "Disable telemetry" : "Enable telemetry"}
-          isSelected={f.draft.sendMetrics}
-          onChange={(v) => f.update({ sendMetrics: v })}
+          ariaLabel={basicOn ? "Disable telemetry" : "Enable telemetry"}
+          isSelected={basicOn}
+          isDisabled={operatorDisabled}
+          // Turning basic off turns extended off with it (spec Q7).
+          onChange={(v) => f.update(v ? { sendMetrics: true } : { sendMetrics: false, extended: false })}
         />
       </div>
+      <div className="flex items-center justify-between pl-8">
+        <div>
+          <div className="text-sm">Send extended usage metrics</div>
+          <div className="pt-0.5 text-xs text-muted">
+            {!operatorDisabled && !basicOn
+              ? "Turn on basic usage metrics to enable extended usage metrics."
+              : "Adds Kubernetes version, distribution, CPU architecture, node-count band, servers per official game module, which optional features are in use, and a random install ID."}
+          </div>
+        </div>
+        <TelemetrySwitch
+          ariaLabel={extendedOn ? "Disable extended telemetry" : "Enable extended telemetry"}
+          isSelected={extendedOn}
+          isDisabled={operatorDisabled || !basicOn}
+          onChange={(v) => f.update({ extended: v })}
+        />
+      </div>
+      <div className="flex items-center justify-between pl-8">
+        <div>
+          <div className="text-sm">Install ID</div>
+          {installId ? (
+            <>
+              <div className="font-mono text-xs">{installId}</div>
+              <div className="pt-0.5 text-xs text-muted">
+                Random and anonymous. Reset it to start reporting under a new ID; the old ID is never
+                sent again.
+              </div>
+            </>
+          ) : (
+            <div className="pt-0.5 text-xs text-muted">No install ID while extended metrics are off.</div>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          isDisabled={!installId || operatorDisabled || reset.isPending}
+          onPress={() => setConfirmingReset(true)}
+        >
+          Reset ID
+        </Button>
+      </div>
+      {reset.error && (
+        <div className="pl-8 text-xs text-danger">{errorText(reset.error, "Could not reset the install ID")}</div>
+      )}
+      {info && <TelemetryPreviewBlock info={info} />}
+      {info && !operatorDisabled && info.destination.kind !== "none" && <TelemetryStatusLines info={info} />}
+      <ConfirmDialog
+        open={confirmingReset}
+        onOpenChange={setConfirmingReset}
+        title="Reset install ID?"
+        confirmLabel="Reset ID"
+        destructive
+        busy={reset.isPending}
+        onConfirm={() => reset.mutate()}
+        description={`This replaces your random install ID ${installId ?? ""} with a new one. The old ID is never sent again, and the destination cannot link the old and new IDs. The next report is sent under the new ID.`}
+      />
     </SectionCard>
   );
 }

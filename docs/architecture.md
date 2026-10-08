@@ -405,9 +405,18 @@ for the registration flow.
   sentinel uses a generic packets-in-window heuristic instead. See `gameproto/`.
 - **API → audit-syslog-bridge**: HTTP-JSON webhook; the bridge forwards plaintext or TLS syslog to the collector
   for the audit trail, enabled via `api.audit.webhook.syslogBridge.enabled`.
-- **API → telemetry-receiver**: the anonymous daily usage report
-  (admin-toggle gated), auto-wired via `api.telemetry.receiver.enabled` or
-  aimed at an external URL via `api.telemetry.endpoint`.
+- **API → telemetry-receiver**: the daily usage report, in a basic tier
+  (version, server and template counts) and an extended tier (adds a random
+  install ID, environment, game and feature categories, and an Ed25519
+  signature). New installs send both by default after a first-login notice;
+  each tier has its own admin toggle, and `api.telemetry.enabled=false`
+  disables sending entirely. An empty `api.telemetry.endpoint` means the
+  project's default receiver (`telemetry.gameplane.net`); the bundled receiver
+  (`api.telemetry.receiver.enabled`) and any other URL replace it. The
+  receiver keeps daily aggregates in SQLite, serves a token-protected
+  dashboard on a separate port, and can expose a public five-count summary.
+  See [install.md](install.md#telemetry) and
+  [telemetry-provider.md](telemetry-provider.md).
 - **Operator → capture-sidecar [optional]**: network packet capture sidecar
   injected into game pods as an ephemeral container; captures AF_PACKET frames
   matching a BPF filter to PCAPNG output, exposed via mTLS on port `:9091`.

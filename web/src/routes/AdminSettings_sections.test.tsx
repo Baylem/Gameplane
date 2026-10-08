@@ -308,12 +308,21 @@ describe("AdminSettings sections", () => {
   });
 
   it("toggles telemetry and saves", async () => {
+    let body: unknown;
+    server.use(
+      http.put("/admin/config/telemetry", async ({ request }) => {
+        body = await request.json();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
     renderWithQuery(<AdminSettingsPage />);
     await gotoSection(/Telemetry/i);
-    const sw = await screen.findByRole("switch", { name: /Enable telemetry/i });
+    const sw = await screen.findByRole("switch", { name: "Enable telemetry" });
     await userEvent.click(sw);
+    expect(screen.getByRole("switch", { name: "Disable telemetry" })).toHaveAttribute("aria-checked", "true");
     await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
     expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect(body).toEqual({ sendMetrics: true, extended: false });
   });
 
   it("shows the read-only update channel from /cluster/info", async () => {

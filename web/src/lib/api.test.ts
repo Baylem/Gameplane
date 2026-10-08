@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api, APIError, Captures, Shares, createRequestClient, type CaptureStartBody } from "./api";
+import {
+  api,
+  APIError,
+  Captures,
+  Shares,
+  Telemetry,
+  createRequestClient,
+  type CaptureStartBody,
+} from "./api";
 import { HttpResponse } from "msw";
 
 // Mock the cluster module to control getCurrentCluster
@@ -866,5 +874,45 @@ describe("Shares.start()", () => {
       async () => new Response("server error", { status: 500 })
     );
     await expect(Shares.start("tok_error")).rejects.toBeInstanceOf(APIError);
+  });
+});
+
+describe("Telemetry notice client", () => {
+  it("GETs /admin/telemetry/notice and returns the pending notice", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonRes(200, {
+        pending: true,
+        destination: { kind: "bundled", host: "receiver.test" },
+        fields: { basic: ["version"], extended: ["installId"] },
+      })
+    );
+    const notice = await Telemetry.notice();
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/admin/telemetry/notice");
+    expect(init.method).toBe("GET");
+    expect(notice.pending).toBe(true);
+    expect(notice.destination?.host).toBe("receiver.test");
+  });
+
+  it("returns only pending:false when the notice is not pending", async () => {
+    fetchMock.mockResolvedValueOnce(jsonRes(200, { pending: false }));
+    expect(await Telemetry.notice()).toEqual({ pending: false });
+  });
+
+  it.each(["seen", "keep", "extended-off", "all-off"] as const)(
+    "POSTs the %s action as a JSON body",
+    async (action) => {
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+      await expect(Telemetry.ack(action)).resolves.toBeUndefined();
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe("/admin/telemetry/notice");
+      expect(init.method).toBe("POST");
+      expect(JSON.parse(init.body as string)).toEqual({ action });
+    }
+  );
+
+  it("surfaces a 409 (notice not pending) as an APIError", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("telemetry notice is not pending", { status: 409 }));
+    await expect(Telemetry.ack("keep")).rejects.toMatchObject({ status: 409 });
   });
 });

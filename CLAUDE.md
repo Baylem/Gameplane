@@ -35,6 +35,7 @@ Run every session.
 netguard/            SSRF dial-guard: IsAllowed (operator module sources, API sinks, agent loopback RCON); IsPublic (agent mod downloads, API Steam resolver)
 gameaction/          console-injection guard + command renderer (api, agent)
 gameproto/           Minecraft/Terraria handshake parser (sentinel)
+telemetryschema/     shared telemetry report contract (api, telemetry-receiver)
 gp-module/           module authoring CLI: init/validate/preview/package
 operator/            controller-runtime operator
   api/v1alpha1/      CRD types (edit here, then `make generate manifests`); zz_generated.deepcopy.go GENERATED
@@ -59,7 +60,7 @@ test/e2e/            Kind E2E suite (//go:build e2e)
 docs/                architecture, security, modules
 design.pen           canonical Pencil dashboard design
 cosign.pub           image + module signature key
-go.work              links all 15 Go modules (incl. test/e2e)
+go.work              links all 16 Go modules (incl. test/e2e)
 Makefile             canonical task runner
 ```
 
@@ -68,13 +69,13 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
 ## Commands (always via Makefile)
 
 - **Dev:** `make dev-up` (Kind + OCI registry :5001 + Helm), `make web-dev` (Vite, proxies in-cluster API), `make dev-load` (load built images; run `make images` first), `make dev-install` (Helm upgrade), `make dev-down`.
-- **Build:** `make build` (all Go + web), `make build-go` (14 modules in GO_MODULES, all but test/e2e), `make build-web` (`npm ci && npm run build`), `make images`.
+- **Build:** `make build` (all Go + web), `make build-go` (15 modules in GO_MODULES, all but test/e2e), `make build-web` (`npm ci && npm run build`), `make images`.
 - **Codegen:** `make generate` (deepcopy), `make manifests` (CRD/RBAC YAML, synced to `charts/gameplane/crds/`), `make modules-push`, `make tidy`.
 - **Tests (CI only — never run locally, see Rule 8):** `make test`, `make test-integration` (envtest operator+api), `make test-e2e` (~10–20 min), `make test-e2e-bucket BUCKET=(operator|api-auth|api-roles|api-rbac|api-agent|api-mods|ratelimit|bot-fast|bot-heavy|multicluster|upgrade)`.
 - **E2E conventions:** register new tests in `test/e2e/buckets.sh`; `t.Parallel()` + unique names; guard shared resources (`ociPushMu` for module pushes, `ensureResticRepo(t)` for shared backup repos). Rate limits per cluster: IP burst 10 (5/min), user burst 6 (3/min) — cap an API bucket at ~7 admin logins.
 - **Lint:** `make lint` = gofmt, go vet, golangci-lint, ESLint, `check-specs`, `check-doc-versions`, `check-links`.
 
-**Coverage minimums:** netguard 91, gameaction 91, gameproto 90, gp-module 80, operator 72, api 80, agent 90, svcutil 90; audit-syslog-bridge, telemetry-receiver, sentinel, capture-sidecar, mcp-server, tunnel 70; web 92 lines / 76 functions / 82 branches / 92 statements.
+**Coverage minimums:** netguard 91, gameaction 91, gameproto 90, telemetryschema 90, gp-module 80, operator 72, api 80, agent 90, svcutil 90; audit-syslog-bridge, telemetry-receiver, sentinel, capture-sidecar, mcp-server, tunnel 70; web 92 lines / 76 functions / 82 branches / 92 statements.
 
 ## Core rules
 
@@ -114,6 +115,7 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
 | netguard | Go | dial-time SSRF prevention: `IsAllowed` (operator/API module sources and sinks, agent loopback RCON), `IsPublic` (agent mod downloads, API Steam resolver) |
 | gameaction | Go | validates console input against schemas; escapes injection |
 | gameproto | Go | Minecraft/Terraria wire parser for connection filtering |
+| telemetryschema | Go | stdlib-only shared telemetry report contract: types, strict decode, official module catalog, report signing (api, telemetry-receiver) |
 | gp-module | Go | module CLI: scaffold, offline validate, dry-run preview, OCI package |
 | svcutil | Go | stdlib-only env + graceful shutdown (`RunHTTP`) |
 | operator | Go, controller-runtime | authoritative reconciler for 9 CRDs (`GameServer`, `GameTemplate`, …) |

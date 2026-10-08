@@ -610,4 +610,39 @@ describe("AppLayout", () => {
       window.sessionStorage.removeItem(SAFE_MODE_SESSION_KEY);
     }
   });
+
+  describe("telemetry notice", () => {
+    function pendingNotice() {
+      const posts: { action: string }[] = [];
+      server.use(
+        http.get("/admin/telemetry/notice", () =>
+          HttpResponse.json({ pending: true, destination: { kind: "default", host: "telemetry.example.org" } }),
+        ),
+        http.post("/admin/telemetry/notice", async ({ request }) => {
+          posts.push((await request.json()) as { action: string });
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+      return posts;
+    }
+
+    it("shows the notice to users with config:manage and opens Telemetry settings", async () => {
+      const posts = pendingNotice();
+      server.use(http.get("/users/me", () => HttpResponse.json(makeUser())));
+      renderWithQuery(<AppLayout />);
+      expect(await screen.findByText("Anonymous usage metrics are on for this install.")).toBeInTheDocument();
+      await waitFor(() => expect(posts).toEqual([{ action: "seen" }]));
+      await userEvent.click(screen.getByRole("button", { name: "Open Telemetry settings" }));
+      expect(navigateMock).toHaveBeenCalledWith({ to: "/admin", search: { section: "telemetry" } });
+    });
+
+    it("does not mount the notice for users without config:manage", async () => {
+      const posts = pendingNotice();
+      server.use(http.get("/users/me", () => HttpResponse.json(makeUser({ role: "viewer" }))));
+      renderWithQuery(<AppLayout />);
+      await screen.findByRole("link", { name: /Dashboard/i });
+      expect(screen.queryByText("Anonymous usage metrics are on for this install.")).not.toBeInTheDocument();
+      expect(posts).toEqual([]);
+    });
+  });
 });

@@ -267,7 +267,8 @@ on `:8090`. Three **off-by-default** chart toggles wire these into a
 Prometheus-Operator stack (e.g. kube-prometheus-stack):
 
 - `serviceMonitors.enabled` — `ServiceMonitor`s so Prometheus scrapes the
-  operator, API, and telemetry-receiver (when deployed), plus a `PodMonitor`
+  operator, API, and telemetry-receiver (when deployed with a dashboard
+  token; its `/metrics` needs that token), plus a `PodMonitor`
   that scrapes per-GameServer agent metrics from game pods in
   `gamesNamespace` on their plain, named `metrics` containerPort (`9090`,
   declared by the operator's `buildAgentContainer`; no TLS, no client cert —
@@ -277,8 +278,10 @@ Prometheus-Operator stack (e.g. kube-prometheus-stack):
   whenever `networkPolicies.enabled` is also `true`. Without it, both the
   games-namespace default-deny policy (agent metrics port `9090` is not
   admitted from any namespace by default) and the telemetry-receiver's
-  `NetworkPolicy` (admitted only from the API pod) leave the `PodMonitor`
-  and `ServiceMonitor` targets unreachable even though they render.
+  `NetworkPolicy` (its metrics port `8081` admits only
+  `api.telemetry.receiver.dashboard.ingressFrom` peers) leave the
+  `PodMonitor` and `ServiceMonitor` targets unreachable even though they
+  render.
 - `prometheusRules.enabled` — a `PrometheusRule` of operator alerts.
 - `grafanaDashboards.enabled` — a Grafana dashboard `ConfigMap` the Grafana
   sidecar auto-imports (relabel via `grafanaDashboards.labels` if your sidecar
@@ -422,21 +425,116 @@ a slow or down sink never blocks or fails a request.
 
 ### Telemetry
 
-Gameplane can report anonymous usage once a day: `{version, servers,
-templates}` — no names, namespaces, hostnames, or identifiers. Two
-independent gates must both open before anything is sent: the admin
-toggle (**Admin Settings → Telemetry → Send anonymous usage metrics**,
-off by default) decides *whether*, and the chart decides *where*. With no
-destination configured (the default), the reporter never runs.
+Gameplane can send two tiers of usage reports, about once a day. Both are
+described below, so you can decide before you install.
 
+**What is sent**
+
+- **Basic** — exactly three fields: `version` (the Gameplane version),
+  `servers` (how many GameServers exist) and `templates` (how many
+  GameTemplates exist). No names, namespaces, hostnames, or addresses.
+- **Extended** — the basic fields plus the following, and nothing else:
+  - a random **install ID** (a UUID generated on your install; it is not
+    derived from your cluster, host, network, or users)
+  - environment: Kubernetes minor version (for example `1.31`), a
+    distribution category (`k3s`, `rke2`, `k0s`, `eks`, `gke`, `aks`,
+    `openshift`, `microk8s`, `minikube`, `kind`, `doks`, `talos` or
+    `other`), node CPU architectures, and a node-count band (`1`, `2-3`,
+    `4-10`, `11-50`, `51+`)
+  - game usage: a server count for each module from the official catalog,
+    plus one combined `custom` count for every other module (custom
+    module names are never sent)
+  - feature adoption: wake-on-connect (yes/no), relay tunnel types in use
+    (`frp`, `tailscale`, `playit`), packet capture enabled (yes/no),
+    backups configured on any server (yes/no), single sign-on (yes/no),
+    audit forwarding (yes/no), a registered-cluster band (`1`, `2-3`,
+    `4-10`, `11+`), the database kind (`sqlite` or `postgres`) and the UI
+    language
+  - the install's public signing key and the time the report was sent
+
+Every extended value comes from a fixed set of categories or bands, or is
+a number, the install ID, the public key or the send time. A value that
+doesn't fit is sent as `other`. Extended reports are signed with a key
+derived from a random secret that never leaves your install combined with
+the install ID, so nobody can report under your ID with a different key.
+Signing proves which key sent a report; it does not prove the install is
+real. The install ID is pseudonymous: it lets the receiver tell that two
+reports came from the same install, and it is deleted when you turn
+extended off. See [Security](security.md#telemetry) for the threat model.
+
+**Defaults**
+
+| Install | Basic | Extended |
+|---|---|---|
+| New install with a destination in effect | on | on |
+| Existing install that saved a basic choice | keeps that choice | off |
+| Existing install that never saved a choice | off | off |
+
+On a new install, the first admin to sign in sees a notice that lists both
+tiers and names the destination. No report is sent until an admin has seen
+the notice. After that, **Admin Settings → Telemetry** shows the
+destination, a preview of the exact next report (including the install
+ID), the last attempt, separate basic and extended toggles, and an
+install-ID reset. Turning basic off turns extended off with it. The
+operator's install-time `api.telemetry.enabled=false` always wins over the
+toggles.
+
+The project's data-handling statement, including how long the project
+keeps data (daily aggregates for 24 months; per-install activity records
+expire after 90 days without a report) is at
+<https://gameplane.net/telemetry/>.
+
+> **Upgrading?** Installs that already had **Send anonymous usage
+> metrics** switched on, while no destination was configured, saved that
+> choice but it had no effect. After upgrading to the release that adds
+> the project's default receiver (`telemetry.gameplane.net`), those installs
+> start sending **basic** reports to it. Extended stays off until an admin turns it on. If you do
+> not want that, set `api.telemetry.enabled=false` before you upgrade, or
+> turn the toggle off in Admin Settings. Installs that already pointed at
+> a custom `api.telemetry.endpoint` or the bundled receiver keep sending
+> only there, never to the project's default receiver. Installs that
+> never saved a choice stay off.
+
+**Where reports go, and how to change it**
+
+- `api.telemetry.enabled` — set to `false` for a hard off: the API never
+  sends telemetry, whatever the admin toggles say, and no first-login
+  notice is shown. Use this for air-gapped and privacy-sensitive
+  clusters.
+
+  ```sh
+  helm upgrade ... --set api.telemetry.enabled=false
+  ```
+
+- `api.telemetry.endpoint` — when empty (the default), reports go to the
+  project's default receiver, `https://telemetry.gameplane.net/ingest`. Set a
+  URL to send them to your own receiver instead (e.g.
+  `https://telemetry.example.com/ingest`); it replaces the default and never
+  also sends to it. An install whose endpoint was already
+  set keeps working unchanged.
 - `api.telemetry.receiver.enabled` — deploy the bundled
-  [telemetry-receiver](../telemetry-receiver/README.md) [optional] next to the API
-  and point the API at it automatically. It logs each report and exposes
-  aggregate Prometheus metrics (`gameplane_telemetry_reports_total` by
-  version, fleet-size histograms) on its `/metrics`.
-- `api.telemetry.endpoint` — send reports to an external receiver URL
-  instead (e.g. `https://telemetry.example.com/ingest`); setting it
-  overrides the receiver auto-wiring.
+  [telemetry-receiver](../telemetry-receiver/README.md) [optional] next to
+  the API and point the API at it automatically (when `endpoint` is
+  empty). The bundled receiver stores daily aggregates in a PVC
+  (`api.telemetry.receiver.persistence.enabled`, default `true`, 1Gi; the
+  chart runs a single replica while persistence is on). It serves
+  aggregate figures on a private dashboard and, optionally, a public
+  summary; see the next two options. To run a receiver for other
+  installs, see the [provider runbook](telemetry-provider.md).
+- `api.telemetry.receiver.dashboard.tokenSecretRef` — name a Secret (key
+  `token` by default) holding the dashboard token. With a token set, the
+  receiver starts a dashboard listener on port `8081` that you reach by
+  `kubectl port-forward` (or from peers listed in
+  `api.telemetry.receiver.dashboard.ingressFrom`). Without a token there
+  is no dashboard. The same token (as a Bearer token) protects the
+  receiver's `/metrics`, which moved to this port.
+- `api.telemetry.receiver.publicSummary.enabled` — set `true` to enable
+  `GET /v1/summary`, a public, unauthenticated endpoint that returns only
+  five headline counts. Off by default.
+- `api.telemetry.receiver.retentionDays` (default `730`, minimum `365`)
+  and `api.telemetry.receiver.activityExpiryDays` (default `90`, minimum
+  `31`) — how long the receiver keeps daily aggregates and per-install
+  activity records. Lower values fail rendering.
 - `api.telemetry.authSecretRef` — optional shared ingest token, sourced
   from a Secret. The API sends it verbatim as the `Authorization` header
   and the bundled receiver requires it — recommended when the receiver is
@@ -445,10 +543,18 @@ destination configured (the default), the reporter never runs.
   ```sh
   kubectl -n gameplane-system create secret generic telemetry-ingest \
     --from-literal=token='Bearer some-long-random-string'
+  kubectl -n gameplane-system create secret generic telemetry-dashboard \
+    --from-literal=token="$(openssl rand -base64 32)"
   helm upgrade ... \
     --set api.telemetry.receiver.enabled=true \
-    --set api.telemetry.authSecretRef.name=telemetry-ingest
+    --set api.telemetry.authSecretRef.name=telemetry-ingest \
+    --set api.telemetry.receiver.dashboard.tokenSecretRef.name=telemetry-dashboard
+  kubectl -n gameplane-system port-forward svc/gameplane-telemetry-receiver 8081:8081
   ```
+
+  Then open `http://localhost:8081` and sign in with the dashboard token.
+  The receiver's session cookie is `Secure`, so use a browser that treats
+  `localhost` as a secure origin or put TLS in front.
 
 ## Installing a module
 

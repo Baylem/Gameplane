@@ -225,6 +225,11 @@ var rules = []rule{
 	// Mod-registry provider key secrets pair with editing the
 	// modRegistries config section.
 	{segment: "admin", prefix: "/admin/registries", perm: "config:manage"},
+	// Telemetry status and notice (spec 022): reads need config:read, writes
+	// config:manage. The notice GET handler itself answers {"pending":false}
+	// to callers without config:manage.
+	{method: "GET", segment: "admin", prefix: "/admin/telemetry", perm: "config:read"},
+	{segment: "admin", prefix: "/admin/telemetry", perm: "config:manage"},
 	{segment: "admin", perm: "*"},
 
 	// Network capture (feature 003-network-capture-sidecar): admin-only via

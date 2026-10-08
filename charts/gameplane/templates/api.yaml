@@ -328,6 +328,18 @@ spec:
             - --telemetry-endpoint={{ $telemetryURL }}
             {{- end }}
             {{- /*
+            Spec 022 (F-214): enabled and interval are absent after `helm
+            upgrade --reuse-values` from beta.8, so they are read through
+            hasKey. enabled defaults to true; false is the hard off switch.
+            */}}
+            {{- $telemetry := .Values.api.telemetry }}
+            {{- if not (ternary $telemetry.enabled true (hasKey $telemetry "enabled")) }}
+            - --telemetry-disabled
+            {{- end }}
+            {{- if .Values.defaultModuleSource.enabled }}
+            - --official-module-source={{ .Values.defaultModuleSource.name | default "default" }}
+            {{- end }}
+            {{- /*
             An explicit updates.channel always wins. Otherwise derive it so
             the dashboard doesn't lie: "edge" when the images actually
             deployed track the rolling :edge build (image.tag=edge, or —
@@ -383,6 +395,14 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.api.audit.s3.credentialsSecretRef.name }}
                   key:  {{ .Values.api.audit.s3.credentialsSecretRef.secretKeyKey }}
+            {{- end }}
+            {{- if and (not .Values.api.telemetry.endpoint) .Values.api.telemetry.receiver.enabled }}
+            - name: GAMEPLANE_TELEMETRY_BUNDLED
+              value: "true"
+            {{- end }}
+            {{- with (.Values.api.telemetry.interval | default "") }}
+            - name: GAMEPLANE_TELEMETRY_INTERVAL
+              value: {{ . | quote }}
             {{- end }}
             {{- if .Values.api.telemetry.authSecretRef.name }}
             - name: GAMEPLANE_TELEMETRY_AUTH

@@ -154,6 +154,7 @@ its own operator and storage; users and authorization stay central. See
 | `gameaction/` | Go | Security guard and command renderer for custom module admin actions. |
 | `netguard/` | Go | SSRF protection layer for outgoing mod downloads and OCI module fetches. |
 | `svcutil/` | Go | Shared HTTP server lifecycle and environment configuration utilities. |
+| `telemetryschema/` | Go | Shared telemetry report contract (types, strict decoder, official module catalog, report signing) used by the API and `telemetry-receiver`. |
 | `audit-syslog-bridge/` | Go | HTTP-JSON to syslog relay [optional] for audit logging infrastructure. |
 | `telemetry-receiver/` | Go | Collector [optional] for anonymous daily usage reports. |
 | `mcp-server/` | Go | Strictly read-only Model Context Protocol server [optional] for AI tools. |
@@ -190,6 +191,7 @@ Gameplane extends Kubernetes using custom resources under `gameplane.local/v1alp
 ├── gameaction/           # Console injection guard & action command renderer
 ├── netguard/             # SSRF dial-guard library
 ├── svcutil/              # Shared HTTP server & env utilities
+├── telemetryschema/      # Shared telemetry report contract (types, decoder, signing)
 ├── audit-syslog-bridge/  # Optional syslog relay for audit logs
 ├── telemetry-receiver/   # Optional anonymous usage telemetry receiver
 ├── mcp-server/           # Optional read-only Model Context Protocol server

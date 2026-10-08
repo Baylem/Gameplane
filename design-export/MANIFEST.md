@@ -2500,6 +2500,29 @@ Server Settings gets a "Game configuration" section (edit `spec.config` from the
 - **Screenshots:** `Export(ids, "png", …, {scale: 2})`.
 - **Re-exported for the sub-nav change:** PNGs of `swxkJ`, `E0ypH`, `J5pjJ3`, `ugDSa`, `i1bLR`, `KaRFX`, `Y5cmvI`, `VfB0Y`, `i8wib`, `xCJlu`, `RodrS`, `VctzT`, `iLm38`, `QpEvu`, `XR0f9`, `nGJE1`, `dhPtX`, `tSOeI`, `y3YcQ`, `EKJyM`, `IMSD5`, `gWqMD` and `EV8mp`; JSON of `Y5cmvI` and `J5pjJ3` (they were out of date with the canvas).
 
+## Spec 022 telemetry notice and settings (2026-10-07)
+
+T041 and T052 of `specs/022-default-telemetry-dashboard/`. New frames sit in an empty region below the Admin Settings row (x 11480–21120, y 25404–28584); no existing frame changed. Destination hosts are samples while OD-1 is unruled: their text nodes are named `host (SAMPLE, OD-1 unruled)` (default) and `host (SAMPLE)` (bundled).
+
+| Object ID | Name | Change |
+| --- | --- | --- |
+| `lh8p8` | Gameplane/Telemetry Notice Banner | **New** reusable component, modelled on the Safe Mode Banner (`DAz77`) in the accent tone with a lucide `info` icon. Headline "Anonymous usage metrics are on for this install.", the destination host line, a basic field column and an extended field column that says a random install ID is included, the actions "Keep sharing", "Turn off extended" and "Turn off all", and the links "Open Telemetry settings" and "Data-handling statement" (`TELEMETRY_STATEMENT_URL`). No dismiss button. |
+| `zj5a3` | Screen/Dashboard Home — Telemetry notice (default) | **New.** Copy of `j24cXg` (1380 tall) with the banner at the top of the body, default destination (sample host `telemetry.example.org`). |
+| `GR1G9` | Screen/Dashboard Home — Telemetry notice (bundled) | **New.** As `zj5a3`, bundled in-cluster receiver (sample host `gameplane-telemetry-receiver.gameplane.svc`). |
+| `l7TRz9` | Screen/Admin Settings — Telemetry (default) | **New.** Copy of `uoxQW`. Subtitle names the install ID. Destination line, basic and extended switches on, install-ID row with "Reset ID", read-only next-report preview JSON, status "ok". |
+| `r0heh` | Screen/Admin Settings — Telemetry (custom) | **New.** Custom destination; status "failed" plus the line "Install ID replaced on Oct 4, 2026: the destination reported it was in use by another key." |
+| `cDiNb` | Screen/Admin Settings — Telemetry (bundled) | **New.** Bundled destination; basic on, extended off, install-ID row dimmed ("No install ID while extended metrics are off."), Reset ID dimmed; status "never". |
+| `DBQyF` | Screen/Admin Settings — Telemetry (disabled) | **New.** Both switches off and dimmed, warning message "Telemetry is disabled by the operator.", Save dimmed. |
+| `K5XinZ` | Screen/Admin Settings — Telemetry (none) | **New.** No destination; basic switch off and enabled, extended dimmed; no preview or status. |
+| `yrxK2` | Screen/Admin Settings — Telemetry (Reset ID confirm) | **New.** Copy of `l7TRz9` with a 40% scrim and an AlertDialog/Danger instance: "Reset install ID?", Cancel / Reset ID. |
+
+- **JSON:** made with `Print(JSON.stringify(Get(id, {depth: 30, includePathGeometry: true})))`, length-checked against the canvas and re-serialized with `jq .`. Zero `"..."` elisions, and `jq empty` passes.
+- **Screenshots:** `Export(ids, "png", …, {scale: 2})`.
+- **Text wrap fix (2026-10-07, after review by the maintainer):** in `U8Zugm` the title (`p6wdYs`), destination suffix (`w4oMww`) and both field descriptions (`js01h`, `WW2ac`) now use `textGrowth: fixed-width` with `width: fill_container`, so long text wraps inside the banner instead of running past it (most visible on `woRBK`, the bundled host). Re-exported: JSON of `U8Zugm`; PNGs of `U8Zugm`, `jmcmS` and `woRBK`. The screens' JSON is unchanged (they hold only instance overrides).
+- **OD-1 ruled (2026-10-07):** telemetry.gameplane.net is the default endpoint per OPEN-DECISIONS OD-1. Updated text nodes: `jhnKn` in `U8Zugm`; `jhnKn` in the `t6Wzr` instance override in `jmcmS`; `i6gVPJ` in `TEBym`; `J98Oe` in `oqm73`. Names updated from `host (SAMPLE, OD-1 unruled)` to `host`. Re-exported: JSON and PNG of `U8Zugm`, `jmcmS`, `TEBym`, `oqm73`.
+- **Reset ID button icon removed (2026-10-07):** removed the plus icon from the resetIdBtn component instances in the Admin Settings screens. The button component's default plus icon is now hidden with `descendants: {"X3iEI": {"enabled": false}}` on all instances (VATLE in DtjyL, P8V7X8 in uwPVC, qq0qa in oqm73, and AILYr in TEBym). Re-exported JSON and PNG for TEBym, DtjyL, uwPVC, oqm73.
+- **Rebuilt in the master merge (2026-10-07):** master's `design.pen` (with `FBiMN` and the `qFLfB` rename from PR #584) was taken as the base and these frames were re-created on it from their exports, so their ids changed: `U8Zugm` → `lh8p8`, `jmcmS` → `zj5a3`, `woRBK` → `GR1G9`, `TEBym` → `l7TRz9`, `DtjyL` → `r0heh`, `uwPVC` → `cDiNb`, `Rvv6z` → `DBQyF`, `RT8lU` → `K5XinZ`, `oqm73` → `yrxK2`. The rebuilt JSON equals the previous export with ids remapped (length and FNV-1a hash checked against the canvas; the hidden rows of the bundled, disabled and none screens carry the x/y/width the canvas now computes for them). The PNGs were re-exported: the two Dashboard Home screens now show the banner's actions row below both metric columns, where the previous PNGs held a stale layout of the same JSON. Internal node ids named in the notes above refer to the pre-merge file.
+
 ## Share Start recovery (PR #584, 2026-10-07)
 
 | Object ID | Name | Change |
