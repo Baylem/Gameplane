@@ -23,6 +23,7 @@ type Client struct {
 	// deliberately has no Kubernetes transport and is never a workload target.
 	SecretStore      func(string) SecretStore
 	ClusterStore     ClusterStore
+	RegisterCluster  ClusterRegistrar
 	kubeconfigDigest [32]byte
 }
 

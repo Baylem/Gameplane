@@ -86,8 +86,9 @@ func New(ctx context.Context, store *db.Store, keyFile string) (*kube.Client, er
 		return nil, fmt.Errorf("read management storage: %w", err)
 	}
 	return &kube.Client{
-		SecretStore:  func(ns string) kube.SecretStore { return &secrets{objects{b, "secrets", ns}} },
-		ClusterStore: &clusters{objects{b, "clusters", ""}},
+		SecretStore:     func(ns string) kube.SecretStore { return &secrets{objects{b, "secrets", ns}} },
+		ClusterStore:    &clusters{objects{b, "clusters", ""}},
+		RegisterCluster: b.registerCluster,
 	}, nil
 }
 
