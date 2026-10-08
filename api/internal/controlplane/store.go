@@ -3,6 +3,7 @@
 package controlplane
 
 import (
+	"bytes"
 	"context"
 	"crypto/cipher"
 	"crypto/rand"
@@ -137,6 +138,15 @@ func loadKeyWithSync(path string, required bool, syncDirectory func(string) erro
 	// Do not allow encrypted DB writes until the final name survives a crash.
 	if err := syncDirectory(filepath.Dir(path)); err != nil {
 		return nil, fmt.Errorf("sync management key directory: %w", err)
+	}
+	// Files can inherit extended ACLs from their parent even when created
+	// with mode 0600. Apply the same handle-based access checks before first use.
+	published, err := readKey(path)
+	if err != nil {
+		return nil, fmt.Errorf("validate published management key: %w", err)
+	}
+	if !bytes.Equal(published, key) {
+		return nil, errors.New("management key changed during publication")
 	}
 	return key, nil
 }

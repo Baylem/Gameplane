@@ -73,7 +73,11 @@ ownership `65532:65532` yourself. Generated key files use mode `0600`. Restored
 keys must be regular files containing exactly 32 raw bytes, owned by the API user
 or root, with no access for other users and no group write/execute permissions.
 Group read is accepted only for a group the API belongs to, which permits
-read-only Kubernetes Secret projections. Key permissions are validated at
+read-only Kubernetes Secret projections. Extended file access ACLs are rejected
+because they can grant extra readers despite safe-looking mode bits. On Linux,
+inspect restored keys with `getfacl` and remove extra file grants with
+`setfacl -b` before applying the required ownership/mode; key directories should
+not have inherited default ACL grants. Key permissions are validated at
 startup; creating a replacement key cannot decrypt existing credentials.
 
 For custom deployments, pass `--standalone` or `GAMEPLANE_STANDALONE=true` to the
@@ -81,8 +85,8 @@ API. `--panel-key-file` / `GAMEPLANE_PANEL_KEY_FILE` selects the key path (defau
 `/data/panel.key` for compatibility with earlier custom deployments; the supplied
 Compose/Helm profiles use `/keys/panel.key`). A persistent key file is required
 even when using the experimental PostgreSQL build. Run one API replica. Run
-standalone key storage in Linux containers; native Windows key access fails
-closed because Windows ACL validation is not implemented.
+standalone key storage in Linux containers on a filesystem supporting POSIX ACL
+inspection. Native non-Linux key access and uninspectable ACLs fail closed.
 
 ### Provision a key outside the database storage
 
