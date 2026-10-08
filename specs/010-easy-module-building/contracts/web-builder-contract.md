@@ -19,7 +19,7 @@ Generates initial YAML manifests and assets from archetype presets and user inpu
   "name": "my-game",
   "displayName": "My Game",
   "archetype": "steamcmd",
-  "image": "ghcr.io/valgulnecron/my-game:latest@sha256:...",
+  "image": "ghcr.io/gameplanepanel/my-game:latest@sha256:...",
   "ports": [
     { "name": "game", "containerPort": 27015, "protocol": "UDP", "advertise": true }
   ],

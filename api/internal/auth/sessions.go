@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/api/internal/db"
+	"github.com/GameplanePanel/gameplane/api/internal/db"
 )
 
 const (

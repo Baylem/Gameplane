@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 )
 
 // Spec 022 US7 (T102 to T104): proof-of-work on /ingest, the challenge

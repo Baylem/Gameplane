@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

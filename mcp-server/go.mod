@@ -1,4 +1,4 @@
-module github.com/ValgulNecron/gameplane/mcp-server
+module github.com/GameplanePanel/gameplane/mcp-server
 
 go 1.26.0
 

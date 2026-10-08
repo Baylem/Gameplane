@@ -25,8 +25,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/api/internal/db"
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/api/internal/db"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 )
 
 const (

@@ -52,8 +52,8 @@ mcp-server/          read-only MCP server
 svcutil/             env parsing + graceful shutdown helpers
 tunnel/              relay client supervisor (frp, Tailscale, playit)
 web/                 React 19 + strict TS + Vite dashboard; src/{routes,components,lib,router,styles,test}/
-modules/             SUBMODULE gameplane-module (OCI game templates)
-website/             SUBMODULE gameplane-website (Astro docs/marketing; has its own CLAUDE.md and AGENTS.md)
+modules/             SUBMODULE GameplanePanel/module (OCI game templates)
+website/             SUBMODULE GameplanePanel/website (Astro docs/marketing; has its own CLAUDE.md and AGENTS.md)
 charts/gameplane/    Helm chart (crd-manifests/, hooks)
 deploy/kind/         local Kind scripts
 test/e2e/            Kind E2E suite (//go:build e2e)
@@ -90,7 +90,7 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
 9. **Kubernetes primitives first** (StatefulSet, Service, PVC, Job, ConfigMap, Secret, CRDs) before custom abstractions.
 10. **Operator authority:** business logic lives in reconcilers (`operator/internal/controller/`); the API is a UX gateway and never bypasses reconciliation.
 11. **Commits:** commit each completed logical unit (`feat:`/`fix:`/`chore:`…), signed (`git commit -s`); never amend pushed commits or use `--no-verify`; keep trailers `Co-Authored-By: <current model>`.
-12. **Branches:** one per unit of work; delete remote + local branch right after merge. `master` is protected by ruleset `18692396` ("protect main"): 1 human approval, no self-approval, no direct pushes, approvals dismissed on push — agents cannot merge PRs. Check: `gh api repos/ValgulNecron/Gameplane/rules/branches/master`.
+12. **Branches:** one per unit of work; delete remote + local branch right after merge. `master` is protected by ruleset `18692396` ("protect main"): 1 human approval, no self-approval, no direct pushes, approvals dismissed on push — agents cannot merge PRs. Check: `gh api repos/GameplanePanel/Gameplane/rules/branches/master`.
 13. **Multi-agent delegation:** main loop orchestrates/reviews; implementation goes through `Workflow` scripts (`parallel()`/`pipeline()`).
     - Start at `haiku`; escalate only on functional failure `haiku` → `sonnet` → `opus` → `fable`. `fable` needs explicit human permission.
     - Set `model:` on every `agent()` call (default is session Opus); check with `grep -c "model:"`.
@@ -100,8 +100,8 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
     - UI changes: browser smoke test via Chrome MCP at `sonnet`, parallel with reviews.
 14. **PR labels (REST only — `gh pr edit` is broken by the Projects-classic deprecation):** ≥1 `type:` (`feature|fix|refactor|test|ci|chore|docs|security`) and ≥1 `area:` (`operator|api|agent|web|modules|chart|e2e|specs|shared|optional-components`); `breaking` when applicable.
     ```sh
-    gh api -X POST repos/ValgulNecron/Gameplane/issues/<pr>/labels -f "labels[]=type: fix" -f "labels[]=area: api"
-    gh api -X PATCH repos/ValgulNecron/Gameplane/pulls/<pr> --input <payload_with_body.json>
+    gh api -X POST repos/GameplanePanel/Gameplane/issues/<pr>/labels -f "labels[]=type: fix" -f "labels[]=area: api"
+    gh api -X PATCH repos/GameplanePanel/Gameplane/pulls/<pr> --input <payload_with_body.json>
     ```
 15. **Specs:** a feature's spec is its whole `specs/<feature>/` folder (`data-model.md`, `contracts/`, `OPEN-DECISIONS.md`, …) — check it for explicit exemptions before flagging violations. Mark obsolete tasks withdrawn in `tasks.md` with citations; never delete them.
 16. **Archival:** once every task is complete/withdrawn and the PR is merged into `master`, `git mv specs/<NNN>-<slug> specs/done_<NNN>-<slug>` and update in-repo references in the same commit.
@@ -134,8 +134,8 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
 - **CRD field:** edit `operator/api/v1alpha1/<kind>_types.go` → `make generate && make manifests` → reconciler `operator/internal/controller/<kind>_controller.go` → mirror in `web/src/types.ts` + affected `web/src/routes/` → envtest `<kind>_envtest_test.go`.
 - **API route:** handler in `api/internal/handlers/` → mount in `api/cmd/main.go` with RBAC middleware (`api/internal/rbac/`) → `api/internal/handlers/<name>_envtest_test.go` → client method in `web/src/lib/api.ts`.
 - **Dashboard screen:** design in `design.pen` + export to `design-export/` → `web/src/routes/<name>.tsx`, register in `web/src/router/tree.tsx` → data via `web/src/lib/api.ts` + TanStack Query → `web/src/routes/<name>.test.tsx`.
-- **Game module:** edit `modules/<name>/` (`module.yaml`, `template.yaml`, `README.md`) → `make modules-push` → commit in `gameplane-module` → `git add modules` + commit pointer bump in root.
-- **Website:** design in `website/website.pen` + export to `website/website-export/` → change `website/` per its own CLAUDE.md and AGENTS.md → commit/push/PR in `gameplane-website` (default branch `main`) → `git add website` + commit pointer bump in root.
+- **Game module:** edit `modules/<name>/` (`module.yaml`, `template.yaml`, `README.md`) → `make modules-push` → commit in `GameplanePanel/module` → `git add modules` + commit pointer bump in root.
+- **Website:** design in `website/website.pen` + export to `website/website-export/` → change `website/` per its own CLAUDE.md and AGENTS.md → commit/push/PR in `GameplanePanel/website` (default branch `main`) → `git add website` + commit pointer bump in root.
 - **DB migration:** new sequential `api/internal/db/migrations/common/<NNN>_<name>.sql` (013 onward) — portable SQL both SQLite and PostgreSQL run unchanged (no `datetime('now')`/`strftime`, `AUTOINCREMENT`, `INSERT OR …`, `COLLATE NOCASE`; bind timestamps from Go). `migrations/sqlite/` and `migrations/postgres/` hold the frozen per-dialect 001–012 sets; see `api/internal/db/migrations/README.md`. Append-only, applied on API startup.
 
 ## Reference docs

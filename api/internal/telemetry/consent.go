@@ -11,7 +11,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/api/internal/db"
+	"github.com/GameplanePanel/gameplane/api/internal/db"
 )
 
 // ErrOperatorDisabled is returned by the consent writers when the operator

@@ -1,16 +1,16 @@
-module github.com/ValgulNecron/gameplane/sentinel
+module github.com/GameplanePanel/gameplane/sentinel
 
 go 1.26.0
 
 require (
-	github.com/ValgulNecron/gameplane/gameproto v0.0.0
+	github.com/GameplanePanel/gameplane/gameproto v0.0.0
 	k8s.io/apimachinery v0.37.1
 	k8s.io/client-go v0.37.1
 )
 
 // gameproto is an in-repo module (no published version); resolve it locally
 // both inside the workspace (go.work) and in standalone module/Docker builds.
-replace github.com/ValgulNecron/gameplane/gameproto => ../gameproto
+replace github.com/GameplanePanel/gameplane/gameproto => ../gameproto
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

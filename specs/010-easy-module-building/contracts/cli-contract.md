@@ -143,7 +143,7 @@ Usage: gp-module package [MODULE_PATH] [options]
 | :--- | :--- | :--- | :--- |
 | `MODULE_PATH` | Path | `.` (current directory) | Path to module directory. |
 | `--output <path>` | Path | None | Build a local `.tar.gz` OCI bundle archive instead of pushing. |
-| `--registry <url>` | String | None | Registry destination (e.g. `localhost:5001` or `ghcr.io/valgulnecron/gameplane-modules`). |
+| `--registry <url>` | String | None | Registry destination (e.g. `localhost:5001` or `ghcr.io/gameplanepanel/gameplane-modules`). |
 | `--tag <str>` | String | `module.yaml#version` | OCI tag to push. |
 | `--tag-latest` | Flag | `False` | Also push the `:latest` tag. |
 | `--plain-http` | Flag | `False` | Allow plain HTTP registry connections (e.g. local Kind). |

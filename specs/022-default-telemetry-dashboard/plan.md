@@ -129,7 +129,7 @@ specs/022-default-telemetry-dashboard/
 
 ```text
 telemetryschema/                         NEW stdlib-only module (R1)
-├── go.mod                               module github.com/ValgulNecron/gameplane/telemetryschema
+├── go.mod                               module github.com/GameplanePanel/gameplane/telemetryschema
 ├── report.go                            Report / ExtendedPart / Env / Games / Features, JSON encode
 ├── decode.go                            strict decoder (moved from telemetry-receiver/main.go decodePayload, extended)
 ├── enums.go                             distro, arch, tunnel, db, language sets; NodeBand / ClusterBand / FleetBands

@@ -29,7 +29,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

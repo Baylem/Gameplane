@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/test/e2e/internal/protocol/joindepth"
+	"github.com/GameplanePanel/gameplane/test/e2e/internal/protocol/joindepth"
 )
 
 // TestGameServer_HellLetLooseBot_Query boots a Hell Let Loose dedicated server
@@ -25,7 +25,7 @@ func TestGameServer_HellLetLooseBot_Query(t *testing.T) {
 		Game:        "hell-let-loose",
 		Template:    fmt.Sprintf("e2e-hll-bot-%d", time.Now().UnixNano()),
 		DisplayName: "E2E Hell Let Loose",
-		Image:       "ghcr.io/valgulnecron/gameplane/hell-let-loose:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
+		Image:       "ghcr.io/gameplanepanel/gameplane/hell-let-loose:latest@sha256:0000000000000000000000000000000000000000000000000000000000000000",
 		Env: map[string]string{
 			"SERVER_NAME":   "Gameplane E2E HLL",
 			"RCON_PASSWORD": "secret-rcon-password",

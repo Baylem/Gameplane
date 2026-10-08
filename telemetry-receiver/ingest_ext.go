@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 )
 
 // Dimension names stored in daily_dim.dim (data-model.md, Receiver).

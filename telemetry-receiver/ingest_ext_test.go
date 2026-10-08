@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 )
 
 // extStart is 12:00 UTC on 2026-10-07, the clock of the extended tests.

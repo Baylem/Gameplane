@@ -1,33 +1,33 @@
-module github.com/ValgulNecron/gameplane/api
+module github.com/GameplanePanel/gameplane/api
 
 go 1.26.0
 
-require github.com/ValgulNecron/gameplane/netguard v0.0.0
+require github.com/GameplanePanel/gameplane/netguard v0.0.0
 
 // netguard is an in-repo module (no published version); resolve it locally
 // both inside the go.work workspace and for standalone `go build ./api/...`.
-replace github.com/ValgulNecron/gameplane/netguard => ../netguard
+replace github.com/GameplanePanel/gameplane/netguard => ../netguard
 
-require github.com/ValgulNecron/gameplane/gameaction v0.0.0
+require github.com/GameplanePanel/gameplane/gameaction v0.0.0
 
 // gameaction is an in-repo module (no published version); resolve it
 // locally both inside the go.work workspace and for standalone
 // `go build ./api/...`.
-replace github.com/ValgulNecron/gameplane/gameaction => ../gameaction
+replace github.com/GameplanePanel/gameplane/gameaction => ../gameaction
 
-require github.com/ValgulNecron/gameplane/gp-module v0.0.0
+require github.com/GameplanePanel/gameplane/gp-module v0.0.0
 
 // gp-module is an in-repo module (no published version); resolve it
 // locally both inside the go.work workspace and for standalone
 // `go build ./api/...`.
-replace github.com/ValgulNecron/gameplane/gp-module => ../gp-module
+replace github.com/GameplanePanel/gameplane/gp-module => ../gp-module
 
-require github.com/ValgulNecron/gameplane/telemetryschema v0.0.0
+require github.com/GameplanePanel/gameplane/telemetryschema v0.0.0
 
 // telemetryschema is an in-repo module (no published version); resolve it
 // locally both inside the go.work workspace and for standalone
 // `go build ./api/...`.
-replace github.com/ValgulNecron/gameplane/telemetryschema => ../telemetryschema
+replace github.com/GameplanePanel/gameplane/telemetryschema => ../telemetryschema
 
 require (
 	github.com/coder/websocket v1.8.15

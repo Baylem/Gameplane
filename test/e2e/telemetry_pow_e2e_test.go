@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 )
 
 // Helpers for the proof-of-work subtests of TestTelemetryLifecycle (spec 022

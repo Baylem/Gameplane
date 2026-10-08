@@ -35,7 +35,7 @@ docker run -d --name telemetry-receiver \
   -e DASHBOARD_TOKEN="$(cat dashboard-token)" \
   -e ID_PEPPER="$(cat id-pepper)" \
   -e PUBLIC_SUMMARY=true \
-  ghcr.io/valgulnecron/gameplane/telemetry-receiver:edge
+  ghcr.io/gameplanepanel/gameplane/telemetry-receiver:edge
 ```
 
 Notes:
@@ -199,7 +199,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: receiver
-          image: ghcr.io/valgulnecron/gameplane/telemetry-receiver:edge   # CHANGE ME: pin a release tag
+          image: ghcr.io/gameplanepanel/gameplane/telemetry-receiver:edge   # CHANGE ME: pin a release tag
           imagePullPolicy: Always   # edge moves; use IfNotPresent once you pin a release tag
           env:
             - { name: LISTEN_ADDR, value: ":8080" }

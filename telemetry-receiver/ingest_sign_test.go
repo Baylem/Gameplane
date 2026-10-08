@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 )
 
 // signedBaseline accepts one report from install 1 and returns the server,

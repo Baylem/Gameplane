@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 )
 
 // telemetryTestClient is a test-only install (spec 022 T088): it builds and

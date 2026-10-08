@@ -1,7 +1,7 @@
 # operator — Specification
 
 **Status:** pre-v1 (v0.3.0)  
-**Module / package:** github.com/ValgulNecron/gameplane/operator  
+**Module / package:** github.com/GameplanePanel/gameplane/operator  
 **Go version:** 1.26.0
 
 ## Purpose
@@ -301,7 +301,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
 - **Default filter (FR-003):** when `spec.filter` is nil or empty, the reconciler builds the filter it sends to `StartCapture` from the GameServer's template (`networkcapture_filter.go`): one `<tcp|udp> port <containerPort>` term per advertised port (`advertise: true`), in template order, duplicates dropped, joined with `or`. A port with no protocol is TCP. When the template advertises no port, or the template is missing, the capture goes `Failed` with a message and the sidecar is never called. The sidecar keeps refusing an empty filter, so a capture never records unfiltered traffic. A filter set on the capture is sent unchanged.
 - **Ephemeral container injection:** Inject into game pod's spec.ephemeralContainers subresource with:
   - **Name:** "capture"
-  - **Image:** operator CLI flag `--capture-sidecar-image` (default `ghcr.io/valgulnecron/gameplane/capture-sidecar:dev`)
+  - **Image:** operator CLI flag `--capture-sidecar-image` (default `ghcr.io/gameplanepanel/gameplane/capture-sidecar:dev`)
   - **TargetContainerName:** "game" (shares pid/network/ipc namespaces with the game container for packet capture)
   - **VolumeMounts:**
     - `captures` (emptyDir pre-provisioned by gameserver_controller.go) mounted at `/tmp/captures` (read-write)
@@ -375,7 +375,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
 | `--metrics-bind-address` | string | `:8080` | Prometheus metrics endpoint address. |
 | `--health-probe-bind-address` | string | `:8081` | Liveness/readiness probes address. |
 | `--leader-elect` | bool | `false` | Enable leader election (multi-replica deployments). |
-| `--agent-image` | string | `ghcr.io/valgulnecron/gameplane/agent:dev` | Container image for injected agent sidecar. |
+| `--agent-image` | string | `ghcr.io/gameplanepanel/gameplane/agent:dev` | Container image for injected agent sidecar. |
 | `--agent-image-pull-policy` | string | `` | ImagePullPolicy override (Always/IfNotPresent/Never); empty leaves unset. |
 | `--config-init-image` | string | `controller.DefaultConfigInitImage` | Init container for rendering config files onto data volume. |
 | `--restic-image` | string | `controller.DefaultResticImage` | restic backup/restore Job image. |
@@ -404,7 +404,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
 | `--capture-max-retention-seconds` | int64 | `604800` | Maximum retention period (seconds) for captures; clamps any higher retention request. 7-day default, a storage-limitation-informed constraint. |
 | `--capture-default-max-duration-seconds` | int64 | `300` | Default maximum duration (seconds) for a single capture when the request does not provide an explicit `maxDuration`. 5-minute default. |
 | `--capture-default-max-size-bytes` | int64 | `5368709120` | Default maximum file size (bytes) for a single capture when the request does not provide an explicit `maxSize`. 5 GiB default. |
-| `--capture-sidecar-image` | string | `ghcr.io/valgulnecron/gameplane/capture-sidecar:dev` | Container image for the network capture sidecar injected when capture is enabled. |
+| `--capture-sidecar-image` | string | `ghcr.io/gameplanepanel/gameplane/capture-sidecar:dev` | Container image for the network capture sidecar injected when capture is enabled. |
 
 **Manager configuration:**
 - CacheSyncTimeout: 5 minutes (extended from default 2m to tolerate slow apiservers on resource-constrained nodes).
@@ -460,7 +460,7 @@ Forgetting codegen leaves the YAML out of sync with types — CI's `make manifes
 | k8s.io/apimachinery | v0.37.1 | Kubernetes API machinery (metav1, runtime.Scheme, etc.). |
 | k8s.io/client-go | v0.37.1 | Kubernetes client (for exec, logs, discovery). |
 | sigs.k8s.io/controller-runtime | v0.25.1 | Reconciler framework (Manager, Builder, Reconciler interface). |
-| github.com/ValgulNecron/gameplane/netguard | local | SSRF dial guard (permissive policy for module fetches from private registries). |
+| github.com/GameplanePanel/gameplane/netguard | local | SSRF dial guard (permissive policy for module fetches from private registries). |
 | github.com/go-git/go-git/v5 | v5.19.2 | Git operations (clone, fetch) for ModuleSources. |
 | github.com/go-git/go-billy/v5 | v5.9.1 | VCS filesystem abstraction for go-git. |
 | github.com/google/go-containerregistry | v0.22.1 | OCI image operations (push, pull, digest). |

@@ -60,7 +60,7 @@ Prove that CI pipelines or power users can generate module directories non-inter
 bin/gp-module init valheim-custom \
   --display-name "Valheim Custom" \
   --archetype steamcmd \
-  --image "ghcr.io/valgulnecron/valheim-server:latest@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" \
+  --image "ghcr.io/gameplanepanel/valheim-server:latest@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" \
   --port 2456/udp \
   --port 2457/udp \
   --category Survival \

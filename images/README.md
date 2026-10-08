@@ -51,7 +51,7 @@ Each game has one directory under `images/games/<name>/` with a **Dockerfile** (
 
 ```dockerfile
 # The workflow passes STEAMCMD_BASE_IMAGE as a build arg with the pinned base digest.
-ARG STEAMCMD_BASE_IMAGE=ghcr.io/valgulnecron/gameplane/common-steamcmd:latest
+ARG STEAMCMD_BASE_IMAGE=ghcr.io/gameplanepanel/gameplane/common-steamcmd:latest
 FROM ${STEAMCMD_BASE_IMAGE}
 
 # Game-specific setup (if needed). The base is Ubuntu 26.04, so use apt-get.
@@ -90,12 +90,12 @@ To pin an image in a module:
 
 1. Open the workflow run: GitHub Actions → `.github/workflows/images.yaml` → the run triggered by your push.
 2. Scroll to the **job summary** (collapsed section under the logs) — it lists every pushed digest.
-3. Copy the full digest reference (e.g., `ghcr.io/valgulnecron/gameplane/nuclear-option@sha256:abc123...`).
+3. Copy the full digest reference (e.g., `ghcr.io/gameplanepanel/gameplane/nuclear-option@sha256:abc123...`).
 4. Paste into the module's `template.yaml` under `spec.image.ref`:
    ```yaml
    spec:
      image:
-       ref: ghcr.io/valgulnecron/gameplane/nuclear-option@sha256:abc123...
+       ref: ghcr.io/gameplanepanel/gameplane/nuclear-option@sha256:abc123...
    ```
 5. Commit and push. The next module build publishes the updated bundle.
 
@@ -212,7 +212,7 @@ docker run -it \
 All published images are signed with cosign using the project's private key. Signatures are recorded in Sigstore's Rekor transparency log. To verify a published image:
 
 ```bash
-cosign verify --key cosign.pub ghcr.io/valgulnecron/gameplane/nuclear-option@sha256:...
+cosign verify --key cosign.pub ghcr.io/gameplanepanel/gameplane/nuclear-option@sha256:...
 ```
 
 The `cosign.pub` file (committed to the repo root) is the public key for verification.

@@ -1,4 +1,4 @@
-module github.com/ValgulNecron/gameplane/capture-sidecar
+module github.com/GameplanePanel/gameplane/capture-sidecar
 
 go 1.26.0
 

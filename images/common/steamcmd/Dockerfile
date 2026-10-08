@@ -121,7 +121,7 @@ ARG VERSION=dev
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.title="Gameplane SteamCMD Base"
 LABEL org.opencontainers.image.description="Shared SteamCMD base image for Gameplane game servers"
-LABEL org.opencontainers.image.source="https://github.com/valgulnecron/gameplane"
+LABEL org.opencontainers.image.source="https://github.com/gameplanepanel/gameplane"
 
 # No ENTRYPOINT or CMD here — derived images define their own.
 # The upstream steamcmd/steamcmd ENTRYPOINT is not inherited: it treats any

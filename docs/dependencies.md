@@ -71,7 +71,7 @@ dial-time hook itself.
 - **API gateway** (`api/internal/notify/{notify,deliver}.go` and `api/internal/steam/resolver.go`): admin-configured notification sinks via `IsAllowed`; Steam name resolution via `IsPublic`.
 - **Agent** (`agent/internal/mods/mods.go` and `agent/internal/rcon/websocket.go`): user-supplied mod downloads via `IsPublic`; loopback WebSocket RCON via `IsAllowed`.
 
-It is a local `replace` module (`replace github.com/ValgulNecron/gameplane/netguard => ../netguard` in every importer's `go.mod`), not a published module — each Dockerfile that builds an importer must `COPY netguard/` into the build context alongside the component's own source.
+It is a local `replace` module (`replace github.com/GameplanePanel/gameplane/netguard => ../netguard` in every importer's `go.mod`), not a published module — each Dockerfile that builds an importer must `COPY netguard/` into the build context alongside the component's own source.
 
 ### gameaction
 
@@ -102,7 +102,7 @@ real client join before waking a sleeping pod.
 Imported by:
 - `sentinel/` — to hold a client's connection open while the sentinel wakes the target `GameServer`'s pod, replaying the buffered handshake once the pod is ready.
 
-Also a local `replace` module (`replace github.com/ValgulNecron/gameplane/gameproto => ../gameproto` in `sentinel/go.mod`); same Dockerfile `COPY` requirement as netguard.
+Also a local `replace` module (`replace github.com/GameplanePanel/gameplane/gameproto => ../gameproto` in `sentinel/go.mod`); same Dockerfile `COPY` requirement as netguard.
 
 ### telemetryschema
 
@@ -118,7 +118,7 @@ Imported by (spec 022, in progress):
 - `telemetry-receiver/` — to decode and validate reports (`Decode`) and to verify signatures (`Verify`).
 - `api/` — to build, encode and sign the reporter's payload and the admin preview.
 
-Both importers use a local `replace` module (`replace github.com/ValgulNecron/gameplane/telemetryschema => ../telemetryschema`); the same Dockerfile `COPY` requirement as netguard applies.
+Both importers use a local `replace` module (`replace github.com/GameplanePanel/gameplane/telemetryschema => ../telemetryschema`); the same Dockerfile `COPY` requirement as netguard applies.
 
 ### svcutil
 

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 )
 
 // sameDayDuplicate accepts install 1's baseline report at extStart, then a

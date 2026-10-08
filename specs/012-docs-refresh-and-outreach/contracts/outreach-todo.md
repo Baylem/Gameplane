@@ -181,8 +181,8 @@ Description:       Kubernetes-native game server control panel.
                    restic backups, OIDC auth, OCI game templates.
 Tags:              [Kubernetes, Game Servers, DevOps, Self-Hosted, 
                    Control Panel, Container Orchestration]
-Website:           https://github.com/ValgulNecron/Gameplane
-Repository:        https://github.com/ValgulNecron/Gameplane
+Website:           https://github.com/GameplanePanel/Gameplane
+Repository:        https://github.com/GameplanePanel/Gameplane
 ```
 
 **OD-5 authorizations required**: Per OD-5, maintainer must create/authorize AlternativeTo account and submit the form. Agent prepares the submission content in outreach.md and updates status as directed.
@@ -220,7 +220,7 @@ Repository:        https://github.com/ValgulNecron/Gameplane
 # File: software/gameplane.yml
 
 Title:       Gameplane
-URL:         https://github.com/ValgulNecron/Gameplane
+URL:         https://github.com/GameplanePanel/Gameplane
 License:     AGPL-3.0-or-later
 Description: |
   Kubernetes-native game server control panel. Features:
@@ -255,7 +255,7 @@ Tags:        [Kubernetes, Game Servers, Self-Hosted, DevOps, AGPL]
 | 25+ GitHub stars | **UNKNOWN** | Not checked in R6; the project is only ~2 months old (first release 2026-06-22) with correspondingly limited time to accumulate stars/contributors, suggesting likely low counts. (R6:126–127) | **Likely blocker** |
 | 3+ contributors | **UNKNOWN** | Not checked; repository appears small. (R6:127) | **Likely blocker** |
 | Proper documentation | PASS | Comprehensive docs/, README.md, CONTRIBUTING.md, architecture.md. (R6:128) | None |
-| Recognized org exception | NO | Individual repo (ValgulNecron/Gameplane), not org-hosted. Exception does not apply. (R6:129) | None |
+| Recognized org exception | NO | Individual repo (GameplanePanel/Gameplane), not org-hosted. Exception does not apply. (R6:129) | None |
 
 **Blocker assessment** (OD-6):
 - Metrics eligibility **not verified at time of deferral** (research scope did not include live GitHub metrics check).
@@ -272,7 +272,7 @@ Tags:        [Kubernetes, Game Servers, Self-Hosted, DevOps, AGPL]
 Add under appropriate category (Infrastructure & Container Orchestration, 
 Kubernetes Tools, or similar):
 
-- [Gameplane](https://github.com/ValgulNecron/Gameplane) - Kubernetes-native 
+- [Gameplane](https://github.com/GameplanePanel/Gameplane) - Kubernetes-native 
   game server control panel with idle auto-sleep, RBAC, restic backups, OIDC auth, 
   and OCI bundle game templates. Self-hosted, runs on k3s homelab to production. 
   AGPL-3.0 open source. [BETA: v0.2.0-beta.8, feature-complete for v1 scope]

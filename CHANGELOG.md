@@ -193,7 +193,7 @@ previewed in v0.3.0-rc.1 and the pre-release audit fixes summarized under
   Euro Truck Simulator 2, Mount & Blade Bannerlord, tModLoader, Team Fortress 2,
   BeamMP, Left 4 Dead 2, The Isle, ARK: Survival Evolved, Arma Reforger, Hell
   Let Loose, and Squad. Gameplane publishes four Gameplane-owned container
-  images: `ghcr.io/valgulnecron/gameplane/fivem` (FiveM + txAdmin), `farming-simulator-25`
+  images: `ghcr.io/gameplanepanel/gameplane/fivem` (FiveM + txAdmin), `farming-simulator-25`
   (Wine/Xvfb runner), `euro-truck-simulator-2` (Wine runner), and `beammp`
   (BeamMP + non-crashing diagnostic idle). All modules are signed with Cosign
   keyless signatures (#369).
@@ -993,11 +993,11 @@ the docs ahead of wider external testing. Highlights below.
   `cosign.pub` attached, idempotent on re-runs. (beta.4's page was backfilled
   by hand.)
 - **website:** Gameplane has a public marketing + docs site at
-  <https://valgulnecron.github.io/gameplane-website/> — features, game
+  <https://gameplanepanel.github.io/website/> — features, game
   showcase, an AMP comparison, and the full documentation set, designed
   screen-first in `design.pen` (18 frames) and built with Astro. The source
   lives in the separate
-  [`gameplane-website`](https://github.com/ValgulNecron/gameplane-website)
+  [`gameplane-website`](https://github.com/GameplanePanel/website)
   repo, mounted here as the `website/` submodule.
 - **web:** the last UI-audit parity items — a show/hide toggle on the login
   password field, user emails shown under display names on the Users page,
@@ -1033,7 +1033,7 @@ the docs ahead of wider external testing. Highlights below.
 - **ci:** the published component images (`:edge` on every `main` push and the
   versioned images on a `v*` release) are now keyed-cosign-signed by digest
   (offline, no Rekor), matching the official module bundles. Verify with
-  `cosign verify --key cosign.pub ghcr.io/valgulnecron/gameplane/<component>`.
+  `cosign verify --key cosign.pub ghcr.io/gameplanepanel/gameplane/<component>`.
   Gated on `COSIGN_PRIVATE_KEY`, so publishing still works before the key is set.
   Signing and publishing run only on `main`/tags, never on PRs.
 - **api:** server-side audit-log export — `GET /admin/audit/export?format=csv|json`
@@ -1138,7 +1138,7 @@ the docs ahead of wider external testing. Highlights below.
     `X-Kestrel-CSRF`, …) → `gameplane_*` / `X-Gameplane-CSRF`; active sessions
     are invalidated on upgrade and users must re-login.
   - **Go module path** `github.com/kestrel-gg/kestrel` →
-    `github.com/ValgulNecron/gameplane`.
+    `github.com/GameplanePanel/gameplane`.
 - Synced `web/package.json` to the chart version (it had been left at `0.1.0`).
 
 ## [0.2.0-beta.1] — 2026-06-22
@@ -1185,15 +1185,15 @@ testing. Not yet recommended for unattended production workloads — see
   runner (retry + longer readiness window), eliminating a cascade of flaky
   API e2e failures.
 
-[Unreleased]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0-rc.1...v0.3.0
-[0.3.0-rc.2]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0-rc.1...v0.3.0
-[0.3.0-rc.1]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.8...v0.3.0-rc.1
-[0.2.0-beta.8]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.7...v0.2.0-beta.8
-[0.2.0-beta.7]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.6...v0.2.0-beta.7
-[0.2.0-beta.6]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.5...v0.2.0-beta.6
-[0.2.0-beta.5]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.4...v0.2.0-beta.5
-[0.2.0-beta.4]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.3...v0.2.0-beta.4
-[0.2.0-beta.3]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.2...v0.2.0-beta.3
-[0.2.0-beta.2]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.1...v0.2.0-beta.2
-[0.2.0-beta.1]: https://github.com/ValgulNecron/gameplane/releases/tag/v0.2.0-beta.1
+[Unreleased]: https://github.com/GameplanePanel/gameplane/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/GameplanePanel/gameplane/compare/v0.3.0-rc.1...v0.3.0
+[0.3.0-rc.2]: https://github.com/GameplanePanel/gameplane/compare/v0.3.0-rc.1...v0.3.0
+[0.3.0-rc.1]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.8...v0.3.0-rc.1
+[0.2.0-beta.8]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.7...v0.2.0-beta.8
+[0.2.0-beta.7]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.6...v0.2.0-beta.7
+[0.2.0-beta.6]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.5...v0.2.0-beta.6
+[0.2.0-beta.5]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.4...v0.2.0-beta.5
+[0.2.0-beta.4]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.3...v0.2.0-beta.4
+[0.2.0-beta.3]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.2...v0.2.0-beta.3
+[0.2.0-beta.2]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.1...v0.2.0-beta.2
+[0.2.0-beta.1]: https://github.com/GameplanePanel/gameplane/releases/tag/v0.2.0-beta.1

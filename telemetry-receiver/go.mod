@@ -1,9 +1,9 @@
-module github.com/ValgulNecron/gameplane/telemetry-receiver
+module github.com/GameplanePanel/gameplane/telemetry-receiver
 
 go 1.26.0
 
 require (
-	github.com/ValgulNecron/gameplane/telemetryschema v0.0.0-00010101000000-000000000000
+	github.com/GameplanePanel/gameplane/telemetryschema v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.24.1
 	modernc.org/sqlite v1.60.1
 )
@@ -11,7 +11,7 @@ require (
 // telemetryschema is an in-repo module (no published version); resolve it
 // locally both inside the go.work workspace and for standalone
 // `go build ./telemetry-receiver/...`.
-replace github.com/ValgulNecron/gameplane/telemetryschema => ../telemetryschema
+replace github.com/GameplanePanel/gameplane/telemetryschema => ../telemetryschema
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect

@@ -9,7 +9,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 )
 
 // validRanges are the dashboard ranges in days (FR-022); anything else falls

@@ -143,7 +143,7 @@ dashboard. Proof-of-work is `api.telemetry.receiver.ingestPow.*`. See
 docker run --rm -p 8080:8080 -p 8081:8081 \
   -v telemetry-data:/data -e DATA_DIR=/data \
   -e DASHBOARD_TOKEN="$(openssl rand -base64 32)" \
-  ghcr.io/valgulnecron/gameplane/telemetry-receiver:edge
+  ghcr.io/gameplanepanel/gameplane/telemetry-receiver:edge
 ```
 
 Point any Gameplane install at it with

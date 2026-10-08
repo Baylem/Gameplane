@@ -300,7 +300,7 @@ export function SourceDialog({ open, onOpenChange, source, onConfirm, busy }: So
                     id="oci-url"
                     value={f.url}
                     onChange={(e) => set({ url: e.target.value })}
-                    placeholder="ghcr.io/valgulnecron/gameplane-modules"
+                    placeholder="ghcr.io/gameplanepanel/gameplane-modules"
                   />
                 </div>
 

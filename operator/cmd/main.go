@@ -25,10 +25,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
-	"github.com/ValgulNecron/gameplane/operator/internal/agent"
-	"github.com/ValgulNecron/gameplane/operator/internal/controller"
-	"github.com/ValgulNecron/gameplane/operator/internal/modsrc"
+	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
+	"github.com/GameplanePanel/gameplane/operator/internal/agent"
+	"github.com/GameplanePanel/gameplane/operator/internal/controller"
+	"github.com/GameplanePanel/gameplane/operator/internal/modsrc"
 )
 
 var scheme = runtime.NewScheme()
@@ -154,7 +154,7 @@ func main() {
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "Address the metrics endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "Address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false, "Enable leader election.")
-	flag.StringVar(&agentImage, "agent-image", "ghcr.io/valgulnecron/gameplane/agent:dev",
+	flag.StringVar(&agentImage, "agent-image", "ghcr.io/gameplanepanel/gameplane/agent:dev",
 		"Image to use for the Gameplane agent sidecar injected into game pods.")
 	flag.StringVar(&agentImagePullPolicy, "agent-image-pull-policy", "",
 		"ImagePullPolicy for the agent sidecar container (Always, IfNotPresent, or Never). "+

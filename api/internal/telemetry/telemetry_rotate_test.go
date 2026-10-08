@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ValgulNecron/gameplane/telemetryschema"
+	"github.com/GameplanePanel/gameplane/telemetryschema"
 )
 
 // Spec 022 US7 (T084, T087): a 409 id_claimed makes the reporter replace its
