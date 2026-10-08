@@ -7,7 +7,7 @@ import (
 )
 
 // DefaultEndpoint is the project default telemetry destination, ruled in
-// specs/022-default-telemetry-dashboard/OPEN-DECISIONS.md OD-1. It must stay
+// specs/done_022-default-telemetry-dashboard/OPEN-DECISIONS.md OD-1. It must stay
 // an https URL (hack/check-telemetry-default.sh enforces this in CI).
 const DefaultEndpoint = "https://telemetry.gameplane.net/ingest"
 
