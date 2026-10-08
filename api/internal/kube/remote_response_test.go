@@ -131,3 +131,86 @@ func TestRemoteResponseLeavesUserLogStreamsUnbounded(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestRemoteResponseRejectsUnsolicitedUpgradeWithoutReading(t *testing.T) {
+	for _, path := range []string{"/version", "/api/v1/namespaces/games/pods/game/log"} {
+		t.Run(path, func(t *testing.T) {
+			body := &countedResponse{Reader: strings.NewReader(strings.Repeat("x", 128*1024))}
+			transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusSwitchingProtocols, Header: http.Header{"Connection": {"Upgrade"}, "Upgrade": {"h2c"}}, Body: body}, nil
+			}))
+			req, err := http.NewRequest(http.MethodGet, "https://cluster.example"+path, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := transport.RoundTrip(req)
+			if err == nil || resp != nil || body.read != 0 || !body.closed {
+				t.Fatalf("unsolicited upgrade was not closed before buffering: response=%v error=%v read=%d closed=%v", resp, err, body.read, body.closed)
+			}
+		})
+	}
+}
+
+func TestRemoteResponsePreservesRequestedUpgrade(t *testing.T) {
+	body := &countedResponse{Reader: strings.NewReader("upgraded stream")}
+	transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusSwitchingProtocols, Header: http.Header{}, Body: body}, nil
+	}))
+	req, err := http.NewRequest(http.MethodPost, "https://cluster.example/api/v1/namespaces/games/pods/game/exec", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Upgrade", "SPDY/3.1")
+	resp, err := transport.RoundTrip(req)
+	if err != nil || resp == nil || resp.Body != body || body.closed {
+		t.Fatalf("requested stream upgrade was altered: response=%v error=%v closed=%v", resp, err, body.closed)
+	}
+	if err := resp.Body.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRemoteResponseBoundsResourcesNamedLikeStreams(t *testing.T) {
+	for _, name := range []string{"log", "exec", "attach", "portforward"} {
+		t.Run(name, func(t *testing.T) {
+			body := &countedResponse{Reader: strings.NewReader(strings.Repeat("x", remoteResponseLimit+1024))}
+			transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
+				return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: body}, nil
+			}))
+			req, err := http.NewRequest(http.MethodGet, "https://cluster.example/apis/gameplane.local/v1alpha1/namespaces/games/gametemplates/"+name, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := transport.RoundTrip(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, err := io.ReadAll(resp.Body)
+			if !errors.Is(err, errRemoteResponseTooLarge) || len(data) > remoteResponseLimit || body.read > remoteResponseLimit+1 {
+				t.Fatalf("resource bypassed observation bound: bytes=%d read=%d error=%v", len(data), body.read, err)
+			}
+			if err := resp.Body.Close(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestRemoteResponsePreservesPrefixedPodLogStream(t *testing.T) {
+	body := &countedResponse{Reader: strings.NewReader("stream")}
+	transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: body}, nil
+	}))
+	req, err := http.NewRequest(http.MethodGet, "https://cluster.example/kubernetes/workload/api/v1/namespaces/games/pods/game/log?follow=true", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := transport.RoundTrip(req)
+	if err != nil || resp == nil || resp.Body != body {
+		t.Fatalf("prefixed pod log stream was altered: response=%v error=%v", resp, err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
