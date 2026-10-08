@@ -33,7 +33,11 @@ func (t *remoteResponseTransport) RoundTrip(req *http.Request) (*http.Response, 
 	if err != nil || resp.Body == nil {
 		return resp, err
 	}
-	requestedUpgrade := req.Header.Get("Upgrade") != ""
+	subresource := kubernetesPodStream(req.URL.Path)
+	// SPDY adds the Upgrade header inside its own cloned request. Its explicit
+	// stream negotiation header is visible to the surrounding REST wrappers.
+	requestedUpgrade := req.Header.Get("Upgrade") != "" ||
+		(subresource != "" && subresource != "log" && req.Header.Get("X-Stream-Protocol-Version") != "")
 	if resp.StatusCode == http.StatusSwitchingProtocols && !requestedUpgrade {
 		// Client-go buffers responses before checking their status. Never let a
 		// remote turn an ordinary observation into an unbounded raw connection.
@@ -42,7 +46,8 @@ func (t *remoteResponseTransport) RoundTrip(req *http.Request) (*http.Response, 
 	}
 	// User log/exec/attach streams are intentionally not finite observations.
 	// A watch is different: each event needs a bound, while its lifetime does not.
-	if requestedUpgrade || userKubernetesStream(req.URL.Path) {
+	if resp.StatusCode == http.StatusSwitchingProtocols ||
+		(subresource == "log" && resp.StatusCode >= 200 && resp.StatusCode < 300) {
 		return resp, nil
 	}
 	body := resp.Body
@@ -70,22 +75,22 @@ func (t *remoteResponseTransport) RoundTrip(req *http.Request) (*http.Response, 
 	return resp, nil
 }
 
-func userKubernetesStream(path string) bool {
+func kubernetesPodStream(path string) string {
 	// Match core Pod subresources, preserving any kubeconfig API-server prefix.
 	// A CR or other resource named "log" must remain a bounded observation.
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	if len(parts) < 7 {
-		return false
+		return ""
 	}
 	parts = parts[len(parts)-7:]
 	if parts[0] != "api" || parts[1] != "v1" || parts[2] != "namespaces" || parts[3] == "" || parts[4] != "pods" || parts[5] == "" {
-		return false
+		return ""
 	}
 	switch parts[6] {
 	case "log", "exec", "attach", "portforward":
-		return true
+		return parts[6]
 	default:
-		return false
+		return ""
 	}
 }
 

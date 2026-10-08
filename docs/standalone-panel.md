@@ -284,7 +284,9 @@ operations to the target, and never falls back to the central host.
 Automatic remote observations have bounded memory: version responses are capped
 at 64 KiB, other finite Kubernetes responses at 8 MiB after decompression, and
 individual JSON watch frames at 1 MiB. User log and interactive streams remain
-streaming. Standalone notifications use snapshots every five seconds with at
+streaming. Interactive stdin/PTY uses the same destination policy, bounds its
+TLS/upgrade handshake to 1 MiB, and caps its error-control stream at 64 KiB.
+Standalone notifications use snapshots every five seconds with at
 most 1,024 objects per resource type and only run when a notification sink is
 enabled. Oversized or incomplete snapshots are ignored; transitions shorter than
 the polling interval may be missed.
