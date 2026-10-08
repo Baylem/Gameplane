@@ -1,5 +1,5 @@
 // Package telemetry sends the install's usage report to its resolved
-// destination (specs/022-default-telemetry-dashboard).
+// destination (specs/done_022-default-telemetry-dashboard).
 //
 // Privacy: the basic report carries only the control-plane version and
 // total counts. The extended report adds an install ID and environment

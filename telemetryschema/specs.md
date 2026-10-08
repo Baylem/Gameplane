@@ -45,7 +45,7 @@ telemetryschema/
 
 ## External interface / contracts
 
-The wire contract is [`specs/022-default-telemetry-dashboard/contracts/report-schema.md`](../specs/022-default-telemetry-dashboard/contracts/report-schema.md); the rules below are what this package enforces.
+The wire contract is [`specs/done_022-default-telemetry-dashboard/contracts/report-schema.md`](../specs/done_022-default-telemetry-dashboard/contracts/report-schema.md); the rules below are what this package enforces.
 
 ### Types
 
@@ -110,7 +110,7 @@ JSON tags are the camelCase names in the contract (`installId`, `wakeOnConnect`,
 
 ### Proof-of-work
 
-The wire contract is research R21 and [`contracts/receiver-http.md`](../specs/022-default-telemetry-dashboard/contracts/receiver-http.md). When a receiver requires proof-of-work, every report carries `Gameplane-Telemetry-PoW: <challenge>:<nonce>`.
+The wire contract is research R21 and [`contracts/receiver-http.md`](../specs/done_022-default-telemetry-dashboard/contracts/receiver-http.md). When a receiver requires proof-of-work, every report carries `Gameplane-Telemetry-PoW: <challenge>:<nonce>`.
 
 | Name | Behavior |
 |---|---|

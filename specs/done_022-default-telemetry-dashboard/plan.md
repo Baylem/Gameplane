@@ -2,7 +2,7 @@
 
 **Branch**: `feat/default-telemetry-dashboard` (not yet created; the spec-kit script derived `022-default-telemetry-dashboard`) | **Date**: 2026-10-06 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `specs/022-default-telemetry-dashboard/spec.md`
+**Input**: Feature specification from `specs/done_022-default-telemetry-dashboard/spec.md`
 
 ## Summary
 
@@ -109,7 +109,7 @@ No NEEDS CLARIFICATION remains. Every technical unknown is resolved in [research
 ### Documentation (this feature)
 
 ```text
-specs/022-default-telemetry-dashboard/
+specs/done_022-default-telemetry-dashboard/
 ├── spec.md
 ├── OPEN-DECISIONS.md        # OD-1..OD-5 ruled
 ├── plan.md                  # this file
