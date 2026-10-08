@@ -244,7 +244,7 @@ function ModulesCatalog({ cluster, canManage }: { cluster: string; canManage: bo
         {visible.length === 0 && (
           <div className="col-span-full rounded-lg border border-dashed border-border bg-card/40 p-12 text-center text-sm text-muted">
             {items.length === 0
-              ? "No modules in any catalog yet — check ModuleSource sync status under Admin → Module sources."
+              ? "No modules in any catalog yet — open Manage sources to add a source or check its sync status."
               : "No modules match the current filter."}
           </div>
         )}

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithQuery } from "@/test/render";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 // Store callbacks for triggering events in tests
 let sseCallback: ((ev: unknown) => void) | null = null;
@@ -36,7 +37,7 @@ describe("NotificationsPanel", () => {
   it("closes its subscription when local event streaming is disabled", () => {
     const view = renderWithQuery(<NotificationsPanel />);
     expect(sseCallback).not.toBeNull();
-    view.rerender(<NotificationsPanel enabled={false} />);
+    view.rerender(<QueryClientProvider client={view.client}><NotificationsPanel enabled={false} /></QueryClientProvider>);
     expect(sseCallback).toBeNull();
     expect(screen.getByRole("button", { name: /notifications/i })).toBeInTheDocument();
   });
