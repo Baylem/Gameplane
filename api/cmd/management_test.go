@@ -56,3 +56,10 @@ func TestStandaloneRejectsLocalCredentialMinting(t *testing.T) {
 		t.Fatal("standalone must reject local cluster operations")
 	}
 }
+
+func TestStandaloneRejectsInvalidDestinationPolicyBeforeOpeningStorage(t *testing.T) {
+	_, _, err := managementClients(t.Context(), config{standalone: true, remoteAllowedCIDRs: "10.0.0.0/8,invalid"}, nil)
+	if err == nil {
+		t.Fatal("standalone accepted an invalid remote destination policy")
+	}
+}

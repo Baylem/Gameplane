@@ -9,6 +9,7 @@ services:
     environment:
       GAMEPLANE_STANDALONE: "true"
       GAMEPLANE_PANEL_KEY_FILE: ${GAMEPLANE_PANEL_KEY_FILE:-/keys/panel.key}
+      GAMEPLANE_REMOTE_ALLOWED_CIDRS: ${GAMEPLANE_REMOTE_ALLOWED_CIDRS:-}
       GAMEPLANE_DB_DRIVER: sqlite
       GAMEPLANE_DB_DSN: "file:/data/gameplane.db?_pragma=journal_mode(WAL)"
     volumes:

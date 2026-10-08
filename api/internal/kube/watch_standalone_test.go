@@ -1,9 +1,11 @@
 package kube
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,7 +26,11 @@ func standaloneWatchFixture(t *testing.T, handler http.Handler) (*Client, *Regis
 	server := httptest.NewTLSServer(handler)
 	t.Cleanup(server.Close)
 	ca := base64.StdEncoding.EncodeToString(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw}))
-	config := fmt.Sprintf(`{"apiVersion":"v1","kind":"Config","clusters":[{"name":"remote","cluster":{"server":%q,"certificate-authority-data":%q}}],"contexts":[{"name":"remote","context":{"cluster":"remote","user":"panel"}}],"current-context":"remote","users":[{"name":"panel","user":{"token":"private-token"}}]}`, server.URL, ca)
+	_, port, err := net.SplitHostPort(server.Listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := fmt.Sprintf(`{"apiVersion":"v1","kind":"Config","clusters":[{"name":"remote","cluster":{"server":%q,"tls-server-name":"127.0.0.1","certificate-authority-data":%q}}],"contexts":[{"name":"remote","context":{"cluster":"remote","user":"panel"}}],"current-context":"remote","users":[{"name":"panel","user":{"token":"private-token"}}]}`, "https://"+net.JoinHostPort("10.0.0.1", port), ca)
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "cluster-remote-kubeconfig", Namespace: "panel", Labels: map[string]string{ClusterKubeconfigLabel: "true"}},
 		Data:       map[string][]byte{"kubeconfig": []byte(config)},
@@ -37,6 +43,12 @@ func standaloneWatchFixture(t *testing.T, handler http.Handler) (*Client, *Regis
 	home := &Client{
 		SecretStore:  func(ns string) SecretStore { return typed.CoreV1().Secrets(ns) },
 		ClusterStore: dynamic.Resource(GVRCluster),
+		RemoteAccess: &RemoteAccessPolicy{dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			if address != net.JoinHostPort("10.0.0.1", port) {
+				return nil, fmt.Errorf("unexpected test destination")
+			}
+			return (&net.Dialer{}).DialContext(ctx, network, server.Listener.Addr().String())
+		}},
 	}
 	reg := NewRegistry("")
 	reg.SetManagement(home)

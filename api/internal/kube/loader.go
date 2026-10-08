@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"net/http"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,18 +45,18 @@ func ClientFromSecret(ctx context.Context, home *Client, ns, name, key string) (
 	if !ok {
 		return nil, fmt.Errorf("secret data missing key %q", key)
 	}
-	cfg, err := ConfigFromKubeconfig(data)
+	var cfg *rest.Config
+	if home.IsStandalone() {
+		cfg, err = ValidateStandaloneKubeconfig(data)
+		if err == nil {
+			err = home.RemoteAccess.ValidateURL(cfg.Host)
+			ApplyStandaloneRemotePolicy(cfg, home.RemoteAccess)
+		}
+	} else {
+		cfg, err = ConfigFromKubeconfig(data)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("load kubeconfig from secret: %w", err)
-	}
-	if home.IsStandalone() {
-		previous := cfg.WrapTransport
-		cfg.WrapTransport = func(next http.RoundTripper) http.RoundTripper {
-			if previous != nil {
-				next = previous(next)
-			}
-			return boundedRemoteTransport(next)
-		}
 	}
 	c, err := New(cfg)
 	if err != nil {

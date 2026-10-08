@@ -186,9 +186,9 @@ func (h clustersHandler) create(w http.ResponseWriter, req *http.Request) {
 			errors.New("kubeconfig is required"))
 		return
 	}
-	_, err := kube.ConfigFromKubeconfig([]byte(in.Kubeconfig))
+	err := h.validateRemoteKubeconfig([]byte(in.Kubeconfig))
 	if err != nil {
-		httperr.WriteCode(w, req, http.StatusBadRequest, err)
+		httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("invalid or disallowed kubeconfig"))
 		return
 	}
 

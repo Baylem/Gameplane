@@ -24,6 +24,7 @@ type Client struct {
 	SecretStore      func(string) SecretStore
 	ClusterStore     ClusterStore
 	RegisterCluster  ClusterRegistrar
+	RemoteAccess     *RemoteAccessPolicy
 	kubeconfigDigest [32]byte
 }
 

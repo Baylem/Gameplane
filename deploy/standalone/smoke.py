@@ -84,7 +84,7 @@ def registration(token):
     # deliberately unreachable inside the API container.
     kubeconfig = json.dumps({
         "apiVersion": "v1", "kind": "Config", "current-context": "smoke",
-        "clusters": [{"name": "smoke", "cluster": {"server": "https://127.0.0.1:65534"}}],
+        "clusters": [{"name": "smoke", "cluster": {"server": "https://192.0.2.1:65534"}}],
         "users": [{"name": "smoke", "user": {"token": token}}],
         "contexts": [{"name": "smoke", "context": {"cluster": "smoke", "user": "smoke"}}],
     })

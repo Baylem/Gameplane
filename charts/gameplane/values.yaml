@@ -170,6 +170,10 @@ api:
       storageClassName: ""
       existingClaim: ""
 
+  # Optional destination CIDRs for standalone Kubernetes APIs and agent gateways.
+  # Empty permits safe public/private addresses; unsafe address classes stay blocked.
+  remoteAllowedCIDRs: []
+
   # Database PVC. Back up its contents separately from the encryption key.
   storage:
     size: 2Gi

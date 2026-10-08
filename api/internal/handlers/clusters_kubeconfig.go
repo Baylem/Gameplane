@@ -37,7 +37,7 @@ func (h clustersHandler) replaceKubeconfig(w http.ResponseWriter, req *http.Requ
 		httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("kubeconfig is required"))
 		return
 	}
-	if _, err := kube.ConfigFromKubeconfig([]byte(in.Kubeconfig)); err != nil {
+	if err := h.validateRemoteKubeconfig([]byte(in.Kubeconfig)); err != nil {
 		httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("invalid kubeconfig"))
 		return
 	}
@@ -101,6 +101,18 @@ func (h clustersHandler) replaceKubeconfig(w http.ResponseWriter, req *http.Requ
 	_ = kube.RefreshRegisteredCluster(cleanupCtx, h.k, h.reg, h.namespace, name, registration.GetUID())
 	h.cleanupKubeconfigCredential(cleanupCtx, name, oldSecret)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h clustersHandler) validateRemoteKubeconfig(data []byte) error {
+	if !h.k.IsStandalone() {
+		_, err := kube.ConfigFromKubeconfig(data)
+		return err
+	}
+	cfg, err := kube.ValidateStandaloneKubeconfig(data)
+	if err != nil {
+		return err
+	}
+	return h.k.RemoteAccess.ValidateURL(cfg.Host)
 }
 
 func (h clustersHandler) updateKubeconfigRegistration(ctx context.Context, original *unstructured.Unstructured, secretName string) error {
