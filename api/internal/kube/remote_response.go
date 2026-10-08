@@ -33,9 +33,16 @@ func (t *remoteResponseTransport) RoundTrip(req *http.Request) (*http.Response, 
 	if err != nil || resp.Body == nil {
 		return resp, err
 	}
+	requestedUpgrade := req.Header.Get("Upgrade") != ""
+	if resp.StatusCode == http.StatusSwitchingProtocols && !requestedUpgrade {
+		// Client-go buffers responses before checking their status. Never let a
+		// remote turn an ordinary observation into an unbounded raw connection.
+		_ = resp.Body.Close()
+		return nil, errors.New("unsolicited remote protocol upgrade")
+	}
 	// User log/exec/attach streams are intentionally not finite observations.
 	// A watch is different: each event needs a bound, while its lifetime does not.
-	if resp.StatusCode == http.StatusSwitchingProtocols || req.Header.Get("Upgrade") != "" || userKubernetesStream(req.URL.Path) {
+	if requestedUpgrade || userKubernetesStream(req.URL.Path) {
 		return resp, nil
 	}
 	body := resp.Body
@@ -64,12 +71,22 @@ func (t *remoteResponseTransport) RoundTrip(req *http.Request) (*http.Response, 
 }
 
 func userKubernetesStream(path string) bool {
-	for _, suffix := range []string{"/log", "/exec", "/attach", "/portforward"} {
-		if strings.HasSuffix(path, suffix) {
-			return true
-		}
+	// Match core Pod subresources, preserving any kubeconfig API-server prefix.
+	// A CR or other resource named "log" must remain a bounded observation.
+	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
+	if len(parts) < 7 {
+		return false
 	}
-	return false
+	parts = parts[len(parts)-7:]
+	if parts[0] != "api" || parts[1] != "v1" || parts[2] != "namespaces" || parts[3] == "" || parts[4] != "pods" || parts[5] == "" {
+		return false
+	}
+	switch parts[6] {
+	case "log", "exec", "attach", "portforward":
+		return true
+	default:
+		return false
+	}
 }
 
 type decodedRemoteBody struct {
