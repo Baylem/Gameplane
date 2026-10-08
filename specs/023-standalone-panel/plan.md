@@ -18,7 +18,7 @@ Preserve default deployments, RBAC and credential labels. Never expose credentia
 - [x] API: skip Kubernetes setup in standalone mode, integrate management storage into credential consumers and cluster/fleet/gateway discovery, dispatch standalone modules remotely, handle unavailable local-only features, add zero-cluster and authorization regressions.
 - [x] Dashboard: derive available clusters from discovery, preserve empty-install registration flow, route standalone module operations to explicit remotes, add regression tests.
 - [x] Deployment: operator.enabled, standalone API profile, no local workload resources/credentials, Docker Compose and installation docs, chart matrix checks.
-- [ ] Review: inspect full diff for nil management clients, credential leakage, stale registration races, implicit local fallback and namespace/cluster authorization confusion. Compile and submit signed branch, then inspect CI and address failures.
+- [x] Review: inspect full diff for nil management clients, credential leakage, stale registration races, implicit local fallback and namespace/cluster authorization confusion. Compile and submit signed branch, then inspect CI and address failures.
 
 ## Review focus
 

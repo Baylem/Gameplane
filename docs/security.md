@@ -922,6 +922,21 @@ cluster, don't enable `mcpServer` there.
 
 ## Secrets
 
+Combined installations store management credentials in Kubernetes Secrets.
+Standalone panels store their labelled management credentials, including remote
+kubeconfigs, gateway keys, OIDC client secrets, notification credentials, and mod
+registry keys, as AES-GCM ciphertext in SQL. They use a persistent 32-byte key at
+`/data/panel.key` by default. Back up that key with the database and restrict
+access to both; encryption does not protect credentials from someone who can
+read both files or control the running API. A missing key with existing
+credentials, a wrong key, or corrupted credential data prevents API startup.
+See [standalone storage and recovery](standalone-panel.md#storage-and-recovery).
+
+The feature labels and managed-secret deletion guards apply to both stores.
+Game credentials and backup repository Secrets remain on the workload cluster.
+The Kubernetes Secret and Helm environment examples below apply to Kubernetes
+deployments.
+
 Secrets Gameplane reads or creates, by convention:
 
 - `gameplane-<gameserver>-rcon` — per-game RCON password, created by operator
@@ -952,9 +967,9 @@ generates a fresh password on the next pod restart.
 
 ## Kubeconfig Secret handling
 
-In a multi-cluster setup, each target cluster is referenced by a Secret
-containing its kubeconfig. Access to cluster credentials is protected
-by several layers:
+Each registered cluster references a labelled kubeconfig credential, stored in
+a Kubernetes Secret in combined mode or encrypted SQL in standalone mode.
+Access to cluster credentials is protected by several layers:
 
 - **Embedded credentials only.** The API and operator reject token files,
   client certificate/key files, CA files, `exec` authentication, and
@@ -978,13 +993,13 @@ by several layers:
 - **Never logged or returned.** The kubeconfig is never logged by the
   API, never echoed in responses, never visible in audit trails. It
   exists only to bootstrap the Kubernetes client for that cluster.
-- **Permission gating.** Only users holding the `cluster:manage`
-  permission (admin-only) can register, list, or delete clusters via
-  the API. Dashboard access to `/clusters` is similarly gated.
+- **Permission gating.** Registering or deleting a cluster requires
+  `cluster:manage`. Discovery returns only registrations the caller may see;
+  workload grants and central cluster-management permission determine visibility.
 - **No implicit RBAC.** Registering a cluster does not grant any user
-  access to resources on that cluster. Access is determined by role
-  bindings created independently on the target cluster, not by
-  federation. See [install.md](install.md#rbac-and-permissions).
+  access to resources on that cluster. The central API stores dashboard user
+  grants by target cluster and namespace. The registered kubeconfig's Kubernetes
+  permissions are a separate requirement. See [install.md](install.md#rbac-and-permissions).
 
 ## Install-Time OIDC Role Mappings
 
