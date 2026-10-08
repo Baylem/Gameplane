@@ -72,10 +72,10 @@ def assert_empty(cookie):
     assert user["username"] == "standalone-admin"
 
 
-def key_digest(container):
+def key_digest(container, path="/keys/panel.key"):
     with tempfile.TemporaryDirectory() as directory:
         key = Path(directory) / "panel.key"
-        subprocess.run(["docker", "cp", container + ":/keys/panel.key", str(key)], check=True)
+        subprocess.run(["docker", "cp", container + ":" + path, str(key)], check=True)
         return hashlib.sha256(key.read_bytes()).digest()
 
 
@@ -106,15 +106,23 @@ def assert_encrypted_registration(container, token):
     with tempfile.TemporaryDirectory() as directory:
         subprocess.run(["docker", "cp", container + ":/data/.", directory], check=True)
         with sqlite3.connect(str(Path(directory) / "gameplane.db")) as database:
+            registration_payload = database.execute(
+                "SELECT payload FROM management_objects WHERE kind = 'clusters' AND name = ?",
+                ("smoke-remote",),
+            ).fetchone()[0]
+            credential_name = json.loads(registration_payload)["spec"]["kubeconfigSecret"]["name"]
             rows = database.execute(
                 "SELECT kind, name, payload FROM management_objects WHERE name IN (?, ?)",
-                ("smoke-remote", "cluster-smoke-remote-kubeconfig"),
+                ("smoke-remote", credential_name),
             ).fetchall()
         assert {(kind, name) for kind, name, _ in rows} == {
-            ("clusters", "smoke-remote"), ("secrets", "cluster-smoke-remote-kubeconfig"),
+            ("clusters", "smoke-remote"), ("secrets", credential_name),
         }, "registration and credential must both persist"
         payload = next(payload for kind, _, payload in rows if kind == "secrets")
-        sealed = base64.b64decode(payload, validate=True)
+        envelope, key_id, encoded = payload.split(".", 2)
+        assert envelope == "gpk1" and len(key_id) == 64
+        assert len(bytes.fromhex(key_id)) == 32, "ciphertext must identify its encryption key"
+        sealed = base64.b64decode(encoded, validate=True)
         assert len(sealed) > 28, "credential ciphertext must include nonce and authentication tag"
         try:
             json.loads(sealed)
@@ -160,13 +168,39 @@ def main():
     assert_registered(cookie, token)
     cookie = login(password)
     assert_registered(cookie, token)
+    token = secrets.token_urlsafe(32)
+    remote = registration(token)
+    request("/clusters/smoke-remote/kubeconfig", {"kubeconfig": remote["kubeconfig"]}, cookie=cookie, method="PUT")
+    compose("stop", "gameplane-api")
+    assert_encrypted_registration(container, token)
+    rotation = ("run", "--rm", "--no-deps", "--entrypoint", "/api", "gameplane-api",
+                "rotate-panel-key", "--old-key-file", "/keys/panel.key", "--new-key-file", "/keys/panel-next.key")
+    compose(*rotation)
+    compose(*rotation)  # The exact retry is safe after an unknown commit outcome.
+    os.environ["GAMEPLANE_PANEL_KEY_FILE"] = "/keys/panel-next.key"
+    compose("up", "-d", "--no-build", "--force-recreate", "gameplane-api")
+    wait_ready()
+    container = compose("ps", "-q", "gameplane-api", capture_output=True).stdout.strip()
+    assert key_digest(container) == original_key, "rotation modified the historical backup key"
+    assert key_digest(container, "/keys/panel-next.key") != original_key
+    assert_registered(cookie, token)
+    # Exercise provisioned mode against a genuinely read-only key volume.
+    with tempfile.TemporaryDirectory() as directory:
+        override = Path(directory) / "provisioned.json"
+        override.write_text(json.dumps({"services": {"gameplane-api": {
+            "environment": {"GAMEPLANE_PANEL_KEY_PROVISIONED": "true"},
+            "volumes": [{"type": "volume", "source": "panel-keys", "target": "/keys", "read_only": True}],
+        }}}))
+        subprocess.run(COMPOSE + ["-f", str(override), "up", "-d", "--no-build", "--force-recreate", "gameplane-api"], check=True)
+        wait_ready()
+        assert_registered(cookie, token)
     request("/clusters/smoke-remote", cookie=cookie, method="DELETE")
     assert_empty(cookie)
     # An orphaned credential would make this second registration return 409.
     request("/clusters", remote, cookie=cookie)
     request("/clusters/smoke-remote", cookie=cookie, method="DELETE")
     assert_empty(cookie)
-    print("Standalone Compose: bootstrap, empty fleet, encrypted registration, persistent key, restart and cleanup passed")
+    print("Standalone Compose: bootstrap, encrypted registration, kubeconfig/master-key rotation, read-only provisioned key, restart and cleanup passed")
 
 
 if __name__ == "__main__":

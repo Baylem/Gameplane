@@ -44,6 +44,9 @@ func (b *backend) registerCluster(ctx context.Context, ns string, secret *corev1
 		return nil, fmt.Errorf("begin cluster registration: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
+	if err := b.lockKeyState(ctx, tx); err != nil {
+		return nil, err
+	}
 	// The absence check and possible legacy-orphan adoption occur in the
 	// same transaction as both writes. No failed registration strands a key.
 	var count int

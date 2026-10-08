@@ -4,7 +4,6 @@ package controlplane
 
 import (
 	"context"
-	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"database/sql"
@@ -31,8 +30,9 @@ import (
 )
 
 type backend struct {
-	db   *sql.DB
-	aead cipher.AEAD
+	db    *sql.DB
+	aead  cipher.AEAD
+	keyID string
 }
 
 type objects struct {
@@ -51,44 +51,22 @@ func New(ctx context.Context, store *db.Store, keyFile string) (*kube.Client, er
 // NewWithOptions opens standalone management storage with explicit key custody.
 func NewWithOptions(ctx context.Context, store *db.Store, opts KeyOptions) (*kube.Client, error) {
 	var count int
-	if err := store.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM management_objects WHERE kind = 'secrets'`).Scan(&count); err != nil {
+	if err := store.DB.QueryRowContext(ctx, `SELECT (SELECT COUNT(*) FROM management_objects WHERE kind = 'secrets') + (SELECT COUNT(*) FROM management_key_state)`).Scan(&count); err != nil {
 		return nil, fmt.Errorf("inspect management credentials: %w", err)
 	}
 	key, err := loadConfiguredKey(opts, count != 0)
 	if err != nil {
 		return nil, err
 	}
-	block, err := aes.NewCipher(key)
+	b, err := backendForKey(store.DB, key)
 	if err != nil {
-		return nil, fmt.Errorf("create credential cipher: %w", err)
+		return nil, err
 	}
-	aead, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, fmt.Errorf("create credential encryption: %w", err)
-	}
-	b := &backend{db: store.DB, aead: aead}
 	// Validate every persisted row before serving requests. Wrong keys and
-	// corrupt ciphertext must fail startup, not silently hide credentials.
-	rows, err := b.db.QueryContext(ctx, `SELECT kind, namespace, name, uid, version, payload FROM management_objects`)
-	if err != nil {
-		return nil, fmt.Errorf("validate management storage: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var kind, ns, name, uid, payload string
-		var version int64
-		if err := rows.Scan(&kind, &ns, &name, &uid, &version, &payload); err != nil {
-			return nil, fmt.Errorf("read management row: %w", err)
-		}
-		if kind != "secrets" && kind != "clusters" {
-			return nil, errors.New("unknown management object kind")
-		}
-		if _, err := (&objects{b, kind, ns}).decode(name, uid, version, payload); err != nil {
-			return nil, err
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read management storage: %w", err)
+	// corrupt ciphertext fail startup. Keep validation under the same write
+	// lock rotation uses, so an old-key process cannot start during retirement.
+	if err := b.validateAndInitialize(ctx); err != nil {
+		return nil, err
 	}
 	return &kube.Client{
 		SecretStore:     func(ns string) kube.SecretStore { return &secrets{objects{b, "secrets", ns}} },
@@ -223,20 +201,17 @@ func (s *objects) encode(obj *unstructured.Unstructured, version int64) (string,
 	if _, err := rand.Read(nonce); err != nil {
 		return "", fmt.Errorf("generate credential nonce: %w", err)
 	}
-	sealed := s.aead.Seal(nonce, nonce, data, s.aad(obj.GetName(), string(obj.GetUID()), version))
-	return base64.StdEncoding.EncodeToString(sealed), nil
+	sealed := s.aead.Seal(nonce, nonce, data, s.ciphertextAAD(obj.GetName(), string(obj.GetUID()), version))
+	return s.ciphertextHeader() + base64.StdEncoding.EncodeToString(sealed), nil
 }
 
 func (s *objects) decode(name, uid string, version int64, payload string) (*unstructured.Unstructured, error) {
 	data := []byte(payload)
 	if s.kind == "secrets" {
-		sealed, err := base64.StdEncoding.DecodeString(payload)
-		if err != nil || len(sealed) < s.aead.NonceSize() {
-			return nil, errors.New("invalid encrypted management credential")
-		}
-		data, err = s.aead.Open(nil, sealed[:s.aead.NonceSize()], sealed[s.aead.NonceSize():], s.aad(name, uid, version))
+		var err error
+		data, err = s.openCiphertext(name, uid, version, payload)
 		if err != nil {
-			return nil, errors.New("management credential authentication failed; verify the database and encryption key")
+			return nil, err
 		}
 	}
 	obj := &unstructured.Unstructured{}
@@ -353,9 +328,9 @@ func (s *objects) save(ctx context.Context, obj *unstructured.Unstructured, crea
 	}
 	var result sql.Result
 	if create {
-		result, err = s.db.ExecContext(ctx, `INSERT INTO management_objects (kind, namespace, name, uid, version, payload) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (kind, namespace, name) DO NOTHING`, s.kind, s.ns, name, string(obj.GetUID()), version, payload)
+		result, err = s.write(ctx, s.kind == "secrets", `INSERT INTO management_objects (kind, namespace, name, uid, version, payload) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (kind, namespace, name) DO NOTHING`, s.kind, s.ns, name, string(obj.GetUID()), version, payload)
 	} else {
-		result, err = s.db.ExecContext(ctx, `UPDATE management_objects SET version = ?, payload = ? WHERE kind = ? AND namespace = ? AND name = ? AND uid = ? AND version = ?`, version, payload, s.kind, s.ns, name, string(obj.GetUID()), version-1)
+		result, err = s.write(ctx, s.kind == "secrets", `UPDATE management_objects SET version = ?, payload = ? WHERE kind = ? AND namespace = ? AND name = ? AND uid = ? AND version = ?`, version, payload, s.kind, s.ns, name, string(obj.GetUID()), version-1)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("persist management object: %w", err)
@@ -383,7 +358,7 @@ func (s *objects) delete(ctx context.Context, name string, opts metav1.DeleteOpt
 			return apierrors.NewConflict(s.resource(), name, errors.New("management object delete precondition failed"))
 		}
 	}
-	result, err := s.db.ExecContext(ctx, `DELETE FROM management_objects WHERE kind = ? AND namespace = ? AND name = ? AND uid = ? AND version = ?`, s.kind, s.ns, name, string(obj.GetUID()), obj.GetResourceVersion())
+	result, err := s.write(ctx, s.kind == "secrets", `DELETE FROM management_objects WHERE kind = ? AND namespace = ? AND name = ? AND uid = ? AND version = ?`, s.kind, s.ns, name, string(obj.GetUID()), obj.GetResourceVersion())
 	if err != nil {
 		return fmt.Errorf("delete management object: %w", err)
 	}
