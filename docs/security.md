@@ -986,13 +986,21 @@ Access to cluster credentials is protected by several layers:
   arbitrary control-plane Secret (e.g., the OIDC client secret or
   backup credentials) and using it as a kubeconfig.
 - **Delete guard.** `DELETE /clusters/{name}` drops the cluster's client at
-  once and deletes the referenced Secret only when it is the one POST generates
-  for that cluster (cluster-<name>-kubeconfig) and carries
-  `gameplane.local/cluster-kubeconfig=true` (Secrets created before the
-  managed-by label was added are also cleaned up). Any other Secret, including
+  once and deletes the referenced Secret only when it uses the API's fixed
+  registration name or a nonce-suffixed rotation name for that cluster, and carries
+  `gameplane.local/cluster-kubeconfig=true`. Rotation names additionally require
+  the API's managed-by label (legacy fixed-name Secrets predate that label).
+  UID/resourceVersion preconditions prevent cleanup from deleting a replacement.
+  Any other Secret, including
   one named for a different cluster or one without the kubeconfig label, is
   left in place. A kubeconfig Secret you create with kubectl or GitOps under
   another name is never deleted over HTTP.
+- **In-place rotation.** `PUT /clusters/{name}/kubeconfig` requires central
+  `cluster:manage`, publishes an immutable replacement, and switches the
+  registration reference only if its UID and previous reference still match.
+  It preserves gateway configuration and user grants and reloads the client.
+  Revoke the old credential on the target after verifying the replacement;
+  requests already in flight may still use it.
 - **Never logged or returned.** The kubeconfig is never logged by the
   API, never echoed in responses, never visible in audit trails. It
   exists only to bootstrap the Kubernetes client for that cluster.
