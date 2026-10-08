@@ -41,7 +41,7 @@ func TestStandaloneKubeconfigRequiresVerifiedDirectHTTPS(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("HTTPS_PROXY", "http://127.0.0.1:8888")
-	req, err := http.NewRequest(http.MethodGet, cfg.Host, nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, cfg.Host, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,15 +144,19 @@ func TestRemoteAccessPolicyPinsValidatedDNSAndRejectsRebinding(t *testing.T) {
 }
 
 func TestStandaloneTransportRejectsCredentialRedirects(t *testing.T) {
-	client := &http.Client{Transport: standaloneRemoteTransport(responseRoundTripper(func(req *http.Request) (*http.Response, error) {
+	client := &http.Client{Transport: standaloneRemoteTransport(responseRoundTripper(func(_ *http.Request) (*http.Response, error) {
 		return &http.Response{StatusCode: http.StatusTemporaryRedirect, Header: http.Header{"Location": []string{"https://attacker.example/collect"}}, Body: io.NopCloser(strings.NewReader("redirect"))}, nil
 	}))}
-	req, err := http.NewRequest(http.MethodGet, "https://cluster.example/version", nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://cluster.example/version", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	req.Header.Set("Authorization", "Bearer private-token")
-	if _, err := client.Do(req); err == nil || strings.Contains(err.Error(), "private-token") {
+	resp, err := client.Do(req)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	if err == nil || strings.Contains(err.Error(), "private-token") {
 		t.Fatal("credential redirect was followed or leaked its token")
 	}
 }
