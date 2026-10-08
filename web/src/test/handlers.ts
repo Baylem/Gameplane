@@ -40,6 +40,7 @@ export const INVALID_BPF_FILTER_FIXTURE = "tcp prot 8080 foo";
 
 export const handlers = [
   ...fleetHandlers,
+  http.get("/admin/installation", () => HttpResponse.json({ standalone: false, localCluster: true })),
   // Auth
   http.get("/users/me", ({ cookies }) => {
     // e2e affordance: a 401 on /users/me must bounce the SPA to /login,
@@ -827,6 +828,7 @@ export function buildScreenshotHandlers() {
   const data = getScreenshotData();
   return [
     ...fleetHandlers,
+    http.get("/admin/installation", () => HttpResponse.json({ standalone: false, localCluster: true })),
     // The Servers page asks which namespaces to list before listing servers.
     http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
     // Auth: reuse default login/logout (screenshot demos don't test auth edge cases)

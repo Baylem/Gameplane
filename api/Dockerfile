@@ -27,9 +27,13 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
     -ldflags="-s -w -X main.Version=${VERSION}" \
     -o /out/api ./cmd
 
+RUN mkdir -p /out/data && chown 65532:65532 /out/data
+
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=build /out/api /api
+# Seed named Docker volumes with a directory writable by the runtime user.
+COPY --from=build --chown=65532:65532 /out/data /data
 USER 65532:65532
 EXPOSE 8000
 VOLUME ["/data"]

@@ -2,6 +2,7 @@ package kube
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 
@@ -32,7 +33,7 @@ func ClientFromSecret(ctx context.Context, home *Client, ns, name, key string) (
 	if key == "" {
 		key = "kubeconfig"
 	}
-	secret, err := home.Typed.CoreV1().Secrets(ns).Get(ctx, name, metav1.GetOptions{})
+	secret, err := home.Secrets(ns).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("get secret: %w", err)
 	}
@@ -52,6 +53,7 @@ func ClientFromSecret(ctx context.Context, home *Client, ns, name, key string) (
 	if err != nil {
 		return nil, fmt.Errorf("create client from config: %w", err)
 	}
+	c.kubeconfigDigest = sha256.Sum256(data)
 	return c, nil
 }
 

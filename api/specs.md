@@ -850,3 +850,15 @@ Kubernetes clients. Gateway loss does not inherently disable those clients.
 The protocol does not provide storage replication, workload migration, or
 central database availability. Deployment guidance is in
 [`docs/gateway-install.md`](../docs/gateway-install.md).
+
+## Standalone management mode
+
+`--standalone` / `GAMEPLANE_STANDALONE=true` skips Kubernetes credential discovery and does not register `local`. Management secrets and remote registrations persist in the API database through narrow `kube.Client.Secrets`/`Clusters` interfaces; workloads still use explicit Kubernetes registry clients. Credential payloads use AES-GCM with a durable 32-byte key selected by `--panel-key-file` / `GAMEPLANE_PANEL_KEY_FILE` (default `/data/panel.key`). Missing/wrong keys and corrupted credentials fail startup. Back up the key with the database; existing Kubernetes management objects are not imported automatically.
+
+`GET /admin/installation` is authenticated and reports `{standalone,localCluster}`. Empty standalone `/clusters` and `/fleet/*` responses contain no synthesized local cluster. A bounded API poller loads registrations and maintains safe connectivity status, independent of an operator on the panel host. Notifications observe registered remote workloads while credentials remain central.
+
+`POST /clusters` accepts a raw, self-contained kubeconfig string; existing kubeconfig validation rejects executable/file-backed credential references. `PUT /clusters/{name}/gateway` accepts `{url,caCert,clientCert,clientKey}` with an HTTPS origin and PEM TLS material. It persists only labelled management credentials and returns 204 without exposing secrets. `DELETE /clusters/{name}/gateway` clears the reference and only removes API-managed credentials. Existing central `cluster:manage` authorization applies to registration and gateway mutations.
+
+Standalone `/modules/*` requests require one explicit registered remote `cluster` selector and cluster-wide module permission on that target. The selected remote operator owns module reconciliation; upload ConfigMaps use the configured operator namespace. Combined installs retain local module ownership and reject remote selectors on this surface. Local node credential minting is incompatible with standalone startup; Kubernetes system-log endpoints return 501 and the dashboard directs administrators to container logs.
+
+See [standalone installation](../docs/standalone-panel.md) and [design](../specs/023-standalone-panel/spec.md).

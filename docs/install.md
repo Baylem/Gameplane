@@ -1,5 +1,10 @@
 # Install
 
+For a central dashboard/API on a host without Kubernetes, use the
+[standalone panel guide](standalone-panel.md), including Docker Compose and a
+panel-only Helm profile. The instructions below describe the default combined
+installation, with an operator and a local game cluster.
+
 ## Prerequisites
 
 - Kubernetes 1.28+
