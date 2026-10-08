@@ -91,6 +91,10 @@ func New(ctx context.Context, store *db.Store, keyFile string) (*kube.Client, er
 }
 
 func loadKey(path string, required bool) ([]byte, error) {
+	return loadKeyWithSync(path, required, syncKeyDirectory)
+}
+
+func loadKeyWithSync(path string, required bool, syncDirectory func(string) error) ([]byte, error) {
 	if path == "" {
 		return nil, errors.New("management key file path is required")
 	}
@@ -107,7 +111,7 @@ func loadKey(path string, required bool) ([]byte, error) {
 	if required {
 		return nil, errors.New("management encryption key is missing; restore the original key alongside the database")
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	if err := createKeyDirectory(filepath.Dir(path), syncDirectory); err != nil {
 		return nil, fmt.Errorf("create key directory: %w", err)
 	}
 	key = make([]byte, 32)
@@ -138,6 +142,11 @@ func loadKey(path string, required bool) ([]byte, error) {
 			return loadKey(path, true)
 		}
 		return nil, fmt.Errorf("publish management key: %w", err)
+	}
+	// Syncing the inode above does not persist its published directory entry.
+	// Do not allow encrypted DB writes until the final name survives a crash.
+	if err := syncDirectory(filepath.Dir(path)); err != nil {
+		return nil, fmt.Errorf("sync management key directory: %w", err)
 	}
 	return key, nil
 }
