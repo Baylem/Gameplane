@@ -10,10 +10,11 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/httpstream"
-	httpstreamspdy "k8s.io/apimachinery/pkg/util/httpstream/spdy"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
+	clientspdy "k8s.io/client-go/transport/spdy"
+	"k8s.io/streaming/pkg/httpstream"
+	httpstreamspdy "k8s.io/streaming/pkg/httpstream/spdy"
 )
 
 // NewSPDYExecutor preserves the configured dial guard for pod streams. The
@@ -59,7 +60,7 @@ func (c *Client) NewSPDYExecutor(method string, target *url.URL) (remotecommand.
 	if err != nil {
 		return nil, fmt.Errorf("configure guarded stream authentication: %w", err)
 	}
-	return remotecommand.NewSPDYExecutorRejectRedirects(wrapped, guarded, method, target)
+	return remotecommand.NewSPDYExecutorRejectRedirects(wrapped, clientspdy.NewUpgraderForStreaming(guarded), method, target)
 }
 
 // Include TLS records in the initial budget: the upstream SPDY reader parses

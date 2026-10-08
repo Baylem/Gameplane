@@ -18,9 +18,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/httpstream"
-	httpstreamspdy "k8s.io/apimachinery/pkg/util/httpstream/spdy"
 	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/streaming/pkg/httpstream"
+	httpstreamspdy "k8s.io/streaming/pkg/httpstream/spdy"
 
 	"github.com/GameplanePanel/gameplane/netguard"
 )
@@ -84,7 +84,9 @@ func TestStandaloneSPDYExecutorRejectsDisallowedDNSBeforeDial(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 			defer cancel()
 			err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{Stdout: io.Discard})
-			if !errors.Is(err, netguard.ErrBlockedAddr) || dials.Load() != 0 {
+			// client-go SPDY negotiation stringifies transport errors with %v.
+			// Verify its blocked-destination cause and that no dial occurred.
+			if err == nil || !strings.HasSuffix(err.Error(), netguard.ErrBlockedAddr.Error()) || dials.Load() != 0 {
 				t.Fatalf("SPDY bypassed destination guard: error=%v dials=%d", err, dials.Load())
 			}
 		})
@@ -151,7 +153,7 @@ func TestStandaloneSPDYExecutorRejectsDNSRebindingAfterRESTRequest(t *testing.T)
 		t.Fatal(err)
 	}
 	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{Stdout: io.Discard})
-	if !errors.Is(err, netguard.ErrBlockedAddr) || resolutions.Load() != 2 {
+	if err == nil || !strings.HasSuffix(err.Error(), netguard.ErrBlockedAddr.Error()) || resolutions.Load() != 2 {
 		t.Fatalf("SPDY reused unvalidated rebound DNS: error=%v resolutions=%d", err, resolutions.Load())
 	}
 }
