@@ -58,7 +58,7 @@ telemetry-receiver/
 
 ## External interface / contracts
 
-The full contract is `specs/022-default-telemetry-dashboard/contracts/receiver-http.md`; the report format is `contracts/report-schema.md`.
+The full contract is `specs/done_022-default-telemetry-dashboard/contracts/receiver-http.md`; the report format is `contracts/report-schema.md`.
 
 ### Public listener (`LISTEN_ADDR`)
 
@@ -180,5 +180,5 @@ Untested (main process wiring): `main()` signal handling and server startup erro
 - **`telemetryschema/specs.md`** — shared report contract, signing and proof-of-work helpers
 - **`api/internal/telemetry`** — the API's reporter that POSTs to this endpoint
 - **`charts/gameplane/`** — Helm chart integration (`api.telemetry.receiver.*`)
-- **`specs/022-default-telemetry-dashboard/`** — feature spec and contracts
+- **`specs/done_022-default-telemetry-dashboard/`** — feature spec and contracts
 - **`CLAUDE.md`** — project architecture summary

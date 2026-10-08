@@ -5,7 +5,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 # Tasks: Default telemetry destination, extended telemetry, and telemetry dashboard
 
-**Input**: Design documents from `specs/022-default-telemetry-dashboard/`
+**Input**: Design documents from `specs/done_022-default-telemetry-dashboard/`
 
 **Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md), [OPEN-DECISIONS.md](OPEN-DECISIONS.md)
 
@@ -33,7 +33,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Purpose**: Create the branch, get test sign-off, and wire the new `telemetryschema` module into the build.
 
-- [X] T001 Create branch `feat/default-telemetry-dashboard` from `master` and commit `specs/022-default-telemetry-dashboard/` (`.specify/feature.json` is git-ignored, so it stays local) as `docs(specs): add 022 default telemetry dashboard spec`.
+- [X] T001 Create branch `feat/default-telemetry-dashboard` from `master` and commit `specs/done_022-default-telemetry-dashboard/` (`.specify/feature.json` is git-ignored, so it stays local) as `docs(specs): add 022 default telemetry dashboard spec`.
 - [X] T002 Get **explicit human sign-off** (system override 1) to rewrite these existing tests so they assert the new behaviour. Rewrites must keep or raise coverage and never delete a case without a replacement:
   - `api/internal/telemetry/telemetry_test.go`: `TestReportOnce_EnabledPostsAnonymousCounts`, `TestReportOnce_SendsAuthHeader`, `TestReportOnce_DisabledSkipsPost`. The reporter's constructor and send path change (research R12).
   - `api/internal/telemetry/telemetry_branches_test.go`: `TestNew_DefaultsInterval`, `TestEnabled_Branches`, `TestCount_UnknownKind`, `TestReportOnce_EndpointErrorPropagates`.
@@ -48,10 +48,10 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `api/internal/handlers/config_validators_test.go` `TestValidateTelemetry` (added 2026-10-07): the canonical output gains `"extended":false`, and a new case checks that `{"sendMetrics":false,"extended":true}` normalises to both false.
 
   **Signed off 2026-10-06** by the user ("Approve all", then "Approve" for the `/metrics` changes; "Assert the seeded default" for `TestConfig_GetEmpty` and "Assert the new shape" for `TestValidateTelemetry` on 2026-10-07). Record the sign-off in the PR description.
-- [X] T003 Create `telemetryschema/go.mod` (`module github.com/GameplanePanel/gameplane/telemetryschema`, `go 1.26.0`, no requires) and `telemetryschema/doc.go` with a package comment: "the shared telemetry report contract used by api and telemetry-receiver; see specs/022-default-telemetry-dashboard/contracts/report-schema.md".
+- [X] T003 Create `telemetryschema/go.mod` (`module github.com/GameplanePanel/gameplane/telemetryschema`, `go 1.26.0`, no requires) and `telemetryschema/doc.go` with a package comment: "the shared telemetry report contract used by api and telemetry-receiver; see specs/done_022-default-telemetry-dashboard/contracts/report-schema.md".
 - [X] T004 Add `./telemetryschema` to the `use` block in `go.work`, and add `telemetryschema` to `GO_MODULES` in `Makefile:43` (after `gameproto`).
 - [X] T005 [P] Add `telemetryschema` to both Go module matrices in `.github/workflows/ci.yaml` (the `module:` lists at about lines 457 and 549). Add `telemetryschema/**` everywhere `telemetry-receiver/**` appears as a path filter (about line 119), and to the api and telemetry-receiver image path filters in `.github/workflows/publish-edge.yaml`. Add a `gomod` entry for `/telemetryschema` in `.github/dependabot.yml`, copied from the `/telemetry-receiver` entry at about line 176.
-- [X] T006 [P] Create `telemetryschema/.testcoverage.yml` (copy the `telemetry-receiver/.testcoverage.yml` format with `total: 90` and an updated header comment) and a non-empty `telemetryschema/specs.md` skeleton with the sections Purpose, Responsibilities, External interface (linking `specs/022-default-telemetry-dashboard/contracts/report-schema.md`), Key invariants, and Testing & coverage, so that `hack/check-specs.sh` passes.
+- [X] T006 [P] Create `telemetryschema/.testcoverage.yml` (copy the `telemetry-receiver/.testcoverage.yml` format with `total: 90` and an updated header comment) and a non-empty `telemetryschema/specs.md` skeleton with the sections Purpose, Responsibilities, External interface (linking `specs/done_022-default-telemetry-dashboard/contracts/report-schema.md`), Key invariants, and Testing & coverage, so that `hack/check-specs.sh` passes.
 - [X] T007 [P] Update the repository docs maps:
   - `CLAUDE.md`: in the repository map add `telemetryschema/   shared telemetry report contract (api, telemetry-receiver)`; change "links all 15 Go modules" to 16; add `telemetryschema 90` to the coverage minimums; add a row to the Architecture table.
   - `docs/agent-architecture.md`: add a `telemetryschema/specs.md` row next to Telemetry-Receiver (line 29).
@@ -556,7 +556,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 - [X] T093 [P] Create `docs/telemetry-provider.md`, a runbook for running the project's receiver (OD-2): deploying the image, TLS termination, keeping `:8081` private, the `DASHBOARD_TOKEN` and `ID_PEPPER` Secrets and their rotation, `PUBLIC_SUMMARY=true`, `TRUSTED_PROXY_CIDRS`, retention (`RETENTION_DAYS`, `ACTIVITY_EXPIRY_DAYS`), scraping `/metrics` with the token, and backing up and restoring `telemetry.db`. Link it from `docs/install.md` § Telemetry and `telemetry-receiver/README.md`. (The README link lands with T089.)
 - [X] T094 [P] Add a `CHANGELOG.md` entry with the FR-008 upgrade notes, breaking-ish behaviour notes ("empty `api.telemetry.endpoint` now means the project default"; "the receiver's `/metrics` moved to the dashboard port and needs the dashboard token"), and links to the docs.
 - [X] T095 Add a single statement-URL constant for the data-handling statement (OD-2), for example in the module `web/src` already uses for docs links. If there is none, create `web/src/lib/links.ts`. Use it in `TelemetryNotice.tsx` and `TelemetrySection`.
-- [ ] T096 Make the website changes in the `website/` submodule, following its own `CLAUDE.md` and PR flow (default branch `main`):
+- [X] T096 Make the website changes in the `website/` submodule, following its own `CLAUDE.md` and PR flow (default branch `main`): (2026-10-08: GameplanePanel/website#13 merged; root pointer bumped to website main 299251d.)
   - a data-handling statement page (OD-2: maintainers operate it; 24-month aggregates, OD-3; 90-day activity expiry, OD-4; signing; no raw reports or IPs)
   - updates to `src/content/docs/platform-settings-telemetry.mdx`, `helm-values-reference.mdx` and `air-gapped-installation.mdx` (set `api.telemetry.enabled=false`)
 
@@ -566,14 +566,14 @@ description: "Task list for feature 022: default telemetry destination, extended
   - the OD-1 merge gate
   - the T002 sign-off list
   - that `telemetry-default-gate` is expected to fail until OD-1 is ruled
-- [X] T099 Once OD-1 is ruled: set `DefaultEndpoint` in `api/internal/telemetry/destination.go`, mark OD-1 RULED in `specs/022-default-telemetry-dashboard/OPEN-DECISIONS.md`, update the destination copy in `design.pen` (with re-export) and the docs, confirm `telemetry-default-gate` passes, and mark the PR ready for review.
+- [X] T099 Once OD-1 is ruled: set `DefaultEndpoint` in `api/internal/telemetry/destination.go`, mark OD-1 RULED in `specs/done_022-default-telemetry-dashboard/OPEN-DECISIONS.md`, update the destination copy in `design.pen` (with re-export) and the docs, confirm `telemetry-default-gate` passes, and mark the PR ready for review.
   The docs written under T091-T094 name no receiver host. Once OD-1 is ruled, add the host to:
   - `docs/install.md` § Telemetry: the sentence on an empty `api.telemetry.endpoint`, and the Upgrading admonition
   - `docs/architecture.md`: the "API → telemetry-receiver" bullet
   - `docs/telemetry-provider.md`: the intro paragraph and the "Public summary" paragraph
   - `CHANGELOG.md` [Unreleased] > Upgrade Notes: the first three bullets
   - the statement URL `https://valgulnecron.github.io/gameplane-website/telemetry/` (in `docs/install.md`, `docs/security.md`, `docs/telemetry-provider.md` and `CHANGELOG.md`) if the website gets a custom domain; it must match the T095 constant
-- [ ] T100 After merge: `git mv specs/022-default-telemetry-dashboard specs/done_022-default-telemetry-dashboard` and update in-repo references as a `docs:` commit (rule 16, constitution IV). Then delete the remote and local branch (rule 12).
+- [X] T100 After merge: `git mv specs/022-default-telemetry-dashboard specs/done_022-default-telemetry-dashboard` and update in-repo references as a `docs:` commit (rule 16, constitution IV). Then delete the remote and local branch (rule 12). (2026-10-08: archived after GameplanePanel/Gameplane#617 merged; branches deleted.)
 
 ---
 
