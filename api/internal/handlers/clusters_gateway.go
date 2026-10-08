@@ -128,7 +128,7 @@ func gatewayCredentialName(registration *unstructured.Unstructured) string {
 func (h clustersHandler) cleanupGatewayCredential(ctx context.Context, cluster, secretName string) {
 	// Preserve external references and support the original fixed-name API secret.
 	base := gatewaySecretName(cluster)
-	if secretName != base && !(strings.HasPrefix(secretName, base+"-") && len(secretName) == len(base)+33) {
+	if secretName != base && (!strings.HasPrefix(secretName, base+"-") || len(secretName) != len(base)+33) {
 		return
 	}
 	if secretName != base {
