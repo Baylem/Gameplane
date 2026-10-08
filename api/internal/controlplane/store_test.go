@@ -48,6 +48,37 @@ func credential(name string) *corev1.Secret {
 	}
 }
 
+func TestManagementKeyRejectsInvalidFilesWithoutReplacingThem(t *testing.T) {
+	for _, size := range []int{0, 31, 33} {
+		t.Run(fmt.Sprint(size), func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "panel.key")
+			original := make([]byte, size)
+			if err := os.WriteFile(path, original, 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := loadKey(path, false); err == nil {
+				t.Fatal("accepted an invalid existing key")
+			}
+			got, err := os.ReadFile(path)
+			if err != nil || string(got) != string(original) {
+				t.Fatal("replaced invalid key instead of failing closed")
+			}
+		})
+	}
+}
+
+func TestManagementKeyCreatesNestedDirectoryAndReusesKey(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "private", "keys", "panel.key")
+	first, err := loadKey(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := loadKey(path, true)
+	if err != nil || len(first) != 32 || string(second) != string(first) {
+		t.Fatalf("key did not survive reopen: %v", err)
+	}
+}
+
 func TestCredentialsPersistEncryptedAndRemainNamespaceIsolated(t *testing.T) {
 	store, client, keyFile := managementFixture(t)
 	created, err := client.Secrets("panel").Create(t.Context(), credential("provider"), metav1.CreateOptions{})

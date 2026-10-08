@@ -1,10 +1,12 @@
 """CI-only smoke test against the real Compose images, without Kubernetes."""
+import base64
 import hashlib
 from http.cookies import SimpleCookie
 import json
 import os
 from pathlib import Path
 import secrets
+import sqlite3
 import subprocess
 import tempfile
 import time
@@ -21,12 +23,16 @@ def compose(*args, **kwargs):
     return subprocess.run(COMPOSE + list(args), check=True, text=True, **kwargs)
 
 
-def request(path, data=None, cookie=""):
+def request(path, data=None, cookie="", method=None):
     headers = {"Accept": "application/json", "Cookie": cookie}
     if data is not None:
         headers["Content-Type"] = "application/json"
+    if cookie and (data is not None or method not in (None, "GET")):
+        cookies = SimpleCookie(cookie)
+        headers["X-Gameplane-CSRF"] = cookies["gameplane_csrf"].value
     req = urllib.request.Request(ORIGIN + path, headers=headers,
-                                 data=json.dumps(data).encode() if data is not None else None)
+                                 data=json.dumps(data).encode() if data is not None else None,
+                                 method=method)
     with urllib.request.urlopen(req, timeout=10) as response:
         return response.read(), response.headers
 
@@ -73,6 +79,53 @@ def key_digest(container):
         return hashlib.sha256(key.read_bytes()).digest()
 
 
+def registration(token):
+    # No Kubernetes dependency: the registration is valid but its target is
+    # deliberately unreachable inside the API container.
+    kubeconfig = json.dumps({
+        "apiVersion": "v1", "kind": "Config", "current-context": "smoke",
+        "clusters": [{"name": "smoke", "cluster": {"server": "https://127.0.0.1:65534"}}],
+        "users": [{"name": "smoke", "user": {"token": token}}],
+        "contexts": [{"name": "smoke", "context": {"cluster": "smoke", "user": "smoke"}}],
+    })
+    return {"name": "smoke-remote", "displayName": "Persistent smoke remote", "kubeconfig": kubeconfig}
+
+
+def assert_registered(cookie, token):
+    body = request("/clusters", cookie=cookie)[0]
+    items = json.loads(body)["items"]
+    assert len(items) == 1, items
+    assert items[0]["name"] == "smoke-remote", items
+    assert items[0]["displayName"] == "Persistent smoke remote", items
+    assert token.encode() not in body, "registration response exposed credentials"
+
+
+def assert_encrypted_registration(container, token):
+    # Caller stops the API first so the database and any WAL form one stable
+    # snapshot. Read only the copy, never the live volume.
+    with tempfile.TemporaryDirectory() as directory:
+        subprocess.run(["docker", "cp", container + ":/data/.", directory], check=True)
+        with sqlite3.connect(str(Path(directory) / "gameplane.db")) as database:
+            rows = database.execute(
+                "SELECT kind, name, payload FROM management_objects WHERE name IN (?, ?)",
+                ("smoke-remote", "cluster-smoke-remote-kubeconfig"),
+            ).fetchall()
+        assert {(kind, name) for kind, name, _ in rows} == {
+            ("clusters", "smoke-remote"), ("secrets", "cluster-smoke-remote-kubeconfig"),
+        }, "registration and credential must both persist"
+        payload = next(payload for kind, _, payload in rows if kind == "secrets")
+        sealed = base64.b64decode(payload, validate=True)
+        assert len(sealed) > 28, "credential ciphertext must include nonce and authentication tag"
+        try:
+            json.loads(sealed)
+        except (ValueError, UnicodeDecodeError):
+            pass
+        else:
+            raise AssertionError("credential payload is unencrypted JSON")
+        for path in Path(directory).glob("gameplane.db*"):
+            assert token.encode() not in path.read_bytes(), "database snapshot exposed credentials"
+
+
 def main():
     config = json.loads(compose("config", "--format", "json", capture_output=True).stdout)
     assert set(config["services"]) == {"gameplane-api", "web"}
@@ -92,13 +145,28 @@ def main():
     compose("exec", "-T", "gameplane-api", "/api", "bootstrap-admin", "--username", "standalone-admin", "--password-stdin", input=password + "\n")
     cookie = login(password)
     assert_empty(cookie)
+    token = secrets.token_urlsafe(32)
+    remote = registration(token)
+    request("/clusters", remote, cookie=cookie)
+    assert_registered(cookie, token)
+    compose("stop", "gameplane-api")
+    assert_encrypted_registration(container, token)
     compose("up", "-d", "--no-build", "--force-recreate", "gameplane-api")
     wait_ready()
     container = compose("ps", "-q", "gameplane-api", capture_output=True).stdout.strip()
     assert key_digest(container) == original_key, "panel key changed on container replacement"
-    assert_empty(cookie)  # Existing session and database must also survive.
-    assert_empty(login(password))
-    print("Standalone Compose: bootstrap, empty fleet, persistent key and restart passed")
+    # Startup validates all persisted credentials using the original key.
+    # Metadata and the existing session must survive alongside those credentials.
+    assert_registered(cookie, token)
+    cookie = login(password)
+    assert_registered(cookie, token)
+    request("/clusters/smoke-remote", cookie=cookie, method="DELETE")
+    assert_empty(cookie)
+    # An orphaned credential would make this second registration return 409.
+    request("/clusters", remote, cookie=cookie)
+    request("/clusters/smoke-remote", cookie=cookie, method="DELETE")
+    assert_empty(cookie)
+    print("Standalone Compose: bootstrap, empty fleet, encrypted registration, persistent key, restart and cleanup passed")
 
 
 if __name__ == "__main__":

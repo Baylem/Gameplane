@@ -67,7 +67,7 @@ func New(ctx context.Context, store *db.Store, keyFile string) (*kube.Client, er
 	if err != nil {
 		return nil, fmt.Errorf("validate management storage: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var kind, ns, name, uid, payload string
 		var version int64
@@ -94,7 +94,7 @@ func loadKey(path string, required bool) ([]byte, error) {
 	if path == "" {
 		return nil, errors.New("management key file path is required")
 	}
-	key, err := os.ReadFile(path)
+	key, err := readKey(path)
 	if err == nil {
 		if len(key) != 32 {
 			return nil, errors.New("management key file must contain exactly 32 bytes")
@@ -140,6 +140,17 @@ func loadKey(path string, required bool) ([]byte, error) {
 		return nil, fmt.Errorf("publish management key: %w", err)
 	}
 	return key, nil
+}
+
+// readKey confines key access to its configured directory, including symlink
+// resolution. The path is operator configuration, never an HTTP request value.
+func readKey(path string) ([]byte, error) {
+	root, err := os.OpenRoot(filepath.Dir(path))
+	if err != nil {
+		return nil, fmt.Errorf("open management key directory: %w", err)
+	}
+	defer func() { _ = root.Close() }()
+	return root.ReadFile(filepath.Base(path))
 }
 
 func (s *objects) resource() schema.GroupResource {
@@ -224,7 +235,7 @@ func (s *objects) list(ctx context.Context, opts metav1.ListOptions) (*unstructu
 	if err != nil {
 		return nil, fmt.Errorf("list management objects: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	result := &unstructured.UnstructuredList{Items: []unstructured.Unstructured{}}
 	for rows.Next() {
 		var name, uid, payload string
