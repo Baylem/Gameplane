@@ -131,6 +131,34 @@ func TestStandaloneSPDYExecutorTrustedUpgradeUsesPolicyAndTLS(t *testing.T) {
 	}
 }
 
+func TestStandaloneSPDYExecutorSystemRootsRejectUntrustedTLSBeforeAuthentication(t *testing.T) {
+	var observed atomic.Bool
+	client, policy, target := standaloneSPDYFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		observed.Store(true)
+		http.Error(w, "unexpected authenticated request", http.StatusBadRequest)
+	}))
+	// A kubeconfig without custom TLS fields uses system trust roots. In this
+	// case rest.TLSConfigFor returns nil, which SPDY must not treat as insecure.
+	client.Config.CAData = nil
+	client.Config.ServerName = ""
+	var dials atomic.Int32
+	dial := policy.dial
+	policy.dial = func(ctx context.Context, network, address string) (net.Conn, error) {
+		dials.Add(1)
+		return dial(ctx, network, address)
+	}
+	executor, err := client.NewSPDYExecutor(http.MethodPost, target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{Stdout: io.Discard})
+	if err == nil || !strings.Contains(err.Error(), "certificate") || dials.Load() != 1 || observed.Load() {
+		t.Fatalf("system-root SPDY request bypassed TLS verification: error=%v dials=%d handler reached=%v", err, dials.Load(), observed.Load())
+	}
+}
+
 func TestStandaloneSPDYExecutorRejectsDNSRebindingAfterRESTRequest(t *testing.T) {
 	client, policy, target := standaloneSPDYFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, `{}`)

@@ -2,6 +2,7 @@ package kube
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -28,6 +29,12 @@ func (c *Client) NewSPDYExecutor(method string, target *url.URL) (remotecommand.
 	tlsConfig, err := rest.TLSConfigFor(c.Config)
 	if err != nil {
 		return nil, fmt.Errorf("configure guarded stream TLS: %w", err)
+	}
+	if tlsConfig == nil {
+		// REST uses nil for system trust roots, but SPDY's custom-dial path
+		// interprets nil as InsecureSkipVerify. Preserve system roots and
+		// inferred hostname verification with an explicit verified default.
+		tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 	}
 	// The SPDY implementation unwraps this transport for both TLS and dialing;
 	// supply the raw HTTP transport so no wrapper can hide its guarded dialer.
