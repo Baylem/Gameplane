@@ -20,6 +20,8 @@ import { formatRelative } from "@/lib/utils";
 import { verifyMode } from "@/lib/verify";
 import type { ModuleSource, ModuleSourceSpec } from "@/types";
 import { SourceDialog } from "./SourceDialog";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { LoadingCard } from "@/components/ui/LoadingCard";
 
 // ModuleSourcesPanel lists every ModuleSource and lets admins add,
 // edit, and remove them. The same sources can equally be declared via
@@ -28,9 +30,9 @@ export function ModuleSourcesPanel() {
   return <ModuleTarget loadingMessage="Loading module sources…">{(cluster, canManage) => <ClusterModuleSources key={cluster} cluster={cluster} canManage={canManage} />}</ModuleTarget>;
 }
 
-function ClusterModuleSources({ cluster, canManage }: { cluster: string; canManage: boolean }) {
+export function ClusterModuleSources({ cluster, canManage }: { cluster: string; canManage: boolean }) {
   const qc = useQueryClient();
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["module-sources", cluster],
     queryFn: () => ModuleSources.list(cluster),
     refetchInterval: 10_000,
@@ -63,14 +65,10 @@ function ClusterModuleSources({ cluster, canManage }: { cluster: string; canMana
   });
 
   if (isLoading) {
-    return <Card className="p-5 text-sm text-muted">Loading module sources…</Card>;
+    return <LoadingCard message="Loading module sources…" />;
   }
   if (isError) {
-    return (
-      <Card className="p-5 text-sm text-danger">
-        Failed to load module sources.
-      </Card>
-    );
+    return <ErrorCard message="Failed to load module sources." onRetry={() => void refetch()} />;
   }
 
   const sources = data?.items ?? [];
