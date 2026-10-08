@@ -126,3 +126,19 @@ func TestStandaloneProbePersistsSafeFailureMessage(t *testing.T) {
 		t.Fatalf("unsafe or missing failure status: %s %s", phase, message)
 	}
 }
+
+func TestStandaloneProbeRejectsOversizeVersion(t *testing.T) {
+	home, reg, registration := standaloneWatchFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"gitVersion":"v1.35.0","padding":"` + strings.Repeat("x", 128*1024) + `"}`))
+	}))
+	probeStandaloneCluster(t.Context(), home, reg, "panel", registration)
+	current, err := home.Clusters().Get(t.Context(), "remote", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	phase, _, _ := unstructured.NestedString(current.Object, "status", "phase")
+	version, _, _ := unstructured.NestedString(current.Object, "status", "serverVersion")
+	if phase != "Unhealthy" || version != "" {
+		t.Fatal("oversize remote version was accepted")
+	}
+}

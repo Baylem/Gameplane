@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"regexp"
 	"sync"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 )
 
 const standalonePollInterval = 30 * time.Second
+
+var standaloneVersionRE = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$`)
 
 func watchStandaloneClusters(ctx context.Context, home *Client, reg *Registry, ns string) {
 	ticker := time.NewTicker(standalonePollInterval)
@@ -92,7 +95,7 @@ func probeStandaloneCluster(ctx context.Context, home *Client, reg *Registry, ns
 		data, err = client.Typed.Discovery().RESTClient().Get().AbsPath("/version").Do(probeCtx).Raw()
 		if err == nil {
 			var info version.Info
-			if json.Unmarshal(data, &info) == nil && info.GitVersion != "" {
+			if json.Unmarshal(data, &info) == nil && len(info.GitVersion) <= 128 && standaloneVersionRE.MatchString(info.GitVersion) {
 				phase, message, serverVersion = "Healthy", "", info.GitVersion
 			}
 		}
