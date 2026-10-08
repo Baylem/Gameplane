@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -103,6 +104,11 @@ func loadKeyWithSync(path string, required bool, syncDirectory func(string) erro
 		if len(key) != 32 {
 			return nil, errors.New("management key file must contain exactly 32 bytes")
 		}
+		// Also persist a concurrent winner's publication, including a retry
+		// after its directory sync failed. Never replace its key.
+		if err := syncDirectory(filepath.Dir(path)); err != nil {
+			return nil, fmt.Errorf("sync existing management key directory: %w", err)
+		}
 		return key, nil
 	}
 	if !errors.Is(err, os.ErrNotExist) {
@@ -154,12 +160,38 @@ func loadKeyWithSync(path string, required bool, syncDirectory func(string) erro
 // readKey confines key access to its configured directory, including symlink
 // resolution. The path is operator configuration, never an HTTP request value.
 func readKey(path string) ([]byte, error) {
+	if err := validateKeyPlatform(); err != nil {
+		return nil, err
+	}
 	root, err := os.OpenRoot(filepath.Dir(path))
 	if err != nil {
 		return nil, fmt.Errorf("open management key directory: %w", err)
 	}
 	defer func() { _ = root.Close() }()
-	return root.ReadFile(filepath.Base(path))
+	f, err := openKeyHandle(root, filepath.Base(path))
+	if err != nil {
+		return nil, fmt.Errorf("open management key: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+	info, err := f.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("inspect management key: %w", err)
+	}
+	if !info.Mode().IsRegular() || info.Size() != 32 {
+		return nil, errors.New("management key must be a regular file containing exactly 32 bytes")
+	}
+	if err := validateKeyFile(info); err != nil {
+		return nil, err
+	}
+	// Validate and read the same open inode; limit even if it grows after Stat.
+	key, err := io.ReadAll(io.LimitReader(f, 33))
+	if err != nil {
+		return nil, fmt.Errorf("read management key bytes: %w", err)
+	}
+	if len(key) != 32 {
+		return nil, errors.New("management key changed size while reading")
+	}
+	return key, nil
 }
 
 func (s *objects) resource() schema.GroupResource {
