@@ -205,6 +205,27 @@ there is no central `Cluster` CR or Kubernetes Secret to create. It monitors
 remote Kubernetes connectivity itself. Selecting that registration routes game
 operations to the target, and never falls back to the central host.
 
+### Rotate a registered kubeconfig
+
+Create a replacement credential on the remote cluster, then update its existing
+registration. This requires central `cluster:manage` permission:
+
+```sh
+jq -n --rawfile kubeconfig replacement-kubeconfig.yaml '{kubeconfig:$kubeconfig}' |
+  curl --fail-with-body --request PUT --cookie cookies.txt \
+    --header "X-Gameplane-CSRF: $CSRF_TOKEN" \
+    --header 'Content-Type: application/json' \
+    --data-binary @- "$PANEL_URL/clusters/remote-1/kubeconfig"
+```
+
+A successful request returns 204, preserves the registration identity, gateway
+settings and user grants, and reloads the workload client. The API checks the
+configuration before storing it; success does not confirm connectivity or remote
+RBAC. Verify the cluster is healthy and required operations work before revoking
+the old remote credential. Requests already in flight can finish with the old
+client. Overlapping rotations return a conflict; reload before retrying. Avoid
+deleting and re-registering a cluster just to replace its kubeconfig.
+
 ## Grant workload access
 
 Registration does not grant workload access, including to the bootstrap admin.

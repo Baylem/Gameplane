@@ -34,6 +34,7 @@ func MountClusters(r chi.Router, reg *kube.Registry, k *kube.Client, ns string) 
 		r.Get("/", h.list)
 		r.Post("/", h.create)
 		r.Delete("/{name}", h.delete)
+		r.Put("/{name}/kubeconfig", h.replaceKubeconfig)
 		r.Put("/{name}/gateway", h.configureGateway)
 		r.Delete("/{name}/gateway", h.removeGateway)
 	})
@@ -45,11 +46,9 @@ func clusterKubeconfigSecretName(cluster string) string {
 	return "cluster-" + cluster + "-kubeconfig"
 }
 
-// deleteClusterKubeconfigSecret deletes a kubeconfig Secret only when it is the one
-// that POST /clusters generates for this cluster (cluster-<name>-kubeconfig) and carries
-// the kube.ClusterKubeconfigLabel label. Secrets created before managed-by labelling
-// are cleaned up; any other Secret (different name or missing the kubeconfig label)
-// is left in place and returns apierrors.NewNotFound.
+// deleteClusterKubeconfigSecret deletes only the API's fixed-name or rotated
+// kubeconfig credential. Legacy fixed names predate managed-by labelling;
+// rotated names require both ownership labels. Other references are preserved.
 func deleteClusterKubeconfigSecret(ctx context.Context, k *kube.Client, ns, cluster, secretName string) error {
 	secret, err := clusterKubeconfigSecret(ctx, k, ns, cluster, secretName)
 	if err != nil {
@@ -59,9 +58,8 @@ func deleteClusterKubeconfigSecret(ctx context.Context, k *kube.Client, ns, clus
 }
 
 func clusterKubeconfigSecret(ctx context.Context, k *kube.Client, ns, cluster, secretName string) (*corev1.Secret, error) {
-	// Check if the secret name matches what POST /clusters generates.
-	expectedName := clusterKubeconfigSecretName(cluster)
-	if secretName != expectedName {
+	// Permit the legacy fixed name and API-generated immutable rotations.
+	if !ownedKubeconfigSecretName(cluster, secretName) {
 		return nil, apierrors.NewNotFound(corev1.Resource("secrets"), secretName)
 	}
 
@@ -73,6 +71,11 @@ func clusterKubeconfigSecret(ctx context.Context, k *kube.Client, ns, cluster, s
 
 	// Only delete if it carries the kubeconfig label.
 	if secret.Labels[kube.ClusterKubeconfigLabel] != "true" {
+		return nil, apierrors.NewNotFound(corev1.Resource("secrets"), secretName)
+	}
+	// Legacy API secrets preceded the managed-by label. Rotated names are new
+	// and must have explicit ownership before they qualify for cleanup.
+	if secretName != clusterKubeconfigSecretName(cluster) && secret.Labels[ManagedByLabel] != managedByValue {
 		return nil, apierrors.NewNotFound(corev1.Resource("secrets"), secretName)
 	}
 
@@ -327,10 +330,9 @@ func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
 	// Only remove credentials this API owns; external GitOps credentials survive.
 	h.cleanupGatewayCredential(req.Context(), name, gatewayCredentialName(u))
 
-	// Clean up the kubeconfig Secret only if it is the one this cluster was created with
-	// (cluster-<name>-kubeconfig) and carries the kubeconfig label. This includes Secrets
-	// created before the managed-by label was added. Any other Secret — different name
-	// or missing the kubeconfig label — is left in place.
+	// Clean up the fixed-name or immutable rotated credential captured before
+	// deletion. Legacy fixed names predate managed-by; rotated names require it.
+	// UID/version preconditions preserve replacements and external references.
 	if kubeconfigSecret != nil {
 		if err := h.k.Secrets(h.namespace).Delete(req.Context(), kubeconfigSecret.Name, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(kubeconfigSecret)}); err != nil && !apierrors.IsNotFound(err) {
 			slog.Warn("cluster delete: kubeconfig secret cleanup failed", "cluster", name, "err", err)
