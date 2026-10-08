@@ -141,7 +141,7 @@ export async function startMSW(): Promise<void> {
     // Don't error on requests we haven't mocked — pass them through to
     // the real network. Lets us mix mocked auth/list endpoints with a
     // real fetch for things we don't care to mock.
-    onUnhandledRequest: "bypass",
+    onUnhandledFrame: "bypass",
     serviceWorker: { url: "/mockServiceWorker.js" },
   });
 }
