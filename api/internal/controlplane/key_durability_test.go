@@ -13,6 +13,9 @@ func TestKeyPublicationWaitsForDirectorySync(t *testing.T) {
 	wantErr := errors.New("directory sync failed")
 	called := false
 	key, err := loadKeyWithSync(path, false, func(got string) error {
+		if got == filepath.Dir(dir) {
+			return nil // persist the already-visible parent directory first
+		}
 		called = true
 		if got != dir {
 			t.Fatalf("synced %q instead of key directory", got)
@@ -43,7 +46,7 @@ func TestNestedKeyDirectoriesAreDurablyPublished(t *testing.T) {
 	if err != nil || len(key) != 32 {
 		t.Fatalf("create key: %v", err)
 	}
-	want := []string{base, filepath.Join(base, "private"), filepath.Dir(path)}
+	want := []string{filepath.Dir(base), base, filepath.Join(base, "private"), filepath.Dir(path)}
 	if len(synced) != len(want) {
 		t.Fatalf("directory sync count = %d, want %d", len(synced), len(want))
 	}
@@ -63,5 +66,38 @@ func TestKeyDirectorySyncFailurePreventsPublication(t *testing.T) {
 	}
 	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("published key after directory sync failed")
+	}
+}
+
+func TestKeyDirectorySyncFailureRetryPersistsVisibleParent(t *testing.T) {
+	base := t.TempDir()
+	dir := filepath.Join(base, "private")
+	path := filepath.Join(dir, "panel.key")
+	wantErr := errors.New("parent directory sync failed once")
+	parentSyncs := 0
+	syncDirectory := func(got string) error {
+		if got == base {
+			parentSyncs++
+			if parentSyncs == 1 {
+				return wantErr
+			}
+		}
+		if got == dir && parentSyncs < 2 {
+			t.Fatal("key became usable before retry persisted the directory entry")
+		}
+		return syncKeyDirectory(got)
+	}
+	if key, err := loadKeyWithSync(path, false, syncDirectory); key != nil || !errors.Is(err, wantErr) {
+		t.Fatalf("first publication failure: %v", err)
+	}
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		t.Fatal("failed publication did not leave a visible directory to retry")
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("key was published before its directory entry was persisted")
+	}
+	key, err := loadKeyWithSync(path, false, syncDirectory)
+	if err != nil || len(key) != 32 || parentSyncs != 2 {
+		t.Fatalf("retry failed to persist the existing directory: parent syncs=%d error=%v", parentSyncs, err)
 	}
 }
