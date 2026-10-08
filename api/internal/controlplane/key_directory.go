@@ -26,7 +26,10 @@ func createKeyDirectory(path string, syncDirectory func(string) error) error {
 		if !info.IsDir() {
 			return errors.New("management key parent is not a directory")
 		}
-		return nil
+		// Visibility does not prove durability: an earlier attempt may have
+		// created this directory and failed while syncing its parent. Recheck
+		// publication before a retry can create encrypted database records.
+		return syncDirectory(filepath.Dir(path))
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("inspect key directory: %w", err)
