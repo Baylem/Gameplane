@@ -8,7 +8,12 @@ import (
 )
 
 func syncKeyDirectory(path string) error {
-	dir, err := os.Open(path)
+	root, err := os.OpenRoot(path)
+	if err != nil {
+		return fmt.Errorf("open key directory root for sync: %w", err)
+	}
+	defer func() { _ = root.Close() }()
+	dir, err := root.Open(".")
 	if err != nil {
 		return fmt.Errorf("open key directory for sync: %w", err)
 	}
