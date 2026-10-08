@@ -28,6 +28,10 @@ type ClusterStore interface {
 	Delete(context.Context, string, metav1.DeleteOptions, ...string) error
 }
 
+// ClusterRegistrar commits a registration and its credential together. Only
+// standalone management implements this; Kubernetes uses its native stores.
+type ClusterRegistrar func(context.Context, string, *corev1.Secret, *unstructured.Unstructured) (*unstructured.Unstructured, error)
+
 // Secrets selects management credentials in a namespace.
 func (c *Client) Secrets(ns string) SecretStore {
 	if c == nil {

@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	corev1 "k8s.io/api/core/v1"
@@ -206,16 +207,6 @@ func (h clustersHandler) create(w http.ResponseWriter, req *http.Request) {
 			"kubeconfig": []byte(in.Kubeconfig),
 		},
 	}
-	_, err = h.k.Secrets(h.namespace).Create(req.Context(), secret, metav1.CreateOptions{})
-	if err != nil {
-		if apierrors.IsAlreadyExists(err) {
-			httperr.WriteCode(w, req, http.StatusConflict, errors.New("cluster already exists"))
-			return
-		}
-		httperr.Write(w, req, err)
-		return
-	}
-
 	// Create the Cluster CR.
 	clusterCR := &unstructured.Unstructured{
 		Object: map[string]any{
@@ -233,10 +224,14 @@ func (h clustersHandler) create(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
-	_, err = h.k.Clusters().Create(req.Context(), clusterCR, metav1.CreateOptions{})
+	if h.k.RegisterCluster != nil {
+		_, err = h.k.RegisterCluster(req.Context(), h.namespace, secret, clusterCR)
+	} else if h.k.IsStandalone() {
+		err = errors.New("atomic registration storage is unavailable")
+	} else {
+		err = h.registerKubernetesCluster(req.Context(), secret, clusterCR)
+	}
 	if err != nil {
-		// Clean up the Secret on CR creation failure.
-		_ = h.k.Secrets(h.namespace).Delete(req.Context(), secretName, metav1.DeleteOptions{})
 		if apierrors.IsAlreadyExists(err) {
 			httperr.WriteCode(w, req, http.StatusConflict, errors.New("cluster already exists"))
 			return
@@ -250,6 +245,30 @@ func (h clustersHandler) create(w http.ResponseWriter, req *http.Request) {
 		DisplayName: in.DisplayName,
 		Phase:       "", // Will be populated by the operator
 	})
+}
+
+// Kubernetes cannot transact across a Secret and a CR. Pin cleanup to the
+// credential we created and use a bounded independent context so cancellation
+// does not strand it. An ambiguous CR write retains possibly-live credentials.
+func (h clustersHandler) registerKubernetesCluster(ctx context.Context, secret *corev1.Secret, registration *unstructured.Unstructured) error {
+	created, err := h.k.Secrets(h.namespace).Create(ctx, secret, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	if _, err := h.k.Clusters().Create(ctx, registration, metav1.CreateOptions{}); err != nil {
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		current, readErr := h.k.Clusters().Get(cleanupCtx, registration.GetName(), metav1.GetOptions{})
+		ref := ""
+		if readErr == nil {
+			ref, _, _ = unstructured.NestedString(current.Object, "spec", "kubeconfigSecret", "name")
+		}
+		if apierrors.IsNotFound(readErr) || (readErr == nil && ref != created.Name) {
+			_ = h.k.Secrets(h.namespace).Delete(cleanupCtx, created.Name, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(created)})
+		}
+		return err
+	}
+	return nil
 }
 
 func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
