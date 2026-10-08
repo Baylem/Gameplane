@@ -63,6 +63,15 @@ def main():
     assert key_volume["secret"] == {"secretName": "protected-panel-key", "defaultMode": 0o440, "items": [{"key": "master", "path": "panel.key"}]}
     assert not any(obj["kind"] == "PersistentVolumeClaim" and obj["metadata"]["name"] == "gameplane-api-key" for obj in objects)
 
+    for custody in ({}, {"existingSecret": "protected-panel-key", "secretKey": "next"}):
+        objects = render({"operator": {"enabled": False}, "api": {"standalone": True, "panelKey": {**custody, "fileName": "panel-next.key"}}})
+        pod = one(objects, "Deployment", "gameplane-api")["spec"]["template"]["spec"]
+        assert "--panel-key-file=/keys/panel-next.key" in pod["containers"][0]["args"]
+        if custody:
+            volume = next(volume for volume in pod["volumes"] if volume["name"] == "panel-key")
+            assert volume["secret"]["items"] == [{"key": "next", "path": "panel-next.key"}]
+    render({"operator": {"enabled": False}, "api": {"standalone": True, "panelKey": {"fileName": "../outside.key"}}}, failure="api.panelKey.fileName must be a simple filename")
+
     render({"operator": {"enabled": False}, "api": {"standalone": True, "panelKey": {"existingSecret": "key", "storage": {"existingClaim": "key-pvc"}}}}, failure="choose either api.panelKey.existingSecret or api.panelKey.storage.existingClaim")
 
     objects = render({"operator": {"enabled": False}, "api": {"standalone": True, "remoteAllowedCIDRs": ["10.20.0.0/16", "fd12:3456::/48"]}})

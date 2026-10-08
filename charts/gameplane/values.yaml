@@ -161,6 +161,8 @@ api:
 
   # Standalone encryption keys use separate storage configured under panelKey.
   panelKey:
+    # Select a new filename after offline master-key rotation on the generated PVC.
+    fileName: panel.key
     # Mount a pre-provisioned 32-byte key read-only. No key is generated in this mode.
     # Use a separate Secret and backup/access policy from the database.
     existingSecret: ""
