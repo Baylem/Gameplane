@@ -19,6 +19,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/GameplanePanel/gameplane/api/internal/auth"
 	"github.com/GameplanePanel/gameplane/api/internal/httperr"
@@ -49,25 +50,32 @@ func clusterKubeconfigSecretName(cluster string) string {
 // are cleaned up; any other Secret (different name or missing the kubeconfig label)
 // is left in place and returns apierrors.NewNotFound.
 func deleteClusterKubeconfigSecret(ctx context.Context, k *kube.Client, ns, cluster, secretName string) error {
+	secret, err := clusterKubeconfigSecret(ctx, k, ns, cluster, secretName)
+	if err != nil {
+		return err
+	}
+	return k.Secrets(ns).Delete(ctx, secretName, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(secret)})
+}
+
+func clusterKubeconfigSecret(ctx context.Context, k *kube.Client, ns, cluster, secretName string) (*corev1.Secret, error) {
 	// Check if the secret name matches what POST /clusters generates.
 	expectedName := clusterKubeconfigSecretName(cluster)
 	if secretName != expectedName {
-		return apierrors.NewNotFound(corev1.Resource("secrets"), secretName)
+		return nil, apierrors.NewNotFound(corev1.Resource("secrets"), secretName)
 	}
 
 	// Fetch the Secret to check its labels.
 	secret, err := k.Secrets(ns).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Only delete if it carries the kubeconfig label.
 	if secret.Labels[kube.ClusterKubeconfigLabel] != "true" {
-		return apierrors.NewNotFound(corev1.Resource("secrets"), secretName)
+		return nil, apierrors.NewNotFound(corev1.Resource("secrets"), secretName)
 	}
 
-	// Delete the Secret.
-	return k.Secrets(ns).Delete(ctx, secretName, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(secret)})
+	return secret, nil
 }
 
 type clustersHandler struct {
@@ -265,37 +273,46 @@ func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Extract the Secret name from the Cluster CR for cleanup.
-	kcSpec, ok, _ := unstructured.NestedMap(u.Object, "spec", "kubeconfigSecret")
-	secretName := ""
-	if ok {
-		if sn, ok := kcSpec["name"].(string); ok {
-			secretName = sn
+	// Pin deletion to the registration we read. A health update may advance
+	// resourceVersion; a new registration with this name must survive.
+	originalUID := u.GetUID()
+	var kubeconfigSecret *corev1.Secret
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		current, err := h.k.Clusters().Get(req.Context(), name, metav1.GetOptions{})
+		if err != nil {
+			return err
 		}
-	}
-
-	// Delete the Cluster CR.
-	if err := h.k.Clusters().Delete(req.Context(), name, metav1.DeleteOptions{}); err != nil {
-		if !apierrors.IsNotFound(err) {
-			httperr.Write(w, req, err)
-			return
+		if current.GetUID() != originalUID {
+			return apierrors.NewNotFound(kube.GVRCluster.GroupResource(), name)
 		}
+		secretName, _, _ := unstructured.NestedString(current.Object, "spec", "kubeconfigSecret", "name")
+		kubeconfigSecret, err = clusterKubeconfigSecret(req.Context(), h.k, h.namespace, name, secretName)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		if err := h.k.Clusters().Delete(req.Context(), name, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(current)}); err != nil {
+			return err
+		}
+		u = current
+		return nil
+	})
+	if err != nil {
+		httperr.Write(w, req, err)
+		return
 	}
 
 	// Drop the cluster's client now instead of waiting for the cluster
 	// watch, so no request is dispatched through a removed registration.
-	h.reg.Remove(name)
+	h.reg.RemoveIfUID(name, originalUID)
 	// Only remove credentials this API owns; external GitOps credentials survive.
-	if err := deleteManagedSecret(req.Context(), h.k, h.namespace, gatewaySecretName(name), clusterGatewayLabel); err != nil && !apierrors.IsNotFound(err) {
-		slog.Warn("cluster delete: gateway credential cleanup failed", "cluster", name)
-	}
+	h.cleanupGatewayCredential(req.Context(), name, gatewayCredentialName(u))
 
 	// Clean up the kubeconfig Secret only if it is the one this cluster was created with
 	// (cluster-<name>-kubeconfig) and carries the kubeconfig label. This includes Secrets
 	// created before the managed-by label was added. Any other Secret — different name
 	// or missing the kubeconfig label — is left in place.
-	if secretName != "" {
-		if err := deleteClusterKubeconfigSecret(req.Context(), h.k, h.namespace, name, secretName); err != nil && !apierrors.IsNotFound(err) {
+	if kubeconfigSecret != nil {
+		if err := h.k.Secrets(h.namespace).Delete(req.Context(), kubeconfigSecret.Name, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(kubeconfigSecret)}); err != nil && !apierrors.IsNotFound(err) {
 			slog.Warn("cluster delete: kubeconfig secret cleanup failed", "cluster", name, "err", err)
 		}
 	}
