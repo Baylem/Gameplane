@@ -175,12 +175,12 @@ func normalizeRange(days int) int {
 }
 
 // BuildViews computes the basic dashboard views over the rangeDays ending
-// on the latest complete UTC day, which is yesterday relative to now. An
+// on today, the current UTC day, which is still in progress (OD-6). An
 // invalid rangeDays falls back to 30. When no daily_basic row exists in the
 // range the result is the empty state: Empty is true and Basic is nil.
 func BuildViews(ctx context.Context, st *store, rangeDays int, now time.Time) (Views, error) {
 	rangeDays = normalizeRange(rangeDays)
-	asOf := now.UTC().Truncate(24*time.Hour).AddDate(0, 0, -1)
+	asOf := now.UTC().Truncate(24 * time.Hour)
 	from := asOf.AddDate(0, 0, 1-rangeDays)
 	v := Views{Range: rangeDays, AsOf: dayString(asOf)}
 	fromDay, toDay := dayString(from), dayString(asOf)
@@ -383,7 +383,7 @@ func fleetMedian(hist []fleetPoint) float64 {
 }
 
 // buildExtended computes the extended block over [from, to], the rangeDays
-// ending on the latest complete day. basicReports is the sum of daily_basic
+// ending on today (in progress). basicReports is the sum of daily_basic
 // reports over the same range. It returns nil when the range has no extended
 // reports.
 func buildExtended(ctx context.Context, st *store, rangeDays int, from, to string, basicReports int64) (*ExtendedViews, error) {

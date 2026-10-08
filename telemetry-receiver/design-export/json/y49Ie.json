@@ -41,7 +41,7 @@
           "id": "yia1E",
           "name": "Label",
           "fill": "$foreground/secondary",
-          "content": "Reports, latest day",
+          "content": "Reports, today",
           "fontFamily": "$typography/font-sans",
           "fontSize": 13,
           "fontWeight": "normal"
@@ -61,7 +61,7 @@
           "id": "oPQEN",
           "name": "Note",
           "fill": "$foreground/muted",
-          "content": "2026-10-06 (UTC)",
+          "content": "2026-10-06 (UTC, in progress)",
           "fontFamily": "$typography/font-sans",
           "fontSize": 12,
           "fontWeight": "normal"

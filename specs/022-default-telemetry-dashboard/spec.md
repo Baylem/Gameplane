@@ -164,7 +164,7 @@ These answer questions that basic counts can't, such as "how many installs are s
 **Acceptance Scenarios**:
 
 1. **Given** extended reports over a range, **When** an authorized viewer looks at installs, **Then** the dashboard shows:
-   - unique active installs for the latest day and the trailing 7 and 30 days
+   - unique active installs for today (in progress) and the trailing 7 and 30 days
    - new installs (first seen) per period
    - lapsed installs (not seen for 30 days) per period
 2. **Given** extended reports, **When** an authorized viewer looks at environment, **Then** it shows each install's share by Kubernetes minor version, distribution, CPU architecture, and node-count band.
@@ -330,10 +330,10 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
   - reports per day as a trend
   - version adoption, with the top 10 versions plus "Other" and "Invalid"
   - fleet-size distributions and medians for servers and templates
-  - total servers and templates on the latest day
+  - total servers and templates today (in progress)
   - a "data as of" timestamp
 - **FR-025**: The dashboard MUST show these **extended** views:
-  - unique active installs (latest day, trailing 7 and 30 days)
+  - unique active installs (today in progress, trailing 7 and 30 days)
   - new and lapsed installs per period
   - version adoption by install
   - environment breakdowns

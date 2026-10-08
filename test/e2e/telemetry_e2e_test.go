@@ -245,9 +245,9 @@ func TestTelemetryLifecycle(t *testing.T) {
 		if v.Preview == nil {
 			t.Fatal("no preview while basic is on")
 		}
-		// Views end at yesterday, so the receiver's same-day record is read
-		// from its fleet histograms and version label: the next report's
-		// servers and templates must equal the preview's.
+		// The receiver's record of the next report is read from its fleet
+		// histograms and version label: the report's servers and templates
+		// must equal the preview's.
 		serversCount0 := rx.get(ctx, t, "gameplane_telemetry_servers_count", "")
 		serversSum0 := rx.get(ctx, t, "gameplane_telemetry_servers_sum", "")
 		templatesSum0 := rx.get(ctx, t, "gameplane_telemetry_templates_sum", "")
@@ -393,9 +393,9 @@ func TestTelemetryLifecycle(t *testing.T) {
 
 	t.Run("dashboard_shows_reports", func(t *testing.T) {
 		cookie := dashboardLogin(ctx, t, metricsPort, telemetryDashToken)
-		before := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+		before := time.Now().UTC().Format("2006-01-02")
 		resp, body := dashboardRequest(ctx, t, metricsPort, http.MethodGet, "/api/v1/views", map[string]string{"Cookie": cookie}, nil)
-		after := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+		after := time.Now().UTC().Format("2006-01-02")
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("GET /api/v1/views with the session = %d: %s", resp.StatusCode, body)
 		}
@@ -411,7 +411,7 @@ func TestTelemetryLifecycle(t *testing.T) {
 		var asOf string
 		var empty bool
 		if json.Unmarshal(views["asOf"], &asOf) != nil || (asOf != before && asOf != after) {
-			t.Fatalf("asOf = %s, want yesterday (UTC), %s: views end at the last complete day", views["asOf"], after)
+			t.Fatalf("asOf = %s, want today (UTC), %s: views end on the current day (OD-6)", views["asOf"], after)
 		}
 		if json.Unmarshal(views["empty"], &empty) != nil || (empty != (string(views["basic"]) == "null")) {
 			t.Fatalf("empty = %s with basic = %s, want basic null exactly when empty", views["empty"], views["basic"])
