@@ -152,6 +152,13 @@ For generated keys, `api.panelKey.storage.existingClaim` selects an existing
 key-only PVC; `size` and `storageClassName` configure a newly created one.
 Apply separate RBAC, encryption-at-rest, and backup policies to the key Secret
 or PVC. Do not put key bytes in Helm values, command arguments, or source control.
+The standalone pod uses `fsGroupChangePolicy: OnRootMismatch` so normal generated
+key PVC remounts do not widen mode `0600` to group-writable `0660`. Start generated
+key storage with an empty PVC. When restoring or migrating an existing PVC, first
+prepare its mount root for group `65532` and restore the key as `65532:65532`,
+mode `0600`. Storage drivers that independently rewrite file permissions must
+preserve this protection; otherwise use the read-only Secret option. The API
+rejects a group-writable key instead of silently changing its permissions.
 
 ## Install and register remote game clusters
 
