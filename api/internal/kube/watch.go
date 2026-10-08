@@ -23,6 +23,10 @@ const resyncPeriod = 10 * time.Minute
 // remote kubeconfigs are logged but do not crash — the registry continues
 // to serve what it has.
 func WatchClusters(ctx context.Context, home *Client, reg *Registry, ns string) {
+	if home.IsStandalone() {
+		watchStandaloneClusters(ctx, home, reg, ns)
+		return
+	}
 	factory := dynamicinformer.NewDynamicSharedInformerFactory(home.Dynamic, resyncPeriod)
 
 	if _, err := factory.ForResource(GVRCluster).Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -105,7 +109,7 @@ func removeDeletedCluster(reg *Registry, obj any) {
 // loads the secret, creates a client, and registers it in the registry.
 // If the Cluster is being deleted, it is removed from the registry instead.
 func loadCluster(ctx context.Context, home *Client, reg *Registry, ns, name string) error {
-	u, err := home.Dynamic.Resource(GVRCluster).Get(ctx, name, metav1.GetOptions{})
+	u, err := home.Clusters().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("get cluster CRD: %w", err)
 	}

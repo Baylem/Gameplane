@@ -1,3 +1,4 @@
+import { useInstallation } from "@/lib/useInstallation";
 import { useState, useEffect, useRef, type ChangeEvent, type ComponentType, type ReactNode, type SetStateAction } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -1871,25 +1872,26 @@ function TelemetrySection({ initial }: { initial?: TelemetryCfg }) {
 }
 
 function UpdatesSection() {
+  const installation = useInstallation();
   // Read-only: the channel mirrors the chart's informational
   // updates.channel value (served on /cluster/info). Nothing in-app
   // consumes it — Gameplane is upgraded via Helm, not a self-updater.
   const { data } = useQuery({
     queryKey: ["cluster-info"],
     queryFn: () => Cluster.info().catch(() => ({} as ClusterInfo)),
+    enabled: installation.data?.localCluster === true,
     staleTime: 60_000,
   });
   return (
     <SectionCard
       title="Updates"
-      subtitle="Gameplane is upgraded via Helm (image tags / chart versions)."
+      subtitle={installation.data?.standalone ? "Update the panel and API container images to upgrade this installation." : "Gameplane is upgraded via Helm (image tags / chart versions)."}
     >
       <div className="flex items-center justify-between">
         <div>
           <div className="text-sm">Channel</div>
           <div className="pt-0.5 text-xs text-muted">
-            Informational only — reflects <code className="font-mono">updates.channel</code> from
-            your Helm values.
+            {installation.data?.standalone ? "Container image tags select the release for this panel." : <>Informational only — reflects <code className="font-mono">updates.channel</code> from your Helm values.</>}
           </div>
         </div>
         <span className="rounded bg-surface px-2 py-0.5 font-mono text-xs">
@@ -1901,18 +1903,20 @@ function UpdatesSection() {
 }
 
 function AboutSection() {
+  const installation = useInstallation();
   // Real versions from the API (the control plane is built and released as
   // one unit, so a single Gameplane version is honest); "—" until loaded.
   const { data } = useQuery({
     queryKey: ["cluster-info"],
     queryFn: () => Cluster.info().catch(() => ({} as ClusterInfo)),
+    enabled: installation.data?.localCluster === true,
     staleTime: 60_000,
   });
   return (
     <SectionCard title="About" subtitle="This Gameplane build.">
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
         <dt className="text-muted">Gameplane</dt><dd className="font-mono">{data?.gameplaneVersion || "—"}</dd>
-        <dt className="text-muted">Kubernetes</dt><dd className="font-mono">{data?.version || "—"}</dd>
+        {installation.data?.localCluster && <><dt className="text-muted">Kubernetes</dt><dd className="font-mono">{data?.version || "—"}</dd></>}
         <dt className="text-muted">License</dt><dd>AGPL-3.0</dd>
       </dl>
     </SectionCard>

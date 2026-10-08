@@ -32,6 +32,8 @@ func MountClusters(r chi.Router, reg *kube.Registry, k *kube.Client, ns string) 
 		r.Get("/", h.list)
 		r.Post("/", h.create)
 		r.Delete("/{name}", h.delete)
+		r.Put("/{name}/gateway", h.configureGateway)
+		r.Delete("/{name}/gateway", h.removeGateway)
 	})
 }
 
@@ -54,7 +56,7 @@ func deleteClusterKubeconfigSecret(ctx context.Context, k *kube.Client, ns, clus
 	}
 
 	// Fetch the Secret to check its labels.
-	secret, err := k.Typed.CoreV1().Secrets(ns).Get(ctx, secretName, metav1.GetOptions{})
+	secret, err := k.Secrets(ns).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -65,7 +67,7 @@ func deleteClusterKubeconfigSecret(ctx context.Context, k *kube.Client, ns, clus
 	}
 
 	// Delete the Secret.
-	return k.Typed.CoreV1().Secrets(ns).Delete(ctx, secretName, metav1.DeleteOptions{})
+	return k.Secrets(ns).Delete(ctx, secretName, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(secret)})
 }
 
 type clustersHandler struct {
@@ -103,13 +105,13 @@ func (h clustersHandler) list(w http.ResponseWriter, req *http.Request) {
 	}
 	out := clustersListResp{Items: make([]clusterRegistryView, 0)}
 	local := h.reg.DefaultID()
-	if u.CanDiscoverCluster(local) {
+	if h.reg.Default() != nil && u.CanDiscoverCluster(local) {
 		out.Items = append(out.Items, clusterRegistryView{Name: local, Phase: "Healthy",
 			CanViewInventory: u.Can("cluster:read", true, local, "")})
 	}
 	// Persisted registrations remain discoverable when a kubeconfig cannot
 	// load; the client registry alone would silently drop those clusters.
-	registrations, err := h.k.Dynamic.Resource(kube.GVRCluster).List(req.Context(), metav1.ListOptions{})
+	registrations, err := h.k.Clusters().List(req.Context(), metav1.ListOptions{})
 	if err != nil {
 		// Older single-cluster installations may not have the optional CRD.
 		// Only that absence may degrade to local discovery; permission and
@@ -196,7 +198,7 @@ func (h clustersHandler) create(w http.ResponseWriter, req *http.Request) {
 			"kubeconfig": []byte(in.Kubeconfig),
 		},
 	}
-	_, err = h.k.Typed.CoreV1().Secrets(h.namespace).Create(req.Context(), secret, metav1.CreateOptions{})
+	_, err = h.k.Secrets(h.namespace).Create(req.Context(), secret, metav1.CreateOptions{})
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			httperr.WriteCode(w, req, http.StatusConflict, errors.New("cluster already exists"))
@@ -223,10 +225,10 @@ func (h clustersHandler) create(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 	}
-	_, err = h.k.Dynamic.Resource(kube.GVRCluster).Create(req.Context(), clusterCR, metav1.CreateOptions{})
+	_, err = h.k.Clusters().Create(req.Context(), clusterCR, metav1.CreateOptions{})
 	if err != nil {
 		// Clean up the Secret on CR creation failure.
-		_ = h.k.Typed.CoreV1().Secrets(h.namespace).Delete(req.Context(), secretName, metav1.DeleteOptions{})
+		_ = h.k.Secrets(h.namespace).Delete(req.Context(), secretName, metav1.DeleteOptions{})
 		if apierrors.IsAlreadyExists(err) {
 			httperr.WriteCode(w, req, http.StatusConflict, errors.New("cluster already exists"))
 			return
@@ -253,7 +255,7 @@ func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Read the Cluster CR to find the Secret name.
-	u, err := h.k.Dynamic.Resource(kube.GVRCluster).Get(req.Context(), name, metav1.GetOptions{})
+	u, err := h.k.Clusters().Get(req.Context(), name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			httperr.WriteCode(w, req, http.StatusNotFound, err)
@@ -273,7 +275,7 @@ func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Delete the Cluster CR.
-	if err := h.k.Dynamic.Resource(kube.GVRCluster).Delete(req.Context(), name, metav1.DeleteOptions{}); err != nil {
+	if err := h.k.Clusters().Delete(req.Context(), name, metav1.DeleteOptions{}); err != nil {
 		if !apierrors.IsNotFound(err) {
 			httperr.Write(w, req, err)
 			return
@@ -283,6 +285,10 @@ func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
 	// Drop the cluster's client now instead of waiting for the cluster
 	// watch, so no request is dispatched through a removed registration.
 	h.reg.Remove(name)
+	// Only remove credentials this API owns; external GitOps credentials survive.
+	if err := deleteManagedSecret(req.Context(), h.k, h.namespace, gatewaySecretName(name), clusterGatewayLabel); err != nil && !apierrors.IsNotFound(err) {
+		slog.Warn("cluster delete: gateway credential cleanup failed", "cluster", name)
+	}
 
 	// Clean up the kubeconfig Secret only if it is the one this cluster was created with
 	// (cluster-<name>-kubeconfig) and carries the kubeconfig label. This includes Secrets
