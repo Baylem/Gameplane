@@ -277,8 +277,9 @@ func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
 	// resourceVersion; a new registration with this name must survive.
 	originalUID := u.GetUID()
 	var kubeconfigSecret *corev1.Secret
+	ctx := req.Context()
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		current, err := h.k.Clusters().Get(req.Context(), name, metav1.GetOptions{})
+		current, err := h.k.Clusters().Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -286,11 +287,11 @@ func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
 			return apierrors.NewNotFound(kube.GVRCluster.GroupResource(), name)
 		}
 		secretName, _, _ := unstructured.NestedString(current.Object, "spec", "kubeconfigSecret", "name")
-		kubeconfigSecret, err = clusterKubeconfigSecret(req.Context(), h.k, h.namespace, name, secretName)
+		kubeconfigSecret, err = clusterKubeconfigSecret(ctx, h.k, h.namespace, name, secretName)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
-		if err := h.k.Clusters().Delete(req.Context(), name, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(current)}); err != nil {
+		if err := h.k.Clusters().Delete(ctx, name, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(current)}); err != nil {
 			return err
 		}
 		u = current
