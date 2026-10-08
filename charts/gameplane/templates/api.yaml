@@ -276,7 +276,7 @@ spec:
           args:
             {{- if .Values.api.standalone }}
             - --standalone
-            - --panel-key-file=/keys/panel.key
+            - {{ printf "--panel-key-file=/keys/%s" ((.Values.api.panelKey | default dict).fileName | default "panel.key") | quote }}
             {{- with .Values.api.remoteAllowedCIDRs }}
             - {{ printf "--remote-allowed-cidrs=%s" (join "," .) | quote }}
             {{- end }}
@@ -493,7 +493,7 @@ spec:
             defaultMode: 0440
             items:
               - key: {{ $panelKey.secretKey | default "panel.key" | quote }}
-                path: panel.key
+                path: {{ $panelKey.fileName | default "panel.key" | quote }}
           {{- else }}
           persistentVolumeClaim:
             claimName: {{ ($panelKey.storage | default dict).existingClaim | default "gameplane-api-key" | quote }}

@@ -159,6 +159,13 @@ API's mounted key/path and restart it. For Helm Secret projections, switch
 the old Secret protected for retained backups. Changing the mounted key without
 running the rotation command cannot decrypt existing records.
 
+For a generated Helm key PVC, scale the API Deployment to zero before running a
+maintenance Job with the same database and key volumes. Rotate into a new file
+under `/keys`, then set `api.panelKey.fileName` to that filename in your Helm
+values and upgrade the release to restart its single API replica. The chart
+keeps the selected filename across future upgrades. Preserve the old key file
+for retained backups.
+
 ## Central panel on Kubernetes
 
 The panel can also run in a Kubernetes cluster without using that cluster for
