@@ -2,15 +2,17 @@ import { ModuleTarget } from "@/components/ModuleTarget";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Settings2, Upload } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { Button, Input, buttonVariants } from "@heroui/react";
+import { Button, Input } from "@heroui/react";
 
 import { ModuleCard } from "@/components/modules/ModuleCard";
 import { InstallDialog } from "@/components/modules/InstallDialog";
 import { UploadModuleDialog } from "@/components/modules/UploadModuleDialog";
 import { BuildModuleDialog } from "@/components/modules/BuildModuleDialog";
+import { ClusterModuleSources } from "@/components/modules/ModuleSourcesPanel";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/PageHeader";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { LoadingCard } from "@/components/ui/LoadingCard";
 import { Modules, ModuleSources } from "@/lib/endpoints";
 import { APIError } from "@/lib/api";
 import { verifyForEntry } from "@/lib/verify";
@@ -28,12 +30,12 @@ export function ModulesPage() {
 
 function ModulesCatalog({ cluster, canManage }: { cluster: string; canManage: boolean }) {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["modules-catalog", cluster],
     queryFn: () => Modules.catalog(cluster),
     refetchInterval: 5_000, // pick up phase transitions promptly
   });
-  const { data: sourcesData } = useQuery({
+  const { data: sourcesData, isError: sourcesError, refetch: refetchSources } = useQuery({
     queryKey: ["module-sources", cluster],
     queryFn: () => ModuleSources.list(cluster),
   });
@@ -46,6 +48,7 @@ function ModulesCatalog({ cluster, canManage }: { cluster: string; canManage: bo
   const [removeUploadTarget, setRemoveUploadTarget] = useState<CatalogEntry | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [buildOpen, setBuildOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
   const uploadSources = useMemo(
@@ -133,6 +136,9 @@ function ModulesCatalog({ cluster, canManage }: { cluster: string; canManage: bo
     onError: (err: Error) => setPageError(formatErr(err)),
   });
 
+  if (isLoading) return <LoadingCard message="Loading module catalog…" />;
+  if (isError) return <ErrorCard message="Failed to load module catalog." onRetry={() => void refetch()} />;
+
   return (
     <div className="space-y-6 p-6">
       <PageHeader
@@ -148,12 +154,15 @@ function ModulesCatalog({ cluster, canManage }: { cluster: string; canManage: bo
                 <Upload className="h-4 w-4" /> Upload module
               </Button>
             )}
-            <Link to="/admin" hash="modules" className={buttonVariants({ variant: "outline" })}>
+            <Button variant="outline" onPress={() => setSourcesOpen((open) => !open)} aria-expanded={sourcesOpen}>
               <Settings2 className="h-4 w-4" /> Manage sources
-            </Link>
+            </Button>
           </div>
         }
       />
+
+      {sourcesOpen ? <ClusterModuleSources cluster={cluster} canManage={canManage} />
+        : sourcesError && <ErrorCard message="Failed to load module sources." onRetry={() => void refetchSources()} />}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="inline-flex gap-1 rounded-md border border-border bg-card p-1">
@@ -232,7 +241,7 @@ function ModulesCatalog({ cluster, canManage }: { cluster: string; canManage: bo
             busy={installMutation.isPending || upgradeMutation.isPending || removeUploadMutation.isPending}
           />
         ))}
-        {!isLoading && visible.length === 0 && (
+        {visible.length === 0 && (
           <div className="col-span-full rounded-lg border border-dashed border-border bg-card/40 p-12 text-center text-sm text-muted">
             {items.length === 0
               ? "No modules in any catalog yet — check ModuleSource sync status under Admin → Module sources."

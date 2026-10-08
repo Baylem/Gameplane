@@ -33,6 +33,14 @@ describe("NotificationsPanel", () => {
     sseCallback = null;
   });
 
+  it("closes its subscription when local event streaming is disabled", () => {
+    const view = renderWithQuery(<NotificationsPanel />);
+    expect(sseCallback).not.toBeNull();
+    view.rerender(<NotificationsPanel enabled={false} />);
+    expect(sseCallback).toBeNull();
+    expect(screen.getByRole("button", { name: /notifications/i })).toBeInTheDocument();
+  });
+
   it("renders bell button with aria label", () => {
     renderWithQuery(<NotificationsPanel />);
     const bell = screen.getByRole("button", { name: /notifications/i });

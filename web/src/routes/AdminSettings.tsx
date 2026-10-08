@@ -48,7 +48,11 @@ import { cn, formatRelative } from "@/lib/utils";
 import { errorText } from "@/lib/errors";
 import { Telemetry, type TelemetryInfo } from "@/lib/api";
 import { TELEMETRY_STATEMENT_URL } from "@/lib/links";
-import { Auth, AuthProviders, BackupDestinations, Cluster, ModRegistries, Notifications, type SinkSecretBody } from "@/lib/endpoints";
+import { Auth, AuthProviders, createResourceClient, Cluster, Clusters, ModRegistries, Notifications, type SinkSecretBody } from "@/lib/endpoints";
+import { useCurrentCluster } from "@/lib/cluster";
+import { ClusterSelector } from "@/components/ClusterSelector";
+import { LoadingCard } from "@/components/ui/LoadingCard";
+import { ErrorCard } from "@/components/ui/ErrorCard";
 import { can, useMe } from "@/lib/auth";
 import type { ClusterInfo } from "@/types";
 import {
@@ -875,18 +879,41 @@ function AddProviderForm({
 }
 
 function BackupDestSection() {
+  const installation = useInstallation();
+  const selected = useCurrentCluster();
+  const registry = useQuery({
+    queryKey: ["clusters"], queryFn: () => Clusters.list(),
+    enabled: installation.data?.standalone === true,
+  });
+  if (installation.isPending) return <LoadingCard message="Loading installation…" />;
+  if (installation.isError) return <ErrorCard message="Couldn't load installation capabilities." onRetry={() => void installation.refetch()} />;
+  if (!installation.data.standalone) return <ClusterBackupDestSection cluster="local" />;
+  const target = registry.data?.items.find((cluster) => cluster.name === selected);
+  return <div className="space-y-4">
+    <ClusterSelector />
+    {registry.isPending ? <LoadingCard message="Loading clusters…" />
+      : registry.isError ? <ErrorCard message="Couldn't load registered clusters." onRetry={() => void registry.refetch()} />
+      : target ? <ClusterBackupDestSection key={target.name} cluster={target.name} />
+      : <SectionCard title="Select a workload cluster" subtitle="Backup destinations are stored on the workload cluster that runs your servers.">
+        <p className="text-sm text-muted">Choose a registered cluster above, or register one on the Clusters page.</p>
+      </SectionCard>}
+  </div>;
+}
+
+function ClusterBackupDestSection({ cluster }: { cluster: string }) {
   const qc = useQueryClient();
+  const { BackupDestinations } = createResourceClient({ cluster });
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const list = useQuery({
-    queryKey: ["backup-destinations"],
+    queryKey: ["backup-destinations", cluster],
     queryFn: () => BackupDestinations.list(),
   });
   const remove = useMutation({
     mutationFn: (name: string) => BackupDestinations.remove(name),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["backup-destinations"] });
+      void qc.invalidateQueries({ queryKey: ["backup-destinations", cluster] });
       setDeleting(null);
     },
   });
@@ -911,7 +938,7 @@ function BackupDestSection() {
           No backup destinations configured. Add one to enable snapshots.
         </div>
       )}
-      {adding && <NewDestinationForm onClose={() => setAdding(false)} />}
+      {adding && <NewDestinationForm cluster={cluster} onClose={() => setAdding(false)} />}
       <ul className="divide-y divide-border">
         {items.map((d) => (
           <li key={d.name} className="flex items-center gap-3 py-3">
@@ -968,13 +995,14 @@ function BackupDestSection() {
   );
 }
 
-function NewDestinationForm({ onClose }: { onClose: () => void }) {
+function NewDestinationForm({ cluster, onClose }: { cluster: string; onClose: () => void }) {
   const qc = useQueryClient();
+  const { BackupDestinations } = createResourceClient({ cluster });
   const [form, setForm] = useState({ name: "", url: "", password: "" });
   const create = useMutation({
     mutationFn: () => BackupDestinations.upsert(form),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["backup-destinations"] });
+      void qc.invalidateQueries({ queryKey: ["backup-destinations", cluster] });
       onClose();
     },
   });

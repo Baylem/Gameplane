@@ -648,7 +648,7 @@ function DeleteRoleDialog({
 function NamespaceGrants({ userId, roles }: { userId: number; roles: Role[] }) {
   const installation = useInstallation();
   if (installation.isPending) return <p className="text-xs text-muted">Loading installation…</p>;
-  if (installation.isError) return <p className="text-xs text-danger">Couldn't load installation capabilities.</p>;
+  if (installation.isError) return <p className="text-xs text-danger">Couldn&apos;t load installation capabilities.</p>;
   return <NamespaceGrantsForm userId={userId} roles={roles} standalone={installation.data.standalone} />;
 }
 
