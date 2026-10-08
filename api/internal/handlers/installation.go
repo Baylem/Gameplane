@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"github.com/go-chi/chi/v5"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // MountInstallation exposes capabilities only through the authenticated router.
