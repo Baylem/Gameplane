@@ -6,7 +6,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -262,7 +261,7 @@ func TestStandaloneRegistryIsEmptyAndRegistrationsPersistWithPagination(t *testi
 
 func TestStandaloneWatcherReloadsAndPersistsRemoteHealth(t *testing.T) {
 	store, client, keyFile := managementFixture(t)
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := privateTLSServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/version" {
 			t.Errorf("unexpected remote path: %s", r.URL.Path)
 		}
@@ -289,6 +288,9 @@ users:
   user:
     token: private-remote-token
 `, server.URL, ca)
+	if _, err := kube.ValidateStandaloneKubeconfig([]byte(config)); err != nil {
+		t.Fatalf("remote health fixture violates standalone access policy: %v", err)
+	}
 	_, err := client.Secrets("panel").Create(t.Context(), &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "remote-config", Labels: map[string]string{kube.ClusterKubeconfigLabel: "true"}},
 		Data:       map[string][]byte{"kubeconfig": []byte(config)},
