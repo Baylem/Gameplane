@@ -487,6 +487,7 @@ type config struct {
 	standalone          bool
 	panelKeyFile        string
 	panelKeyProvisioned bool
+	remoteAllowedCIDRs  string
 	addr                string
 	metricsAddr         string
 	dbDriver            string
@@ -615,6 +616,7 @@ func (c *config) bindFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&c.standalone, "standalone", envOr("GAMEPLANE_STANDALONE", "") == "true", "run without a local Kubernetes cluster")
 	fs.StringVar(&c.panelKeyFile, "panel-key-file", envOr("GAMEPLANE_PANEL_KEY_FILE", "/data/panel.key"), "persistent standalone credential encryption key file")
 	fs.BoolVar(&c.panelKeyProvisioned, "panel-key-provisioned", envOr("GAMEPLANE_PANEL_KEY_PROVISIONED", "") == "true", "require an existing read-only standalone credential key; never generate it")
+	fs.StringVar(&c.remoteAllowedCIDRs, "remote-allowed-cidrs", envOr("GAMEPLANE_REMOTE_ALLOWED_CIDRS", ""), "optional comma-separated CIDRs allowed for standalone Kubernetes and gateway connections")
 	fs.StringVar(&c.namespace, "namespace", envOr("GAMEPLANE_NAMESPACE", "gameplane-system"),
 		"namespace the control plane runs in (module upload ConfigMaps are stored here)")
 	fs.StringVar(&c.gameDataStorageClass, "game-data-storage-class", envOr("GAMEPLANE_GAME_DATA_STORAGE_CLASS", ""),

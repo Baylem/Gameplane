@@ -277,6 +277,9 @@ spec:
             {{- if .Values.api.standalone }}
             - --standalone
             - --panel-key-file=/keys/panel.key
+            {{- with .Values.api.remoteAllowedCIDRs }}
+            - {{ printf "--remote-allowed-cidrs=%s" (join "," .) | quote }}
+            {{- end }}
             {{- if (.Values.api.panelKey | default dict).existingSecret }}
             - --panel-key-provisioned
             {{- end }}

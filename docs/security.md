@@ -980,6 +980,14 @@ Access to cluster credentials is protected by several layers:
   entry, including unused contexts. Remote kubeconfigs must carry tokens
   or certificate/key/CA data directly; they cannot read control-plane files
   or run local authentication commands.
+- **Standalone destination policy.** Standalone clients require verified HTTPS,
+  reject redirects and forward proxies, and validate all DNS answers before
+  dialing a pinned address. Loopback, metadata, link-local and other unsafe
+  address classes are blocked; optional operator CIDRs narrow access to the
+  intended workload networks. The same policy protects gateway connections.
+  Remote response, watch-frame and notification-cache limits bound memory used
+  by an untrusted workload endpoint. See the
+  [standalone connection policy](standalone-panel.md#install-and-register-remote-game-clusters).
 - **Label guard.** The API only reads Secrets labelled
   `gameplane.local/cluster-kubeconfig=true` when registering a cluster
   via the dashboard or API. This prevents a user from pointing at an

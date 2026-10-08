@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -20,12 +21,21 @@ func managementClients(ctx context.Context, cfg config, store *db.Store) (*kube.
 		if cfg.clusterOps {
 			return nil, nil, fmt.Errorf("cluster-ops requires a local Kubernetes cluster")
 		}
+		var cidrs []string
+		if strings.TrimSpace(cfg.remoteAllowedCIDRs) != "" {
+			cidrs = strings.Split(cfg.remoteAllowedCIDRs, ",")
+		}
+		policy, err := kube.NewRemoteAccessPolicy(cidrs)
+		if err != nil {
+			return nil, nil, fmt.Errorf("standalone remote policy: %w", err)
+		}
 		management, err := controlplane.NewWithOptions(ctx, store, controlplane.KeyOptions{
 			File: cfg.panelKeyFile, Provisioned: cfg.panelKeyProvisioned,
 		})
 		if err != nil {
 			return nil, nil, fmt.Errorf("standalone storage: %w", err)
 		}
+		management.RemoteAccess = policy
 		reg.SetManagement(management)
 		return management, reg, nil
 	}

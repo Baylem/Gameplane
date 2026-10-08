@@ -56,6 +56,12 @@ func (h clustersHandler) configureGateway(w http.ResponseWriter, req *http.Reque
 		httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("invalid gateway client certificate or key"))
 		return
 	}
+	if h.k.IsStandalone() {
+		if err := h.k.RemoteAccess.ValidateURL(in.URL); err != nil {
+			httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("gateway destination is not allowed"))
+			return
+		}
+	}
 	if !x509.NewCertPool().AppendCertsFromPEM([]byte(in.CACert)) {
 		httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("invalid gateway CA certificate"))
 		return

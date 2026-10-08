@@ -65,6 +65,10 @@ def main():
 
     render({"operator": {"enabled": False}, "api": {"standalone": True, "panelKey": {"existingSecret": "key", "storage": {"existingClaim": "key-pvc"}}}}, failure="choose either api.panelKey.existingSecret or api.panelKey.storage.existingClaim")
 
+    objects = render({"operator": {"enabled": False}, "api": {"standalone": True, "remoteAllowedCIDRs": ["10.20.0.0/16", "fd12:3456::/48"]}})
+    args = one(objects, "Deployment", "gameplane-api")["spec"]["template"]["spec"]["containers"][0]["args"]
+    assert "--remote-allowed-cidrs=10.20.0.0/16,fd12:3456::/48" in args
+
     remote = render({"api": {"enabled": False}})
     one(remote, "Deployment", "gameplane-operator")
     one(remote, "Secret", "gameplane-agent-ca")

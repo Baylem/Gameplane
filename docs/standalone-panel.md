@@ -193,6 +193,23 @@ whose credentials require local files or interactive credential plugins. Use
 the same operator namespace on the targets as the API's `--namespace` setting
 (default `gameplane-system`).
 
+Standalone kubeconfigs must use HTTPS with certificate verification. HTTP,
+`insecure-skip-tls-verify`, custom kubeconfig proxies, and redirects are rejected;
+environment forward proxies are not used for workload connections. Use embedded
+CA data for a private CA. Kubernetes API and gateway connections validate every
+resolved address at dial time and reject loopback, link-local, cloud metadata,
+unspecified, multicast, and address-translation bypasses. Private workload
+addresses remain supported.
+
+For tighter network isolation, set `GAMEPLANE_REMOTE_ALLOWED_CIDRS` (or
+`--remote-allowed-cidrs`) to comma-separated destination networks, such as
+`10.20.0.0/16,10.30.0.0/16`. The Helm equivalent is
+`api.remoteAllowedCIDRs: ["10.20.0.0/16", "10.30.0.0/16"]`. This applies to
+both Kubernetes API and gateway destinations and cannot override blocked address
+classes. DNS names must resolve entirely within the allowed ranges. Restart the
+API after changing the policy. Add host or network firewall rules where port-level
+or additional service isolation is needed.
+
 Register the target with an authenticated administrator session. In the examples
 below, `cookies.txt` is a private cookie jar for that session and `CSRF_TOKEN`
 is its `gameplane_csrf` cookie value. `PANEL_URL` is the HTTPS dashboard origin.
@@ -211,6 +228,14 @@ The standalone panel saves the registration and credentials in its database;
 there is no central `Cluster` CR or Kubernetes Secret to create. It monitors
 remote Kubernetes connectivity itself. Selecting that registration routes game
 operations to the target, and never falls back to the central host.
+
+Automatic remote observations have bounded memory: version responses are capped
+at 64 KiB, other finite Kubernetes responses at 8 MiB after decompression, and
+individual JSON watch frames at 1 MiB. User log and interactive streams remain
+streaming. Standalone notifications use snapshots every five seconds with at
+most 1,024 objects per resource type and only run when a notification sink is
+enabled. Oversized or incomplete snapshots are ignored; transitions shorter than
+the polling interval may be missed.
 
 ### Rotate a registered kubeconfig
 
