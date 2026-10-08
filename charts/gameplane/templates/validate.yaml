@@ -1,4 +1,8 @@
 {{- if .Values.api.standalone }}
+{{- $panelKey := .Values.api.panelKey | default dict }}
+{{- if and $panelKey.existingSecret ($panelKey.storage | default dict).existingClaim }}
+{{- fail "choose either api.panelKey.existingSecret or api.panelKey.storage.existingClaim" }}
+{{- end }}
 {{- if eq (include "gameplane.operatorEnabled" .) "true" }}
 {{- fail "api.standalone requires operator.enabled=false; install operators in the remote game clusters" }}
 {{- end }}

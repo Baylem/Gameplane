@@ -36,17 +36,33 @@ def main():
         assert "annotations" not in deployment["spec"]["template"]["metadata"]
         container = pod["containers"][0]
         assert "--standalone" in container["args"]
-        assert "--panel-key-file=/data/panel.key" in container["args"]
+        assert "--panel-key-file=/keys/panel.key" in container["args"]
         assert not any(arg.startswith("--agent-") for arg in container["args"])
-        assert container["volumeMounts"] == [{"name": "data", "mountPath": "/data"}]
-        assert pod["volumes"] == [{"name": "data", "persistentVolumeClaim": {"claimName": "gameplane-api-data"}}]
+        assert container["volumeMounts"] == [{"name": "data", "mountPath": "/data"}, {"name": "panel-key", "mountPath": "/keys"}]
+        assert pod["volumes"] == [
+            {"name": "data", "persistentVolumeClaim": {"claimName": "gameplane-api-data"}},
+            {"name": "panel-key", "persistentVolumeClaim": {"claimName": "gameplane-api-key"}},
+        ]
+        one(objects, "PersistentVolumeClaim", "gameplane-api-key")
 
     # The encryption key must survive pod replacement with either database driver.
     objects = render({"operator": {"enabled": False}, "api": {"standalone": True, "db": {"driver": "postgres"}}})
     one(objects, "PersistentVolumeClaim", "gameplane-api-data")
-    objects = render({"operator": {"enabled": False}, "api": {"standalone": True, "storage": {"existingClaim": "panel-data"}}})
+    one(objects, "PersistentVolumeClaim", "gameplane-api-key")
+    objects = render({"operator": {"enabled": False}, "api": {"standalone": True, "storage": {"existingClaim": "panel-data"}, "panelKey": {"storage": {"existingClaim": "panel-key"}}}})
     assert not any(obj["kind"] == "PersistentVolumeClaim" for obj in objects)
     assert one(objects, "Deployment", "gameplane-api")["spec"]["template"]["spec"]["volumes"][0]["persistentVolumeClaim"]["claimName"] == "panel-data"
+
+    # Externally provisioned keys are mounted read-only, without generating a key PVC.
+    objects = render({"operator": {"enabled": False}, "api": {"standalone": True, "panelKey": {"existingSecret": "protected-panel-key", "secretKey": "master"}}})
+    pod = one(objects, "Deployment", "gameplane-api")["spec"]["template"]["spec"]
+    assert "--panel-key-provisioned" in pod["containers"][0]["args"]
+    assert {"name": "panel-key", "mountPath": "/keys", "readOnly": True} in pod["containers"][0]["volumeMounts"]
+    key_volume = next(volume for volume in pod["volumes"] if volume["name"] == "panel-key")
+    assert key_volume["secret"] == {"secretName": "protected-panel-key", "defaultMode": 0o440, "items": [{"key": "master", "path": "panel.key"}]}
+    assert not any(obj["kind"] == "PersistentVolumeClaim" and obj["metadata"]["name"] == "gameplane-api-key" for obj in objects)
+
+    render({"operator": {"enabled": False}, "api": {"standalone": True, "panelKey": {"existingSecret": "key", "storage": {"existingClaim": "key-pvc"}}}}, failure="choose either api.panelKey.existingSecret or api.panelKey.storage.existingClaim")
 
     remote = render({"api": {"enabled": False}})
     one(remote, "Deployment", "gameplane-operator")

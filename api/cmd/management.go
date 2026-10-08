@@ -20,7 +20,9 @@ func managementClients(ctx context.Context, cfg config, store *db.Store) (*kube.
 		if cfg.clusterOps {
 			return nil, nil, fmt.Errorf("cluster-ops requires a local Kubernetes cluster")
 		}
-		management, err := controlplane.New(ctx, store, cfg.panelKeyFile)
+		management, err := controlplane.NewWithOptions(ctx, store, controlplane.KeyOptions{
+			File: cfg.panelKeyFile, Provisioned: cfg.panelKeyProvisioned,
+		})
 		if err != nil {
 			return nil, nil, fmt.Errorf("standalone storage: %w", err)
 		}

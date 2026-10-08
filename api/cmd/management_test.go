@@ -1,11 +1,31 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/GameplanePanel/gameplane/api/internal/db"
 )
+
+func TestStandaloneProvisionedKeyMustExist(t *testing.T) {
+	store, err := db.Open(t.Context(), "sqlite", "file::memory:?cache=shared")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if err := store.Migrate(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "operator.key")
+	_, _, err = managementClients(t.Context(), config{standalone: true, panelKeyFile: path, panelKeyProvisioned: true}, store)
+	if err == nil {
+		t.Fatal("missing provisioned key must fail startup")
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatal("startup generated a replacement for a provisioned key")
+	}
+}
 
 func TestStandaloneManagementIgnoresKubeconfig(t *testing.T) {
 	t.Setenv("KUBECONFIG", filepath.Join(t.TempDir(), "does-not-exist"))

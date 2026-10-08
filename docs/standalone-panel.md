@@ -53,27 +53,70 @@ registered clusters. Gateway credentials are configured through the API.
 
 ## Storage and recovery
 
-The Compose volume `panel-data` contains `/data/gameplane.db` and
-`/data/panel.key`. Standalone settings and remote credentials are stored in SQL;
-credential values are encrypted using the persistent key. Both files are needed
-for recovery. Stop the services before copying the entire volume so the SQLite
-database and its WAL files are consistent. Restore the volume with ownership
-`65532:65532`, then start the services. Normal `docker compose down` retains the
-volume; `down --volumes` deletes the database and key.
+The Compose volume `panel-data` contains `/data/gameplane.db`; a separate
+`panel-keys` volume contains `/keys/panel.key`. Standalone settings and remote
+credentials are stored in SQL; credential values are authenticated-encrypted
+using the persistent key. Back up the database and its WAL files after stopping
+the services. Back up the key separately, with restricted access and encrypted
+backup storage. Both are needed for recovery, but a database backup should not
+automatically include the decryption key. Restore generated volumes with
+ownership `65532:65532`. Normal `docker compose down` retains both volumes;
+`down --volumes` deletes them.
 
-With the supplied Compose project name, Docker names this volume
-`gameplane-panel_panel-data`. Check `docker volume inspect gameplane-panel_panel-data`
-before backing it up, especially if you changed the Compose project name.
+With the supplied Compose project name, Docker names these volumes
+`gameplane-panel_panel-data` and `gameplane-panel_panel-keys`. Inspect both before
+backing them up, especially if you changed the Compose project name.
 
 The API image seeds a new named volume with a directory writable by its non-root
 runtime user. If you replace it with a host bind mount, create that directory with
-ownership `65532:65532` yourself. Keep the key private and back it up with the
-database; creating a replacement key cannot decrypt existing credentials.
+ownership `65532:65532` yourself. Generated key files use mode `0600`. Restored
+keys must be regular files containing exactly 32 raw bytes, owned by the API user
+or root, with no access for other users and no group write/execute permissions.
+Group read is accepted only for a group the API belongs to, which permits
+read-only Kubernetes Secret projections. Key permissions are validated at
+startup; creating a replacement key cannot decrypt existing credentials.
 
 For custom deployments, pass `--standalone` or `GAMEPLANE_STANDALONE=true` to the
 API. `--panel-key-file` / `GAMEPLANE_PANEL_KEY_FILE` selects the key path (default
-`/data/panel.key`). A persistent key file is required even when using the
-experimental PostgreSQL build. Run one API replica.
+`/data/panel.key` for compatibility with earlier custom deployments; the supplied
+Compose/Helm profiles use `/keys/panel.key`). A persistent key file is required
+even when using the experimental PostgreSQL build. Run one API replica. Run
+standalone key storage in Linux containers; native Windows key access fails
+closed because Windows ACL validation is not implemented.
+
+### Provision a key outside the database storage
+
+Set `--panel-key-provisioned` / `GAMEPLANE_PANEL_KEY_PROVISIONED=true` to require
+an existing key at startup. This mode never generates a missing key. Provision
+32 cryptographically random bytes through your secret manager or a protected
+file, then mount it read-only. For a Linux Docker host:
+
+```sh
+sudo install -d -m 0700 /etc/gameplane/keys
+sudo sh -c 'set -C; umask 077; openssl rand 32 > /etc/gameplane/keys/panel.key'
+sudo chown 65532:65532 /etc/gameplane/keys/panel.key
+export GAMEPLANE_PANEL_KEY_SOURCE_FILE=/etc/gameplane/keys/panel.key
+docker compose -f deploy/standalone/compose.yaml \
+  -f deploy/standalone/compose.provisioned-key.yaml up -d --build
+```
+
+Use the same two Compose files for subsequent commands. File-backed Compose
+secrets preserve the host file's ownership and permissions; configure those
+before starting the API. Keep this file outside database backup jobs. The API
+does not upload keys to a service or put their values in environment variables.
+A separately protected key helps with database/backup disclosure; compromise of
+the running API or a host that can read both files still exposes credentials.
+See [OWASP's key-storage guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html#key-storage).
+
+### Move an existing key to separate storage
+
+For installations created before separate key volumes, stop the API and retain
+a protected backup of the original `/data/panel.key`. Copy that exact file into
+the new key volume as `/keys/panel.key`, preserving ownership and mode `0600`, or
+provision it through the read-only file option above. Start using the new path
+and verify existing registrations load before removing the old copy from the
+database volume and excluding it from future database backups. Do not generate
+a new key as a migration step; it cannot decrypt existing records.
 
 ## Central panel on Kubernetes
 
@@ -98,8 +141,17 @@ before evaluating templates; setting values alone cannot suppress those CRDs.
 Standalone mode skips the CRD apply hook automatically. It creates no operator,
 agent certificates, game namespace, module source, game network policies,
 operator monitors, or API Kubernetes RBAC. Its API pod disables service account
-token mounting. Its PVC holds both SQLite and the panel key. Do not switch an
+token mounting. Separate PVCs hold the database and generated panel key. Do not switch an
 existing combined release to these values as a migration procedure.
+
+For an externally managed key, set `api.panelKey.existingSecret` to a Secret in
+the release namespace and `api.panelKey.secretKey` to its 32-byte data entry
+(default `panel.key`). The chart mounts it read-only at `/keys/panel.key` with
+mode `0440` and enables provisioned-key mode. No generated key PVC is created.
+For generated keys, `api.panelKey.storage.existingClaim` selects an existing
+key-only PVC; `size` and `storageClassName` configure a newly created one.
+Apply separate RBAC, encryption-at-rest, and backup policies to the key Secret
+or PVC. Do not put key bytes in Helm values, command arguments, or source control.
 
 ## Install and register remote game clusters
 
@@ -213,19 +265,19 @@ instructions apply to combined mode, while standalone uses the API above.
 
 ## Upgrading
 
-Stop the Compose services and back up the complete data volume before upgrading.
+Stop the Compose services and back up the database and key separately before upgrading.
 From the repository root, check out the new release or commit, then rebuild both
 panel images:
 
 ```sh
 docker compose -f deploy/standalone/compose.yaml stop
-# Back up gameplane-panel_panel-data, including the database and panel.key.
+# Back up gameplane-panel_panel-data and protect a separate panel-key backup.
 git checkout <new-ref>
 docker compose -f deploy/standalone/compose.yaml up -d --build
 docker compose -f deploy/standalone/compose.yaml logs gameplane-api
 ```
 
-Keep the same Compose project name and data volume. The API applies database
+Keep the same Compose project name, data volume, and selected key. The API applies database
 migrations at startup; retain the pre-upgrade backup if you need to restore an
 older version. Upgrade remote operators, gateways, and agents to matching
 versions using their Helm values. Existing games continue running during a panel
@@ -233,7 +285,7 @@ restart; a remote operator upgrade may roll game pods.
 
 For a panel-only Helm release, repeat the installation command with the updated
 chart, matching images, `--skip-crds`, and your standalone values file. Keep
-`api.replicas=1` and the existing data claim, including when using PostgreSQL.
+`api.replicas=1` and the existing key storage, including when using PostgreSQL.
 
 ## Troubleshooting
 

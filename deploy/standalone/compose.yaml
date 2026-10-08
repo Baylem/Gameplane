@@ -8,11 +8,12 @@ services:
     restart: unless-stopped
     environment:
       GAMEPLANE_STANDALONE: "true"
-      GAMEPLANE_PANEL_KEY_FILE: /data/panel.key
+      GAMEPLANE_PANEL_KEY_FILE: ${GAMEPLANE_PANEL_KEY_FILE:-/keys/panel.key}
       GAMEPLANE_DB_DRIVER: sqlite
       GAMEPLANE_DB_DSN: "file:/data/gameplane.db?_pragma=journal_mode(WAL)"
     volumes:
       - panel-data:/data
+      - panel-keys:/keys
     read_only: true
     tmpfs:
       - /tmp:uid=65532,gid=65532,mode=1777
@@ -46,3 +47,4 @@ services:
 
 volumes:
   panel-data:
+  panel-keys:
