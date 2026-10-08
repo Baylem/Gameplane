@@ -935,6 +935,13 @@ read both files or control the running API. A missing key with existing
 credentials, a wrong key, or corrupted credential data prevents API startup.
 See [standalone storage and recovery](standalone-panel.md#storage-and-recovery).
 
+Master-key rotation is an offline transaction through `rotate-panel-key`.
+Versioned authenticated ciphertext identifies its key; the database key-state
+lock rejects writes by processes still holding a retired key. Old key files are
+retained for historical backups. See the
+[rotation procedure](standalone-panel.md#rotate-the-master-encryption-key) before
+changing a mounted key.
+
 The feature labels and managed-secret deletion guards apply to both stores.
 Game credentials and backup repository Secrets remain on the workload cluster.
 The Kubernetes Secret and Helm environment examples below apply to Kubernetes

@@ -118,6 +118,47 @@ and verify existing registrations load before removing the old copy from the
 database volume and excluding it from future database backups. Do not generate
 a new key as a migration step; it cannot decrypt existing records.
 
+### Rotate the master encryption key
+
+Stop every API process that uses this database, then take a database backup and
+a separately protected backup of its current key. The offline command accepts
+file paths and never prints key material. For generated keys in the Compose
+volume, use a new filename:
+
+```sh
+docker compose -f deploy/standalone/compose.yaml stop gameplane-api
+docker compose -f deploy/standalone/compose.yaml run --rm --no-deps \
+  --entrypoint /api gameplane-api rotate-panel-key \
+  --old-key-file /keys/panel.key --new-key-file /keys/panel-2026-10.key
+export GAMEPLANE_PANEL_KEY_FILE=/keys/panel-2026-10.key
+docker compose -f deploy/standalone/compose.yaml up -d --no-build gameplane-api
+```
+
+Persist the selected path in your Compose environment configuration before
+future restarts. Check login, cluster health and credential-backed operations.
+Back up the new key separately. The command retains the old file because older
+database backups still require it; retire that key only after its matching
+backups have expired under your retention policy.
+
+The new generated key is durably published before one database transaction
+re-encrypts all management credentials and activates its identity. A failure
+before commit leaves the old database state usable. Keep both files if the
+command is interrupted or its result is uncertain, and retry the same old/new
+pair; a completed immediately preceding rotation is authenticated and accepted.
+Do not create another new key or restore only one half of a database/key backup.
+Stale API processes cannot write credentials under the retired key, but stopping
+them first is still required for a clean maintenance window.
+
+For a secret manager or read-only Kubernetes Secret, durably provision a new
+32-byte key first and mount the old and new keys at separate paths in the offline
+maintenance container. Add `--new-key-provisioned` to the command; a missing new
+key fails without creating a replacement. Use the same database configuration
+as the API (`GAMEPLANE_DB_DRIVER` and `GAMEPLANE_DB_DSN`). After success, update the
+API's mounted key/path and restart it. For Helm Secret projections, switch
+`api.panelKey.existingSecret` or its `secretKey` entry to the new key while keeping
+the old Secret protected for retained backups. Changing the mounted key without
+running the rotation command cannot decrypt existing records.
+
 ## Central panel on Kubernetes
 
 The panel can also run in a Kubernetes cluster without using that cluster for
@@ -155,7 +196,7 @@ or PVC. Do not put key bytes in Helm values, command arguments, or source contro
 The standalone pod uses `fsGroupChangePolicy: OnRootMismatch` so normal generated
 key PVC remounts do not widen mode `0600` to group-writable `0660`. Start generated
 key storage with an empty PVC. When restoring or migrating an existing PVC, first
-prepare its mount root for group `65532` and restore the key as `65532:65532`,
+prepare its mount root with group `65532`, mode `2770` (including setgid), and restore the key as `65532:65532`,
 mode `0600`. Storage drivers that independently rewrite file permissions must
 preserve this protection; otherwise use the read-only Secret option. The API
 rejects a group-writable key instead of silently changing its permissions.

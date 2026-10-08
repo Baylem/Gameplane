@@ -22,9 +22,15 @@ func TestProvisionedKeyNeverGeneratesMissingFile(t *testing.T) {
 }
 
 func TestProvisionedKeyAcceptsPrivateReadOnlyInputWithoutChangingIt(t *testing.T) {
-	store, _, path := managementFixture(t)
-	before, err := os.ReadFile(path)
+	store, _, originalPath := managementFixture(t)
+	before, err := os.ReadFile(originalPath)
 	if err != nil {
+		t.Fatal(err)
+	}
+	// The operator's key mount is read-only; the separate database directory
+	// stays writable for startup key-state validation and SQLite journaling.
+	path := filepath.Join(t.TempDir(), "panel.key")
+	if err := os.WriteFile(path, before, 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Chmod(path, 0400); err != nil {

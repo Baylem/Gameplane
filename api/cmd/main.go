@@ -83,6 +83,13 @@ func main() {
 				os.Exit(1)
 			}
 			return
+		case "rotate-panel-key":
+			if err := rotatePanelKey(ctx, args[1:]); err != nil {
+				logger.Error("rotate-panel-key", "err", err)
+				os.Exit(1)
+			}
+			logger.Info("panel key rotation completed; restart the API with the new key file")
+			return
 		default:
 			logger.Error("unknown subcommand", "name", args[0])
 			os.Exit(2)
