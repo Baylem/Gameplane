@@ -309,7 +309,7 @@ description: "Task list for 013-expand-test-coverage"
 
 **PR**: `test: unit coverage for managed secrets and console shell`. Independent of every other phase.
 
-- [ ] T051 [P] [US4] Write `api/internal/handlers/secrets_managed_test.go`. Build a `kube.Client` on `k8s.io/client-go/kubernetes/fake`, following `registry_secret_test.go`. Inject errors with `PrependReactor`. Cover every case in research R8:
+- [X] T051 [P] [US4] Write `api/internal/handlers/secrets_managed_test.go`. Build a `kube.Client` on `k8s.io/client-go/kubernetes/fake`, following `registry_secret_test.go`. Inject errors with `PrependReactor`. Cover every case in research R8:
   - create carries both labels
   - `AlreadyExists` with the feature label → merge patch and `managed-by` re-asserted
   - `AlreadyExists` without the label → `errNotManagedSecret`, Secret untouched
@@ -319,7 +319,7 @@ description: "Task list for 013-expand-test-coverage"
   - Get and Delete errors propagate
 
   Use table-driven tests with `t.Parallel()`.
-- [ ] T052 [P] [US4] Write `web/src/routes/tabs/ConsoleShell.test.tsx`. Render `ConsoleShell` with a stub `ConsoleHandle` (`vi.fn()` for `clear`, `download`, `toggleFullscreen` and `sendCommand`, and a `hostRef`). Cover:
+- [X] T052 [P] [US4] Write `web/src/routes/tabs/ConsoleShell.test.tsx`. Render `ConsoleShell` with a stub `ConsoleHandle` (`vi.fn()` for `clear`, `download`, `toggleFullscreen` and `sendCommand`, and a `hostRef`). Cover:
   - each `WSStatus` label: LIVE, connecting…, reconnecting…, offline
   - Enter sends the trimmed command and clears the input; an empty input sends nothing
   - ArrowUp/ArrowDown recall, including restoring the unsent draft
