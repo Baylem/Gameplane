@@ -1,9 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IntlProvider, ReactIntlErrorCode } from "react-intl";
 import type { IntlConfig } from "react-intl";
 import { I18nProvider as AriaI18nProvider } from "@react-aria/i18n";
 
+import { Auth } from "@/lib/endpoints";
+import type { User } from "@/types";
 import { directionFor, listedLanguages, loadMessages } from "./languages";
 import type { CompiledCatalog } from "./languages";
 import { resolveLanguage } from "./resolve";
@@ -104,5 +107,38 @@ export function I18nProvider({ children, userLanguage, instanceDefault }: I18nPr
         <AriaI18nProvider locale={language}>{children}</AriaI18nProvider>
       </IntlProvider>
     </I18nContext.Provider>
+  );
+}
+
+// useCachedUserLanguage returns the saved language on the cached ["me"]
+// profile. It only observes the query cache and never starts a fetch: the
+// route guards own /users/me, and this hook re-renders when that cache entry
+// changes (login, a later language picker invalidating ["me"]).
+function useCachedUserLanguage(): string | null | undefined {
+  const queryClient = useQueryClient();
+  const cache = queryClient.getQueryCache();
+  const subscribe = useCallback((onChange: () => void) => cache.subscribe(onChange), [cache]);
+  const snapshot = () => queryClient.getQueryData<User>(["me"])?.preferences?.language;
+  return useSyncExternalStore(subscribe, snapshot, snapshot);
+}
+
+// AppI18nProvider feeds I18nProvider the two server-side inputs of the
+// resolution order (spec 019, FR-004): the signed-in user's saved language
+// from /users/me (cache only), and the instance default from /auth/locale.
+// The locale request is public and cached for the session; a failure leaves
+// the instance default unset, so resolution falls through to English.
+export function AppI18nProvider({ children }: { children: ReactNode }) {
+  const userLanguage = useCachedUserLanguage();
+  const locale = useQuery({
+    queryKey: ["auth-locale"],
+    queryFn: () => Auth.locale(),
+    staleTime: Infinity,
+    retry: false,
+  });
+  const instanceDefault = locale.data?.defaultLanguage;
+  return (
+    <I18nProvider userLanguage={userLanguage} instanceDefault={instanceDefault}>
+      {children}
+    </I18nProvider>
   );
 }

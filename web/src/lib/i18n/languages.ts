@@ -29,10 +29,19 @@ const manifests = import.meta.glob<LanguageInfo[]>("/src/generated/i18n/language
   import: "default",
 });
 
+// Fixture manifest for E2E builds only (npm run i18n:fixtures, or
+// VITE_I18N_FIXTURES=1). Release builds never write it, so no fixture language
+// is listed there.
+const fixtureManifests = import.meta.glob<LanguageInfo[]>("/src/generated/i18n/languages.fixtures.json", {
+  eager: true,
+  import: "default",
+});
+
 const catalogs = import.meta.glob<Record<string, unknown>>(
   [
     "/src/generated/i18n/*.json",
     "!/src/generated/i18n/languages.json",
+    "!/src/generated/i18n/languages.fixtures.json",
     "!/src/generated/i18n/extracted.json",
   ],
   { import: "default" },
@@ -70,7 +79,7 @@ let allCache: LanguageInfo[] | null = null;
 // allLanguages returns the manifest entries (or just English when the
 // generated manifest is absent, e.g. before `npm run build`).
 export function allLanguages(): LanguageInfo[] {
-  allCache ??= parseManifests(manifests);
+  allCache ??= parseManifests({ ...manifests, ...fixtureManifests });
   return allCache;
 }
 

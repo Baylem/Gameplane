@@ -752,6 +752,9 @@ export interface UserThemePreferences {
   customCssEnabled: boolean;
   customCss?: string | null;
   updatedAt?: string;
+  // Saved dashboard language (BCP 47 tag). null or absent means no saved
+  // choice: the app falls back to the browser, then the instance default.
+  language?: string | null;
 }
 
 // Portable export document (FR-014, data-model.md §2.4; full schema in
