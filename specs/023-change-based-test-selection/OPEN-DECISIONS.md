@@ -12,4 +12,14 @@ OD-4 (Principle I): a Go e2e test is required for this feature even though it is
 OD-5 (FR-009): changed lines on a partial run must meet the module's own coverage minimum (`total` from its `.testcoverage.yml`; web uses the Vitest `lines` threshold, 92).
 OD-6 (plan R2): a selected e2e bucket runs only its affected tests; full runs still run every test of every bucket.
 
-No open decisions remain.
+## OD-7 (plan R9, FR-007): how to force a full run on a PR — **Open**
+Plan default: the label `ci: full-run` (read on each run, no `labeled` trigger, because auto-label would start extra runs) plus a manual `workflow_dispatch`. Options: (a) label + manual run; (b) label only; (c) manual run only.
+
+## OD-8 (plan R4): how Go package dependencies are found — **Open**
+Plan default: scan import lines in Python, so the `changes` job stays Go-free (~1 min). Options: (a) import scanning; (b) `go list -deps -test` in the `changes` job (exact, but installs Go and downloads modules there).
+
+## OD-9 (plan R6, R7): dashboard checks that stay whole when web changes — **Open**
+Plan default: on a partial run only Vitest is narrowed (`vitest related`); ESLint, `tsc` build and the Playwright mock suite still run whole. Options: (a) as planned; (b) also narrow Playwright mock to specs touching the changed screens.
+
+## OD-10 (plan Phasing): rollout shape — **Open**
+Plan default: five PRs (summary table first, then e2e, unit, CI-config mapping, docs). Options: (a) five PRs; (b) one PR.
