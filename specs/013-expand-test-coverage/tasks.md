@@ -200,11 +200,11 @@ description: "Task list for 013-expand-test-coverage"
 
 ### G6 submodule freshness: PR `ci: submodule freshness gate` (OD-1 ruled)
 
-- [ ] T034 [P] [US1] Write `hack/check-submodule-freshness.sh`. For each gitlink (`modules` → `https://github.com/GameplanePanel/module`, `website` → `https://github.com/GameplanePanel/website`; URLs overridable through env for tests) it:
+- [X] T034 [P] [US1] Write `hack/check-submodule-freshness.sh`. For each gitlink (`modules` → `https://github.com/GameplanePanel/module`, `website` → `https://github.com/GameplanePanel/website`; URLs overridable through env for tests) it:
   1. Reads the committed SHA with `git ls-tree HEAD <path>`.
   2. Fetches the upstream `main` into a temp bare repo.
   3. Fails unless `git merge-base --is-ancestor <sha> FETCH_HEAD` succeeds, naming the submodule and the SHA in the error.
-- [ ] T035 [P] [US1] Write `hack/check-submodule-freshness_test.sh`. It builds an upstream bare repo and a superproject in `mktemp -d`, and checks two cases:
+- [X] T035 [P] [US1] Write `hack/check-submodule-freshness_test.sh`. It builds an upstream bare repo and a superproject in `mktemp -d`, and checks two cases:
   - a pointer on `main` (and one behind its tip): expects pass
   - a pointer on an unmerged side branch: expects fail
 - [ ] T036 [US1] Add a `submodule-freshness` job named `submodule freshness` to `.github/workflows/ci.yaml`. Settings:

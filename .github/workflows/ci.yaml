@@ -176,6 +176,8 @@ jobs:
             submodules:
               - 'modules'
               - 'website'
+              - 'hack/check-submodule-freshness.sh'
+              - 'hack/check-submodule-freshness_test.sh'
             # Gate scope for codegen drift (spec 013 T007).
             codegen:
               - 'operator/api/v1alpha1/**'
@@ -515,6 +517,28 @@ jobs:
         run: make check-dev-load-images
       - name: test up.sh registry/context bootstrap
         run: make test-up-registry
+
+  # Spec 013 G6 (OD-1): the modules/ and website/ gitlinks must point at
+  # commits already on each submodule's main branch, so a pointer bump never
+  # lands before its submodule PR merges.
+  submodule-freshness:
+    name: submodule freshness
+    needs: [changes]
+    if: needs.changes.outputs.submodules == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: prove the freshness check can fail
+        run: ./hack/check-submodule-freshness_test.sh
+      - name: submodule pointers are on upstream main
+        run: ./hack/check-submodule-freshness.sh
 
   lint:
     name: lint (${{ matrix.module }})
@@ -1956,6 +1980,7 @@ jobs:
         build-images-arm64,
         capture-sidecar-setcap-proof,
         docs,
+        submodule-freshness,
         lint,
         go,
         web,
@@ -2067,7 +2092,7 @@ jobs:
 
             const NEEDS_ORDER = [
               'changes', 'build-images', 'build-images-arm64',
-              'capture-sidecar-setcap-proof', 'docs', 'lint', 'go',
+              'capture-sidecar-setcap-proof', 'docs', 'submodule-freshness', 'lint', 'go',
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-go-arm64', 'e2e-multicluster', 'e2e-multicluster-arm64', 'e2e-upgrade', 'e2e-upgrade-arm64',
@@ -2083,6 +2108,7 @@ jobs:
               'build-images-arm64': (n) => n === 'build e2e images (arm64)',
               'capture-sidecar-setcap-proof': (n) => n === 'capture-sidecar CAP_NET_RAW survival',
               docs: (n) => n === 'docs and repository checks',
+              'submodule-freshness': (n) => n === 'submodule freshness',
               lint: (n) => n.startsWith('lint ('),
               go: (n) => n.startsWith('go (') && n !== 'go (test/e2e)',
               web: (n) => n === 'web',
