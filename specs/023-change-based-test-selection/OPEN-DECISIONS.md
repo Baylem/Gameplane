@@ -13,9 +13,7 @@ OD-5 (FR-009): changed lines on a partial run must meet the module's own coverag
 OD-6 (plan R2): a selected e2e bucket runs only its affected tests; full runs still run every test of every bucket.
 OD-7 (FR-007): a PR forces the full suite with the label `ci: full-run` (read on each run, no `labeled` trigger) or a manual `workflow_dispatch` run on the branch.
 OD-8 (plan R4): Go package dependencies are found by scanning import lines in `ci_scope.py`; the `changes` job stays Go-free.
+OD-9 (plan R6, R7): on partial runs only Vitest is narrowed (`vitest related`); ESLint, the `tsc` build and the Playwright mock suite run whole whenever web is selected.
+OD-10 (plan Phasing): rollout is five PRs: summary table, e2e selection, unit selection, CI-config mapping, docs.
 
-## OD-9 (plan R6, R7): dashboard checks that stay whole when web changes — **Open**
-Plan default: on a partial run only Vitest is narrowed (`vitest related`); ESLint, `tsc` build and the Playwright mock suite still run whole. Options: (a) as planned; (b) also narrow Playwright mock to specs touching the changed screens.
-
-## OD-10 (plan Phasing): rollout shape — **Open**
-Plan default: five PRs (summary table first, then e2e, unit, CI-config mapping, docs). Options: (a) five PRs; (b) one PR.
+No open decisions remain.
