@@ -483,7 +483,7 @@ wizard-managed server-settings.json, portal registry), **palworld**
 catalog also includes 7-days-to-die, ark-survival-ascended,
 ark-survival-evolved, arma-reforger, beammp, cs2, dayz, dont-starve-together,
 enshrouded, euro-truck-simulator-2, farming-simulator-25, fivem, garrys-mod,
-hell-let-loose, left-4-dead-2, mount-and-blade-2-bannerlord, nuclear-option,
+left-4-dead-2, mount-and-blade-2-bannerlord, nuclear-option,
 project-zomboid, rust, satisfactory, squad, team-fortress-2, the-isle,
 tmodloader, and v-rising (see [Game Coverage](game-coverage.md) for full protocol and testing status).
 

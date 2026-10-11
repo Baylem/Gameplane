@@ -54,7 +54,7 @@ var heavyGameSet = []string{
 	"enshrouded", "satisfactory",
 	"fivem", "team-fortress-2", "farming-simulator-25", "euro-truck-simulator-2",
 	"mount-and-blade-2-bannerlord", "left-4-dead-2", "the-isle",
-	"ark-survival-evolved", "arma-reforger", "hell-let-loose", "squad",
+	"ark-survival-evolved", "arma-reforger", "squad",
 }
 
 // parseGameScope parses GAMEPLANE_E2E_GAMES and returns the set of games to test,

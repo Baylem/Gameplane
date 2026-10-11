@@ -185,7 +185,7 @@ Gameplane extends Kubernetes using custom resources under `gameplane.local/v1alp
 ├── sentinel/             # Wake-on-connect daemon (Go)
 ├── tunnel/               # Relay client supervisor for frp/Tailscale/playit (Go)
 ├── web/                  # Dashboard frontend (React, Vite, Monaco, xterm.js)
-├── modules/              # Submodule: Game templates (30 games shipped)
+├── modules/              # Submodule: Game templates (29 games shipped)
 ├── website/              # Submodule: Public documentation site
 ├── gameproto/            # Wire-protocol parsing library (Minecraft, Terraria)
 ├── gameaction/           # Console injection guard & action command renderer
@@ -268,7 +268,7 @@ The `make dev-up` target:
    `kind-registry:5000`),
 2. loads every locally-built image (operator, api, web, agent, and every
    optional component's image),
-3. pushes every directory under `modules/` (30 games at last count — see
+3. pushes every directory under `modules/` (29 games at last count — see
    `modules/` for the current list) to the local registry as an OCI module
    bundle,
 4. installs the Helm chart from `charts/gameplane/` with a default

@@ -36,5 +36,4 @@ This matrix defines the required configurations, port specifications, query prot
 | `the-isle` | 412680 | A2S_INFO (UDP) | 7777 UDP | 7778 UDP | 8888 TCP (Source RCON) | `/serverdata/TheIsle/Saved` | `save` |
 | `ark-survival-evolved`| 376030 | A2S_INFO (UDP) | 7777 UDP | 27015 UDP | 27020 TCP (Source RCON) | `/serverdata/ShooterGame/Saved` | `SaveWorld` |
 | `arma-reforger` | 1874900 | A2S_INFO (UDP) | 2001 UDP | 17777 UDP | Stdin Console | `/home/steam/.local/share/ArmaReforgerServer` | `save` |
-| `hell-let-loose` | 731790 | A2S_INFO (UDP) | 7787 UDP | 27165 UDP | 22222 TCP (UE4 RCON) | `/serverdata/HLL/Saved` | N/A (Match-based) |
 | `squad` | 403240 | A2S_INFO (UDP) | 7787 UDP | 27165 UDP | 21114 TCP (Squad RCON) | `/serverdata/Squad/Saved` | N/A (Match-based) |

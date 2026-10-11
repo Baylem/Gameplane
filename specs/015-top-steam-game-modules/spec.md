@@ -13,7 +13,7 @@
 ### Session 2026-09-03
 
 - Q: How should Gameplane handle auxiliary dependencies (such as external databases for FiveM or secondary web administration portals for Farming Simulator 25 and txAdmin) within these game modules? → A: Option B (All-in-One Bundles: Include lightweight auxiliary services such as embedded database processes and companion web interfaces within the container runtime for single-pod zero-dependency deployment).
-- Q: Should module #25 target the standard official Hell Let Loose dedicated server (Steam AppID 731790) with support for community configurations/maps, or a specific Vietnam modded variant? → A: Option C (Both Variants: Provide standard Hell Let Loose as the default template version with an optional version profile / preset for Vietnam community conversions).
+- Q: Should module #25 target the standard official Hell Let Loose dedicated server (Steam AppID 731790) with support for community configurations/maps, or a specific Vietnam modded variant? → A: Option C (Both Variants: Provide standard Hell Let Loose as the default template version with an optional version profile / preset for Vietnam community conversions). *Superseded 2026-10-11: module withdrawn (OPEN-DECISIONS.md §10).*
 - Q: How should game modules that require external authorization keys or master server registration tokens (such as FiveM CFX keys, BeamMP auth keys, and ETS2 server tokens) behave when launched without a configured token? → A: Option A (Graceful Idle with Diagnostics: Containers missing mandatory registration tokens log a clear step-by-step diagnostic message for obtaining and setting the key, and idle cleanly without crash-looping).
 
 ---
@@ -141,7 +141,7 @@ Platform monitoring systems and cluster operators need continuous, accurate heal
   22. The Isle (`the-isle`)
   23. ARK: Survival Evolved (`ark-survival-evolved`)
   24. Arma Reforger (`arma-reforger`)
-  25. Hell Let Loose with Vietnam community preset (`hell-let-loose`)
+  25. ~~Hell Let Loose with Vietnam community preset (`hell-let-loose`)~~ **Withdrawn 2026-10-11** (maintainer ruling, OPEN-DECISIONS.md §10): the server files go only to Team17's licensed hosting partners, so no image can install it.
   26. Squad (`squad`)
 - **FR-002**: Every game module MUST contain the complete, standardized file layout:
   - `module.yaml`: Module metadata conforming to `module.schema.json` (name, display name, version, categories, summary, homepage, license, gameplaneMinVersion).
