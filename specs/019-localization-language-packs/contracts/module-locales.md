@@ -15,7 +15,7 @@
 | `mods.<volume>.displayName` | mod volumes |
 | `metrics.<id>.displayName` | metrics |
 
-Ids use the YAML identifiers verbatim (dots inside identifiers are escaped as `~`). Commands, regexes, env values and images are never translatable.
+Ids use the YAML identifiers with a reversible escape (JSON Pointer style): `~` → `~0`, then `.` → `~1`. So `a.b` becomes `a~1b` and `a~b` becomes `a~0b`; unescaping applies `~1` → `.` then `~0` → `~`. Commands, regexes, env values and images are never translatable.
 
 ## 2. Packaging
 
@@ -25,6 +25,8 @@ Ids use the YAML identifiers verbatim (dots inside identifiers are escaped as `~
 ## 3. Operator
 
 On GameTemplate install/upgrade: validate each locale layer with `i18n/pack` against ids extracted from the bundled template. Valid entries → ConfigMap `<template>-locales` (`data["<tag>.json"]`, owner ref → GameTemplate). Invalid entries dropped; condition `LocalesValid=False`, reason `InvalidEntries`, Warning event listing up to 20 `tag:id: problem` lines. Module install never fails because of locales (FR-034).
+
+Size bound: the ConfigMap data for all languages together MUST stay ≤ 900 KiB (below the 1 MiB Kubernetes limit). Languages are added in tag order until the next one would exceed the bound; the rest are left out, the condition is `LocalesValid=False` with reason `LocalesTooLarge`, and a Warning event names the dropped languages. Dropped languages fall back to the template's default text.
 
 ## 4. API
 

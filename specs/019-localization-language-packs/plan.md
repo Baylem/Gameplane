@@ -141,7 +141,7 @@ docs/translating.md                         # NEW contributor guide (FR-019)
 4. Dashboard infrastructure (provider, resolution, boot, API error mapping, formatting) behind English-only catalog.
 5. Design in `design.pen` (local machine) → pickers/fields UI.
 6. Dashboard string migration, directory by directory, with ESLint rule enabled per directory.
-7. French content (app, server, notifications, 3 modules), pseudo-language pass and layout fixes.
+7. French content (app, server, notifications, 3 modules), pseudo-language pass and layout fixes. E2E tests that assert French (T035, T037, T061, T062, T092) merge with or after the French pack (T096–T097); see tasks.md Dependencies.
 8. Hosted Weblate setup, contributor guide, E2E completion.
 
 ## Complexity Tracking

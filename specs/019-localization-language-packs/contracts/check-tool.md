@@ -22,6 +22,8 @@ Exit 0 = pass, 1 = findings, 2 = usage/IO error.
 
 ## Findings (each names file, id and a plain-language problem — FR-015)
 
+Findings that apply to a whole file rather than one entry use a fixed sentinel id: `<pack>` for `malformed-pack`, `<meta>` for `invalid-meta`, `<reference>` for `extract-drift` and `<registry>` for `server-drift` when no single id is at fault. Every finding therefore has the same shape: `{code, severity, file, id, message}`.
+
 | Code | Severity | Meaning |
 |---|---|---|
 | `malformed-pack` | error | invalid JSON / wrong shape |
@@ -38,4 +40,4 @@ Exit 0 = pass, 1 = findings, 2 = usage/IO error.
 
 Summary table: tag, completeness (base → head), listed yes/no.
 
-Seeded fixtures `i18n/testdata/defective/<code>/` MUST each produce exactly their finding (SC-007).
+Seeded fixtures `i18n/testdata/defective/<code>/` MUST each produce exactly their finding (SC-007). Pack-level fixtures hold `en/app.json`, `xx/app.json`, `xx/meta.json`. Fixtures for `extract-drift`, `server-drift` and `unused-id` also hold the auxiliary input (`extracted.json`, `registry.json` or `used-ids.txt`) and an `args` file with the flags the test passes (`--extracted`, `--check-server`, `--used-ids`).

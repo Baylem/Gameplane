@@ -10,7 +10,7 @@ Auth: session + CSRF. Any authenticated user, own record only.
 { "language": "fr" }      // or { "language": null } to clear
 ```
 
-- `language`: null or a tag shipped in this release (present in `i18n/catalog`); otherwise `400`, `server.i18n.unknown_language`, args `{language}`.
+- `language`: null or a **listed** language of this release (`i18n/catalog.Listed()`, the same predicate as the picker and `languages.json`: app completeness ≥ 80%, ltr, not `en-XA`). A tag that is unknown or shipped but unlisted → `400`, `server.i18n.unknown_language`, args `{language}` (FR-017).
 - `204 No Content` on success; audit event recorded as usual.
 
 `GET /api/v1/users/me/preferences` (done_016 contract) gains `"language": "fr" | null`. `PUT /api/v1/users/me/preferences` ignores `language` (unchanged validation).
@@ -37,7 +37,7 @@ Only this field. No version, cluster, user or count data (CLAUDE.md rule 3). Sam
 
 ## 4. Notification sinks
 
-The admin config section `notifications` (`PUT /api/v1/admin/config/notifications`, validator `validateNotifications`) accepts `"language": "<tag>"` per sink; omitted = instance default. Unknown tag → `400 server.i18n.unknown_language`. Test send (`POST /api/v1/admin/notifications/sinks/{name}/test`) renders in the sink's language.
+The admin config section `notifications` (`PUT /api/v1/admin/config/notifications`, validator `validateNotifications`) accepts `"language": "<tag>"` per sink; omitted = instance default. Unknown or unlisted tag → `400 server.i18n.unknown_language`. Test send (`POST /api/v1/admin/notifications/sinks/{name}/test`) renders in the sink's language.
 
 Webhook payload (additive):
 

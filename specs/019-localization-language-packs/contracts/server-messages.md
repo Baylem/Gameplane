@@ -6,10 +6,10 @@
 
 | Request `Accept` | Error response |
 |---|---|
-| contains `application/problem+json` | `Content-Type: application/problem+json`, body §2 |
-| anything else (including absent, `*/*`, `application/json`) | unchanged: `Content-Type: text/plain; charset=utf-8`, body = English text + `\n` exactly as today |
+| lists `application/problem+json` explicitly with an effective quality value > 0 | `Content-Type: application/problem+json`, body §2 |
+| anything else (including absent, `*/*`, `application/*`, `application/json`, or `application/problem+json;q=0`) | unchanged: `Content-Type: text/plain; charset=utf-8`, body = English text + `\n` exactly as today |
 
-Success responses are unaffected. The dashboard always sends `Accept: application/json, application/problem+json`.
+The header is parsed as comma-separated media ranges with optional `q` parameters (RFC 9110 §12.5.1); wildcards never select problem details, and `q=0` means not acceptable. Success responses are unaffected. The dashboard always sends `Accept: application/json, application/problem+json`.
 
 ## 2. Problem body (RFC 9457 + extensions)
 
@@ -24,7 +24,7 @@ Success responses are unaffected. The dashboard always sends `Accept: applicatio
 }
 ```
 
-- `detail` MUST equal the text the plain-text response would carry (SC-010).
+- `detail` MUST equal the text the plain-text response would carry, without the trailing `\n` that `http.Error` appends to the plain-text body (SC-010 concerns the plain-text body, which keeps that newline).
 - `messageId` is present for every message in the registry; responses from code paths not yet migrated carry `"messageId": "server.generic.<status>"` (e.g. `server.generic.400`) so the dashboard still shows a translated generic sentence followed by `detail`.
 - `args` values are strings or numbers; names match the English entry's placeholders.
 - 5xx keep today's behaviour: `detail` is the status text, never internal error text.
@@ -48,7 +48,7 @@ Registry entries are `{ID, English ICU, Description}`; `i18n-check --sync-server
 
 ## 4. Dashboard
 
-`APIError` gains `messageId?: string` and `args?: Record<string, string | number>`. Display: `intl.formatMessage({id: messageId}, args)` when the id exists in the active catalog, else `detail`. Plain-text responses (older API) keep today's behaviour.
+`APIError` gains `messageId?: string` and `args?: Record<string, string | number>`. Display: `intl.formatMessage({id: messageId}, args)` when the id exists in the active catalog; for `server.generic.*` ids the dashboard appends `detail` after the translated sentence; when the id is not in the catalog, `detail` alone. Plain-text responses (older API) keep today's behaviour.
 
 ## 5. Operator condition reasons
 

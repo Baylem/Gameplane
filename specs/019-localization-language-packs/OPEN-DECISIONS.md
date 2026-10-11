@@ -4,7 +4,7 @@ All four decisions below were settled by valgul on 2026-10-10 and are recorded i
 
 ## OD-001: Which pilot language ships at launch — RESOLVED: French (valgul, 2026-10-10)
 
-At launch, Gameplane must ship English plus one pilot language that is 100% complete for dashboard text, server messages, and the three reference modules (Minecraft Java, Terraria, Valheim). The user confirmed the 2-language strategy on 2026-09-23 but did not specify which language to choose.
+At launch, Gameplane must ship English plus one pilot language that is 100% complete for dashboard text, server messages, and the three reference modules (Minecraft Java, Terraria, Valheim). The user confirmed the 2-language strategy on 2026-09-23 and chose French on 2026-10-10.
 
 Options and constraints:
 
@@ -16,7 +16,7 @@ Affects: FR-037, SC-002
 
 ## OD-002: Which community translation site — RESOLVED: Hosted Weblate (valgul, 2026-10-10)
 
-The system must support two contribution paths: file-based pull requests and a web-based community translation site where translators work in the browser. The specific translation site service is not yet chosen.
+The system must support two contribution paths: file-based pull requests and a web-based community translation site where translators work in the browser. The chosen service is Hosted Weblate (libre plan); setup is described in research.md R10.
 
 The site must:
 
@@ -32,7 +32,7 @@ Affects: FR-020, US3
 
 ## OD-003: Minimum completeness threshold for language listing — RESOLVED: 80% (valgul, 2026-10-10)
 
-Languages below a certain completeness threshold must not be offered to end users, though they remain available to translators for continued work. The default assumption is 50% completeness.
+Languages below a certain completeness threshold must not be offered to end users, though they remain available to translators for continued work. The threshold is 80% completeness of the app text source (see data-model.md, Language).
 
 Options and constraints:
 
@@ -52,6 +52,6 @@ Options:
 - Per-destination language setting: each notification destination can be configured in a specific language (default: the instance default language). This allows a team to receive Discord alerts in one language and email notifications in another.
 - Instance-wide only: all notification destinations use the instance default language, and no per-destination language configuration is offered.
 
-Default assumption: per-destination language setting.
+Decision: per-destination language setting, defaulting to the instance default language.
 
 Affects: FR-028

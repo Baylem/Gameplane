@@ -13,7 +13,8 @@ Spec entities (spec.md, Key Entities) mapped to storage. File formats are define
 | `englishName` | string | 1–64 chars (`French`) |
 | `direction` | `ltr` \| `rtl` | `rtl` packs are never listed in v1 (spec edge case) |
 | `credits` | list of `{name, url?}` | optional |
-| `listed` | bool, derived | `completeness ≥ 80 && direction == ltr && tag != en-XA` (OD-003) |
+| `completeness` | percent, derived | completeness of the **app** text source for this language (module packs never affect it; module text falls back per entry). This is the single value shown in the picker and written to `languages.json` |
+| `listed` | bool, derived | `completeness ≥ 80 && direction == ltr && tag != en-XA` (OD-003), using the app completeness above |
 
 Stored in `i18n/locales/<tag>/meta.json`. `en` is always listed (completeness 100 by definition). `en-XA` (pseudo) has no meta file in releases.
 
