@@ -11,9 +11,7 @@ OD-3 (US3, FR-014): each shared CI config file runs only the jobs it feeds plus 
 OD-4 (Principle I): a Go e2e test is required for this feature even though it is CI-only. Plan research R13 defines it: `TestCISelection_*` in `test/e2e/`, registered in the `operator` bucket.
 OD-5 (FR-009): changed lines on a partial run must meet the module's own coverage minimum (`total` from its `.testcoverage.yml`; web uses the Vitest `lines` threshold, 92).
 OD-6 (plan R2): a selected e2e bucket runs only its affected tests; full runs still run every test of every bucket.
-
-## OD-7 (plan R9, FR-007): how to force a full run on a PR — **Open**
-Plan default: the label `ci: full-run` (read on each run, no `labeled` trigger, because auto-label would start extra runs) plus a manual `workflow_dispatch`. Options: (a) label + manual run; (b) label only; (c) manual run only.
+OD-7 (FR-007): a PR forces the full suite with the label `ci: full-run` (read on each run, no `labeled` trigger) or a manual `workflow_dispatch` run on the branch.
 
 ## OD-8 (plan R4): how Go package dependencies are found — **Open**
 Plan default: scan import lines in Python, so the `changes` job stays Go-free (~1 min). Options: (a) import scanning; (b) `go list -deps -test` in the `changes` job (exact, but installs Go and downloads modules there).
