@@ -134,6 +134,9 @@ jobs:
               - '**/go.mod'
               - '**/go.sum'
               - '**/Dockerfile'
+              - 'hack/govulncheck-all.sh'
+              - 'hack/check-govulncheck_test.sh'
+              - 'hack/testdata/govulncheck/**'
             web:
               - 'web/**'
             charts:
@@ -515,6 +518,29 @@ jobs:
         run: make check-dev-load-images
       - name: test up.sh registry/context bootstrap
         run: make test-up-registry
+
+  # Spec 013 G1: fail on any reachable Go vulnerability in any go.work module.
+  # The proof step first shows the gate goes red on a synthetic reachable
+  # advisory (hack/testdata/govulncheck). Fix findings by bumping, never excluding.
+  vuln-go:
+    name: vuln (go)
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/go-cache
+        with:
+          key-suffix: vuln-go
+      - name: install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+      - name: prove the gate fails on a reachable vulnerable symbol
+        run: ./hack/check-govulncheck_test.sh
+      - name: govulncheck every go.work module
+        run: ./hack/govulncheck-all.sh
 
   lint:
     name: lint (${{ matrix.module }})
@@ -1956,6 +1982,7 @@ jobs:
         build-images-arm64,
         capture-sidecar-setcap-proof,
         docs,
+        vuln-go,
         lint,
         go,
         web,
@@ -2067,7 +2094,7 @@ jobs:
 
             const NEEDS_ORDER = [
               'changes', 'build-images', 'build-images-arm64',
-              'capture-sidecar-setcap-proof', 'docs', 'lint', 'go',
+              'capture-sidecar-setcap-proof', 'docs', 'vuln-go', 'lint', 'go',
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-go-arm64', 'e2e-multicluster', 'e2e-multicluster-arm64', 'e2e-upgrade', 'e2e-upgrade-arm64',
@@ -2083,6 +2110,7 @@ jobs:
               'build-images-arm64': (n) => n === 'build e2e images (arm64)',
               'capture-sidecar-setcap-proof': (n) => n === 'capture-sidecar CAP_NET_RAW survival',
               docs: (n) => n === 'docs and repository checks',
+              'vuln-go': (n) => n === 'vuln (go)',
               lint: (n) => n.startsWith('lint ('),
               go: (n) => n.startsWith('go (') && n !== 'go (test/e2e)',
               web: (n) => n === 'web',

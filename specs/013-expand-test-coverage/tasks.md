@@ -121,29 +121,31 @@ description: "Task list for 013-expand-test-coverage"
 
 ### G1 govulncheck: PR `ci: go vulnerability gate`
 
-- [ ] T015 [P] [US1] Create a synthetic offline OSV database under `hack/testdata/govulncheck/db/`, in govulncheck's `-db file://` layout:
+- [X] T015 [P] [US1] Create a synthetic offline OSV database under `hack/testdata/govulncheck/db/`, in govulncheck's `-db file://` layout:
   - `index/db.json`, `index/modules.json`, `index/vulns.json`
   - `ID/GO-0000-0001.json`, with one advisory for module `example.invalid/vulnfixture` that marks function `vulnfixture.Bad` as affected below `v1.0.1`
-- [ ] T016 [P] [US1] Create the fixture modules:
+- [X] T016 [P] [US1] Create the fixture modules:
   - `hack/testdata/govulncheck/vulnfixture/` (module `example.invalid/vulnfixture` v1.0.0, declaring `func Bad()` and `func Good()`)
   - `hack/testdata/govulncheck/fail/` (its `main.go` calls `vulnfixture.Bad`)
   - `hack/testdata/govulncheck/pass/` (its `main.go` calls only `vulnfixture.Good`)
 
   Both `fail` and `pass` reach `vulnfixture` through a `replace` directive, so no network fetch happens. None of these modules goes in `go.work`.
-- [ ] T017 [US1] Write `hack/check-govulncheck_test.sh`. It runs `govulncheck -db "file://$PWD/hack/testdata/govulncheck/db" ./...` in `fail/` and expects exit 3, then in `pass/` and expects exit 0. Depends on T015 and T016.
-- [ ] T018 [P] [US1] Write `hack/govulncheck-all.sh`. It runs `govulncheck ./...` in every module listed in `go.work` with these tags:
+
+  Implementation note: a directory `replace` gives the module an empty version, which govulncheck never reports (`affected()` in golang.org/x/vuln v1.9.0 `internal/vulncheck/vulncheck.go`). So the modules carry no `replace`; `hack/check-govulncheck_test.sh` vendors `vulnfixture` at v1.0.0 into a temp copy instead, still with no network fetch.
+- [X] T017 [US1] Write `hack/check-govulncheck_test.sh`. It runs `govulncheck -db "file://$PWD/hack/testdata/govulncheck/db" ./...` in `fail/` and expects exit 3, then in `pass/` and expects exit 0. Depends on T015 and T016.
+- [X] T018 [P] [US1] Write `hack/govulncheck-all.sh`. It runs `govulncheck ./...` in every module listed in `go.work` with these tags:
   - `operator` and `api`: `-tags envtest`
   - `test/e2e`: `-tags e2e`
   - `api` again: `-tags postgres`
 
   It reports all findings and exits non-zero if any reachable finding exists.
-- [ ] T019 [US1] Add a `vuln-go` job named `vuln (go)` to `.github/workflows/ci.yaml`. Settings:
+- [X] T019 [US1] Add a `vuln-go` job named `vuln (go)` to `.github/workflows/ci.yaml`. Settings:
   - `if: needs.changes.outputs.go == 'true' || github.event_name == 'push'`
   - installs govulncheck with `go install golang.org/x/vuln/cmd/govulncheck@<pinned vX.Y.Z>`, with `GOSUMDB` left on
   - runs `hack/check-govulncheck_test.sh`, then `hack/govulncheck-all.sh`
 
   Register the job in `report`. Depends on T017 and T018.
-- [ ] T020 [P] [US1] Add `.github/workflows/vuln-weekly.yaml`. Settings:
+- [X] T020 [P] [US1] Add `.github/workflows/vuln-weekly.yaml`. Settings:
   - `on: schedule` (weekly, Monday 04:00 UTC) and `workflow_dispatch`
   - `permissions: contents: read`
   - one job running the same install step and `hack/govulncheck-all.sh` against `master`
