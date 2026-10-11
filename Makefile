@@ -265,6 +265,12 @@ i18n-sync: ## Write the API message registry into the English reference (i18n/lo
 	cd i18n && go run ./cmd/i18n-check --registry .registry.json --sync-server locales
 	rm -f i18n/.registry.json
 
+.PHONY: check-i18n
+check-i18n: ## Verify language packs, server-message drift and dashboard extraction drift (spec 019)
+	cd web && npm run i18n:extract-only
+	cd api && go run ./cmd/messages-export > ../i18n/.registry.json
+	cd i18n && status=0; go run ./cmd/i18n-check --extracted ../web/src/generated/i18n/extracted.json --registry .registry.json --check-server locales || status=$$?; rm -f .registry.json; exit $$status
+
 .PHONY: check-dev-load-images
 check-dev-load-images: ## Verify `dev-load` loads every image `images` builds
 	hack/check-dev-load-images.sh
@@ -274,7 +280,7 @@ test-up-registry: ## Run the fixture tests for deploy/kind/up.sh's registry/cont
 	hack/test-up-registry.sh
 
 .PHONY: lint
-lint: check-doc-versions check-links check-specs check-telemetry-catalog check-dev-load-images test-up-registry lint-go lint-web ## Run all linters
+lint: check-doc-versions check-links check-specs check-telemetry-catalog check-i18n check-dev-load-images test-up-registry lint-go lint-web ## Run all linters
 
 .PHONY: lint-go
 lint-go: ## Run golangci-lint across all modules

@@ -1079,6 +1079,7 @@ Each namespace is an object of typed functions building and fetching URLs:
 - **API errors.** The client sends `Accept: application/json, application/problem+json`. A problem+json body sets `APIError.messageId`, `args` and `detail`, and keeps `body`/`message` equal to the English `detail`. `serverMessageText` and `useServerMessage` (`src/lib/i18n/serverMessage.ts`) translate a `messageId` when the catalog has it. `errorTextIntl` (`src/lib/errors.ts`) falls back to `errorText`.
 - **Formatting.** `useFormat()` (`src/lib/i18n/format.ts`) provides `date`, `time`, `dateTime`, `number`, `relative`, `list` and `duration`, bound to the active locale. The pure `format*In(locale, …)` helpers are for non-React code. Default options match the old no-argument `toLocale*String()` calls, so English output is unchanged.
 - **Lint.** `eslint-plugin-formatjs` rules apply to `src/lib/i18n/**` (`MIGRATED_I18N_PATHS` in `eslint.config.js`). The list grows with each string migration.
+- **CI.** The `web` job builds the language manifest (`npm run i18n:manifest`), runs `i18n-check` with extraction drift, server-message drift and before/after completeness in the job summary, and self-tests the checker on `i18n/testdata/defective/`. Locally the same checks run as `make check-i18n` (part of `make lint`).
 
 ## Realtime (WebSocket & SSE)
 

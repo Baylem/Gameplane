@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run i18n:compile && tsc -b && vite build",
-    "i18n:extract": "formatjs extract \"src/**/*.{ts,tsx}\" --ignore \"src/**/*.test.{ts,tsx}\" --ignore \"src/**/*.d.ts\" --ignore \"src/generated/**\" --out-file src/generated/i18n/extracted.json && node scripts/i18n-reference.mjs",
+    "i18n:extract-only": "formatjs extract \"src/**/*.{ts,tsx}\" --ignore \"src/**/*.test.{ts,tsx}\" --ignore \"src/**/*.d.ts\" --ignore \"src/generated/**\" --out-file src/generated/i18n/extracted.json",
+    "i18n:extract": "npm run i18n:extract-only && node scripts/i18n-reference.mjs",
     "i18n:compile": "node scripts/i18n-compile.mjs",
     "i18n:manifest": "cd ../i18n && go run ./cmd/i18n-check --manifest ../web/src/generated/i18n/languages.json locales",
     "preview": "vite preview",

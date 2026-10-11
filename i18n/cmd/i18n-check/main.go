@@ -534,6 +534,11 @@ func writeManifest(path string, rows []manifestRow) error {
 	if err != nil {
 		return fmt.Errorf("encode manifest: %w", err)
 	}
+	// The manifest lands in a generated directory (web/src/generated/i18n,
+	// or /out in the image build) that may not exist yet.
+	if err := os.MkdirAll(filepath.Dir(filepath.Clean(path)), 0o750); err != nil {
+		return fmt.Errorf("create manifest directory: %w", err)
+	}
 	if err := os.WriteFile(path, append(data, '\n'), 0o600); err != nil {
 		return fmt.Errorf("write manifest: %w", err)
 	}
