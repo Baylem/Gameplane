@@ -12,7 +12,12 @@ export function serverMessageText(intl: IntlShape, err: unknown): string | null 
   if (!(err instanceof APIError) || !err.messageId) return null;
   const id = err.messageId;
   if (!Object.hasOwn(intl.messages, id)) return null;
-  const formatted: unknown = intl.formatMessage({ id }, err.args);
+  // The id comes from the API response; its English text and translator note
+  // live in the server.* catalog entries (api/internal/messages), not here.
+  const formatted: unknown = intl.formatMessage(
+    { id, description: "API error; text and note come from the server.* catalog entry" },
+    err.args,
+  );
   if (typeof formatted !== "string") return null;
   // Generic server errors carry a free-form English detail (for example the
   // underlying Kubernetes message) that is shown after the translated sentence.
