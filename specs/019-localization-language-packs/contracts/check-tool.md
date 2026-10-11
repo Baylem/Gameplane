@@ -9,6 +9,7 @@ go run ./i18n/cmd/i18n-check [flags] <locales-dir>
   --reference en            reference tag (default en)
   --base <dir>              base-branch copy for before/after completeness
   --extracted <file>        formatjs extract output to compare with the reference (drift)
+  --registry <file>         API message registry JSON (from api/cmd/messages-export) for the two server flags
   --sync-server             write api/internal/messages registry into the reference
   --check-server            fail if the registry and the reference differ
   --used-ids <file>         ids referenced by code (from extract + Go registry) → unused report
