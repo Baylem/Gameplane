@@ -1,4 +1,5 @@
 import { useResourceAccess, useResourcePermissions, resourceCan } from "@/lib/resourceTarget";
+import { useFormat } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
 import {
   Input,
@@ -48,6 +49,7 @@ function bestUnit(seconds: number): RetentionUnit {
 }
 
 export function NetworkCaptureSection({ draft, onChange, onValidityChange }: SectionProps) {
+  const fmt = useFormat();
   const access = useResourceAccess();
   const permissionsReady = access?.permissions !== undefined;
   const permissions = useResourcePermissions();
@@ -91,7 +93,7 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
     const seconds = Math.round(n * UNIT_SECONDS[u]);
     if (seconds > CLUSTER_MAX_RETENTION_SECONDS) {
       setRetentionError(
-        `Exceeds the cluster maximum of 7 days (${CLUSTER_MAX_RETENTION_SECONDS.toLocaleString()} seconds).`,
+        `Exceeds the cluster maximum of 7 days (${fmt.number(CLUSTER_MAX_RETENTION_SECONDS)} seconds).`,
       );
       return;
     }
@@ -213,7 +215,7 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
             <FieldError className="text-xs">{retentionError}</FieldError>
           ) : (
             <p className="text-xs text-default-500">
-              Cluster maximum: 7 days ({CLUSTER_MAX_RETENTION_SECONDS.toLocaleString()} seconds)
+              Cluster maximum: 7 days ({fmt.number(CLUSTER_MAX_RETENTION_SECONDS)} seconds)
               — a storage-limitation-informed default, not a legal requirement.
             </p>
           )}

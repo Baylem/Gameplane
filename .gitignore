@@ -25,6 +25,8 @@ web/coverage/
 web/playwright-report/
 web/test-results/
 web/website-screenshots/
+# Generated i18n artifacts (compiled catalogs, extracted messages, language manifest)
+web/src/generated/
 web/e2e/.portforward.pid
 *.log
 .npmrc.local

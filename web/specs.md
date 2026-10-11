@@ -1067,6 +1067,19 @@ Each namespace is an object of typed functions building and fetching URLs:
 - **events.ts** — event severity / reason → display strings
 - **quantity.ts** — parse/format K8s quantities (500m → 0.5, 1Gi → 1073741824 bytes)
 
+## Internationalization (spec 019)
+
+- **Provider.** `src/lib/i18n/I18nProvider.tsx` wraps the whole app inside `QueryClientProvider` in `src/main.tsx`, so `/login` and `/share/*` are covered. It renders react-intl `IntlProvider` and react-aria `I18nProvider` with the same locale, and exposes `useLanguage()` (`language`, `setLanguage`, `direction`). Outside a provider `useLanguage()` and `useFormat()` fall back to English.
+- **Resolution order** (`src/lib/i18n/resolve.ts`): user choice, then browser choice (storage), then each `navigator.languages` entry (regional, then base language, so `fr-CA` resolves to `fr`), then the instance default, then `en`. Candidates that are not listed languages are skipped. Listing comes only from the generated manifest.
+- **Storage key.** `localStorage["gameplane-language"]` holds `{choice, applied}`. `choice` is the viewer's pick on this browser; `applied` is the language last rendered. Every access is guarded, and failures mean "no preference".
+- **Boot snippet.** `<script id="i18n-boot">` in `web/index.html` reads `applied` before React mounts and sets `<html lang>` (and `dir="ltr"`). It accepts only tags matching `^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$`.
+- **Catalogs and generated files.** Messages come from the shared `i18n/locales/<tag>/app.json`. The build writes `src/generated/i18n/` (not committed; ignored by `.gitignore`): `<tag>.json` compiled AST catalogs, `extracted.json` (reference for `formatjs extract`), and `languages.json` (the manifest computed by `i18n/cmd/i18n-check`). A missing message renders its `defaultMessage`, and `MISSING_TRANSLATION` is not logged.
+- **Scripts** (`web/package.json`). `i18n:extract` runs `formatjs extract` and then `scripts/i18n-reference.mjs`. `i18n:compile` runs `scripts/i18n-compile.mjs`. `i18n:manifest` runs `i18n-check --manifest`. `build` runs `i18n:compile` first. Vite and Vitest alias `@i18n` to `../i18n/locales`.
+- **Docker.** The `web` image builds `languages.json` in a Go stage (`i18n-check`), so the listing rule lives in one place.
+- **API errors.** The client sends `Accept: application/json, application/problem+json`. A problem+json body sets `APIError.messageId`, `args` and `detail`, and keeps `body`/`message` equal to the English `detail`. `serverMessageText` and `useServerMessage` (`src/lib/i18n/serverMessage.ts`) translate a `messageId` when the catalog has it. `errorTextIntl` (`src/lib/errors.ts`) falls back to `errorText`.
+- **Formatting.** `useFormat()` (`src/lib/i18n/format.ts`) provides `date`, `time`, `dateTime`, `number`, `relative`, `list` and `duration`, bound to the active locale. The pure `format*In(locale, …)` helpers are for non-React code. Default options match the old no-argument `toLocale*String()` calls, so English output is unchanged.
+- **Lint.** `eslint-plugin-formatjs` rules apply to `src/lib/i18n/**` (`MIGRATED_I18N_PATHS` in `eslint.config.js`). The list grows with each string migration.
+
 ## Realtime (WebSocket & SSE)
 
 ### WebSocket (`lib/ws.ts`)

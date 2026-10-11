@@ -74,6 +74,7 @@ import {
 } from "@/lib/config";
 import { ErrorBanner } from "@/components/backups/ErrorBanner";
 import { ModuleSourcesPanel } from "@/components/modules/ModuleSourcesPanel";
+import { useFormat, type FormatApi } from "@/lib/i18n/format";
 
 type Section =
   | "general" | "auth" | "backups" | "modules" | "modRegistries" | "notifications"
@@ -1624,16 +1625,16 @@ const TELEMETRY_KEY = ["telemetry"] as const;
 
 // Intl output is "Oct 6, 2026, 09:12" for these options; the section always
 // renders UTC so the text matches what the receiver stores.
-function formatUtc(iso: string, withTime: boolean): string {
+function formatUtc(iso: string, withTime: boolean, fmt: FormatApi): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  const text = new Intl.DateTimeFormat("en-US", {
+  const text = fmt.dateTime(d, {
     month: "short",
     day: "numeric",
     year: "numeric",
     ...(withTime ? { hour: "2-digit", minute: "2-digit", hourCycle: "h23" as const } : {}),
     timeZone: "UTC",
-  }).format(d);
+  });
   return withTime ? `${text} UTC` : text;
 }
 
@@ -1736,12 +1737,13 @@ function TelemetryPreviewBlock({ info }: { info: TelemetryInfo }) {
 
 function TelemetryStatusLines({ info }: { info: TelemetryInfo }) {
   const { status } = info;
+  const fmt = useFormat();
   let text: string;
   if (status.lastOutcome === "ok") {
-    text = `Last report sent successfully on ${status.lastSuccessAt ? formatUtc(status.lastSuccessAt, true) : "an earlier attempt"}.`;
+    text = `Last report sent successfully on ${status.lastSuccessAt ? formatUtc(status.lastSuccessAt, true, fmt) : "an earlier attempt"}.`;
   } else if (status.lastOutcome === "failed") {
     text = status.lastSuccessAt
-      ? `Last attempt failed, will retry. Last successful report: ${formatUtc(status.lastSuccessAt, true)}.`
+      ? `Last attempt failed, will retry. Last successful report: ${formatUtc(status.lastSuccessAt, true, fmt)}.`
       : "Last attempt failed, will retry. No report has been delivered yet.";
   } else {
     text = "No report sent yet.";
@@ -1751,7 +1753,7 @@ function TelemetryStatusLines({ info }: { info: TelemetryInfo }) {
       <div>{text}</div>
       {status.lastIdRotationAt && (
         <div>
-          Install ID replaced on {formatUtc(status.lastIdRotationAt, false)}: the destination
+          Install ID replaced on {formatUtc(status.lastIdRotationAt, false, fmt)}: the destination
           reported it was in use by another key.
         </div>
       )}

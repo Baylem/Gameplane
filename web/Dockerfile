@@ -4,6 +4,16 @@
 # publish/release workflows pass `context: .` and `file: web/Dockerfile`).
 # Everything this stage needs lives under web/, so only web/ is copied in.
 
+# ---- compute the language manifest ----
+# The language listing rule (which locales are shown in pickers) lives in the
+# shared Go checker (i18n/), so the manifest is produced by that checker here
+# rather than re-implemented in TypeScript. Only i18n/ is needed for this stage.
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS i18n
+WORKDIR /src
+COPY i18n/ ./i18n/
+WORKDIR /src/i18n
+RUN mkdir -p /out && go run ./cmd/i18n-check --manifest /out/languages.json locales
+
 # ---- build the SPA ----
 FROM node:26-bookworm-slim AS build
 WORKDIR /src/web
@@ -12,7 +22,13 @@ WORKDIR /src/web
 COPY web/package.json web/package-lock.json* ./
 RUN npm ci
 
+# Shared locale catalogs live outside web/; the i18n scripts and Vite alias
+# read them from ../i18n/locales relative to /src/web.
+COPY i18n/locales ../i18n/locales
+
 COPY web/ ./
+# Generated language manifest (computed by the i18n stage above).
+COPY --from=i18n /out/languages.json ./src/generated/i18n/languages.json
 # Vite emits to web/dist. tsc + vite build run via `npm run build`.
 RUN npm run build
 

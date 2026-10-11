@@ -25,7 +25,10 @@ function htmlBypass(req: { headers: Record<string, string | string[] | undefined
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { "@": path.resolve(here, "./src") },
+    alias: {
+      "@": path.resolve(here, "./src"),
+      "@i18n": path.resolve(here, "../i18n/locales"),
+    },
   },
   server: {
     port: 5173,

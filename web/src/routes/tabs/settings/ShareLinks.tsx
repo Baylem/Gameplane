@@ -34,6 +34,7 @@ import { AlertCircle, Calendar as CalendarIcon, Copy, Link2 } from "lucide-react
 import type { ShareLink } from "@/types";
 import { type ShareLinkCreateBody } from "@/lib/api";
 import { errorText } from "@/lib/errors";
+import { useFormat, type FormatApi } from "@/lib/i18n/format";
 
 interface ShareLinksProps {
   name: string;
@@ -141,10 +142,10 @@ function getLinkStatus(expiresAt: string | null, revokedAt?: string | null): str
 
 // Format date for display (e.g., "Jul 28, 2026"), or "Never" for a
 // no-expiry link (SC-004).
-function formatDate(dateStr: string | null): string {
+function formatDate(dateStr: string | null, fmt: FormatApi): string {
   if (dateStr === null) return "Never";
   const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", {
+  return fmt.date(date, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -508,6 +509,7 @@ function RevokeDialog({
 
 // Main component
 export function ShareLinksSection({ name, ns }: ShareLinksProps) {
+  const fmt = useFormat();
   const resourceTarget = useResourceTarget({ name, namespace: ns });
   const resourceClient = useResourceClient(resourceTarget);
   const access = useResourceAccess();
@@ -584,8 +586,8 @@ export function ShareLinksSection({ name, ns }: ShareLinksProps) {
               <Table.Body>
                 {links?.map((link) => (
                   <Table.Row key={link.id}>
-                    <Table.Cell>{formatDate(link.createdAt)}</Table.Cell>
-                    <Table.Cell>{formatDate(link.expiresAt)}</Table.Cell>
+                    <Table.Cell>{formatDate(link.createdAt, fmt)}</Table.Cell>
+                    <Table.Cell>{formatDate(link.expiresAt, fmt)}</Table.Cell>
                     <Table.Cell>
                       <Chip
                         variant="soft"

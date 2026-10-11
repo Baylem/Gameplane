@@ -1,4 +1,7 @@
+import type { IntlShape } from "react-intl";
+
 import { APIError } from "@/lib/api";
+import { serverMessageText } from "@/lib/i18n/serverMessage";
 
 // errorText renders an unknown thrown value as a user-facing string,
 // unwrapping the JSON {error|message} body of an APIError when present.
@@ -22,4 +25,10 @@ export function errorText(err: unknown, fallback = "request failed"): string {
 export function errorTextWithStatus(err: unknown, fallback = "request failed"): string {
   if (err instanceof APIError) return `${err.status}: ${errorText(err, fallback)}`;
   return errorText(err, fallback);
+}
+
+// errorTextIntl prefers the translated server message (problem+json messageId)
+// when the active catalog has it, and otherwise behaves exactly like errorText.
+export function errorTextIntl(intl: IntlShape, err: unknown, fallback = "request failed"): string {
+  return serverMessageText(intl, err) ?? errorText(err, fallback);
 }

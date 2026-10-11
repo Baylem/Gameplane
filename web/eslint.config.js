@@ -11,6 +11,11 @@ import tsParser from "@typescript-eslint/parser";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
+import formatjs from "eslint-plugin-formatjs";
+
+// Files whose user-facing strings have moved to the i18n runtime. This list
+// grows with each string-migration task and switches to all of src in T058.
+const MIGRATED_I18N_PATHS = ["src/lib/i18n/**/*.{ts,tsx}"];
 
 export default [
   {
@@ -66,6 +71,28 @@ export default [
     },
     settings: {
       react: { version: "detect" },
+    },
+  },
+  {
+    files: MIGRATED_I18N_PATHS,
+    ignores: ["**/*.test.{ts,tsx}"],
+    plugins: { formatjs },
+    rules: {
+      "formatjs/enforce-description": ["error", "literal"],
+      "formatjs/enforce-placeholders": "error",
+      "formatjs/no-literal-string-in-jsx": [
+        "error",
+        {
+          props: {
+            include: [
+              ["*", "aria-label"],
+              ["*", "title"],
+              ["*", "placeholder"],
+              ["*", "alt"],
+            ],
+          },
+        },
+      ],
     },
   },
 ];

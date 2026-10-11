@@ -61,6 +61,7 @@ import { CaptureWarningBanner } from "@/components/ui/CaptureWarningBanner";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { Chip } from "@/components/ui/PhaseChip";
 import { formatBytes, formatRelative } from "@/lib/utils";
+import { useFormat } from "@/lib/i18n/format";
 import type { GameServer, NetworkCapture } from "@/types";
 
 const DEFAULT_RETENTION_SECONDS = 86400; // 24h — FR-007's engineering default, not a legal mandate.
@@ -129,6 +130,7 @@ interface Props {
 }
 
 export function CaptureWidget({ name, ns, gs }: Props) {
+  const fmt = useFormat();
   const { data: me, isLoading: meLoading, error: meError, refetch: refetchMe } = useMe();
   const permissions = useResourcePermissions();
   const canManage = !!me && resourceCan(permissions, "captures:manage");
@@ -406,7 +408,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
               </div>
             </div>
             <div className="text-xs text-default-500">
-              {(activeCaptureDetails?.packetsWritten ?? activeCapture.packetsWritten).toLocaleString()} packets captured
+              {fmt.number(activeCaptureDetails?.packetsWritten ?? activeCapture.packetsWritten)} packets captured
             </div>
           </CardContent>
         </Card>
@@ -455,7 +457,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
                             </Chip>
                           </TableCell>
                           <TableCell className="font-mono text-sm">{formatBytes(c.bytesWritten)}</TableCell>
-                          <TableCell className="font-mono text-sm">{c.packetsWritten.toLocaleString()}</TableCell>
+                          <TableCell className="font-mono text-sm">{fmt.number(c.packetsWritten)}</TableCell>
                           <TableCell className="font-mono text-sm text-default-500">
                             {durationBetween(c.startedAt, c.completedAt)}
                           </TableCell>

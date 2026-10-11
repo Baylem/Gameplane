@@ -9,6 +9,7 @@
 # local copies must never leak in.
 *
 !web
+!i18n
 web/node_modules
 web/dist
 web/.vite

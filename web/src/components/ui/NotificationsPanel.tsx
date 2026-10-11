@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { JSX } from "react";
 import { useQueryClient, type QueryFilters } from "@tanstack/react-query";
 import {
@@ -7,6 +7,7 @@ import {
 } from "@heroui/react";
 import { Bell } from "lucide-react";
 import { openEventStream, queryFilterForKind, type GameplaneEvent } from "@/lib/sse";
+import { useFormat } from "@/lib/i18n/format";
 
 interface Notice {
   id: number;
@@ -36,9 +37,17 @@ function phaseOf(obj: GameplaneEvent["object"] | undefined): string {
  */
 export function NotificationsPanel(): JSX.Element {
   const qc = useQueryClient();
+  const fmt = useFormat();
+  // The SSE stream is opened once per query client; the formatter is read through
+  // a ref so a language change does not tear down and reopen the stream.
+  const fmtRef = useRef(fmt);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    fmtRef.current = fmt;
+  }, [fmt]);
 
   useEffect(() => {
     let seq = 0;
@@ -89,7 +98,7 @@ export function NotificationsPanel(): JSX.Element {
         const notice: Notice = {
           id: seq,
           text: `${verb} ${ev.kind.replace(/s$/, "")} ${name}`.trim(),
-          at: new Date().toLocaleTimeString(),
+          at: fmtRef.current.time(new Date()),
         };
         setNotices((prev) => [notice, ...prev].slice(0, 50));
         setUnread((u) => u + 1);

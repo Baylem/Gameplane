@@ -6,6 +6,7 @@ import { Button, Input, Tabs, Tab as TabComponent } from "@heroui/react";
 
 
 
+import { useFormat } from "@/lib/i18n/format";
 import { openWS } from "@/lib/ws";
 import { capitalize, cn } from "@/lib/utils";
 import type { GameServerPhase } from "@/types";
@@ -58,6 +59,7 @@ export function LogsTab({
   const resourceTarget = useResourceTarget({ name, namespace: ns });
   const resourceClient = useResourceClient(resourceTarget);
   const { Logs } = resourceClient;
+  const fmt = useFormat();
 
   const [lines, setLines] = useState<string[]>([]);
   const [filter, setFilter] = useState("");
@@ -185,7 +187,7 @@ export function LogsTab({
             ))}
           </Tabs.List>
         </Tabs>
-        <span className="text-xs text-muted">{filtered.length.toLocaleString()} lines</span>
+        <span className="text-xs text-muted">{fmt.number(filtered.length)} lines</span>
         <div className="ml-auto">
           <Button
             size="sm"

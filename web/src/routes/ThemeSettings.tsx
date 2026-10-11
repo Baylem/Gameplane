@@ -44,6 +44,7 @@ import {
 import { MAX_CUSTOM_CSS_LEN, sanitizeCustomCss, type SanitizeResult } from "@/lib/theme-sanitize";
 import { buildThemeExport, validateThemeExport } from "@/lib/theme-export";
 import type { AppearanceMode, CustomColorConfig, ThemePresetId, UserThemePreferences } from "@/types";
+import { useFormat, type FormatApi } from "@/lib/i18n/format";
 
 // Dark-mode accent/surface pair per preset, per contracts/theme-ui.md §3.1
 // and the lWvcv swatch fills.
@@ -106,7 +107,7 @@ function findLine(css: string, re: RegExp): { line: number; text: string } | nul
   return null;
 }
 
-function editorErrorMessage(css: string, result: Extract<SanitizeResult, { ok: false }>): string {
+function editorErrorMessage(css: string, result: Extract<SanitizeResult, { ok: false }>, fmt: FormatApi): string {
   const err = result.error;
   if (err.includes("@import")) {
     const hit = findLine(css, /@import/i);
@@ -124,7 +125,7 @@ function editorErrorMessage(css: string, result: Extract<SanitizeResult, { ok: f
     return "Syntax error: unbalanced braces — every '{' must have a matching '}'.";
   }
   if (err.includes("maximum length")) {
-    return `Custom CSS exceeds the ${MAX_CUSTOM_CSS_LEN.toLocaleString("en-US")}-byte limit.`;
+    return `Custom CSS exceeds the ${fmt.number(MAX_CUSTOM_CSS_LEN)}-byte limit.`;
   }
   if (err.includes("HTML delimiter")) {
     return "HTML <style> and <script> tags are not allowed in custom CSS.";
@@ -147,6 +148,7 @@ function ThemeCard({ title, subtitle, children }: { title: string; subtitle: str
 }
 
 export function ThemeSettingsPage() {
+  const fmt = useFormat();
   const { data: me } = useMe();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -281,7 +283,7 @@ export function ThemeSettingsPage() {
   const cssDraft = draft?.customCss ?? "";
   const cssBytes = utf8Len(cssDraft);
   const cssResult = useMemo(() => sanitizeCustomCss(cssDraft), [cssDraft]);
-  const cssError = cssResult.ok ? null : editorErrorMessage(cssDraft, cssResult);
+  const cssError = cssResult.ok ? null : editorErrorMessage(cssDraft, cssResult, fmt);
 
   // Live preview: the draft applies to the DOM as it changes; applyThemePreferences
   // mounts the custom-color vars and re-appends #gameplane-custom-css last in <head>.
@@ -702,7 +704,7 @@ export function ThemeSettingsPage() {
                   />
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted">
-                      {cssBytes.toLocaleString("en-US")} / {MAX_CUSTOM_CSS_LEN.toLocaleString("en-US")}
+                      {fmt.number(cssBytes)} / {fmt.number(MAX_CUSTOM_CSS_LEN)}
                     </span>
                   </div>
                 </div>
@@ -812,7 +814,7 @@ export function ThemeSettingsPage() {
                     <div className="text-xs text-muted">
                       Custom CSS:{" "}
                       {importPreview.preferences.customCss
-                        ? `${utf8Len(importPreview.preferences.customCss).toLocaleString("en-US")} bytes`
+                        ? `${fmt.number(utf8Len(importPreview.preferences.customCss))} bytes`
                         : "none"}
                     </div>
                     <div className="flex justify-end">
