@@ -19,7 +19,7 @@ All open questions documented here arise from the feature spec (spec.md), CLAUDE
 **Evidence**: 
 - spec.md:46 "maintainer idea: auto fetch latest tag in a ci to auto update the docs for version string?"
 - R1-versions.md shows 4 STALE version strings: docs/install.md:14 (install example), telemetry-receiver/README.md:9 and :28 (example payloads), docs/dependencies.md:26 (snapshot date)
-- SC-005 requirement: /home/user/Gameplane/specs/012-docs-refresh-and-outreach/spec.md:170
+- SC-005 requirement: /home/user/Gameplane/specs/done_012-docs-refresh-and-outreach/spec.md:170
 
 **Options**:
 1. **(a) Release workflow auto-rewrite**: A GitHub Actions step in the release workflow rewrites version strings in docs when a release tag is pushed (e.g., sed replacing old version with new). Pros: automatic, release-time. Cons: script fragility, false positives (example vs. literal).
@@ -545,7 +545,7 @@ Should alt text for live-stream tabs (Console, Logs) explicitly note "mocked dat
 **Blocks**:
 - .github/workflows/screenshot-refresh.yaml amendment (extend to website)
 - web/e2e/specs/websiteScreenshots.spec.ts creation
-- specs/012-docs-refresh-and-outreach amendment (OD-16, FRs, contracts, tasks)
+- specs/done_012-docs-refresh-and-outreach amendment (OD-16, FRs, contracts, tasks)
 
 ---
 
