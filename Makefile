@@ -259,6 +259,12 @@ check-links: ## Verify internal documentation links and anchors resolve
 check-telemetry-catalog: ## Verify telemetryschema/catalog.txt matches the chart's official module list
 	hack/check-telemetry-catalog.sh
 
+.PHONY: i18n-sync
+i18n-sync: ## Write the API message registry into the English reference (i18n/locales/en/app.json)
+	cd api && go run ./cmd/messages-export > ../i18n/.registry.json
+	cd i18n && go run ./cmd/i18n-check --registry .registry.json --sync-server locales
+	rm -f i18n/.registry.json
+
 .PHONY: check-dev-load-images
 check-dev-load-images: ## Verify `dev-load` loads every image `images` builds
 	hack/check-dev-load-images.sh

@@ -1,1 +1,102 @@
-{}
+{
+  "server.already_exists": {
+    "defaultMessage": "already exists",
+    "description": "API error when creating a resource whose name is already taken."
+  },
+  "server.auth.invalid_credentials": {
+    "defaultMessage": "invalid credentials",
+    "description": "Login error. It is generic on purpose, so it never reveals whether an account exists."
+  },
+  "server.bad_request": {
+    "defaultMessage": "bad request",
+    "description": "API error for a malformed request that does not fit a more specific message."
+  },
+  "server.cluster_forbidden": {
+    "defaultMessage": "cluster not permitted",
+    "description": "API error when the ?cluster= query value names a cluster the caller may not use or that is unknown."
+  },
+  "server.conflict_retry": {
+    "defaultMessage": "conflict, retry",
+    "description": "API error when a concurrent write changed the resource; the caller should re-read and retry."
+  },
+  "server.empty_body": {
+    "defaultMessage": "empty body",
+    "description": "API error when a route that expects a JSON body receives none."
+  },
+  "server.forbidden": {
+    "defaultMessage": "forbidden",
+    "description": "API error when the Kubernetes API denies the operation for the API's service identity."
+  },
+  "server.generic.400": {
+    "defaultMessage": "The request was not accepted.",
+    "description": "Generic sentence shown before the detail text for an HTTP 400 response."
+  },
+  "server.generic.401": {
+    "defaultMessage": "You are not signed in.",
+    "description": "Generic sentence shown before the detail text for an HTTP 401 response."
+  },
+  "server.generic.403": {
+    "defaultMessage": "You do not have permission to do this.",
+    "description": "Generic sentence shown before the detail text for an HTTP 403 response."
+  },
+  "server.generic.404": {
+    "defaultMessage": "The requested item was not found.",
+    "description": "Generic sentence shown before the detail text for an HTTP 404 response."
+  },
+  "server.generic.409": {
+    "defaultMessage": "The request conflicts with the current state.",
+    "description": "Generic sentence shown before the detail text for an HTTP 409 response."
+  },
+  "server.generic.413": {
+    "defaultMessage": "The request is too large.",
+    "description": "Generic sentence shown before the detail text for an HTTP 413 response."
+  },
+  "server.generic.422": {
+    "defaultMessage": "The request contains invalid values.",
+    "description": "Generic sentence shown before the detail text for an HTTP 422 response."
+  },
+  "server.generic.429": {
+    "defaultMessage": "Too many requests. Please wait and try again.",
+    "description": "Generic sentence shown before the detail text for an HTTP 429 response."
+  },
+  "server.generic.500": {
+    "defaultMessage": "The server hit an internal error.",
+    "description": "Generic sentence shown before the detail text for an HTTP 500 response."
+  },
+  "server.generic.501": {
+    "defaultMessage": "This is not supported here.",
+    "description": "Generic sentence shown before the detail text for an HTTP 501 response."
+  },
+  "server.generic.502": {
+    "defaultMessage": "An upstream service returned an error.",
+    "description": "Generic sentence shown before the detail text for an HTTP 502 response."
+  },
+  "server.generic.503": {
+    "defaultMessage": "The service is temporarily unavailable.",
+    "description": "Generic sentence shown before the detail text for an HTTP 503 response."
+  },
+  "server.internal": {
+    "defaultMessage": "internal error",
+    "description": "API error for an unexpected server failure. The real error is logged on the server only."
+  },
+  "server.invalid": {
+    "defaultMessage": "{detail}",
+    "description": "API validation error. The argument detail is the validation message from Kubernetes, in English, and describes the caller's input."
+  },
+  "server.namespace_forbidden": {
+    "defaultMessage": "namespace not permitted",
+    "description": "API error when the user's role does not cover the requested namespace."
+  },
+  "server.not_found": {
+    "defaultMessage": "not found",
+    "description": "API error when the requested resource does not exist."
+  },
+  "server.remote_cluster_not_implemented": {
+    "defaultMessage": "not implemented: no cross-cluster agent yet; this route only serves the home cluster",
+    "description": "API response for a home-cluster-only route called with a ?cluster= value that names another cluster. No cross-cluster agent exists yet."
+  },
+  "server.unauthorized": {
+    "defaultMessage": "unauthorized",
+    "description": "API error when the Kubernetes API rejects the credentials used for the operation."
+  }
+}
