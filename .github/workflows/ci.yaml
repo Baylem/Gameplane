@@ -93,6 +93,8 @@ jobs:
       e2e-unit: ${{ steps.scope.outputs.e2e-unit }}
       bot-matrix: ${{ steps.bots.outputs.matrix }}
       capture_overhead: ${{ steps.combine.outputs.capture_overhead }}
+      submodules: ${{ steps.combine.outputs.submodules }}
+      codegen: ${{ steps.combine.outputs.codegen }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -170,6 +172,20 @@ jobs:
               - 'test/e2e/internal/minecraft-java/**'
               - 'test/e2e/capture_overhead_e2e_test.go'
               - 'test/e2e/gameprobe_job.go'
+            # Gate scope for submodule freshness (spec 013 T007).
+            submodules:
+              - 'modules'
+              - 'website'
+            # Gate scope for codegen drift (spec 013 T007).
+            codegen:
+              - 'operator/api/v1alpha1/**'
+              - '**/go.mod'
+              - '**/go.sum'
+              - 'Makefile'
+              - 'hack/sync-chart-crds.sh'
+              - 'operator/config/**'
+              - 'charts/gameplane/crds/**'
+              - 'charts/gameplane/crd-manifests/**'
             ci:
               - '.github/workflows/ci.yaml'
               - '.github/actions/**'
@@ -207,6 +223,10 @@ jobs:
               - 'hack/check-dev-load-images.sh'
               - 'hack/test-up-registry.sh'
               - 'deploy/kind/up.sh'
+              - 'specs/**/coverage-gaps.md'
+              - 'hack/check-coverage-gaps.sh'
+              - 'hack/check-coverage-gaps_test.sh'
+              - 'hack/testdata/coverage-gaps/**'
             docs:
               - 'README.md'
               - 'docs/architecture.md'
@@ -265,6 +285,8 @@ jobs:
           GAMECOVERAGE: ${{ steps.filter.outputs.gamecoverage }}
           CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' }}
           CAPTURE: ${{ steps.filter.outputs.capture_overhead }}
+          SUBMODULES: ${{ steps.filter.outputs.submodules }}
+          CODEGEN: ${{ steps.filter.outputs.codegen }}
           GITHUB: ${{ steps.filter.outputs.github }}
           SPECS: ${{ steps.filter.outputs.specs }}
           DOCS: ${{ steps.filter.outputs.docs }}
@@ -279,6 +301,8 @@ jobs:
           specsv=false; { [ "$SPECS" = true ] || [ "$CI" = true ]; } && specsv=true
           docsv=false; { [ "$DOCS" = true ] || [ "$CI" = true ]; } && docsv=true
           capov=false; { [ "$CAPTURE" = true ] || [ "$CI" = true ]; } && capov=true
+          subv=false; { [ "$SUBMODULES" = true ] || [ "$CI" = true ]; } && subv=true
+          cgv=false; { [ "$CODEGEN" = true ] || [ "$CI" = true ]; } && cgv=true
           # Keep this gate narrow on PRs; KINDSMOKE also enables it for every
           # master push, independently of its file filter.
           ksv=false; [ "$KINDSMOKE" = true ] && ksv=true
@@ -294,6 +318,8 @@ jobs:
             echo "docs=$docsv"
             echo "kindsmoke=$ksv"
             echo "capture_overhead=$capov"
+            echo "submodules=$subv"
+            echo "codegen=$cgv"
           } >> "$GITHUB_OUTPUT"
 
   # Build the operator/api/agent (+ gameprobe) images ONCE and publish them as
@@ -481,6 +507,8 @@ jobs:
         run: make test-doc-versions
       - name: check specs compliance
         run: make check-specs
+      - name: check coverage gap record
+        run: make check-coverage-gaps
       - name: check telemetry catalog
         run: make check-telemetry-catalog
       - name: check dev-load image coverage

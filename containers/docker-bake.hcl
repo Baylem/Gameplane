@@ -1,10 +1,10 @@
 # Bake definition for the e2e images (used by .github/actions/e2e-images).
-# `docker buildx bake --load e2e` builds all seven concurrently —
+# `docker buildx bake --load e2e` builds all ten concurrently —
 # compile steps are independent, so this cuts image-build wall time versus
 # sequential `docker build`s. Tags match what `make e2e-images` produces
 # and what deploy/kind/e2e.sh loads.
 group "e2e" {
-  targets = ["e2e-operator", "e2e-api", "e2e-agent", "e2e-sentinel", "e2e-capture-sidecar", "e2e-telemetry-receiver", "e2e-fakeoidc"]
+  targets = ["e2e-operator", "e2e-api", "e2e-agent", "e2e-sentinel", "e2e-capture-sidecar", "e2e-telemetry-receiver", "e2e-fakeoidc", "e2e-mcp-server", "e2e-audit-syslog-bridge", "e2e-tunnel-frp"]
 }
 
 target "e2e-operator" {
@@ -52,6 +52,37 @@ target "e2e-fakeoidc" {
   context    = "."
   dockerfile = "test/e2e/Dockerfile.fakeoidc"
   tags       = ["gameplane-test/fakeoidc:e2e"]
+}
+
+# The read-only MCP server (spec 013 US3). Built into the base "e2e" group so
+# the MCP e2e bucket finds it loaded in the cluster.
+target "e2e-mcp-server" {
+  context    = "."
+  dockerfile = "mcp-server/Dockerfile"
+  tags       = ["gameplane-test/mcp-server:e2e"]
+}
+
+# The RFC 5424 audit syslog forwarder (spec 013 US5). Base "e2e" group.
+target "e2e-audit-syslog-bridge" {
+  context    = "."
+  dockerfile = "audit-syslog-bridge/Dockerfile"
+  tags       = ["gameplane-test/audit-syslog-bridge:e2e"]
+}
+
+# The FRP relay client used by the tunnel e2e tests (spec 013 US5). Base "e2e" group.
+target "e2e-tunnel-frp" {
+  context    = "."
+  dockerfile = "tunnel/Dockerfile.frp"
+  tags       = ["gameplane-test/tunnel-frp:e2e"]
+}
+
+# The API built with the "postgres" build tag (spec 013 US3). Baked on its own,
+# like gameprobe, so the default e2e group keeps its SQLite-only api image.
+target "e2e-api-postgres" {
+  context    = "."
+  dockerfile = "api/Dockerfile"
+  args       = { GO_TAGS = "postgres" }
+  tags       = ["gameplane-test/api:e2e-postgres"]
 }
 
 # The headless protocol bot the game-bot job runs inside the cluster. It is

@@ -44,7 +44,7 @@ TestOptionalComponents_Lifecycle
 |---|---|
 | `.github/actions/build-e2e-images` | targets `mcp-server`, `audit-syslog-bridge`, `tunnel-frp` (`tunnel/Dockerfile.frp`), `api-postgres` (`GO_TAGS=postgres`) |
 | `.github/actions/e2e-images` | loads those images into kind |
-| `deploy/kind/e2e.sh` image loop (`e2e.sh:166-172`) | `mcp-server`, `audit-syslog-bridge`, `tunnel-frp` added to the loaded set |
+| `deploy/kind/e2e.sh` image loop (`e2e.sh:190-197`) | `mcp-server`, `audit-syslog-bridge`, `tunnel-frp` added to the loaded set |
 | `Makefile` `dev-load` | the same images (enforced by `make check-dev-load-images`) |
 
 ## Live Playwright (`web/e2e/specs/live/`)

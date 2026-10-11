@@ -45,22 +45,22 @@ description: "Task list for 013-expand-test-coverage"
 
 **Purpose**: rebase onto current `master` and create the Coverage Gap Record that every later task updates.
 
-- [ ] T001 Merge `origin/master` into this feature branch with a merge commit (no rebase). Then re-anchor every path in plan.md and contracts/ that `master` moved:
+- [X] T001 Merge `origin/master` into this feature branch with a merge commit (no rebase). Then re-anchor every path in plan.md and contracts/ that `master` moved:
   - `docker-bake.hcl` is now `containers/docker-bake.hcl`
   - `cosign.pub` is now `signing/cosign.pub`
   - `e2e-capture-overhead` is a new job and new `report` member, and is the template for the `e2e-postgres` job in T057
 
   Edit `specs/013-expand-test-coverage/{plan.md,research.md,contracts/e2e-additions.md}` where a cited path or line changed.
-- [ ] T002 Create `specs/013-expand-test-coverage/coverage-gaps.md` using the layout and the 24 seed rows in contracts/coverage-gap-record.md. Fill these rows' Evidence:
+- [X] T002 Create `specs/013-expand-test-coverage/coverage-gaps.md` using the layout and the 24 seed rows in contracts/coverage-gap-record.md. Fill these rows' Evidence:
   - G-12: the `web/e2e/specs/live/*` specs
   - G-17: `TestTelemetryLifecycle` / `e2e telemetry`
   - G-16: Notes say the Tailscale/playit providers need external accounts (research R7)
 
   Fill the Summary and Last updated lines.
-- [ ] T003 [P] Write `hack/check-coverage-gaps.sh`, which validates a gap-record file (default `specs/013-expand-test-coverage/coverage-gaps.md`, overridable with `COVERAGE_GAPS_FILE`) against rules 1–8 of contracts/coverage-gap-record.md. It exits non-zero with a `file:line` message per violation.
-- [ ] T004 [P] Add the fixtures `hack/testdata/coverage-gaps/pass/ok.md` and `hack/testdata/coverage-gaps/fail/{bad-status,closed-no-evidence,wrong-summary,unproven-no-ruling}.md`.
-- [ ] T005 Write `hack/check-coverage-gaps_test.sh`. It must fail unless every `fail/*.md` is rejected and `pass/ok.md` is accepted (depends on T003, T004).
-- [ ] T006 Add a `check-coverage-gaps` target (running both scripts) to `Makefile`, include it in the `lint:` prerequisites, and add a `run: make check-coverage-gaps` step to the `docs` job in `.github/workflows/ci.yaml`, next to `make check-specs`.
+- [X] T003 [P] Write `hack/check-coverage-gaps.sh`, which validates a gap-record file (default `specs/013-expand-test-coverage/coverage-gaps.md`, overridable with `COVERAGE_GAPS_FILE`) against rules 1–8 of contracts/coverage-gap-record.md. It exits non-zero with a `file:line` message per violation.
+- [X] T004 [P] Add the fixtures `hack/testdata/coverage-gaps/pass/ok.md` and `hack/testdata/coverage-gaps/fail/{bad-status,closed-no-evidence,wrong-summary,unproven-no-ruling}.md`.
+- [X] T005 Write `hack/check-coverage-gaps_test.sh`. It must fail unless every `fail/*.md` is rejected and `pass/ok.md` is accepted (depends on T003, T004).
+- [X] T006 Add a `check-coverage-gaps` target (running both scripts) to `Makefile`, include it in the `lint:` prerequisites, and add a `run: make check-coverage-gaps` step to the `docs` job in `.github/workflows/ci.yaml`, next to `make check-specs`.
 
 **Checkpoint**: the gap record exists, is validated in CI, and is proven able to fail.
 
@@ -72,24 +72,24 @@ description: "Task list for 013-expand-test-coverage"
 
 **⚠️** T007–T011 must land before T029 (Trivy), Phase 5 and Phase 7.
 
-- [ ] T007 Add two filters and outputs to the `changes` job's paths filter in `.github/workflows/ci.yaml`. Follow the `capture_overhead` filter added on `master` as the pattern.
+- [X] T007 Add two filters and outputs to the `changes` job's paths filter in `.github/workflows/ci.yaml`. Follow the `capture_overhead` filter added on `master` as the pattern.
   - `submodules`: paths `modules` and `website`
   - `codegen`: paths `operator/api/v1alpha1/**`, `**/go.mod`, `**/go.sum`, `Makefile`, `hack/sync-chart-crds.sh`, `operator/config/**`, `charts/gameplane/crds/**`, `charts/gameplane/crd-manifests/**`
-- [ ] T008 [P] Add `ARG GO_TAGS=""` to `api/Dockerfile` and pass it as `-tags "${GO_TAGS}"` on the existing `go build` line. The default empty value must leave the build unchanged (contracts/e2e-additions.md, "Job e2e-postgres").
-- [ ] T009 Add four targets to `containers/docker-bake.hcl`, all tagged `gameplane-test/<name>:e2e` like the existing targets:
+- [X] T008 [P] Add `ARG GO_TAGS=""` to `api/Dockerfile` and pass it as `-tags "${GO_TAGS}"` on the existing `go build` line. The default empty value must leave the build unchanged (contracts/e2e-additions.md, "Job e2e-postgres").
+- [X] T009 Add four targets to `containers/docker-bake.hcl`, all tagged `gameplane-test/<name>:e2e` like the existing targets:
   - `e2e-mcp-server` (`mcp-server/Dockerfile`)
   - `e2e-audit-syslog-bridge` (`audit-syslog-bridge/Dockerfile`)
   - `e2e-tunnel-frp` (`tunnel/Dockerfile.frp`)
   - `e2e-api-postgres` (`api/Dockerfile`, `args = { GO_TAGS = "postgres" }`, tag `gameplane-test/api:e2e-postgres`)
 
   Add the first three to `group "e2e"`. Leave `e2e-api-postgres` out of the group; it is baked on its own in T010. Depends on T008.
-- [ ] T010 Update `.github/actions/build-e2e-images/action.yml`:
+- [X] T010 Update `.github/actions/build-e2e-images/action.yml`:
   - extend the step name and `docker save` list with the three new `e2e` group images
   - add a separate `bake` step for `e2e-api-postgres` (amd64 inputs only, same pattern as the `e2e-gameprobe` step)
   - save the result into the same tar
 
   Depends on T009.
-- [ ] T011 Extend the image loop in `deploy/kind/e2e.sh` (the `loading gameplane-test/{…}` block) with `mcp-server`, `audit-syslog-bridge` and `tunnel-frp`. Confirm with `make -n dev-load` that `make check-dev-load-images` still holds: `dev-load` already iterates `ALL_IMAGE_NAMES`, so no Makefile change is expected.
+- [X] T011 Extend the image loop in `deploy/kind/e2e.sh` (the `loading gameplane-test/{…}` block) with `mcp-server`, `audit-syslog-bridge` and `tunnel-frp`. Confirm with `make -n dev-load` that `make check-dev-load-images` still holds: `dev-load` already iterates `ALL_IMAGE_NAMES`, so no Makefile change is expected.
 
 **Checkpoint**: the e2e image artifact carries every image the later phases scan or deploy.
 
