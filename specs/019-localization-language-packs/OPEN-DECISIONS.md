@@ -1,8 +1,8 @@
 # Open Decisions: App Localization & Community Language Packs
 
-These values are unsettled. They are not contracts; resolve them during `/speckit-clarify` or `/speckit-plan`.
+All four decisions below were settled by valgul on 2026-10-10 and are recorded in spec.md (Clarifications, Session 2026-10-10).
 
-## OD-001: Which pilot language ships at launch — OPEN
+## OD-001: Which pilot language ships at launch — RESOLVED: French (valgul, 2026-10-10)
 
 At launch, Gameplane must ship English plus one pilot language that is 100% complete for dashboard text, server messages, and the three reference modules (Minecraft Java, Terraria, Valheim). The user confirmed the 2-language strategy on 2026-09-23 but did not specify which language to choose.
 
@@ -14,7 +14,7 @@ Options and constraints:
 
 Affects: FR-037, SC-002
 
-## OD-002: Which community translation site — OPEN (planning)
+## OD-002: Which community translation site — RESOLVED: Hosted Weblate (valgul, 2026-10-10)
 
 The system must support two contribution paths: file-based pull requests and a web-based community translation site where translators work in the browser. The specific translation site service is not yet chosen.
 
@@ -30,7 +30,7 @@ The site must:
 
 Affects: FR-020, US3
 
-## OD-003: Minimum completeness threshold for language listing (default assumed 50%) — OPEN
+## OD-003: Minimum completeness threshold for language listing — RESOLVED: 80% (valgul, 2026-10-10)
 
 Languages below a certain completeness threshold must not be offered to end users, though they remain available to translators for continued work. The default assumption is 50% completeness.
 
@@ -43,7 +43,7 @@ Options and constraints:
 
 Affects: FR-017
 
-## OD-004: Notification destination language — per-destination or instance-wide only? (default assumed per-destination) — OPEN
+## OD-004: Notification destination language — RESOLVED: per-destination (valgul, 2026-10-10)
 
 Notifications are sent to multiple destinations (Discord, email, webhooks, and others), each of which could have its own language preference, or all could use a single instance-wide language.
 
