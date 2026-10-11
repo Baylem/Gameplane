@@ -2,7 +2,7 @@
 
 **Feature**: `015-top-steam-game-modules`  
 **Status**: Authoritative Reference for Phase 3-7 Implementation  
-**Dependencies**: Derived from `specs/015-top-steam-game-modules/contracts/engine-matrix-contract.md` (T009) and `specs/015-top-steam-game-modules/OPEN-DECISIONS.md` (T005, T012).
+**Dependencies**: Derived from `specs/done_015-top-steam-game-modules/contracts/engine-matrix-contract.md` (T009) and `specs/done_015-top-steam-game-modules/OPEN-DECISIONS.md` (T005, T012).
 
 ---
 

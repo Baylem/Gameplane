@@ -2,7 +2,7 @@
 
 **Branch**: `015-top-steam-game-modules` | **Date**: 2026-09-03 (refreshed 2026-10-09 to match shipped scope) | **Spec**: [./spec.md](./spec.md)
 
-**Input**: Feature specification from `specs/015-top-steam-game-modules/spec.md`
+**Input**: Feature specification from `specs/done_015-top-steam-game-modules/spec.md`
 
 ## Summary
 
@@ -63,7 +63,7 @@ Unresolved questions and per-module findings are tracked in [OPEN-DECISIONS.md](
 ### Documentation (this feature)
 
 ```text
-specs/015-top-steam-game-modules/
+specs/done_015-top-steam-game-modules/
 ├── spec.md                      # Feature specification
 ├── plan.md                      # This file
 ├── research.md                  # Phase 0: engine matrix and key decisions
