@@ -360,7 +360,7 @@ func (p *parser) parseTag(c ctx) (Node, error) {
 // '_' and, when dashes is true, '-'. Returns ok=false when none is present.
 func (p *parser) parseName(dashes bool) (string, bool) {
 	start := p.pos
-	if p.pos >= len(p.s) || !(isLetter(p.s[p.pos]) || p.s[p.pos] == '_') {
+	if p.pos >= len(p.s) || (!isLetter(p.s[p.pos]) && p.s[p.pos] != '_') {
 		return "", false
 	}
 	p.pos++

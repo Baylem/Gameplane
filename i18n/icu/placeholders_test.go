@@ -24,7 +24,7 @@ func TestArguments(t *testing.T) {
 				t.Fatalf("Parse: %v", err)
 			}
 			got := SortedKeys(Arguments(m))
-			if !reflect.DeepEqual(got, tt.want) && !(len(got) == 0 && len(tt.want) == 0) {
+			if !reflect.DeepEqual(got, tt.want) && (len(got) != 0 || len(tt.want) != 0) {
 				t.Fatalf("Arguments() = %v, want %v", got, tt.want)
 			}
 		})
@@ -49,7 +49,7 @@ func TestTags(t *testing.T) {
 				t.Fatalf("Parse: %v", err)
 			}
 			got := SortedKeys(Tags(m))
-			if !reflect.DeepEqual(got, tt.want) && !(len(got) == 0 && len(tt.want) == 0) {
+			if !reflect.DeepEqual(got, tt.want) && (len(got) != 0 || len(tt.want) != 0) {
 				t.Fatalf("Tags() = %v, want %v", got, tt.want)
 			}
 		})

@@ -346,9 +346,23 @@ func stampTranslations(ref map[string]pack.Entry, trs []translation) error {
 		if err != nil {
 			return fmt.Errorf("stamp %s: %w", tr.tag, err)
 		}
-		if err := os.WriteFile(filepath.Join(tr.dir, "app.json"), data, 0o600); err != nil {
+		if err := writeInDir(tr.dir, "app.json", data); err != nil {
 			return fmt.Errorf("write stamped %s/app.json: %w", tr.tag, err)
 		}
+	}
+	return nil
+}
+
+// writeInDir writes name inside dir through an os.Root, so the write cannot
+// escape dir whatever the directory listing or flags contained.
+func writeInDir(dir, name string, data []byte) error {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", dir, err)
+	}
+	defer func() { _ = root.Close() }()
+	if err := root.WriteFile(name, data, 0o600); err != nil {
+		return fmt.Errorf("write %s: %w", name, err)
 	}
 	return nil
 }
@@ -366,7 +380,7 @@ func syncServer(path string, ref, registry map[string]pack.Entry) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	if err := writeInDir(filepath.Dir(path), filepath.Base(path), data); err != nil {
 		return fmt.Errorf("write reference: %w", err)
 	}
 	return nil
