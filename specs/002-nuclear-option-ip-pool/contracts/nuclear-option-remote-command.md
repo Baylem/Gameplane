@@ -332,7 +332,7 @@ Consequences: (1) status 2000 does not mean the action worked: `send-chat-messag
     "faction": "Boscali"
 }
 ```
-However, **this per-entry schema remains UNVERIFIED**. The wrapper key `"Players"` (capital P) is confirmed (re-confirmed 2026-10-11, status 2000, `{"Players":[]}`, 14 bytes); the per-entry contents are not. Not observed on 2026-10-11 either: no game client was available to connect a player, and the join test is withdrawn (spec FR-004 amendment). The exact field set stays UNVERIFIED until a player connects.
+However, **this per-entry schema remains UNVERIFIED**. The wrapper key `"Players"` (capital P) is confirmed (re-confirmed 2026-10-11, status 2000, `{"Players":[]}`, 14 bytes); the per-entry contents are not. Not observed on 2026-10-11 either: no game client was available to connect a player, and the join test is skipped awaiting a packet capture (spec FR-004 amendment). The exact field set stays UNVERIFIED until a player connects.
 
 **RESOLVED — display names are hydrated outside this protocol**: Spec 002 FR-007 and User Story 3 AC1 promise a player list with display names in the dashboard. Those requirements **stand as written and are not amended**. This protocol cannot supply display names, and it is not being extended to do so: the resolution is a Steam Web API display-name lookup performed in the **API server** (`api/internal/...`), layered on top of the wire response. The question is closed; no further spec-owner decision is pending.
 
