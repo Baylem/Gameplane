@@ -153,12 +153,12 @@ description: "Task list for 013-expand-test-coverage"
 
 ### G3 hadolint: PR `ci: dockerfile lint gate`
 
-- [ ] T022 [P] [US1] Create `.hadolint.yaml` containing only `failure-threshold: warning`: no `trustedRegistries` (OD-2) and no `ignored:` list.
-- [ ] T023 [P] [US1] Add fixtures:
+- [X] T022 [P] [US1] Create `.hadolint.yaml` containing only `failure-threshold: warning`: no `trustedRegistries` (OD-2) and no `ignored:` list.
+- [X] T023 [P] [US1] Add fixtures:
   - `hack/testdata/hadolint/fail/Dockerfile`: `FROM alpine` with no tag or digest, `RUN apk add curl` without `--no-cache`, `ADD https://example.invalid/x /x`, and `USER` absent
   - `hack/testdata/hadolint/pass/Dockerfile`: a digest-pinned distroless `FROM`, `COPY` only, `USER nonroot`
-- [ ] T024 [US1] Write `hack/check-hadolint_test.sh`, which expects a failure on `fail/Dockerfile` and a success on `pass/Dockerfile`, both with `--config .hadolint.yaml`. Depends on T022 and T023.
-- [ ] T025 [US1] Add steps to the existing `workflow-lint` job in `.github/workflows/ci.yaml`:
+- [X] T024 [US1] Write `hack/check-hadolint_test.sh`, which expects a failure on `fail/Dockerfile` and a success on `pass/Dockerfile`, both with `--config .hadolint.yaml`. Depends on T022 and T023.
+- [X] T025 [US1] Add steps to the existing `workflow-lint` job in `.github/workflows/ci.yaml`:
   1. Download hadolint, pinned to a release tag, using the actionlint pattern: `curl -fsSL -o` plus a `sha256sum -c` against a committed hash.
   2. Run `hadolint --config .hadolint.yaml $(git ls-files '*Dockerfile*' ':!:hack/testdata/**' ':!:*.dockerignore')`.
   3. Run `./hack/check-hadolint_test.sh`.
