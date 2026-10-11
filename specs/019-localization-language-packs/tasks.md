@@ -88,21 +88,21 @@ description: "Task list for 019 App Localization & Community Language Packs"
 ### Tests for User Story 1
 
 - [ ] T035 [P] [US1] Go API E2E `test/e2e/i18n_language_pref_e2e_test.go`: `PUT /api/v1/users/me/language` `fr` → `GET /users/me/preferences` returns `language: "fr"`; `null` clears; unknown tag → 400 with `server.i18n.unknown_language` problem body; register in `test/e2e/buckets.sh` (bucket `api-auth`, respect its login budget)
-- [ ] T036 [P] [US1] Go API E2E `test/e2e/i18n_auth_locale_e2e_test.go`: unauthenticated `GET /auth/locale` returns exactly `{"defaultLanguage": …}` and no other keys (rule 3); register in `test/e2e/buckets.sh`
+- [X] T036 [P] [US1] Go API E2E `test/e2e/i18n_auth_locale_e2e_test.go`: unauthenticated `GET /auth/locale` returns exactly `{"defaultLanguage": …}` and no other keys (rule 3); register in `test/e2e/buckets.sh`
 - [ ] T037 [P] [US1] Playwright `web/e2e/specs/live/i18n.spec.ts`: switch to French in personal settings with create-server dialog open and a typed name (kept, no reload, `<html lang="fr">`), reload and second browser context keep French with no English flash, login and share pages offer a picker remembered per browser, 0%-fixture language shows English everywhere (SC-008)
 
 ### Implementation for User Story 1
 
-- [ ] T038 [P] [US1] Migration `api/internal/db/migrations/common/016_user_language.sql`: `ALTER TABLE user_preferences ADD COLUMN language TEXT;` (portable, per `api/internal/db/migrations/README.md`)
-- [ ] T039 [US1] Add `Language *string` to `UserPreferences` and `SetLanguage(ctx, userID, *string)` (upsert keeping other columns / defaults) in `api/internal/db/preferences.go`; tests in `api/internal/db/preferences_test.go`
-- [ ] T040 [US1] Add `PUT /me/language` and `language` in `GET /me/preferences` in `api/internal/handlers/users.go` per contracts/i18n-api.md §1 (validate against `i18n/catalog.Listed()`, the same predicate as the picker; unknown or unlisted tag → `server.i18n.unknown_language`; handler test covers a shipped-but-unlisted tag); register the new message id in `api/internal/messages/messages.go`; handler tests `api/internal/handlers/users_language_test.go`
-- [ ] T041 [US1] Add `GET /auth/locale` in `api/internal/handlers/auth_providers.go`, mounted in the `/auth` route group of `api/cmd/main.go`, returning only `defaultLanguage` from config section `i18n` (absent → `en`); tests in `api/internal/handlers/auth_providers_test.go`
-- [ ] T042 [US1] Add `Users.setLanguage` and `Auth.locale` client methods in `web/src/lib/endpoints.ts`, `language` on the preferences type in `web/src/types.ts`; hydrate the user's language in `useMe()` so the shell renders only after it is known (US1 AS2)
+- [X] T038 [P] [US1] Migration `api/internal/db/migrations/common/016_user_language.sql`: `ALTER TABLE user_preferences ADD COLUMN language TEXT;` (portable, per `api/internal/db/migrations/README.md`)
+- [X] T039 [US1] Add `Language *string` to `UserPreferences` and `SetLanguage(ctx, userID, *string)` (upsert keeping other columns / defaults) in `api/internal/db/preferences.go`; tests in `api/internal/db/preferences_test.go`
+- [X] T040 [US1] Add `PUT /me/language` and `language` in `GET /me/preferences` in `api/internal/handlers/users.go` per contracts/i18n-api.md §1 (validate against `i18n/catalog.Listed()`, the same predicate as the picker; unknown or unlisted tag → `server.i18n.unknown_language`; handler test covers a shipped-but-unlisted tag); register the new message id in `api/internal/messages/messages.go`; handler tests `api/internal/handlers/users_language_test.go`
+- [X] T041 [US1] Add `GET /auth/locale` in `api/internal/handlers/auth_providers.go`, mounted in the `/auth` route group of `api/cmd/main.go`, returning only `defaultLanguage` from config section `i18n` (absent → `en`); tests in `api/internal/handlers/auth_providers_test.go`
+- [X] T042 [US1] Add `Users.setLanguage` and `Auth.locale` client methods in `web/src/lib/endpoints.ts`, `language` on the preferences type in `web/src/types.ts`; hydrate the user's language in `useMe()` so the shell renders only after it is known (US1 AS2)
 - [ ] T043 [US1] DESIGN (local machine, Pencil MCP): add to `design.pen` a Language section in personal settings (native names + completeness, current choice), a compact language picker for `/login` and `/share/*` (no internal info), and a mobile variant; export touched nodes to `assets/design-export/json/<id>.json` and `assets/design-export/screenshots/<id>.png` (design-export skill)
 - [ ] T044 [US1] Implement the personal-settings language section (component `web/src/components/settings/LanguagePicker.tsx`, mounted in `web/src/routes/ThemeSettings.tsx` settings page per the T043 design) calling `Users.setLanguage`, listing only `listed` languages from `languages.json`; tests `LanguagePicker.test.tsx`
 - [ ] T045 [US1] Add the browser-local picker to `web/src/routes/Login.tsx` and `web/src/routes/Share.tsx` (writes `gameplane-language.choice`, reads `Auth.locale` for the default); tests in `Login.test.tsx`, `Share.test.tsx`
-- [ ] T046 [US1] Add the `0%` fixture language behind `VITE_I18N_FIXTURES=1` in the build step of `web/vite.config.ts` (never in release `languages.json`) for SC-008 tests
-- [ ] T047 [US1] Update `web/specs.md` and `api/specs.md` (language resolution, endpoints, boot snippet, problem+json)
+- [X] T046 [US1] Add the `0%` fixture language behind `VITE_I18N_FIXTURES=1` in the build step of `web/vite.config.ts` (never in release `languages.json`) for SC-008 tests
+- [X] T047 [US1] Update `web/specs.md` and `api/specs.md` (language resolution, endpoints, boot snippet, problem+json)
 
 **Checkpoint**: Picker works with English + any listed pack; strings migrate in US4.
 
@@ -227,7 +227,7 @@ description: "Task list for 019 App Localization & Community Language Packs"
 **Independent Test**: quickstart.md scenario 4.
 
 - [ ] T092 [P] [US7] Go API E2E `test/e2e/i18n_instance_default_e2e_test.go`: `PUT /api/v1/admin/config/i18n` `{defaultLanguage:"fr"}` → `GET /auth/locale` returns `fr`; unlisted tag → 400 `server.i18n.unlisted_language`; non-admin → 403; register in `test/e2e/buckets.sh`
-- [ ] T093 [US7] Add config section `i18n` with `validateI18n` (listed languages only) to the validators map in `api/internal/handlers/config.go`; register `server.i18n.unlisted_language`; tests `config_validators_test.go`
+- [X] T093 [US7] Add config section `i18n` with `validateI18n` (listed languages only) to the validators map in `api/internal/handlers/config.go`; register `server.i18n.unlisted_language`; tests `config_validators_test.go`
 - [ ] T094 [US7] DESIGN (local machine, Pencil MCP): add a Default language field to admin settings in `design.pen`; export touched nodes to `assets/design-export/`
 - [ ] T095 [US7] Implement the Default language field in `web/src/routes/AdminSettings.tsx` per T094; tests `AdminSettings_sections.test.tsx`
 
