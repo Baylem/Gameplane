@@ -100,7 +100,7 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 - [ ] T027 [US1] In `.github/workflows/ci.yaml`, fold the four e2e booleans from T023 into the gates of `e2e-multicluster*`, `e2e-upgrade*`, `e2e-web-live*` and `e2e-capture-overhead`, and gate `e2e-game-bot` on `bots-any`
 - [ ] T028 [US1] Extend the `selection` records (T010) with the per-bucket and per-test decisions and reasons from T023
 - [ ] T029 [US1] Compile checks only: `python3 -m py_compile hack/ci_scope.py`, `go vet -tags e2e ./...` in `test/e2e`; open PR 2 with labels `type: ci`, `area: shared`, `area: e2e`
-- [ ] T030 [US1] After PR 2 merges, record in `specs/023-change-based-test-selection/validation.md` the selection summary and wall time of the next real PRs that match quickstart scenarios 1–4 and 12 (no throwaway draft PRs, OD-11)
+- [ ] T030 [US1] Run quickstart scenarios 1–4 and 12 as draft PRs based on PR 2's branch, record the summaries and wall times in `specs/023-change-based-test-selection/validation.md`, close the draft PRs and delete their branches
 
 **Checkpoint**: MVP. A single-component PR boots only its suites (SC-001).
 
@@ -127,7 +127,7 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 - [ ] T038 [US2] In the `web` job of `.github/workflows/ci.yaml` (lines ~676-733), keep `npm run lint` and `npm run build`; on partial scope with a file list run `npx vitest related --run --coverage --coverage.thresholds.lines=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --coverage.thresholds.statements=0 <files>` then `hack/check_changed_coverage.py --vitest-json web/coverage/coverage-final.json`; otherwise run `npm run test:cover` unchanged. `web-e2e-mock` stays whole (OD-9)
 - [ ] T039 [US2] Extend the `selection` records with per-module package counts and the web related-file count
 - [ ] T040 [US2] Compile checks only; open PR 3 with labels `type: ci`, `area: shared`, `area: web`
-- [ ] T041 [US2] After PR 3 merges, record in `validation.md` the selection summary of the next real PRs that match quickstart scenarios 5, 7 and 8 (no throwaway draft PRs, OD-11)
+- [ ] T041 [US2] Run quickstart scenarios 5–8 as draft PRs on PR 3's branch, record results in `validation.md`, close them and delete their branches
 
 **Checkpoint**: unit selection and changed-lines coverage work; full runs keep module gates.
 
@@ -149,7 +149,7 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 - [ ] T044 [US3] In `hack/ci_scope.py`, narrow the shared-file list per OD-3: remove `.github/` and `.golangci.yml` from the force-all set, map them per research R8, keep `hack/ci_scope*`, `hack/check_changed_coverage.py`, `Makefile`, `go.work*`, `.github/actions/**`, `test/e2e/buckets.sh`, `test/e2e/suite-components.json` as force-all
 - [ ] T045 [US3] In `.github/workflows/ci.yaml`, OR each job's existing gate with `contains(fromJSON(needs.changes.outputs.ci-jobs), '<job-id>')`, keeping `workflow-lint` selected for any `.github/` change
 - [ ] T046 [US3] Compile checks only; open PR 4 with labels `type: ci`, `area: shared`
-- [ ] T047 [US3] After PR 4 merges, record in `validation.md` the selection summary of the next real PRs that match quickstart scenarios 9–11, with runner-minutes for scenario 9 (SC-003) (no throwaway draft PRs, OD-11)
+- [ ] T047 [US3] Run quickstart scenarios 9–11 as draft PRs on PR 4's branch, record runner-minutes for scenario 9 (SC-003) in `validation.md`, close them and delete their branches
 
 **Checkpoint**: all four stories work independently.
 
@@ -202,7 +202,7 @@ Review (sonnet): one reviewer on the combined git diff against the scout brief a
 ### MVP first
 
 1. Phases 1–3 (PR 1): visibility only, zero behaviour change.
-2. Phase 4 (PR 2): e2e selection, the largest saving. It is proven by `TestCISelection_*` in its own CI run, then observed on real PRs (quickstart 1–4, 12).
+2. Phase 4 (PR 2): e2e selection, the largest saving. Stop and validate with quickstart 1–4 and 12.
 
 ### Incremental delivery
 
@@ -212,4 +212,4 @@ PR 3 (unit selection), PR 4 (CI-config mapping) and PR 5 (docs) each add value a
 
 - `bot-heavy` is mapped in `suite-components.json` for completeness but still never runs in CI (unchanged).
 - `telemetry-default-gate` missing from `report.needs` (research R11) is out of scope here.
-- No throwaway draft PRs are opened (OD-11); scenarios are proven by `TestCISelection_*` and `hack/test_ci_scope.py`, then observed on real PRs.
+- Each draft PR from a quickstart scenario is closed and its branch deleted after its result is recorded; none is merged.

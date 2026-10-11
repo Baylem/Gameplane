@@ -15,6 +15,6 @@ OD-7 (FR-007): a PR forces the full suite with the label `ci: full-run` (read on
 OD-8 (plan R4): Go package dependencies are found by scanning import lines in `ci_scope.py`; the `changes` job stays Go-free.
 OD-9 (plan R6, R7): on partial runs only Vitest is narrowed (`vitest related`); ESLint, the `tsc` build and the Playwright mock suite run whole whenever web is selected.
 OD-10 (plan Phasing): rollout is five PRs: summary table, e2e selection, unit selection, CI-config mapping, docs.
-OD-11 (tasks T030, T041, T047; quickstart): no throwaway draft PRs. Each scenario is covered by `TestCISelection_*` and `hack/test_ci_scope.py`, then confirmed on the next real PRs after merge.
+OD-11 (tasks T030, T041, T047; quickstart): keep the throwaway draft PRs from quickstart.md, including scenario 6's deliberate compile error. valgul confirmed this twice on 2026-10-11 as an explicit exception to his no-demo-PR rule, for spec 023 only.
 
 No open decisions remain.
