@@ -16,4 +16,5 @@ OD-8 (plan R4): Go package dependencies are found by scanning import lines in `c
 OD-9 (plan R6, R7): on partial runs only Vitest is narrowed (`vitest related`); ESLint, the `tsc` build and the Playwright mock suite run whole whenever web is selected.
 OD-10 (plan Phasing): rollout is five PRs: summary table, e2e selection, unit selection, CI-config mapping, docs.
 
-No open decisions remain.
+## OD-11 (tasks T030, T041, T047; quickstart): how selection is validated — **Open**
+quickstart.md plans about 12 throwaway draft PRs (one with a deliberate compile error), which conflicts with valgul's 2026-10-11 rule against demo PRs that prove CI behaviour. Options: (a) drop them; scenarios are covered by `TestCISelection_*` and `hack/test_ci_scope.py`, then checked on the next real PRs after merge; (b) keep the draft PRs. Recommended: (a).
