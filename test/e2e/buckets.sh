@@ -278,7 +278,6 @@ EOF
 #   TestGameServer_EuroTruckSimulator2Bot_Query: 5Gi storage + SteamCMD download (exceeds runner disk)
 #   TestGameServer_FarmingSimulator25Bot_Query: 20Gi storage + Wine/Xvfb overhead (exceeds runner disk)
 #   TestGameServer_FiveMBot_Query: 10Gi storage + embedded txAdmin database (exceeds runner disk)
-#   TestGameServer_HellLetLooseBot_Query: 30Gi storage + SteamCMD download (exceeds runner disk)
 #   TestGameServer_Left4Dead2Bot_Query: 15Gi storage + SteamCMD download (exceeds runner disk)
 #   TestGameServer_MountAndBlade2BannerlordBot_Query: 15Gi storage + SteamCMD download (exceeds runner disk)
 #   TestGameServer_SquadBot_Query: 40Gi storage + SteamCMD download (exceeds runner disk)
@@ -301,7 +300,6 @@ TestGameServer_FactorioBot_Query
 TestGameServer_FarmingSimulator25Bot_Query
 TestGameServer_FiveMBot_Query
 TestGameServer_FiveM_Persistence
-TestGameServer_HellLetLooseBot_Query
 TestGameServer_Left4Dead2Bot_Query
 TestGameServer_MountAndBlade2BannerlordBot_Query
 TestGameServer_PalworldBot_Query

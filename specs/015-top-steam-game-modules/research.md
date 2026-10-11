@@ -38,7 +38,7 @@ This research defines the architectural foundation, container configurations, pr
 | 22 | `the-isle` | The Isle | 412680 | Unreal Engine 4/5 (Linux) | 7777 UDP (Game), 7778 UDP (Query), 8888 TCP (RCON) | Source RCON | Steam Workshop / `Game.ini` |
 | 23 | `ark-survival-evolved` | ARK: Survival Evolved | 376030 | Unreal Engine 4 (Linux) | 7777-7778 UDP (Game/Raw), 27015 UDP (Query), 27020 TCP (RCON) | Source RCON | Steam Workshop / Cluster sync |
 | 24 | `arma-reforger` | Arma Reforger | 1874900 | Enfusion (Linux) | 2001 UDP (Game), 17777 UDP (Query) | Stdin CLI / Bohemia API | Bohemia Interactive Workshop |
-| 25 | `hell-let-loose` | Hell Let Loose | 731790 | Unreal Engine 4 (Linux) | 7787 UDP (Game), 27165 UDP (Query), 22222 TCP (RCON) | UE4 RCON Protocol | Community Maps / Vietnam Preset |
+| 25 | `hell-let-loose` | Hell Let Loose | 731790 | Unreal Engine 4 (Linux) | 7787 UDP (Game), 27165 UDP (Query), 22222 TCP (RCON) | UE4 RCON Protocol | Community Maps / Vietnam Preset **Withdrawn 2026-10-11** (OPEN-DECISIONS.md §10). |
 | 26 | `squad` | Squad | 403240 | Unreal Engine 4 (Linux) | 7787 UDP (Game), 27165 UDP (Query), 21114 TCP (RCON) | Squad RCON Protocol | Steam Workshop / `Admins.cfg` |
 
 ---

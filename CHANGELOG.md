@@ -128,6 +128,13 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
   per-server `<gameserver>-rcon` Secret, mounts nothing for the
   agent and injects no password environment variable.
 
+### Removed
+
+- **Hell Let Loose module:** `hell-let-loose` is withdrawn from the
+  official catalog. Its dedicated-server files are distributed only to
+  Team17's licensed hosting partners, so no public image can install it.
+  Its hand-run e2e test and probe package are removed with it.
+
 ## [0.3.0] — 2026-10-05
 
 The first Gameplane release without a pre-release suffix, a pre-v1 release. It

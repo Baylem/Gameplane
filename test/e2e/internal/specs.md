@@ -305,7 +305,7 @@ The `buckets.sh verify` step fails CI if any test is unbucketed or double-bucket
 ### Per-game depth table
 
 The canonical, up-to-date per-game join-protocol coverage table — covering
-all 29 probe packages under `internal/` (30 modules including
+all 28 probe packages under `internal/` (29 modules including
 `nuclear-option`, which has no probe package yet) — lives in
 [`docs/game-coverage.md`](../../../docs/game-coverage.md). It lists each
 module's transport, status, depth, test name, bucket, last-verified date and

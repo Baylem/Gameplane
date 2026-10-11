@@ -32,7 +32,6 @@ Every Gameplane-shipped game module is listed here with its join-protocol covera
 | `the-isle` | The Isle | blocked-doc | QUERY | TestGameServer_TheIsleBot_Query | bot-heavy | — | Unreal Engine 4 network protocol variant partially documented; stateless connect handshake requires packet capture | documentation |
 | `ark-survival-evolved` | ARK: Survival Evolved | blocked-doc | QUERY | TestGameServer_ArkSurvivalEvolvedBot_Query | bot-heavy | — | Unreal Engine 4 custom net driver; A2S query verified but ShooterGame client login handshake requires reverse-engineering | documentation |
 | `arma-reforger` | Arma Reforger | blocked-doc | QUERY | TestGameServer_ArmaReforgerBot_Query | bot-heavy | — | Bohemia Interactive Enfusion engine proprietary network protocol; A2S query verified but backend authentication format undocumented | documentation |
-| `hell-let-loose` | Hell Let Loose | blocked-doc | QUERY | TestGameServer_HellLetLooseBot_Query | bot-heavy | — | Unreal Engine 4 network stack; Steam query verified but join handshake and Easy Anti-Cheat integration require reverse-engineering | documentation |
 | `squad` | Squad | blocked-doc | QUERY | TestGameServer_SquadBot_Query | bot-heavy | — | Unreal Engine 4 network stack; Steam A2S query verified but client connection handshake format undocumented | documentation |
 
 ## Covered (in CI)
@@ -75,7 +74,6 @@ These modules lack a join-protocol client. The reason is documented as temporary
 - **the-isle**: Unreal Engine 4 network protocol variant partially documented. Stateless connect handshake requires packet capture.
 - **ark-survival-evolved**: Unreal Engine 4 custom net driver. A2S query verified but ShooterGame client login handshake requires reverse-engineering.
 - **arma-reforger**: Bohemia Interactive Enfusion engine proprietary network protocol. A2S query verified but backend authentication format is undocumented.
-- **hell-let-loose**: Unreal Engine 4 network stack. Steam query verified but join handshake and Easy Anti-Cheat integration require reverse-engineering.
 - **squad**: Unreal Engine 4 network stack. Steam A2S query verified but client connection handshake format is undocumented.
 
 ## Out of Scope by Design
