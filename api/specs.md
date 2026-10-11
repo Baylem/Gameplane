@@ -95,6 +95,7 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 
 **Public (pre-auth):**
 - `/auth/providers` — GET: list enabled login methods (no version/host/count, login privacy)
+- `/auth/locale` — GET: the instance default language tag for the login page, `{"defaultLanguage": "<tag>"}` and nothing else (spec 019; see [Language and localizable errors](#language-and-localizable-errors-spec-019))
 - `/auth/login` — POST: argon2id auth + session creation (rate-limited per IP + user)
 - `/auth/logout` — POST: session deletion
 - `/auth/oidc/{provider}/start` — GET: IdP authorization flow start
@@ -160,6 +161,7 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/users/me/servers` — GET: own GameServers (owner/collaborator)
 - `/users/me/preferences` — GET/PUT: own theme/styling preferences (feature 016)
 - `/users/me/preferences/reset` — POST: reset own theme preferences to defaults (feature 016)
+- `/users/me/language` — PUT: set or clear own language choice (spec 019; see below)
 - `/users` — GET, POST: list and create users
 - `/users/{id}` — PATCH, DELETE: manage users (admin only). DELETE runs `db.Store.DeleteUser`: one transaction deletes the user's `oidc_links`, `user_preferences`, `sessions`, `api_tokens` and role bindings, revokes the share links the user created (sets `revoked_at`), then deletes the `users` row. It does not rely on FK cascades (off on SQLite). An SSO subject whose user was deleted is provisioned as a new user on its next login
 - **User list, lookup and create (`POST /users`) responses** include a `createdAt` field: `db.NormalizeTimestamp` passes RFC3339 values through unchanged, converts the legacy "YYYY-MM-DD HH:MM:SS" format from older migrations to RFC3339 UTC, and passes through unrecognized stored values unchanged.
@@ -665,6 +667,22 @@ Foreign keys are enforced only on Postgres (modernc-sqlite runs with FK OFF); th
 
 ### Upload limits
 - **Module bundle upload** (`POST /modules/sources/{name}/upload`): the compressed body is capped at 900 KiB (413 above it). Extraction caps each member at 900 KiB, the archive at 256 distinct paths, the running total of extracted bytes at 4 MiB (`maxUploadExtractedBytes`, repeated member names included), and the whole decompressed tar stream (including headers and entries extraction skips) at 5 MiB (`maxUploadDecompressedBytes`, covering tar framing). Extraction stops at the first member that crosses a limit, and the request gets 400. The four kept bundle files must together stay under 900 KiB.
+
+### Language and localizable errors (spec 019)
+
+**Storage (migration `016_user_language.sql`):** `user_preferences.language` is a nullable BCP 47 tag. `NULL` means the user has no saved choice and follows the instance default. Preference writes never touch the column: `UpsertPreferences` and `ResetPreferences` leave it alone, and `db.Store.SetLanguage` owns it. `SetLanguage` inserts a default row when the user has none.
+
+**Endpoints:**
+- **PUT `/users/me/language`** — body `{"language": "<tag>" | null}`. A tag must be one `catalog.IsListed` reports for this release (`i18n/catalog`). `null` clears the choice. Success is `204 No Content`. A missing `language` key is `400 language is required`. An unlisted tag is `400` with the message `server.i18n.unknown_language`, so `args.language` carries the tag sent. 401 when unauthenticated.
+- **GET/PUT `/users/me/preferences`** — the preferences object always carries `language` (`string | null`, `null` when unset). `PUT /users/me/preferences` accepts and ignores a `language` key, so it cannot change the saved language.
+- **POST `/users/me/preferences/reset`** — clears the styling only; the saved language is kept.
+- **GET `/auth/locale`** — public and pre-auth, so it returns only the tag. It reads the config section `i18n`. An absent, unparsable or unlisted default, or a database read failure (logged at warn, never echoed), gives `"en"`.
+
+**Config section `i18n`** (`PUT /admin/config/i18n`): body `{"defaultLanguage": "<tag>"}`. Unknown keys and an empty tag are `422`. A tag that is not offered (missing, or below the completeness threshold) is `400` with `server.i18n.unlisted_language` (`args.language` is the tag). This is the only config validator that returns a localizable `httperr.Message`; the `put` handler checks `errors.As(*httperr.Message)` before its generic `422` line.
+
+**Localizable error ids added to the registry (`api/internal/messages`):** `server.i18n.unknown_language` (`unknown language: {language}`, 400) and `server.i18n.unlisted_language` (`language is not available: {language}`, 400). Both are in `i18n/locales/en/app.json` (written by `make i18n-sync`).
+
+**Problem document negotiation:** a caller that sends `Accept: application/problem+json` gets an RFC 9457 document from `httperr.WriteMessage` / `httperr.WriteCode` with `messageId` (the registry id) and `args`. Every other caller gets the byte-identical plain-text body (`text/plain`, `http.Error` form) that the endpoint has always returned. 5xx responses never carry internal text. The `Message.English` text is the plain body.
 
 ### Error handling
 - **httperr package:** internal errors (K8s 404, DB constraint, FS path) mapped to safe HTTP status + generic message

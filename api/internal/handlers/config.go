@@ -19,6 +19,7 @@ import (
 	"github.com/GameplanePanel/gameplane/api/internal/auth"
 	"github.com/GameplanePanel/gameplane/api/internal/db"
 	"github.com/GameplanePanel/gameplane/api/internal/httperr"
+	"github.com/GameplanePanel/gameplane/api/internal/messages"
 	"github.com/GameplanePanel/gameplane/api/internal/notify"
 	"github.com/GameplanePanel/gameplane/api/internal/registry"
 	"github.com/GameplanePanel/gameplane/api/internal/telemetry"
@@ -130,6 +131,11 @@ func (h *configHandler) put(w http.ResponseWriter, req *http.Request) {
 	}
 	canon, err := validate(body)
 	if err != nil {
+		var m *httperr.Message
+		if errors.As(err, &m) {
+			httperr.WriteMessage(w, req, m)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
@@ -468,6 +474,7 @@ func newValidators(helmOIDCPresent bool) map[string]func([]byte) (json.RawMessag
 		"auth":                              validateAuth(helmOIDCPresent),
 		"notifications":                     validateNotifications,
 		"telemetry":                         validateTelemetry,
+		"i18n":                              validateI18n,
 		registry.ConfigSectionModRegistries: validateModRegistries,
 	}
 }
@@ -773,6 +780,31 @@ func validateTelemetry(body []byte) (json.RawMessage, error) {
 	// (FR-003, spec Q7).
 	if !c.SendMetrics {
 		c.Extended = false
+	}
+	return json.Marshal(c)
+}
+
+// i18nCfg is the instance language section: the default language for users
+// who have not chosen one, and the login page before sign-in.
+type i18nCfg struct {
+	DefaultLanguage string `json:"defaultLanguage"`
+}
+
+// validateI18n requires defaultLanguage to be a tag this release offers. An
+// unlisted tag returns a localizable *httperr.Message, so the save reports the
+// same error id to the dashboard in either language.
+func validateI18n(body []byte) (json.RawMessage, error) {
+	dec := json.NewDecoder(strings.NewReader(string(body)))
+	dec.DisallowUnknownFields()
+	var c i18nCfg
+	if err := dec.Decode(&c); err != nil {
+		return nil, fmt.Errorf("invalid json: %w", err)
+	}
+	if c.DefaultLanguage == "" {
+		return nil, fmt.Errorf("defaultLanguage is required")
+	}
+	if !languageListed(c.DefaultLanguage) {
+		return nil, messages.New("server.i18n.unlisted_language", map[string]any{"language": c.DefaultLanguage})
 	}
 	return json.Marshal(c)
 }

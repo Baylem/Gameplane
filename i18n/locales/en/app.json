@@ -75,6 +75,14 @@
     "defaultMessage": "The service is temporarily unavailable.",
     "description": "Generic sentence shown before the detail text for an HTTP 503 response."
   },
+  "server.i18n.unknown_language": {
+    "defaultMessage": "unknown language: {language}",
+    "description": "Shown when a user picks a language this release does not offer. language = the language tag that was sent."
+  },
+  "server.i18n.unlisted_language": {
+    "defaultMessage": "language is not available: {language}",
+    "description": "Shown when an admin picks an instance default language that is not offered (missing or below the completeness threshold). language = the tag."
+  },
   "server.internal": {
     "defaultMessage": "internal error",
     "description": "API error for an unexpected server failure. The real error is logged on the server only."

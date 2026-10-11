@@ -186,6 +186,18 @@ var entries = []Entry{
 		Description: "Generic sentence shown before the detail text for an HTTP 503 response.",
 		Status:      http.StatusServiceUnavailable,
 	},
+	{
+		ID:          "server.i18n.unknown_language",
+		English:     "unknown language: {language}",
+		Description: "Shown when a user picks a language this release does not offer. language = the language tag that was sent.",
+		Status:      http.StatusBadRequest,
+	},
+	{
+		ID:          "server.i18n.unlisted_language",
+		English:     "language is not available: {language}",
+		Description: "Shown when an admin picks an instance default language that is not offered (missing or below the completeness threshold). language = the tag.",
+		Status:      http.StatusBadRequest,
+	},
 }
 
 // parsedEntry is a registry entry with its English text parsed once.

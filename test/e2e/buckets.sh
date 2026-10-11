@@ -123,8 +123,12 @@ TestAPI_PasswordResetInvalidatesSession
 TestAPI_OIDCHelmSeeded_AdminOnFirstLogin
 TestAPI_OIDCHelmSeeded_DefaultRoleOnNoMapping
 TestAPI_OIDCHelmSeeded_RoleReevaluatedOnGroupChange
+TestAPI_I18n_AuthLocale
 EOF
 }
+
+# TestAPI_I18n_AuthLocale (spec 019, T036) reads the pre-auth GET /auth/locale
+# on a fresh install. It never logs in, so it spends no admin-login budget.
 
 # The three TestAPI_OIDCHelmSeeded_* tests above spend 0 of this bucket's
 # admin-login budget: they authenticate entirely as OIDC users against a

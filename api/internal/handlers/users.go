@@ -19,8 +19,14 @@ import (
 	"github.com/GameplanePanel/gameplane/api/internal/auth"
 	"github.com/GameplanePanel/gameplane/api/internal/db"
 	"github.com/GameplanePanel/gameplane/api/internal/httperr"
+	"github.com/GameplanePanel/gameplane/api/internal/messages"
 	"github.com/GameplanePanel/gameplane/api/internal/scope"
+	"github.com/GameplanePanel/gameplane/i18n/catalog"
 )
+
+// languageListed reports whether a language tag is offered by this release.
+// It is a variable so tests can point it at a tag the shipped catalog lists.
+var languageListed = catalog.IsListed
 
 // MountUsers registers the user management API handlers.
 func MountUsers(r chi.Router, store *db.Store, sessions *auth.SessionStore, clusters scope.ClusterLister) {
@@ -32,6 +38,7 @@ func MountUsers(r chi.Router, store *db.Store, sessions *auth.SessionStore, clus
 		r.Get("/me/preferences", h.getPreferences)
 		r.Put("/me/preferences", h.putPreferences)
 		r.Post("/me/preferences/reset", h.resetPreferences)
+		r.Put("/me/language", h.putLanguage)
 		r.Delete("/{id}", h.del)
 		r.Patch("/{id}", h.update)
 		r.Post("/{id}/reset-password", h.resetPassword)
@@ -213,7 +220,10 @@ type userPreferencesDTO struct {
 	CustomColors     *customColorsDTO `json:"customColors"`
 	CustomCSSEnabled bool             `json:"customCssEnabled"`
 	CustomCSS        *string          `json:"customCss"`
-	UpdatedAt        string           `json:"updatedAt"`
+	// Language is the user's saved language tag, null when the user follows
+	// the instance default. It is set through PUT /users/me/language.
+	Language  *string `json:"language"`
+	UpdatedAt string  `json:"updatedAt"`
 }
 
 func preferencesDTO(p db.UserPreferences) *userPreferencesDTO {
@@ -223,6 +233,7 @@ func preferencesDTO(p db.UserPreferences) *userPreferencesDTO {
 		AppearanceMode:   p.AppearanceMode,
 		CustomCSSEnabled: p.CustomCSSEnabled,
 		CustomCSS:        p.CustomCSS,
+		Language:         p.Language,
 		UpdatedAt:        p.UpdatedAt,
 	}
 	if p.CustomAccent != nil || p.CustomSurface != nil {
@@ -444,7 +455,54 @@ func (h *userHandler) resetPreferences(w http.ResponseWriter, req *http.Request)
 		httperr.Write(w, req, err)
 		return
 	}
+	// Reset clears styling only; the saved language is kept.
+	saved.Language = prefs.Language
 	writeJSON(w, preferencesDTO(saved))
+}
+
+// languageReq is the PUT /users/me/language body. Language is kept raw so a
+// missing key (an error) can be told apart from an explicit null (clear).
+type languageReq struct {
+	Language json.RawMessage `json:"language"`
+}
+
+// putLanguage stores the user's language choice. A null clears it back to
+// the instance default. A non-null tag must be one this release offers.
+func (h *userHandler) putLanguage(w http.ResponseWriter, req *http.Request) {
+	u := auth.UserFromContext(req.Context())
+	if u == nil {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		return
+	}
+	var body languageReq
+	dec := json.NewDecoder(req.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&body); err != nil {
+		httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("bad request"))
+		return
+	}
+	if len(body.Language) == 0 {
+		httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("language is required"))
+		return
+	}
+	var language *string
+	if string(body.Language) != "null" {
+		var tag string
+		if err := json.Unmarshal(body.Language, &tag); err != nil {
+			httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("language must be a string or null"))
+			return
+		}
+		if !languageListed(tag) {
+			httperr.WriteMessage(w, req, messages.New("server.i18n.unknown_language", map[string]any{"language": tag}))
+			return
+		}
+		language = &tag
+	}
+	if err := h.db.SetLanguage(req.Context(), u.ID, language); err != nil {
+		httperr.Write(w, req, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *userHandler) del(w http.ResponseWriter, req *http.Request) {
