@@ -250,7 +250,7 @@ func run(appPath, controllersDir string, check bool) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(appPath, out, 0o600); err != nil {
+	if err := writeInDir(filepath.Dir(appPath), filepath.Base(appPath), out); err != nil {
 		return fmt.Errorf("write %s: %w", appPath, err)
 	}
 	fmt.Printf("condition-ids: wrote %d condition.* ids to %s\n", len(entries), appPath)
@@ -466,4 +466,18 @@ func collectFile(file *ast.File, path string, record func(*ast.BasicLit, string)
 		}
 		return true
 	})
+}
+
+// writeInDir writes name inside dir through an os.Root, so the write cannot
+// escape dir.
+func writeInDir(dir, name string, data []byte) error {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", dir, err)
+	}
+	defer func() { _ = root.Close() }()
+	if err := root.WriteFile(name, data, 0o600); err != nil {
+		return fmt.Errorf("write %s: %w", name, err)
+	}
+	return nil
 }
