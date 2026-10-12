@@ -158,7 +158,7 @@ Alt text template: "Shows the [Tab/Section] with [description of key UI elements
 
 **Rationale**: R6 researched eligibility criteria from official directory guidelines. SC-014 requires a terminal state (submitted or deferred) by feature completion. Ruled 2026-09-02 (OD-5): account ownership remains with maintainer; agents draft submission content only. Agents write exact submission content into outreach.md; maintainer submits from their own accounts.
 
-Outreach list location: `specs/012-docs-refresh-and-outreach/outreach.md` (FR-020). Linked from `docs/contributing.md` (FR-025). Status vocabulary per D-D: `pending | in-progress [YYYY-MM-DD] | submitted [YYYY-MM-DD] | rejected [YYYY-MM-DD, reason] | deferred [YYYY-MM-DD, reason]`.
+Outreach list location: `specs/done_012-docs-refresh-and-outreach/outreach.md` (FR-020). Linked from `docs/contributing.md` (FR-025). Status vocabulary per D-D: `pending | in-progress [YYYY-MM-DD] | submitted [YYYY-MM-DD] | rejected [YYYY-MM-DD, reason] | deferred [YYYY-MM-DD, reason]`.
 
 **Alternatives considered**: Removing Awesome-Selfhosted from targets would only address 2 directories, reducing outreach impact. Deferring without a date would allow the task to be forgotten; explicit date marking ensures re-evaluation.
 
@@ -178,7 +178,7 @@ Multi-cluster console/log streaming is correctly documented as `[local cluster o
 
 ## Decision: Evidence Log Location and Schema
 
-**Decision**: Evidence log location: `specs/012-docs-refresh-and-outreach/audit-log.md` (D-F). Schema (one row per correction):
+**Decision**: Evidence log location: `specs/done_012-docs-refresh-and-outreach/audit-log.md` (D-F). Schema (one row per correction):
 - File
 - Line(s)
 - Finding (type: stale version string, broken link, inconsistent labeling, etc.)

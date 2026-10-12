@@ -255,7 +255,7 @@ Each file is checked for:
 ### Storage & Validation Rules
 
 **V-AF1 (Audit Log File, D-F)**: All findings are recorded in a single file:  
-**Path**: `/home/user/Gameplane/specs/012-docs-refresh-and-outreach/audit-log.md`  
+**Path**: `/home/user/Gameplane/specs/done_012-docs-refresh-and-outreach/audit-log.md`  
 **Format**: Markdown table with columns matching Properties above  
 **Order**: Chronological by implementation phase (findings discovered and fixed in order)
 
@@ -479,7 +479,7 @@ Per FR-020, FR-021, and R6:
 ### Storage & Validation Rules
 
 **V-OE1 (Outreach List File, FR-020, SC-012)**: All entries are stored in a single file:  
-**Path**: `/home/user/Gameplane/specs/012-docs-refresh-and-outreach/outreach.md`  
+**Path**: `/home/user/Gameplane/specs/done_012-docs-refresh-and-outreach/outreach.md`  
 **Format**: Markdown list or table, one entry per target
 
 **V-OE2 (Status Transitions, D-D, SC-014)**: Status MUST follow the state machine above. Transitions:
@@ -490,7 +490,7 @@ Per FR-020, FR-021, and R6:
 **V-OE3 (Acceptance NOT a Success State, FR-023, SC-014)**: If a third-party directory accepts the submission (e.g., Awesome-Selfhosted approves the PR), this is recorded in `notes` (informational only) and does NOT change the status. Success = submission made + tracked, not acceptance.
 
 **V-OE4 (Linked from docs/contributing.md, FR-025)**: The outreach.md file MUST be linked from docs/contributing.md so maintainers can find it. Suggested line:  
-"See [External Outreach Tracking](../specs/012-docs-refresh-and-outreach/outreach.md) for visibility into third-party directory submissions."
+"See [External Outreach Tracking](../specs/done_012-docs-refresh-and-outreach/outreach.md) for visibility into third-party directory submissions."
 
 **V-OE5 (Git Commit per Transition, FR-022)**: Every status change is its own commit. Example:
 ```
@@ -549,7 +549,7 @@ This table maps every FR (Functional Requirement) and SC (Success Criterion) to 
 
 ## References
 
-- **Feature Spec**: `/home/user/Gameplane/specs/012-docs-refresh-and-outreach/spec.md` (FR-001 through FR-025, SC-001 through SC-014)
+- **Feature Spec**: `/home/user/Gameplane/specs/done_012-docs-refresh-and-outreach/spec.md` (FR-001 through FR-025, SC-001 through SC-014)
 - **Orchestrator Decisions**: D-A through D-I (D-H: table placement; D-C: label vocabulary; D-F: audit-log schema; D-A: comparison-sources.md); OD-1 through OD-15 (all ruled 2026-09-02 by maintainer; see MAINTAINER RULINGS section)
 - **Research Findings**: R1-versions.md (version audit), R2-links.md (link verification), R3-labels.md (label registry), R4-screens.md (screenshot inventory), R5-gameplane-facts.md (Gameplane comparison cells), R6-outreach.md (directory requirements), R7-competitor-sources.md (competitor sourcing), R8-unshipped.md (unshipped-feature audit)
 - **CLAUDE.md**: Rule 7 (wrap errors with %w), Rule 11 (commit regularly), Rule 12 (one branch per unit), Rule 15 (read whole spec folder), Rule 16 (rename done_ on completion)

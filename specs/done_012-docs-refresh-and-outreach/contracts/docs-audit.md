@@ -388,7 +388,7 @@ Commit: (filled during implementation; D-F)
 
 ## Audit Evidence Log (D-F)
 
-All corrections identified during the audit MUST be recorded in `/home/user/Gameplane/specs/012-docs-refresh-and-outreach/audit-log.md` with the following schema:
+All corrections identified during the audit MUST be recorded in `/home/user/Gameplane/specs/done_012-docs-refresh-and-outreach/audit-log.md` with the following schema:
 
 ### Schema
 
@@ -565,9 +565,9 @@ The documentation audit is **complete** when all of the following are true:
 
 ## References
 
-- **Feature Specification**: `specs/012-docs-refresh-and-outreach/spec.md` (FR-009 to FR-014, SC-004 to SC-008)
+- **Feature Specification**: `specs/done_012-docs-refresh-and-outreach/spec.md` (FR-009 to FR-014, SC-004 to SC-008)
 - **Constitution**: `.specify/memory/constitution.md` (Principle IV: Spec-Driven Development)
 - **Project Guidance**: `CLAUDE.md` (rules 8, 11, 13, 15, 16; no-local-execution, commit-early, delegation)
-- **Research Findings**: `specs/012-docs-refresh-and-outreach/research.md` (synthesis of version/link/label/screenshot/gameplane-facts/outreach/competitor-sources/unshipped audits; detailed research summaries R1–R8 are in the scratchpad during planning)
-- **Orchestrator Decisions**: `specs/012-docs-refresh-and-outreach/OPEN-DECISIONS.md` (D-A through D-I, OD-1 through OD-15)
+- **Research Findings**: `specs/done_012-docs-refresh-and-outreach/research.md` (synthesis of version/link/label/screenshot/gameplane-facts/outreach/competitor-sources/unshipped audits; detailed research summaries R1–R8 are in the scratchpad during planning)
+- **Orchestrator Decisions**: `specs/done_012-docs-refresh-and-outreach/OPEN-DECISIONS.md` (D-A through D-I, OD-1 through OD-15)
 - **Style Reference**: `specs/done_011-add-missing-module-specs/contracts/check-specs.md` (tone, heading discipline, evidence density)
