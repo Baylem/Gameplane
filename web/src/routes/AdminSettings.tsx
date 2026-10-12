@@ -469,6 +469,7 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
   return (
     <div className="space-y-6">
       <SectionCard
+        className="gap-0 p-0"
         title="Authentication"
         subtitle="Built-in local accounts plus federated identity providers. Changes take effect on save — no restart needed."
         titleClassName="text-sm font-medium"
@@ -1948,6 +1949,7 @@ function HelmOIDCProviderCard({ provider }: { provider: OIDCHelmProvider }) {
   const adminMapped = provider.roleMappings?.admin && provider.roleMappings.admin.length > 0;
   return (
     <SectionCard
+      className="gap-0 p-0"
       title="Helm-seeded OIDC provider"
       subtitle="Read-only snapshot of the identity provider configured via api.oidc.* Helm values at install time. Connection settings are not editable here; role mappings can be overridden below."
       titleClassName="text-sm font-medium"
@@ -2165,7 +2167,7 @@ function RoleMappingOverridesCard({
       <SectionCard
         title="Role mapping overrides"
         subtitle="Override the Helm-seeded OIDC group mappings per role from here. A change takes effect the next time an affected user logs in — no restart or reinstall needed."
-        className="bg-card"
+        className="bg-card gap-0 p-0"
         titleClassName="text-sm font-medium"
         subtitleClassName="text-sm"
         headerClassName="px-5 pt-5 pb-4 space-y-1"
@@ -2255,19 +2257,21 @@ function RoleMappingOverridesCard({
                   )}
 
                   <div className="flex items-center gap-2">
-                    <HeroInput
-                      type="text"
-                      placeholder="Add IdP group name…"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddGroup(typedRole, input);
-                        }
-                      }}
-                      className="h-8 w-[250px] text-[13px]"
-                    />
+                    <div className="w-[250px] shrink-0">
+                      <HeroInput
+                        type="text"
+                        placeholder="Add IdP group name…"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddGroup(typedRole, input);
+                          }
+                        }}
+                        className="h-8 text-[13px]"
+                      />
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"
