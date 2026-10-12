@@ -195,7 +195,7 @@ description: "Task list for 013-expand-test-coverage"
 
 ### G4 dependency-review: PR `ci: dependency review gate`
 
-- [ ] T032 [US1] Add a `dependency-review` job named `dependency review` to `.github/workflows/ci.yaml`. Settings:
+- [X] T032 [US1] Add a `dependency-review` job named `dependency review` to `.github/workflows/ci.yaml`. Settings:
   - `if: github.event_name == 'pull_request'`
   - `permissions: contents: read, pull-requests: write`
   - uses `actions/dependency-review-action`, SHA-pinned, with `fail-on-severity: high` and `comment-summary-in-pr: on-failure`
