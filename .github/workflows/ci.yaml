@@ -609,6 +609,27 @@ jobs:
       - name: submodule pointers are on upstream main
         run: ./hack/check-submodule-freshness.sh
 
+  # Spec 013 G4: block a PR that adds a dependency with a known high or
+  # critical advisory. PR-only; on push it is skipped, which the report
+  # already counts as neutral. No failure-proof fixture by ruling (OD-4).
+  dependency-review:
+    name: dependency review
+    needs: [changes]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
   lint:
     name: lint (${{ matrix.module }})
     needs: [changes]
@@ -2070,6 +2091,7 @@ jobs:
         docs,
         codegen-drift,
         submodule-freshness,
+        dependency-review,
         lint,
         go,
         web,
@@ -2181,7 +2203,7 @@ jobs:
 
             const NEEDS_ORDER = [
               'changes', 'build-images', 'build-images-arm64', 'vuln-images',
-              'capture-sidecar-setcap-proof', 'docs', 'codegen-drift', 'submodule-freshness', 'lint', 'go',
+              'capture-sidecar-setcap-proof', 'docs', 'codegen-drift', 'submodule-freshness', 'dependency-review', 'lint', 'go',
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-go-arm64', 'e2e-multicluster', 'e2e-multicluster-arm64', 'e2e-upgrade', 'e2e-upgrade-arm64',
@@ -2221,6 +2243,7 @@ jobs:
               'e2e-capture-overhead': (n) => n === 'e2e capture overhead (kind)',
               'e2e-kind-ingress-smoke': (n) => n === 'ingress-nginx smoke (kind)',
               'submodule-freshness': (n) => n === 'submodule freshness',
+              'dependency-review': (n) => n === 'dependency review',
             };
 
             let passed = 0, failed = 0, skipped = 0, cancelled = 0;
