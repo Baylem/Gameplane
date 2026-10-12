@@ -1,6 +1,6 @@
 # External Outreach Tracking
 
-**Last updated**: 2026-09-02  
+**Last updated**: 2026-10-11  
 **Feature**: 012 — Documentation Refresh, Comparison Table, and External Outreach
 
 This file tracks submissions to external directories to grow Gameplane's 
@@ -11,7 +11,7 @@ visibility and discoverability. Status updates are committed to git
 
 | Target | Submission URL | Status | Submitted Reference | Notes / History |
 |--------|---|---|---|---|
-| AlternativeTo | https://alternativeto.net/add-app/ | pending | pending | No blockers identified. Ready for maintainer account creation and submission. See contract for submission template. |
+| AlternativeTo | https://alternativeto.net/add-app/ | submitted [2026-10-11] | 2026-10-11 — https://alternativeto.net/software/gameplane/ | Submitted by the maintainer via the add-app form; maintainer reported the listing page on 2026-10-11 (date recorded is that report, the form submission date was not captured). |
 | Awesome-Selfhosted | https://github.com/awesome-selfhosted/awesome-selfhosted-data/pulls | deferred [2026-09-02, first release 2026-06-22 is under the 4-month minimum; eligible from 2026-10-22] | N/A | First release 2026-06-22 (CHANGELOG.md:656); 4-month minimum requires wait until 2026-10-22. See contract for submission template. Re-evaluate on or after 2026-10-22. |
 | Awesome-Kubernetes | https://github.com/ramitsurana/awesome-kubernetes | deferred [2026-09-02, 25-star / 3-contributor eligibility rule not verified; revisit in a later release] | N/A | Eligibility metrics (25+ GitHub stars and 3+ contributors) were not verified at deferral. Per OD-6b, no pre-check task or submission attempt in this feature. See contract for eligibility criteria. |
 | GitHub About (description + topics) | https://github.com/GameplanePanel/Gameplane (repository settings) | submitted [2026-09-02] | 2026-09-02 — https://github.com/GameplanePanel/Gameplane (About box) | Description applied by the maintainer 2026-09-02 (as AGPL-3.0; draft now says AGPL-3.0-or-later — optional follow-up); topics not verified |
@@ -114,6 +114,6 @@ The status values used in the submission table follow this vocabulary (D-D):
 
 ## Next Steps
 
-1. **AlternativeTo**: Maintainer creates free account (requires email verification), prepares submission form with template content above, submits.
+1. **AlternativeTo**: Submitted 2026-10-11 (listing page: https://alternativeto.net/software/gameplane/). No further action in this feature.
 2. **Awesome-Selfhosted**: Deferred until 2026-10-22 (4-month eligibility date). No action required during this feature; re-evaluate after the date if desired.
 3. **Awesome-Kubernetes**: Deferred per OD-6b; no pre-check task or submission attempt. Revisit in a later release if metrics improve or maintainer explicitly authorizes.

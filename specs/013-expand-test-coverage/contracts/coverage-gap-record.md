@@ -26,7 +26,7 @@
 7. `unit-only-by-design` rows have non-empty `Notes`. `closed-unproven` rows have `Evidence` naming the job and the PR that added it, and `Notes` citing the ruling that waived the failure proof (only G-04, OD-4).
 8. The `Summary` counts equal the counts computed from the table.
 
-**Proof**: `hack/check-coverage-gaps_test.sh` runs the validator on `hack/testdata/coverage-gaps/{pass,fail}/*.md`. The fail cases are a bad status, a closed row without evidence, a wrong summary count, and a `closed-unproven` row without a ruling in Notes.
+**Proof**: `hack/check-coverage-gaps_test.sh` runs the validator on `hack/testdata/coverage-gaps/{pass,fail}/*.md`. The fail cases are a bad status, a closed row without evidence, a wrong summary count, a `closed-unproven` row without a ruling in Notes, and a `closed-unproven` row on an ID other than G-04.
 
 ## Seed rows (from research R0)
 
