@@ -198,7 +198,7 @@ description: "Task list for 013-expand-test-coverage"
   - uses `actions/dependency-review-action`, SHA-pinned, with `fail-on-severity: high` and `comment-summary-in-pr: on-failure`
 
   Register it in `report`, and make the report treat `skipped` on push events as neutral, the same way other PR-only jobs are tallied.
-- [ ] T033 [US1] Once the T032 PR merges, set G-04 to `closed-unproven` in `coverage-gaps.md`: Evidence names the `dependency review` job and that PR, and Notes cite OD-4 (configuration review only; no throwaway PR, no fixture branch, no local act run).
+- [X] T033 [US1] Once the T032 PR merges, set G-04 to `closed-unproven` in `coverage-gaps.md`: Evidence names the `dependency review` job and that PR, and Notes cite OD-4 (configuration review only; no throwaway PR, no fixture branch, no local act run).
 
 ### G6 submodule freshness: PR `ci: submodule freshness gate` (OD-1 ruled)
 
