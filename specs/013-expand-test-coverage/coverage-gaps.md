@@ -1,6 +1,6 @@
 # Coverage Gap Record
 
-**Summary**: 3/24 closed · 0 closed unproven · 2 in progress · 18 open · 1 unit-only by design
+**Summary**: 4/24 closed · 0 closed unproven · 2 in progress · 17 open · 1 unit-only by design
 **Last updated**: 2026-10-12
 
 | ID | Category | Gap | Story | FR | Priority | Status | Evidence | Notes |
