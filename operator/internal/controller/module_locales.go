@@ -66,7 +66,8 @@ type localeOutcome struct {
 	// Dropped lists the tags left out by the size bound.
 	Dropped []string
 	// Oversized lists the tags whose file was larger than
-	// oci.MaxLocaleLayerSize and was not read. They are never stored.
+	// oci.MaxLocaleLayerSize, or did not fit oci.MaxLocaleTotalSize, and was
+	// not read. They are never stored.
 	Oversized []string
 	// WriteErr is set when the translations ConfigMap could not be written
 	// or deleted, so nothing new is being served.
@@ -174,7 +175,7 @@ const maxConditionMessageBytes = 32768
 func localesConditionUnclipped(out localeOutcome) metav1.Condition {
 	var parts []string
 	if len(out.Oversized) > 0 {
-		parts = append(parts, fmt.Sprintf("too large to read (over %d KiB): %s", oci.MaxLocaleLayerSize/1024, strings.Join(out.Oversized, ", ")))
+		parts = append(parts, fmt.Sprintf("too large to read (over %d KiB per file or %d KiB for all languages together): %s", oci.MaxLocaleLayerSize/1024, oci.MaxLocaleTotalSize/1024, strings.Join(out.Oversized, ", ")))
 	}
 	if len(out.Dropped) > 0 {
 		parts = append(parts, "left out because of the size limit: "+strings.Join(out.Dropped, ", "))

@@ -78,7 +78,8 @@ type Bundle struct {
 	Locales map[string][]byte
 
 	// OversizedLocales lists, sorted, the tags whose locale file was larger
-	// than oci.MaxLocaleLayerSize and was therefore not read. Locales never
+	// than oci.MaxLocaleLayerSize, or did not fit oci.MaxLocaleTotalSize, and
+	// was therefore not read. Locales never
 	// holds them; the reconciler reports them as LocalesTooLarge.
 	OversizedLocales []string
 }

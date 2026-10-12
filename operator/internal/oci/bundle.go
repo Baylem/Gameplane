@@ -45,7 +45,29 @@ const (
 	// MaxLocaleLayerSize bounds one locale layer. Pull refuses to read a
 	// larger one, so a hostile bundle cannot exhaust the operator's memory.
 	MaxLocaleLayerSize = 900 * 1024
+
+	// MaxLocaleTotalSize bounds all locale files of one bundle together.
+	// Languages are counted in file-name order; one that would push the running
+	// total over this bound is recorded as oversized and not read, like a file
+	// over MaxLocaleLayerSize.
+	MaxLocaleTotalSize = 4 * 1024 * 1024
 )
+
+// LocaleBudget tracks the total bytes of locale files read for one bundle.
+type LocaleBudget struct {
+	used int64
+}
+
+// Take reserves size bytes and reports whether they fit within
+// MaxLocaleTotalSize. A size that does not fit reserves nothing, so a smaller
+// later language can still fit.
+func (b *LocaleBudget) Take(size int64) bool {
+	if size < 0 || b.used+size > MaxLocaleTotalSize {
+		return false
+	}
+	b.used += size
+	return true
+}
 
 // OversizedLocale is stored in Pull's title-keyed map in place of a locale
 // layer larger than MaxLocaleLayerSize. The blob is never read; the marker lets

@@ -163,12 +163,16 @@ func bundleFromDir(fsys fs.FS, dir, digest string) (*Bundle, error) {
 // readLocaleFiles adds locales/<tag>.json (regular files only) to files under
 // the key "locales/<tag>.json", the same names an OCI bundle uses. A file over
 // oci.MaxLocaleLayerSize is not read: oci.OversizedLocale is stored in its
-// place so the reconciler reports the language instead of dropping it.
+// place so the reconciler reports the language instead of dropping it. The
+// files together are also bounded by oci.MaxLocaleTotalSize: languages are
+// counted in name order, and one that would exceed the total is recorded as
+// oversized the same way.
 func readLocaleFiles(fsys fs.FS, dir string, files map[string][]byte) {
 	entries, err := fs.ReadDir(fsys, path.Join(dir, "locales"))
 	if err != nil {
 		return
 	}
+	var budget oci.LocaleBudget
 	for _, e := range entries {
 		name := e.Name()
 		if !e.Type().IsRegular() || !strings.HasSuffix(name, ".json") {
@@ -179,7 +183,7 @@ func readLocaleFiles(fsys fs.FS, dir string, files map[string][]byte) {
 		if err != nil {
 			continue
 		}
-		if info.Size() > oci.MaxLocaleLayerSize {
+		if info.Size() > oci.MaxLocaleLayerSize || !budget.Take(info.Size()) {
 			files[key] = oci.OversizedLocale
 			continue
 		}
