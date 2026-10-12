@@ -15,7 +15,7 @@ FROM ${STEAMCMD_BASE_IMAGE}
 # it even when it is started through a vendor wrapper script.
 USER root
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends tini wine && \
+    apt-get install -y --no-install-recommends tini=0.19.0-6 wine=10.0~repack-12ubuntu1 && \
     rm -rf /var/lib/apt/lists/*
 USER gameserver:gameserver
 
