@@ -7,5 +7,5 @@
 |---|---|---|---|---|---|---|---|---|
 | G-01 | static | govulncheck gate | US1 | FR-001 | P1 | open | | |
 | G-02 | static | Dockerfile lint gate ≥ 1 check | US1 | FR-002 | P1 | closed | `job x` https://github.com/GameplanePanel/Gameplane/actions/runs/1 | |
-| G-03 | static | dependency-review gate | US1 | FR-003 | P1 | closed-unproven | `dependency review` https://github.com/GameplanePanel/Gameplane/pull/1 | configuration review only |
-| G-04 | unit | `secrets_managed.go` 100 % | US2 | FR-004 | P2 | unit-only-by-design | | Covered by envtest; no unit path |
+| G-03 | unit | `secrets_managed.go` 100 % | US2 | FR-004 | P2 | unit-only-by-design | | Covered by envtest; no unit path |
+| G-04 | static | dependency-review gate | US1 | FR-003 | P1 | closed-unproven | `dependency review` https://github.com/GameplanePanel/Gameplane/pull/1 | configuration review only |

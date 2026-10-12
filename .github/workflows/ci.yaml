@@ -33,6 +33,7 @@ on:
       - "CLAUDE.md"
       - "LICENSE"
       - "specs/**/outreach.md"
+      - "specs/**/coverage-gaps.md"
 # Cancel superseded runs so rapid pushes to the same ref don't waste
 # runner minutes on stale commits.
 concurrency:
