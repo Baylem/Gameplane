@@ -167,8 +167,11 @@ BEGIN {
         if (st == "closed" || st == "closed-unproven") {
           check_evidence(NR, ev, st)
         }
-        if (st == "closed-unproven" && notes !~ /OD-[0-9]+/) {
-          report(NR, "closed-unproven Notes must cite an OD-<n> ruling")
+        if (st == "closed-unproven" && id != "G-04") {
+          report(NR, "closed-unproven is allowed only for G-04 (OD-4)")
+        }
+        if (st == "closed-unproven" && notes !~ /OD-4([^0-9]|$)/) {
+          report(NR, "closed-unproven Notes must cite the OD-4 ruling")
         }
         if (st == "unit-only-by-design" && notes == "") {
           report(NR, "unit-only-by-design Notes must be non-empty")
