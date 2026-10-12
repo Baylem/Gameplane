@@ -285,6 +285,9 @@ Design changes go through `design.pen` (Pencil) before any UI code is
 written. See [`docs/contributing.md`](docs/contributing.md) for the
 full guide: code style, test tiers, and the PR process.
 
+Translations are welcome. See [`docs/translating.md`](docs/translating.md)
+to add or improve a language pack.
+
 ## License
 
 [AGPL-3.0-or-later](./LICENSE). Any network-accessible deployment of a

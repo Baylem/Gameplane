@@ -120,9 +120,9 @@ description: "Task list for 019 App Localization & Community Language Packs"
 
 ### Implementation for User Story 2
 
-- [ ] T049 [US2] Implement `--stamp` and needs-review handling end to end: translations carry `sourceHash`; build drops `invalid` entries so English shows (FR-018); verify the manifest marks a pack under 80% `listed: false` (FR-017)
-- [ ] T050 [US2] Write contributor guide `docs/translating.md` (FR-019): both contribution paths (file PR and Weblate), copying `i18n/locales/en/` to a new tag, writing `meta.json`, ICU plural/select examples, safe tags, running the dev server with a local pack to preview (`make web-dev`), style guide and glossary of fixed/untranslated Gameplane terms (GameServer, module, sentinel, …), what the CI report means; link it from `docs/contributing.md` and `README.md`
-- [ ] T051 [US2] Add a "translation" PR template section or label rule (`type: docs`, `area: shared`) in `.github/` auto-label config so pack PRs are labelled automatically
+- [X] T049 [US2] Implement `--stamp` and needs-review handling end to end: translations carry `sourceHash`; build drops `invalid` entries so English shows (FR-018); verify the manifest marks a pack under 80% `listed: false` (FR-017)
+- [X] T050 [US2] Write contributor guide `docs/translating.md` (FR-019): both contribution paths (file PR and Weblate), copying `i18n/locales/en/` to a new tag, writing `meta.json`, ICU plural/select examples, safe tags, running the dev server with a local pack to preview (`make web-dev`), style guide and glossary of fixed/untranslated Gameplane terms (GameServer, module, sentinel, …), what the CI report means; link it from `docs/contributing.md` and `README.md`
+- [X] T051 [US2] Add a "translation" PR template section or label rule (`type: docs`, `area: shared`) in `.github/` auto-label config so pack PRs are labelled automatically
 
 **Checkpoint**: A partial test pack passes CI and shows in the job summary.
 
