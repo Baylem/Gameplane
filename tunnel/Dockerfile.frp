@@ -31,8 +31,10 @@ ARG TARGETARCH
 ARG FRP_SHA256_amd64=333da23d1b9009d7c01638e9ba38cf4600f7d37d393f854e96ee1396adefa9a6
 ARG FRP_SHA256_arm64=3990f396a9a490ee7f0e5f355287750ed41520064ed999eab443b5e9a78d773d
 
-RUN apk add --no-cache curl tar
+RUN apk add --no-cache curl~=8.22.0 tar~=1.35
 WORKDIR /tmp
+# DL4006: fail the RUN if any command in a pipe fails.
+SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 RUN mkdir -p /out && \
     if [ "$TARGETARCH" = "arm64" ]; then \
       FRP_ARCH="arm64"; \
