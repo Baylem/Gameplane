@@ -1,7 +1,7 @@
 # Coverage Gap Record
 
-**Summary**: 2/24 closed · 0 closed unproven · 2 in progress · 19 open · 1 unit-only by design
-**Last updated**: 2026-10-11
+**Summary**: 3/24 closed · 0 closed unproven · 2 in progress · 18 open · 1 unit-only by design
+**Last updated**: 2026-10-12
 
 | ID | Category | Gap | Story | FR | Priority | Status | Evidence | Notes |
 |---|---|---|---|---|---|---|---|---|
@@ -9,7 +9,7 @@
 | G-02 | static | container image scan gate | US1 | FR-001 | P1 | open |  |  |
 | G-03 | static | Dockerfile lint gate | US1 | FR-001 | P1 | open |  |  |
 | G-04 | static | dependency-review gate | US1 | FR-001 | P1 | open |  |  |
-| G-05 | static | codegen / tidy drift gate | US1 | FR-001 | P1 | open |  |  |
+| G-05 | static | codegen / tidy drift gate | US1 | FR-001 | P1 | closed | `codegen drift` https://github.com/GameplanePanel/Gameplane/actions/runs/38189397259 | First run on #672 found no drift; the proof shows the job fails on injected drift. |
 | G-06 | static | submodule pointer freshness gate | US1 | FR-001 | P1 | open |  |  |
 | G-07 | e2e-dashboard | live: notification webhook config | US2 | FR-002 | P1 | open |  |  |
 | G-08 | e2e-dashboard | live: user create + role assignment | US2 | FR-002 | P1 | open |  |  |
