@@ -4,6 +4,11 @@ go 1.26.0
 
 require github.com/GameplanePanel/gameplane/netguard v0.0.0
 
+require (
+	github.com/google/go-github/v88 v88.0.0 // indirect
+	github.com/sigstore/cosign/v3 v3.1.2
+)
+
 // netguard is an in-repo module (no published version); resolve it locally
 // both inside the workspace (go.work) and in standalone module/Docker builds.
 replace github.com/GameplanePanel/gameplane/netguard => ../netguard
@@ -18,7 +23,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/sigstore/cosign/v2 v2.6.5
 	github.com/sigstore/sigstore v1.10.9 // indirect
 	golang.org/x/crypto v0.57.0
 	golang.org/x/mod v0.41.0
@@ -92,7 +96,6 @@ require (
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/certificate-transparency-go v1.3.3 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
-	github.com/google/go-github/v73 v73.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
