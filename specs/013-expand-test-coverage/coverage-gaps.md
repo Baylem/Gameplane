@@ -9,7 +9,7 @@
 | G-02 | static | container image scan gate | US1 | FR-001 | P1 | open |  |  |
 | G-03 | static | Dockerfile lint gate | US1 | FR-001 | P1 | closed | `workflow lint` https://github.com/GameplanePanel/Gameplane/actions/runs/38286000942 | First run on #674 flagged DL3008/DL3018/DL4006 in 13 Dockerfiles; pinned apk/apt versions and pipefail SHELL fixed them, and every game image still builds (run 38286000940). |
 | G-04 | static | dependency-review gate | US1 | FR-001 | P1 | open |  |  |
-| G-05 | static | codegen / tidy drift gate | US1 | FR-001 | P1 | open |  |  |
+| G-05 | static | codegen / tidy drift gate | US1 | FR-001 | P1 | closed | `codegen drift` https://github.com/GameplanePanel/Gameplane/actions/runs/38189397259 | First run on #672 found no drift; the proof shows the job fails on injected drift. |
 | G-06 | static | submodule pointer freshness gate | US1 | FR-001 | P1 | open |  |  |
 | G-07 | e2e-dashboard | live: notification webhook config | US2 | FR-002 | P1 | open |  |  |
 | G-08 | e2e-dashboard | live: user create + role assignment | US2 | FR-002 | P1 | open |  |  |

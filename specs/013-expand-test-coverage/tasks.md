@@ -105,19 +105,20 @@ description: "Task list for 013-expand-test-coverage"
 
 ### G5 codegen drift: PR `ci: codegen drift gate`
 
-- [ ] T012 [P] [US1] Write `hack/check-codegen-drift_test.sh`. In a `git worktree add` temp checkout it:
+- [X] T012 [P] [US1] Write `hack/check-codegen-drift_test.sh`. In a `git worktree add` temp checkout it:
   1. Appends a doc comment to a field in `operator/api/v1alpha1/gameserver_types.go`, edits the struct tag on that field, runs `make generate manifests && make tidy && git diff --exit-code`, and expects a non-zero exit.
   2. Resets the checkout, reruns the same command, and expects zero.
 
   It removes the worktree on exit.
-- [ ] T013 [US1] Add a `codegen-drift` job named `codegen drift` to `.github/workflows/ci.yaml`. Settings:
+- [X] T013 [US1] Add a `codegen-drift` job named `codegen drift` to `.github/workflows/ci.yaml`. Settings:
   - `needs: [changes]`
   - `if: needs.changes.outputs.codegen == 'true' || github.event_name == 'push'`
   - setup: `actions/checkout`, `./.github/actions/go-cache`, `azure/setup-helm`
   - steps: `make generate manifests`, then `make tidy`, then `git diff --exit-code`, then `./hack/check-codegen-drift_test.sh`
 
   Register the job in `report`. Depends on T007 and T012.
-- [ ] T014 [US1] If the first CI run of T013 shows drift, commit the regenerated files the job printed: deepcopy, `operator/config/**`, chart CRDs, `go.mod`/`go.sum`. Flip gap row G-05 with the job name and run link.
+- [X] T014 [US1] If the first CI run of T013 shows drift, commit the regenerated files the job printed: deepcopy, `operator/config/**`, chart CRDs, `go.mod`/`go.sum`. Flip gap row G-05 with the job name and run link.
+  *Implementation note (2026-10-12)*: the first run of `codegen drift` (run 38189397259) found no drift, so there was nothing to commit.
 
 ### G1 govulncheck: PR `ci: go vulnerability gate`
 
