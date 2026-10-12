@@ -328,11 +328,13 @@ description: "Task list for 013-expand-test-coverage"
   - the `closed` status state
 
   Use `@testing-library/user-event` the same way `Console.test.tsx` does.
-- [ ] T053 [US4] After T051 and T052 are green in CI, read the `web` job's lcov for `src/components/server/CloneServerDialog.tsx` and `src/components/server/ServerActionsMenu.tsx`.
+- [X] T053 [US4] After T051 and T052 are green in CI, read the `web` job's lcov for `src/components/server/CloneServerDialog.tsx` and `src/components/server/ServerActionsMenu.tsx`.
   - Any file under 80 % lines, or missing a "cancel discards changes" case or an API-error case: add only the missing cases to `CloneServerDialog.test.tsx` or `ServerActionsMenu.test.tsx`.
   - Otherwise: record the measured percentages as evidence.
 
   Flip G-19 to G-22.
+
+  *Implementation note (2026-10-12)*: lcov from run 38189418314: `CloneServerDialog.tsx` 89.29 % lines / 69.23 % branches, with a Cancel case but no API-error case, so T053 adds the API-error and cancel-discards-changes cases. `ServerActionsMenu.tsx` 100 % lines / branches / functions; it makes no API calls, so cancel and API errors are dialog-level (G-22 note). `ConsoleShell.tsx` 100 % lines. G-19 stays in progress: CI reports only package coverage for Go.
 
 **Checkpoint**: SC-004 is met. Module thresholds stay unchanged.
 
