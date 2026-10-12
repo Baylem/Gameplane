@@ -16,7 +16,7 @@ Write a root `FEATURES.md` that lists every Gameplane capability, one row per ca
 
 **Storage**: N/A
 
-**Testing**: fixture tests `hack/test-check-features-sync.sh` (`make test-features-sync`) in CI; existing `make check-links`, `make check-doc-versions` in CI; website CI `npm run lint`, `check`, `build`. Principle I treatment is pending OD-4.
+**Testing**: fixture tests `hack/test-check-features-sync.sh` (`make test-features-sync`) in CI; existing `make check-links`, `make check-doc-versions` in CI; website CI `npm run lint`, `check`, `build`. No `test/e2e/` test: Principle I docs exception (OD-4).
 
 **Target Platform**: GitHub (rendered Markdown), GitHub Pages website, GitHub Actions `ubuntu-latest`
 
@@ -34,7 +34,7 @@ Write a root `FEATURES.md` that lists every Gameplane capability, one row per ca
 
 | Principle | Status | Notes |
 |---|---|---|
-| I. E2E-Tested Delivery | PENDING OD-4 | Docs feature plus a CI-only check. Precedents differ: spec 012 (docs) took a justified exception; spec 023 (CI-only) was ruled to need a Go e2e test. Plan default until valgul answers OD-4: the spec 012 exception, verified by the sync check's fixture tests and the existing doc gates (see Complexity Tracking). |
+| I. E2E-Tested Delivery | PASS-WITH-JUSTIFICATION | Docs feature plus a CI-only text check. valgul ruled OD-4 (2026-10-12): no Go e2e test; the spec 012 docs exception applies, verified by the sync check's fixture tests and the existing doc gates in CI (see Complexity Tracking). |
 | II. Design-First | PASS | No dashboard change. Website change is docs-page text only (OD-3); a new docs page is frontmatter-only per the website CLAUDE.md, so no `website.pen` change. No `.pen` file is read or touched. |
 | III. Ecosystem Best Practice | PASS | Bash script follows the sibling doc gates; no suppressions; no lint config change. |
 | IV. Spec-Driven | PASS | spec → clarify → plan done; tasks next. No module behaviour changes, so no `specs.md` updates. Archive to `done_024` after all PRs merge. |
@@ -105,4 +105,6 @@ Coordination: spec 023 is reshaping CI job selection; whichever lands second map
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| Principle I exception (proposed, pending OD-4) | The feature changes no runtime path: catalog, roadmap and doc fixes describe shipped code, and the sync check is a repo lint that has no cluster behaviour to exercise. Verification is the fixture tests (every mismatch kind rejected, in-sync accepted) plus the existing doc gates in CI. | A Go e2e test in `test/e2e/` would boot a kind cluster to run a text comparison; it would test nothing the fixture tests do not. Same reasoning as `specs/done_012-docs-refresh-and-outreach/plan.md`. If valgul rules otherwise on OD-4, add the e2e test the ruling names. |
+| Principle I exception (OD-4, ruled 2026-10-12) | The feature changes no runtime path: catalog, roadmap and doc fixes describe shipped code, and the sync check is a repo lint that has no cluster behaviour to exercise. Verification is the fixture tests (every mismatch kind rejected, in-sync accepted) plus the existing doc gates in CI. | A Go e2e test in `test/e2e/` would boot a kind cluster to run a text comparison; it would test nothing the fixture tests do not. Same reasoning as `specs/done_012-docs-refresh-and-outreach/plan.md`. |
+
+**Constitution re-check (post-Phase 1)**: Principles I–VI satisfied; the Principle I exception is ruled (OD-4) and recorded above. No other violations.

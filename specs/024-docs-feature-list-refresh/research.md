@@ -82,4 +82,5 @@ All decisions below rest on the spec, its Clarifications (2026-10-12) and the se
 
 ## R11. Principle I (E2E-tested delivery)
 
-- **Decision**: Open, see OPEN-DECISIONS.md OD-4. Spec 012, also a docs feature, justified a Principle I exception (verification by doc gates); spec 023, a CI-only feature, was ruled to need a Go e2e test (023 OD-4). This spec adds a CI check, so the maintainer rules which precedent applies. Plan default until answered: the spec 012 exception, with the sync check's fixture tests as its verification.
+- **Decision**: No Go e2e test (OD-4, valgul 2026-10-12). The spec takes the documented docs exception spec 012 used; verification is the sync check's fixture tests plus the existing doc gates in CI.
+- **Alternatives considered**: a `test/e2e/` test running the sync check, as spec 023 OD-4 required for CI-only work; rejected by the ruling because the check compares two text files and has no cluster behaviour to exercise.
