@@ -31,5 +31,5 @@
 
 ## Notes
 
-- OD-1 (catalog location) is settled: root `FEATURES.md`. Two scope questions remain in `OPEN-DECISIONS.md` (OD-2 roadmap in-progress scope, OD-3 website depth) instead of inline markers, per repo rule 10. They must be settled before `/speckit-plan`.
+- All three scope decisions are settled in `OPEN-DECISIONS.md` (OD-1 root `FEATURES.md`, OD-2 every open spec on the roadmap, OD-3 website docs text only). Ready for `/speckit-plan`.
 - File paths (`docs/roadmap.md`, `README.md`) appear because the user named them; they are deliverables, not implementation choices.

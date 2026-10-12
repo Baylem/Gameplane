@@ -106,11 +106,11 @@ A visitor to the public website reads its docs pages and finds the same feature 
 - **FR-006**: Roadmap items that have shipped MUST move to the shipped section with their release; stale "planned" claims MUST be corrected or removed.
 - **FR-007**: The README MUST be corrected for stale facts (module count, status text, links) and its Features section MUST become a short summary linking to the feature catalog.
 - **FR-008**: Every file under `docs/` and every component README in the main repo MUST be reviewed against the shipped product; stale counts, defaults, maturity labels, names and links MUST be fixed.
-- **FR-009**: The website docs MUST be updated to match: a features page mirroring the catalog, the roadmap page mirroring `docs/roadmap.md`, and fixes to any website page carrying the same stale facts, within the scope set in OD-3.
+- **FR-009**: The website docs MUST be updated to match: a features page mirroring the catalog, the roadmap page mirroring `docs/roadmap.md`, and fixes to any website page carrying the same stale facts, as docs-page text only; the landing page is not changed (OD-3).
 - **FR-010**: The module repository README MUST be checked for the module list and count and fixed if stale.
 - **FR-011**: Every change MUST pass the project's existing documentation checks in CI (version strings, internal links and anchors, spec checks), with no checks loosened or skipped.
 - **FR-012**: Each fact corrected MUST be traceable: the docs PR description or a review list in the spec folder MUST note what was stale, where, and what source confirmed the new value.
-- **FR-013**: The scope of roadmap status for unmerged work MUST follow OD-2.
+- **FR-013**: The roadmap MUST have an "In progress" section with one line per open spec in `specs/` on the status date, each with its plain-words status and blocker (OD-2).
 - **FR-014**: The comparison table's competitor columns MUST NOT change unless re-verified with a dated source; only Gameplane-column facts are corrected.
 
 ### Key Entities
@@ -132,7 +132,7 @@ A visitor to the public website reads its docs pages and finds the same feature 
 
 ## Assumptions
 
-- "Website" means the `GameplanePanel/website` docs pages (text content). Docs pages are added with frontmatter only, so adding a features page needs no design change. Landing page visuals are out of scope unless OD-3 says otherwise.
+- "Website" means the `GameplanePanel/website` docs pages (text content). Docs pages are added with frontmatter only, so adding a features page needs no design change. Landing page visuals are out of scope (OD-3).
 - "/docs" means the main repo `docs/` folder, including `docs/design`, `docs/examples` and `docs/outreach` text where facts are stated; `docs/superpowers` and archived spec folders are not edited.
 - "readme.md etc." means the root README, component READMEs (`audit-syslog-bridge`, `containers`, `mcp-server`, `telemetry-receiver`) and the module repo README.
 - The CHANGELOG is a historical record and is not rewritten; only its link targets are checked.
