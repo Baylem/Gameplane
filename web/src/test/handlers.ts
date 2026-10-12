@@ -29,6 +29,9 @@ import {
   screenshotConsoleOutput,
   screenshotSystemLogLines,
   screenshotConfigWithOidc,
+  screenshotConfigOidcDesign,
+  screenshotDesignCatalog,
+  screenshotDesignSources,
   screenshotConfigOidcEmptyMappings,
   screenshotConfigEmptyStorageClass,
   screenshotConfigCurseforgeOnly,
@@ -1351,8 +1354,12 @@ export function buildScreenshotHandlers() {
 
     // Modules
     http.get("/modules", () => HttpResponse.json({ items: [makeModule()] })),
-    http.get("/modules/catalog", () =>
-      HttpResponse.json({
+    http.get("/modules/catalog", ({ cookies }) => {
+      // kK8Ji design variant: selected by the e2e_modules_variant=design cookie.
+      if (cookies.e2e_modules_variant === "design") {
+        return HttpResponse.json({ items: screenshotDesignCatalog });
+      }
+      return HttpResponse.json({
         items: [
           makeCatalog(),
           makeCatalog({
@@ -1367,11 +1374,14 @@ export function buildScreenshotHandlers() {
             latestVersion: "0.218",
           }),
         ],
-      }),
-    ),
-    http.get("/modules/sources", () =>
-      HttpResponse.json({ items: [makeModuleSource()] }),
-    ),
+      });
+    }),
+    http.get("/modules/sources", ({ cookies }) => {
+      if (cookies.e2e_modules_variant === "design") {
+        return HttpResponse.json({ items: screenshotDesignSources });
+      }
+      return HttpResponse.json({ items: [makeModuleSource()] });
+    }),
     http.get("/modules/:name", ({ params }) =>
       HttpResponse.json(makeModule({ metadata: { name: String(params.name) } })),
     ),
@@ -1637,6 +1647,8 @@ export function buildScreenshotHandlers() {
       switch (cookies.e2e_admin_config_variant) {
         case "oidc":
           return HttpResponse.json(screenshotConfigWithOidc());
+        case "oidc-design":
+          return HttpResponse.json(screenshotConfigOidcDesign());
         case "oidc-empty-mappings":
           return HttpResponse.json(screenshotConfigOidcEmptyMappings());
         case "empty-storage-class":
