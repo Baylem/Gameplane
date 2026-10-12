@@ -135,7 +135,7 @@ export function ModulesPage() {
         subtitle="Pre-packaged game-server templates pulled from your configured module sources."
         actions={
           <div className="flex items-center gap-2">
-            <Button onClick={() => setBuildOpen(true)}>
+            <Button variant="outline" onClick={() => setBuildOpen(true)}>
               <Plus className="h-4 w-4" /> Create module
             </Button>
             {uploadSources.length > 0 && (
@@ -168,7 +168,7 @@ export function ModulesPage() {
             </Button>
           ))}
         </div>
-        <div className="relative min-w-0">
+        <div className="relative min-w-0 w-[440px] max-w-full">
           <div className="flex gap-1 overflow-x-auto rounded-md border border-border bg-card p-1 scrollbar-thin">
             {catChips.map((c) => (
               <Button
@@ -207,7 +207,7 @@ export function ModulesPage() {
       )}
 
       <div
-        className="grid gap-x-4 gap-y-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        className="grid items-start gap-x-4 gap-y-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         data-testid="modules-grid"
       >
         {visible.map((entry) => (

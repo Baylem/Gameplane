@@ -53,13 +53,13 @@ export function ServerStatusCard({
         ? String(status.agent.playersOnline)
         : "—";
     return (
-      <Card className="border border-border bg-surface">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h3 className="text-sm font-semibold text-foreground">Game status</h3>
+      <Card className="border border-border bg-card p-0">
+        <div className="flex items-center justify-between px-6 pt-5 pb-3">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">Game status</h3>
           <Activity className="h-4 w-4 text-muted" />
         </div>
-        <div className="px-6 py-4">
-          <dl className="space-y-2 text-sm">
+        <div className="px-6 pb-5">
+          <dl className="space-y-3 text-[13px]">
             <GenericStatusRow label="Phase" value={status.phase ?? "—"} />
             <GenericStatusRow label="Uptime" value={formatUptime(status.startedAt)} />
             <GenericStatusRow
@@ -76,20 +76,20 @@ export function ServerStatusCard({
   const byId = new Map((readings ?? []).map((r) => [r.id, r]));
 
   return (
-    <Card className="border border-border bg-surface">
-      <div className="flex items-center justify-between border-b border-border px-6 py-4">
-        <h3 className="text-sm font-semibold text-foreground">Game status</h3>
+    <Card className="border border-border bg-card p-0">
+      <div className="flex items-center justify-between px-6 pt-5 pb-3">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">Game status</h3>
         <Activity className="h-4 w-4 text-muted" />
       </div>
-      <div className="px-6 py-4">
-        <dl className="space-y-2 text-sm">
+      <div className="px-6 pb-5">
+        <dl className="space-y-3 text-[13px]">
           {metrics.map((m) => {
             const reading = byId.get(m.id);
             const value = reading?.value?.trim();
             return (
               <div
                 key={m.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface/60 px-3 py-2"
+                className="flex items-center justify-between gap-2 rounded-[8px] border border-border bg-[var(--default)] px-3.5 py-2.5"
               >
                 <dt className="text-muted">{m.displayName}</dt>
                 <dd className="font-mono text-foreground">
@@ -115,7 +115,7 @@ export function ServerStatusCard({
 // summary — same visual row shape as the declared-metric rows above.
 function GenericStatusRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-[8px] border border-border bg-surface/60 px-3 py-2">
+    <div className="flex items-center justify-between gap-2 rounded-[8px] border border-border bg-[var(--default)] px-3.5 py-2.5">
       <dt className="text-muted">{label}</dt>
       <dd className="font-mono text-foreground">{value}</dd>
     </div>
