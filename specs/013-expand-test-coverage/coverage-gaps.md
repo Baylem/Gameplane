@@ -1,6 +1,6 @@
 # Coverage Gap Record
 
-**Summary**: 5/24 closed · 0 closed unproven · 3 in progress · 15 open · 1 unit-only by design
+**Summary**: 8/24 closed · 0 closed unproven · 2 in progress · 13 open · 1 unit-only by design
 **Last updated**: 2026-10-12
 
 | ID | Category | Gap | Story | FR | Priority | Status | Evidence | Notes |
@@ -23,9 +23,9 @@
 | G-16 | e2e-optional | tunnel (tailscale, playit) | US3 | FR-003 | P2 | unit-only-by-design |  | Tailscale and playit need external accounts and network reachability that CI cannot provide; covered by unit tests only (research R7). |
 | G-17 | e2e-optional | telemetry receiver | US3 | FR-003 | P2 | closed | `TestTelemetryLifecycle` in bucket `telemetry` (job `e2e telemetry`), spec 022: https://github.com/GameplanePanel/Gameplane/blob/master/test/e2e/telemetry_e2e_test.go |  |
 | G-18 | e2e-optional | disabled state + no interference | US3 | FR-003 | P2 | open |  |  |
-| G-19 | unit | `secrets_managed.go` 100 % | US4 | FR-004 | P2 | open |  |  |
-| G-20 | unit | `ConsoleShell.test.tsx` ≥ 80 % lines | US4 | FR-004 | P2 | open |  |  |
-| G-21 | unit | `CloneServerDialog` ≥ 80 % lines + cancel/error | US4 | FR-004 | P2 | in-progress |  | test exists (`CloneServerDialog.test.tsx`); coverage to verify in T053. |
-| G-22 | unit | `ServerActionsMenu` ≥ 80 % lines + cancel/error | US4 | FR-004 | P2 | in-progress |  | test exists (`ServerActionsMenu.test.tsx`); coverage to verify in T053. |
+| G-19 | unit | `secrets_managed.go` 100 % | US4 | FR-004 | P2 | in-progress |  | `secrets_managed_test.go` added in https://github.com/GameplanePanel/Gameplane/pull/677; CI publishes only package totals, so the per-file figure is not yet measured. The `json.Marshal` error branch in `upsertLabelledSecret` is unreachable. |
+| G-20 | unit | `ConsoleShell.test.tsx` ≥ 80 % lines | US4 | FR-004 | P2 | closed | `web` https://github.com/GameplanePanel/Gameplane/actions/runs/38189418314 | `ConsoleShell.tsx` 100 % lines, 95 % branches (lcov from https://github.com/GameplanePanel/Gameplane/pull/677). |
+| G-21 | unit | `CloneServerDialog` ≥ 80 % lines + cancel/error | US4 | FR-004 | P2 | closed | `web` https://github.com/GameplanePanel/Gameplane/actions/runs/38189418314 | 89.29 % lines before T053; T053 adds API-error (409, 403, other status, non-API) and cancel-discards-changes cases in https://github.com/GameplanePanel/Gameplane/pull/677. |
+| G-22 | unit | `ServerActionsMenu` ≥ 80 % lines + cancel/error | US4 | FR-004 | P2 | closed | `web` https://github.com/GameplanePanel/Gameplane/actions/runs/38189418314 | 100 % lines, branches and functions. The menu makes no API calls; cancel and API errors live in its dialogs, covered by their own tests (G-21 for clone). |
 | G-23 | e2e-postgres | kind E2E on Postgres-backed API | US5 | FR-005 | P3 | open |  |  |
 | G-24 | e2e-postgres | upgrade from frozen 001–012 baseline | US5 | FR-005 | P3 | open |  |  |
