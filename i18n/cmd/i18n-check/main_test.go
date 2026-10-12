@@ -311,18 +311,18 @@ func TestModulePacks(t *testing.T) {
 		fr   string
 		want int
 	}{
-		{"clean", `{"a":{"defaultMessage":"Afr"}}`, 0},
-		{"placeholder mismatch", `{"a":{"defaultMessage":"{x}"}}`, 1},
+		{"clean", `{"template.displayName":{"defaultMessage":"Afr"}}`, 0},
+		{"placeholder mismatch", `{"template.displayName":{"defaultMessage":"{x}"}}`, 1},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
 			writeTree(t, root, map[string]string{
-				"en.json": `{"a":{"defaultMessage":"A","description":"d"}}`,
+				"en.json": `{"template.displayName":{"defaultMessage":"A","description":"d"}}`,
 				"fr.json": tc.fr,
 			})
 			tpl := filepath.Join(t.TempDir(), "template.yaml")
-			if err := os.WriteFile(tpl, []byte("id: example\n"), 0o644); err != nil {
+			if err := os.WriteFile(tpl, []byte("spec:\n  displayName: A\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
 			var stdout, stderr bytes.Buffer
