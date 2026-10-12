@@ -69,13 +69,13 @@ var entries = []Entry{
 	{
 		ID:          httperr.IDForbidden,
 		English:     "forbidden",
-		Description: "API error when the Kubernetes API denies the operation for the API's service identity.",
+		Description: "API error when the caller, or the API's service identity in Kubernetes, is not allowed to perform the operation.",
 		Status:      http.StatusForbidden,
 	},
 	{
 		ID:          httperr.IDUnauthorized,
 		English:     "unauthorized",
-		Description: "API error when the Kubernetes API rejects the credentials used for the operation.",
+		Description: "API error when the request carries no valid credentials, or Kubernetes rejects the credentials used for the operation.",
 		Status:      http.StatusUnauthorized,
 	},
 	{
@@ -214,8 +214,9 @@ var (
 )
 
 func init() {
-	byID = make(map[ID]parsedEntry, len(entries))
-	for _, e := range entries {
+	all := slices.Concat(entries, serverEntries)
+	byID = make(map[ID]parsedEntry, len(all))
+	for _, e := range all {
 		if _, dup := byID[e.ID]; dup {
 			panic(fmt.Sprintf("messages: duplicate id %q", e.ID))
 		}
@@ -225,7 +226,7 @@ func init() {
 		}
 		byID[e.ID] = parsedEntry{entry: e, msg: msg}
 	}
-	sorted = slices.Clone(entries)
+	sorted = slices.Clone(all)
 	slices.SortFunc(sorted, func(a, b Entry) int {
 		return strings.Compare(string(a.ID), string(b.ID))
 	})

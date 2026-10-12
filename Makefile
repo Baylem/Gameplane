@@ -260,14 +260,16 @@ check-telemetry-catalog: ## Verify telemetryschema/catalog.txt matches the chart
 	hack/check-telemetry-catalog.sh
 
 .PHONY: i18n-sync
-i18n-sync: ## Write the API message registry into the English reference (i18n/locales/en/app.json)
+i18n-sync: ## Write the API message registry (server.* and notify.*) and the operator condition.* ids into the English reference (i18n/locales/en/app.json)
 	cd api && go run ./cmd/messages-export > ../i18n/.registry.json
 	cd i18n && go run ./cmd/i18n-check --registry .registry.json --sync-server locales
 	rm -f i18n/.registry.json
+	cd operator && go run ./hack/condition-ids -app ../i18n/locales/en/app.json
 
 .PHONY: check-i18n
-check-i18n: ## Verify language packs, server-message drift and dashboard extraction drift (spec 019)
+check-i18n: ## Verify language packs, server.*, notify.* and operator condition.* drift and dashboard extraction drift (spec 019)
 	cd web && npm run i18n:extract-only
+	cd operator && go run ./hack/condition-ids -check -app ../i18n/locales/en/app.json
 	cd api && go run ./cmd/messages-export > ../i18n/.registry.json
 	cd i18n && status=0; go run ./cmd/i18n-check --extracted ../web/src/generated/i18n/extracted.json --registry .registry.json --check-server locales || status=$$?; rm -f .registry.json; exit $$status
 

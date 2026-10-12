@@ -1,8 +1,8 @@
 // Command i18n-check validates Gameplane's language packs.
 //
 // App mode (default) checks the reference pack and every translation under
-// <locales-dir>. It can sync the reference's server.* entries from a registry,
-// check server.* and extracted messages for drift, report unused ids, stamp
+// <locales-dir>. It can sync the reference's server.* and notify.* entries from a
+// registry, check server.* and notify.* and extracted messages for drift, report unused ids, stamp
 // source hashes, and write the language manifest and a markdown summary.
 //
 // Module mode (--module) checks flat <tag>.json packs for a game module.
@@ -61,9 +61,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 	fset.StringVar(&o.reference, "reference", "en", "reference language tag")
 	fset.StringVar(&o.base, "base", "", "previous language packs directory, for the summary's old completeness")
 	fset.StringVar(&o.extracted, "extracted", "", "formatjs-extracted messages file to compare with the reference")
-	fset.StringVar(&o.registry, "registry", "", "JSON registry of server.* messages (required by --sync-server and --check-server)")
-	fset.BoolVar(&o.syncServer, "sync-server", false, "replace the reference's server.* entries with the registry")
-	fset.BoolVar(&o.checkServer, "check-server", false, "report server.* entries that differ from the registry")
+	fset.StringVar(&o.registry, "registry", "", "JSON registry of server.* and notify.* messages (required by --sync-server and --check-server)")
+	fset.BoolVar(&o.syncServer, "sync-server", false, "replace the reference's server.* and notify.* entries with the registry")
+	fset.BoolVar(&o.checkServer, "check-server", false, "report server.* and notify.* entries that differ from the registry")
 	fset.StringVar(&o.usedIDs, "used-ids", "", "file listing the message ids code uses, one per line")
 	fset.StringVar(&o.manifest, "manifest", "", "write the language manifest JSON to this file")
 	fset.BoolVar(&o.stamp, "stamp", false, "record sourceHash on translated entries that lack one")
@@ -367,11 +367,17 @@ func writeInDir(dir, name string, data []byte) error {
 	return nil
 }
 
-// syncServer replaces the reference's server.* entries with the registry and
-// writes the reference back.
+// isRegistryID reports whether id belongs to the registry the API exports:
+// API errors (server.*) and notification text (notify.*).
+func isRegistryID(id string) bool {
+	return strings.HasPrefix(id, "server.") || strings.HasPrefix(id, "notify.")
+}
+
+// syncServer replaces the reference's server.* and notify.* entries with the
+// registry and writes the reference back.
 func syncServer(path string, ref, registry map[string]pack.Entry) error {
 	for id := range ref {
-		if strings.HasPrefix(id, "server.") {
+		if isRegistryID(id) {
 			delete(ref, id)
 		}
 	}
@@ -386,12 +392,12 @@ func syncServer(path string, ref, registry map[string]pack.Entry) error {
 	return nil
 }
 
-// checkServer reports server.* ids that exist on only one side, or whose
-// message or description differs between the reference and the registry.
+// checkServer reports server.* and notify.* ids that exist on only one side, or
+// whose message or description differs between the reference and the registry.
 func checkServer(ref, registry map[string]pack.Entry, file string) []pack.Finding {
 	ids := map[string]struct{}{}
 	for id := range ref {
-		if strings.HasPrefix(id, "server.") {
+		if isRegistryID(id) {
 			ids[id] = struct{}{}
 		}
 	}
@@ -404,9 +410,9 @@ func checkServer(ref, registry map[string]pack.Entry, file string) []pack.Findin
 		g, inReg := registry[id]
 		switch {
 		case !inRef:
-			out = append(out, errFinding(pack.CodeServerDrift, file, id, "registry defines this server message but the reference does not; run --sync-server"))
+			out = append(out, errFinding(pack.CodeServerDrift, file, id, "registry defines this server.* or notify.* message but the reference does not; run --sync-server"))
 		case !inReg:
-			out = append(out, errFinding(pack.CodeServerDrift, file, id, "reference has this server message but the registry does not; run --sync-server"))
+			out = append(out, errFinding(pack.CodeServerDrift, file, id, "reference has this server.* or notify.* message but the registry does not; run --sync-server"))
 		case r.DefaultMessage != g.DefaultMessage || r.Description != g.Description:
 			out = append(out, errFinding(pack.CodeServerDrift, file, id, "reference differs from the registry; run --sync-server"))
 		}

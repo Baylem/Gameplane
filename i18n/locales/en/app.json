@@ -1,11 +1,531 @@
 {
+  "condition.addressassignment.addressinuse": {
+    "defaultMessage": "The requested address ''{address}'' is already in use by GameServer ''{server}''.",
+    "description": "AddressAssignment condition when another game server holds the requested address."
+  },
+  "condition.addressassignment.allocationfailed": {
+    "defaultMessage": "The address manager could not allocate an address: {detail}",
+    "description": "AddressAssignment condition when the address manager reports an allocation failure. detail is the address manager's own English message."
+  },
+  "condition.addressassignment.assigned": {
+    "defaultMessage": "{assignedFrom, select, pool {Address {address} assigned from pool ''{pool}''.} other {Address {address} assigned.}}",
+    "description": "AddressAssignment condition once an address is assigned. assignedFrom is pool or default."
+  },
+  "condition.addressassignment.assignmentpending": {
+    "defaultMessage": "Requested {requestKind, select, addressAndPool {address ''{address}'' from pool ''{pool}''} address {address ''{address}''} other {pool ''{pool}''}}: the address manager has not assigned an address yet.",
+    "description": "AddressAssignment condition while the address manager works."
+  },
+  "condition.addressassignment.ignoredforexposuremode": {
+    "defaultMessage": "Requested {requestKind, select, addressAndPool {address ''{address}'' from pool ''{pool}''} address {address ''{address}''} other {pool ''{pool}''}} is ignored: it applies only to the LoadBalancer expose mode, and this server is exposed as ''{expose}''.",
+    "description": "AddressAssignment condition when an address or pool is requested for a server that is not exposed as a LoadBalancer. expose is the current expose mode."
+  },
+  "condition.addressassignment.invalidaddress": {
+    "defaultMessage": "The requested address ''{address}'' is not a valid IP address.",
+    "description": "AddressAssignment condition when the requested address does not parse."
+  },
+  "condition.addressassignment.noaddressmanagerconfigured": {
+    "defaultMessage": "Requested {requestKind, select, addressAndPool {address ''{address}'' from pool ''{pool}''} address {address ''{address}''} other {pool ''{pool}''}} cannot be honored: this cluster has no load-balancer address manager configured, so any address comes from the default assignment policy.",
+    "description": "AddressAssignment condition when no address manager (MetalLB or Cilium) is configured."
+  },
+  "condition.addressassignment.poolnotfound": {
+    "defaultMessage": "The requested address pool ''{pool}'' was not found.",
+    "description": "AddressAssignment condition when the requested address pool does not exist."
+  },
+  "condition.addressassignment.servicenotready": {
+    "defaultMessage": "Requested {requestKind, select, addressAndPool {address ''{address}'' from pool ''{pool}''} address {address ''{address}''} other {pool ''{pool}''}}: waiting for the LoadBalancer Service that carries the request to exist.",
+    "description": "AddressAssignment condition before the load-balancer Service exists."
+  },
+  "condition.completed.failed": {
+    "defaultMessage": "The backup or restore failed.",
+    "description": "Completed condition on a Backup or Restore that failed. The message holds the English detail."
+  },
+  "condition.completed.jobfailed": {
+    "defaultMessage": "The backup job reported a failure.",
+    "description": "Completed condition on a Backup whose job failed."
+  },
+  "condition.completed.pending": {
+    "defaultMessage": "The backup is waiting to start.",
+    "description": "Completed condition on a Backup that has not started (dynamic: reason is the phase)."
+  },
+  "condition.completed.running": {
+    "defaultMessage": "The backup is running.",
+    "description": "Completed condition on a Backup in progress (dynamic: reason is the phase)."
+  },
+  "condition.completed.succeeded": {
+    "defaultMessage": "The backup or restore completed successfully.",
+    "description": "Completed condition on a Backup or Restore that finished."
+  },
+  "condition.datawipe.jobfailed": {
+    "defaultMessage": "The data wipe job did not complete. The volume may not be fully cleared.",
+    "description": "DataWipe condition when the wipe job fails."
+  },
+  "condition.failed.capture_already_in_progress": {
+    "defaultMessage": "Another capture is already running on this server.",
+    "description": "Failed condition when two captures target one server."
+  },
+  "condition.failed.failed": {
+    "defaultMessage": "The capture failed.",
+    "description": "Failed condition on a NetworkCapture; the message holds the English detail."
+  },
+  "condition.failed.podrestarted": {
+    "defaultMessage": "The game pod restarted while the capture was running.",
+    "description": "Failed condition when the pod was replaced during a capture."
+  },
+  "condition.failed.sidecarcrashed": {
+    "defaultMessage": "The capture sidecar exited unexpectedly.",
+    "description": "Failed condition when the capture container died."
+  },
+  "condition.filecleanupfailed.delete_failed": {
+    "defaultMessage": "Deleting the capture file failed. It may stay past its retention.",
+    "description": "Condition when the capture file could not be deleted."
+  },
+  "condition.healthy.agentfresh": {
+    "defaultMessage": "The agent is reporting heartbeats.",
+    "description": "Healthy condition while heartbeats arrive."
+  },
+  "condition.healthy.agentstale": {
+    "defaultMessage": "The agent has not reported a heartbeat recently.",
+    "description": "Healthy condition when heartbeats stopped."
+  },
+  "condition.healthy.badkubeconfig": {
+    "defaultMessage": "The kubeconfig could not be used.",
+    "description": "Healthy condition when the kubeconfig does not parse."
+  },
+  "condition.healthy.discoveryclientfailed": {
+    "defaultMessage": "Connecting to the cluster failed.",
+    "description": "Healthy condition when the discovery client cannot be built."
+  },
+  "condition.healthy.failed": {
+    "defaultMessage": "The server failed.",
+    "description": "Healthy condition when the server has failed."
+  },
+  "condition.healthy.healthcheckfailed": {
+    "defaultMessage": "The cluster health check failed.",
+    "description": "Healthy condition when the cluster does not answer."
+  },
+  "condition.healthy.healthcheckpassed": {
+    "defaultMessage": "The cluster is reachable and healthy.",
+    "description": "Healthy condition on a registered cluster."
+  },
+  "condition.healthy.idleasleep": {
+    "defaultMessage": "The server is asleep because no players are online.",
+    "description": "Healthy condition for an idle-sleeping server."
+  },
+  "condition.healthy.invalidsecret": {
+    "defaultMessage": "The kubeconfig secret is missing the required label.",
+    "description": "Healthy condition when the secret lacks the cluster-kubeconfig label."
+  },
+  "condition.healthy.missingkey": {
+    "defaultMessage": "The kubeconfig secret does not contain the expected key.",
+    "description": "Healthy condition when the kubeconfig key is absent."
+  },
+  "condition.healthy.namereserved": {
+    "defaultMessage": "The cluster name \"local\" is reserved.",
+    "description": "Healthy condition when a cluster is registered with the reserved name."
+  },
+  "condition.healthy.pending": {
+    "defaultMessage": "The server has not started yet.",
+    "description": "Healthy condition before the first start."
+  },
+  "condition.healthy.secretnotfound": {
+    "defaultMessage": "The kubeconfig secret was not found.",
+    "description": "Healthy condition when the kubeconfig secret is missing."
+  },
+  "condition.healthy.stopping": {
+    "defaultMessage": "The server is stopping.",
+    "description": "Healthy condition while stopping."
+  },
+  "condition.healthy.suspended": {
+    "defaultMessage": "The server is stopped.",
+    "description": "Healthy condition for a stopped server."
+  },
+  "condition.healthy.unknown": {
+    "defaultMessage": "The state of the server is not known yet.",
+    "description": "Healthy condition before the operator has observed the server."
+  },
+  "condition.idlescheduleinvalid.wakewindowunparseable": {
+    "defaultMessage": "A wake window in the idle schedule cannot be parsed: {details}",
+    "description": "Condition when spec.idle has an invalid wake window. details is the English parse error."
+  },
+  "condition.progressing.containercreating": {
+    "defaultMessage": "Creating the container.",
+    "description": "Progressing detail while the kubelet creates the container."
+  },
+  "condition.progressing.containerexited": {
+    "defaultMessage": "The game container exited with code {exitCode} during startup. Check the logs.",
+    "description": "Progressing condition when the game container exits during startup. exitCode is the process exit code."
+  },
+  "condition.progressing.crashloopbackoff": {
+    "defaultMessage": "The game container keeps crashing during startup ({restartCount} restarts so far). Check the logs.",
+    "description": "Progressing condition when the game container crash-loops. restartCount is the number of restarts."
+  },
+  "condition.progressing.failed": {
+    "defaultMessage": "The server stopped trying to start.",
+    "description": "Progressing condition when startup has failed."
+  },
+  "condition.progressing.idleasleep": {
+    "defaultMessage": "The server is asleep because no players are online.",
+    "description": "Progressing condition for an idle-sleeping server."
+  },
+  "condition.progressing.imagepullfailed": {
+    "defaultMessage": "The game image cannot be pulled. Check the image reference.",
+    "description": "Progressing condition when the container image pull keeps failing."
+  },
+  "condition.progressing.installingserverfiles": {
+    "defaultMessage": "Downloading game files or waiting for the server to become ready.",
+    "description": "Progressing detail during first-run installation."
+  },
+  "condition.progressing.pending": {
+    "defaultMessage": "The server is waiting to be scheduled.",
+    "description": "Progressing condition while the pod is waiting for a node."
+  },
+  "condition.progressing.pullingimage": {
+    "defaultMessage": "Pulling the game image.",
+    "description": "Progressing detail while the container image downloads."
+  },
+  "condition.progressing.pvcprovisioningfailed": {
+    "defaultMessage": "Storage cannot be provisioned: PVC ''{pvc}'' needs StorageClass ''{storageClass}'', which does not exist on this cluster.",
+    "description": "Progressing condition when the data volume cannot be created. pvc is the volume claim name, storageClass the missing class."
+  },
+  "condition.progressing.stable": {
+    "defaultMessage": "The server is stable and nothing is changing.",
+    "description": "Progressing condition once the server is running."
+  },
+  "condition.progressing.starting": {
+    "defaultMessage": "The server is starting.",
+    "description": "Progressing condition while the pod starts."
+  },
+  "condition.progressing.stopping": {
+    "defaultMessage": "The server is stopping.",
+    "description": "Progressing condition while the pod stops."
+  },
+  "condition.progressing.suspended": {
+    "defaultMessage": "The server is stopped and nothing is in progress.",
+    "description": "Progressing condition for a stopped server."
+  },
+  "condition.progressing.unknown": {
+    "defaultMessage": "The state of the server is not known yet.",
+    "description": "Progressing condition before the operator has observed the server."
+  },
+  "condition.progressing.waitingforagent": {
+    "defaultMessage": "The server is up. Waiting for the first heartbeat from the agent.",
+    "description": "Progressing detail once the game container runs but the agent has not reported yet."
+  },
+  "condition.pulling.applied": {
+    "defaultMessage": "The module pull finished.",
+    "description": "Pulling condition once the template was applied."
+  },
+  "condition.pulling.applytemplate": {
+    "defaultMessage": "Applying the module template failed.",
+    "description": "Module condition when the GameTemplate cannot be written."
+  },
+  "condition.pulling.digestmismatch": {
+    "defaultMessage": "The module content does not match its pinned digest.",
+    "description": "Module condition when the digest differs from the pin."
+  },
+  "condition.pulling.incompatibleoperator": {
+    "defaultMessage": "The module needs a newer Gameplane operator.",
+    "description": "Module condition when gameplaneMinVersion is not met."
+  },
+  "condition.pulling.noversionavailable": {
+    "defaultMessage": "The module source has no available versions.",
+    "description": "Module condition when no version can be chosen."
+  },
+  "condition.pulling.pullfailed": {
+    "defaultMessage": "Pulling the module failed.",
+    "description": "Module condition when the OCI pull fails."
+  },
+  "condition.pulling.pulling": {
+    "defaultMessage": "Pulling the module.",
+    "description": "Pulling condition while a pull runs."
+  },
+  "condition.pulling.signatureinvalid": {
+    "defaultMessage": "The module signature could not be verified.",
+    "description": "Module condition when cosign verification fails."
+  },
+  "condition.pulling.sourceconfig": {
+    "defaultMessage": "The module source configuration is invalid.",
+    "description": "Module condition for a broken source setup."
+  },
+  "condition.pulling.sourcenotfound": {
+    "defaultMessage": "The module source was not found.",
+    "description": "Module condition when the named ModuleSource does not exist."
+  },
+  "condition.pulling.verifyconfig": {
+    "defaultMessage": "The signature verification settings are invalid.",
+    "description": "Module condition for a bad verification setup."
+  },
+  "condition.pulling.versionunavailable": {
+    "defaultMessage": "The requested version is not in the catalog.",
+    "description": "Module condition when the pinned version is missing."
+  },
+  "condition.pulling.waitingforcatalog": {
+    "defaultMessage": "Waiting for the module source to index this module.",
+    "description": "Module condition while the source has no catalog entry yet."
+  },
+  "condition.ready.applied": {
+    "defaultMessage": "The module template was applied.",
+    "description": "Ready condition on a Module after its GameTemplate was written."
+  },
+  "condition.ready.applytemplate": {
+    "defaultMessage": "Applying the module template failed.",
+    "description": "Module condition when the GameTemplate cannot be written."
+  },
+  "condition.ready.catalogpopulated": {
+    "defaultMessage": "The module catalog is populated.",
+    "description": "Ready condition on a source with a catalog."
+  },
+  "condition.ready.containerexited": {
+    "defaultMessage": "The game container exited with code {exitCode} during startup. Check the logs.",
+    "description": "Ready condition when the game container exits during startup. exitCode is the process exit code."
+  },
+  "condition.ready.crashloopbackoff": {
+    "defaultMessage": "The game container keeps crashing during startup ({restartCount} restarts so far). Check the logs.",
+    "description": "Ready condition when the game container crash-loops. restartCount is the number of restarts."
+  },
+  "condition.ready.digestmismatch": {
+    "defaultMessage": "The module content does not match its pinned digest.",
+    "description": "Module condition when the digest differs from the pin."
+  },
+  "condition.ready.failed": {
+    "defaultMessage": "{detail}",
+    "description": "Ready condition when the server cannot start. detail is the English reason from the operator, for example a missing template or an invalid configuration."
+  },
+  "condition.ready.idleasleep": {
+    "defaultMessage": "The server is asleep because no players are online.",
+    "description": "Ready condition for a server put to sleep by idle auto-sleep."
+  },
+  "condition.ready.imagepullfailed": {
+    "defaultMessage": "The game image cannot be pulled. Check the image reference.",
+    "description": "Ready condition when the container image pull keeps failing."
+  },
+  "condition.ready.incompatibleoperator": {
+    "defaultMessage": "The module needs a newer Gameplane operator.",
+    "description": "Module condition when gameplaneMinVersion is not met."
+  },
+  "condition.ready.inuse": {
+    "defaultMessage": "The module cannot be removed while game servers use its template.",
+    "description": "Ready condition when deletion is blocked."
+  },
+  "condition.ready.noversionavailable": {
+    "defaultMessage": "The module source has no available versions.",
+    "description": "Module condition when no version can be chosen."
+  },
+  "condition.ready.pending": {
+    "defaultMessage": "The server is waiting to start.",
+    "description": "Ready condition while the game server is being created."
+  },
+  "condition.ready.pullfailed": {
+    "defaultMessage": "Pulling the module failed.",
+    "description": "Module condition when the OCI pull fails."
+  },
+  "condition.ready.pvcprovisioningfailed": {
+    "defaultMessage": "Storage cannot be provisioned: PVC ''{pvc}'' needs StorageClass ''{storageClass}'', which does not exist on this cluster.",
+    "description": "Ready condition when the data volume cannot be created. pvc is the volume claim name, storageClass the missing class."
+  },
+  "condition.ready.running": {
+    "defaultMessage": "The server is running and the agent is reporting heartbeats.",
+    "description": "Ready condition while the game server is up."
+  },
+  "condition.ready.servingstalecatalog": {
+    "defaultMessage": "Serving the cached catalog. The last index attempt failed.",
+    "description": "Ready condition while an older catalog stays available."
+  },
+  "condition.ready.signatureinvalid": {
+    "defaultMessage": "The module signature could not be verified.",
+    "description": "Module condition when cosign verification fails."
+  },
+  "condition.ready.sourceconfig": {
+    "defaultMessage": "The module source configuration is invalid.",
+    "description": "Module condition for a broken source setup."
+  },
+  "condition.ready.sourcenotfound": {
+    "defaultMessage": "The module source was not found.",
+    "description": "Module condition when the named ModuleSource does not exist."
+  },
+  "condition.ready.sourceunreachable": {
+    "defaultMessage": "The module source has never been indexed successfully.",
+    "description": "Ready condition on a source that cannot be reached."
+  },
+  "condition.ready.starting": {
+    "defaultMessage": "The server is starting.",
+    "description": "Ready condition while the pod is starting up."
+  },
+  "condition.ready.stopping": {
+    "defaultMessage": "The server is stopping.",
+    "description": "Ready condition while the pod is shutting down."
+  },
+  "condition.ready.suspended": {
+    "defaultMessage": "The server is stopped.",
+    "description": "Ready condition for a server that was stopped."
+  },
+  "condition.ready.unknown": {
+    "defaultMessage": "The state of the server is not known yet.",
+    "description": "Ready condition before the operator has observed the server."
+  },
+  "condition.ready.verifyconfig": {
+    "defaultMessage": "The signature verification settings are invalid.",
+    "description": "Module condition for a bad verification setup."
+  },
+  "condition.ready.versionunavailable": {
+    "defaultMessage": "The requested version is not in the catalog.",
+    "description": "Module condition when the pinned version is missing."
+  },
+  "condition.ready.waitingforcatalog": {
+    "defaultMessage": "Waiting for the module source to index this module.",
+    "description": "Module condition while the source has no catalog entry yet."
+  },
+  "condition.retentionstopfailed.sidecar_stop_failed": {
+    "defaultMessage": "Stopping the capture sidecar at the end of retention failed.",
+    "description": "Condition when the retention-expiry stop failed."
+  },
+  "condition.retentiontrimmed.trimfailed": {
+    "defaultMessage": "Applying the retention policy failed.",
+    "description": "RetentionTrimmed condition when old backups could not be removed."
+  },
+  "condition.retentiontrimmed.trimsucceeded": {
+    "defaultMessage": "The retention policy was applied.",
+    "description": "RetentionTrimmed condition after a successful trim."
+  },
+  "condition.schedulevalid.cronparseerror": {
+    "defaultMessage": "The schedule is not a valid cron expression.",
+    "description": "ScheduleValid condition for an unparseable schedule."
+  },
+  "condition.schedulevalid.cronvalid": {
+    "defaultMessage": "The schedule is a valid cron expression.",
+    "description": "ScheduleValid condition for a good schedule."
+  },
+  "condition.sidecarstopfailed.sidecar_stop_failed": {
+    "defaultMessage": "Stopping the capture sidecar failed.",
+    "description": "Condition when the stop request to the sidecar failed."
+  },
+  "condition.sidecarstopped.never_started": {
+    "defaultMessage": "The capture was stopped before it started.",
+    "description": "SidecarStopped condition when a pending capture was cancelled."
+  },
+  "condition.sidecarstopped.stopped": {
+    "defaultMessage": "The capture sidecar was told to stop.",
+    "description": "SidecarStopped condition after a stop request."
+  },
+  "condition.snapshotforgotten.forgetabandoned": {
+    "defaultMessage": "The snapshot was not removed from the backup repository when the backup was deleted.",
+    "description": "SnapshotForgotten condition when the forget step was abandoned."
+  },
+  "condition.snapshotforgotten.forgotten": {
+    "defaultMessage": "The snapshot was removed from the backup repository.",
+    "description": "SnapshotForgotten condition after a deleted Backup's snapshot was forgotten."
+  },
+  "condition.synced.indexed": {
+    "defaultMessage": "The module source was indexed.",
+    "description": "Synced condition after a successful index."
+  },
+  "condition.synced.indexfailed": {
+    "defaultMessage": "Indexing the module source failed.",
+    "description": "Synced condition after a failed index."
+  },
+  "condition.tunneladdressinvalid.validationfailed": {
+    "defaultMessage": "Some tunnel endpoints were rejected: {details}",
+    "description": "Condition when endpoints reported by the playit tunnel pod fail validation. details is the English validation text."
+  },
+  "condition.tunnelhostnameignored.settingignored": {
+    "defaultMessage": "These settings apply to the backing Service, not to tunnel traffic: {settings}.",
+    "description": "Informational condition when hostname, source ranges or node ports are set on a server with a tunnel. settings is a comma-separated list of field names."
+  },
+  "condition.tunnelready.deploymentnotready": {
+    "defaultMessage": "Waiting for the tunnel deployment to become ready.",
+    "description": "TunnelReady condition while the tunnel pod is not ready."
+  },
+  "condition.tunnelready.invalidconfig": {
+    "defaultMessage": "{provider, select, none {The tunnel is enabled but the server has no tunnel configuration.} other {The ''{provider}'' tunnel provider is selected but its configuration is missing.}}",
+    "description": "TunnelReady condition for an incomplete tunnel setup. provider is the selected provider, or none."
+  },
+  "condition.tunnelready.nocredentials": {
+    "defaultMessage": "No credentials secret was provided, so the ''{provider}'' tunnel cannot authenticate.",
+    "description": "TunnelReady condition when a tunnel provider needs credentials that are missing."
+  },
+  "condition.tunnelready.portnotmapped": {
+    "defaultMessage": "No frp remote port is configured for: {ports}.",
+    "description": "TunnelReady condition for frp when advertised ports have no remote port. ports is a comma-separated list of port names."
+  },
+  "condition.tunnelready.ready": {
+    "defaultMessage": "{provider, select, playit {The tunnel deployment is ready. Waiting for the playit endpoint assignment.} tailscale {The tunnel deployment is ready and authenticated.} other {The tunnel deployment is ready and all ports are mapped.}}",
+    "description": "TunnelReady condition when the tunnel works."
+  },
+  "condition.tunnelready.tunnelcredentialrefused": {
+    "defaultMessage": "The tunnel credentials secret ''{secret}'' is not owned by this GameServer. {remedy, select, defaultName {Add an ownerReference to this GameServer to the Secret, or delete the Secret and save the credential again from the dashboard.} other {Save the credential from the dashboard, or add an ownerReference to this GameServer to the Secret.}}",
+    "description": "TunnelReady condition when the operator refuses to mount a credentials secret. secret is the secret name, remedy is defaultName or other."
+  },
+  "condition.tunnelready.unknownprovider": {
+    "defaultMessage": "Unknown tunnel provider ''{provider}''.",
+    "description": "TunnelReady condition when the provider name is not supported."
+  },
+  "condition.unquiesced.failed": {
+    "defaultMessage": "The server could not be resumed after the backup. Its world may still have auto-save turned off.",
+    "description": "Unquiesced condition when the unfreeze failed."
+  },
+  "condition.unquiesced.unquiesced": {
+    "defaultMessage": "The server was resumed after the backup.",
+    "description": "Unquiesced condition when the world was unfrozen."
+  },
+  "notify.detail.reason_message": {
+    "defaultMessage": "{reason} — {message}",
+    "description": "Body line that joins the Kubernetes reason and message of an event. The reason and message are quoted from Kubernetes in English and stay untranslated. The dash is an em dash."
+  },
+  "notify.detail.test": {
+    "defaultMessage": "This is a test notification from Gameplane. Your sink is wired up correctly.",
+    "description": "Body of a test notification sent from Admin Settings."
+  },
+  "notify.event.backup.failed": {
+    "defaultMessage": "backup failed",
+    "description": "Event name used inside a notification headline when a backup fails."
+  },
+  "notify.event.backup.succeeded": {
+    "defaultMessage": "backup succeeded",
+    "description": "Event name used inside a notification headline when a backup succeeds."
+  },
+  "notify.event.restore.failed": {
+    "defaultMessage": "restore failed",
+    "description": "Event name used inside a notification headline when a restore fails."
+  },
+  "notify.event.restore.succeeded": {
+    "defaultMessage": "restore succeeded",
+    "description": "Event name used inside a notification headline when a restore succeeds."
+  },
+  "notify.event.server.recovered": {
+    "defaultMessage": "server recovered",
+    "description": "Event name used inside a notification headline when a game server recovers."
+  },
+  "notify.event.server.unhealthy": {
+    "defaultMessage": "server unhealthy",
+    "description": "Event name used inside a notification headline when a game server becomes unhealthy."
+  },
+  "notify.event.test": {
+    "defaultMessage": "test notification",
+    "description": "Event name used inside the headline of a test notification."
+  },
+  "notify.title.named": {
+    "defaultMessage": "[{instance}] {event}: {namespace}/{name}",
+    "description": "Headline of a notification about a named resource. instance is the Gameplane instance name, event is the event name (for example \"backup failed\"), namespace and name identify the resource."
+  },
+  "notify.title.unnamed": {
+    "defaultMessage": "[{instance}] {event}",
+    "description": "Headline of a notification without a resource, such as a test send. instance is the Gameplane instance name, event is the event name."
+  },
   "server.already_exists": {
     "defaultMessage": "already exists",
     "description": "API error when creating a resource whose name is already taken."
   },
+  "server.auth.csrf_mismatch": {
+    "defaultMessage": "csrf mismatch",
+    "description": "API error from the session layer (sessions.go:Authenticate)."
+  },
   "server.auth.invalid_credentials": {
     "defaultMessage": "invalid credentials",
     "description": "Login error. It is generic on purpose, so it never reveals whether an account exists."
+  },
+  "server.auth_providers.client_secret_required": {
+    "defaultMessage": "clientSecret is required",
+    "description": "API error from the auth provider credentials API (auth_provider_secret.go:put)."
   },
   "server.bad_request": {
     "defaultMessage": "bad request",
@@ -14,6 +534,34 @@
   "server.cluster_forbidden": {
     "defaultMessage": "cluster not permitted",
     "description": "API error when the ?cluster= query value names a cluster the caller may not use or that is unknown."
+  },
+  "server.common.invalid_json": {
+    "defaultMessage": "invalid json",
+    "description": "API error when a request body is not valid JSON."
+  },
+  "server.common.namespace_not_permitted": {
+    "defaultMessage": "namespace not permitted",
+    "description": "API error when the caller's role does not cover the requested namespace (400 form, returned by the permission check and the role-binding API)."
+  },
+  "server.common.too_many_requests": {
+    "defaultMessage": "too many requests",
+    "description": "API error when a signed-in user sends requests faster than the per-user rate limit allows; retry later."
+  },
+  "server.common.unauthenticated": {
+    "defaultMessage": "unauthenticated",
+    "description": "API error when a route that needs a signed-in user is called without a valid session."
+  },
+  "server.common.user_not_found": {
+    "defaultMessage": "user not found",
+    "description": "API error when the user named in the request does not exist."
+  },
+  "server.config.read_body": {
+    "defaultMessage": "read body",
+    "description": "API error from the admin config API (config.go:put)."
+  },
+  "server.config.unknown_section": {
+    "defaultMessage": "unknown section",
+    "description": "API error from the admin config API (config.go:put)."
   },
   "server.conflict_retry": {
     "defaultMessage": "conflict, retry",
@@ -25,7 +573,7 @@
   },
   "server.forbidden": {
     "defaultMessage": "forbidden",
-    "description": "API error when the Kubernetes API denies the operation for the API's service identity."
+    "description": "API error when the caller, or the API's service identity in Kubernetes, is not allowed to perform the operation."
   },
   "server.generic.400": {
     "defaultMessage": "The request was not accepted.",
@@ -50,6 +598,10 @@
   "server.generic.413": {
     "defaultMessage": "The request is too large.",
     "description": "Generic sentence shown before the detail text for an HTTP 413 response."
+  },
+  "server.generic.415": {
+    "defaultMessage": "The request type is not supported.",
+    "description": "Generic sentence shown before the detail text for an HTTP 415 response."
   },
   "server.generic.422": {
     "defaultMessage": "The request contains invalid values.",
@@ -91,6 +643,14 @@
     "defaultMessage": "{detail}",
     "description": "API validation error. The argument detail is the validation message from Kubernetes, in English, and describes the caller's input."
   },
+  "server.lifecycle.confirmation_mismatch": {
+    "defaultMessage": "confirmation does not match server name",
+    "description": "API error from the server lifecycle API (lifecycle.go:wipeDataHandler)."
+  },
+  "server.lifecycle.new_name_required": {
+    "defaultMessage": "newName required",
+    "description": "API error from the server lifecycle API (lifecycle.go:cloneHandler)."
+  },
   "server.namespace_forbidden": {
     "defaultMessage": "namespace not permitted",
     "description": "API error when the user's role does not cover the requested namespace."
@@ -99,12 +659,200 @@
     "defaultMessage": "not found",
     "description": "API error when the requested resource does not exist."
   },
+  "server.notifications.sink_name_not_dns_label": {
+    "defaultMessage": "sink name must be a DNS label (lowercase, digits, hyphens)",
+    "description": "API error from the notification sinks API (notifications.go:deleteSecret, notifications.go:putSecret)."
+  },
+  "server.ownership.invalid_request": {
+    "defaultMessage": "invalid request",
+    "description": "API error from the server ownership API (ownership.go:setCollaborators)."
+  },
+  "server.ownership.user_id_required": {
+    "defaultMessage": "userId required",
+    "description": "API error from the server ownership API (ownership.go:transfer)."
+  },
+  "server.ownership.user_not_found_400": {
+    "defaultMessage": "user not found",
+    "description": "API error from the server ownership API (ownership.go:setCollaborators)."
+  },
+  "server.registry.api_key_required": {
+    "defaultMessage": "apiKey is required",
+    "description": "API error from the mod-registry credentials API (registry_secret.go:put)."
+  },
   "server.remote_cluster_not_implemented": {
     "defaultMessage": "not implemented: no cross-cluster agent yet; this route only serves the home cluster",
     "description": "API response for a home-cluster-only route called with a ?cluster= value that names another cluster. No cross-cluster agent exists yet."
   },
+  "server.roles.admin_not_editable": {
+    "defaultMessage": "the admin role cannot be edited",
+    "description": "API error from the roles API (roles.go:update)."
+  },
+  "server.roles.builtin_not_deletable": {
+    "defaultMessage": "built-in roles cannot be deleted",
+    "description": "API error from the roles API (roles.go:del)."
+  },
+  "server.roles.invalid_role_name": {
+    "defaultMessage": "invalid role name",
+    "description": "API error from the roles API (roles.go:create)."
+  },
+  "server.roles.remote_bindings_block_control_plane": {
+    "defaultMessage": "remove remote cluster-wide bindings before adding control-plane permissions",
+    "description": "API error from the roles API (roles.go:update)."
+  },
+  "server.roles.role_already_exists": {
+    "defaultMessage": "role already exists",
+    "description": "API error from the roles API (roles.go:create)."
+  },
+  "server.roles.role_in_use": {
+    "defaultMessage": "role is assigned to one or more users",
+    "description": "API error from the roles API (roles.go:del)."
+  },
+  "server.roles.role_not_found": {
+    "defaultMessage": "role not found",
+    "description": "API error from the roles API (roles.go:del, roles.go:update)."
+  },
+  "server.shares.expires_at_in_past": {
+    "defaultMessage": "expiresAt must be in the future",
+    "description": "API error from the share-links API (shares.go:createShareHandler)."
+  },
+  "server.shares.expiry_mutually_exclusive": {
+    "defaultMessage": "expiresAt and neverExpires are mutually exclusive",
+    "description": "API error from the share-links API (shares.go:createShareHandler)."
+  },
+  "server.shares.expiry_required": {
+    "defaultMessage": "must specify exactly one of expiresAt or neverExpires (or the deprecated expiresIn)",
+    "description": "API error from the share-links API (shares.go:createShareHandler)."
+  },
+  "server.shares.invalid_expires_at": {
+    "defaultMessage": "invalid expiresAt: must be RFC3339",
+    "description": "API error from the share-links API (shares.go:createShareHandler)."
+  },
+  "server.shares.invalid_expires_in": {
+    "defaultMessage": "invalid expiresIn",
+    "description": "API error from the share-links API (shares.go:createShareHandler)."
+  },
+  "server.telemetry.invalid_notice_action": {
+    "defaultMessage": "action must be one of seen|keep|extended-off|all-off",
+    "description": "API error from the telemetry API (telemetry.go:postNotice). Quoted words and tokens in the text are API keywords; keep them as written."
+  },
+  "server.telemetry.notice_not_pending": {
+    "defaultMessage": "telemetry notice is not pending",
+    "description": "API error from the telemetry API (telemetry.go:postNotice)."
+  },
+  "server.tunnel.credentials_in_use": {
+    "defaultMessage": "cannot delete tunnel credentials while tunnel is enabled; disable the tunnel first or use PUT to rotate credentials",
+    "description": "API error from the tunnel credentials API (tunnelcreds.go:delete)."
+  },
+  "server.tunnel.invalid_request_body": {
+    "defaultMessage": "invalid request body",
+    "description": "API error from the tunnel credentials API (tunnelcreds.go:put)."
+  },
+  "server.tunnel.secret_not_owned_conflict": {
+    "defaultMessage": "conflict: existing secret is not owned by this server",
+    "description": "API error from the tunnel credentials API (tunnelcreds.go:put)."
+  },
+  "server.tunnel.secret_not_owned_forbidden": {
+    "defaultMessage": "forbidden: cannot delete secret not owned by this server",
+    "description": "API error from the tunnel credentials API (tunnelcreds.go:delete)."
+  },
   "server.unauthorized": {
     "defaultMessage": "unauthorized",
-    "description": "API error when the Kubernetes API rejects the credentials used for the operation."
+    "description": "API error when the request carries no valid credentials, or Kubernetes rejects the credentials used for the operation."
+  },
+  "server.users.appearance_mode_invalid": {
+    "defaultMessage": "appearanceMode must be \"light\", \"dark\" or \"system\"",
+    "description": "API error from the users API (users.go:putPreferences, users.go:resetPreferences). Quoted words and tokens in the text are API keywords; keep them as written."
+  },
+  "server.users.appearance_mode_required": {
+    "defaultMessage": "appearanceMode is required",
+    "description": "API error from the users API (users.go:putPreferences)."
+  },
+  "server.users.bad_id": {
+    "defaultMessage": "bad id",
+    "description": "API error from the users API (users.go:addBinding, users.go:del, users.go:deleteBinding, users.go:listBindings, users.go:resetPassword, users.go:update)."
+  },
+  "server.users.binding_already_exists": {
+    "defaultMessage": "binding already exists",
+    "description": "API error from the users API (users.go:addBinding)."
+  },
+  "server.users.binding_not_found": {
+    "defaultMessage": "binding not found",
+    "description": "API error from the users API (users.go:deleteBinding)."
+  },
+  "server.users.cannot_delete_last_manager": {
+    "defaultMessage": "cannot delete the last user who can manage users",
+    "description": "API error from the users API (users.go:del)."
+  },
+  "server.users.cannot_delete_self": {
+    "defaultMessage": "cannot delete self",
+    "description": "API error from the users API (users.go:del)."
+  },
+  "server.users.cannot_demote_last_manager": {
+    "defaultMessage": "cannot demote the last user who can manage users",
+    "description": "API error from the users API (users.go:update)."
+  },
+  "server.users.cannot_remove_own_management": {
+    "defaultMessage": "cannot remove your own user-management access",
+    "description": "API error from the users API (users.go:update)."
+  },
+  "server.users.cluster_role_is_primary": {
+    "defaultMessage": "the cluster-wide role is managed via the primary role",
+    "description": "API error from the users API (users.go:deleteBinding)."
+  },
+  "server.users.custom_accent_invalid": {
+    "defaultMessage": "customColors.accent must be a #RRGGBB hex color",
+    "description": "API error from the users API (users.go:putPreferences). Quoted words and tokens in the text are API keywords; keep them as written."
+  },
+  "server.users.custom_css_enabled_required": {
+    "defaultMessage": "customCssEnabled is required",
+    "description": "API error from the users API (users.go:putPreferences)."
+  },
+  "server.users.custom_surface_invalid": {
+    "defaultMessage": "customColors.surface must be a #RRGGBB hex color",
+    "description": "API error from the users API (users.go:putPreferences). Quoted words and tokens in the text are API keywords; keep them as written."
+  },
+  "server.users.invalid_email": {
+    "defaultMessage": "invalid email",
+    "description": "API error from the users API (users.go:create, users.go:update)."
+  },
+  "server.users.invalid_role": {
+    "defaultMessage": "invalid role",
+    "description": "API error from the users API (users.go:addBinding, users.go:create, users.go:update)."
+  },
+  "server.users.invalid_username": {
+    "defaultMessage": "invalid username",
+    "description": "API error from the users API (users.go:create)."
+  },
+  "server.users.password_too_short": {
+    "defaultMessage": "password too short",
+    "description": "API error from the users API (users.go:create, users.go:resetPassword)."
+  },
+  "server.users.preset_id_invalid": {
+    "defaultMessage": "presetId must be \"pink\" or \"legacy\"",
+    "description": "API error from the users API (users.go:putPreferences, users.go:resetPreferences). Quoted words and tokens in the text are API keywords; keep them as written."
+  },
+  "server.users.preset_id_required": {
+    "defaultMessage": "presetId is required",
+    "description": "API error from the users API (users.go:putPreferences)."
+  },
+  "server.users.remote_binding_not_removable": {
+    "defaultMessage": "remote control-plane bindings cannot be removed through supplemental grants",
+    "description": "API error from the users API (users.go:deleteBinding)."
+  },
+  "server.users.remote_role_scope_limited": {
+    "defaultMessage": "remote cluster-wide roles may grant only cluster:read and namespaced permissions",
+    "description": "API error from the users API (users.go:addBinding)."
+  },
+  "server.users.theme_type_invalid": {
+    "defaultMessage": "themeType must be \"preset\" or \"custom_colors\"",
+    "description": "API error from the users API (users.go:putPreferences). Quoted words and tokens in the text are API keywords; keep them as written."
+  },
+  "server.users.theme_type_required": {
+    "defaultMessage": "themeType is required",
+    "description": "API error from the users API (users.go:putPreferences)."
+  },
+  "server.ws.invalid_server_name": {
+    "defaultMessage": "invalid server name",
+    "description": "API error from the console and log WebSocket routes (attach.go:handle, podlogs.go:handle)."
   }
 }

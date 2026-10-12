@@ -120,16 +120,16 @@ type createUserReq struct {
 func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 	var body createUserReq
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.bad_request", nil))
 		return
 	}
 	if !identifierRE.MatchString(body.Username) {
-		http.Error(w, "invalid username", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.invalid_username", nil))
 		return
 	}
 	if body.Email != "" {
 		if _, err := mail.ParseAddress(body.Email); err != nil {
-			http.Error(w, "invalid email", http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.invalid_email", nil))
 			return
 		}
 	}
@@ -140,13 +140,13 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 		httperr.Write(w, req, err)
 		return
 	} else if !ok {
-		http.Error(w, "invalid role", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.invalid_role", nil))
 		return
 	}
 	var hash string
 	if body.Password != "" {
 		if len(body.Password) < auth.MinPasswordLen {
-			http.Error(w, "password too short", http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.password_too_short", nil))
 			return
 		}
 		h2, err := auth.HashPassword(req.Context(), body.Password)
@@ -188,7 +188,7 @@ func (h *userHandler) create(w http.ResponseWriter, req *http.Request) {
 func (h *userHandler) me(w http.ResponseWriter, req *http.Request) {
 	u := auth.UserFromContext(req.Context())
 	if u == nil {
-		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		httperr.WriteMessage(w, req, messages.New("server.common.unauthenticated", nil))
 		return
 	}
 	prefs, err := h.db.GetPreferences(req.Context(), u.ID)
@@ -295,7 +295,7 @@ func sanitizeCustomCSS(css string) string {
 func (h *userHandler) getPreferences(w http.ResponseWriter, req *http.Request) {
 	u := auth.UserFromContext(req.Context())
 	if u == nil {
-		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		httperr.WriteMessage(w, req, messages.New("server.common.unauthenticated", nil))
 		return
 	}
 	prefs, err := h.db.GetPreferences(req.Context(), u.ID)
@@ -327,55 +327,55 @@ type customColorsReq struct {
 func (h *userHandler) putPreferences(w http.ResponseWriter, req *http.Request) {
 	u := auth.UserFromContext(req.Context())
 	if u == nil {
-		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		httperr.WriteMessage(w, req, messages.New("server.common.unauthenticated", nil))
 		return
 	}
 	var body updatePreferencesReq
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.bad_request", nil))
 		return
 	}
 	if body.ThemeType == nil {
-		http.Error(w, "themeType is required", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.theme_type_required", nil))
 		return
 	}
 	if *body.ThemeType != "preset" && *body.ThemeType != "custom_colors" {
-		http.Error(w, `themeType must be "preset" or "custom_colors"`, http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.theme_type_invalid", nil))
 		return
 	}
 	if body.PresetID == nil {
-		http.Error(w, "presetId is required", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.preset_id_required", nil))
 		return
 	}
 	if *body.PresetID != "pink" && *body.PresetID != "legacy" {
-		http.Error(w, `presetId must be "pink" or "legacy"`, http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.preset_id_invalid", nil))
 		return
 	}
 	if body.AppearanceMode == nil {
-		http.Error(w, "appearanceMode is required", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.appearance_mode_required", nil))
 		return
 	}
 	if *body.AppearanceMode != "light" && *body.AppearanceMode != "dark" && *body.AppearanceMode != "system" {
-		http.Error(w, `appearanceMode must be "light", "dark" or "system"`, http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.appearance_mode_invalid", nil))
 		return
 	}
 	if body.CustomCSSEnabled == nil {
-		http.Error(w, "customCssEnabled is required", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.custom_css_enabled_required", nil))
 		return
 	}
 	if body.CustomColors != nil {
 		if body.CustomColors.Accent != nil && !hexColorRE.MatchString(*body.CustomColors.Accent) {
-			http.Error(w, "customColors.accent must be a #RRGGBB hex color", http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.custom_accent_invalid", nil))
 			return
 		}
 		if body.CustomColors.Surface != nil && !hexColorRE.MatchString(*body.CustomColors.Surface) {
-			http.Error(w, "customColors.surface must be a #RRGGBB hex color", http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.custom_surface_invalid", nil))
 			return
 		}
 	}
 	if body.CustomCSS != nil {
 		if msg := sanitizeCustomCSS(*body.CustomCSS); msg != "" {
-			http.Error(w, msg, http.StatusBadRequest)
+			httperr.WriteCode(w, req, http.StatusBadRequest, errors.New(msg))
 			return
 		}
 	}
@@ -421,12 +421,12 @@ type resetPreferencesReq struct {
 func (h *userHandler) resetPreferences(w http.ResponseWriter, req *http.Request) {
 	u := auth.UserFromContext(req.Context())
 	if u == nil {
-		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		httperr.WriteMessage(w, req, messages.New("server.common.unauthenticated", nil))
 		return
 	}
 	var body resetPreferencesReq
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.bad_request", nil))
 		return
 	}
 	// Resolve the target preset/appearance from the body, defaulting to the
@@ -438,14 +438,14 @@ func (h *userHandler) resetPreferences(w http.ResponseWriter, req *http.Request)
 	}
 	if body.PresetID != nil {
 		if *body.PresetID != "pink" && *body.PresetID != "legacy" {
-			http.Error(w, `presetId must be "pink" or "legacy"`, http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.preset_id_invalid", nil))
 			return
 		}
 		prefs.PresetID = *body.PresetID
 	}
 	if body.AppearanceMode != nil {
 		if *body.AppearanceMode != "light" && *body.AppearanceMode != "dark" && *body.AppearanceMode != "system" {
-			http.Error(w, `appearanceMode must be "light", "dark" or "system"`, http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.appearance_mode_invalid", nil))
 			return
 		}
 		prefs.AppearanceMode = *body.AppearanceMode
@@ -471,7 +471,7 @@ type languageReq struct {
 func (h *userHandler) putLanguage(w http.ResponseWriter, req *http.Request) {
 	u := auth.UserFromContext(req.Context())
 	if u == nil {
-		http.Error(w, "unauthenticated", http.StatusUnauthorized)
+		httperr.WriteMessage(w, req, messages.New("server.common.unauthenticated", nil))
 		return
 	}
 	var body languageReq
@@ -508,12 +508,12 @@ func (h *userHandler) putLanguage(w http.ResponseWriter, req *http.Request) {
 func (h *userHandler) del(w http.ResponseWriter, req *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(req, "id"), 10, 64)
 	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.bad_id", nil))
 		return
 	}
 	u := auth.UserFromContext(req.Context())
 	if u != nil && u.ID == id {
-		http.Error(w, "cannot delete self", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.cannot_delete_self", nil))
 		return
 	}
 	// Lock to serialize with writes so the last-user-manager check can't race.
@@ -530,7 +530,7 @@ func (h *userHandler) del(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		if count <= 1 {
-			http.Error(w, "cannot delete the last user who can manage users", http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.cannot_delete_last_manager", nil))
 			return
 		}
 	}
@@ -556,17 +556,17 @@ type updateUserReq struct {
 func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(req, "id"), 10, 64)
 	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.bad_id", nil))
 		return
 	}
 	var body updateUserReq
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.bad_request", nil))
 		return
 	}
 	if body.Email != nil && *body.Email != "" {
 		if _, err := mail.ParseAddress(*body.Email); err != nil {
-			http.Error(w, "invalid email", http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.invalid_email", nil))
 			return
 		}
 	}
@@ -575,7 +575,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 			httperr.Write(w, req, err)
 			return
 		} else if !ok {
-			http.Error(w, "invalid role", http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.invalid_role", nil))
 			return
 		}
 	}
@@ -594,7 +594,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 		// users (the generalization of the old "don't demote yourself out
 		// of admin" guard) — someone else must do it.
 		if selfChanging && !newGrantsManage {
-			http.Error(w, "cannot remove your own user-management access", http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.cannot_remove_own_management", nil))
 			return
 		}
 		// System-wide safety net: never demote the last user who can manage
@@ -610,7 +610,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 					return
 				}
 				if count <= 1 {
-					http.Error(w, "cannot demote the last user who can manage users", http.StatusBadRequest)
+					httperr.WriteMessage(w, req, messages.New("server.users.cannot_demote_last_manager", nil))
 					return
 				}
 			}
@@ -678,7 +678,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 	out, err := h.fetchByID(req.Context(), id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "user not found", http.StatusNotFound)
+			httperr.WriteMessage(w, req, messages.New("server.common.user_not_found", nil))
 			return
 		}
 		httperr.Write(w, req, err)
@@ -694,16 +694,16 @@ type resetPasswordReq struct {
 func (h *userHandler) resetPassword(w http.ResponseWriter, req *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(req, "id"), 10, 64)
 	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.bad_id", nil))
 		return
 	}
 	var body resetPasswordReq
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.bad_request", nil))
 		return
 	}
 	if len(body.Password) < auth.MinPasswordLen {
-		http.Error(w, "password too short", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.password_too_short", nil))
 		return
 	}
 	hash, err := auth.HashPassword(req.Context(), body.Password)
@@ -720,7 +720,7 @@ func (h *userHandler) resetPassword(w http.ResponseWriter, req *http.Request) {
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		http.Error(w, "user not found", http.StatusNotFound)
+		httperr.WriteMessage(w, req, messages.New("server.common.user_not_found", nil))
 		return
 	}
 	// Force the target user to re-authenticate under the new credential.
@@ -743,7 +743,7 @@ type bindingDTO struct {
 func (h *userHandler) listBindings(w http.ResponseWriter, req *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(req, "id"), 10, 64)
 	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.bad_id", nil))
 		return
 	}
 	rows, err := h.db.DB.QueryContext(req.Context(),
@@ -778,12 +778,12 @@ type addBindingReq struct {
 func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(req, "id"), 10, 64)
 	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.bad_id", nil))
 		return
 	}
 	var body addBindingReq
 	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.bad_request", nil))
 		return
 	}
 	// Default the cluster to the default cluster.
@@ -794,12 +794,12 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 	// An explicit remote-wide grant may carry only inventory/namespaced access.
 	remoteWide := body.Namespace == "*" && body.Cluster != scope.DefaultCluster
 	if !remoteWide && (body.Namespace == "*" || !scope.Allowed(body.Namespace)) {
-		http.Error(w, "namespace not permitted", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.common.namespace_not_permitted", nil))
 		return
 	}
 	// Validate the cluster.
 	if body.Cluster == "*" {
-		http.Error(w, "cluster not permitted", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.cluster_forbidden", nil))
 		return
 	}
 	known := false
@@ -810,7 +810,7 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	if !known {
-		http.Error(w, "cluster not permitted", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.cluster_forbidden", nil))
 		return
 	}
 	if remoteWide {
@@ -823,7 +823,7 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 		httperr.Write(w, req, err)
 		return
 	} else if !ok {
-		http.Error(w, "invalid role", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.invalid_role", nil))
 		return
 	}
 	if remoteWide {
@@ -831,7 +831,7 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 			httperr.Write(w, req, err)
 			return
 		} else if !allowed {
-			http.Error(w, "remote cluster-wide roles may grant only cluster:read and namespaced permissions", http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.remote_role_scope_limited", nil))
 			return
 		}
 	}
@@ -839,7 +839,7 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 		httperr.Write(w, req, err)
 		return
 	} else if !ok {
-		http.Error(w, "user not found", http.StatusNotFound)
+		httperr.WriteMessage(w, req, messages.New("server.common.user_not_found", nil))
 		return
 	}
 	var dup int
@@ -850,7 +850,7 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if dup > 0 {
-		http.Error(w, "binding already exists", http.StatusConflict)
+		httperr.WriteMessage(w, req, messages.New("server.users.binding_already_exists", nil))
 		return
 	}
 	if _, err := h.db.DB.ExecContext(req.Context(),
@@ -866,7 +866,7 @@ func (h *userHandler) addBinding(w http.ResponseWriter, req *http.Request) {
 func (h *userHandler) deleteBinding(w http.ResponseWriter, req *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(req, "id"), 10, 64)
 	if err != nil {
-		http.Error(w, "bad id", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.bad_id", nil))
 		return
 	}
 	role := chi.URLParam(req, "role")
@@ -876,11 +876,11 @@ func (h *userHandler) deleteBinding(w http.ResponseWriter, req *http.Request) {
 		cluster = scope.DefaultCluster
 	}
 	if namespace == "*" && cluster == scope.DefaultCluster {
-		http.Error(w, "the cluster-wide role is managed via the primary role", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.users.cluster_role_is_primary", nil))
 		return
 	}
 	if cluster == "*" {
-		http.Error(w, "cluster not permitted", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.cluster_forbidden", nil))
 		return
 	}
 	if namespace == "*" {
@@ -892,7 +892,7 @@ func (h *userHandler) deleteBinding(w http.ResponseWriter, req *http.Request) {
 			httperr.Write(w, req, err)
 			return
 		} else if !allowed {
-			http.Error(w, "remote control-plane bindings cannot be removed through supplemental grants", http.StatusBadRequest)
+			httperr.WriteMessage(w, req, messages.New("server.users.remote_binding_not_removable", nil))
 			return
 		}
 	}
@@ -904,7 +904,7 @@ func (h *userHandler) deleteBinding(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		http.Error(w, "binding not found", http.StatusNotFound)
+		httperr.WriteMessage(w, req, messages.New("server.users.binding_not_found", nil))
 		return
 	}
 	h.invalidateSessions(req, id, "role binding removed")

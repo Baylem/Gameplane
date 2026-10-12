@@ -27,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/GameplanePanel/gameplane/api/internal/auth"
+	"github.com/GameplanePanel/gameplane/api/internal/httperr"
+	"github.com/GameplanePanel/gameplane/api/internal/messages"
 	"github.com/GameplanePanel/gameplane/api/internal/scope"
 )
 
@@ -78,12 +80,12 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			u := auth.UserFromContext(req.Context())
 			if u == nil {
-				http.Error(w, "unauthenticated", http.StatusUnauthorized)
+				httperr.WriteMessage(w, req, messages.New("server.common.unauthenticated", nil))
 				return
 			}
 			r, ok := match(req.Method, req.URL.Path)
 			if !ok {
-				http.Error(w, "forbidden", http.StatusForbidden)
+				httperr.WriteMessage(w, req, messages.New("server.forbidden", nil))
 				return
 			}
 			if r.perm == "" { // any authenticated user
@@ -100,7 +102,7 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 			if Namespaced(r.perm) {
 				resolved, err := scope.Resolve(req)
 				if err != nil {
-					http.Error(w, "namespace not permitted", http.StatusBadRequest)
+					httperr.WriteMessage(w, req, messages.New("server.common.namespace_not_permitted", nil))
 					return
 				}
 				ns = resolved
@@ -110,7 +112,7 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 				if fetch != nil {
 					resolvedCluster, err := scope.ResolveCluster(req, fetch)
 					if err != nil {
-						http.Error(w, "cluster not permitted", http.StatusBadRequest)
+						httperr.WriteMessage(w, req, messages.New("server.cluster_forbidden", nil))
 						return
 					}
 					cl = resolvedCluster
@@ -128,7 +130,7 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 						// (owner-only deletion) are permitted on the exact server path.
 						// Sub-resource writes (files, players, mods) continue through ownership fallback.
 						if isExact && req.Method != http.MethodGet && req.Method != http.MethodHead && req.Method != http.MethodDelete {
-							http.Error(w, "forbidden", http.StatusForbidden)
+							httperr.WriteMessage(w, req, messages.New("server.forbidden", nil))
 							return
 						}
 						obj, err := fetch.GetServer(req.Context(), cl, ns, name)
@@ -146,7 +148,7 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 						}
 					}
 				}
-				http.Error(w, "forbidden", http.StatusForbidden)
+				httperr.WriteMessage(w, req, messages.New("server.forbidden", nil))
 				return
 			}
 			// Owner-only server operations need the server's owner or an
@@ -155,12 +157,12 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 			if Namespaced(r.perm) && !u.Can("*", true, cl, ns) {
 				if name, verb, isExact, ok := parseServerPath(req.URL.Path); ok && ownerOnlyOperation(req.Method, verb, isExact) {
 					if fetch == nil {
-						http.Error(w, "forbidden", http.StatusForbidden)
+						httperr.WriteMessage(w, req, messages.New("server.forbidden", nil))
 						return
 					}
 					obj, err := fetch.GetServer(req.Context(), cl, ns, name)
 					if err != nil || obj == nil || ownershipRole(obj, u.ID) != roleOwner {
-						http.Error(w, "forbidden", http.StatusForbidden)
+						httperr.WriteMessage(w, req, messages.New("server.forbidden", nil))
 						return
 					}
 					// This grant still depends on owning this exact object, even

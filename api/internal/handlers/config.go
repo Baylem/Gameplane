@@ -117,16 +117,16 @@ func (h *configHandler) put(w http.ResponseWriter, req *http.Request) {
 	section := chi.URLParam(req, "section")
 	validate, ok := h.validators[section]
 	if !ok {
-		http.Error(w, "unknown section", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.config.unknown_section", nil))
 		return
 	}
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		http.Error(w, "read body", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.config.read_body", nil))
 		return
 	}
 	if len(body) == 0 {
-		http.Error(w, "empty body", http.StatusBadRequest)
+		httperr.WriteMessage(w, req, messages.New("server.empty_body", nil))
 		return
 	}
 	canon, err := validate(body)
@@ -136,7 +136,7 @@ func (h *configHandler) put(w http.ResponseWriter, req *http.Request) {
 			httperr.WriteMessage(w, req, m)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		httperr.WriteCode(w, req, http.StatusUnprocessableEntity, err)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (h *configHandler) put(w http.ResponseWriter, req *http.Request) {
 		// transaction as the config write (see saveTelemetry).
 		if err := h.saveTelemetry(req.Context(), canon); err != nil {
 			if errors.Is(err, telemetry.ErrOperatorDisabled) {
-				http.Error(w, err.Error(), http.StatusConflict)
+				httperr.WriteCode(w, req, http.StatusConflict, err)
 				return
 			}
 			httperr.Write(w, req, err)
@@ -721,6 +721,7 @@ type notifSink struct {
 	Enabled   bool     `json:"enabled"`
 	ConfigRef string   `json:"configRef,omitempty"` // K8s Secret name holding the sink's credentials
 	Events    []string `json:"events,omitempty"`    // subset of notify.AllEvents; empty = notify.DefaultOn
+	Language  string   `json:"language,omitempty"`  // BCP 47 tag of a listed language; empty = instance default
 }
 
 type notifCfg struct {
@@ -745,6 +746,9 @@ func validateNotifications(body []byte) (json.RawMessage, error) {
 		seen[s.Name] = true
 		if !validSinkKinds[s.Kind] {
 			return nil, fmt.Errorf("sinks[%d].kind must be one of discord|slack|smtp|webhook|ntfy", i)
+		}
+		if s.Language != "" && !languageListed(s.Language) {
+			return nil, messages.New("server.i18n.unknown_language", map[string]any{"language": s.Language})
 		}
 		// configRef stays optional so sink rows persisted before the
 		// delivery pipeline existed keep loading; the dispatcher skips
