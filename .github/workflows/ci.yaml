@@ -179,6 +179,8 @@ jobs:
             submodules:
               - 'modules'
               - 'website'
+              - 'hack/check-submodule-freshness.sh'
+              - 'hack/check-submodule-freshness_test.sh'
             # Gate scope for codegen drift (spec 013 T007).
             codegen:
               - 'operator/api/v1alpha1/**'
@@ -584,6 +586,28 @@ jobs:
         run: git diff --exit-code
       - name: prove the gate fails on a stale types edit
         run: ./hack/check-codegen-drift_test.sh
+
+  # Spec 013 G6 (OD-1): the modules/ and website/ gitlinks must point at
+  # commits already on each submodule's main branch, so a pointer bump never
+  # lands before its submodule PR merges.
+  submodule-freshness:
+    name: submodule freshness
+    needs: [changes]
+    if: needs.changes.outputs.submodules == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: prove the freshness check can fail
+        run: ./hack/check-submodule-freshness_test.sh
+      - name: submodule pointers are on upstream main
+        run: ./hack/check-submodule-freshness.sh
 
   lint:
     name: lint (${{ matrix.module }})
@@ -2045,6 +2069,7 @@ jobs:
         capture-sidecar-setcap-proof,
         docs,
         codegen-drift,
+        submodule-freshness,
         lint,
         go,
         web,
@@ -2156,7 +2181,7 @@ jobs:
 
             const NEEDS_ORDER = [
               'changes', 'build-images', 'build-images-arm64', 'vuln-images',
-              'capture-sidecar-setcap-proof', 'docs', 'codegen-drift', 'lint', 'go',
+              'capture-sidecar-setcap-proof', 'docs', 'codegen-drift', 'submodule-freshness', 'lint', 'go',
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-go-arm64', 'e2e-multicluster', 'e2e-multicluster-arm64', 'e2e-upgrade', 'e2e-upgrade-arm64',
@@ -2195,6 +2220,7 @@ jobs:
               'e2e-game-bot': (n) => n.startsWith('e2e game bot /'),
               'e2e-capture-overhead': (n) => n === 'e2e capture overhead (kind)',
               'e2e-kind-ingress-smoke': (n) => n === 'ingress-nginx smoke (kind)',
+              'submodule-freshness': (n) => n === 'submodule freshness',
             };
 
             let passed = 0, failed = 0, skipped = 0, cancelled = 0;
