@@ -51,6 +51,7 @@ type options struct {
 	stamp       bool
 	module      string
 	summary     string
+	validOut    string
 	dir         string
 }
 
@@ -69,6 +70,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	fset.BoolVar(&o.stamp, "stamp", false, "record sourceHash on translated entries that lack one")
 	fset.StringVar(&o.module, "module", "", "module mode: check flat <tag>.json packs against this template")
 	fset.StringVar(&o.summary, "summary", "", "append a markdown summary to this file")
+	fset.StringVar(&o.validOut, "valid-out", "", "write each pack's usable entries (the ones the dashboard shows) to <dir>/<tag>/app.json")
 
 	if err := fset.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -111,6 +113,7 @@ func (o options) checkUsage() error {
 		{"--extracted", o.extracted != ""},
 		{"--used-ids", o.usedIDs != ""},
 		{"--base", o.base != ""},
+		{"--valid-out", o.validOut != ""},
 	}
 	for _, f := range appOnly {
 		if f.set {
@@ -186,6 +189,11 @@ func runApp(o options, stdout, stderr io.Writer) int {
 		}
 	}
 
+	if o.validOut != "" {
+		if err := writeValidPacks(o.validOut, o.reference, ref, trs); err != nil {
+			return fail(stderr, err)
+		}
+	}
 	rows := manifestRows(o.reference, refMeta, ref, trs)
 	if o.manifest != "" {
 		if err := writeManifest(o.manifest, rows); err != nil {
@@ -363,6 +371,31 @@ func writeInDir(dir, name string, data []byte) error {
 	defer func() { _ = root.Close() }()
 	if err := root.WriteFile(name, data, 0o600); err != nil {
 		return fmt.Errorf("write %s: %w", name, err)
+	}
+	return nil
+}
+
+// writeValidPacks writes the pack the dashboard may show for every language to
+// <dir>/<tag>/app.json. The reference pack is written whole. Other packs keep
+// only the entries pack.Valid accepts, so invalid, unknown and missing ids are
+// left out and the dashboard falls back to English for them.
+func writeValidPacks(dir, reference string, ref map[string]pack.Entry, trs []translation) error {
+	packs := map[string]map[string]pack.Entry{reference: ref}
+	for _, tr := range trs {
+		packs[tr.tag] = pack.Valid(ref, tr.entries)
+	}
+	for _, tag := range slices.Sorted(maps.Keys(packs)) {
+		data, err := pack.Marshal(packs[tag])
+		if err != nil {
+			return fmt.Errorf("valid pack %s: %w", tag, err)
+		}
+		packDir := filepath.Join(dir, tag)
+		if err := os.MkdirAll(packDir, 0o750); err != nil {
+			return fmt.Errorf("create %s: %w", packDir, err)
+		}
+		if err := writeInDir(packDir, "app.json", data); err != nil {
+			return fmt.Errorf("write valid %s/app.json: %w", tag, err)
+		}
 	}
 	return nil
 }

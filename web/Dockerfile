@@ -12,7 +12,7 @@ FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS i18n
 WORKDIR /src
 COPY i18n/ ./i18n/
 WORKDIR /src/i18n
-RUN mkdir -p /out && go run ./cmd/i18n-check --manifest /out/languages.json locales
+RUN mkdir -p /out && go run ./cmd/i18n-check --manifest /out/languages.json --valid-out /out/valid locales
 
 # ---- build the SPA ----
 FROM node:26-bookworm-slim AS build
@@ -25,6 +25,10 @@ RUN npm ci
 # Shared locale catalogs live outside web/; the i18n scripts and Vite alias
 # read them from ../i18n/locales relative to /src/web.
 COPY i18n/locales ../i18n/locales
+# Filtered packs (only entries the checker accepts), written by the i18n stage.
+# The compile script reads them through GAMEPLANE_I18N_VALID, so no Go is needed here.
+COPY --from=i18n /out/valid ../i18n/valid
+ENV GAMEPLANE_I18N_VALID=../i18n/valid
 
 COPY web/ ./
 # Generated language manifest (computed by the i18n stage above).
