@@ -97,7 +97,7 @@ description: "Task list for 013-expand-test-coverage"
 
 ## Phase 3: User Story 1 – Static gates (Priority: P1) 🎯 MVP
 
-**Goal**: six blocking gates, each proven able to fail, with zero pre-existing findings left (contracts/static-gates.md G1–G6).
+**Goal**: six blocking gates, each proven able to fail except `dependency-review`, which OD-4 proves by configuration review only, with zero pre-existing findings left (contracts/static-gates.md G1–G6).
 
 **Independent Test**: for each gate, its `hack/check-<gate>_test.sh` step is green, the gate job is green, and the gap record links a run where the gate was red on a real violation (quickstart.md, "US1").
 
@@ -219,7 +219,7 @@ description: "Task list for 013-expand-test-coverage"
 
   Register it in `report`. Depends on T007, T034 and T035. Flip G-06.
 
-**Checkpoint**: all six gates are blocking and proven. The gap rows G-01 to G-06 are `closed` with run links (quickstart.md "US1" items 1–4).
+**Checkpoint**: all six gates are blocking. G-01, G-02, G-03, G-05 and G-06 are `closed` with run links; G-04 is `closed-unproven` under OD-4 (quickstart.md "US1" items 1–4).
 
 ---
 
