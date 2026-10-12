@@ -16,18 +16,18 @@ The spec was written on 2026-09-02. Several of its survey numbers are stale, so 
 | Container image scanning | **Open**: images are cosign-signed but never scanned | `images.yaml:115`, `publish-edge.yaml:189` sign; no `trivy`/`grype` anywhere |
 | Dockerfile linting | **Open**: 17 real Dockerfiles, no hadolint | `git ls-files \| grep Dockerfile` |
 | Dependency-review gating | **Open**: Dependabot opens update PRs (`.github/dependabot.yml`) but nothing reviews the dependencies a PR adds | no `dependency-review-action` |
-| Generated-file drift | **Partial**: chart CRD copies are diffed (`ci.yaml:1068-1077`); `make generate` (deepcopy), `make manifests` (`operator/config/{crd,rbac}`) and `go mod tidy` are not | no `controller-gen`/`tidy` in `ci.yaml` |
+| Generated-file drift | **Partial**: chart CRD copies are diffed (`ci.yaml:1077-1091`); `make generate` (deepcopy), `make manifests` (`operator/config/{crd,rbac}`) and `go mod tidy` are not | no `controller-gen`/`tidy` in `ci.yaml` |
 | Module freshness drift | **Open**: nothing checks the `modules/` and `website/` submodule pointers | see R5 |
 | Live dashboard E2E | **Partial**: 9 live Playwright specs now exist (`web/e2e/specs/live/`), up from the spec's 4. Login, create/delete server, server settings, share links, theme, console PTY and data screens are live. Admin notification config, user create + role assignment, backup restore, mod registry config and role bindings are still mock-only | `web/e2e/specs/{adminSettings,users,restoreFlow,rbacEnforcement}.spec.ts` all `test.skip(GAMEPLANE_E2E_TARGET === "live")` |
-| Telemetry receiver E2E | **Closed** by spec 022: `TestTelemetryLifecycle` in bucket `telemetry` (`test/e2e/buckets.sh:355`), amd64 + arm64 in `e2e-go` | `ci.yaml:1310` |
+| Telemetry receiver E2E | **Closed** by spec 022: `TestTelemetryLifecycle` in bucket `telemetry` (`test/e2e/buckets.sh:355`), amd64 + arm64 in `e2e-go` | `ci.yaml:1324` |
 | MCP server E2E | **Open**: no e2e references; image not in the e2e image bake | `.github/actions/build-e2e-images` builds operator/api/agent/sentinel/capture-sidecar/telemetry-receiver/fakeoidc only |
-| Tunnel E2E | **Partial**: CRD validation (3 tests) and `TestGameServer_TunnelCredentialRefusalSurfaced` exist; nothing boots a relay and proves supervision | `test/e2e/gameserver_e2e_test.go:1728` |
+| Tunnel E2E | **Partial**: CRD validation (3 tests) and `TestGameServer_TunnelCredentialRefusalSurfaced` exist; nothing boots a relay and proves supervision | `test/e2e/gameserver_e2e_test.go:1727` |
 | Audit syslog bridge E2E | **Open**: no e2e references; image not baked | as above |
 | `secrets_managed.go` unit tests | **Open**: no `_test.go` calls `upsertLabelledSecret`/`deleteManagedSecret` directly; they are reached only through feature handlers | `grep -l upsertLabelledSecret api/internal/handlers/*_test.go` is empty |
 | `ConsoleShell.tsx` test | **Open**: no `ConsoleShell.test.tsx`; exercised only indirectly by `Console.test.tsx`. File is 138 lines, not 77 | `web/src/routes/tabs/` |
 | `CloneServerDialog` test | **Exists**: `web/src/components/server/CloneServerDialog.test.tsx`. Remaining work is only to confirm ≥ 80 % lines and the cancel + error case | |
 | `ServerActionsMenu` test | **Exists**: `web/src/components/server/ServerActionsMenu.test.tsx`. Same as above | |
-| Postgres E2E | **Partial**: `api-postgres` job (`ci.yaml:1207`) builds/vets `-tags postgres` and runs `api/internal/db` against a real PostgreSQL 17 service (schema parity, RBAC, prefs, shares, delete-user). No kind cluster runs a Postgres-backed API | |
+| Postgres E2E | **Partial**: `api-postgres` job (`ci.yaml:1221`) builds/vets `-tags postgres` and runs `api/internal/db` against a real PostgreSQL 17 service (schema parity, RBAC, prefs, shares, delete-user). No kind cluster runs a Postgres-backed API | |
 
 **Rationale**: closed or partially closed gaps must not be re-implemented, and partially closed ones need only their remainder planned.
 
@@ -81,7 +81,7 @@ The spec was written on 2026-09-02. Several of its survey numbers are stale, so 
 
 ## R3: Dockerfile lint gate
 
-**Decision**: a `hadolint` step in the `workflow-lint` job (it already runs actionlint and zizmor; Dockerfiles are build config of the same kind). It uses a SHA-pinned hadolint binary verified by `sha256sum -c`, the same pattern as actionlint at `ci.yaml:1136-1151`, and runs over `git ls-files '*Dockerfile*'`, excluding `hack/testdata/**`. `failure-threshold: warning`. A root `.hadolint.yaml` holds only the `failure-threshold` and ignores no rules (no `trustedRegistries`, per OD-2).
+**Decision**: a `hadolint` step in the `workflow-lint` job (it already runs actionlint and zizmor; Dockerfiles are build config of the same kind). It uses a SHA-pinned hadolint binary verified by `sha256sum -c`, the same pattern as actionlint at `ci.yaml:1150-1165`, and runs over `git ls-files '*Dockerfile*'`, excluding `hack/testdata/**`. `failure-threshold: warning`. A root `.hadolint.yaml` holds only the `failure-threshold` and ignores no rules (no `trustedRegistries`, per OD-2).
 
 **Pre-existing findings**: fixed in the same PR that turns the gate on (FR-008: fix, never silence). Rule 8 forbids running hadolint locally, so the gate PR's first CI run lists the findings, and the fixes follow as commits on that PR. The gate is never merged in a red or report-only state.
 
@@ -146,7 +146,7 @@ The user confirmed this interpretation on 2026-10-09 (OD-1, ruled).
 
 **Login budget**: `globalSetup` logs in once and every spec reuses `storageState`. Only `users-and-roles` and `role-bindings` add logins: one each, as the created non-admin user (a different username, so a different per-user bucket). The per-IP total stays within burst 10.
 
-**Backup dependency**: restore needs a restic repo, and `deploy/kind/e2e.sh` does not provision one. The Go suite creates it lazily through `ensureResticRepo(t)` (`test/e2e/test_helpers_e2e_test.go:459`), which applies `fixtures/restic-server.yaml`, `fixtures/backup-restic-secret.yaml` and a warm-up Job. The live job therefore gains one step before Playwright: a `go test -run '^TestE2E_ResticRepoReady$'` helper test (bucketed in `operator`, since it is idempotent and login-free) that calls `ensureResticRepo`. That reuses the same fixtures and warm-up retry logic rather than duplicating them in TypeScript, and the spec then points its backup at that repo's Secret.
+**Backup dependency**: restore needs a restic repo, and `deploy/kind/e2e.sh` does not provision one. The Go suite creates it lazily through `ensureResticRepo(t)` (`test/e2e/test_helpers_e2e_test.go:458`), which applies `fixtures/restic-server.yaml`, `fixtures/backup-restic-secret.yaml` and a warm-up Job. The live job therefore gains one step before Playwright: a `go test -run '^TestE2E_ResticRepoReady$'` helper test (bucketed in `operator`, since it is idempotent and login-free) that calls `ensureResticRepo`. That reuses the same fixtures and warm-up retry logic rather than duplicating them in TypeScript, and the spec then points its backup at that repo's Secret.
 
 **Runtime**: `e2e-web-live` has a 60-minute timeout and runs `workers: 1`. Five specs at an estimated 1–3 minutes each fit, and the job's duration is recorded in the gap record after the first green run.
 
@@ -261,6 +261,6 @@ The telemetry receiver is already covered by `TestTelemetryLifecycle` (R0). This
 - uses SHA-pinned actions with version comments, which zizmor and actionlint already enforce
 - is added to the `report` job's `needs`, `NEEDS_ORDER` and `JOB_MATCHERS`
 
-Job display names must not start with `go (`, because the report's `go` matcher is a prefix match (`ci.yaml:1205` comment).
+Job display names must not start with `go (`, because the report's `go` matcher is a prefix match (`ci.yaml:1219` comment).
 
 **Rationale**: `check-ci-report-coverage.sh` fails otherwise, and the PR comment would silently omit the job.

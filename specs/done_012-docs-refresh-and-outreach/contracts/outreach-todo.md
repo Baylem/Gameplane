@@ -2,16 +2,16 @@
 
 **Status**: Specification (Ruled 2026-09-02 — Ready for Implementation)  
 **Feature Branch**: `012-docs-refresh-and-outreach`  
-**Applies To**: `specs/012-docs-refresh-and-outreach/outreach.md`
+**Applies To**: `specs/done_012-docs-refresh-and-outreach/outreach.md`
 
 ---
 
 ## File Location and Purpose (FR-020, Rule 16)
 
-**Path**: `specs/012-docs-refresh-and-outreach/outreach.md`  
+**Path**: `specs/done_012-docs-refresh-and-outreach/outreach.md`  
 **Location rationale** (FR-020): The outreach-tracking file lives in the feature spec folder because it is a durable, traceable record of Gameplane's external-visibility submissions — part of the feature's deliverable alongside the docs refresh and comparison table. It is maintained as the authoritative record (SC-013) of submission status for all three target directories.
 
-**Folder rename consequence** (Rule 16): When feature 012 is complete and the folder is renamed from `specs/012-docs-refresh-and-outreach/` to `specs/done_012-docs-refresh-and-outreach/`, the link in `docs/contributing.md` (FR-025) MUST be updated in the same commit to point to the new path. The contract itself becomes a binding record of the submission history and remains valid after the rename.
+**Folder rename consequence** (Rule 16): When feature 012 is complete and the folder is renamed from `specs/done_012-docs-refresh-and-outreach/` to `specs/done_012-docs-refresh-and-outreach/`, the link in `docs/contributing.md` (FR-025) MUST be updated in the same commit to point to the new path. The contract itself becomes a binding record of the submission history and remains valid after the rename.
 
 ---
 
@@ -141,7 +141,7 @@ The reference MUST be traceable: a human or maintainer reviewing the record shou
 ```markdown
 ## Community Visibility & Outreach
 
-[External Directory Submissions](../specs/012-docs-refresh-and-outreach/outreach.md)
+[External Directory Submissions](../specs/done_012-docs-refresh-and-outreach/outreach.md)
 
 The project maintains a tracked list of external directory submissions
 (AlternativeTo, Awesome-Selfhosted, Awesome-Kubernetes) to grow
@@ -321,7 +321,7 @@ Feature 012 is **complete with respect to outreach tracking** when ALL of the fo
 
 ### SC-012: Tracking Infrastructure
 
-- [ ] File `specs/012-docs-refresh-and-outreach/outreach.md` exists in the repo.
+- [ ] File `specs/done_012-docs-refresh-and-outreach/outreach.md` exists in the repo.
 - [ ] File contains a markdown table with columns: Target, Submission URL, Status, Submitted Reference, Notes / History.
 - [ ] All three target directories are listed: AlternativeTo, Awesome-Selfhosted, Awesome-Kubernetes.
 - [ ] Status values use only the vocabulary defined in D-D (no other status strings).
@@ -330,7 +330,7 @@ Feature 012 is **complete with respect to outreach tracking** when ALL of the fo
 ### SC-013: Maintenance & Linkage
 
 - [ ] File is linked from `docs/contributing.md` with a meaningful section and link text (FR-025).
-- [ ] Link uses a path relative to the docs/ directory (e.g., `../specs/012-docs-refresh-and-outreach/outreach.md`).
+- [ ] Link uses a path relative to the docs/ directory (e.g., `../specs/done_012-docs-refresh-and-outreach/outreach.md`).
 - [ ] Link resolves when the docs are built or read.
 
 ### SC-014: Terminal States

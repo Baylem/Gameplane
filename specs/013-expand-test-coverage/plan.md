@@ -39,7 +39,7 @@ Each ships with a fixture-driven `_test.sh` that proves it can fail. The one exc
 
 Test-side: Playwright 1.63, vitest 5, `client-go/kubernetes/fake`, existing e2e helpers. No runtime dependency is added to any shipped component.
 
-**Storage**: N/A for the gates. The Postgres E2E uses a throwaway in-cluster PostgreSQL 17 (same digest as the `api-postgres` service, `ci.yaml:1217`).
+**Storage**: N/A for the gates. The Postgres E2E uses a throwaway in-cluster PostgreSQL 17 (same digest as the `api-postgres` service, `ci.yaml:1231`).
 
 **Testing**: everything runs in CI only (Constitution VI, CLAUDE.md rule 8). Locally only `go build ./...`, `go vet -tags e2e ./...` compile checks and `npx tsc --noEmit` / `npm run typecheck:e2e`.
 

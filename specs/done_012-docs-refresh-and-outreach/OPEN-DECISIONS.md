@@ -1,6 +1,6 @@
 # Open Decisions
 
-**Status**: All sixteen decisions ruled (OD-1 through OD-15 on 2026-09-02; OD-16 on 2026-10-07); none remain open.
+**Status**: All sixteen decisions ruled (OD-1 through OD-15 on 2026-09-02; OD-16 on 2026-10-07; OD-2's two slug sub-questions on 2026-10-11); none remain open.
 
 All open questions documented here arise from the feature spec (spec.md), CLAUDE.md guidance, constitution principles, research findings (R1–R8), or maintainer amendments that could not be resolved without maintainer judgment. This document is the authoritative list of everything blocking detailed planning and implementation.
 
@@ -19,7 +19,7 @@ All open questions documented here arise from the feature spec (spec.md), CLAUDE
 **Evidence**: 
 - spec.md:46 "maintainer idea: auto fetch latest tag in a ci to auto update the docs for version string?"
 - R1-versions.md shows 4 STALE version strings: docs/install.md:14 (install example), telemetry-receiver/README.md:9 and :28 (example payloads), docs/dependencies.md:26 (snapshot date)
-- SC-005 requirement: /home/user/Gameplane/specs/012-docs-refresh-and-outreach/spec.md:170
+- SC-005 requirement: /home/user/Gameplane/specs/done_012-docs-refresh-and-outreach/spec.md:170
 
 **Options**:
 1. **(a) Release workflow auto-rewrite**: A GitHub Actions step in the release workflow rewrites version strings in docs when a release tag is pushed (e.g., sed replacing old version with new). Pros: automatic, release-time. Cons: script fragility, false positives (example vs. literal).
@@ -63,7 +63,9 @@ All open questions documented here arise from the feature spec (spec.md), CLAUDE
 
 **Sub-questions** (clarification needed for script design):
 - How does the markdown processor handle ampersand characters in heading slugs (e.g., "Beta Status & Limitations" → `beta-status--limitations` or `beta-status-limitations`)? (R2-links.md open question 1)
+  - **Ruling (2026-10-11, valgul)**: GitHub style — `&` is dropped and its surrounding spaces stay, giving a double hyphen (`beta-status--limitations`). This is what hack/check-links.sh already implements and self-tests.
 - Are same-file anchor references always required to use the full heading slug, or are shorthand/partial matches supported? (R2-links.md open question 2)
+  - **Ruling (2026-10-11, valgul)**: Full slug only — a same-file `#anchor` must exactly match a heading slug (or explicit `<a id>`/`<a name>` anchor) in that file; no partial or prefix matches. This is what hack/check-links.sh already implements.
 
 **Blocks**:
 - SC-006 pass/fail (internal links verified)
@@ -543,7 +545,7 @@ Should alt text for live-stream tabs (Console, Logs) explicitly note "mocked dat
 **Blocks**:
 - .github/workflows/screenshot-refresh.yaml amendment (extend to website)
 - web/e2e/specs/websiteScreenshots.spec.ts creation
-- specs/012-docs-refresh-and-outreach amendment (OD-16, FRs, contracts, tasks)
+- specs/done_012-docs-refresh-and-outreach amendment (OD-16, FRs, contracts, tasks)
 
 ---
 

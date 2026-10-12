@@ -402,7 +402,7 @@ README placement order: intro paragraph above table explaining scope, then FR-00
 ## 13. References & Evidence
 
 **Spec references**:
-- Feature Specification: `/home/user/Gameplane/specs/012-docs-refresh-and-outreach/spec.md` (FR-001 through FR-008, SC-001 through SC-003)
+- Feature Specification: `/home/user/Gameplane/specs/done_012-docs-refresh-and-outreach/spec.md` (FR-001 through FR-008, SC-001 through SC-003)
 - Orchestrator decisions: D-A (marker syntax), D-B (version truth), D-C (label vocabulary), D-H (placement)
 
 **Research references**:

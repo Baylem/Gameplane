@@ -277,12 +277,17 @@ check-i18n: ## Verify language packs, server.*, notify.* and operator condition.
 check-dev-load-images: ## Verify `dev-load` loads every image `images` builds
 	hack/check-dev-load-images.sh
 
+.PHONY: check-coverage-gaps
+check-coverage-gaps: ## Validate spec 013's coverage gap record and prove the validator can fail
+	hack/check-coverage-gaps.sh
+	hack/check-coverage-gaps_test.sh
+
 .PHONY: test-up-registry
 test-up-registry: ## Run the fixture tests for deploy/kind/up.sh's registry/context bootstrap
 	hack/test-up-registry.sh
 
 .PHONY: lint
-lint: check-doc-versions check-links check-specs check-telemetry-catalog check-i18n check-dev-load-images test-up-registry lint-go lint-web ## Run all linters
+lint: check-doc-versions check-links check-specs check-telemetry-catalog check-i18n check-dev-load-images check-coverage-gaps test-up-registry lint-go lint-web ## Run all linters
 
 .PHONY: lint-go
 lint-go: ## Run golangci-lint across all modules

@@ -191,7 +191,7 @@ so inspect the image's tags before re-running the failed jobs.
 
 ## Community Visibility & Outreach
 
-[External Directory Submissions](../specs/012-docs-refresh-and-outreach/outreach.md)
+[External Directory Submissions](../specs/done_012-docs-refresh-and-outreach/outreach.md)
 
 The project maintains a tracked list of external directory submissions
 (AlternativeTo, Awesome-Selfhosted, Awesome-Kubernetes) to grow
