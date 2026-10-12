@@ -65,7 +65,11 @@ func writeNodes(b *strings.Builder, nodes []Node, st state) {
 				writeOption(b, findOption(n.Options, "other"), st, "", false)
 				continue
 			}
-			writeOption(b, findOption(n.Options, fmt.Sprint(v)), st, "", false)
+			opt := findOption(n.Options, fmt.Sprint(v))
+			if opt == nil {
+				opt = findOption(n.Options, "other")
+			}
+			writeOption(b, opt, st, "", false)
 		}
 	}
 }
