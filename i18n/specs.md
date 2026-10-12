@@ -2,7 +2,7 @@
 
 **Status:** pre-v1 (spec 019)
 **Module / package:** `github.com/GameplanePanel/gameplane/i18n`
-**Dependencies:** stdlib and `golang.org/x/text` (Go 1.26+)
+**Dependencies:** stdlib, `golang.org/x/text` and `gopkg.in/yaml.v3` (the `i18n-check --module` mode reads module manifests; Go 1.26+)
 
 ## Purpose
 
@@ -38,9 +38,10 @@ i18n/
 │   ├── en/meta.json    # reference metadata (tag, nativeName, englishName, direction)
 │   └── <tag>/…         # translated packs
 ├── icu/                # parse.go, placeholders.go, format.go: ICU subset
-├── pack/               # pack.go (types, parse, marshal, hash, tags), validate.go, completeness.go
+├── pack/               # pack.go (types, parse, marshal, hash, tags), validate.go, completeness.go, stamp.go
+├── modlocale/          # ids.go: module id derivation (Derive, ValidID) shared by gp-module, i18n-check --module and the operator
 ├── catalog/            # catalog.go: Load, Default, lookup chain, listing
-├── cmd/i18n-check/     # main.go: CLI, app mode and module mode
+├── cmd/i18n-check/     # main.go: CLI, app mode and module mode (--module: en.json must equal the ids derived from template.yaml + module.yaml; --stamp is app-mode only)
 ├── testdata/defective/ # one fixture per finding code (SC-007)
 ├── .testcoverage.yml   # 90% coverage gate
 └── go.mod

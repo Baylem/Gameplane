@@ -147,6 +147,22 @@
     "defaultMessage": "A wake window in the idle schedule cannot be parsed: {details}",
     "description": "Condition when spec.idle has an invalid wake window. details is the English parse error."
   },
+  "condition.localesvalid.invalidentries": {
+    "defaultMessage": "Some module translation entries are invalid and were left out.",
+    "description": "LocalesValid condition on a GameTemplate when translation entries or files were dropped. The message holds the English per-language counts."
+  },
+  "condition.localesvalid.localestoolarge": {
+    "defaultMessage": "Some module translations were left out because they are too large.",
+    "description": "LocalesValid condition on a GameTemplate when a language file is over the size limit or the translations together exceed it. The message names the languages."
+  },
+  "condition.localesvalid.valid": {
+    "defaultMessage": "All module translations are valid.",
+    "description": "LocalesValid condition on a GameTemplate when every translation entry shipped with the module is valid."
+  },
+  "condition.localesvalid.writefailed": {
+    "defaultMessage": "Module translations could not be stored.",
+    "description": "LocalesValid condition on a GameTemplate when the translations ConfigMap could not be written. The message holds the English error."
+  },
   "condition.progressing.containercreating": {
     "defaultMessage": "Creating the container.",
     "description": "Progressing detail while the kubelet creates the container."

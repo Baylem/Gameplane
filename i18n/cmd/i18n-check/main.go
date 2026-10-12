@@ -5,7 +5,12 @@
 // registry, check server.* and notify.* and extracted messages for drift, report unused ids, stamp
 // source hashes, and write the language manifest and a markdown summary.
 //
-// Module mode (--module) checks flat <tag>.json packs for a game module.
+// Module mode (--module <template.yaml>) derives the reference from the
+// template and the module.yaml beside it (package modlocale, the same ids as
+// gp-module i18n extract and the operator), requires <locales-dir>/en.json to
+// equal the derived set, and validates every other <tag>.json against it. File
+// names must be valid language tags. Without a module.yaml the module.* ids are
+// not derived, so an en.json that contains them reports unknown-id.
 //
 // Exit status: 0 when no error-severity finding was reported, 1 when one was,
 // 2 for usage errors or unreadable required files.
@@ -25,7 +30,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/GameplanePanel/gameplane/i18n/modlocale"
 	"github.com/GameplanePanel/gameplane/i18n/pack"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -210,11 +217,14 @@ func runApp(o options, stdout, stderr io.Writer) int {
 }
 
 func runModule(o options, stdout, stderr io.Writer) int {
-	if _, err := os.ReadFile(filepath.Clean(o.module)); err != nil {
+	tplData, err := os.ReadFile(filepath.Clean(o.module))
+	if err != nil {
 		return fail(stderr, fmt.Errorf("read template: %w", err))
 	}
-	// T084: template-derived id checking plugs in here. Every id a module's
-	// template references must exist in the reference pack.
+	derived, err := deriveModuleRefs(o.module, tplData)
+	if err != nil {
+		return fail(stderr, err)
+	}
 
 	refFile := o.reference + ".json"
 	refData, err := os.ReadFile(filepath.Clean(filepath.Join(o.dir, refFile)))
@@ -226,6 +236,10 @@ func runModule(o options, stdout, stderr io.Writer) int {
 		return report(stdout, []pack.Finding{errFinding(pack.CodeMalformedPack, refFile, pack.IDPack, err.Error())})
 	}
 	findings := pack.ValidateReference(ref, refFile)
+	// The reference must equal the ids derived from the YAML, even when that
+	// set is empty; every translation is then validated against the derived set.
+	findings = append(findings, checkModuleDrift(ref, derived, refFile)...)
+	ref = derived
 
 	dirEntries, err := os.ReadDir(o.dir)
 	if err != nil {
@@ -234,6 +248,10 @@ func runModule(o options, stdout, stderr io.Writer) int {
 	for _, d := range dirEntries {
 		name := d.Name()
 		if d.IsDir() || name == refFile || !strings.HasSuffix(name, ".json") {
+			continue
+		}
+		if stem := strings.TrimSuffix(name, ".json"); !pack.ValidTag(stem) {
+			findings = append(findings, errFinding(pack.CodeMalformedPack, name, pack.IDPack, fmt.Sprintf("%q is not a valid language tag", stem)))
 			continue
 		}
 		data, err := os.ReadFile(filepath.Clean(filepath.Join(o.dir, name)))
@@ -255,6 +273,48 @@ func runModule(o options, stdout, stderr io.Writer) int {
 		}
 	}
 	return report(stdout, findings)
+}
+
+// deriveModuleRefs derives the reference pack from the template and the
+// module.yaml that sits beside it (when there is one).
+func deriveModuleRefs(templatePath string, templateData []byte) (map[string]pack.Entry, error) {
+	var tmpl map[string]any
+	if err := yaml.Unmarshal(templateData, &tmpl); err != nil {
+		return nil, fmt.Errorf("parse template: %w", err)
+	}
+	var meta map[string]any
+	metaData, err := os.ReadFile(filepath.Clean(filepath.Join(filepath.Dir(templatePath), "module.yaml")))
+	switch {
+	case err == nil:
+		if err := yaml.Unmarshal(metaData, &meta); err != nil {
+			return nil, fmt.Errorf("parse module.yaml: %w", err)
+		}
+	case !errors.Is(err, fs.ErrNotExist):
+		return nil, fmt.Errorf("read module.yaml: %w", err)
+	}
+	return modlocale.References(modlocale.Derive(meta, tmpl)), nil
+}
+
+// checkModuleDrift compares the written reference with the ids derived from
+// the template: a derived id that is missing or whose English text changed is
+// extract-drift, and an id the template no longer yields is unknown-id.
+func checkModuleDrift(ref, derived map[string]pack.Entry, file string) []pack.Finding {
+	var out []pack.Finding
+	for _, id := range slices.Sorted(maps.Keys(derived)) {
+		got, ok := ref[id]
+		switch {
+		case !ok:
+			out = append(out, errFinding(pack.CodeExtractDrift, file, id, "template references this id but the reference pack does not have it"))
+		case got.DefaultMessage != derived[id].DefaultMessage:
+			out = append(out, errFinding(pack.CodeExtractDrift, file, id, "reference text differs from the template"))
+		}
+	}
+	for _, id := range slices.Sorted(maps.Keys(ref)) {
+		if _, ok := derived[id]; !ok {
+			out = append(out, errFinding(pack.CodeUnknownID, file, id, "reference has an id the template does not use"))
+		}
+	}
+	return out
 }
 
 // translation is one non-reference app pack under the locales directory.
@@ -331,25 +391,13 @@ func readMeta(path, tag, file string, required bool) (meta pack.Meta, ok bool, f
 // stampTranslations records the English source hash on every translated entry
 // that lacks one, and rewrites the packs it changed.
 func stampTranslations(ref map[string]pack.Entry, trs []translation) error {
-	ids := slices.Sorted(maps.Keys(ref))
 	for i := range trs {
 		tr := &trs[i]
-		changed := false
-		for _, id := range ids {
-			entry, ok := tr.entries[id]
-			if !ok || entry.SourceHash != "" {
-				continue
-			}
-			if pack.EntryStatus(ref[id], entry, true) != pack.StatusTranslated {
-				continue
-			}
-			entry.SourceHash = pack.SourceHash(ref[id].DefaultMessage)
-			tr.entries[id] = entry
-			changed = true
-		}
+		stamped, changed := pack.Stamp(ref, tr.entries)
 		if !changed {
 			continue
 		}
+		tr.entries = stamped
 		data, err := pack.Marshal(tr.entries)
 		if err != nil {
 			return fmt.Errorf("stamp %s: %w", tr.tag, err)
