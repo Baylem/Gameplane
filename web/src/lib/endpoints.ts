@@ -441,6 +441,12 @@ export const Modules = {
     api<Module>(`/modules/${name}`, { method: "PATCH", body: { version } }),
   uninstall: (name: string) =>
     api<void>(`/modules/${name}`, { method: "DELETE" }),
+  // locales returns the module's translated messages for a language as a
+  // flat id -> message map ({} when there are none).
+  locales: (name: string, tag: string) =>
+    api<Record<string, string>>(
+      `/modules/${name}/locales/${encodeURIComponent(tag)}`,
+    ),
 };
 
 // UploadedModule is the parsed-metadata echo from a bundle upload

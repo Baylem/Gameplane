@@ -1,6 +1,6 @@
 # Open Decisions: App Localization & Community Language Packs
 
-All four decisions below were settled by valgul on 2026-10-10 and are recorded in spec.md (Clarifications, Session 2026-10-10).
+The first four decisions were settled by valgul on 2026-10-10 and are recorded in spec.md (Clarifications, Session 2026-10-10). The US6 module-translation rulings (OD-005 to OD-014) were settled on 2026-10-12 (Clarifications, Session 2026-10-12).
 
 ## OD-001: Which pilot language ships at launch — RESOLVED: French (valgul, 2026-10-10)
 
@@ -55,3 +55,71 @@ Options:
 Decision: per-destination language setting, defaulting to the instance default language.
 
 Affects: FR-028
+
+## US6 module-translation rulings
+
+Ten decisions on the module translations (user story 6), all settled 2026-10-12 by valgul.
+
+## OD-005: Namespace of the translations ConfigMap - RESOLVED: the operator namespace (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. The ConfigMap `<template>-locales` lives in the operator namespace, the namespace Gameplane runs in (`--module-namespace`). The GameTemplate is cluster-scoped, so the owner reference points at a cluster-scoped owner. The API reads the same namespace.
+
+Affects: FR-031, T087
+
+## OD-006: Where module id derivation lives - RESOLVED: `i18n/modlocale` (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. One shared package derives module ids for `gp-module`, `i18n-check --module` and the operator. The `i18n` module may depend on `gopkg.in/yaml.v3`.
+
+Affects: FR-031, T084
+
+## OD-007: Module id rule - RESOLVED: upper case and `~` allowed (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. Module ids get their own documented rule that allows upper case and `~` with reversible `~0`/`~1` escaping. Dashboard and server ids keep the strict lower-case regex.
+
+Open risk (not decided): the derivation escapes only `~` and `.`. A YAML identifier or enum value containing a space, `/`, `:` or `+` yields an id outside `[A-Za-z0-9_~-]` that fails `modlocale.ValidID`. The `modules/` submodule was not checked out, so real modules were not scanned. Recommendation: skip such an id in the derivation or report it in `gp-module validate`. Until ruled, `ValidID` is used only in tests and documentation.
+
+Affects: FR-031, T084
+
+## OD-008: Meaning of `i18n-check --module` - RESOLVED: en.json must equal the derived ids (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. `en.json` must match the ids derived from the YAML (also when the YAML derives nothing); every translation is validated against the derived set.
+
+Affects: FR-031, T085, T090
+
+## OD-009: LocalesValid reporting - RESOLVED: full reporting (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. `LocalesValid=True` with reason `Valid` when fine; `False` with `LocalesTooLarge` before `InvalidEntries`; a new reason `WriteFailed` when the ConfigMap write fails.
+
+Scout note: `WriteFailed` is ranked first (nothing new is served); the ruling only fixed the order of `LocalesTooLarge` and `InvalidEntries`.
+
+Affects: FR-034, T087
+
+## OD-010: Oversized locale layers - RESOLVED: recorded by tag (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. An oversized locale file is never dropped silently at pull time. A hard memory cap stays on reading; the language tag is recorded as oversized, reaches the reconciler and shows as `LocalesTooLarge` naming the language in the condition message and the Warning event.
+
+Affects: FR-034, T086, T087
+
+## OD-011: Module sources that carry translations - RESOLVED: all (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. Directory, git, HTTP, upload and `gp-module package --output` tarball sources carry `locales/*.json` as well as OCI layers, with the same file names and validation. Scout note: the upload ConfigMap key is `locales.<tag>.json`.
+
+Affects: FR-031, T086, T087
+
+## OD-012: Locales endpoint edge cases - RESOLVED: `200 {}` and ICU strings (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. `GET /modules/{name}/locales/{tag}` with a malformed tag returns `200 {}`; values are the validated ICU message strings.
+
+Affects: FR-032, T088
+
+## OD-013: sourceHash on module translations - RESOLVED: yes (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. Module translations carry `sourceHash` like app packs; a changed English text shows a needs-review notice. Authoring: `gp-module i18n stamp` writes the hash and `gp-module validate` warns (`locale-needs-review`). Not done: `i18n-check --module --stamp` stays invalid because a committed test in `i18n/cmd/i18n-check/main_test.go` ("module with stamp") expects a usage error; it needs sign-off to change.
+
+Affects: FR-031, T085
+
+## OD-014: Warning event frequency - RESOLVED: only when the problem list changes (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. Warning events fire only when the problem list changes, tracked by a fingerprint annotation `gameplane.local/locales-problems` on the GameTemplate, not on every re-pull.
+
+Affects: FR-034, T087

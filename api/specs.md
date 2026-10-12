@@ -149,6 +149,7 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/modules/sources/{name}` — GET, PUT, DELETE: manage ModuleSource CRDs (cluster-scoped)
 - `/modules/sources/{name}/upload`, `/modules/sources/{name}/upload/{module}` — bundle upload/delete
 - `/modules/catalog` — GET: merged catalog across sources, with installation state
+- `/modules/{name}/locales/{tag}` — GET: the module's translated messages for a language as a flat id → message map, read from the operator-written `<name>-locales` ConfigMap. The tag falls back to its base language; an unknown or malformed tag, or a module without translations, returns `200 {}`; values are the validated ICU message strings, uncompiled. 404 only when the Module does not exist. Requires `modules:read`.
 - `/modules/builder/{archetypes,scaffold,validate,preview,export}` — module builder workflow
 - `/registry/{provider}/search`, `/{id}` — live mod registry queries (CurseForge, Modrinth, Spigot, etc.)
 - `/mod-updates/{name}` — GET: available updates for a mod

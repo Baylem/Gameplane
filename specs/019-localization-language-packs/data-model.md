@@ -29,7 +29,7 @@ Stored in `i18n/locales/<tag>/meta.json`. `en` is always listed (completeness 10
 
 | Field | Type | Rules |
 |---|---|---|
-| `id` | string | `^[a-z][a-z0-9_]*(\.[a-z0-9_-]+)+$`; namespace prefix `web.`, `server.`, `condition.`, `notify.`, `audit.` (app) or the module id scheme in [module-locales.md](./contracts/module-locales.md); stable once shipped |
+| `id` | string | App ids: `^[a-z][a-z0-9_]*(\.[a-z0-9_-]+)+$` with namespace prefix `web.`, `server.`, `condition.`, `notify.`, `audit.`. Module ids: the module id rule in [module-locales.md](./contracts/module-locales.md) §1 (upper case, digits, `_`, `-`, `~0`/`~1` escapes). Stable once shipped |
 | `defaultMessage` | ICU MessageFormat | parses; only designated rich-text tags (`<b>`, `<link>`) |
 | `description` | string | required (translator note: where shown, placeholder meaning, length limit) |
 | placeholders | derived | set of argument names (incl. inside `plural`/`select`) |
