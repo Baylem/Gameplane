@@ -207,7 +207,7 @@ description: "Task list for 013-expand-test-coverage"
 - [X] T035 [P] [US1] Write `hack/check-submodule-freshness_test.sh`. It builds an upstream bare repo and a superproject in `mktemp -d`, and checks two cases:
   - a pointer on `main` (and one behind its tip): expects pass
   - a pointer on an unmerged side branch: expects fail
-- [ ] T036 [US1] Add a `submodule-freshness` job named `submodule freshness` to `.github/workflows/ci.yaml`. Settings:
+- [X] T036 [US1] Add a `submodule-freshness` job named `submodule freshness` to `.github/workflows/ci.yaml`. Settings:
   - `if: needs.changes.outputs.submodules == 'true' || github.event_name == 'push'`
   - checks out with `fetch-depth: 0`, without submodule checkout
   - runs `hack/check-submodule-freshness_test.sh`, then `hack/check-submodule-freshness.sh`
