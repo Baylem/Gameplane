@@ -99,7 +99,7 @@ description: "Task list for 013-expand-test-coverage"
 
 **Goal**: six blocking gates, each proven able to fail except `dependency-review`, which OD-4 proves by configuration review only, with zero pre-existing findings left (contracts/static-gates.md G1–G6).
 
-**Independent Test**: for each gate, its `hack/check-<gate>_test.sh` step is green, the gate job is green, and the gap record links a run where the gate was red on a real violation (quickstart.md, "US1").
+**Independent Test**: for each gate, its `hack/check-<gate>_test.sh` step is green, the gate job is green, and the gap record links a run where the gate was red on a real violation (quickstart.md, "US1") `dependency-review` is the OD-4 exception: no test script or red run, only a configuration review.
 
 **PR boundaries**: one PR per gate, in the order G5 → G1 → G3 → G2 → G4 → G6 (plan "Phase sequencing").
 
