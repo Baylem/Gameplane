@@ -6,15 +6,15 @@ LABEL org.opencontainers.image.title="Gameplane BeamMP Dedicated Server" \
       org.opencontainers.image.source="https://github.com/GameplanePanel/Gameplane"
 
 RUN apk add --no-cache \
-    bash \
-    curl \
-    ca-certificates \
-    tini \
-    procps \
-    libstdc++ \
-    libgcc \
-    openssl \
-    zlib
+    bash~=5.2.26 \
+    curl~=8.14.1 \
+    ca-certificates~=20260413 \
+    tini~=0.19.0 \
+    procps~=4.0.4 \
+    libstdc++~=13.2.1_git20240309 \
+    libgcc~=13.2.1_git20240309 \
+    openssl~=3.3.7 \
+    zlib~=1.3.2
 
 # Create gameplane runtime user with fixed UID/GID 1000
 RUN addgroup -g 1000 gameplane && \
