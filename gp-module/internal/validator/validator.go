@@ -172,6 +172,7 @@ func ValidateFiles(dirName string, files map[string][]byte, opts ValidateOptions
 	}
 
 	findings = append(findings, validateLocales(files)...)
+	findings = append(findings, validateLocaleIDs(files)...)
 
 	repName := dirName
 	if repName == "" || repName == "." {

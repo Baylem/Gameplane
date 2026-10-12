@@ -34,6 +34,7 @@ const (
 	RuleExcessiveAssetSize      = "excessive-asset-size"
 	RuleMinVersionExceedsTool   = "gameplane-min-version-exceeds-tool"
 	RuleLocaleInvalid           = "locale-invalid"
+	RuleLocaleIDInvalid         = "locale-id-invalid"
 	RuleLocaleNeedsReview       = "locale-needs-review"
 )
 

@@ -90,6 +90,21 @@ func validateLocales(files map[string][]byte) []Finding {
 // falls back to locales/en.json when the manifests derive nothing. ok is false
 // when no reference is available.
 func localeReference(files map[string][]byte) (map[string]pack.Entry, bool) {
+	if refs := deriveLocaleRefs(files); len(refs) > 0 {
+		return modlocale.References(refs), true
+	}
+	if data, found := files[localesDir+englishLocale+localesSuffix]; found {
+		if ref, err := pack.ParseEntries(data); err == nil {
+			return ref, true
+		}
+	}
+	return nil, false
+}
+
+// deriveLocaleRefs parses module.yaml and template.yaml the way localeReference
+// does and returns the translatable ids derived from them. A manifest that
+// fails to parse contributes nothing.
+func deriveLocaleRefs(files map[string][]byte) []modlocale.Ref {
 	var module, template map[string]any
 	if data, found := files["module.yaml"]; found {
 		if err := yaml.Unmarshal(data, &module); err != nil {
@@ -101,15 +116,38 @@ func localeReference(files map[string][]byte) (map[string]pack.Entry, bool) {
 			template = nil
 		}
 	}
-	if refs := modlocale.Derive(module, template); len(refs) > 0 {
-		return modlocale.References(refs), true
+	return modlocale.Derive(module, template)
+}
+
+// validateLocaleIDs reports every derived translation id that the module id
+// rule rejects, because translators could not target such an id. It runs
+// whenever module.yaml or template.yaml is present, independent of locales/.
+func validateLocaleIDs(files map[string][]byte) []Finding {
+	_, hasModule := files["module.yaml"]
+	_, hasTemplate := files["template.yaml"]
+	if !hasModule && !hasTemplate {
+		return nil
 	}
-	if data, found := files[localesDir+englishLocale+localesSuffix]; found {
-		if ref, err := pack.ParseEntries(data); err == nil {
-			return ref, true
+	var findings []Finding
+	for _, ref := range deriveLocaleRefs(files) {
+		if modlocale.ValidID(ref.ID) {
+			continue
 		}
+		file := "template.yaml"
+		if strings.HasPrefix(ref.ID, "module.") {
+			file = "module.yaml"
+		}
+		findings = append(findings, Finding{
+			Level:       SeverityError,
+			RuleID:      RuleLocaleIDInvalid,
+			File:        file,
+			Line:        0,
+			Field:       ref.ID,
+			Message:     fmt.Sprintf("%q cannot be used as a translation id: names may only use letters, digits, '_', '-' and '.'", ref.ID),
+			Remediation: "Rename the key or option value so it contains no spaces, '/', ':' or other symbols; translators cannot target it otherwise.",
+		})
 	}
-	return nil, false
+	return findings
 }
 
 func localeFinding(file, field, message, remediation string) Finding {

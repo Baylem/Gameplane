@@ -76,7 +76,7 @@ Affects: FR-031, T084
 
 Settled 2026-10-12 by valgul. Module ids get their own documented rule that allows upper case and `~` with reversible `~0`/`~1` escaping. Dashboard and server ids keep the strict lower-case regex.
 
-Open risk (not decided): the derivation escapes only `~` and `.`. A YAML identifier or enum value containing a space, `/`, `:` or `+` yields an id outside `[A-Za-z0-9_~-]` that fails `modlocale.ValidID`. The `modules/` submodule was not checked out, so real modules were not scanned. Recommendation: skip such an id in the derivation or report it in `gp-module validate`. Until ruled, `ValidID` is used only in tests and documentation.
+Settled 2026-10-12 by valgul: gp-module validate reports such names as error locale-id-invalid (scan of all 29 modules: 0 of 808 ids affected).
 
 Affects: FR-031, T084
 
@@ -90,7 +90,7 @@ Affects: FR-031, T085, T090
 
 Settled 2026-10-12 by valgul. `LocalesValid=True` with reason `Valid` when fine; `False` with `LocalesTooLarge` before `InvalidEntries`; a new reason `WriteFailed` when the ConfigMap write fails.
 
-Scout note: `WriteFailed` is ranked first (nothing new is served); the ruling only fixed the order of `LocalesTooLarge` and `InvalidEntries`.
+Settled 2026-10-12 by valgul: WriteFailed ranks first.
 
 Affects: FR-034, T087
 
@@ -114,7 +114,7 @@ Affects: FR-032, T088
 
 ## OD-013: sourceHash on module translations - RESOLVED: yes (valgul, 2026-10-12)
 
-Settled 2026-10-12 by valgul. Module translations carry `sourceHash` like app packs; a changed English text shows a needs-review notice. Authoring: `gp-module i18n stamp` writes the hash and `gp-module validate` warns (`locale-needs-review`). Not done: `i18n-check --module --stamp` stays invalid because a committed test in `i18n/cmd/i18n-check/main_test.go` ("module with stamp") expects a usage error; it needs sign-off to change.
+Settled 2026-10-12 by valgul. Module translations carry `sourceHash` like app packs; a changed English text shows a needs-review notice. Authoring: `gp-module i18n stamp` writes the hash and `gp-module validate` warns (`locale-needs-review`). i18n-check --module --stamp stays a usage error; gp-module i18n stamp is the only module stamping tool.
 
 Affects: FR-031, T085
 
