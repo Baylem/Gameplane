@@ -164,12 +164,13 @@ description: "Task list for 013-expand-test-coverage"
   3. Run `./hack/check-hadolint_test.sh`.
 
   Depends on T024.
-- [ ] T026 [US1] Fix every finding from T025's first CI run, editing the affected files among:
+- [X] T026 [US1] Fix every finding from T025's first CI run, editing the affected files among:
   - `agent/Dockerfile`, `api/Dockerfile`, `audit-syslog-bridge/Dockerfile`, `capture-sidecar/Dockerfile`, `mcp-server/Dockerfile`, `operator/Dockerfile`, `sentinel/Dockerfile`, `telemetry-receiver/Dockerfile`, `web/Dockerfile`
   - `tunnel/Dockerfile.{frp,playit,tailscale}`, `test/e2e/Dockerfile`, `test/e2e/Dockerfile.fakeoidc`
   - `images/common/steamcmd/Dockerfile`, `images/games/nuclear-option/Dockerfile`
 
   Pin images by digest, add `--no-install-recommends`/`--no-cache`, and set `USER` and `SHELL -o pipefail` as each rule asks. Get sign-off on the diff first (production files). Flip G-03.
+  *Implementation note (2026-10-12)*: the first `workflow lint` run (38284658090) flagged only DL3008/DL3018 (unpinned apt/apk) and DL4006 (pipefail), in `capture-sidecar/Dockerfile`, `tunnel/Dockerfile.{frp,playit}`, `test/e2e/Dockerfile`, `containers/common/steamcmd/Dockerfile` and eight `containers/games/*/Dockerfile`s. valgul chose "Pin and pipefail" on 2026-10-12; fixed in 698d51f, green in run 38286000942.
 
 ### G2 Trivy: PR `ci: container image vulnerability gate`
 

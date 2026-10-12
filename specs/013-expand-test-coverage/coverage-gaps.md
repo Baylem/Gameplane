@@ -1,13 +1,13 @@
 # Coverage Gap Record
 
-**Summary**: 2/24 closed · 0 closed unproven · 2 in progress · 19 open · 1 unit-only by design
-**Last updated**: 2026-10-11
+**Summary**: 3/24 closed · 0 closed unproven · 2 in progress · 18 open · 1 unit-only by design
+**Last updated**: 2026-10-12
 
 | ID | Category | Gap | Story | FR | Priority | Status | Evidence | Notes |
 |---|---|---|---|---|---|---|---|---|
 | G-01 | static | govulncheck gate | US1 | FR-001 | P1 | open |  |  |
 | G-02 | static | container image scan gate | US1 | FR-001 | P1 | open |  |  |
-| G-03 | static | Dockerfile lint gate | US1 | FR-001 | P1 | open |  |  |
+| G-03 | static | Dockerfile lint gate | US1 | FR-001 | P1 | closed | `workflow lint` https://github.com/GameplanePanel/Gameplane/actions/runs/38286000942 | First run on #674 flagged DL3008/DL3018/DL4006 in 13 Dockerfiles; pinned apk/apt versions and pipefail SHELL fixed them, and every game image still builds (run 38286000940). |
 | G-04 | static | dependency-review gate | US1 | FR-001 | P1 | open |  |  |
 | G-05 | static | codegen / tidy drift gate | US1 | FR-001 | P1 | open |  |  |
 | G-06 | static | submodule pointer freshness gate | US1 | FR-001 | P1 | open |  |  |
