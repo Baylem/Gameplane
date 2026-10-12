@@ -164,127 +164,166 @@
                   "width": 220
                 },
                 {
-                  "id": "l4Iw3z",
-                  "type": "ref",
-                  "ref": "XDZ0E",
-                  "name": "Settings Panel",
+                  "type": "frame",
+                  "id": "v38YR",
+                  "name": "Panel Column",
                   "width": "fill_container",
-                  "padding": 0,
-                  "gap": 0,
+                  "layout": "vertical",
+                  "gap": 24,
                   "children": [
                     {
-                      "id": "tXDnN",
+                      "id": "l4Iw3z",
                       "type": "ref",
-                      "ref": "FRpsu",
-                      "name": "Card Header",
+                      "ref": "XDZ0E",
+                      "name": "Settings Panel",
                       "width": "fill_container",
-                      "padding": [
-                        20,
-                        20,
-                        16,
-                        20
-                      ],
-                      "gap": 4,
-                      "descendants": {
-                        "fuZHB": {
-                          "content": "General"
-                        },
-                        "BZG9o": {
-                          "content": "Basic identity for this Gameplane instance."
-                        }
-                      }
-                    },
-                    {
-                      "type": "frame",
-                      "id": "DI9X5",
-                      "name": "Card Fields",
-                      "width": "fill_container",
-                      "layout": "vertical",
-                      "gap": 16,
-                      "padding": [
-                        0,
-                        20
-                      ],
+                      "padding": 0,
+                      "gap": 0,
                       "children": [
                         {
+                          "id": "tXDnN",
+                          "type": "ref",
+                          "ref": "FRpsu",
+                          "name": "Card Header",
+                          "width": "fill_container",
+                          "padding": [
+                            20,
+                            20,
+                            16,
+                            20
+                          ],
+                          "gap": 4,
+                          "descendants": {
+                            "fuZHB": {
+                              "content": "General"
+                            },
+                            "BZG9o": {
+                              "content": "Basic identity for this Gameplane instance."
+                            }
+                          }
+                        },
+                        {
                           "type": "frame",
-                          "id": "BGqdF",
-                          "name": "fieldInstanceName",
+                          "id": "DI9X5",
+                          "name": "Card Fields",
                           "width": "fill_container",
                           "layout": "vertical",
+                          "gap": 16,
+                          "padding": [
+                            0,
+                            20
+                          ],
                           "children": [
                             {
-                              "id": "E8BwC",
-                              "type": "ref",
-                              "ref": "aRqX6",
-                              "name": "Input/Primary",
+                              "type": "frame",
+                              "id": "BGqdF",
+                              "name": "fieldInstanceName",
                               "width": "fill_container",
-                              "descendants": {
-                                "ANxU1": {
-                                  "content": "Instance name"
-                                },
-                                "hokJ3": {
-                                  "content": "",
-                                  "fill": "$field/placeholder"
-                                },
-                                "wolxN": {
-                                  "content": "Optional. Names this install on the Cluster page and in notifications."
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "id": "E8BwC",
+                                  "type": "ref",
+                                  "ref": "aRqX6",
+                                  "name": "Input/Primary",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "ANxU1": {
+                                      "content": "Instance name"
+                                    },
+                                    "hokJ3": {
+                                      "content": "",
+                                      "fill": "$field/placeholder"
+                                    },
+                                    "wolxN": {
+                                      "content": "Optional. Names this install on the Cluster page and in notifications."
+                                    }
+                                  }
                                 }
-                              }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "yjujL",
+                              "name": "fieldExternalURL",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "id": "YesmO",
+                                  "type": "ref",
+                                  "ref": "aRqX6",
+                                  "name": "Input/Primary",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "ANxU1": {
+                                      "content": "External URL"
+                                    },
+                                    "hokJ3": {
+                                      "content": "",
+                                      "fill": "$field/placeholder"
+                                    },
+                                    "wolxN": {
+                                      "content": "Canonical base URL, used in emails, webhooks, OIDC callbacks."
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "l6wE1E",
+                              "name": "fieldDefaultNamespace",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "id": "SVLor",
+                                  "type": "ref",
+                                  "ref": "aRqX6",
+                                  "name": "Input/Primary",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "ANxU1": {
+                                      "content": "Default namespace"
+                                    },
+                                    "hokJ3": {
+                                      "content": "gameplane-games",
+                                      "fill": "$foreground/foreground"
+                                    },
+                                    "wolxN": {
+                                      "content": "Where new GameServers land by default."
+                                    }
+                                  }
+                                }
+                              ]
                             }
                           ]
                         },
                         {
                           "type": "frame",
-                          "id": "yjujL",
-                          "name": "fieldExternalURL",
+                          "id": "Aey03",
+                          "name": "Card Actions",
                           "width": "fill_container",
-                          "layout": "vertical",
+                          "padding": [
+                            8,
+                            20,
+                            20,
+                            20
+                          ],
+                          "justifyContent": "end",
                           "children": [
                             {
-                              "id": "YesmO",
+                              "id": "KmwSz",
                               "type": "ref",
-                              "ref": "aRqX6",
-                              "name": "Input/Primary",
-                              "width": "fill_container",
+                              "ref": "tpKRk",
+                              "name": "Btn Save Changes",
                               "descendants": {
-                                "ANxU1": {
-                                  "content": "External URL"
+                                "q58In/Xpn7K": {
+                                  "enabled": false
                                 },
-                                "hokJ3": {
-                                  "content": "",
-                                  "fill": "$field/placeholder"
-                                },
-                                "wolxN": {
-                                  "content": "Canonical base URL, used in emails, webhooks, OIDC callbacks."
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "l6wE1E",
-                          "name": "fieldDefaultNamespace",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "children": [
-                            {
-                              "id": "SVLor",
-                              "type": "ref",
-                              "ref": "aRqX6",
-                              "name": "Input/Primary",
-                              "width": "fill_container",
-                              "descendants": {
-                                "ANxU1": {
-                                  "content": "Default namespace"
-                                },
-                                "hokJ3": {
-                                  "content": "gameplane-games",
-                                  "fill": "$foreground/foreground"
-                                },
-                                "wolxN": {
-                                  "content": "Where new GameServers land by default."
+                                "q58In/U6q13B": {
+                                  "content": "Save changes"
                                 }
                               }
                             }
@@ -293,31 +332,138 @@
                       ]
                     },
                     {
-                      "type": "frame",
-                      "id": "Aey03",
-                      "name": "Card Actions",
+                      "id": "noNHt",
+                      "type": "ref",
+                      "ref": "XDZ0E",
+                      "name": "Language Panel",
                       "width": "fill_container",
-                      "padding": [
-                        8,
-                        20,
-                        20,
-                        20
-                      ],
-                      "justifyContent": "end",
+                      "padding": 0,
+                      "gap": 0,
                       "children": [
                         {
-                          "id": "KmwSz",
+                          "id": "F1k5Xe",
                           "type": "ref",
-                          "ref": "tpKRk",
-                          "name": "Btn Save Changes",
+                          "ref": "FRpsu",
+                          "name": "Card Header",
+                          "width": "fill_container",
+                          "padding": [
+                            20,
+                            20,
+                            16,
+                            20
+                          ],
+                          "gap": 4,
                           "descendants": {
-                            "q58In/Xpn7K": {
-                              "enabled": false
+                            "fuZHB": {
+                              "content": "Language"
                             },
-                            "q58In/U6q13B": {
-                              "content": "Save changes"
+                            "BZG9o": {
+                              "content": "Default language for this Gameplane instance.",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container"
                             }
                           }
+                        },
+                        {
+                          "type": "frame",
+                          "id": "m1Yjkf",
+                          "name": "Card Fields",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": [
+                            0,
+                            20
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "F8NpG0",
+                              "name": "fieldDefaultLanguage",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 4,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "VVbzH",
+                                  "name": "defaultLanguageLabel",
+                                  "fill": "$foreground/foreground",
+                                  "content": "Default language",
+                                  "fontFamily": "$typography/font-sans",
+                                  "fontSize": 14,
+                                  "fontWeight": "500"
+                                },
+                                {
+                                  "id": "hnojD",
+                                  "type": "ref",
+                                  "ref": "AT7ya",
+                                  "name": "defaultLanguageSelect",
+                                  "width": "fill_container",
+                                  "height": 40,
+                                  "descendants": {
+                                    "cFsFk": {
+                                      "content": "English",
+                                      "fill": "$foreground/foreground"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "o7JIu4",
+                                  "name": "defaultLanguageHintWrap",
+                                  "width": "fill_container",
+                                  "padding": [
+                                    0,
+                                    4
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "kNjLO",
+                                      "name": "defaultLanguageHint",
+                                      "fill": "$muted",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "Used when someone has not chosen a language and none of their browser's languages are available. Notification sinks set to Instance default use it too.",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "jfCH4",
+                          "name": "Card Actions",
+                          "width": "fill_container",
+                          "padding": [
+                            8,
+                            20,
+                            20,
+                            20
+                          ],
+                          "justifyContent": "end",
+                          "children": [
+                            {
+                              "id": "EhcS9",
+                              "type": "ref",
+                              "ref": "tpKRk",
+                              "name": "Btn Save Changes",
+                              "descendants": {
+                                "q58In/Xpn7K": {
+                                  "enabled": false
+                                },
+                                "q58In/U6q13B": {
+                                  "content": "Save changes"
+                                }
+                              }
+                            }
+                          ]
                         }
                       ]
                     }

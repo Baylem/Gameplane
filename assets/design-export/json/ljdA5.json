@@ -171,6 +171,29 @@
               "fontFamily": "$typography/font-sans",
               "fontSize": 11,
               "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "uwvzA",
+              "layoutPosition": "absolute",
+              "x": 0,
+              "y": 12,
+              "name": "loginLangRow",
+              "width": 420,
+              "padding": [
+                0,
+                12
+              ],
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "fMy1s",
+                  "type": "ref",
+                  "ref": "Jf27F",
+                  "name": "langPicker"
+                }
+              ]
             }
           ]
         }

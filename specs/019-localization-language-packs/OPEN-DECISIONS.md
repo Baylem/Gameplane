@@ -1,6 +1,6 @@
 # Open Decisions: App Localization & Community Language Packs
 
-The first four decisions were settled by valgul on 2026-10-10 and are recorded in spec.md (Clarifications, Session 2026-10-10). The US6 module-translation rulings (OD-005 to OD-014) were settled on 2026-10-12 (Clarifications, Session 2026-10-12).
+The first four decisions were settled by valgul on 2026-10-10 and are recorded in spec.md (Clarifications, Session 2026-10-10). The US6 module-translation rulings (OD-005 to OD-014) and the design placement rulings (OD-015 to OD-017) were settled on 2026-10-12 (Clarifications, Session 2026-10-12).
 
 ## OD-001: Which pilot language ships at launch — RESOLVED: French (valgul, 2026-10-10)
 
@@ -123,3 +123,25 @@ Affects: FR-031, T085
 Settled 2026-10-12 by valgul. Warning events fire only when the problem list changes, tracked by a fingerprint annotation `gameplane.local/locales-problems` on the GameTemplate, not on every re-pull.
 
 Affects: FR-034, T087
+
+## Design placement rulings
+
+Three decisions on the design tasks (T043, T072), all settled 2026-10-12 by valgul.
+
+## OD-015: Where a sink's language is edited - RESOLVED: the Add sink form and each sink row (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. The design had no destination form, only the sink rows and an "Add sink" button. The Add sink form gets a Language select that defaults to "Instance default", and every existing sink row gets its own Language select, so the language can be changed without deleting the sink and entering its credentials again.
+
+Affects: FR-028, T072, T073
+
+## OD-016: Position of the Language card in personal settings - RESOLVED: first card (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. The Language card is the first card of the Theme & Appearance page, above Preset theme. The page title and subtitle stay unchanged.
+
+Affects: FR-001, T043, T044
+
+## OD-017: Position of the compact picker on the login and share pages - RESOLVED: top-right corner of the card (valgul, 2026-10-12)
+
+Settled 2026-10-12 by valgul. The compact picker sits inside the card, in its top-right corner, on every state of the login and share pages. It shows only the native names of the languages.
+
+Affects: FR-005, T043, T045

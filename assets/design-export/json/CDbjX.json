@@ -1,0 +1,41 @@
+{
+  "type": "frame",
+  "id": "CDbjX",
+  "x": -10998.0544367535,
+  "y": 27592.997924316056,
+  "name": "Gameplane/Login Card With Language",
+  "reusable": true,
+  "width": 420,
+  "children": [
+    {
+      "id": "g8k7AO",
+      "type": "ref",
+      "ref": "J14ME",
+      "name": "loginCard",
+      "width": "fill_container"
+    },
+    {
+      "type": "frame",
+      "id": "L3y9E",
+      "layoutPosition": "absolute",
+      "x": 0,
+      "y": 12,
+      "name": "loginLangRow",
+      "width": 420,
+      "padding": [
+        0,
+        12
+      ],
+      "justifyContent": "end",
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "c7DCx",
+          "type": "ref",
+          "ref": "Jf27F",
+          "name": "langPicker"
+        }
+      ]
+    }
+  ]
+}

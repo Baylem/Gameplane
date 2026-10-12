@@ -2550,3 +2550,30 @@ JSON: `Print(JSON.stringify(Get("EkcbF", {depth: 12})))`, `python3 -m json.tool`
 | `ffmEd` | … (New password typed) | New copy of `OC804`. Masked typed value, no remove button, helper "Write-only". |
 
 `Ne5TA` is unaffected. All four have MCP `Get` JSON exports (depth 20, zero elisions; `OC804`/`QFEg9` patched from the prior export with the `Get` result for the changed field subtree) and 2× PNG exports via `Export`. Validated by grepping `Password will be removed` (only `h5clan`) and `Remove password` (`OC804`, `QFEg9`, `h5clan`).
+
+## Spec 019 language pickers and language settings (2026-10-12)
+
+T043, T072 and T094 of `specs/019-localization-language-packs/`. Placement follows OD-015 to OD-017 of that spec.
+
+| Object ID | Name | Change |
+| --- | --- | --- |
+| `Jf27F` | Gameplane/Language Picker Compact | **New** reusable component: lucide `globe`, the native name of the language ("English") and `chevron-down`. 32 px high, no fill and no border. It shows a language name and nothing else. |
+| `CDbjX` | Gameplane/Login Card With Language | **New** reusable component: one instance of `loginCard` (`J14ME`) and an absolute `loginLangRow` (x 0, y 12, 420 wide, right-aligned, 12 px inset) that holds the picker. It exists because `J14ME` cannot take a new child (see the note below). |
+| `N1GkB` | Screen/Login | **Changed.** `loginL` is a new instance of `fjQjb` (`TbEIq`, was `sUdzl`) whose card is swapped for `CDbjX`, so the picker sits in the top-right corner of the card. |
+| `gX7um` | Screen/Login (Light) | **Changed.** Same swap (`gsDFd`, was `UQZOa`). |
+| `g2HLxz` | loginCardError | **Changed.** `loginLangRow` with the picker in the top-right corner. Seen on `jmoi3`. |
+| `ljdA5` | Screen/Login — SSO only | **Changed.** The same row inside the inline card `ohWEp`. |
+| `G7OwqK` | Screen/Login — Language menu open | **New.** Copy of `N1GkB` with the picker's menu open under it (170 px wide, right edges level): English (current, check icon), Français, Deutsch. Native names only. |
+| `HKEl2` | Gameplane/Share Card | **Changed.** `shareLangRow` with the picker in the top-right corner. Seen on every share screen (`C2LQE4`, `q31B6w`, `qFLfB`, `EcoGD`, `epZO2`, `FBiMN`). |
+| `lWvcv` | Screen/Theme Settings | **Changed.** New first card "Language" (`FVPqf`): four radio rows, "Automatic (browser language)", "English" (selected, "100% translated"), "Français" ("100% translated") and "Deutsch" ("86% translated"), then the note "Text that has not been translated yet is shown in English." Frame height 2000 → 2344. |
+| `T1wkiT` | Screen/Theme Settings — Warnings | **Changed.** The same card first (`wPAnz`). Frame height 2146 → 2490. |
+| `g5e2fM` | Screen/Mobile — Theme Settings · Language | **New.** 390 px wide: Mobile TopBar ("Settings"), page header, the settings navigation stacked full width, then the Language card with the same four rows. |
+| `n6Xlo` | Screen/Admin Settings — Notifications | **Changed.** Each sink row has a third line "Language" with a 200 px select ("Français" on ops-discord, "Instance default" on pager). |
+| `eaNkj` | Screen/Admin Settings — Notifications (Add sink) | **New.** Copy of `n6Xlo` with the inline Add sink form open where the "Add sink" button was: Name, Kind, Webhook URL, Language (select "Instance default", helper "Notifications sent to this sink are written in this language."), the six event checkboxes, Cancel and Add sink. The form was not in the design before. |
+| `WZdnw` | Screen/Admin Settings | **Changed.** The General card and a new "Language" card are stacked in a `Panel Column` (`v38YR`). The Language card (`noNHt`) has one select "Default language" set to "English", its helper text and its own Save changes button, because the value is saved to its own config section (`i18n`). |
+
+- **JSON:** `JSON.stringify(Get(id, {depth: 30, includePathGeometry: true}))` for `lWvcv`, `T1wkiT`, `g2HLxz`, `HKEl2`, `ljdA5`, `WZdnw`, `n6Xlo`, `N1GkB`, `gX7um`, `Jf27F`, `CDbjX`, `G7OwqK`, `g5e2fM` and `eaNkj`. Each string was taken from the tool result by a script, never retyped, and its length and FNV-1a hash equal the values computed on the canvas in the same call. Zero `"..."` elisions, `jq empty` passes. Files that were one line stay one line; the others are formatted with `jq .`.
+- **Screenshots:** `Export(ids, "png", …, {scale: 2})` for the 14 ids above and, PNG only, for the screens that show a changed component: `jmoi3`, `C2LQE4`, `q31B6w`, `qFLfB`, `EcoGD`, `epZO2` and `FBiMN`.
+- **Pixel check against the previous PNGs:** `ljdA5`, `g2HLxz`, `HKEl2`, `C2LQE4`, `EcoGD`, `epZO2` and `q31B6w` differ only in the picker's rectangle. `WZdnw` differs only below the General card. `FBiMN` and `qFLfB` also show sub-pixel text anti-aliasing differences. `N1GkB`, `gX7um` and `jmoi3` also show the safe-mode link in the accent colour, and `n6Xlo` also shows the current sidebar ("Clusters") and top bar: the canvas already had both, the previous PNGs were out of date.
+- **Body-text check:** `86% translated` appears only in `lWvcv`, `T1wkiT` and `g5e2fM`; `Notifications sent to this sink are written in this language.` only in `eaNkj`; `Default language for this Gameplane instance.` only in `WZdnw`; `langItemDeutsch` only in `G7OwqK`.
+- **Do not insert a child into `J14ME` through the MCP.** `Insert("J14ME", …)` throws `TypeError: Cannot read properties of undefined (reading 'id')`, and the rollback is not clean: afterwards the two screens with a plain instance of `fjQjb` (`N1GkB`, `gX7um`) showed two login cards and `Get` failed on those instances. `J14ME` is nested in `fjQjb`, and the instances of `fjQjb` on `jmoi3` and `ljdA5` replace that nested card through a children override, which is the likely cause. The two instances were replaced by new ones (so their ids changed) and the picker was added through the wrapper `CDbjX`. `J14ME` (nine children) and `fjQjb` (one child) are unchanged.

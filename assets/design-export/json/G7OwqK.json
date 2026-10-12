@@ -1,0 +1,114 @@
+{
+  "type": "frame",
+  "id": "G7OwqK",
+  "x": 8200,
+  "y": 4500,
+  "name": "Screen/Login — Language menu open",
+  "theme": {
+    "semantic": "dark"
+  },
+  "clip": true,
+  "width": 1440,
+  "height": 900,
+  "fill": "$background/background",
+  "children": [
+    {
+      "id": "knE8K",
+      "type": "ref",
+      "ref": "fjQjb",
+      "name": "loginL",
+      "width": "fill_container",
+      "height": "fill_container",
+      "children": [
+        {
+          "id": "g5PgR",
+          "type": "ref",
+          "ref": "CDbjX",
+          "name": "loginCard"
+        }
+      ]
+    },
+    {
+      "id": "uERm8",
+      "type": "ref",
+      "ref": "T8Hug",
+      "name": "loginR",
+      "width": "fill_container",
+      "height": "fill_container"
+    },
+    {
+      "type": "frame",
+      "id": "IbjMm",
+      "layoutPosition": "absolute",
+      "x": 388,
+      "y": 184,
+      "name": "langMenu",
+      "width": 170,
+      "fill": "$surface/surface",
+      "cornerRadius": "$radius/md",
+      "stroke": "$border/border",
+      "strokeWidth": 1,
+      "strokeAlignment": "inner",
+      "effect": {
+        "type": "shadow",
+        "shadowType": "outer",
+        "color": "#00000059",
+        "offset": {
+          "x": 0,
+          "y": 4
+        },
+        "blur": 12
+      },
+      "layout": "vertical",
+      "padding": 4,
+      "children": [
+        {
+          "id": "g6idK",
+          "type": "ref",
+          "ref": "B5sYje",
+          "name": "langItemEnglish",
+          "width": "fill_container",
+          "descendants": {
+            "ghUsw": {
+              "icon": "check"
+            },
+            "bpSQ7": {
+              "content": "English",
+              "fontFamily": "$typography/font-sans"
+            }
+          }
+        },
+        {
+          "id": "t5NvrH",
+          "type": "ref",
+          "ref": "W8XiN",
+          "name": "langItemFrancais",
+          "width": "fill_container",
+          "descendants": {
+            "Sr2Q5": {
+              "opacity": 0
+            },
+            "Ra9NK": {
+              "content": "Français"
+            }
+          }
+        },
+        {
+          "id": "ekh8P",
+          "type": "ref",
+          "ref": "W8XiN",
+          "name": "langItemDeutsch",
+          "width": "fill_container",
+          "descendants": {
+            "Sr2Q5": {
+              "opacity": 0
+            },
+            "Ra9NK": {
+              "content": "Deutsch"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

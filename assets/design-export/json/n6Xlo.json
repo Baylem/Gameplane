@@ -223,6 +223,50 @@
                                       "fontFamily": "$typography/font-sans",
                                       "fontSize": 12,
                                       "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "DTGe6",
+                                      "name": "sinkLangRow",
+                                      "gap": 8,
+                                      "padding": [
+                                        6,
+                                        0,
+                                        0,
+                                        0
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "axNVI",
+                                          "name": "sinkLangLabel",
+                                          "fill": "$muted",
+                                          "content": "Language",
+                                          "fontFamily": "$typography/font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "B4seX",
+                                          "type": "ref",
+                                          "ref": "AT7ya",
+                                          "name": "sinkLangSelect",
+                                          "width": 200,
+                                          "height": 32,
+                                          "padding": [
+                                            6,
+                                            10
+                                          ],
+                                          "descendants": {
+                                            "cFsFk": {
+                                              "content": "Français",
+                                              "fill": "$foreground/foreground",
+                                              "fontSize": 13
+                                            }
+                                          }
+                                        }
+                                      ]
                                     }
                                   ]
                                 },
@@ -395,6 +439,50 @@
                                       "fontFamily": "$typography/font-sans",
                                       "fontSize": 12,
                                       "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "TEVSf",
+                                      "name": "sinkLangRow",
+                                      "gap": 8,
+                                      "padding": [
+                                        6,
+                                        0,
+                                        0,
+                                        0
+                                      ],
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "NiCQX",
+                                          "name": "sinkLangLabel",
+                                          "fill": "$muted",
+                                          "content": "Language",
+                                          "fontFamily": "$typography/font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "NCMJz",
+                                          "type": "ref",
+                                          "ref": "AT7ya",
+                                          "name": "sinkLangSelect",
+                                          "width": 200,
+                                          "height": 32,
+                                          "padding": [
+                                            6,
+                                            10
+                                          ],
+                                          "descendants": {
+                                            "cFsFk": {
+                                              "content": "Instance default",
+                                              "fill": "$foreground/foreground",
+                                              "fontSize": 13
+                                            }
+                                          }
+                                        }
+                                      ]
                                     }
                                   ]
                                 },
