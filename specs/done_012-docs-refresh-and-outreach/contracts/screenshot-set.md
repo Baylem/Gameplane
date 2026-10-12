@@ -295,7 +295,7 @@ If a planned screenshot cannot be captured because:
 **Then:**
 
 1. **Substitute a lower-priority screen** from the tier list (Tier 2 or Tier 3 in R4, lines 140–211)
-2. **Document the substitution** in the audit log (`specs/012-docs-refresh-and-outreach/audit-log.md`, per D-F):
+2. **Document the substitution** in the audit log (`specs/done_012-docs-refresh-and-outreach/audit-log.md`, per D-F):
    - Original planned screenshot (filename, route)
    - Reason (feature unavailable, route broken, fixture incomplete, etc.)
    - Substitute chosen (filename, route)
@@ -378,7 +378,7 @@ Use this checklist **before merging** the screenshot commits (D-F, per constitut
 
 ### Audit Log (D-F)
 
-- [ ] If any substitutions were made, `specs/012-docs-refresh-and-outreach/audit-log.md` includes one row per substitution:
+- [ ] If any substitutions were made, `specs/done_012-docs-refresh-and-outreach/audit-log.md` includes one row per substitution:
   - [ ] Filename, route
   - [ ] Finding (original intended screenshot)
   - [ ] Evidence (path:line checked)
@@ -445,7 +445,7 @@ Website screenshots follow the same dummy-data rules as dashboard screenshots (t
 
 ## References
 
-- **Specification**: `/home/user/Gameplane/specs/012-docs-refresh-and-outreach/spec.md` (FR-015 through FR-019, SC-009 through SC-011)
+- **Specification**: `/home/user/Gameplane/specs/done_012-docs-refresh-and-outreach/spec.md` (FR-015 through FR-019, SC-009 through SC-011)
 - **Research**: `/tmp/claude-0/-home-user-Gameplane/*/scratchpad/plan-012/R4-screens.md` (complete inventory, gap analysis, capture assessment)
 - **Current README**: `/home/user/Gameplane/README.md` lines 18–27 (existing gallery)
 - **Playwright Config**: `/home/user/Gameplane/web/playwright.config.ts` (mock/live mode setup, viewport defaults)

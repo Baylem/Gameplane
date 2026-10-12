@@ -280,6 +280,7 @@ EOF
 #   TestGameServer_FiveMBot_Query: 10Gi storage + embedded txAdmin database (exceeds runner disk)
 #   TestGameServer_Left4Dead2Bot_Query: 15Gi storage + SteamCMD download (exceeds runner disk)
 #   TestGameServer_MountAndBlade2BannerlordBot_Query: 15Gi storage + SteamCMD download (exceeds runner disk)
+#   TestGameServer_NuclearOptionBot_Query: 8Gi memory requests (16Gi limits) + SteamCMD download
 #   TestGameServer_SquadBot_Query: 40Gi storage + SteamCMD download (exceeds runner disk)
 #   TestGameServer_TeamFortress2Bot_Query: 15Gi storage + SteamCMD download (exceeds runner disk)
 #   TestGameServer_TheIsleBot_Query: 20Gi storage + UE4 + SteamCMD download (exceeds runner disk)
@@ -302,6 +303,7 @@ TestGameServer_FiveMBot_Query
 TestGameServer_FiveM_Persistence
 TestGameServer_Left4Dead2Bot_Query
 TestGameServer_MountAndBlade2BannerlordBot_Query
+TestGameServer_NuclearOptionBot_Query
 TestGameServer_PalworldBot_Query
 TestGameServer_ProjectZomboidBot_Query
 TestGameServer_RustBot_Query
