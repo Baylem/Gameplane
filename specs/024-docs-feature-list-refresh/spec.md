@@ -16,6 +16,14 @@ Spec 012 (archived as `specs/done_012-docs-refresh-and-outreach/`) last refreshe
 - `docs/roadmap.md` lists only items shipped up to `v0.2.0-beta.8` under "Shipped toward v1" and says nothing about the `v0.3.0` release or the specs in progress.
 - The project has no single list of everything Gameplane can do; features are described in scattered places (README Features, website pages, 20+ docs files, CHANGELOG).
 
+## Clarifications
+
+### Session 2026-10-12
+
+- Q: How should FEATURES.md decide which maturity label a feature gets? → A: Evidence rule: stable = shipped, on by default and covered by CI e2e tests; beta = shipped with documented caveats or no e2e test; experimental = the docs already call it experimental.
+- Q: How should FEATURES.md and the website features page stay in sync? → A: A CI check: a new script fails CI when the two lists differ in feature names or labels; it ships with its own fixture tests.
+- Q: How detailed should each FEATURES.md entry be? → A: One entry per capability (roughly 100 to 150 rows, one per thing a user or operator can do), grouped under area headings.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Evaluator reads one complete feature list (Priority: P1)
@@ -98,8 +106,8 @@ A visitor to the public website reads its docs pages and finds the same feature 
 
 ### Functional Requirements
 
-- **FR-001**: The project MUST have one feature catalog file listing every shipped capability of Gameplane, grouped by area, as a root `FEATURES.md` next to `README.md` (OD-1), mirrored by a features page on the website.
-- **FR-002**: Each catalog entry MUST carry a one-line description, a maturity label from a fixed set (stable, beta, experimental, optional/off by default, planned, in progress), and a link to the page that documents it.
+- **FR-001**: The project MUST have one feature catalog file listing every shipped capability of Gameplane, with one entry per capability (one per thing a user or operator can do, roughly 100 to 150 entries) grouped under area headings, as a root `FEATURES.md` next to `README.md` (OD-1), mirrored by a features page on the website.
+- **FR-002**: Each catalog entry MUST carry a one-line description, a maturity label from a fixed set (stable, beta, experimental, optional/off by default, planned, in progress), and a link to the page that documents it. Maturity follows an evidence rule: **stable** = shipped, on by default and covered by a CI end-to-end test; **beta** = shipped but with documented caveats or no end-to-end test; **experimental** = the docs already call it experimental. A feature the install ships disabled is never stable; it gets beta or experimental plus the **optional/off by default** tag.
 - **FR-003**: The catalog MUST cover the dashboard, operator, API, agent, optional components (sentinel, capture sidecar, tunnels, audit syslog bridge, telemetry receiver, MCP server, agent gateway), the game module catalog, and the module authoring tool.
 - **FR-004**: The catalog MUST NOT list as shipped anything that is not merged to the default branch; planned and in-progress items MUST link to the roadmap.
 - **FR-005**: `docs/roadmap.md` MUST state the current release, the date of the status, what shipped in `v0.3.0` and since (linking the CHANGELOG), each open spec with a plain-words status, blockers with what unblocks them, what remains for v1, and what is out of scope.
@@ -112,10 +120,11 @@ A visitor to the public website reads its docs pages and finds the same feature 
 - **FR-012**: Each fact corrected MUST be traceable: the docs PR description or a review list in the spec folder MUST note what was stale, where, and what source confirmed the new value.
 - **FR-013**: The roadmap MUST have an "In progress" section with one line per open spec in `specs/` on the status date, each with its plain-words status and blocker (OD-2).
 - **FR-014**: The comparison table's competitor columns MUST NOT change unless re-verified with a dated source; only Gameplane-column facts are corrected.
+- **FR-015**: A new CI check MUST fail when `FEATURES.md` and the website features page differ in their feature names, areas or maturity labels, and MUST ship with fixture tests covering the in-sync case and at least one mismatch of each kind. Existing checks are not loosened to make it pass.
 
 ### Key Entities
 
-- **Feature catalog entry**: area, name, one-line description, maturity label, default (on/off), documentation link, release first shipped (when known).
+- **Feature catalog entry**: one capability (a single thing a user or operator can do); fields: area, name, one-line description, maturity label, default (on/off), documentation link, release first shipped (when known).
 - **Roadmap item**: title, status (shipped, in progress, blocked, planned, out of scope), release or spec reference, blocker and what unblocks it, status date.
 - **Stale fact record**: page, old value, new value, confirming source.
 
@@ -126,8 +135,8 @@ A visitor to the public website reads its docs pages and finds the same feature 
 - **SC-001**: 100% of shipped capabilities found in the docs, CHANGELOG and finished specs appear in the feature catalog, and a reviewer sampling 10 entries finds 10 correct (exists, right label, link resolves).
 - **SC-002**: Every open spec in `specs/` on the status date appears on the roadmap with a status matching its `tasks.md`.
 - **SC-003**: Zero known stale counts remain: every page stating the module count says 29 (or the catalog's count on the status date), and every page stating the registry count matches the code.
-- **SC-004**: The repo roadmap and the website roadmap agree on 100% of item statuses; the repo catalog and the website features page list the same entries.
-- **SC-005**: The project's documentation checks pass in CI on the docs PRs with no rule changes.
+- **SC-004**: The repo roadmap and the website roadmap agree on 100% of item statuses; the repo catalog and the website features page list the same entries, enforced by the FR-015 check passing in CI.
+- **SC-005**: The project's existing documentation checks pass in CI on the docs PRs with no rule changes, and the new sync check fails on a deliberately mismatched fixture in its own tests.
 - **SC-006**: A new reader can answer "does Gameplane do X, and is it stable?" for any listed capability from the catalog alone in under one minute.
 
 ## Assumptions
