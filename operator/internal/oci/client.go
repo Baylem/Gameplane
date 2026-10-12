@@ -129,6 +129,18 @@ func (c *Client) Pull(ctx context.Context, ref, reference string) (string, map[s
 		if title == "" {
 			continue
 		}
+		if _, isLocale := LocaleTag(title); isLocale {
+			// A locale layer with another media type is ignored, not
+			// trusted. One over the size bound is never read (memory cap);
+			// the marker records its language so the reconciler can report it.
+			if layer.MediaType != MediaTypeLocale {
+				continue
+			}
+			if layer.Size > MaxLocaleLayerSize {
+				files[title] = OversizedLocale
+				continue
+			}
+		}
 		blob, err := readBlob(ctx, r, layer)
 		if err != nil {
 			return "", nil, fmt.Errorf("read layer %s: %w", title, err)

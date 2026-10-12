@@ -332,7 +332,15 @@ export interface GameTemplate {
       maxLength?: number;
     }>;
   };
-  status?: { inUseCount?: number };
+  status?: {
+    inUseCount?: number;
+    conditions?: Array<{
+      type: string;
+      status: string;
+      reason?: string;
+      message?: string;
+    }>;
+  };
 }
 
 export type GameServerPhase =

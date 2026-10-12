@@ -173,6 +173,10 @@ var rows = []row{
 	{types: []string{"Ready", "Pulling"}, reason: "ApplyTemplate", english: "Applying the module template failed.", description: "Module condition when the GameTemplate cannot be written."},
 	{types: []string{"Pulling"}, reason: "Pulling", english: "Pulling the module.", description: "Pulling condition while a pull runs."},
 	{types: []string{"Pulling"}, reason: "Applied", english: "The module pull finished.", description: "Pulling condition once the template was applied."},
+	{types: []string{"LocalesValid"}, reason: "Valid", english: "All module translations are valid.", description: "LocalesValid condition on a GameTemplate when every translation entry shipped with the module is valid."},
+	{types: []string{"LocalesValid"}, reason: "InvalidEntries", english: "Some module translation entries are invalid and were left out.", description: "LocalesValid condition on a GameTemplate when translation entries or files were dropped. The message holds the English per-language counts."},
+	{types: []string{"LocalesValid"}, reason: "LocalesTooLarge", english: "Some module translations were left out because they are too large.", description: "LocalesValid condition on a GameTemplate when a language file is over the size limit or the translations together exceed it. The message names the languages."},
+	{types: []string{"LocalesValid"}, reason: "WriteFailed", english: "Module translations could not be stored.", description: "LocalesValid condition on a GameTemplate when the translations ConfigMap could not be written. The message holds the English error."},
 
 	// ModuleSource
 	{types: []string{"Synced"}, reason: "Indexed", english: "The module source was indexed.", description: "Synced condition after a successful index."},

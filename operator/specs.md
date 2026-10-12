@@ -11,7 +11,7 @@ The operator is a Kubernetes controller-runtime-based process that reconciles Ga
 ## Responsibilities
 
 - **GameServer lifecycle:** reconcile GameServer CRs into StatefulSets, Services, PVCs, and pod-injected agent sidecars; manage pod affinity, RCON/console integration, file I/O, and graceful stop sequences.
-- **Module installation:** pull OCI module bundles from remote or local sources, verify signatures (cosign), and materialize GameTemplate CRs; refresh source indexes periodically.
+- **Module installation:** pull OCI module bundles from remote or local sources, verify signatures (cosign), and materialize GameTemplate CRs; refresh source indexes periodically. Translation files (`locales/<tag>.json`) are carried by every module source (OCI layers, directory, git, HTTP archive, upload, `gp-module package` tarball) and validated against the ids derived from the module (`i18n/modlocale`); valid entries are written to the `<template>-locales` ConfigMap (owned by the GameTemplate, in the operator namespace) and problems surface as the GameTemplate `LocalesValid` condition (reasons `Valid`, `InvalidEntries`, `LocalesTooLarge`, `WriteFailed`) and Warning events, never as an install failure. A file over 900 KiB is not read but reported by language tag as `LocalesTooLarge`. Events fire only when the problem list changes (fingerprint annotation `gameplane.local/locales-problems`). The ConfigMap is rewritten on each apply, not recreated if deleted while the Module stays converged.
 - **Backup & restore:** coordinate application-level quiesce with agent, spawn restic backup/restore Jobs, track snapshot IDs, and enforce retention policies.
 - **Scheduled backups:** parse cron expressions, create Backup objects on schedule, apply retention rules (keep-daily, keep-hourly, etc.), and report schedule validity and retention status.
 - **Remote cluster health:** periodically probe Kubernetes clusters reachable via kubeconfig Secrets, report connectivity and API-server health.
@@ -72,7 +72,8 @@ operator/
 │   │   ├── restore_controller.go           Drives Restore → restic Job with GameServer suspend
 │   │   ├── restore_volumesnapshot.go       Snapshot recovery for restore strategy
 │   │   ├── modulesource_controller.go      Indexes module sources, refreshes catalog
-│   │   ├── module_controller.go            Pulls OCI bundle, verifies signature, creates GameTemplate
+│   │   ├── module_controller.go            Pulls OCI bundle, verifies signature, creates GameTemplate, publishes module translations
+│   │   ├── module_locales.go               Validates module translations, writes the <template>-locales ConfigMap, LocalesValid condition + events
 │   │   ├── cluster_controller.go           Health checks remote clusters via kubeconfig
 │   │   ├── networkcapture_controller.go    Drives NetworkCapture → sidecar injection + retention/expiry
 │   │   ├── agent_certs.go                  Generates per-GameServer agent mTLS certs
@@ -111,7 +112,7 @@ Nine CRD kinds under `gameplane.local/v1alpha1`:
 
 | Kind | File | Purpose |
 |------|------|---------|
-| **GameTemplate** | `gametemplate_types.go` | Reusable blueprint for a game server (image, ports, probes, RCON protocol, mod loaders, etc.). Cluster-wide catalog; instances are created via GameServer references. Status tracks in-use count. |
+| **GameTemplate** | `gametemplate_types.go` | Reusable blueprint for a game server (image, ports, probes, RCON protocol, mod loaders, etc.). Cluster-wide catalog; instances are created via GameServer references. Status tracks in-use count and the `LocalesValid` condition (module translations). |
 | **Module** | `module_types.go` | User request to pull and install a module (OCI bundle) from a ModuleSource. Creates a child GameTemplate on success; delete cascades to the template via owner reference. |
 | **ModuleSource** | `modulesource_types.go` | Registry of module bundles (OCI, git, HTTP, or local). Declares source location, refresh interval, optional credentials Secret, and optional cosign verification policy. Status lists available modules. |
 | **Cluster** | `cluster_types.go` | Metadata for a remote Kubernetes cluster (displayName, kubeconfig Secret ref). Cluster-scoped so multiple control planes can discover each other. Status tracks health (Unknown/Healthy/Unhealthy), lastCheckTime, conditions. |
