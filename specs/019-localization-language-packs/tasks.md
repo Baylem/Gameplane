@@ -240,15 +240,15 @@ description: "Task list for 019 App Localization & Community Language Packs"
 - [ ] T096 Create `i18n/locales/fr/meta.json` (`fr`, `Français`, `French`, `ltr`, credits)
 - [ ] T097 Translate `i18n/locales/fr/app.json` to 100% (web, server, condition, notify, audit); drafts may be machine-assisted but every entry is approved by a native French reviewer on Weblate or in PR review; `i18n-check` shows fr 100% and listed
 - [ ] T098 [module repo] Translate `modules/minecraft-java/locales/fr.json`, `modules/terraria/locales/fr.json`, `modules/valheim/locales/fr.json` to 100%; module-repo PR; root pointer bump after merge
-- [ ] T099 Implement pseudo-language `en-XA` generation (accented, ~40% longer, bracketed) behind `VITE_I18N_PSEUDO=1` in the `web/vite.config.ts` build step; never present in release `languages.json` (FR-038)
+- [X] T099 Implement pseudo-language `en-XA` generation (accented, ~40% longer, bracketed) behind `VITE_I18N_PSEUDO=1` in the `web/vite.config.ts` build step; never present in release `languages.json` (FR-038)
 - [ ] T100 Add an `en-XA` project to `web/playwright.config.ts` running the screenshot suite (`web/e2e/screenshots/`), and fix clipping/overlap found (truncation must reveal full text on hover/focus, FR-010); any visual change goes through `design.pen` first (local machine)
 
 ---
 
 ## Phase 11: Polish & Cross-Cutting Concerns
 
-- [ ] T101 [P] Update `docs/architecture.md`, `docs/agent-architecture.md` (task → doc map entry for i18n) and `docs/module-authoring.md` (module translations section)
-- [ ] T102 [P] Add a CHANGELOG / release-notes entry describing language selection, French, problem+json negotiation (opt-in) and module translations
+- [X] T101 [P] Update `docs/architecture.md`, `docs/agent-architecture.md` (task → doc map entry for i18n) and `docs/module-authoring.md` (module translations section)
+- [X] T102 [P] Add a CHANGELOG / release-notes entry describing language selection, French, problem+json negotiation (opt-in) and module translations
 - [ ] T103 Run quickstart.md scenarios 1–13 against a `make dev-up` cluster and record results in the PR description
 - [ ] T104 Confirm the coverage gates (`i18n` 90, api 80, operator 72, gp-module 80, web thresholds) pass on CI; add tests where they do not (never lower thresholds)
 - [ ] T105 After merge and with every task complete or withdrawn: `git mv specs/019-localization-language-packs specs/done_019-localization-language-packs` and update in-repo references (Constitution IV, rule 16)

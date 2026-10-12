@@ -42,6 +42,12 @@ This document is the **first stop** for AI agents modifying or extending Gamepla
 | **Modules** | `modules/<game>/specs.md` | OCI bundle templates for deploying specific games (e.g., Minecraft, Rust). |
 | **Test e2e** | `test/e2e/specs.md` | E2E integration test suite covering operator and API flows. |
 
+## Task to doc map
+
+| Task | Read |
+| --- | --- |
+| Translations, language packs, localized server or module messages (i18n) | `docs/translating.md`, `specs/019-localization-language-packs/contracts/` (`pack-format.md`, `server-messages.md`, `i18n-api.md`, `module-locales.md`, `check-tool.md`), and the Internationalization section of `web/specs.md` |
+
 ## How to use this index
 1. Identify the domain of your task (e.g., "Add an auth provider").
 2. Find the component handling this domain (e.g., "API Gateway").

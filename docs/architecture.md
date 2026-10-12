@@ -289,6 +289,15 @@ bundle upload) only reads and writes these CRs/ConfigMaps; the
 operator owns all reconciliation, so the dashboard and kubectl always
 converge on the same outcome. Format spec: `docs/module-authoring.md`.
 
+## Internationalization
+
+Language packs are shared: `i18n/locales/<tag>/{app.json,meta.json}` is embedded in Go (`i18n/catalog`, used by the API and operator) and compiled for the dashboard (`web/scripts/i18n-compile.mjs`). One checker (`i18n/cmd/i18n-check`) validates packs and computes the manifest (`languages.json`), including the listing rule (completeness at least 80%, left-to-right, never `en-XA`), so every component agrees on which languages exist. Contributor guide: `docs/translating.md`.
+
+- **API.** Error responses stay English plain text unless the request lists `application/problem+json` in `Accept` (opt-in); then the body is RFC 9457 with a stable `messageId` and `args` extensions and the English text in `detail`. Users save a language (`PUT /users/me/language`), admins set the instance default (`GET /auth/locale` exposes only that), and each notification destination can carry its own language.
+- **Operator.** Conditions keep their English `message`; the arguments interpolated into it are written to `status.conditionArgs[<Type>]`, and the dashboard translates `condition.<type>.<reason>` with them. The operator never depends on a UI language.
+- **Module translations.** The Module reconciler validates a bundle's `locales/<tag>.json` against ids derived from its templates and writes the valid entries to the `<template>-locales` ConfigMap; the API serves them at `GET /modules/{name}/locales/{tag}`. Invalid or oversized files are reported by the `LocalesValid` condition and never fail an install.
+- **Dashboard runtime.** `I18nProvider` resolves the language (saved choice, browser choice, `navigator.languages`, instance default, `en`), lazy-loads the compiled catalog chunk and re-renders without remounting routes. Missing messages fall back to English. Details: `web/specs.md`.
+
 ## Multi-cluster (federation)
 
 Gameplane scales across multiple Kubernetes clusters through a

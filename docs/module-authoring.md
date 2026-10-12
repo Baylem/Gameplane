@@ -215,7 +215,9 @@ Every module source carries the same files:
 | upload | ConfigMap key `locales.<tag>.json`; an uploaded archive may contain `locales/<tag>.json`, counted in the 900 KiB bundle limit |
 | `gp-module package --output` | the `.tar.gz` contains `locales/<tag>.json` (`en.json` excluded) |
 
-A translation file larger than 900 KiB is not read; the install still
+A translation file larger than 900 KiB is not read, and neither is a
+language that would take all of a bundle's translation files past 4 MiB
+together (languages count in file-name order); the install still
 succeeds and the `LocalesValid` condition shows `LocalesTooLarge` naming the
 language. The condition reasons are `Valid`, `InvalidEntries`,
 `LocalesTooLarge` and `WriteFailed`; when several apply, `WriteFailed` wins,
