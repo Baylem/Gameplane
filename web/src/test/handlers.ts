@@ -974,11 +974,18 @@ export function buildScreenshotHandlers() {
             ...server,
             spec: {
               ...server.spec,
-              idle: { enabled: true, afterMinutes: 60 },
+              idle: { ...server.spec.idle, enabled: true, afterMinutes: 30 },
             },
             status: {
               ...server.status,
               idle: { reason: "this game reports no player count" },
+              agent: {
+                ...server.status?.agent,
+                memoryBytes: 1610612736, // 1.5 GiB -> "1.5 GB", 38% of limit
+                memoryLimitBytes: 4294967296, // 4.0 GiB -> "4.0 GB"
+                diskUsedBytes: 3972844749, // 3.7 GiB -> "3.7 GB", 13% of total
+                diskTotalBytes: 31138512896, // 29 GiB -> "29 GB"
+              },
             },
           });
         }
@@ -1383,8 +1390,11 @@ export function buildScreenshotHandlers() {
     http.delete("/modules/:name", () => new HttpResponse(null, { status: 204 })),
 
     // Server events: return events for the requested server
-    http.get("/servers/:name/events", ({ params }) => {
+    http.get("/servers/:name/events", ({ params, cookies }) => {
       const name = String(params.name);
+      if (name === "mc-survival" && cookies.e2e_server_variant === "never-sleeps") {
+        return HttpResponse.json([]);
+      }
       const serverEvents = data.events.filter((e) => e.object === name);
       return HttpResponse.json(serverEvents);
     }),
