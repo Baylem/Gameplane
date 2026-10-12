@@ -190,6 +190,7 @@ jobs:
               - 'operator/config/**'
               - 'charts/gameplane/crds/**'
               - 'charts/gameplane/crd-manifests/**'
+              - 'hack/check-codegen-drift_test.sh'
             ci:
               - '.github/workflows/ci.yaml'
               - '.github/actions/**'
@@ -218,6 +219,10 @@ jobs:
               - 'hack/check-publish-edge-paths.sh'
               - 'hack/test-check-publish-edge-paths.sh'
               - 'hack/testdata/check-publish-edge-paths/**'
+              - '**/Dockerfile*'
+              - '.hadolint.yaml'
+              - 'hack/check-hadolint_test.sh'
+              - 'hack/testdata/hadolint/**'
             specs:
               - '**/specs.md'
               - 'hack/check-specs.sh'
@@ -519,6 +524,32 @@ jobs:
         run: make check-dev-load-images
       - name: test up.sh registry/context bootstrap
         run: make test-up-registry
+
+  # Spec 013 G5: regenerated files (deepcopy, operator/config/{crd,rbac}, chart
+  # CRDs, go.mod/go.sum) must be committed with the change that needs them. The
+  # proof step shows the gate goes red on a types edit committed without regenerating.
+  codegen-drift:
+    name: codegen drift
+    needs: [changes]
+    if: needs.changes.outputs.codegen == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/go-cache
+        with:
+          key-suffix: codegen-drift
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - name: regenerate deepcopy, CRDs, RBAC and chart CRD copies
+        run: make generate manifests
+      - name: go mod tidy across modules
+        run: make tidy
+      - name: fail on drift
+        run: git diff --exit-code
+      - name: prove the gate fails on a stale types edit
+        run: ./hack/check-codegen-drift_test.sh
 
   # Spec 013 G1: fail on any reachable Go vulnerability in any go.work module.
   # The proof step first shows the gate goes red on a synthetic reachable
@@ -1218,6 +1249,24 @@ jobs:
           # so run it from the checkout root.
           cd "$GITHUB_WORKSPACE"
           "$tmp/actionlint"
+      # Spec 013 G3: hadolint over every tracked Dockerfile, at warning and
+      # above (.hadolint.yaml). Same pinned-download pattern as actionlint.
+      - name: hadolint (download and verify)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/hadolint"
+          cd "$RUNNER_TEMP/hadolint"
+          curl -fsSL -o hadolint \
+            https://github.com/hadolint/hadolint/releases/download/v2.14.0/hadolint-linux-x86_64
+          echo "6bf226944684f56c84dd014e8b979d27425c0148f61b3bd99bcc6f39e9dc5a47  hadolint" | sha256sum -c -
+          chmod +x hadolint
+          echo "$RUNNER_TEMP/hadolint" >> "$GITHUB_PATH"
+      - name: prove the Dockerfile lint gate can fail
+        run: ./hack/check-hadolint_test.sh
+      - name: hadolint
+        run: |
+          mapfile -t files < <(git ls-files '*Dockerfile*' ':!:hack/testdata/**' ':!:*.dockerignore')
+          hadolint --config .hadolint.yaml "${files[@]}"
       - name: ci report job coverage (F-238)
         run: ./hack/check-ci-report-coverage.sh
       - name: test ci report job coverage checker
@@ -1983,6 +2032,7 @@ jobs:
         build-images-arm64,
         capture-sidecar-setcap-proof,
         docs,
+        codegen-drift,
         vuln-go,
         lint,
         go,
@@ -2095,7 +2145,7 @@ jobs:
 
             const NEEDS_ORDER = [
               'changes', 'build-images', 'build-images-arm64',
-              'capture-sidecar-setcap-proof', 'docs', 'vuln-go', 'lint', 'go',
+              'capture-sidecar-setcap-proof', 'docs', 'codegen-drift', 'vuln-go', 'lint', 'go',
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-go-arm64', 'e2e-multicluster', 'e2e-multicluster-arm64', 'e2e-upgrade', 'e2e-upgrade-arm64',
@@ -2111,6 +2161,7 @@ jobs:
               'build-images-arm64': (n) => n === 'build e2e images (arm64)',
               'capture-sidecar-setcap-proof': (n) => n === 'capture-sidecar CAP_NET_RAW survival',
               docs: (n) => n === 'docs and repository checks',
+              'codegen-drift': (n) => n === 'codegen drift',
               'vuln-go': (n) => n === 'vuln (go)',
               lint: (n) => n.startsWith('lint ('),
               go: (n) => n.startsWith('go (') && n !== 'go (test/e2e)',

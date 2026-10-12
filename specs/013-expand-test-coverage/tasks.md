@@ -105,19 +105,20 @@ description: "Task list for 013-expand-test-coverage"
 
 ### G5 codegen drift: PR `ci: codegen drift gate`
 
-- [ ] T012 [P] [US1] Write `hack/check-codegen-drift_test.sh`. In a `git worktree add` temp checkout it:
+- [X] T012 [P] [US1] Write `hack/check-codegen-drift_test.sh`. In a `git worktree add` temp checkout it:
   1. Appends a doc comment to a field in `operator/api/v1alpha1/gameserver_types.go`, edits the struct tag on that field, runs `make generate manifests && make tidy && git diff --exit-code`, and expects a non-zero exit.
   2. Resets the checkout, reruns the same command, and expects zero.
 
   It removes the worktree on exit.
-- [ ] T013 [US1] Add a `codegen-drift` job named `codegen drift` to `.github/workflows/ci.yaml`. Settings:
+- [X] T013 [US1] Add a `codegen-drift` job named `codegen drift` to `.github/workflows/ci.yaml`. Settings:
   - `needs: [changes]`
   - `if: needs.changes.outputs.codegen == 'true' || github.event_name == 'push'`
   - setup: `actions/checkout`, `./.github/actions/go-cache`, `azure/setup-helm`
   - steps: `make generate manifests`, then `make tidy`, then `git diff --exit-code`, then `./hack/check-codegen-drift_test.sh`
 
   Register the job in `report`. Depends on T007 and T012.
-- [ ] T014 [US1] If the first CI run of T013 shows drift, commit the regenerated files the job printed: deepcopy, `operator/config/**`, chart CRDs, `go.mod`/`go.sum`. Flip gap row G-05 with the job name and run link.
+- [X] T014 [US1] If the first CI run of T013 shows drift, commit the regenerated files the job printed: deepcopy, `operator/config/**`, chart CRDs, `go.mod`/`go.sum`. Flip gap row G-05 with the job name and run link.
+  *Implementation note (2026-10-12)*: the first run of `codegen drift` (run 38189397259) found no drift, so there was nothing to commit.
 
 ### G1 govulncheck: PR `ci: go vulnerability gate`
 
@@ -155,23 +156,24 @@ description: "Task list for 013-expand-test-coverage"
 
 ### G3 hadolint: PR `ci: dockerfile lint gate`
 
-- [ ] T022 [P] [US1] Create `.hadolint.yaml` containing only `failure-threshold: warning`: no `trustedRegistries` (OD-2) and no `ignored:` list.
-- [ ] T023 [P] [US1] Add fixtures:
+- [X] T022 [P] [US1] Create `.hadolint.yaml` containing only `failure-threshold: warning`: no `trustedRegistries` (OD-2) and no `ignored:` list.
+- [X] T023 [P] [US1] Add fixtures:
   - `hack/testdata/hadolint/fail/Dockerfile`: `FROM alpine` with no tag or digest, `RUN apk add curl` without `--no-cache`, `ADD https://example.invalid/x /x`, and `USER` absent
   - `hack/testdata/hadolint/pass/Dockerfile`: a digest-pinned distroless `FROM`, `COPY` only, `USER nonroot`
-- [ ] T024 [US1] Write `hack/check-hadolint_test.sh`, which expects a failure on `fail/Dockerfile` and a success on `pass/Dockerfile`, both with `--config .hadolint.yaml`. Depends on T022 and T023.
-- [ ] T025 [US1] Add steps to the existing `workflow-lint` job in `.github/workflows/ci.yaml`:
+- [X] T024 [US1] Write `hack/check-hadolint_test.sh`, which expects a failure on `fail/Dockerfile` and a success on `pass/Dockerfile`, both with `--config .hadolint.yaml`. Depends on T022 and T023.
+- [X] T025 [US1] Add steps to the existing `workflow-lint` job in `.github/workflows/ci.yaml`:
   1. Download hadolint, pinned to a release tag, using the actionlint pattern: `curl -fsSL -o` plus a `sha256sum -c` against a committed hash.
   2. Run `hadolint --config .hadolint.yaml $(git ls-files '*Dockerfile*' ':!:hack/testdata/**' ':!:*.dockerignore')`.
   3. Run `./hack/check-hadolint_test.sh`.
 
   Depends on T024.
-- [ ] T026 [US1] Fix every finding from T025's first CI run, editing the affected files among:
+- [X] T026 [US1] Fix every finding from T025's first CI run, editing the affected files among:
   - `agent/Dockerfile`, `api/Dockerfile`, `audit-syslog-bridge/Dockerfile`, `capture-sidecar/Dockerfile`, `mcp-server/Dockerfile`, `operator/Dockerfile`, `sentinel/Dockerfile`, `telemetry-receiver/Dockerfile`, `web/Dockerfile`
   - `tunnel/Dockerfile.{frp,playit,tailscale}`, `test/e2e/Dockerfile`, `test/e2e/Dockerfile.fakeoidc`
   - `images/common/steamcmd/Dockerfile`, `images/games/nuclear-option/Dockerfile`
 
   Pin images by digest, add `--no-install-recommends`/`--no-cache`, and set `USER` and `SHELL -o pipefail` as each rule asks. Get sign-off on the diff first (production files). Flip G-03.
+  *Implementation note (2026-10-12)*: the first `workflow lint` run (38284658090) flagged only DL3008/DL3018 (unpinned apt/apk) and DL4006 (pipefail), in `capture-sidecar/Dockerfile`, `tunnel/Dockerfile.{frp,playit}`, `test/e2e/Dockerfile`, `containers/common/steamcmd/Dockerfile` and eight `containers/games/*/Dockerfile`s. valgul chose "Pin and pipefail" on 2026-10-12; fixed in 698d51f, green in run 38286000942.
 
 ### G2 Trivy: PR `ci: container image vulnerability gate`
 
