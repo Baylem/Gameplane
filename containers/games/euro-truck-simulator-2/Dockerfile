@@ -10,15 +10,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN dpkg --add-architecture i386 && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        bash \
-        curl \
-        ca-certificates \
-        tini \
-        procps \
-        lib32gcc-s1 \
-        libstdc++6 \
-        libstdc++6:i386 \
-        locales && \
+        bash=5.2.15-2+b13 \
+        curl=7.88.1-10+deb12u15 \
+        ca-certificates=20250419~deb12u1 \
+        tini=0.19.0-1+b3 \
+        procps=2:4.0.2-3 \
+        lib32gcc-s1=12.2.0-14+deb12u1 \
+        libstdc++6=12.2.0-14+deb12u1 \
+        libstdc++6:i386=12.2.0-14+deb12u1 \
+        locales=2.36-9+deb12u14 && \
     sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     locale-gen && \
     apt-get clean && \
