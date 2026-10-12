@@ -150,6 +150,8 @@ jobs:
               - 'test/e2e/**'
               - 'deploy/kind/**'
               - 'containers/docker-bake.hcl'
+              - 'hack/trivy-scan-images.sh'
+              - 'hack/check-image-scan_test.sh'
             # Narrower than e2etree on purpose: this backs a job that only
             # smoke-tests deploy/kind/**'s pinned dev ingress-nginx manifest
             # on a real Kind cluster, and must NOT run on every e2e-affecting
@@ -486,6 +488,41 @@ jobs:
           echo "This means file capabilities did not survive the multi-stage Dockerfile COPY." >&2
           echo "The sidecar will fail at runtime when it tries to open AF_PACKET sockets." >&2
           exit 1
+
+  # Spec 013 G2: fail on any fixed HIGH/CRITICAL vulnerability in a built e2e
+  # image. hack/check-image-scan_test.sh first proves the gate rejects an
+  # end-of-life alpine. Fix findings with a base-image digest or dependency
+  # bump, never an ignore file.
+  vuln-images:
+    name: vuln (images)
+    needs: [changes, build-images]
+    if: needs.changes.outputs.images == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: load images
+        uses: ./.github/actions/e2e-images
+      - name: week of year
+        id: week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - name: cache trivy db
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ steps.week.outputs.week }}
+      - name: install trivy
+        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.74.0
+      - name: prove the gate rejects a vulnerable image
+        run: ./hack/check-image-scan_test.sh
+      - name: scan every e2e image
+        run: |
+          mapfile -t images < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^gameplane-test/[^:]+:e2e(-postgres)?$' | sort -u)
+          ./hack/trivy-scan-images.sh "${images[@]}"
 
   # Repository-wide gates run once, including on documentation-only changes.
   docs:
@@ -1955,6 +1992,7 @@ jobs:
         changes,
         build-images,
         build-images-arm64,
+        vuln-images,
         capture-sidecar-setcap-proof,
         docs,
         lint,
@@ -2067,7 +2105,7 @@ jobs:
             const files = readJSON('/tmp/files.json', []);
 
             const NEEDS_ORDER = [
-              'changes', 'build-images', 'build-images-arm64',
+              'changes', 'build-images', 'build-images-arm64', 'vuln-images',
               'capture-sidecar-setcap-proof', 'docs', 'lint', 'go',
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
@@ -2082,6 +2120,7 @@ jobs:
               changes: (n) => n === 'detect changes',
               'build-images': (n) => n === 'build e2e images',
               'build-images-arm64': (n) => n === 'build e2e images (arm64)',
+              'vuln-images': (n) => n === 'vuln (images)',
               'capture-sidecar-setcap-proof': (n) => n === 'capture-sidecar CAP_NET_RAW survival',
               docs: (n) => n === 'docs and repository checks',
               lint: (n) => n.startsWith('lint ('),
