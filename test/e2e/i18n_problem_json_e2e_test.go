@@ -145,7 +145,7 @@ func TestAPI_I18n_ProblemJSON(t *testing.T) {
 	// body and problem detail carry the same sentence.
 	notif := map[string]any{"sinks": []any{map[string]any{"name": "x", "kind": "telegram", "enabled": false}}}
 	const notifText = "sinks[0].kind must be one of discord|slack|smtp|webhook|ntfy"
-	status, ct, raw = rawDo(t, admin, http.MethodPut, "/admin/config/notifications", notif, "")
+	status, _, raw = rawDo(t, admin, http.MethodPut, "/admin/config/notifications", notif, "")
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("PUT /admin/config/notifications (plain): status=%d body=%q", status, string(raw))
 	}
@@ -161,7 +161,7 @@ func TestAPI_I18n_ProblemJSON(t *testing.T) {
 
 	// Validation with an argument: an unlisted instance language is a 400
 	// whose problem document carries the language as a message argument.
-	status, ct, raw = rawDo(t, admin, http.MethodPut, "/admin/config/i18n", map[string]any{"defaultLanguage": "zz"}, "")
+	status, _, raw = rawDo(t, admin, http.MethodPut, "/admin/config/i18n", map[string]any{"defaultLanguage": "zz"}, "")
 	if status != http.StatusBadRequest {
 		t.Fatalf("PUT /admin/config/i18n (plain): status=%d body=%q", status, string(raw))
 	}

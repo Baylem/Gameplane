@@ -253,9 +253,12 @@ func TestValidateI18n(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := validateI18n([]byte(tc.in))
+			canon, err := validateI18n([]byte(tc.in))
 			if tc.ok && err != nil {
 				t.Fatalf("unexpected: %v", err)
+			}
+			if tc.ok && string(canon) != tc.in {
+				t.Fatalf("canonicalized output: got %s, want %s", canon, tc.in)
 			}
 			if !tc.ok && err == nil {
 				t.Fatal("want error, got nil")

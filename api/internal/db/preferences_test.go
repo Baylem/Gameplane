@@ -93,6 +93,12 @@ func TestUserThemePreferencesMigration(t *testing.T) {
 		t.Error("index idx_user_preferences_user missing after migration 011")
 	}
 
+	// Apply the remaining migrations so GetPreferences sees the columns
+	// later migrations add (016 adds language).
+	if err := s.Migrate(ctx); err != nil {
+		t.Fatalf("apply remaining migrations: %v", err)
+	}
+
 	// A user created after the migration has no row; GetPreferences must
 	// return the pink defaults.
 	post := insertTestUser(t, s, "post-migration")

@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -72,7 +73,7 @@ func TestGetLocales_RegionalPackWinsOverBase(t *testing.T) {
 func TestGetLocales_UnknownAndInvalidTagsAreEmpty(t *testing.T) {
 	h := localesFixture(t, map[string]string{"fr.json": frJSON})
 	for _, tag := range []string{"de", "not a tag!", "x"} {
-		rr := do(t, h, "GET", "/modules/mc/locales/"+tag, nil)
+		rr := do(t, h, "GET", "/modules/mc/locales/"+url.PathEscape(tag), nil)
 		if rr.Code != http.StatusOK {
 			t.Errorf("tag %q: status = %d", tag, rr.Code)
 			continue

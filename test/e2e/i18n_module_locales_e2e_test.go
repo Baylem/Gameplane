@@ -138,6 +138,7 @@ func TestAPI_I18n_ModuleLocales(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GET locales %s/%s: %v", module, tag, err)
 		}
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != http.StatusOK {
 			return resp.StatusCode, nil
 		}

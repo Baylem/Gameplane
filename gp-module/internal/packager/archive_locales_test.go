@@ -33,7 +33,7 @@ func archiveNames(t *testing.T, data []byte) []string {
 
 func writeModuleBase(t *testing.T, dir string) {
 	t.Helper()
-	for name, body := range map[string]string{"module.yaml": "name: demo\n", "template.yaml": "spec: {}\n"} {
+	for name, body := range map[string]string{"module.yaml": "name: demo\n", "template.yaml": "spec: {}\n", "README.md": "# demo\n"} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -53,7 +53,7 @@ func TestCreateArchiveFromDirCarriesLocales(t *testing.T) {
 		t.Fatal(err)
 	}
 	names := archiveNames(t, data)
-	want := []string{"module.yaml", "template.yaml", "locales/de.json", "locales/fr.json"}
+	want := []string{"module.yaml", "template.yaml", "README.md", "locales/de.json", "locales/fr.json"}
 	if len(names) != len(want) {
 		t.Fatalf("entries = %v, want %v", names, want)
 	}
