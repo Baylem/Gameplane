@@ -338,7 +338,7 @@ description: "Task list for 013-expand-test-coverage"
 
   *Implementation note (2026-10-12)*: lcov from run 38189418314: `CloneServerDialog.tsx` 89.29 % lines / 69.23 % branches, with a Cancel case but no API-error case, so T053 adds the API-error and cancel-discards-changes cases. `ServerActionsMenu.tsx` 100 % lines / branches / functions; it makes no API calls, so cancel and API errors are dialog-level (G-22 note). `ConsoleShell.tsx` 100 % lines. G-19 stays in progress: CI reports only package coverage for Go.
 
-**Checkpoint**: SC-004 is met. Module thresholds stay unchanged.
+**Checkpoint**: SC-004 stays pending until G-19 has per-file proof for `secrets_managed.go` (G-20 to G-22 are proven). Module thresholds stay unchanged.
 
 ---
 
