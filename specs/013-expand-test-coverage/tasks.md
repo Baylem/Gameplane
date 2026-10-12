@@ -189,7 +189,8 @@ description: "Task list for 013-expand-test-coverage"
   Register the job in `report`. Depends on T010, T027 and T028.
 - [X] T030 [US1] In `.github/workflows/publish-edge.yaml` and `.github/workflows/release.yaml`, insert a step running `hack/trivy-scan-images.sh` on each pushed digest before the `cosign sign` loop. Same flags, Trivy install SHA-pinned.
   *Implementation note (2026-10-12)*: the EOL fixture is `alpine:3.17.0` pinned by index digest; the proof requires CVE-2023-0286 (libcrypto3 3.0.7-r0) in the output so an unrelated scan error cannot pass as a rejection. Trivy v0.74.0 through `aquasecurity/setup-trivy` v0.3.1 (SHA-pinned).
-- [ ] T031 [US1] Fix every finding from T029's first run with a base-image digest bump or a Go/npm dependency bump in the image's module, never an ignore file. Get sign-off on the diff. Flip G-02.
+- [X] T031 [US1] Fix every finding from T029's first run with a base-image digest bump or a Go/npm dependency bump in the image's module, never an ignore file. Get sign-off on the diff. Flip G-02.
+  Done 2026-10-12: the first scan flagged golang.org/x/net in five Go modules (bumped to v0.60.0) and the upstream frpc release binary (old Go, x/net and x/crypto); frpc is now built from source via `tunnel/frpc/go.mod` with `-tags frpc,noweb`. valgul signed off the diff on a card.
 
 ### G4 dependency-review: PR `ci: dependency review gate`
 
