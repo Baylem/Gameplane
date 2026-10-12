@@ -58,11 +58,25 @@ func Stamp(dir string) ([]string, error) {
 		if err != nil {
 			return stamped, fmt.Errorf("encode locales/%s: %w", name, err)
 		}
-		if err := os.WriteFile(path, encoded, 0o600); err != nil {
+		if err := writeInDir(localesDir, name, encoded); err != nil {
 			return stamped, fmt.Errorf("write locales/%s: %w", name, err)
 		}
 		stamped = append(stamped, path)
 	}
 	sort.Strings(stamped)
 	return stamped, nil
+}
+
+// writeInDir writes name inside dir through an os.Root, so the write cannot
+// escape dir whatever the directory listing contained.
+func writeInDir(dir, name string, data []byte) error {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", dir, err)
+	}
+	defer func() { _ = root.Close() }()
+	if err := root.WriteFile(name, data, 0o600); err != nil {
+		return fmt.Errorf("write %s: %w", name, err)
+	}
+	return nil
 }

@@ -18,7 +18,7 @@ func runI18n(args []string) {
 // 0 on success, 1 on error, 2 on usage errors.
 func i18nCommand(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 || args[0] == "-h" || args[0] == "--help" {
-		fmt.Fprint(stderr, i18nUsage)
+		_, _ = fmt.Fprint(stderr, i18nUsage)
 		if len(args) == 0 {
 			return 2
 		}
@@ -30,7 +30,7 @@ func i18nCommand(args []string, stdout, stderr io.Writer) int {
 	case "stamp":
 		return i18nStamp(args[1:], stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "error: unknown i18n subcommand %q\n\n%s", args[0], i18nUsage)
+		_, _ = fmt.Fprintf(stderr, "error: unknown i18n subcommand %q\n\n%s", args[0], i18nUsage)
 		return 2
 	}
 }
@@ -58,23 +58,24 @@ func i18nExtract(args []string, stdout, stderr io.Writer) int {
 		arg := args[i]
 		switch {
 		case arg == "-h" || arg == "--help":
-			fmt.Fprint(stderr, i18nUsage)
+			_, _ = fmt.Fprint(stderr, i18nUsage)
 			return 0
 		case arg == "--output" || arg == "-output":
-			if i+1 >= len(args) {
-				fmt.Fprintln(stderr, "error: --output needs a file path")
-				return 2
+			if i+1 < len(args) {
+				output = args[i+1]
+				i++
+				continue
 			}
-			i++
-			output = args[i]
+			_, _ = fmt.Fprintln(stderr, "error: --output needs a file path")
+			return 2
 		case strings.HasPrefix(arg, "--output="):
 			output = strings.TrimPrefix(arg, "--output=")
 		case strings.HasPrefix(arg, "-"):
-			fmt.Fprintf(stderr, "error: unknown option %q\n\n%s", arg, i18nUsage)
+			_, _ = fmt.Fprintf(stderr, "error: unknown option %q\n\n%s", arg, i18nUsage)
 			return 2
 		default:
 			if havePath {
-				fmt.Fprintln(stderr, "error: only one MODULE_PATH may be given")
+				_, _ = fmt.Fprintln(stderr, "error: only one MODULE_PATH may be given")
 				return 2
 			}
 			modulePath, havePath = arg, true
@@ -82,10 +83,10 @@ func i18nExtract(args []string, stdout, stderr io.Writer) int {
 	}
 	written, err := gpi18n.WriteExtract(modulePath, output)
 	if err != nil {
-		fmt.Fprintf(stderr, "error: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "error: %v\n", err)
 		return 1
 	}
-	fmt.Fprintf(stdout, "wrote %s\n", written)
+	_, _ = fmt.Fprintf(stdout, "wrote %s\n", written)
 	return 0
 }
 
@@ -95,14 +96,14 @@ func i18nStamp(args []string, stdout, stderr io.Writer) int {
 	for _, arg := range args {
 		switch {
 		case arg == "-h" || arg == "--help":
-			fmt.Fprint(stderr, i18nUsage)
+			_, _ = fmt.Fprint(stderr, i18nUsage)
 			return 0
 		case strings.HasPrefix(arg, "-"):
-			fmt.Fprintf(stderr, "error: unknown option %q\n\n%s", arg, i18nUsage)
+			_, _ = fmt.Fprintf(stderr, "error: unknown option %q\n\n%s", arg, i18nUsage)
 			return 2
 		default:
 			if havePath {
-				fmt.Fprintln(stderr, "error: only one MODULE_PATH may be given")
+				_, _ = fmt.Fprintln(stderr, "error: only one MODULE_PATH may be given")
 				return 2
 			}
 			modulePath, havePath = arg, true
@@ -110,15 +111,15 @@ func i18nStamp(args []string, stdout, stderr io.Writer) int {
 	}
 	stamped, err := gpi18n.Stamp(modulePath)
 	if err != nil {
-		fmt.Fprintf(stderr, "error: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "error: %v\n", err)
 		return 1
 	}
 	if len(stamped) == 0 {
-		fmt.Fprintln(stdout, "nothing to stamp")
+		_, _ = fmt.Fprintln(stdout, "nothing to stamp")
 		return 0
 	}
 	for _, f := range stamped {
-		fmt.Fprintf(stdout, "stamped %s\n", f)
+		_, _ = fmt.Fprintf(stdout, "stamped %s\n", f)
 	}
 	return 0
 }
