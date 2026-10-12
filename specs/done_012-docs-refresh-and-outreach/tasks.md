@@ -1,8 +1,8 @@
 # Tasks: Documentation Refresh, Comparison Table, and External Outreach
 
-**Input**: Feature spec from `/specs/012-docs-refresh-and-outreach/`
+**Input**: Feature spec from `/specs/done_012-docs-refresh-and-outreach/`
 
-**Prerequisites**: All artifacts in `/specs/012-docs-refresh-and-outreach/` (spec.md, plan.md, research.md, data-model.md, contracts/, OPEN-DECISIONS.md, quickstart.md)
+**Prerequisites**: All artifacts in `/specs/done_012-docs-refresh-and-outreach/` (spec.md, plan.md, research.md, data-model.md, contracts/, OPEN-DECISIONS.md, quickstart.md)
 
 **Tests**: No unit/E2E tests requested. Verification: CI runs automated link and version checks (hack/check-links.sh, hack/check-doc-versions.sh) on every lint run; screenshot capture runs on CI via tag-triggered workflow (OD-3c) and on-demand `workflow_dispatch` (OD-15); the positive path (all 17 files have matching version strings, zero broken internal links, consistent optional/experimental labels) is verified locally per D6 precedent and in CI per Principle VI (rule 8). Quickstart.md Scenarios 1–8 provide read-only validation checklists.
 
@@ -28,7 +28,7 @@
 
 **Purpose**: Establish shared audit record before user stories begin
 
-- [X] T002 Create `/home/user/Gameplane/specs/012-docs-refresh-and-outreach/audit-log.md` with header block only: markdown table with columns `File | Line(s) | Finding | Evidence Checked | Resolution | Commit`; no rows yet; include introductory explanation that this log records every correction made per US2 and US4 (FR-011, SC-001); satisfies D-F ruling
+- [X] T002 Create `/home/user/Gameplane/specs/done_012-docs-refresh-and-outreach/audit-log.md` with header block only: markdown table with columns `File | Line(s) | Finding | Evidence Checked | Resolution | Commit`; no rows yet; include introductory explanation that this log records every correction made per US2 and US4 (FR-011, SC-001); satisfies D-F ruling
 
 ---
 
@@ -110,21 +110,21 @@
 
 **Goal**: Create and maintain a persistent to-do list tracking submissions to three external directories (FR-020–FR-025, SC-012–SC-014)
 
-**Independent Test**: outreach.md file exists in specs/012-docs-refresh-and-outreach/; lists three targets (AlternativeTo, Awesome-Selfhosted, Awesome-Kubernetes) with status fields per SC-014 state machine (pending, submitted [date], deferred [date, reason]); linked from docs/contributing.md; every status change is a separate git commit per FR-022
+**Independent Test**: outreach.md file exists in specs/done_012-docs-refresh-and-outreach/; lists three targets (AlternativeTo, Awesome-Selfhosted, Awesome-Kubernetes) with status fields per SC-014 state machine (pending, submitted [date], deferred [date, reason]); linked from docs/contributing.md; every status change is a separate git commit per FR-022
 
 ### Creation for User Story 3
 
-- [X] T026 [US3] Create `/home/user/Gameplane/specs/012-docs-refresh-and-outreach/outreach.md` from contracts/outreach-todo.md "Proposed Initial Content" with three status entries exactly as ruled (per OD-5, OD-6a, OD-6b, OD-6c): (a) AlternativeTo status = pending (no blockers per R6, OD-5); (b) Awesome-Selfhosted status = deferred [2026-09-02, first release 2026-06-22 is under the 4-month minimum; eligible from 2026-10-22] per R6, OD-6a; (c) Awesome-Kubernetes status = deferred [2026-09-02, 25-star / 3-contributor eligibility rule not verified; revisit in a later release] per R6, OD-6b; plus one "DRAFT SUBMISSION" block per target (OD-5) copied from contract templates (AlternativeTo form fields template, awesome-selfhosted-data `software/gameplane.yml` YAML template, awesome-kubernetes README line template); last-updated date = real date of authoring (2026-09-02 or later when actual work runs); satisfies FR-020, FR-021, FR-022, SC-012, SC-014, OD-5, OD-6a, OD-6b
+- [X] T026 [US3] Create `/home/user/Gameplane/specs/done_012-docs-refresh-and-outreach/outreach.md` from contracts/outreach-todo.md "Proposed Initial Content" with three status entries exactly as ruled (per OD-5, OD-6a, OD-6b, OD-6c): (a) AlternativeTo status = pending (no blockers per R6, OD-5); (b) Awesome-Selfhosted status = deferred [2026-09-02, first release 2026-06-22 is under the 4-month minimum; eligible from 2026-10-22] per R6, OD-6a; (c) Awesome-Kubernetes status = deferred [2026-09-02, 25-star / 3-contributor eligibility rule not verified; revisit in a later release] per R6, OD-6b; plus one "DRAFT SUBMISSION" block per target (OD-5) copied from contract templates (AlternativeTo form fields template, awesome-selfhosted-data `software/gameplane.yml` YAML template, awesome-kubernetes README line template); last-updated date = real date of authoring (2026-09-02 or later when actual work runs); satisfies FR-020, FR-021, FR-022, SC-012, SC-014, OD-5, OD-6a, OD-6b
 
-- [X] T027 [US3] Edit `docs/contributing.md`: add "Community Visibility & Outreach" section and link text per contracts/outreach-todo.md; placed per heading outline in FACTS 7 (after contributing guidelines, before testing section or at end); link text (verbatim from contract): "See [External Outreach Tracking](../specs/012-docs-refresh-and-outreach/outreach.md) for visibility into third-party directory submissions."; satisfies FR-025, SC-013
+- [X] T027 [US3] Edit `docs/contributing.md`: add "Community Visibility & Outreach" section and link text per contracts/outreach-todo.md; placed per heading outline in FACTS 7 (after contributing guidelines, before testing section or at end); link text (verbatim from contract): "See [External Outreach Tracking](../specs/done_012-docs-refresh-and-outreach/outreach.md) for visibility into third-party directory submissions."; satisfies FR-025, SC-013
 
 ### Maintainer-Owned Task for User Story 3
 
-- [ ] T028 [US3] **[MAINTAINER TASK — Not agent-executable]** Create AlternativeTo.net account if needed, then submit Gameplane listing via the web form at `https://alternativeto.net/add-app/`; fill form with project details from the AlternativeTo "DRAFT SUBMISSION" block in outreach.md (T026), not from README prose; upon successful form submission, update outreach.md AlternativeTo entry: change status from `pending` to `submitted [2026-MM-DD]`, add submission reference (form ID or email confirmation link) in `submittedRef` field; commit as single commit: `git commit -s` with subject line `docs: outreach [AlternativeTo] submitted` (no date in subject) plus body stating the new status, date, and submission reference (form ID or confirmation link) per contracts/outreach-todo.md Commit Message Format, and standard trailers (rule 11); satisfies FR-022, FR-024, SC-014
+- [X] T028 [US3] **[MAINTAINER TASK — Not agent-executable]** Create AlternativeTo.net account if needed, then submit Gameplane listing via the web form at `https://alternativeto.net/add-app/`; fill form with project details from the AlternativeTo "DRAFT SUBMISSION" block in outreach.md (T026), not from README prose; upon successful form submission, update outreach.md AlternativeTo entry: change status from `pending` to `submitted [2026-MM-DD]`, add submission reference (form ID or email confirmation link) in `submittedRef` field; commit as single commit: `git commit -s` with subject line `docs: outreach [AlternativeTo] submitted` (no date in subject) plus body stating the new status, date, and submission reference (form ID or confirmation link) per contracts/outreach-todo.md Commit Message Format, and standard trailers (rule 11); satisfies FR-022, FR-024, SC-014
 
 ### Verification for User Story 3
 
-- [ ] T029 [US3] Verify outreach tracking (SC-012, SC-013, SC-014, FR-023): (a) read outreach.md and confirm three targets listed with status fields matching spec'd format per data-model.md state machine; (b) verify each status is terminal state per SC-014 (submitted [date] or deferred [date, reason]); no "pending" entries remain at feature completion; (c) verify per FR-023 that no Status field or commit message in outreach.md/its git history claims success or acceptance by AlternativeTo/Awesome-Selfhosted/Awesome-Kubernetes — only submission/deferral is recorded, per contracts/outreach-todo.md V-OE3; (d) confirm docs/contributing.md links to outreach.md; (e) run quickstart.md Scenario 7 (outreach to-do checklist) and confirm all assertions pass; satisfies SC-012, SC-013, SC-014, FR-023
+- [X] T029 [US3] Verify outreach tracking (SC-012, SC-013, SC-014, FR-023): (a) read outreach.md and confirm three targets listed with status fields matching spec'd format per data-model.md state machine; (b) verify each status is terminal state per SC-014 (submitted [date] or deferred [date, reason]); no "pending" entries remain at feature completion; (c) verify per FR-023 that no Status field or commit message in outreach.md/its git history claims success or acceptance by AlternativeTo/Awesome-Selfhosted/Awesome-Kubernetes — only submission/deferral is recorded, per contracts/outreach-todo.md V-OE3; (d) confirm docs/contributing.md links to outreach.md; (e) run quickstart.md Scenario 7 (outreach to-do checklist) and confirm all assertions pass; satisfies SC-012, SC-013, SC-014, FR-023
 
 ---
 
@@ -210,9 +210,9 @@
 
 - [X] T055 Push feature branch to remote: `git push -u origin 012-docs-refresh-and-outreach` (creates remote branch and upstream tracking). Watch CI with `gh run watch` (or GitHub Actions MCP tools); do NOT report done while red. Confirm all lint, web-e2e-mock, actionlint, zizmor jobs pass per rule 8, Principle VI. (CI definition: `.github/workflows/ci.yaml`; new workflow: `.github/workflows/screenshot-refresh.yaml`) — (CI green on 2d61504d, run 992, 30/30 jobs)
 
-- [ ] T056 Run all eight quickstart.md scenarios as read-only verification (D6 permitted; not executing code, only validating documented workflows): (a) Scenario 1: Evaluator can read comparison table and identify 3+ key differences per Gameplane column, (b) Scenario 2: Version strings in README and docs match appVersion 0.2.0-beta.8 or marked examples, (c) Scenario 3: Internal links in README and docs resolve (run hack/check-links.sh locally read-only), (d) Scenario 4: Optional/experimental components labeled consistently ([optional] at first mention), (e) Scenario 5: No unshipped features claimed in docs (CHANGELOG Unreleased items verified or noted), (f) Scenario 6: 11+ screenshots at 1920×1080 JPEG with alt text, no real data, (g) Scenario 7: Outreach to-do list tracks three targets with terminal status, (h) Scenario 8: Audit log records all corrections with evidence. Confirm all assertions pass; record results in notes section of this tasks.md before submitting. — STATUS 2026-09-02: scenarios 1–6 and 8 verified (screenshots via CI runs 4–6, merged f64333d9/655afa37/6ffa851a; alt-text trims f1dc2199); scenario 7 PENDING on T028 (AlternativeTo submission); T056 stays open until T028 lands.
+- [X] T056 Run all eight quickstart.md scenarios as read-only verification (D6 permitted; not executing code, only validating documented workflows): (a) Scenario 1: Evaluator can read comparison table and identify 3+ key differences per Gameplane column, (b) Scenario 2: Version strings in README and docs match appVersion 0.2.0-beta.8 or marked examples, (c) Scenario 3: Internal links in README and docs resolve (run hack/check-links.sh locally read-only), (d) Scenario 4: Optional/experimental components labeled consistently ([optional] at first mention), (e) Scenario 5: No unshipped features claimed in docs (CHANGELOG Unreleased items verified or noted), (f) Scenario 6: 11+ screenshots at 1920×1080 JPEG with alt text, no real data, (g) Scenario 7: Outreach to-do list tracks three targets with terminal status, (h) Scenario 8: Audit log records all corrections with evidence. Confirm all assertions pass; record results in notes section of this tasks.md before submitting. — STATUS 2026-09-02: scenarios 1–6 and 8 verified (screenshots via CI runs 4–6, merged f64333d9/655afa37/6ffa851a; alt-text trims f1dc2199); scenario 7 PENDING on T028 (AlternativeTo submission); T056 stays open until T028 lands. — DONE 2026-10-11: T028 landed (commit 7c5b214, AlternativeTo `submitted [2026-10-11]`); scenario 7 re-run: outreach.md has all three targets in terminal states, vocabulary valid, linked from docs/contributing.md.
 
-- [ ] T057 Walk every contract "Done When" checklist: (a) contracts/comparison-table.md § 11, (b) contracts/docs-audit.md § "Done When", (c) contracts/screenshot-set.md Verification Checklist, (d) contracts/outreach-todo.md § "Done When" per SC-012–SC-014. Confirm all acceptance criteria met. — STATUS 2026-09-02: checklists for the documentation audit, comparison table, screenshot verification, and outreach tracking verified; only the AlternativeTo terminal state (SC-014) remains open, so T057 stays open until T028 (maintainer submission) lands.
+- [X] T057 Walk every contract "Done When" checklist: (a) contracts/comparison-table.md § 11, (b) contracts/docs-audit.md § "Done When", (c) contracts/screenshot-set.md Verification Checklist, (d) contracts/outreach-todo.md § "Done When" per SC-012–SC-014. Confirm all acceptance criteria met. — STATUS 2026-09-02: checklists for the documentation audit, comparison table, screenshot verification, and outreach tracking verified; only the AlternativeTo terminal state (SC-014) remains open, so T057 stays open until T028 (maintainer submission) lands. — DONE 2026-10-11: contracts/outreach-todo.md SC-012–SC-014 "Done When" met after T028 (AlternativeTo `submitted [2026-10-11]`, other two `deferred`).
 
 - [X] T058 Produce SC status table for final report: Create summary table in notes section: | SC-001 through SC-014 | Status: PASS/FAIL | Evidence | per spec.md § Success Criteria. All 14 success criteria must PASS before feature 012 completion.
 
@@ -461,8 +461,8 @@ All commits signed and conform to rule 11 (conventional-commit prefixes, `Co-Aut
 - **SC-001 through SC-008**: 8/8 **PASS** (Comparison table + docs audit complete)
 - **SC-009 through SC-011**: 3/3 **PASS** (12 screenshots captured in CI runs 4–6, gallery rebuilt, alt text verified)
 - **SC-012, SC-013**: 2/2 **PASS** (Outreach tracking infrastructure setup)
-- **SC-014**: **PENDING** (AlternativeTo status stays `pending`, a non-terminal state, until T028 submission)
-- **Total**: 13/14 PASS, 1/14 PENDING (no FAILs)
+- **SC-014**: **PASS** (2026-10-11: AlternativeTo `submitted [2026-10-11]` per T028; Awesome-Selfhosted and Awesome-Kubernetes `deferred`)
+- **Total**: 14/14 PASS (no FAILs)
 
 **Verification Summary**
 
@@ -473,7 +473,7 @@ All eight quickstart.md scenarios (D6 read-only validation per FACTS 7, FACTS 8)
 - Scenario 4 (Component Labels): 27 label instances across docs ✓
 - Scenario 5 (No Unshipped Features): CHANGELOG Unreleased empty, roadmap has 12 marked entries ✓
 - Scenario 6 (Screenshots): 12 JPEG at 1920×1080 in docs/img, all under 150 KB, captured by CI runs 4–6 (PRs #341/#342/#343 merged as f64333d9/655afa37/6ffa851a); README gallery lists all 12 ✓
-- Scenario 7 (Outreach Tracking): outreach.md created, 3 targets with status fields, linked in contributing.md; AlternativeTo is still `pending` (non-terminal), so the scenario stays open until T028 ⏳
+- Scenario 7 (Outreach Tracking): outreach.md created, 3 targets with status fields, linked in contributing.md; AlternativeTo `submitted [2026-10-11]` after T028, all three targets terminal ✓
 - Scenario 8 (Audit Log): 147 corrections recorded with evidence ✓
 
 **CI & Rule 8 Compliance**
@@ -534,9 +534,9 @@ Per quickstart.md, eight scenarios validate feature completion. All must PASS be
 | SC-009 | PASS | Six refreshed screenshots retaken at 1920×1080 JPEG by screenshot-refresh.yaml (runs 4–6, merged f64333d9/655afa37/6ffa851a) |
 | SC-010 | PASS | Six new screenshots (login, create-server wizard, events, admin general, cluster, logs) with one-sentence alt text in the README gallery (f55078a1) |
 | SC-011 | PASS | Fixture-source scan and per-image review: only *.gameplane-demo.local hosts, no IPs, no real users, no cluster names (FR-019) |
-| SC-012 | PASS | Outreach.md created and committed in specs/012-docs-refresh-and-outreach/ per T026 |
+| SC-012 | PASS | Outreach.md created and committed in specs/done_012-docs-refresh-and-outreach/ per T026 |
 | SC-013 | PASS | Outreach.md linked from docs/contributing.md per T027 |
-| SC-014 | PENDING | Three targets tracked: AlternativeTo (pending per T026), Awesome-Selfhosted (deferred per OD-6a), Awesome-Kubernetes (deferred per OD-6b); AlternativeTo's `pending` status is not a terminal state per the SC-014 state machine, so SC-014 is not met until T028 (maintainer submission) lands |
+| SC-014 | PASS | Three targets tracked: AlternativeTo (submitted [2026-10-11] per T028; was pending per T026), Awesome-Selfhosted (deferred per OD-6a), Awesome-Kubernetes (deferred per OD-6b); AlternativeTo's `pending` status is not a terminal state per the SC-014 state machine, SC-014 was not met until T028 landed on 2026-10-11 |
 
 **PR Labels** (Rule 14):
 - `type: docs` (primary)

@@ -143,7 +143,7 @@ An evaluator exploring the Gameplane README wants to see what the dashboard look
 
 ### Deliverable 4: External Outreach To-Do List
 
-**FR-020**: A persistent to-do list MUST be created in specs/012-docs-refresh-and-outreach/ listing the three target external directories and the status of each submission.
+**FR-020**: A persistent to-do list MUST be created in specs/done_012-docs-refresh-and-outreach/ listing the three target external directories and the status of each submission.
 
 **FR-021**: The to-do list MUST include entries for: (a) AlternativeTo.net submission, (b) Awesome-Selfhosted PR, (c) Awesome-Kubernetes submission.
 
@@ -181,7 +181,7 @@ An evaluator exploring the Gameplane README wants to see what the dashboard look
 
 **SC-011**: All screenshots contain no real user data, real hostnames, real cluster names, or real IP addresses.
 
-**SC-012**: The outreach to-do list is created, committed to specs/012-docs-refresh-and-outreach/, and includes entries for all three target directories with status fields.
+**SC-012**: The outreach to-do list is created, committed to specs/done_012-docs-refresh-and-outreach/, and includes entries for all three target directories with status fields.
 
 **SC-013**: The outreach to-do list is linked from docs/contributing.md and is maintained as the authoritative record of submission status.
 
