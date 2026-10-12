@@ -2,7 +2,7 @@
 
 **Branch**: `012-docs-refresh-and-outreach` | **Date**: 2026-09-01 | **Spec**: [./spec.md](./spec.md)
 
-**Input**: Feature specification from `specs/012-docs-refresh-and-outreach/spec.md`
+**Input**: Feature specification from `specs/done_012-docs-refresh-and-outreach/spec.md`
 
 ## Summary
 
@@ -14,7 +14,7 @@ Conduct a systematic audit of all user-facing documentation (README.md, 13 docs/
 
 **Primary Dependencies**: The 17 audited files (README.md, 13 docs/*.md, 3 component READMEs); charts/gameplane/Chart.yaml and values.yaml (appVersion, feature toggles); operator/api/v1alpha1/*_types.go (CRD fields); CHANGELOG.md (release history); web/src/router/tree.tsx and web/src/routes/ (dashboard screens); official competitor documentation (external)
 
-**Storage**: git-tracked files (docs/img/*.jpg, docs/comparison-sources.md, specs/012-docs-refresh-and-outreach/outreach.md, audit-log.md); no database, no external service state
+**Storage**: git-tracked files (docs/img/*.jpg, docs/comparison-sources.md, specs/done_012-docs-refresh-and-outreach/outreach.md, audit-log.md); no database, no external service state
 
 **Testing**: Read-only verification scenarios in quickstart.md (grep/ls/file commands), docs-audit contract procedures (version match, link resolution, label consistency), and CI deployment (link check via hack/check-links.sh, OD-2); no local test or lint suites per rule 8 (CI is authoritative)
 
@@ -48,7 +48,7 @@ Conduct a systematic audit of all user-facing documentation (README.md, 13 docs/
 ### Documentation (this feature)
 
 ```text
-specs/012-docs-refresh-and-outreach/
+specs/done_012-docs-refresh-and-outreach/
 ├── plan.md                                  # This file
 ├── spec.md                                  # Feature specification
 ├── inventory.md                             # Sampled staleness audit (input to research)
@@ -86,7 +86,7 @@ web/
 │   └── modules.png
 ├── e2e/specs/websiteScreenshots.spec.ts    # NEW (OD-16): Dedicated Playwright spec capturing website screenshot set (1440×900 @2x)
 ├── architecture.md                          # AUDITED: version strings, feature descriptions, cross-references
-├── contributing.md                          # MODIFIED: link to specs/012-docs-refresh-and-outreach/outreach.md (FR-025)
+├── contributing.md                          # MODIFIED: link to specs/done_012-docs-refresh-and-outreach/outreach.md (FR-025)
 ├── dependencies.md                          # AUDITED: snapshot date, version pins, accuracy
 ├── game-coverage.md                         # AUDITED: feature coverage claims
 ├── install.md                               # AUDITED: version examples, Helm values, feature labels
@@ -104,7 +104,7 @@ mcp-server/README.md                         # AUDITED: feature claims, RBAC bou
 telemetry-receiver/README.md                 # AUDITED: version examples, configuration
 CHANGELOG.md                                 # MODIFIED (only if an Unreleased entry proves shipped): move it into the v0.2.0-beta.8 section per OD-8
 
-specs/012-docs-refresh-and-outreach/
+specs/done_012-docs-refresh-and-outreach/
 ├── outreach.md                              # NEW: to-do list tracking submissions (FR-020, FR-021, FR-022)
 └── audit-log.md                             # NEW: evidence log of all corrections (FR-011, D-F)
 
@@ -117,11 +117,11 @@ web/e2e/specs/screenshots.spec.ts           # NEW: Playwright mock-mode screensh
 
 **Structure Decision**: 
 
-Documentation artifacts (research.md, data-model.md, quickstart.md, contracts/) live in specs/012-docs-refresh-and-outreach/ per Principle IV, serving as the durable record of intent and validation criteria. This separation keeps implementation-specific details out of the main repo and makes the spec folder self-contained.
+Documentation artifacts (research.md, data-model.md, quickstart.md, contracts/) live in specs/done_012-docs-refresh-and-outreach/ per Principle IV, serving as the durable record of intent and validation criteria. This separation keeps implementation-specific details out of the main repo and makes the spec folder self-contained.
 
 External source tracking (docs/comparison-sources.md) is a separate file rather than inline README links because (a) it grows independently as competitors are researched during implementation, (b) it remains authoritative for audits and updates, and (c) README embedding would make cells unreadably dense (D-A, SC-003).
 
-The outreach to-do list (specs/012-docs-refresh-and-outreach/outreach.md) lives in the spec folder, not docs/, because it is a project-internal tracking artifact, not user-facing documentation (FR-020, SC-012).
+The outreach to-do list (specs/done_012-docs-refresh-and-outreach/outreach.md) lives in the spec folder, not docs/, because it is a project-internal tracking artifact, not user-facing documentation (FR-020, SC-012).
 
 Tooling decisions (OD-1 through OD-16): The maintainer ruled on 2026-09-02 that link checks (hack/check-links.sh), version checks (hack/check-doc-versions.sh with historical-reference markers), and screenshot capture (Playwright mock mode in web/e2e/specs/screenshots.spec.ts, CI dispatch only per OD-15) plus tag-triggered refresh workflow (.github/workflows/screenshot-refresh.yaml with workflow_dispatch trigger per OD-15) are adopted and run on CI. The PR credential for the tag-triggered workflow is a fine-grained PAT repository secret `SCREENSHOT_BOT_PAT` (OD-13, ruled 2026-09-02). On 2026-10-07, the maintainer extended the screenshot-refresh workflow to also capture and update website screenshots on gameplane-website repo (OD-16), using the SAME `SCREENSHOT_BOT_PAT` token extended to cover both repositories (GameplanePanel/Gameplane and GameplanePanel/website, Contents + Pull requests read/write), replacing the originally separate `WEBSITE_SCREENSHOT_BOT_PAT` design. All sixteen open decisions are now ruled. None of these are product code, CRDs, or chart changes — they are repository tooling, testing infrastructure, and website automation, so the Out of Scope section of spec.md is not violated (website screenshot sync is the sole exception per OD-16).
 

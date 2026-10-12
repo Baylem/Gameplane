@@ -11,9 +11,9 @@ All validation commands below are read-only grep, file inspection, and test oper
 - `docs/comparison-sources.md` has been created with source documentation (explicit HTML anchors per the maintainer-signed contract correction; GitHub-flavored Markdown does not support `{#id}` heading attributes)
 - `docs/` audited files have been refreshed for version strings (with `<!-- doc-versions: historical -->` markers per OD-14), links, and labels
 - `docs/img/` contains six existing and at least five new screenshots (1920×1080 JPEG per OD-3a, captured via CI workflow_dispatch per OD-15)
-- `specs/012-docs-refresh-and-outreach/outreach.md` has been created
+- `specs/done_012-docs-refresh-and-outreach/outreach.md` has been created
 - `docs/contributing.md` links to the outreach tracker
-- `specs/012-docs-refresh-and-outreach/audit-log.md` has been created with all findings
+- `specs/done_012-docs-refresh-and-outreach/audit-log.md` has been created with all findings
 - `hack/check-doc-versions.sh` and `hack/check-links.sh` exist (once implemented per OD-1 and OD-2)
 - `.github/workflows/screenshot-refresh.yaml` has been created with `workflow_dispatch` trigger (OD-15)
 
@@ -297,22 +297,22 @@ grep "test-server\|demo-\|test-cluster\|test-user" README.md | wc -l
 
 ```bash
 # Check that outreach.md exists
-test -f specs/012-docs-refresh-and-outreach/outreach.md && echo "✓ outreach.md exists" || echo "✗ missing"
+test -f specs/done_012-docs-refresh-and-outreach/outreach.md && echo "✓ outreach.md exists" || echo "✗ missing"
 
 # Verify table structure: Target | Submission URL | Status | Submitted Reference | Notes
 echo ""
 echo "=== Outreach table content ==="
-grep -A 10 "^| Target" specs/012-docs-refresh-and-outreach/outreach.md
+grep -A 10 "^| Target" specs/done_012-docs-refresh-and-outreach/outreach.md
 
 # Verify all three target directories are listed
 echo ""
 echo "=== Checking for all three targets ==="
-grep -c "AlternativeTo\|Awesome-Selfhosted\|Awesome-Kubernetes" specs/012-docs-refresh-and-outreach/outreach.md
+grep -c "AlternativeTo\|Awesome-Selfhosted\|Awesome-Kubernetes" specs/done_012-docs-refresh-and-outreach/outreach.md
 
 # Verify status vocabulary (pending | in-progress | submitted | rejected | deferred)
 echo ""
 echo "=== Status values used ==="
-grep -oE "(pending|in-progress|submitted|rejected|deferred)" specs/012-docs-refresh-and-outreach/outreach.md | sort | uniq -c
+grep -oE "(pending|in-progress|submitted|rejected|deferred)" specs/done_012-docs-refresh-and-outreach/outreach.md | sort | uniq -c
 
 # Check that docs/contributing.md links to outreach.md
 echo ""
@@ -325,14 +325,14 @@ test -f docs/contributing.md && grep -q "outreach.md" docs/contributing.md && ec
 
 **Expected outcome**:
 
-- `specs/012-docs-refresh-and-outreach/outreach.md` exists and is a markdown file
+- `specs/done_012-docs-refresh-and-outreach/outreach.md` exists and is a markdown file
 - Outreach table has exactly three rows (one per target: AlternativeTo, Awesome-Selfhosted, Awesome-Kubernetes)
 - Each row has Status field with one of the allowed values: `pending`, `in-progress [YYYY-MM-DD]`, `submitted [YYYY-MM-DD]`, `deferred [YYYY-MM-DD, reason]`, or `rejected [YYYY-MM-DD, reason]`
 - Per OD-6a, Awesome-Selfhosted status is: `deferred [2026-09-02, first release 2026-06-22 is under the 4-month minimum; eligible from 2026-10-22]`
 - Per OD-6b, Awesome-Kubernetes status is: `deferred [2026-09-02, 25-star / 3-contributor eligibility rule not verified; revisit in a later release]`
 - Per OD-6c, AlternativeTo status is: `pending` (or `submitted [YYYY-MM-DD]` if maintainer has already submitted per OD-5)
 - Each row has a "Submitted Reference" field with appropriate content (pending/in-progress: "pending" or context; submitted: URL/PR/email date; deferred/rejected: "N/A" with reason in Notes)
-- `docs/contributing.md` contains a link to `../specs/012-docs-refresh-and-outreach/outreach.md` (or similar relative path)
+- `docs/contributing.md` contains a link to `../specs/done_012-docs-refresh-and-outreach/outreach.md` (or similar relative path)
 - Link resolves when docs/ is read
 
 **SC-012, SC-013, SC-014, FR-020, FR-021, FR-022, FR-025**: Confirms outreach tracking structure, vocabulary, and linkage per contracts/outreach-todo.md §Table Schema and §Status Vocabulary.
@@ -347,27 +347,27 @@ test -f docs/contributing.md && grep -q "outreach.md" docs/contributing.md && ec
 
 ```bash
 # Check that audit-log.md exists and is a markdown table
-test -f specs/012-docs-refresh-and-outreach/audit-log.md && echo "✓ audit-log.md exists" || echo "✗ missing"
+test -f specs/done_012-docs-refresh-and-outreach/audit-log.md && echo "✓ audit-log.md exists" || echo "✗ missing"
 
 # Verify table structure (headers: File | Line(s) | Finding | Evidence Checked | Resolution | Commit)
 echo ""
 echo "=== Audit log headers ==="
-head -5 specs/012-docs-refresh-and-outreach/audit-log.md
+head -5 specs/done_012-docs-refresh-and-outreach/audit-log.md
 
 # Count audit log entries (number of data rows, skipping header row only)
 echo ""
 echo "=== Number of findings recorded ==="
-grep "^| " specs/012-docs-refresh-and-outreach/audit-log.md | tail -n +2 | wc -l
+grep "^| " specs/done_012-docs-refresh-and-outreach/audit-log.md | tail -n +2 | wc -l
 
 # Verify each row has evidence citations (path:line format)
 echo ""
 echo "=== Evidence citation examples ==="
-grep -oE "[a-z_/.-]+\.(md|yaml|go):?[0-9]*" specs/012-docs-refresh-and-outreach/audit-log.md | head -10
+grep -oE "[a-z_/.-]+\.(md|yaml|go):?[0-9]*" specs/done_012-docs-refresh-and-outreach/audit-log.md | head -10
 ```
 
 **Expected outcome**:
 
-- `specs/012-docs-refresh-and-outreach/audit-log.md` exists and is a markdown table
+- `specs/done_012-docs-refresh-and-outreach/audit-log.md` exists and is a markdown table
 - Table header row lists: File | Line(s) | Finding | Evidence Checked | Resolution | Commit
 - Each correction identified during implementation is recorded as a separate row
 - Evidence citations are in format `path:line` (e.g., `docs/install.md:14`, `charts/gameplane/Chart.yaml:6`)
@@ -403,16 +403,16 @@ All scenarios above pass without error, confirming:
 
 After validation, no branch cleanup is required. The feature branch remains active until the corresponding PR is approved and merged, at which point the branch is deleted per CLAUDE.md rule 12.
 
-Once the feature is merged and the branch deleted, the spec folder is renamed from `specs/012-docs-refresh-and-outreach/` to `specs/done_012-docs-refresh-and-outreach/` per CLAUDE.md rule 16 and constitution Principle IV. In that same commit, update the link in `docs/contributing.md` to point to the new path.
+Once the feature is merged and the branch deleted, the spec folder is renamed from `specs/done_012-docs-refresh-and-outreach/` to `specs/done_012-docs-refresh-and-outreach/` per CLAUDE.md rule 16 and constitution Principle IV. In that same commit, update the link in `docs/contributing.md` to point to the new path.
 
 ---
 
 ## References
 
-- **Feature Specification**: `specs/012-docs-refresh-and-outreach/spec.md` (all FR and SC requirements)
-- **Contracts**: `specs/012-docs-refresh-and-outreach/contracts/` (comparison-table.md, docs-audit.md, outreach-todo.md, screenshot-set.md)
+- **Feature Specification**: `specs/done_012-docs-refresh-and-outreach/spec.md` (all FR and SC requirements)
+- **Contracts**: `specs/done_012-docs-refresh-and-outreach/contracts/` (comparison-table.md, docs-audit.md, outreach-todo.md, screenshot-set.md)
 - **Orchestrator Decisions**: Feature spec Assumptions and Orchestrator Decisions (D-A through D-I, OD-1 through OD-15)
-- **Research Findings**: synthesized into `specs/012-docs-refresh-and-outreach/research.md` (R1-R8 detailed findings were produced during planning)
-- **Audit Log Schema**: `specs/012-docs-refresh-and-outreach/audit-log.md`
+- **Research Findings**: synthesized into `specs/done_012-docs-refresh-and-outreach/research.md` (R1-R8 detailed findings were produced during planning)
+- **Audit Log Schema**: `specs/done_012-docs-refresh-and-outreach/audit-log.md`
 - **Style Reference**: `specs/done_011-add-missing-module-specs/quickstart.md` (matching tone and structure)
 - **Project Guidance**: `CLAUDE.md` (rules 8, 11, 12, 16); `.specify/memory/constitution.md` (Principle IV, VI)
