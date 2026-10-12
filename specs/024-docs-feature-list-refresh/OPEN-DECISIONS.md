@@ -2,12 +2,10 @@
 
 Unsettled items. Do not treat any of the below as decided until a maintainer rules on it here.
 
-## Open
+## Settled (user, 2026-10-12)
+OD-1 (FR-001): the feature catalog is a root `FEATURES.md` next to `README.md`; the website gets a features docs page with the same content, and the README links to it.
 
-OD-1 (FR-001): where the feature catalog lives.
-- A (recommended): `docs/features.md` in the main repo is the source; the website gets a `features` docs page with the same content; the README links to it.
-- B: root `FEATURES.md` next to the README, plus the website page.
-- C: main repo only, no website page.
+## Open
 
 OD-2 (FR-005, FR-013): how much in-progress work the roadmap shows.
 - A (recommended): an "In progress" section with one line per open spec (002, 009, 013, 019, 021, 023) and its plain-words status and blocker.

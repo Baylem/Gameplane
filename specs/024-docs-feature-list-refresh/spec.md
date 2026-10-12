@@ -98,7 +98,7 @@ A visitor to the public website reads its docs pages and finds the same feature 
 
 ### Functional Requirements
 
-- **FR-001**: The project MUST have one feature catalog file listing every shipped capability of Gameplane, grouped by area, at the location set in OPEN-DECISIONS.md OD-1.
+- **FR-001**: The project MUST have one feature catalog file listing every shipped capability of Gameplane, grouped by area, as a root `FEATURES.md` next to `README.md` (OD-1), mirrored by a features page on the website.
 - **FR-002**: Each catalog entry MUST carry a one-line description, a maturity label from a fixed set (stable, beta, experimental, optional/off by default, planned, in progress), and a link to the page that documents it.
 - **FR-003**: The catalog MUST cover the dashboard, operator, API, agent, optional components (sentinel, capture sidecar, tunnels, audit syslog bridge, telemetry receiver, MCP server, agent gateway), the game module catalog, and the module authoring tool.
 - **FR-004**: The catalog MUST NOT list as shipped anything that is not merged to the default branch; planned and in-progress items MUST link to the roadmap.
