@@ -192,7 +192,7 @@ description: "Task list for 013-expand-test-coverage"
 
 ### G4 dependency-review: PR `ci: dependency review gate`
 
-- [ ] T032 [US1] Add a `dependency-review` job named `dependency review` to `.github/workflows/ci.yaml`. Settings:
+- [X] T032 [US1] Add a `dependency-review` job named `dependency review` to `.github/workflows/ci.yaml`. Settings:
   - `if: github.event_name == 'pull_request'`
   - `permissions: contents: read, pull-requests: write`
   - uses `actions/dependency-review-action`, SHA-pinned, with `fail-on-severity: high` and `comment-summary-in-pr: on-failure`
@@ -202,14 +202,14 @@ description: "Task list for 013-expand-test-coverage"
 
 ### G6 submodule freshness: PR `ci: submodule freshness gate` (OD-1 ruled)
 
-- [ ] T034 [P] [US1] Write `hack/check-submodule-freshness.sh`. For each gitlink (`modules` → `https://github.com/GameplanePanel/module`, `website` → `https://github.com/GameplanePanel/website`; URLs overridable through env for tests) it:
+- [X] T034 [P] [US1] Write `hack/check-submodule-freshness.sh`. For each gitlink (`modules` → `https://github.com/GameplanePanel/module`, `website` → `https://github.com/GameplanePanel/website`; URLs overridable through env for tests) it:
   1. Reads the committed SHA with `git ls-tree HEAD <path>`.
   2. Fetches the upstream `main` into a temp bare repo.
   3. Fails unless `git merge-base --is-ancestor <sha> FETCH_HEAD` succeeds, naming the submodule and the SHA in the error.
-- [ ] T035 [P] [US1] Write `hack/check-submodule-freshness_test.sh`. It builds an upstream bare repo and a superproject in `mktemp -d`, and checks two cases:
+- [X] T035 [P] [US1] Write `hack/check-submodule-freshness_test.sh`. It builds an upstream bare repo and a superproject in `mktemp -d`, and checks two cases:
   - a pointer on `main` (and one behind its tip): expects pass
   - a pointer on an unmerged side branch: expects fail
-- [ ] T036 [US1] Add a `submodule-freshness` job named `submodule freshness` to `.github/workflows/ci.yaml`. Settings:
+- [X] T036 [US1] Add a `submodule-freshness` job named `submodule freshness` to `.github/workflows/ci.yaml`. Settings:
   - `if: needs.changes.outputs.submodules == 'true' || github.event_name == 'push'`
   - checks out with `fetch-depth: 0`, without submodule checkout
   - runs `hack/check-submodule-freshness_test.sh`, then `hack/check-submodule-freshness.sh`
@@ -311,7 +311,7 @@ description: "Task list for 013-expand-test-coverage"
 
 **PR**: `test: unit coverage for managed secrets and console shell`. Independent of every other phase.
 
-- [ ] T051 [P] [US4] Write `api/internal/handlers/secrets_managed_test.go`. Build a `kube.Client` on `k8s.io/client-go/kubernetes/fake`, following `registry_secret_test.go`. Inject errors with `PrependReactor`. Cover every case in research R8:
+- [X] T051 [P] [US4] Write `api/internal/handlers/secrets_managed_test.go`. Build a `kube.Client` on `k8s.io/client-go/kubernetes/fake`, following `registry_secret_test.go`. Inject errors with `PrependReactor`. Cover every case in research R8:
   - create carries both labels
   - `AlreadyExists` with the feature label → merge patch and `managed-by` re-asserted
   - `AlreadyExists` without the label → `errNotManagedSecret`, Secret untouched
@@ -321,7 +321,7 @@ description: "Task list for 013-expand-test-coverage"
   - Get and Delete errors propagate
 
   Use table-driven tests with `t.Parallel()`.
-- [ ] T052 [P] [US4] Write `web/src/routes/tabs/ConsoleShell.test.tsx`. Render `ConsoleShell` with a stub `ConsoleHandle` (`vi.fn()` for `clear`, `download`, `toggleFullscreen` and `sendCommand`, and a `hostRef`). Cover:
+- [X] T052 [P] [US4] Write `web/src/routes/tabs/ConsoleShell.test.tsx`. Render `ConsoleShell` with a stub `ConsoleHandle` (`vi.fn()` for `clear`, `download`, `toggleFullscreen` and `sendCommand`, and a `hostRef`). Cover:
   - each `WSStatus` label: LIVE, connecting…, reconnecting…, offline
   - Enter sends the trimmed command and clears the input; an empty input sends nothing
   - ArrowUp/ArrowDown recall, including restoring the unsent draft
@@ -330,13 +330,15 @@ description: "Task list for 013-expand-test-coverage"
   - the `closed` status state
 
   Use `@testing-library/user-event` the same way `Console.test.tsx` does.
-- [ ] T053 [US4] After T051 and T052 are green in CI, read the `web` job's lcov for `src/components/server/CloneServerDialog.tsx` and `src/components/server/ServerActionsMenu.tsx`.
+- [X] T053 [US4] After T051 and T052 are green in CI, read the `web` job's lcov for `src/components/server/CloneServerDialog.tsx` and `src/components/server/ServerActionsMenu.tsx`.
   - Any file under 80 % lines, or missing a "cancel discards changes" case or an API-error case: add only the missing cases to `CloneServerDialog.test.tsx` or `ServerActionsMenu.test.tsx`.
   - Otherwise: record the measured percentages as evidence.
 
   Flip G-19 to G-22.
 
-**Checkpoint**: SC-004 is met. Module thresholds stay unchanged.
+  *Implementation note (2026-10-12)*: lcov from run 38189418314: `CloneServerDialog.tsx` 89.29 % lines / 69.23 % branches, with a Cancel case but no API-error case, so T053 adds the API-error and cancel-discards-changes cases. `ServerActionsMenu.tsx` 100 % lines / branches / functions; it makes no API calls, so cancel and API errors are dialog-level (G-22 note). `ConsoleShell.tsx` 100 % lines. G-19 stays in progress: CI reports only package coverage for Go.
+
+**Checkpoint**: SC-004 stays pending until G-19 has per-file proof for `secrets_managed.go` (G-20 to G-22 are proven). Module thresholds stay unchanged.
 
 ---
 
