@@ -37,11 +37,19 @@ const fixtureManifests = import.meta.glob<LanguageInfo[]>("/src/generated/i18n/l
   import: "default",
 });
 
+// Pseudo-language manifest (en-XA) for VITE_I18N_PSEUDO=1 builds only; see
+// scripts/i18n-pseudo.mjs. Absent in release builds.
+const pseudoManifests = import.meta.glob<LanguageInfo[]>("/src/generated/i18n/languages.pseudo.json", {
+  eager: true,
+  import: "default",
+});
+
 const catalogs = import.meta.glob<Record<string, unknown>>(
   [
     "/src/generated/i18n/*.json",
     "!/src/generated/i18n/languages.json",
     "!/src/generated/i18n/languages.fixtures.json",
+    "!/src/generated/i18n/languages.pseudo.json",
     "!/src/generated/i18n/extracted.json",
   ],
   { import: "default" },
@@ -79,7 +87,7 @@ let allCache: LanguageInfo[] | null = null;
 // allLanguages returns the manifest entries (or just English when the
 // generated manifest is absent, e.g. before `npm run build`).
 export function allLanguages(): LanguageInfo[] {
-  allCache ??= parseManifests({ ...manifests, ...fixtureManifests });
+  allCache ??= parseManifests({ ...manifests, ...fixtureManifests, ...pseudoManifests });
   return allCache;
 }
 

@@ -23,6 +23,21 @@ function i18nFixtures(): Plugin {
   };
 }
 
+// i18nPseudo: VITE_I18N_PSEUDO=1 writes the pseudo-language "en-XA" (spec 019,
+// T099, FR-038) for the dev server (and the planned Playwright en-XA project,
+// T100). Release builds never set the flag, so en-XA never reaches a release
+// languages.json.
+function i18nPseudo(): Plugin {
+  return {
+    name: "gameplane-i18n-pseudo",
+    configResolved() {
+      if (process.env.VITE_I18N_PSEUDO === "1") {
+        execFileSync(process.execPath, [path.resolve(here, "scripts/i18n-pseudo.mjs")], { stdio: "inherit" });
+      }
+    },
+  };
+}
+
 // API target for the dev server's proxy. Defaults to the standard local
 // process; Playwright live-mode points it at a kubectl port-forward by
 // setting GAMEPLANE_API_URL=http://localhost:18080 before spawning vite.
@@ -40,7 +55,7 @@ function htmlBypass(req: { headers: Record<string, string | string[] | undefined
 }
 
 export default defineConfig({
-  plugins: [react(), i18nFixtures()],
+  plugins: [react(), i18nFixtures(), i18nPseudo()],
   resolve: {
     alias: {
       "@": path.resolve(here, "./src"),
