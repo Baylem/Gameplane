@@ -152,7 +152,8 @@ description: "Task list for 013-expand-test-coverage"
   - one job running the same install step and `hack/govulncheck-all.sh` against `master`
 
   Then add the file to the `workflow-lint` job's inputs if they are enumerated.
-- [ ] T021 [US1] Fix every reachable finding the first `vuln (go)` run reports. Bump the affected dependency in the module's `go.mod`/`go.sum`, or the `go` toolchain line, never by excluding anything. Flip G-01.
+- [X] T021 [US1] Fix every reachable finding the first `vuln (go)` run reports. Bump the affected dependency in the module's `go.mod`/`go.sum`, or the `go` toolchain line, never by excluding anything. Flip G-01.
+  Done 2026-10-12: the first runs flagged stdlib findings (fixed by making go-cache resolve the newest Go 1.26 patch, e98f77a6) and GO-2026-5932 in `golang.org/x/crypto/openpgp`, which has no fixed version. The operator reached it through cosign v2 and then `sigstore/rekor` v1.5.3, so cosign moved to v3 (#684) and rekor to v1.5.4 (093be1d9), which drops the package. Nothing is excluded.
 
 ### G3 hadolint: PR `ci: dockerfile lint gate`
 
