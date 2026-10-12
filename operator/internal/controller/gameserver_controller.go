@@ -2344,6 +2344,7 @@ func (r *GameServerReconciler) setPhase(
 		Message:            msg,
 		ObservedGeneration: gs.Generation,
 	})
+	setConditionArgs(&gs.Status, "Ready", map[string]string{"detail": msg})
 	return r.Status().Patch(ctx, gs, client.MergeFrom(base))
 }
 

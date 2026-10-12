@@ -612,6 +612,11 @@ export interface GameServer {
       message?: string;
       lastTransitionTime?: string;
     }>;
+    // Per condition type, the values interpolated into that condition's
+    // English message. Pair it with the condition's reason to render the
+    // localized message (id condition.<type>.<reason>, lower-cased); the
+    // condition's message stays the fallback.
+    conditionArgs?: Record<string, Record<string, string>>;
     startedAt?: string;
     // Observed state of the capture sidecar for this server.
     capture?: CaptureStatus;
