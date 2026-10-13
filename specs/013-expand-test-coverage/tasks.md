@@ -178,11 +178,11 @@ description: "Task list for 013-expand-test-coverage"
 
 ### G2 Trivy: PR `ci: container image vulnerability gate`
 
-- [ ] T027 [P] [US1] Write `hack/check-image-scan_test.sh`. It runs `trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` on:
+- [X] T027 [P] [US1] Write `hack/check-image-scan_test.sh`. It runs `trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` on:
   - a digest-pinned end-of-life `alpine` (pick a 3.1x digest with known fixed HIGH CVEs and record it in the script with the CVE IDs it expects), expecting exit 1
   - `gameplane-test/telemetry-receiver:e2e`, expecting exit 0
-- [ ] T028 [P] [US1] Write `hack/trivy-scan-images.sh`. Given image references as arguments, it runs the same Trivy flags on each and exits non-zero if any image fails, after scanning them all.
-- [ ] T029 [US1] Add a `vuln-images` job named `vuln (images)` to `.github/workflows/ci.yaml`. Settings:
+- [X] T028 [P] [US1] Write `hack/trivy-scan-images.sh`. Given image references as arguments, it runs the same Trivy flags on each and exits non-zero if any image fails, after scanning them all.
+- [X] T029 [US1] Add a `vuln-images` job named `vuln (images)` to `.github/workflows/ci.yaml`. Settings:
   - `needs: [changes, build-images]`, with the same `if:` as `build-images`
   - loads the amd64 artifact with `./.github/actions/e2e-images`
   - caches the Trivy DB with `actions/cache` keyed on the week
@@ -190,8 +190,10 @@ description: "Task list for 013-expand-test-coverage"
   - runs `hack/check-image-scan_test.sh`, then `hack/trivy-scan-images.sh` over every `gameplane-test/*:e2e` image, plus `gameplane-test/api:e2e-postgres`
 
   Register the job in `report`. Depends on T010, T027 and T028.
-- [ ] T030 [US1] In `.github/workflows/publish-edge.yaml` and `.github/workflows/release.yaml`, insert a step running `hack/trivy-scan-images.sh` on each pushed digest before the `cosign sign` loop. Same flags, Trivy install SHA-pinned.
-- [ ] T031 [US1] Fix every finding from T029's first run with a base-image digest bump or a Go/npm dependency bump in the image's module, never an ignore file. Get sign-off on the diff. Flip G-02.
+- [X] T030 [US1] In `.github/workflows/publish-edge.yaml` and `.github/workflows/release.yaml`, insert a step running `hack/trivy-scan-images.sh` on each pushed digest before the `cosign sign` loop. Same flags, Trivy install SHA-pinned.
+  *Implementation note (2026-10-12)*: the EOL fixture is `alpine:3.17.0` pinned by index digest; the proof requires CVE-2023-0286 (libcrypto3 3.0.7-r0) in the output so an unrelated scan error cannot pass as a rejection. Trivy v0.74.0 through `aquasecurity/setup-trivy` v0.3.1 (SHA-pinned).
+- [X] T031 [US1] Fix every finding from T029's first run with a base-image digest bump or a Go/npm dependency bump in the image's module, never an ignore file. Get sign-off on the diff. Flip G-02.
+  Done 2026-10-12: the first scan flagged golang.org/x/net in five Go modules (bumped to v0.60.0) and the upstream frpc release binary (old Go, x/net and x/crypto); frpc is now built from source via `tunnel/frpc/go.mod` with `-tags frpc,noweb`. valgul signed off the diff on a card.
 
 ### G4 dependency-review: PR `ci: dependency review gate`
 
