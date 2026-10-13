@@ -1,14 +1,14 @@
 # Coverage Gap Record
 
-**Summary**: 10/24 closed · 0 closed unproven · 1 in progress · 12 open · 1 unit-only by design
-**Last updated**: 2026-10-12
+**Summary**: 10/24 closed · 1 closed unproven · 1 in progress · 11 open · 1 unit-only by design
+**Last updated**: 2026-10-13
 
 | ID | Category | Gap | Story | FR | Priority | Status | Evidence | Notes |
 |---|---|---|---|---|---|---|---|---|
 | G-01 | static | govulncheck gate | US1 | FR-001 | P1 | closed | `vuln (go)` https://github.com/GameplanePanel/Gameplane/actions/runs/38312206591 | Green on #673 after the Go patch, cosign v3 and rekor v1.5.4 bumps (T021); the proof shows the gate fails on a vendored vulnerable fixture. |
 | G-02 | static | container image scan gate | US1 | FR-001 | P1 | closed | `vuln (images)` https://github.com/GameplanePanel/Gameplane/actions/runs/38309803144/job/115025510959 | Green on #678 after T031: frpc built from source (frp v0.71.0, x/net v0.60.0, x/crypto v0.58.0) and x/net bumps; no ignore file. valgul signed off the diff 2026-10-12. |
 | G-03 | static | Dockerfile lint gate | US1 | FR-001 | P1 | closed | `workflow lint` https://github.com/GameplanePanel/Gameplane/actions/runs/38286000942 | First run on #674 flagged DL3008/DL3018/DL4006 in 13 Dockerfiles; pinned apk/apt versions and pipefail SHELL fixed them, and every game image still builds (run 38286000940). |
-| G-04 | static | dependency-review gate | US1 | FR-001 | P1 | open |  |  |
+| G-04 | static | dependency-review gate | US1 | FR-001 | P1 | closed-unproven | `dependency review` job, added in https://github.com/GameplanePanel/Gameplane/pull/676 | OD-4: proven by configuration review only (`fail-on-severity: high`, PR-only); no throwaway PR, no fixture branch, no local act run. |
 | G-05 | static | codegen / tidy drift gate | US1 | FR-001 | P1 | closed | `codegen drift` https://github.com/GameplanePanel/Gameplane/actions/runs/38189397259 | First run on #672 found no drift; the proof shows the job fails on injected drift. |
 | G-06 | static | submodule pointer freshness gate | US1 | FR-001 | P1 | closed | `submodule freshness` https://github.com/GameplanePanel/Gameplane/actions/runs/38189409720 | First run on #675 green; the proof covers a stale and a fresh pointer. |
 | G-07 | e2e-dashboard | live: notification webhook config | US2 | FR-002 | P1 | open |  |  |
