@@ -9,6 +9,10 @@
 #
 # Usage: hack/trivy-scan-images.sh IMAGE [IMAGE...]
 # Env:   TRIVY - Trivy binary to run (default: trivy)
+#        TRIVY_PLATFORMS - comma-separated os/arch list (e.g.
+#          linux/amd64,linux/arm64); each image is scanned once per platform.
+#          Unset scans Trivy's default platform only, which for a multi-arch
+#          index is linux/amd64.
 #
 # Exit codes: 0 = every image clean; 1 = at least one image failed;
 #             2 = no image given
@@ -20,21 +24,35 @@ if [[ $# -eq 0 ]]; then
 fi
 
 trivy_bin="${TRIVY:-trivy}"
+platforms=("")
+if [[ -n "${TRIVY_PLATFORMS:-}" ]]; then
+  IFS=',' read -r -a platforms <<<"$TRIVY_PLATFORMS"
+fi
 failed=()
+scans=0
 
 for img in "$@"; do
-  echo "::group::trivy ${img}"
-  if "$trivy_bin" image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress "$img"; then
-    echo "✓ ${img}"
-  else
-    failed+=("$img")
-  fi
-  echo "::endgroup::"
+  for platform in "${platforms[@]}"; do
+    label="$img"
+    platform_args=()
+    if [[ -n "$platform" ]]; then
+      label="${img} (${platform})"
+      platform_args=(--platform "$platform")
+    fi
+    scans=$((scans + 1))
+    echo "::group::trivy ${label}"
+    if "$trivy_bin" image "${platform_args[@]}" --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --no-progress "$img"; then
+      echo "✓ ${label}"
+    else
+      failed+=("$label")
+    fi
+    echo "::endgroup::"
+  done
 done
 
 if [[ ${#failed[@]} -gt 0 ]]; then
-  printf '✗ fixed HIGH/CRITICAL vulnerabilities (or a scan error) in %d of %d image(s):\n' "${#failed[@]}" "$#" >&2
+  printf '✗ fixed HIGH/CRITICAL vulnerabilities (or a scan error) in %d of %d scan(s):\n' "${#failed[@]}" "$scans" >&2
   printf '  %s\n' "${failed[@]}" >&2
   exit 1
 fi
-echo "✓ $# image(s) clean"
+echo "✓ ${scans} scan(s) clean"
