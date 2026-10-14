@@ -135,6 +135,9 @@ jobs:
               - '**/go.mod'
               - '**/go.sum'
               - '**/Dockerfile'
+              - 'hack/govulncheck-all.sh'
+              - 'hack/check-govulncheck_test.sh'
+              - 'hack/testdata/govulncheck/**'
             web:
               - 'web/**'
             charts:
@@ -150,6 +153,8 @@ jobs:
               - 'test/e2e/**'
               - 'deploy/kind/**'
               - 'containers/docker-bake.hcl'
+              - 'hack/trivy-scan-images.sh'
+              - 'hack/check-image-scan_test.sh'
             # Narrower than e2etree on purpose: this backs a job that only
             # smoke-tests deploy/kind/**'s pinned dev ingress-nginx manifest
             # on a real Kind cluster, and must NOT run on every e2e-affecting
@@ -177,6 +182,8 @@ jobs:
             submodules:
               - 'modules'
               - 'website'
+              - 'hack/check-submodule-freshness.sh'
+              - 'hack/check-submodule-freshness_test.sh'
             # Gate scope for codegen drift (spec 013 T007).
             codegen:
               - 'operator/api/v1alpha1/**'
@@ -187,6 +194,7 @@ jobs:
               - 'operator/config/**'
               - 'charts/gameplane/crds/**'
               - 'charts/gameplane/crd-manifests/**'
+              - 'hack/check-codegen-drift_test.sh'
             ci:
               - '.github/workflows/ci.yaml'
               - '.github/actions/**'
@@ -215,6 +223,10 @@ jobs:
               - 'hack/check-publish-edge-paths.sh'
               - 'hack/test-check-publish-edge-paths.sh'
               - 'hack/testdata/check-publish-edge-paths/**'
+              - '**/Dockerfile*'
+              - '.hadolint.yaml'
+              - 'hack/check-hadolint_test.sh'
+              - 'hack/testdata/hadolint/**'
             specs:
               - '**/specs.md'
               - 'hack/check-specs.sh'
@@ -487,6 +499,41 @@ jobs:
           echo "The sidecar will fail at runtime when it tries to open AF_PACKET sockets." >&2
           exit 1
 
+  # Spec 013 G2: fail on any fixed HIGH/CRITICAL vulnerability in a built e2e
+  # image. hack/check-image-scan_test.sh first proves the gate rejects an
+  # end-of-life alpine. Fix findings with a base-image digest or dependency
+  # bump, never an ignore file.
+  vuln-images:
+    name: vuln (images)
+    needs: [changes, build-images]
+    if: needs.changes.outputs.images == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: load images
+        uses: ./.github/actions/e2e-images
+      - name: week of year
+        id: week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+      - name: cache trivy db
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ steps.week.outputs.week }}
+      - name: install trivy
+        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.74.0
+      - name: prove the gate rejects a vulnerable image
+        run: ./hack/check-image-scan_test.sh
+      - name: scan every e2e image
+        run: |
+          mapfile -t images < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '^gameplane-test/[^:]+:e2e(-postgres)?$' | sort -u)
+          ./hack/trivy-scan-images.sh "${images[@]}"
+
   # Repository-wide gates run once, including on documentation-only changes.
   docs:
     name: docs and repository checks
@@ -516,6 +563,98 @@ jobs:
         run: make check-dev-load-images
       - name: test up.sh registry/context bootstrap
         run: make test-up-registry
+
+  # Spec 013 G5: regenerated files (deepcopy, operator/config/{crd,rbac}, chart
+  # CRDs, go.mod/go.sum) must be committed with the change that needs them. The
+  # proof step shows the gate goes red on a types edit committed without regenerating.
+  codegen-drift:
+    name: codegen drift
+    needs: [changes]
+    if: needs.changes.outputs.codegen == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/go-cache
+        with:
+          key-suffix: codegen-drift
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - name: regenerate deepcopy, CRDs, RBAC and chart CRD copies
+        run: make generate manifests
+      - name: go mod tidy across modules
+        run: make tidy
+      - name: fail on drift
+        run: git diff --exit-code
+      - name: prove the gate fails on a stale types edit
+        run: ./hack/check-codegen-drift_test.sh
+
+  # Spec 013 G6 (OD-1): the modules/ and website/ gitlinks must point at
+  # commits already on each submodule's main branch, so a pointer bump never
+  # lands before its submodule PR merges.
+  submodule-freshness:
+    name: submodule freshness
+    needs: [changes]
+    if: needs.changes.outputs.submodules == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: prove the freshness check can fail
+        run: ./hack/check-submodule-freshness_test.sh
+      - name: submodule pointers are on upstream main
+        run: ./hack/check-submodule-freshness.sh
+
+  # Spec 013 G4: block a PR that adds a dependency with a known high or
+  # critical advisory. PR-only; on push it is skipped, which the report
+  # already counts as neutral. No failure-proof fixture by ruling (OD-4).
+  dependency-review:
+    name: dependency review
+    needs: [changes]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  # Spec 013 G1: fail on any reachable Go vulnerability in any go.work module.
+  # The proof step first shows the gate goes red on a synthetic reachable
+  # advisory (hack/testdata/govulncheck). Fix findings by bumping, never excluding.
+  vuln-go:
+    name: vuln (go)
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/go-cache
+        with:
+          key-suffix: vuln-go
+      - name: install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+      - name: prove the gate fails on a reachable vulnerable symbol
+        run: ./hack/check-govulncheck_test.sh
+      - name: govulncheck every go.work module
+        run: ./hack/govulncheck-all.sh
 
   lint:
     name: lint (${{ matrix.module }})
@@ -1192,6 +1331,24 @@ jobs:
           # so run it from the checkout root.
           cd "$GITHUB_WORKSPACE"
           "$tmp/actionlint"
+      # Spec 013 G3: hadolint over every tracked Dockerfile, at warning and
+      # above (.hadolint.yaml). Same pinned-download pattern as actionlint.
+      - name: hadolint (download and verify)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/hadolint"
+          cd "$RUNNER_TEMP/hadolint"
+          curl -fsSL -o hadolint \
+            https://github.com/hadolint/hadolint/releases/download/v2.14.0/hadolint-linux-x86_64
+          echo "6bf226944684f56c84dd014e8b979d27425c0148f61b3bd99bcc6f39e9dc5a47  hadolint" | sha256sum -c -
+          chmod +x hadolint
+          echo "$RUNNER_TEMP/hadolint" >> "$GITHUB_PATH"
+      - name: prove the Dockerfile lint gate can fail
+        run: ./hack/check-hadolint_test.sh
+      - name: hadolint
+        run: |
+          mapfile -t files < <(git ls-files '*Dockerfile*' ':!:hack/testdata/**' ':!:*.dockerignore')
+          hadolint --config .hadolint.yaml "${files[@]}"
       - name: ci report job coverage (F-238)
         run: ./hack/check-ci-report-coverage.sh
       - name: test ci report job coverage checker
@@ -1955,8 +2112,13 @@ jobs:
         changes,
         build-images,
         build-images-arm64,
+        vuln-images,
         capture-sidecar-setcap-proof,
         docs,
+        codegen-drift,
+        submodule-freshness,
+        dependency-review,
+        vuln-go,
         lint,
         go,
         web,
@@ -2067,8 +2229,8 @@ jobs:
             const files = readJSON('/tmp/files.json', []);
 
             const NEEDS_ORDER = [
-              'changes', 'build-images', 'build-images-arm64',
-              'capture-sidecar-setcap-proof', 'docs', 'lint', 'go',
+              'changes', 'build-images', 'build-images-arm64', 'vuln-images',
+              'capture-sidecar-setcap-proof', 'docs', 'codegen-drift', 'submodule-freshness', 'dependency-review', 'vuln-go', 'lint', 'go',
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-go-arm64', 'e2e-multicluster', 'e2e-multicluster-arm64', 'e2e-upgrade', 'e2e-upgrade-arm64',
@@ -2082,8 +2244,10 @@ jobs:
               changes: (n) => n === 'detect changes',
               'build-images': (n) => n === 'build e2e images',
               'build-images-arm64': (n) => n === 'build e2e images (arm64)',
+              'vuln-images': (n) => n === 'vuln (images)',
               'capture-sidecar-setcap-proof': (n) => n === 'capture-sidecar CAP_NET_RAW survival',
               docs: (n) => n === 'docs and repository checks',
+              'codegen-drift': (n) => n === 'codegen drift',
               lint: (n) => n.startsWith('lint ('),
               go: (n) => n.startsWith('go (') && n !== 'go (test/e2e)',
               web: (n) => n === 'web',
@@ -2105,6 +2269,9 @@ jobs:
               'e2e-game-bot': (n) => n.startsWith('e2e game bot /'),
               'e2e-capture-overhead': (n) => n === 'e2e capture overhead (kind)',
               'e2e-kind-ingress-smoke': (n) => n === 'ingress-nginx smoke (kind)',
+              'submodule-freshness': (n) => n === 'submodule freshness',
+              'dependency-review': (n) => n === 'dependency review',
+              'vuln-go': (n) => n === 'vuln (go)',
             };
 
             let passed = 0, failed = 0, skipped = 0, cancelled = 0;

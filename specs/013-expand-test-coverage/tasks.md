@@ -97,87 +97,92 @@ description: "Task list for 013-expand-test-coverage"
 
 ## Phase 3: User Story 1 – Static gates (Priority: P1) 🎯 MVP
 
-**Goal**: six blocking gates, each proven able to fail, with zero pre-existing findings left (contracts/static-gates.md G1–G6).
+**Goal**: six blocking gates, each proven able to fail except `dependency-review`, which OD-4 proves by configuration review only, with zero pre-existing findings left (contracts/static-gates.md G1–G6).
 
-**Independent Test**: for each gate, its `hack/check-<gate>_test.sh` step is green, the gate job is green, and the gap record links a run where the gate was red on a real violation (quickstart.md, "US1").
+**Independent Test**: for each gate, its `hack/check-<gate>_test.sh` step is green, the gate job is green, and the gap record links a run where the gate was red on a real violation (quickstart.md, "US1") `dependency-review` is the OD-4 exception: no test script or red run, only a configuration review.
 
 **PR boundaries**: one PR per gate, in the order G5 → G1 → G3 → G2 → G4 → G6 (plan "Phase sequencing").
 
 ### G5 codegen drift: PR `ci: codegen drift gate`
 
-- [ ] T012 [P] [US1] Write `hack/check-codegen-drift_test.sh`. In a `git worktree add` temp checkout it:
+- [X] T012 [P] [US1] Write `hack/check-codegen-drift_test.sh`. In a `git worktree add` temp checkout it:
   1. Appends a doc comment to a field in `operator/api/v1alpha1/gameserver_types.go`, edits the struct tag on that field, runs `make generate manifests && make tidy && git diff --exit-code`, and expects a non-zero exit.
   2. Resets the checkout, reruns the same command, and expects zero.
 
   It removes the worktree on exit.
-- [ ] T013 [US1] Add a `codegen-drift` job named `codegen drift` to `.github/workflows/ci.yaml`. Settings:
+- [X] T013 [US1] Add a `codegen-drift` job named `codegen drift` to `.github/workflows/ci.yaml`. Settings:
   - `needs: [changes]`
   - `if: needs.changes.outputs.codegen == 'true' || github.event_name == 'push'`
   - setup: `actions/checkout`, `./.github/actions/go-cache`, `azure/setup-helm`
   - steps: `make generate manifests`, then `make tidy`, then `git diff --exit-code`, then `./hack/check-codegen-drift_test.sh`
 
   Register the job in `report`. Depends on T007 and T012.
-- [ ] T014 [US1] If the first CI run of T013 shows drift, commit the regenerated files the job printed: deepcopy, `operator/config/**`, chart CRDs, `go.mod`/`go.sum`. Flip gap row G-05 with the job name and run link.
+- [X] T014 [US1] If the first CI run of T013 shows drift, commit the regenerated files the job printed: deepcopy, `operator/config/**`, chart CRDs, `go.mod`/`go.sum`. Flip gap row G-05 with the job name and run link.
+  *Implementation note (2026-10-12)*: the first run of `codegen drift` (run 38189397259) found no drift, so there was nothing to commit.
 
 ### G1 govulncheck: PR `ci: go vulnerability gate`
 
-- [ ] T015 [P] [US1] Create a synthetic offline OSV database under `hack/testdata/govulncheck/db/`, in govulncheck's `-db file://` layout:
+- [X] T015 [P] [US1] Create a synthetic offline OSV database under `hack/testdata/govulncheck/db/`, in govulncheck's `-db file://` layout:
   - `index/db.json`, `index/modules.json`, `index/vulns.json`
   - `ID/GO-0000-0001.json`, with one advisory for module `example.invalid/vulnfixture` that marks function `vulnfixture.Bad` as affected below `v1.0.1`
-- [ ] T016 [P] [US1] Create the fixture modules:
+- [X] T016 [P] [US1] Create the fixture modules:
   - `hack/testdata/govulncheck/vulnfixture/` (module `example.invalid/vulnfixture` v1.0.0, declaring `func Bad()` and `func Good()`)
   - `hack/testdata/govulncheck/fail/` (its `main.go` calls `vulnfixture.Bad`)
   - `hack/testdata/govulncheck/pass/` (its `main.go` calls only `vulnfixture.Good`)
 
   Both `fail` and `pass` reach `vulnfixture` through a `replace` directive, so no network fetch happens. None of these modules goes in `go.work`.
-- [ ] T017 [US1] Write `hack/check-govulncheck_test.sh`. It runs `govulncheck -db "file://$PWD/hack/testdata/govulncheck/db" ./...` in `fail/` and expects exit 3, then in `pass/` and expects exit 0. Depends on T015 and T016.
-- [ ] T018 [P] [US1] Write `hack/govulncheck-all.sh`. It runs `govulncheck ./...` in every module listed in `go.work` with these tags:
+
+  Implementation note: a directory `replace` gives the module an empty version, which govulncheck never reports (`affected()` in golang.org/x/vuln v1.9.0 `internal/vulncheck/vulncheck.go`). So the modules carry no `replace`; `hack/check-govulncheck_test.sh` vendors `vulnfixture` at v1.0.0 into a temp copy instead, still with no network fetch.
+- [X] T017 [US1] Write `hack/check-govulncheck_test.sh`. It runs `govulncheck -db "file://$PWD/hack/testdata/govulncheck/db" ./...` in `fail/` and expects exit 3, then in `pass/` and expects exit 0. Depends on T015 and T016.
+- [X] T018 [P] [US1] Write `hack/govulncheck-all.sh`. It runs `govulncheck ./...` in every module listed in `go.work` with these tags:
   - `operator` and `api`: `-tags envtest`
   - `test/e2e`: `-tags e2e`
   - `api` again: `-tags postgres`
 
   It reports all findings and exits non-zero if any reachable finding exists.
-- [ ] T019 [US1] Add a `vuln-go` job named `vuln (go)` to `.github/workflows/ci.yaml`. Settings:
+- [X] T019 [US1] Add a `vuln-go` job named `vuln (go)` to `.github/workflows/ci.yaml`. Settings:
   - `if: needs.changes.outputs.go == 'true' || github.event_name == 'push'`
   - installs govulncheck with `go install golang.org/x/vuln/cmd/govulncheck@<pinned vX.Y.Z>`, with `GOSUMDB` left on
   - runs `hack/check-govulncheck_test.sh`, then `hack/govulncheck-all.sh`
 
   Register the job in `report`. Depends on T017 and T018.
-- [ ] T020 [P] [US1] Add `.github/workflows/vuln-weekly.yaml`. Settings:
+- [X] T020 [P] [US1] Add `.github/workflows/vuln-weekly.yaml`. Settings:
   - `on: schedule` (weekly, Monday 04:00 UTC) and `workflow_dispatch`
   - `permissions: contents: read`
   - one job running the same install step and `hack/govulncheck-all.sh` against `master`
 
   Then add the file to the `workflow-lint` job's inputs if they are enumerated.
-- [ ] T021 [US1] Fix every reachable finding the first `vuln (go)` run reports. Bump the affected dependency in the module's `go.mod`/`go.sum`, or the `go` toolchain line, never by excluding anything. Flip G-01.
+- [X] T021 [US1] Fix every reachable finding the first `vuln (go)` run reports. Bump the affected dependency in the module's `go.mod`/`go.sum`, or the `go` toolchain line, never by excluding anything. Flip G-01.
+  Done 2026-10-12: the first runs flagged stdlib findings (fixed by making go-cache resolve the newest Go 1.26 patch, e98f77a6) and GO-2026-5932 in `golang.org/x/crypto/openpgp`, which has no fixed version. The operator reached it through cosign v2 and then `sigstore/rekor` v1.5.3, so cosign moved to v3 (#684) and rekor to v1.5.4 (093be1d9), which drops the package. Nothing is excluded.
 
 ### G3 hadolint: PR `ci: dockerfile lint gate`
 
-- [ ] T022 [P] [US1] Create `.hadolint.yaml` containing only `failure-threshold: warning`: no `trustedRegistries` (OD-2) and no `ignored:` list.
-- [ ] T023 [P] [US1] Add fixtures:
+- [X] T022 [P] [US1] Create `.hadolint.yaml` containing only `failure-threshold: warning`: no `trustedRegistries` (OD-2) and no `ignored:` list.
+- [X] T023 [P] [US1] Add fixtures:
   - `hack/testdata/hadolint/fail/Dockerfile`: `FROM alpine` with no tag or digest, `RUN apk add curl` without `--no-cache`, `ADD https://example.invalid/x /x`, and `USER` absent
   - `hack/testdata/hadolint/pass/Dockerfile`: a digest-pinned distroless `FROM`, `COPY` only, `USER nonroot`
-- [ ] T024 [US1] Write `hack/check-hadolint_test.sh`, which expects a failure on `fail/Dockerfile` and a success on `pass/Dockerfile`, both with `--config .hadolint.yaml`. Depends on T022 and T023.
-- [ ] T025 [US1] Add steps to the existing `workflow-lint` job in `.github/workflows/ci.yaml`:
+- [X] T024 [US1] Write `hack/check-hadolint_test.sh`, which expects a failure on `fail/Dockerfile` and a success on `pass/Dockerfile`, both with `--config .hadolint.yaml`. Depends on T022 and T023.
+- [X] T025 [US1] Add steps to the existing `workflow-lint` job in `.github/workflows/ci.yaml`:
   1. Download hadolint, pinned to a release tag, using the actionlint pattern: `curl -fsSL -o` plus a `sha256sum -c` against a committed hash.
   2. Run `hadolint --config .hadolint.yaml $(git ls-files '*Dockerfile*' ':!:hack/testdata/**' ':!:*.dockerignore')`.
   3. Run `./hack/check-hadolint_test.sh`.
 
   Depends on T024.
-- [ ] T026 [US1] Fix every finding from T025's first CI run, editing the affected files among:
+- [X] T026 [US1] Fix every finding from T025's first CI run, editing the affected files among:
   - `agent/Dockerfile`, `api/Dockerfile`, `audit-syslog-bridge/Dockerfile`, `capture-sidecar/Dockerfile`, `mcp-server/Dockerfile`, `operator/Dockerfile`, `sentinel/Dockerfile`, `telemetry-receiver/Dockerfile`, `web/Dockerfile`
   - `tunnel/Dockerfile.{frp,playit,tailscale}`, `test/e2e/Dockerfile`, `test/e2e/Dockerfile.fakeoidc`
   - `images/common/steamcmd/Dockerfile`, `images/games/nuclear-option/Dockerfile`
 
   Pin images by digest, add `--no-install-recommends`/`--no-cache`, and set `USER` and `SHELL -o pipefail` as each rule asks. Get sign-off on the diff first (production files). Flip G-03.
+  *Implementation note (2026-10-12)*: the first `workflow lint` run (38284658090) flagged only DL3008/DL3018 (unpinned apt/apk) and DL4006 (pipefail), in `capture-sidecar/Dockerfile`, `tunnel/Dockerfile.{frp,playit}`, `test/e2e/Dockerfile`, `containers/common/steamcmd/Dockerfile` and eight `containers/games/*/Dockerfile`s. valgul chose "Pin and pipefail" on 2026-10-12; fixed in 698d51f, green in run 38286000942.
 
 ### G2 Trivy: PR `ci: container image vulnerability gate`
 
-- [ ] T027 [P] [US1] Write `hack/check-image-scan_test.sh`. It runs `trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` on:
+- [X] T027 [P] [US1] Write `hack/check-image-scan_test.sh`. It runs `trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` on:
   - a digest-pinned end-of-life `alpine` (pick a 3.1x digest with known fixed HIGH CVEs and record it in the script with the CVE IDs it expects), expecting exit 1
   - `gameplane-test/telemetry-receiver:e2e`, expecting exit 0
-- [ ] T028 [P] [US1] Write `hack/trivy-scan-images.sh`. Given image references as arguments, it runs the same Trivy flags on each and exits non-zero if any image fails, after scanning them all.
-- [ ] T029 [US1] Add a `vuln-images` job named `vuln (images)` to `.github/workflows/ci.yaml`. Settings:
+- [X] T028 [P] [US1] Write `hack/trivy-scan-images.sh`. Given image references as arguments, it runs the same Trivy flags on each and exits non-zero if any image fails, after scanning them all.
+- [X] T029 [US1] Add a `vuln-images` job named `vuln (images)` to `.github/workflows/ci.yaml`. Settings:
   - `needs: [changes, build-images]`, with the same `if:` as `build-images`
   - loads the amd64 artifact with `./.github/actions/e2e-images`
   - caches the Trivy DB with `actions/cache` keyed on the week
@@ -185,36 +190,38 @@ description: "Task list for 013-expand-test-coverage"
   - runs `hack/check-image-scan_test.sh`, then `hack/trivy-scan-images.sh` over every `gameplane-test/*:e2e` image, plus `gameplane-test/api:e2e-postgres`
 
   Register the job in `report`. Depends on T010, T027 and T028.
-- [ ] T030 [US1] In `.github/workflows/publish-edge.yaml` and `.github/workflows/release.yaml`, insert a step running `hack/trivy-scan-images.sh` on each pushed digest before the `cosign sign` loop. Same flags, Trivy install SHA-pinned.
-- [ ] T031 [US1] Fix every finding from T029's first run with a base-image digest bump or a Go/npm dependency bump in the image's module, never an ignore file. Get sign-off on the diff. Flip G-02.
+- [X] T030 [US1] In `.github/workflows/publish-edge.yaml` and `.github/workflows/release.yaml`, insert a step running `hack/trivy-scan-images.sh` on each pushed digest before the `cosign sign` loop. Same flags, Trivy install SHA-pinned.
+  *Implementation note (2026-10-12)*: the EOL fixture is `alpine:3.17.0` pinned by index digest; the proof requires CVE-2023-0286 (libcrypto3 3.0.7-r0) in the output so an unrelated scan error cannot pass as a rejection. Trivy v0.74.0 through `aquasecurity/setup-trivy` v0.3.1 (SHA-pinned).
+- [X] T031 [US1] Fix every finding from T029's first run with a base-image digest bump or a Go/npm dependency bump in the image's module, never an ignore file. Get sign-off on the diff. Flip G-02.
+  Done 2026-10-12: the first scan flagged golang.org/x/net in five Go modules (bumped to v0.60.0) and the upstream frpc release binary (old Go, x/net and x/crypto); frpc is now built from source via `tunnel/frpc/go.mod` with `-tags frpc,noweb`. valgul signed off the diff on a card.
 
 ### G4 dependency-review: PR `ci: dependency review gate`
 
-- [ ] T032 [US1] Add a `dependency-review` job named `dependency review` to `.github/workflows/ci.yaml`. Settings:
+- [X] T032 [US1] Add a `dependency-review` job named `dependency review` to `.github/workflows/ci.yaml`. Settings:
   - `if: github.event_name == 'pull_request'`
   - `permissions: contents: read, pull-requests: write`
   - uses `actions/dependency-review-action`, SHA-pinned, with `fail-on-severity: high` and `comment-summary-in-pr: on-failure`
 
   Register it in `report`, and make the report treat `skipped` on push events as neutral, the same way other PR-only jobs are tallied.
-- [ ] T033 [US1] Once the T032 PR merges, set G-04 to `closed-unproven` in `coverage-gaps.md`: Evidence names the `dependency review` job and that PR, and Notes cite OD-4 (configuration review only; no throwaway PR, no fixture branch, no local act run).
+- [X] T033 [US1] Once the T032 PR merges, set G-04 to `closed-unproven` in `coverage-gaps.md`: Evidence names the `dependency review` job and that PR, and Notes cite OD-4 (configuration review only; no throwaway PR, no fixture branch, no local act run).
 
 ### G6 submodule freshness: PR `ci: submodule freshness gate` (OD-1 ruled)
 
-- [ ] T034 [P] [US1] Write `hack/check-submodule-freshness.sh`. For each gitlink (`modules` → `https://github.com/GameplanePanel/module`, `website` → `https://github.com/GameplanePanel/website`; URLs overridable through env for tests) it:
+- [X] T034 [P] [US1] Write `hack/check-submodule-freshness.sh`. For each gitlink (`modules` → `https://github.com/GameplanePanel/module`, `website` → `https://github.com/GameplanePanel/website`; URLs overridable through env for tests) it:
   1. Reads the committed SHA with `git ls-tree HEAD <path>`.
   2. Fetches the upstream `main` into a temp bare repo.
   3. Fails unless `git merge-base --is-ancestor <sha> FETCH_HEAD` succeeds, naming the submodule and the SHA in the error.
-- [ ] T035 [P] [US1] Write `hack/check-submodule-freshness_test.sh`. It builds an upstream bare repo and a superproject in `mktemp -d`, and checks two cases:
+- [X] T035 [P] [US1] Write `hack/check-submodule-freshness_test.sh`. It builds an upstream bare repo and a superproject in `mktemp -d`, and checks two cases:
   - a pointer on `main` (and one behind its tip): expects pass
   - a pointer on an unmerged side branch: expects fail
-- [ ] T036 [US1] Add a `submodule-freshness` job named `submodule freshness` to `.github/workflows/ci.yaml`. Settings:
+- [X] T036 [US1] Add a `submodule-freshness` job named `submodule freshness` to `.github/workflows/ci.yaml`. Settings:
   - `if: needs.changes.outputs.submodules == 'true' || github.event_name == 'push'`
   - checks out with `fetch-depth: 0`, without submodule checkout
   - runs `hack/check-submodule-freshness_test.sh`, then `hack/check-submodule-freshness.sh`
 
   Register it in `report`. Depends on T007, T034 and T035. Flip G-06.
 
-**Checkpoint**: all six gates are blocking and proven. The gap rows G-01 to G-06 are `closed` with run links (quickstart.md "US1" items 1–4).
+**Checkpoint**: all six gates are blocking. G-01, G-02, G-03, G-05 and G-06 are `closed` with run links; G-04 is `closed-unproven` under OD-4 (quickstart.md "US1" items 1–4).
 
 ---
 
@@ -309,7 +316,7 @@ description: "Task list for 013-expand-test-coverage"
 
 **PR**: `test: unit coverage for managed secrets and console shell`. Independent of every other phase.
 
-- [ ] T051 [P] [US4] Write `api/internal/handlers/secrets_managed_test.go`. Build a `kube.Client` on `k8s.io/client-go/kubernetes/fake`, following `registry_secret_test.go`. Inject errors with `PrependReactor`. Cover every case in research R8:
+- [X] T051 [P] [US4] Write `api/internal/handlers/secrets_managed_test.go`. Build a `kube.Client` on `k8s.io/client-go/kubernetes/fake`, following `registry_secret_test.go`. Inject errors with `PrependReactor`. Cover every case in research R8:
   - create carries both labels
   - `AlreadyExists` with the feature label → merge patch and `managed-by` re-asserted
   - `AlreadyExists` without the label → `errNotManagedSecret`, Secret untouched
@@ -319,7 +326,7 @@ description: "Task list for 013-expand-test-coverage"
   - Get and Delete errors propagate
 
   Use table-driven tests with `t.Parallel()`.
-- [ ] T052 [P] [US4] Write `web/src/routes/tabs/ConsoleShell.test.tsx`. Render `ConsoleShell` with a stub `ConsoleHandle` (`vi.fn()` for `clear`, `download`, `toggleFullscreen` and `sendCommand`, and a `hostRef`). Cover:
+- [X] T052 [P] [US4] Write `web/src/routes/tabs/ConsoleShell.test.tsx`. Render `ConsoleShell` with a stub `ConsoleHandle` (`vi.fn()` for `clear`, `download`, `toggleFullscreen` and `sendCommand`, and a `hostRef`). Cover:
   - each `WSStatus` label: LIVE, connecting…, reconnecting…, offline
   - Enter sends the trimmed command and clears the input; an empty input sends nothing
   - ArrowUp/ArrowDown recall, including restoring the unsent draft
@@ -328,13 +335,15 @@ description: "Task list for 013-expand-test-coverage"
   - the `closed` status state
 
   Use `@testing-library/user-event` the same way `Console.test.tsx` does.
-- [ ] T053 [US4] After T051 and T052 are green in CI, read the `web` job's lcov for `src/components/server/CloneServerDialog.tsx` and `src/components/server/ServerActionsMenu.tsx`.
+- [X] T053 [US4] After T051 and T052 are green in CI, read the `web` job's lcov for `src/components/server/CloneServerDialog.tsx` and `src/components/server/ServerActionsMenu.tsx`.
   - Any file under 80 % lines, or missing a "cancel discards changes" case or an API-error case: add only the missing cases to `CloneServerDialog.test.tsx` or `ServerActionsMenu.test.tsx`.
   - Otherwise: record the measured percentages as evidence.
 
   Flip G-19 to G-22.
 
-**Checkpoint**: SC-004 is met. Module thresholds stay unchanged.
+  *Implementation note (2026-10-12)*: lcov from run 38189418314: `CloneServerDialog.tsx` 89.29 % lines / 69.23 % branches, with a Cancel case but no API-error case, so T053 adds the API-error and cancel-discards-changes cases. `ServerActionsMenu.tsx` 100 % lines / branches / functions; it makes no API calls, so cancel and API errors are dialog-level (G-22 note). `ConsoleShell.tsx` 100 % lines. G-19 stays in progress: CI reports only package coverage for Go.
+
+**Checkpoint**: SC-004 stays pending until G-19 has per-file proof for `secrets_managed.go` (G-20 to G-22 are proven). Module thresholds stay unchanged.
 
 ---
 
