@@ -51,10 +51,14 @@ describe("standalone panel", () => {
     await userEvent.type(screen.getByLabelText("Install as"), "retained-draft");
     unavailable = true;
     await act(async () => { await client.refetchQueries({ queryKey: [resource] }); });
-    if (retained) expect(screen.getByLabelText("Install as")).toHaveValue("retained-draft");
-    else expect(screen.queryByLabelText("Install as")).not.toBeInTheDocument();
-    expect(screen.getByText(resource === "me" ? "Couldn't load your permissions." : resource === "clusters"
-      ? "Couldn't load registered clusters." : "Couldn't load installation capabilities.")).toBeInTheDocument();
+    expect(client.getQueryState([resource])?.status).toBe("error");
+    // The fetch settles before TanStack's scheduled observer notification commits.
+    await waitFor(() => {
+      expect(screen.getByText(resource === "me" ? "Couldn't load your permissions." : resource === "clusters"
+        ? "Couldn't load registered clusters." : "Couldn't load installation capabilities.")).toBeInTheDocument();
+      if (retained) expect(screen.getByLabelText("Install as")).toHaveValue("retained-draft");
+      else expect(screen.queryByLabelText("Install as")).not.toBeInTheDocument();
+    });
   });
   it.each(["catalog", "sources"])("retains an open draft through failed background %s refreshes", async (kind) => {
     standalone([{ name: "east" }]);
@@ -71,14 +75,20 @@ describe("standalone panel", () => {
     unavailable = true;
     const queryKey = [kind === "catalog" ? "modules-catalog" : "module-sources", "east"];
     await act(async () => { await client.refetchQueries({ queryKey }); });
-    expect(field).toHaveValue("my-draft");
-    expect(field).toBeInTheDocument();
-    expect(screen.getByText(`Failed to load module ${kind}.`)).toBeInTheDocument();
+    expect(client.getQueryState(queryKey)?.status).toBe("error");
+    await waitFor(() => {
+      expect(screen.getByText(`Failed to load module ${kind}.`)).toBeInTheDocument();
+      expect(field).toHaveValue("my-draft");
+      expect(field).toBeInTheDocument();
+    });
     unavailable = false;
     await act(async () => { await client.refetchQueries({ queryKey }); });
-    expect(field).toHaveValue("my-draft");
-    expect(field).toBeInTheDocument();
-    expect(screen.queryByText(`Failed to load module ${kind}.`)).not.toBeInTheDocument();
+    expect(client.getQueryState(queryKey)?.status).toBe("success");
+    await waitFor(() => {
+      expect(screen.queryByText(`Failed to load module ${kind}.`)).not.toBeInTheDocument();
+      expect(field).toHaveValue("my-draft");
+      expect(field).toBeInTheDocument();
+    });
   });
 
   it("distinguishes failed identity loading from denied permission and retries", async () => {
