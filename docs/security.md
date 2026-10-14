@@ -993,6 +993,13 @@ Access to cluster credentials is protected by several layers:
   dialing a pinned address. Loopback, metadata, link-local and other unsafe
   address classes are blocked; optional operator CIDRs narrow access to the
   intended workload networks. The same policy protects gateway connections.
+  With no destination CIDRs, permitted private addresses remain reachable from
+  the panel host. An administrator able to register endpoints can direct
+  requests to unrelated private services that satisfy the connection policy;
+  TLS verification and unsafe-address blocks do not isolate those networks.
+  Set `GAMEPLANE_REMOTE_ALLOWED_CIDRS` for Compose/custom deployments or
+  `api.remoteAllowedCIDRs` for Helm to the workload API and gateway networks,
+  and use firewall rules for additional service or port restrictions.
   Remote response, watch-frame and notification-cache limits bound memory used
   by an untrusted workload endpoint. See the
   [standalone connection policy](standalone-panel.md#install-and-register-remote-game-clusters).

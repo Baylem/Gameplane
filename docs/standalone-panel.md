@@ -13,8 +13,18 @@ into SQL storage.
 
 Install Git and Docker with the Compose plugin. Use a release or commit that
 contains standalone support; replace `<ref>` below with that tag or commit.
-The Compose file builds the API and web images from the same checkout. Run the
-commands from the repository root:
+The Compose file builds the API and web images from the same checkout.
+
+Before starting the panel, set `GAMEPLANE_REMOTE_ALLOWED_CIDRS` to the destination
+networks for your Kubernetes APIs and agent gateways, for example
+`export GAMEPLANE_REMOTE_ALLOWED_CIDRS=10.20.0.0/16,10.30.0.0/16`. Without this
+restriction, registration can reach permitted public and private addresses
+accessible from the panel host. A registration administrator can therefore
+direct requests into private networks. Verified TLS and blocked unsafe address
+classes do not isolate unrelated private services; use narrow destination CIDRs
+and host/network firewall rules. See [connection policy](#install-and-register-remote-game-clusters).
+
+Run the commands from the repository root:
 
 ```sh
 git clone https://github.com/GameplanePanel/Gameplane.git
@@ -32,6 +42,9 @@ change that port. Use `http://localhost:8080` locally; for remote access, put an
 HTTPS reverse proxy in front of the loopback port and forward WebSocket upgrades
 and streaming responses. Login cookies require a secure browser context; serving
 the dashboard on an ordinary remote HTTP origin will not work.
+
+Run exactly one `gameplane-api` container. Do not scale it through Compose or
+start another API process against the same database, including PostgreSQL.
 
 Create the first administrator using the same database volume. This Bash example
 reads the password without including it in shell history or process arguments:
@@ -72,8 +85,11 @@ runtime user. If you replace it with a host bind mount, create that directory wi
 ownership `65532:65532` yourself. Generated key files use mode `0600`. Restored
 keys must be regular files containing exactly 32 raw bytes, owned by the API user
 or root, with no access for other users and no group write/execute permissions.
-Group read is accepted only for a group the API belongs to, which permits
-read-only Kubernetes Secret projections. Extended file access ACLs are rejected
+For API-owned keys, group read is accepted only for the API's effective group.
+Root-owned provisioned keys may use a supplementary group the API belongs to,
+which permits read-only Kubernetes Secret projections. Use a dedicated key-read
+group: membership checks cannot prove that no unrelated account shares it.
+Extended file access ACLs are rejected
 because they can grant extra readers despite safe-looking mode bits. On Linux,
 inspect restored keys with `getfacl` and remove extra file grants with
 `setfacl -b` before applying the required ownership/mode; key directories should
@@ -84,8 +100,12 @@ For custom deployments, pass `--standalone` or `GAMEPLANE_STANDALONE=true` to th
 API. `--panel-key-file` / `GAMEPLANE_PANEL_KEY_FILE` selects the key path (default
 `/data/panel.key` for compatibility with earlier custom deployments; the supplied
 Compose/Helm profiles use `/keys/panel.key`). A persistent key file is required
-even when using the experimental PostgreSQL build. Run one API replica. Run
-standalone key storage in Linux containers on a filesystem supporting POSIX ACL
+even when using the experimental PostgreSQL build. Run one API replica in
+Compose and custom deployments as well as Helm. Independently generated keys
+cannot serve multiple API processes against a shared database. A shared key
+with `--panel-key-provisioned` prevents independent generation but does not make
+multiple replicas supported: audit-chain and user-management locks remain
+per-process. Run standalone key storage in Linux containers on a filesystem supporting POSIX ACL
 inspection. Native non-Linux key access and uninspectable ACLs fail closed.
 
 ### Provision a key outside the database storage
@@ -126,8 +146,12 @@ a new key as a migration step; it cannot decrypt existing records.
 
 Stop every API process that uses this database, then take a database backup and
 a separately protected backup of its current key. The offline command accepts
-file paths and never prints key material. For generated keys in the Compose
-volume, use a new filename:
+file paths and never prints key material. Database connections come from
+`GAMEPLANE_DB_DSN`; the rotation command does not accept `--db-dsn`, so database
+passwords need not appear in shell history or process arguments. Supply the old
+key path explicitly with `--old-key-file` or `GAMEPLANE_PANEL_KEY_FILE`.
+`rotate-panel-key --help` describes the available options without connecting to
+the database. For generated keys in the Compose volume, use a new filename:
 
 ```sh
 docker compose -f deploy/standalone/compose.yaml stop gameplane-api
@@ -193,7 +217,8 @@ before evaluating templates; setting values alone cannot suppress those CRDs.
 Standalone mode skips the CRD apply hook automatically. It creates no operator,
 agent certificates, game namespace, module source, game network policies,
 operator monitors, or API Kubernetes RBAC. Its API pod disables service account
-token mounting. Separate PVCs hold the database and generated panel key. Do not switch an
+token mounting. SQLite uses a database PVC; PostgreSQL creates no local database
+volume. Generated keys use a separate key PVC with either driver. Do not switch an
 existing combined release to these values as a migration procedure.
 
 For an externally managed key, set `api.panelKey.existingSecret` to a Secret in

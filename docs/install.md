@@ -135,7 +135,9 @@ Top-level knobs (see `values.yaml` for the full list):
   `--set operator.gameDataStorage.storageClassName=fast-nvme`
 - `api.db.driver` — `sqlite` (default, production-tested) or `postgres` [experimental] (requires an api image built with `-tags postgres`; not yet covered by e2e or upgrade tests)
 - `api.db.dsn` — connection string; SQLite default persists to a PVC
-- `api.storage.existingClaim` — pre-existing PVC for the API's SQLite database and, in standalone mode, its encryption key (default `""`). Standalone PostgreSQL deployments also need persistent storage for the key. The chart annotates `gameplane-api-data` with `helm.sh/resource-policy: keep` so switching to an existing claim preserves the previous PVC.
+- `api.storage.existingClaim` — pre-existing PVC for the API's SQLite database (default `""`). PostgreSQL standalone deployments create no local database PVC or mount. The chart annotates `gameplane-api-data` with `helm.sh/resource-policy: keep` so switching to an existing claim preserves the previous PVC.
+- `api.panelKey.storage.existingClaim` — pre-existing key-only PVC for generated standalone encryption keys; independent of database storage. `api.panelKey.storage.size` and `storageClassName` configure a new key PVC when no existing claim is selected.
+- `api.panelKey.existingSecret` — mount an externally provisioned standalone key read-only instead of a key PVC. `api.panelKey.secretKey` selects the Secret entry (default `panel.key`); `api.panelKey.fileName` selects its mounted filename. Back up the database and matching key separately under different access policies. See [key custody](standalone-panel.md#central-panel-on-kubernetes).
 - `api.oidc.enabled` + the following settings — wire OIDC login from Helm (shows
   up as the read-only `helm` provider). Providers can also be added at runtime
   under **Admin Settings → Authentication** — no Helm values or restart needed;
@@ -857,4 +859,6 @@ SQLite-backed installs experience a few seconds of dashboard downtime during
 an upgrade. Combined PostgreSQL installs use rolling updates, but the driver
 remains experimental and the API should still run as a single replica (see
 `api.replicas` in `values.yaml`). Standalone installs use `Recreate` with either
-database driver because the API also mounts its persistent encryption-key volume.
+database driver: generated keys use a ReadWriteOnce volume, and audit-chain and
+user-management locks remain per-process. A shared provisioned key does not make
+multiple API replicas supported.

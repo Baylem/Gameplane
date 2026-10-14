@@ -10,13 +10,22 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 ### Upgrade Notes
 
 - **Standalone panel/API:** run the central panel with Docker Compose or the
-  standalone Helm profile, without a local Kubernetes cluster or operator.
-  Register remote clusters explicitly and back up the credential encryption key
-  with the database. See [standalone installation](docs/standalone-panel.md).
-- **Remote module/template grants:** module and template permissions now apply
-  to their selected cluster. Grant these permissions explicitly on remote
-  clusters; a local grant no longer authorizes another cluster's catalog.
-
+  standalone Helm profile, without a local game cluster or operator. Compose
+  needs no Kubernetes installation on the panel host.
+  Register remote clusters explicitly. Back up the database and matching
+  credential encryption key separately, with restricted access and encrypted
+  storage for key backups. Supplied profiles use key storage outside the database
+  volume. Preserve the original key when migrating legacy `/data/panel.key`
+  installations. See [standalone installation](docs/standalone-panel.md).
+- **Breaking: selected-cluster module/template grants:** in combined and
+  standalone installations, catalog permissions now require a cluster-wide
+  grant on the selected cluster or wildcard cluster. A grant on `local` retains
+  local access but no longer authorizes a remote catalog. Before upgrading,
+  identify users who rely on remote catalog access and grant a role containing
+  `modules:read`, `modules:manage`, `templates:read`, and/or `templates:write`
+  on each intended remote cluster, selecting **All namespaces**. Grant only the
+  operations each user needs; namespace-only grants do not authorize catalogs.
+  See [grant workload access](docs/standalone-panel.md#grant-workload-access).
 - **Telemetry is on by default for new installs, after a first-login
   notice:** a new install with a telemetry destination in effect now shares
   basic and extended data by default; the stock destination is the project's
@@ -77,6 +86,17 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 ### Added
 
+- **Independent central panel:** Docker Compose runs the API/dashboard without
+  host Kubernetes; a standalone Helm profile runs them without a central game
+  operator or workloads. SQL stores registrations, settings, and encrypted
+  credentials; explicitly selected remote clusters host games through their own
+  operators and agents.
+- **Credential maintenance:** standalone keys have separate generated storage
+  or read-only provisioned custody, the offline transactional `rotate-panel-key`
+  command, and `PUT /clusters/{name}/kubeconfig` preserving registration identity
+  and grants. `PUT`/`DELETE /clusters/{name}/gateway` manage remote gateway
+  credentials; `api.remoteAllowedCIDRs` restricts workload API and gateway
+  destinations. See [standalone setup](docs/standalone-panel.md).
 - **Extended telemetry tier:** a second, separately consented tier with a
   random install ID, environment, game-usage and feature-adoption
   categories. Every value comes from a fixed set, a band or a number; no
@@ -113,6 +133,21 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **Provider runbook:** [`docs/telemetry-provider.md`](docs/telemetry-provider.md)
   covers deploying the receiver, TLS, keeping `:8081` private, secrets and
   rotation, retention, scraping `/metrics` and backing up `telemetry.db`.
+
+### Security
+
+- **Standalone credential protection:** encryption keys are kept outside
+  database volumes, with durable publication, fail-closed file-access checks,
+  read-only provisioned custody, and authenticated transactional rotation.
+  Database and key backups need separate access policies; recovery requires
+  the matching key. See [storage and recovery](docs/standalone-panel.md#storage-and-recovery).
+- **Remote workload boundaries:** standalone connections require verified TLS,
+  reject unsafe destinations at dial time, and bound finite responses, watch
+  frames, and retained observations. Private networks remain reachable unless
+  destination CIDRs restrict them; configure `GAMEPLANE_REMOTE_ALLOWED_CIDRS`
+  or `api.remoteAllowedCIDRs` for the workload APIs and gateways. Module and
+  template authorization follows the selected cluster in every deployment mode.
+  See [security](docs/security.md#kubeconfig-secret-handling).
 
 ## [0.3.0] — 2026-10-05
 

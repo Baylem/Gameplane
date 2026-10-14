@@ -142,7 +142,10 @@ its own operator and storage; users and authorization stay central. See
 
 A standalone panel has no `local` cluster. It stores remote registrations and
 encrypted credentials in SQL and connects to the registered workload clusters.
-Back up its database and `/data/panel.key` together.
+Back up its database and matching encryption key separately, with restricted
+access and encrypted storage for the key backup. Supplied profiles keep the key
+at `/keys/panel.key`, outside database storage; `/data/panel.key` remains the
+legacy default for custom deployments. See [storage and recovery](docs/standalone-panel.md#storage-and-recovery).
 
 ### Components
 
