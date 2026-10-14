@@ -20,7 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/ValgulNecron/gameplane/agent/internal/httpjson"
+	"github.com/GameplanePanel/gameplane/agent/internal/httpjson"
 )
 
 // errPathOutOfRoot is the only "bad path" error safe to echo back to the
@@ -133,7 +133,7 @@ func (h *handler) badRequest(w http.ResponseWriter, err error) {
 
 // fail maps an error from path validation or a descriptor walk to a response:
 // bad-path classes are 400s via badRequest, everything else goes through
-// httpErr (404/403/500).
+// httpErr (404/403/409/413/500).
 func (h *handler) fail(w http.ResponseWriter, err error) {
 	if errors.Is(err, errPathOutOfRoot) || errors.Is(err, errDotfile) || errors.Is(err, errBadPath) {
 		h.badRequest(w, err)
@@ -231,10 +231,14 @@ func (h *handler) write(w http.ResponseWriter, req *http.Request) {
 	h.storeRequest(w, req, false)
 }
 
+// create publishes a new file only if the destination remains absent; an
+// existing entry returns 409, and an oversized body returns 413 without publishing.
 func (h *handler) create(w http.ResponseWriter, req *http.Request) {
 	h.storeRequest(w, req, true)
 }
 
+// storeRequest shares the bounded, atomic write path for create and replace.
+// Copy failures leave the destination untouched; body-limit failures are 413.
 func (h *handler) storeRequest(w http.ResponseWriter, req *http.Request, createOnly bool) {
 	comps, err := h.components(req.URL.Query().Get("path"))
 	if err != nil {
@@ -407,8 +411,13 @@ func (h *handler) del(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// httpErr maps storage errors to safe HTTP responses, including wrapped body
+// limits as 413. Internal error details are logged rather than returned.
 func httpErr(w http.ResponseWriter, err error) {
+	var tooLarge *http.MaxBytesError
 	switch {
+	case errors.As(err, &tooLarge):
+		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
 	case errors.Is(err, errFileExists):
 		http.Error(w, errFileExists.Error(), http.StatusConflict)
 	case errors.Is(err, errPreserveAccess):

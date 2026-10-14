@@ -16,9 +16,9 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 
-	"github.com/ValgulNecron/gameplane/api/internal/httperr"
-	"github.com/ValgulNecron/gameplane/api/internal/kube"
-	"github.com/ValgulNecron/gameplane/api/internal/scope"
+	"github.com/GameplanePanel/gameplane/api/internal/httperr"
+	"github.com/GameplanePanel/gameplane/api/internal/kube"
+	"github.com/GameplanePanel/gameplane/api/internal/scope"
 )
 
 // mountAttach exposes a WebSocket that bridges the browser to a running
@@ -112,7 +112,7 @@ func (a *attachProxy) handle(w http.ResponseWriter, req *http.Request) {
 		}, scheme.ParameterCodec).
 		URL()
 
-	exec, err := remotecommand.NewSPDYExecutor(a.k.Config, "POST", url)
+	exec, err := a.k.NewSPDYExecutor("POST", url)
 	if err != nil {
 		slog.Error("build attach executor", "name", name, "ns", ns, "err", err)
 		writeEnvErr(ctx, wsConn, "attach unavailable")

@@ -1,7 +1,7 @@
 # gameproto — Specification
 
 **Status:** pre-v1 (v0.3.0)  
-**Module / package:** `github.com/ValgulNecron/gameplane/gameproto`  
+**Module / package:** `github.com/GameplanePanel/gameplane/gameproto`  
 **Dependencies:** stdlib only (Go 1.26+)
 
 ## Purpose

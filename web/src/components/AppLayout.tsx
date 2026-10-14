@@ -14,6 +14,7 @@ import {
 import { APIError } from "@/lib/api";
 import { Clusters, Auth } from "@/lib/endpoints";
 import { useMe, can } from "@/lib/auth";
+import { useInstallation } from "@/lib/useInstallation";
 import type { User } from "@/types";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/ui/AppShell";
@@ -34,6 +35,7 @@ import {
   useThemePreferences,
 } from "@/lib/useThemePreferences";
 import { SafeModeBanner } from "@/components/ui/SafeModeBanner";
+import { TelemetryNotice } from "@/components/ui/TelemetryNotice";
 
 // The localStorage key the theme boot script in index.html reads before
 // React mounts — must stay in sync (see index.html and theme-tokens.md).
@@ -90,6 +92,7 @@ function useAppearance(
 
 export function AppLayout() {
   const { data: me, error, isLoading } = useMe();
+  const installation = useInstallation();
   const { data: registry } = useQuery({ queryKey: ["clusters"], queryFn: () => Clusters.list() });
   const canViewInventory = registry?.items.some((item) => item.canViewInventory === true) === true;
   const canManageInfrastructure = can(me, "cluster:manage") || canViewInventory;
@@ -158,6 +161,10 @@ export function AppLayout() {
     void navigate({ to: "/settings/theme" });
   };
 
+  const openTelemetrySettings = () => {
+    void navigate({ to: "/admin", search: { section: "telemetry" } });
+  };
+
   const navItems: SidebarNavGroup[] = [
     {
       label: "General",
@@ -201,7 +208,7 @@ export function AppLayout() {
     : buildCrumbs(pathname);
   // Extract the last breadcrumb label as the mobile title
   const mobileTitle = crumbs.length > 0 ? crumbs[crumbs.length - 1].label : "";
-  const centralManagement = ["/modules", "/users", "/admin", "/settings"].some(
+  const centralManagement = ["/users", "/admin", "/settings", ...(installation.data?.standalone === false ? ["/modules"] : [])].some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
   );
 
@@ -237,13 +244,16 @@ export function AppLayout() {
             breadcrumbs={<Breadcrumbs items={crumbs} />}
             clusterSelector={null}
             search={<GlobalSearch />}
-            notifications={<NotificationsPanel />}
+            notifications={<NotificationsPanel enabled={installation.data?.localCluster === true} />}
             mobileTitle={mobileTitle}
             user={me}
             onMenuClick={() => setDrawerOpen(true)}
           />
         }
       >
+        {/* First-login telemetry notice (spec 022 FR-004): admins only; the
+            API also answers {pending:false} to callers without config:manage. */}
+        {can(me, "config:manage") && <TelemetryNotice onOpenSettings={openTelemetrySettings} />}
         {centralManagement && (
           <div role="note" className="border-b border-border bg-surface px-4 py-3 text-sm text-muted sm:px-6">
             <strong className="font-medium text-foreground">Central management.</strong>{" "}

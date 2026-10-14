@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
+	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
 )
 
 // GameServerReconciler reconciles a GameServer object into a StatefulSet,
@@ -1577,12 +1577,12 @@ const DefaultConfigInitImage = "busybox:1.37.0"
 // DefaultSentinelImage is the image for the wake sentinel pod that holds
 // advertised ports while a server is asleep, waking it when a player connects.
 // Overridable via the operator's --sentinel-image flag for air-gapped installs.
-const DefaultSentinelImage = "ghcr.io/valgulnecron/gameplane/sentinel:dev"
+const DefaultSentinelImage = "ghcr.io/gameplanepanel/gameplane/sentinel:dev"
 
 // DefaultCaptureSidecarImage is the image for the network capture sidecar
 // ephemeral container injected when capture is enabled on a GameServer.
 // Overridable via the operator's --capture-sidecar-image flag for air-gapped installs.
-const DefaultCaptureSidecarImage = "ghcr.io/valgulnecron/gameplane/capture-sidecar:dev"
+const DefaultCaptureSidecarImage = "ghcr.io/gameplanepanel/gameplane/capture-sidecar:dev"
 
 // captureVolumeSizeLimitBytes is the "captures" emptyDir's kubelet-enforced
 // SizeLimit (see the "captures" Volume above). It is the single source of

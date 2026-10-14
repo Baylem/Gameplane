@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ValgulNecron/gameplane/api/internal/auth"
-	"github.com/ValgulNecron/gameplane/api/internal/db"
+	"github.com/GameplanePanel/gameplane/api/internal/auth"
+	"github.com/GameplanePanel/gameplane/api/internal/db"
 )
 
 // providersRegistry builds a registry over a fresh store, optionally

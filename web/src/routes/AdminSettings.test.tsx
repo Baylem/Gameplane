@@ -320,25 +320,32 @@ describe("AdminSettingsPage", () => {
   });
 
   it("shows telemetry toggle and saves setting", async () => {
+    let body: unknown;
     server.use(
       http.get("/admin/config", () =>
         HttpResponse.json({
           general: { instanceName: "", externalURL: "", defaultNamespace: "" },
-          telemetry: { sendMetrics: false },
+          telemetry: { sendMetrics: false, extended: false },
         }),
       ),
-      http.put("/admin/config/telemetry", () => new HttpResponse(null, { status: 204 })),
+      http.put("/admin/config/telemetry", async ({ request }) => {
+        body = await request.json();
+        return new HttpResponse(null, { status: 204 });
+      }),
     );
     renderWithQuery(<AdminSettingsPage />);
     await userEvent.click(screen.getByRole("button", { name: /Telemetry/i }));
     // The Switch component renders role="switch" (a <button>), not a
     // native checkbox input; assert via aria-checked, matching
-    // switch.test.tsx's own convention for this component.
-    const toggle = await screen.findByRole("switch");
+    // switch.test.tsx's own convention for this component. There are two
+    // switches now (basic and extended), so select by accessible name.
+    expect(await screen.findAllByRole("switch")).toHaveLength(2);
+    const toggle = screen.getByRole("switch", { name: "Enable telemetry" });
     expect(toggle).toHaveAttribute("aria-checked", "false");
     await userEvent.click(toggle);
     await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
     await waitFor(() => expect(screen.getByText("Saved")).toBeInTheDocument());
+    expect(body).toEqual({ sendMetrics: true, extended: false });
   });
 
   it("navigates to Updates section and shows update channel", async () => {

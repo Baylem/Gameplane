@@ -7,6 +7,177 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Upgrade Notes
+
+- **Standalone panel/API:** run the central panel with Docker Compose or the
+  standalone Helm profile, without a local game cluster or operator. Compose
+  needs no Kubernetes installation on the panel host.
+  Register remote clusters explicitly. Back up the database and matching
+  credential encryption key separately, with restricted access and encrypted
+  storage for key backups. Supplied profiles use key storage outside the database
+  volume. Preserve the original key when migrating legacy `/data/panel.key`
+  installations. See [standalone installation](docs/standalone-panel.md).
+- **Breaking: selected-cluster module/template grants:** in combined and
+  standalone installations, catalog permissions now require a cluster-wide
+  grant on the selected cluster or wildcard cluster. A grant on `local` retains
+  local access but no longer authorizes a remote catalog. Before upgrading,
+  identify users who rely on remote catalog access and grant a role containing
+  `modules:read`, `modules:manage`, `templates:read`, and/or `templates:write`
+  on each intended remote cluster, selecting **All namespaces**. Grant only the
+  operations each user needs; namespace-only grants do not authorize catalogs.
+  See [grant workload access](docs/standalone-panel.md#grant-workload-access).
+- **Telemetry is on by default for new installs, after a first-login
+  notice:** a new install with a telemetry destination in effect now shares
+  basic and extended data by default; the stock destination is the project's
+  receiver at telemetry.gameplane.net. The first admin to sign in sees a
+  notice that lists every field of both tiers and names the destination;
+  nothing is sent before then. Basic is `version`, `servers` and
+  `templates`. Extended adds a random install ID, the Kubernetes minor
+  version, a distribution category, node architectures and a node-count
+  band, server counts per official module plus one `custom` count, feature
+  flags (wake-on-connect, tunnel types, packet capture, backups, single
+  sign-on, audit forwarding), a cluster-count band, the database kind, the
+  UI language, the install's public signing key and the send time. Each
+  tier has its own toggle in **Admin Settings → Telemetry**, which also
+  shows the destination, a preview of the next report and an install-ID
+  reset. The data-handling statement is at
+  <https://gameplane.net/telemetry/>. See
+  [`docs/install.md`](docs/install.md#telemetry).
+- **Installs whose basic toggle was already on start sending to the
+  project's default receiver:** an install that saved **Send anonymous usage
+  metrics** while no destination was configured (so it had no effect) starts
+  sending basic reports to the project's default receiver
+  (telemetry.gameplane.net) after upgrade.
+  Extended stays off until an admin turns it on, and installs that never
+  saved a choice stay off. Installs already using a custom
+  `api.telemetry.endpoint` or the bundled receiver keep sending only there.
+  Set `api.telemetry.enabled=false` before upgrading to prevent any
+  sending.
+- **Empty `api.telemetry.endpoint` now means the project default:**
+  It now means the project's default receiver
+  (https://telemetry.gameplane.net/ingest), so the admin toggles have an
+  effect on a stock install. Set `api.telemetry.enabled=false` for a hard off (air-gapped
+  clusters, privacy-sensitive installs); it overrides the endpoint, the
+  bundled receiver and the admin toggles, and hides the notice.
+- **The receiver's `/metrics` moved to the dashboard port and needs the
+  dashboard token:** the receiver's Prometheus endpoint is no longer on
+  `:8080`; it is on `:8081` and accepts only
+  `Authorization: Bearer <DASHBOARD_TOKEN>`. Without
+  `api.telemetry.receiver.dashboard.tokenSecretRef.name` there is no
+  dashboard listener and no metrics endpoint, and the chart renders no
+  `ServiceMonitor` for the receiver. Update your Prometheus scrape config
+  or set the token Secret. See
+  [`docs/telemetry-provider.md`](docs/telemetry-provider.md).
+- **The bundled receiver now stores data:** with
+  `api.telemetry.receiver.persistence.enabled` (default `true`, 1Gi) it
+  keeps daily aggregates for 24 months and activity records for 90 days in
+  SQLite on a PVC, and runs a single replica with a `Recreate` strategy.
+  `helm upgrade --reuse-values` from 0.3.0 needs no new values; with no
+  `persistence` block the receiver keeps using an `emptyDir`, as before.
+- **The receiver's `DASHBOARD_TOKEN` must be at least 32 characters:** a
+  receiver with `DASHBOARD_TOKEN` set to a shorter value now exits at
+  startup (`DASHBOARD_TOKEN must be at least 32 characters`). Replace the
+  Secret behind `api.telemetry.receiver.dashboard.tokenSecretRef` with a
+  value generated from 32 random bytes, for example
+  `openssl rand -base64 32`, before upgrading. Replacing the token
+  invalidates browser sessions and loses no data. Receivers with no token
+  (no dashboard) are unaffected. See
+  [`docs/telemetry-provider.md`](docs/telemetry-provider.md#secrets).
+
+### Added
+
+- **Independent central panel:** Docker Compose runs the API/dashboard without
+  host Kubernetes; a standalone Helm profile runs them without a central game
+  operator or workloads. SQL stores registrations, settings, and encrypted
+  credentials; explicitly selected remote clusters host games through their own
+  operators and agents.
+- **Credential maintenance:** standalone keys have separate generated storage
+  or read-only provisioned custody, the offline transactional `rotate-panel-key`
+  command, and `PUT /clusters/{name}/kubeconfig` preserving registration identity
+  and grants. `PUT`/`DELETE /clusters/{name}/gateway` manage remote gateway
+  credentials; `api.remoteAllowedCIDRs` restricts workload API and gateway
+  destinations. See [standalone setup](docs/standalone-panel.md).
+- **Extended telemetry tier:** a second, separately consented tier with a
+  random install ID, environment, game-usage and feature-adoption
+  categories. Every value comes from a fixed set, a band or a number; no
+  names, namespaces, hostnames, addresses, player counts or custom module
+  names. Reports are signed (Ed25519, key derived from a per-install secret
+  and the install ID); a receiver binds each ID to its first key and refuses
+  forged, stale and replayed reports. See
+  [`docs/security.md`](docs/security.md#telemetry).
+- **Telemetry receiver dashboard and public summary:** a private,
+  token-protected dashboard (`DASHBOARD_LISTEN_ADDR`, default `:8081`) with
+  7-, 30-, 90- and 365-day views, durable daily aggregates
+  (`RETENTION_DAYS`, default `730`, minimum `365`), per-install activity
+  records that expire (`ACTIVITY_EXPIRY_DAYS`, default `90`, minimum `31`),
+  a per-source daily ingest limit (`INGEST_SOURCE_DAILY_LIMIT`, default
+  `20`), `TRUSTED_PROXY_CIDRS`, an `ID_PEPPER` secret and an optional public
+  `GET /v1/summary` (`PUBLIC_SUMMARY=true`). Helm values:
+  `api.telemetry.enabled`, `api.telemetry.interval`,
+  `api.telemetry.receiver.{persistence,dashboard,publicSummary,pepperSecretRef,retentionDays,activityExpiryDays,ingestSourceDailyLimit,trustedProxyCIDRs}`.
+- **Proof-of-work on telemetry ingestion (off by default):** a receiver with
+  `INGEST_POW=true` serves `GET /v1/challenge` and requires a solved
+  challenge on `/ingest` (`428 pow_required` / `pow_invalid`, `503 pow_busy`
+  when its used-challenge set is full). The difficulty is zero up to
+  `INGEST_POW_TARGET_PER_MIN` challenges a minute (default `60`), then rises
+  with the rate between `INGEST_POW_MIN_BITS` (default `0`) and
+  `INGEST_POW_MAX_BITS` (default `22`, at most `26`), and decays one bit
+  every five minutes. New metrics: `gameplane_telemetry_pow_challenges_total`
+  and `gameplane_telemetry_pow_bits`; `gameplane_telemetry_refused_total`
+  gains the reasons `pow_required`, `pow_invalid` and `pow_busy`, and
+  `gameplane_telemetry_rate_limited_total` the route `challenge`. Helm values:
+  `api.telemetry.receiver.ingestPow.{enabled,targetPerMinute,minBits,maxBits}`.
+  The API reporter solves a challenge when its destination offers one and
+  sends without it otherwise. See
+  [`docs/telemetry-provider.md`](docs/telemetry-provider.md#proof-of-work-on-ingest).
+- **Provider runbook:** [`docs/telemetry-provider.md`](docs/telemetry-provider.md)
+  covers deploying the receiver, TLS, keeping `:8081` private, secrets and
+  rotation, retention, scraping `/metrics` and backing up `telemetry.db`.
+- **Optional Steam display names on player lists:** with
+  `api.steam.apiKeySecretRef.name` set to a Secret holding a Steam Web API key
+  (key name `api-key` by default), the API looks up public display names for
+  Steam IDs in player lists through `ISteamUser/GetPlayerSummaries/v2`, with an
+  in-memory cache tuned by `api.steam.cache.{maxEntries,ttl,negativeTTL,timeout}`
+  (defaults 10000 entries, 12h, 15m, 2s). Without a key, or when Steam is
+  unreachable, player lists show raw Steam IDs as before. The key is env-only,
+  never logged and never sent to the browser. See
+  [`docs/install.md`](docs/install.md#steam-display-names-optional) and
+  [`docs/security.md`](docs/security.md#steam-display-name-lookup).
+- **Nuclear Option player lists are structured:** the agent's player output
+  for JSON player lists now includes an entry per player (`steamId` and
+  `faction`), which the API uses for display-name lookup.
+
+### Changed
+
+- **No RCON Secret for unauthenticated consoles:** a new optional
+  `GameTemplate` field `spec.rcon.authentication` (default `true`) lets a
+  template declare a console with no password, such as Nuclear Option's
+  loopback-only remote-command port. When `false`, the operator mints no
+  per-server `<gameserver>-rcon` Secret, mounts nothing for the
+  agent and injects no password environment variable.
+
+### Removed
+
+- **Hell Let Loose module:** `hell-let-loose` is withdrawn from the
+  official catalog. Its dedicated-server files are distributed only to
+  Team17's licensed hosting partners, so no public image can install it.
+  Its hand-run e2e test and probe package are removed with it.
+
+### Security
+
+- **Standalone credential protection:** encryption keys are kept outside
+  database volumes, with durable publication, fail-closed file-access checks,
+  read-only provisioned custody, and authenticated transactional rotation.
+  Database and key backups need separate access policies; recovery requires
+  the matching key. See [storage and recovery](docs/standalone-panel.md#storage-and-recovery).
+- **Remote workload boundaries:** standalone connections require verified TLS,
+  reject unsafe destinations at dial time, and bound finite responses, watch
+  frames, and retained observations. Private networks remain reachable unless
+  destination CIDRs restrict them; configure `GAMEPLANE_REMOTE_ALLOWED_CIDRS`
+  or `api.remoteAllowedCIDRs` for the workload APIs and gateways. Module and
+  template authorization follows the selected cluster in every deployment mode.
+  See [security](docs/security.md#kubeconfig-secret-handling).
+
 ## [0.3.0] — 2026-10-05
 
 The first Gameplane release without a pre-release suffix, a pre-v1 release. It
@@ -94,7 +265,7 @@ previewed in v0.3.0-rc.1 and the pre-release audit fixes summarized under
   Euro Truck Simulator 2, Mount & Blade Bannerlord, tModLoader, Team Fortress 2,
   BeamMP, Left 4 Dead 2, The Isle, ARK: Survival Evolved, Arma Reforger, Hell
   Let Loose, and Squad. Gameplane publishes four Gameplane-owned container
-  images: `ghcr.io/valgulnecron/gameplane/fivem` (FiveM + txAdmin), `farming-simulator-25`
+  images: `ghcr.io/gameplanepanel/gameplane/fivem` (FiveM + txAdmin), `farming-simulator-25`
   (Wine/Xvfb runner), `euro-truck-simulator-2` (Wine runner), and `beammp`
   (BeamMP + non-crashing diagnostic idle). All modules are signed with Cosign
   keyless signatures (#369).
@@ -882,7 +1053,7 @@ the docs ahead of wider external testing. Highlights below.
 ### Added
 
 - **ci/supply-chain:** the cosign **public key is now published** — committed
-  at the repo root as [`cosign.pub`](cosign.pub), exported by CI (job summary +
+  under signing/ as [`cosign.pub`](signing/cosign.pub), exported by CI (job summary +
   artifact on every edge publish), and shipped as a release asset. Both publish
   workflows now **verify each signature right after signing** with the key
   derived from the CI secret, and fail the publish if the committed
@@ -894,11 +1065,11 @@ the docs ahead of wider external testing. Highlights below.
   `cosign.pub` attached, idempotent on re-runs. (beta.4's page was backfilled
   by hand.)
 - **website:** Gameplane has a public marketing + docs site at
-  <https://valgulnecron.github.io/gameplane-website/> — features, game
+  <https://gameplanepanel.github.io/website/> — features, game
   showcase, an AMP comparison, and the full documentation set, designed
   screen-first in `design.pen` (18 frames) and built with Astro. The source
   lives in the separate
-  [`gameplane-website`](https://github.com/ValgulNecron/gameplane-website)
+  [`gameplane-website`](https://github.com/GameplanePanel/website)
   repo, mounted here as the `website/` submodule.
 - **web:** the last UI-audit parity items — a show/hide toggle on the login
   password field, user emails shown under display names on the Users page,
@@ -934,7 +1105,7 @@ the docs ahead of wider external testing. Highlights below.
 - **ci:** the published component images (`:edge` on every `main` push and the
   versioned images on a `v*` release) are now keyed-cosign-signed by digest
   (offline, no Rekor), matching the official module bundles. Verify with
-  `cosign verify --key cosign.pub ghcr.io/valgulnecron/gameplane/<component>`.
+  `cosign verify --key cosign.pub ghcr.io/gameplanepanel/gameplane/<component>`.
   Gated on `COSIGN_PRIVATE_KEY`, so publishing still works before the key is set.
   Signing and publishing run only on `main`/tags, never on PRs.
 - **api:** server-side audit-log export — `GET /admin/audit/export?format=csv|json`
@@ -1039,7 +1210,7 @@ the docs ahead of wider external testing. Highlights below.
     `X-Kestrel-CSRF`, …) → `gameplane_*` / `X-Gameplane-CSRF`; active sessions
     are invalidated on upgrade and users must re-login.
   - **Go module path** `github.com/kestrel-gg/kestrel` →
-    `github.com/ValgulNecron/gameplane`.
+    `github.com/GameplanePanel/gameplane`.
 - Synced `web/package.json` to the chart version (it had been left at `0.1.0`).
 
 ## [0.2.0-beta.1] — 2026-06-22
@@ -1086,15 +1257,15 @@ testing. Not yet recommended for unattended production workloads — see
   runner (retry + longer readiness window), eliminating a cascade of flaky
   API e2e failures.
 
-[Unreleased]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0-rc.1...v0.3.0
-[0.3.0-rc.2]: https://github.com/ValgulNecron/gameplane/compare/v0.3.0-rc.1...v0.3.0
-[0.3.0-rc.1]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.8...v0.3.0-rc.1
-[0.2.0-beta.8]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.7...v0.2.0-beta.8
-[0.2.0-beta.7]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.6...v0.2.0-beta.7
-[0.2.0-beta.6]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.5...v0.2.0-beta.6
-[0.2.0-beta.5]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.4...v0.2.0-beta.5
-[0.2.0-beta.4]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.3...v0.2.0-beta.4
-[0.2.0-beta.3]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.2...v0.2.0-beta.3
-[0.2.0-beta.2]: https://github.com/ValgulNecron/gameplane/compare/v0.2.0-beta.1...v0.2.0-beta.2
-[0.2.0-beta.1]: https://github.com/ValgulNecron/gameplane/releases/tag/v0.2.0-beta.1
+[Unreleased]: https://github.com/GameplanePanel/gameplane/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/GameplanePanel/gameplane/compare/v0.3.0-rc.1...v0.3.0
+[0.3.0-rc.2]: https://github.com/GameplanePanel/gameplane/compare/v0.3.0-rc.1...v0.3.0
+[0.3.0-rc.1]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.8...v0.3.0-rc.1
+[0.2.0-beta.8]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.7...v0.2.0-beta.8
+[0.2.0-beta.7]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.6...v0.2.0-beta.7
+[0.2.0-beta.6]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.5...v0.2.0-beta.6
+[0.2.0-beta.5]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.4...v0.2.0-beta.5
+[0.2.0-beta.4]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.3...v0.2.0-beta.4
+[0.2.0-beta.3]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.2...v0.2.0-beta.3
+[0.2.0-beta.2]: https://github.com/GameplanePanel/gameplane/compare/v0.2.0-beta.1...v0.2.0-beta.2
+[0.2.0-beta.1]: https://github.com/GameplanePanel/gameplane/releases/tag/v0.2.0-beta.1

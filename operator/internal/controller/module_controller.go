@@ -20,9 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
-	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
-	"github.com/ValgulNecron/gameplane/operator/internal/modsrc"
-	"github.com/ValgulNecron/gameplane/operator/internal/verify"
+	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
+	"github.com/GameplanePanel/gameplane/operator/internal/modsrc"
+	"github.com/GameplanePanel/gameplane/operator/internal/verify"
 )
 
 // moduleFailedRetryInterval paces retries of a Failed Module. A spec change

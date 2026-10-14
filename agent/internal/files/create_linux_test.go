@@ -155,7 +155,7 @@ func TestCreateFailureDoesNotPublish(t *testing.T) {
 				}
 			case "body limit":
 				rr := serve(t, h.create, http.MethodPost, "/files/create?path=/new.txt", bytes.NewReader(bytes.Repeat([]byte("a"), maxWriteBytes+1)))
-				if rr.Code != http.StatusInternalServerError {
+				if rr.Code != http.StatusRequestEntityTooLarge {
 					t.Fatalf("oversized body status=%d", rr.Code)
 				}
 			default:
@@ -174,7 +174,7 @@ func TestCreateFailureDoesNotPublish(t *testing.T) {
 
 func TestCreateRemovesInheritedAccessACL(t *testing.T) {
 	h, root, _ := raceHandler(t)
-	acl := encodeACL([]aclEntry{{aclUserObj, 7, aclUndefined}, {aclUser, 4, uint32(os.Getuid() + 1)}, {aclGroupObj, 0, aclUndefined}, {aclMask, 4, aclUndefined}, {aclOther, 0, aclUndefined}})
+	acl := encodeACL([]aclEntry{{aclUserObj, 7, aclUndefined}, {aclUser, 4, otherACLUserID()}, {aclGroupObj, 0, aclUndefined}, {aclMask, 4, aclUndefined}, {aclOther, 0, aclUndefined}})
 	if err := unix.Setxattr(root, "system.posix_acl_default", acl, 0); err != nil {
 		if errors.Is(err, unix.EOPNOTSUPP) {
 			t.Skip("test filesystem lacks POSIX ACL support")
