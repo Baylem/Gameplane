@@ -4,7 +4,7 @@
   "x": -12557,
   "y": 33432,
   "name": "Screen/Standalone — Settings · About",
-  "context": "PR #630 standalone installation. No local Kubernetes metadata or local workload fallback. Master-key storage and offline rotation have no dashboard controls.",
+  "context": "Panel build version comes from authenticated installation metadata; standalone About does not fetch local Kubernetes metadata.",
   "theme": {
     "semantic": "dark"
   },
@@ -207,7 +207,7 @@
                           "fill": "$foreground/foreground",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "—",
+                          "content": "0.3.0-dev",
                           "lineHeight": 1.5,
                           "fontFamily": "$typography/font-mono",
                           "fontSize": 14,
@@ -260,4 +260,3 @@
     }
   ]
 }
-

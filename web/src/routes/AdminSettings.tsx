@@ -1943,7 +1943,7 @@ function AboutSection() {
   return (
     <SectionCard title="About" subtitle="This Gameplane build.">
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
-        <dt className="text-muted">Gameplane</dt><dd className="font-mono">{data?.gameplaneVersion || "—"}</dd>
+        <dt className="text-muted">Gameplane</dt><dd className="font-mono">{installation.data?.version || data?.gameplaneVersion || "—"}</dd>
         {installation.data?.localCluster && <><dt className="text-muted">Kubernetes</dt><dd className="font-mono">{data?.version || "—"}</dd></>}
         <dt className="text-muted">License</dt><dd>AGPL-3.0</dd>
       </dl>

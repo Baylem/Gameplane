@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { LoadingCard } from "@/components/ui/LoadingCard";
 import { Clusters } from "@/lib/endpoints";
-import { useCurrentCluster } from "@/lib/cluster";
+import { getCurrentCluster, setCurrentCluster, useCurrentCluster } from "@/lib/cluster";
 import { useClusterSelection } from "@/lib/useClusterSelection";
 import { useMe, can } from "@/lib/auth";
 import { cn, formatRelative } from "@/lib/utils";
@@ -21,7 +21,8 @@ export function ClustersPage() {
   const [removeTarget, setRemoveTarget] = useState<string | null>(null);
   const remove = useMutation({
     mutationFn: (name: string) => Clusters.remove(name),
-    onSuccess: async () => {
+    onSuccess: async (_data, name) => {
+      if (getCurrentCluster() === name) setCurrentCluster("");
       setRemoveTarget(null);
       await client.invalidateQueries({ queryKey: ["clusters"] });
       await client.invalidateQueries({ queryKey: ["fleet"] });
@@ -47,9 +48,13 @@ export function ClustersPage() {
       <PageHeader title="Clusters" description="Administration of registered locations, connectivity and node inventory."
         actions={can(me, "cluster:manage") && <Button onPress={() => setRegisterOpen(true)}>Register cluster</Button>} />
       {registerOpen && <RegisterClusterDialog open onOpenChange={setRegisterOpen} />}
-      {remove.error && <ErrorCard message="Couldn't remove the cluster registration. Try again." />}
-      <ConfirmDialog open={!!removeTarget} onOpenChange={(open) => !open && setRemoveTarget(null)} title={`Remove ${removeTarget ?? ""}?`}
-        description="Removes this panel's connection to the cluster. Running workloads remain on the cluster."
+      <ConfirmDialog open={!!removeTarget} onOpenChange={(open) => {
+        if (!open && !remove.isPending) { setRemoveTarget(null); remove.reset(); }
+      }} title={`Remove ${removeTarget ?? ""}?`}
+        description={<div className="space-y-3">
+          <p>Removes this panel's connection to the cluster. Running workloads remain on the cluster.</p>
+          {remove.error && <p role="alert" className="text-danger">Couldn't remove the cluster registration. Try again.</p>}
+        </div>}
         confirmLabel="Remove cluster" destructive busy={remove.isPending} onConfirm={() => removeTarget && remove.mutate(removeTarget)} />
       {!isLoading && !error && !can(me, "cluster:manage") && !clusters.some((item) => item.canViewInventory) ? (
         <ErrorCard message="Cluster administration requires inventory or cluster-management access." />
@@ -88,7 +93,7 @@ export function ClustersPage() {
                   <div className="mt-auto flex flex-wrap gap-2">
                     <Button onPress={() => void openCluster(cluster.name, "/servers")} aria-label={`View servers in ${cluster.displayName || cluster.name}`}>View servers</Button>
                     {cluster.canViewInventory === true && <Button variant="outline" onPress={() => void openCluster(cluster.name, "/cluster")} aria-label={`View nodes in ${cluster.displayName || cluster.name}`}>View nodes</Button>}
-                    {cluster.name !== "local" && can(me, "cluster:manage") && <Button variant="outline" onPress={() => setRemoveTarget(cluster.name)} aria-label={`Remove cluster ${cluster.displayName || cluster.name}`}>Remove</Button>}
+                    {cluster.name !== "local" && can(me, "cluster:manage") && <Button variant="outline" onPress={() => { remove.reset(); setRemoveTarget(cluster.name); }} aria-label={`Remove cluster ${cluster.displayName || cluster.name}`}>Remove</Button>}
                   </div>
                 </CardContent>
               </Card>

@@ -28,7 +28,7 @@ function getPhaseColor(phase: ClusterRegistry["phase"]): string {
 }
 
 function getDisplayName(cluster: ClusterRegistry | undefined | null, selectedId: string): string {
-  if (!cluster) return selectedId;
+  if (!cluster) return selectedId || "Select cluster";
   return cluster.displayName || cluster.name || "local";
 }
 

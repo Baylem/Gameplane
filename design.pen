@@ -1,5 +1,5 @@
 {
-  "version": "2.20",
+  "version": "2.21",
   "children": [
     {
       "type": "frame",
@@ -130609,7 +130609,7 @@
       "x": -14157,
       "y": 32032,
       "name": "Screen/Standalone — Remove cluster",
-      "context": "PR #630. Modal actions use central cluster-management permission. Dismissing is disabled during submission.",
+      "context": "Removal errors stay inside the confirmation and reset when dismissed or reopened. Successful removal clears a matching current selection to empty without selecting local or another remote.",
       "theme": {
         "semantic": "dark"
       },
@@ -131054,8 +131054,44 @@
                 "QARhG": {
                   "content": "Remove east?"
                 },
-                "WKy74": {
-                  "content": "Removes this panel's connection to the cluster. Running workloads remain on the cluster."
+                "aZP2h": {
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "KC7CR",
+                      "name": "Removal description and error",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "DcBlI",
+                          "name": "Removal description",
+                          "fill": "$muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Removes this panel’s connection to the cluster. Running workloads remain on the cluster.",
+                          "fontFamily": "$typography/font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "BOOHh",
+                          "name": "Removal request error",
+                          "fill": "$danger/foreground",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "Couldn’t remove the cluster registration. Try again.",
+                          "fontFamily": "$typography/font-sans",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 "Wa0YZ": {
                   "enabled": false,
@@ -131507,13 +131543,53 @@
           ]
         },
         {
+          "type": "frame",
+          "id": "rmmyP",
+          "name": "Identity request failure",
+          "width": "fill_container",
+          "fill": "$surface/surface",
+          "cornerRadius": "$radius/3xl",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": 24,
+          "children": [
+            {
+              "type": "text",
+              "id": "vytzd",
+              "name": "Identity failure message",
+              "fill": "$foreground/foreground",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Couldn’t load your permissions.",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "lNVmH",
+              "type": "ref",
+              "ref": "FIB65",
+              "name": "Retry request",
+              "height": 32,
+              "descendants": {
+                "K8d1zg": {
+                  "enabled": false
+                },
+                "zMNkR": {
+                  "content": "Retry"
+                }
+              }
+            }
+          ]
+        },
+        {
           "type": "text",
           "id": "ZwDM2",
           "name": "Scope note",
           "fill": "$muted",
           "textGrowth": "fixed-width",
           "width": "fill_container",
-          "content": "Each card above documents a separate request state. A failed request never falls back to a local workload cluster.",
+          "content": "Initial failures show a retry state. Background refresh errors keep the last loaded catalog, sources, and open drafts mounted. Permission fetch failures show Retry, separately from denied permission. Successful removal clears the selected registration without choosing another cluster.",
           "lineHeight": 1.5,
           "fontFamily": "$typography/font-sans",
           "fontSize": 12,
@@ -132317,7 +132393,7 @@
       "x": -12557,
       "y": 33432,
       "name": "Screen/Standalone — Settings · About",
-      "context": "PR #630 standalone installation. No local Kubernetes metadata or local workload fallback. Master-key storage and offline rotation have no dashboard controls.",
+      "context": "Panel build version comes from authenticated installation metadata; standalone About does not fetch local Kubernetes metadata.",
       "theme": {
         "semantic": "dark"
       },
@@ -132520,7 +132596,7 @@
                               "fill": "$foreground/foreground",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "—",
+                              "content": "0.3.0-dev",
                               "lineHeight": 1.5,
                               "fontFamily": "$typography/font-mono",
                               "fontSize": 14,
@@ -132812,13 +132888,13 @@
       "x": -10957,
       "y": 34832,
       "name": "Screen/Standalone — Modules (East selected)",
-      "context": "PR #630 remote workload catalog for the selected east registration. The category strip scrolls horizontally. Source management requires modules:manage on the selected cluster. Changing cluster discards open upload, builder, install and source drafts; mutation actions retain their captured cluster target.",
+      "context": "Background refetch failures display an inline retry banner and retain existing data plus open install/upload/builder/source drafts. Only an initial failure replaces loading content. Explicit target changes discard drafts.",
       "theme": {
         "semantic": "dark"
       },
       "clip": true,
       "width": 1440,
-      "height": 1400,
+      "height": 1900,
       "fill": "$background/background",
       "children": [
         {
@@ -133005,6 +133081,46 @@
                       ]
                     }
                   }
+                },
+                {
+                  "type": "frame",
+                  "id": "ySjMT",
+                  "name": "Background refresh error with retained draft",
+                  "width": "fill_container",
+                  "height": 64,
+                  "fill": "$surface/surface",
+                  "gap": 16,
+                  "padding": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Q2MWK",
+                      "name": "Refresh error",
+                      "fill": "$foreground/foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Failed to load module catalog.",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "jrRAt",
+                      "type": "ref",
+                      "ref": "FIB65",
+                      "name": "Retry request",
+                      "height": 32,
+                      "descendants": {
+                        "K8d1zg": {
+                          "enabled": false
+                        },
+                        "zMNkR": {
+                          "content": "Retry"
+                        }
+                      }
+                    }
+                  ]
                 },
                 {
                   "type": "frame",
@@ -133734,8 +133850,9 @@
                               "type": "frame",
                               "id": "pcgth",
                               "name": "mc1Btns",
+                              "layout": "vertical",
                               "gap": 4,
-                              "alignItems": "center",
+                              "alignItems": "end",
                               "children": [
                                 {
                                   "id": "TE5Bx",
@@ -133747,7 +133864,7 @@
                                       "icon": "external-link"
                                     },
                                     "zMNkR": {
-                                      "content": "Deploy to east"
+                                      "content": "Deploy to East production"
                                     }
                                   }
                                 },
@@ -133962,8 +134079,9 @@
                               "type": "frame",
                               "id": "P4r07",
                               "name": "mc2Btns",
+                              "layout": "vertical",
                               "gap": 4,
-                              "alignItems": "center",
+                              "alignItems": "end",
                               "children": [
                                 {
                                   "id": "zljEL",
@@ -133975,7 +134093,7 @@
                                       "icon": "external-link"
                                     },
                                     "zMNkR": {
-                                      "content": "Deploy to east"
+                                      "content": "Deploy to East production"
                                     }
                                   }
                                 },
@@ -134190,8 +134308,9 @@
                               "type": "frame",
                               "id": "KtH2v",
                               "name": "mc3Btns",
+                              "layout": "vertical",
                               "gap": 4,
-                              "alignItems": "center",
+                              "alignItems": "end",
                               "children": [
                                 {
                                   "id": "P9kUxK",
@@ -134203,7 +134322,7 @@
                                       "icon": "external-link"
                                     },
                                     "zMNkR": {
-                                      "content": "Deploy to east"
+                                      "content": "Deploy to East production"
                                     }
                                   }
                                 },
@@ -134642,8 +134761,9 @@
                               "type": "frame",
                               "id": "Cmaj5",
                               "name": "mc5Btns",
+                              "layout": "vertical",
                               "gap": 4,
-                              "alignItems": "center",
+                              "alignItems": "end",
                               "children": [
                                 {
                                   "id": "j2yeju",
@@ -134655,7 +134775,7 @@
                                       "icon": "external-link"
                                     },
                                     "zMNkR": {
-                                      "content": "Deploy to east"
+                                      "content": "Deploy to East production"
                                     }
                                   }
                                 },
@@ -135085,8 +135205,9 @@
                               "type": "frame",
                               "id": "IkPSv",
                               "name": "mc7Btns",
+                              "layout": "vertical",
                               "gap": 4,
-                              "alignItems": "center",
+                              "alignItems": "end",
                               "children": [
                                 {
                                   "id": "o1D6u",
@@ -135098,7 +135219,7 @@
                                       "icon": "external-link"
                                     },
                                     "zMNkR": {
-                                      "content": "Deploy to east"
+                                      "content": "Deploy to East production"
                                     }
                                   }
                                 },
@@ -136001,8 +136122,9 @@
                               "type": "frame",
                               "id": "V7UXSy",
                               "name": "mc11Btns",
+                              "layout": "vertical",
                               "gap": 4,
-                              "alignItems": "center",
+                              "alignItems": "end",
                               "children": [
                                 {
                                   "id": "cquRY",
@@ -136014,7 +136136,7 @@
                                       "icon": "external-link"
                                     },
                                     "zMNkR": {
-                                      "content": "Deploy to east"
+                                      "content": "Deploy to East production"
                                     }
                                   }
                                 },
@@ -136059,13 +136181,13 @@
       "x": -17357,
       "y": 34832,
       "name": "Screen/Standalone — Modules (Manage sources)",
-      "context": "PR #630 remote workload catalog for the selected east registration. The category strip scrolls horizontally. Source management requires modules:manage on the selected cluster. Changing cluster discards open upload, builder, install and source drafts; mutation actions retain their captured cluster target.",
+      "context": "Background refetch failures display an inline retry banner and retain existing data plus open install/upload/builder/source drafts. Only an initial failure replaces loading content. Explicit target changes discard drafts.",
       "theme": {
         "semantic": "dark"
       },
       "clip": true,
       "width": 1440,
-      "height": 1250,
+      "height": 2050,
       "fill": "$background/background",
       "children": [
         {
@@ -136252,6 +136374,46 @@
                       ]
                     }
                   }
+                },
+                {
+                  "type": "frame",
+                  "id": "b5EIv4",
+                  "name": "Background refresh error with retained draft",
+                  "width": "fill_container",
+                  "height": 64,
+                  "fill": "$surface/surface",
+                  "gap": 16,
+                  "padding": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "hLpJp",
+                      "name": "Refresh error",
+                      "fill": "$foreground/foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Failed to load module sources.",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "TjNdy",
+                      "type": "ref",
+                      "ref": "FIB65",
+                      "name": "Retry request",
+                      "height": 32,
+                      "descendants": {
+                        "K8d1zg": {
+                          "enabled": false
+                        },
+                        "zMNkR": {
+                          "content": "Retry"
+                        }
+                      }
+                    }
+                  ]
                 },
                 {
                   "type": "frame",

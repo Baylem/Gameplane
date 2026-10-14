@@ -19,6 +19,7 @@ import type { CatalogEntry } from "@/types";
 
 interface ModuleCardProps {
   cluster?: string;
+  clusterDisplayName?: string;
   canManage?: boolean;
   entry: CatalogEntry;
   // Verification posture for this entry, joined client-side from the
@@ -43,6 +44,7 @@ interface ModuleCardProps {
 export function ModuleCard({
   entry,
   cluster = "local",
+  clusterDisplayName = cluster,
   canManage = true,
   verify,
   onInstall,
@@ -169,15 +171,15 @@ export function ModuleCard({
             ? `${entry.sources[0].name} (${entry.sources[0].type})`
             : `${entry.sources.length} sources`}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex max-w-full flex-wrap items-center gap-1">
           {entry.installed && entry.phase === "Ready" && entry.moduleName && (
             <Button
               size="sm"
               variant="outline"
               onPress={() => void deploy()}
-              className="h-8"
+              className="min-h-8 h-auto max-w-full whitespace-normal text-left"
             >
-              <ExternalLink className="h-3.5 w-3.5" /> {cluster === "local" ? "Deploy locally" : `Deploy to ${cluster}`}
+              <ExternalLink className="h-3.5 w-3.5" /> {cluster === "local" ? "Deploy locally" : `Deploy to ${clusterDisplayName}`}
             </Button>
           )}
           {upgradeAvailable && entry.phase === "Ready" && (

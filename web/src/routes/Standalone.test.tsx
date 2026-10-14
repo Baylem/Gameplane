@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
-import { renderWithQuery } from "@/test/render";
-import { setCurrentCluster } from "@/lib/cluster";
+import { makeClient, renderWithQuery } from "@/test/render";
+import { getCurrentCluster, setCurrentCluster } from "@/lib/cluster";
 import { ClusterPage } from "./Cluster";
 import { ClustersPage } from "./Clusters";
 import { ModulesPage } from "./Modules";
@@ -29,6 +29,109 @@ function standalone(clusters: Array<{ name: string; displayName?: string; canVie
 afterEach(() => setCurrentCluster("local"));
 
 describe("standalone panel", () => {
+  it.each([
+    { resource: "me", status: 503, retained: true },
+    { resource: "clusters", status: 503, retained: true },
+    { resource: "installation", status: 503, retained: true },
+    { resource: "me", status: 401, retained: false },
+  ])("handles a cached $resource failure ($status) without assuming another target", async ({ resource, status, retained }) => {
+    standalone([{ name: "east" }]);
+    setCurrentCluster("east");
+    let unavailable = false;
+    const path = resource === "me" ? "/users/me" : resource === "installation" ? "/admin/installation" : "/clusters";
+    const success = resource === "me" ? makeUser() : resource === "installation"
+      ? { standalone: true, localCluster: false, version: "dev" } : { items: [{ name: "east" }] };
+    server.use(http.get(path, () => unavailable ? HttpResponse.text("unavailable", { status }) : HttpResponse.json(success)),
+      http.get("/modules/catalog", () => HttpResponse.json({ items: [makeCatalog({ installed: false })] })));
+    const client = makeClient();
+    client.setQueryDefaults(["me"], { retryDelay: 0 });
+    renderWithQuery(<ModulesPage />, { client });
+    await userEvent.click(await screen.findByRole("button", { name: "Install" }));
+    await userEvent.clear(screen.getByLabelText("Install as"));
+    await userEvent.type(screen.getByLabelText("Install as"), "retained-draft");
+    unavailable = true;
+    await act(async () => { await client.refetchQueries({ queryKey: [resource] }); });
+    if (retained) expect(screen.getByLabelText("Install as")).toHaveValue("retained-draft");
+    else expect(screen.queryByLabelText("Install as")).not.toBeInTheDocument();
+    expect(screen.getByText(resource === "me" ? "Couldn't load your permissions." : resource === "clusters"
+      ? "Couldn't load registered clusters." : "Couldn't load installation capabilities.")).toBeInTheDocument();
+  });
+  it.each(["catalog", "sources"])("retains an open draft through failed background %s refreshes", async (kind) => {
+    standalone([{ name: "east" }]);
+    setCurrentCluster("east");
+    let unavailable = false;
+    server.use(http.get(`/modules/${kind}`, () => unavailable
+      ? HttpResponse.text("unavailable", { status: 503 })
+      : HttpResponse.json({ items: kind === "catalog" ? [makeCatalog({ installed: false })] : [makeModuleSource()] })));
+    const { client } = renderWithQuery(kind === "catalog" ? <ModulesPage /> : <ModuleSourcesPanel />);
+    await userEvent.click(await screen.findByRole("button", { name: kind === "catalog" ? "Install" : "Add source" }));
+    const field = kind === "catalog" ? screen.getByLabelText("Install as") : screen.getByPlaceholderText("community");
+    await userEvent.clear(field);
+    await userEvent.type(field, "my-draft");
+    unavailable = true;
+    const queryKey = [kind === "catalog" ? "modules-catalog" : "module-sources", "east"];
+    await act(async () => { await client.refetchQueries({ queryKey }); });
+    expect(field).toHaveValue("my-draft");
+    expect(field).toBeInTheDocument();
+    expect(screen.getByText(`Failed to load module ${kind}.`)).toBeInTheDocument();
+    unavailable = false;
+    await act(async () => { await client.refetchQueries({ queryKey }); });
+    expect(field).toHaveValue("my-draft");
+    expect(field).toBeInTheDocument();
+    expect(screen.queryByText(`Failed to load module ${kind}.`)).not.toBeInTheDocument();
+  });
+
+  it("distinguishes failed identity loading from denied permission and retries", async () => {
+    standalone([{ name: "east" }]);
+    setCurrentCluster("east");
+    let unavailable = true;
+    const catalog = vi.fn(() => HttpResponse.json({ items: [] }));
+    server.use(http.get("/users/me", () => unavailable
+      ? HttpResponse.text("unavailable", { status: 401 }) : HttpResponse.json(makeUser())),
+      http.get("/modules/catalog", catalog));
+    renderWithQuery(<ModulesPage />);
+    expect(await screen.findByText("Couldn't load your permissions.")).toBeInTheDocument();
+    expect(screen.queryByText("You don't have permission to view modules on this cluster.")).not.toBeInTheDocument();
+    expect(catalog).not.toHaveBeenCalled();
+    unavailable = false;
+    await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByRole("heading", { name: "Modules" })).toBeInTheDocument();
+  });
+
+  it("scopes removal errors to the dialog, resets them, and clears the removed selection", async () => {
+    standalone([{ name: "east" }, { name: "west" }]);
+    setCurrentCluster("east");
+    let fails = true;
+    server.use(http.delete("/clusters/east", () => fails
+      ? HttpResponse.text("failed", { status: 503 }) : new HttpResponse(null, { status: 204 })));
+    renderWithQuery(<ClustersPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "Remove cluster east" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove cluster" }));
+    const dialog = screen.getByRole("alertdialog");
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Couldn't remove the cluster registration.");
+    expect(getCurrentCluster()).toBe("east");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove cluster west" }));
+    expect(within(screen.getByRole("alertdialog")).queryByRole("alert")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fails = false;
+    await userEvent.click(screen.getByRole("button", { name: "Remove cluster east" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove cluster" }));
+    await waitFor(() => expect(getCurrentCluster()).toBe(""));
+    expect(localStorage.getItem("gameplane.cluster")).toBe("");
+  });
+
+  it("shows the panel build in About without fetching local cluster metadata", async () => {
+    standalone();
+    const info = vi.fn(() => HttpResponse.json({ gameplaneVersion: "wrong-local-version" }));
+    server.use(http.get("/admin/installation", () => HttpResponse.json({ standalone: true, localCluster: false, version: "0.3.0-review" })),
+      http.get("/cluster/info", info));
+    renderWithQuery(<AdminSettingsPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "About" }));
+    expect(await screen.findByText("0.3.0-review")).toBeInTheDocument();
+    expect(screen.queryByText("Kubernetes")).not.toBeInTheDocument();
+    expect(info).not.toHaveBeenCalled();
+  });
   it.each(["catalog", "sources"])("shows and retries an unavailable remote module %s", async (kind) => {
     standalone([{ name: "east" }]);
     setCurrentCluster("east");

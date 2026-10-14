@@ -25,10 +25,10 @@ import { cn } from "@/lib/utils";
 // a Module CR, the operator's Module reconciler pulls the bundle and
 // materializes the GameTemplate.
 export function ModulesPage() {
-  return <ModuleTarget>{(cluster, canManage) => <ModulesCatalog key={cluster} cluster={cluster} canManage={canManage} />}</ModuleTarget>;
+  return <ModuleTarget>{(cluster, canManage, clusterDisplayName) => <ModulesCatalog key={cluster} cluster={cluster} clusterDisplayName={clusterDisplayName} canManage={canManage} />}</ModuleTarget>;
 }
 
-function ModulesCatalog({ cluster, canManage }: { cluster: string; canManage: boolean }) {
+function ModulesCatalog({ cluster, clusterDisplayName, canManage }: { cluster: string; clusterDisplayName: string; canManage: boolean }) {
   const qc = useQueryClient();
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["modules-catalog", cluster],
@@ -137,7 +137,7 @@ function ModulesCatalog({ cluster, canManage }: { cluster: string; canManage: bo
   });
 
   if (isLoading) return <LoadingCard message="Loading module catalog…" />;
-  if (isError) return <ErrorCard message="Failed to load module catalog." onRetry={() => void refetch()} />;
+  if (isError && !data) return <ErrorCard message="Failed to load module catalog." onRetry={() => void refetch()} />;
 
   return (
     <div className="space-y-6 p-6">
@@ -161,6 +161,7 @@ function ModulesCatalog({ cluster, canManage }: { cluster: string; canManage: bo
         }
       />
 
+      {isError && <ErrorCard message="Failed to load module catalog." onRetry={() => void refetch()} />}
       {sourcesOpen ? <ClusterModuleSources cluster={cluster} canManage={canManage} />
         : sourcesError && <ErrorCard message="Failed to load module sources." onRetry={() => void refetchSources()} />}
 
@@ -227,6 +228,7 @@ function ModulesCatalog({ cluster, canManage }: { cluster: string; canManage: bo
         {visible.map((entry) => (
           <ModuleCard
             cluster={cluster}
+            clusterDisplayName={clusterDisplayName}
             canManage={canManage}
             key={entry.name}
             entry={entry}

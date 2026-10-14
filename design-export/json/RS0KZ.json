@@ -434,13 +434,53 @@
       ]
     },
     {
+      "type": "frame",
+      "id": "rmmyP",
+      "name": "Identity request failure",
+      "width": "fill_container",
+      "fill": "$surface/surface",
+      "cornerRadius": "$radius/3xl",
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "vytzd",
+          "name": "Identity failure message",
+          "fill": "$foreground/foreground",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Couldn’t load your permissions.",
+          "fontFamily": "$typography/font-sans",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "id": "lNVmH",
+          "type": "ref",
+          "ref": "FIB65",
+          "name": "Retry request",
+          "height": 32,
+          "descendants": {
+            "K8d1zg": {
+              "enabled": false
+            },
+            "zMNkR": {
+              "content": "Retry"
+            }
+          }
+        }
+      ]
+    },
+    {
       "type": "text",
       "id": "ZwDM2",
       "name": "Scope note",
       "fill": "$muted",
       "textGrowth": "fixed-width",
       "width": "fill_container",
-      "content": "Each card above documents a separate request state. A failed request never falls back to a local workload cluster.",
+      "content": "Initial failures show a retry state. Background refresh errors keep the last loaded catalog, sources, and open drafts mounted. Permission fetch failures show Retry, separately from denied permission. Successful removal clears the selected registration without choosing another cluster.",
       "lineHeight": 1.5,
       "fontFamily": "$typography/font-sans",
       "fontSize": 12,
@@ -448,4 +488,3 @@
     }
   ]
 }
-

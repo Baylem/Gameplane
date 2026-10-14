@@ -4,7 +4,7 @@
   "x": -14157,
   "y": 32032,
   "name": "Screen/Standalone — Remove cluster",
-  "context": "PR #630. Modal actions use central cluster-management permission. Dismissing is disabled during submission.",
+  "context": "Removal errors stay inside the confirmation and reset when dismissed or reopened. Successful removal clears a matching current selection to empty without selecting local or another remote.",
   "theme": {
     "semantic": "dark"
   },
@@ -449,8 +449,44 @@
             "QARhG": {
               "content": "Remove east?"
             },
-            "WKy74": {
-              "content": "Removes this panel's connection to the cluster. Running workloads remain on the cluster."
+            "aZP2h": {
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "KC7CR",
+                  "name": "Removal description and error",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "DcBlI",
+                      "name": "Removal description",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Removes this panel’s connection to the cluster. Running workloads remain on the cluster.",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "BOOHh",
+                      "name": "Removal request error",
+                      "fill": "$danger/foreground",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Couldn’t remove the cluster registration. Try again.",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
             },
             "Wa0YZ": {
               "enabled": false,
@@ -466,4 +502,3 @@
     }
   ]
 }
-

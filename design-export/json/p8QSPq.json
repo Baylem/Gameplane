@@ -4,13 +4,13 @@
   "x": -17357,
   "y": 34832,
   "name": "Screen/Standalone — Modules (Manage sources)",
-  "context": "PR #630 remote workload catalog for the selected east registration. The category strip scrolls horizontally. Source management requires modules:manage on the selected cluster. Changing cluster discards open upload, builder, install and source drafts; mutation actions retain their captured cluster target.",
+  "context": "Background refetch failures display an inline retry banner and retain existing data plus open install/upload/builder/source drafts. Only an initial failure replaces loading content. Explicit target changes discard drafts.",
   "theme": {
     "semantic": "dark"
   },
   "clip": true,
   "width": 1440,
-  "height": 1250,
+  "height": 2050,
   "fill": "$background/background",
   "children": [
     {
@@ -197,6 +197,46 @@
                   ]
                 }
               }
+            },
+            {
+              "type": "frame",
+              "id": "b5EIv4",
+              "name": "Background refresh error with retained draft",
+              "width": "fill_container",
+              "height": 64,
+              "fill": "$surface/surface",
+              "gap": 16,
+              "padding": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "hLpJp",
+                  "name": "Refresh error",
+                  "fill": "$foreground/foreground",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Failed to load module sources.",
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "TjNdy",
+                  "type": "ref",
+                  "ref": "FIB65",
+                  "name": "Retry request",
+                  "height": 32,
+                  "descendants": {
+                    "K8d1zg": {
+                      "enabled": false
+                    },
+                    "zMNkR": {
+                      "content": "Retry"
+                    }
+                  }
+                }
+              ]
             },
             {
               "type": "frame",
@@ -3721,4 +3761,3 @@
     }
   ]
 }
-

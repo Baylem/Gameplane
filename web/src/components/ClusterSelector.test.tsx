@@ -155,6 +155,14 @@ describe("ClusterSelector", () => {
     expect(getCurrentCluster()).toBe("removed-site");
   });
 
+  it("prompts for a cluster when the selection was explicitly cleared", async () => {
+    setCurrentCluster("");
+    server.use(http.get("/clusters", () => HttpResponse.json({ items: [{ name: "east", displayName: "East", phase: "Healthy" }] })));
+    renderWithQuery(<ClusterSelector />);
+    expect(await screen.findByRole("button", { name: "Select cluster" })).toHaveTextContent("Select cluster");
+    expect(getCurrentCluster()).toBe("");
+  });
+
   it("includes an 'View all clusters' option at the bottom of the dropdown", async () => {
     const clusters: ClusterRegistry[] = [
       { name: "local", displayName: "Local", phase: "Healthy" },

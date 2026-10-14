@@ -19,8 +19,8 @@ const handlers = { onInstall: vi.fn(), onUpgrade: vi.fn(), onUninstall: vi.fn() 
 describe("ModuleCard", () => {
   it("deploys an explicitly targeted module to that remote cluster", async () => {
     setCurrentCluster("other");
-    renderWithQuery(<ModuleCard cluster="east" entry={makeCatalog({ installed: true, installedVersion: "1", latestVersion: "1", phase: "Ready", moduleName: "minecraft" })} {...handlers} />);
-    await userEvent.click(screen.getByRole("button", { name: "Deploy to east" }));
+    renderWithQuery(<ModuleCard cluster="east" clusterDisplayName="East production" entry={makeCatalog({ installed: true, installedVersion: "1", latestVersion: "1", phase: "Ready", moduleName: "minecraft" })} {...handlers} />);
+    await userEvent.click(screen.getByRole("button", { name: "Deploy to East production" }));
     expect(navigate).toHaveBeenCalledWith({ to: "/servers/new", search: { template: "minecraft", cluster: "east" } });
     expect(getCurrentCluster()).toBe("other");
   });

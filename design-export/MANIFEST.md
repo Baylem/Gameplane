@@ -2561,3 +2561,23 @@ Added standalone variants beside the existing combined-installation designs. Cop
 Interaction context records permission gating, retained registration drafts on failure, pending dismissal restrictions, and clearing cluster-bound module drafts when the target changes. Primary user roles manage panel access; additional grants name the workload cluster and namespace. The reference board documents separate request states, not a single application screen. Master-key storage/rotation and in-place kubeconfig rotation are backend/operator workflows in this PR and do not add dashboard controls.
 
 All 19 roots have MCP `Get` JSON exports (depth 30, path geometry included) and 2× PNG exports. Structural checks found no remaining placeholders or unintended clipping. The two catalog category strips intentionally scroll horizontally. Screens and dialogs were visually inspected with `TakeScreenshot`; JSON copy/actions received an independent source review. No live-browser comparison was performed for this design-only pass.
+
+## PR #630 maintainer follow-up — October 14, 2026
+
+Updated existing roots before dashboard implementation and refreshed their MCP
+Get JSON exports (depth 30, path geometry) plus 2x PNG exports:
+
+| Root | Updated behavior |
+| --- | --- |
+| `RS0KZ` | Identity-fetch failure has Retry, distinct from denied permission; background refreshes preserve loaded data and drafts |
+| `HVhmb` | Removal error stays inside confirmation; dismissal/reopening resets it; successful removal clears matching selection without fallback |
+| `EWrn0` | Catalog background failure displays inline Retry; Deploy labels use the registration display name while routing uses its ID |
+| `p8QSPq` | Source background failure displays inline Retry and retains source-edit drafts |
+| `FOVMf` | About shows the central API build version without requesting local Kubernetes metadata |
+
+The request-state board, removal confirmation, About, catalog, and source view
+were visually inspected with MCP TakeScreenshot. New retry banners are visible
+and aligned. The existing horizontally scrolling category strips retain their
+intentional clipping. Deploy action rows use vertical layout to fit display-name
+labels. UI regression checks are prepared for CI execution; local TypeScript
+compilation passed. The user saved design.pen after the design updates.

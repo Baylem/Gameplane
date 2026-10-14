@@ -67,7 +67,7 @@ export function ClusterModuleSources({ cluster, canManage }: { cluster: string; 
   if (isLoading) {
     return <LoadingCard message="Loading module sources…" />;
   }
-  if (isError) {
+  if (isError && !data) {
     return <ErrorCard message="Failed to load module sources." onRetry={() => void refetch()} />;
   }
 
@@ -75,6 +75,7 @@ export function ClusterModuleSources({ cluster, canManage }: { cluster: string; 
 
   return (
     <Card className="p-5 space-y-3">
+      {isError && <ErrorCard message="Failed to load module sources." onRetry={() => void refetch()} />}
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="font-medium">Module sources</div>
