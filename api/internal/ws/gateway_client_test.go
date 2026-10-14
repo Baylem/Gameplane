@@ -93,6 +93,22 @@ func TestStandaloneGatewayRejectsUnsafeDestinations(t *testing.T) {
 	}
 }
 
+func TestCombinedGatewayUsesDestinationGuard(t *testing.T) {
+	for _, endpoint := range []string{"https://127.0.0.1:8443", "https://169.254.169.254", "https://metadata.google.internal"} {
+		resolver, _, _ := gatewayFixture(t, endpoint)
+		if _, _, err := resolver.resolve(t.Context(), "remote", agentTarget{name: "alpha", namespace: "gameplane-games"}); err == nil {
+			t.Fatalf("combined gateway accepted unsafe destination %s", endpoint)
+		}
+	}
+	resolver, _, _ := gatewayFixture(t, "https://10.1.2.3:8443")
+	if _, transport, err := resolver.resolve(t.Context(), "remote", agentTarget{name: "alpha", namespace: "gameplane-games"}); err != nil {
+		t.Fatalf("private workload destination rejected: %v", err)
+	} else if conn, err := transport.http.Transport.(*http.Transport).DialContext(t.Context(), "tcp", "169.254.169.254:443"); err == nil {
+		_ = conn.Close()
+		t.Fatal("combined gateway dial bypassed metadata protection")
+	}
+}
+
 func TestGatewayResolverBindsRemoteUIDAndReadsCredentialsFresh(t *testing.T) {
 	resolver, home, remote := gatewayFixture(t, "https://gateway.test:8443")
 	target := agentTarget{name: "alpha", namespace: "gameplane-games"}
@@ -126,7 +142,7 @@ func TestGatewayResolverBindsRemoteUIDAndReadsCredentialsFresh(t *testing.T) {
 }
 
 func TestGatewayTransportPreservesBoundTargetAndFiltersCredentials(t *testing.T) {
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	srv := newGatewayTLSTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		target, path, err := gatewayprotocol.ParsePath(req.URL.Path)
 		if err != nil || target.Cluster != "remote" || target.UID != "remote-uid" || path != "/files/write" {
 			t.Errorf("target = %+v, path = %s, error = %v", target, path, err)

@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/GameplanePanel/gameplane/api/internal/kube"
 	"github.com/go-chi/chi/v5"
@@ -56,11 +57,9 @@ func (h clustersHandler) configureGateway(w http.ResponseWriter, req *http.Reque
 		httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("invalid gateway client certificate or key"))
 		return
 	}
-	if h.k.IsStandalone() {
-		if err := h.k.RemoteAccess.ValidateURL(in.URL); err != nil {
-			httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("gateway destination is not allowed"))
-			return
-		}
+	if err := h.k.RemoteAccess.ValidateURL(in.URL); err != nil {
+		httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("gateway destination is not allowed"))
+		return
 	}
 	if !x509.NewCertPool().AppendCertsFromPEM([]byte(in.CACert)) {
 		httperr.WriteCode(w, req, http.StatusBadRequest, errors.New("invalid gateway CA certificate"))
@@ -69,6 +68,10 @@ func (h clustersHandler) configureGateway(w http.ResponseWriter, req *http.Reque
 	registration, err := h.k.Clusters().Get(req.Context(), name, metav1.GetOptions{})
 	if err != nil {
 		httperr.Write(w, req, err)
+		return
+	}
+	if registration.GetDeletionTimestamp() != nil {
+		httperr.Write(w, req, apierrors.NewNotFound(kube.GVRCluster.GroupResource(), name))
 		return
 	}
 	// Publish a new immutable credential object before switching the pointer.
@@ -92,19 +95,22 @@ func (h clustersHandler) configureGateway(w http.ResponseWriter, req *http.Reque
 		httperr.Write(w, req, err)
 		return
 	}
-	if err := h.updateGatewayRegistration(req.Context(), registration, map[string]any{
+	err = h.updateGatewayRegistration(req.Context(), registration, map[string]any{
 		"url": in.URL, "tlsSecretRef": map[string]any{"name": secretName},
-	}); err != nil {
+	})
+	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(req.Context()), 5*time.Second)
+	defer cancel()
+	if err != nil {
 		// An update may have committed before a transport failure. Retain the
 		// credential when the live pointer cannot be checked safely.
-		current, readErr := h.k.Clusters().Get(req.Context(), name, metav1.GetOptions{})
+		current, readErr := h.k.Clusters().Get(cleanupCtx, name, metav1.GetOptions{})
 		if apierrors.IsNotFound(readErr) || (readErr == nil && gatewayCredentialName(current) != secretName) {
-			h.cleanupGatewayCredential(req.Context(), name, secretName)
+			h.cleanupGatewayCredential(cleanupCtx, name, secretName)
 		}
 		httperr.Write(w, req, err)
 		return
 	}
-	h.cleanupGatewayCredential(req.Context(), name, gatewayCredentialName(registration))
+	h.cleanupGatewayCredential(cleanupCtx, name, gatewayCredentialName(registration))
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -122,7 +128,9 @@ func (h clustersHandler) removeGateway(w http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	h.cleanupGatewayCredential(req.Context(), name, secretName)
+	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(req.Context()), 5*time.Second)
+	defer cancel()
+	h.cleanupGatewayCredential(cleanupCtx, name, secretName)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -159,7 +167,7 @@ func (h clustersHandler) updateGatewayRegistration(ctx context.Context, original
 		if err != nil {
 			return err
 		}
-		if current.GetUID() != original.GetUID() {
+		if current.GetUID() != original.GetUID() || current.GetDeletionTimestamp() != nil {
 			return apierrors.NewNotFound(kube.GVRCluster.GroupResource(), original.GetName())
 		}
 		live, _, err := unstructured.NestedMap(current.Object, "spec", "agentGateway")

@@ -85,6 +85,9 @@ func main() {
 			return
 		case "rotate-panel-key":
 			if err := rotatePanelKey(ctx, args[1:]); err != nil {
+				if errors.Is(err, flag.ErrHelp) {
+					return
+				}
 				logger.Error("rotate-panel-key", "err", err)
 				os.Exit(1)
 			}
@@ -368,9 +371,9 @@ func main() {
 		handlers.MountNotifications(p, notifier, k8s, cfg.namespace)
 		handlers.MountAuthProviderSecrets(p, k8s, cfg.namespace)
 		handlers.MountCluster(p, reg, store, Version, cfg.clusterOps, cfg.updateChannel)
-		handlers.MountClusterActions(p, k8s, cfg.clusterOps && !cfg.standalone, cfg.clusterExternalAddress)
+		handlers.MountClusterActions(p, k8s, cfg.clusterOps, cfg.clusterExternalAddress)
 		handlers.MountClusters(p, reg, k8s, cfg.namespace)
-		handlers.MountInstallation(p, cfg.standalone)
+		handlers.MountInstallation(p, cfg.standalone, Version)
 		handlers.MountEvents(p, reg)
 		handlers.MountDestinations(p, reg)
 		handlers.MountTunnelCredentials(p, reg)

@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -73,13 +72,10 @@ func (r *agentGatewayResolver) resolve(ctx context.Context, cluster string, targ
 	if err != nil {
 		return nil, nil, err
 	}
-	dial := (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext
-	if home.IsStandalone() {
-		if err := home.RemoteAccess.ValidateURL(endpoint); err != nil {
-			return nil, nil, err
-		}
-		dial = home.RemoteAccess.DialContext
+	if err := home.RemoteAccess.ValidateURL(endpoint); err != nil {
+		return nil, nil, err
 	}
+	dial := home.RemoteAccess.DialContext
 	secret, err := home.Secrets(r.namespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, fmt.Errorf("read gateway credentials: %w", err)

@@ -327,14 +327,16 @@ func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
 	// Drop the cluster's client now instead of waiting for the cluster
 	// watch, so no request is dispatched through a removed registration.
 	h.reg.RemoveIfUID(name, originalUID)
+	cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(req.Context()), 5*time.Second)
+	defer cancel()
 	// Only remove credentials this API owns; external GitOps credentials survive.
-	h.cleanupGatewayCredential(req.Context(), name, gatewayCredentialName(u))
+	h.cleanupGatewayCredential(cleanupCtx, name, gatewayCredentialName(u))
 
 	// Clean up the fixed-name or immutable rotated credential captured before
 	// deletion. Legacy fixed names predate managed-by; rotated names require it.
 	// UID/version preconditions preserve replacements and external references.
 	if kubeconfigSecret != nil {
-		if err := h.k.Secrets(h.namespace).Delete(req.Context(), kubeconfigSecret.Name, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(kubeconfigSecret)}); err != nil && !apierrors.IsNotFound(err) {
+		if err := h.k.Secrets(h.namespace).Delete(cleanupCtx, kubeconfigSecret.Name, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(kubeconfigSecret)}); err != nil && !apierrors.IsNotFound(err) {
 			slog.Warn("cluster delete: kubeconfig secret cleanup failed", "cluster", name, "err", err)
 		}
 	}

@@ -43,7 +43,7 @@ func TestCaptureCapabilitiesAreVersionedBoundedAndCancelable(t *testing.T) {
 		{"malformed", "{", 200, false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			srv := newGatewayTLSTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/v1/capabilities" || r.Header.Get("Cookie") != "" {
 					t.Error("wrong capability request")
 				}
@@ -67,7 +67,7 @@ func TestCaptureCapabilitiesAreVersionedBoundedAndCancelable(t *testing.T) {
 
 func TestCaptureGatewayUsesFreshIdentityAndCredentials(t *testing.T) {
 	calls := 0
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := newGatewayTLSTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
 		target, err := gatewayprotocol.ParseCapturePath(r.URL.Path)
 		if err != nil || target.UID != "remote-uid" || target.CaptureUID != "capture-uid" {

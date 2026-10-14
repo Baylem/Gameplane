@@ -156,7 +156,7 @@ func ownedKubeconfigSecretName(cluster, name string) bool {
 }
 
 func (h clustersHandler) cleanupKubeconfigCredential(ctx context.Context, cluster string, secret *corev1.Secret) {
-	if secret == nil || !ownedKubeconfigSecretName(cluster, secret.Name) || secret.Labels[kube.ClusterKubeconfigLabel] != "true" || secret.Labels[ManagedByLabel] != managedByValue {
+	if secret == nil || !ownedKubeconfigSecretName(cluster, secret.Name) || secret.Labels[kube.ClusterKubeconfigLabel] != "true" || (secret.Name != clusterKubeconfigSecretName(cluster) && secret.Labels[ManagedByLabel] != managedByValue) {
 		return
 	}
 	// UID/resourceVersion preconditions make stale cleanup harmless.
