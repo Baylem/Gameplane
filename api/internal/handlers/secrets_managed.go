@@ -33,8 +33,8 @@ var errNotManagedSecret = errors.New("a secret with that name exists but is not 
 
 // upsertLabelledSecret creates or updates ns/name with featureLabel=true
 // + managed-by and the supplied keys. Callers must pass the complete key
-// set for their schema (empty string for unset optionals) — the update is
-// a merge patch, so an omitted key would otherwise keep its old value.
+// set for their schema (empty string for unset optionals) — supplied keys
+// are merged into the current Secret, so omitted keys retain their value.
 // Updating a Secret that lacks featureLabel is refused, so this path
 // can't overwrite arbitrary control-plane Secrets.
 func upsertLabelledSecret(ctx context.Context, k *kube.Client, ns, name, featureLabel string, data map[string]string) error {
@@ -69,7 +69,12 @@ func upsertLabelledSecret(ctx context.Context, k *kube.Client, ns, name, feature
 	for key, value := range labels {
 		existing.Labels[key] = value
 	}
-	existing.StringData = data
+	if existing.StringData == nil {
+		existing.StringData = map[string]string{}
+	}
+	for key, value := range data {
+		existing.StringData[key] = value
+	}
 	_, err = k.Secrets(ns).Update(ctx, existing, metav1.UpdateOptions{})
 	return err
 }
