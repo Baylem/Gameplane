@@ -114,7 +114,7 @@ export function AdminSettingsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 p-6">
       <PageHeader
         title="Admin settings"
         description="Platform-wide configuration for this Gameplane instance."
@@ -1989,8 +1989,8 @@ function HelmOIDCProviderCard({ provider }: { provider: OIDCHelmProvider }) {
       headerClassName="px-5 pt-5 pb-4 space-y-1"
       contentClassName="px-5 pb-5 space-y-4"
     >
-      <div className="space-y-1">
-        <div className="space-y-2 pb-2">
+      <div>
+        <div className="space-y-0.5 pb-1">
           <div className="font-medium text-sm">Provider</div>
           <p className="text-[11px] text-muted">
             Groups claim and default role are seeded from the same Helm values and are not editable here.
