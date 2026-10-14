@@ -1,6 +1,6 @@
 # Open Decisions
 
-**Status**: 0 open; 6 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07, OD-6 on 2026-10-08).
+**Status**: 1 open (OD-10); 9 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07, OD-6 on 2026-10-08, OD-7, OD-8 and OD-9 on 2026-10-14).
 
 Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract in code, chart defaults or docs until it is ruled here.
 
@@ -110,3 +110,61 @@ Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract
 **Question**: The receiver dashboard's ranges ended on the latest complete UTC day (yesterday), so a provider saw "No reports yet" for up to a day after its first accepted report, and today's reports never showed until the day closed.
 
 **Ruling**: the dashboard shows all data. Every range (7, 30, 90 or 365 days) ends on today, the current UTC day, which is still in progress and labelled so. The empty state appears only when the range holds no report at all. Today's lapsed-installs value stays `0` until the lifecycle job finalises the day. The public `GET /v1/summary` is unchanged and keeps the latest complete day.
+
+---
+
+## Amendment 2026-10-14: version trend (FR-042)
+
+### OD-7: What "stale" means
+
+**Status**: RULED (2026-10-14, user)
+
+**Question**: The version trend counts installs that upgraded, downgraded or went stale. Upgrades and downgrades are detected when an install reports a different version than last time. What makes an install stale? The receiver doesn't know which release is newest today, and installs that stop reporting are already counted as lapsed.
+
+**Options**:
+1. Behind the newest seen: on a day, an install's version is lower than the newest release any install reported in the range.
+2. Unchanged for N days.
+3. Both: behind the newest seen release for at least N days.
+
+**Ruling**: (1) behind the newest seen. No threshold to tune. Whether a pre-release can be the newest release is OD-10.
+
+### OD-8: Ordering versions that aren't releases
+
+**Status**: RULED (2026-10-14, user)
+
+**Question**: Hand builds (`pr617`), PR images (`dev`) and edge images (`edge-<sha>`) have no order. How does the trend treat them?
+
+**Options**:
+1. Semver only: only semver versions are ordered; a change to or from anything else is "changed (unordered)".
+2. Semver, with everything else sorting below every release.
+3. Leave installs on non-release builds out of the trend.
+
+**Ruling**: (1) semver only. The trend never guesses a direction, and an install on a non-semver build is never stale.
+
+### OD-9: Where the views go
+
+**Status**: RULED (2026-10-14, user)
+
+**Question**: The basic "Versions" panel counts reports by version (FR-024), and "Versions by install" in the extended section already counts each install once on its latest version (FR-025). Where do these and the new trend go?
+
+**Options**:
+1. Replace the top panel with the per-install view and the trend.
+2. Keep both, rename the reports panel "Reports by version", and put the trend under "Versions by install".
+3. Move "Versions by install" and the trend to the top, and the reports panel down.
+
+**Ruling**: (2) keep both and add the trend. The layout is designed first in `telemetry-receiver/telemetry-dashboard.pen`.
+
+### OD-10: Pre-releases and the newest-release bar
+
+**Status**: OPEN
+
+**Question**: Can a pre-release such as `v0.4.0-rc.1` be the "newest release" that makes other installs stale (OD-7)? Release images report their git tag (`v0.3.0`), and the repo has pre-release tags (`v0.3.0-rc.1`). Semver orders `v0.4.0-rc.1` above `v0.3.0`, so one rc tester would make every install on the newest final release stale. Moving to or from a pre-release still counts as an upgrade or downgrade either way.
+
+**Options**:
+1. Finals only: only versions without a pre-release suffix set the bar.
+2. Any semver: the highest semver seen sets the bar, pre-releases included.
+
+**Recommended default**: (1) finals only. Being on the newest final release isn't stale, and rc testers are few.
+
+**Blocks**: the stale computation in T106 and its tests in T109.
+

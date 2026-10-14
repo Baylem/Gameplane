@@ -577,6 +577,32 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 ---
 
+## Phase 11: Amendment 2026-10-14 — version trend (US5, FR-042)
+
+**Goal**: The dashboard shows, per day, how many installs upgraded, downgraded, changed version without an order, or stayed behind the newest release (OD-7–OD-10, research R22). The basic version panel is renamed "Reports by version" (OD-9).
+
+**Independent Test**: A synthetic population with known upgrades, downgrades, unordered changes (`pr617` → `v0.3.0`) and installs left on older releases gives exact daily counts for every series (SC-017).
+
+**Branch and PR**: a new branch from `master` and a new PR; the merged 022 PR (#617) is not reused.
+
+- [ ] T101 [US5] In `telemetry-receiver/store.go`, add `daily_install_version (day, version, installs)` and `daily_version_change (day, kind, installs)` to the `CREATE TABLE IF NOT EXISTS` list (data-model § Receiver), and add both to the retention `DELETE FROM … WHERE day < ?` list near line 293.
+- [ ] T102 [P] [US5] Create `telemetry-receiver/versionorder.go`: `classifyChange(old, new string) (kind string, changed bool)` and `isRelease(label string) bool`, using `golang.org/x/mod/semver` (v0.41.0, as in `operator/go.mod`) with a `v` prefix added to labels that lack one (R22). Add the dependency to `telemetry-receiver/go.mod` with `make tidy`; confirm with `go build ./...`.
+- [ ] T103 [US5] In `telemetry-receiver/ingest_ext.go`, inside the transaction of a non-duplicate extended report (the insert near line 197 and the update near line 225): increment `daily_install_version[today, label]`; when the record existed and `classifyChange(last_version, label)` reports a change, increment `daily_version_change[today, kind]`. A new record is never a change (FR-042). Duplicates and refused reports write nothing.
+- [ ] T104 [US5] Design first, on the local machine where Pencil runs: in `telemetry-receiver/telemetry-dashboard.pen`, rename the basic "Versions" card to "Reports by version" and add a "Version trend" card under "Versions by install" in the extended section, with four daily series (upgraded, downgraded, changed (unordered), stale) and the newest release named in the caption. Load the `dataviz` skill for the chart form and colours. Ask the user to save in the Pencil UI, run `design-export` into `telemetry-receiver/design-export/`, and commit the export with the design (rules 1, 2).
+- [ ] T105 [US5] In `telemetry-receiver/views.go`, add `extended.versionTrend` (`contracts/receiver-http.md`): one entry per day in R with `upgraded`, `downgraded` and `unordered` from `daily_version_change`, and `newestRelease`. `null` with the rest of `extended` when the range has no extended reports.
+- [ ] T106 [US5] Blocked on OD-10. In `telemetry-receiver/views.go`, compute `stale` per day and `newestRelease` from `daily_install_version` over R (data-model § Derived views): N is the highest version in R that `isRelease` accepts under the OD-10 ruling; `stale[D]` sums installs on semver versions below N. Non-semver versions are never stale (OD-8).
+- [ ] T107 [US5] After T104: in `telemetry-receiver/charts.go:350` change the card title to "Reports by version" and update its caption in `web/overview.html:37`; add the trend chart to `charts_ext.go` and `web/overview_extended.html` under "Versions by install", following the T104 design.
+- [ ] T108 [P] [US5] Docs: describe the trend, the two tables and the "Reports by version" rename in `telemetry-receiver/specs.md` and `README.md`, and mention the two new daily counts wherever `docs/telemetry-provider.md` or the `website/` data-handling statement describe what the receiver stores (the statement change goes through the submodule's own PR flow).
+- [ ] T109 [US5] Tests (CI only, rule 8):
+  - new `telemetry-receiver/versionorder_test.go`: semver up, down, equal across `v` prefixes, pre-releases, and every non-semver label as unordered
+  - new cases in `ingest_ext_test.go` and `population_test.go` for SC-017, including duplicates and refused reports leaving both tables unchanged, and `views_test.go` for `versionTrend` with and without extended data
+  - **needs the user's sign-off before editing** (existing tests whose expectations change): `lifecycle_test.go:11` adds the two tables to `dailyTables` so the retention sweep covers them; `charts_test.go:83` if it asserts the old "Versions" title
+- [ ] T110 Push the branch and open the PR with the `ship-branch` skill; labels `type: feature`, `area: shared`, `area: specs` through REST (rule 14). After merge, `git mv specs/022-default-telemetry-dashboard specs/done_022-default-telemetry-dashboard`, update in-repo references, and delete the branch (rules 12, 16).
+
+**Checkpoint**: the trend is visible and every series matches SC-017.
+
+---
+
 ## Dependencies and execution order
 
 ### Phase dependencies
@@ -605,6 +631,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - T108 depends on T102, T105 and T107
   - T109 depends on T102 and T103
 - **Polish (Phase 10)** depends on every story. T099 also waits for OD-1, and T100 waits for the merge.
+- **Amendment (Phase 11)** depends only on the shipped feature. T101–T103 and T105 can start at once; T104 runs on the local machine; T106 waits for OD-10; T107 waits for T104; T109 waits for T101–T107 and the sign-off it names.
 
 ### Story order (graph)
 
