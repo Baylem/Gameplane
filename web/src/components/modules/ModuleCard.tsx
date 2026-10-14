@@ -96,7 +96,7 @@ export function ModuleCard({
   const digest = entry.appliedDigest ?? entry.digest;
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col border border-border">
       <CardHeader className="flex flex-col gap-3 pb-0">
         <div className="flex items-center justify-between gap-3">
           <GameIcon
@@ -138,8 +138,8 @@ export function ModuleCard({
           </div>
         )}
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 flex-1 py-3">
-        <p className="line-clamp-3 text-xs text-muted leading-[1.4]">
+      <CardContent className="flex flex-col gap-3 flex-1 py-0">
+        <p className="line-clamp-4 text-xs text-muted leading-[1.4]">
           {entry.summary ?? "No summary."}
         </p>
         {versionUnavailable ? (

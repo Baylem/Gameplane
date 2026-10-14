@@ -129,7 +129,7 @@ export function ModulesPage() {
   });
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 p-6">
       <PageHeader
         title="Modules"
         subtitle="Pre-packaged game-server templates pulled from your configured module sources."
@@ -207,7 +207,7 @@ export function ModulesPage() {
       )}
 
       <div
-        className="grid items-start gap-x-4 gap-y-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        className="grid pt-2 items-start gap-x-4 gap-y-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         data-testid="modules-grid"
       >
         {visible.map((entry) => (
