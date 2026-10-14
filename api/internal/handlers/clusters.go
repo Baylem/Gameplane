@@ -336,7 +336,10 @@ func (h clustersHandler) delete(w http.ResponseWriter, req *http.Request) {
 	// deletion. Legacy fixed names predate managed-by; rotated names require it.
 	// UID/version preconditions preserve replacements and external references.
 	if kubeconfigSecret != nil {
-		if err := h.k.Secrets(h.namespace).Delete(cleanupCtx, kubeconfigSecret.Name, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(kubeconfigSecret)}); err != nil && !apierrors.IsNotFound(err) {
+		// A blocked gateway read must not consume the kubeconfig's cleanup budget.
+		credentialCtx, cancelCredential := context.WithTimeout(context.WithoutCancel(req.Context()), 5*time.Second)
+		defer cancelCredential()
+		if err := h.k.Secrets(h.namespace).Delete(credentialCtx, kubeconfigSecret.Name, metav1.DeleteOptions{Preconditions: objectDeletePreconditions(kubeconfigSecret)}); err != nil && !apierrors.IsNotFound(err) {
 			slog.Warn("cluster delete: kubeconfig secret cleanup failed", "cluster", name, "err", err)
 		}
 	}

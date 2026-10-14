@@ -95,11 +95,14 @@ func (h clustersHandler) replaceKubeconfig(w http.ResponseWriter, req *http.Requ
 		return
 	}
 	h.reg.RemoveIfUID(name, registration.GetUID())
+	// Retire the captured credential before refreshing the workload client.
+	// A concurrent health probe or slow store can consume the refresh budget;
+	// it must not leave a fixed-name credential blocking later registration.
+	h.cleanupKubeconfigCredential(cleanupCtx, name, oldSecret)
 	// Loading uses the same bounded and validated transport as startup.
 	// It rechecks the live UID/version before publication; the poll/watch can
 	// retry if a concurrent health update or removal defeats this refresh.
 	_ = kube.RefreshRegisteredCluster(cleanupCtx, h.k, h.reg, h.namespace, name, registration.GetUID())
-	h.cleanupKubeconfigCredential(cleanupCtx, name, oldSecret)
 	w.WriteHeader(http.StatusNoContent)
 }
 

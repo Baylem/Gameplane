@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/GameplanePanel/gameplane/api/internal/kube"
 	"github.com/go-chi/chi/v5"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -17,6 +19,87 @@ import (
 	"k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 )
+
+type stalledRotationRefresh struct {
+	kube.ClusterStore
+	published bool
+	stalled   bool
+}
+
+func (s *stalledRotationRefresh) Update(ctx context.Context, obj *unstructured.Unstructured, opts metav1.UpdateOptions, subresources ...string) (*unstructured.Unstructured, error) {
+	updated, err := s.ClusterStore.Update(ctx, obj, opts, subresources...)
+	if err == nil {
+		s.published = true
+	}
+	return updated, err
+}
+
+func (s *stalledRotationRefresh) Get(ctx context.Context, name string, opts metav1.GetOptions, subresources ...string) (*unstructured.Unstructured, error) {
+	if s.published && !s.stalled {
+		s.stalled = true
+		// Model a queued or blocked refresh consuming the whole cleanup budget.
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	return s.ClusterStore.Get(ctx, name, opts, subresources...)
+}
+
+func TestKubeconfigCleanupSurvivesExpiredClientRefresh(t *testing.T) {
+	t.Parallel()
+	home, _, router, registration := registeredRotationFixture(t)
+	oldName, _, _ := unstructured.NestedString(registration.Object, "spec", "kubeconfigSecret", "name")
+	home.ClusterStore = &stalledRotationRefresh{ClusterStore: home.ClusterStore}
+	rotated := strings.ReplaceAll(standaloneTestKubeconfig, "secret-standalone-registration-token", "rotated-cleanup-token")
+	if rr := doClusters(t, router, http.MethodPut, "/clusters/remote/kubeconfig", map[string]string{"kubeconfig": rotated}); rr.Code != http.StatusNoContent {
+		t.Fatalf("rotate: %d %s", rr.Code, rr.Body)
+	}
+	if _, err := home.Secrets(standaloneTestNamespace).Get(t.Context(), oldName, metav1.GetOptions{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("expired refresh stranded old credential: %v", err)
+	}
+	if rr := doClusters(t, router, http.MethodDelete, "/clusters/remote", nil); rr.Code != http.StatusNoContent {
+		t.Fatalf("delete: %d %s", rr.Code, rr.Body)
+	}
+	if rr := doClusters(t, router, http.MethodPost, "/clusters/", clusterCreateReq{Name: "remote", Kubeconfig: rotated}); rr.Code != http.StatusCreated {
+		t.Fatalf("re-registration after timed-out refresh: %d %s", rr.Code, rr.Body)
+	}
+}
+
+type stalledGatewayCredentialRead struct {
+	kube.SecretStore
+	gatewayName string
+}
+
+func (s stalledGatewayCredentialRead) Get(ctx context.Context, name string, opts metav1.GetOptions) (*corev1.Secret, error) {
+	if name == s.gatewayName {
+		<-ctx.Done()
+		return nil, ctx.Err()
+	}
+	return s.SecretStore.Get(ctx, name, opts)
+}
+
+func TestClusterDeletionSeparatesCredentialCleanupBudgets(t *testing.T) {
+	t.Parallel()
+	home, _, router, registration := registeredRotationFixture(t)
+	kubeconfigName, _, _ := unstructured.NestedString(registration.Object, "spec", "kubeconfigSecret", "name")
+	if rr := doClusters(t, router, http.MethodPut, "/clusters/remote/gateway", gatewayCertificateRequest(t)); rr.Code != http.StatusNoContent {
+		t.Fatalf("configure: %d", rr.Code)
+	}
+	current, err := home.Clusters().Get(t.Context(), "remote", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	gatewayName := gatewayCredentialName(current)
+	secrets := home.SecretStore
+	home.SecretStore = func(namespace string) kube.SecretStore {
+		return stalledGatewayCredentialRead{SecretStore: secrets(namespace), gatewayName: gatewayName}
+	}
+	if rr := doClusters(t, router, http.MethodDelete, "/clusters/remote", nil); rr.Code != http.StatusNoContent {
+		t.Fatalf("delete: %d %s", rr.Code, rr.Body)
+	}
+	if _, err := secrets(standaloneTestNamespace).Get(t.Context(), kubeconfigName, metav1.GetOptions{}); !apierrors.IsNotFound(err) {
+		t.Fatalf("gateway read consumed kubeconfig cleanup budget: %v", err)
+	}
+}
 
 func TestCombinedGatewayConfigurationRejectsUnsafeDestination(t *testing.T) {
 	home := &kube.Client{Typed: kubefake.NewSimpleClientset(), Dynamic: fake.NewSimpleDynamicClient(runtime.NewScheme())}
