@@ -257,6 +257,28 @@ func newBarChart(name, labelHead, valueHead string, track bool, items []barItem)
 	return c
 }
 
+// Wide bar layout for a bar card that spans the page (Versions by install),
+// so its text renders near 13px at full width.
+const (
+	wideBarChartW = 1320.0
+	wideBarLabelW = 200.0
+	wideBarMaxW   = 1020.0
+	wideBarValueX = 1312.0
+)
+
+// widenBars returns c laid out for a full-width card. Bar lengths keep their
+// share of the track.
+func widenBars(c barChart) barChart {
+	w := c
+	w.W, w.BarX, w.TrackW, w.ValueX = wideBarChartW, wideBarLabelW, wideBarMaxW, wideBarValueX
+	w.Bars = make([]barRow, len(c.Bars))
+	for i, b := range c.Bars {
+		b.Bar = round1(b.Bar / barMaxW * wideBarMaxW)
+		w.Bars[i] = b
+	}
+	return w
+}
+
 // countBars builds bar items from counts, scaled to the largest count.
 func countBars(labels []string, counts []int64) []barItem {
 	var maxV int64

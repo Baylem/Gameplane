@@ -16,6 +16,7 @@ type extCharts struct {
 	Games           barChart
 	Features        barChart
 	VersionsInstall barChart
+	VersionsWide    barChart // VersionsInstall laid out for wide screens
 	Trend           trendChart
 	WindowDays      int
 }
@@ -98,6 +99,7 @@ func buildExtendedCharts(v Views, table bool) *extCharts {
 		bc.Table = table
 	}
 	c.New.Table, c.Lapsed.Table = table, table
+	c.VersionsWide = widenBars(c.VersionsInstall)
 	return c
 }
 
@@ -114,10 +116,11 @@ type trendChart struct {
 
 // trendPanel is one series of the version trend; Class colours its swatch.
 type trendPanel struct {
-	Label string
-	Class string
-	Note  string
-	Chart columnChart
+	Label  string
+	Class  string
+	Note   string
+	Chart  columnChart
+	Narrow columnChart // set for the stale panel: its layout for narrow screens
 }
 
 // trendRow is one day of the version trend's table view.
@@ -169,7 +172,8 @@ func buildTrendChart(t VersionTrend, table bool) trendChart {
 		note = "Behind " + t.NewestRelease + ", on its own scale"
 	}
 	c.Stale = trendPanel{Label: "Stale", Class: seriesAmber, Note: note,
-		Chart: layoutColumns(trendStaleCols, "Stale installs per day", seriesAmber, "Day", "Installs", stale, dayLabelEvery(n), 0)}
+		Chart:  layoutColumns(trendStaleCols, "Stale installs per day", seriesAmber, "Day", "Installs", stale, dayLabelEvery(n), 0),
+		Narrow: layoutColumns(trendPanelCols, "Stale installs per day", seriesAmber, "Day", "Installs", stale, every, 0)}
 	return c
 }
 

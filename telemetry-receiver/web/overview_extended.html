@@ -65,7 +65,8 @@
 </div>
 <figure class="card chart-card">
 <figcaption class="card-head"><span><span class="card-title">Versions by install</span><span class="muted block">Installs by their last reported version, over the last {{.WindowDays}} days (the shorter of the range and the activity-record expiry).</span></span></figcaption>
-{{template "bars" .VersionsInstall}}
+{{if .VersionsInstall.Table}}{{template "bars" .VersionsInstall}}{{else}}<div class="only-wide">{{template "bars" .VersionsWide}}</div>
+<div class="only-narrow">{{template "bars" .VersionsInstall}}</div>{{end}}
 </figure>
 <figure class="card chart-card trend" id="version-trend">
 <figcaption class="card-head"><span><span class="card-title">Version trend</span><span class="muted block">Installs per day that upgraded, downgraded, changed between versions that can't be ordered, or stayed behind the newest version seen in the range{{with .Trend.Newest}} ({{.}}){{end}}. Extended reports only.</span></span>
@@ -87,7 +88,8 @@
 {{end}}</div>
 {{with .Trend.Stale}}<div class="panel">
 <p class="panel-head"><span class="swatch {{.Class}}"></span>{{.Label}} <span class="muted">{{.Note}}</span></p>
-{{template "columns" .Chart}}
+<div class="only-wide">{{template "columns" .Chart}}</div>
+<div class="only-narrow">{{template "columns" .Narrow}}</div>
 </div>{{end}}
 {{end}}
 </figure>
