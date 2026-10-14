@@ -207,7 +207,7 @@ export function ModulesPage() {
       )}
 
       <div
-        className="grid pt-2 items-start gap-x-4 gap-y-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        className="grid items-start gap-x-4 gap-y-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         data-testid="modules-grid"
       >
         {visible.map((entry) => (

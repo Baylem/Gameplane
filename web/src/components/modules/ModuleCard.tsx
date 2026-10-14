@@ -114,22 +114,22 @@ export function ModuleCard({
           <div className="text-base font-medium text-foreground">
             {entry.displayName ?? entry.name}
           </div>
-          <div className="pt-0.5 font-mono text-[11px] text-muted">{versionLabel}</div>
+          <div className="font-mono text-[11px] text-muted">{versionLabel}</div>
           {digest && (
-            <div className="flex items-center gap-1 pt-0.5 font-mono text-[10px] text-muted">
+            <div className="flex items-center gap-1 font-mono text-[10px] text-muted">
               <Fingerprint className="h-3 w-3 shrink-0" />
               <span className="truncate">{shortDigest(digest)}</span>
             </div>
           )}
           {entry.installed && entry.previousVersion && (
-            <div className="flex items-center gap-1 pt-0.5 text-[10px] text-muted">
+            <div className="flex items-center gap-1 text-[10px] text-muted">
               <History className="h-3 w-3 shrink-0" />
               rollback target · v{entry.previousVersion}
             </div>
           )}
         </div>
         {resolveCategories(entry.categories, entry.game ?? entry.name).length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
+          <div className="flex flex-wrap gap-1.5">
             {resolveCategories(entry.categories, entry.game ?? entry.name).map((c) => (
               <Chip key={c} variant="tertiary" size="sm" className="text-[11px] font-medium">
                 {c}
