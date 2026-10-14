@@ -75,7 +75,9 @@ test.describe("live: role bindings", () => {
       .locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' flex-col ')][1]");
     await expect(roleCard.getByText("1 permission", { exact: true })).toBeVisible();
 
-    // 2. Grant the role to the user in gameplane-games from the Edit dialog.
+    // 2. Grant the role to the user in gameplane-games from the Edit dialog. The user
+    // was seeded through the API after the list loaded, so reload to refetch it.
+    await page.reload();
     await page.getByRole("tab", { name: /^Users/ }).click();
     const grid = page.getByRole("grid", { name: "Users list" });
     await expect(grid.getByRole("row").filter({ hasText: uname })).toBeVisible({ timeout: 15_000 });

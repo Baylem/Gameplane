@@ -247,8 +247,12 @@ test.describe("live: backup and restore a running server", () => {
 
     await page.goto("/backups?tab=restores");
     const restoresTable = page.getByRole("grid", { name: "Restores" });
-    const failedRow = restoresTable.getByRole("row").filter({ hasText: serverName }).first();
-    await expect(failedRow.getByText("Failed", { exact: true })).toBeVisible({ timeout: 90_000 });
+    // The happy path's Succeeded restore targets the same server, so match the Failed row itself.
+    const failedRow = restoresTable
+      .getByRole("row")
+      .filter({ hasText: serverName })
+      .filter({ has: page.getByText("Failed", { exact: true }) });
+    await expect(failedRow).toBeVisible({ timeout: 90_000 });
     await expect(failedRow.getByText(/target server .* not found/)).toBeVisible({ timeout: 10_000 });
   });
 });
