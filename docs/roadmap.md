@@ -32,6 +32,7 @@ discovered along the way gets added.
 - Removed: the Hell Let Loose module is withdrawn from the official catalog ([changelog](../CHANGELOG.md)).
 - Upgrade-note behaviour changes: telemetry is on by default for new installs after a first-login notice; installs with a saved basic toggle start sending to the default receiver after upgrade; an empty `api.telemetry.endpoint` means the project default receiver; the receiver `/metrics` moved to `:8081` and needs the dashboard token; the bundled receiver stores data on a PVC by default; receiver `DASHBOARD_TOKEN` must be at least 32 characters ([changelog](../CHANGELOG.md)).
 - Breaking: selected-cluster module and template grants need a cluster-wide grant for remote catalogs ([changelog](../CHANGELOG.md)).
+- Upgrade note: every game pod gains an empty capture `emptyDir`, so existing GameServers roll once on upgrade ([changelog](../CHANGELOG.md)).
 
 ### Shipped in v0.3.0
 
@@ -272,7 +273,7 @@ Status as of 2026-10-14. Task counts come from each spec's `tasks.md`.
 - **Spec 022, default telemetry destination, extended telemetry and telemetry dashboard** (`specs/022-default-telemetry-dashboard/`): 109 of 119 tasks done. The shipped feature is unchanged until the version-trend amendment (2026-10-14, T101 to T110) lands. Blocked: T104 needs Pencil design work on the machine where Pencil runs; T109 needs the user's sign-off before editing existing tests `lifecycle_test.go:11` and `charts_test.go:83`; T110 waits for the PR to merge. Unblocked by: the design work, that sign-off, and the merge.
 - **Spec 023, change-based test selection** (`specs/023-change-based-test-selection/`): 0 of 52 tasks done; no open decisions remain. No blocker is named. T001 creates the `ci: full-run` label. T052 needs 30 merged PRs to measure runner minutes.
 - **Spec 023, standalone panel and API** (`specs/023-standalone-panel/`, see [standalone panel](standalone-panel.md)): the core behaviour is listed under Unreleased in the [changelog](../CHANGELOG.md). The spec has no `tasks.md`, so the remaining work is not tracked. Unblocked by: writing `tasks.md`.
-- **Spec 024, documentation refresh, feature catalog and roadmap status** (`specs/024-docs-feature-list-refresh/`): 0 of 45 tasks checked; this refresh is in progress. No blocker is named.
+- **Spec 024, documentation refresh, feature catalog and roadmap status** (`specs/024-docs-feature-list-refresh/`): in progress: the catalog, roadmap and sync check are drafted; the website and main repo PRs are next. No blocker is named.
 
 ---
 
@@ -312,13 +313,6 @@ process).
 
 ---
 
-## Out of scope for v1
-
-- **A hosted/managed Gameplane (not planned).** The project targets self-hosted clusters, from
-  a single-node k3s homelab to multi-node production.
-
----
-
 ## Known gaps tracked for completion
 
 ### Users page: service accounts and identity-provider tabs (planned, v1.1)
@@ -340,6 +334,13 @@ are tracked there in the module repository rather than in this main repo, and
 are a known incomplete item for v1. As of 2026-10-14, 26 of the 29 modules have
 a `specs.md`; `enshrouded`, `minecraft-java` and `v-rising` do not yet. See the
 module submodule's project board for status.
+
+---
+
+## Out of scope for v1
+
+- **A hosted/managed Gameplane (not planned).** The project targets self-hosted clusters, from
+  a single-node k3s homelab to multi-node production.
 
 ---
 

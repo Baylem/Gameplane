@@ -281,7 +281,7 @@ jobs:
               - 'hack/test-check-features-sync.sh'
               - 'hack/testdata/check-features-sync/**'
               # `docs/**` broadly: check-links resolves relative links from
-              # the 18 audited files against ANY file under docs/ (e.g.
+              # the 19 audited files against ANY file under docs/ (e.g.
               # docs/architecture.md -> docs/agent-architecture.md), not
               # just the other audited files, so renaming a non-audited doc
               # must still run the gate.
