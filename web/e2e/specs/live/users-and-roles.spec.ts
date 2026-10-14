@@ -6,7 +6,7 @@ import { LoginPage } from "../../pages/LoginPage";
 // Live users-and-roles coverage: the Users & RBAC page (web/src/routes/Users.tsx)
 // driven against the REAL API. Covers invite -> role change -> persisted
 // reload -> sign-in as the new user with the operator permission set, plus the
-// grant-binding error path for a user that no longer exists.
+// role-change error path (404) for a user that no longer exists.
 //
 // Login budget: loginIfNeeded (the shared admin session from storageState)
 // covers the page under test; the only extra login is the fresh context that
@@ -110,10 +110,10 @@ test.describe("live: users and roles", () => {
     }
   });
 
-  test("granting a namespace role to a deleted user surfaces the API 404 inline", async ({ page, request }) => {
-    // Error path. A primary-role PATCH on a deleted user returns a 500 rather
-    // than a clean 404, so this test uses the grants path, where addBinding
-    // checks user existence and returns 404 "user not found".
+  test("changing the role of a deleted user surfaces the API 404 inline", async ({ page, request }) => {
+    // Error path (T040). PATCH /users/{id} with a role on a deleted user
+    // returns 404 "user not found" (users.go update, #699), which the Edit
+    // dialog renders as its inline alert.
     const ghostName = `e2e-ghost-${stamp}-${Math.random().toString(36).slice(2, 6)}`;
     const ghost = await seedUser(request, { username: ghostName, password: pw });
     cleanupUsernames.push(ghostName);
@@ -126,12 +126,15 @@ test.describe("live: users and roles", () => {
     });
     await openEditDialog(page, ghostName);
 
-    // Delete the user behind the open dialog, then try to grant a binding.
+    // Delete the user behind the open dialog, then try to change its role.
     await deleteUser(request, ghost.id);
 
-    await page.getByPlaceholder("namespace").fill("gameplane-games");
-    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await page.locator("#edit-role").click();
+    await page.getByRole("option", { name: "operator", exact: true }).click();
+    await page.getByRole("button", { name: "Save changes", exact: true }).click();
 
-    await expect(page.getByRole("alert").filter({ hasText: "user not found" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("dialog").getByRole("alert").filter({ hasText: "user not found" })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

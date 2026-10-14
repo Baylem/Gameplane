@@ -243,13 +243,13 @@ description: "Task list for 013-expand-test-coverage"
 
   Error path: saving `http://169.254.169.254/` renders the API's SSRF rejection inline. Clean up in `afterEach`. Selectors come from `web/src/routes/AdminSettings.tsx` and the existing `AdminSettings_notifications.test.tsx`.
   *Implementation note (2026-10-14)*: Reworded to current behaviour (valgul card 2026-10-14, "Test current"): the UI cannot edit a sink URL, so the spec toggles the sink's enabled switch instead of editing the URL. Save accepts http://169.254.169.254/; the SSRF guard (netguard in notify.HTTPClient) rejects it at delivery, so the error path asserts the inline result after "Send test".
-- [ ] T040 [P] [US2] Write `web/e2e/specs/live/users-and-roles.spec.ts`:
+- [X] T040 [P] [US2] Write `web/e2e/specs/live/users-and-roles.spec.ts`:
   1. Create a user with a unique name through the Users page, and assign it a built-in non-admin role.
   2. Reload and assert the role.
   3. In a fresh `browser.newContext()` with no `storageState`, sign in as that user, which is the spec's one extra login, and assert the sidebar shows only the role's nav entries.
 
   Error path: assigning a role to a user deleted through `_seed.ts` surfaces the 404 message. `afterEach` deletes the user.
-  *Implementation note (2026-10-14)*: spec written on #693; open until the API returns 404 (today 500) for a role change on a deleted user. valgul chose "Fix in separate PR" on the card; after that PR merges, the error path switches from the namespace-grant 404 to the role-change 404 and this task is ticked.
+  *Implementation note (2026-10-14)*: the role PATCH on a deleted user returned 500; valgul chose "Fix in separate PR" on the card, and #699 made it 404 "user not found" (test change signed off on its own card). The spec's error path changes a deleted user's role in the Edit dialog and asserts the inline 404 alert, as written.
 - [X] T041 [P] [US2] Write `web/e2e/specs/live/role-bindings.spec.ts`:
   1. Create a custom role with `RoleEditorModal` and bind it to a namespace-scoped user seeded through `_seed.ts`.
   2. Reload and assert the binding.
