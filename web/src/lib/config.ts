@@ -85,6 +85,9 @@ export interface NotificationsCfg {
 
 export interface TelemetryCfg {
   sendMetrics: boolean;
+  // Extended tier (spec 022). The server saves it as false whenever
+  // sendMetrics is false.
+  extended: boolean;
 }
 
 // Mod-registry providers that take an admin-configured API key (mirrors

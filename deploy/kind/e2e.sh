@@ -8,7 +8,7 @@
 # Diffs from dev-up (deploy/kind/up.sh):
 #   - Single-node cluster (faster boot, sufficient for E2E coverage).
 #   - Skips ingress-nginx (the dashboard isn't exercised here).
-#   - Loads pre-built gameplane-test/{operator,api,agent,sentinel,capture-sidecar,fakeoidc}:<tag>
+#   - Loads pre-built gameplane-test/{operator,api,agent,sentinel,capture-sidecar,telemetry-receiver,fakeoidc}:<tag>
 #     images (and gameplane-test/gameprobe:<tag> when present).
 #   - Helm install with --wait so pods are Ready before tests start.
 #
@@ -62,7 +62,7 @@ install_metallb() {
 # read back from docker rather than hardcoded, because the bridge subnet is
 # docker's choice (commonly 172.18.0.0/16) and not guaranteed.
 apply_metallb_pools() {
-    local subnet prefix range_east range_west attempt
+    local subnet prefix range_east range_west range_single attempt
     subnet="$(docker network inspect kind \
         -f '{{range .IPAM.Config}}{{.Subnet}} {{end}}' | tr ' ' '\n' | grep -m1 '\.' || true)"
     case "${subnet}" in
@@ -75,8 +75,9 @@ apply_metallb_pools() {
     prefix="$(echo "${subnet}" | cut -d. -f1,2)"
     range_east="${prefix}.255.100-${prefix}.255.110"
     range_west="${prefix}.255.200-${prefix}.255.210"
+    range_single="${prefix}.255.150-${prefix}.255.150"
 
-    echo "defining MetalLB pools pool-us-east (${range_east}) and pool-us-west (${range_west})"
+    echo "defining MetalLB pools pool-us-east (${range_east}), pool-us-west (${range_west}) and pool-e2e-single (${range_single})"
     # IPAddressPool and L2Advertisement are gated by MetalLB's validating
     # webhook, which keeps refusing connections for a few seconds after the
     # controller Deployment reports Available. Retry instead of racing it.
@@ -104,6 +105,20 @@ spec:
   addresses:
     - ${range_west}
 ---
+# pool-e2e-single holds exactly one address and never auto-assigns. It exists
+# only so TestAddressPool_PoolExhausted can exhaust a pool without starving the
+# parallel tests that draw from pool-us-east and pool-us-west. Do not reference
+# it from any other test.
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: pool-e2e-single
+  namespace: metallb-system
+spec:
+  autoAssign: false
+  addresses:
+    - ${range_single}
+---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
@@ -121,6 +136,15 @@ metadata:
 spec:
   ipAddressPools:
     - pool-us-west
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: pool-e2e-single
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - pool-e2e-single
 EOF
         then
             return 0
@@ -163,11 +187,15 @@ EOF
     install_metallb
     apply_metallb_pools
 
-    echo "loading gameplane-test/{operator,api,agent,sentinel,capture-sidecar}:${TAG} images into kind"
-    for img in operator api agent sentinel capture-sidecar; do
+    echo "loading gameplane-test/{operator,api,agent,sentinel,capture-sidecar,telemetry-receiver,mcp-server,audit-syslog-bridge,tunnel-frp}:${TAG} images into kind"
+    for img in operator api agent sentinel capture-sidecar telemetry-receiver mcp-server audit-syslog-bridge tunnel-frp; do
         if ! docker image inspect "gameplane-test/${img}:${TAG}" >/dev/null 2>&1; then
             echo "  missing local image gameplane-test/${img}:${TAG} — building"
-            docker build -t "gameplane-test/${img}:${TAG}" -f "${REPO}/${img}/Dockerfile" "${REPO}"
+            dockerfile="${REPO}/${img}/Dockerfile"
+            if [ "${img}" = tunnel-frp ]; then
+                dockerfile="${REPO}/tunnel/Dockerfile.frp"
+            fi
+            docker build -t "gameplane-test/${img}:${TAG}" -f "${dockerfile}" "${REPO}"
         fi
         kind load docker-image "gameplane-test/${img}:${TAG}" --name "${CLUSTER}"
     done
@@ -298,6 +326,8 @@ EOF
     # Disable the web front end: the suite drives the API directly via
     # port-forward (never the browser), so building/loading the nginx image
     # would only add minutes, and `--wait` would block on an unloaded image.
+    # Deploy the bundled telemetry receiver and point the API at it: never let
+    # CI or dev installs reach the project provider (spec 022 R17).
     helm upgrade --install gameplane "${CHART_DIR}" \
         --namespace gameplane-system --create-namespace \
         --set "image.registry=gameplane-test" \
@@ -318,6 +348,7 @@ EOF
         --set "operator.addressManager=metallb" \
         --set "operator.gameDataStorage.storageClassName=gameplane-e2e-install-default" \
         --set "defaultModuleSource.enabled=false" \
+        --set "api.telemetry.receiver.enabled=true" \
         --wait --timeout 5m
 
     echo

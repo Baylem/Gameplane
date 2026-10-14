@@ -63,7 +63,7 @@ export function useFleetLocation(): readonly [string, (value: string) => void] {
     void navigate({
       to: ".",
       replace: true,
-      search: (previous) => ({ ...previous, cluster: value || undefined }),
+      search: (previous: Record<string, unknown>) => ({ ...previous, cluster: value || undefined }),
     });
   }, [navigate]);
   return [location, choose];

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ValgulNecron/gameplane/gp-module/internal/validator"
+	"github.com/GameplanePanel/gameplane/gp-module/internal/validator"
 )
 
 // version is the gp-module release, surfaced via --version and compared by

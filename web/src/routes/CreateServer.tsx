@@ -41,7 +41,7 @@ const STEP_TITLES: Record<StepKey, string> = {
   review: "Review",
 };
 
-const DOCS_CREATE_SERVER_URL = "https://valgulnecron.github.io/gameplane-website/docs/getting-started";
+const DOCS_CREATE_SERVER_URL = "https://gameplanepanel.github.io/website/docs/getting-started";
 
 function stepsFor(template: GameTemplate | null): StepKey[] {
   const base: StepKey[] = ["template", "configure", "network", "review"];

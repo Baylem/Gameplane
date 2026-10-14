@@ -12,9 +12,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/ValgulNecron/gameplane/api/internal/db"
-	"github.com/ValgulNecron/gameplane/api/internal/kube"
-	"github.com/ValgulNecron/gameplane/netguard"
+	"github.com/GameplanePanel/gameplane/api/internal/db"
+	"github.com/GameplanePanel/gameplane/api/internal/kube"
+	"github.com/GameplanePanel/gameplane/netguard"
 )
 
 // EventTest is the synthetic type sent by the test endpoint. It is not in
@@ -47,6 +47,7 @@ const queueSize = 256
 // shipped to generic webhook sinks, so field renames are a breaking change
 // for webhook consumers.
 type Event struct {
+	Cluster   string    `json:"cluster,omitempty"`
 	Type      EventType `json:"type"`
 	TS        string    `json:"ts"`
 	Kind      string    `json:"kind,omitempty"` // CRD kind: GameServer | Backup | Restore

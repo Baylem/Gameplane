@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
+	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
 )
 
 const (
@@ -735,7 +735,7 @@ func buildPlayitPortsConfig(tmpl *gameplanev1alpha1.GameTemplate) string {
 
 // Tunnel image defaults.
 const (
-	DefaultTunnelFrpImage       = "ghcr.io/valgulnecron/gameplane/tunnel-frp:dev"
-	DefaultTunnelTailscaleImage = "ghcr.io/valgulnecron/gameplane/tunnel-tailscale:dev"
-	DefaultTunnelPlayitImage    = "ghcr.io/valgulnecron/gameplane/tunnel-playit:dev"
+	DefaultTunnelFrpImage       = "ghcr.io/gameplanepanel/gameplane/tunnel-frp:dev"
+	DefaultTunnelTailscaleImage = "ghcr.io/gameplanepanel/gameplane/tunnel-tailscale:dev"
+	DefaultTunnelPlayitImage    = "ghcr.io/gameplanepanel/gameplane/tunnel-playit:dev"
 )

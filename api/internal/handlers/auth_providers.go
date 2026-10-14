@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/ValgulNecron/gameplane/api/internal/auth"
+	"github.com/GameplanePanel/gameplane/api/internal/auth"
 )
 
 type loginProvider struct {

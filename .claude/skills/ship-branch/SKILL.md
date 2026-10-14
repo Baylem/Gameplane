@@ -62,7 +62,7 @@ description: "Use when a branch is ready to become a PR, or a merged PR needs cl
    **Add labels via REST API** (rule 14: `gh pr edit` is broken on this repo):
    ```sh
    # Example: type:fix + area:api
-   gh api -X POST repos/ValgulNecron/Gameplane/issues/<PR_NUMBER>/labels \
+   gh api -X POST repos/GameplanePanel/Gameplane/issues/<PR_NUMBER>/labels \
      -f "labels[]=type: fix" \
      -f "labels[]=area: api"
    ```
@@ -75,7 +75,7 @@ description: "Use when a branch is ready to become a PR, or a merged PR needs cl
 
 8. Verify labels were applied:
    ```sh
-   gh api repos/ValgulNecron/Gameplane/issues/<PR_NUMBER>/labels \
+   gh api repos/GameplanePanel/Gameplane/issues/<PR_NUMBER>/labels \
      -q '[.[].name]|join(", ")'
    ```
 

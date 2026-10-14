@@ -1,5 +1,5 @@
-import { Clock } from "lucide-react";
-import { Card, Alert } from "@heroui/react";
+import { CalendarClock, Megaphone, Moon } from "lucide-react";
+import { Card } from "@heroui/react";
 
 import type { GameServer } from "@/types";
 import { formatRelative, capitalize } from "@/lib/utils";
@@ -29,17 +29,15 @@ export function ServerSleepCard({ gs }: { gs?: GameServer }) {
   const neverSleeps = reason === "this game reports no player count";
 
   return (
-    <Card className="border border-border bg-surface">
+    <Card className="border border-border bg-card p-0">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-foreground" />
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Sleep</h3>
-        </div>
+      <div className="flex items-center justify-between px-6 pt-5 pb-3">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">Sleep</h3>
+        <Moon className="h-4 w-4 text-muted" />
       </div>
 
       {/* Content */}
-      <div className="space-y-3 p-4 text-sm">
+      <div className="space-y-3 px-6 pb-5 text-[13px]">
         {/* Asleep state */}
         {asleep && (
           <>
@@ -96,20 +94,18 @@ export function ServerSleepCard({ gs }: { gs?: GameServer }) {
         {!asleep && !emptySince && reason && (
           <>
             {neverSleeps ? (
-              <Alert status="warning">
-                <Alert.Indicator>
-                  <span className="text-warning">⚠</span>
-                </Alert.Indicator>
-                <Alert.Content>
-                  <div className="space-y-1">
-                    <div className="font-semibold text-warning">Will never sleep</div>
-                    <div className="text-xs text-muted">
-                      {capitalize(reason)}. Idle auto-sleep needs a live player count. This game
-                      exposes none over RCON or a query protocol, so the countdown never starts.
-                    </div>
+              <>
+                <div className="flex items-start gap-4 rounded-[8px] border border-warning-soft-foreground bg-warning-soft px-4 py-3">
+                  <Megaphone className="mt-0.5 h-4 w-4 shrink-0 text-warning-soft-foreground" />
+                  <div className="min-w-0 flex-1 space-y-0.5 text-warning-soft-foreground">
+                    <div className="text-[14px] font-medium">Will never sleep</div>
+                    <div className="text-[13px]">{capitalize(reason)}.</div>
                   </div>
-                </Alert.Content>
-              </Alert>
+                </div>
+                <p className="text-xs leading-[1.4] text-muted">
+                  Idle auto-sleep needs a live player count. This game exposes none over RCON or a query protocol, so the countdown never starts.
+                </p>
+              </>
             ) : (
               <div className="rounded-md border border-border bg-surface/60 px-3 py-2">
                 <dt className="text-muted">State</dt>
@@ -131,32 +127,30 @@ export function ServerSleepCard({ gs }: { gs?: GameServer }) {
         {/* Configuration */}
         {spec?.enabled && (
           <>
-            <div className="border-t border-border pt-3">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+            <div className="pt-1">
+              <div className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">
                 Configured
               </div>
             </div>
 
-            <div className="rounded-md border border-border bg-surface/60 px-3 py-2">
-              <dt className="text-muted">Sleep after</dt>
-              <dd className="font-mono text-fg">
+            <div className="flex items-center justify-between rounded-[8px] border border-border bg-[var(--default)] px-3.5 py-2.5">
+              <dt className="text-[13px] text-muted">Sleep after</dt>
+              <dd className="font-mono text-[13px] text-foreground">
                 {afterMinutes} minute{afterMinutes === 1 ? "" : "s"}
               </dd>
             </div>
 
-            <div className="space-y-1">
-              <dt className="text-muted">Wake windows</dt>
+            <div className="space-y-3">
               {wakeWindows.length > 0 ? (
-                <dd className="space-y-1">
-                  {wakeWindows.map((cron, i) => (
-                    <div
-                      key={i}
-                      className="rounded-md border border-border bg-surface/60 px-3 py-2 font-mono text-fg"
-                    >
-                      {cron}
-                    </div>
-                  ))}
-                </dd>
+                wakeWindows.map((cron, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-[8px] border border-border bg-[var(--default)] px-3.5 py-2.5"
+                  >
+                    <CalendarClock className="h-3.5 w-3.5 text-muted" />
+                    <span className="font-mono text-[13px] text-foreground">{cron}</span>
+                  </div>
+                ))
               ) : (
                 <dd className="text-xs text-muted">Not configured</dd>
               )}

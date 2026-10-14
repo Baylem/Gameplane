@@ -4,9 +4,9 @@ description: Kubernetes-native game server control panel (open-source alternativ
 type: application
 version: 0.3.0
 appVersion: "0.3.0"
-home: https://github.com/ValgulNecron/gameplane
+home: https://github.com/GameplanePanel/gameplane
 sources:
-  - https://github.com/ValgulNecron/gameplane
+  - https://github.com/GameplanePanel/gameplane
 keywords:
   - game-server
   - minecraft

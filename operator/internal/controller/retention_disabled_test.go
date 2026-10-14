@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
+	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
 )
 
 // Disabled retention must neither query the API nor start snapshot cleanup by
@@ -131,6 +131,9 @@ func (c *retentionListCountingClient) List(ctx context.Context, list client.Obje
 	return c.Client.List(ctx, list, opts...)
 }
 
+// retentionBackupWithSnapshotFinalizer creates a completed backup for ns/sched.
+// The finalizer keeps deletion observable through DeletionTimestamp, and distinct
+// completion years put fixtures in separate buckets for every time-based rule.
 func retentionBackupWithSnapshotFinalizer(name string, year int) *gameplanev1alpha1.Backup {
 	ct := metav1.NewTime(time.Date(year, time.June, 15, 12, 0, 0, 0, time.UTC))
 	return &gameplanev1alpha1.Backup{
