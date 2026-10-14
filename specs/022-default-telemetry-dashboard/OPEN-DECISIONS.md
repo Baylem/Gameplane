@@ -1,6 +1,6 @@
 # Open Decisions
 
-**Status**: 2 open (OD-14, OD-15); 13 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07, OD-6 on 2026-10-08, OD-7 to OD-13 on 2026-10-14).
+**Status**: 1 open (OD-15); 14 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07, OD-6 on 2026-10-08, OD-7 to OD-14 on 2026-10-14).
 
 Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract in code, chart defaults or docs until it is ruled here.
 
@@ -210,13 +210,15 @@ Since the standalone panel (GameplanePanel/Gameplane#630) the API can run withou
 
 ### OD-14: Older reports in the deployment breakdown
 
-**Status**: OPEN
+**Status**: RULED (2026-10-14, user)
 
 **Question**: Installs on releases before the marker send extended reports without it (schema 1). Their deployment is unknown. How does the breakdown show them?
 
 **Options**:
 1. Count as `other`, the rule every other environment field uses for a value that doesn't fit (FR-013). **Recommended.**
 2. Leave them out: shares are computed only over installs that send the marker, and the card says how many sent it.
+
+**Ruling**: (1) count as `other`.
 
 ### OD-15: Environment fields on a standalone or central panel
 

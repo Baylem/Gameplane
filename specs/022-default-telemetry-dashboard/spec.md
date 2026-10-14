@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft (clarified); amended 2026-10-14 with the version trend (US5, FR-042), and again on 2026-10-14 with standalone and multicluster reporting (FR-043–FR-045; OD-14 and OD-15 open)
+**Status**: Draft (clarified); amended 2026-10-14 with the version trend (US5, FR-042), and again on 2026-10-14 with standalone and multicluster reporting (FR-043–FR-045; OD-15 open)
 
 **Input**: User description: "Right now telemetry is only something someone can add. i want to add a default to a domain (not yet defined) and also build a dashboard to show the data provided by the telemetry provider". Follow-ups: "also could we extend the telemetry?" and "right now there is no verif for data sent. so i want a way for server to 'claim' the id with a key derivated from stable local value to sign the data so no one can impersonatte other id"
 
@@ -418,7 +418,7 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 
 - **FR-043**: An install MUST send one report for everything its panel manages. Server and template counts (FR-010), game usage and the cluster-derived feature flags (wake-on-connect, relay tunnels, backups) MUST be summed over the local cluster, when there is one, plus every registered remote cluster (OD-11). A standalone panel, which has no local cluster, counts its registered clusters only. A registered cluster's servers count in the report of the panel that manages them. The basic report keeps exactly its three fields (FR-010).
 - **FR-044**: When a registered cluster can't be listed while a report is built (unreachable, or its credentials rejected), the install MUST leave that cluster out of the counts and still send the report on schedule (OD-12). The report MUST NOT be delayed, retried or skipped because of it, and the clusters band (FR-011) MUST still count every registered cluster.
-- **FR-045**: The extended report MUST carry a **deployment** marker in its environment: `standalone` when the panel runs without a local cluster, `cluster` otherwise (OD-13). It is a new extended schema version. The provider MUST accept both the new and the previous schema, and MUST keep a daily per-category count for deployment like the other environment fields (FR-020). A provider older than this amendment refuses the new schema, and the install falls back to basic reports for it (FR-016). How reports on the previous schema, which carry no marker, appear in the breakdown is OD-14 (open). Whether the other environment fields keep describing only the panel's own cluster is OD-15 (open).
+- **FR-045**: The extended report MUST carry a **deployment** marker in its environment: `standalone` when the panel runs without a local cluster, `cluster` otherwise (OD-13). It is a new extended schema version. The provider MUST accept both the new and the previous schema, and MUST keep a daily per-category count for deployment like the other environment fields (FR-020). A provider older than this amendment refuses the new schema, and the install falls back to basic reports for it (FR-016). Reports on the previous schema carry no marker and count as `other` in the breakdown (OD-14). Whether the other environment fields keep describing only the panel's own cluster is OD-15 (open).
 
 ### Key Entities
 

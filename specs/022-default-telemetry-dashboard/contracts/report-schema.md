@@ -119,6 +119,6 @@ A refused report changes no stored data.
 | Old install (basic only) → new receiver | Accepted, counted as basic. |
 | New install with `ext` → a receiver released before this feature (≤ v0.3.0) | 400. The install re-POSTs basic only, which is accepted, and suppresses `ext` for that endpoint for 7 days. |
 | New install with `ext.schema` N → receiver that supports a lower schema | 400. Same fallback as the row above. |
-| Install on schema 1 (no `deployment`) → receiver that supports schema 2 | Accepted. The deployment breakdown counts it per OD-14 (open). |
+| Install on schema 1 (no `deployment`) → receiver that supports schema 2 | Accepted. The deployment breakdown counts it as `other` (OD-14). |
 | Install whose ID is claimed by another key → new receiver | 409. The install replaces its ID, re-signs and re-POSTs once (FR-037). |
 | Bad signature, stale send time or replay → new receiver | 403. Counts as a failed attempt with normal backoff. No fallback and no ID rotation. |

@@ -609,9 +609,9 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Independent Test**: SC-018.
 
-**Blocked**: OD-14 and OD-15 are open. No task in this phase starts until both are ruled (constitution: a spec is fully written before work starts).
+**Blocked**: OD-15 is open. No task in this phase starts until it is ruled (constitution: a spec is fully written before work starts).
 
-- [ ] T121 [P] In `telemetryschema/`: raise `SchemaVersion` to `2`, add `Env.Deployment` and the enumeration `Deployments = {"cluster", "standalone"}` in `enums.go`, and make `decodeEnv` require `deployment` on schema 2 and refuse it on schema 1 (unknown key). Schema 1 reports decode with `Deployment` per OD-14. Update `telemetryschema/specs.md`.
+- [ ] T121 [P] In `telemetryschema/`: raise `SchemaVersion` to `2`, add `Env.Deployment` and the enumeration `Deployments = {"cluster", "standalone"}` in `enums.go`, and make `decodeEnv` require `deployment` on schema 2 and refuse it on schema 1 (unknown key). Schema 1 reports decode with `Deployment` set to `other` (OD-14). Update `telemetryschema/specs.md`.
 - [ ] T122 [US5] Design first, on the local machine where Pencil runs: in `telemetry-receiver/telemetry-dashboard.pen`, add a "Deployment" share card to the environment breakdowns of frame `i0xK1E`, matching the other environment cards. Export it into `telemetry-receiver/design-export/` and commit the export with the design (rules 1, 2).
 - [ ] T123 [US5] Receiver, after T121: add `dimDeployment` to the `daily_dim` writes in `ingest_ext.go`, `Env.Deployment` to `views.go` (`extended.env.deployment`), and after T122 the card in `charts_ext.go` and `web/overview_extended.html`. Update `telemetry-receiver/specs.md` and `README.md`.
 - [ ] T124 API, after T121: give `telemetry.Deps` the cluster registry (`api/cmd/main.go:352`), and in `api/internal/telemetry/collect.go` list servers, templates and backup schedules on every cluster in `Registry.IDs()` with a per-cluster timeout, sum them, skip clusters whose list fails (FR-043, FR-044), and set `Env.Deployment` from `IsStandalone()` (FR-045). Environment fields follow OD-15. Bump `extSchema` to `2`.
@@ -650,7 +650,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - T109 depends on T102 and T103
 - **Polish (Phase 10)** depends on every story. T099 also waits for OD-1, and T100 waits for the merge.
 - **Amendment (Phase 11)** depends only on the shipped feature. T111–T113 and T115 can start at once; T114 runs on the local machine; T117 waits for T114; T119 waits for T111–T117 and the sign-off it names.
-- **Amendment (Phase 12)** waits for OD-14 and OD-15. Then T121 first; T122 runs on the local machine; T123 waits for T121 and T122; T124 and T125 wait for T121; T126 waits for T121–T125.
+- **Amendment (Phase 12)** waits for OD-15. Then T121 first; T122 runs on the local machine; T123 waits for T121 and T122; T124 and T125 wait for T121; T126 waits for T121–T125.
 
 ### Story order (graph)
 

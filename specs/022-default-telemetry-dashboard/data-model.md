@@ -203,7 +203,7 @@ Responses inside one attempt:
 `daily_dim` dimensions:
 
 - `k8s`, `distro`, `arch` (one row per architecture present), `nodes`
-- `deployment` (FR-045; a schema 1 report has no marker, and how it is counted is OD-14, open)
+- `deployment` (FR-045; a schema 1 report has no marker and counts as `other`, OD-14)
 - `tunnel` (one row per provider present)
 - `clusters`, `db`, `language`
 - `feature` with value `wakeOnConnect`, `capture`, `backups`, `sso` or `auditForwarding` (a row only when the value is true)
