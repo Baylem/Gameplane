@@ -597,9 +597,27 @@ description: "Task list for feature 022: default telemetry destination, extended
   - new `telemetry-receiver/versionorder_test.go`: semver up, down, equal across `v` prefixes, pre-releases, and every non-semver label as unordered
   - new cases in `ingest_ext_test.go` and `population_test.go` for SC-017, including duplicates and refused reports leaving both tables unchanged, and `views_test.go` for `versionTrend` with and without extended data
   - **needs the user's sign-off before editing** (existing tests whose expectations change): `lifecycle_test.go:11` adds the two tables to `dailyTables` so the retention sweep covers them; `charts_test.go:83` if it asserts the old "Versions" title
-- [ ] T120 Push the branch and open the PR with the `ship-branch` skill; labels `type: feature`, `area: shared`, `area: specs` through REST (rule 14). After merge, `git mv specs/022-default-telemetry-dashboard specs/done_022-default-telemetry-dashboard`, update in-repo references, and delete the branch (rules 12, 16).
+- [ ] T120 Push the branch and open the PR with the `ship-branch` skill; labels `type: feature`, `area: shared`, `area: specs` through REST (rule 14). After merge, `git mv specs/022-default-telemetry-dashboard specs/done_022-default-telemetry-dashboard`, update in-repo references, and delete the branch (rules 12, 16). The re-archive waits until Phase 12 is done too.
 
 **Checkpoint**: the trend is visible and every series matches SC-017.
+
+---
+
+## Phase 12: Amendment 2026-10-14 — standalone and multicluster reporting (FR-043–FR-045)
+
+**Goal**: A central or standalone panel reports once for every cluster it manages, skips clusters it can't reach, and says whether it is a cluster install or a standalone panel (OD-11–OD-13, research R23).
+
+**Independent Test**: SC-018.
+
+**Blocked**: OD-14 and OD-15 are open. No task in this phase starts until both are ruled (constitution: a spec is fully written before work starts).
+
+- [ ] T121 [P] In `telemetryschema/`: raise `SchemaVersion` to `2`, add `Env.Deployment` and the enumeration `Deployments = {"cluster", "standalone"}` in `enums.go`, and make `decodeEnv` require `deployment` on schema 2 and refuse it on schema 1 (unknown key). Schema 1 reports decode with `Deployment` per OD-14. Update `telemetryschema/specs.md`.
+- [ ] T122 [US5] Design first, on the local machine where Pencil runs: in `telemetry-receiver/telemetry-dashboard.pen`, add a "Deployment" share card to the environment breakdowns of frame `i0xK1E`, matching the other environment cards. Export it into `telemetry-receiver/design-export/` and commit the export with the design (rules 1, 2).
+- [ ] T123 [US5] Receiver, after T121: add `dimDeployment` to the `daily_dim` writes in `ingest_ext.go`, `Env.Deployment` to `views.go` (`extended.env.deployment`), and after T122 the card in `charts_ext.go` and `web/overview_extended.html`. Update `telemetry-receiver/specs.md` and `README.md`.
+- [ ] T124 API, after T121: give `telemetry.Deps` the cluster registry (`api/cmd/main.go:352`), and in `api/internal/telemetry/collect.go` list servers, templates and backup schedules on every cluster in `Registry.IDs()` with a per-cluster timeout, sum them, skip clusters whose list fails (FR-043, FR-044), and set `Env.Deployment` from `IsStandalone()` (FR-045). Environment fields follow OD-15. Bump `extSchema` to `2`.
+- [ ] T125 [P] Add `env.deployment` to `noticeExtendedFields` in `api/internal/handlers/telemetry.go`, to the `env` type in `web/src/lib/api.ts`, and to the extended field list in `docs/` and the website data-handling statement (submodule PR flow, then a pointer bump).
+- [ ] T126 Tests (CI only, rule 8): new tests for schema 1 and 2 decoding, the deployment dimension, cross-cluster counting with one unreachable cluster, and the standalone marker (SC-018). Existing tests whose expectations change (for example a schema version or field list they assert) need the user's sign-off before editing, with the exact before and after.
+- [ ] T127 Ship through the open PR or a new one, as the user decides when the phase starts; labels `type: feature`, `area: api`, `area: shared`, `area: specs` (plus `area: web` for T125) through REST (rule 14).
 
 ---
 
@@ -632,6 +650,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - T109 depends on T102 and T103
 - **Polish (Phase 10)** depends on every story. T099 also waits for OD-1, and T100 waits for the merge.
 - **Amendment (Phase 11)** depends only on the shipped feature. T111–T113 and T115 can start at once; T114 runs on the local machine; T117 waits for T114; T119 waits for T111–T117 and the sign-off it names.
+- **Amendment (Phase 12)** waits for OD-14 and OD-15. Then T121 first; T122 runs on the local machine; T123 waits for T121 and T122; T124 and T125 wait for T121; T126 waits for T121–T125.
 
 ### Story order (graph)
 

@@ -27,7 +27,7 @@ All timestamps are RFC 3339 UTC strings bound from Go. All days are UTC calendar
 
 | Field | Type | Rule |
 |---|---|---|
-| `schema` | int | Required, `1`. A receiver rejects values above the one it supports with 400. |
+| `schema` | int | Required, `1`, or `2` from the standalone and multicluster amendment (FR-045), which adds `env.deployment`. A receiver rejects values above the one it supports with 400. |
 | `installId` | string | Required. Lowercase UUIDv4. A malformed ID makes the receiver drop `ext` and count the report as basic only. |
 | `env` | Env | Required. |
 | `games` | Games | Required. |
@@ -42,6 +42,7 @@ All timestamps are RFC 3339 UTC strings bound from Go. All days are UTC calendar
   - `distro` (enumeration)
   - `arch` (non-empty sorted set from an enumeration)
   - `nodes` (band)
+  - `deployment` (`cluster` or `standalone`; schema 2 only, FR-045)
 - **Games**:
   - `official`: a map from catalog module name to its server count (int ≥ 1; zero entries are omitted)
   - `custom`: int ≥ 0
@@ -202,6 +203,7 @@ Responses inside one attempt:
 `daily_dim` dimensions:
 
 - `k8s`, `distro`, `arch` (one row per architecture present), `nodes`
+- `deployment` (FR-045; a schema 1 report has no marker, and how it is counted is OD-14, open)
 - `tunnel` (one row per provider present)
 - `clusters`, `db`, `language`
 - `feature` with value `wakeOnConnect`, `capture`, `backups`, `sso` or `auditForwarding` (a row only when the value is true)

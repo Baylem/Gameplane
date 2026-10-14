@@ -486,3 +486,19 @@ No new RBAC is needed; every source is already readable (see the baseline facts)
 - Stale at ingest against the newest version seen so far: rejected, the result would depend on arrival order and ignore the selected range.
 - A hand-written semver parser in `telemetryschema`: rejected, the `x/mod` package is the reference implementation and is already vetted in this workspace.
 
+## R23. Standalone and multicluster reporting (FR-043–FR-045, OD-11–OD-15)
+
+**Decision**:
+- **Counting across clusters** goes through the API's cluster registry (`kube.Registry`, `api/internal/kube/registry.go`), which already holds one client per managed cluster: the local cluster when there is one, and every registered remote that `kube.WatchClusters` loaded. `telemetry.Deps` gains the registry; `Collect` lists GameServers, GameTemplates and backup schedules on each client from `Registry.IDs()` and sums them. This replaces the local-only `listItems` path, whose comment says "The basic counts cover the local cluster only".
+- **Unreachable clusters** (OD-12): a cluster whose list call fails is skipped for that report, the same way a failed list already yields 0 today. Each list call keeps a short per-cluster timeout so one dead cluster can't hold the report past its slot. The clusters band still counts registered clusters, not reachable ones.
+- **Deployment marker** (OD-13): `ext.env.deployment` is `standalone` when the API runs with `--standalone` (`kube.Client.IsStandalone()`), `cluster` otherwise. The extended schema becomes `2`. `telemetryschema.Decode` accepts schema `1` without the field and schema `2` with it, so a new receiver keeps accepting older installs; an older receiver answers schema `2` with 400, and the existing basic-only fallback (FR-016, `api/internal/telemetry/telemetry.go`) applies. The receiver stores the marker as a `daily_dim` dimension, so no new table is needed.
+- **Order of release**: the receiver and `telemetryschema` learn schema `2` in the same change that makes the API send it. The default provider has to run the new receiver before the first release that sends schema `2`, so the fallback only affects self-hosted receivers that weren't upgraded.
+
+**Rationale**: The registry is the one place that already knows every managed cluster and its credentials, so telemetry counts what the panel manages without a second discovery path. A marker in `env` reuses the enumerated-dimension pipeline (sanitising, `daily_dim`, share bars) end to end.
+
+**Alternatives considered**:
+- Each member cluster reports for itself: rejected, the user asked for reporting through the central panel (OD-11).
+- Skip the report until every cluster answers: rejected by OD-12.
+- A new top-level `ext.deployment` field instead of `env.deployment`: rejected, it is an environment attribute and the dashboard shows it with the other environment breakdowns.
+- Infer standalone on the receiver from `env.k8s = other`: rejected, a cluster install whose version can't be read also sends `other`.
+
