@@ -80,6 +80,7 @@ jobs:
       go: ${{ steps.combine.outputs.go }}
       web: ${{ steps.combine.outputs.web }}
       charts: ${{ steps.combine.outputs.charts }}
+      standalone: ${{ steps.combine.outputs.standalone }}
       e2e: ${{ steps.combine.outputs.e2e }}
       weblive: ${{ steps.combine.outputs.weblive }}
       images: ${{ steps.combine.outputs.images }}
@@ -149,6 +150,18 @@ jobs:
               # from these; an edit to either must re-run it.
               - 'operator/config/crd/**'
               - 'hack/sync-chart-crds.sh'
+            # Compose builds only API, its local module dependencies, and web.
+            # Deployment prose and unrelated Go/chart changes need no smoke VM.
+            standalone:
+              - 'api/**'
+              - 'netguard/**'
+              - 'gameaction/**'
+              - 'gp-module/**'
+              - 'telemetryschema/**'
+              - 'web/**'
+              - 'deploy/standalone/compose*.yaml'
+              - 'deploy/standalone/smoke.py'
+              - '.dockerignore'
             e2etree:
               - 'test/e2e/**'
               - 'deploy/kind/**'
@@ -294,6 +307,7 @@ jobs:
           GO: ${{ steps.scope.outputs.go }}
           WEB: ${{ steps.filter.outputs.web }}
           CHARTS: ${{ steps.filter.outputs.charts }}
+          STANDALONE: ${{ steps.filter.outputs.standalone }}
           E2ETREE: ${{ steps.filter.outputs.e2etree }}
           GAMECOVERAGE: ${{ steps.filter.outputs.gamecoverage }}
           CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' }}
@@ -308,6 +322,7 @@ jobs:
           gov=false;  { [ "$GO" = true ]     || [ "$CI" = true ]; } && gov=true
           webv=false; { [ "$WEB" = true ]    || [ "$CI" = true ]; } && webv=true
           chv=false;  { [ "$CHARTS" = true ] || [ "$CI" = true ]; } && chv=true
+          standalonev=false; { [ "$STANDALONE" = true ] || [ "$CI" = true ]; } && standalonev=true
           e2ev=false; { [ "$GO" = true ] || [ "$CHARTS" = true ] || [ "$E2ETREE" = true ] || [ "$GAMECOVERAGE" = true ] || [ "$CI" = true ]; } && e2ev=true
           wlv=false;  { [ "$e2ev" = true ] || [ "$WEB" = true ] || [ "$CI" = true ]; } && wlv=true
           ghv=false;  { [ "$GITHUB" = true ] || [ "$CI" = true ]; } && ghv=true
@@ -323,6 +338,7 @@ jobs:
             echo "go=$gov"
             echo "web=$webv"
             echo "charts=$chv"
+            echo "standalone=$standalonev"
             echo "e2e=$e2ev"
             echo "weblive=$wlv"
             echo "images=$wlv"
@@ -946,6 +962,52 @@ jobs:
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
       - run: helm lint charts/gameplane
 
+  standalone-compose:
+    name: standalone Compose smoke
+    needs: [changes]
+    if: needs.changes.outputs.standalone == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # Match Compose's image names for its fixed gameplane-panel project.
+      # Separate cache scopes prevent the API/web exports overwriting each other.
+      - name: build standalone API
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: api/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: gameplane-panel-gameplane-api:latest
+          cache-from: type=gha,scope=standalone-api
+          cache-to: type=gha,mode=max,scope=standalone-api
+      - name: build standalone dashboard
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: web/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: gameplane-panel-web:latest
+          cache-from: type=gha,scope=standalone-web
+          cache-to: type=gha,mode=max,scope=standalone-web
+      - name: start standalone panel
+        run: docker compose -f deploy/standalone/compose.yaml up -d --no-build --pull never
+      - name: bootstrap and verify persistent standalone panel
+        run: python3 deploy/standalone/smoke.py
+      - name: container logs
+        if: failure()
+        run: docker compose -f deploy/standalone/compose.yaml logs
+      - name: remove smoke containers and volume
+        if: always()
+        run: docker compose -f deploy/standalone/compose.yaml down --volumes
+
   chart-template:
     name: chart render
     needs: [changes]
@@ -960,6 +1022,8 @@ jobs:
       - run: helm template gameplane charts/gameplane > /tmp/rendered.yaml
       - name: gateway isolation and API-disabled chart renders
         run: python3 charts/tests/check_gateway.py
+      - name: standalone panel isolation and persistence chart renders
+        run: python3 charts/tests/check_standalone.py
       - name: sanity-check rendered manifests
         run: |
           grep -q 'kind: Deployment' /tmp/rendered.yaml
@@ -1397,8 +1461,8 @@ jobs:
 
   # The api's PostgreSQL backend (--db-driver=postgres) is compiled only
   # with -tags postgres, so the `go` matrix and `lint` never build it. This
-  # job builds and vets api with the tag and runs api/internal/db's tests
-  # against a real PostgreSQL service; the db_postgres_test.go tests skip
+  # job builds and vets api with the tag and runs database and standalone
+  # management storage tests against a real PostgreSQL service; these tests skip
   # unless GAMEPLANE_TEST_POSTGRES_DSN is set. The server keeps the image's
   # default (non-C) locale on purpose: TestPostgres_TextOrderingIsByteWise
   # checks the migrations' COLLATE "C" columns sort byte-wise regardless.
@@ -1449,11 +1513,11 @@ jobs:
       - name: go vet -tags postgres
         working-directory: api
         run: go vet -tags postgres ./...
-      - name: test api/internal/db against PostgreSQL
+      - name: test database and standalone management storage against PostgreSQL
         working-directory: api
         env:
           GAMEPLANE_TEST_POSTGRES_DSN: postgres://postgres@localhost:5432/gameplane_test?sslmode=disable
-        run: go test -tags postgres -count=1 ./internal/db/...
+        run: go test -tags postgres -count=1 ./internal/db/... ./internal/controlplane/...
 
   # ---------------------------------------------------------------------
   # kind e2e — one job per suite, each with its own throwaway cluster on
@@ -2125,6 +2189,7 @@ jobs:
         web-e2e-mock,
         helm,
         chart-template,
+        standalone-compose,
         workflow-lint,
         go-e2e-unit,
         api-postgres,
@@ -2231,7 +2296,7 @@ jobs:
             const NEEDS_ORDER = [
               'changes', 'build-images', 'build-images-arm64', 'vuln-images',
               'capture-sidecar-setcap-proof', 'docs', 'codegen-drift', 'submodule-freshness', 'dependency-review', 'vuln-go', 'lint', 'go',
-              'web', 'web-e2e-mock', 'helm', 'chart-template', 'workflow-lint', 'go-e2e-unit',
+              'web', 'web-e2e-mock', 'helm', 'chart-template', 'standalone-compose', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-go-arm64', 'e2e-multicluster', 'e2e-multicluster-arm64', 'e2e-upgrade', 'e2e-upgrade-arm64',
               'e2e-web-live', 'e2e-web-live-arm64', 'e2e-game-bot', 'e2e-capture-overhead', 'e2e-kind-ingress-smoke',
@@ -2254,6 +2319,7 @@ jobs:
               'web-e2e-mock': (n) => n === 'web e2e (mock)',
               helm: (n) => n === 'helm lint',
               'chart-template': (n) => n === 'chart render',
+              'standalone-compose': (n) => n === 'standalone Compose smoke',
               'workflow-lint': (n) => n === 'workflow lint',
               'go-e2e-unit': (n) => n === 'go (test/e2e)',
               'api-postgres': (n) => n === 'api (postgres)',
