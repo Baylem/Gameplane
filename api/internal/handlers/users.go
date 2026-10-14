@@ -592,7 +592,7 @@ func (h *userHandler) update(w http.ResponseWriter, req *http.Request) {
 		}
 		n, _ := res.RowsAffected()
 		if n == 0 {
-			httperr.Write(w, req, sql.ErrNoRows)
+			http.Error(w, "user not found", http.StatusNotFound)
 			return
 		}
 		// Keep the cluster-wide ("*") role binding in sync with the primary
