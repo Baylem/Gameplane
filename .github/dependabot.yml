@@ -242,6 +242,21 @@ updates:
       tunnel-minor-patch:
         update-types: ["minor", "patch"]
 
+  # frpc build module (tunnel/Dockerfile.frp builds frpc from these pins)
+  - package-ecosystem: "gomod"
+    directory: "/tunnel/frpc"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    open-pull-requests-limit: 5
+    groups:
+      tunnel-frpc-minor-patch:
+        update-types: ["minor", "patch"]
+
   # npm — 1 entry (React dashboard)
   - package-ecosystem: "npm"
     directory: "/web"
