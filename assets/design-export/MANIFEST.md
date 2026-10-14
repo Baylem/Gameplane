@@ -2550,3 +2550,12 @@ JSON: `Print(JSON.stringify(Get("EkcbF", {depth: 12})))`, `python3 -m json.tool`
 | `ffmEd` | … (New password typed) | New copy of `OC804`. Masked typed value, no remove button, helper "Write-only". |
 
 `Ne5TA` is unaffected. All four have MCP `Get` JSON exports (depth 20, zero elisions; `OC804`/`QFEg9` patched from the prior export with the `Get` result for the changed field subtree) and 2× PNG exports via `Export`. Validated by grepping `Password will be removed` (only `h5clan`) and `Remove password` (`OC804`, `QFEg9`, `h5clan`).
+
+## Incremental export 2026-10-14 — Central management banner on Modules Catalog and Admin Authentication (PR #685)
+
+| Node | Name | Change |
+| --- | --- | --- |
+| `kK8Ji` | Screen/Modules Catalog | Re-exported (1440×1320, was 1440×1150). A copy of the Central management notice from `Wj0V4` (`QOOnO`) now sits in Main between the Top Bar and the Body (`I2bQk`). The App Sidebar instance (`DlcuA`, replaces `h2sWTB`) carries the same overrides as `Wj0V4`'s sidebar (`EXGen`): brand subtitle "Central management" and both "Clusters" and "Cluster" under ADMIN, with Modules as the active item. The frame grew 45px for the notice and a further 125px so Row 3 is no longer clipped. |
+| `uMiwd` | Screen/Admin Settings — Authentication | Re-exported (1440×1636, was 1440×1591). Same notice copy (`UosI6`) and the same sidebar overrides as `EXGen` (`bbiZQ`, replaces `WrwBN`), with Settings as the active item. The frame grew 45px for the notice. |
+
+The app already renders the notice on `/modules` and `/admin`; the maintainer decided on 2026-10-12 that the design follows the app. The Top Bar and Body subtrees of both frames are unchanged, and no reusable component was touched. JSON: the committed export patched with `Get` results (depth 30, path geometry included) for the sidebar instance and the notice, then checked by length and FNV-1a hash against `JSON.stringify(Get(id, …))` of the whole frame on the canvas; `python3 -m json.tool` passes, zero `"..."` elisions. PNG: `Export(ids, "png", …, {scale: 2})` (2880×2640 and 2880×3272). Body-text check: `"Central management."` appears only in `kK8Ji.json`, `uMiwd.json` and `Wj0V4.json`.
