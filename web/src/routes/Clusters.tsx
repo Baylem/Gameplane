@@ -52,8 +52,8 @@ export function ClustersPage() {
         if (!open && !remove.isPending) { setRemoveTarget(null); remove.reset(); }
       }} title={`Remove ${removeTarget ?? ""}?`}
         description={<div className="space-y-3">
-          <p>Removes this panel's connection to the cluster. Running workloads remain on the cluster.</p>
-          {remove.error && <p role="alert" className="text-danger">Couldn't remove the cluster registration. Try again.</p>}
+          <p>Removes this panel&apos;s connection to the cluster. Running workloads remain on the cluster.</p>
+          {remove.error && <p role="alert" className="text-danger">Couldn&apos;t remove the cluster registration. Try again.</p>}
         </div>}
         confirmLabel="Remove cluster" destructive busy={remove.isPending} onConfirm={() => removeTarget && remove.mutate(removeTarget)} />
       {!isLoading && !error && !can(me, "cluster:manage") && !clusters.some((item) => item.canViewInventory) ? (

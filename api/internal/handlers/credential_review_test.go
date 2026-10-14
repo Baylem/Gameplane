@@ -61,8 +61,8 @@ type cancelClusterDelete struct {
 	cancel context.CancelFunc
 }
 
-func (s cancelClusterDelete) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	if err := s.ClusterStore.Delete(ctx, name, opts); err != nil {
+func (s cancelClusterDelete) Delete(ctx context.Context, name string, opts metav1.DeleteOptions, subresources ...string) error {
+	if err := s.ClusterStore.Delete(ctx, name, opts, subresources...); err != nil {
 		return err
 	}
 	s.cancel()
