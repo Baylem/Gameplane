@@ -43,7 +43,7 @@ All timestamps are RFC 3339 UTC strings bound from Go. All days are UTC calendar
   - `arch` (non-empty sorted set from an enumeration)
   - `nodes` (band)
   - `deployment` (`cluster` or `standalone`; schema 2 only, FR-045)
-  - in schema 2, `k8s` and `distro` are sorted sets over the reachable managed clusters, and `arch` is their union (OD-15); `nodes` per OD-16 (open)
+  - in schema 2, `k8s` and `distro` are sorted sets over the reachable managed clusters, and `arch` is their union (OD-15); `nodes` is one band over all their nodes (OD-16)
 - **Games**:
   - `official`: a map from catalog module name to its server count (int ≥ 1; zero entries are omitted)
   - `custom`: int ≥ 0

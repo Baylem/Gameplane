@@ -1,6 +1,6 @@
 # Open Decisions
 
-**Status**: 1 open (OD-16); 15 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07, OD-6 on 2026-10-08, OD-7 to OD-15 on 2026-10-14).
+**Status**: 0 open; 16 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07, OD-6 on 2026-10-08, OD-7 to OD-16 on 2026-10-14).
 
 Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract in code, chart defaults or docs until it is ruled here.
 
@@ -234,10 +234,12 @@ Since the standalone panel (GameplanePanel/Gameplane#630) the API can run withou
 
 ### OD-16: Node-count band across clusters
 
-**Status**: OPEN
+**Status**: RULED (2026-10-14, user)
 
 **Question**: With the environment fields covering every managed cluster (OD-15), is the node-count band one band for the total, or one band per cluster? The dashboard uses it for the share of single-node installs (SC-007).
 
 **Options**:
 1. Total nodes: one band over all nodes of the reachable clusters; three single-node clusters report `2-3`, and shares still add up to 100%. **Recommended.**
 2. Band per cluster: a set of bands; three single-node clusters report `1`, and shares can add up to more than 100%.
+
+**Ruling**: (1) total nodes. `env.nodes` stays one band, over all nodes of the reachable managed clusters.
