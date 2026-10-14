@@ -20,7 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"github.com/ValgulNecron/gameplane/agent/internal/httpjson"
+	"github.com/GameplanePanel/gameplane/agent/internal/httpjson"
 )
 
 // errPathOutOfRoot is the only "bad path" error safe to echo back to the

@@ -26,8 +26,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/ValgulNecron/gameplane/api/internal/auth"
-	"github.com/ValgulNecron/gameplane/api/internal/scope"
+	"github.com/GameplanePanel/gameplane/api/internal/auth"
+	"github.com/GameplanePanel/gameplane/api/internal/scope"
 )
 
 // ServerFetcher fetches a GameServer so the middleware can evaluate
@@ -92,7 +92,7 @@ func Middleware(fetch ServerFetcher) func(http.Handler) http.Handler {
 			}
 			ns := ""
 			cl := scope.DefaultCluster
-			if clusterInventoryRead(req.Method, req.URL.Path) {
+			if clusterInventoryRead(req.Method, req.URL.Path) || strings.HasPrefix(req.URL.Path, "/modules") || strings.HasPrefix(req.URL.Path, "/templates") {
 				// Authorize before discovery, including registered clusters whose
 				// credentials could not load. The handler validates registration.
 				cl = scope.RequestedCluster(req)
@@ -214,6 +214,7 @@ var rules = []rule{
 
 	// Admin area. Audit is a read; config splits read vs manage; anything
 	// else under /admin defaults to the admin wildcard (fail-closed-ish).
+	{method: "GET", segment: "admin", suffix: "/admin/installation", perm: ""},
 	{method: "GET", segment: "admin", prefix: "/admin/audit", perm: "audit:read"},
 	{method: "GET", segment: "admin", prefix: "/admin/config", perm: "config:read"},
 	{segment: "admin", prefix: "/admin/config", perm: "config:manage"},
@@ -225,6 +226,11 @@ var rules = []rule{
 	// Mod-registry provider key secrets pair with editing the
 	// modRegistries config section.
 	{segment: "admin", prefix: "/admin/registries", perm: "config:manage"},
+	// Telemetry status and notice (spec 022): reads need config:read, writes
+	// config:manage. The notice GET handler itself answers {"pending":false}
+	// to callers without config:manage.
+	{method: "GET", segment: "admin", prefix: "/admin/telemetry", perm: "config:read"},
+	{segment: "admin", prefix: "/admin/telemetry", perm: "config:manage"},
 	{segment: "admin", perm: "*"},
 
 	// Network capture (feature 003-network-capture-sidecar): admin-only via

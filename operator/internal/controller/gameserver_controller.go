@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
+	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
 )
 
 // GameServerReconciler reconciles a GameServer object into a StatefulSet,
@@ -242,7 +242,8 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Refresh and recover wipe ownership before deriving config or idle state.
 	// A later refresh would mix an older idle calculation with a newer status
 	// patch base and could overwrite a concurrent idle-clock update.
-	if changed, err := r.ensureWipeGuard(ctx, &gs); err != nil {
+	var wipeState wipeWorkerState
+	if changed, err := r.ensureWipeGuard(ctx, &gs, &wipeState); err != nil {
 		return requeueOnConflict(ctrl.Result{}, err)
 	} else if changed {
 		return ctrl.Result{Requeue: true}, nil
@@ -385,7 +386,7 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		logger.Error(err, "compute desired replicas")
 		return ctrl.Result{}, err
 	}
-	if err := r.reconcileStatefulSet(ctx, &gs, &tmpl, ver, mc, replicas); err != nil {
+	if err := r.reconcileStatefulSet(ctx, &gs, &tmpl, ver, mc, replicas, &wipeState); err != nil {
 		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -405,12 +406,12 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		logger.Error(err, "reconcile BackupSchedule")
 		return ctrl.Result{}, err
 	}
-	// Preflight already recovered legacy workers. An ordinary pass needs only
-	// finished-Job cleanup; avoid repeating namespace inventories here.
+	// Share the version-bound preflight/workload inventory with wipe handling.
+	// A live GameServer change can refresh it; an ordinary pass does not rescan.
 	var wipeErr error
 	if gs.Annotations[wipeGuardAnnotation] != "" || pendingWipe(&gs) {
-		wipeErr = r.reconcileWipe(ctx, &gs, &tmpl)
-	} else {
+		wipeErr = r.reconcileWipe(ctx, &gs, &tmpl, &wipeState)
+	} else if wipeState.matches(&gs) && len(wipeState.jobs) != 0 {
 		wipeErr = r.deleteWipeJob(ctx, &gs, gs.Name+"-wipe")
 	}
 	if err := wipeErr; err != nil {
@@ -1410,8 +1411,10 @@ func (r *GameServerReconciler) clearStopAnnotation(ctx context.Context, gs *game
 func (r *GameServerReconciler) reconcileStatefulSet(
 	ctx context.Context, gs *gameplanev1alpha1.GameServer, tmpl *gameplanev1alpha1.GameTemplate,
 	ver *gameplanev1alpha1.GameVersion, mc *materializedConfig, replicas int32,
+	inventory ...*wipeWorkerState,
 ) error {
 	image := resolveImage(gs, tmpl, ver)
+	workers := wipeInventory(inventory)
 
 	// Validate gs.Spec.Env secret and configmap references: any SecretKeyRef
 	// or ConfigMapKeyRef must target a server-owned resource. Referencing
@@ -1467,8 +1470,7 @@ func (r *GameServerReconciler) reconcileStatefulSet(
 			actualReplicas = 0
 		}
 		if live.Annotations[wipeGuardAnnotation] == "" && !pendingWipe(&live) {
-			workers, err := wipeWorkers(ctx, r.wipeReader(), &live)
-			if err != nil {
+			if err := r.loadWipeWorkers(ctx, &live, workers); err != nil {
 				return err
 			}
 			if workers.busy {
@@ -1632,12 +1634,12 @@ const DefaultConfigInitImage = "busybox:1.37.0"
 // DefaultSentinelImage is the image for the wake sentinel pod that holds
 // advertised ports while a server is asleep, waking it when a player connects.
 // Overridable via the operator's --sentinel-image flag for air-gapped installs.
-const DefaultSentinelImage = "ghcr.io/valgulnecron/gameplane/sentinel:dev"
+const DefaultSentinelImage = "ghcr.io/gameplanepanel/gameplane/sentinel:dev"
 
 // DefaultCaptureSidecarImage is the image for the network capture sidecar
 // ephemeral container injected when capture is enabled on a GameServer.
 // Overridable via the operator's --capture-sidecar-image flag for air-gapped installs.
-const DefaultCaptureSidecarImage = "ghcr.io/valgulnecron/gameplane/capture-sidecar:dev"
+const DefaultCaptureSidecarImage = "ghcr.io/gameplanepanel/gameplane/capture-sidecar:dev"
 
 // captureVolumeSizeLimitBytes is the "captures" emptyDir's kubelet-enforced
 // SizeLimit (see the "captures" Volume above). It is the single source of

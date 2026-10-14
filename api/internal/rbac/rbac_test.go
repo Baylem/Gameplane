@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/ValgulNecron/gameplane/api/internal/auth"
-	"github.com/ValgulNecron/gameplane/api/internal/db"
-	"github.com/ValgulNecron/gameplane/api/internal/scope"
+	"github.com/GameplanePanel/gameplane/api/internal/auth"
+	"github.com/GameplanePanel/gameplane/api/internal/db"
+	"github.com/GameplanePanel/gameplane/api/internal/scope"
 )
 
 // userForRole builds an authenticated User whose cluster-wide ("*")
@@ -178,6 +178,18 @@ func TestAllow(t *testing.T) {
 		{RoleOperator, "PUT", "/admin/registries/curseforge/secret", scope.DefaultCluster, false},
 		{RoleAdmin, "PUT", "/admin/registries/curseforge/secret", scope.DefaultCluster, true},
 		{RoleAdmin, "DELETE", "/admin/registries/curseforge/secret", scope.DefaultCluster, true},
+		// Telemetry notice (spec 022): reads need config:read, writes config:manage.
+		{RoleViewer, "GET", "/admin/telemetry/notice", scope.DefaultCluster, false},
+		{RoleAdmin, "GET", "/admin/telemetry/notice", scope.DefaultCluster, true},
+		{RoleViewer, "POST", "/admin/telemetry/notice", scope.DefaultCluster, false},
+		{RoleOperator, "POST", "/admin/telemetry/notice", scope.DefaultCluster, false},
+		{RoleAdmin, "POST", "/admin/telemetry/notice", scope.DefaultCluster, true},
+		// Telemetry status and install-ID reset (spec 022, prefix entries in rbac.go).
+		{RoleViewer, "GET", "/admin/telemetry", scope.DefaultCluster, false},
+		{RoleAdmin, "GET", "/admin/telemetry", scope.DefaultCluster, true},
+		{RoleViewer, "POST", "/admin/telemetry/install-id", scope.DefaultCluster, false},
+		{RoleOperator, "POST", "/admin/telemetry/install-id", scope.DefaultCluster, false},
+		{RoleAdmin, "POST", "/admin/telemetry/install-id", scope.DefaultCluster, true},
 		// Restores: read viewer+, create operator+ (backups:restore).
 		{RoleViewer, "GET", "/restores", scope.DefaultCluster, true},
 		{RoleViewer, "POST", "/restores", scope.DefaultCluster, false},

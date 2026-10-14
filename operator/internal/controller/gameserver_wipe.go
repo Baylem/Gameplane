@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
+	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
 )
 
 const (
@@ -41,8 +41,10 @@ fi`
 // arbitrate through the checked GameServer guard update.
 func (r *GameServerReconciler) reconcileWipe(
 	ctx context.Context, gs *gameplanev1alpha1.GameServer, tmpl *gameplanev1alpha1.GameTemplate,
+	inventory ...*wipeWorkerState,
 ) error {
-	changed, err := r.ensureWipeGuard(ctx, gs)
+	state := wipeInventory(inventory)
+	changed, err := r.ensureWipeGuard(ctx, gs, state)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -55,18 +57,15 @@ func (r *GameServerReconciler) reconcileWipe(
 	req := gs.Annotations[WipeRequestedAnnotation]
 	guard := gs.Annotations[wipeGuardAnnotation]
 	jobName := gs.Name + "-wipe"
-	state, err := wipeWorkers(ctx, r.wipeReader(), gs)
-	if err != nil {
-		return err
+	if !changed {
+		if err := r.loadWipeWorkers(ctx, gs, state); err != nil {
+			return err
+		}
 	}
 	// Foreign Jobs can never prove completion or authorize cleanup.
-	var job batchv1.Job
-	err = r.wipeReader().Get(ctx, types.NamespacedName{Name: jobName, Namespace: gs.Namespace}, &job)
-	if err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	exists := err == nil
-	if exists && !metav1.IsControlledBy(&job, gs) {
+	job := state.job
+	exists := job != nil
+	if exists && !metav1.IsControlledBy(job, gs) {
 		if pendingWipe(gs) {
 			return fmt.Errorf("wipe Job %s/%s is not controlled by this GameServer", gs.Namespace, jobName)
 		}
@@ -76,6 +75,9 @@ func (r *GameServerReconciler) reconcileWipe(
 		return nil
 	}
 	if guard == "" {
+		if len(state.jobs) == 0 {
+			return nil
+		}
 		return r.deleteWipeJob(ctx, gs, jobName)
 	}
 	if !pendingWipe(gs) || req != guard || (exists && job.Labels[wipeTokenLabel] != guard) {
@@ -110,7 +112,7 @@ func (r *GameServerReconciler) reconcileWipe(
 		if job.Status.Succeeded > 0 {
 			return r.recordWipeSuccess(ctx, gs, guard)
 		}
-		if jobPermanentlyFailed(&job) {
+		if jobPermanentlyFailed(job) {
 			// Retain guard, failed Job and logs even after a direct start request.
 			if !gs.Spec.Suspend {
 				gs.Spec.Suspend = true

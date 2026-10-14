@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gameplanev1alpha1 "github.com/ValgulNecron/gameplane/operator/api/v1alpha1"
+	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
 )
 
 const (
@@ -29,10 +29,42 @@ func pendingWipe(gs *gameplanev1alpha1.GameServer) bool {
 }
 
 type wipeWorkerState struct {
+	job      *batchv1.Job
 	jobs     []*batchv1.Job
 	livePods bool
 	busy     bool
 	token    string
+	server   client.ObjectKey
+	uid      types.UID
+	version  string
+	observed bool
+}
+
+// Inventory reuse is scoped to one reconcile and the exact GameServer version
+// observed before listing workers. A live guard read remains mandatory before
+// workload writes; a changed version requires a fresh inventory before resume.
+func (s *wipeWorkerState) matches(gs *gameplanev1alpha1.GameServer) bool {
+	return s.observed && s.server == client.ObjectKeyFromObject(gs) && s.uid == gs.UID && s.version == gs.ResourceVersion
+}
+
+// Preserve uncached orphan detection but avoid repeating it for an unchanged
+// live GameServer. Callers must discard this inventory after the reconcile.
+func (r *GameServerReconciler) loadWipeWorkers(ctx context.Context, gs *gameplanev1alpha1.GameServer, state *wipeWorkerState) error {
+	if state.matches(gs) {
+		return nil
+	}
+	var err error
+	*state, err = wipeWorkers(ctx, r.wipeReader(), gs)
+	return err
+}
+
+// Direct lifecycle callers get an isolated inventory; the main reconcile passes
+// its own shared state through acquisition, workload fencing and wipe handling.
+func wipeInventory(supplied []*wipeWorkerState) *wipeWorkerState {
+	if len(supplied) != 0 && supplied[0] != nil {
+		return supplied[0]
+	}
+	return &wipeWorkerState{}
 }
 
 // Inventory bypasses the cache and keeps terminating/orphan pods visible after
@@ -48,8 +80,10 @@ func wipeWorkers(ctx context.Context, reader client.Reader, gs *gameplanev1alpha
 		return state, err
 	}
 	ownedUIDs := map[types.UID]bool{}
-	jobExists := err == nil
-	if jobExists && metav1.IsControlledBy(&job, gs) {
+	if err == nil {
+		state.job = &job
+	}
+	if state.job != nil && metav1.IsControlledBy(&job, gs) {
 		state.jobs = append(state.jobs, &job)
 		if job.UID != "" {
 			ownedUIDs[job.UID] = true
@@ -62,6 +96,9 @@ func wipeWorkers(ctx context.Context, reader client.Reader, gs *gameplanev1alpha
 		}
 	}
 	var pods corev1.PodList
+	// A legacy pod can outlive its Job without carrying a guard or UID label.
+	// Restricting this list by labels (even when the Job is absent) would hide
+	// that writer on operator restart and permit a premature workload start.
 	if err := reader.List(ctx, &pods, client.InNamespace(gs.Namespace)); err != nil {
 		return state, err
 	}
@@ -82,6 +119,7 @@ func wipeWorkers(ctx context.Context, reader client.Reader, gs *gameplanev1alpha
 			}
 		}
 	}
+	state.server, state.uid, state.version, state.observed = client.ObjectKeyFromObject(gs), gs.UID, gs.ResourceVersion, true
 	return state, nil
 }
 
@@ -95,7 +133,9 @@ func (r *GameServerReconciler) wipeReader() client.Reader {
 // Called before workload mutation as well as before wipe side effects. Recovery
 // from a legacy Job-only/orphan state must fence a start after operator restart.
 // The resourceVersion Update arbitrates with restore claims and API writes.
-func (r *GameServerReconciler) ensureWipeGuard(ctx context.Context, gs *gameplanev1alpha1.GameServer) (changed bool, err error) {
+// Supplied inventory belongs to this reconcile only; acquisition still uses a
+// fresh GameServer read and cannot reuse observations from a different version.
+func (r *GameServerReconciler) ensureWipeGuard(ctx context.Context, gs *gameplanev1alpha1.GameServer, inventory ...*wipeWorkerState) (changed bool, err error) {
 	var live gameplanev1alpha1.GameServer
 	if err := r.wipeReader().Get(ctx, client.ObjectKeyFromObject(gs), &live); err != nil {
 		return false, err
@@ -107,8 +147,8 @@ func (r *GameServerReconciler) ensureWipeGuard(ctx context.Context, gs *gameplan
 	if gs.Annotations[wipeGuardAnnotation] != "" || gs.Annotations[restoreGuardAnnotation] != "" {
 		return false, nil
 	}
-	state, err := wipeWorkers(ctx, r.wipeReader(), gs)
-	if err != nil {
+	state := wipeInventory(inventory)
+	if err := r.loadWipeWorkers(ctx, gs, state); err != nil {
 		return false, err
 	}
 	needsGuard := pendingWipe(gs) || state.busy
