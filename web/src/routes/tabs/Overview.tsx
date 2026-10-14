@@ -128,7 +128,7 @@ export function OverviewTab({
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-3">
             <ResourceCard
               label="CPU"
@@ -169,12 +169,12 @@ export function OverviewTab({
             />
           </div>
 
-          <Card className="border border-border bg-surface">
-            <CardHeader className="flex flex-col gap-3 border-b border-border p-4">
+          <Card className="border border-border bg-card p-0">
+            <CardHeader className="flex flex-col gap-0 border-b border-border px-6 pb-5 pt-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Recent events</h3>
+                <h3 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">Recent events</h3>
                 <button
-                  className="text-xs font-medium text-accent hover:underline"
+                  className="text-xs text-accent hover:underline"
                   onClick={onViewAllEvents}
                 >
                   View all
@@ -190,12 +190,14 @@ export function OverviewTab({
           </Card>
         </div>
 
-        <div className="space-y-5">
-          <Card className="border border-border bg-surface">
-            <CardHeader className="border-b border-border px-4 py-3">
-              <h3 className="text-lg font-semibold text-foreground">Connection</h3>
+        <div className="space-y-6">
+          <ServerSleepCard gs={gs} />
+
+          <Card className="border border-border bg-card p-0">
+            <CardHeader className="px-6 pb-3 pt-5">
+              <h3 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">Connection</h3>
             </CardHeader>
-            <CardContent className="space-y-3 px-4 py-3 text-sm">
+            <CardContent className="space-y-3 px-6 pb-5 text-[13px]">
               {/* Tunnel row — only when a tunnel endpoint actually exists;
                   per design (EZFW0) this row doesn't appear at all otherwise. */}
               {primary?.tunnelProvider && (
@@ -287,8 +289,6 @@ export function OverviewTab({
 
           <ServerStatusCard name={name} ns={ns} tmpl={tmpl} running={running} gs={gs} />
 
-          <ServerSleepCard gs={gs} />
-
           <ServerActionsCard name={name} tmpl={tmpl} gs={gs} ns={ns} onOpenConsole={onOpenConsole} />
         </div>
       </div>
@@ -333,34 +333,34 @@ function ResourceCard({
 }) {
   const accentClass = {
     primary: "bg-accent",
-    success: "bg-success",
+    success: "bg-success-soft-foreground",
     warning: "bg-warning",
     violet: "bg-violet",
   }[accent ?? "primary"];
   const accentText = {
     primary: "text-accent",
-    success: "text-success",
+    success: "text-success-soft-foreground",
     warning: "text-warning",
     violet: "text-violet",
   }[accent ?? "primary"];
   const history = useMetricHistory(trend);
   return (
-    <Card className="border border-border bg-surface p-4">
-      <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted">
+    <Card className="flex flex-col gap-2 border border-border bg-card p-4">
+      <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.5px] text-muted">
         <span>{label}</span>
         <span className="text-muted">{icon}</span>
       </div>
-      <div className="pt-2 font-mono text-2xl font-bold text-foreground">{value}</div>
-      <Sparkline data={history} className={`mt-2 ${accentText}`} />
+      <div className="font-mono text-2xl font-bold text-foreground">{value}</div>
+      <Sparkline data={history} className={accentText} />
       {progress !== undefined && (
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface/60">
+        <div className="h-1.5 overflow-hidden rounded-full bg-[var(--default)]">
           <div
             className={`h-full ${accentClass}`}
             style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
           />
         </div>
       )}
-      {sub && <div className="pt-2 text-xs text-muted">{sub}</div>}
+      {sub && <div className="text-xs text-muted">{sub}</div>}
     </Card>
   );
 }
@@ -369,9 +369,9 @@ function ResourceCard({
 // bordered rows for each connection value, most with a copy affordance.
 function EndpointRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-start gap-2 rounded-[8px] border border-border bg-surface/60 px-3 py-2">
-      <span className="w-16 shrink-0 pt-1 text-xs font-medium text-muted">{label}</span>
-      <div className="flex min-w-0 flex-1 items-center gap-2">{children}</div>
+    <div className="flex items-center justify-between gap-2 rounded-[8px] border border-border bg-[var(--default)] px-3.5 py-2.5">
+      <span className="shrink-0 text-[13px] text-muted">{label}</span>
+      <div className="flex min-w-0 items-center justify-end gap-2">{children}</div>
     </div>
   );
 }
@@ -392,29 +392,29 @@ function PlayersCard({
     roster === undefined || roster.capabilities !== undefined;
 
   return (
-    <Card className="border border-border bg-surface">
-      <CardHeader className="border-b border-border px-4 py-3">
+    <Card className="border border-border bg-card p-0">
+      <CardHeader className="px-6 pb-3 pt-5">
         <div className="flex flex-col gap-1">
-          <h3 className="text-lg font-semibold text-foreground">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">
             Players online ·{" "}
-            <span className="font-mono">{onlineUnknown ? "—" : online}</span>
+            <span>{onlineUnknown ? "—" : online}</span>
           </h3>
           {rows.length > 0 && (
             <span className="text-xs text-muted">{rows.length} listed</span>
           )}
         </div>
       </CardHeader>
-      <CardContent className="px-4 py-3">
+      <CardContent className="px-6 pb-6">
         {!supported ? (
-          <p className="text-sm text-muted">
+          <p className="text-[13px] text-muted">
             Player list not supported for this game.
           </p>
         ) : onlineUnknown ? (
-          <p className="text-sm text-muted">Player count unknown.</p>
+          <p className="text-[13px] text-muted">Player count unknown.</p>
         ) : online === 0 ? (
-          <p className="text-sm text-muted">No players connected.</p>
+          <p className="text-[13px] text-muted">No players connected.</p>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-muted">
+          <p className="text-[13px] text-muted">
             {online} online · names not yet available.
           </p>
         ) : (

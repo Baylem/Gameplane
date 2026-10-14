@@ -2,7 +2,7 @@
 
 **Branch**: `feat/default-telemetry-dashboard` (not yet created; the spec-kit script derived `022-default-telemetry-dashboard`) | **Date**: 2026-10-06 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `specs/done_022-default-telemetry-dashboard/spec.md`
+**Input**: Feature specification from `specs/022-default-telemetry-dashboard/spec.md`
 
 ## Summary
 
@@ -109,7 +109,7 @@ No NEEDS CLARIFICATION remains. Every technical unknown is resolved in [research
 ### Documentation (this feature)
 
 ```text
-specs/done_022-default-telemetry-dashboard/
+specs/022-default-telemetry-dashboard/
 ├── spec.md
 ├── OPEN-DECISIONS.md        # OD-1..OD-5 ruled
 ├── plan.md                  # this file
@@ -217,6 +217,16 @@ The slices are implementation waves on **one feature branch and one PR**, in thi
 5. **E2E and docs:** the `telemetry` bucket, the upgrade assertion, FR-008 docs and CHANGELOG, `docs/security.md` threat-model additions, and website pages (through the submodule's own PR flow).
 
 Slices 2 and 3 can run in parallel once slice 1 is committed. Slice 4 needs slice 3's routes. Slice 5 needs everything before it.
+
+### Amendment slice (2026-10-14): version trend (FR-042)
+
+Spec 022 is reopened for one more slice on a new branch and PR; the shipped feature is unchanged until it lands.
+
+6. **Version trend** (US5 scenarios 7–9, FR-042, OD-7–OD-10, research R22):
+   - receiver storage: `daily_install_version` and `daily_version_change` (created with `CREATE TABLE IF NOT EXISTS`, so existing providers gain them on restart; no schema-version bump), plus their retention sweep
+   - version ordering through `golang.org/x/mod/semver`, a new direct dependency of `telemetry-receiver`
+   - classification in the extended ingest transaction, and the `extended.versionTrend` view block
+   - the design in `telemetry-receiver/telemetry-dashboard.pen` first (rename "Versions" to "Reports by version", add the trend chart under "Versions by install"), done on the local machine where Pencil runs, then the templates
 
 ## Cross-spec dependencies
 

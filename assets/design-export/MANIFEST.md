@@ -2502,7 +2502,7 @@ Server Settings gets a "Game configuration" section (edit `spec.config` from the
 
 ## Spec 022 telemetry notice and settings (2026-10-07)
 
-T041 and T052 of `specs/done_022-default-telemetry-dashboard/`. New frames sit in an empty region below the Admin Settings row (x 11480–21120, y 25404–28584); no existing frame changed. Destination hosts are samples while OD-1 is unruled: their text nodes are named `host (SAMPLE, OD-1 unruled)` (default) and `host (SAMPLE)` (bundled).
+T041 and T052 of `specs/022-default-telemetry-dashboard/`. New frames sit in an empty region below the Admin Settings row (x 11480–21120, y 25404–28584); no existing frame changed. Destination hosts are samples while OD-1 is unruled: their text nodes are named `host (SAMPLE, OD-1 unruled)` (default) and `host (SAMPLE)` (bundled).
 
 | Object ID | Name | Change |
 | --- | --- | --- |
@@ -2577,3 +2577,12 @@ T043, T072 and T094 of `specs/019-localization-language-packs/`. Placement follo
 - **Pixel check against the previous PNGs:** `ljdA5`, `g2HLxz`, `HKEl2`, `C2LQE4`, `EcoGD`, `epZO2` and `q31B6w` differ only in the picker's rectangle. `WZdnw` differs only below the General card. `FBiMN` and `qFLfB` also show sub-pixel text anti-aliasing differences. `N1GkB`, `gX7um` and `jmoi3` also show the safe-mode link in the accent colour, and `n6Xlo` also shows the current sidebar ("Clusters") and top bar: the canvas already had both, the previous PNGs were out of date.
 - **Body-text check:** `86% translated` appears only in `lWvcv`, `T1wkiT` and `g5e2fM`; `Notifications sent to this sink are written in this language.` only in `eaNkj`; `Default language for this Gameplane instance.` only in `WZdnw`; `langItemDeutsch` only in `G7OwqK`.
 - **Do not insert a child into `J14ME` through the MCP.** `Insert("J14ME", …)` throws `TypeError: Cannot read properties of undefined (reading 'id')`, and the rollback is not clean: afterwards the two screens with a plain instance of `fjQjb` (`N1GkB`, `gX7um`) showed two login cards and `Get` failed on those instances. `J14ME` is nested in `fjQjb`, and the instances of `fjQjb` on `jmoi3` and `ljdA5` replace that nested card through a children override, which is the likely cause. The two instances were replaced by new ones (so their ids changed) and the picker was added through the wrapper `CDbjX`. `J14ME` (nine children) and `fjQjb` (one child) are unchanged.
+
+## Incremental export 2026-10-14 — Central management banner on Modules Catalog and Admin Authentication (PR #685)
+
+| Node | Name | Change |
+| --- | --- | --- |
+| `kK8Ji` | Screen/Modules Catalog | Re-exported (1440×1320, was 1440×1150). A copy of the Central management notice from `Wj0V4` (`QOOnO`) now sits in Main between the Top Bar and the Body (`I2bQk`). The App Sidebar instance (`DlcuA`, replaces `h2sWTB`) carries the same overrides as `Wj0V4`'s sidebar (`EXGen`): brand subtitle "Central management" and both "Clusters" and "Cluster" under ADMIN, with Modules as the active item. The frame grew 45px for the notice and a further 125px so Row 3 is no longer clipped. |
+| `uMiwd` | Screen/Admin Settings — Authentication | Re-exported (1440×1636, was 1440×1591). Same notice copy (`UosI6`) and the same sidebar overrides as `EXGen` (`bbiZQ`, replaces `WrwBN`), with Settings as the active item. The frame grew 45px for the notice. |
+
+The app already renders the notice on `/modules` and `/admin`; the maintainer decided on 2026-10-12 that the design follows the app. The Top Bar and Body subtrees of both frames are unchanged, and no reusable component was touched. JSON: the committed export patched with `Get` results (depth 30, path geometry included) for the sidebar instance and the notice, then checked by length and FNV-1a hash against `JSON.stringify(Get(id, …))` of the whole frame on the canvas; `python3 -m json.tool` passes, zero `"..."` elisions. PNG: `Export(ids, "png", …, {scale: 2})` (2880×2640 and 2880×3272). Body-text check: `"Central management."` appears only in `kK8Ji.json`, `uMiwd.json` and `Wj0V4.json`.

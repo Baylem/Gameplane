@@ -471,3 +471,18 @@ No new RBAC is needed; every source is already readable (see the baseline facts)
 - *A memory-hard function such as Argon2.* It resists GPUs better, but `telemetryschema` must stay stdlib-only, and a Raspberry Pi install would pay far more.
 - *Proof-of-work on the dashboard login.* It needs JavaScript, which the dashboard's CSP forbids (R7), and the 32-character credential (R8) already makes guessing infeasible.
 - *A fixed difficulty.* Either every install pays all the time, or the difficulty is too low to matter under attack.
+
+## R22. Version trend: ordering and storage (FR-042, OD-7–OD-10)
+
+**Decision**:
+- **Ordering** uses `golang.org/x/mod/semver`, already used in the workspace (`operator/internal/controller/semver.go`, `operator/internal/oci`) at v0.41.0. A label without a leading `v` is compared as `v` + label, so `0.3.0` and `v0.3.0` order alike. A label `semver.IsValid` rejects (`pr617`, `dev`, `edge-<sha>`, `other`, `invalid`) is unordered (OD-8).
+- **Classification at ingest**, on a non-duplicate extended report for an existing activity record whose `last_version` differs from the new label: both semver and new > old is `upgraded`, new < old is `downgraded`, otherwise `unordered`. Labels that differ but compare equal under semver (`0.3.0` and `v0.3.0`) are not a change. The write shares the transaction that updates the activity record, so a refused or duplicate report changes nothing.
+- **Stale at read time** from `daily_install_version`, so the "newest release in the range" (OD-7) follows the selected range instead of being frozen at ingest time.
+
+**Rationale**: Daily counts keep FR-014 (no attribute linked to an ID) while still giving a per-day trend. Storing installs per version per day costs at most the bounded label set (`maxVersionLabels` = 128, plus `other` and `invalid`) per day.
+
+**Alternatives considered**:
+- A per-install version history table: rejected, it would link versions to an ID over time (FR-014).
+- Stale at ingest against the newest version seen so far: rejected, the result would depend on arrival order and ignore the selected range.
+- A hand-written semver parser in `telemetryschema`: rejected, the `x/mod` package is the reference implementation and is already vetted in this workspace.
+

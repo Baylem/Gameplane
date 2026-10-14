@@ -22893,33 +22893,348 @@
       },
       "clip": true,
       "width": 1440,
-      "height": 1150,
+      "height": 1320,
       "fill": "$background/background",
       "children": [
         {
-          "id": "h2sWTB",
+          "id": "DlcuA",
           "type": "ref",
           "ref": "kKFX9",
-          "name": "App Sidebar",
           "height": "fill_container",
+          "layout": "vertical",
+          "name": "App Sidebar",
           "descendants": {
-            "iTbd8": {
-              "fill": "#00000000"
+            "Sci9k": {
+              "height": 70,
+              "padding": [
+                16,
+                20
+              ]
             },
-            "iTbd8/ghUsw": {
-              "fill": "$foreground/foreground"
+            "A42yg4": {
+              "gap": 8
             },
-            "iTbd8/bpSQ7": {
-              "fill": "$foreground/foreground"
+            "t4vZR": {
+              "width": 32,
+              "height": 32
             },
-            "sTSGR": {
-              "fill": "$accent/soft"
+            "BuhAS": {
+              "content": "Central management"
             },
-            "sTSGR/Sr2Q5": {
-              "fill": "$accent/soft-foreground"
+            "ijsQu": {
+              "type": "frame",
+              "id": "wVY15",
+              "name": "Nav Content",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "id": "A8CqgC",
+                  "type": "ref",
+                  "ref": "uFDbF",
+                  "name": "Section General",
+                  "width": "fill_container",
+                  "descendants": {
+                    "gY8Nr": {
+                      "content": "GENERAL"
+                    }
+                  }
+                },
+                {
+                  "id": "t8hOE",
+                  "type": "ref",
+                  "ref": "B5sYje",
+                  "name": "navDashboard",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "ghUsw": {
+                      "icon": "layout-dashboard",
+                      "fill": "$muted"
+                    },
+                    "bpSQ7": {
+                      "content": "Dashboard",
+                      "fill": "$muted"
+                    }
+                  }
+                },
+                {
+                  "id": "jV8uw",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navServers",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "server"
+                    },
+                    "Ra9NK": {
+                      "content": "Servers"
+                    }
+                  }
+                },
+                {
+                  "id": "raFQV",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navModules",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "$accent/soft",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "package",
+                      "fill": "$accent/soft-foreground"
+                    },
+                    "Ra9NK": {
+                      "content": "Modules",
+                      "fill": "$accent/soft-foreground"
+                    }
+                  }
+                },
+                {
+                  "id": "O0HLrA",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navBackups",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "archive"
+                    },
+                    "Ra9NK": {
+                      "content": "Backups"
+                    }
+                  }
+                },
+                {
+                  "id": "k0QQxc",
+                  "type": "ref",
+                  "ref": "uFDbF",
+                  "name": "Section Admin",
+                  "width": "fill_container",
+                  "descendants": {
+                    "gY8Nr": {
+                      "content": "ADMIN"
+                    }
+                  }
+                },
+                {
+                  "id": "ubagu",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navCluster",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "network"
+                    },
+                    "Ra9NK": {
+                      "content": "Clusters"
+                    }
+                  }
+                },
+                {
+                  "id": "Ka2Xf",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "Cluster inventory navigation",
+                  "width": "fill_container",
+                  "height": 36,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "cornerRadius": 6,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "server"
+                    },
+                    "Ra9NK": {
+                      "content": "Cluster"
+                    }
+                  }
+                },
+                {
+                  "id": "g7FxN",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navUsers",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "users"
+                    },
+                    "Ra9NK": {
+                      "content": "Users & RBAC"
+                    }
+                  }
+                },
+                {
+                  "id": "GbLXA",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navAudit",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "scroll-text"
+                    },
+                    "Ra9NK": {
+                      "content": "Audit log"
+                    }
+                  }
+                },
+                {
+                  "id": "Pd9d1",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navLogs",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "terminal"
+                    },
+                    "Ra9NK": {
+                      "content": "System logs"
+                    }
+                  }
+                },
+                {
+                  "id": "n2Gdq",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navSettings",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "settings"
+                    },
+                    "Ra9NK": {
+                      "content": "Settings"
+                    }
+                  }
+                }
+              ]
             },
-            "sTSGR/Ra9NK": {
-              "fill": "$accent/soft-foreground"
+            "NmfQu": {
+              "layout": "vertical"
+            },
+            "oByLP": {
+              "type": "frame",
+              "id": "gVXWY",
+              "name": "Toggle Row",
+              "width": "fill_container",
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "f5oXbp",
+                  "type": "ref",
+                  "ref": "iA2C8",
+                  "name": "Appearance Toggle",
+                  "fill": "$surface/secondary"
+                },
+                {
+                  "id": "NJR0y",
+                  "type": "ref",
+                  "ref": "owgrI",
+                  "name": "Customize Theme",
+                  "descendants": {
+                    "FOBKk": {
+                      "icon": "palette"
+                    }
+                  }
+                }
+              ]
             }
           }
         },
@@ -22943,6 +23258,49 @@
                   "content": "Modules"
                 }
               }
+            },
+            {
+              "type": "frame",
+              "id": "I2bQk",
+              "name": "Central management notice",
+              "width": "fill_container",
+              "height": 45,
+              "fill": "$surface/surface",
+              "stroke": "$border/border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "strokeAlignment": "inner",
+              "gap": 4,
+              "padding": [
+                12,
+                24
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "aBBe4",
+                  "name": "Central management label",
+                  "fill": "$foreground/foreground",
+                  "content": "Central management.",
+                  "lineHeight": 1.4285714286,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "HWUr3",
+                  "name": "Central management explanation",
+                  "fill": "$muted",
+                  "content": "This catalog, account or installation setting belongs to the central Gameplane installation. Server actions use each server’s location.",
+                  "lineHeight": 1.4285714286,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
             },
             {
               "type": "frame",
@@ -32615,95 +32973,347 @@
       },
       "clip": true,
       "width": 1440,
-      "height": 1591,
+      "height": 1636,
       "fill": "$background/background",
       "children": [
         {
-          "id": "WrwBN",
+          "id": "bbiZQ",
           "type": "ref",
           "ref": "kKFX9",
           "height": "fill_container",
+          "layout": "vertical",
           "descendants": {
-            "iTbd8": {
-              "fill": "#00000000"
+            "Sci9k": {
+              "height": 70,
+              "padding": [
+                16,
+                20
+              ]
             },
-            "iTbd8/ghUsw": {
-              "fill": "$foreground/foreground"
+            "A42yg4": {
+              "gap": 8
             },
-            "iTbd8/bpSQ7": {
-              "fill": "$foreground/foreground"
+            "t4vZR": {
+              "width": 32,
+              "height": 32
             },
-            "i8Z1B": {
-              "fill": "#00000000"
+            "BuhAS": {
+              "content": "Central management"
             },
-            "i8Z1B/Sr2Q5": {
-              "fill": "$foreground/foreground"
+            "ijsQu": {
+              "type": "frame",
+              "id": "UfWg3",
+              "name": "Nav Content",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                8,
+                12
+              ],
+              "children": [
+                {
+                  "id": "AuPaR",
+                  "type": "ref",
+                  "ref": "uFDbF",
+                  "name": "Section General",
+                  "width": "fill_container",
+                  "descendants": {
+                    "gY8Nr": {
+                      "content": "GENERAL"
+                    }
+                  }
+                },
+                {
+                  "id": "M83pNt",
+                  "type": "ref",
+                  "ref": "B5sYje",
+                  "name": "navDashboard",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "ghUsw": {
+                      "icon": "layout-dashboard",
+                      "fill": "$muted"
+                    },
+                    "bpSQ7": {
+                      "content": "Dashboard",
+                      "fill": "$muted"
+                    }
+                  }
+                },
+                {
+                  "id": "p4SLRN",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navServers",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "server"
+                    },
+                    "Ra9NK": {
+                      "content": "Servers"
+                    }
+                  }
+                },
+                {
+                  "id": "YxlR5",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navModules",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "package"
+                    },
+                    "Ra9NK": {
+                      "content": "Modules"
+                    }
+                  }
+                },
+                {
+                  "id": "Jb5er",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navBackups",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "archive"
+                    },
+                    "Ra9NK": {
+                      "content": "Backups"
+                    }
+                  }
+                },
+                {
+                  "id": "n2RpJu",
+                  "type": "ref",
+                  "ref": "uFDbF",
+                  "name": "Section Admin",
+                  "width": "fill_container",
+                  "descendants": {
+                    "gY8Nr": {
+                      "content": "ADMIN"
+                    }
+                  }
+                },
+                {
+                  "id": "BKefb",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navCluster",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "network"
+                    },
+                    "Ra9NK": {
+                      "content": "Clusters"
+                    }
+                  }
+                },
+                {
+                  "id": "HtRdQ",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "Cluster inventory navigation",
+                  "width": "fill_container",
+                  "height": 36,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "cornerRadius": 6,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "server"
+                    },
+                    "Ra9NK": {
+                      "content": "Cluster"
+                    }
+                  }
+                },
+                {
+                  "id": "E85j60",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navUsers",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "users"
+                    },
+                    "Ra9NK": {
+                      "content": "Users & RBAC"
+                    }
+                  }
+                },
+                {
+                  "id": "yuoW5",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navAudit",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "scroll-text"
+                    },
+                    "Ra9NK": {
+                      "content": "Audit log"
+                    }
+                  }
+                },
+                {
+                  "id": "C1XTGP",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navLogs",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "#00000000",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "terminal"
+                    },
+                    "Ra9NK": {
+                      "content": "System logs"
+                    }
+                  }
+                },
+                {
+                  "id": "ec5Zd",
+                  "type": "ref",
+                  "ref": "W8XiN",
+                  "name": "navSettings",
+                  "width": "fill_container",
+                  "cornerRadius": 6,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "gap": 12,
+                  "height": 36,
+                  "alignItems": "center",
+                  "fill": "$accent/soft",
+                  "descendants": {
+                    "Sr2Q5": {
+                      "icon": "settings",
+                      "fill": "$accent/soft-foreground"
+                    },
+                    "Ra9NK": {
+                      "content": "Settings",
+                      "fill": "$accent/soft-foreground"
+                    }
+                  }
+                }
+              ]
             },
-            "i8Z1B/Ra9NK": {
-              "fill": "$foreground/foreground"
+            "NmfQu": {
+              "layout": "vertical"
             },
-            "sTSGR": {
-              "fill": "#00000000"
-            },
-            "sTSGR/Sr2Q5": {
-              "fill": "$foreground/foreground"
-            },
-            "sTSGR/Ra9NK": {
-              "fill": "$foreground/foreground"
-            },
-            "NADGL": {
-              "fill": "#00000000"
-            },
-            "NADGL/Sr2Q5": {
-              "fill": "$foreground/foreground"
-            },
-            "NADGL/Ra9NK": {
-              "fill": "$foreground/foreground"
-            },
-            "lZ6pP": {
-              "fill": "#00000000"
-            },
-            "lZ6pP/Sr2Q5": {
-              "fill": "$foreground/foreground"
-            },
-            "lZ6pP/Ra9NK": {
-              "fill": "$foreground/foreground"
-            },
-            "dNsbz": {
-              "fill": "#00000000"
-            },
-            "dNsbz/Sr2Q5": {
-              "fill": "$foreground/foreground"
-            },
-            "dNsbz/Ra9NK": {
-              "fill": "$foreground/foreground"
-            },
-            "uLhzP": {
-              "fill": "#00000000"
-            },
-            "uLhzP/Sr2Q5": {
-              "fill": "$foreground/foreground"
-            },
-            "uLhzP/Ra9NK": {
-              "fill": "$foreground/foreground"
-            },
-            "zV6Z5": {
-              "fill": "#00000000"
-            },
-            "zV6Z5/Sr2Q5": {
-              "fill": "$foreground/foreground"
-            },
-            "zV6Z5/Ra9NK": {
-              "fill": "$foreground/foreground"
-            },
-            "ya5KB": {
-              "fill": "$accent/soft"
-            },
-            "ya5KB/Sr2Q5": {
-              "fill": "$accent/soft-foreground"
-            },
-            "ya5KB/Ra9NK": {
-              "fill": "$accent/soft-foreground"
+            "oByLP": {
+              "type": "frame",
+              "id": "qAhr6",
+              "name": "Toggle Row",
+              "width": "fill_container",
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "d1Whiq",
+                  "type": "ref",
+                  "ref": "iA2C8",
+                  "name": "Appearance Toggle",
+                  "fill": "$surface/secondary"
+                },
+                {
+                  "id": "ugAHI",
+                  "type": "ref",
+                  "ref": "owgrI",
+                  "name": "Customize Theme",
+                  "descendants": {
+                    "FOBKk": {
+                      "icon": "palette"
+                    }
+                  }
+                }
+              ]
             }
           }
         },
@@ -32726,6 +33336,49 @@
                   "content": "Settings"
                 }
               }
+            },
+            {
+              "type": "frame",
+              "id": "UosI6",
+              "name": "Central management notice",
+              "width": "fill_container",
+              "height": 45,
+              "fill": "$surface/surface",
+              "stroke": "$border/border",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "strokeAlignment": "inner",
+              "gap": 4,
+              "padding": [
+                12,
+                24
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "TpnjI",
+                  "name": "Central management label",
+                  "fill": "$foreground/foreground",
+                  "content": "Central management.",
+                  "lineHeight": 1.4285714286,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "zpf0T",
+                  "name": "Central management explanation",
+                  "fill": "$muted",
+                  "content": "This catalog, account or installation setting belongs to the central Gameplane installation. Server actions use each server’s location.",
+                  "lineHeight": 1.4285714286,
+                  "fontFamily": "$typography/font-sans",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
             },
             {
               "type": "frame",
