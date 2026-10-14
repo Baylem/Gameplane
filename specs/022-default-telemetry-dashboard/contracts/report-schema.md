@@ -55,6 +55,7 @@ Gameplane-Telemetry-Signature: ed25519=<base64url Ed25519 signature over the exa
 | `ext.env.distro` | string | `k3s` `rke2` `k0s` `eks` `gke` `aks` `openshift` `microk8s` `minikube` `kind` `doks` `talos` `other` | `other` |
 | `ext.env.arch` | string[] | non-empty, sorted, unique, drawn from `amd64` `arm64` `arm` `ppc64le` `s390x` `riscv64` `other` | Unknown members become `other`. An empty array gets 400. |
 | `ext.env.nodes` | string | `1` `2-3` `4-10` `11-50` `51+` | `other` |
+| `ext.env.k8s`, `ext.env.distro` in schema 2 | string[] | non-empty, sorted, unique; members follow the schema 1 rules above, one per value across the reachable managed clusters (OD-15) | Unknown members become `other`; a panel with no reachable cluster sends `["other"]`. An empty array gets 400. |
 | `ext.env.deployment` | string | `cluster` `standalone`. Required in schema 2, refused (unknown key, 400) in schema 1. | `other` |
 | `ext.games.official` | object | keys are module names from the embedded catalog, values are integers ≥ 1 | Unknown keys are added to `custom`. A non-positive value gets 400. |
 | `ext.games.custom` | integer | ≥ 0 | 400 |

@@ -43,6 +43,7 @@ All timestamps are RFC 3339 UTC strings bound from Go. All days are UTC calendar
   - `arch` (non-empty sorted set from an enumeration)
   - `nodes` (band)
   - `deployment` (`cluster` or `standalone`; schema 2 only, FR-045)
+  - in schema 2, `k8s` and `distro` are sorted sets over the reachable managed clusters, and `arch` is their union (OD-15); `nodes` per OD-16 (open)
 - **Games**:
   - `official`: a map from catalog module name to its server count (int ≥ 1; zero entries are omitted)
   - `custom`: int ≥ 0
@@ -202,7 +203,7 @@ Responses inside one attempt:
 
 `daily_dim` dimensions:
 
-- `k8s`, `distro`, `arch` (one row per architecture present), `nodes`
+- `k8s`, `distro`, `arch` (one row per value present; schema 1 `k8s` and `distro` count as a one-value set), `nodes`
 - `deployment` (FR-045; a schema 1 report has no marker and counts as `other`, OD-14)
 - `tunnel` (one row per provider present)
 - `clusters`, `db`, `language`

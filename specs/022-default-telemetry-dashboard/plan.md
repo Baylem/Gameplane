@@ -230,7 +230,7 @@ Spec 022 is reopened for one more slice on a new branch and PR; the shipped feat
 
 ### Amendment slice (2026-10-14): standalone and multicluster reporting (FR-043–FR-045)
 
-7. **Reporting through the central panel** (OD-11–OD-13, research R23; OD-14 ruled; OD-15 open, so this slice waits for it):
+7. **Reporting through the central panel** (OD-11–OD-13, research R23; OD-14 and OD-15 ruled; OD-16 open, so this slice waits for it):
    - `telemetryschema`: extended schema `2` with `env.deployment` (`cluster`, `standalone`); `Decode` accepts schemas `1` and `2`
    - receiver: store `deployment` as a `daily_dim` dimension and show it as an environment breakdown, designed first in `telemetry-receiver/telemetry-dashboard.pen` on the local machine
    - API: `telemetry.Deps` gains the cluster registry; `Collect` sums servers, templates, games and the cluster-derived features over every reachable managed cluster, skips unreachable ones, and sets the marker
