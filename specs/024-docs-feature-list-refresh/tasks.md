@@ -109,7 +109,7 @@ description: "Task list for spec 024: documentation refresh, feature catalog and
 
 ### Website PR (WEB, merges before the GP PR)
 
-- [ ] T031 [US4] Create `src/content/docs/features.mdx` in WEB with the frontmatter from [contracts/features-catalog.md](./contracts/features-catalog.md) and the same area headings and tables as `FEATURES.md` (Capability, Maturity, Default identical; Docs cells rewritten to relative website docs links per the WEB CLAUDE.md); depends on T017
+- [X] T031 [US4] Create `src/content/docs/features.mdx` in WEB with the frontmatter from [contracts/features-catalog.md](./contracts/features-catalog.md) and the same area headings and tables as `FEATURES.md` (Capability, Maturity, Default identical; Docs cells rewritten to relative website docs links per the WEB CLAUDE.md); depends on T017
 - [X] T032 [US4] Rewrite `src/content/docs/roadmap.mdx` in WEB to the same items and statuses as `docs/roadmap.md` (replace the "Beta status" headline with the current pre-v1 release wording); keep existing components (`DocsCallout`, `IconList`, `VERSION`); depends on T022
 - [X] T033 [P] [US4] Grep WEB `src/content/docs/*.mdx` and `src/config.ts` for the R9 fact classes, add hits to `stale-facts.md`, and fix them in the docs pages (no landing page or component changes, OD-3)
 - [X] T034 [US4] Run `npm run build` and `npm run check` in WEB (allowed locally); fix build errors only
