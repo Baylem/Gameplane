@@ -29,6 +29,9 @@ import {
   screenshotConsoleOutput,
   screenshotSystemLogLines,
   screenshotConfigWithOidc,
+  screenshotConfigOidcDesign,
+  screenshotDesignCatalog,
+  screenshotDesignSources,
   screenshotConfigOidcEmptyMappings,
   screenshotConfigEmptyStorageClass,
   screenshotConfigCurseforgeOnly,
@@ -45,6 +48,7 @@ const isColonAction = (params: PathParams) => String(params.name).includes(":");
 
 export const handlers = [
   ...fleetHandlers,
+  http.get("/admin/installation", () => HttpResponse.json({ standalone: false, localCluster: true })),
   // Auth
   http.get("/users/me", ({ cookies }) => {
     // e2e affordance: a 401 on /users/me must bounce the SPA to /login,
@@ -833,6 +837,7 @@ export function buildScreenshotHandlers() {
   const data = getScreenshotData();
   return [
     ...fleetHandlers,
+    http.get("/admin/installation", () => HttpResponse.json({ standalone: false, localCluster: true })),
     // The Servers page asks which namespaces to list before listing servers.
     http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
     // Auth: reuse default login/logout (screenshot demos don't test auth edge cases)
@@ -974,11 +979,18 @@ export function buildScreenshotHandlers() {
             ...server,
             spec: {
               ...server.spec,
-              idle: { enabled: true, afterMinutes: 60 },
+              idle: { ...server.spec.idle, enabled: true, afterMinutes: 30 },
             },
             status: {
               ...server.status,
               idle: { reason: "this game reports no player count" },
+              agent: {
+                ...server.status?.agent,
+                memoryBytes: 1610612736, // 1.5 GiB -> "1.5 GB", 38% of limit
+                memoryLimitBytes: 4294967296, // 4.0 GiB -> "4.0 GB"
+                diskUsedBytes: 3972844749, // 3.7 GiB -> "3.7 GB", 13% of total
+                diskTotalBytes: 31138512896, // 29 GiB -> "29 GB"
+              },
             },
           });
         }
@@ -1344,8 +1356,12 @@ export function buildScreenshotHandlers() {
 
     // Modules
     http.get("/modules", () => HttpResponse.json({ items: [makeModule()] })),
-    http.get("/modules/catalog", () =>
-      HttpResponse.json({
+    http.get("/modules/catalog", ({ cookies }) => {
+      // kK8Ji design variant: selected by the e2e_modules_variant=design cookie.
+      if (cookies.e2e_modules_variant === "design") {
+        return HttpResponse.json({ items: screenshotDesignCatalog });
+      }
+      return HttpResponse.json({
         items: [
           makeCatalog(),
           makeCatalog({
@@ -1360,11 +1376,14 @@ export function buildScreenshotHandlers() {
             latestVersion: "0.218",
           }),
         ],
-      }),
-    ),
-    http.get("/modules/sources", () =>
-      HttpResponse.json({ items: [makeModuleSource()] }),
-    ),
+      });
+    }),
+    http.get("/modules/sources", ({ cookies }) => {
+      if (cookies.e2e_modules_variant === "design") {
+        return HttpResponse.json({ items: screenshotDesignSources });
+      }
+      return HttpResponse.json({ items: [makeModuleSource()] });
+    }),
     http.get("/modules/:name", ({ params }) =>
       HttpResponse.json(makeModule({ metadata: { name: String(params.name) } })),
     ),
@@ -1383,8 +1402,11 @@ export function buildScreenshotHandlers() {
     http.delete("/modules/:name", () => new HttpResponse(null, { status: 204 })),
 
     // Server events: return events for the requested server
-    http.get("/servers/:name/events", ({ params }) => {
+    http.get("/servers/:name/events", ({ params, cookies }) => {
       const name = String(params.name);
+      if (name === "mc-survival" && cookies.e2e_server_variant === "never-sleeps") {
+        return HttpResponse.json([]);
+      }
       const serverEvents = data.events.filter((e) => e.object === name);
       return HttpResponse.json(serverEvents);
     }),
@@ -1627,6 +1649,8 @@ export function buildScreenshotHandlers() {
       switch (cookies.e2e_admin_config_variant) {
         case "oidc":
           return HttpResponse.json(screenshotConfigWithOidc());
+        case "oidc-design":
+          return HttpResponse.json(screenshotConfigOidcDesign());
         case "oidc-empty-mappings":
           return HttpResponse.json(screenshotConfigOidcEmptyMappings());
         case "empty-storage-class":

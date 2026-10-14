@@ -152,18 +152,22 @@ test.describe("Slice 3: Create Server, Modules, Backups (Desktop — 1440x900) @
     await capture(page, "UMJli");
   });
 
-  test("kK8Ji: Modules Catalog", async ({ page }) => {
+  test("kK8Ji: Modules Catalog", async ({ context, page }) => {
+    await context.addCookies([
+      { name: "e2e_modules_variant", value: "design", domain: "localhost", path: "/" },
+    ]);
     await page.goto("/modules");
     await expect(page.getByRole("heading", { name: /^modules$/i })).toBeVisible({
       timeout: 10_000,
     });
-    // The catalog fixture (buildScreenshotHandlers' /modules/catalog) seeds
-    // an uninstalled Minecraft entry and an installed Valheim entry.
+    // The design variant (buildScreenshotHandlers' /modules/catalog, selected by
+    // the e2e_modules_variant=design cookie) seeds the 11-card design grid:
+    // installed Minecraft (Java Edition) and an available Factorio, among others.
     const grid = page.locator('[data-testid="modules-grid"]');
-    await expect(grid.getByText("Minecraft (Vanilla)", { exact: true })).toBeVisible({
+    await expect(grid.getByText("Minecraft (Java Edition)", { exact: true })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(grid.getByText("Valheim", { exact: true })).toBeVisible();
+    await expect(grid.getByText("Valheim (Dedicated)", { exact: true })).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "kK8Ji");
   });

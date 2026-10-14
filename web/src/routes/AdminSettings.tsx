@@ -1,7 +1,7 @@
+import { useInstallation } from "@/lib/useInstallation";
 import { useState, useEffect, useRef, type ChangeEvent, type ComponentType, type ReactNode, type SetStateAction } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   Archive,
   Bell,
   BellRing,
@@ -47,7 +47,11 @@ import { cn, formatRelative } from "@/lib/utils";
 import { errorText } from "@/lib/errors";
 import { Telemetry, type TelemetryInfo } from "@/lib/api";
 import { TELEMETRY_STATEMENT_URL } from "@/lib/links";
-import { Auth, AuthProviders, BackupDestinations, Cluster, ModRegistries, Notifications, type SinkSecretBody } from "@/lib/endpoints";
+import { Auth, AuthProviders, createResourceClient, Cluster, Clusters, ModRegistries, Notifications, type SinkSecretBody } from "@/lib/endpoints";
+import { useCurrentCluster } from "@/lib/cluster";
+import { ClusterSelector } from "@/components/ClusterSelector";
+import { LoadingCard } from "@/components/ui/LoadingCard";
+import { ErrorCard } from "@/components/ui/ErrorCard";
 import { can, useMe } from "@/lib/auth";
 import type { ClusterInfo } from "@/types";
 import {
@@ -110,7 +114,7 @@ export function AdminSettingsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 p-6">
       <PageHeader
         title="Admin settings"
         description="Platform-wide configuration for this Gameplane instance."
@@ -154,21 +158,35 @@ function SectionCard({
   footer,
   children,
   className,
+  headerClassName,
+  titleClassName,
+  subtitleClassName,
+  contentClassName,
+  footerClassName,
 }: {
   title: string;
   subtitle?: string;
   footer?: ReactNode;
   children: ReactNode;
   className?: string;
+  headerClassName?: string;
+  titleClassName?: string;
+  subtitleClassName?: string;
+  contentClassName?: string;
+  footerClassName?: string;
 }) {
   return (
     <Card className={cn("space-y-4", className)}>
-      <Card.Header className="space-y-2 pb-2">
-        <div className="font-medium text-base">{title}</div>
-        {subtitle && <div className="text-xs text-muted">{subtitle}</div>}
+      <Card.Header className={cn("space-y-2 pb-2", headerClassName)}>
+        <div className={cn("font-medium text-base", titleClassName)}>{title}</div>
+        {subtitle && <div className={cn("text-xs text-muted", subtitleClassName)}>{subtitle}</div>}
       </Card.Header>
-      <Card.Content className="space-y-4">{children}</Card.Content>
-      {footer && <Card.Footer className="flex items-center justify-end gap-3 pt-2">{footer}</Card.Footer>}
+      <Card.Content className={cn("space-y-4", contentClassName)}>{children}</Card.Content>
+      {footer && (
+        <Card.Footer className={cn("flex items-center justify-end gap-3 pt-2", footerClassName)}>
+          {footer}
+        </Card.Footer>
+      )}
     </Card>
   );
 }
@@ -456,8 +474,14 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
   return (
     <div className="space-y-6">
       <SectionCard
+        className="gap-0 space-y-0 p-0"
         title="Authentication"
         subtitle="Built-in local accounts plus federated identity providers. Changes take effect on save — no restart needed."
+        titleClassName="text-sm font-medium"
+        subtitleClassName="text-sm"
+        headerClassName="px-5 pt-5 pb-4 space-y-1"
+        contentClassName="px-5 space-y-4"
+        footerClassName="px-5 pt-2 pb-5 justify-end"
         footer={
           <>
             <SaveStatus pending={f.pending} error={f.error} saved={f.saved} />
@@ -471,10 +495,10 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
         <ul className="divide-y divide-border">
           {f.draft.providers.map((p, idx) => (
             <li key={p.name} className="flex items-center gap-3 py-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-surface">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-surface-secondary">
                 <Key className="h-4 w-4 text-muted" />
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                 <div className="text-sm">{p.displayName || p.name}</div>
                 <div className="truncate text-xs text-muted">
                   {p.kind}
@@ -491,8 +515,8 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
                     : undefined
                 }
                 className={cn(
-                  "rounded px-2 py-0.5 text-[10px] font-mono uppercase disabled:cursor-not-allowed disabled:opacity-60",
-                  p.enabled ? "bg-success/15 text-success" : "bg-muted/15 text-muted",
+                  "rounded-full px-1 py-0.5 text-[11px] font-medium font-sans uppercase disabled:cursor-not-allowed disabled:opacity-60",
+                  p.enabled ? "bg-success-soft text-success-soft-foreground" : "bg-default text-muted",
                 )}
               >
                 {p.enabled ? "Enabled" : "Disabled"}
@@ -511,23 +535,23 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
           ))}
           {helm && (
             <li className="flex items-center gap-3 py-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-surface">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-surface-secondary">
                 <Lock className="h-4 w-4 text-muted" />
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                 <div className="text-sm">{helm.label}</div>
                 <div className="truncate text-xs text-muted">
                   oidc · configured via Helm — manage in values.yaml
                 </div>
               </div>
-              <span className="rounded bg-success/15 px-2 py-0.5 text-[10px] font-mono uppercase text-success">
+              <span className="rounded-full px-1 py-0.5 text-[11px] font-medium font-sans uppercase bg-success-soft text-success-soft-foreground">
                 Enabled
               </span>
             </li>
           )}
         </ul>
         {lastToggleLocked && (
-          <p className="mt-2 text-xs text-muted">
+          <p className="text-xs text-muted">
             At least one identity provider must stay enabled — the last enabled
             provider can&apos;t be turned off.
           </p>
@@ -546,8 +570,13 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
             onClose={() => setAdding(false)}
           />
         ) : (
-          <Button variant="outline" size="sm" onPress={() => setAdding(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-[13px] font-medium"
+            onPress={() => setAdding(true)}
+          >
+            <Plus className="h-3.5 w-3.5" />
             Add provider
           </Button>
         )}
@@ -874,18 +903,41 @@ function AddProviderForm({
 }
 
 function BackupDestSection() {
+  const installation = useInstallation();
+  const selected = useCurrentCluster();
+  const registry = useQuery({
+    queryKey: ["clusters"], queryFn: () => Clusters.list(),
+    enabled: installation.data?.standalone === true,
+  });
+  if (installation.isPending) return <LoadingCard message="Loading installation…" />;
+  if (installation.isError) return <ErrorCard message="Couldn't load installation capabilities." onRetry={() => void installation.refetch()} />;
+  if (!installation.data.standalone) return <ClusterBackupDestSection cluster="local" />;
+  const target = registry.data?.items.find((cluster) => cluster.name === selected);
+  return <div className="space-y-4">
+    <ClusterSelector />
+    {registry.isPending ? <LoadingCard message="Loading clusters…" />
+      : registry.isError ? <ErrorCard message="Couldn't load registered clusters." onRetry={() => void registry.refetch()} />
+      : target ? <ClusterBackupDestSection key={target.name} cluster={target.name} />
+      : <SectionCard title="Select a workload cluster" subtitle="Backup destinations are stored on the workload cluster that runs your servers.">
+        <p className="text-sm text-muted">Choose a registered cluster above, or register one on the Clusters page.</p>
+      </SectionCard>}
+  </div>;
+}
+
+function ClusterBackupDestSection({ cluster }: { cluster: string }) {
   const qc = useQueryClient();
+  const { BackupDestinations } = createResourceClient({ cluster });
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const list = useQuery({
-    queryKey: ["backup-destinations"],
+    queryKey: ["backup-destinations", cluster],
     queryFn: () => BackupDestinations.list(),
   });
   const remove = useMutation({
     mutationFn: (name: string) => BackupDestinations.remove(name),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["backup-destinations"] });
+      void qc.invalidateQueries({ queryKey: ["backup-destinations", cluster] });
       setDeleting(null);
     },
   });
@@ -910,7 +962,7 @@ function BackupDestSection() {
           No backup destinations configured. Add one to enable snapshots.
         </div>
       )}
-      {adding && <NewDestinationForm onClose={() => setAdding(false)} />}
+      {adding && <NewDestinationForm cluster={cluster} onClose={() => setAdding(false)} />}
       <ul className="divide-y divide-border">
         {items.map((d) => (
           <li key={d.name} className="flex items-center gap-3 py-3">
@@ -967,13 +1019,14 @@ function BackupDestSection() {
   );
 }
 
-function NewDestinationForm({ onClose }: { onClose: () => void }) {
+function NewDestinationForm({ cluster, onClose }: { cluster: string; onClose: () => void }) {
   const qc = useQueryClient();
+  const { BackupDestinations } = createResourceClient({ cluster });
   const [form, setForm] = useState({ name: "", url: "", password: "" });
   const create = useMutation({
     mutationFn: () => BackupDestinations.upsert(form),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["backup-destinations"] });
+      void qc.invalidateQueries({ queryKey: ["backup-destinations", cluster] });
       onClose();
     },
   });
@@ -1871,25 +1924,26 @@ function TelemetrySection({ initial }: { initial?: TelemetryCfg }) {
 }
 
 function UpdatesSection() {
+  const installation = useInstallation();
   // Read-only: the channel mirrors the chart's informational
   // updates.channel value (served on /cluster/info). Nothing in-app
   // consumes it — Gameplane is upgraded via Helm, not a self-updater.
   const { data } = useQuery({
     queryKey: ["cluster-info"],
     queryFn: () => Cluster.info().catch(() => ({} as ClusterInfo)),
+    enabled: installation.data?.localCluster === true,
     staleTime: 60_000,
   });
   return (
     <SectionCard
       title="Updates"
-      subtitle="Gameplane is upgraded via Helm (image tags / chart versions)."
+      subtitle={installation.data?.standalone ? "Update the panel and API container images to upgrade this installation." : "Gameplane is upgraded via Helm (image tags / chart versions)."}
     >
       <div className="flex items-center justify-between">
         <div>
           <div className="text-sm">Channel</div>
           <div className="pt-0.5 text-xs text-muted">
-            Informational only — reflects <code className="font-mono">updates.channel</code> from
-            your Helm values.
+            {installation.data?.standalone ? "Container image tags select the release for this panel." : <>Informational only — reflects <code className="font-mono">updates.channel</code> from your Helm values.</>}
           </div>
         </div>
         <span className="rounded bg-surface px-2 py-0.5 font-mono text-xs">
@@ -1901,18 +1955,20 @@ function UpdatesSection() {
 }
 
 function AboutSection() {
+  const installation = useInstallation();
   // Real versions from the API (the control plane is built and released as
   // one unit, so a single Gameplane version is honest); "—" until loaded.
   const { data } = useQuery({
     queryKey: ["cluster-info"],
     queryFn: () => Cluster.info().catch(() => ({} as ClusterInfo)),
+    enabled: installation.data?.localCluster === true,
     staleTime: 60_000,
   });
   return (
     <SectionCard title="About" subtitle="This Gameplane build.">
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
-        <dt className="text-muted">Gameplane</dt><dd className="font-mono">{data?.gameplaneVersion || "—"}</dd>
-        <dt className="text-muted">Kubernetes</dt><dd className="font-mono">{data?.version || "—"}</dd>
+        <dt className="text-muted">Gameplane</dt><dd className="font-mono">{installation.data?.version || data?.gameplaneVersion || "—"}</dd>
+        {installation.data?.localCluster && <><dt className="text-muted">Kubernetes</dt><dd className="font-mono">{data?.version || "—"}</dd></>}
         <dt className="text-muted">License</dt><dd>AGPL-3.0</dd>
       </dl>
     </SectionCard>
@@ -1925,40 +1981,50 @@ function HelmOIDCProviderCard({ provider }: { provider: OIDCHelmProvider }) {
   const adminMapped = provider.roleMappings?.admin && provider.roleMappings.admin.length > 0;
   return (
     <SectionCard
+      className="gap-0 space-y-0 p-0"
       title="Helm-seeded OIDC provider"
       subtitle="Read-only snapshot of the identity provider configured via api.oidc.* Helm values at install time. Connection settings are not editable here; role mappings can be overridden below."
+      titleClassName="text-sm font-medium"
+      subtitleClassName="text-sm"
+      headerClassName="px-5 pt-5 pb-4 space-y-1"
+      contentClassName="px-5 pb-5 space-y-4"
     >
-      <div className="space-y-4">
-        <div className="space-y-2">
+      <div>
+        <div className="space-y-0.5 pb-1">
           <div className="font-medium text-sm">Provider</div>
-          <p className="text-xs text-muted">
+          <p className="text-[11px] text-muted">
             Groups claim and default role are seeded from the same Helm values and are not editable here.
           </p>
         </div>
         <div className="flex items-center justify-between py-2">
           <span className="text-xs text-muted">Groups claim</span>
-          <span className="font-mono text-sm">{provider.groupsClaim}</span>
+          <span className="font-mono text-xs font-medium text-foreground">{provider.groupsClaim}</span>
         </div>
         <div className="flex items-center justify-between py-2">
           <span className="text-xs text-muted">Default role</span>
-          <span className="px-2 py-0.5 rounded text-xs font-medium bg-muted/20 text-muted">
+          <span className="rounded-full px-1 py-0.5 text-[11px] font-mono font-medium bg-default text-default-foreground">
             {provider.defaultRole}
           </span>
         </div>
         {hasRoleMappings ? (
-          <div className="space-y-3 pt-2">
+          <div className="space-y-2.5 pt-2">
             <div className="text-xs text-muted">Helm-seeded role mappings</div>
             {["admin", "operator", "viewer"].map((role) => {
               const groups = provider.roleMappings?.[role as keyof typeof provider.roleMappings];
               return (
-                <div key={role} className="flex items-start gap-3">
-                  <span className="text-xs font-medium w-16 flex-shrink-0 capitalize">{role}</span>
-                  <div className="flex flex-wrap gap-2">
+                <div key={role} className="flex items-center gap-3">
+                  <span className="text-xs font-medium w-[70px] flex-shrink-0 capitalize">{role}</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {groups && groups.length > 0 ? (
                       groups.map((group) => (
                         <span
                           key={group}
-                          className="px-2 py-1 rounded text-xs bg-muted/20 text-muted"
+                          className={cn(
+                            "rounded-full px-1 py-0.5 text-[11px] font-mono font-medium",
+                            role === "admin" && "bg-warning-soft text-warning-soft-foreground",
+                            role === "operator" && "bg-accent-soft text-accent-soft-foreground",
+                            role === "viewer" && "bg-default text-default-foreground",
+                          )}
                         >
                           {group}
                         </span>
@@ -1983,9 +2049,9 @@ function HelmOIDCProviderCard({ provider }: { provider: OIDCHelmProvider }) {
           </div>
         )}
         {adminMapped && (
-          <div className="rounded-md border border-warning/40 bg-warning/10 p-3 flex gap-3">
-            <AlertTriangle className="h-4 w-4 text-warning-soft-foreground flex-shrink-0 mt-0.5" />
-            <div className="text-xs">
+          <div className="mt-3 rounded-lg border border-warning-soft-foreground bg-warning-soft px-4 py-3 flex gap-4">
+            <Megaphone className="h-4 w-4 text-warning-soft-foreground flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
               <div className="font-medium text-warning-soft-foreground mb-1">Helm-configured admin mapping</div>
               <p className="text-warning-soft-foreground">
                 The group(s) on the Admin row above were mapped to admin via Helm values, not the dashboard, so there
@@ -2133,10 +2199,15 @@ function RoleMappingOverridesCard({
       <SectionCard
         title="Role mapping overrides"
         subtitle="Override the Helm-seeded OIDC group mappings per role from here. A change takes effect the next time an affected user logs in — no restart or reinstall needed."
-        className="bg-card"
+        className="bg-card gap-0 space-y-0 p-0"
+        titleClassName="text-sm font-medium"
+        subtitleClassName="text-sm"
+        headerClassName="px-5 pt-5 pb-4 space-y-1"
+        contentClassName="px-5 pb-5 space-y-4"
+        footerClassName="px-5 pt-2 pb-5 justify-between"
         footer={
           <div className="flex items-center justify-between w-full">
-            <p className="text-xs text-muted">
+            <p className="text-[11px] text-muted">
               Saved changes take effect on next login for affected users — no restart or reinstall needed.
             </p>
             <div className="flex gap-2">
@@ -2146,14 +2217,20 @@ function RoleMappingOverridesCard({
                   same text (e.g. a save error) appears twice in the DOM, breaking
                   any singular getByText/findByText query for it — see the
                   "surfaces a backend rejection when saving the auth section" test. */}
-              <Button variant="outline" onPress={onSave} isDisabled={formState.pending}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-[13px] font-medium"
+                onPress={onSave}
+                isDisabled={formState.pending}
+              >
                 Save role mappings
               </Button>
             </div>
           </div>
         }
       >
-        <div className="space-y-6">
+        <div className="space-y-3.5">
           {["admin", "operator", "viewer"].map((role) => {
             const typedRole = role as "admin" | "operator" | "viewer";
             const groups = getRoleGroups(typedRole);
@@ -2170,17 +2247,18 @@ function RoleMappingOverridesCard({
 
             return (
               <div key={role} role="group" aria-label={`${role.charAt(0).toUpperCase() + role.slice(1)} role mapping`}>
-                {role !== "admin" && <div className="h-px bg-border" />}
-                <div className="space-y-3 pt-3">
+                {role !== "admin" && <div className="mb-4 h-px bg-border" />}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm capitalize">{role}</span>
+                      <span className="text-[13px] font-semibold capitalize">{role}</span>
                       <ProvenanceBadge type={getProvenance(typedRole)} size="sm" />
                     </div>
                     {hasOverride && (
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
+                        className="text-[13px] font-medium"
                         aria-label={`Reset to Helm default (${role} role mapping)`}
                         onPress={() => handleReset(typedRole)}
                         isDisabled={resetMutation.isPending}
@@ -2192,7 +2270,7 @@ function RoleMappingOverridesCard({
                   </div>
 
                   {groups.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {groups.map((group) => (
                         <RemovableGroupChip
                           key={group}
@@ -2204,33 +2282,38 @@ function RoleMappingOverridesCard({
                       ))}
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 px-2.5 py-2 rounded border border-border text-xs text-muted">
+                    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-border text-xs italic text-muted">
                       <CircleSlash2 className="h-3.5 w-3.5" />
                       No groups mapped — nobody signs in as {role} via OIDC.
                     </div>
                   )}
 
-                  <div className="flex gap-2">
-                    <HeroInput
-                      type="text"
-                      placeholder="Add IdP group name…"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddGroup(typedRole, input);
-                        }
-                      }}
-                      className="text-xs"
-                    />
+                  <div className="flex items-center gap-2">
+                    <div className="w-[250px] shrink-0">
+                      <HeroInput
+                        type="text"
+                        placeholder="Add IdP group name…"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddGroup(typedRole, input);
+                          }
+                        }}
+                        className="h-8 text-[13px]"
+                      />
+                    </div>
                     <Button
+                      variant="outline"
                       size="sm"
                       aria-label="Add group"
                       onPress={() => handleAddGroup(typedRole, input)}
                       isDisabled={!input.trim()}
+                      className="h-8 gap-1 text-[13px] font-medium"
                     >
                       <Plus className="h-3.5 w-3.5" />
+                      Add
                     </Button>
                   </div>
                 </div>

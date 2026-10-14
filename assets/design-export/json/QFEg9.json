@@ -566,8 +566,18 @@
                                   "gap": 6,
                                   "children": [
                                     {
+                                      "type": "text",
+                                      "id": "GJfAx",
+                                      "name": "Helper",
+                                      "fill": "$muted",
+                                      "content": "Write-only",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 12,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
                                       "type": "frame",
-                                      "id": "v2RYLO",
+                                      "id": "t5LkHa",
                                       "name": "Input row",
                                       "width": "fill_container",
                                       "gap": 8,
@@ -587,7 +597,7 @@
                                           }
                                         },
                                         {
-                                          "id": "yCtMa",
+                                          "id": "KAuGZ",
                                           "type": "ref",
                                           "ref": "J09iP",
                                           "name": "Remove password button",
@@ -598,16 +608,6 @@
                                           }
                                         }
                                       ]
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "GJfAx",
-                                      "name": "Helper",
-                                      "fill": "$muted",
-                                      "content": "Write-only",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 12,
-                                      "fontWeight": "normal"
                                     }
                                   ]
                                 }

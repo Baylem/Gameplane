@@ -9,7 +9,7 @@
   },
   "clip": true,
   "width": 1440,
-  "height": 1150,
+  "height": 1320,
   "fill": "$background/background",
   "children": [
     {
@@ -18,24 +18,339 @@
       "ref": "kKFX9",
       "name": "App Sidebar",
       "height": "fill_container",
+      "layout": "vertical",
       "descendants": {
-        "iTbd8": {
-          "fill": "#00000000"
+        "Sci9k": {
+          "height": 70,
+          "padding": [
+            16,
+            20
+          ]
         },
-        "iTbd8/ghUsw": {
-          "fill": "$foreground/foreground"
+        "A42yg4": {
+          "gap": 8
         },
-        "iTbd8/bpSQ7": {
-          "fill": "$foreground/foreground"
+        "t4vZR": {
+          "width": 32,
+          "height": 32
         },
-        "sTSGR": {
-          "fill": "$accent/soft"
+        "BuhAS": {
+          "content": "Central management"
         },
-        "sTSGR/Sr2Q5": {
-          "fill": "$accent/soft-foreground"
+        "ijsQu": {
+          "type": "frame",
+          "id": "yuZHJ",
+          "name": "Nav Content",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 2,
+          "padding": [
+            8,
+            12
+          ],
+          "children": [
+            {
+              "id": "jekdC",
+              "type": "ref",
+              "ref": "uFDbF",
+              "name": "Section General",
+              "width": "fill_container",
+              "descendants": {
+                "gY8Nr": {
+                  "content": "GENERAL"
+                }
+              }
+            },
+            {
+              "id": "FTFLn",
+              "type": "ref",
+              "ref": "B5sYje",
+              "name": "navDashboard",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "padding": [
+                8,
+                12
+              ],
+              "gap": 12,
+              "height": 36,
+              "alignItems": "center",
+              "fill": "#00000000",
+              "descendants": {
+                "ghUsw": {
+                  "icon": "layout-dashboard",
+                  "fill": "$muted"
+                },
+                "bpSQ7": {
+                  "content": "Dashboard",
+                  "fill": "$muted"
+                }
+              }
+            },
+            {
+              "id": "l2BPqJ",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "navServers",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "padding": [
+                8,
+                12
+              ],
+              "gap": 12,
+              "height": 36,
+              "alignItems": "center",
+              "fill": "#00000000",
+              "descendants": {
+                "Sr2Q5": {
+                  "icon": "server"
+                },
+                "Ra9NK": {
+                  "content": "Servers"
+                }
+              }
+            },
+            {
+              "id": "RvmiI",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "navModules",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "padding": [
+                8,
+                12
+              ],
+              "gap": 12,
+              "height": 36,
+              "alignItems": "center",
+              "fill": "$accent/soft",
+              "descendants": {
+                "Sr2Q5": {
+                  "icon": "package",
+                  "fill": "$accent/soft-foreground"
+                },
+                "Ra9NK": {
+                  "content": "Modules",
+                  "fill": "$accent/soft-foreground"
+                }
+              }
+            },
+            {
+              "id": "BMZAy",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "navBackups",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "padding": [
+                8,
+                12
+              ],
+              "gap": 12,
+              "height": 36,
+              "alignItems": "center",
+              "fill": "#00000000",
+              "descendants": {
+                "Sr2Q5": {
+                  "icon": "archive"
+                },
+                "Ra9NK": {
+                  "content": "Backups"
+                }
+              }
+            },
+            {
+              "id": "i0M86T",
+              "type": "ref",
+              "ref": "uFDbF",
+              "name": "Section Admin",
+              "width": "fill_container",
+              "descendants": {
+                "gY8Nr": {
+                  "content": "ADMIN"
+                }
+              }
+            },
+            {
+              "id": "RxY1j",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "navCluster",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "padding": [
+                8,
+                12
+              ],
+              "gap": 12,
+              "height": 36,
+              "alignItems": "center",
+              "fill": "#00000000",
+              "descendants": {
+                "Sr2Q5": {
+                  "icon": "network"
+                },
+                "Ra9NK": {
+                  "content": "Clusters"
+                }
+              }
+            },
+            {
+              "id": "l8tdzK",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "Cluster inventory navigation",
+              "width": "fill_container",
+              "height": 36,
+              "padding": [
+                8,
+                12
+              ],
+              "gap": 12,
+              "cornerRadius": 6,
+              "alignItems": "center",
+              "fill": "#00000000",
+              "descendants": {
+                "Sr2Q5": {
+                  "icon": "server"
+                },
+                "Ra9NK": {
+                  "content": "Cluster"
+                }
+              }
+            },
+            {
+              "id": "AM6yG",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "navUsers",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "padding": [
+                8,
+                12
+              ],
+              "gap": 12,
+              "height": 36,
+              "alignItems": "center",
+              "fill": "#00000000",
+              "descendants": {
+                "Sr2Q5": {
+                  "icon": "users"
+                },
+                "Ra9NK": {
+                  "content": "Users & RBAC"
+                }
+              }
+            },
+            {
+              "id": "OPf4U",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "navAudit",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "padding": [
+                8,
+                12
+              ],
+              "gap": 12,
+              "height": 36,
+              "alignItems": "center",
+              "fill": "#00000000",
+              "descendants": {
+                "Sr2Q5": {
+                  "icon": "scroll-text"
+                },
+                "Ra9NK": {
+                  "content": "Audit log"
+                }
+              }
+            },
+            {
+              "id": "rX4JW",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "navLogs",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "padding": [
+                8,
+                12
+              ],
+              "gap": 12,
+              "height": 36,
+              "alignItems": "center",
+              "fill": "#00000000",
+              "descendants": {
+                "Sr2Q5": {
+                  "icon": "terminal"
+                },
+                "Ra9NK": {
+                  "content": "System logs"
+                }
+              }
+            },
+            {
+              "id": "uzLV2",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "navSettings",
+              "width": "fill_container",
+              "cornerRadius": 6,
+              "padding": [
+                8,
+                12
+              ],
+              "gap": 12,
+              "height": 36,
+              "alignItems": "center",
+              "fill": "#00000000",
+              "descendants": {
+                "Sr2Q5": {
+                  "icon": "settings"
+                },
+                "Ra9NK": {
+                  "content": "Settings"
+                }
+              }
+            }
+          ]
         },
-        "sTSGR/Ra9NK": {
-          "fill": "$accent/soft-foreground"
+        "NmfQu": {
+          "layout": "vertical"
+        },
+        "oByLP": {
+          "type": "frame",
+          "id": "DIHKx",
+          "name": "Toggle Row",
+          "width": "fill_container",
+          "gap": 8,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "yVbl6",
+              "type": "ref",
+              "ref": "iA2C8",
+              "name": "Appearance Toggle",
+              "fill": "$surface/secondary"
+            },
+            {
+              "id": "T7leKW",
+              "type": "ref",
+              "ref": "owgrI",
+              "name": "Customize Theme",
+              "descendants": {
+                "FOBKk": {
+                  "icon": "palette"
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -59,6 +374,49 @@
               "content": "Modules"
             }
           }
+        },
+        {
+          "type": "frame",
+          "id": "m7kmp",
+          "name": "Central management notice",
+          "width": "fill_container",
+          "height": 45,
+          "fill": "$surface/surface",
+          "stroke": "$border/border",
+          "strokeWidth": {
+            "bottom": 1
+          },
+          "strokeAlignment": "inner",
+          "gap": 4,
+          "padding": [
+            12,
+            24
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "rX0zZ",
+              "name": "Central management label",
+              "fill": "$foreground/foreground",
+              "content": "Central management.",
+              "lineHeight": 1.4285714286,
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 14,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "vudRw",
+              "name": "Central management explanation",
+              "fill": "$muted",
+              "content": "This catalog, account or installation setting belongs to the central Gameplane installation. Server actions use each server’s location.",
+              "lineHeight": 1.4285714286,
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
         },
         {
           "type": "frame",

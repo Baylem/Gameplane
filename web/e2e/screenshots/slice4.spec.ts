@@ -93,7 +93,7 @@ async function clickSection(page: Page, name: string): Promise<void> {
 // so the rest of the suite is unaffected; must be called before page.goto.
 async function setAdminConfigVariant(
   context: BrowserContext,
-  variant: "oidc" | "oidc-empty-mappings" | "empty-storage-class" | "registries-curseforge",
+  variant: "oidc" | "oidc-design" | "oidc-empty-mappings" | "empty-storage-class" | "registries-curseforge",
 ): Promise<void> {
   await context.addCookies([
     { name: "e2e_admin_config_variant", value: variant, domain: "localhost", path: "/" },
@@ -122,7 +122,7 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
   });
 
   test("uMiwd: Admin Settings — Authentication", async ({ page, context }) => {
-    await setAdminConfigVariant(context, "oidc");
+    await setAdminConfigVariant(context, "oidc-design");
     await page.goto("/admin");
     await clickSection(page, "Authentication");
     // Helm OIDC Provider Card (read-only, groups claim + default role).
@@ -132,7 +132,7 @@ test.describe("Slice 4: Admin, Users, Audit, System logs, Cluster (Desktop — 1
     // AdminSettings.tsx) since the Helm-seeded card above renders the same
     // group name as a plain read-only chip.
     await expect(page.getByText("Role mapping overrides")).toBeVisible();
-    await expect(page.getByLabel("Admin role mapping").getByText("ops-leads")).toBeVisible();
+    await expect(page.getByLabel("Admin role mapping").getByText("gameplane-admins")).toBeVisible();
     await page.waitForTimeout(200);
     await capture(page, "uMiwd");
   });

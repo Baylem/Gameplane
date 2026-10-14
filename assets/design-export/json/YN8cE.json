@@ -1,9 +1,9 @@
 {
   "type": "frame",
-  "id": "h5clan",
-  "x": 43120,
+  "id": "YN8cE",
+  "x": 44640,
   "y": 11355,
-  "name": "Screen/Server Detail — Settings · Game configuration (Password will be removed)",
+  "name": "Screen/Server Detail — Settings · Game configuration (New password typed)",
   "theme": {
     "semantic": "dark"
   },
@@ -13,10 +13,11 @@
   "fill": "$background/background",
   "children": [
     {
-      "id": "W2XAo",
+      "id": "QC4QI",
       "type": "ref",
       "ref": "kKFX9",
       "height": "fill_container",
+      "name": "Restored ref",
       "descendants": {
         "iTbd8": {
           "fill": "#00000000"
@@ -40,7 +41,7 @@
     },
     {
       "type": "frame",
-      "id": "z9d3P",
+      "id": "AwAAZ",
       "name": "Main",
       "width": "fill_container",
       "height": "fill_container",
@@ -48,10 +49,11 @@
       "layout": "vertical",
       "children": [
         {
-          "id": "l19Id",
+          "id": "z1zcAw",
           "type": "ref",
           "ref": "gu5WY",
           "width": "fill_container",
+          "name": "Restored ref",
           "descendants": {
             "Gl7AY": {
               "content": "mc-survival"
@@ -60,7 +62,7 @@
         },
         {
           "type": "frame",
-          "id": "fDTIu",
+          "id": "JsrrP",
           "name": "Body",
           "width": "fill_container",
           "height": "fill_container",
@@ -70,14 +72,14 @@
           "padding": 24,
           "children": [
             {
-              "id": "F25Cp",
+              "id": "dBiIp",
               "type": "ref",
               "ref": "S4k0x",
               "name": "Detail Header",
               "width": "fill_container"
             },
             {
-              "id": "EPBOZ",
+              "id": "yHNON",
               "type": "ref",
               "ref": "I9kvlZ",
               "name": "Tabs Bar",
@@ -105,13 +107,13 @@
             },
             {
               "type": "frame",
-              "id": "rgg36",
+              "id": "y9X6p",
               "name": "Settings Content",
               "width": "fill_container",
               "height": "fill_container",
               "children": [
                 {
-                  "id": "NhLDd",
+                  "id": "IxbPy",
                   "type": "ref",
                   "ref": "EV8mp",
                   "name": "Settings Sub Nav",
@@ -236,7 +238,7 @@
                 },
                 {
                   "type": "frame",
-                  "id": "eVucv",
+                  "id": "B1JyQ",
                   "name": "Settings Panel Wrap",
                   "width": "fill_container",
                   "height": "fill_container",
@@ -244,7 +246,7 @@
                   "children": [
                     {
                       "type": "frame",
-                      "id": "J2VnM",
+                      "id": "c9zM4k",
                       "name": "Settings Form",
                       "width": "fill_container",
                       "height": "fill_container",
@@ -252,7 +254,7 @@
                       "children": [
                         {
                           "type": "frame",
-                          "id": "QuP2F",
+                          "id": "KGHPV",
                           "name": "Form Body",
                           "width": "fill_container",
                           "height": "fill_container",
@@ -262,7 +264,7 @@
                           "children": [
                             {
                               "type": "frame",
-                              "id": "S5mGZ",
+                              "id": "AFwnw",
                               "name": "Section Header",
                               "width": "fill_container",
                               "layout": "vertical",
@@ -270,7 +272,7 @@
                               "children": [
                                 {
                                   "type": "text",
-                                  "id": "z5KwZN",
+                                  "id": "bqAlw",
                                   "name": "Section Title",
                                   "fill": "$foreground/foreground",
                                   "content": "Game configuration",
@@ -280,7 +282,7 @@
                                 },
                                 {
                                   "type": "text",
-                                  "id": "SICLk",
+                                  "id": "n3asvo",
                                   "name": "Section Description",
                                   "fill": "$muted",
                                   "content": "Settings from this server's game template. Saving restarts the server.",
@@ -291,7 +293,7 @@
                               ]
                             },
                             {
-                              "id": "i5kSI",
+                              "id": "dIZPs",
                               "type": "ref",
                               "ref": "uJ3KZ",
                               "name": "Restart Alert",
@@ -307,14 +309,14 @@
                             },
                             {
                               "type": "frame",
-                              "id": "D2XSw",
+                              "id": "EDxrk",
                               "name": "Field World name",
                               "width": "fill_container",
                               "gap": 16,
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "aLFDZ",
+                                  "id": "E21gp0",
                                   "name": "lbl",
                                   "width": 200,
                                   "layout": "vertical",
@@ -322,7 +324,7 @@
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "wa9uX",
+                                      "id": "mxrxW",
                                       "name": "Label",
                                       "fill": "$foreground/foreground",
                                       "content": "World name",
@@ -334,14 +336,14 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "pHuja",
+                                  "id": "blKmQ",
                                   "name": "ctrl",
                                   "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
                                     {
-                                      "id": "Etrig",
+                                      "id": "S4Ryz",
                                       "type": "ref",
                                       "ref": "D0cDM",
                                       "name": "Input",
@@ -359,14 +361,14 @@
                             },
                             {
                               "type": "frame",
-                              "id": "OwRSn",
+                              "id": "YrnLI",
                               "name": "Field Difficulty",
                               "width": "fill_container",
                               "gap": 16,
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "vmud3",
+                                  "id": "ebygk",
                                   "name": "lbl",
                                   "width": 200,
                                   "layout": "vertical",
@@ -374,7 +376,7 @@
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "vToUF",
+                                      "id": "ihoZt",
                                       "name": "Label",
                                       "fill": "$foreground/foreground",
                                       "content": "Difficulty",
@@ -386,14 +388,14 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "M54st4",
+                                  "id": "O4oaS",
                                   "name": "ctrl",
                                   "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
                                     {
-                                      "id": "Dt1fG",
+                                      "id": "qWlRT",
                                       "type": "ref",
                                       "ref": "AT7ya",
                                       "name": "Select",
@@ -414,14 +416,14 @@
                             },
                             {
                               "type": "frame",
-                              "id": "SzlMN",
+                              "id": "BfNvQ",
                               "name": "Field Max players",
                               "width": "fill_container",
                               "gap": 16,
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "e50P75",
+                                  "id": "D9yRI",
                                   "name": "lbl",
                                   "width": 200,
                                   "layout": "vertical",
@@ -429,7 +431,7 @@
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "r8ZQWt",
+                                      "id": "r0dvK",
                                       "name": "Label",
                                       "fill": "$foreground/foreground",
                                       "content": "Max players",
@@ -441,14 +443,14 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "X9Pvl",
+                                  "id": "fGN7X",
                                   "name": "ctrl",
                                   "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
                                     {
-                                      "id": "s43pHd",
+                                      "id": "JSnMN",
                                       "type": "ref",
                                       "ref": "D0cDM",
                                       "name": "Input",
@@ -466,14 +468,14 @@
                             },
                             {
                               "type": "frame",
-                              "id": "X0E8H",
+                              "id": "M7WyzF",
                               "name": "Field PvP",
                               "width": "fill_container",
                               "gap": 16,
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "kSnF3",
+                                  "id": "S7efIl",
                                   "name": "lbl",
                                   "width": 200,
                                   "layout": "vertical",
@@ -481,7 +483,7 @@
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "j4lfR",
+                                      "id": "UCrrs",
                                       "name": "Label",
                                       "fill": "$foreground/foreground",
                                       "content": "PvP",
@@ -493,14 +495,14 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "AwdJJ",
+                                  "id": "M3aHv",
                                   "name": "ctrl",
                                   "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
                                     {
-                                      "id": "W0Foz",
+                                      "id": "wO3zr",
                                       "type": "ref",
                                       "ref": "AT7ya",
                                       "name": "Select",
@@ -521,14 +523,14 @@
                             },
                             {
                               "type": "frame",
-                              "id": "sKu9v",
+                              "id": "xQ9Nz",
                               "name": "Field Server password",
                               "width": "fill_container",
                               "gap": 16,
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "Kz4wH",
+                                  "id": "uD85J",
                                   "name": "lbl",
                                   "width": 200,
                                   "layout": "vertical",
@@ -536,7 +538,7 @@
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "TxWfa",
+                                      "id": "vovRG",
                                       "name": "Label",
                                       "fill": "$foreground/foreground",
                                       "content": "Server password",
@@ -548,7 +550,7 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "xC231",
+                                  "id": "mX0ac",
                                   "name": "ctrl",
                                   "width": "fill_container",
                                   "layout": "vertical",
@@ -556,34 +558,22 @@
                                   "children": [
                                     {
                                       "type": "frame",
-                                      "id": "pkqQ8",
+                                      "id": "sAYIe",
                                       "name": "Input row",
                                       "width": "fill_container",
                                       "gap": 8,
                                       "alignItems": "center",
                                       "children": [
                                         {
-                                          "id": "L9xAIS",
+                                          "id": "FrryF",
                                           "type": "ref",
                                           "ref": "D0cDM",
                                           "name": "Input",
                                           "width": "fill_container",
-                                          "stroke": "$danger/danger",
                                           "descendants": {
                                             "PJERm": {
-                                              "content": "Password will be removed",
-                                              "fill": "$danger/danger"
-                                            }
-                                          }
-                                        },
-                                        {
-                                          "id": "FUHzm",
-                                          "type": "ref",
-                                          "ref": "J09iP",
-                                          "name": "Remove password button",
-                                          "descendants": {
-                                            "eWkIT/r4VbAi": {
-                                              "content": "Undo"
+                                              "content": "••••••••••",
+                                              "fill": "$foreground/foreground"
                                             }
                                           }
                                         }
@@ -591,10 +581,10 @@
                                     },
                                     {
                                       "type": "text",
-                                      "id": "Eb0j0",
+                                      "id": "q473dg",
                                       "name": "Helper",
-                                      "fill": "$danger/danger",
-                                      "content": "Removed when you save. Undo to keep the stored password.",
+                                      "fill": "$muted",
+                                      "content": "Write-only",
                                       "fontFamily": "$typography/font-sans",
                                       "fontSize": 12,
                                       "fontWeight": "normal"
@@ -605,14 +595,14 @@
                             },
                             {
                               "type": "frame",
-                              "id": "ITufX",
+                              "id": "NBrKm",
                               "name": "Field MOTD",
                               "width": "fill_container",
                               "gap": 16,
                               "children": [
                                 {
                                   "type": "frame",
-                                  "id": "j4C93",
+                                  "id": "aFMOo",
                                   "name": "lbl",
                                   "width": 200,
                                   "layout": "vertical",
@@ -620,7 +610,7 @@
                                   "children": [
                                     {
                                       "type": "text",
-                                      "id": "J5PPz",
+                                      "id": "TRziH",
                                       "name": "Label",
                                       "fill": "$foreground/foreground",
                                       "content": "MOTD",
@@ -632,14 +622,14 @@
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "K3aqU",
+                                  "id": "oUikf",
                                   "name": "ctrl",
                                   "width": "fill_container",
                                   "layout": "vertical",
                                   "gap": 6,
                                   "children": [
                                     {
-                                      "id": "Gotg9",
+                                      "id": "z36WJ",
                                       "type": "ref",
                                       "ref": "D0cDM",
                                       "name": "Input",
@@ -653,7 +643,7 @@
                                     },
                                     {
                                       "type": "text",
-                                      "id": "GPjVy",
+                                      "id": "L1jWH",
                                       "name": "Helper",
                                       "fill": "$muted",
                                       "content": "Written to serverconfig.txt",
@@ -669,7 +659,7 @@
                         },
                         {
                           "type": "frame",
-                          "id": "TY24A",
+                          "id": "gkY8j",
                           "name": "Form Footer",
                           "width": "fill_container",
                           "stroke": "$border/border",
@@ -687,7 +677,7 @@
                           "alignItems": "center",
                           "children": [
                             {
-                              "id": "e35wn",
+                              "id": "jZQLp",
                               "type": "ref",
                               "ref": "J09iP",
                               "name": "Btn Discard",
@@ -698,7 +688,7 @@
                               }
                             },
                             {
-                              "id": "S04hZr",
+                              "id": "IOHMd",
                               "type": "ref",
                               "ref": "z9ShNE",
                               "name": "Btn Save Changes",
