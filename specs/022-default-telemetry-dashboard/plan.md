@@ -227,7 +227,6 @@ Spec 022 is reopened for one more slice on a new branch and PR; the shipped feat
    - version ordering through `golang.org/x/mod/semver`, a new direct dependency of `telemetry-receiver`
    - classification in the extended ingest transaction, and the `extended.versionTrend` view block
    - the design in `telemetry-receiver/telemetry-dashboard.pen` first (rename "Versions" to "Reports by version", add the trend chart under "Versions by install"), done on the local machine where Pencil runs, then the templates
-   - the stale computation waits for OD-10
 
 ## Cross-spec dependencies
 

@@ -39,7 +39,7 @@ The Versions panel showed "pr617 6" for one install that had sent 6 daily report
 - Q13: What does "stale" mean? → A: **Behind the newest release seen.** On a given day, an install is stale when its version is lower than the newest release any install reported in the selected range (OD-7).
 - Q14: How are versions that aren't releases (`pr617`, `dev`, `edge-<sha>`) ordered? → A: **Semver only.** Only semver versions are ordered. A change to or from anything else counts as "changed (unordered)", never as an upgrade or downgrade, and such an install is never stale (OD-8).
 - Q15: Where do the views go? → A: **Keep both, add the trend.** The basic reports-by-version panel stays and is renamed "Reports by version". The trend goes under "Versions by install" in the extended section (OD-9).
-- Q16: Can a pre-release (`v0.4.0-rc.1`) set the newest-release bar for stale? → OPEN (OD-10).
+- Q16: Can a pre-release (`v0.4.0-rc.1`) set the newest-release bar for stale? → A: **Any semver.** The highest semver version seen in the range sets the bar, pre-releases included, so one install on `v0.4.0-rc.1` makes installs on `v0.3.0` stale (OD-10).
 
 ## Context
 
@@ -398,7 +398,7 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
   - **upgraded**: installs whose first non-duplicate report that day carries a semver version higher than their activity record's last version
   - **downgraded**: the same, with a lower semver version
   - **changed (unordered)**: installs whose version changed where either side isn't semver (OD-8)
-  - **stale**: installs active that day on a semver version lower than the newest release reported by any install in the range (OD-7). Whether a pre-release can be that newest release is OD-10. Installs on a version that isn't semver are never stale.
+  - **stale**: installs active that day on a semver version lower than the newest release reported by any install in the range (OD-7). The newest release is the highest semver version seen, pre-releases included (OD-10). Installs on a version that isn't semver are never stale.
 
   An install's first report (no activity record yet) is never a change. Version changes MUST be stored only as daily counts, never linked to an install ID (FR-014). The trend starts on the day the provider gains this feature, with no backfill.
 

@@ -238,7 +238,7 @@ The range R is 7, 30, 90 or 365 days and ends on today, the current UTC day, whi
 | Unique active installs | `count(activity where last_seen ≥ asOf − {0, 6, 29})` |
 | New and lapsed installs | `daily_ext.new_installs` and `lapsed_installs` series over R |
 | Version adoption (installs) | `activity.last_version` for records with `last_seen` inside `min(R, ACTIVITY_EXPIRY_DAYS)`. The window used is shown. |
-| Version trend (FR-042) | Per day D in R: `upgraded`, `downgraded` and `unordered` from `daily_version_change[D]`; `stale[D]` = Σ `daily_install_version[D].installs` over semver versions lower than N, where N is the newest release in `daily_install_version` over R (OD-7; which versions can be N is OD-10). Versions that aren't semver are never stale (OD-8). |
+| Version trend (FR-042) | Per day D in R: `upgraded`, `downgraded` and `unordered` from `daily_version_change[D]`; `stale[D]` = Σ `daily_install_version[D].installs` over semver versions lower than N, where N is the newest release in `daily_install_version` over R (OD-7): the highest semver version, pre-releases included (OD-10). Versions that aren't semver are never stale (OD-8). |
 | Environment, games, feature shares | Σ `installs` ÷ Σ `daily_ext.ext_reports` over R (install-day weighted, research R4) |
 | Extended coverage (FR-026) | Σ `ext_reports` ÷ Σ `reports` over R |
 | Public summary (FR-029) | `reports` for asOf; Σ `reports` over the 30 days ending asOf; `meta.reports_total`; `count(activity where last_seen ≥ asOf − 29)`; `asOf` |

@@ -1,6 +1,6 @@
 # Open Decisions
 
-**Status**: 1 open (OD-10); 9 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07, OD-6 on 2026-10-08, OD-7, OD-8 and OD-9 on 2026-10-14).
+**Status**: 0 open; 10 ruled (OD-2, OD-3 and OD-4 on 2026-10-06, OD-1 and OD-5 on 2026-10-07, OD-6 on 2026-10-08, OD-7 to OD-10 on 2026-10-14).
 
 Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract in code, chart defaults or docs until it is ruled here.
 
@@ -156,7 +156,7 @@ Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract
 
 ### OD-10: Pre-releases and the newest-release bar
 
-**Status**: OPEN
+**Status**: RULED (2026-10-14, user)
 
 **Question**: Can a pre-release such as `v0.4.0-rc.1` be the "newest release" that makes other installs stale (OD-7)? Release images report their git tag (`v0.3.0`), and the repo has pre-release tags (`v0.3.0-rc.1`). Semver orders `v0.4.0-rc.1` above `v0.3.0`, so one rc tester would make every install on the newest final release stale. Moving to or from a pre-release still counts as an upgrade or downgrade either way.
 
@@ -164,7 +164,5 @@ Per CLAUDE.md rule 10, an open value MUST NOT be committed as a settled contract
 1. Finals only: only versions without a pre-release suffix set the bar.
 2. Any semver: the highest semver seen sets the bar, pre-releases included.
 
-**Recommended default**: (1) finals only. Being on the newest final release isn't stale, and rc testers are few.
-
-**Blocks**: the stale computation in T106 and its tests in T109.
+**Ruling**: (2) any semver. The highest semver version seen in the range sets the bar, pre-releases included. One install on `v0.4.0-rc.1` makes every install on `v0.3.0` stale for the days in the range.
 
