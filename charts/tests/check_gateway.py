@@ -10,6 +10,11 @@ CHART = ROOT / "charts" / "gameplane"
 
 
 def render(values=None, failure=None, upgrade=False, namespace="gameplane-system", release="gameplane", include_crds=False, chart=CHART):
+    """Return rendered objects, or assert the expected Helm validation failure.
+
+    Accept a source chart or packaged archive; native CRDs are opt-in to match
+    Helm template's default behavior.
+    """
     with tempfile.TemporaryDirectory() as directory:
         values_path = Path(directory) / "values.yaml"
         values_path.write_text(yaml.safe_dump(values or {}), encoding="utf-8")

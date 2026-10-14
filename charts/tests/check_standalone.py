@@ -18,11 +18,13 @@ EXPECTED_CRDS = {
 
 
 def assert_crds(objects, expected):
+    """Require exactly the expected CRD names, with no duplicate definitions."""
     names = [obj["metadata"]["name"] for obj in objects if obj["kind"] == "CustomResourceDefinition"]
     assert set(names) == expected and len(names) == len(expected), names
 
 
 def check_packaged_crds(example):
+    """Verify vendored chart archives preserve CRD gating for each install role."""
     # Package only vendored files. Dependency downloads/builds would hide a
     # missing bundled CRD chart and require network access for installation.
     with tempfile.TemporaryDirectory() as directory:
@@ -41,6 +43,7 @@ def check_packaged_crds(example):
 
 
 def main():
+    """Check deployment roles, standalone key custody, and source/archive CRDs."""
     defaults = render(include_crds=True)
     assert_crds(defaults, EXPECTED_CRDS)
     one(defaults, "Deployment", "gameplane-operator")
