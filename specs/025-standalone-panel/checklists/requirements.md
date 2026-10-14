@@ -16,7 +16,7 @@
 - [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
-- [x] Success criteria are technology-agnostic (no implementation details)
+- [ ] Success criteria are technology-agnostic (no implementation details)
 - [x] All acceptance scenarios are defined
 - [x] Edge cases are identified
 - [x] Scope is clearly bounded
@@ -26,11 +26,12 @@
 
 - [x] All functional requirements have clear acceptance criteria
 - [x] User scenarios cover primary flows
-- [ ] Feature meets measurable outcomes defined in Success Criteria
+- [x] Feature meets measurable outcomes defined in Success Criteria
 - [x] No implementation details leak into specification
 
 ## Notes
 
 - Written retroactively for merged PR #630. Flags, paths and file names appear because the contributor's design note named them and operators configure them; they are the user-facing contract, not implementation choices.
-- "Feature meets measurable outcomes" stays unchecked: SC-001 to SC-006 are met by CI jobs and unit tests, but Constitution I requires a `test/e2e/` test, which does not exist (spec Known gaps).
+- "Technology-agnostic" stays unchecked: SC-001, SC-005 and SC-006 name the CI jobs and tests that measure them, because this folder documents shipped behaviour.
+- SC-001 to SC-006 are met by CI jobs and unit tests. Separately, Constitution I requires a `test/e2e/` test, which does not exist (spec Known gaps, OD-5).
 - OD-4 (legacy key formats) and OD-5 (`done_` rename) are open; neither changes a requirement of the merged feature.
