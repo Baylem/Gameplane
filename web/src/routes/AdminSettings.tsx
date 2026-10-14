@@ -114,7 +114,7 @@ export function AdminSettingsPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-4 p-6">
       <PageHeader
         title="Admin settings"
         description="Platform-wide configuration for this Gameplane instance."
@@ -474,7 +474,7 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
   return (
     <div className="space-y-6">
       <SectionCard
-        className="gap-0 p-0"
+        className="gap-0 space-y-0 p-0"
         title="Authentication"
         subtitle="Built-in local accounts plus federated identity providers. Changes take effect on save — no restart needed."
         titleClassName="text-sm font-medium"
@@ -551,7 +551,7 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
           )}
         </ul>
         {lastToggleLocked && (
-          <p className="mt-4 text-xs text-muted">
+          <p className="text-xs text-muted">
             At least one identity provider must stay enabled — the last enabled
             provider can&apos;t be turned off.
           </p>
@@ -1981,7 +1981,7 @@ function HelmOIDCProviderCard({ provider }: { provider: OIDCHelmProvider }) {
   const adminMapped = provider.roleMappings?.admin && provider.roleMappings.admin.length > 0;
   return (
     <SectionCard
-      className="gap-0 p-0"
+      className="gap-0 space-y-0 p-0"
       title="Helm-seeded OIDC provider"
       subtitle="Read-only snapshot of the identity provider configured via api.oidc.* Helm values at install time. Connection settings are not editable here; role mappings can be overridden below."
       titleClassName="text-sm font-medium"
@@ -1989,8 +1989,8 @@ function HelmOIDCProviderCard({ provider }: { provider: OIDCHelmProvider }) {
       headerClassName="px-5 pt-5 pb-4 space-y-1"
       contentClassName="px-5 pb-5 space-y-4"
     >
-      <div className="space-y-4">
-        <div className="space-y-2">
+      <div>
+        <div className="space-y-0.5 pb-1">
           <div className="font-medium text-sm">Provider</div>
           <p className="text-[11px] text-muted">
             Groups claim and default role are seeded from the same Helm values and are not editable here.
@@ -2049,7 +2049,7 @@ function HelmOIDCProviderCard({ provider }: { provider: OIDCHelmProvider }) {
           </div>
         )}
         {adminMapped && (
-          <div className="rounded-lg border border-warning-soft-foreground bg-warning-soft px-4 py-3 flex gap-4">
+          <div className="mt-3 rounded-lg border border-warning-soft-foreground bg-warning-soft px-4 py-3 flex gap-4">
             <Megaphone className="h-4 w-4 text-warning-soft-foreground flex-shrink-0 mt-0.5" />
             <div className="text-sm">
               <div className="font-medium text-warning-soft-foreground mb-1">Helm-configured admin mapping</div>
@@ -2199,7 +2199,7 @@ function RoleMappingOverridesCard({
       <SectionCard
         title="Role mapping overrides"
         subtitle="Override the Helm-seeded OIDC group mappings per role from here. A change takes effect the next time an affected user logs in — no restart or reinstall needed."
-        className="bg-card gap-0 p-0"
+        className="bg-card gap-0 space-y-0 p-0"
         titleClassName="text-sm font-medium"
         subtitleClassName="text-sm"
         headerClassName="px-5 pt-5 pb-4 space-y-1"
@@ -2247,7 +2247,7 @@ function RoleMappingOverridesCard({
 
             return (
               <div key={role} role="group" aria-label={`${role.charAt(0).toUpperCase() + role.slice(1)} role mapping`}>
-                {role !== "admin" && <div className="h-px bg-border" />}
+                {role !== "admin" && <div className="mb-4 h-px bg-border" />}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
