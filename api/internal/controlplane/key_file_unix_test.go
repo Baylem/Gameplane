@@ -105,7 +105,7 @@ func TestKeyOwnershipAllowsProjectedRootOwnedFSGroup(t *testing.T) {
 		{"group-writable", 0, 65532, 0460, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateKeyAccess(tc.uid, tc.gid, tc.mode, 65532, []int{65532})
+			err := validateKeyAccess(tc.uid, tc.gid, tc.mode, 65532, 65532, []int{65532})
 			if (err == nil) != tc.wantOK {
 				t.Fatalf("key access accepted=%v want=%v", err == nil, tc.wantOK)
 			}

@@ -115,6 +115,13 @@ func validateRotationSource(ctx context.Context, old *backend, newOptions KeyOpt
 		return false, fmt.Errorf("begin rotation source validation: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
+	var initialized, credentials int
+	if err := tx.QueryRowContext(ctx, `SELECT (SELECT COUNT(*) FROM management_key_state), (SELECT COUNT(*) FROM management_objects WHERE kind = 'secrets')`).Scan(&initialized, &credentials); err != nil {
+		return false, fmt.Errorf("inspect rotation source: %w", err)
+	}
+	if initialized == 0 && credentials == 0 {
+		return false, errors.New("rotation source is an uninitialized database; select an established panel database")
+	}
 	if err := old.initializeKeyState(ctx, tx); err != nil {
 		// A differing active key is safe only for an authenticated retry of
 		// the immediately preceding rotation with these exact key identities.

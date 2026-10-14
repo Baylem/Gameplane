@@ -42,11 +42,11 @@ func asSecret(obj *unstructured.Unstructured, err error) (*corev1.Secret, error)
 	}
 	data, err := json.Marshal(obj.Object)
 	if err != nil {
-		return nil, fmt.Errorf("encode credential object: %w", err)
+		return nil, &credentialStorageError{fmt.Errorf("management object secrets/%s/%s: encode credential object: %w", obj.GetNamespace(), obj.GetName(), err)}
 	}
 	secret := &corev1.Secret{}
 	if err := json.Unmarshal(data, secret); err != nil {
-		return nil, fmt.Errorf("decode credential: %w", err)
+		return nil, &credentialStorageError{fmt.Errorf("management object secrets/%s/%s: decode credential: %w", obj.GetNamespace(), obj.GetName(), err)}
 	}
 	return secret, nil
 }

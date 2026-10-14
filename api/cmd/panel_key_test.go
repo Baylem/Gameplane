@@ -3,8 +3,12 @@
 package main
 
 import (
+	"bytes"
+	"errors"
+	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/GameplanePanel/gameplane/api/internal/controlplane"
@@ -12,6 +16,22 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestRotatePanelKeyHelpDoesNotExposeDatabaseCredentials(t *testing.T) {
+	t.Setenv("GAMEPLANE_DB_DSN", "postgres://user:private-help-password@database/panel")
+	var out bytes.Buffer
+	err := rotatePanelKeyWithOutput(t.Context(), []string{"--help"}, &out)
+	if !errors.Is(err, flag.ErrHelp) || !strings.Contains(out.String(), "new-key-file") || strings.Contains(out.String(), "private-help-password") {
+		t.Fatalf("unsafe or missing help: %v %s", err, &out)
+	}
+}
+
+func TestRotatePanelKeyRejectsCredentialBearingDSNArgument(t *testing.T) {
+	err := rotatePanelKey(t.Context(), []string{"--db-dsn=postgres://user:private-argument-password@database/panel", "--old-key-file=old.key", "--new-key-file=new.key"})
+	if err == nil || !strings.Contains(err.Error(), "GAMEPLANE_DB_DSN") || strings.Contains(err.Error(), "private-argument-password") {
+		t.Fatalf("credential-bearing argument accepted or exposed: %v", err)
+	}
+}
 
 func TestRotatePanelKeyRejectsIncompleteArgumentsBeforeDatabaseWrites(t *testing.T) {
 	t.Setenv("GAMEPLANE_PANEL_KEY_FILE", "")
@@ -22,8 +42,9 @@ func TestRotatePanelKeyRejectsIncompleteArgumentsBeforeDatabaseWrites(t *testing
 		{"--old-key-file=old.key", "--new-key-file=new.key", "unexpected"},
 	} {
 		path := filepath.Join(t.TempDir(), "panel.db")
-		full := append([]string{"--db-driver=sqlite", "--db-dsn=" + path}, args...)
-		if err := rotatePanelKey(t.Context(), full); err == nil {
+		t.Setenv("GAMEPLANE_DB_DRIVER", "sqlite")
+		t.Setenv("GAMEPLANE_DB_DSN", path)
+		if err := rotatePanelKey(t.Context(), args); err == nil {
 			t.Fatal("accepted incomplete rotation arguments")
 		}
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -85,7 +106,9 @@ func TestRotatePanelKeyMissingProvisionedReplacementLeavesOldStateUsable(t *test
 	if _, err := controlplane.New(t.Context(), store, oldPath); err != nil {
 		t.Fatal(err)
 	}
-	args := []string{"--db-driver=sqlite", "--db-dsn=" + dbPath, "--old-key-file=" + oldPath, "--new-key-file=" + newPath, "--new-key-provisioned"}
+	t.Setenv("GAMEPLANE_DB_DRIVER", "sqlite")
+	t.Setenv("GAMEPLANE_DB_DSN", dbPath)
+	args := []string{"--old-key-file=" + oldPath, "--new-key-file=" + newPath, "--new-key-provisioned"}
 	if err := rotatePanelKey(t.Context(), args); err == nil {
 		t.Fatal("generated missing provisioned replacement key")
 	}

@@ -84,6 +84,22 @@ func loadKeyWithSync(path string, required bool, syncDirectory func(string) erro
 	if path == "" {
 		return nil, errors.New("management key file path is required")
 	}
+	if err := validateKeyPlatform(); err != nil {
+		return nil, err
+	}
+	if !required {
+		if err := createKeyDirectory(filepath.Dir(path), syncDirectory); err != nil {
+			return nil, fmt.Errorf("create key directory: %w", err)
+		}
+	}
+	unlock, err := lockKeyPublication(filepath.Dir(path))
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+	if err := recoverKeyAliases(path); err != nil {
+		return nil, fmt.Errorf("recover management key publication: %w", err)
+	}
 	key, err := readKey(path)
 	if err == nil {
 		if len(key) != 32 {
@@ -101,9 +117,6 @@ func loadKeyWithSync(path string, required bool, syncDirectory func(string) erro
 	}
 	if required {
 		return nil, errors.New("management encryption key is missing; restore the original key alongside the database")
-	}
-	if err := createKeyDirectory(filepath.Dir(path), syncDirectory); err != nil {
-		return nil, fmt.Errorf("create key directory: %w", err)
 	}
 	key = make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
@@ -130,9 +143,12 @@ func loadKeyWithSync(path string, required bool, syncDirectory func(string) erro
 	}
 	if err := os.Link(tmp, path); err != nil {
 		if errors.Is(err, os.ErrExist) {
-			return loadKey(path, true)
+			return nil, errors.New("management key appeared outside the publication lock; retry startup")
 		}
 		return nil, fmt.Errorf("publish management key: %w", err)
+	}
+	if err := os.Remove(tmp); err != nil {
+		return nil, fmt.Errorf("remove management key publication alias: %w", err)
 	}
 	// Syncing the inode above does not persist its published directory entry.
 	// Do not allow encrypted DB writes until the final name survives a crash.
@@ -221,15 +237,15 @@ func (s *objects) decode(name, uid string, version int64, payload string) (*unst
 		var err error
 		data, err = s.openCiphertext(name, uid, version, payload)
 		if err != nil {
-			return nil, err
+			return nil, &credentialStorageError{fmt.Errorf("management object %s/%s/%s: %w", s.kind, s.ns, name, err)}
 		}
 	}
 	obj := &unstructured.Unstructured{}
 	if err := json.Unmarshal(data, &obj.Object); err != nil {
-		return nil, errors.New("invalid management object data")
+		return nil, &credentialStorageError{fmt.Errorf("management object %s/%s/%s: invalid object data", s.kind, s.ns, name)}
 	}
 	if obj.GetName() != name || obj.GetNamespace() != s.ns || string(obj.GetUID()) != uid || obj.GetResourceVersion() != strconv.FormatInt(version, 10) {
-		return nil, errors.New("management object metadata does not match stored identity")
+		return nil, &credentialStorageError{fmt.Errorf("management object %s/%s/%s: metadata does not match stored identity", s.kind, s.ns, name)}
 	}
 	return obj, nil
 }
@@ -368,7 +384,11 @@ func (s *objects) delete(ctx context.Context, name string, opts metav1.DeleteOpt
 			return apierrors.NewConflict(s.resource(), name, errors.New("management object delete precondition failed"))
 		}
 	}
-	result, err := s.write(ctx, s.kind == "secrets", `DELETE FROM management_objects WHERE kind = ? AND namespace = ? AND name = ? AND uid = ? AND version = ?`, s.kind, s.ns, name, string(obj.GetUID()), obj.GetResourceVersion())
+	version, err := strconv.ParseInt(obj.GetResourceVersion(), 10, 64)
+	if err != nil {
+		return fmt.Errorf("management object %s/%s/%s: invalid version: %w", s.kind, s.ns, name, err)
+	}
+	result, err := s.write(ctx, s.kind == "secrets", `DELETE FROM management_objects WHERE kind = ? AND namespace = ? AND name = ? AND uid = ? AND version = ?`, s.kind, s.ns, name, string(obj.GetUID()), version)
 	if err != nil {
 		return fmt.Errorf("delete management object: %w", err)
 	}
