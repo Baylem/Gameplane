@@ -4,6 +4,17 @@
   persistence and dashboard blocks are absent.
 */ -}}
 {{- $r := .Values.api.telemetry.receiver }}
+{{- if .Values.api.standalone }}
+
+Standalone central panel: no local game cluster or Kubernetes API credentials.
+Register remote clusters through the panel API after bootstrapping an admin.
+Back up the database and matching encryption key separately. SQLite uses the
+API data PVC; generated keys use the separate API key PVC mounted at /keys.
+If using api.panelKey.existingSecret, protect and back up that Secret instead.
+Restrict access to key backups; do not include them in database backup jobs.
+Always pass --skip-crds when installing this profile; Helm's native crds/
+installation happens before chart values can disable resources.
+{{- end }}
 {{- $receiverDeployed := and (eq (include "gameplane.apiEnabled" .) "true") $r.enabled (not .Values.api.telemetry.endpoint) }}
 {{- $persistence := $r.persistence | default dict }}
 {{- $persistenceEnabled := ternary $persistence.enabled false (hasKey $persistence "enabled") }}

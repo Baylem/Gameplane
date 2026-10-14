@@ -48,6 +48,7 @@ const isColonAction = (params: PathParams) => String(params.name).includes(":");
 
 export const handlers = [
   ...fleetHandlers,
+  http.get("/admin/installation", () => HttpResponse.json({ standalone: false, localCluster: true })),
   // Auth
   http.get("/users/me", ({ cookies }) => {
     // e2e affordance: a 401 on /users/me must bounce the SPA to /login,
@@ -839,6 +840,7 @@ export function buildScreenshotHandlers() {
   const data = getScreenshotData();
   return [
     ...fleetHandlers,
+    http.get("/admin/installation", () => HttpResponse.json({ standalone: false, localCluster: true })),
     // The Servers page asks which namespaces to list before listing servers.
     http.get("/namespaces", () => HttpResponse.json({ namespaces: ["gameplane-games"] })),
     // Pre-auth instance default language (spec 019).

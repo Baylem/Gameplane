@@ -13,12 +13,12 @@
   "fill": "$background/background",
   "children": [
     {
-      "id": "DlcuA",
+      "id": "h2sWTB",
       "type": "ref",
       "ref": "kKFX9",
+      "name": "App Sidebar",
       "height": "fill_container",
       "layout": "vertical",
-      "name": "App Sidebar",
       "descendants": {
         "Sci9k": {
           "height": 70,
@@ -39,7 +39,7 @@
         },
         "ijsQu": {
           "type": "frame",
-          "id": "wVY15",
+          "id": "yuZHJ",
           "name": "Nav Content",
           "width": "fill_container",
           "height": "fill_container",
@@ -51,7 +51,7 @@
           ],
           "children": [
             {
-              "id": "A8CqgC",
+              "id": "jekdC",
               "type": "ref",
               "ref": "uFDbF",
               "name": "Section General",
@@ -63,7 +63,7 @@
               }
             },
             {
-              "id": "t8hOE",
+              "id": "FTFLn",
               "type": "ref",
               "ref": "B5sYje",
               "name": "navDashboard",
@@ -89,7 +89,7 @@
               }
             },
             {
-              "id": "jV8uw",
+              "id": "l2BPqJ",
               "type": "ref",
               "ref": "W8XiN",
               "name": "navServers",
@@ -113,7 +113,7 @@
               }
             },
             {
-              "id": "raFQV",
+              "id": "RvmiI",
               "type": "ref",
               "ref": "W8XiN",
               "name": "navModules",
@@ -139,7 +139,7 @@
               }
             },
             {
-              "id": "O0HLrA",
+              "id": "BMZAy",
               "type": "ref",
               "ref": "W8XiN",
               "name": "navBackups",
@@ -163,7 +163,7 @@
               }
             },
             {
-              "id": "k0QQxc",
+              "id": "i0M86T",
               "type": "ref",
               "ref": "uFDbF",
               "name": "Section Admin",
@@ -175,7 +175,7 @@
               }
             },
             {
-              "id": "ubagu",
+              "id": "RxY1j",
               "type": "ref",
               "ref": "W8XiN",
               "name": "navCluster",
@@ -199,7 +199,7 @@
               }
             },
             {
-              "id": "Ka2Xf",
+              "id": "l8tdzK",
               "type": "ref",
               "ref": "W8XiN",
               "name": "Cluster inventory navigation",
@@ -223,7 +223,7 @@
               }
             },
             {
-              "id": "g7FxN",
+              "id": "AM6yG",
               "type": "ref",
               "ref": "W8XiN",
               "name": "navUsers",
@@ -247,7 +247,7 @@
               }
             },
             {
-              "id": "GbLXA",
+              "id": "OPf4U",
               "type": "ref",
               "ref": "W8XiN",
               "name": "navAudit",
@@ -271,7 +271,7 @@
               }
             },
             {
-              "id": "Pd9d1",
+              "id": "rX4JW",
               "type": "ref",
               "ref": "W8XiN",
               "name": "navLogs",
@@ -295,7 +295,7 @@
               }
             },
             {
-              "id": "n2Gdq",
+              "id": "uzLV2",
               "type": "ref",
               "ref": "W8XiN",
               "name": "navSettings",
@@ -325,7 +325,7 @@
         },
         "oByLP": {
           "type": "frame",
-          "id": "gVXWY",
+          "id": "DIHKx",
           "name": "Toggle Row",
           "width": "fill_container",
           "gap": 8,
@@ -333,14 +333,14 @@
           "alignItems": "center",
           "children": [
             {
-              "id": "f5oXbp",
+              "id": "yVbl6",
               "type": "ref",
               "ref": "iA2C8",
               "name": "Appearance Toggle",
               "fill": "$surface/secondary"
             },
             {
-              "id": "NJR0y",
+              "id": "T7leKW",
               "type": "ref",
               "ref": "owgrI",
               "name": "Customize Theme",
@@ -377,7 +377,7 @@
         },
         {
           "type": "frame",
-          "id": "I2bQk",
+          "id": "m7kmp",
           "name": "Central management notice",
           "width": "fill_container",
           "height": 45,
@@ -396,7 +396,7 @@
           "children": [
             {
               "type": "text",
-              "id": "aBBe4",
+              "id": "rX0zZ",
               "name": "Central management label",
               "fill": "$foreground/foreground",
               "content": "Central management.",
@@ -407,7 +407,7 @@
             },
             {
               "type": "text",
-              "id": "HWUr3",
+              "id": "vudRw",
               "name": "Central management explanation",
               "fill": "$muted",
               "content": "This catalog, account or installation setting belongs to the central Gameplane installation. Server actions use each server’s location.",

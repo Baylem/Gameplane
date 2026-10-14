@@ -36,6 +36,15 @@ func title(e Event) string {
 	if e.Name == "" {
 		return render(e.lang, "notify.title.unnamed", map[string]any{"instance": inst, "event": what})
 	}
+	if e.Cluster != "" {
+		return render(e.lang, "notify.title.cluster", map[string]any{
+			"instance":  inst,
+			"event":     what,
+			"cluster":   e.Cluster,
+			"namespace": e.Namespace,
+			"name":      e.Name,
+		})
+	}
 	return render(e.lang, "notify.title.named", map[string]any{
 		"instance":  inst,
 		"event":     what,

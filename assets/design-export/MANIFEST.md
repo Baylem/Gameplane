@@ -2532,13 +2532,62 @@ T041 and T052 of `specs/022-default-telemetry-dashboard/`. New frames sit in an 
 
 `q31B6w` is unchanged. Both listed frames have MCP `Get` JSON exports (depth 30, path geometry included) and 2× PNG exports. The cooldown card was visually checked with `TakeScreenshot`; no clipping was reported. Browser capture for `FBiMN` uses a mocked 429 Start response with Retry-After; visual comparison remains pending CI.
 
+## Standalone panel (PR #630, 2026-10-08)
+
+Added standalone variants beside the existing combined-installation designs. Copy and available actions were checked against PR #630 at `794ee79da08d5381af875b15d80b5b17593b172c`.
+
+| Object ID | State |
+| --- | --- |
+| `w34N9` | Dashboard with no workload clusters: zero fleet, unavailable inventory, central audit, and no cluster-dependent create action |
+| `n2qdi` | Empty registered-cluster list |
+| `WrmU5` | Registered remote clusters with API connectivity status |
+| `Z81TW` | Reusable registration dialog with empty kubeconfig input |
+| `RpHBg` | Registration dialog in the Clusters screen |
+| `HVhmb` | Remove-registration confirmation; workloads remain on the cluster |
+| `Be7ZW` | Cluster inventory requiring an explicit workload selection |
+| `RS0KZ` | Selector, installation/registry failures, loading, and Retry reference states |
+| `Z0oyh` | Modules without a selected workload cluster |
+| `ZlLf0` | Modules permission denied on the selected cluster |
+| `EWrn0` | Remote module catalog with Deploy to east actions |
+| `p8QSPq` | Remote module catalog with inline source management |
+| `D9QYZ` | Backup destinations requiring workload selection |
+| `l64bd` | Module source settings requiring workload selection |
+| `Uzzje` | Standalone container update guidance |
+| `FOVMf` | Standalone About without a local Kubernetes version |
+| `r139UP` | Container-runtime system-log guidance |
+| `aMU7O` | User grants without a selected workload target |
+| `C9bR6` | User grants targeting a named remote cluster |
+
+Interaction context records permission gating, retained registration drafts on failure, pending dismissal restrictions, and clearing cluster-bound module drafts when the target changes. Primary user roles manage panel access; additional grants name the workload cluster and namespace. The reference board documents separate request states, not a single application screen. Master-key storage/rotation and in-place kubeconfig rotation are backend/operator workflows in this PR and do not add dashboard controls.
+
+All 19 roots have MCP `Get` JSON exports (depth 30, path geometry included) and 2× PNG exports. Structural checks found no remaining placeholders or unintended clipping. The two catalog category strips intentionally scroll horizontally. Screens and dialogs were visually inspected with `TakeScreenshot`; JSON copy/actions received an independent source review. No live-browser comparison was performed for this design-only pass.
+
+## PR #630 maintainer follow-up — October 14, 2026
+
+Updated existing roots before dashboard implementation and refreshed their MCP
+Get JSON exports (depth 30, path geometry) plus 2x PNG exports:
+
+| Root | Updated behavior |
+| --- | --- |
+| `RS0KZ` | Identity-fetch failure has Retry, distinct from denied permission; background refreshes preserve loaded data and drafts |
+| `HVhmb` | Removal error stays inside confirmation; dismissal/reopening resets it; successful removal clears matching selection without fallback |
+| `EWrn0` | Catalog background failure displays inline Retry; Deploy labels use the registration display name while routing uses its ID |
+| `p8QSPq` | Source background failure displays inline Retry and retains source-edit drafts |
+| `FOVMf` | About shows the central API build version without requesting local Kubernetes metadata |
+
+The request-state board, removal confirmation, About, catalog, and source view
+were visually inspected with MCP TakeScreenshot. New retry banners are visible
+and aligned. The existing horizontally scrolling category strips retain their
+intentional clipping. Deploy action rows use vertical layout to fit display-name
+labels. UI regression checks are prepared for CI execution; local TypeScript
+compilation passed. The user saved design.pen after the design updates.
 ## Players tab Nuclear Option state (spec 002, 2026-10-11)
 
 | Object ID | Name | Change |
 | --- | --- | --- |
-| `EkcbF` | Screen/Server Detail — Players (Nuclear Option) | New copy of `dPP50` with three player rows: display name plus faction chip, raw Steam ID (muted monospace) plus faction chip, and a named row without a faction. Kick/ban actions unchanged. Games without entries keep the `dPP50` layout. |
+| `U9xSg` | Screen/Server Detail — Players (Nuclear Option) | New copy of `dPP50` with three player rows: display name plus faction chip, raw Steam ID (muted monospace) plus faction chip, and a named row without a faction. Kick/ban actions unchanged. Games without entries keep the `dPP50` layout. |
 
-JSON: `Print(JSON.stringify(Get("EkcbF", {depth: 12})))`, `python3 -m json.tool` passes, no `"..."` elisions. PNG: `Export(["EkcbF"], "png", …, {scale: 2})` (2880x1800). Body-text check: `Pilot_Vance` appears only in `EkcbF.json`.
+JSON: `Print(JSON.stringify(Get("U9xSg", {depth: 12})))`, `python3 -m json.tool` passes, no `"..."` elisions. PNG: `Export(["U9xSg"], "png", …, {scale: 2})` (2880x1800). Body-text check: `Pilot_Vance` appears only in `U9xSg.json`.
 
 ## Incremental export 2026-10-11 — Game config optional password clear state (spec 021 OD-2)
 
@@ -2546,10 +2595,10 @@ JSON: `Print(JSON.stringify(Get("EkcbF", {depth: 12})))`, `python3 -m json.tool`
 | --- | --- | --- |
 | `OC804` | Screen/Server Detail — Settings · Game configuration | Stored optional password (untouched): the input sits in an "Input row" beside a ghost "Remove password" button. |
 | `QFEg9` | … (Invalid value) | Same "Remove password" button added to the stored password row. |
-| `h5clan` | … (Password will be removed) | New copy of `OC804`. Danger-outlined input reads "Password will be removed", the button reads "Undo", helper "Removed when you save. Undo to keep the stored password." |
-| `ffmEd` | … (New password typed) | New copy of `OC804`. Masked typed value, no remove button, helper "Write-only". |
+| `BguST` | … (Password will be removed) | New copy of `OC804`. Danger-outlined input reads "Password will be removed", the button reads "Undo", helper "Removed when you save. Undo to keep the stored password." |
+| `YN8cE` | … (New password typed) | New copy of `OC804`. Masked typed value, no remove button, helper "Write-only". |
 
-`Ne5TA` is unaffected. All four have MCP `Get` JSON exports (depth 20, zero elisions; `OC804`/`QFEg9` patched from the prior export with the `Get` result for the changed field subtree) and 2× PNG exports via `Export`. Validated by grepping `Password will be removed` (only `h5clan`) and `Remove password` (`OC804`, `QFEg9`, `h5clan`).
+`Ne5TA` is unaffected. All four have MCP `Get` JSON exports (depth 20, zero elisions; `OC804`/`QFEg9` patched from the prior export with the `Get` result for the changed field subtree) and 2× PNG exports via `Export`. Validated by grepping `Password will be removed` (only `BguST`) and `Remove password` (`OC804`, `QFEg9`, `BguST`).
 
 ## Spec 019 language pickers and language settings (2026-10-12)
 
@@ -2582,7 +2631,27 @@ T043, T072 and T094 of `specs/019-localization-language-packs/`. Placement follo
 
 | Node | Name | Change |
 | --- | --- | --- |
-| `kK8Ji` | Screen/Modules Catalog | Re-exported (1440×1320, was 1440×1150). A copy of the Central management notice from `Wj0V4` (`QOOnO`) now sits in Main between the Top Bar and the Body (`I2bQk`). The App Sidebar instance (`DlcuA`, replaces `h2sWTB`) carries the same overrides as `Wj0V4`'s sidebar (`EXGen`): brand subtitle "Central management" and both "Clusters" and "Cluster" under ADMIN, with Modules as the active item. The frame grew 45px for the notice and a further 125px so Row 3 is no longer clipped. |
-| `uMiwd` | Screen/Admin Settings — Authentication | Re-exported (1440×1636, was 1440×1591). Same notice copy (`UosI6`) and the same sidebar overrides as `EXGen` (`bbiZQ`, replaces `WrwBN`), with Settings as the active item. The frame grew 45px for the notice. |
+| `kK8Ji` | Screen/Modules Catalog | Re-exported (1440×1320, was 1440×1150). A copy of the Central management notice from `Wj0V4` (`QOOnO`) now sits in Main between the Top Bar and the Body (`m7kmp`). The App Sidebar instance (`h2sWTB`, updated in place) carries the same overrides as `Wj0V4`'s sidebar (`EXGen`): brand subtitle "Central management" and both "Clusters" and "Cluster" under ADMIN, with Modules as the active item. The frame grew 45px for the notice and a further 125px so Row 3 is no longer clipped. |
+| `uMiwd` | Screen/Admin Settings — Authentication | Re-exported (1440×1636, was 1440×1591). Same notice copy (`svJe1`) and the same sidebar overrides as `EXGen` (`WrwBN`, updated in place), with Settings as the active item. The frame grew 45px for the notice. |
 
 The app already renders the notice on `/modules` and `/admin`; the maintainer decided on 2026-10-12 that the design follows the app. The Top Bar and Body subtrees of both frames are unchanged, and no reusable component was touched. JSON: the committed export patched with `Get` results (depth 30, path geometry included) for the sidebar instance and the notice, then checked by length and FNV-1a hash against `JSON.stringify(Get(id, …))` of the whole frame on the canvas; `python3 -m json.tool` passes, zero `"..."` elisions. PNG: `Export(ids, "png", …, {scale: 2})` (2880×2640 and 2880×3272). Body-text check: `"Central management."` appears only in `kK8Ji.json`, `uMiwd.json` and `Wj0V4.json`.
+
+
+
+## Merge with upstream master 86cc48c9 — October 14, 2026
+
+Preserved all 19 standalone roots and the maintainer follow-up states. The other
+upstream exports moved unchanged into assets/design-export. Applied upstream
+changes to OC804/QFEg9 (optional password removal), kK8Ji (central management
+notice and sidebar), and uMiwd (the same notice/sidebar), retaining their root
+IDs. Recreated the three new upstream screens through Pencil insertion, which
+assigns fresh IDs; their current canonical IDs are U9xSg (Players, Nuclear
+Option), BguST (password will be removed), and YN8cE (new password typed).
+Their screenshot-test/spec/manifest references use those IDs. Superseded export
+filenames were removed rather than leaving snapshots that imply missing roots.
+
+All seven touched roots were visually inspected through MCP TakeScreenshot and
+re-exported with full Get JSON plus 2x PNGs to assets/design-export. No reusable
+component was changed. Modules keeps upstream spacing, filter width, grid
+alignment and outline Create action alongside explicit target permissions and
+retained-draft error handling.

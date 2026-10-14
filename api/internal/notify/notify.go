@@ -49,6 +49,7 @@ const queueSize = 256
 // (language, title, text); they are additive and every field above keeps its
 // name and value.
 type Event struct {
+	Cluster   string    `json:"cluster,omitempty"`
 	Type      EventType `json:"type"`
 	TS        string    `json:"ts"`
 	Kind      string    `json:"kind,omitempty"` // CRD kind: GameServer | Backup | Restore

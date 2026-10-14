@@ -13,6 +13,11 @@ func Messages() []messages.Entry {
 			Description: "Headline of a notification about a named resource. instance is the Gameplane instance name, event is the event name (for example \"backup failed\"), namespace and name identify the resource.",
 		},
 		{
+			ID:          "notify.title.cluster",
+			English:     "[{instance}] {event}: {cluster}/{namespace}/{name}",
+			Description: "Headline of a notification about a named resource on a remote cluster. instance is the Gameplane instance name, event is the event name (for example \"backup failed\"), cluster is the cluster name, namespace and name identify the resource.",
+		},
+		{
 			ID:          "notify.title.unnamed",
 			English:     "[{instance}] {event}",
 			Description: "Headline of a notification without a resource, such as a test send. instance is the Gameplane instance name, event is the event name.",

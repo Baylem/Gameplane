@@ -68,8 +68,9 @@ func TestUpsertLabelledSecret_UpdatesLabelledSecret(t *testing.T) {
 	t.Parallel()
 
 	existing := smtSecret("creds",
-		map[string]string{smtFeatureLabel: "true"},
+		map[string]string{smtFeatureLabel: "true", "extra": "keep-label"},
 		map[string]string{"a": "old", "b": "keep"})
+	existing.Data = map[string][]byte{"unrelated": []byte("keep-data")}
 	_, k := smtClient(existing)
 
 	if err := upsertLabelledSecret(t.Context(), k, smtNamespace, "creds", smtFeatureLabel, map[string]string{"a": "new"}); err != nil {
@@ -86,7 +87,10 @@ func TestUpsertLabelledSecret_UpdatesLabelledSecret(t *testing.T) {
 		t.Fatalf("a = %q, want new", got.StringData["a"])
 	}
 	if got.StringData["b"] != "keep" {
-		t.Fatalf("b = %q, want keep (merge patch must not drop it)", got.StringData["b"])
+		t.Fatalf("b = %q, want keep (credential merge must not drop it)", got.StringData["b"])
+	}
+	if string(got.Data["unrelated"]) != "keep-data" || got.Labels["extra"] != "keep-label" {
+		t.Fatal("credential update dropped unrelated stored data or labels")
 	}
 }
 
@@ -142,9 +146,9 @@ func TestUpsertLabelledSecret_ErrorPropagation(t *testing.T) {
 			injected: injected,
 		},
 		{
-			name:     "patch error is returned",
+			name:     "update error is returned",
 			objs:     []runtime.Object{smtSecret("creds", map[string]string{smtFeatureLabel: "true"}, nil)},
-			verb:     "patch",
+			verb:     "update",
 			injected: injected,
 		},
 	}
