@@ -46,10 +46,19 @@ def main():
         ]
         one(objects, "PersistentVolumeClaim", "gameplane-api-key")
 
-    # The encryption key must survive pod replacement with either database driver.
-    objects = render({"operator": {"enabled": False}, "api": {"standalone": True, "db": {"driver": "postgres"}}})
-    one(objects, "PersistentVolumeClaim", "gameplane-api-data")
-    one(objects, "PersistentVolumeClaim", "gameplane-api-key")
+    # PostgreSQL needs persistent key custody, but no local database volume.
+    # Retain Recreate to avoid overlapping API writers, including Secret custody.
+    for custody in ({}, {"existingSecret": "protected-panel-key"}):
+        objects = render({"operator": {"enabled": False}, "api": {"standalone": True, "db": {"driver": "postgres"}, "panelKey": custody}})
+        assert not any(obj["kind"] == "PersistentVolumeClaim" and obj["metadata"]["name"] == "gameplane-api-data" for obj in objects)
+        deployment = one(objects, "Deployment", "gameplane-api")
+        assert deployment["spec"]["strategy"] == {"type": "Recreate", "rollingUpdate": None}
+        pod = deployment["spec"]["template"]["spec"]
+        assert not any(volume["name"] == "data" for volume in pod["volumes"])
+        assert not any(mount["name"] == "data" for mount in pod["containers"][0]["volumeMounts"])
+        assert any(mount["name"] == "panel-key" and mount["mountPath"] == "/keys" for mount in pod["containers"][0]["volumeMounts"])
+        if not custody:
+            one(objects, "PersistentVolumeClaim", "gameplane-api-key")
     objects = render({"operator": {"enabled": False}, "api": {"standalone": True, "storage": {"existingClaim": "panel-data"}, "panelKey": {"storage": {"existingClaim": "panel-key"}}}})
     assert not any(obj["kind"] == "PersistentVolumeClaim" for obj in objects)
     assert one(objects, "Deployment", "gameplane-api")["spec"]["template"]["spec"]["volumes"][0]["persistentVolumeClaim"]["claimName"] == "panel-data"
@@ -87,6 +96,7 @@ def main():
     one(disabled, "Deployment", "gameplane-api")
 
     render({"api": {"standalone": True}}, failure="api.standalone requires operator.enabled=false")
+    render({"operator": {"enabled": False}, "api": {"enabled": False, "standalone": True}}, failure="api.standalone requires api.enabled=true")
     render({"operator": {"enabled": False}, "api": {"standalone": True, "replicas": 2}}, failure="api.standalone requires api.replicas=1")
     example = yaml.safe_load((Path(__file__).parents[1] / "gameplane/examples/standalone-panel-values.yaml").read_text())
     one(render(example), "Deployment", "gameplane-api")

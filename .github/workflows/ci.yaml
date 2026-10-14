@@ -79,6 +79,7 @@ jobs:
       go: ${{ steps.combine.outputs.go }}
       web: ${{ steps.combine.outputs.web }}
       charts: ${{ steps.combine.outputs.charts }}
+      standalone: ${{ steps.combine.outputs.standalone }}
       e2e: ${{ steps.combine.outputs.e2e }}
       weblive: ${{ steps.combine.outputs.weblive }}
       images: ${{ steps.combine.outputs.images }}
@@ -135,7 +136,6 @@ jobs:
               - 'web/**'
             charts:
               - 'charts/**'
-              - 'deploy/standalone/**'
               # The chart embeds a copy of the root signing key; the drift
               # check in `chart render` has to run when either side moves.
               - 'cosign.pub'
@@ -143,6 +143,18 @@ jobs:
               # from these; an edit to either must re-run it.
               - 'operator/config/crd/**'
               - 'hack/sync-chart-crds.sh'
+            # Compose builds only API, its local module dependencies, and web.
+            # Deployment prose and unrelated Go/chart changes need no smoke VM.
+            standalone:
+              - 'api/**'
+              - 'netguard/**'
+              - 'gameaction/**'
+              - 'gp-module/**'
+              - 'telemetryschema/**'
+              - 'web/**'
+              - 'deploy/standalone/compose*.yaml'
+              - 'deploy/standalone/smoke.py'
+              - '.dockerignore'
             e2etree:
               - 'test/e2e/**'
               - 'deploy/kind/**'
@@ -251,6 +263,7 @@ jobs:
           GO: ${{ steps.scope.outputs.go }}
           WEB: ${{ steps.filter.outputs.web }}
           CHARTS: ${{ steps.filter.outputs.charts }}
+          STANDALONE: ${{ steps.filter.outputs.standalone }}
           E2ETREE: ${{ steps.filter.outputs.e2etree }}
           GAMECOVERAGE: ${{ steps.filter.outputs.gamecoverage }}
           CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' }}
@@ -262,6 +275,7 @@ jobs:
           gov=false;  { [ "$GO" = true ]     || [ "$CI" = true ]; } && gov=true
           webv=false; { [ "$WEB" = true ]    || [ "$CI" = true ]; } && webv=true
           chv=false;  { [ "$CHARTS" = true ] || [ "$CI" = true ]; } && chv=true
+          standalonev=false; { [ "$STANDALONE" = true ] || [ "$CI" = true ]; } && standalonev=true
           e2ev=false; { [ "$GO" = true ] || [ "$CHARTS" = true ] || [ "$E2ETREE" = true ] || [ "$GAMECOVERAGE" = true ] || [ "$CI" = true ]; } && e2ev=true
           wlv=false;  { [ "$e2ev" = true ] || [ "$WEB" = true ] || [ "$CI" = true ]; } && wlv=true
           ghv=false;  { [ "$GITHUB" = true ] || [ "$CI" = true ]; } && ghv=true
@@ -274,6 +288,7 @@ jobs:
             echo "go=$gov"
             echo "web=$webv"
             echo "charts=$chv"
+            echo "standalone=$standalonev"
             echo "e2e=$e2ev"
             echo "weblive=$wlv"
             echo "images=$wlv"
@@ -768,15 +783,40 @@ jobs:
   standalone-compose:
     name: standalone Compose smoke
     needs: [changes]
-    if: needs.changes.outputs.images == 'true' || needs.changes.outputs.web == 'true' || needs.changes.outputs.charts == 'true'
+    if: needs.changes.outputs.standalone == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: build and start standalone panel
-        run: docker compose -f deploy/standalone/compose.yaml up -d --build
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # Match Compose's image names for its fixed gameplane-panel project.
+      # Separate cache scopes prevent the API/web exports overwriting each other.
+      - name: build standalone API
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: api/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: gameplane-panel-gameplane-api:latest
+          cache-from: type=gha,scope=standalone-api
+          cache-to: type=gha,mode=max,scope=standalone-api
+      - name: build standalone dashboard
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: web/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: gameplane-panel-web:latest
+          cache-from: type=gha,scope=standalone-web
+          cache-to: type=gha,mode=max,scope=standalone-web
+      - name: start standalone panel
+        run: docker compose -f deploy/standalone/compose.yaml up -d --no-build --pull never
       - name: bootstrap and verify persistent standalone panel
         run: python3 deploy/standalone/smoke.py
       - name: container logs

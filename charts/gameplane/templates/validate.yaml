@@ -1,4 +1,7 @@
 {{- if .Values.api.standalone }}
+{{- if ne (include "gameplane.apiEnabled" .) "true" }}
+{{- fail "api.standalone requires api.enabled=true" }}
+{{- end }}
 {{- $panelKey := .Values.api.panelKey | default dict }}
 {{- $keyFileName := $panelKey.fileName | default "panel.key" }}
 {{- if or (gt (len $keyFileName) 128) (not (regexMatch "^[A-Za-z0-9][A-Za-z0-9._-]*$" $keyFileName)) }}

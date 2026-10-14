@@ -8,7 +8,10 @@
 
 Standalone central panel: no local game cluster or Kubernetes API credentials.
 Register remote clusters through the panel API after bootstrapping an admin.
-Back up the API data volume including panel.key together with the database.
+Back up the database and matching encryption key separately. SQLite uses the
+API data PVC; generated keys use the separate API key PVC mounted at /keys.
+If using api.panelKey.existingSecret, protect and back up that Secret instead.
+Restrict access to key backups; do not include them in database backup jobs.
 Always pass --skip-crds when installing this profile; Helm's native crds/
 installation happens before chart values can disable resources.
 {{- end }}

@@ -185,7 +185,7 @@ subjects:
   Safety guard: If switching an existing install to existingClaim, ensure the
   live gameplane-api-data PVC won't be pruned and destroyed by Helm.
 */}}
-{{- if and (or .Values.api.standalone (eq .Values.api.db.driver "sqlite")) .Values.api.storage.existingClaim }}
+{{- if and (eq .Values.api.db.driver "sqlite") .Values.api.storage.existingClaim }}
   {{- $livePVC := lookup "v1" "PersistentVolumeClaim" .Release.Namespace "gameplane-api-data" }}
   {{- if $livePVC }}
     {{- $annotations := $livePVC.metadata.annotations | default dict }}
@@ -194,7 +194,7 @@ subjects:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- if and (or .Values.api.standalone (eq .Values.api.db.driver "sqlite")) (not .Values.api.storage.existingClaim) }}
+{{- if and (eq .Values.api.db.driver "sqlite") (not .Values.api.storage.existingClaim) }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -224,6 +224,8 @@ spec:
   selector:
     matchLabels: { app.kubernetes.io/name: gameplane-api }
   {{- if or .Values.api.standalone (eq .Values.api.db.driver "sqlite") }}
+  # Standalone also avoids overlapping API processes with PostgreSQL: generated
+  # keys use a ReadWriteOnce PVC, and audit/user-management locks are per-process.
   # Recreate strategy for SQLite: the database is a single-writer store
   # on a ReadWriteOnce PVC. RollingUpdate would start a new pod before
   # terminating the old one, allowing two processes to compete for the
@@ -465,7 +467,9 @@ spec:
             readOnlyRootFilesystem: true
             capabilities: { drop: [ALL] }
           volumeMounts:
+            {{- if or (not .Values.api.standalone) (eq .Values.api.db.driver "sqlite") }}
             - { name: data, mountPath: /data }
+            {{- end }}
             {{- if .Values.api.standalone }}
             - name: panel-key
               mountPath: /keys
@@ -478,12 +482,14 @@ spec:
             - { name: agent-client, mountPath: /etc/gameplane/agent-client, readOnly: true }
             {{- end }}
       volumes:
+        {{- if or (not .Values.api.standalone) (eq .Values.api.db.driver "sqlite") }}
         - name: data
-          {{- if or .Values.api.standalone (eq .Values.api.db.driver "sqlite") }}
+          {{- if eq .Values.api.db.driver "sqlite" }}
           persistentVolumeClaim: { claimName: {{ .Values.api.storage.existingClaim | default "gameplane-api-data" }} }
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- end }}
         {{- if .Values.api.standalone }}
         {{- $panelKey := .Values.api.panelKey | default dict }}
         - name: panel-key
