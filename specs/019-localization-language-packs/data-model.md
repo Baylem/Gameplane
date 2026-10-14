@@ -48,7 +48,7 @@ State transitions for one entry: `missing → translated` (contribution merged) 
 
 | Where | Field | Rules |
 |---|---|---|
-| `user_preferences.language` (new nullable column, migration `api/internal/db/migrations/common/016_user_language.sql`) | TEXT | BCP 47 tag or NULL (= no saved choice). Kept even if the language disappears from a release (spec edge case); resolution then skips it |
+| `user_preferences.language` (new nullable column, migration `api/internal/db/migrations/common/018_user_language.sql`) | TEXT | BCP 47 tag or NULL (= no saved choice). Kept even if the language disappears from a release (spec edge case); resolution then skips it |
 | browser `localStorage['gameplane-language']` | JSON `{"choice": tag \| null, "applied": tag}` | `choice` is the unauthenticated/browser choice (FR-005); `applied` drives the no-flash boot snippet |
 
 Resolution (FR-004): user `language` → browser `choice` → first available of `navigator.languages` (regional → base) → instance default → `en`.

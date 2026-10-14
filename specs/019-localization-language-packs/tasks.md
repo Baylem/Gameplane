@@ -93,7 +93,7 @@ description: "Task list for 019 App Localization & Community Language Packs"
 
 ### Implementation for User Story 1
 
-- [X] T038 [P] [US1] Migration `api/internal/db/migrations/common/016_user_language.sql`: `ALTER TABLE user_preferences ADD COLUMN language TEXT;` (portable, per `api/internal/db/migrations/README.md`)
+- [X] T038 [P] [US1] Migration `api/internal/db/migrations/common/018_user_language.sql`: `ALTER TABLE user_preferences ADD COLUMN language TEXT;` (portable, per `api/internal/db/migrations/README.md`)
 - [X] T039 [US1] Add `Language *string` to `UserPreferences` and `SetLanguage(ctx, userID, *string)` (upsert keeping other columns / defaults) in `api/internal/db/preferences.go`; tests in `api/internal/db/preferences_test.go`
 - [X] T040 [US1] Add `PUT /me/language` and `language` in `GET /me/preferences` in `api/internal/handlers/users.go` per contracts/i18n-api.md §1 (validate against `i18n/catalog.Listed()`, the same predicate as the picker; unknown or unlisted tag → `server.i18n.unknown_language`; handler test covers a shipped-but-unlisted tag); register the new message id in `api/internal/messages/messages.go`; handler tests `api/internal/handlers/users_language_test.go`
 - [X] T041 [US1] Add `GET /auth/locale` in `api/internal/handlers/auth_providers.go`, mounted in the `/auth` route group of `api/cmd/main.go`, returning only `defaultLanguage` from config section `i18n` (absent → `en`); tests in `api/internal/handlers/auth_providers_test.go`
