@@ -59,7 +59,7 @@ func TestRemoteCreateProxyPreservesScopeAndRefusalWithoutFallback(t *testing.T) 
 	for _, status := range []int{http.StatusNoContent, http.StatusConflict, http.StatusNotFound} {
 		t.Run(http.StatusText(status), func(t *testing.T) {
 			calls := 0
-			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			srv := newGatewayTLSTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 				calls++
 				target, operation, err := gatewayprotocol.ParsePath(req.URL.Path)
 				if err != nil || target != (gatewayprotocol.Target{Cluster: "remote", Namespace: "gameplane-games", Name: "alpha", UID: "remote-uid"}) || operation != "/files/create" || req.Method != http.MethodPost {
