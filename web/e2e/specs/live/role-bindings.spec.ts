@@ -65,7 +65,8 @@ test.describe("live: role bindings", () => {
     await page.getByRole("tab", { name: /^Roles/ }).click();
     await page.getByRole("button", { name: "New role", exact: true }).click();
     await page.locator("#role-name").fill(roleName);
-    await page.getByRole("checkbox", { name: /servers:read/ }).check();
+    // HeroUI hides the checkbox input under its own spans; force it, as servers-core does.
+    await page.getByRole("checkbox", { name: /servers:read/ }).check({ force: true });
     await page.getByRole("button", { name: "Create role", exact: true }).click();
 
     await expect(page.getByText(roleName, { exact: true })).toBeVisible({ timeout: 15_000 });

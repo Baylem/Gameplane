@@ -74,8 +74,8 @@ test.describe("live: users and roles", () => {
     await page.getByRole("option", { name: "operator", exact: true }).click();
     await page.getByRole("button", { name: "Save changes", exact: true }).click();
     await expect(row.getByText("operator", { exact: true })).toBeVisible({ timeout: 15_000 });
-    // Save only invalidates the list; the dialog stays open, so close it.
-    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    // A successful save closes the dialog (Users.tsx save.onSuccess -> setEditing(null)).
+    await expect(page.getByRole("dialog")).toBeHidden({ timeout: 15_000 });
 
     // 3. The change survives a reload.
     await page.reload();

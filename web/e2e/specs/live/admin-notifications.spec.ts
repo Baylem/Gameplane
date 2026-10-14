@@ -76,7 +76,9 @@ test.describe("live: admin notifications", () => {
     await expect(row).toContainText(`webhook · Secret: gameplane-notify-${sink}`);
 
     // Edit substitute: disable the sink (see PREMISE NOTE above), save, reload.
-    await row.getByRole("switch", { name: `Disable sink ${sink}` }).click();
+    // HeroUI's Switch hides the role=switch input under decorative spans, so a pointer
+    // click is intercepted; toggle it the way a keyboard user does (as theme-customization does).
+    await row.getByRole("switch", { name: `Disable sink ${sink}` }).press("Space");
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Saved", { exact: true })).toBeVisible({ timeout: 15_000 });
 
