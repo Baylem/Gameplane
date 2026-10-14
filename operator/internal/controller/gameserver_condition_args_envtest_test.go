@@ -77,6 +77,7 @@ func TestGameServer_ConditionArgsAddressInUse(t *testing.T) {
 	if err := k8sClient.Create(t.Context(), gs1); err != nil {
 		t.Fatalf("create server1: %v", err)
 	}
+	deleteCleanup(t, gs1)
 	eventually(t, func() (bool, string) {
 		var svc corev1.Service
 		if err := k8sClient.Get(t.Context(),
@@ -120,6 +121,7 @@ func TestGameServer_ConditionArgsAddressInUse(t *testing.T) {
 	if err := k8sClient.Create(t.Context(), gs2); err != nil {
 		t.Fatalf("create server2: %v", err)
 	}
+	deleteCleanup(t, gs2)
 	eventually(t, func() (bool, string) {
 		var gs gameplanev1alpha1.GameServer
 		if err := k8sClient.Get(t.Context(),
