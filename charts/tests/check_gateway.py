@@ -9,13 +9,14 @@ ROOT = Path(__file__).resolve().parents[2]
 CHART = ROOT / "charts" / "gameplane"
 
 
-def render(values=None, failure=None, upgrade=False, namespace="gameplane-system", release="gameplane"):
+def render(values=None, failure=None, upgrade=False, namespace="gameplane-system", release="gameplane", include_crds=False, chart=CHART):
     with tempfile.TemporaryDirectory() as directory:
         values_path = Path(directory) / "values.yaml"
         values_path.write_text(yaml.safe_dump(values or {}), encoding="utf-8")
         result = subprocess.run(
-            ["helm", "template", release, str(CHART), "--namespace", namespace, "--values", str(values_path)]
-            + (["--is-upgrade"] if upgrade else []),
+            ["helm", "template", release, str(chart), "--namespace", namespace, "--values", str(values_path)]
+            + (["--is-upgrade"] if upgrade else [])
+            + (["--include-crds"] if include_crds else []),
             capture_output=True, text=True, check=False,
         )
     if failure:
