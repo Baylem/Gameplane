@@ -26,9 +26,9 @@ description: "Task list for spec 024: documentation refresh, feature catalog and
 
 **Purpose**: Branches and the status snapshot every story reads from.
 
-- [ ] T001 Create branch `claude/024-docs-refresh` in GP from latest `master` (after the spec docs PR merges) and branch `claude/024-docs-refresh` in WEB from latest `main`
-- [ ] T002 Record the status date and source revisions (GP `master` SHA, WEB `main` SHA, MOD `master` SHA, chart `appVersion` from `charts/gameplane/Chart.yaml`) at the top of `specs/024-docs-feature-list-refresh/stale-facts.md`
-- [ ] T003 [P] Create `specs/024-docs-feature-list-refresh/feature-evidence.md` with the record header from [data-model.md](./data-model.md) (area, capability, maturity, e2e test, default source, notes)
+- [X] T001 Create branch `claude/024-docs-refresh` (used the session branch `claude/project-thread-6pzhf7` instead) in GP from latest `master` (after the spec docs PR merges) and branch `claude/024-docs-refresh` in WEB from latest `main`
+- [X] T002 Record the status date and source revisions (GP `master` SHA, WEB `main` SHA, MOD `master` SHA, chart `appVersion` from `charts/gameplane/Chart.yaml`) at the top of `specs/024-docs-feature-list-refresh/stale-facts.md`
+- [X] T003 [P] Create `specs/024-docs-feature-list-refresh/feature-evidence.md` with the record header from [data-model.md](./data-model.md) (area, capability, maturity, e2e test, default source, notes)
 
 ---
 
@@ -36,11 +36,11 @@ description: "Task list for spec 024: documentation refresh, feature catalog and
 
 **Purpose**: The fact base the catalog, roadmap and sweep all use. Each task writes a section of `specs/024-docs-feature-list-refresh/research-notes.md` (scratch input, committed for review).
 
-- [ ] T004 [P] List every e2e test registered in a bucket: parse `test/e2e/buckets.sh` and `test/e2e/*_test.go` into a table test name → bucket; note tests excluded from all buckets (they do not count as CI coverage, research R5)
-- [ ] T005 [P] List install defaults: every enable/disable toggle in `charts/gameplane/values.yaml` with its default, plus build-tag features (`-tags postgres`) and separately installed components (sentinel, capture sidecar, tunnels, audit-syslog-bridge, telemetry-receiver, mcp-server, agent gateway)
-- [ ] T006 [P] List the module catalog: game directories in MOD (expected 29, Hell Let Loose withdrawn) and the mod registries implemented in code (expected 10: Modrinth, CurseForge, Thunderstore, Hangar, Factorio Mod Portal, Steam Workshop, SpigotMC, GitHub Releases, uMod, Nexus Mods), citing the code location of the registry list
-- [ ] T007 [P] Snapshot open specs: for each `specs/<NNN>-*` folder without `done_` in GP `master`, record done/open task counts from its `tasks.md`, blockers named in it, and its open PRs (research R7 table refreshed)
-- [ ] T008 [P] Summarise shipped work: `CHANGELOG.md` sections `[0.3.0]` and `[Unreleased]`, plus each `specs/done_*` folder's one-line outcome
+- [X] T004 [P] List every e2e test registered in a bucket: parse `test/e2e/buckets.sh` and `test/e2e/*_test.go` into a table test name → bucket; note tests excluded from all buckets (they do not count as CI coverage, research R5)
+- [X] T005 [P] List install defaults: every enable/disable toggle in `charts/gameplane/values.yaml` with its default, plus build-tag features (`-tags postgres`) and separately installed components (sentinel, capture sidecar, tunnels, audit-syslog-bridge, telemetry-receiver, mcp-server, agent gateway)
+- [X] T006 [P] List the module catalog: game directories in MOD (expected 29, Hell Let Loose withdrawn) and the mod registries implemented in code (expected 10: Modrinth, CurseForge, Thunderstore, Hangar, Factorio Mod Portal, Steam Workshop, SpigotMC, GitHub Releases, uMod, Nexus Mods), citing the code location of the registry list
+- [X] T007 [P] Snapshot open specs: for each `specs/<NNN>-*` folder without `done_` in GP `master`, record done/open task counts from its `tasks.md`, blockers named in it, and its open PRs (research R7 table refreshed)
+- [X] T008 [P] Summarise shipped work: `CHANGELOG.md` sections `[0.3.0]` and `[Unreleased]`, plus each `specs/done_*` folder's one-line outcome
 
 **Checkpoint**: research-notes.md complete; stories can start in parallel.
 
@@ -117,9 +117,9 @@ description: "Task list for spec 024: documentation refresh, feature catalog and
 
 ### Sync check (GP)
 
-- [ ] T036 [P] [US4] Write fixtures in `hack/testdata/check-features-sync/` per [contracts/features-sync-check.md](./contracts/features-sync-check.md): `pass/in-sync`, `pass/code-fence`, and `fail/{missing-row-website,missing-row-repo,maturity-mismatch,default-mismatch,area-mismatch,order-differs,invalid-label,stable-off,missing-file}` each with `.expected` output
-- [ ] T037 [P] [US4] Write `hack/check-features-sync.sh` (Bash + awk, `set -euo pipefail`, env overrides `FEATURES_MD` / `FEATURES_MDX`, exit 0/1/2 and messages exactly as the contract), header comment citing spec 024 FR-015
-- [ ] T038 [US4] Write `hack/test-check-features-sync.sh` following the `hack/test-check-doc-versions.sh` harness (pass cases exit 0; fail cases exit non-zero with output equal to `.expected`); check both scripts with `bash -n` only
+- [X] T036 [P] [US4] Write fixtures in `hack/testdata/check-features-sync/` per [contracts/features-sync-check.md](./contracts/features-sync-check.md): `pass/in-sync`, `pass/code-fence`, and `fail/{missing-row-website,missing-row-repo,maturity-mismatch,default-mismatch,area-mismatch,order-differs,invalid-label,stable-off,missing-file}` each with `.expected` output
+- [X] T037 [P] [US4] Write `hack/check-features-sync.sh` (Bash + awk, `set -euo pipefail`, env overrides `FEATURES_MD` / `FEATURES_MDX`, exit 0/1/2 and messages exactly as the contract), header comment citing spec 024 FR-015
+- [X] T038 [US4] Write `hack/test-check-features-sync.sh` following the `hack/test-check-doc-versions.sh` harness (pass cases exit 0; fail cases exit non-zero with output equal to `.expected`); check both scripts with `bash -n` only
 - [ ] T039 [US4] Add Makefile targets `check-features-sync` and `test-features-sync` (with `##` help text) and add `check-features-sync` to the `lint` target in `Makefile`
 - [ ] T040 [US4] After T029 (both edit the `docs` path filter; extend T029's list, never replace it), in `.github/workflows/ci.yaml` `docs` job: add a step `git submodule update --init website` before the checks, then steps running `make check-features-sync` and `make test-features-sync`; add `FEATURES.md`, `website`, `hack/check-features-sync.sh`, `hack/test-check-features-sync.sh`, `hack/testdata/check-features-sync/**` to the `docs` path filter; if spec 023's selection script has landed, map the same paths to the docs job in `hack/ci_scope.py`
 - [ ] T041 [US4] Tier-up review (`sonnet`) of T036–T040 against the contract; fixes in a new `haiku` wave
