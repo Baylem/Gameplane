@@ -258,6 +258,9 @@ func (r *GameServerReconciler) clearWipeWorkloadGuard(ctx context.Context, gs *g
 	return nil
 }
 
+// releaseWipeGuard requires the caller to have observed all workers drained.
+// Success acknowledges the current token using durable success proof; cancellation
+// preserves power intent or transfers ownership to a newer pending request.
 func (r *GameServerReconciler) releaseWipeGuard(ctx context.Context, gs *gameplanev1alpha1.GameServer, token string, success bool) error {
 	var live gameplanev1alpha1.GameServer
 	if err := r.wipeReader().Get(ctx, client.ObjectKeyFromObject(gs), &live); err != nil {
