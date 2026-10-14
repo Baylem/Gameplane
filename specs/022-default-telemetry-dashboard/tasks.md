@@ -5,7 +5,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 # Tasks: Default telemetry destination, extended telemetry, and telemetry dashboard
 
-**Input**: Design documents from `specs/done_022-default-telemetry-dashboard/`
+**Input**: Design documents from `specs/022-default-telemetry-dashboard/`
 
 **Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md), [OPEN-DECISIONS.md](OPEN-DECISIONS.md)
 
@@ -33,7 +33,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 
 **Purpose**: Create the branch, get test sign-off, and wire the new `telemetryschema` module into the build.
 
-- [X] T001 Create branch `feat/default-telemetry-dashboard` from `master` and commit `specs/done_022-default-telemetry-dashboard/` (`.specify/feature.json` is git-ignored, so it stays local) as `docs(specs): add 022 default telemetry dashboard spec`.
+- [X] T001 Create branch `feat/default-telemetry-dashboard` from `master` and commit `specs/022-default-telemetry-dashboard/` (`.specify/feature.json` is git-ignored, so it stays local) as `docs(specs): add 022 default telemetry dashboard spec`.
 - [X] T002 Get **explicit human sign-off** (system override 1) to rewrite these existing tests so they assert the new behaviour. Rewrites must keep or raise coverage and never delete a case without a replacement:
   - `api/internal/telemetry/telemetry_test.go`: `TestReportOnce_EnabledPostsAnonymousCounts`, `TestReportOnce_SendsAuthHeader`, `TestReportOnce_DisabledSkipsPost`. The reporter's constructor and send path change (research R12).
   - `api/internal/telemetry/telemetry_branches_test.go`: `TestNew_DefaultsInterval`, `TestEnabled_Branches`, `TestCount_UnknownKind`, `TestReportOnce_EndpointErrorPropagates`.
@@ -48,10 +48,10 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `api/internal/handlers/config_validators_test.go` `TestValidateTelemetry` (added 2026-10-07): the canonical output gains `"extended":false`, and a new case checks that `{"sendMetrics":false,"extended":true}` normalises to both false.
 
   **Signed off 2026-10-06** by the user ("Approve all", then "Approve" for the `/metrics` changes; "Assert the seeded default" for `TestConfig_GetEmpty` and "Assert the new shape" for `TestValidateTelemetry` on 2026-10-07). Record the sign-off in the PR description.
-- [X] T003 Create `telemetryschema/go.mod` (`module github.com/GameplanePanel/gameplane/telemetryschema`, `go 1.26.0`, no requires) and `telemetryschema/doc.go` with a package comment: "the shared telemetry report contract used by api and telemetry-receiver; see specs/done_022-default-telemetry-dashboard/contracts/report-schema.md".
+- [X] T003 Create `telemetryschema/go.mod` (`module github.com/GameplanePanel/gameplane/telemetryschema`, `go 1.26.0`, no requires) and `telemetryschema/doc.go` with a package comment: "the shared telemetry report contract used by api and telemetry-receiver; see specs/022-default-telemetry-dashboard/contracts/report-schema.md".
 - [X] T004 Add `./telemetryschema` to the `use` block in `go.work`, and add `telemetryschema` to `GO_MODULES` in `Makefile:43` (after `gameproto`).
 - [X] T005 [P] Add `telemetryschema` to both Go module matrices in `.github/workflows/ci.yaml` (the `module:` lists at about lines 457 and 549). Add `telemetryschema/**` everywhere `telemetry-receiver/**` appears as a path filter (about line 119), and to the api and telemetry-receiver image path filters in `.github/workflows/publish-edge.yaml`. Add a `gomod` entry for `/telemetryschema` in `.github/dependabot.yml`, copied from the `/telemetry-receiver` entry at about line 176.
-- [X] T006 [P] Create `telemetryschema/.testcoverage.yml` (copy the `telemetry-receiver/.testcoverage.yml` format with `total: 90` and an updated header comment) and a non-empty `telemetryschema/specs.md` skeleton with the sections Purpose, Responsibilities, External interface (linking `specs/done_022-default-telemetry-dashboard/contracts/report-schema.md`), Key invariants, and Testing & coverage, so that `hack/check-specs.sh` passes.
+- [X] T006 [P] Create `telemetryschema/.testcoverage.yml` (copy the `telemetry-receiver/.testcoverage.yml` format with `total: 90` and an updated header comment) and a non-empty `telemetryschema/specs.md` skeleton with the sections Purpose, Responsibilities, External interface (linking `specs/022-default-telemetry-dashboard/contracts/report-schema.md`), Key invariants, and Testing & coverage, so that `hack/check-specs.sh` passes.
 - [X] T007 [P] Update the repository docs maps:
   - `CLAUDE.md`: in the repository map add `telemetryschema/   shared telemetry report contract (api, telemetry-receiver)`; change "links all 15 Go modules" to 16; add `telemetryschema 90` to the coverage minimums; add a row to the Architecture table.
   - `docs/agent-architecture.md`: add a `telemetryschema/specs.md` row next to Telemetry-Receiver (line 29).
@@ -566,7 +566,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - the OD-1 merge gate
   - the T002 sign-off list
   - that `telemetry-default-gate` is expected to fail until OD-1 is ruled
-- [X] T099 Once OD-1 is ruled: set `DefaultEndpoint` in `api/internal/telemetry/destination.go`, mark OD-1 RULED in `specs/done_022-default-telemetry-dashboard/OPEN-DECISIONS.md`, update the destination copy in `design.pen` (with re-export) and the docs, confirm `telemetry-default-gate` passes, and mark the PR ready for review.
+- [X] T099 Once OD-1 is ruled: set `DefaultEndpoint` in `api/internal/telemetry/destination.go`, mark OD-1 RULED in `specs/022-default-telemetry-dashboard/OPEN-DECISIONS.md`, update the destination copy in `design.pen` (with re-export) and the docs, confirm `telemetry-default-gate` passes, and mark the PR ready for review.
   The docs written under T091-T094 name no receiver host. Once OD-1 is ruled, add the host to:
   - `docs/install.md` § Telemetry: the sentence on an empty `api.telemetry.endpoint`, and the Upgrading admonition
   - `docs/architecture.md`: the "API → telemetry-receiver" bullet
@@ -574,6 +574,32 @@ description: "Task list for feature 022: default telemetry destination, extended
   - `CHANGELOG.md` [Unreleased] > Upgrade Notes: the first three bullets
   - the statement URL `https://valgulnecron.github.io/gameplane-website/telemetry/` (in `docs/install.md`, `docs/security.md`, `docs/telemetry-provider.md` and `CHANGELOG.md`) if the website gets a custom domain; it must match the T095 constant
 - [X] T100 After merge: `git mv specs/022-default-telemetry-dashboard specs/done_022-default-telemetry-dashboard` and update in-repo references as a `docs:` commit (rule 16, constitution IV). Then delete the remote and local branch (rule 12). (2026-10-08: archived after GameplanePanel/Gameplane#617 merged; branches deleted.)
+
+---
+
+## Phase 11: Amendment 2026-10-14 — version trend (US5, FR-042)
+
+**Goal**: The dashboard shows, per day, how many installs upgraded, downgraded, changed version without an order, or stayed behind the newest release (OD-7–OD-10, research R22). The basic version panel is renamed "Reports by version" (OD-9).
+
+**Independent Test**: A synthetic population with known upgrades, downgrades, unordered changes (`pr617` → `v0.3.0`) and installs left on older releases gives exact daily counts for every series (SC-017).
+
+**Branch and PR**: a new branch from `master` and a new PR; the merged 022 PR (#617) is not reused.
+
+- [ ] T101 [US5] In `telemetry-receiver/store.go`, add `daily_install_version (day, version, installs)` and `daily_version_change (day, kind, installs)` to the `CREATE TABLE IF NOT EXISTS` list (data-model § Receiver), and add both to the retention `DELETE FROM … WHERE day < ?` list near line 293.
+- [ ] T102 [P] [US5] Create `telemetry-receiver/versionorder.go`: `classifyChange(old, new string) (kind string, changed bool)` and `isSemver(label string) bool`, using `golang.org/x/mod/semver` (v0.41.0, as in `operator/go.mod`) with a `v` prefix added to labels that lack one (R22). Add the dependency to `telemetry-receiver/go.mod` with `make tidy`; confirm with `go build ./...`.
+- [ ] T103 [US5] In `telemetry-receiver/ingest_ext.go`, inside the transaction of a non-duplicate extended report (the insert near line 197 and the update near line 225): increment `daily_install_version[today, label]`; when the record existed and `classifyChange(last_version, label)` reports a change, increment `daily_version_change[today, kind]`. A new record is never a change (FR-042). Duplicates and refused reports write nothing.
+- [ ] T104 [US5] Design first, on the local machine where Pencil runs: in `telemetry-receiver/telemetry-dashboard.pen`, rename the basic "Versions" card to "Reports by version" and add a "Version trend" card under "Versions by install" in the extended section, with four daily series (upgraded, downgraded, changed (unordered), stale) and the newest release named in the caption. Load the `dataviz` skill for the chart form and colours. Ask the user to save in the Pencil UI, run `design-export` into `telemetry-receiver/design-export/`, and commit the export with the design (rules 1, 2).
+- [ ] T105 [US5] In `telemetry-receiver/views.go`, add `extended.versionTrend` (`contracts/receiver-http.md`): one entry per day in R with `upgraded`, `downgraded` and `unordered` from `daily_version_change`, and `newestRelease`. `null` with the rest of `extended` when the range has no extended reports.
+- [ ] T106 [US5] In `telemetry-receiver/views.go`, compute `stale` per day and `newestRelease` from `daily_install_version` over R (data-model § Derived views): N is the highest semver version in R, pre-releases included (OD-10); `stale[D]` sums installs on semver versions below N. Non-semver versions are never stale (OD-8).
+- [ ] T107 [US5] After T104: in `telemetry-receiver/charts.go:350` change the card title to "Reports by version" and update its caption in `web/overview.html:37`; add the trend chart to `charts_ext.go` and `web/overview_extended.html` under "Versions by install", following the T104 design.
+- [ ] T108 [P] [US5] Docs: describe the trend, the two tables and the "Reports by version" rename in `telemetry-receiver/specs.md` and `README.md`, and mention the two new daily counts wherever `docs/telemetry-provider.md` or the `website/` data-handling statement describe what the receiver stores (the statement change goes through the submodule's own PR flow).
+- [ ] T109 [US5] Tests (CI only, rule 8):
+  - new `telemetry-receiver/versionorder_test.go`: semver up, down, equal across `v` prefixes, pre-releases, and every non-semver label as unordered
+  - new cases in `ingest_ext_test.go` and `population_test.go` for SC-017, including duplicates and refused reports leaving both tables unchanged, and `views_test.go` for `versionTrend` with and without extended data
+  - **needs the user's sign-off before editing** (existing tests whose expectations change): `lifecycle_test.go:11` adds the two tables to `dailyTables` so the retention sweep covers them; `charts_test.go:83` if it asserts the old "Versions" title
+- [ ] T110 Push the branch and open the PR with the `ship-branch` skill; labels `type: feature`, `area: shared`, `area: specs` through REST (rule 14). After merge, `git mv specs/022-default-telemetry-dashboard specs/done_022-default-telemetry-dashboard`, update in-repo references, and delete the branch (rules 12, 16).
+
+**Checkpoint**: the trend is visible and every series matches SC-017.
 
 ---
 
@@ -605,6 +631,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - T108 depends on T102, T105 and T107
   - T109 depends on T102 and T103
 - **Polish (Phase 10)** depends on every story. T099 also waits for OD-1, and T100 waits for the merge.
+- **Amendment (Phase 11)** depends only on the shipped feature. T101–T103 and T105 can start at once; T104 runs on the local machine; T107 waits for T104; T109 waits for T101–T107 and the sign-off it names.
 
 ### Story order (graph)
 
