@@ -2,6 +2,8 @@ package notify
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -15,12 +17,13 @@ import (
 const remoteNotificationObjectLimit = 1024
 
 type clusterSnapshot struct {
-	previous map[string]map[string]*unstructured.Unstructured
-	alerted  map[string]bool
+	previous    map[string]map[string]*unstructured.Unstructured
+	alerted     map[string]bool
+	lastWarning map[string]time.Time
 }
 
 func newClusterSnapshot() *clusterSnapshot {
-	return &clusterSnapshot{previous: map[string]map[string]*unstructured.Unstructured{}, alerted: map[string]bool{}}
+	return &clusterSnapshot{previous: map[string]map[string]*unstructured.Unstructured{}, alerted: map[string]bool{}, lastWarning: map[string]time.Time{}}
 }
 
 func (n *Notifier) runClusterPoller(ctx context.Context, k *kube.Client, cluster string) {
@@ -42,22 +45,19 @@ func (n *Notifier) runClusterPoller(ctx context.Context, k *kube.Client, cluster
 func (n *Notifier) pollClusterSnapshot(ctx context.Context, k *kube.Client, cluster string, state *clusterSnapshot) {
 	for _, kind := range []string{"servers", "backups", "restores"} {
 		probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		list, err := k.Dynamic.Resource(kube.GVRs[kind]).List(probeCtx, metav1.ListOptions{Limit: remoteNotificationObjectLimit + 1})
+		current, err := notificationSnapshot(probeCtx, k, kind)
 		cancel()
 		if ctx.Err() != nil {
 			return
 		}
-		if err != nil || len(list.Items) > remoteNotificationObjectLimit || list.GetContinue() != "" {
-			continue
-		}
-		current := map[string]*unstructured.Unstructured{}
-		for i := range list.Items {
-			obj := &list.Items[i]
-			if !scope.Allowed(obj.GetNamespace()) || len(validation.IsDNS1123Subdomain(obj.GetName())) != 0 || len(obj.GetUID()) > 128 {
-				continue
+		if err != nil {
+			if time.Since(state.lastWarning[kind]) >= time.Minute {
+				// Never log upstream errors or object data: either may carry
+				// credentials. The warning identifies the affected observer.
+				slog.Warn("standalone notification snapshot unavailable or exceeds observation limit; retaining baseline", "cluster", cluster, "resource", kind)
+				state.lastWarning[kind] = time.Now()
 			}
-			key := obj.GetNamespace() + "/" + obj.GetName()
-			current[key] = notificationProjection(obj)
+			continue
 		}
 		previous := state.previous[kind]
 		for key, obj := range current {
@@ -66,7 +66,12 @@ func (n *Notifier) pollClusterSnapshot(ctx context.Context, k *kube.Client, clus
 				if kind == "servers" {
 					delete(state.alerted, key)
 				}
-				continue
+				if previous == nil {
+					continue
+				} // First successful snapshot is silent.
+				// An object created and completed between polls still represents
+				// a new terminal event. Never pair it with a replaced object's state.
+				old = &unstructured.Unstructured{Object: map[string]any{}}
 			}
 			var events []Event
 			if kind == "servers" {
@@ -98,6 +103,36 @@ func (n *Notifier) pollClusterSnapshot(ctx context.Context, k *kube.Client, clus
 		}
 		state.previous[kind] = current
 	}
+}
+
+func notificationSnapshot(ctx context.Context, k *kube.Client, kind string) (map[string]*unstructured.Unstructured, error) {
+	current := map[string]*unstructured.Unstructured{}
+	count := 0
+	seen := map[string]bool{}
+	for _, ns := range scope.AllowedNamespaces {
+		if seen[ns] {
+			continue
+		}
+		seen[ns] = true
+		// Scope remotely before applying the aggregate object budget. Objects
+		// in namespaces the panel ignores cannot exhaust the retained baseline.
+		list, err := k.Dynamic.Resource(kube.GVRs[kind]).Namespace(ns).List(ctx, metav1.ListOptions{Limit: int64(remoteNotificationObjectLimit - count + 1)})
+		if err != nil {
+			return nil, err
+		}
+		count += len(list.Items)
+		if count > remoteNotificationObjectLimit || list.GetContinue() != "" {
+			return nil, errors.New("remote notification snapshot exceeds observation limit")
+		}
+		for i := range list.Items {
+			obj := &list.Items[i]
+			if obj.GetNamespace() != ns || len(validation.IsDNS1123Subdomain(obj.GetName())) != 0 || len(obj.GetUID()) > 128 {
+				continue
+			}
+			current[ns+"/"+obj.GetName()] = notificationProjection(obj)
+		}
+	}
+	return current, nil
 }
 
 // Retain only fields needed to detect alerts, with fixed text limits. Remote spec

@@ -2,6 +2,7 @@ package notify
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/GameplanePanel/gameplane/api/internal/kube"
@@ -38,19 +39,17 @@ func (n *Notifier) watchRegistry(ctx context.Context, reg *kube.Registry) {
 	}()
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
+	observe := false
+	var lastWarning time.Time
 	for {
 		clients := map[string]*kube.Client{}
 		loadCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		sinks, err := n.loadSinks(loadCtx)
 		cancel()
-		observe := false
-		if err == nil {
-			for _, sink := range sinks {
-				if sink.Enabled && sink.ConfigRef != "" {
-					observe = true
-					break
-				}
-			}
+		observe = notificationObservationEnabled(observe, sinks, err)
+		if err != nil && ctx.Err() == nil && time.Since(lastWarning) >= time.Minute {
+			slog.Warn("standalone notification sink configuration unavailable; retaining last observation decision")
+			lastWarning = time.Now()
 		}
 		if observe {
 			for _, id := range reg.IDs() {
@@ -79,4 +78,16 @@ func (n *Notifier) watchRegistry(ctx context.Context, reg *kube.Registry) {
 		case <-ticker.C:
 		}
 	}
+}
+
+func notificationObservationEnabled(previous bool, sinks []Sink, err error) bool {
+	if err != nil {
+		return previous
+	}
+	for _, sink := range sinks {
+		if sink.Enabled && sink.ConfigRef != "" {
+			return true
+		}
+	}
+	return false
 }

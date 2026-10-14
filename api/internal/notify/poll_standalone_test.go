@@ -20,6 +20,51 @@ func pollTestClient(objects ...runtime.Object) *kube.Client {
 	return &kube.Client{Dynamic: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), kinds, objects...)}
 }
 
+func TestStandaloneNotificationPollReportsNewTerminalObjectsAfterBaseline(t *testing.T) {
+	k := pollTestClient()
+	n := &Notifier{ch: make(chan Event, 10)}
+	state := newClusterSnapshot()
+	n.pollClusterSnapshot(t.Context(), k, "remote", state)
+	for _, kind := range []string{"Backup", "Restore", "GameServer"} {
+		resource, phase := "backups", "Succeeded"
+		if kind == "Restore" {
+			resource, phase = "restores", "Failed"
+		}
+		if kind == "GameServer" {
+			resource, phase = "servers", "Failed"
+		}
+		obj := &unstructured.Unstructured{Object: map[string]any{"apiVersion": "gameplane.local/v1alpha1", "kind": kind, "status": map[string]any{"phase": phase}}}
+		obj.SetName("new-object")
+		obj.SetNamespace(scope.DefaultNamespace)
+		obj.SetUID("new-identity")
+		if _, err := k.Dynamic.Resource(kube.GVRs[resource]).Namespace(scope.DefaultNamespace).Create(t.Context(), obj, metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	n.pollClusterSnapshot(t.Context(), k, "remote", state)
+	if len(n.ch) != 3 {
+		t.Fatalf("missed newly observed terminal objects: %d events", len(n.ch))
+	}
+	n.pollClusterSnapshot(t.Context(), k, "remote", state)
+	if len(n.ch) != 3 {
+		t.Fatal("stable terminal objects emitted duplicate alerts")
+	}
+}
+
+func TestStandaloneNotificationPollScopesBeforeBounding(t *testing.T) {
+	objects := make([]runtime.Object, 0, 1101)
+	for i := range 1100 {
+		objects = append(objects, gsObj("ignored", fmt.Sprintf("server-%d", i), "Running", "True", "AgentFresh", "", ""))
+	}
+	objects = append(objects, gsObj(scope.DefaultNamespace, "visible", "Running", "True", "AgentFresh", "", ""))
+	n := &Notifier{ch: make(chan Event, 10)}
+	state := newClusterSnapshot()
+	n.pollClusterSnapshot(t.Context(), pollTestClient(objects...), "remote", state)
+	if len(state.previous["servers"]) != 1 {
+		t.Fatal("ignored namespace exhausted notification snapshot")
+	}
+}
+
 func TestStandaloneNotificationPollPreservesTransitions(t *testing.T) {
 	server := gsObj(scope.DefaultNamespace, "game", "Running", "True", "AgentFresh", "", "")
 	server.SetUID("original")
@@ -75,6 +120,14 @@ func TestStandaloneNotificationPollRejectsExcessObjects(t *testing.T) {
 	}
 	if len(n.ch) != 0 {
 		t.Fatal("rejected inventory emitted alerts")
+	}
+	firstWarning := state.lastWarning["servers"]
+	if firstWarning.IsZero() {
+		t.Fatal("oversize snapshot was silently rejected")
+	}
+	n.pollClusterSnapshot(t.Context(), pollTestClient(objects...), "remote", state)
+	if state.lastWarning["servers"] != firstWarning {
+		t.Fatal("snapshot warnings were not rate limited")
 	}
 }
 

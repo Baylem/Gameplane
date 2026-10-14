@@ -95,8 +95,9 @@ func TestStandaloneSPDYExecutorRejectsDisallowedDNSBeforeDial(t *testing.T) {
 
 func TestStandaloneSPDYExecutorTrustedUpgradeUsesPolicyAndTLS(t *testing.T) {
 	var observed atomic.Bool
+	var deadlineArmed, deadlineCleared atomic.Bool
 	payload := strings.Repeat("trusted output", 100*1024)
-	client, _, target := standaloneSPDYFixture(t, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	client, policy, target := standaloneSPDYFixture(t, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.Header.Get("Authorization") != "Bearer private-token" || req.Header.Get("Upgrade") != "SPDY/3.1" {
 			http.Error(w, "missing authenticated upgrade", http.StatusBadRequest)
 			return
@@ -118,6 +119,14 @@ func TestStandaloneSPDYExecutorTrustedUpgradeUsesPolicyAndTLS(t *testing.T) {
 			<-connection.CloseChan()
 		}
 	}))
+	dial := policy.dial
+	policy.dial = func(ctx context.Context, network, address string) (net.Conn, error) {
+		conn, err := dial(ctx, network, address)
+		if err != nil {
+			return nil, err
+		}
+		return &observedDeadlineConn{Conn: conn, armed: &deadlineArmed, cleared: &deadlineCleared}, nil
+	}
 	executor, err := client.NewSPDYExecutor(http.MethodPost, target)
 	if err != nil {
 		t.Fatal(err)
@@ -129,6 +138,23 @@ func TestStandaloneSPDYExecutorTrustedUpgradeUsesPolicyAndTLS(t *testing.T) {
 	if err != nil || !observed.Load() || output.String() != payload {
 		t.Fatalf("trusted SPDY upgrade failed: error=%v observed=%v output bytes=%d", err, observed.Load(), output.Len())
 	}
+	if !deadlineArmed.Load() || !deadlineCleared.Load() {
+		t.Fatal("upgrade did not arm and clear its independent handshake deadline")
+	}
+}
+
+type observedDeadlineConn struct {
+	net.Conn
+	armed, cleared *atomic.Bool
+}
+
+func (c *observedDeadlineConn) SetDeadline(deadline time.Time) error {
+	if deadline.IsZero() {
+		c.cleared.Store(true)
+	} else {
+		c.armed.Store(true)
+	}
+	return c.Conn.SetDeadline(deadline)
 }
 
 func TestStandaloneSPDYExecutorSystemRootsRejectUntrustedTLSBeforeAuthentication(t *testing.T) {
@@ -226,6 +252,30 @@ func TestStandaloneSPDYExecutorBoundsUpgradeHeaders(t *testing.T) {
 	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{Stdout: io.Discard})
 	if err == nil || !strings.Contains(err.Error(), "observation limit") || len(err.Error()) > 1024 {
 		t.Fatalf("SPDY accepted or reflected oversized headers: error length=%d", len(fmt.Sprint(err)))
+	}
+}
+
+func TestStandaloneSPDYExecutorTimesOutStalledHandshake(t *testing.T) {
+	for _, stage := range []string{"TLS", "HTTP headers"} {
+		t.Run(stage, func(t *testing.T) {
+			client, policy, target := standaloneSPDYFixture(t, http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) { <-req.Context().Done() }))
+			if stage == "TLS" {
+				policy.dial = func(context.Context, string, string) (net.Conn, error) {
+					a, b := net.Pipe()
+					go func() { defer b.Close(); _, _ = io.Copy(io.Discard, b) }()
+					return a, nil
+				}
+			}
+			executor, err := client.NewSPDYExecutor(http.MethodPost, target)
+			if err != nil {
+				t.Fatal(err)
+			}
+			started := time.Now()
+			err = executor.StreamWithContext(t.Context(), remotecommand.StreamOptions{Stdout: io.Discard})
+			if err == nil || time.Since(started) > 12*time.Second {
+				t.Fatalf("stalled %s handshake was not bounded: %v", stage, err)
+			}
+		})
 	}
 }
 

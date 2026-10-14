@@ -46,6 +46,10 @@ func (c *Client) NewSPDYExecutor(method string, target *url.URL) (remotecommand.
 				if err != nil {
 					return nil, err
 				}
+				if err := conn.SetDeadline(time.Now().Add(remoteStreamHandshakeTimeout)); err != nil {
+					_ = conn.Close()
+					return nil, fmt.Errorf("set remote stream handshake deadline: %w", err)
+				}
 				bounded := &streamHandshakeConn{Conn: conn, remaining: remoteStreamHandshakeLimit}
 				bounded.limited.Store(true)
 				// The upstream manual HTTP header reader does not cancel reads
@@ -74,6 +78,7 @@ func (c *Client) NewSPDYExecutor(method string, target *url.URL) (remotecommand.
 // HTTP headers directly from its connection without a header-size limit. This
 // bound is lifted once headers parse, leaving real interactive streams unlimited.
 const remoteStreamHandshakeLimit = 1 << 20
+const remoteStreamHandshakeTimeout = 10 * time.Second
 
 type streamHandshakeConn struct {
 	net.Conn
@@ -116,6 +121,10 @@ func (t *guardedSPDYTransport) RoundTrip(req *http.Request) (*http.Response, err
 		if err != nil {
 			_ = conn.Close()
 		} else {
+			if err := conn.SetDeadline(time.Time{}); err != nil {
+				_ = conn.Close()
+				return nil, fmt.Errorf("clear remote stream handshake deadline: %w", err)
+			}
 			conn.limited.Store(false)
 		}
 	}

@@ -57,6 +57,12 @@ func normalizedRemoteIP(ip net.IP) net.IP {
 }
 
 func (p *RemoteAccessPolicy) allowsIP(ip net.IP) bool {
+	// IPv4-translated addresses are distinct from Go's IPv4-mapped form.
+	// Reject the whole ::ffff:0:0:0/96 translation range before IPv6 policy
+	// checks, including private addresses: a translator can route their payload.
+	if len(ip) == net.IPv6len && ip[0] == 0 && ip[1] == 0 && ip[2] == 0 && ip[3] == 0 && ip[4] == 0 && ip[5] == 0 && ip[6] == 0 && ip[7] == 0 && ip[8] == 0xff && ip[9] == 0xff && ip[10] == 0 && ip[11] == 0 {
+		return false
+	}
 	if ip == nil || ip.IsLoopback() || !netguard.IsAllowed(ip) {
 		return false
 	}

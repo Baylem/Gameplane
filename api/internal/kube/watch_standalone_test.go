@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -20,6 +22,187 @@ import (
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	kubefake "k8s.io/client-go/kubernetes/fake"
 )
+
+type interceptClusterStore struct {
+	ClusterStore
+	get func(context.Context, string, metav1.GetOptions) (*unstructured.Unstructured, error)
+}
+
+func (s interceptClusterStore) Get(ctx context.Context, name string, opts metav1.GetOptions, _ ...string) (*unstructured.Unstructured, error) {
+	return s.get(ctx, name, opts)
+}
+
+type unavailableSecretStore struct {
+	SecretStore
+	failure error
+}
+
+func (s unavailableSecretStore) Get(context.Context, string, metav1.GetOptions) (*corev1.Secret, error) {
+	if s.failure != nil {
+		return nil, s.failure
+	}
+	return nil, errors.New("temporary database failure")
+}
+
+func TestClusterRefreshDoesNotBlockRegistryReadsOrResurrectRemoval(t *testing.T) {
+	home, reg, _ := standaloneWatchFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+	store := home.ClusterStore
+	blocked, release := make(chan struct{}), make(chan struct{})
+	var calls atomic.Int32
+	home.ClusterStore = interceptClusterStore{ClusterStore: store, get: func(ctx context.Context, name string, opts metav1.GetOptions) (*unstructured.Unstructured, error) {
+		u, err := store.Get(ctx, name, opts)
+		if calls.Add(1) == 2 {
+			close(blocked)
+			<-release
+		}
+		return u, err
+	}}
+	reg.Set("other", &Client{})
+	done := make(chan error, 1)
+	go func() { done <- RefreshRegisteredCluster(t.Context(), home, reg, "panel", "remote", "remote-identity") }()
+	select {
+	case <-blocked:
+	case <-time.After(3 * time.Second):
+		close(release)
+		t.Fatal("refresh did not reach recheck")
+	}
+	read := make(chan struct{})
+	go func() { reg.Get("other"); reg.IDs(); reg.Remove("remote"); close(read) }()
+	select {
+	case <-read:
+	case <-time.After(time.Second):
+		close(release)
+		<-done
+		t.Fatal("store I/O blocked registry access")
+	}
+	close(release)
+	<-done
+	if _, ok := reg.Get("remote"); ok {
+		t.Fatal("refresh published after removal invalidated its epoch")
+	}
+}
+
+func TestClusterRefreshAcceptsStatusOnlyResourceVersionChange(t *testing.T) {
+	home, reg, _ := standaloneWatchFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+	store := home.ClusterStore
+	var calls atomic.Int32
+	home.ClusterStore = interceptClusterStore{ClusterStore: store, get: func(ctx context.Context, name string, opts metav1.GetOptions) (*unstructured.Unstructured, error) {
+		u, err := store.Get(ctx, name, opts)
+		if err == nil && calls.Add(1) == 2 {
+			u.SetResourceVersion("status-only-update")
+		}
+		return u, err
+	}}
+	if err := RefreshRegisteredCluster(t.Context(), home, reg, "panel", "remote", "remote-identity"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := reg.Get("remote"); !ok {
+		t.Fatal("status update rejected fresh credentials")
+	}
+}
+
+func TestStandaloneProbeRetainsClientAcrossTransientSecretRead(t *testing.T) {
+	home, reg, registration := standaloneWatchFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"gitVersion":"v1.35.0"}`)) }))
+	probeStandaloneCluster(t.Context(), home, reg, "panel", registration)
+	first, _ := reg.Get("remote")
+	secretStore := home.Secrets("panel")
+	home.SecretStore = func(string) SecretStore { return unavailableSecretStore{SecretStore: secretStore} }
+	current, err := home.Clusters().Get(t.Context(), "remote", metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	probeStandaloneCluster(t.Context(), home, reg, "panel", current)
+	if got, _ := reg.Get("remote"); first == nil || got != first {
+		t.Fatal("transient credential read discarded live client")
+	}
+	if err := unstructured.SetNestedField(current.Object, "new-secret", "spec", "kubeconfigSecret", "name"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := home.Clusters().Update(t.Context(), current, metav1.UpdateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	probeStandaloneCluster(t.Context(), home, reg, "panel", current)
+	if _, ok := reg.Get("remote"); ok {
+		t.Fatal("changed credential identity retained old client after failed load")
+	}
+}
+
+type corruptCredentialError struct{}
+
+func (corruptCredentialError) Error() string                    { return "management credential authentication failed" }
+func (corruptCredentialError) PermanentCredentialFailure() bool { return true }
+
+func TestStandaloneProbeEvictsDefinitivelyInvalidCredentials(t *testing.T) {
+	for _, mode := range []string{"missing", "invalid kubeconfig", "corrupt ciphertext"} {
+		t.Run(mode, func(t *testing.T) {
+			home, reg, registration := standaloneWatchFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"gitVersion":"v1.35.0"}`)) }))
+			probeStandaloneCluster(t.Context(), home, reg, "panel", registration)
+			if _, ok := reg.Get("remote"); !ok {
+				t.Fatal("initial probe did not register client")
+			}
+			store := home.Secrets("panel")
+			switch mode {
+			case "missing":
+				if err := store.Delete(t.Context(), "cluster-remote-kubeconfig", metav1.DeleteOptions{}); err != nil {
+					t.Fatal(err)
+				}
+			case "invalid kubeconfig":
+				secret, err := store.Get(t.Context(), "cluster-remote-kubeconfig", metav1.GetOptions{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				secret.Data["kubeconfig"] = []byte("invalid")
+				if _, err := store.Update(t.Context(), secret, metav1.UpdateOptions{}); err != nil {
+					t.Fatal(err)
+				}
+			case "corrupt ciphertext":
+				home.SecretStore = func(string) SecretStore {
+					return unavailableSecretStore{SecretStore: store, failure: corruptCredentialError{}}
+				}
+			}
+			current, err := home.Clusters().Get(t.Context(), "remote", metav1.GetOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			probeStandaloneCluster(t.Context(), home, reg, "panel", current)
+			if _, ok := reg.Get("remote"); ok {
+				t.Fatal("definitively invalid credentials retained live client")
+			}
+		})
+	}
+}
+
+func TestClusterRefreshRejectsChangedCredentialOrRegistrationIdentity(t *testing.T) {
+	for _, mode := range []string{"credential pointer", "registration UID", "terminating"} {
+		t.Run(mode, func(t *testing.T) {
+			home, reg, _ := standaloneWatchFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+			store := home.ClusterStore
+			var calls atomic.Int32
+			home.ClusterStore = interceptClusterStore{ClusterStore: store, get: func(ctx context.Context, name string, opts metav1.GetOptions) (*unstructured.Unstructured, error) {
+				u, err := store.Get(ctx, name, opts)
+				if err == nil && calls.Add(1) == 2 {
+					switch mode {
+					case "credential pointer":
+						if err := unstructured.SetNestedField(u.Object, "rotated-secret", "spec", "kubeconfigSecret", "name"); err != nil {
+							return nil, err
+						}
+					case "registration UID":
+						u.SetUID("replacement")
+					case "terminating":
+						u.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
+					}
+				}
+				return u, err
+			}}
+			if err := RefreshRegisteredCluster(t.Context(), home, reg, "panel", "remote", "remote-identity"); err == nil {
+				t.Fatal("changed identity published stale loaded credentials")
+			}
+			if _, ok := reg.Get("remote"); ok {
+				t.Fatal("changed identity was published")
+			}
+		})
+	}
+}
 
 func standaloneWatchFixture(t *testing.T, handler http.Handler) (*Client, *Registry, *unstructured.Unstructured) {
 	t.Helper()

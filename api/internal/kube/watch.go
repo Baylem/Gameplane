@@ -121,6 +121,11 @@ func RefreshRegisteredCluster(ctx context.Context, home *Client, reg *Registry, 
 }
 
 func loadClusterForUID(ctx context.Context, home *Client, reg *Registry, ns, name string, expectedUID types.UID) error {
+	op, err := reg.beginOperation(ctx, name)
+	if err != nil {
+		return err
+	}
+	defer op.finish()
 	u, err := home.Clusters().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("get cluster CRD: %w", err)
@@ -163,21 +168,23 @@ func loadClusterForUID(ctx context.Context, home *Client, reg *Registry, ns, nam
 		return fmt.Errorf("load client from secret: %w", err)
 	}
 
-	// Serialize the final metadata check with client removal/publication. A
-	// credential loaded before rotation must never replace its newer client.
-	reg.mu.Lock()
-	defer reg.mu.Unlock()
+	// Status-only updates do not change credential identity. The per-name
+	// sequence orders loads; epoch publication rejects concurrent removals.
 	checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	current, err := home.Clusters().Get(checkCtx, name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("recheck cluster registration: %w", err)
 	}
-	if current.GetDeletionTimestamp() != nil || current.GetUID() != u.GetUID() || current.GetResourceVersion() != u.GetResourceVersion() {
+	if current.GetDeletionTimestamp() != nil || registrationCredentials(current) != registrationCredentials(u) {
 		return apierrors.NewConflict(GVRCluster.GroupResource(), name, fmt.Errorf("cluster registration changed during credential load"))
 	}
-	reg.clients[name] = c
-	reg.uids[name] = u.GetUID()
+	if existing := reg.existingClient(name, registrationCredentials(u)); existing != nil && existing.kubeconfigDigest == c.kubeconfigDigest {
+		c = existing
+	}
+	if !op.publish(registrationCredentials(u), c) {
+		return apierrors.NewConflict(GVRCluster.GroupResource(), name, fmt.Errorf("cluster registration invalidated during credential load"))
+	}
 	slog.Debug("cluster watch: loaded cluster", "cluster", name)
 	return nil
 }

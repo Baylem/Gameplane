@@ -17,6 +17,21 @@ import (
 // The label must have the value "true".
 const ClusterKubeconfigLabel = "gameplane.local/cluster-kubeconfig"
 
+// A retrieval failure leaves the payload unknown; validation failures below
+// establish that the stored credentials cannot be used. Only transient reads
+// may retain a client with the same registration/credential reference.
+type credentialReadError struct{ error }
+
+func (e *credentialReadError) Unwrap() error { return e.error }
+
+func transientCredentialRead(err error) bool {
+	var readErr *credentialReadError
+	var permanent interface{ PermanentCredentialFailure() bool }
+	return errors.As(err, &readErr) &&
+		!(errors.As(err, &permanent) && permanent.PermanentCredentialFailure()) &&
+		!apierrors.IsNotFound(err) && !apierrors.IsForbidden(err) && !apierrors.IsUnauthorized(err)
+}
+
 // ConfigFromKubeconfig parses self-contained kubeconfig bytes and returns a rest.Config.
 func ConfigFromKubeconfig(data []byte) (*rest.Config, error) {
 	cfg, err := remoteconfig.RESTConfig(data)
@@ -35,7 +50,7 @@ func ClientFromSecret(ctx context.Context, home *Client, ns, name, key string) (
 	}
 	secret, err := home.Secrets(ns).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("get secret: %w", err)
+		return nil, &credentialReadError{fmt.Errorf("get secret: %w", err)}
 	}
 	// Verify the secret has the required label to prevent loading arbitrary secrets.
 	if secret.Labels == nil || secret.Labels[ClusterKubeconfigLabel] != "true" {

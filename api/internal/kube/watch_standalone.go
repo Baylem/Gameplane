@@ -61,35 +61,45 @@ func syncStandaloneClusters(ctx context.Context, home *Client, reg *Registry, ns
 	}
 	close(jobs)
 	workers.Wait()
-	// Recheck under the same lock used to publish loaded clients. A registration
-	// added after the list must not be evicted because it missed that snapshot.
+	// Recheck each name in its own sequence. A registration added after the
+	// list must not be evicted because it missed that snapshot.
 	for _, name := range reg.IDs() {
-		reg.mu.Lock()
-		_, err := home.Clusters().Get(ctx, name, metav1.GetOptions{})
-		if apierrors.IsNotFound(err) {
-			delete(reg.clients, name)
-			delete(reg.uids, name)
+		op, err := reg.beginOperation(ctx, name)
+		if err != nil {
+			return
 		}
-		reg.mu.Unlock()
+		_, err = home.Clusters().Get(ctx, name, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			op.publish(credentialIdentity{}, nil)
+		}
+		op.finish()
 	}
 }
 
 func probeStandaloneCluster(ctx context.Context, home *Client, reg *Registry, ns string, registration *unstructured.Unstructured) {
+	name := registration.GetName()
+	op, err := reg.beginOperation(ctx, name)
+	if err != nil {
+		return
+	}
+	defer op.finish()
 	probeCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	name := registration.GetName()
+	identity := registrationCredentials(registration)
 	secretName, _, _ := unstructured.NestedString(registration.Object, "spec", "kubeconfigSecret", "name")
 	key, _, _ := unstructured.NestedString(registration.Object, "spec", "kubeconfigSecret", "key")
 	phase, message, serverVersion := "Unhealthy", "Cluster credentials could not be loaded", ""
-	client, err := ClientFromSecret(probeCtx, home, ns, secretName, key)
-	if err == nil {
+	client, loadErr := ClientFromSecret(probeCtx, home, ns, secretName, key)
+	existing := reg.existingClient(name, identity)
+	if transientCredentialRead(loadErr) {
+		client = existing
+	}
+	if loadErr == nil {
 		// Keep a stable client identity while credentials are unchanged, so
 		// consumers can retain their informers and transport connections.
-		reg.mu.RLock()
-		if existing := reg.clients[name]; existing != nil && reg.uids[name] == registration.GetUID() && existing.kubeconfigDigest == client.kubeconfigDigest {
+		if existing != nil && existing.kubeconfigDigest == client.kubeconfigDigest {
 			client = existing
 		}
-		reg.mu.RUnlock()
 		message = "Cluster connection is unavailable"
 		var data []byte
 		data, err = client.Typed.Discovery().RESTClient().Get().AbsPath("/version").Do(probeCtx).Raw()
@@ -105,33 +115,29 @@ func probeStandaloneCluster(ctx context.Context, home *Client, reg *Registry, ns
 	}
 	// Never persist transport/parser error strings: they may contain credentials
 	// or host details. The public status is deliberately a small safe projection.
-	registration = registration.DeepCopy()
-	registration.Object["status"] = map[string]any{
-		"phase": phase, "message": message, "serverVersion": serverVersion,
-		"lastCheckTime": time.Now().UTC().Format(time.RFC3339),
-	}
-	// A delete handler removes the persisted registration before Registry.Remove.
-	// Holding this lock across the final read/CAS and publication prevents a slow
-	// load from resurrecting a deleted or replaced registration in the registry.
-	reg.mu.Lock()
-	defer reg.mu.Unlock()
+	// Rebase status onto the latest metadata, retaining the store's update CAS.
+	// Status RV churn cannot reject unchanged credentials. Removal invalidates
+	// the epoch without waiting for storage or a remote probe.
 	latest, err := home.Clusters().Get(ctx, name, metav1.GetOptions{})
-	if err != nil || latest.GetUID() != registration.GetUID() || latest.GetResourceVersion() != registration.GetResourceVersion() {
+	if err != nil || registrationCredentials(latest) != identity {
 		return
 	}
 	if latest.GetDeletionTimestamp() != nil {
-		delete(reg.clients, name)
-		delete(reg.uids, name)
+		op.publish(identity, nil)
 		return
 	}
-	if _, err := home.Clusters().Update(ctx, registration, metav1.UpdateOptions{}); err != nil {
-		return
-	}
+	// A definitively missing/invalid credential must not keep serving through
+	// a separate status-store failure. Epoch checks still protect replacements.
 	if client == nil {
-		delete(reg.clients, name)
-		delete(reg.uids, name)
+		op.publish(identity, nil)
+	}
+	latest = latest.DeepCopy()
+	latest.Object["status"] = map[string]any{
+		"phase": phase, "message": message, "serverVersion": serverVersion,
+		"lastCheckTime": time.Now().UTC().Format(time.RFC3339),
+	}
+	if _, err := home.Clusters().Update(ctx, latest, metav1.UpdateOptions{}); err != nil {
 		return
 	}
-	reg.clients[name] = client
-	reg.uids[name] = registration.GetUID()
+	op.publish(identity, client)
 }

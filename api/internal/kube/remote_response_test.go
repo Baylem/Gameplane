@@ -74,6 +74,48 @@ func TestRemoteResponseBoundsVersionBeforeBuffering(t *testing.T) {
 	}
 }
 
+func TestRemoteResponseBoundsPrefixedVersion(t *testing.T) {
+	transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(strings.Repeat("x", remoteVersionLimit+1)))}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://cluster.example/kubernetes/workload/version", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := transport.RoundTrip(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if !errors.Is(err, errRemoteResponseTooLarge) || len(data) > remoteVersionLimit {
+		t.Fatalf("prefixed version exceeded bound: %d %v", len(data), err)
+	}
+}
+
+func TestRemoteResponseAcceptsBodylessGzip(t *testing.T) {
+	for _, tc := range []struct {
+		method string
+		status int
+	}{{http.MethodDelete, 204}, {http.MethodGet, 304}, {http.MethodHead, 200}} {
+		body := &countedResponse{Reader: strings.NewReader("")}
+		transport := boundedRemoteTransport(responseRoundTripper(func(*http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: tc.status, Header: http.Header{"Content-Encoding": {"gzip"}}, Body: body}, nil
+		}))
+		req, err := http.NewRequestWithContext(t.Context(), tc.method, "https://cluster.example/api/v1/pods", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp, err := transport.RoundTrip(req)
+		if err != nil || resp == nil || body.read != 0 {
+			t.Fatalf("bodyless response rejected/read: %v %d", err, body.read)
+		}
+		if err := resp.Body.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestRemoteResponseWatchBoundsIndividualEvents(t *testing.T) {
 	for _, tc := range []struct {
 		name, payload string

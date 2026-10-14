@@ -50,14 +50,13 @@ func (t *remoteResponseTransport) RoundTrip(req *http.Request) (*http.Response, 
 		(subresource == "log" && resp.StatusCode >= 200 && resp.StatusCode < 300) {
 		return resp, nil
 	}
+	// These responses have no representation, regardless of encoding headers.
+	if req.Method == http.MethodHead || resp.StatusCode == http.StatusNoContent || resp.StatusCode == http.StatusNotModified || resp.StatusCode < 200 {
+		return resp, nil
+	}
 	body := resp.Body
 	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
-		decoded, err := gzip.NewReader(body)
-		if err != nil {
-			_ = body.Close()
-			return nil, errors.New("invalid compressed remote response")
-		}
-		body = &decodedRemoteBody{Reader: decoded, compressed: resp.Body}
+		body = &decodedRemoteBody{compressed: resp.Body}
 		resp.Header.Del("Content-Encoding")
 		resp.Header.Del("Content-Length")
 		resp.ContentLength = -1
@@ -67,7 +66,7 @@ func (t *remoteResponseTransport) RoundTrip(req *http.Request) (*http.Response, 
 		resp.Body = &remoteWatchBody{ReadCloser: body}
 	} else {
 		limit := int64(remoteResponseLimit)
-		if strings.TrimSuffix(req.URL.Path, "/") == "/version" {
+		if strings.HasSuffix(strings.TrimSuffix(req.URL.Path, "/"), "/version") {
 			limit = remoteVersionLimit
 		}
 		resp.Body = &finiteRemoteBody{ReadCloser: body, remaining: limit}
@@ -95,11 +94,35 @@ func kubernetesPodStream(path string) string {
 }
 
 type decodedRemoteBody struct {
-	*gzip.Reader
+	reader     *gzip.Reader
 	compressed io.ReadCloser
+	failed     bool
 }
 
-func (r *decodedRemoteBody) Close() error { return errors.Join(r.Reader.Close(), r.compressed.Close()) }
+func (r *decodedRemoteBody) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if r.failed {
+		return 0, errors.New("invalid compressed remote response")
+	}
+	if r.reader == nil {
+		reader, err := gzip.NewReader(r.compressed)
+		if err != nil {
+			r.failed = true
+			return 0, errors.New("invalid compressed remote response")
+		}
+		r.reader = reader
+	}
+	return r.reader.Read(p)
+}
+
+func (r *decodedRemoteBody) Close() error {
+	if r.reader != nil {
+		return errors.Join(r.reader.Close(), r.compressed.Close())
+	}
+	return r.compressed.Close()
+}
 
 type finiteRemoteBody struct {
 	io.ReadCloser

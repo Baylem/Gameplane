@@ -66,7 +66,7 @@ func TestRemoteAccessPolicyCannotAllowUnsafeClasses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, raw := range []string{"127.0.0.1", "::1", "169.254.169.254", "fd00:ec2::254", "100.100.100.200", "0.0.0.0", "::", "224.0.0.1", "ff02::1", "64:ff9b::a9fe:a9fe", "2002:a9fe:a9fe::1", "::ffff:127.0.0.1", "::127.0.0.1", "0.1.2.3", "255.255.255.255"} {
+	for _, raw := range []string{"127.0.0.1", "::1", "169.254.169.254", "fd00:ec2::254", "100.100.100.200", "0.0.0.0", "::", "224.0.0.1", "ff02::1", "64:ff9b::a9fe:a9fe", "2002:a9fe:a9fe::1", "::ffff:127.0.0.1", "::127.0.0.1", "0.1.2.3", "255.255.255.255", "::ffff:0:127.0.0.1", "::ffff:0:169.254.169.254", "::ffff:0:10.0.0.1"} {
 		t.Run(raw, func(t *testing.T) {
 			called := false
 			policy.dial = func(context.Context, string, string) (net.Conn, error) {
