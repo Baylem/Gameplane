@@ -4,6 +4,8 @@ Maturity labels: **stable** (shipped, on by default, and exercised by a bucketed
 
 Default column: **on** (enabled by the chart or the product), **off** (opt-in, ships disabled), or **n/a** (planned, in progress, or tooling with no install default).
 
+Notification rows take effect once a notification sink is configured.
+
 Status date: 2026-10-14 (v0.3.0, pre-v1).
 
 See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
@@ -12,20 +14,23 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 
 | Capability | Maturity | Default | Description | Docs |
 |---|---|---|---|---|
-| Create a game server from a module template | stable | on | Creates a GameServer from an installed module template through the create wizard or the API. | [](README.md#features) |
+| Create a game server from a module template | stable | on | Creates a GameServer from an installed module template through the create wizard or the API. | [README](README.md#features) |
 | Start a stopped server | stable | on | Clears spec.suspend so the operator scales the pod back up. | [architecture](docs/architecture.md#start-a-server) |
 | Stop a server | stable | on | Sets spec.suspend so the operator scales the pod to zero after the stop sequence. | [architecture](docs/architecture.md#start-a-server) |
-| Restart a server | stable | on | Stamps a restart annotation so the pod restarts without changing desired state. | [](README.md#features) |
-| Show server phase and conditions | stable | on | Shows Running, Starting, Stopping, Suspended, Failed and Pending with the reason conditions behind each. | [architecture](docs/architecture.md#start-a-server) |
-| Clone a server without world data | stable | on | Copies the spec of a server into a new GameServer and leaves world data out. | [](README.md#features) |
+| Restart a server | stable | on | Stamps a restart annotation so the pod restarts without changing desired state. | [README](README.md#features) |
+| Show server phase and conditions | stable | on | Shows the server phase, such as Running or Suspended, with the reason conditions behind each. | [architecture](docs/architecture.md#start-a-server) |
+| Clone a server into a new GameServer | stable | on | Copies the spec of a server into a new GameServer. | [README](README.md#features) |
 | Switch game version on a running server | stable | on | Changes the template version of an existing server so the operator rolls it out. | [module-authoring](docs/module-authoring.md) |
-| Delete a server | stable | on | Deletes a GameServer and its owned child objects. | [](README.md#features) |
-| Transfer server ownership | stable | on | Lets the owner or an admin hand a server to another user. | [security](docs/security.md) |
+| Delete a server | stable | on | Deletes a GameServer and its owned child objects. | [README](README.md#features) |
+| Transfer server ownership | beta | on | Lets the owner or an admin hand a server to another user. | [security](docs/security.md) |
 | Manage server collaborators | stable | on | Lets the owner set collaborator users who can use start, stop, restart, wake and clone. | [security](docs/security.md) |
 | Graceful stop with the game's native shutdown sequence | beta | on | Runs the template stop sequence over RCON, telnet or stdin before the pod scales to zero so world saves finish. | [architecture](docs/architecture.md#sleep-an-idle-server) |
 | Wipe world data with typed confirmation | beta | on | Suspends the server, erases the world volume and resumes, for owners or admins only. | [architecture](docs/architecture.md) |
 | Filter the server list by Running or Stopped | beta | on | Filters the server list with All, Running and Stopped tabs. | [unified-dashboard](docs/unified-dashboard.md) |
 | List servers across all readable namespaces | beta | on | The Servers page lists servers from every namespace the viewer may read. | [unified-dashboard](docs/unified-dashboard.md) |
+| Set an install-time default storage class for game data | beta | off | Applies the Helm default storage class to new game data volumes when neither the template nor the server names one. | [install](docs/install.md#values-reference) |
+| Report a missing game-data storage class as PVCProvisioningFailed | stable | on | Sets the GameServer Ready condition to False with reason PVCProvisioningFailed when its storage class does not exist. | [install](docs/install.md#values-reference) |
+| Keep game data on a PVC when the game pod is deleted | stable | on | Game data stays on its PVC when the game pod is deleted. | [architecture](docs/architecture.md#start-a-server) |
 | Edit game configuration from the Settings tab | in progress | n/a | Lets an operator change a server game configuration from its Settings tab, with validation. | [roadmap](docs/roadmap.md#in-progress) |
 
 ## Console and admin actions
@@ -36,8 +41,10 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 | Run template quick actions | stable | on | Runs template-defined admin actions such as save, broadcast, time, weather and reload from buttons. | [module-authoring](docs/module-authoring.md#actions) |
 | Live game log tail | stable | on | Streams the game log file over a WebSocket from the agent sidecar. | [architecture](docs/architecture.md#tail-logs) |
 | RCON command console | beta | on | Sends line-based commands to the game RCON protocol and shows responses as log lines. | [module-authoring](docs/module-authoring.md#rcon) |
-| Console command history | beta | on | Recalls the last 100 sent commands with the arrow keys, kept only while the Console tab stays open. | [](README.md#features) |
-| Clear, download and fullscreen console controls | beta | on | Toolbar buttons clear the terminal, download its buffer and toggle fullscreen without stopping the stream. | [](README.md#features) |
+| Pick a console protocol from the full rcon.protocol set | beta | on | A template selects one of ten console protocols for its console, including REST and CLI. | [module-authoring](docs/module-authoring.md#rcon) |
+| Run a console without a password with rcon.authentication false | beta | off | Lets a console with no authentication, such as a loopback-only port, run without a password Secret. | [module-authoring](docs/module-authoring.md#rcon) |
+| Console command history | beta | on | Recalls the last 100 sent commands with the arrow keys, kept only while the Console tab stays open. | [README](README.md#features) |
+| Clear, download and fullscreen console controls | beta | on | Toolbar buttons clear the terminal, download its buffer and toggle fullscreen without stopping the stream. | [README](README.md#features) |
 | Schema-validated action input with injection guard | beta | on | Validates action parameters against the template schema and escapes them before they reach the game console. | [dependencies](docs/dependencies.md#gameaction) |
 | Stdin action transport for PTY-only games | beta | on | Runs actions on PTY-console games by writing lines to the container stdin through pods attach. | [module-authoring](docs/module-authoring.md#console-mode-and-game-log) |
 | Kubernetes events timeline for a server | beta | on | Shows the 50 most recent Kubernetes events for the server pod and its parent objects. | [architecture](docs/architecture.md#start-a-server) |
@@ -50,8 +57,8 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 | Capability | Maturity | Default | Description | Docs |
 |---|---|---|---|---|
 | Browse the exposed server filesystem | stable | on | Lists directories under the exposed data root with a breadcrumb. | [security](docs/security.md#agent-file-browser-path-confinement) |
-| Edit and save text files in the Monaco editor | stable | on | Opens a text file in the in-browser Monaco editor and saves it through the write endpoint. | [security](docs/security.md#agent-file-browser-path-confinement) |
-| Create a new text file | stable | on | Creates a new file in the open directory through the write endpoint. | [security](docs/security.md#agent-file-browser-path-confinement) |
+| Save text file contents through the write endpoint | stable | on | Saves text content to a file through the agent write endpoint, which the in-browser editor uses. | [security](docs/security.md#agent-file-browser-path-confinement) |
+| Create a file through the write endpoint | stable | on | Creates a new file in the open directory through the write endpoint. | [security](docs/security.md#agent-file-browser-path-confinement) |
 | Download a file | stable | on | Downloads one file from the server through the agent, including large files that stream past the request timeout. | [security](docs/security.md#agent-file-browser-path-confinement) |
 | Delete a file | stable | on | Removes one file through the delete endpoint after confirmation. | [security](docs/security.md#agent-file-browser-path-confinement) |
 | Create a folder | beta | on | Creates a folder in the open directory through the mkdir endpoint. | [security](docs/security.md#agent-file-browser-path-confinement) |
@@ -63,35 +70,35 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 
 | Capability | Maturity | Default | Description | Docs |
 |---|---|---|---|---|
-| View online players and capacity | stable | on | Shows the online count, the maximum and the player list, refreshed every 5 seconds, for templates that declare a player source. | [](README.md#features) |
-| View the whitelist and add or remove entries | stable | on | Lists whitelist entries and adds or removes names through the whitelist endpoints. | [](README.md#features) |
-| Kick a player | beta | on | Disconnects an online player through the template kick command, and returns HTTP 501 when the template does not declare it. | [](README.md#features) |
-| Ban and unban a player | beta | on | Adds or removes a persistent ban through the template ban and unban commands. | [](README.md#features) |
-| View the banned players list | beta | on | Shows the banned players reported by the game through the banned endpoint. | [](README.md#features) |
+| View online players and capacity | stable | on | Shows the online count, the maximum and the player list, refreshed every 5 seconds, for templates that declare a player source. | [README](README.md#features) |
+| View the whitelist and add or remove entries | beta | on | Lists whitelist entries and adds or removes names through the whitelist endpoints. | [README](README.md#features) |
+| Kick a player | beta | on | Disconnects an online player through the template kick command, and returns HTTP 501 when the template does not declare it. | [README](README.md#features) |
+| Ban and unban a player | beta | on | Adds or removes a persistent ban through the template ban and unban commands. | [README](README.md#features) |
+| View the banned players list | beta | on | Shows the banned players reported by the game through the banned endpoint. | [README](README.md#features) |
 | Steam display names on player lists | beta | off | Resolves Steam IDs to display names through the Steam Web API once a Secret is configured. | [install](docs/install.md#steam-display-names-optional) |
 
 ## Mods
 
 | Capability | Maturity | Default | Description | Docs |
 |---|---|---|---|---|
-| Install a mod from a download URL with registry metadata in the mod manifest | stable | on | Installs a mod file from a download URL and records its registry metadata in the per-volume mod manifest. | [](README.md#mod-management) |
-| Upgrade an installed mod in place and remove it from the manifest | stable | on | Replaces an installed mod with a new file and removes the old file and its manifest entry, or removes the mod entirely. | [](README.md#mod-management) |
-| Upload a mod file directly from the dashboard | stable | on | Accepts a multipart mod file upload for a server and installs it as a file-drop mod. | [](README.md#mod-management) |
-| Reject path-traversal and symlink-escape mod archives | stable | on | Extracts valid mod archives while rejecting zip-slip paths and symlinks that escape the target directory. | [](README.md#mod-management) |
+| Install a mod from a download URL with registry metadata in the mod manifest | stable | on | Installs a mod file from a download URL and records its registry metadata in the per-volume mod manifest. | [README](README.md#mod-management) |
+| Upgrade an installed mod in place and remove it from the manifest | stable | on | Replaces an installed mod with a new file and removes the old file and its manifest entry, or removes the mod entirely. | [README](README.md#mod-management) |
+| Upload a mod file directly from the dashboard | stable | on | Accepts a multipart mod file upload for a server and installs it as a file-drop mod. | [README](README.md#mod-management) |
+| Reject path-traversal and symlink-escape mod archives | stable | on | Extracts valid mod archives while rejecting zip-slip paths and symlinks that escape the target directory. | [README](README.md#mod-management) |
 | Install mods by launch-parameter ID | beta | on | Projects selected mod IDs into the launch environment for games that fetch mods at startup. | [module-authoring](docs/module-authoring.md#mods) |
-| Browse and install from Modrinth | beta | on | Searches and installs Modrinth mods scoped to the server game version and loader, with no key needed. | [](README.md#supported-registries) |
-| Browse and install from Thunderstore | beta | on | Searches and installs Thunderstore packages for templates that set a community, with no key needed. | [](README.md#supported-registries) |
-| Browse and install from Hangar | beta | on | Searches and installs Hangar plugins, with no key needed. | [](README.md#supported-registries) |
-| Browse and install from the Factorio Mod Portal | beta | on | Installs Factorio mods from the mod portal using the user's factorio.com credentials entered in the install form. | [](README.md#supported-registries) |
-| Browse and install from SpigotMC | beta | on | Searches and installs SpigotMC resources, with no key needed. | [](README.md#supported-registries) |
-| Browse and install from GitHub Releases | beta | on | Installs release assets from a GitHub owner and repository set on the template, with no key needed. | [](README.md#supported-registries) |
-| Browse and install from uMod | beta | on | Searches and installs uMod plugins, with no key needed. | [](README.md#supported-registries) |
-| Store and replace registry API keys from Settings | beta | on | Saves, replaces and removes registry keys under Settings, Mod registries, kept in Kubernetes Secrets or the standalone database. | [](README.md#supported-registries) |
-| Check installed mods for newer versions | beta | on | Reports available updates for mods installed from a provider that has a resolvable version. | [](README.md#mod-management) |
+| Browse and install from Modrinth | beta | on | Searches and installs Modrinth mods scoped to the server game version and loader, with no key needed. | [README](README.md#supported-registries) |
+| Browse and install from Thunderstore | beta | on | Searches and installs Thunderstore packages for templates that set a community, with no key needed. | [README](README.md#supported-registries) |
+| Browse and install from Hangar | beta | on | Searches and installs Hangar plugins, with no key needed. | [README](README.md#supported-registries) |
+| Browse and install from the Factorio Mod Portal | beta | on | Installs Factorio mods from the mod portal using the user's factorio.com credentials entered in the install form. | [README](README.md#supported-registries) |
+| Browse and install from SpigotMC | beta | on | Searches and installs SpigotMC resources, with no key needed. | [README](README.md#supported-registries) |
+| Browse and install from GitHub Releases | beta | on | Installs release assets from a GitHub owner and repository set on the template, with no key needed. | [README](README.md#supported-registries) |
+| Browse and install from uMod | beta | on | Searches and installs uMod plugins, with no key needed. | [README](README.md#supported-registries) |
+| Store and replace registry API keys from Settings | beta | on | Saves, replaces and removes registry keys under Settings, Mod registries, kept in Kubernetes Secrets or the standalone database. | [README](README.md#supported-registries) |
+| Check installed mods for newer versions | beta | on | Reports available updates for mods installed from a provider that has a resolvable version. | [README](README.md#mod-management) |
 | Install a modpack from a provider | beta | on | Installs a modpack either by pinning it into a server env (env-mode) or by installing its dependency mods (deps-mode). | [module-authoring](docs/module-authoring.md#modpacks-providersmodpacks) |
-| Browse and install from CurseForge | beta | off | Searches and installs CurseForge mods once a CurseForge API key is configured. | [](README.md#supported-registries) |
-| Browse and install from Steam Workshop | beta | off | Searches and installs Steam Workshop items once a Steam Web API key is configured. | [](README.md#supported-registries) |
-| Browse Nexus Mods | beta | off | Browses Nexus Mods once an API key is configured; downloads are not supported. | [](README.md#supported-registries) |
+| Browse and install from CurseForge | beta | off | Searches and installs CurseForge mods once a CurseForge API key is configured. | [README](README.md#supported-registries) |
+| Browse and install from Steam Workshop | beta | off | Searches and installs Steam Workshop items once a Steam Web API key is configured. | [README](README.md#supported-registries) |
+| Browse Nexus Mods | beta | off | Browses Nexus Mods once an API key is configured; downloads are not supported. | [README](README.md#supported-registries) |
 
 ## Backups and restore
 
@@ -99,11 +106,12 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 |---|---|---|---|---|
 | Create an on-demand restic-snapshot backup of a server | stable | on | Starts a Backup that runs restic against the server data volume and records the snapshot ID. | [architecture](docs/architecture.md#back-up) |
 | Connect a restic repository through a labelled Secret | stable | on | Reads the restic repository and credentials from a labelled Kubernetes Secret referenced by repoRef. | [architecture](docs/architecture.md#back-up) |
+| Store restic backups in S3-compatible storage | beta | on | Points a restic repository at an S3-compatible endpoint through the repository URL in the labelled Secret. | [architecture](docs/architecture.md#back-up) |
 | Report a Failed backup for a missing PVC or bad credentials | stable | on | Sets a Backup to Failed with a message when its data volume is missing or its repository credentials are rejected. | [architecture](docs/architecture.md#back-up) |
 | Delete a backup and forget its restic snapshot with prune | stable | on | Deleting a Backup runs restic forget with prune so the snapshot is removed from the repository. | [architecture](docs/architecture.md#backup-deletion-and-snapshot-cleanup) |
 | Run backups on a cron schedule | stable | on | A BackupSchedule creates Backup resources on its cron expression and records last and next schedule times. | [architecture](docs/architecture.md#back-up) |
 | Suspend a backup schedule | stable | on | Setting suspend on a BackupSchedule stops it from creating new backups. | [architecture](docs/architecture.md#back-up) |
-| Trim old backups with keep-last and calendar retention rules | stable | on | Applies keepLast, hourly, daily, weekly, monthly and yearly retention after each scheduled backup; an empty policy keeps everything. | [architecture](docs/architecture.md#back-up) |
+| Trim old backups with keep-last retention | stable | on | Applies keepLast retention after each scheduled backup; an empty policy keeps everything. | [architecture](docs/architecture.md#back-up) |
 | Forbid overlapping scheduled backups | stable | on | A schedule with concurrencyPolicy Forbid does not start a new backup while one is still active. | [architecture](docs/architecture.md#back-up) |
 | Restore a restic snapshot into an existing server | stable | on | Suspends the target GameServer, overwrites its data volume from a snapshot, and resumes it. | [architecture](docs/architecture.md#restore-from-backup) |
 | Reject a restore whose source backup is missing or not Succeeded | stable | on | Sets a Restore to Failed when its Backup does not exist or has no successful snapshot. | [architecture](docs/architecture.md#restore-from-backup) |
@@ -160,7 +168,7 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 | Apply a per-server egress NetworkPolicy for the tunnel pod | beta | on | Creates an egress policy for a tunnel-enabled server that admits DNS, advertised ports and provider relay ports. | [tunnels](docs/tunnels.md#troubleshooting) |
 | Expose a server through a NodePort Service | beta | off | An opt-in expose mode publishes game ports on node ports, with an optional pinned port number. | [tunnels](docs/tunnels.md#interaction-with-other-networking-fields) |
 | Expose a server through a LoadBalancer Service | beta | off | An opt-in expose mode asks the cluster load-balancer address manager for an external address. | [networking](docs/networking.md#address-pool-overview) |
-| Expose a server through a Hostport mapping | beta | off | An opt-in expose mode binds game ports on the node host, which the wake sentinel cannot hold. | [roadmap](docs/roadmap.md) |
+| Expose a server through a Hostport mapping | beta | off | An opt-in expose mode binds game ports on the node host, which the wake sentinel cannot hold. | [architecture](docs/architecture.md#security-boundaries) |
 | Request a named address pool for a server | beta | off | Writes a MetalLB or Cilium pool preference onto a LoadBalancer Service, recorded as unhonored when no address manager is set. | [networking](docs/networking.md#setting-an-address-pool-or-specific-address) |
 | Request a specific external IP address for a server | beta | off | Sets spec.networking.address so the address manager assigns that IP. | [networking](docs/networking.md#setting-an-address-pool-or-specific-address) |
 | Report address assignment progress on the AddressAssignment condition | beta | off | Shows Assigned, AssignmentPending, ServiceNotReady, IgnoredForExposureMode and other reasons on the server status. | [networking](docs/networking.md#troubleshooting-address-assignment) |
@@ -173,7 +181,7 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 | Store tunnel credentials as owned Secrets | beta | off | Accepts relay credentials from the dashboard or the tunnel-credentials API and refuses Secrets without a matching ownerReference. | [tunnels](docs/tunnels.md#security) |
 | Keep the tunnel pod running while the game sleeps | beta | off | The tunnel Deployment keeps the relay connection and public address up while the game pod is asleep. | [tunnels](docs/tunnels.md#interaction-with-idle-auto-sleep-and-wake-on-connect) |
 | Restrict game ingress with a sourceRanges allowlist | beta | off | Limits Service-port traffic to listed source ranges, and does not gate traffic arriving through a tunnel. | [tunnels](docs/tunnels.md#interaction-with-other-networking-fields) |
-| Report conflicting networking options as a status condition | planned | n/a | Would flag redundant settings such as a public LoadBalancer plus a tunnel as an informational condition. | [roadmap](docs/roadmap.md) |
+| Report conflicting networking options as a status condition | planned | n/a | Would flag redundant settings such as a public LoadBalancer plus a tunnel as an informational condition. | [tunnels](docs/tunnels.md#interaction-with-other-networking-fields) |
 
 ## Idle sleep and wake
 
@@ -204,8 +212,10 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 | Create a server on a chosen registered cluster | stable | on | A create request with ?cluster=<id> places the GameServer on that cluster's own Kubernetes API. | [unified-dashboard](docs/unified-dashboard.md#user-experience) |
 | Read servers from a selected cluster with ?cluster= dispatch | stable | on | Listing and reads resolve the requested cluster, reject unknown cluster ids with 400, and keep remote servers out of the local listing. | [unified-dashboard](docs/unified-dashboard.md#data-and-authorization-contract) |
 | Enforce per-cluster RBAC grants on remote servers | stable | on | A viewer bound only to the local cluster is forbidden from reading remote servers. | [multicluster-ui](docs/multicluster-ui.md#user-access) |
+| Require a cluster-wide grant for remote module catalog access | beta | on | Catalog reads and writes on a remote cluster need a cluster-wide modules:read or modules:manage grant there. | [multicluster-ui](docs/multicluster-ui.md#user-access) |
 | Refuse fallback to a same-named local server when a remote target is missing | stable | on | A missing remote server never resolves to the home namesake, including registry, modpack and capture routes. | [remote-parity](docs/remote-parity.md#routing-and-identity) |
 | Keep node join tokens and kubeconfig issuance local to the central cluster | stable | on | Node join token and kubeconfig endpoints are available only for the local cluster. | [multicluster-ui](docs/multicluster-ui.md#node-inventory) |
+| Add nodes and download kubeconfig from the Cluster page | beta | off | With clusterOps enabled, the Cluster page mints a node join command and a downloaded kubeconfig, which grants kube-system and CSR-approval RBAC. | [install](docs/install.md#values-reference) |
 | Remove a registered cluster and its kubeconfig Secret | stable | on | Removing a registration deletes the kubeconfig Secret the API created for it. | [multicluster-ui](docs/multicluster-ui.md#registered-clusters) |
 | Rotate a registered kubeconfig in place | beta | on | PUT /clusters/{name}/kubeconfig replaces the credential, keeps identity and grants, and reloads the client. | [standalone-panel](docs/standalone-panel.md#rotate-a-registered-kubeconfig) |
 | Show Kubernetes API health per registered cluster | beta | on | The Clusters page shows API health, version and last check, but not gateway or game health. | [multicluster-ui](docs/multicluster-ui.md#registered-clusters) |
@@ -248,6 +258,7 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 | Restrict destructive server actions to the owner or an admin | stable | on | Delete, wipe, ownership transfer and collaborator edits require the server's owner or an admin. | [security](docs/security.md#per-gameserver-access-owner--collaborators) |
 | Remove a user account with all linked data | stable | on | Deleting a user removes SSO links, preferences, sessions, API tokens and role bindings and revokes the share links that account created. | [security](docs/security.md#authorization) |
 | Save personal dashboard theme preferences | stable | on | Any signed-in user can read and save their own dashboard theme preferences. | [roadmap](docs/roadmap.md#shipped-in-v030) |
+| Customize the dashboard theme with presets, custom colors, a CSS overlay and safe mode | beta | on | Settings, Theme & Appearance offers preset themes, custom colors with a contrast check, a CSS overlay, safe mode, and import and export. | [roadmap](docs/roadmap.md#shipped-in-v030) |
 | Require the CSRF header on mutating requests | beta | on | Mutating requests must echo the CSRF cookie value in the X-Gameplane-CSRF header (double-submit). | [security](docs/security.md#authentication) |
 | Refuse an auth config save that leaves no sign-in provider enabled | beta | on | The API rejects an auth config save with zero enabled providers, counting the Helm provider as always enabled. | [security](docs/security.md#lockout-guard-and-break-glass) |
 | Refuse to demote or delete the last user manager | beta | on | The API refuses to demote or delete the last user who can manage users and refuses self-demotion below users:manage. | [security](docs/security.md#authorization) |
@@ -271,7 +282,7 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 | Record every mutating API request in the audit log | stable | on | Each mutating API request writes an audit event to the audit_events table that the dashboard serves. | [install](docs/install.md#audit-log) |
 | Page and filter the audit log | stable | on | The audit view pages through events and applies filters, backed by GET /admin/audit. | [install](docs/install.md#audit-log) |
 | Encrypt agent and capture control traffic with mTLS | stable | on | Operator-managed agent and capture-sidecar control connections use mutual TLS 1.2 or newer with a verified client certificate. | [security](docs/security.md#authentication) |
-| Isolate pods with NetworkPolicies | stable | on | NetworkPolicies restrict game, API and backup traffic, including default-deny egress for game pods. | [security](docs/security.md#networkpolicies) |
+| Isolate pods with NetworkPolicies | stable | on | Applies NetworkPolicies that restrict ingress to game servers and give the API pod an egress policy that allows private ranges. | [security](docs/security.md#networkpolicies) |
 | Export the audit trail as CSV or JSON | beta | on | GET /admin/audit/export downloads the full audit trail for offline review. | [install](docs/install.md#audit-log) |
 | Verify the audit hash chain for tampering | beta | on | GET /admin/audit/verify re-walks the SHA-256 chain and reports the first broken link, catching naive in-database edits and tail truncation. | [security](docs/security.md#audit-log-integrity) |
 | Resolve client IPs through trusted proxies | beta | on | The API reads X-Forwarded-For only from peers inside api.trustedProxies, so audit records and per-IP limits use the real client address. | [security](docs/security.md#client-ip-extraction-from-forwarded-headers) |
@@ -319,8 +330,8 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 | Hard-disable telemetry at install time | stable | on | Setting api.telemetry.enabled to false stops all sending and hides the first-login notice, overriding the admin toggles. | [install](docs/install.md#telemetry) |
 | Send extended usage reports with a random install ID | stable | on | The extended tier adds a random install ID, environment bands, per-module counts, feature flags and the UI language, all from fixed sets. | [install](docs/install.md#telemetry) |
 | Send reports to the project default receiver | beta | on | An empty api.telemetry.endpoint sends reports to the project default receiver at telemetry.gameplane.net, and a custom endpoint replaces it. | [install](docs/install.md#telemetry) |
-| Reset the install ID from Admin Settings | beta | off | An admin resets the pseudonymous install ID, and the install then looks new to the receiver. | [install](docs/install.md#telemetry) |
-| Sign extended reports with an install key | beta | off | Extended reports carry an Ed25519 signature, so forged, unsigned, tampered or replayed reports are refused without changing stored data. | [security](docs/security.md#signing-what-it-does-and-doesnt-stop) |
+| Reset the install ID from Admin Settings | beta | on | An admin resets the pseudonymous install ID, and the install then looks new to the receiver. | [install](docs/install.md#telemetry) |
+| Sign extended reports with an install key | beta | on | Extended reports carry an Ed25519 signature, so forged, unsigned, tampered or replayed reports are refused without changing stored data. | [security](docs/security.md#signing-what-it-does-and-doesnt-stop) |
 | Run a bundled telemetry receiver from Helm | beta | off | api.telemetry.receiver.enabled deploys a receiver beside the install, with a PVC for its SQLite data. | [telemetry-provider](docs/telemetry-provider.md#deploy-on-kubernetes) |
 | Validate and aggregate incoming reports strictly | beta | off | The receiver decodes each report strictly, folds it into daily aggregates and expiring activity records, and never stores raw reports or source addresses. | [telemetry-receiver](telemetry-receiver/README.md#behavior) |
 | Limit accepted reports per source per day | beta | off | INGEST_SOURCE_DAILY_LIMIT caps accepted reports per source per UTC day, with a default of 20. | [telemetry-provider](docs/telemetry-provider.md#configuration) |
@@ -357,10 +368,12 @@ See [docs/roadmap.md](docs/roadmap.md) for what is planned and in progress.
 
 | Capability | Maturity | Default | Description | Docs |
 |---|---|---|---|---|
-| Install the panel from the Helm chart | stable | on | One helm upgrade --install from the GHCR OCI registry installs the operator, API and dashboard. | [install](docs/install.md#one-shot-install) |
+| Install the panel from the Helm chart | stable | on | One helm upgrade --install installs the operator, API and dashboard. | [install](docs/install.md#one-shot-install) |
 | CRD auto-apply on helm upgrade | stable | on | A pre-upgrade hook applies the Gameplane CRDs so every helm upgrade keeps the schema current. | [install](docs/install.md#helm-crd-caveat) |
 | Read-only MCP server | beta | off | An optional MCP server lets AI assistants read GameServers, pods, events and logs and propose fixes without writing. | [mcp-server](mcp-server/README.md#tools) |
 | Helper image overrides for air-gapped mirrors | beta | n/a | Helm lets operators retag the config-init and restic helper images to a private registry mirror. | [install](docs/install.md#values-reference) |
 | Rolling edge images | beta | off | Setting image.tag to edge runs the rolling build published on every master push. | [install](docs/install.md#edge-channel-latest-edge-build) |
 | Local Kind development loop | beta | n/a | Make targets create a Kind cluster with a local OCI registry, load images and run the web dev server. | [contributing](docs/contributing.md#dev-loop) |
 | Store API data in PostgreSQL | experimental | off | Runs the API against a PostgreSQL database instead of SQLite, but only in images built with the postgres build tag. | [install](docs/install.md#values-reference) |
+| Reuse an existing PVC for the API database | beta | off | Mounts a pre-existing PersistentVolumeClaim for the API SQLite database instead of creating one. | [install](docs/install.md#values-reference) |
+| Reuse an existing PVC for the standalone panel key | beta | off | Mounts a pre-existing key-only PersistentVolumeClaim for generated standalone encryption keys. | [install](docs/install.md#values-reference) |
