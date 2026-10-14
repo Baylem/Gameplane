@@ -7,7 +7,7 @@ No runtime data. The "entities" are structured documentation records.
 | Field | Rule |
 |---|---|
 | area | The `##` heading the row sits under; one of the areas in [research R6](./research.md#r6-building-the-capability-inventory). |
-| capability | Short name of one thing a user or operator can do. Unique within its area. Plain text, no links, no `|`. |
+| capability | Short name of one thing a user or operator can do. Unique within its area. Plain text, no links, no pipe character. |
 | maturity | Exactly one of `stable`, `beta`, `experimental`, `planned`, `in progress`. |
 | default | `on`, `off` (opt-in), or `n/a` (planned / in progress / tooling with no install default). |
 | description | One sentence. May differ between repo and website. |
