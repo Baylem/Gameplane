@@ -167,5 +167,5 @@ As delivered: one large PR. The first commit `0182e16` built the MVP across US1,
 
 ## Notes
 
-- Every task is ticked and PR #630 is merged, so Constitution IV and CLAUDE.md rule 16 call for renaming this folder to `done_025-standalone-panel`. The rename is pending OD-5, because Constitution I also requires a `test/e2e/` test and there is none (spec Known gaps).
+- Every task is ticked and PR #630 is merged, so Constitution IV and CLAUDE.md rule 16 call for renaming this folder to `done_025-standalone-panel`. valgul decided to keep the `025-` name until a standalone E2E test exists, because Constitution I also requires one and there is none (OD-5, spec Known gaps).
 - Follow-ups outside this feature: telemetry marker for standalone installs (OD-2); `--skip-crds` issue (OD-3).

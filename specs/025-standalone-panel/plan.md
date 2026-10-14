@@ -43,7 +43,7 @@ The API gains a standalone mode that runs without any local Kubernetes cluster. 
 | V. Delegation | Not applicable | Contributor PR. |
 | VI. CI bears the load | Met | All 97 checks green on head `117caf35` before merge. |
 
-**Gate decision**: The feature is merged, so the gate cannot block it. Every task is ticked, so rule 16 calls for the `done_025-` rename; it is pending OD-5 because of the Principle I gap (see [OPEN-DECISIONS.md](OPEN-DECISIONS.md)).
+**Gate decision**: The feature is merged, so the gate cannot block it. Every task is ticked, so rule 16 calls for the `done_025-` rename; valgul decided to keep the `025-` name until a standalone E2E test exists (OD-5) (see [OPEN-DECISIONS.md](OPEN-DECISIONS.md)).
 
 ## Project Structure
 
