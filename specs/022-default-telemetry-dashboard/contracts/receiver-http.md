@@ -116,6 +116,7 @@ An E2E check (R17) compares the unauthenticated response against the login page 
     "newPerDay": [{"day": "2026-09-06", "count": 12}],
     "lapsedPerDay": [{"day": "2026-09-06", "count": 4}],
     "versionsByInstall": {"windowDays": 30, "items": [{"label": "0.3.0", "installs": 1011}]},
+    "versionTrend": {"newestRelease": "v0.3.0", "days": [{"day": "2026-09-06", "upgraded": 14, "downgraded": 1, "unordered": 0, "stale": 212}]},
     "env": {"k8s": [{"label": "1.31", "share": 0.42}], "distro": [], "arch": [], "nodes": []},
     "games": [{"module": "minecraft-java", "installsShare": 0.63, "serversPerDay": 2140.5}, {"module": "custom", "installsShare": 0.08, "serversPerDay": 77.1}],
     "features": [{"feature": "wakeOnConnect", "share": 0.18}],
@@ -125,6 +126,7 @@ An E2E check (R17) compares the unauthenticated response against the login page 
 }
 ```
 
+- `asOf` is today, the current UTC day, which is still in progress (OD-6). Every range ends on it, its figures change until the day closes, and its lapsed-installs value stays `0` until the lifecycle job finalises the day. `/v1/summary` keeps the latest complete day.
 - When the range has no data: `empty: true`, with `basic` and `extended` set to `null`. The HTML renders the empty state (FR-027).
 - When there is basic data but no extended reports: `extended: null`, and the HTML explains that no reports in the range included extended data.
 

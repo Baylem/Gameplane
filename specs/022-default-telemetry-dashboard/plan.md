@@ -218,6 +218,16 @@ The slices are implementation waves on **one feature branch and one PR**, in thi
 
 Slices 2 and 3 can run in parallel once slice 1 is committed. Slice 4 needs slice 3's routes. Slice 5 needs everything before it.
 
+### Amendment slice (2026-10-14): version trend (FR-042)
+
+Spec 022 is reopened for one more slice on a new branch and PR; the shipped feature is unchanged until it lands.
+
+6. **Version trend** (US5 scenarios 7–9, FR-042, OD-7–OD-10, research R22):
+   - receiver storage: `daily_install_version` and `daily_version_change` (created with `CREATE TABLE IF NOT EXISTS`, so existing providers gain them on restart; no schema-version bump), plus their retention sweep
+   - version ordering through `golang.org/x/mod/semver`, a new direct dependency of `telemetry-receiver`
+   - classification in the extended ingest transaction, and the `extended.versionTrend` view block
+   - the design in `telemetry-receiver/telemetry-dashboard.pen` first (rename "Versions" to "Reports by version", add the trend chart under "Versions by install"), done on the local machine where Pencil runs, then the templates
+
 ## Cross-spec dependencies
 
 - **019 localization-language-packs** (Draft) owns adding languages to the `telemetryschema` `language` enumeration and wiring the configured default. Until then `language` is always `en` (R19).

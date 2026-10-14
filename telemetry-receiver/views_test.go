@@ -10,13 +10,12 @@ import (
 	"time"
 )
 
-// viewsNow is the clock of the views tests: the latest complete day (asOf)
-// is 2026-10-06.
-var viewsNow = time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+// viewsNow is the clock of the views tests: today (asOf) is 2026-10-06.
+var viewsNow = time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
 
-// viewsDay returns the day offset days before asOf (2026-10-06).
+// viewsDay returns the day offset days before asOf (2026-10-06, today).
 func viewsDay(offset int) string {
-	return dayString(viewsNow.AddDate(0, 0, -1-offset))
+	return dayString(viewsNow.AddDate(0, 0, -offset))
 }
 
 // seedViews writes a synthetic multi-day dataset. Reports sit at 0, 3, 10,
@@ -156,6 +155,37 @@ func TestBuildViewsReportsPerDayIsDense(t *testing.T) {
 	}
 }
 
+// TestBuildViewsIncludesTodayInProgress proves that the range ends on today
+// (UTC, in progress): a report accepted today is the last reportsPerDay
+// entry, leaves the empty state, and its totals are the latest-day row.
+func TestBuildViewsIncludesTodayInProgress(t *testing.T) {
+	st := openTestStore(t.Context(), t, config{})
+	ctx := context.Background()
+	today := dayString(viewsNow)
+	for range 2 {
+		if err := st.recordBasic(ctx, today, "1.0.0", 4, 9); err != nil {
+			t.Fatal(err)
+		}
+	}
+	v, err := BuildViews(ctx, st, 7, viewsNow)
+	if err != nil {
+		t.Fatalf("BuildViews: %v", err)
+	}
+	if v.Empty || v.Basic == nil {
+		t.Fatalf("empty = %v with reports accepted today, want the populated view", v.Empty)
+	}
+	if v.AsOf != today {
+		t.Fatalf("asOf = %s, want today %s", v.AsOf, today)
+	}
+	days := v.Basic.ReportsPerDay
+	if last := days[len(days)-1]; last.Day != today || last.Reports != 2 {
+		t.Fatalf("last reportsPerDay entry = %+v, want %s with 2 reports", last, today)
+	}
+	if want := (LatestDayRow{ServersTotal: 8, TemplatesTotal: 18}); v.Basic.LatestDay != want {
+		t.Fatalf("latestDay = %+v, want %+v (today's totals)", v.Basic.LatestDay, want)
+	}
+}
+
 func TestBuildViewsInvalidRangeFallsBackTo30(t *testing.T) {
 	st := openTestStore(t.Context(), t, config{})
 	seedViews(t, st)
@@ -185,8 +215,8 @@ func TestBuildViewsEmptyState(t *testing.T) {
 		}
 	}
 	check("empty store")
-	// Reports from today (not yet a complete day) and from beyond the
-	// widest range do not leave the empty state.
+	// Reports from tomorrow (after asOf) and from beyond the widest range do
+	// not leave the empty state; today's do (TestBuildViewsIncludesTodayInProgress).
 	if err := st.recordBasic(context.Background(), "2026-10-07", "1.0.0", 1, 1); err != nil {
 		t.Fatal(err)
 	}

@@ -306,7 +306,7 @@
               "fill": "$foreground/muted",
               "textGrowth": "fixed-width",
               "width": 520,
-              "content": "Figures appear once this receiver has accepted reports for a full UTC day. Installs send to POST /ingest on the public port; nothing is shown until there is data, so no chart is drawn from zeros.",
+              "content": "Figures appear as soon as this receiver accepts a report; today's figures are in progress and update as reports arrive. Installs send to POST /ingest on the public port; nothing is shown until there is data, so no chart is drawn from zeros.",
               "lineHeight": 1.5,
               "textAlign": "center",
               "fontFamily": "$typography/font-sans",

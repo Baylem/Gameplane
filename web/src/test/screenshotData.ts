@@ -11,6 +11,8 @@ import type {
   ServerEvent,
   InstalledMod,
   RegistryProject,
+  CatalogEntry,
+  ModuleSource,
 } from "@/types";
 import type { AllConfig } from "@/lib/config";
 import {
@@ -1043,6 +1045,42 @@ export function screenshotConfigWithOidc(): AllConfig {
   };
 }
 
+// Variant of screenshotConfigWithOidc() matching the uMiwd design frame
+// (Admin settings — Authentication). Used ONLY by uMiwd, selected via the
+// "e2e_admin_config_variant=oidc-design" cookie. The shared "oidc" variant
+// is kept as-is: the R65Xyx/Rwnu3/XL5ZU/vStkb/uw0dB design crops carry the
+// ops-leads / ops-team / everyone chip text.
+export function screenshotConfigOidcDesign(): AllConfig {
+  const base = screenshotConfig();
+  return {
+    ...base,
+    auth: {
+      providers: [
+        { name: "local", displayName: "Local accounts", kind: "local", enabled: true },
+      ],
+      helmOverride: {
+        // operator key deliberately absent so its badge reads "From Helm values".
+        roleMappings: {
+          admin: ["gameplane-admins", "gameplane-sre"],
+          viewer: [],
+        },
+      },
+    },
+    installTimeSettings: {
+      gameDataStorageClass: "fast-nvme",
+      oidcHelmProvider: {
+        groupsClaim: "teams",
+        defaultRole: "viewer",
+        roleMappings: {
+          admin: ["gameplane-admins"],
+          operator: ["gameplane-ops"],
+          viewer: ["gameplane-members"],
+        },
+      },
+    },
+  };
+}
+
 // Variant of screenshotConfig() with a Helm-seeded OIDC provider that
 // declares no role mappings at all, and no dashboard override either —
 // the "no OIDC mappings yet" empty state. Backs both nNGDX (the empty-state
@@ -1298,7 +1336,7 @@ export const screenshotRegistryProjects: RegistryProject[] = [
   },
 ];
 
-// Author/downloads values are pinned to design-export/json/tY6RD.json's
+// Author/downloads values are pinned to assets/design-export/json/tY6RD.json's
 // "Card <title>" nodes (Server Detail — Modpacks) so the screenshot capture
 // (slice2b.spec.ts's tY6RD test) matches the design frame's copy exactly —
 // title/description/id/slug/pageUrl/provider are unaffected.
@@ -1386,6 +1424,215 @@ export const screenshotTemplateConfigSchemas: Record<
     { name: "MOTD", displayName: "MOTD", type: "string", target: "file" },
   ],
 };
+
+// ============================================================================
+// Modules catalog design variant (kK8Ji "Screen/Modules Catalog"). Served by
+// buildScreenshotHandlers only when the "e2e_modules_variant=design" cookie is
+// set; the default /modules/catalog and /modules/sources responses are kept
+// as-is for every other screenshot spec. Order matches the design grid.
+// ============================================================================
+
+const DESIGN_CATALOG_SOURCE_DEFAULT = { name: "default", type: "git" as const };
+const DESIGN_CATALOG_SOURCE_COMMUNITY = { name: "community", type: "oci" as const };
+
+export const screenshotDesignCatalog: CatalogEntry[] = [
+  {
+    name: "minecraft-java",
+    displayName: "Minecraft (Java Edition)",
+    summary: "Vanilla / Paper / Spigot / Bukkit / Purpur / Forge / NeoForge / Fabric / Quilt servers with a version+loader picker and in-app Modrinth browse.",
+    game: "minecraft-java",
+    categories: ["Sandbox", "Survival", "Modded"],
+    sources: [DESIGN_CATALOG_SOURCE_DEFAULT],
+    versions: ["1.21.4", "1.21.3"],
+    latestVersion: "1.21.4",
+    installed: true,
+    installedVersion: "1.21.4",
+    installedFrom: "default",
+    moduleName: "minecraft-java",
+    phase: "Ready",
+    appliedDigest: "sha256:a1b2c3d4…9e2f",
+    verifiedDigest: "sha256:a1b2c3d4…9e2f",
+    verifyPolicy: "keyless",
+    previousVersion: "1.21.3",
+  },
+  {
+    name: "minecraft-bedrock",
+    displayName: "Minecraft (Bedrock)",
+    summary: "Cross-platform edition for mobile, console and Windows clients. Allow-list and permissions managed from the wizard.",
+    game: "minecraft-bedrock",
+    categories: ["Sandbox", "Survival", "Creative"],
+    sources: [DESIGN_CATALOG_SOURCE_DEFAULT],
+    versions: ["1.21.5"],
+    latestVersion: "1.21.5",
+    installed: true,
+    installedVersion: "1.21.5",
+    installedFrom: "default",
+    moduleName: "minecraft-bedrock",
+    phase: "Ready",
+    appliedDigest: "sha256:5f0ab913…c47d",
+  },
+  {
+    name: "valheim-default",
+    displayName: "Valheim (Dedicated)",
+    summary: "Valheim dedicated server (lloesche/valheim-server) with a stable/public-test channel picker, a BepInEx mod volume, and in-app Thunderstore browse. Crossplay-friendly.",
+    game: "valheim",
+    categories: ["Survival", "Co-op", "Building"],
+    sources: [DESIGN_CATALOG_SOURCE_DEFAULT],
+    versions: ["2.3.0"],
+    latestVersion: "2.3.0",
+    installed: true,
+    installedVersion: "2.3.0",
+    installedFrom: "default",
+    moduleName: "valheim",
+    phase: "Ready",
+    appliedDigest: "sha256:9c14e07b…3ba8",
+  },
+  {
+    name: "factorio-vanilla",
+    displayName: "Factorio (Headless)",
+    summary: "Factorio headless server (factoriotools/factorio) with a stable/latest/pinned channel picker, server-settings managed from the wizard, and a mods volume with in-app Factorio mod portal browse.",
+    game: "factorio",
+    categories: ["Simulation", "Building", "Sandbox"],
+    sources: [DESIGN_CATALOG_SOURCE_DEFAULT],
+    versions: ["1.1.0"],
+    latestVersion: "1.1.0",
+    installed: false,
+    digest: "sha256:7d32e46a…1161",
+  },
+  {
+    name: "palworld-default",
+    displayName: "Palworld (Dedicated)",
+    summary: "Palworld dedicated server (thijsvanloef/palworld-server-docker) with RCON console, save-aware graceful stop, and a .pak mod volume with archive install.",
+    game: "palworld",
+    categories: ["Survival", "Co-op", "Modded"],
+    sources: [DESIGN_CATALOG_SOURCE_DEFAULT],
+    versions: ["1.1.0"],
+    latestVersion: "1.1.0",
+    installed: true,
+    installedVersion: "1.1.0",
+    installedFrom: "default",
+    moduleName: "palworld",
+    phase: "Ready",
+    appliedDigest: "sha256:2e91fa04…8d17",
+  },
+  {
+    name: "ark-ascended",
+    displayName: "ARK: Survival Evolved",
+    summary: "Dinosaur survival on the Unreal engine. Mod install via the Steam workshop; schedule onto a GPU node for acceptable tick rates.",
+    game: "ark",
+    categories: ["Survival", "Modded", "PvP"],
+    sources: [DESIGN_CATALOG_SOURCE_DEFAULT],
+    versions: ["0.9.2"],
+    latestVersion: "0.9.2",
+    installed: false,
+    digest: "sha256:b7440ce1…05af",
+  },
+  {
+    name: "terraria-vanilla",
+    displayName: "Terraria",
+    summary: "Terraria + tModLoader dedicated server (passivelemon/terraria-docker) with a vanilla/tModLoader version picker and a tModLoader ModPacks volume. Console via container stdin.",
+    game: "terraria",
+    categories: ["Sandbox", "Survival", "Adventure"],
+    sources: [DESIGN_CATALOG_SOURCE_DEFAULT],
+    versions: ["2.1.0"],
+    latestVersion: "2.1.0",
+    installed: true,
+    installedVersion: "2.1.0",
+    installedFrom: "default",
+    moduleName: "terraria",
+    phase: "Ready",
+    appliedDigest: "sha256:c805d7f2…46e9",
+  },
+  {
+    name: "cs2-competitive",
+    displayName: "Counter-Strike 2",
+    summary: "Competitive shooter with MatchZy and CounterStrikeSharp plugin support. Game-server login token supplied as a secret.",
+    game: "counter-strike-2",
+    categories: ["Shooter", "PvP"],
+    sources: [DESIGN_CATALOG_SOURCE_DEFAULT],
+    versions: ["0.4.1"],
+    latestVersion: "0.4.1",
+    installed: false,
+    digest: "sha256:1a6be390…f72c",
+  },
+  {
+    name: "rust-vanilla",
+    displayName: "Rust",
+    summary: "Hardcore multiplayer survival with Oxide and Carbon mod loaders. Monthly forced wipe; schedule a backup before each one.",
+    game: "rust",
+    categories: ["Survival", "PvP", "Modded"],
+    sources: [DESIGN_CATALOG_SOURCE_COMMUNITY],
+    versions: ["0.7.3"],
+    latestVersion: "0.7.3",
+    installed: false,
+    digest: "sha256:3fd0817c…ba24",
+  },
+  {
+    name: "7-days-to-die",
+    displayName: "7 Days to Die",
+    summary: "Zombie survival crafting in a destructible voxel world. Blood-moon horde nights are CPU-spiky — give it headroom.",
+    game: "7-days-to-die",
+    categories: ["Survival", "Horror", "Building"],
+    sources: [DESIGN_CATALOG_SOURCE_COMMUNITY],
+    versions: ["0.5.0"],
+    latestVersion: "0.5.0",
+    installed: false,
+    digest: "sha256:e2c93b58…7a0d",
+  },
+  {
+    name: "satisfactory",
+    displayName: "Satisfactory (Dedicated)",
+    summary: "Satisfactory dedicated server (wolveix/satisfactory-server) with a stable/experimental branch picker. Env-configured; installs via steamcmd on first boot.",
+    game: "satisfactory",
+    categories: ["Simulation", "Building", "Sandbox"],
+    sources: [DESIGN_CATALOG_SOURCE_DEFAULT],
+    versions: ["1.0.0"],
+    latestVersion: "1.0.0",
+    installed: true,
+    installedVersion: "1.0.0",
+    installedFrom: "default",
+    moduleName: "satisfactory",
+    phase: "Ready",
+    appliedDigest: "sha256:4b7ecf19…d3e6",
+  },
+];
+
+// Sources for the design variant: "default" (git, unverified), "community"
+// (oci, keyless cosign policy: the POLICY badge source) and one upload-type
+// source so the "Upload module" button renders (Modules.tsx gates it on
+// upload sources). Chips come from catalog entries, not from this list.
+export const screenshotDesignSources: ModuleSource[] = [
+  {
+    metadata: { name: "default" },
+    spec: {
+      type: "git",
+      git: { url: "https://github.com/GameplanePanel/module.git", ref: "main" },
+    },
+    status: { lastSync: "2026-10-12T08:00:00Z", modules: [] },
+  },
+  {
+    metadata: { name: "community" },
+    spec: {
+      type: "oci",
+      oci: {
+        url: "ghcr.io/example/community-modules",
+        modules: [{ name: "rust-vanilla" }, { name: "7-days-to-die" }],
+      },
+      verify: {
+        keyless: {
+          issuer: "https://token.actions.githubusercontent.com",
+          identity: "https://github.com/example/community-modules/.github/workflows/release.yml@refs/heads/main",
+        },
+      },
+    },
+    status: { lastSync: "2026-10-12T08:00:00Z", modules: [] },
+  },
+  {
+    metadata: { name: "uploads" },
+    spec: { type: "upload" },
+    status: { lastSync: "2026-10-12T08:00:00Z", modules: [] },
+  },
+];
 
 export function getScreenshotData() {
   return {

@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-06
 
-**Status**: Draft (clarified)
+**Status**: Draft (clarified); amended 2026-10-14 with the version trend (US5, FR-042)
 
 **Input**: User description: "Right now telemetry is only something someone can add. i want to add a default to a domain (not yet defined) and also build a dashboard to show the data provided by the telemetry provider". Follow-ups: "also could we extend the telemetry?" and "right now there is no verif for data sent. so i want a way for server to 'claim' the id with a key derivated from stable local value to sign the data so no one can impersonatte other id"
 
@@ -31,6 +31,15 @@
 
 - Q11: Per-source limits can be outrun by anyone holding many IPv6 /64s. What protects the dashboard credential? → A: **The provider refuses to start with a dashboard credential shorter than 32 characters**, so guessing it stays infeasible however many sources an attacker controls. Per-source limits remain a cost, not a bound (security review of 0819cec1).
 - Q12: Should sending a report cost the sender work, as Anubis does for browsers? → A: **Yes, for report ingestion only (not the dashboard login), as an Anubis-style proof-of-work.** It is off by default, including in the bundled receiver, and the project's provider turns it on through the runbook. When it is on, the difficulty follows the request rate: none while traffic is normal or absent, rising fast as requests flood in, and falling slowly once they stop. Default values are ruled in OD-5.
+
+### Session 2026-10-14 (amendment: version trend)
+
+The Versions panel showed "pr617 6" for one install that had sent 6 daily reports, which reads like 6 installs. The user asked for the current version per install, with a trend of installs that upgrade, go stale or downgrade over time, and chose to amend this spec rather than start a new one.
+
+- Q13: What does "stale" mean? → A: **Behind the newest release seen.** On a given day, an install is stale when its version is lower than the newest release any install reported in the selected range (OD-7).
+- Q14: How are versions that aren't releases (`pr617`, `dev`, `edge-<sha>`) ordered? → A: **Semver only.** Only semver versions are ordered. A change to or from anything else counts as "changed (unordered)", never as an upgrade or downgrade, and such an install is never stale (OD-8).
+- Q15: Where do the views go? → A: **Keep both, add the trend.** The basic reports-by-version panel stays and is renamed "Reports by version". The trend goes under "Versions by install" in the extended section (OD-9).
+- Q16: Can a pre-release (`v0.4.0-rc.1`) set the newest-release bar for stale? → A: **Any semver.** The highest semver version seen in the range sets the bar, pre-releases included, so one install on `v0.4.0-rc.1` makes installs on `v0.3.0` stale (OD-10).
 
 ## Context
 
@@ -164,7 +173,7 @@ These answer questions that basic counts can't, such as "how many installs are s
 **Acceptance Scenarios**:
 
 1. **Given** extended reports over a range, **When** an authorized viewer looks at installs, **Then** the dashboard shows:
-   - unique active installs for the latest day and the trailing 7 and 30 days
+   - unique active installs for today (in progress) and the trailing 7 and 30 days
    - new installs (first seen) per period
    - lapsed installs (not seen for 30 days) per period
 2. **Given** extended reports, **When** an authorized viewer looks at environment, **Then** it shows each install's share by Kubernetes minor version, distribution, CPU architecture, and node-count band.
@@ -172,6 +181,9 @@ These answer questions that basic counts can't, such as "how many installs are s
 4. **Given** extended reports, **When** an authorized viewer looks at feature adoption, **Then** it shows the share of installs using each tracked feature.
 5. **Given** some installs share only basic data, **When** an authorized viewer looks at any extended figure, **Then** the dashboard states how many of the reports in the range included extended data, so coverage is clear.
 6. **Given** an install that upgraded within the range, **When** an authorized viewer looks at version adoption by install, **Then** the install is counted on its latest reported version.
+7. **Given** installs whose extended reports change version within the range, **When** an authorized viewer looks at the version trend, **Then** it shows per day how many installs upgraded, downgraded, or changed between versions that can't be ordered (FR-042).
+8. **Given** installs active on several semver versions within the range, **When** an authorized viewer looks at the version trend, **Then** it shows per day how many active installs were stale, that is, on a version lower than the newest release seen in the range (FR-042, OD-7, OD-10).
+9. **Given** an install that only ever reports a version that isn't semver (for example `pr617`), **When** an authorized viewer looks at the version trend, **Then** that install is never counted as upgraded, downgraded or stale, and a change of its version counts only as "changed (unordered)".
 
 ---
 
@@ -320,6 +332,8 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
     - installs and servers per official module, plus "custom"
     - per-feature adoption counts
     - the number of reports that included extended data
+    - active installs per reported version
+    - installs that upgraded, downgraded, or changed version without an order (FR-042)
 - **FR-021**: The provider MUST limit how many reports a single source can submit per day, so that one source can't distort the figures by flooding.
 
 **Private dashboard**
@@ -328,14 +342,15 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 - **FR-023**: Unauthenticated access to the dashboard or its data MUST be refused with a generic message that reveals no figures, dates, categories, or whether any data exists.
 - **FR-024**: The dashboard MUST show these **basic** views:
   - reports per day as a trend
-  - version adoption, with the top 10 versions plus "Other" and "Invalid"
+  - version adoption by reports, titled "Reports by version", with the top 10 versions plus "Other" and "Invalid" (OD-9)
   - fleet-size distributions and medians for servers and templates
-  - total servers and templates on the latest day
+  - total servers and templates today (in progress)
   - a "data as of" timestamp
 - **FR-025**: The dashboard MUST show these **extended** views:
-  - unique active installs (latest day, trailing 7 and 30 days)
+  - unique active installs (today in progress, trailing 7 and 30 days)
   - new and lapsed installs per period
   - version adoption by install
+  - the version trend (FR-042), placed under version adoption by install (OD-9)
   - environment breakdowns
   - game usage by installs and by servers, including "custom"
   - feature adoption shares
@@ -377,6 +392,16 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 - **FR-040**: When its provider offers challenges, the install MUST obtain and solve one before each report. When the provider doesn't offer them, the install MUST send without proof-of-work, so older and self-hosted providers keep working. The install MUST refuse to solve a challenge harder than a fixed cap (OD-5) and record the attempt as failed. When the provider refuses a report for its proof-of-work, the install MUST obtain a new challenge and resend once in the same attempt. Solving MUST NOT block the API's request handling.
 - **FR-041**: The provider MUST refuse to start when a dashboard credential is set but shorter than 32 characters.
 
+**Version trend** (amendment 2026-10-14)
+
+- **FR-042**: The provider MUST derive a daily version trend from extended reports only, because basic reports carry no install ID. For each day in the range it shows:
+  - **upgraded**: installs whose first non-duplicate report that day carries a semver version higher than their activity record's last version
+  - **downgraded**: the same, with a lower semver version
+  - **changed (unordered)**: installs whose version changed where either side isn't semver (OD-8)
+  - **stale**: installs active that day on a semver version lower than the newest release reported by any install in the range (OD-7). The newest release is the highest semver version seen, pre-releases included (OD-10). Installs on a version that isn't semver are never stale.
+
+  An install's first report (no activity record yet) is never a change. Version changes MUST be stored only as daily counts, never linked to an install ID (FR-014). The trend starts on the day the provider gains this feature, with no backfill.
+
 ### Key Entities
 
 - **Basic report**: one anonymous sample from one install, carrying version, server count, and template count. Unchanged by this feature.
@@ -388,6 +413,7 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 - **Telemetry notice acknowledgement**: per admin, whether the FR-004 notice has been shown and dismissed. It gates the first report on new installs.
 - **Delivery status**: per install, the last attempt time, the last successful report time, and the last outcome. Shown to admins and never sent anywhere.
 - **Daily aggregate**: per calendar day (UTC) on the provider. Holds the basic and extended tallies listed in FR-020. It's the only form in which report contents are kept.
+- **Version change**: a daily count of installs whose reported version went up, went down, or changed without an order (FR-042). Never linked to an ID.
 - **Activity record**: per install ID on the provider. Holds the transformed ID, the fingerprint of the key that claimed it, the first-seen and last-seen dates, the latest accepted send time, and the last version. It expires after inactivity (OD-4), and the claim expires with it.
 - **Dashboard access credential**: the provider operator's secret that unlocks the private dashboard. It can be replaced without touching stored data.
 - **Public summary**: a view derived from daily aggregates and activity records, limited to the values listed in FR-029.
@@ -421,6 +447,7 @@ Someone learns an install's ID, for example from a screenshot of Admin Settings,
 - **SC-014**: In a test of every forgery case in US7 scenarios 1–3 against a claimed ID, 100% of forged reports are refused and 0 figures change.
 - **SC-015**: An install whose ID was claimed by another key has a report accepted under a new ID within the same delivery attempt in 100% of tested cases.
 - **SC-016**: With proof-of-work on, a challenge issued while demand is at or below the normal rate requires no work, and a challenge issued while demand is 1,000 times the normal rate requires at least 2^20 hash attempts on average (FR-039).
+- **SC-017**: For a synthetic population with known upgrades, downgrades, unordered changes and installs left on older releases, every daily upgraded, downgraded, unordered and stale count on the version trend matches the expected value exactly.
 
 ## Assumptions
 

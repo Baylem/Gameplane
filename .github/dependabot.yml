@@ -228,6 +228,21 @@ updates:
       tunnel-minor-patch:
         update-types: ["minor", "patch"]
 
+  # frpc build module (tunnel/Dockerfile.frp builds frpc from these pins)
+  - package-ecosystem: "gomod"
+    directory: "/tunnel/frpc"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    open-pull-requests-limit: 5
+    groups:
+      tunnel-frpc-minor-patch:
+        update-types: ["minor", "patch"]
+
   # npm — 1 entry (React dashboard)
   - package-ecosystem: "npm"
     directory: "/web"
@@ -301,7 +316,7 @@ updates:
         update-types: ["minor", "patch"]
 
   - package-ecosystem: "docker"
-    directory: "/images/common/steamcmd"
+    directory: "/containers/common/steamcmd"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -315,7 +330,7 @@ updates:
         update-types: ["minor", "patch"]
 
   - package-ecosystem: "docker"
-    directory: "/images/games/nuclear-option"
+    directory: "/containers/games/nuclear-option"
     schedule:
       interval: "weekly"
       day: "monday"

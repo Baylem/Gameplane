@@ -132,23 +132,41 @@ func TestStandaloneNotificationPollRejectsExcessObjects(t *testing.T) {
 }
 
 func TestStandaloneNotificationPollDoesNotPairRecreatedServer(t *testing.T) {
-	server := gsObj(scope.DefaultNamespace, "game", "Failed", "False", "Failed", "", "")
-	server.SetUID("old")
-	k := pollTestClient(server)
-	n := &Notifier{ch: make(chan Event, 10)}
-	state := newClusterSnapshot()
-	n.pollClusterSnapshot(t.Context(), k, "remote", state)
-	state.alerted[scope.DefaultNamespace+"/game"] = true
-	replacement := server.DeepCopy()
-	replacement.SetUID("new")
-	if err := unstructured.SetNestedSlice(replacement.Object, []any{map[string]any{"type": "Healthy", "status": "True"}}, "status", "conditions"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := k.Dynamic.Resource(kube.GVRs["servers"]).Namespace(scope.DefaultNamespace).Update(t.Context(), replacement, metav1.UpdateOptions{}); err != nil {
-		t.Fatal(err)
-	}
-	n.pollClusterSnapshot(t.Context(), k, "remote", state)
-	if len(n.ch) != 0 {
-		t.Fatal("replacement inherited old outage")
+	for _, tc := range []struct {
+		phase, healthy string
+		wantFailure    bool
+	}{{"Running", "True", false}, {"Failed", "False", true}} {
+		t.Run(tc.phase, func(t *testing.T) {
+			server := gsObj(scope.DefaultNamespace, "game", "Failed", "False", "Failed", "", "")
+			server.SetUID("old")
+			k := pollTestClient(server)
+			n := &Notifier{ch: make(chan Event, 10)}
+			state := newClusterSnapshot()
+			n.pollClusterSnapshot(t.Context(), k, "remote", state)
+			state.alerted[scope.DefaultNamespace+"/game"] = true
+			replacement := gsObj(scope.DefaultNamespace, "game", tc.phase, tc.healthy, "AgentFresh", "ReplacementFailed", "new failure")
+			replacement.SetUID("new")
+			if _, err := k.Dynamic.Resource(kube.GVRs["servers"]).Namespace(scope.DefaultNamespace).Update(t.Context(), replacement, metav1.UpdateOptions{}); err != nil {
+				t.Fatal(err)
+			}
+			n.pollClusterSnapshot(t.Context(), k, "remote", state)
+			if tc.wantFailure {
+				select {
+				case event := <-n.ch:
+					if event.Type != EventServerUnhealthy || event.Reason != "ReplacementFailed" {
+						t.Fatalf("replacement did not report its own failure: %+v", event)
+					}
+				default:
+					t.Fatal("replacement failure was suppressed by the old outage")
+				}
+			}
+			if len(n.ch) != 0 {
+				t.Fatal("replacement inherited an old recovery or emitted extra events")
+			}
+			n.pollClusterSnapshot(t.Context(), k, "remote", state)
+			if len(n.ch) != 0 {
+				t.Fatal("stable replacement emitted duplicate events")
+			}
+		})
 	}
 }

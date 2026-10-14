@@ -16,6 +16,7 @@ import { useGameCodes } from "@/lib/useGameCodes";
 import { resolveCategories } from "@/lib/games";
 import type { EntryVerify } from "@/lib/verify";
 import type { CatalogEntry } from "@/types";
+import { cn } from "@/lib/utils";
 
 interface ModuleCardProps {
   cluster?: string;
@@ -101,7 +102,7 @@ export function ModuleCard({
   const digest = entry.appliedDigest ?? entry.digest;
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col border border-border">
       <CardHeader className="flex flex-col gap-3 pb-0">
         <div className="flex items-center justify-between gap-3">
           <GameIcon
@@ -116,35 +117,35 @@ export function ModuleCard({
           </div>
         </div>
         <div>
-          <div className="font-medium text-foreground">
+          <div className="text-base font-medium text-foreground">
             {entry.displayName ?? entry.name}
           </div>
-          <div className="pt-0.5 font-mono text-[11px] text-muted">{versionLabel}</div>
+          <div className="font-mono text-[11px] text-muted">{versionLabel}</div>
           {digest && (
-            <div className="flex items-center gap-1 pt-0.5 font-mono text-[10px] text-muted">
+            <div className="flex items-center gap-1 font-mono text-[10px] text-muted">
               <Fingerprint className="h-3 w-3 shrink-0" />
               <span className="truncate">{shortDigest(digest)}</span>
             </div>
           )}
           {entry.installed && entry.previousVersion && (
-            <div className="flex items-center gap-1 pt-0.5 text-[10px] text-muted">
+            <div className="flex items-center gap-1 text-[10px] text-muted">
               <History className="h-3 w-3 shrink-0" />
               rollback target · v{entry.previousVersion}
             </div>
           )}
         </div>
         {resolveCategories(entry.categories, entry.game ?? entry.name).length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
+          <div className="flex flex-wrap gap-1.5">
             {resolveCategories(entry.categories, entry.game ?? entry.name).map((c) => (
-              <Chip key={c} variant="soft" size="sm" className="text-[11px]">
+              <Chip key={c} variant="tertiary" size="sm" className="text-[11px] font-medium">
                 {c}
               </Chip>
             ))}
           </div>
         )}
       </CardHeader>
-      <CardContent className="flex flex-col gap-3 flex-1 py-3">
-        <p className="line-clamp-3 text-xs text-muted leading-[1.4]">
+      <CardContent className="flex flex-col gap-3 flex-1 py-0">
+        <p className="line-clamp-4 text-xs text-muted leading-[1.4]">
           {entry.summary ?? "No summary."}
         </p>
         {versionUnavailable ? (
@@ -165,7 +166,12 @@ export function ModuleCard({
           </div>
         ) : null}
       </CardContent>
-      <CardFooter className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted pt-0">
+      <CardFooter
+        className={cn(
+          "flex flex-wrap gap-2 text-[11px] text-muted pt-0",
+          entry.installed ? "flex-col items-start" : "items-center justify-between",
+        )}
+      >
         <span className="font-mono">
           {entry.sources.length === 1
             ? `${entry.sources[0].name} (${entry.sources[0].type})`
@@ -267,7 +273,7 @@ function VerifyBadge({ verify }: { verify: EntryVerify }) {
         size="sm"
         variant="soft"
         title={keyless ? "keyless (Fulcio) signature verified" : "signature verified"}
-        className="font-mono text-[10px] uppercase inline-flex items-center gap-1"
+        className="font-mono text-[10px] uppercase font-normal inline-flex items-center gap-1"
         data-color="success"
       >
         <ShieldCheck className="h-3 w-3" />
@@ -281,7 +287,7 @@ function VerifyBadge({ verify }: { verify: EntryVerify }) {
       size="sm"
       variant="soft"
       title={keyless ? "keyless (Fulcio) signature policy declared" : "signature policy declared"}
-      className="font-mono text-[10px] uppercase inline-flex items-center gap-1"
+      className="font-mono text-[10px] uppercase font-normal inline-flex items-center gap-1"
       data-color="success"
     >
       <ShieldQuestion className="h-3 w-3" />
@@ -333,7 +339,7 @@ function StatusPill({ entry }: { entry: CatalogEntry }) {
       color={color}
       size="sm"
       variant="soft"
-      className="font-mono text-[10px] uppercase"
+      className="font-mono text-[10px] uppercase font-normal"
     >
       {label}
     </Chip>

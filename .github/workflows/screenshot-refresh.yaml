@@ -52,7 +52,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
           package-manager-cache: false
@@ -66,7 +66,7 @@ jobs:
 
       - name: upload playwright report
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report-screenshots
           path: web/playwright-report
@@ -125,7 +125,7 @@ jobs:
               --base "$base" \
               --head "$branch" \
               --title "chore: refresh dashboard screenshots (${REF_NAME})" \
-              --body-file <(printf "Automated dashboard screenshot refresh on %s release tag.\n\nBase: %s\nTrigger: %s\n\nSee contract: specs/012-docs-refresh-and-outreach/contracts/screenshot-set.md (OD-3 Decision).\n" "$REF_NAME" "$base" "$EVENT_NAME")
+              --body-file <(printf "Automated dashboard screenshot refresh on %s release tag.\n\nBase: %s\nTrigger: %s\n\nSee contract: specs/done_012-docs-refresh-and-outreach/contracts/screenshot-set.md (OD-3 Decision).\n" "$REF_NAME" "$base" "$EVENT_NAME")
           fi
 
       - name: open website screenshot pull request
@@ -216,5 +216,5 @@ jobs:
               --base "$base" \
               --head "$branch" \
               --title "chore: refresh website screenshots (${REF_NAME})" \
-              --body-file <(printf "Automated website screenshot refresh on %s.\n\nSource: %s @ %s\nTrigger: %s\n\nSee contract: specs/012-docs-refresh-and-outreach (website screenshot amendment, OD-16).\n" "$REF_NAME" "$SOURCE_REPO" "$SOURCE_SHA" "$EVENT_NAME")
+              --body-file <(printf "Automated website screenshot refresh on %s.\n\nSource: %s @ %s\nTrigger: %s\n\nSee contract: specs/done_012-docs-refresh-and-outreach (website screenshot amendment, OD-16).\n" "$REF_NAME" "$SOURCE_REPO" "$SOURCE_SHA" "$EVENT_NAME")
           fi

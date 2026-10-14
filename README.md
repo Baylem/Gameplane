@@ -196,7 +196,7 @@ Gameplane extends Kubernetes using custom resources under `gameplane.local/v1alp
 ├── sentinel/             # Wake-on-connect daemon (Go)
 ├── tunnel/               # Relay client supervisor for frp/Tailscale/playit (Go)
 ├── web/                  # Dashboard frontend (React, Vite, Monaco, xterm.js)
-├── modules/              # Submodule: Game templates (30 games shipped)
+├── modules/              # Submodule: Game templates (29 games shipped)
 ├── website/              # Submodule: Public documentation site
 ├── gameproto/            # Wire-protocol parsing library (Minecraft, Terraria)
 ├── gameaction/           # Console injection guard & action command renderer
@@ -248,18 +248,18 @@ values reference. For address pool configuration (pinning servers to specific
 public IP addresses), see [`docs/networking.md`](docs/networking.md).
 
 All published images, the Helm chart, and official module bundles are signed
-with the project's cosign key ([`cosign.pub`](cosign.pub), also baked into
+with the project's cosign key ([`cosign.pub`](signing/cosign.pub), also baked into
 the chart for module verification) and recorded in the public Sigstore Rekor
 transparency log:
 
 ```sh
-cosign verify --key cosign.pub \
+cosign verify --key signing/cosign.pub \
   ghcr.io/gameplanepanel/gameplane/operator:<version>
 ```
 
 Pre-rotation releases (v0.2.0-beta.7 and earlier) were signed with the retired <!-- doc-versions: historical -->
 Ed25519 key and do not have transparency log entries — verify them with
-`cosign-legacy.pub` and `--insecure-ignore-tlog=true`. See
+`signing/2026-07-24-cosign-legacy.pub` and `--insecure-ignore-tlog=true`. See
 [`docs/key-rotation.md`](docs/key-rotation.md) for details.
 
 ## Quickstart (local dev)
@@ -294,7 +294,7 @@ The `make dev-up` target:
    `kind-registry:5000`),
 2. loads every locally-built image (operator, api, web, agent, and every
    optional component's image),
-3. pushes every directory under `modules/` (30 games at last count — see
+3. pushes every directory under `modules/` (29 games at last count — see
    `modules/` for the current list) to the local registry as an OCI module
    bundle,
 4. installs the Helm chart from `charts/gameplane/` with a default

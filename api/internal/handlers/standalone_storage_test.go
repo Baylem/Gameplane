@@ -164,6 +164,7 @@ func TestStandaloneRegistrationRejectsRemoteOnlyWorkloadPermissions(t *testing.T
 			for _, request := range []struct{ method, path string }{
 				{http.MethodPost, "/clusters/?cluster=remote"},
 				{http.MethodDelete, "/clusters/remote?cluster=remote"},
+				{http.MethodPut, "/clusters/remote/kubeconfig?cluster=remote"},
 				{http.MethodPut, "/clusters/remote/gateway?cluster=remote"},
 				{http.MethodDelete, "/clusters/remote/gateway?cluster=remote"},
 			} {

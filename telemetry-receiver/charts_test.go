@@ -109,7 +109,7 @@ func TestDayLabelEvery(t *testing.T) {
 }
 
 // seedExtendedDash stores one basic report and two extended reports on the
-// latest complete day (2026-10-06) of a dashboard test server.
+// day before today (2026-10-05) of a dashboard test server, inside every range.
 func seedExtendedDash(t *testing.T, s *server) {
 	t.Helper()
 	s.now = func() time.Time { return dashNow.Add(-24 * time.Hour) }

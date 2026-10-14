@@ -17,7 +17,7 @@
 </div>
 {{if .Extended}}{{with .Ext}}
 <div class="kpis kpis-5">
-<div class="card tile"><p class="tile-label">Active installs, latest day</p><p class="tile-value">{{num $.Extended.Installs.Active1d}}</p><p class="tile-sub">{{$.AsOf}} (UTC)</p></div>
+<div class="card tile"><p class="tile-label">Active installs, today</p><p class="tile-value">{{num $.Extended.Installs.Active1d}}</p><p class="tile-sub">{{$.AsOf}} (UTC, in progress)</p></div>
 <div class="card tile"><p class="tile-label">Active, last 7 days</p><p class="tile-value">{{num $.Extended.Installs.Active7d}}</p><p class="tile-sub">Unique installs</p></div>
 <div class="card tile"><p class="tile-label">Active, last 30 days</p><p class="tile-value">{{num $.Extended.Installs.Active30d}}</p><p class="tile-sub">Unique installs</p></div>
 <div class="card tile"><p class="tile-label">New installs, last {{$.Range}} days</p><p class="tile-value">{{num .NewTotal}}</p><p class="tile-sub">First report in range</p></div>
@@ -29,7 +29,7 @@
 {{template "columns" .New}}
 </figure>
 <figure class="card chart-card">
-<figcaption class="card-head"><span><span class="card-title">Lapsed installs per day</span><span class="muted block">Installs whose last report was 30 days earlier</span></span></figcaption>
+<figcaption class="card-head"><span><span class="card-title">Lapsed installs per day</span><span class="muted block">Installs whose last report was 30 days earlier. Today's bar is final after the UTC day closes.</span></span></figcaption>
 {{template "columns" .Lapsed}}
 </figure>
 </div>

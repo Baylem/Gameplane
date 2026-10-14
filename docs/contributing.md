@@ -167,7 +167,7 @@ Signing is **mandatory and fail-closed**: if `COSIGN_PRIVATE_KEY` is not
 configured, the release job fails before anything is pushed. A one-time key
 setup is required: run `cosign generate-key-pair`, set
 `COSIGN_PRIVATE_KEY`/`COSIGN_PASSWORD` as secrets of the `release-signing`
-environment, and publish `cosign.pub` at the repo root. See
+environment, and publish `signing/cosign.pub`. See
 [`module-authoring.md`](module-authoring.md#signing-official-bundles) for details.
 
 Every job that signs (`release.yaml`, `publish-edge.yaml`, `images.yaml` and
@@ -182,7 +182,7 @@ so inspect the image's tags before re-running the failed jobs.
 
 ## Community Visibility & Outreach
 
-[External Directory Submissions](../specs/012-docs-refresh-and-outreach/outreach.md)
+[External Directory Submissions](../specs/done_012-docs-refresh-and-outreach/outreach.md)
 
 The project maintains a tracked list of external directory submissions
 (AlternativeTo, Awesome-Selfhosted, Awesome-Kubernetes) to grow

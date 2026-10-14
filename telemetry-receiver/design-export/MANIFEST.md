@@ -37,3 +37,13 @@ This is a snapshot of `telemetry-receiver/telemetry-dashboard.pen` for review in
   - "Lapsed installs per day" → `i0xK1E`
   - "No reports in this range included extended data" → `jy9Rn`
   - "DASHBOARD_TOKEN value" → `HBYBE`, `a7wUpP`
+
+## Incremental export (2026-10-08): dashboard ends on today (OD-6)
+
+| Node | Change |
+|---|---|
+| `i0xK1E` | "Data through 2026-10-06 (UTC, today in progress)"; tiles "Reports, today" and "Active installs, today" with "2026-10-06 (UTC, in progress)"; "Median servers per install" sub "Last 30 days"; captions "…, ending today (in progress)", "Reports in range by reported version…", "Reports by game-server count. Median 3." and the lapsed note "Today's bar is final after the UTC day closes." |
+| `Z079vK` | Empty-state text: "Figures appear as soon as this receiver accepts a report; today's figures are in progress and update as reports arrive. …" |
+| `y49Ie` | `sDDfo` Stat tile sample: "Reports, today", "2026-10-06 (UTC, in progress)" |
+
+Method: 15 `Update` calls in one `execute`. The JSON files were produced by applying the same edits to the previous export, then checked equal to Pencil (`JSON.stringify(Get(id, {depth: 40, includePathGeometry: true}))` length and FNV-1a hash per frame: `i0xK1E` 69071, `Z079vK` 4684, `y49Ie` 1854). PNGs: `Export(ids, "png", …, {scale: 2})`, same sizes as before. Content check: "today in progress" → `i0xK1E`; "accepts a report" → `Z079vK`.
