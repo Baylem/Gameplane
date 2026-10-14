@@ -109,7 +109,7 @@ func TestCombinedGatewayConfigurationRejectsUnsafeDestination(t *testing.T) {
 	in := gatewayCertificateRequest(t)
 	in.URL = "https://169.254.169.254"
 	rr := gatewayReviewRecorder()
-	h.configureGateway(rr, gatewayReviewRequest(t, t.Context(), in))
+	h.configureGateway(rr, gatewayReviewRequest(t.Context(), t, in))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("combined handler accepted metadata origin: %d %s", rr.Code, rr.Body)
 	}
@@ -162,7 +162,7 @@ func TestClusterRemovalCleansCredentialsAfterCallerDisconnects(t *testing.T) {
 	defer cancel()
 	home.ClusterStore = cancelClusterDelete{home.ClusterStore, cancel}
 	// Cancel only after persisted removal, exercising the cleanup boundary.
-	request := gatewayReviewRequest(t, ctx, gatewayCertificateRequest(t))
+	request := gatewayReviewRequest(ctx, t, gatewayCertificateRequest(t))
 	request.Method = http.MethodDelete
 	h := clustersHandler{k: home, reg: reg, namespace: standaloneTestNamespace}
 	rr := gatewayReviewRecorder()
@@ -178,7 +178,7 @@ func TestClusterRemovalCleansCredentialsAfterCallerDisconnects(t *testing.T) {
 	}
 }
 
-func (s cancelGatewayUpdate) Update(ctx context.Context, obj *unstructured.Unstructured, opts metav1.UpdateOptions, subresources ...string) (*unstructured.Unstructured, error) {
+func (s cancelGatewayUpdate) Update(ctx context.Context, _ *unstructured.Unstructured, _ metav1.UpdateOptions, _ ...string) (*unstructured.Unstructured, error) {
 	s.cancel()
 	return nil, ctx.Err()
 }
@@ -193,7 +193,7 @@ func TestCancelledGatewayConfigurationCleansUnusedCredential(t *testing.T) {
 	home.ClusterStore = cancelGatewayUpdate{home.ClusterStore, cancel}
 	h := clustersHandler{k: home, reg: reg, namespace: standaloneTestNamespace}
 	// Drive the handler with a request carrying the cancelled update context.
-	req := gatewayReviewRequest(t, ctx, gatewayCertificateRequest(t))
+	req := gatewayReviewRequest(ctx, t, gatewayCertificateRequest(t))
 	rr := gatewayReviewRecorder()
 	h.configureGateway(rr, req)
 	secrets, err := home.Secrets(standaloneTestNamespace).List(t.Context(), metav1.ListOptions{})
@@ -218,16 +218,16 @@ func TestGatewayConfigurationRejectsTerminatingRegistration(t *testing.T) {
 	}
 }
 
-func gatewayReviewRequest(t *testing.T, ctx context.Context, in clusterGatewayRequest) *http.Request {
+func gatewayReviewRequest(ctx context.Context, t *testing.T, in clusterGatewayRequest) *http.Request {
 	t.Helper()
 	data, err := json.Marshal(in)
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := httptest.NewRequestWithContext(ctx, http.MethodPut, "/clusters/remote/gateway", bytes.NewReader(data))
 	route := chi.NewRouteContext()
 	route.URLParams.Add("name", "remote")
-	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, route))
+	ctx = context.WithValue(ctx, chi.RouteCtxKey, route)
+	return httptest.NewRequestWithContext(ctx, http.MethodPut, "/clusters/remote/gateway", bytes.NewReader(data))
 }
 
 func gatewayReviewRecorder() *httptest.ResponseRecorder { return httptest.NewRecorder() }

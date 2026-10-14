@@ -2,6 +2,7 @@ package kube
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,8 +77,20 @@ func TestClusterRefreshDoesNotPublishCredentialAcrossRotationOrDeletion(t *testi
 				return rotationSecretStore{SecretStore: typed.CoreV1().Secrets(ns), afterRead: func() {
 					switch action {
 					case "rotate":
+						// Rotate the credential reference and payload. A status-only
+						// resourceVersion update must not invalidate a loaded client.
+						rotatedName := "cluster-remote-kubeconfig-rotated"
+						if _, err := typed.CoreV1().Secrets(ns).Create(t.Context(), &corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{Name: rotatedName, Namespace: ns, Labels: map[string]string{ClusterKubeconfigLabel: "true"}},
+							Data:       map[string][]byte{"kubeconfig": []byte(strings.ReplaceAll(string(kubeconfig()), "fake-token", "rotated-token"))},
+						}, metav1.CreateOptions{}); err != nil {
+							t.Fatal(err)
+						}
 						current := registration.DeepCopy()
 						current.SetResourceVersion("2")
+						if err := unstructured.SetNestedField(current.Object, rotatedName, "spec", "kubeconfigSecret", "name"); err != nil {
+							t.Fatal(err)
+						}
 						if _, err := home.Clusters().Update(t.Context(), current, metav1.UpdateOptions{}); err != nil {
 							t.Fatal(err)
 						}

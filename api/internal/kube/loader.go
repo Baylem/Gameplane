@@ -28,7 +28,7 @@ func transientCredentialRead(err error) bool {
 	var readErr *credentialReadError
 	var permanent interface{ PermanentCredentialFailure() bool }
 	return errors.As(err, &readErr) &&
-		!(errors.As(err, &permanent) && permanent.PermanentCredentialFailure()) &&
+		(!errors.As(err, &permanent) || !permanent.PermanentCredentialFailure()) &&
 		!apierrors.IsNotFound(err) && !apierrors.IsForbidden(err) && !apierrors.IsUnauthorized(err)
 }
 

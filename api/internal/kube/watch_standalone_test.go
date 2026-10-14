@@ -45,7 +45,7 @@ func (s unavailableSecretStore) Get(context.Context, string, metav1.GetOptions) 
 }
 
 func TestClusterRefreshDoesNotBlockRegistryReadsOrResurrectRemoval(t *testing.T) {
-	home, reg, _ := standaloneWatchFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+	home, reg, _ := standaloneWatchFixture(t, http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	store := home.ClusterStore
 	blocked, release := make(chan struct{}), make(chan struct{})
 	var calls atomic.Int32
@@ -83,7 +83,7 @@ func TestClusterRefreshDoesNotBlockRegistryReadsOrResurrectRemoval(t *testing.T)
 }
 
 func TestClusterRefreshAcceptsStatusOnlyResourceVersionChange(t *testing.T) {
-	home, reg, _ := standaloneWatchFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+	home, reg, _ := standaloneWatchFixture(t, http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	store := home.ClusterStore
 	var calls atomic.Int32
 	home.ClusterStore = interceptClusterStore{ClusterStore: store, get: func(ctx context.Context, name string, opts metav1.GetOptions) (*unstructured.Unstructured, error) {
@@ -175,7 +175,7 @@ func TestStandaloneProbeEvictsDefinitivelyInvalidCredentials(t *testing.T) {
 func TestClusterRefreshRejectsChangedCredentialOrRegistrationIdentity(t *testing.T) {
 	for _, mode := range []string{"credential pointer", "registration UID", "terminating"} {
 		t.Run(mode, func(t *testing.T) {
-			home, reg, _ := standaloneWatchFixture(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+			home, reg, _ := standaloneWatchFixture(t, http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 			store := home.ClusterStore
 			var calls atomic.Int32
 			home.ClusterStore = interceptClusterStore{ClusterStore: store, get: func(ctx context.Context, name string, opts metav1.GetOptions) (*unstructured.Unstructured, error) {
