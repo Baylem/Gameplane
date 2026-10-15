@@ -17,15 +17,16 @@ import (
 
 // Dimension names stored in daily_dim.dim (data-model.md, Receiver).
 const (
-	dimK8s      = "k8s"
-	dimDistro   = "distro"
-	dimArch     = "arch"
-	dimNodes    = "nodes"
-	dimTunnel   = "tunnel"
-	dimClusters = "clusters"
-	dimDB       = "db"
-	dimLanguage = "language"
-	dimFeature  = "feature"
+	dimK8s        = "k8s"
+	dimDistro     = "distro"
+	dimArch       = "arch"
+	dimNodes      = "nodes"
+	dimDeployment = "deployment"
+	dimTunnel     = "tunnel"
+	dimClusters   = "clusters"
+	dimDB         = "db"
+	dimLanguage   = "language"
+	dimFeature    = "feature"
 )
 
 // featureNames are the boolean features stored under dimFeature, in display
@@ -259,11 +260,17 @@ func writeExtendedAggregates(ctx context.Context, tx *sql.Tx, r extRecord, isNew
 	}
 	e := r.Ext
 	dims := []struct{ dim, value string }{
-		{dimK8s, e.Env.K8s}, {dimDistro, e.Env.Distro}, {dimNodes, e.Env.Nodes},
+		{dimNodes, e.Env.Nodes}, {dimDeployment, e.Env.Deployment},
 		{dimClusters, e.Features.Clusters}, {dimDB, e.Features.DB}, {dimLanguage, e.Features.Language},
 	}
-	for _, a := range e.Env.Arch {
-		dims = append(dims, struct{ dim, value string }{dimArch, a})
+	// k8s, distro and arch are sets (OD-15): one row per value present.
+	for _, set := range []struct {
+		dim    string
+		values []string
+	}{{dimK8s, e.Env.K8s}, {dimDistro, e.Env.Distro}, {dimArch, e.Env.Arch}} {
+		for _, v := range set.values {
+			dims = append(dims, struct{ dim, value string }{set.dim, v})
+		}
 	}
 	for _, t := range e.Features.Tunnels {
 		dims = append(dims, struct{ dim, value string }{dimTunnel, t})

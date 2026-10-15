@@ -111,10 +111,11 @@ type VersionTrendDay struct {
 
 // EnvViews are the environment shares.
 type EnvViews struct {
-	K8s    []ShareRow `json:"k8s"`
-	Distro []ShareRow `json:"distro"`
-	Arch   []ShareRow `json:"arch"`
-	Nodes  []ShareRow `json:"nodes"`
+	K8s        []ShareRow `json:"k8s"`
+	Distro     []ShareRow `json:"distro"`
+	Arch       []ShareRow `json:"arch"`
+	Nodes      []ShareRow `json:"nodes"`
+	Deployment []ShareRow `json:"deployment"`
 }
 
 // ShareRow is a category's share of the reporting install-days in the range
@@ -445,10 +446,11 @@ func buildExtended(ctx context.Context, st *store, rangeDays int, from, to strin
 		return nil, err
 	}
 	e.Env = EnvViews{
-		K8s:    sortedShares(dims[dimK8s], nil),
-		Distro: sortedShares(dims[dimDistro], nil),
-		Arch:   sortedShares(dims[dimArch], nil),
-		Nodes:  sortedShares(dims[dimNodes], telemetryschema.NodeBands),
+		K8s:        sortedShares(dims[dimK8s], nil),
+		Distro:     sortedShares(dims[dimDistro], nil),
+		Arch:       sortedShares(dims[dimArch], nil),
+		Nodes:      sortedShares(dims[dimNodes], telemetryschema.NodeBands),
+		Deployment: sortedShares(dims[dimDeployment], nil),
 	}
 	e.Tunnels = sortedShares(dims[dimTunnel], nil)
 	e.Clusters = sortedShares(dims[dimClusters], telemetryschema.ClusterBands)
