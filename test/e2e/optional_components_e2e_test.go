@@ -217,8 +217,6 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 	t.Parallel()
 	parent := t
 
-	ctx := context.Background()
-
 	suffix := time.Now().UnixNano()
 	tmplName := fmt.Sprintf("e2e-oc-tmpl-%d", suffix)
 	gsName := fmt.Sprintf("e2e-oc-gs-%d", suffix)
@@ -229,6 +227,8 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 	var admin *APIClient
 
 	if !t.Run("disabled", func(t *testing.T) {
+		// A fresh context per subtest: contextcheck flags a captured one.
+		ctx := context.Background()
 		_, err := envInstance.K8s.AppsV1().Deployments(ocNS).Get(ctx, "gameplane-mcp-server", metav1.GetOptions{})
 		if !apierrors.IsNotFound(err) {
 			t.Fatalf("mcp server deployment: want NotFound, got err=%v", err)
@@ -253,6 +253,8 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 	}
 
 	if !t.Run("enable", func(t *testing.T) {
+		// A fresh context per subtest: contextcheck flags a captured one.
+		ctx := context.Background()
 		envInstance.ApplyYAML(t, "syslog-sink.yaml")
 		envInstance.ApplyYAML(t, "frps.yaml")
 		parent.Cleanup(func() {
@@ -302,6 +304,8 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 	}
 
 	if !t.Run("mcp", func(t *testing.T) {
+		// A fresh context per subtest: contextcheck flags a captured one.
+		ctx := context.Background()
 		m := ocStartMCP(ctx, t)
 		defer m.close()
 
@@ -363,6 +367,8 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 	}
 
 	if !t.Run("syslog", func(t *testing.T) {
+		// A fresh context per subtest: contextcheck flags a captured one.
+		ctx := context.Background()
 		envInstance.BootstrapAdmin(t, ocAdminUser, ocAdminPass)
 		admin = envInstance.APIClient(parent, ocAdminUser, ocAdminPass)
 		parent.Cleanup(func() { admin.Close() })
@@ -423,6 +429,8 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 	}
 
 	if !t.Run("tunnel-frp", func(t *testing.T) {
+		// A fresh context per subtest: contextcheck flags a captured one.
+		ctx := context.Background()
 		tunnel := &unstructured.Unstructured{Object: map[string]any{
 			"apiVersion": "gameplane.local/v1alpha1",
 			"kind":       "GameServer",
@@ -576,6 +584,8 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 	}
 
 	t.Run("core-unaffected", func(t *testing.T) {
+		// A fresh context per subtest: contextcheck flags a captured one.
+		ctx := context.Background()
 		if admin == nil {
 			t.Fatal("admin client not initialised by the syslog subtest")
 		}
