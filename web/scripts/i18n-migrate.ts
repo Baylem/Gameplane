@@ -3,7 +3,13 @@
 // `intl.formatMessage(...)` calls with generated `web.<path>.<slug>` ids, adds a
 // `useOptionalIntl()` hook to the owning component and a description stub.
 //
-//   node scripts/i18n-migrate.ts [--dry-run] [--report <file>] [--root <dir>] <file|dir|glob>...
+//   node scripts/i18n-migrate.ts [--dry-run] [--join-spaces] [--report <file>] [--root <dir>] <file|dir|glob>...
+//   node scripts/i18n-migrate.ts --check [--root <dir>] <file|dir|glob>...
+//
+// --join-spaces (also run on every migrated file) replaces JSX `{" "}` children by a plain
+// space on the same line. --check is read-only: it reproduces the formatjs lint rules
+// (no-literal-string-in-jsx, enforce-placeholders, enforce-description, id regex) and exits
+// 1 when it finds anything.
 //
 // Run from web/. --root is the directory whose `src/` child defines id paths
 // (default: the current directory). Erasable TypeScript only (Node 22 type
@@ -116,7 +122,9 @@ function decodeEntities(s: string): string {
 // JSX whitespace rules (same algorithm as the TypeScript/Babel JSX transform).
 function jsxWhitespace(raw: string): string {
   const lines = raw.split(/\r\n|\n|\r/);
-  let lastNonEmpty = -1;
+  // Babel's cleanJSXElementLiteralChild: the default is line 0, so whitespace-only text
+  // gets no extra space appended.
+  let lastNonEmpty = 0;
   lines.forEach((line, i) => {
     if (/[^ \t]/.test(line)) lastNonEmpty = i;
   });
@@ -490,8 +498,8 @@ function emitSite(
   const valuesPart =
     values.size > 0 ? `, { ${[...values].map(([n, e]) => `${n}: ${e}`).join(", ")} }` : "";
   const call = `{intl.formatMessage({ id: ${JSON.stringify(id)}, defaultMessage: ${JSON.stringify(icu)}, description: ${JSON.stringify(desc)} }${valuesPart})}`;
-  // Edge whitespace stays outside the message as `{" "}`-style expressions.
-  const text = wrap ? `${lead ? `{${JSON.stringify(lead)}}` : ""}${call}${trail ? `{${JSON.stringify(trail)}}` : ""}` : call;
+  // Edge whitespace stays outside the message as plain JSX text (never `{" "}`).
+  const text = wrap ? `${rawEdge(lead)}${call}${rawEdge(trail)}` : call;
   ctx.edits.push({ start: site.start, end: site.end, text });
   ctx.replaced.push([site.start, site.end]);
   ctx.migrated += 1;
@@ -719,8 +727,14 @@ function applyEdits(text: string, edits: Edit[]): string {
   return out;
 }
 
-function migrateFile(file: string, root: string): { original: string; output: string; report: FileReport; edits: Edit[] } {
-  const text = fs.readFileSync(file, "utf8");
+function migrateFile(file: string, root: string, migrate: boolean): MigrateResult {
+  const source = fs.readFileSync(file, "utf8");
+  const displayPath = path.relative(root, file).split(path.sep).join("/");
+  const joined = joinSpaces(source, displayPath);
+  const text = joined.text;
+  if (!migrate) {
+    return { source, input: text, output: text, edits: [], report: { path: displayPath, migrated: 0, skipped: joined.lone } };
+  }
   const srcDir = path.join(root, "src");
   const relFromSrc = path.relative(srcDir, file).split(path.sep).join("/");
   const base = path.basename(file).replace(/\.(tsx?)$/, "");
@@ -753,6 +767,7 @@ function migrateFile(file: string, root: string): { original: string; output: st
     replaced: [],
   };
 
+  ctx.skipped.push(...joined.lone);
   collectExistingIds(ctx, sf);
   visitJsx(ctx, sf);
   scanExpressionStrings(ctx, sf);
@@ -786,11 +801,277 @@ function migrateFile(file: string, root: string): { original: string; output: st
   const output = applyEdits(text, ctx.edits);
   ctx.skipped.sort((a, b) => a.line - b.line);
   return {
-    original: text,
+    source,
+    input: text,
     output,
     edits: ctx.edits,
     report: { path: ctx.displayPath, migrated: ctx.migrated, skipped: ctx.skipped },
   };
+}
+
+type MigrateResult = { source: string; input: string; output: string; report: FileReport; edits: Edit[] };
+type Finding = { file: string; line: number; col: number; rule: string; message: string };
+type IcuEl = { type: number; value?: string; options?: Record<string, { value: IcuEl[] }>; children?: IcuEl[] };
+
+// Props checked by formatjs/no-literal-string-in-jsx (config include plus the plugin defaults).
+const CHECK_PROPS = new Set(["aria-label", "aria-description", "aria-details", "aria-errormessage", "title", "placeholder", "alt"]);
+const LITERAL_OPERATORS = new Set<ts.SyntaxKind>([
+  ts.SyntaxKind.PlusToken,
+  ts.SyntaxKind.AmpersandAmpersandToken,
+  ts.SyntaxKind.BarBarToken,
+  ts.SyntaxKind.QuestionQuestionToken,
+]);
+
+function parseSource(file: string, text: string): ts.SourceFile {
+  return ts.createSourceFile(
+    file,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+}
+
+function isNewline(s: string): boolean {
+  return /[\r\n]/.test(s);
+}
+
+// Edge whitespace of a migrated run goes back into the JSX text as plain spaces (JSX keeps
+// same-line spaces); anything else falls back to a string expression.
+function rawEdge(s: string): string {
+  if (s === "") return "";
+  return /^[ \t]+$/.test(s) ? s : `{${JSON.stringify(s)}}`;
+}
+
+function isSpaceChild(c: ts.JsxChild): boolean {
+  return (
+    ts.isJsxExpression(c) &&
+    c.expression !== undefined &&
+    (ts.isStringLiteral(c.expression) || ts.isNoSubstitutionTemplateLiteral(c.expression)) &&
+    c.expression.text === " "
+  );
+}
+
+// Whitespace-only JSX text containing a newline is dropped by JSX, so it renders nothing.
+function rendersChild(c: ts.JsxChild): boolean {
+  return !(ts.isJsxText(c) && /^\s*$/.test(c.text) && isNewline(c.text));
+}
+
+type SpaceSite = { parent: ts.JsxElement | ts.JsxFragment; index: number };
+
+function spaceSites(sf: ts.SourceFile): SpaceSite[] {
+  const out: SpaceSite[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isJsxElement(node) || ts.isJsxFragment(node)) {
+      const parent = node;
+      parent.children.forEach((c, index) => {
+        if (isSpaceChild(c)) out.push({ parent, index });
+      });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return out;
+}
+
+// A `{" "}` with no rendering sibling on either side (lone space child). Left alone and reported.
+function isLoneSite(site: SpaceSite): boolean {
+  return site.parent.children.every((c, j) => j === site.index || !rendersChild(c));
+}
+
+// End of the content before a child: trailing whitespace that holds a newline is dropped.
+function edgeStart(sf: ts.SourceFile, c: ts.JsxChild): number {
+  if (!ts.isJsxText(c)) return c.end;
+  const trailing = /\s*$/.exec(sf.text.slice(c.pos, c.end))?.[0] ?? "";
+  return isNewline(trailing) ? c.end - trailing.length : c.end;
+}
+
+// Start of the content after a child: leading whitespace that holds a newline is dropped.
+function edgeEnd(sf: ts.SourceFile, c: ts.JsxChild): number {
+  if (!ts.isJsxText(c)) return c.getStart(sf);
+  const leading = /^\s*/.exec(sf.text.slice(c.pos, c.end))?.[0] ?? "";
+  return isNewline(leading) ? c.pos + leading.length : c.pos;
+}
+
+// Range replaced by a single space: from the previous content (or the opening tag) to the
+// next content (or the closing tag). It always contains the `{" "}` itself.
+function joinRange(sf: ts.SourceFile, site: SpaceSite): { start: number; end: number } {
+  const { parent, index } = site;
+  const kids = parent.children;
+  const start =
+    index > 0
+      ? edgeStart(sf, kids[index - 1])
+      : ts.isJsxElement(parent)
+        ? parent.openingElement.end
+        : parent.openingFragment.end;
+  const end =
+    index < kids.length - 1
+      ? edgeEnd(sf, kids[index + 1])
+      : ts.isJsxElement(parent)
+        ? parent.closingElement.getStart(sf)
+        : parent.closingFragment.getStart(sf);
+  return { start, end };
+}
+
+// Replaces every non-lone `{" "}` child with a plain same-line space. One edit per pass, then
+// re-parse, because neighbouring sites share whitespace. Lone sites are reported with their line.
+function joinSpaces(source: string, displayPath: string): { text: string; lone: Skip[] } {
+  let text = source;
+  for (;;) {
+    const sf = parseSource(displayPath, text);
+    const site = spaceSites(sf).find((s) => !isLoneSite(s));
+    if (site === undefined) break;
+    const { start, end } = joinRange(sf, site);
+    text = `${text.slice(0, start)} ${text.slice(end)}`;
+  }
+  const sf = parseSource(displayPath, text);
+  const lone = spaceSites(sf)
+    .filter(isLoneSite)
+    .map((s) => {
+      const node = s.parent.children[s.index];
+      const line = sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
+      return { line, kind: "lone-space", text: snippet(node.getText(sf)) };
+    });
+  return { text, lone };
+}
+
+// Argument names of an ICU message: simple/number/date/time args, select and plural args
+// (with their option bodies) and rich-text tags. `#` is not an argument.
+function icuArgNames(els: IcuEl[], out: Set<string> = new Set<string>()): Set<string> {
+  for (const el of els) {
+    if (el.type >= 1 && el.type <= 6) out.add(el.value ?? "");
+    if (el.type === 5 || el.type === 6) {
+      for (const opt of Object.values(el.options ?? {})) icuArgNames(opt.value, out);
+    }
+    if (el.type === 8) {
+      out.add(el.value ?? "");
+      icuArgNames(el.children ?? [], out);
+    }
+  }
+  return out;
+}
+
+// Read-only reproduction of the formatjs lint rules that web/eslint.config.js enables.
+function checkFile(file: string, root: string): Finding[] {
+  const sf = parseSource(file, fs.readFileSync(file, "utf8"));
+  const displayPath = path.relative(root, file).split(path.sep).join("/");
+  const findings: Finding[] = [];
+  const report = (node: ts.Node, rule: string, message: string): void => {
+    const pos = ts.isJsxText(node) ? node.pos : node.getStart(sf);
+    const at = sf.getLineAndCharacterOfPosition(pos);
+    findings.push({ file: displayPath, line: at.line + 1, col: at.character + 1, rule: `formatjs/${rule}`, message });
+  };
+  const literalRule = "no-literal-string-in-jsx";
+  const literalMsg = "string literal in JSX; format it with intl.formatMessage";
+
+  const checkJsxExpr = (e: ts.Expression): void => {
+    if (ts.isParenthesizedExpression(e)) {
+      checkJsxExpr(e.expression);
+    } else if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) {
+      if (e.text !== "") report(e, literalRule, literalMsg);
+    } else if (ts.isTemplateExpression(e)) {
+      report(e, literalRule, literalMsg);
+    } else if (ts.isConditionalExpression(e)) {
+      checkJsxExpr(e.whenTrue);
+      checkJsxExpr(e.whenFalse);
+    } else if (ts.isBinaryExpression(e) && LITERAL_OPERATORS.has(e.operatorToken.kind)) {
+      checkJsxExpr(e.left);
+      checkJsxExpr(e.right);
+    }
+  };
+
+  const checkDescriptor = (obj: ts.ObjectLiteralExpression, values: ts.Expression | undefined, isFormat: boolean): void => {
+    const props = new Map<string, ts.Expression>();
+    for (const p of obj.properties) {
+      if (ts.isPropertyAssignment(p) && (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name))) {
+        props.set(p.name.text, p.initializer);
+      } else if (ts.isShorthandPropertyAssignment(p)) {
+        props.set(p.name.text, p.name);
+      }
+    }
+    const id = props.get("id");
+    // A computed id (a variable, e.g. a server catalog key) cannot be checked statically.
+    if (id === undefined) {
+      report(obj, "enforce-id", "descriptor has no id");
+    } else if (ts.isStringLiteral(id) && !ID_RE.test(id.text)) {
+      report(id, "enforce-id", `id must match ${ID_RE.source}`);
+    }
+    const desc = props.get("description");
+    if (desc === undefined || !ts.isStringLiteral(desc) || desc.text === "") {
+      report(desc ?? obj, "enforce-description", "description must be a non-empty string literal");
+    }
+    const msg = props.get("defaultMessage");
+    if (msg === undefined || !(ts.isStringLiteral(msg) || ts.isNoSubstitutionTemplateLiteral(msg))) return;
+    let els: IcuEl[];
+    try {
+      els = parse(msg.text) as unknown as IcuEl[];
+    } catch (err) {
+      report(msg, "enforce-placeholders", `ICU parse error: ${snippet(String(err))}`);
+      return;
+    }
+    // defineMessages descriptors get their values at a later formatMessage call, so only the
+    // formatMessage call site can be checked against its values object.
+    if (!isFormat) return;
+    const names = icuArgNames(els);
+    if (values === undefined) {
+      if (names.size > 0) report(obj, "enforce-placeholders", `no values for placeholder(s) ${[...names].join(", ")}`);
+      return;
+    }
+    if (!ts.isObjectLiteralExpression(values)) return;
+    const keys = new Set<string>();
+    for (const p of values.properties) {
+      if (ts.isSpreadAssignment(p)) return;
+      if (ts.isIdentifier(p.name) || ts.isStringLiteral(p.name)) keys.add(p.name.text);
+    }
+    const missing = [...names].filter((n) => !keys.has(n));
+    const extra = [...keys].filter((k) => !names.has(k));
+    if (missing.length > 0) report(values, "enforce-placeholders", `missing value for placeholder(s) ${missing.join(", ")}`);
+    if (extra.length > 0) report(values, "enforce-placeholders", `value(s) not used in defaultMessage: ${extra.join(", ")}`);
+  };
+
+  const checkCall = (call: ts.CallExpression): void => {
+    const callee = call.expression;
+    const first = call.arguments[0];
+    if (ts.isPropertyAccessExpression(callee) && callee.name.text === "formatMessage") {
+      if (first && ts.isObjectLiteralExpression(first)) checkDescriptor(first, call.arguments[1], true);
+    } else if (ts.isIdentifier(callee) && callee.text === "defineMessages") {
+      if (first && ts.isObjectLiteralExpression(first)) {
+        for (const p of first.properties) {
+          if (ts.isPropertyAssignment(p) && ts.isObjectLiteralExpression(p.initializer)) {
+            checkDescriptor(p.initializer, undefined, false);
+          }
+        }
+      }
+    } else if (ts.isIdentifier(callee) && callee.text === "defineMessage") {
+      if (first && ts.isObjectLiteralExpression(first)) checkDescriptor(first, undefined, false);
+    }
+  };
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isJsxElement(node) || ts.isJsxFragment(node)) {
+      for (const c of node.children) {
+        if (ts.isJsxText(c)) {
+          if (/\S/.test(decodeEntities(c.text))) report(c, literalRule, literalMsg);
+        } else if (ts.isJsxExpression(c) && c.expression) {
+          checkJsxExpr(c.expression);
+        }
+      }
+    } else if (ts.isJsxAttribute(node)) {
+      const init = node.initializer;
+      if (init !== undefined && CHECK_PROPS.has(node.name.getText(sf))) {
+        if (ts.isStringLiteral(init)) {
+          if (init.text !== "") report(init, literalRule, literalMsg);
+        } else if (ts.isJsxExpression(init) && init.expression) {
+          checkJsxExpr(init.expression);
+        }
+      }
+    } else if (ts.isCallExpression(node)) {
+      checkCall(node);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return findings;
 }
 
 function walk(dir: string): string[] {
@@ -829,18 +1110,22 @@ function previewDiff(displayPath: string, original: string, edits: Edit[]): void
 function main(): void {
   const args = process.argv.slice(2);
   let dryRun = false;
+  let check = false;
+  let joinOnly = false;
   let reportPath: string | undefined;
   let root = process.cwd();
   const inputs: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--dry-run") dryRun = true;
+    else if (a === "--check") check = true;
+    else if (a === "--join-spaces") joinOnly = true;
     else if (a === "--report") reportPath = args[++i];
     else if (a === "--root") root = path.resolve(args[++i]);
     else inputs.push(a);
   }
   if (inputs.length === 0) {
-    console.error("usage: node scripts/i18n-migrate.ts [--dry-run] [--report <file>] [--root <dir>] <file|dir|glob>...");
+    console.error("usage: node scripts/i18n-migrate.ts [--dry-run] [--join-spaces] [--report <file>] [--root <dir>] <file|dir|glob>...\n       node scripts/i18n-migrate.ts --check [--root <dir>] <file|dir|glob>...");
     process.exitCode = 2;
     return;
   }
@@ -851,6 +1136,7 @@ function main(): void {
   const kindTotals: Record<string, number> = {};
   let migratedTotal = 0;
   let changedFiles = 0;
+  const findings: Finding[] = [];
 
   for (const file of files) {
     const rel = path.relative(srcDir, file).split(path.sep).join("/");
@@ -859,11 +1145,15 @@ function main(): void {
       continue;
     }
     if (/\.test\.tsx?$/.test(file) || /\.d\.ts$/.test(file)) continue;
+    if (check) {
+      findings.push(...checkFile(file, root));
+      continue;
+    }
     if (rel.startsWith("generated/") || rel.startsWith("lib/i18n/")) continue;
 
-    let result: ReturnType<typeof migrateFile>;
+    let result: MigrateResult;
     try {
-      result = migrateFile(file, root);
+      result = migrateFile(file, root, !joinOnly);
     } catch (err) {
       // Nothing is written for a file whose migration failed.
       const message = snippet(err instanceof Error ? err.message : String(err));
@@ -879,15 +1169,21 @@ function main(): void {
     reports.push(result.report);
     migratedTotal += result.report.migrated;
     for (const s of result.report.skipped) kindTotals[s.kind] = (kindTotals[s.kind] ?? 0) + 1;
-    if (result.output === result.original) continue;
+    if (result.output === result.source) continue;
     changedFiles += 1;
     if (dryRun) {
-      previewDiff(result.report.path, result.original, result.edits);
+      previewDiff(result.report.path, result.input, result.edits);
     } else {
       fs.writeFileSync(file, result.output);
     }
   }
 
+  if (check) {
+    findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line || a.col - b.col);
+    for (const f of findings) console.log(`${f.file}:${f.line}:${f.col} ${f.rule} ${f.message}`);
+    process.exitCode = findings.length > 0 ? 1 : 0;
+    return;
+  }
   if (reportPath) {
     const totals = { files: reports.length, changedFiles, migrated: migratedTotal, skipped: kindTotals };
     fs.writeFileSync(reportPath, `${JSON.stringify({ files: reports, totals }, null, 2)}\n`);
