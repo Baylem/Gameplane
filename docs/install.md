@@ -442,15 +442,19 @@ described below, so you can decide before you install.
 
 - **Basic** — exactly three fields: `version` (the Gameplane version),
   `servers` (how many GameServers exist) and `templates` (how many
-  GameTemplates exist). No names, namespaces, hostnames, or addresses.
+  GameTemplates exist), summed over the local cluster, when there is one,
+  and every registered cluster the panel can reach. No names, namespaces,
+  hostnames, or addresses.
 - **Extended** — the basic fields plus the following, and nothing else:
   - a random **install ID** (a UUID generated on your install; it is not
     derived from your cluster, host, network, or users)
-  - environment: Kubernetes minor version (for example `1.31`), a
-    distribution category (`k3s`, `rke2`, `k0s`, `eks`, `gke`, `aks`,
-    `openshift`, `microk8s`, `minikube`, `kind`, `doks`, `talos` or
-    `other`), node CPU architectures, and a node-count band (`1`, `2-3`,
-    `4-10`, `11-50`, `51+`)
+  - environment, over every cluster the panel can reach: the Kubernetes
+    minor versions (for example `1.31`), the distribution categories
+    (`k3s`, `rke2`, `k0s`, `eks`, `gke`, `aks`, `openshift`, `microk8s`,
+    `minikube`, `kind`, `doks`, `talos` or `other`), node CPU
+    architectures, a node-count band over all their nodes (`1`, `2-3`,
+    `4-10`, `11-50`, `51+`), and whether the panel runs on a cluster or
+    standalone (`cluster` or `standalone`)
   - game usage: a server count for each module from the official catalog,
     plus one combined `custom` count for every other module (custom
     module names are never sent)

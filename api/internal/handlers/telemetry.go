@@ -30,7 +30,7 @@ const (
 // first-login notice lists (contracts/report-schema.md).
 var (
 	noticeBasicFields    = []string{"version", "servers", "templates"}
-	noticeExtendedFields = []string{"installId", "env.k8s", "env.distro", "env.arch", "env.nodes", "games", "features"}
+	noticeExtendedFields = []string{"installId", "env.k8s", "env.distro", "env.arch", "env.nodes", "env.deployment", "games", "features"}
 )
 
 // TelemetrySettings is the install-time telemetry setting the config and
