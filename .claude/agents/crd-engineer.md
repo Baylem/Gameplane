@@ -105,8 +105,7 @@ git commit -s -m "feat: add <field> to <Kind>
 
 Description of the new behavior.
 
-Co-Authored-By: <model actually running this session> <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_<id>"
+Co-Authored-By: <model actually running this session> <noreply@anthropic.com>"
 ```
 
 ## Local Testing Discipline (CLAUDE.md Rule 8)
