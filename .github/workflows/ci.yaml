@@ -1924,6 +1924,14 @@ jobs:
             GAMEPLANE_E2E_REUSE_CLUSTER=1 \
             GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
             go test -tags=e2e -timeout 5m -v -run '^TestAPI_BootstrapAndLogin$' ./...
+      - name: restic repo ready
+        # backup-restic-secret.yaml + restic-server.yaml + warm-up Job persist in the
+        # cluster (no cleanup), so backup-restore.spec.ts can back up to the shared repo.
+        run: |
+          cd test/e2e && \
+            GAMEPLANE_E2E_REUSE_CLUSTER=1 \
+            GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
+            go test -tags=e2e -timeout 10m -v -run '^TestE2E_ResticRepoReady$' ./...
       - name: playwright browser cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
