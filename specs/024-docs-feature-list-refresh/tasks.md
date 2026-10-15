@@ -113,7 +113,7 @@ description: "Task list for spec 024: documentation refresh, feature catalog and
 - [X] T032 [US4] Rewrite `src/content/docs/roadmap.mdx` in WEB to the same items and statuses as `docs/roadmap.md` (replace the "Beta status" headline with the current pre-v1 release wording); keep existing components (`DocsCallout`, `IconList`, `VERSION`); depends on T022
 - [X] T033 [P] [US4] Grep WEB `src/content/docs/*.mdx` and `src/config.ts` for the R9 fact classes, add hits to `stale-facts.md`, and fix them in the docs pages (no landing page or component changes, OD-3)
 - [X] T034 [US4] Run `npm run build` and `npm run check` in WEB (allowed locally); fix build errors only
-- [ ] T035 [US4] Open the WEB PR to `main` (signed commits), get WEB CI (`lint`, `check`, `build`) green, and wait for it to merge
+- [X] T035 [US4] Open the WEB PR to `main` (signed commits), get WEB CI (`lint`, `check`, `build`) green, and wait for it to merge
 
 ### Sync check (GP)
 
@@ -130,7 +130,7 @@ description: "Task list for spec 024: documentation refresh, feature catalog and
 
 ## Phase 7: Polish & delivery
 
-- [ ] T042 Bump the `website` submodule pointer to the merged WEB commit (and `modules` if T028 merged a MOD PR) on the GP branch; after the bump, copy any final `FEATURES.md` edits into `features.mdx` via a WEB follow-up PR before bumping again, so the two stay identical
+- [X] T042 Bump the `website` submodule pointer to the merged WEB commit (and `modules` if T028 merged a MOD PR) on the GP branch; after the bump, copy any final `FEATURES.md` edits into `features.mdx` via a WEB follow-up PR before bumping again, so the two stay identical
 - [ ] T043 Open the GP PR (signed commits, labels `type: docs`, `area: specs`, plus `area: shared` for the hack/CI change), body without attribution block or session links; drive CI green, including `check-links`, `check-doc-versions`, `check-features-sync`, `test-features-sync`
 - [ ] T044 Run quickstart scenarios 1–8 against the merged state and record results in `specs/024-docs-feature-list-refresh/stale-facts.md` (final section)
 - [ ] T045 After the GP PR merges: tick all tasks, `git mv specs/024-docs-feature-list-refresh specs/done_024-docs-feature-list-refresh`, update in-repo references, in its own `docs:` commit and PR (Constitution IV, CLAUDE.md rule 16)
