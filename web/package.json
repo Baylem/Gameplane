@@ -11,6 +11,7 @@
     "i18n:compile": "node scripts/i18n-compile.mjs",
     "i18n:fixtures": "node scripts/i18n-fixtures.mjs",
     "i18n:pseudo": "node scripts/i18n-pseudo.mjs",
+    "i18n:migrate": "node scripts/i18n-migrate.ts",
     "i18n:manifest": "cd ../i18n && go run ./cmd/i18n-check --manifest ../web/src/generated/i18n/languages.json locales",
     "preview": "vite preview",
     "lint": "eslint .",

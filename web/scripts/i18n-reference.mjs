@@ -1,7 +1,9 @@
-// Builds the extracted-message reference: every message the dashboard source
-// uses (from `formatjs extract`) plus every server.*, condition.* and notify.*
-// entry from the shared English catalog. Written back sorted by key so the
-// output is stable across runs.
+// Rebuilds the English reference catalog `i18n/locales/en/app.json`: every
+// message the dashboard source uses (from `formatjs extract`, which is written
+// to src/generated/i18n/extracted.json and left untouched here) plus every
+// server.*, condition.* and notify.* entry already in the reference. Written
+// back sorted by key so the output is stable across runs. CI compares this
+// file against the extraction (`i18n-check --extracted`); drift is an error.
 //
 // Node ESM, no dependencies. Run via `npm run i18n:extract`.
 import { readFileSync, writeFileSync } from "node:fs";
@@ -33,5 +35,5 @@ for (const key of Object.keys(merged).sort()) {
   sorted[key] = merged[key];
 }
 
-writeFileSync(extractedPath, JSON.stringify(sorted, null, 2) + "\n");
-console.log(`i18n:extract wrote ${Object.keys(sorted).length} message(s) to src/generated/i18n/extracted.json`);
+writeFileSync(referencePath, JSON.stringify(sorted, null, 2) + "\n");
+console.log(`i18n:extract wrote ${Object.keys(sorted).length} message(s) to i18n/locales/en/app.json`);
