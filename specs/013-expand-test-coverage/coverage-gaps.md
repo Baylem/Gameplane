@@ -1,6 +1,6 @@
 # Coverage Gap Record
 
-**Summary**: 19/24 closed · 1 closed unproven · 1 in progress · 2 open · 1 unit-only by design
+**Summary**: 21/24 closed · 1 closed unproven · 1 in progress · 0 open · 1 unit-only by design
 **Last updated**: 2026-10-15
 
 | ID | Category | Gap | Story | FR | Priority | Status | Evidence | Notes |
@@ -27,5 +27,5 @@
 | G-20 | unit | `ConsoleShell.test.tsx` ≥ 80 % lines | US4 | FR-004 | P2 | closed | `web` https://github.com/GameplanePanel/Gameplane/actions/runs/38189418314 | `ConsoleShell.tsx` 100 % lines, 95 % branches (lcov from https://github.com/GameplanePanel/Gameplane/pull/677). |
 | G-21 | unit | `CloneServerDialog` ≥ 80 % lines + cancel/error | US4 | FR-004 | P2 | closed | `web` https://github.com/GameplanePanel/Gameplane/actions/runs/38189418314 | 89.29 % lines before T053; T053 adds API-error (409, 403, other status, non-API) and cancel-discards-changes cases in https://github.com/GameplanePanel/Gameplane/pull/677. |
 | G-22 | unit | `ServerActionsMenu` ≥ 80 % lines + cancel/error | US4 | FR-004 | P2 | closed | `web` https://github.com/GameplanePanel/Gameplane/actions/runs/38189418314 | 100 % lines, branches and functions. The menu makes no API calls; cancel and API errors live in its dialogs, covered by their own tests (G-21 for clone). |
-| G-23 | e2e-postgres | kind E2E on Postgres-backed API | US5 | FR-005 | P3 | open |  |  |
-| G-24 | e2e-postgres | upgrade from frozen 001–012 baseline | US5 | FR-005 | P3 | open |  |  |
+| G-23 | e2e-postgres | kind E2E on Postgres-backed API | US5 | FR-005 | P3 | closed | `e2e postgres / amd64 (kind)` https://github.com/GameplanePanel/Gameplane/actions/runs/38821938712 | #707: the API runs with `--db-driver=postgres` against an in-cluster PostgreSQL 17, and the `api-auth`, `api-roles` and `api-rbac` buckets pass. |
+| G-24 | e2e-postgres | upgrade from frozen 001–012 baseline | US5 | FR-005 | P3 | closed | `api (postgres)` https://github.com/GameplanePanel/Gameplane/actions/runs/38821938712 | `TestPostgres_MigrateFromFrozenBaseline` (#707) applies only the frozen 001–012 files, seeds a user, role binding, share link and audit row, migrates to head, and reads them back unchanged. |
