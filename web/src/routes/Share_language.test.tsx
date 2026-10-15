@@ -98,6 +98,7 @@ describe("SharePage compact language picker (T045)", () => {
     });
     renderShare();
 
+    expect(await screen.findByText("mc-survival")).toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: "Language" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "Français" }));
 

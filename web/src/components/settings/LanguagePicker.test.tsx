@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { server } from "@/test/server";
 import { renderWithQuery } from "@/test/render";
@@ -62,7 +62,7 @@ describe("LanguagePicker", () => {
     expect(await screen.findByRole("radio", { name: /Français/ })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /English/ })).toBeInTheDocument();
     const deutsch = screen.getByRole("radio", { name: /Deutsch/ });
-    expect(within(deutsch).getByText("86% translated")).toBeInTheDocument();
+    expect(deutsch).toHaveAccessibleName(/86% translated/);
     expect(screen.queryByText("Kreyòl")).not.toBeInTheDocument();
   });
 
