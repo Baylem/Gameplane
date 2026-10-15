@@ -1,8 +1,10 @@
 # Spec 013 T045: a syslog collector for the optional-components bucket
 # (TestOptionalComponents_Lifecycle). socat accepts TCP on 514 and copies
-# every received byte to stdout, so the audit-syslog bridge's RFC 5424
-# records show up in `kubectl logs deploy/e2e-syslog-sink`. The bridge frames
-# records with octet counting, so several records can share one log line.
+# every received byte to /tmp/syslog.log, which the test reads with
+# `kubectl exec … cat`. Not stdout: the bridge frames TCP records with octet
+# counting and no trailing newline, and the container runtime holds back a
+# log line until its newline arrives, so the records never reach
+# `kubectl logs`.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,7 +23,7 @@ spec:
         - name: sink
           # alpine/socat:1.8.0.3 (multi-arch index digest)
           image: alpine/socat@sha256:beb4a68d9e4fe6b0f21ea774a0fde6c31f580dde6368939ed70100c5385b015e
-          args: ["-u", "TCP-LISTEN:514,fork,reuseaddr", "STDOUT"]
+          args: ["-u", "TCP-LISTEN:514,fork,reuseaddr", "OPEN:/tmp/syslog.log,creat,append"]
           ports:
             - { name: syslog, containerPort: 514, protocol: TCP }
           readinessProbe:

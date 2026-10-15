@@ -145,6 +145,36 @@ func ocTail(s string, n int) string {
 	return s[len(s)-n:]
 }
 
+// ocSyslogDiagnostics gathers each hop of the audit path for a failure
+// message: the API's latest audit rows, the API's webhook log lines, the
+// bridge's log and the sink's file.
+func ocSyslogDiagnostics(admin *APIClient, sinkOut string) string {
+	ctx := context.Background()
+	var b strings.Builder
+	if resp, body, err := admin.Get("/admin/audit?limit=5"); err != nil {
+		fmt.Fprintf(&b, "GET /admin/audit: %v\n", err)
+	} else {
+		_ = resp.Body.Close()
+		fmt.Fprintf(&b, "GET /admin/audit = %d: %s\n", resp.StatusCode, ocTail(string(body), 2000))
+	}
+	apiLogs, err := envInstance.Kubectl(ctx, "logs", "-n", ocNS, "deploy/gameplane-api", "--tail=300")
+	if err != nil {
+		fmt.Fprintf(&b, "api logs: %v\n", err)
+	}
+	for _, line := range strings.Split(apiLogs, "\n") {
+		if strings.Contains(line, "audit") {
+			fmt.Fprintf(&b, "api: %s\n", line)
+		}
+	}
+	bridgeLogs, err := envInstance.Kubectl(ctx, "logs", "-n", ocNS, "deploy/gameplane-audit-syslog-bridge", "--tail=50")
+	if err != nil {
+		fmt.Fprintf(&b, "bridge logs: %v\n", err)
+	}
+	fmt.Fprintf(&b, "bridge log tail:\n%s\n", ocTail(bridgeLogs, 2000))
+	fmt.Fprintf(&b, "sink file tail:\n%s", ocTail(sinkOut, 2000))
+	return b.String()
+}
+
 // ocContainer returns the named container status of pod.
 func ocContainer(pod *corev1.Pod, name string) (corev1.ContainerStatus, bool) {
 	for _, cs := range pod.Status.ContainerStatuses {
@@ -399,14 +429,23 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 			t.Fatalf("delete role: want 2xx, got %d", resp.StatusCode)
 		}
 
-		envInstance.Eventually(t, 2*time.Minute, func() (bool, string) {
-			out, err := envInstance.Kubectl(ctx, "logs", "-n", ocNS, "deploy/e2e-syslog-sink")
-			if err != nil {
-				return false, err.Error()
+		// Poll the sink by hand rather than with Eventually so a timeout can
+		// report every hop: the API's audit trail and webhook log lines, the
+		// bridge's log and the sink's file.
+		var sinkOut string
+		deadline := time.Now().Add(2 * time.Minute)
+		for {
+			out, err := envInstance.Kubectl(ctx, "exec", "-n", ocNS, "deploy/e2e-syslog-sink", "--", "cat", "/tmp/syslog.log")
+			sinkOut = out
+			if err == nil && strings.Contains(out, "gameplane-audit") && strings.Contains(out, "/roles/"+roleName) {
+				break
 			}
-			ok := strings.Contains(out, "gameplane-audit") && strings.Contains(out, "/roles/"+roleName)
-			return ok, "syslog sink tail: " + ocTail(out, 2000)
-		})
+			if time.Now().After(deadline) {
+				t.Fatalf("no RFC 5424 record for /roles/%s reached the syslog sink within 2m\n%s",
+					roleName, ocSyslogDiagnostics(admin, sinkOut))
+			}
+			time.Sleep(3 * time.Second)
+		}
 
 		port, stop := detachedPortForward(ctx, t, ocNS, "svc/gameplane-audit-syslog-bridge", 8514)
 		defer stop()
