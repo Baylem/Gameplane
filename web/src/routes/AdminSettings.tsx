@@ -1712,7 +1712,8 @@ function NotificationsSection({ initial }: { initial?: NotificationsCfg }) {
               <div className="min-w-0 flex-1">
                 <div className="text-sm">{s.name}</div>
                 <div className="truncate text-xs text-muted">
-                  {sinkKindLabel(intl, s.kind)}
+                  {/* The stored kind identifier, not a translated label. */}
+                  {s.kind}
                   {s.configRef ? intl.formatMessage({ id: "web.routes.admin_settings.sink_secret_ref", defaultMessage: " · Secret: {ref}", description: "Admin settings: secret reference shown under a notification sink; {ref} is the Secret name" }, { ref: s.configRef }) : intl.formatMessage({ id: "web.routes.admin_settings.sink_no_secret", defaultMessage: " · no Secret configured", description: "Admin settings: shown under a notification sink that has no Secret configured" })}
                 </div>
               </div>
