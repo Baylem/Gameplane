@@ -85,8 +85,14 @@ in_table && /^\|/ {
 }
 in_table { in_table = 0 }
 END {
-    for (i = 1; i <= N["R"]; i++) { k = AREA["R", i] SUBSEP CAP["R", i]; if (!(k in RIDX)) RIDX[k] = i }
-    for (j = 1; j <= N["W"]; j++) { k = AREA["W", j] SUBSEP CAP["W", j]; if (!(k in WIDX)) WIDX[k] = j }
+    for (i = 1; i <= N["R"]; i++) {
+        k = AREA["R", i] SUBSEP CAP["R", i]
+        if (k in RIDX) { printf "features-sync: duplicate row in FEATURES.md: %s / %s\n", AREA["R", i], CAP["R", i]; problems++ } else RIDX[k] = i
+    }
+    for (j = 1; j <= N["W"]; j++) {
+        k = AREA["W", j] SUBSEP CAP["W", j]
+        if (k in WIDX) { printf "features-sync: duplicate row in features.mdx: %s / %s\n", AREA["W", j], CAP["W", j]; problems++ } else WIDX[k] = j
+    }
 
     n = (AN["R"] > AN["W"]) ? AN["R"] : AN["W"]
     for (p = 1; p <= n; p++) {

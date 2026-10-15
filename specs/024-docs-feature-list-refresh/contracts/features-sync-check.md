@@ -31,6 +31,7 @@ features-sync: only in features.mdx: <area> / <capability>
 features-sync: <area> / <capability>: maturity "<repo>" vs "<website>"
 features-sync: <area> / <capability>: default "<repo>" vs "<website>"
 features-sync: <area> / <capability>: order differs
+features-sync: duplicate row in <FEATURES.md|features.mdx>: <area> / <capability>
 ```
 
 ## Fixture tests (FR-015, SC-005)
