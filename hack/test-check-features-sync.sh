@@ -8,7 +8,7 @@
 # Paths are passed relative to the repo root, so messages carry the paths exactly as
 # written in each expected.txt.
 #
-# See: specs/024-docs-feature-list-refresh/contracts/features-sync-check.md (FR-015, SC-005)
+# See: specs/done_024-docs-feature-list-refresh/contracts/features-sync-check.md (FR-015, SC-005)
 
 set -euo pipefail
 

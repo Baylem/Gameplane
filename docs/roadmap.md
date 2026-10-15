@@ -32,7 +32,7 @@ discovered along the way gets added.
 - Removed: the Hell Let Loose module is withdrawn from the official catalog ([changelog](../CHANGELOG.md)).
 - Upgrade-note behaviour changes: telemetry is on by default for new installs after a first-login notice; installs with a saved basic toggle start sending to the default receiver after upgrade; an empty `api.telemetry.endpoint` means the project default receiver; the receiver `/metrics` moved to `:8081` and needs the dashboard token; the bundled receiver stores data on a PVC by default; receiver `DASHBOARD_TOKEN` must be at least 32 characters ([changelog](../CHANGELOG.md)).
 - Breaking: selected-cluster module and template grants need a cluster-wide grant for remote catalogs ([changelog](../CHANGELOG.md)).
-- Upgrade note: every game pod gains an empty capture `emptyDir`, so existing GameServers roll once on upgrade ([changelog](../CHANGELOG.md)).
+- Feature catalog: [FEATURES.md](../FEATURES.md) lists every capability with its maturity and default, mirrored on the website and kept in step by `make check-features-sync` (spec 024, PR #703).
 
 ### Shipped in v0.3.0
 
@@ -55,6 +55,7 @@ discovered along the way gets added.
 - Data wipe failures fail the Job and set `DataWipe=False`; backup/restore quiesce lifecycle fixed, and restore removes files created after the snapshot ([changelog](../CHANGELOG.md)).
 - SQLite DSN gets `busy_timeout(5000)` by default; agent metrics on a separate unauthenticated `:9090` listener that the PodMonitor scrapes ([changelog](../CHANGELOG.md)).
 - Multi-cluster request scoping, OIDC role re-evaluation, bootstrap-admin reset, cluster registration removal, mod bundle integrity, and tunnel credential handling hardened ([changelog](../CHANGELOG.md)).
+- Upgrade note: every game pod gains an empty capture `emptyDir`, so existing GameServers roll once on upgrade ([changelog](../CHANGELOG.md)).
 
 ### Earlier releases (before v0.3.0)
 
@@ -272,8 +273,7 @@ Status as of 2026-10-14. Task counts come from each spec's `tasks.md`.
 - **Spec 021, edit game configuration from server Settings** (`specs/021-settings-game-config/`): implemented, 20 of 24 tasks done, pending CI and review. Blocked: CI must go green and a human must approve the PR. Unblocked by: that approval and merge, then archiving to `done_021`.
 - **Spec 022, default telemetry destination, extended telemetry and telemetry dashboard** (`specs/022-default-telemetry-dashboard/`): 109 of 119 tasks done. The shipped feature is unchanged until the version-trend amendment (2026-10-14, T101 to T110) lands. Blocked: T104 needs Pencil design work on the machine where Pencil runs; T109 needs the user's sign-off before editing existing tests `lifecycle_test.go:11` and `charts_test.go:83`; T110 waits for the PR to merge. Unblocked by: the design work, that sign-off, and the merge.
 - **Spec 023, change-based test selection** (`specs/023-change-based-test-selection/`): 0 of 52 tasks done; no open decisions remain. No blocker is named. T001 creates the `ci: full-run` label. T052 needs 30 merged PRs to measure runner minutes.
-- **Spec 023, standalone panel and API** (`specs/023-standalone-panel/`, see [standalone panel](standalone-panel.md)): the core behaviour is listed under Unreleased in the [changelog](../CHANGELOG.md). The spec has no `tasks.md`, so the remaining work is not tracked. Unblocked by: writing `tasks.md`.
-- **Spec 024, documentation refresh, feature catalog and roadmap status** (`specs/024-docs-feature-list-refresh/`): in progress: the catalog, roadmap and sync check are drafted; the website and main repo PRs are next. No blocker is named.
+- **Spec 025, standalone panel and API** (`specs/025-standalone-panel/`, see [standalone panel](standalone-panel.md)): implemented and merged in PR #630; all 51 tasks done, with known gaps listed in the spec. The folder was renumbered from `023-standalone-panel` and written after the fact. Next step: archive to `done_025`.
 
 ---
 

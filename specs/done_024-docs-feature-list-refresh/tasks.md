@@ -5,7 +5,7 @@ description: "Task list for spec 024: documentation refresh, feature catalog and
 
 # Tasks: Documentation Refresh, Feature Catalog, and Roadmap Status
 
-**Input**: Design documents from `specs/024-docs-feature-list-refresh/`
+**Input**: Design documents from `specs/done_024-docs-feature-list-refresh/`
 
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/), [quickstart.md](./quickstart.md)
 
@@ -27,14 +27,14 @@ description: "Task list for spec 024: documentation refresh, feature catalog and
 **Purpose**: Branches and the status snapshot every story reads from.
 
 - [X] T001 Create branch `claude/024-docs-refresh` (used the session branch `claude/project-thread-6pzhf7` instead) in GP from latest `master` (after the spec docs PR merges) and branch `claude/024-docs-refresh` in WEB from latest `main`
-- [X] T002 Record the status date and source revisions (GP `master` SHA, WEB `main` SHA, MOD `master` SHA, chart `appVersion` from `charts/gameplane/Chart.yaml`) at the top of `specs/024-docs-feature-list-refresh/stale-facts.md`
-- [X] T003 [P] Create `specs/024-docs-feature-list-refresh/feature-evidence.md` with the record header from [data-model.md](./data-model.md) (area, capability, maturity, e2e test, default source, notes)
+- [X] T002 Record the status date and source revisions (GP `master` SHA, WEB `main` SHA, MOD `master` SHA, chart `appVersion` from `charts/gameplane/Chart.yaml`) at the top of `specs/done_024-docs-feature-list-refresh/stale-facts.md`
+- [X] T003 [P] Create `specs/done_024-docs-feature-list-refresh/feature-evidence.md` with the record header from [data-model.md](./data-model.md) (area, capability, maturity, e2e test, default source, notes)
 
 ---
 
 ## Phase 2: Foundational (blocks all stories)
 
-**Purpose**: The fact base the catalog, roadmap and sweep all use. Each task writes a section of `specs/024-docs-feature-list-refresh/research-notes.md` (scratch input, committed for review).
+**Purpose**: The fact base the catalog, roadmap and sweep all use. Each task writes a section of `specs/done_024-docs-feature-list-refresh/research-notes.md` (scratch input, committed for review).
 
 - [X] T004 [P] List every e2e test registered in a bucket: parse `test/e2e/buckets.sh` and `test/e2e/*_test.go` into a table test name → bucket; note tests excluded from all buckets (they do not count as CI coverage, research R5)
 - [X] T005 [P] List install defaults: every enable/disable toggle in `charts/gameplane/values.yaml` with its default, plus build-tag features (`-tags postgres`) and separately installed components (sentinel, capture sidecar, tunnels, audit-syslog-bridge, telemetry-receiver, mcp-server, agent gateway)
@@ -53,11 +53,11 @@ description: "Task list for spec 024: documentation refresh, feature catalog and
 **Independent Test**: [quickstart.md](./quickstart.md) scenario 1: 10 random rows each have a matching evidence record, a label that obeys the data-model validation, and a docs link that documents the capability.
 
 - [X] T009 [US1] Write the `FEATURES.md` skeleton per [contracts/features-catalog.md](./contracts/features-catalog.md): title, intro explaining the labels (stable / beta / experimental / planned / in progress, and the on/off/n/a default column), status date, link to `docs/roadmap.md`, and the 18 area `##` headings from research R6, each with the catalog table header
-- [X] T010 [P] [US1] Inventory rows for areas *Servers and lifecycle*, *Console and admin actions*, *Files*, *Players* from `web/src/router/tree.tsx`, `web/src/routes/`, `api/cmd/main.go`, README Features, `docs/architecture.md` and website pages `server-operations.mdx`, `console-events-logs.mdx`, `file-manager.mdx`, `player-administration.mdx`; write rows and evidence records to `specs/024-docs-feature-list-refresh/catalog-drafts/servers-console-files-players.md`
-- [X] T011 [P] [US1] Inventory rows for *Mods*, *Backups and restore*, *Game modules and catalog*, *Module authoring* from README Mod Management, `docs/module-authoring.md`, `gp-module/`, `operator/api/v1alpha1/` (ModuleSource, GameTemplate, Backup*, Restore), website `mods-modpacks.mdx`, `backups-recovery.mdx`, `modules-sources.mdx`; write rows and evidence records to `specs/024-docs-feature-list-refresh/catalog-drafts/mods-backups-modules-authoring.md`
-- [X] T012 [P] [US1] Inventory rows for *Networking and tunnels*, *Idle sleep and wake*, *Multi-cluster* from `docs/networking.md`, `docs/tunnels.md`, `docs/multicluster-*.md`, `docs/unified-dashboard.md`, `docs/remote-parity.md`, `sentinel/`, `tunnel/`; write rows and evidence records to `specs/024-docs-feature-list-refresh/catalog-drafts/networking-sleep-multicluster.md`
-- [X] T013 [P] [US1] Inventory rows for *Users, auth and access*, *Audit and security*, *Notifications*, *Telemetry* from `docs/oidc.md`, `docs/security.md`, `docs/notifications.md`, `docs/telemetry-provider.md`, `docs/key-rotation.md`, `api/internal/rbac/`, `audit-syslog-bridge/README.md`, `telemetry-receiver/README.md`; write rows and evidence records to `specs/024-docs-feature-list-refresh/catalog-drafts/access-audit-notify-telemetry.md`
-- [X] T014 [P] [US1] Inventory rows for *Observability and admin*, *Localization*, *Developer and operator tooling* from `docs/install.md`, `docs/gateway-install.md`, `mcp-server/README.md`, `capture-sidecar/`, `charts/gameplane/`, website `metrics-alerts-dashboards.mdx`, `system-log-viewer.mdx`; localization rows reflect only what is merged on `master` (spec 019 work is `in progress`, FR-004); write rows and evidence records to `specs/024-docs-feature-list-refresh/catalog-drafts/observability-l10n-tooling.md`
+- [X] T010 [P] [US1] Inventory rows for areas *Servers and lifecycle*, *Console and admin actions*, *Files*, *Players* from `web/src/router/tree.tsx`, `web/src/routes/`, `api/cmd/main.go`, README Features, `docs/architecture.md` and website pages `server-operations.mdx`, `console-events-logs.mdx`, `file-manager.mdx`, `player-administration.mdx`; write rows and evidence records to `specs/done_024-docs-feature-list-refresh/catalog-drafts/servers-console-files-players.md`
+- [X] T011 [P] [US1] Inventory rows for *Mods*, *Backups and restore*, *Game modules and catalog*, *Module authoring* from README Mod Management, `docs/module-authoring.md`, `gp-module/`, `operator/api/v1alpha1/` (ModuleSource, GameTemplate, Backup*, Restore), website `mods-modpacks.mdx`, `backups-recovery.mdx`, `modules-sources.mdx`; write rows and evidence records to `specs/done_024-docs-feature-list-refresh/catalog-drafts/mods-backups-modules-authoring.md`
+- [X] T012 [P] [US1] Inventory rows for *Networking and tunnels*, *Idle sleep and wake*, *Multi-cluster* from `docs/networking.md`, `docs/tunnels.md`, `docs/multicluster-*.md`, `docs/unified-dashboard.md`, `docs/remote-parity.md`, `sentinel/`, `tunnel/`; write rows and evidence records to `specs/done_024-docs-feature-list-refresh/catalog-drafts/networking-sleep-multicluster.md`
+- [X] T013 [P] [US1] Inventory rows for *Users, auth and access*, *Audit and security*, *Notifications*, *Telemetry* from `docs/oidc.md`, `docs/security.md`, `docs/notifications.md`, `docs/telemetry-provider.md`, `docs/key-rotation.md`, `api/internal/rbac/`, `audit-syslog-bridge/README.md`, `telemetry-receiver/README.md`; write rows and evidence records to `specs/done_024-docs-feature-list-refresh/catalog-drafts/access-audit-notify-telemetry.md`
+- [X] T014 [P] [US1] Inventory rows for *Observability and admin*, *Localization*, *Developer and operator tooling* from `docs/install.md`, `docs/gateway-install.md`, `mcp-server/README.md`, `capture-sidecar/`, `charts/gameplane/`, website `metrics-alerts-dashboards.mdx`, `system-log-viewer.mdx`; localization rows reflect only what is merged on `master` (spec 019 work is `in progress`, FR-004); write rows and evidence records to `specs/done_024-docs-feature-list-refresh/catalog-drafts/observability-l10n-tooling.md`
 - [X] T015 [US1] Merge the five `catalog-drafts/*.md` files into `FEATURES.md` (rows under their area headings) and `feature-evidence.md` (single owner of both files; delete `catalog-drafts/` afterwards), then apply the maturity rule to every row using T004/T005 facts: `stable` only with `default = on` and a bucketed e2e test; `default = off` rows are `beta` or `experimental`; `experimental` only where docs already say so (PostgreSQL driver); planned/in-progress rows get `default = n/a` and a roadmap link; fill each evidence record (`FEATURES.md`, `feature-evidence.md`)
 - [X] T016 [US1] Deduplicate and order rows within each area, check every Docs link target exists in GP, and confirm the row count is in the 100–150 range or note why not in `feature-evidence.md`
 - [X] T017 [US1] Tier-up review (`sonnet`): check the combined `FEATURES.md` + `feature-evidence.md` diff against research-notes.md and the sources; fixes go to a new `haiku` fix wave
@@ -131,9 +131,9 @@ description: "Task list for spec 024: documentation refresh, feature catalog and
 ## Phase 7: Polish & delivery
 
 - [X] T042 Bump the `website` submodule pointer to the merged WEB commit (and `modules` if T028 merged a MOD PR) on the GP branch; after the bump, copy any final `FEATURES.md` edits into `features.mdx` via a WEB follow-up PR before bumping again, so the two stay identical
-- [ ] T043 Open the GP PR (signed commits, labels `type: docs`, `area: specs`, plus `area: shared` for the hack/CI change), body without attribution block or session links; drive CI green, including `check-links`, `check-doc-versions`, `check-features-sync`, `test-features-sync`
-- [ ] T044 Run quickstart scenarios 1–8 against the merged state and record results in `specs/024-docs-feature-list-refresh/stale-facts.md` (final section)
-- [ ] T045 After the GP PR merges: tick all tasks, `git mv specs/024-docs-feature-list-refresh specs/done_024-docs-feature-list-refresh`, update in-repo references, in its own `docs:` commit and PR (Constitution IV, CLAUDE.md rule 16)
+- [X] T043 Open the GP PR (signed commits, labels `type: docs`, `area: specs`, plus `area: shared` for the hack/CI change), body without attribution block or session links; drive CI green, including `check-links`, `check-doc-versions`, `check-features-sync`, `test-features-sync`
+- [X] T044 Run quickstart scenarios 1–8 against the merged state and record results in `specs/done_024-docs-feature-list-refresh/stale-facts.md` (final section)
+- [X] T045 After the GP PR merges: tick all tasks, `git mv specs/done_024-docs-feature-list-refresh specs/done_024-docs-feature-list-refresh`, update in-repo references, in its own `docs:` commit and PR (Constitution IV, CLAUDE.md rule 16)
 
 ---
 
