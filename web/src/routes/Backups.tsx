@@ -84,11 +84,11 @@ export function BackupsPage() {
   return (
     <div className="space-y-5 p-6">
       <PageHeader
-        title={intl.formatMessage({ id: "web.routes.backups.backups", defaultMessage: "Backups", description: "Backups: title of PageHeader" })}
-        subtitle={intl.formatMessage({ id: "web.routes.backups.snapshots_schedules_and_restores_across", defaultMessage: "Snapshots, schedules, and restores across your authorized locations.", description: "Backups: subtitle of PageHeader" })}
+        title={intl.formatMessage({ id: "web.routes.backups.backups", defaultMessage: "Backups", description: "Backups: page title at the top of the backups screen, also the name of the backups tab and its table; keep it short" })}
+        subtitle={intl.formatMessage({ id: "web.routes.backups.snapshots_schedules_and_restores_across", defaultMessage: "Snapshots, schedules, and restores across your authorized locations.", description: "Backups: subtitle under the page title saying the screen covers snapshots, schedules and restores across your authorised locations" })}
         actions={
           <Button onPress={() => setBackupNow(true)}>
-            <Plus className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.backups.back_up_now", defaultMessage: "Back up now", description: "Backups: text in Button" })}</Button>
+            <Plus className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.backups.back_up_now", defaultMessage: "Back up now", description: "Backups: button that opens the dialog for a one-off snapshot, and the heading of that dialog; keep it short" })}</Button>
         }
       />
       {backupNow && <BackupNowDialog onClose={() => setBackupNow(false)} />}
@@ -146,8 +146,8 @@ function BackupsTabPanel({ location, onLocationChange, locations }: LocationFilt
 
   return (
     <div className="space-y-4">
-      <FleetCoverage partial={backupsFleet?.partial} issues={backupsFleet?.issues} error={fleetError} label={intl.formatMessage({ id: "web.routes.backups.backups", defaultMessage: "Backups", description: "Backups: title of PageHeader" })} />
-      {fleetLoading && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.backups.loading_backups", defaultMessage: "Loading backups…", description: "Backups: text in p" })}</p>}
+      <FleetCoverage partial={backupsFleet?.partial} issues={backupsFleet?.issues} error={fleetError} label={intl.formatMessage({ id: "web.routes.backups.backups", defaultMessage: "Backups", description: "Backups: page title at the top of the backups screen, also the name of the backups tab and its table; keep it short" })} />
+      {fleetLoading && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.backups.loading_backups", defaultMessage: "Loading backups…", description: "Backups: loading text on the backups tab while backup data is fetched" })}</p>}
       <BackupFilters
         location={location}
         onLocationChange={onLocationChange}
@@ -166,13 +166,13 @@ function BackupsTabPanel({ location, onLocationChange, locations }: LocationFilt
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table.Root>
           <Table.ScrollContainer>
-            <Table.Content aria-label={intl.formatMessage({ id: "web.routes.backups.backups", defaultMessage: "Backups", description: "Backups: title of PageHeader" })} keyboardNavigationBehavior="arrow">
+            <Table.Content aria-label={intl.formatMessage({ id: "web.routes.backups.backups", defaultMessage: "Backups", description: "Backups: page title at the top of the backups screen, also the name of the backups tab and its table; keep it short" })} keyboardNavigationBehavior="arrow">
               <Table.Header>
-                <Table.Column key="name" isRowHeader>{intl.formatMessage({ id: "web.routes.backups.name", defaultMessage: "Name", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="server">{intl.formatMessage({ id: "web.routes.backups.server", defaultMessage: "Server", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="phase">{intl.formatMessage({ id: "web.routes.backups.phase", defaultMessage: "Phase", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="size">{intl.formatMessage({ id: "web.routes.backups.size", defaultMessage: "Size", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="completed">{intl.formatMessage({ id: "web.routes.backups.completed", defaultMessage: "Completed", description: "Backups: text in Table.Column" })}</Table.Column>
+                <Table.Column key="name" isRowHeader>{intl.formatMessage({ id: "web.routes.backups.name", defaultMessage: "Name", description: "Backups: column heading for the name of each backup, schedule or restore; keep it short" })}</Table.Column>
+                <Table.Column key="server">{intl.formatMessage({ id: "web.routes.backups.server", defaultMessage: "Server", description: "Backups: column heading for the server a row belongs to, and the accessible name of the server dropdown in the backup dialog; keep it short" })}</Table.Column>
+                <Table.Column key="phase">{intl.formatMessage({ id: "web.routes.backups.phase", defaultMessage: "Phase", description: "Backups: column heading for the phase or state of a backup or restore; keep it short" })}</Table.Column>
+                <Table.Column key="size">{intl.formatMessage({ id: "web.routes.backups.size", defaultMessage: "Size", description: "Backups: column heading for the size of each backup; keep it short" })}</Table.Column>
+                <Table.Column key="completed">{intl.formatMessage({ id: "web.routes.backups.completed", defaultMessage: "Completed", description: "Backups: column heading for when a backup or restore completed; keep it short" })}</Table.Column>
                 <Table.Column key="actions" className="text-end" />
               </Table.Header>
               <Table.Body
@@ -275,17 +275,17 @@ function BackupNowDialog({ onClose }: { onClose: () => void }) {
         <ModalContainer>
           <ModalDialog>
             <ModalHeader>
-              <ModalHeading>{intl.formatMessage({ id: "web.routes.backups.back_up_now", defaultMessage: "Back up now", description: "Backups: text in Button" })}</ModalHeading>
+              <ModalHeading>{intl.formatMessage({ id: "web.routes.backups.back_up_now", defaultMessage: "Back up now", description: "Backups: button that opens the dialog for a one-off snapshot, and the heading of that dialog; keep it short" })}</ModalHeading>
             </ModalHeader>
             <ModalBody className="gap-4">
-              <p className="text-sm text-foreground/60">{intl.formatMessage({ id: "web.routes.backups.run_a_one_off_snapshot_outside_any", defaultMessage: "Run a one-off snapshot outside any schedule.", description: "Backups: text in p" })}</p>
+              <p className="text-sm text-foreground/60">{intl.formatMessage({ id: "web.routes.backups.run_a_one_off_snapshot_outside_any", defaultMessage: "Run a one-off snapshot outside any schedule.", description: "Backups: text in the back-up-now dialog explaining that it runs a one-off snapshot outside any schedule" })}</p>
               <div className="space-y-4">
                 <div>
                   <Select
                     value={createServer}
                     onChange={(v) => { setCreateServer(v as string); setCreateDest(""); }}
-                    placeholder={intl.formatMessage({ id: "web.routes.backups.select_a_server", defaultMessage: "Select a server…", description: "Backups: placeholder of Select" })}
-                    aria-label={intl.formatMessage({ id: "web.routes.backups.server", defaultMessage: "Server", description: "Backups: text in Table.Column" })}
+                    placeholder={intl.formatMessage({ id: "web.routes.backups.select_a_server", defaultMessage: "Select a server…", description: "Backups: grey placeholder of the server dropdown, asking the user to pick a server in the backup dialog or the new schedule form" })}
+                    aria-label={intl.formatMessage({ id: "web.routes.backups.server", defaultMessage: "Server", description: "Backups: column heading for the server a row belongs to, and the accessible name of the server dropdown in the backup dialog; keep it short" })}
                     className="mt-1"
                   >
                     <Select.Trigger>
@@ -293,7 +293,7 @@ function BackupNowDialog({ onClose }: { onClose: () => void }) {
                       <Select.Indicator className="ml-auto h-4 w-4" />
                     </Select.Trigger>
                     <Select.Popover>
-                      <ListBox aria-label={intl.formatMessage({ id: "web.routes.backups.server_options", defaultMessage: "Server options", description: "Backups: aria-label of ListBox" })}>
+                      <ListBox aria-label={intl.formatMessage({ id: "web.routes.backups.server_options", defaultMessage: "Server options", description: "Backups: accessible name of the list of servers shown when the server dropdown is open" })}>
                         {(serversList?.items ?? []).filter((item) => hasPermission(item.fleetPermissions, "backups:write")).map((s) => (
                           <ListBoxItem key={targetKey(s.fleetTarget)} id={targetKey(s.fleetTarget)} textValue={intl.formatMessage(SERVER_OPTION_LABEL.label, { name: s.metadata.name, target: targetLabel(s.fleetTarget) })}>
                             {intl.formatMessage(SERVER_OPTION_LABEL.label, { name: s.metadata.name, target: targetLabel(s.fleetTarget) })}
@@ -308,8 +308,8 @@ function BackupNowDialog({ onClose }: { onClose: () => void }) {
                     <Select
                       value={createDest}
                       onChange={(v) => setCreateDest(v as string)}
-                      placeholder={intl.formatMessage({ id: "web.routes.backups.select_a_destination", defaultMessage: "Select a destination…", description: "Backups: placeholder of Select" })}
-                      aria-label={intl.formatMessage({ id: "web.routes.backups.destination", defaultMessage: "Destination", description: "Backups: aria-label of Select" })}
+                      placeholder={intl.formatMessage({ id: "web.routes.backups.select_a_destination", defaultMessage: "Select a destination…", description: "Backups: grey placeholder of the destination dropdown in the back-up-now dialog, asking the user to pick a backup destination" })}
+                      aria-label={intl.formatMessage({ id: "web.routes.backups.destination", defaultMessage: "Destination", description: "Backups: accessible name of the backup destination dropdown in the back-up-now dialog" })}
                       className="mt-1"
                     >
                       <Select.Trigger>
@@ -317,7 +317,7 @@ function BackupNowDialog({ onClose }: { onClose: () => void }) {
                         <Select.Indicator className="ml-auto h-4 w-4" />
                       </Select.Trigger>
                       <Select.Popover>
-                        <ListBox aria-label={intl.formatMessage({ id: "web.routes.backups.destination_options", defaultMessage: "Destination options", description: "Backups: aria-label of ListBox" })}>
+                        <ListBox aria-label={intl.formatMessage({ id: "web.routes.backups.destination_options", defaultMessage: "Destination options", description: "Backups: accessible name of the list of backup destinations shown when the destination dropdown is open" })}>
                           {destinations.map((d) => (
                             <ListBoxItem key={d.name} id={d.name} textValue={d.name}>{d.name}</ListBoxItem>
                           ))}
@@ -327,13 +327,13 @@ function BackupNowDialog({ onClose }: { onClose: () => void }) {
                   </div>
                 )}
                 {noDestinations && (
-                  <p className="text-xs text-foreground/60">{intl.formatMessage({ id: "web.routes.backups.no_backup_destinations_configured_add", defaultMessage: "No backup destinations configured. Add one in", description: "Backups: text in p" })} <Link to="/admin" className="text-primary hover:underline">{intl.formatMessage({ id: "web.routes.backups.admin_settings", defaultMessage: "admin settings", description: "Backups: text in Link" })}</Link> {intl.formatMessage({ id: "web.routes.backups.to_enable_snapshots", defaultMessage: "to enable snapshots.", description: "Backups: text in p" })}</p>
+                  <p className="text-xs text-foreground/60">{intl.formatMessage({ id: "web.routes.backups.no_backup_destinations_configured_add", defaultMessage: "No backup destinations configured. Add one in", description: "Backups: opening words of the note in the back-up-now dialog shown when no destination exists; the link and closing words follow it" })} <Link to="/admin" className="text-primary hover:underline">{intl.formatMessage({ id: "web.routes.backups.admin_settings", defaultMessage: "admin settings", description: "Backups: link text inside the no-destination note that opens the admin settings screen; keep it short" })}</Link> {intl.formatMessage({ id: "web.routes.backups.to_enable_snapshots", defaultMessage: "to enable snapshots.", description: "Backups: closing words of the no-destination note after the admin settings link, ending the sentence about enabling snapshots" })}</p>
                 )}
                 {createNow.error && <ErrorBanner err={createNow.error} />}
               </div>
             </ModalBody>
             <ModalFooter>
-              <Button variant="ghost" onPress={onClose} isDisabled={createNow.isPending}>{intl.formatMessage({ id: "web.routes.backups.cancel", defaultMessage: "Cancel", description: "Backups: text in Button" })}</Button>
+              <Button variant="ghost" onPress={onClose} isDisabled={createNow.isPending}>{intl.formatMessage({ id: "web.routes.backups.cancel", defaultMessage: "Cancel", description: "Backups: button that closes the back-up-now dialog without starting a snapshot; keep it short" })}</Button>
               <Button
                 variant="primary"
                 isDisabled={!selectedServer || !createDest || createNow.isPending || noDestinations}
@@ -395,8 +395,8 @@ function SchedulesTabPanel({ location, onLocationChange, locations }: LocationFi
 
   return (
     <div className="space-y-4">
-      <FleetCoverage partial={schedulesFleet?.partial} issues={schedulesFleet?.issues} error={fleetError} label={intl.formatMessage({ id: "web.routes.backups.schedules", defaultMessage: "Schedules", description: "Backups: label of FleetCoverage" })} />
-      {fleetLoading && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.backups.loading_schedules", defaultMessage: "Loading schedules…", description: "Backups: text in p" })}</p>}
+      <FleetCoverage partial={schedulesFleet?.partial} issues={schedulesFleet?.issues} error={fleetError} label={intl.formatMessage({ id: "web.routes.backups.schedules", defaultMessage: "Schedules", description: "Backups: name of the schedules tab, also its table label and the title of its panel; keep it short" })} />
+      {fleetLoading && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.backups.loading_schedules", defaultMessage: "Loading schedules…", description: "Backups: loading text on the schedules tab while schedule data is fetched" })}</p>}
       <BackupFilters
         location={location}
         onLocationChange={onLocationChange}
@@ -411,12 +411,12 @@ function SchedulesTabPanel({ location, onLocationChange, locations }: LocationFi
       <Card className="p-4">
         <div className="flex items-end gap-2">
           <div className="flex-1">
-            <label className="text-xs font-medium">{intl.formatMessage({ id: "web.routes.backups.new_schedule_for", defaultMessage: "New schedule for", description: "Backups: text in label" })}</label>
+            <label className="text-xs font-medium">{intl.formatMessage({ id: "web.routes.backups.new_schedule_for", defaultMessage: "New schedule for", description: "Backups: label above the server dropdown of the new schedule form" })}</label>
             <Select
               value={creatingFor}
               onChange={(v) => setCreatingFor(v as string)}
-              placeholder={intl.formatMessage({ id: "web.routes.backups.select_a_server", defaultMessage: "Select a server…", description: "Backups: placeholder of Select" })}
-              aria-label={intl.formatMessage({ id: "web.routes.backups.select_a_server_2", defaultMessage: "Select a server", description: "Backups: aria-label of Select" })}
+              placeholder={intl.formatMessage({ id: "web.routes.backups.select_a_server", defaultMessage: "Select a server…", description: "Backups: grey placeholder of the server dropdown, asking the user to pick a server in the backup dialog or the new schedule form" })}
+              aria-label={intl.formatMessage({ id: "web.routes.backups.select_a_server_2", defaultMessage: "Select a server", description: "Backups: accessible name of the server dropdown in the new schedule form" })}
               className="mt-1"
             >
               <Select.Trigger>
@@ -424,7 +424,7 @@ function SchedulesTabPanel({ location, onLocationChange, locations }: LocationFi
                 <Select.Indicator className="ml-auto h-4 w-4" />
               </Select.Trigger>
               <Select.Popover>
-                <ListBox aria-label={intl.formatMessage({ id: "web.routes.backups.server_options", defaultMessage: "Server options", description: "Backups: aria-label of ListBox" })}>
+                <ListBox aria-label={intl.formatMessage({ id: "web.routes.backups.server_options", defaultMessage: "Server options", description: "Backups: accessible name of the list of servers shown when the server dropdown is open" })}>
                   {(serversList?.items ?? []).filter((item) => hasPermission(item.fleetPermissions, "schedules:write")).map((s) => (
                     <ListBoxItem key={targetKey(s.fleetTarget)} id={targetKey(s.fleetTarget)} textValue={intl.formatMessage(SERVER_OPTION_LABEL.label, { name: s.metadata.name, target: targetLabel(s.fleetTarget) })}>
                       {intl.formatMessage(SERVER_OPTION_LABEL.label, { name: s.metadata.name, target: targetLabel(s.fleetTarget) })}
@@ -446,14 +446,14 @@ function SchedulesTabPanel({ location, onLocationChange, locations }: LocationFi
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table.Root>
           <Table.ScrollContainer>
-            <Table.Content aria-label={intl.formatMessage({ id: "web.routes.backups.schedules", defaultMessage: "Schedules", description: "Backups: label of FleetCoverage" })} keyboardNavigationBehavior="arrow">
+            <Table.Content aria-label={intl.formatMessage({ id: "web.routes.backups.schedules", defaultMessage: "Schedules", description: "Backups: name of the schedules tab, also its table label and the title of its panel; keep it short" })} keyboardNavigationBehavior="arrow">
               <Table.Header>
-                <Table.Column key="name" isRowHeader>{intl.formatMessage({ id: "web.routes.backups.name", defaultMessage: "Name", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="server">{intl.formatMessage({ id: "web.routes.backups.server", defaultMessage: "Server", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="cron">{intl.formatMessage({ id: "web.routes.backups.cron", defaultMessage: "Cron", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="lastrun">{intl.formatMessage({ id: "web.routes.backups.last_run", defaultMessage: "Last run", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="nextrun">{intl.formatMessage({ id: "web.routes.backups.next_run", defaultMessage: "Next run", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="active">{intl.formatMessage({ id: "web.routes.backups.active", defaultMessage: "Active", description: "Backups: text in Table.Column" })}</Table.Column>
+                <Table.Column key="name" isRowHeader>{intl.formatMessage({ id: "web.routes.backups.name", defaultMessage: "Name", description: "Backups: column heading for the name of each backup, schedule or restore; keep it short" })}</Table.Column>
+                <Table.Column key="server">{intl.formatMessage({ id: "web.routes.backups.server", defaultMessage: "Server", description: "Backups: column heading for the server a row belongs to, and the accessible name of the server dropdown in the backup dialog; keep it short" })}</Table.Column>
+                <Table.Column key="cron">{intl.formatMessage({ id: "web.routes.backups.cron", defaultMessage: "Cron", description: "Backups: column heading for the cron expression of each schedule; keep it short" })}</Table.Column>
+                <Table.Column key="lastrun">{intl.formatMessage({ id: "web.routes.backups.last_run", defaultMessage: "Last run", description: "Backups: column heading for when a schedule last ran; keep it short" })}</Table.Column>
+                <Table.Column key="nextrun">{intl.formatMessage({ id: "web.routes.backups.next_run", defaultMessage: "Next run", description: "Backups: column heading for when a schedule runs next; keep it short" })}</Table.Column>
+                <Table.Column key="active">{intl.formatMessage({ id: "web.routes.backups.active", defaultMessage: "Active", description: "Backups: column heading for the switch that turns a schedule on or off; keep it short" })}</Table.Column>
                 <Table.Column key="actions" className="text-end" />
               </Table.Header>
               <Table.Body renderEmptyState={() => <>{items.length > 0
@@ -483,7 +483,7 @@ function SchedulesTabPanel({ location, onLocationChange, locations }: LocationFi
                         onChange={(isSelected) =>
                           toggleSuspend.mutate({ item: s, suspend: !isSelected })
                         }
-                        aria-label={intl.formatMessage({ id: "web.routes.backups.schedule_active", defaultMessage: "Schedule active", description: "Backups: aria-label of Switch" })}
+                        aria-label={intl.formatMessage({ id: "web.routes.backups.schedule_active", defaultMessage: "Schedule active", description: "Backups: accessible name of the switch that turns a schedule on or off" })}
                       >
                         <Switch.Content>
                           <Switch.Control>
@@ -498,7 +498,7 @@ function SchedulesTabPanel({ location, onLocationChange, locations }: LocationFi
                         variant="ghost"
                         isDisabled={!hasPermission(s.fleetPermissions, "schedules:write")}
                         onPress={() => setDeleting(s)}
-                      >{intl.formatMessage({ id: "web.routes.backups.delete", defaultMessage: "Delete", description: "Backups: text in Button" })}</Button>
+                      >{intl.formatMessage({ id: "web.routes.backups.delete", defaultMessage: "Delete", description: "Backups: button that starts deleting a schedule row, and the confirm button of the delete schedule dialog; keep it short" })}</Button>
                     </Table.Cell>
                   </Table.Row>
                 ))}
@@ -511,17 +511,17 @@ function SchedulesTabPanel({ location, onLocationChange, locations }: LocationFi
       <ConfirmDialog
         open={deleting !== null}
         onOpenChange={(open) => { if (!open) setDeleting(null); }}
-        title={intl.formatMessage({ id: "web.routes.backups.delete_schedule", defaultMessage: "Delete schedule?", description: "Backups: title of ConfirmDialog" })}
+        title={intl.formatMessage({ id: "web.routes.backups.delete_schedule", defaultMessage: "Delete schedule?", description: "Backups: title of the dialog asking whether to delete a schedule" })}
         description={
           <>
-            <p>{intl.formatMessage({ id: "web.routes.backups.the_cron_schedule_will_be_removed", defaultMessage: "The cron schedule will be removed. Existing backups remain intact; new snapshots on this schedule will stop running until it's recreated.", description: "Backups: text in p" })}</p>
+            <p>{intl.formatMessage({ id: "web.routes.backups.the_cron_schedule_will_be_removed", defaultMessage: "The cron schedule will be removed. Existing backups remain intact; new snapshots on this schedule will stop running until it's recreated.", description: "Backups: text in the delete schedule dialog: the schedule is removed, existing backups stay, and new snapshots stop until it is recreated" })}</p>
             {deleting && (
               <p className="pt-2">{intl.formatMessage({ id: "web.routes.backups.type_name_to_confirm", defaultMessage: "Type {name} ({target}) to confirm.", description: "Backups: confirmation hint under the delete-schedule dialog; {name} is the schedule name in monospace, {target} is its cluster and namespace" }, { name: <span className="font-mono">{deleting.metadata.name}</span>, target: targetLabel(deleting.fleetTarget) })}</p>
             )}
           </>
         }
         confirmPhrase={deleting?.metadata.name}
-        confirmLabel={intl.formatMessage({ id: "web.routes.backups.delete", defaultMessage: "Delete", description: "Backups: text in Button" })}
+        confirmLabel={intl.formatMessage({ id: "web.routes.backups.delete", defaultMessage: "Delete", description: "Backups: button that starts deleting a schedule row, and the confirm button of the delete schedule dialog; keep it short" })}
         destructive
         busy={remove.isPending}
         onConfirm={() => deleting && remove.mutate(deleting)}
@@ -564,8 +564,8 @@ function RestoresTabPanel({ location, onLocationChange, locations }: LocationFil
 
   return (
     <div className="space-y-4">
-      <FleetCoverage partial={restoresFleet?.partial} issues={restoresFleet?.issues} error={fleetError} label={intl.formatMessage({ id: "web.routes.backups.restores", defaultMessage: "Restores", description: "Backups: label of FleetCoverage" })} />
-      {fleetLoading && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.backups.loading_restores", defaultMessage: "Loading restores…", description: "Backups: text in p" })}</p>}
+      <FleetCoverage partial={restoresFleet?.partial} issues={restoresFleet?.issues} error={fleetError} label={intl.formatMessage({ id: "web.routes.backups.restores", defaultMessage: "Restores", description: "Backups: name of the restores tab, also its table label; keep it short" })} />
+      {fleetLoading && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.backups.loading_restores", defaultMessage: "Loading restores…", description: "Backups: loading text on the restores tab while restore data is fetched" })}</p>}
       <BackupFilters
         location={location}
         onLocationChange={onLocationChange}
@@ -583,14 +583,14 @@ function RestoresTabPanel({ location, onLocationChange, locations }: LocationFil
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <Table.Root>
           <Table.ScrollContainer>
-            <Table.Content aria-label={intl.formatMessage({ id: "web.routes.backups.restores", defaultMessage: "Restores", description: "Backups: label of FleetCoverage" })} keyboardNavigationBehavior="arrow">
+            <Table.Content aria-label={intl.formatMessage({ id: "web.routes.backups.restores", defaultMessage: "Restores", description: "Backups: name of the restores tab, also its table label; keep it short" })} keyboardNavigationBehavior="arrow">
               <Table.Header>
-                <Table.Column key="name" isRowHeader>{intl.formatMessage({ id: "web.routes.backups.name", defaultMessage: "Name", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="backup">{intl.formatMessage({ id: "web.routes.backups.backup", defaultMessage: "Backup", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="target">{intl.formatMessage({ id: "web.routes.backups.target", defaultMessage: "Target", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="phase">{intl.formatMessage({ id: "web.routes.backups.phase", defaultMessage: "Phase", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="completed">{intl.formatMessage({ id: "web.routes.backups.completed", defaultMessage: "Completed", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="message">{intl.formatMessage({ id: "web.routes.backups.message", defaultMessage: "Message", description: "Backups: text in Table.Column" })}</Table.Column>
+                <Table.Column key="name" isRowHeader>{intl.formatMessage({ id: "web.routes.backups.name", defaultMessage: "Name", description: "Backups: column heading for the name of each backup, schedule or restore; keep it short" })}</Table.Column>
+                <Table.Column key="backup">{intl.formatMessage({ id: "web.routes.backups.backup", defaultMessage: "Backup", description: "Backups: column heading for the backup a restore came from; keep it short" })}</Table.Column>
+                <Table.Column key="target">{intl.formatMessage({ id: "web.routes.backups.target", defaultMessage: "Target", description: "Backups: column heading for the target a restore was applied to; keep it short" })}</Table.Column>
+                <Table.Column key="phase">{intl.formatMessage({ id: "web.routes.backups.phase", defaultMessage: "Phase", description: "Backups: column heading for the phase or state of a backup or restore; keep it short" })}</Table.Column>
+                <Table.Column key="completed">{intl.formatMessage({ id: "web.routes.backups.completed", defaultMessage: "Completed", description: "Backups: column heading for when a backup or restore completed; keep it short" })}</Table.Column>
+                <Table.Column key="message">{intl.formatMessage({ id: "web.routes.backups.message", defaultMessage: "Message", description: "Backups: column heading for the status message of a restore; keep it short" })}</Table.Column>
               </Table.Header>
               <Table.Body
                 renderEmptyState={() => (

@@ -76,8 +76,8 @@ export function AuditLogPage() {
   return (
     <div className="space-y-5 p-6">
       <PageHeader
-        title={intl.formatMessage({ id: "web.routes.audit_log.audit_log", defaultMessage: "Audit log", description: "Audit log: title of PageHeader" })}
-        description={intl.formatMessage({ id: "web.routes.audit_log.mutating_control_plane_requests_newest", defaultMessage: "Mutating control-plane requests, newest first.", description: "Audit log: description of PageHeader" })}
+        title={intl.formatMessage({ id: "web.routes.audit_log.audit_log", defaultMessage: "Audit log", description: "Audit log: page title at the top of the audit log screen; keep it short" })}
+        description={intl.formatMessage({ id: "web.routes.audit_log.mutating_control_plane_requests_newest", defaultMessage: "Mutating control-plane requests, newest first.", description: "Audit log: description under the title saying the list holds mutating control-plane requests, newest first" })}
         actions={
           <>
             <Button
@@ -91,7 +91,7 @@ export function AuditLogPage() {
               }}
               isDisabled={exportMutation.isPending}
             >
-              <Download className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.audit_log.export_csv", defaultMessage: "Export CSV", description: "Audit log: text in Button" })}</Button>
+              <Download className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.audit_log.export_csv", defaultMessage: "Export CSV", description: "Audit log: button that downloads the currently filtered audit events as a CSV file; keep it short" })}</Button>
             <Button
               onPress={() => void query.refetch()}
               isDisabled={query.isFetching && !query.isFetchingNextPage}
@@ -101,7 +101,7 @@ export function AuditLogPage() {
                   "h-4 w-4",
                   query.isFetching && !query.isFetchingNextPage && "animate-spin",
                 )}
-              />{intl.formatMessage({ id: "web.routes.audit_log.refresh", defaultMessage: "Refresh", description: "Audit log: text in Button" })}</Button>
+              />{intl.formatMessage({ id: "web.routes.audit_log.refresh", defaultMessage: "Refresh", description: "Audit log: button that reloads the audit events; keep it short" })}</Button>
           </>
         }
       />
@@ -113,7 +113,7 @@ export function AuditLogPage() {
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Tabs selectedKey={statusClass} onSelectionChange={(key) => setStatusClass(key as StatusClass)} variant="secondary" aria-label={intl.formatMessage({ id: "web.routes.audit_log.status_filter", defaultMessage: "Status filter", description: "Audit log: aria-label of Tabs" })}>
+        <Tabs selectedKey={statusClass} onSelectionChange={(key) => setStatusClass(key as StatusClass)} variant="secondary" aria-label={intl.formatMessage({ id: "web.routes.audit_log.status_filter", defaultMessage: "Status filter", description: "Audit log: accessible name of the status tabs that filter the audit events by status" })}>
           <Tabs.List className="w-fit">
             {(["all", "2xx", "4xx", "5xx"] as StatusClass[]).map((s) => (
               <TabComponent key={s} id={s} className="text-xs">
@@ -128,14 +128,14 @@ export function AuditLogPage() {
           onChange={(e) => setMethodFilter(e.target.value as MethodFilter)}
           className="h-9 rounded-md border border-border bg-surface px-2 text-sm text-foreground"
         >
-          <option value="all">{intl.formatMessage({ id: "web.routes.audit_log.all_methods", defaultMessage: "All methods", description: "Audit log: text in option" })}</option>
+          <option value="all">{intl.formatMessage({ id: "web.routes.audit_log.all_methods", defaultMessage: "All methods", description: "Audit log: first option in the method dropdown, meaning no method filter; keep it short" })}</option>
           {(["GET", "POST", "PUT", "PATCH", "DELETE"] as const).map((m) => (
             <option key={m} value={m}>{m}</option>
           ))}
         </select>
 
         <Input
-          placeholder={intl.formatMessage({ id: "web.routes.audit_log.filter_by_actor", defaultMessage: "Filter by actor…", description: "Audit log: placeholder of Input" })}
+          placeholder={intl.formatMessage({ id: "web.routes.audit_log.filter_by_actor", defaultMessage: "Filter by actor…", description: "Audit log: grey placeholder of the search field that filters events by the actor who made the request" })}
           value={actorQ}
           onChange={(e) => setActorQ(e.target.value)}
           className="w-64"
@@ -149,14 +149,14 @@ export function AuditLogPage() {
       <Card className="overflow-hidden p-0">
         <Table.Root className="bg-transparent text-xs">
           <Table.ScrollContainer className="max-h-[70vh]">
-            <Table.Content aria-label={intl.formatMessage({ id: "web.routes.audit_log.audit_log", defaultMessage: "Audit log", description: "Audit log: title of PageHeader" })} keyboardNavigationBehavior="arrow">
+            <Table.Content aria-label={intl.formatMessage({ id: "web.routes.audit_log.audit_log", defaultMessage: "Audit log", description: "Audit log: page title at the top of the audit log screen; keep it short" })} keyboardNavigationBehavior="arrow">
               <Table.Header>
-                <Table.Column id="time" isRowHeader className="w-40">{intl.formatMessage({ id: "web.routes.audit_log.time", defaultMessage: "Time", description: "Audit log: text in Table.Column" })}</Table.Column>
-                <Table.Column id="actor" className="w-36">{intl.formatMessage({ id: "web.routes.audit_log.actor", defaultMessage: "Actor", description: "Audit log: text in Table.Column" })}</Table.Column>
-                <Table.Column id="action">{intl.formatMessage({ id: "web.routes.audit_log.action", defaultMessage: "Action", description: "Audit log: text in Table.Column" })}</Table.Column>
-                <Table.Column id="method" className="w-20">{intl.formatMessage({ id: "web.routes.audit_log.method", defaultMessage: "Method", description: "Audit log: text in Table.Column" })}</Table.Column>
-                <Table.Column id="access" className="w-24">{intl.formatMessage({ id: "web.routes.audit_log.access", defaultMessage: "Access", description: "Audit log: text in Table.Column" })}</Table.Column>
-                <Table.Column id="ip" className="w-32">{intl.formatMessage({ id: "web.routes.audit_log.ip", defaultMessage: "IP", description: "Audit log: text in Table.Column" })}</Table.Column>
+                <Table.Column id="time" isRowHeader className="w-40">{intl.formatMessage({ id: "web.routes.audit_log.time", defaultMessage: "Time", description: "Audit log: column heading for when each event happened; keep it short" })}</Table.Column>
+                <Table.Column id="actor" className="w-36">{intl.formatMessage({ id: "web.routes.audit_log.actor", defaultMessage: "Actor", description: "Audit log: column heading for the user who made each request; keep it short" })}</Table.Column>
+                <Table.Column id="action">{intl.formatMessage({ id: "web.routes.audit_log.action", defaultMessage: "Action", description: "Audit log: column heading for the action performed in each event; keep it short" })}</Table.Column>
+                <Table.Column id="method" className="w-20">{intl.formatMessage({ id: "web.routes.audit_log.method", defaultMessage: "Method", description: "Audit log: column heading for the HTTP method of each request; keep it short" })}</Table.Column>
+                <Table.Column id="access" className="w-24">{intl.formatMessage({ id: "web.routes.audit_log.access", defaultMessage: "Access", description: "Audit log: column heading for the access column of each event; keep it short" })}</Table.Column>
+                <Table.Column id="ip" className="w-32">{intl.formatMessage({ id: "web.routes.audit_log.ip", defaultMessage: "IP", description: "Audit log: column heading for the IP address of each request; keep it short" })}</Table.Column>
               </Table.Header>
               <Table.Body
                 renderEmptyState={() =>
@@ -267,39 +267,39 @@ function renderIntegrityBanner(query: UseQueryResult<AuditVerifyResult>, intl: I
 // Message descriptors for audit action labels. Raw values (an unknown HTTP
 // method, an unknown lifecycle verb, a path segment) are shown as received.
 const VERB_MSG: Record<string, MessageDescriptor> = defineMessages({
-  POST: { id: "web.routes.audit_log.verb_created", defaultMessage: "Created", description: "Audit log: action verb for a POST request" },
-  PUT: { id: "web.routes.audit_log.verb_updated", defaultMessage: "Updated", description: "Audit log: action verb for a PUT or PATCH request" },
-  PATCH: { id: "web.routes.audit_log.verb_updated", defaultMessage: "Updated", description: "Audit log: action verb for a PUT or PATCH request" },
-  DELETE: { id: "web.routes.audit_log.verb_deleted", defaultMessage: "Deleted", description: "Audit log: action verb for a DELETE request" },
-  GET: { id: "web.routes.audit_log.verb_viewed", defaultMessage: "Viewed", description: "Audit log: action verb for a GET request" },
+  POST: { id: "audit.verb.created", defaultMessage: "Created", description: "Audit log: action verb for a POST request" },
+  PUT: { id: "audit.verb.updated", defaultMessage: "Updated", description: "Audit log: action verb for a PUT or PATCH request" },
+  PATCH: { id: "audit.verb.updated", defaultMessage: "Updated", description: "Audit log: action verb for a PUT or PATCH request" },
+  DELETE: { id: "audit.verb.deleted", defaultMessage: "Deleted", description: "Audit log: action verb for a DELETE request" },
+  GET: { id: "audit.verb.viewed", defaultMessage: "Viewed", description: "Audit log: action verb for a GET request" },
 });
 const LIFECYCLE_MSG: Record<string, MessageDescriptor> = defineMessages({
-  start: { id: "web.routes.audit_log.verb_started", defaultMessage: "Started", description: "Audit log: action verb for starting a game server" },
-  stop: { id: "web.routes.audit_log.verb_stopped", defaultMessage: "Stopped", description: "Audit log: action verb for stopping a game server" },
-  restart: { id: "web.routes.audit_log.verb_restarted", defaultMessage: "Restarted", description: "Audit log: action verb for restarting a game server" },
-  clone: { id: "web.routes.audit_log.verb_cloned", defaultMessage: "Cloned", description: "Audit log: action verb for cloning a game server" },
-  "wipe-data": { id: "web.routes.audit_log.verb_wiped_data_on", defaultMessage: "Wiped data on", description: "Audit log: action verb for wiping a game server's world data" },
-  transfer: { id: "web.routes.audit_log.verb_transferred_ownership_of", defaultMessage: "Transferred ownership of", description: "Audit log: action verb for transferring a game server's ownership" },
+  start: { id: "audit.verb.started", defaultMessage: "Started", description: "Audit log: action verb for starting a game server" },
+  stop: { id: "audit.verb.stopped", defaultMessage: "Stopped", description: "Audit log: action verb for stopping a game server" },
+  restart: { id: "audit.verb.restarted", defaultMessage: "Restarted", description: "Audit log: action verb for restarting a game server" },
+  clone: { id: "audit.verb.cloned", defaultMessage: "Cloned", description: "Audit log: action verb for cloning a game server" },
+  "wipe-data": { id: "audit.verb.wiped_data_on", defaultMessage: "Wiped data on", description: "Audit log: action verb for wiping a game server's world data" },
+  transfer: { id: "audit.verb.transferred_ownership_of", defaultMessage: "Transferred ownership of", description: "Audit log: action verb for transferring a game server's ownership" },
 });
 const NOUN_MSG: Record<string, MessageDescriptor> = defineMessages({
-  server: { id: "web.routes.audit_log.noun_server", defaultMessage: "server", description: "Audit log: object type in an action label, a game server" },
-  backup: { id: "web.routes.audit_log.noun_backup", defaultMessage: "backup", description: "Audit log: object type in an action label, a backup" },
-  backup_schedule: { id: "web.routes.audit_log.noun_backup_schedule", defaultMessage: "backup schedule", description: "Audit log: object type in an action label, a backup schedule" },
-  backup_destination: { id: "web.routes.audit_log.noun_backup_destination", defaultMessage: "backup destination", description: "Audit log: object type in an action label, a backup destination" },
-  restore: { id: "web.routes.audit_log.noun_restore", defaultMessage: "restore", description: "Audit log: object type in an action label, a restore" },
-  user: { id: "web.routes.audit_log.noun_user", defaultMessage: "user", description: "Audit log: object type in an action label, a user account" },
-  role: { id: "web.routes.audit_log.noun_role", defaultMessage: "role", description: "Audit log: object type in an action label, a role" },
-  module_source: { id: "web.routes.audit_log.noun_module_source", defaultMessage: "module source", description: "Audit log: object type in an action label, a module source" },
-  module: { id: "web.routes.audit_log.noun_module", defaultMessage: "module", description: "Audit log: object type in an action label, a module" },
-  cluster: { id: "web.routes.audit_log.noun_cluster", defaultMessage: "cluster", description: "Audit log: object type in an action label, a cluster" },
+  server: { id: "audit.noun.server", defaultMessage: "server", description: "Audit log: object type in an action label, a game server" },
+  backup: { id: "audit.noun.backup", defaultMessage: "backup", description: "Audit log: object type in an action label, a backup" },
+  backup_schedule: { id: "audit.noun.backup_schedule", defaultMessage: "backup schedule", description: "Audit log: object type in an action label, a backup schedule" },
+  backup_destination: { id: "audit.noun.backup_destination", defaultMessage: "backup destination", description: "Audit log: object type in an action label, a backup destination" },
+  restore: { id: "audit.noun.restore", defaultMessage: "restore", description: "Audit log: object type in an action label, a restore" },
+  user: { id: "audit.noun.user", defaultMessage: "user", description: "Audit log: object type in an action label, a user account" },
+  role: { id: "audit.noun.role", defaultMessage: "role", description: "Audit log: object type in an action label, a role" },
+  module_source: { id: "audit.noun.module_source", defaultMessage: "module source", description: "Audit log: object type in an action label, a module source" },
+  module: { id: "audit.noun.module", defaultMessage: "module", description: "Audit log: object type in an action label, a module" },
+  cluster: { id: "audit.noun.cluster", defaultMessage: "cluster", description: "Audit log: object type in an action label, a cluster" },
 });
 const AUDIT_ACTION_MSG: Record<string, MessageDescriptor> = defineMessages({
-  object: { id: "web.routes.audit_log.action_object", defaultMessage: "{action} {noun}{target}", description: "Audit log: action label such as 'Created server alpha'; {action} is the verb, {noun} is the object type, {target} is empty or a space followed by the object name" },
-  restored_backup: { id: "web.routes.audit_log.restored_backup", defaultMessage: "Restored backup{target}", description: "Audit log: action label for a backup restore; {target} is empty or a space followed by the backup name" },
-  settings_updated: { id: "web.routes.audit_log.settings_updated", defaultMessage: "Updated settings", description: "Audit log: action label for a change to panel settings" },
-  signed_in: { id: "web.routes.audit_log.signed_in", defaultMessage: "Signed in", description: "Audit log: action label for a successful sign-in" },
-  failed_sign_in: { id: "web.routes.audit_log.failed_sign_in", defaultMessage: "Failed sign-in", description: "Audit log: action label for a sign-in attempt that was rejected" },
-  fallback: { id: "web.routes.audit_log.fallback_action", defaultMessage: "{action} {resource}", description: "Audit log: fallback action label for an unrecognised route; {action} is the verb, {resource} is the last path segment" },
+  object: { id: "audit.action.object", defaultMessage: "{action} {noun}{target}", description: "Audit log: action label such as 'Created server alpha'; {action} is the verb, {noun} is the object type, {target} is empty or a space followed by the object name" },
+  restored_backup: { id: "audit.action.restored_backup", defaultMessage: "Restored backup{target}", description: "Audit log: action label for a backup restore; {target} is empty or a space followed by the backup name" },
+  settings_updated: { id: "audit.action.settings_updated", defaultMessage: "Updated settings", description: "Audit log: action label for a change to panel settings" },
+  signed_in: { id: "audit.action.signed_in", defaultMessage: "Signed in", description: "Audit log: action label for a successful sign-in" },
+  failed_sign_in: { id: "audit.action.failed_sign_in", defaultMessage: "Failed sign-in", description: "Audit log: action label for a sign-in attempt that was rejected" },
+  fallback: { id: "audit.action.fallback", defaultMessage: "{action} {resource}", description: "Audit log: fallback action label for an unrecognised route; {action} is the verb, {resource} is the last path segment" },
 });
 
 // auditAction takes the English fallback when no intl is passed (tests and
@@ -353,10 +353,10 @@ function accessOutcome(status: number, intl: IntlShape): { label: string; tone: 
 }
 
 const ACCESS_MSG = defineMessages({
-  denied: { id: "web.routes.audit_log.access_denied", defaultMessage: "Denied", description: "Audit log: access column for a 403 response" },
-  error: { id: "web.routes.audit_log.access_error", defaultMessage: "Error", description: "Audit log: access column for a 5xx response" },
-  failed: { id: "web.routes.audit_log.access_failed", defaultMessage: "Failed", description: "Audit log: access column for a non-403 4xx response" },
-  allowed: { id: "web.routes.audit_log.access_allowed", defaultMessage: "Allowed", description: "Audit log: access column for a 2xx or 3xx response" },
+  denied: { id: "audit.access.denied", defaultMessage: "Denied", description: "Audit log: access column for a 403 response" },
+  error: { id: "audit.access.error", defaultMessage: "Error", description: "Audit log: access column for a 5xx response" },
+  failed: { id: "audit.access.failed", defaultMessage: "Failed", description: "Audit log: access column for a non-403 4xx response" },
+  allowed: { id: "audit.access.allowed", defaultMessage: "Allowed", description: "Audit log: access column for a 2xx or 3xx response" },
 });
 
 function MethodPill({ method }: { method: string }) {

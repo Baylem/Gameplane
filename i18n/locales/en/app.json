@@ -1,4 +1,124 @@
 {
+  "audit.access.allowed": {
+    "defaultMessage": "Allowed",
+    "description": "Audit log: access column for a 2xx or 3xx response"
+  },
+  "audit.access.denied": {
+    "defaultMessage": "Denied",
+    "description": "Audit log: access column for a 403 response"
+  },
+  "audit.access.error": {
+    "defaultMessage": "Error",
+    "description": "Audit log: access column for a 5xx response"
+  },
+  "audit.access.failed": {
+    "defaultMessage": "Failed",
+    "description": "Audit log: access column for a non-403 4xx response"
+  },
+  "audit.action.failed_sign_in": {
+    "defaultMessage": "Failed sign-in",
+    "description": "Audit log: action label for a sign-in attempt that was rejected"
+  },
+  "audit.action.fallback": {
+    "defaultMessage": "{action} {resource}",
+    "description": "Audit log: fallback action label for an unrecognised route; {action} is the verb, {resource} is the last path segment"
+  },
+  "audit.action.object": {
+    "defaultMessage": "{action} {noun}{target}",
+    "description": "Audit log: action label such as 'Created server alpha'; {action} is the verb, {noun} is the object type, {target} is empty or a space followed by the object name"
+  },
+  "audit.action.restored_backup": {
+    "defaultMessage": "Restored backup{target}",
+    "description": "Audit log: action label for a backup restore; {target} is empty or a space followed by the backup name"
+  },
+  "audit.action.settings_updated": {
+    "defaultMessage": "Updated settings",
+    "description": "Audit log: action label for a change to panel settings"
+  },
+  "audit.action.signed_in": {
+    "defaultMessage": "Signed in",
+    "description": "Audit log: action label for a successful sign-in"
+  },
+  "audit.noun.backup": {
+    "defaultMessage": "backup",
+    "description": "Audit log: object type in an action label, a backup"
+  },
+  "audit.noun.backup_destination": {
+    "defaultMessage": "backup destination",
+    "description": "Audit log: object type in an action label, a backup destination"
+  },
+  "audit.noun.backup_schedule": {
+    "defaultMessage": "backup schedule",
+    "description": "Audit log: object type in an action label, a backup schedule"
+  },
+  "audit.noun.cluster": {
+    "defaultMessage": "cluster",
+    "description": "Audit log: object type in an action label, a cluster"
+  },
+  "audit.noun.module": {
+    "defaultMessage": "module",
+    "description": "Audit log: object type in an action label, a module"
+  },
+  "audit.noun.module_source": {
+    "defaultMessage": "module source",
+    "description": "Audit log: object type in an action label, a module source"
+  },
+  "audit.noun.restore": {
+    "defaultMessage": "restore",
+    "description": "Audit log: object type in an action label, a restore"
+  },
+  "audit.noun.role": {
+    "defaultMessage": "role",
+    "description": "Audit log: object type in an action label, a role"
+  },
+  "audit.noun.server": {
+    "defaultMessage": "server",
+    "description": "Audit log: object type in an action label, a game server"
+  },
+  "audit.noun.user": {
+    "defaultMessage": "user",
+    "description": "Audit log: object type in an action label, a user account"
+  },
+  "audit.verb.cloned": {
+    "defaultMessage": "Cloned",
+    "description": "Audit log: action verb for cloning a game server"
+  },
+  "audit.verb.created": {
+    "defaultMessage": "Created",
+    "description": "Audit log: action verb for a POST request"
+  },
+  "audit.verb.deleted": {
+    "defaultMessage": "Deleted",
+    "description": "Audit log: action verb for a DELETE request"
+  },
+  "audit.verb.restarted": {
+    "defaultMessage": "Restarted",
+    "description": "Audit log: action verb for restarting a game server"
+  },
+  "audit.verb.started": {
+    "defaultMessage": "Started",
+    "description": "Audit log: action verb for starting a game server"
+  },
+  "audit.verb.stopped": {
+    "defaultMessage": "Stopped",
+    "description": "Audit log: action verb for stopping a game server"
+  },
+  "audit.verb.transferred_ownership_of": {
+    "defaultMessage": "Transferred ownership of",
+    "description": "Audit log: action verb for transferring a game server's ownership"
+  },
+  "audit.verb.updated": {
+    "defaultMessage": "Updated",
+    "description": "Audit log: action verb for a PUT or PATCH request"
+  },
+  "audit.verb.viewed": {
+    "defaultMessage": "Viewed",
+    "description": "Audit log: action verb for a GET request"
+  },
+  "audit.verb.wiped_data_on": {
+    "defaultMessage": "Wiped data on",
+    "description": "Audit log: action verb for wiping a game server's world data"
+  },
   "condition.addressassignment.addressinuse": {
     "defaultMessage": "The requested address ''{address}'' is already in use by GameServer ''{server}''.",
     "description": "AddressAssignment condition when another game server holds the requested address."
@@ -4049,43 +4169,43 @@
   },
   "web.routes.admin_logs.couldn_t_load_installation_capabilities": {
     "defaultMessage": "Couldn't load installation capabilities.",
-    "description": "Admin logs: message of ErrorCard"
+    "description": "Admin logs: error message shown when installation details fail to load; a retry button follows it"
   },
   "web.routes.admin_logs.docker_compose_logs_follow": {
     "defaultMessage": "docker compose logs --follow",
-    "description": "Admin logs: text in code"
+    "description": "Admin logs: shell command shown in monospace inside the standalone hint, the Docker Compose command to stream logs; technical term, usually left untranslated"
   },
   "web.routes.admin_logs.download": {
     "defaultMessage": "Download",
-    "description": "Admin logs: text in Button"
+    "description": "Admin logs: button that downloads the logs shown on screen as a file; keep it short"
   },
   "web.routes.admin_logs.follow": {
     "defaultMessage": "Follow",
-    "description": "Admin logs: text in div"
+    "description": "Admin logs: label of the switch that keeps the log view following new lines as they arrive; keep it short"
   },
   "web.routes.admin_logs.for_docker_compose_run": {
     "defaultMessage": "For Docker Compose, run",
-    "description": "Admin logs: text in p"
+    "description": "Admin logs: opening words of the standalone hint paragraph, followed by a command in monospace and the rest of the sentence"
   },
   "web.routes.admin_logs.from_your_panel_installation_directory": {
     "defaultMessage": "from your panel installation directory. Operator logs are available on each workload cluster.",
-    "description": "Admin logs: text in p"
+    "description": "Admin logs: end of the standalone hint, asking to run the command from the install directory; also notes operator logs are on each workload cluster"
   },
   "web.routes.admin_logs.live_logs_from_the_gameplane_control": {
     "defaultMessage": "Live logs from the Gameplane control-plane pods.",
-    "description": "Admin logs: description of PageHeader"
+    "description": "Admin logs: description under the title of the cluster logs view, saying the lines come from the Gameplane control-plane pods"
   },
   "web.routes.admin_logs.loading_installation": {
     "defaultMessage": "Loading installation…",
-    "description": "Admin logs: message of LoadingCard"
+    "description": "Admin logs: loading text shown in place of the page while installation details are fetched"
   },
   "web.routes.admin_logs.log_source": {
     "defaultMessage": "Log source",
-    "description": "Admin logs: aria-label of Tabs"
+    "description": "Admin logs: accessible name of the tab group for choosing which component's logs to show"
   },
   "web.routes.admin_logs.logs_for_this_standalone_panel": {
     "defaultMessage": "Logs for this standalone panel.",
-    "description": "Admin logs: description of PageHeader"
+    "description": "Admin logs: description under the title in the standalone panel view, saying these logs belong to this panel only"
   },
   "web.routes.admin_logs.n_lines": {
     "defaultMessage": "{n} lines",
@@ -4097,23 +4217,23 @@
   },
   "web.routes.admin_logs.pod_currently_streamed": {
     "defaultMessage": "Pod currently streamed",
-    "description": "Admin logs: title of span"
+    "description": "Admin logs: badge showing the pod whose logs are being streamed right now; keep it short"
   },
   "web.routes.admin_logs.system_logs": {
     "defaultMessage": "System logs",
-    "description": "Admin logs: title of PageHeader"
+    "description": "Admin logs: page title at the top of the system logs screen; keep it short"
   },
   "web.routes.admin_logs.tail": {
     "defaultMessage": "Tail",
-    "description": "Admin logs: text in div"
+    "description": "Admin logs: label in front of the line-count dropdown in the log toolbar; keep it short"
   },
   "web.routes.admin_logs.tail_lines": {
     "defaultMessage": "Tail lines",
-    "description": "Admin logs: aria-label of Select"
+    "description": "Admin logs: accessible name of the dropdown that sets how many recent lines to load"
   },
   "web.routes.admin_logs.view_logs_through_your_container_runtime": {
     "defaultMessage": "View logs through your container runtime",
-    "description": "Admin logs: text in h2"
+    "description": "Admin logs: heading in the standalone panel view that introduces how to read logs through the container runtime"
   },
   "web.routes.admin_logs.waiting_for_output": {
     "defaultMessage": "Waiting for output…",
@@ -4121,19 +4241,19 @@
   },
   "web.routes.admin_settings.a_short_lowercase_identifier_letters": {
     "defaultMessage": "A short lowercase identifier (letters, digits, and dashes) used in the login route and the Secret name.",
-    "description": "Admin settings: text in Description"
+    "description": "Admin settings: hint under the provider name field: a short lowercase identifier of letters, digits and dashes, used in the login route and the Secret name"
   },
   "web.routes.admin_settings.about": {
     "defaultMessage": "About",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the About section card showing version details; keep it short"
   },
   "web.routes.admin_settings.access_token_optional": {
     "defaultMessage": "Access token (optional)",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the optional access token field for an ntfy notification sink"
   },
   "web.routes.admin_settings.acme_sso": {
     "defaultMessage": "Acme SSO",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example text inside the display name field, shown only while it is empty"
   },
   "web.routes.admin_settings.active_in_mods_browser": {
     "defaultMessage": "Active in the Mods browser",
@@ -4141,51 +4261,51 @@
   },
   "web.routes.admin_settings.add": {
     "defaultMessage": "Add",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button that adds the typed group to the role; keep it short"
   },
   "web.routes.admin_settings.add_destination": {
     "defaultMessage": "Add destination",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button that opens the form to add a backup destination, and the heading of that form; keep it short"
   },
   "web.routes.admin_settings.add_group": {
     "defaultMessage": "Add group",
-    "description": "Admin settings: aria-label of Button"
+    "description": "Admin settings: accessible name of the button that adds the typed group to a role; keep it short"
   },
   "web.routes.admin_settings.add_identity_provider": {
     "defaultMessage": "Add identity provider",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: heading of the card for adding a new identity provider"
   },
   "web.routes.admin_settings.add_idp_group_name": {
     "defaultMessage": "Add IdP group name…",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey placeholder inside the field where an identity-provider group name is typed to add it to a role"
   },
   "web.routes.admin_settings.add_provider": {
     "defaultMessage": "Add provider",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button that opens the form to add an identity provider, and the button in that form that submits it; keep it short"
   },
   "web.routes.admin_settings.add_sink": {
     "defaultMessage": "Add sink",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: heading of the add-sink form, and the button in its footer that adds the sink; keep it short"
   },
   "web.routes.admin_settings.admin": {
     "defaultMessage": "Admin",
-    "description": "Admin settings: text in ListBoxItem"
+    "description": "Admin settings: option in the default role dropdown for the admin role; keep it short"
   },
   "web.routes.admin_settings.admin_groups": {
     "defaultMessage": "Admin groups",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the field listing the identity-provider groups that map to the admin role"
   },
   "web.routes.admin_settings.admin_settings": {
     "defaultMessage": "Admin settings",
-    "description": "Admin settings: title of PageHeader"
+    "description": "Admin settings: page title at the top of the admin settings screen; keep it short"
   },
   "web.routes.admin_settings.agpl_3_0": {
     "defaultMessage": "AGPL-3.0",
-    "description": "Admin settings: text in dd"
+    "description": "Admin settings: license name shown in the About list, usually left untranslated"
   },
   "web.routes.admin_settings.always_available_modrinth_thunderstore": {
     "defaultMessage": "Always available: Modrinth, Thunderstore, Hangar, Factorio, Spigot, GitHub, uMod",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: note under the registry list naming the registries that need no key; the names are product names, usually left untranslated"
   },
   "web.routes.admin_settings.an_earlier_attempt": {
     "defaultMessage": "an earlier attempt",
@@ -4193,11 +4313,11 @@
   },
   "web.routes.admin_settings.anonymous_usage_metrics_help_us": {
     "defaultMessage": "Anonymous usage metrics help us prioritize work. Extended metrics include a random install ID.",
-    "description": "Admin settings: subtitle of SectionCard"
+    "description": "Admin settings: subtitle under Telemetry: anonymous usage metrics help prioritise work, and extended metrics include a random install ID"
   },
   "web.routes.admin_settings.api_key": {
     "defaultMessage": "API key",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the API key field in the dialog that sets the key for a module registry"
   },
   "web.routes.admin_settings.api_key_label": {
     "defaultMessage": "API key — {label}",
@@ -4205,7 +4325,7 @@
   },
   "web.routes.admin_settings.applied_when_no_group_matches_deny_sign": {
     "defaultMessage": "Applied when no group matches. “Deny sign-in” refuses logins without a mapped group.",
-    "description": "Admin settings: text in Description"
+    "description": "Admin settings: hint under the default role dropdown explaining the default applies when no group matches, and that Deny sign-in refuses such logins"
   },
   "web.routes.admin_settings.at_least_one_identity_provider": {
     "defaultMessage": "At least one identity provider must stay enabled.",
@@ -4213,15 +4333,15 @@
   },
   "web.routes.admin_settings.at_least_one_identity_provider_must": {
     "defaultMessage": "At least one identity provider must stay enabled — the last enabled provider can't be turned off.",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: note under the provider list explaining that the last enabled provider cannot be turned off"
   },
   "web.routes.admin_settings.authentication": {
     "defaultMessage": "Authentication",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the Authentication section card for local accounts and identity providers; keep it short"
   },
   "web.routes.admin_settings.authorization_header_optional": {
     "defaultMessage": "Authorization header (optional)",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the optional Authorization header field for a webhook notification sink"
   },
   "web.routes.admin_settings.azure_account_container": {
     "defaultMessage": "azure:account/container",
@@ -4233,51 +4353,51 @@
   },
   "web.routes.admin_settings.backup_destinations": {
     "defaultMessage": "Backup destinations",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the backup destinations section card for one cluster; keep it short"
   },
   "web.routes.admin_settings.backup_destinations_are_stored_on_the": {
     "defaultMessage": "Backup destinations are stored on the workload cluster that runs your servers.",
-    "description": "Admin settings: subtitle of SectionCard"
+    "description": "Admin settings: subtitle under the select-a-cluster title saying backup destinations live on the workload cluster that runs your servers"
   },
   "web.routes.admin_settings.basic_identity_for_this_gameplane": {
     "defaultMessage": "Basic identity for this Gameplane instance.",
-    "description": "Admin settings: subtitle of SectionCard"
+    "description": "Admin settings: subtitle under the General title describing the basic identity of this Gameplane instance"
   },
   "web.routes.admin_settings.be_erased_only_the_credentials": {
     "defaultMessage": "be erased — only the credentials Gameplane uses to reach it. Existing backups remain intact; new backups against this destination will fail until it's re-added.",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: end of the delete dialog text: only Gameplane's credentials for the destination are removed, existing backups stay and new backups fail"
   },
   "web.routes.admin_settings.bearer": {
     "defaultMessage": "Bearer …",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example value inside the Authorization header field, showing the Bearer prefix; shown only while it is empty"
   },
   "web.routes.admin_settings.built_in_local_accounts_plus_federated": {
     "defaultMessage": "Built-in local accounts plus federated identity providers. Changes take effect on save — no restart needed.",
-    "description": "Admin settings: subtitle of SectionCard"
+    "description": "Admin settings: subtitle under the Authentication title; says changes take effect on save without a restart"
   },
   "web.routes.admin_settings.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button that closes an add or set form without saving; keep it short"
   },
   "web.routes.admin_settings.canonical_base_url_used_in_emails": {
     "defaultMessage": "Canonical base URL, used in emails, webhooks, OIDC callbacks.",
-    "description": "Admin settings: hint of Field"
+    "description": "Admin settings: hint under the external URL field: the canonical base URL used in emails, webhooks and OIDC callbacks (OIDC: technical term, usually left untranslated)"
   },
   "web.routes.admin_settings.channel": {
     "defaultMessage": "Channel",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: label of the update channel row; its value is set by the container image tags"
   },
   "web.routes.admin_settings.choose_a_registered_cluster_above_or": {
     "defaultMessage": "Choose a registered cluster above, or register one on the Clusters page.",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: text in the select-a-cluster card asking the user to pick a cluster above or register one on the Clusters page"
   },
   "web.routes.admin_settings.client_id": {
     "defaultMessage": "Client ID",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the OAuth client ID field for the provider"
   },
   "web.routes.admin_settings.client_secret": {
     "defaultMessage": "Client secret",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the OAuth client secret field for the provider"
   },
   "web.routes.admin_settings.configuration_changed": {
     "defaultMessage": "Configuration changed. Copy your edits and reopen this section before saving.",
@@ -4297,7 +4417,7 @@
   },
   "web.routes.admin_settings.corp_sso": {
     "defaultMessage": "corp-sso",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example text inside the provider name field, shown only while it is empty"
   },
   "web.routes.admin_settings.could_not_refresh_configuration": {
     "defaultMessage": "Could not refresh configuration. Retry the refresh before saving.",
@@ -4305,35 +4425,35 @@
   },
   "web.routes.admin_settings.couldn_t_load_installation_capabilities": {
     "defaultMessage": "Couldn't load installation capabilities.",
-    "description": "Admin settings: message of ErrorCard"
+    "description": "Admin settings: error message in the backup destinations area when installation details fail to load; a retry button follows it"
   },
   "web.routes.admin_settings.couldn_t_load_registered_clusters": {
     "defaultMessage": "Couldn't load registered clusters.",
-    "description": "Admin settings: message of ErrorCard"
+    "description": "Admin settings: error message in the backup destinations area when the list of registered clusters fails to load"
   },
   "web.routes.admin_settings.data_handling_statement": {
     "defaultMessage": "Data-handling statement",
-    "description": "Admin settings: text in a"
+    "description": "Admin settings: link to the telemetry data-handling statement, which opens in a new tab; keep it short"
   },
   "web.routes.admin_settings.default_events": {
     "defaultMessage": "default events",
-    "description": "Admin settings: label of EventChip"
+    "description": "Admin settings: badge on a notification sink with no events selected, meaning the default event set applies; keep it short"
   },
   "web.routes.admin_settings.default_namespace": {
     "defaultMessage": "Default namespace",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the field for the Kubernetes namespace where new game servers are created by default"
   },
   "web.routes.admin_settings.default_role": {
     "defaultMessage": "Default role",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label for the default role, the role given to users whose groups match no mapping; also a row label in the Helm provider details"
   },
   "web.routes.admin_settings.delete": {
     "defaultMessage": "Delete",
-    "description": "Admin settings: confirmLabel of ConfirmDialog"
+    "description": "Admin settings: confirm button of the delete backup destination dialog; keep it short"
   },
   "web.routes.admin_settings.delete_backup_destination": {
     "defaultMessage": "Delete backup destination?",
-    "description": "Admin settings: title of ConfirmDialog"
+    "description": "Admin settings: title of the confirmation dialog that asks whether to delete a backup destination"
   },
   "web.routes.admin_settings.delete_destination": {
     "defaultMessage": "Delete {name}",
@@ -4349,7 +4469,7 @@
   },
   "web.routes.admin_settings.deliver_server_health_and_backup": {
     "defaultMessage": "Deliver server health and backup/restore events to Discord, Slack, ntfy, email, or webhooks. Credentials are entered when adding a sink and stored as a labelled Secret in the control-plane namespace.",
-    "description": "Admin settings: subtitle of SectionCard"
+    "description": "Admin settings: subtitle under Notifications: sinks receive server health and backup events; credentials are entered when adding a sink and stored as a labelled Secret"
   },
   "web.routes.admin_settings.delivery_failed": {
     "defaultMessage": "delivery failed",
@@ -4357,7 +4477,7 @@
   },
   "web.routes.admin_settings.deny_sign_in": {
     "defaultMessage": "Deny sign-in",
-    "description": "Admin settings: text in ListBoxItem"
+    "description": "Admin settings: option in the default role dropdown that refuses sign-in when no group matches; keep it short"
   },
   "web.routes.admin_settings.disable_extended_telemetry": {
     "defaultMessage": "Disable extended telemetry",
@@ -4373,11 +4493,11 @@
   },
   "web.routes.admin_settings.disabled": {
     "defaultMessage": "Disabled",
-    "description": "Admin settings: text in span"
+    "description": "Admin settings: badge showing the telemetry destination is disabled; keep it short"
   },
   "web.routes.admin_settings.display_name_login_button": {
     "defaultMessage": "Display name (login button)",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the field for the name shown on the sign-in button for this provider"
   },
   "web.routes.admin_settings.enable_extended_telemetry": {
     "defaultMessage": "Enable extended telemetry",
@@ -4393,11 +4513,11 @@
   },
   "web.routes.admin_settings.enabled": {
     "defaultMessage": "Enabled",
-    "description": "Admin settings: text in span"
+    "description": "Admin settings: status badge on a provider row showing the provider is turned on; keep it short"
   },
   "web.routes.admin_settings.events_failures_and_recovery_are_pre": {
     "defaultMessage": "Events (failures and recovery are pre-selected)",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: heading above the event checkboxes of a notification sink; failures and recovery are selected by default"
   },
   "web.routes.admin_settings.every_oidc_user_currently_signs_in_with": {
     "defaultMessage": "Every OIDC user currently signs in with the {defaultRole} default role. Two ways to change that: add mappings in Role mapping overrides below — they apply from the next login, with no restart or Helm re-run — or seed them at install time with api.oidc.roleMappings.admin / .operator / .viewer in your Helm values.",
@@ -4405,19 +4525,19 @@
   },
   "web.routes.admin_settings.exactly_what_the_next_report_contains": {
     "defaultMessage": "Exactly what the next report contains. Read-only.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: text under the preview heading saying the shown content is exactly what the next report contains and is read-only"
   },
   "web.routes.admin_settings.external_url": {
     "defaultMessage": "External URL",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the field for the public base URL of this instance"
   },
   "web.routes.admin_settings.extra_oauth_scopes_beyond": {
     "defaultMessage": "Extra OAuth scopes beyond",
-    "description": "Admin settings: text in Description"
+    "description": "Admin settings: opening words of the hint under the scopes field, followed by example scope names and a note that scopes are space- or comma-separated"
   },
   "web.routes.admin_settings.failed_to_load_configuration_refresh_to": {
     "defaultMessage": "Failed to load configuration. Refresh to retry.",
-    "description": "Admin settings: text in Card.Content"
+    "description": "Admin settings: error text in a card when the configuration cannot be fetched; asks the user to refresh the page"
   },
   "web.routes.admin_settings.failed_to_store_a_secret": {
     "defaultMessage": "Failed to store a secret",
@@ -4425,31 +4545,31 @@
   },
   "web.routes.admin_settings.first_it_forms_the_provider_s_oidc": {
     "defaultMessage": "first — it forms the provider's OIDC redirect URL.",
-    "description": "Admin settings: text in Alert.Content"
+    "description": "Admin settings: end of the warning sentence saying the external URL forms the provider's OIDC redirect URL (OIDC: technical term, usually left untranslated)"
   },
   "web.routes.admin_settings.from_address": {
     "defaultMessage": "From address",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the field for the sender address of email notifications"
   },
   "web.routes.admin_settings.full_admin_access": {
     "defaultMessage": "Full admin access",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: warning heading shown when groups are about to be mapped to the admin role"
   },
   "web.routes.admin_settings.gameplane": {
     "defaultMessage": "Gameplane",
-    "description": "Admin settings: text in dt"
+    "description": "Admin settings: row label for the Gameplane version in the About list; keep it short"
   },
   "web.routes.admin_settings.gameplane_admins": {
     "defaultMessage": "gameplane-admins",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example group name inside the admin groups field, shown only while it is empty"
   },
   "web.routes.admin_settings.gameplane_backup_repo": {
     "defaultMessage": "gameplane-backup-repo",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example name inside the destination name field, shown only while it is empty"
   },
   "web.routes.admin_settings.gameplane_example_com": {
     "defaultMessage": "gameplane@example.com",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example sender address inside the from address field, shown only while it is empty"
   },
   "web.routes.admin_settings.gameplane_local_backup_destination_true": {
     "defaultMessage": "gameplane.local/backup-destination=true",
@@ -4457,55 +4577,55 @@
   },
   "web.routes.admin_settings.gameplane_operators": {
     "defaultMessage": "gameplane-operators",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example group name inside the operator groups field, shown only while it is empty"
   },
   "web.routes.admin_settings.gameplane_version_number_of_servers_and": {
     "defaultMessage": "Gameplane version, number of servers and number of templates.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: hint under the basic metrics switch listing what is sent: the Gameplane version, number of servers and number of templates"
   },
   "web.routes.admin_settings.gameplane_viewers": {
     "defaultMessage": "gameplane-viewers",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example group name inside the viewer groups field, shown only while it is empty"
   },
   "web.routes.admin_settings.general": {
     "defaultMessage": "General",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the General section card that holds the instance identity fields; keep it short"
   },
   "web.routes.admin_settings.general_external_url": {
     "defaultMessage": "General → External URL",
-    "description": "Admin settings: text in span"
+    "description": "Admin settings: setting path shown in monospace inside the warning, pointing to the External URL field of the General section"
   },
   "web.routes.admin_settings.generic_oidc": {
     "defaultMessage": "Generic OIDC",
-    "description": "Admin settings: text in ListBoxItem"
+    "description": "Admin settings: option in the provider kind dropdown for a generic OIDC provider; keep it short"
   },
   "web.routes.admin_settings.github_com_has_no_oidc_discovery_for": {
     "defaultMessage": "GitHub.com has no OIDC discovery for user login — run an OIDC bridge such as Dex and enter its issuer URL below.",
-    "description": "Admin settings: text in Description"
+    "description": "Admin settings: small note under the provider kind dropdown saying GitHub.com needs an OIDC bridge such as Dex, with its issuer URL entered below"
   },
   "web.routes.admin_settings.github_via_oidc_bridge": {
     "defaultMessage": "GitHub (via OIDC bridge)",
-    "description": "Admin settings: text in ListBoxItem"
+    "description": "Admin settings: option in the provider kind dropdown for GitHub, reached through an OIDC bridge; keep it short"
   },
   "web.routes.admin_settings.google": {
     "defaultMessage": "Google",
-    "description": "Admin settings: text in ListBoxItem"
+    "description": "Admin settings: option in the provider kind dropdown for Google sign-in; keep it short"
   },
   "web.routes.admin_settings.groups": {
     "defaultMessage": "groups",
-    "description": "Admin settings: text in span"
+    "description": "Admin settings: the scope name groups, shown in the scopes hint and as the grey placeholder of the groups claim field (technical term, usually left untranslated)"
   },
   "web.routes.admin_settings.groups_added_here_will_be_mapped_to_the": {
     "defaultMessage": "Groups added here will be mapped to the admin role and get full cluster control from their next login. You'll be asked to confirm before this is saved.",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: warning text explaining that groups added here get full cluster control from their next login and must be confirmed before saving"
   },
   "web.routes.admin_settings.groups_claim": {
     "defaultMessage": "Groups claim",
-    "description": "Admin settings: text in span"
+    "description": "Admin settings: row label for the groups claim in the Helm provider details; keep it short"
   },
   "web.routes.admin_settings.groups_claim_and_default_role_are": {
     "defaultMessage": "Groups claim and default role are seeded from the same Helm values and are not editable here.",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: note under the provider heading: groups claim and default role come from Helm values and cannot be edited here"
   },
   "web.routes.admin_settings.groups_claim_name": {
     "defaultMessage": "groups",
@@ -4513,19 +4633,19 @@
   },
   "web.routes.admin_settings.groups_claim_optional": {
     "defaultMessage": "Groups claim (optional)",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the optional field naming the token claim that carries the user's group memberships"
   },
   "web.routes.admin_settings.helm_configured_admin_mapping": {
     "defaultMessage": "Helm-configured admin mapping",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: warning heading shown when the admin role is mapped through Helm values"
   },
   "web.routes.admin_settings.helm_seeded_oidc_provider": {
     "defaultMessage": "Helm-seeded OIDC provider",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the card showing the OIDC provider set up through Helm values (OIDC: technical term, usually left untranslated)"
   },
   "web.routes.admin_settings.helm_seeded_role_mappings": {
     "defaultMessage": "Helm-seeded role mappings",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: label above the role mappings seeded from Helm values"
   },
   "web.routes.admin_settings.hidden_from_mods_browser": {
     "defaultMessage": "Hidden from the Mods browser",
@@ -4533,7 +4653,7 @@
   },
   "web.routes.admin_settings.https_idp_example_com": {
     "defaultMessage": "https://idp.example.com",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example text inside the issuer URL field, shown only while it is empty"
   },
   "web.routes.admin_settings.id_token_claim_holding_the_user_s_group": {
     "defaultMessage": "ID-token claim holding the user's group memberships; defaults to {groups}.",
@@ -4545,27 +4665,27 @@
   },
   "web.routes.admin_settings.install_id": {
     "defaultMessage": "Install ID",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: label of the install ID row in the telemetry section"
   },
   "web.routes.admin_settings.install_id_replaced_on": {
     "defaultMessage": "Install ID replaced on",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: status line starting with the date the install ID was replaced; the explanation follows it"
   },
   "web.routes.admin_settings.instance_name": {
     "defaultMessage": "Instance name",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the text field for the instance name, which shows on the Cluster page and in notifications"
   },
   "web.routes.admin_settings.issuer_url": {
     "defaultMessage": "Issuer URL",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the field for the issuer URL of the identity provider"
   },
   "web.routes.admin_settings.kind": {
     "defaultMessage": "Kind",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the dropdown that chooses the provider kind, such as generic OIDC, Google or GitHub"
   },
   "web.routes.admin_settings.kubernetes": {
     "defaultMessage": "Kubernetes",
-    "description": "Admin settings: text in dt"
+    "description": "Admin settings: row label for the Kubernetes version in the About list, shown for the local cluster only; keep it short"
   },
   "web.routes.admin_settings.last_attempt_failed_no_success": {
     "defaultMessage": "Last attempt failed, will retry. No report has been delivered yet.",
@@ -4581,39 +4701,39 @@
   },
   "web.routes.admin_settings.license": {
     "defaultMessage": "License",
-    "description": "Admin settings: text in dt"
+    "description": "Admin settings: row label for the license in the About list; keep it short"
   },
   "web.routes.admin_settings.like": {
     "defaultMessage": "— like",
-    "description": "Admin settings: text in Description"
+    "description": "Admin settings: the words for example in the scopes hint, introducing the example scope named groups"
   },
   "web.routes.admin_settings.loading_clusters": {
     "defaultMessage": "Loading clusters…",
-    "description": "Admin settings: message of LoadingCard"
+    "description": "Admin settings: loading text in the backup destinations area while the list of registered clusters loads"
   },
   "web.routes.admin_settings.loading_configuration": {
     "defaultMessage": "Loading configuration…",
-    "description": "Admin settings: text in Card.Content"
+    "description": "Admin settings: loading text shown in a card while the configuration is fetched"
   },
   "web.routes.admin_settings.loading_destinations": {
     "defaultMessage": "Loading destinations…",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: loading text in the backup destinations card while the list is fetched"
   },
   "web.routes.admin_settings.loading_installation": {
     "defaultMessage": "Loading installation…",
-    "description": "Admin settings: message of LoadingCard"
+    "description": "Admin settings: loading text in the backup destinations area while installation details are fetched"
   },
   "web.routes.admin_settings.mail_example_com": {
     "defaultMessage": "mail.example.com",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example host name inside the SMTP host field, shown only while it is empty"
   },
   "web.routes.admin_settings.map_idp_groups_comma_separated_to": {
     "defaultMessage": "Map IdP groups (comma-separated) to dashboard roles. A user's highest matching role wins (admin > operator > viewer), and roles re-sync on every login while any mapping is set.",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: explanation under the role mapping heading: comma-separated IdP groups map to dashboard roles, the highest match wins and roles resync on each login"
   },
   "web.routes.admin_settings.mod_registries": {
     "defaultMessage": "Mod registries",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the Mod registries card that lists mod registries which may need an API key; keep it short"
   },
   "web.routes.admin_settings.more_events_count": {
     "defaultMessage": "+{count}",
@@ -4621,35 +4741,35 @@
   },
   "web.routes.admin_settings.name": {
     "defaultMessage": "Name",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the name field, a short identifier for the provider or sink; the same label is used in the add-sink form"
   },
   "web.routes.admin_settings.name_dns_label": {
     "defaultMessage": "Name (DNS label)",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the destination name field, which must be a DNS label of lowercase letters, digits and dashes (DNS label: technical term, usually left untranslated)"
   },
   "web.routes.admin_settings.needs_secret": {
     "defaultMessage": "Needs secret",
-    "description": "Admin settings: text in span"
+    "description": "Admin settings: warning badge on a notification sink row showing its credentials Secret is missing; keep it short"
   },
   "web.routes.admin_settings.next_report_json": {
     "defaultMessage": "Next report JSON",
-    "description": "Admin settings: aria-label of pre"
+    "description": "Admin settings: accessible name of the scrollable block that shows the next telemetry report as JSON"
   },
   "web.routes.admin_settings.next_report_preview": {
     "defaultMessage": "Next report preview",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: heading of the block that previews the next telemetry report"
   },
   "web.routes.admin_settings.no_backup_destinations_configured_add": {
     "defaultMessage": "No backup destinations configured. Add one to enable snapshots.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: empty-state text in the backup destinations card when none exist, asking the user to add one to enable snapshots"
   },
   "web.routes.admin_settings.no_data_of_either_kind_is_sent_and_no": {
     "defaultMessage": "No data of either kind is sent and no telemetry destination is contacted, whatever the switches below say. Only an operator can change this, at install time.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: text under the disabled-telemetry heading: no data is sent, no destination is contacted, and only an operator can change this at install time"
   },
   "web.routes.admin_settings.no_destination": {
     "defaultMessage": "No destination",
-    "description": "Admin settings: text in span"
+    "description": "Admin settings: badge shown when no telemetry destination is configured; keep it short"
   },
   "web.routes.admin_settings.no_groups_mapped_nobody_signs_in_as": {
     "defaultMessage": "No groups mapped — nobody signs in as {role} via OIDC.",
@@ -4657,23 +4777,23 @@
   },
   "web.routes.admin_settings.no_identity_providers_configured_yet": {
     "defaultMessage": "No identity providers configured yet.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: empty-state text in the Authentication section shown when no identity provider has been added"
   },
   "web.routes.admin_settings.no_install_id_while_extended_metrics": {
     "defaultMessage": "No install ID while extended metrics are off.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: hint shown in place of the install ID while extended metrics are off"
   },
   "web.routes.admin_settings.no_mapping": {
     "defaultMessage": "(no mapping)",
-    "description": "Admin settings: text in ListBoxItem"
+    "description": "Admin settings: first option in the default role dropdown, meaning no default role is set; keep it short"
   },
   "web.routes.admin_settings.no_notification_sinks_configured": {
     "defaultMessage": "No notification sinks configured.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: empty-state text in the Notifications section shown when no sink exists"
   },
   "web.routes.admin_settings.no_oidc_role_mappings_yet": {
     "defaultMessage": "No OIDC role mappings yet",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: heading shown when the OIDC provider has no role mappings yet; the text below says how to add them"
   },
   "web.routes.admin_settings.no_password": {
     "defaultMessage": "no-password",
@@ -4685,11 +4805,11 @@
   },
   "web.routes.admin_settings.no_telemetry_destination_configured": {
     "defaultMessage": "No telemetry destination configured.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: heading of the telemetry box shown when no telemetry destination is configured"
   },
   "web.routes.admin_settings.not": {
     "defaultMessage": "not",
-    "description": "Admin settings: text in strong"
+    "description": "Admin settings: the word not, shown in bold in the delete dialog text to stress the repository is not erased"
   },
   "web.routes.admin_settings.not_configured": {
     "defaultMessage": "Not configured",
@@ -4697,7 +4817,7 @@
   },
   "web.routes.admin_settings.nothing_is_sent_an_operator_can_set_a": {
     "defaultMessage": "Nothing is sent. An operator can set a custom or bundled destination at install time.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: text under the no-destination heading: nothing is sent, and an operator can set a destination at install time"
   },
   "web.routes.admin_settings.nothing_to_preview_disabled": {
     "defaultMessage": "Nothing to preview: telemetry is disabled by the operator.",
@@ -4713,51 +4833,51 @@
   },
   "web.routes.admin_settings.notifications": {
     "defaultMessage": "Notifications",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the Notifications section card that lists notification sinks; keep it short"
   },
   "web.routes.admin_settings.oidc_configured_via_helm_manage_in": {
     "defaultMessage": "oidc · configured via Helm — manage in values.yaml",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: small line under a Helm-configured provider name giving its kind (OIDC, technical term, usually left untranslated) and saying it is managed in values.yaml"
   },
   "web.routes.admin_settings.openid_profile_email": {
     "defaultMessage": "openid profile email",
-    "description": "Admin settings: text in span"
+    "description": "Admin settings: example default OAuth scope names shown in monospace in the scopes hint (technical term, usually left untranslated)"
   },
   "web.routes.admin_settings.operator": {
     "defaultMessage": "Operator",
-    "description": "Admin settings: text in ListBoxItem"
+    "description": "Admin settings: option in the default role dropdown for the operator role; keep it short"
   },
   "web.routes.admin_settings.operator_groups": {
     "defaultMessage": "Operator groups",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the field listing the identity-provider groups that map to the operator role"
   },
   "web.routes.admin_settings.ops_example_com": {
     "defaultMessage": "ops@example.com",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example recipient addresses inside the recipients field, shown only while it is empty"
   },
   "web.routes.admin_settings.optional_names_this_install_on_the": {
     "defaultMessage": "Optional. Names this install on the Cluster page and in notifications.",
-    "description": "Admin settings: hint of Field"
+    "description": "Admin settings: hint under the instance name field saying the name is optional and where it appears"
   },
   "web.routes.admin_settings.override_the_helm_seeded_oidc_group": {
     "defaultMessage": "Override the Helm-seeded OIDC group mappings per role from here. A change takes effect the next time an affected user logs in — no restart or reinstall needed.",
-    "description": "Admin settings: subtitle of SectionCard"
+    "description": "Admin settings: subtitle under Role mapping overrides: change the Helm-seeded group mappings per role; changes apply at the next login without a restart"
   },
   "web.routes.admin_settings.password_optional": {
     "defaultMessage": "Password (optional)",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the optional SMTP password field"
   },
   "web.routes.admin_settings.platform_wide_configuration_for_this": {
     "defaultMessage": "Platform-wide configuration for this Gameplane instance.",
-    "description": "Admin settings: description of PageHeader"
+    "description": "Admin settings: description under the page title saying these settings apply to the whole Gameplane instance"
   },
   "web.routes.admin_settings.port_default_587": {
     "defaultMessage": "Port (default 587)",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the SMTP port field, which states 587 is the default port"
   },
   "web.routes.admin_settings.provider": {
     "defaultMessage": "Provider",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: heading of the provider details block in the Helm-seeded card; keep it short"
   },
   "web.routes.admin_settings.provider_disabled_state": {
     "defaultMessage": "Disabled",
@@ -4773,7 +4893,7 @@
   },
   "web.routes.admin_settings.provider_kind": {
     "defaultMessage": "Provider kind",
-    "description": "Admin settings: aria-label of Select"
+    "description": "Admin settings: accessible name of the provider kind dropdown; its options are generic OIDC, Google and GitHub"
   },
   "web.routes.admin_settings.provider_secret_suffix": {
     "defaultMessage": "· {ref}",
@@ -4781,23 +4901,23 @@
   },
   "web.routes.admin_settings.random_and_anonymous_reset_it_to_start": {
     "defaultMessage": "Random and anonymous. Reset it to start reporting under a new ID; the old ID is never sent again.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: hint under the install ID: it is random and anonymous; resetting starts reporting under a new ID and the old one is never sent again"
   },
   "web.routes.admin_settings.read_only_snapshot_of_the_identity": {
     "defaultMessage": "Read-only snapshot of the identity provider configured via api.oidc.* Helm values at install time. Connection settings are not editable here; role mappings can be overridden below.",
-    "description": "Admin settings: subtitle of SectionCard"
+    "description": "Admin settings: subtitle under the Helm-seeded provider title: a read-only snapshot taken at install time; role mappings can be overridden below"
   },
   "web.routes.admin_settings.registries_that_require_an_api_key_stay": {
     "defaultMessage": "Registries that require an API key stay hidden from the Mods browser until a key is configured.",
-    "description": "Admin settings: subtitle of SectionCard"
+    "description": "Admin settings: subtitle under Mod registries: registries that need an API key stay hidden from the Mods browser until a key is set"
   },
   "web.routes.admin_settings.remove": {
     "defaultMessage": "Remove",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button that removes the API key entry of a module registry; keep it short"
   },
   "web.routes.admin_settings.replace": {
     "defaultMessage": "Replace",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button on a configured module registry that opens the dialog to replace its API key; keep it short"
   },
   "web.routes.admin_settings.replace_verb": {
     "defaultMessage": "Replace",
@@ -4805,7 +4925,7 @@
   },
   "web.routes.admin_settings.repository_password": {
     "defaultMessage": "Repository password",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the password field for the Restic backup repository"
   },
   "web.routes.admin_settings.reset_failed": {
     "defaultMessage": "Reset failed",
@@ -4817,23 +4937,27 @@
   },
   "web.routes.admin_settings.reset_id": {
     "defaultMessage": "Reset ID",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button that asks to reset the install ID, and the confirm button of the reset dialog; keep it short"
   },
   "web.routes.admin_settings.reset_install_id": {
     "defaultMessage": "Reset install ID?",
-    "description": "Admin settings: title of ConfirmDialog"
+    "description": "Admin settings: title of the confirmation dialog for resetting the random install ID"
+  },
+  "web.routes.admin_settings.reset_install_id_failed": {
+    "defaultMessage": "Could not reset the install ID",
+    "description": "Admin settings: fallback error text under the install ID when resetting it fails"
   },
   "web.routes.admin_settings.reset_to_helm_default": {
     "defaultMessage": "Reset to Helm default",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button that resets one role's mapping to the Helm default; keep it short"
   },
   "web.routes.admin_settings.restic_repositories_for_snapshots": {
     "defaultMessage": "Restic repositories for snapshots. Stored as labelled Kubernetes Secrets in the configured namespace.",
-    "description": "Admin settings: subtitle of SectionCard"
+    "description": "Admin settings: subtitle under Backup destinations: Restic repositories for snapshots, stored as labelled Kubernetes Secrets (Restic: technical term, usually left untranslated)"
   },
   "web.routes.admin_settings.restic_url": {
     "defaultMessage": "Restic URL",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the field for the Restic repository URL (Restic: technical term, usually left untranslated)"
   },
   "web.routes.admin_settings.restic_url_hint": {
     "defaultMessage": "Stored as a Secret labelled {secret}. Restic URL formats: {s3}, {b2}, {azure}, etc.",
@@ -4841,7 +4965,7 @@
   },
   "web.routes.admin_settings.role_mapping": {
     "defaultMessage": "Role mapping",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: heading of the part of the provider form that maps identity-provider groups to dashboard roles"
   },
   "web.routes.admin_settings.role_mapping_group": {
     "defaultMessage": "{role} role mapping",
@@ -4849,7 +4973,7 @@
   },
   "web.routes.admin_settings.role_mapping_overrides": {
     "defaultMessage": "Role mapping overrides",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the card where role mappings can be overridden per role in the dashboard; keep it short"
   },
   "web.routes.admin_settings.s3_host_bucket": {
     "defaultMessage": "s3:host/bucket",
@@ -4857,15 +4981,15 @@
   },
   "web.routes.admin_settings.s3_s3_example_com_gameplane_bucket": {
     "defaultMessage": "s3:s3.example.com/gameplane-bucket",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example Restic URL inside the URL field, pointing at an S3 bucket (S3: technical term, usually left untranslated)"
   },
   "web.routes.admin_settings.save": {
     "defaultMessage": "Save",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button that saves the module registry API key; keep it short"
   },
   "web.routes.admin_settings.save_changes": {
     "defaultMessage": "Save changes",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button that saves the changes in this section; keep it short"
   },
   "web.routes.admin_settings.save_changes_first_tests": {
     "defaultMessage": "Save changes first — tests run against the saved config",
@@ -4881,19 +5005,19 @@
   },
   "web.routes.admin_settings.save_role_mappings": {
     "defaultMessage": "Save role mappings",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button that saves the role mapping overrides; keep it short"
   },
   "web.routes.admin_settings.saved": {
     "defaultMessage": "Saved",
-    "description": "Admin settings: text in span"
+    "description": "Admin settings: status text beside a save button confirming the changes were saved; keep it short"
   },
   "web.routes.admin_settings.saved_changes_take_effect_on_next_login": {
     "defaultMessage": "Saved changes take effect on next login for affected users — no restart or reinstall needed.",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: footer note of the role mapping overrides card: saved changes apply at the next login for affected users, with no restart needed"
   },
   "web.routes.admin_settings.saving": {
     "defaultMessage": "Saving…",
-    "description": "Admin settings: text in span"
+    "description": "Admin settings: status text beside a save button while changes are being saved; keep it short"
   },
   "web.routes.admin_settings.saving_destination": {
     "defaultMessage": "Saving…",
@@ -4901,23 +5025,23 @@
   },
   "web.routes.admin_settings.scopes_optional": {
     "defaultMessage": "Scopes (optional)",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the optional field for extra OAuth scopes"
   },
   "web.routes.admin_settings.select_a_workload_cluster": {
     "defaultMessage": "Select a workload cluster",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the placeholder card shown when no workload cluster is selected for backup destinations"
   },
   "web.routes.admin_settings.send_basic_usage_metrics": {
     "defaultMessage": "Send basic usage metrics",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: label of the switch that turns on basic usage metrics"
   },
   "web.routes.admin_settings.send_extended_usage_metrics": {
     "defaultMessage": "Send extended usage metrics",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: label of the switch that turns on extended usage metrics; basic metrics must be on first"
   },
   "web.routes.admin_settings.send_test": {
     "defaultMessage": "Send test",
-    "description": "Admin settings: text in TestButton"
+    "description": "Admin settings: button that sends a test message to a notification sink; keep it short"
   },
   "web.routes.admin_settings.sending_to_host": {
     "defaultMessage": "Sending to {host}",
@@ -4925,11 +5049,11 @@
   },
   "web.routes.admin_settings.set": {
     "defaultMessage": "Set",
-    "description": "Admin settings: text in Alert.Content"
+    "description": "Admin settings: opening word of the warning saying the external URL must be set first, followed by the setting path and the rest of the sentence"
   },
   "web.routes.admin_settings.set_api_key": {
     "defaultMessage": "Set API key",
-    "description": "Admin settings: text in Button"
+    "description": "Admin settings: button on an unconfigured module registry that opens the dialog to add its API key; keep it short"
   },
   "web.routes.admin_settings.set_verb": {
     "defaultMessage": "Set",
@@ -4937,7 +5061,7 @@
   },
   "web.routes.admin_settings.sink_kind": {
     "defaultMessage": "Sink kind",
-    "description": "Admin settings: aria-label of Select"
+    "description": "Admin settings: accessible name of the dropdown that picks the notification sink type, such as Discord, Slack, ntfy, email or webhook"
   },
   "web.routes.admin_settings.sink_kind_discord": {
     "defaultMessage": "Discord",
@@ -4977,27 +5101,27 @@
   },
   "web.routes.admin_settings.smtp_host": {
     "defaultMessage": "SMTP host",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the SMTP host field for the email notification sink"
   },
   "web.routes.admin_settings.smtp_tls_mode": {
     "defaultMessage": "SMTP TLS mode",
-    "description": "Admin settings: aria-label of Select"
+    "description": "Admin settings: accessible name of the SMTP TLS mode dropdown; its options are STARTTLS, implicit TLS and none"
   },
   "web.routes.admin_settings.space_or_comma_separated": {
     "defaultMessage": ". Space- or comma-separated.",
-    "description": "Admin settings: text in Description"
+    "description": "Admin settings: end of the scopes hint telling the user to separate several scopes with spaces or commas"
   },
   "web.routes.admin_settings.strong_unique_passphrase": {
     "defaultMessage": "Strong, unique passphrase",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey hint inside the repository password field, suggesting a strong unique passphrase; shown only while it is empty"
   },
   "web.routes.admin_settings.team_alerts": {
     "defaultMessage": "team-alerts",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example sink name inside the name field of the add-sink form, shown only while it is empty"
   },
   "web.routes.admin_settings.telemetry": {
     "defaultMessage": "Telemetry",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the Telemetry section card; keep it short"
   },
   "web.routes.admin_settings.telemetry_bundled_badge": {
     "defaultMessage": "Bundled",
@@ -5033,7 +5157,7 @@
   },
   "web.routes.admin_settings.telemetry_is_disabled_by_the_operator": {
     "defaultMessage": "Telemetry is disabled by the operator.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: heading of the warning box saying telemetry was turned off by the operator"
   },
   "web.routes.admin_settings.telemetry_reset_id_description": {
     "defaultMessage": "This replaces your random install ID {id} with a new one. The old ID is never sent again, and the destination cannot link the old and new IDs. The next report is sent under the new ID.",
@@ -5045,35 +5169,35 @@
   },
   "web.routes.admin_settings.the_destination_reported_it_was_in_use": {
     "defaultMessage": ": the destination reported it was in use by another key.",
-    "description": "Admin settings: text in div"
+    "description": "Admin settings: end of the install-ID status line, saying the destination reported the ID was already in use by another key"
   },
   "web.routes.admin_settings.the_group_s_on_the_admin_row_above_were": {
     "defaultMessage": "The group(s) on the Admin row above were mapped to admin via Helm values, not the dashboard, so there is no confirmation step here. Verify they contain only trusted accounts — anyone in them gets full admin access.",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: warning text: the groups on the Admin row were mapped to admin through Helm, so there is no confirmation step; check they hold only trusted accounts"
   },
   "web.routes.admin_settings.the_repository_at_this_destination_will": {
     "defaultMessage": "The repository at this destination will",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: opening words of the delete dialog text, followed by the emphasised word not and the rest of the sentence"
   },
   "web.routes.admin_settings.this_gameplane_build": {
     "defaultMessage": "This Gameplane build.",
-    "description": "Admin settings: subtitle of SectionCard"
+    "description": "Admin settings: subtitle under the About title describing the Gameplane build shown below"
   },
   "web.routes.admin_settings.tk": {
     "defaultMessage": "tk_…",
-    "description": "Admin settings: placeholder of HeroInput"
+    "description": "Admin settings: grey example token format inside the access token field, shown only while it is empty"
   },
   "web.routes.admin_settings.tls": {
     "defaultMessage": "TLS",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the dropdown that sets how the SMTP connection uses TLS; TLS is a technical term, usually left untranslated"
   },
   "web.routes.admin_settings.to_comma_separated": {
     "defaultMessage": "To (comma-separated)",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the field listing recipient addresses, separated by commas"
   },
   "web.routes.admin_settings.to_confirm": {
     "defaultMessage": "to confirm.",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: last words of the line asking the user to type the destination name to confirm; the name is shown in monospace before them"
   },
   "web.routes.admin_settings.topic_url": {
     "defaultMessage": "Topic URL",
@@ -5081,11 +5205,11 @@
   },
   "web.routes.admin_settings.type": {
     "defaultMessage": "Type",
-    "description": "Admin settings: text in p"
+    "description": "Admin settings: first word of the line in the delete dialog asking the user to type the destination name to confirm"
   },
   "web.routes.admin_settings.updates": {
     "defaultMessage": "Updates",
-    "description": "Admin settings: title of SectionCard"
+    "description": "Admin settings: title of the Updates section card about how this installation is upgraded; keep it short"
   },
   "web.routes.admin_settings.updates_channel": {
     "defaultMessage": "updates.channel",
@@ -5101,15 +5225,15 @@
   },
   "web.routes.admin_settings.username_optional": {
     "defaultMessage": "Username (optional)",
-    "description": "Admin settings: label of Field"
+    "description": "Admin settings: label of the optional SMTP username field"
   },
   "web.routes.admin_settings.viewer": {
     "defaultMessage": "Viewer",
-    "description": "Admin settings: text in ListBoxItem"
+    "description": "Admin settings: option in the default role dropdown for the viewer role; keep it short"
   },
   "web.routes.admin_settings.viewer_groups": {
     "defaultMessage": "Viewer groups",
-    "description": "Admin settings: text in Label"
+    "description": "Admin settings: label of the field listing the identity-provider groups that map to the viewer role"
   },
   "web.routes.admin_settings.webhook_url": {
     "defaultMessage": "Webhook URL",
@@ -5117,47 +5241,27 @@
   },
   "web.routes.admin_settings.where_new_gameservers_land_by_default": {
     "defaultMessage": "Where new GameServers land by default.",
-    "description": "Admin settings: hint of Field"
+    "description": "Admin settings: hint under the default namespace field saying new GameServers are created in that namespace by default"
   },
   "web.routes.audit_log.access": {
     "defaultMessage": "Access",
-    "description": "Audit log: text in Table.Column"
-  },
-  "web.routes.audit_log.access_allowed": {
-    "defaultMessage": "Allowed",
-    "description": "Audit log: access column for a 2xx or 3xx response"
-  },
-  "web.routes.audit_log.access_denied": {
-    "defaultMessage": "Denied",
-    "description": "Audit log: access column for a 403 response"
-  },
-  "web.routes.audit_log.access_error": {
-    "defaultMessage": "Error",
-    "description": "Audit log: access column for a 5xx response"
-  },
-  "web.routes.audit_log.access_failed": {
-    "defaultMessage": "Failed",
-    "description": "Audit log: access column for a non-403 4xx response"
+    "description": "Audit log: column heading for the access column of each event; keep it short"
   },
   "web.routes.audit_log.action": {
     "defaultMessage": "Action",
-    "description": "Audit log: text in Table.Column"
-  },
-  "web.routes.audit_log.action_object": {
-    "defaultMessage": "{action} {noun}{target}",
-    "description": "Audit log: action label such as 'Created server alpha'; {action} is the verb, {noun} is the object type, {target} is empty or a space followed by the object name"
+    "description": "Audit log: column heading for the action performed in each event; keep it short"
   },
   "web.routes.audit_log.actor": {
     "defaultMessage": "Actor",
-    "description": "Audit log: text in Table.Column"
+    "description": "Audit log: column heading for the user who made each request; keep it short"
   },
   "web.routes.audit_log.all_methods": {
     "defaultMessage": "All methods",
-    "description": "Audit log: text in option"
+    "description": "Audit log: first option in the method dropdown, meaning no method filter; keep it short"
   },
   "web.routes.audit_log.audit_log": {
     "defaultMessage": "Audit log",
-    "description": "Audit log: title of PageHeader"
+    "description": "Audit log: page title at the top of the audit log screen; keep it short"
   },
   "web.routes.audit_log.chain_verified": {
     "defaultMessage": "Audit chain verified — no tampering detected",
@@ -5169,19 +5273,11 @@
   },
   "web.routes.audit_log.export_csv": {
     "defaultMessage": "Export CSV",
-    "description": "Audit log: text in Button"
-  },
-  "web.routes.audit_log.failed_sign_in": {
-    "defaultMessage": "Failed sign-in",
-    "description": "Audit log: action label for a sign-in attempt that was rejected"
-  },
-  "web.routes.audit_log.fallback_action": {
-    "defaultMessage": "{action} {resource}",
-    "description": "Audit log: fallback action label for an unrecognised route; {action} is the verb, {resource} is the last path segment"
+    "description": "Audit log: button that downloads the currently filtered audit events as a CSV file; keep it short"
   },
   "web.routes.audit_log.filter_by_actor": {
     "defaultMessage": "Filter by actor…",
-    "description": "Audit log: placeholder of Input"
+    "description": "Audit log: grey placeholder of the search field that filters events by the actor who made the request"
   },
   "web.routes.audit_log.http_status": {
     "defaultMessage": "HTTP {status}",
@@ -5197,7 +5293,7 @@
   },
   "web.routes.audit_log.ip": {
     "defaultMessage": "IP",
-    "description": "Audit log: text in Table.Column"
+    "description": "Audit log: column heading for the IP address of each request; keep it short"
   },
   "web.routes.audit_log.length_of_length2_loaded": {
     "defaultMessage": "{length} of {length2} loaded",
@@ -5213,7 +5309,7 @@
   },
   "web.routes.audit_log.method": {
     "defaultMessage": "Method",
-    "description": "Audit log: text in Table.Column"
+    "description": "Audit log: column heading for the HTTP method of each request; keep it short"
   },
   "web.routes.audit_log.method_and_path": {
     "defaultMessage": "{method} {path}",
@@ -5225,7 +5321,7 @@
   },
   "web.routes.audit_log.mutating_control_plane_requests_newest": {
     "defaultMessage": "Mutating control-plane requests, newest first.",
-    "description": "Audit log: description of PageHeader"
+    "description": "Audit log: description under the title saying the list holds mutating control-plane requests, newest first"
   },
   "web.routes.audit_log.no_audit_events_yet": {
     "defaultMessage": "No audit events yet.",
@@ -5234,46 +5330,6 @@
   "web.routes.audit_log.no_events_match_the_active_filters": {
     "defaultMessage": "No events match the active filters.",
     "description": "Audit log: empty state when the active filters hide every event"
-  },
-  "web.routes.audit_log.noun_backup": {
-    "defaultMessage": "backup",
-    "description": "Audit log: object type in an action label, a backup"
-  },
-  "web.routes.audit_log.noun_backup_destination": {
-    "defaultMessage": "backup destination",
-    "description": "Audit log: object type in an action label, a backup destination"
-  },
-  "web.routes.audit_log.noun_backup_schedule": {
-    "defaultMessage": "backup schedule",
-    "description": "Audit log: object type in an action label, a backup schedule"
-  },
-  "web.routes.audit_log.noun_cluster": {
-    "defaultMessage": "cluster",
-    "description": "Audit log: object type in an action label, a cluster"
-  },
-  "web.routes.audit_log.noun_module": {
-    "defaultMessage": "module",
-    "description": "Audit log: object type in an action label, a module"
-  },
-  "web.routes.audit_log.noun_module_source": {
-    "defaultMessage": "module source",
-    "description": "Audit log: object type in an action label, a module source"
-  },
-  "web.routes.audit_log.noun_restore": {
-    "defaultMessage": "restore",
-    "description": "Audit log: object type in an action label, a restore"
-  },
-  "web.routes.audit_log.noun_role": {
-    "defaultMessage": "role",
-    "description": "Audit log: object type in an action label, a role"
-  },
-  "web.routes.audit_log.noun_server": {
-    "defaultMessage": "server",
-    "description": "Audit log: object type in an action label, a game server"
-  },
-  "web.routes.audit_log.noun_user": {
-    "defaultMessage": "user",
-    "description": "Audit log: object type in an action label, a user account"
   },
   "web.routes.audit_log.page_size_pagesize_older_events_load_on": {
     "defaultMessage": "Page size {pageSize}. Older events load on demand.",
@@ -5285,19 +5341,7 @@
   },
   "web.routes.audit_log.refresh": {
     "defaultMessage": "Refresh",
-    "description": "Audit log: text in Button"
-  },
-  "web.routes.audit_log.restored_backup": {
-    "defaultMessage": "Restored backup{target}",
-    "description": "Audit log: action label for a backup restore; {target} is empty or a space followed by the backup name"
-  },
-  "web.routes.audit_log.settings_updated": {
-    "defaultMessage": "Updated settings",
-    "description": "Audit log: action label for a change to panel settings"
-  },
-  "web.routes.audit_log.signed_in": {
-    "defaultMessage": "Signed in",
-    "description": "Audit log: action label for a successful sign-in"
+    "description": "Audit log: button that reloads the audit events; keep it short"
   },
   "web.routes.audit_log.status_all": {
     "defaultMessage": "All",
@@ -5305,7 +5349,7 @@
   },
   "web.routes.audit_log.status_filter": {
     "defaultMessage": "Status filter",
-    "description": "Audit log: aria-label of Tabs"
+    "description": "Audit log: accessible name of the status tabs that filter the audit events by status"
   },
   "web.routes.audit_log.status_tab": {
     "defaultMessage": "{label} · {count}",
@@ -5313,127 +5357,87 @@
   },
   "web.routes.audit_log.time": {
     "defaultMessage": "Time",
-    "description": "Audit log: text in Table.Column"
-  },
-  "web.routes.audit_log.verb_cloned": {
-    "defaultMessage": "Cloned",
-    "description": "Audit log: action verb for cloning a game server"
-  },
-  "web.routes.audit_log.verb_created": {
-    "defaultMessage": "Created",
-    "description": "Audit log: action verb for a POST request"
-  },
-  "web.routes.audit_log.verb_deleted": {
-    "defaultMessage": "Deleted",
-    "description": "Audit log: action verb for a DELETE request"
-  },
-  "web.routes.audit_log.verb_restarted": {
-    "defaultMessage": "Restarted",
-    "description": "Audit log: action verb for restarting a game server"
-  },
-  "web.routes.audit_log.verb_started": {
-    "defaultMessage": "Started",
-    "description": "Audit log: action verb for starting a game server"
-  },
-  "web.routes.audit_log.verb_stopped": {
-    "defaultMessage": "Stopped",
-    "description": "Audit log: action verb for stopping a game server"
-  },
-  "web.routes.audit_log.verb_transferred_ownership_of": {
-    "defaultMessage": "Transferred ownership of",
-    "description": "Audit log: action verb for transferring a game server's ownership"
-  },
-  "web.routes.audit_log.verb_updated": {
-    "defaultMessage": "Updated",
-    "description": "Audit log: action verb for a PUT or PATCH request"
-  },
-  "web.routes.audit_log.verb_viewed": {
-    "defaultMessage": "Viewed",
-    "description": "Audit log: action verb for a GET request"
-  },
-  "web.routes.audit_log.verb_wiped_data_on": {
-    "defaultMessage": "Wiped data on",
-    "description": "Audit log: action verb for wiping a game server's world data"
+    "description": "Audit log: column heading for when each event happened; keep it short"
   },
   "web.routes.backups.active": {
     "defaultMessage": "Active",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for the switch that turns a schedule on or off; keep it short"
   },
   "web.routes.backups.admin_settings": {
     "defaultMessage": "admin settings",
-    "description": "Backups: text in Link"
+    "description": "Backups: link text inside the no-destination note that opens the admin settings screen; keep it short"
   },
   "web.routes.backups.back_up_now": {
     "defaultMessage": "Back up now",
-    "description": "Backups: text in Button"
+    "description": "Backups: button that opens the dialog for a one-off snapshot, and the heading of that dialog; keep it short"
   },
   "web.routes.backups.backup": {
     "defaultMessage": "Backup",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for the backup a restore came from; keep it short"
   },
   "web.routes.backups.backups": {
     "defaultMessage": "Backups",
-    "description": "Backups: title of PageHeader"
+    "description": "Backups: page title at the top of the backups screen, also the name of the backups tab and its table; keep it short"
   },
   "web.routes.backups.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Backups: text in Button"
+    "description": "Backups: button that closes the back-up-now dialog without starting a snapshot; keep it short"
   },
   "web.routes.backups.completed": {
     "defaultMessage": "Completed",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for when a backup or restore completed; keep it short"
   },
   "web.routes.backups.cron": {
     "defaultMessage": "Cron",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for the cron expression of each schedule; keep it short"
   },
   "web.routes.backups.delete": {
     "defaultMessage": "Delete",
-    "description": "Backups: text in Button"
+    "description": "Backups: button that starts deleting a schedule row, and the confirm button of the delete schedule dialog; keep it short"
   },
   "web.routes.backups.delete_schedule": {
     "defaultMessage": "Delete schedule?",
-    "description": "Backups: title of ConfirmDialog"
+    "description": "Backups: title of the dialog asking whether to delete a schedule"
   },
   "web.routes.backups.destination": {
     "defaultMessage": "Destination",
-    "description": "Backups: aria-label of Select"
+    "description": "Backups: accessible name of the backup destination dropdown in the back-up-now dialog"
   },
   "web.routes.backups.destination_options": {
     "defaultMessage": "Destination options",
-    "description": "Backups: aria-label of ListBox"
+    "description": "Backups: accessible name of the list of backup destinations shown when the destination dropdown is open"
   },
   "web.routes.backups.last_run": {
     "defaultMessage": "Last run",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for when a schedule last ran; keep it short"
   },
   "web.routes.backups.loading_backups": {
     "defaultMessage": "Loading backups…",
-    "description": "Backups: text in p"
+    "description": "Backups: loading text on the backups tab while backup data is fetched"
   },
   "web.routes.backups.loading_restores": {
     "defaultMessage": "Loading restores…",
-    "description": "Backups: text in p"
+    "description": "Backups: loading text on the restores tab while restore data is fetched"
   },
   "web.routes.backups.loading_schedules": {
     "defaultMessage": "Loading schedules…",
-    "description": "Backups: text in p"
+    "description": "Backups: loading text on the schedules tab while schedule data is fetched"
   },
   "web.routes.backups.message": {
     "defaultMessage": "Message",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for the status message of a restore; keep it short"
   },
   "web.routes.backups.name": {
     "defaultMessage": "Name",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for the name of each backup, schedule or restore; keep it short"
   },
   "web.routes.backups.new_schedule_for": {
     "defaultMessage": "New schedule for",
-    "description": "Backups: text in label"
+    "description": "Backups: label above the server dropdown of the new schedule form"
   },
   "web.routes.backups.next_run": {
     "defaultMessage": "Next run",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for when a schedule runs next; keep it short"
   },
   "web.routes.backups.no_backup_data_available": {
     "defaultMessage": "No backup data available.",
@@ -5441,7 +5445,7 @@
   },
   "web.routes.backups.no_backup_destinations_configured_add": {
     "defaultMessage": "No backup destinations configured. Add one in",
-    "description": "Backups: text in p"
+    "description": "Backups: opening words of the note in the back-up-now dialog shown when no destination exists; the link and closing words follow it"
   },
   "web.routes.backups.no_backups_match_the_current_filters": {
     "defaultMessage": "No backups match the current filters.",
@@ -5477,15 +5481,15 @@
   },
   "web.routes.backups.phase": {
     "defaultMessage": "Phase",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for the phase or state of a backup or restore; keep it short"
   },
   "web.routes.backups.restores": {
     "defaultMessage": "Restores",
-    "description": "Backups: label of FleetCoverage"
+    "description": "Backups: name of the restores tab, also its table label; keep it short"
   },
   "web.routes.backups.run_a_one_off_snapshot_outside_any": {
     "defaultMessage": "Run a one-off snapshot outside any schedule.",
-    "description": "Backups: text in p"
+    "description": "Backups: text in the back-up-now dialog explaining that it runs a one-off snapshot outside any schedule"
   },
   "web.routes.backups.run_snapshot": {
     "defaultMessage": "Run snapshot",
@@ -5493,23 +5497,23 @@
   },
   "web.routes.backups.schedule_active": {
     "defaultMessage": "Schedule active",
-    "description": "Backups: aria-label of Switch"
+    "description": "Backups: accessible name of the switch that turns a schedule on or off"
   },
   "web.routes.backups.schedules": {
     "defaultMessage": "Schedules",
-    "description": "Backups: label of FleetCoverage"
+    "description": "Backups: name of the schedules tab, also its table label and the title of its panel; keep it short"
   },
   "web.routes.backups.select_a_destination": {
     "defaultMessage": "Select a destination…",
-    "description": "Backups: placeholder of Select"
+    "description": "Backups: grey placeholder of the destination dropdown in the back-up-now dialog, asking the user to pick a backup destination"
   },
   "web.routes.backups.select_a_server": {
     "defaultMessage": "Select a server…",
-    "description": "Backups: placeholder of Select"
+    "description": "Backups: grey placeholder of the server dropdown, asking the user to pick a server in the backup dialog or the new schedule form"
   },
   "web.routes.backups.select_a_server_2": {
     "defaultMessage": "Select a server",
-    "description": "Backups: aria-label of Select"
+    "description": "Backups: accessible name of the server dropdown in the new schedule form"
   },
   "web.routes.backups.select_server_with_backup_access": {
     "defaultMessage": "Select a server with backup access.",
@@ -5517,7 +5521,7 @@
   },
   "web.routes.backups.server": {
     "defaultMessage": "Server",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for the server a row belongs to, and the accessible name of the server dropdown in the backup dialog; keep it short"
   },
   "web.routes.backups.server_option_label": {
     "defaultMessage": "{name} · {target}",
@@ -5525,15 +5529,15 @@
   },
   "web.routes.backups.server_options": {
     "defaultMessage": "Server options",
-    "description": "Backups: aria-label of ListBox"
+    "description": "Backups: accessible name of the list of servers shown when the server dropdown is open"
   },
   "web.routes.backups.size": {
     "defaultMessage": "Size",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for the size of each backup; keep it short"
   },
   "web.routes.backups.snapshots_schedules_and_restores_across": {
     "defaultMessage": "Snapshots, schedules, and restores across your authorized locations.",
-    "description": "Backups: subtitle of PageHeader"
+    "description": "Backups: subtitle under the page title saying the screen covers snapshots, schedules and restores across your authorised locations"
   },
   "web.routes.backups.starting": {
     "defaultMessage": "Starting…",
@@ -5553,15 +5557,15 @@
   },
   "web.routes.backups.target": {
     "defaultMessage": "Target",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups: column heading for the target a restore was applied to; keep it short"
   },
   "web.routes.backups.the_cron_schedule_will_be_removed": {
     "defaultMessage": "The cron schedule will be removed. Existing backups remain intact; new snapshots on this schedule will stop running until it's recreated.",
-    "description": "Backups: text in p"
+    "description": "Backups: text in the delete schedule dialog: the schedule is removed, existing backups stay, and new snapshots stop until it is recreated"
   },
   "web.routes.backups.to_enable_snapshots": {
     "defaultMessage": "to enable snapshots.",
-    "description": "Backups: text in p"
+    "description": "Backups: closing words of the no-destination note after the admin settings link, ending the sentence about enabling snapshots"
   },
   "web.routes.backups.trailing_backups": {
     "defaultMessage": "{shown} of {total} {total, plural, one {backup} other {backups}}",
@@ -6901,39 +6905,39 @@
   },
   "web.routes.modules.catalog_entry_the_entry_can_be_re": {
     "defaultMessage": "catalog entry. The entry can be re-uploaded later.",
-    "description": "Modules: text in p"
+    "description": "Modules: end of the remove-upload dialog text saying the catalog entry can be re-uploaded later"
   },
   "web.routes.modules.create_module": {
     "defaultMessage": "Create module",
-    "description": "Modules: text in Button"
+    "description": "Modules: button that opens the dialog to build a new module; keep it short"
   },
   "web.routes.modules.deletes_the_module_resource_and_its": {
     "defaultMessage": "Deletes the Module resource and its managed GameTemplate. Game servers using this template must be removed first.",
-    "description": "Modules: text in p"
+    "description": "Modules: explanation in the uninstall dialog: deletes the Module resource and its managed GameTemplate, and game servers using it must be removed first"
   },
   "web.routes.modules.deletes_the_uploaded_bundle_backing_the": {
     "defaultMessage": "Deletes the uploaded bundle backing the",
-    "description": "Modules: text in p"
+    "description": "Modules: opening words of the remove-upload dialog text, followed by the module name in monospace and the rest of the sentence"
   },
   "web.routes.modules.failed_to_load_module_catalog": {
     "defaultMessage": "Failed to load module catalog.",
-    "description": "Modules: message of ErrorCard"
+    "description": "Modules: error text shown when the module catalog fails to load; a retry button sits next to it"
   },
   "web.routes.modules.failed_to_load_module_sources": {
     "defaultMessage": "Failed to load module sources.",
-    "description": "Modules: message of ErrorCard"
+    "description": "Modules: error text shown when the module sources panel fails to load; a retry button sits next to it"
   },
   "web.routes.modules.loading_module_catalog": {
     "defaultMessage": "Loading module catalog…",
-    "description": "Modules: message of LoadingCard"
+    "description": "Modules: loading text shown in place of the catalog while the module list is fetched"
   },
   "web.routes.modules.manage_sources": {
     "defaultMessage": "Manage sources",
-    "description": "Modules: text in Button"
+    "description": "Modules: button that shows or hides the module sources panel; keep it short"
   },
   "web.routes.modules.modules": {
     "defaultMessage": "Modules",
-    "description": "Modules: title of PageHeader"
+    "description": "Modules: page title at the top of the modules screen; keep it short"
   },
   "web.routes.modules.no_modules_in_any_catalog_yet": {
     "defaultMessage": "No modules in any catalog yet — open Manage sources to add a source or check its sync status.",
@@ -6945,11 +6949,11 @@
   },
   "web.routes.modules.pre_packaged_game_server_templates": {
     "defaultMessage": "Pre-packaged game-server templates pulled from your configured module sources.",
-    "description": "Modules: subtitle of PageHeader"
+    "description": "Modules: subtitle under the title: pre-packaged game-server templates pulled from your configured module sources"
   },
   "web.routes.modules.remove_upload": {
     "defaultMessage": "Remove upload",
-    "description": "Modules: confirmLabel of ConfirmDialog"
+    "description": "Modules: confirm button of the remove-upload dialog; keep it short"
   },
   "web.routes.modules.remove_uploaded_module": {
     "defaultMessage": "Remove uploaded module?",
@@ -6957,15 +6961,15 @@
   },
   "web.routes.modules.search_modules": {
     "defaultMessage": "Search modules…",
-    "description": "Modules: placeholder of Input"
+    "description": "Modules: grey placeholder of the search field that filters the module list by name"
   },
   "web.routes.modules.search_modules_2": {
     "defaultMessage": "Search modules",
-    "description": "Modules: aria-label of Input"
+    "description": "Modules: accessible name of the module search field"
   },
   "web.routes.modules.uninstall": {
     "defaultMessage": "Uninstall",
-    "description": "Modules: confirmLabel of ConfirmDialog"
+    "description": "Modules: confirm button of the uninstall dialog that removes the module; keep it short"
   },
   "web.routes.modules.uninstall_title": {
     "defaultMessage": "Uninstall {name}?",
@@ -6973,7 +6977,7 @@
   },
   "web.routes.modules.upload_module": {
     "defaultMessage": "Upload module",
-    "description": "Modules: text in Button"
+    "description": "Modules: button that opens the dialog to upload a module bundle; keep it short"
   },
   "web.routes.not_found.go_to_dashboard": {
     "defaultMessage": "Go to dashboard",
@@ -9801,7 +9805,7 @@
   },
   "web.routes.theme_settings.a_stylesheet_layered_on_top_of_the": {
     "defaultMessage": "A stylesheet layered on top of the active base theme.",
-    "description": "Theme settings: subtitle of ThemeCard"
+    "description": "Theme settings: subtitle under the custom CSS overlay title: a stylesheet layered on top of the active base theme"
   },
   "web.routes.theme_settings.accent_amber": {
     "defaultMessage": "Amber",
@@ -9813,7 +9817,7 @@
   },
   "web.routes.theme_settings.accent_color_and_surface_tone_for_the": {
     "defaultMessage": "Accent color and surface tone for the dashboard.",
-    "description": "Theme settings: subtitle of ThemeCard"
+    "description": "Theme settings: subtitle under the custom colors title: accent color and surface tone for the dashboard"
   },
   "web.routes.theme_settings.accent_cyan": {
     "defaultMessage": "Cyan",
@@ -9837,31 +9841,31 @@
   },
   "web.routes.theme_settings.accepts_gameplane_theme_v1_documents": {
     "defaultMessage": "Accepts gameplane-theme v1 documents.",
-    "description": "Theme settings: text in p"
+    "description": "Theme settings: hint under the paste area saying it accepts gameplane-theme v1 documents"
   },
   "web.routes.theme_settings.accepts_gameplane_theme_v1_json": {
     "defaultMessage": "Accepts gameplane-theme v1 (.json)",
-    "description": "Theme settings: text in span"
+    "description": "Theme settings: hint beside the choose-file button saying the file must be a gameplane-theme v1 JSON document"
   },
   "web.routes.theme_settings.appearance_mode": {
     "defaultMessage": "Appearance mode",
-    "description": "Theme settings: title of ThemeCard"
+    "description": "Theme settings: title of the appearance mode card, also its accessible group name; keep it short"
   },
   "web.routes.theme_settings.apply_import": {
     "defaultMessage": "Apply import",
-    "description": "Theme settings: text in Button"
+    "description": "Theme settings: button that applies the imported theme; keep it short"
   },
   "web.routes.theme_settings.choose_a_preset_theme": {
     "defaultMessage": "Choose a preset theme:",
-    "description": "Theme settings: text in Label"
+    "description": "Theme settings: label above the preset choices in the preset theme card"
   },
   "web.routes.theme_settings.choose_file": {
     "defaultMessage": "Choose file…",
-    "description": "Theme settings: text in Button"
+    "description": "Theme settings: button that opens the file picker to choose a theme file; keep it short"
   },
   "web.routes.theme_settings.choose_the_base_preset_for_your": {
     "defaultMessage": "Choose the base preset for your dashboard.",
-    "description": "Theme settings: subtitle of ThemeCard"
+    "description": "Theme settings: subtitle under the preset theme title: choose the base preset for the dashboard"
   },
   "web.routes.theme_settings.clipboard_unavailable": {
     "defaultMessage": "Clipboard unavailable — select the text and copy it manually.",
@@ -9869,7 +9873,7 @@
   },
   "web.routes.theme_settings.contrast_guard": {
     "defaultMessage": "Contrast guard",
-    "description": "Theme settings: text in div"
+    "description": "Theme settings: heading of the warning shown when the accent and surface colors fail the WCAG AA contrast check"
   },
   "web.routes.theme_settings.contrast_result": {
     "defaultMessage": "Contrast {ratio}:1 — {verdict} WCAG AA",
@@ -9881,11 +9885,11 @@
   },
   "web.routes.theme_settings.copy_or_download_your_saved_theme": {
     "defaultMessage": "Copy or download your saved theme profile, or apply a gameplane-theme v1 document.",
-    "description": "Theme settings: subtitle of ThemeCard"
+    "description": "Theme settings: subtitle under the export and import title: copy or download the saved theme, or apply a theme document"
   },
   "web.routes.theme_settings.copy_to_clipboard": {
     "defaultMessage": "Copy to clipboard",
-    "description": "Theme settings: text in Button"
+    "description": "Theme settings: button that copies the theme export to the clipboard; keep it short"
   },
   "web.routes.theme_settings.css_bytes_of_limit": {
     "defaultMessage": "{used} / {max}",
@@ -9893,31 +9897,31 @@
   },
   "web.routes.theme_settings.custom_colors": {
     "defaultMessage": "Custom colors",
-    "description": "Theme settings: text in div"
+    "description": "Theme settings: name of the custom colors option and the title of its card; keep it short"
   },
   "web.routes.theme_settings.custom_css": {
     "defaultMessage": "Custom CSS",
-    "description": "Theme settings: text in label"
+    "description": "Theme settings: label of the custom CSS text area"
   },
   "web.routes.theme_settings.custom_css_2": {
     "defaultMessage": "Custom CSS:",
-    "description": "Theme settings: text in div"
+    "description": "Theme settings: label before the custom CSS summary in the import preview; the size or none follows it"
   },
   "web.routes.theme_settings.custom_css_modifies_application": {
     "defaultMessage": "Custom CSS modifies application appearance directly. If the interface becomes unusable, recover via the",
-    "description": "Theme settings: text in p"
+    "description": "Theme settings: opening sentence of the custom CSS warning, ending with the words recover via the, followed by the safe-mode parameter"
   },
   "web.routes.theme_settings.custom_css_overlay": {
     "defaultMessage": "Custom CSS overlay",
-    "description": "Theme settings: title of ThemeCard"
+    "description": "Theme settings: title of the custom CSS overlay card; keep it short"
   },
   "web.routes.theme_settings.custom_css_recovery": {
     "defaultMessage": "Custom CSS recovery",
-    "description": "Theme settings: text in div"
+    "description": "Theme settings: heading of the warning box about recovering the interface if custom CSS makes it unusable"
   },
   "web.routes.theme_settings.download_gameplane_theme_json": {
     "defaultMessage": "Download gameplane-theme.json",
-    "description": "Theme settings: text in Button"
+    "description": "Theme settings: button that downloads the theme export as a gameplane-theme.json file; keep it short, the file name is usually left untranslated"
   },
   "web.routes.theme_settings.editor_error_external_import": {
     "defaultMessage": "External resource loads are not allowed (@import). Paste the content inline instead.",
@@ -9945,15 +9949,15 @@
   },
   "web.routes.theme_settings.enable_custom_css_overlay": {
     "defaultMessage": "Enable custom CSS overlay",
-    "description": "Theme settings: text in Label"
+    "description": "Theme settings: label and accessible name of the switch that turns the custom CSS overlay on"
   },
   "web.routes.theme_settings.export_import": {
     "defaultMessage": "Export / Import",
-    "description": "Theme settings: title of ThemeCard"
+    "description": "Theme settings: title of the export and import card; keep it short"
   },
   "web.routes.theme_settings.import_applied": {
     "defaultMessage": "Import applied",
-    "description": "Theme settings: text in span"
+    "description": "Theme settings: status text confirming the imported theme was applied; keep it short"
   },
   "web.routes.theme_settings.import_css_bytes": {
     "defaultMessage": "{size} bytes",
@@ -9965,15 +9969,15 @@
   },
   "web.routes.theme_settings.import_preview": {
     "defaultMessage": "Import preview",
-    "description": "Theme settings: text in div"
+    "description": "Theme settings: heading of the preview box that shows what an import will apply"
   },
   "web.routes.theme_settings.light_dark_or_follow_your_system": {
     "defaultMessage": "Light, dark, or follow your system preference.",
-    "description": "Theme settings: subtitle of ThemeCard"
+    "description": "Theme settings: subtitle under the appearance mode title: light, dark, or follow the system preference"
   },
   "web.routes.theme_settings.loading_theme_preferences": {
     "defaultMessage": "Loading theme preferences…",
-    "description": "Theme settings: text in Card.Content"
+    "description": "Theme settings: loading text shown while the saved theme preferences are fetched"
   },
   "web.routes.theme_settings.mode_dark": {
     "defaultMessage": "Dark",
@@ -9989,19 +9993,19 @@
   },
   "web.routes.theme_settings.paste_a_gameplane_theme_v1_document": {
     "defaultMessage": "Paste a gameplane-theme v1 document…",
-    "description": "Theme settings: placeholder of textarea"
+    "description": "Theme settings: grey placeholder inside the paste area showing that a gameplane-theme v1 document goes here; format name, usually left untranslated"
   },
   "web.routes.theme_settings.paste_theme_json": {
     "defaultMessage": "Paste theme JSON",
-    "description": "Theme settings: text in label"
+    "description": "Theme settings: label of the text area where a theme document is pasted to import it"
   },
   "web.routes.theme_settings.personal_theme_presets_colors_custom": {
     "defaultMessage": "Personal theme presets, colors, custom CSS, and theme portability.",
-    "description": "Theme settings: description of PageHeader"
+    "description": "Theme settings: description under the page title: personal presets, colors, custom CSS and theme import and export"
   },
   "web.routes.theme_settings.preset": {
     "defaultMessage": "Preset:",
-    "description": "Theme settings: text in span"
+    "description": "Theme settings: label before the preset name in the import preview; the preset name follows it"
   },
   "web.routes.theme_settings.preset_legacy_orange": {
     "defaultMessage": "Legacy Orange",
@@ -10021,27 +10025,27 @@
   },
   "web.routes.theme_settings.preset_theme": {
     "defaultMessage": "Preset theme",
-    "description": "Theme settings: title of ThemeCard"
+    "description": "Theme settings: title of the preset theme card, also the accessible name of its preset choice group; keep it short"
   },
   "web.routes.theme_settings.preview_button": {
     "defaultMessage": "Preview button",
-    "description": "Theme settings: text in span"
+    "description": "Theme settings: sample button drawn in the chosen colors to preview contrast; its text is only a sample label"
   },
   "web.routes.theme_settings.primary_accent": {
     "defaultMessage": "Primary accent",
-    "description": "Theme settings: text in Label"
+    "description": "Theme settings: label of the primary accent swatches, also their accessible group name; keep it short"
   },
   "web.routes.theme_settings.primary_accent_color_picker": {
     "defaultMessage": "Primary accent color picker",
-    "description": "Theme settings: aria-label of input"
+    "description": "Theme settings: accessible name of the colour picker for the primary accent"
   },
   "web.routes.theme_settings.primary_accent_hex_value": {
     "defaultMessage": "Primary accent hex value",
-    "description": "Theme settings: aria-label of input"
+    "description": "Theme settings: accessible name of the text field where the primary accent is typed as a hex value"
   },
   "web.routes.theme_settings.reset": {
     "defaultMessage": "Reset",
-    "description": "Theme settings: confirmLabel of ConfirmDialog"
+    "description": "Theme settings: confirm button of the reset-to-defaults dialog; keep it short"
   },
   "web.routes.theme_settings.reset_failed": {
     "defaultMessage": "Reset failed",
@@ -10049,19 +10053,19 @@
   },
   "web.routes.theme_settings.reset_to_defaults": {
     "defaultMessage": "Reset to Defaults",
-    "description": "Theme settings: text in Button"
+    "description": "Theme settings: button that opens the reset-to-defaults confirmation; keep it short"
   },
   "web.routes.theme_settings.reset_to_defaults_2": {
     "defaultMessage": "Reset to Defaults?",
-    "description": "Theme settings: title of ConfirmDialog"
+    "description": "Theme settings: title of the reset-to-defaults confirmation dialog"
   },
   "web.routes.theme_settings.rrggbb": {
     "defaultMessage": "#RRGGBB",
-    "description": "Theme settings: placeholder of input"
+    "description": "Theme settings: grey placeholder showing the hex colour format in the hex fields, usually left untranslated"
   },
   "web.routes.theme_settings.safe_mode_1": {
     "defaultMessage": "?safe-mode=1",
-    "description": "Theme settings: text in code"
+    "description": "Theme settings: URL parameter shown in monospace in the custom CSS warning (technical term, usually left untranslated)"
   },
   "web.routes.theme_settings.save": {
     "defaultMessage": "Save",
@@ -10069,7 +10073,7 @@
   },
   "web.routes.theme_settings.saved": {
     "defaultMessage": "Saved",
-    "description": "Theme settings: text in span"
+    "description": "Theme settings: status text beside the save button confirming the theme was saved; keep it short"
   },
   "web.routes.theme_settings.saving": {
     "defaultMessage": "Saving…",
@@ -10077,11 +10081,11 @@
   },
   "web.routes.theme_settings.set_by_your_surface_color": {
     "defaultMessage": "Set by your surface color",
-    "description": "Theme settings: text in p"
+    "description": "Theme settings: note shown when custom colors are active, saying the appearance mode is set by the surface color"
   },
   "web.routes.theme_settings.sharing_galleries_and_organization": {
     "defaultMessage": "Sharing galleries and organization-enforced themes are not part of this feature.",
-    "description": "Theme settings: text in p"
+    "description": "Theme settings: note at the bottom saying sharing galleries and organisation-enforced themes are not part of this feature"
   },
   "web.routes.theme_settings.surface_charcoal": {
     "defaultMessage": "Charcoal",
@@ -10101,15 +10105,15 @@
   },
   "web.routes.theme_settings.surface_tone": {
     "defaultMessage": "Surface tone",
-    "description": "Theme settings: text in Label"
+    "description": "Theme settings: label of the surface tone choices, also their accessible group name; keep it short"
   },
   "web.routes.theme_settings.surface_tone_color_picker": {
     "defaultMessage": "Surface tone color picker",
-    "description": "Theme settings: aria-label of input"
+    "description": "Theme settings: accessible name of the colour picker for the surface tone"
   },
   "web.routes.theme_settings.surface_tone_hex_value": {
     "defaultMessage": "Surface tone hex value",
-    "description": "Theme settings: aria-label of input"
+    "description": "Theme settings: accessible name of the text field where the surface tone is typed as a hex value"
   },
   "web.routes.theme_settings.the_selected_accent_and_surface": {
     "defaultMessage": "The selected accent and surface combination fails WCAG AA ({toFixed}:1). Choose a darker accent or a darker surface tone.",
@@ -10117,19 +10121,19 @@
   },
   "web.routes.theme_settings.theme_appearance": {
     "defaultMessage": "Theme & Appearance",
-    "description": "Theme settings: title of PageHeader"
+    "description": "Theme settings: page title, Theme & Appearance, at the top of the screen; keep it short"
   },
   "web.routes.theme_settings.theme_export_file": {
     "defaultMessage": "Theme export file",
-    "description": "Theme settings: aria-label of input"
+    "description": "Theme settings: accessible name of the hidden file picker that chooses a theme JSON file"
   },
   "web.routes.theme_settings.this_deletes_your_custom_colors_and": {
     "defaultMessage": "This deletes your custom colors and custom CSS and restores the selected preset. Continue?",
-    "description": "Theme settings: description of ConfirmDialog"
+    "description": "Theme settings: description in the reset confirmation: deletes custom colors and custom CSS, restores the selected preset, and asks whether to continue"
   },
   "web.routes.theme_settings.url_parameter_the_safe_mode_keyboard": {
     "defaultMessage": "URL parameter, the safe-mode keyboard shortcut, or the ‘Sign in with safe mode’ link on the login page.",
-    "description": "Theme settings: text in p"
+    "description": "Theme settings: end of the custom CSS warning naming the recovery options: the URL parameter, the safe-mode keyboard shortcut, or the sign-in link on the login page"
   },
   "web.routes.theme_settings.verdict_fails": {
     "defaultMessage": "Fails",
@@ -10141,15 +10145,15 @@
   },
   "web.routes.theme_settings.your_custom_colors_and_css_are_kept_and": {
     "defaultMessage": "Your custom colors and CSS are kept and can be re-applied later.",
-    "description": "Theme settings: text in p"
+    "description": "Theme settings: note under the preset choices: custom colors and CSS are kept and can be re-applied later"
   },
   "web.routes.theme_settings.your_rules_are_applied_on_top_of_the": {
     "defaultMessage": "Your rules are applied on top of the active base theme and win over it; elements you don't target follow the base theme.",
-    "description": "Theme settings: text in p"
+    "description": "Theme settings: note under the overlay switch: your rules are applied over the base theme and win; elements you do not target follow the base theme"
   },
   "web.routes.theme_settings.your_saved_accent_and_surface": {
     "defaultMessage": "Your saved accent and surface",
-    "description": "Theme settings: text in div"
+    "description": "Theme settings: caption under the colour preview, naming the accent and surface colors you saved"
   },
   "web.routes.users.account_is_oidc_managed": {
     "defaultMessage": "Account is OIDC-managed",
@@ -10157,7 +10161,7 @@
   },
   "web.routes.users.actions": {
     "defaultMessage": "Actions",
-    "description": "Users: aria-label of Table.Column"
+    "description": "Users: accessible name of the actions column, which holds the menu for each row; keep it short"
   },
   "web.routes.users.actions_for_user": {
     "defaultMessage": "Actions for {name}",
@@ -10165,11 +10169,11 @@
   },
   "web.routes.users.add": {
     "defaultMessage": "Add",
-    "description": "Users: text in Button"
+    "description": "Users: button that adds the grant to the user; keep it short"
   },
   "web.routes.users.additional_grants_apply_only_to_their": {
     "defaultMessage": "Additional grants apply only to their named cluster and namespace.",
-    "description": "Users: text in p"
+    "description": "Users: hint after the primary role note: additional grants apply only to their named cluster and namespace"
   },
   "web.routes.users.all_namespaces": {
     "defaultMessage": "all namespaces",
@@ -10177,7 +10181,7 @@
   },
   "web.routes.users.all_namespaces_button": {
     "defaultMessage": "All namespaces",
-    "description": "Users: text in Button"
+    "description": "Users: button that fills the namespace field with all namespaces; keep it short"
   },
   "web.routes.users.all_namespaces_requires_workload": {
     "defaultMessage": "All namespaces requires a role containing only workload cluster permissions. Central administration permissions are not allowed.",
@@ -10189,15 +10193,15 @@
   },
   "web.routes.users.audit_log": {
     "defaultMessage": "Audit log",
-    "description": "Users: text in Link"
+    "description": "Users: link button to the audit log screen, shown only to users allowed to audit; keep it short"
   },
   "web.routes.users.built_in": {
     "defaultMessage": "built-in",
-    "description": "Users: text in span"
+    "description": "Users: small badge marking a built-in role; keep it short"
   },
   "web.routes.users.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Users: text in Button"
+    "description": "Users: button that closes a dialog without making changes; keep it short"
   },
   "web.routes.users.cannot_delete": {
     "defaultMessage": "Cannot delete",
@@ -10205,7 +10209,7 @@
   },
   "web.routes.users.cluster_namespace_grants": {
     "defaultMessage": "Cluster & namespace grants",
-    "description": "Users: text in div"
+    "description": "Users: small heading of the cluster and namespace grants section for a user"
   },
   "web.routes.users.cluster_option": {
     "defaultMessage": "{displayName} ({name})",
@@ -10213,7 +10217,7 @@
   },
   "web.routes.users.couldn_t_load_installation_capabilities": {
     "defaultMessage": "Couldn't load installation capabilities.",
-    "description": "Users: text in p"
+    "description": "Users: error text in the namespace grants area when installation details fail to load"
   },
   "web.routes.users.create_user": {
     "defaultMessage": "Create user",
@@ -10221,15 +10225,15 @@
   },
   "web.routes.users.created": {
     "defaultMessage": "Created",
-    "description": "Users: text in Table.Column"
+    "description": "Users: column heading for when each user account was created; keep it short"
   },
   "web.routes.users.delete": {
     "defaultMessage": "Delete",
-    "description": "Users: text in Button"
+    "description": "Users: button that opens the delete dialog for a role; keep it short"
   },
   "web.routes.users.delete_role": {
     "defaultMessage": "Delete role",
-    "description": "Users: text in Button"
+    "description": "Users: confirm button of the delete role dialog; keep it short"
   },
   "web.routes.users.delete_role_name": {
     "defaultMessage": "Delete role {name}?",
@@ -10237,7 +10241,7 @@
   },
   "web.routes.users.delete_user": {
     "defaultMessage": "Delete user",
-    "description": "Users: text in div"
+    "description": "Users: menu item that opens the delete dialog for a user, and the dialog button that deletes the user; keep it short"
   },
   "web.routes.users.delete_username": {
     "defaultMessage": "Delete {username}?",
@@ -10245,27 +10249,27 @@
   },
   "web.routes.users.edit": {
     "defaultMessage": "Edit",
-    "description": "Users: text in Button"
+    "description": "Users: button that opens the edit dialog for a role other than admin; keep it short"
   },
   "web.routes.users.edit_user": {
     "defaultMessage": "Edit user",
-    "description": "Users: text in div"
+    "description": "Users: menu item that opens the edit dialog for a user; keep it short"
   },
   "web.routes.users.failed_to_load_users": {
     "defaultMessage": "Failed to load users.",
-    "description": "Users: text in Alert.Title"
+    "description": "Users: error title shown when the user list cannot be loaded"
   },
   "web.routes.users.for_remote_node_inventory_create_a_role": {
     "defaultMessage": "For remote node inventory, create a role in the Roles tab with “View nodes, version, and storage”, then grant it to all namespaces on that cluster.",
-    "description": "Users: text in p"
+    "description": "Users: hint under the grant form on remote node inventory: create a role with View nodes, version, and storage, then grant it to all namespaces on that cluster"
   },
   "web.routes.users.grant_cluster": {
     "defaultMessage": "Grant cluster",
-    "description": "Users: aria-label of Select"
+    "description": "Users: accessible name of the cluster dropdown for adding a grant"
   },
   "web.routes.users.grant_namespace": {
     "defaultMessage": "Grant namespace",
-    "description": "Users: aria-label of Input"
+    "description": "Users: accessible name of the namespace field for a new grant"
   },
   "web.routes.users.grant_panel": {
     "defaultMessage": "panel",
@@ -10273,27 +10277,27 @@
   },
   "web.routes.users.grant_role": {
     "defaultMessage": "Grant role",
-    "description": "Users: aria-label of Select"
+    "description": "Users: accessible name of the role dropdown for a new grant"
   },
   "web.routes.users.identity_providers": {
     "defaultMessage": "Identity providers",
-    "description": "Users: text in TabComponent"
+    "description": "Users: name of the Identity providers tab; keep it short"
   },
   "web.routes.users.in": {
     "defaultMessage": "in",
-    "description": "Users: text in span"
+    "description": "Users: small connecting word in a grant row, between the role and the namespace"
   },
   "web.routes.users.invite_user": {
     "defaultMessage": "Invite user",
-    "description": "Users: text in Button"
+    "description": "Users: button that opens the invite-user dialog; keep it short"
   },
   "web.routes.users.loading_installation": {
     "defaultMessage": "Loading installation…",
-    "description": "Users: text in p"
+    "description": "Users: loading text in the namespace grants area while installation details are fetched"
   },
   "web.routes.users.local_cluster": {
     "defaultMessage": "Local cluster",
-    "description": "Users: text in ListBoxItem"
+    "description": "Users: option in the grant cluster dropdown for the local cluster; keep it short"
   },
   "web.routes.users.local_primary_role_managed_above": {
     "defaultMessage": "The local primary role is managed above. Choose a namespace for an additional local grant.",
@@ -10301,7 +10305,7 @@
   },
   "web.routes.users.manage_access_to_the_gameplane_control": {
     "defaultMessage": "Manage access to the Gameplane control plane.",
-    "description": "Users: description of PageHeader"
+    "description": "Users: description under the title saying the page manages access to the Gameplane control plane"
   },
   "web.routes.users.managed_outside_this_editor": {
     "defaultMessage": "Managed outside this editor",
@@ -10309,23 +10313,23 @@
   },
   "web.routes.users.namespace": {
     "defaultMessage": "namespace",
-    "description": "Users: placeholder of Input"
+    "description": "Users: grey placeholder of the namespace field in the grants form, showing the expected entry"
   },
   "web.routes.users.new_role": {
     "defaultMessage": "New role",
-    "description": "Users: text in Button"
+    "description": "Users: button that opens the dialog to create a new role; keep it short"
   },
   "web.routes.users.no_entries": {
     "defaultMessage": "No entries.",
-    "description": "Users: text in span"
+    "description": "Users: empty-state text shown when the table has no rows"
   },
   "web.routes.users.oidc_identity_providers_configured_in": {
     "defaultMessage": "OIDC identity providers configured in Helm values appear here. UI configuration is tracked for v1.1.",
-    "description": "Users: text in Card"
+    "description": "Users: note on the identity providers tab: OIDC providers from Helm values appear here and UI setup is planned for v1.1 (OIDC: technical term, usually left untranslated)"
   },
   "web.routes.users.on": {
     "defaultMessage": "on",
-    "description": "Users: text in span"
+    "description": "Users: small connecting word in a grant row, between the namespace and the cluster"
   },
   "web.routes.users.permission_count": {
     "defaultMessage": "{count, plural, one {{count} permission} other {{count} permissions}}",
@@ -10345,7 +10349,7 @@
   },
   "web.routes.users.provider": {
     "defaultMessage": "Provider",
-    "description": "Users: text in Table.Column"
+    "description": "Users: column heading for the sign-in provider of each user; keep it short"
   },
   "web.routes.users.provider_local": {
     "defaultMessage": "Local",
@@ -10369,7 +10373,7 @@
   },
   "web.routes.users.reset_password": {
     "defaultMessage": "Reset password",
-    "description": "Users: text in div"
+    "description": "Users: menu item that opens password reset for a user; disabled for OIDC-managed accounts; keep it short"
   },
   "web.routes.users.reset_password_oidc_label": {
     "defaultMessage": "Reset password: Account is OIDC-managed",
@@ -10377,11 +10381,11 @@
   },
   "web.routes.users.role": {
     "defaultMessage": "Role",
-    "description": "Users: text in Table.Column"
+    "description": "Users: column heading for the role of each user; keep it short"
   },
   "web.routes.users.roles": {
     "defaultMessage": "Roles",
-    "description": "Users: text in span"
+    "description": "Users: name of the Roles tab, followed by a count in brackets; keep it short"
   },
   "web.routes.users.search_placeholder": {
     "defaultMessage": "Search…",
@@ -10389,7 +10393,7 @@
   },
   "web.routes.users.search_users": {
     "defaultMessage": "Search users",
-    "description": "Users: aria-label of Input"
+    "description": "Users: accessible name of the search field that filters the list in the open tab"
   },
   "web.routes.users.search_users_placeholder": {
     "defaultMessage": "Search users…",
@@ -10397,15 +10401,15 @@
   },
   "web.routes.users.select_a_workload_cluster": {
     "defaultMessage": "Select a workload cluster",
-    "description": "Users: placeholder of Select"
+    "description": "Users: grey placeholder of the cluster dropdown in the grants form, asking the user to pick a workload cluster"
   },
   "web.routes.users.service_accounts": {
     "defaultMessage": "Service accounts",
-    "description": "Users: text in TabComponent"
+    "description": "Users: name of the Service accounts tab; keep it short"
   },
   "web.routes.users.service_accounts_machine_to_machine_api": {
     "defaultMessage": "Service accounts (machine-to-machine API tokens) are tracked for v1.1.",
-    "description": "Users: text in Card"
+    "description": "Users: note on the service accounts tab: machine-to-machine API tokens are planned for v1.1"
   },
   "web.routes.users.set_new_password": {
     "defaultMessage": "Set new password",
@@ -10417,35 +10421,35 @@
   },
   "web.routes.users.their_sessions_will_be_revoked_and_they": {
     "defaultMessage": "Their sessions will be revoked and they'll lose access immediately. This cannot be undone.",
-    "description": "Users: text in p"
+    "description": "Users: text in the delete dialog: their sessions are revoked, they lose access immediately, and this cannot be undone"
   },
   "web.routes.users.this_can_t_be_undone_roles_assigned_to": {
     "defaultMessage": "This can't be undone. Roles assigned to a user can't be deleted.",
-    "description": "Users: text in p"
+    "description": "Users: text in the delete role dialog: this cannot be undone, and roles still assigned to a user cannot be deleted"
   },
   "web.routes.users.user": {
     "defaultMessage": "User",
-    "description": "Users: text in Table.Column"
+    "description": "Users: column heading for the user name; keep it short"
   },
   "web.routes.users.users": {
     "defaultMessage": "Users",
-    "description": "Users: text in span"
+    "description": "Users: name of the Users tab, followed by a count in brackets; keep it short"
   },
   "web.routes.users.users_list": {
     "defaultMessage": "Users list",
-    "description": "Users: aria-label of Table.Content"
+    "description": "Users: accessible name of the users table"
   },
   "web.routes.users.users_rbac": {
     "defaultMessage": "Users & RBAC",
-    "description": "Users: title of PageHeader"
+    "description": "Users: page title, Users & RBAC, at the top of the users screen; keep it short"
   },
   "web.routes.users.you": {
     "defaultMessage": "you",
-    "description": "Users: text in span"
+    "description": "Users: small badge next to your own user name; keep it short"
   },
   "web.routes.users.you_can_t_delete_your_own_account": {
     "defaultMessage": "You can't delete your own account.",
-    "description": "Users: text in p"
+    "description": "Users: message in the delete dialog shown when you try to delete your own account"
   },
   "web.settings.compact_language_menu": {
     "defaultMessage": "Language options",

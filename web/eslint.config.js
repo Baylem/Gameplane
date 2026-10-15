@@ -21,6 +21,7 @@ const MIGRATED_I18N_PATHS = [
   "src/routes/{Login,Share,NotFound,Dashboard,Servers,Clusters,Cluster}.tsx",
   "src/routes/{CreateServer,ServerDetail}.tsx",
   "src/routes/tabs/**/*.{ts,tsx}",
+  "src/routes/{Modules,Backups,Users,AuditLog,AdminLogs,AdminSettings,ThemeSettings}.tsx",
 ];
 
 export default [

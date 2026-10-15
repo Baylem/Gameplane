@@ -446,8 +446,8 @@ export function ThemeSettingsPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title={intl.formatMessage({ id: "web.routes.theme_settings.theme_appearance", defaultMessage: "Theme & Appearance", description: "Theme settings: title of PageHeader" })}
-        description={intl.formatMessage({ id: "web.routes.theme_settings.personal_theme_presets_colors_custom", defaultMessage: "Personal theme presets, colors, custom CSS, and theme portability.", description: "Theme settings: description of PageHeader" })}
+        title={intl.formatMessage({ id: "web.routes.theme_settings.theme_appearance", defaultMessage: "Theme & Appearance", description: "Theme settings: page title, Theme & Appearance, at the top of the screen; keep it short" })}
+        description={intl.formatMessage({ id: "web.routes.theme_settings.personal_theme_presets_colors_custom", defaultMessage: "Personal theme presets, colors, custom CSS, and theme portability.", description: "Theme settings: description under the page title: personal presets, colors, custom CSS and theme import and export" })}
       />
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
@@ -462,7 +462,7 @@ export function ThemeSettingsPage() {
         <div className="space-y-6">
           {!draft ? (
             <Card>
-              <Card.Content className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.loading_theme_preferences", defaultMessage: "Loading theme preferences…", description: "Theme settings: text in Card.Content" })}</Card.Content>
+              <Card.Content className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.loading_theme_preferences", defaultMessage: "Loading theme preferences…", description: "Theme settings: loading text shown while the saved theme preferences are fetched" })}</Card.Content>
             </Card>
           ) : (
             <>
@@ -470,11 +470,11 @@ export function ThemeSettingsPage() {
               <LanguagePicker />
 
               {/* Preset theme (contracts/theme-ui.md §3.1) */}
-              <ThemeCard title={intl.formatMessage({ id: "web.routes.theme_settings.preset_theme", defaultMessage: "Preset theme", description: "Theme settings: title of ThemeCard" })} subtitle={intl.formatMessage({ id: "web.routes.theme_settings.choose_the_base_preset_for_your", defaultMessage: "Choose the base preset for your dashboard.", description: "Theme settings: subtitle of ThemeCard" })}>
+              <ThemeCard title={intl.formatMessage({ id: "web.routes.theme_settings.preset_theme", defaultMessage: "Preset theme", description: "Theme settings: title of the preset theme card, also the accessible name of its preset choice group; keep it short" })} subtitle={intl.formatMessage({ id: "web.routes.theme_settings.choose_the_base_preset_for_your", defaultMessage: "Choose the base preset for your dashboard.", description: "Theme settings: subtitle under the preset theme title: choose the base preset for the dashboard" })}>
                 <div className="space-y-2">
-                  <Label className="text-xs">{intl.formatMessage({ id: "web.routes.theme_settings.choose_a_preset_theme", defaultMessage: "Choose a preset theme:", description: "Theme settings: text in Label" })}</Label>
+                  <Label className="text-xs">{intl.formatMessage({ id: "web.routes.theme_settings.choose_a_preset_theme", defaultMessage: "Choose a preset theme:", description: "Theme settings: label above the preset choices in the preset theme card" })}</Label>
                   <RadioGroup
-                    aria-label={intl.formatMessage({ id: "web.routes.theme_settings.preset_theme", defaultMessage: "Preset theme", description: "Theme settings: title of ThemeCard" })}
+                    aria-label={intl.formatMessage({ id: "web.routes.theme_settings.preset_theme", defaultMessage: "Preset theme", description: "Theme settings: title of the preset theme card, also the accessible name of its preset choice group; keep it short" })}
                     value={draft.themeType === "custom_colors" ? "custom_colors" : draft.presetId}
                     onChange={pickBase}
                     className="grid gap-3 sm:grid-cols-3"
@@ -506,7 +506,7 @@ export function ThemeSettingsPage() {
                       <Radio.Content className="flex h-full w-full items-start gap-3 rounded-lg border border-border px-4 py-3 transition-colors hover:bg-surface/60 data-[selected]:border-primary data-[selected]:bg-primary/5">
                         <Radio.Control className="mt-1 shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.theme_settings.custom_colors", defaultMessage: "Custom colors", description: "Theme settings: text in div" })}</div>
+                          <div className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.theme_settings.custom_colors", defaultMessage: "Custom colors", description: "Theme settings: name of the custom colors option and the title of its card; keep it short" })}</div>
                           <div className="mt-2 flex items-center gap-2">
                             <span
                               aria-hidden
@@ -520,21 +520,21 @@ export function ThemeSettingsPage() {
                               style={{ backgroundColor: effectiveColors.surface }}
                             />
                           </div>
-                          <div className="mt-1.5 text-xs text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.your_saved_accent_and_surface", defaultMessage: "Your saved accent and surface", description: "Theme settings: text in div" })}</div>
+                          <div className="mt-1.5 text-xs text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.your_saved_accent_and_surface", defaultMessage: "Your saved accent and surface", description: "Theme settings: caption under the colour preview, naming the accent and surface colors you saved" })}</div>
                         </div>
                       </Radio.Content>
                     </Radio>
                   </RadioGroup>
                 </div>
                 <p className="flex items-center gap-2 text-xs text-muted">
-                  <Info className="h-3.5 w-3.5 shrink-0" />{intl.formatMessage({ id: "web.routes.theme_settings.your_custom_colors_and_css_are_kept_and", defaultMessage: "Your custom colors and CSS are kept and can be re-applied later.", description: "Theme settings: text in p" })}</p>
+                  <Info className="h-3.5 w-3.5 shrink-0" />{intl.formatMessage({ id: "web.routes.theme_settings.your_custom_colors_and_css_are_kept_and", defaultMessage: "Your custom colors and CSS are kept and can be re-applied later.", description: "Theme settings: note under the preset choices: custom colors and CSS are kept and can be re-applied later" })}</p>
               </ThemeCard>
 
               {/* Appearance mode */}
-              <ThemeCard title={intl.formatMessage({ id: "web.routes.theme_settings.appearance_mode", defaultMessage: "Appearance mode", description: "Theme settings: title of ThemeCard" })} subtitle={intl.formatMessage({ id: "web.routes.theme_settings.light_dark_or_follow_your_system", defaultMessage: "Light, dark, or follow your system preference.", description: "Theme settings: subtitle of ThemeCard" })}>
+              <ThemeCard title={intl.formatMessage({ id: "web.routes.theme_settings.appearance_mode", defaultMessage: "Appearance mode", description: "Theme settings: title of the appearance mode card, also its accessible group name; keep it short" })} subtitle={intl.formatMessage({ id: "web.routes.theme_settings.light_dark_or_follow_your_system", defaultMessage: "Light, dark, or follow your system preference.", description: "Theme settings: subtitle under the appearance mode title: light, dark, or follow the system preference" })}>
                 <div
                   role="group"
-                  aria-label={intl.formatMessage({ id: "web.routes.theme_settings.appearance_mode", defaultMessage: "Appearance mode", description: "Theme settings: title of ThemeCard" })}
+                  aria-label={intl.formatMessage({ id: "web.routes.theme_settings.appearance_mode", defaultMessage: "Appearance mode", description: "Theme settings: title of the appearance mode card, also its accessible group name; keep it short" })}
                   aria-describedby={colorsActive ? "appearance-mode-note" : undefined}
                   className="inline-flex self-start rounded-lg border border-border bg-surface/40 p-1"
                 >
@@ -559,16 +559,16 @@ export function ThemeSettingsPage() {
                 </div>
                 {colorsActive && (
                   <p id="appearance-mode-note" className="flex items-center gap-2 text-xs text-muted">
-                    <Info className="h-3.5 w-3.5 shrink-0" />{intl.formatMessage({ id: "web.routes.theme_settings.set_by_your_surface_color", defaultMessage: "Set by your surface color", description: "Theme settings: text in p" })}</p>
+                    <Info className="h-3.5 w-3.5 shrink-0" />{intl.formatMessage({ id: "web.routes.theme_settings.set_by_your_surface_color", defaultMessage: "Set by your surface color", description: "Theme settings: note shown when custom colors are active, saying the appearance mode is set by the surface color" })}</p>
                 )}
               </ThemeCard>
 
               {/* Custom colors (§3.2) */}
-              <ThemeCard title={intl.formatMessage({ id: "web.routes.theme_settings.custom_colors", defaultMessage: "Custom colors", description: "Theme settings: text in div" })} subtitle={intl.formatMessage({ id: "web.routes.theme_settings.accent_color_and_surface_tone_for_the", defaultMessage: "Accent color and surface tone for the dashboard.", description: "Theme settings: subtitle of ThemeCard" })}>
+              <ThemeCard title={intl.formatMessage({ id: "web.routes.theme_settings.custom_colors", defaultMessage: "Custom colors", description: "Theme settings: name of the custom colors option and the title of its card; keep it short" })} subtitle={intl.formatMessage({ id: "web.routes.theme_settings.accent_color_and_surface_tone_for_the", defaultMessage: "Accent color and surface tone for the dashboard.", description: "Theme settings: subtitle under the custom colors title: accent color and surface tone for the dashboard" })}>
                 <div className={cn("space-y-4 transition-opacity", !colorsActive && "opacity-50")}>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">{intl.formatMessage({ id: "web.routes.theme_settings.primary_accent", defaultMessage: "Primary accent", description: "Theme settings: text in Label" })}</Label>
-                    <div className="flex flex-wrap gap-2.5" role="group" aria-label={intl.formatMessage({ id: "web.routes.theme_settings.primary_accent", defaultMessage: "Primary accent", description: "Theme settings: text in Label" })}>
+                    <Label className="text-xs">{intl.formatMessage({ id: "web.routes.theme_settings.primary_accent", defaultMessage: "Primary accent", description: "Theme settings: label of the primary accent swatches, also their accessible group name; keep it short" })}</Label>
+                    <div className="flex flex-wrap gap-2.5" role="group" aria-label={intl.formatMessage({ id: "web.routes.theme_settings.primary_accent", defaultMessage: "Primary accent", description: "Theme settings: label of the primary accent swatches, also their accessible group name; keep it short" })}>
                       {ACCENT_SWATCHES.map((s) => {
                         const selected = effectiveColors.accent.toLowerCase() === s.hex.toLowerCase();
                         return (
@@ -592,7 +592,7 @@ export function ThemeSettingsPage() {
                     <div className="flex items-center gap-2 pt-1">
                       <input
                         type="color"
-                        aria-label={intl.formatMessage({ id: "web.routes.theme_settings.primary_accent_color_picker", defaultMessage: "Primary accent color picker", description: "Theme settings: aria-label of input" })}
+                        aria-label={intl.formatMessage({ id: "web.routes.theme_settings.primary_accent_color_picker", defaultMessage: "Primary accent color picker", description: "Theme settings: accessible name of the colour picker for the primary accent" })}
                         disabled={!colorsActive}
                         value={effectiveColors.accent.toLowerCase()}
                         onChange={(e) => pickAccent(e.target.value)}
@@ -601,11 +601,11 @@ export function ThemeSettingsPage() {
                       <input
                         type="text"
                         inputMode="text"
-                        aria-label={intl.formatMessage({ id: "web.routes.theme_settings.primary_accent_hex_value", defaultMessage: "Primary accent hex value", description: "Theme settings: aria-label of input" })}
+                        aria-label={intl.formatMessage({ id: "web.routes.theme_settings.primary_accent_hex_value", defaultMessage: "Primary accent hex value", description: "Theme settings: accessible name of the text field where the primary accent is typed as a hex value" })}
                         disabled={!colorsActive}
                         defaultValue={effectiveColors.accent}
                         key={effectiveColors.accent}
-                        placeholder={intl.formatMessage({ id: "web.routes.theme_settings.rrggbb", defaultMessage: "#RRGGBB", description: "Theme settings: placeholder of input" })}
+                        placeholder={intl.formatMessage({ id: "web.routes.theme_settings.rrggbb", defaultMessage: "#RRGGBB", description: "Theme settings: grey placeholder showing the hex colour format in the hex fields, usually left untranslated" })}
                         maxLength={7}
                         className="w-28 rounded-md border border-border bg-surface px-2 py-1 font-mono text-xs text-fg placeholder:text-muted focus:border-primary focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
                         onBlur={(e) => {
@@ -626,14 +626,14 @@ export function ThemeSettingsPage() {
                     <span
                       className="rounded-md px-3 py-1.5 text-sm font-medium"
                       style={{ backgroundColor: derived.accent, color: derived["accent-foreground"] }}
-                    >{intl.formatMessage({ id: "web.routes.theme_settings.preview_button", defaultMessage: "Preview button", description: "Theme settings: text in span" })}</span>
+                    >{intl.formatMessage({ id: "web.routes.theme_settings.preview_button", defaultMessage: "Preview button", description: "Theme settings: sample button drawn in the chosen colors to preview contrast; its text is only a sample label" })}</span>
                     <span className={cn("text-xs", guardOk ? "text-muted" : "text-danger")}>{intl.formatMessage({ id: "web.routes.theme_settings.contrast_result", defaultMessage: "Contrast {ratio}:1 — {verdict} WCAG AA", description: "Theme settings: accent/surface contrast result; {ratio} is the contrast ratio to one decimal place and {verdict} is Passes or Fails" }, { ratio: accentSurfaceRatio.toFixed(1), verdict: guardOk ? intl.formatMessage({ id: "web.routes.theme_settings.verdict_passes", defaultMessage: "Passes", description: "Theme settings: contrast verdict when the WCAG AA check passes" }) : intl.formatMessage({ id: "web.routes.theme_settings.verdict_fails", defaultMessage: "Fails", description: "Theme settings: contrast verdict when the WCAG AA check fails" }) })}</span>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs">{intl.formatMessage({ id: "web.routes.theme_settings.surface_tone", defaultMessage: "Surface tone", description: "Theme settings: text in Label" })}</Label>
+                    <Label className="text-xs">{intl.formatMessage({ id: "web.routes.theme_settings.surface_tone", defaultMessage: "Surface tone", description: "Theme settings: label of the surface tone choices, also their accessible group name; keep it short" })}</Label>
                     <RadioGroup
-                      aria-label={intl.formatMessage({ id: "web.routes.theme_settings.surface_tone", defaultMessage: "Surface tone", description: "Theme settings: text in Label" })}
+                      aria-label={intl.formatMessage({ id: "web.routes.theme_settings.surface_tone", defaultMessage: "Surface tone", description: "Theme settings: label of the surface tone choices, also their accessible group name; keep it short" })}
                       value={
                         SURFACE_TONES.find((t) => t.hex.toLowerCase() === effectiveColors.surface.toLowerCase())
                           ?.hex ?? effectiveColors.surface
@@ -660,7 +660,7 @@ export function ThemeSettingsPage() {
                     <div className="flex items-center gap-2 pt-1">
                       <input
                         type="color"
-                        aria-label={intl.formatMessage({ id: "web.routes.theme_settings.surface_tone_color_picker", defaultMessage: "Surface tone color picker", description: "Theme settings: aria-label of input" })}
+                        aria-label={intl.formatMessage({ id: "web.routes.theme_settings.surface_tone_color_picker", defaultMessage: "Surface tone color picker", description: "Theme settings: accessible name of the colour picker for the surface tone" })}
                         disabled={!colorsActive}
                         value={effectiveColors.surface.toLowerCase()}
                         onChange={(e) => pickSurface(e.target.value)}
@@ -669,11 +669,11 @@ export function ThemeSettingsPage() {
                       <input
                         type="text"
                         inputMode="text"
-                        aria-label={intl.formatMessage({ id: "web.routes.theme_settings.surface_tone_hex_value", defaultMessage: "Surface tone hex value", description: "Theme settings: aria-label of input" })}
+                        aria-label={intl.formatMessage({ id: "web.routes.theme_settings.surface_tone_hex_value", defaultMessage: "Surface tone hex value", description: "Theme settings: accessible name of the text field where the surface tone is typed as a hex value" })}
                         disabled={!colorsActive}
                         defaultValue={effectiveColors.surface}
                         key={effectiveColors.surface}
-                        placeholder={intl.formatMessage({ id: "web.routes.theme_settings.rrggbb", defaultMessage: "#RRGGBB", description: "Theme settings: placeholder of input" })}
+                        placeholder={intl.formatMessage({ id: "web.routes.theme_settings.rrggbb", defaultMessage: "#RRGGBB", description: "Theme settings: grey placeholder showing the hex colour format in the hex fields, usually left untranslated" })}
                         maxLength={7}
                         className="w-28 rounded-md border border-border bg-surface px-2 py-1 font-mono text-xs text-fg placeholder:text-muted focus:border-primary focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50"
                         onBlur={(e) => {
@@ -695,7 +695,7 @@ export function ThemeSettingsPage() {
                   <div role="alert" className="flex gap-3 rounded-md border border-warning/40 bg-warning/10 p-3">
                     <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning-soft-foreground" />
                     <div className="text-xs">
-                      <div className="mb-1 font-medium text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.theme_settings.contrast_guard", defaultMessage: "Contrast guard", description: "Theme settings: text in div" })}</div>
+                      <div className="mb-1 font-medium text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.theme_settings.contrast_guard", defaultMessage: "Contrast guard", description: "Theme settings: heading of the warning shown when the accent and surface colors fail the WCAG AA contrast check" })}</div>
                       <p className="text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.theme_settings.the_selected_accent_and_surface", defaultMessage: "The selected accent and surface combination fails WCAG AA ({toFixed}:1). Choose a darker accent or a darker surface tone.", description: "Theme settings: sentence with toFixed in p" }, { toFixed: accentSurfaceRatio.toFixed(1) })}</p>
                     </div>
                   </div>
@@ -703,11 +703,11 @@ export function ThemeSettingsPage() {
               </ThemeCard>
 
               {/* Custom CSS overlay (§3.3) */}
-              <ThemeCard title={intl.formatMessage({ id: "web.routes.theme_settings.custom_css_overlay", defaultMessage: "Custom CSS overlay", description: "Theme settings: title of ThemeCard" })} subtitle={intl.formatMessage({ id: "web.routes.theme_settings.a_stylesheet_layered_on_top_of_the", defaultMessage: "A stylesheet layered on top of the active base theme.", description: "Theme settings: subtitle of ThemeCard" })}>
+              <ThemeCard title={intl.formatMessage({ id: "web.routes.theme_settings.custom_css_overlay", defaultMessage: "Custom CSS overlay", description: "Theme settings: title of the custom CSS overlay card; keep it short" })} subtitle={intl.formatMessage({ id: "web.routes.theme_settings.a_stylesheet_layered_on_top_of_the", defaultMessage: "A stylesheet layered on top of the active base theme.", description: "Theme settings: subtitle under the custom CSS overlay title: a stylesheet layered on top of the active base theme" })}>
                 <div className="flex items-center justify-between gap-4">
-                  <Label className="text-sm">{intl.formatMessage({ id: "web.routes.theme_settings.enable_custom_css_overlay", defaultMessage: "Enable custom CSS overlay", description: "Theme settings: text in Label" })}</Label>
+                  <Label className="text-sm">{intl.formatMessage({ id: "web.routes.theme_settings.enable_custom_css_overlay", defaultMessage: "Enable custom CSS overlay", description: "Theme settings: label and accessible name of the switch that turns the custom CSS overlay on" })}</Label>
                   <Switch
-                    aria-label={intl.formatMessage({ id: "web.routes.theme_settings.enable_custom_css_overlay", defaultMessage: "Enable custom CSS overlay", description: "Theme settings: text in Label" })}
+                    aria-label={intl.formatMessage({ id: "web.routes.theme_settings.enable_custom_css_overlay", defaultMessage: "Enable custom CSS overlay", description: "Theme settings: label and accessible name of the switch that turns the custom CSS overlay on" })}
                     isSelected={draft.customCssEnabled}
                     onChange={(v) => update({ customCssEnabled: v })}
                   >
@@ -718,9 +718,9 @@ export function ThemeSettingsPage() {
                     </Switch.Content>
                   </Switch>
                 </div>
-                <p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.your_rules_are_applied_on_top_of_the", defaultMessage: "Your rules are applied on top of the active base theme and win over it; elements you don't target follow the base theme.", description: "Theme settings: text in p" })}</p>
+                <p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.your_rules_are_applied_on_top_of_the", defaultMessage: "Your rules are applied on top of the active base theme and win over it; elements you don't target follow the base theme.", description: "Theme settings: note under the overlay switch: your rules are applied over the base theme and win; elements you do not target follow the base theme" })}</p>
                 <div className="space-y-1.5">
-                  <label className="block text-xs text-muted" htmlFor="theme-custom-css">{intl.formatMessage({ id: "web.routes.theme_settings.custom_css", defaultMessage: "Custom CSS", description: "Theme settings: text in label" })}</label>
+                  <label className="block text-xs text-muted" htmlFor="theme-custom-css">{intl.formatMessage({ id: "web.routes.theme_settings.custom_css", defaultMessage: "Custom CSS", description: "Theme settings: label of the custom CSS text area" })}</label>
                   <textarea
                     id="theme-custom-css"
                     className="min-h-[140px] w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-[13px] text-fg placeholder:text-muted focus:border-primary focus:outline-hidden"
@@ -744,22 +744,22 @@ export function ThemeSettingsPage() {
                 <div className="flex gap-3 rounded-md border border-warning/40 bg-warning/10 p-3">
                   <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-warning-soft-foreground" />
                   <div className="text-xs">
-                    <div className="mb-1 font-medium text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.theme_settings.custom_css_recovery", defaultMessage: "Custom CSS recovery", description: "Theme settings: text in div" })}</div>
-                    <p className="text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.theme_settings.custom_css_modifies_application", defaultMessage: "Custom CSS modifies application appearance directly. If the interface becomes unusable, recover via the", description: "Theme settings: text in p" })} <code className="font-mono">{intl.formatMessage({ id: "web.routes.theme_settings.safe_mode_1", defaultMessage: "?safe-mode=1", description: "Theme settings: text in code" })}</code> {intl.formatMessage({ id: "web.routes.theme_settings.url_parameter_the_safe_mode_keyboard", defaultMessage: "URL parameter, the safe-mode keyboard shortcut, or the ‘Sign in with safe mode’ link on the login page.", description: "Theme settings: text in p" })}</p>
+                    <div className="mb-1 font-medium text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.theme_settings.custom_css_recovery", defaultMessage: "Custom CSS recovery", description: "Theme settings: heading of the warning box about recovering the interface if custom CSS makes it unusable" })}</div>
+                    <p className="text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.theme_settings.custom_css_modifies_application", defaultMessage: "Custom CSS modifies application appearance directly. If the interface becomes unusable, recover via the", description: "Theme settings: opening sentence of the custom CSS warning, ending with the words recover via the, followed by the safe-mode parameter" })} <code className="font-mono">{intl.formatMessage({ id: "web.routes.theme_settings.safe_mode_1", defaultMessage: "?safe-mode=1", description: "Theme settings: URL parameter shown in monospace in the custom CSS warning (technical term, usually left untranslated)" })}</code> {intl.formatMessage({ id: "web.routes.theme_settings.url_parameter_the_safe_mode_keyboard", defaultMessage: "URL parameter, the safe-mode keyboard shortcut, or the ‘Sign in with safe mode’ link on the login page.", description: "Theme settings: end of the custom CSS warning naming the recovery options: the URL parameter, the safe-mode keyboard shortcut, or the sign-in link on the login page" })}</p>
                   </div>
                 </div>
               </ThemeCard>
 
               {/* Export / Import (§3.4) */}
               <ThemeCard
-                title={intl.formatMessage({ id: "web.routes.theme_settings.export_import", defaultMessage: "Export / Import", description: "Theme settings: title of ThemeCard" })}
-                subtitle={intl.formatMessage({ id: "web.routes.theme_settings.copy_or_download_your_saved_theme", defaultMessage: "Copy or download your saved theme profile, or apply a gameplane-theme v1 document.", description: "Theme settings: subtitle of ThemeCard" })}
+                title={intl.formatMessage({ id: "web.routes.theme_settings.export_import", defaultMessage: "Export / Import", description: "Theme settings: title of the export and import card; keep it short" })}
+                subtitle={intl.formatMessage({ id: "web.routes.theme_settings.copy_or_download_your_saved_theme", defaultMessage: "Copy or download your saved theme profile, or apply a gameplane-theme v1 document.", description: "Theme settings: subtitle under the export and import title: copy or download the saved theme, or apply a theme document" })}
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <Button variant="outline" size="sm" onPress={() => void copyExport()}>
-                    <Copy className="mr-1.5 h-4 w-4" />{intl.formatMessage({ id: "web.routes.theme_settings.copy_to_clipboard", defaultMessage: "Copy to clipboard", description: "Theme settings: text in Button" })}</Button>
+                    <Copy className="mr-1.5 h-4 w-4" />{intl.formatMessage({ id: "web.routes.theme_settings.copy_to_clipboard", defaultMessage: "Copy to clipboard", description: "Theme settings: button that copies the theme export to the clipboard; keep it short" })}</Button>
                   <Button variant="outline" size="sm" onPress={downloadExport}>
-                    <Download className="mr-1.5 h-4 w-4" />{intl.formatMessage({ id: "web.routes.theme_settings.download_gameplane_theme_json", defaultMessage: "Download gameplane-theme.json", description: "Theme settings: text in Button" })}</Button>
+                    <Download className="mr-1.5 h-4 w-4" />{intl.formatMessage({ id: "web.routes.theme_settings.download_gameplane_theme_json", defaultMessage: "Download gameplane-theme.json", description: "Theme settings: button that downloads the theme export as a gameplane-theme.json file; keep it short, the file name is usually left untranslated" })}</Button>
                 </div>
                 {copyNote && (
                   <p className="text-xs text-muted" role="status">
@@ -768,16 +768,16 @@ export function ThemeSettingsPage() {
                 )}
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs text-muted" htmlFor="theme-import-json">{intl.formatMessage({ id: "web.routes.theme_settings.paste_theme_json", defaultMessage: "Paste theme JSON", description: "Theme settings: text in label" })}</label>
+                  <label className="block text-xs text-muted" htmlFor="theme-import-json">{intl.formatMessage({ id: "web.routes.theme_settings.paste_theme_json", defaultMessage: "Paste theme JSON", description: "Theme settings: label of the text area where a theme document is pasted to import it" })}</label>
                   <textarea
                     id="theme-import-json"
                     className="min-h-[96px] w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-[13px] text-fg placeholder:text-muted focus:border-primary focus:outline-hidden"
                     value={importText}
                     onChange={(e) => setImportText(e.target.value)}
-                    placeholder={intl.formatMessage({ id: "web.routes.theme_settings.paste_a_gameplane_theme_v1_document", defaultMessage: "Paste a gameplane-theme v1 document…", description: "Theme settings: placeholder of textarea" })}
+                    placeholder={intl.formatMessage({ id: "web.routes.theme_settings.paste_a_gameplane_theme_v1_document", defaultMessage: "Paste a gameplane-theme v1 document…", description: "Theme settings: grey placeholder inside the paste area showing that a gameplane-theme v1 document goes here; format name, usually left untranslated" })}
                     spellCheck={false}
                   />
-                  <p className="text-[11px] text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.accepts_gameplane_theme_v1_documents", defaultMessage: "Accepts gameplane-theme v1 documents.", description: "Theme settings: text in p" })}</p>
+                  <p className="text-[11px] text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.accepts_gameplane_theme_v1_documents", defaultMessage: "Accepts gameplane-theme v1 documents.", description: "Theme settings: hint under the paste area saying it accepts gameplane-theme v1 documents" })}</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -786,12 +786,12 @@ export function ThemeSettingsPage() {
                     type="file"
                     accept=".json,application/json"
                     className="hidden"
-                    aria-label={intl.formatMessage({ id: "web.routes.theme_settings.theme_export_file", defaultMessage: "Theme export file", description: "Theme settings: aria-label of input" })}
+                    aria-label={intl.formatMessage({ id: "web.routes.theme_settings.theme_export_file", defaultMessage: "Theme export file", description: "Theme settings: accessible name of the hidden file picker that chooses a theme JSON file" })}
                     onChange={(e) => void onFilePicked(e)}
                   />
                   <Button variant="outline" size="sm" onPress={() => fileInputRef.current?.click()}>
-                    <Upload className="mr-1.5 h-4 w-4" />{intl.formatMessage({ id: "web.routes.theme_settings.choose_file", defaultMessage: "Choose file…", description: "Theme settings: text in Button" })}</Button>
-                  <span className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.accepts_gameplane_theme_v1_json", defaultMessage: "Accepts gameplane-theme v1 (.json)", description: "Theme settings: text in span" })}</span>
+                    <Upload className="mr-1.5 h-4 w-4" />{intl.formatMessage({ id: "web.routes.theme_settings.choose_file", defaultMessage: "Choose file…", description: "Theme settings: button that opens the file picker to choose a theme file; keep it short" })}</Button>
+                  <span className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.accepts_gameplane_theme_v1_json", defaultMessage: "Accepts gameplane-theme v1 (.json)", description: "Theme settings: hint beside the choose-file button saying the file must be a gameplane-theme v1 JSON document" })}</span>
                 </div>
 
                 {importClientError && (
@@ -809,7 +809,7 @@ export function ThemeSettingsPage() {
 
                 {importPreview && (
                   <div className="space-y-2 rounded-md border border-border bg-surface/40 p-4">
-                    <div className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.theme_settings.import_preview", defaultMessage: "Import preview", description: "Theme settings: text in div" })}</div>
+                    <div className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.theme_settings.import_preview", defaultMessage: "Import preview", description: "Theme settings: heading of the preview box that shows what an import will apply" })}</div>
                     <div className="flex items-center gap-2 text-sm">
                       <span
                         aria-hidden
@@ -820,10 +820,10 @@ export function ThemeSettingsPage() {
                             PRESETS.find((p) => p.id === importPreview.preferences.presetId)?.accent,
                         }}
                       />
-                      <span>{intl.formatMessage({ id: "web.routes.theme_settings.preset", defaultMessage: "Preset:", description: "Theme settings: text in span" })} {presetLabel(intl, importPreview.preferences.presetId)}
+                      <span>{intl.formatMessage({ id: "web.routes.theme_settings.preset", defaultMessage: "Preset:", description: "Theme settings: label before the preset name in the import preview; the preset name follows it" })} {presetLabel(intl, importPreview.preferences.presetId)}
                       </span>
                     </div>
-                    <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.custom_css_2", defaultMessage: "Custom CSS:", description: "Theme settings: text in div" })} {importPreview.preferences.customCss
+                    <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.theme_settings.custom_css_2", defaultMessage: "Custom CSS:", description: "Theme settings: label before the custom CSS summary in the import preview; the size or none follows it" })} {importPreview.preferences.customCss
                         ? intl.formatMessage({ id: "web.routes.theme_settings.import_css_bytes", defaultMessage: "{size} bytes", description: "Theme settings: import preview size of the imported custom CSS; {size} is the formatted byte count" }, { size: fmt.number(utf8Len(importPreview.preferences.customCss)) })
                         : intl.formatMessage({ id: "web.routes.theme_settings.import_css_none", defaultMessage: "none", description: "Theme settings: import preview value when the imported document has no custom CSS" })}
                     </div>
@@ -833,27 +833,27 @@ export function ThemeSettingsPage() {
                         size="sm"
                         isDisabled={isUpdating}
                         onPress={applyImport}
-                      >{intl.formatMessage({ id: "web.routes.theme_settings.apply_import", defaultMessage: "Apply import", description: "Theme settings: text in Button" })}</Button>
+                      >{intl.formatMessage({ id: "web.routes.theme_settings.apply_import", defaultMessage: "Apply import", description: "Theme settings: button that applies the imported theme; keep it short" })}</Button>
                     </div>
                   </div>
                 )}
 
                 <p className="flex items-center gap-2 text-xs text-muted">
-                  <Info className="h-3.5 w-3.5 shrink-0" />{intl.formatMessage({ id: "web.routes.theme_settings.sharing_galleries_and_organization", defaultMessage: "Sharing galleries and organization-enforced themes are not part of this feature.", description: "Theme settings: text in p" })}</p>
+                  <Info className="h-3.5 w-3.5 shrink-0" />{intl.formatMessage({ id: "web.routes.theme_settings.sharing_galleries_and_organization", defaultMessage: "Sharing galleries and organization-enforced themes are not part of this feature.", description: "Theme settings: note at the bottom saying sharing galleries and organisation-enforced themes are not part of this feature" })}</p>
               </ThemeCard>
 
               {/* Actions row: destructive Reset on the left, Save on the right. */}
               <div className="flex items-center justify-between gap-3">
                 <Button variant="danger" onPress={() => { setResetError(null); setConfirmingReset(true); }}>
-                  <RotateCcw className="mr-1.5 h-4 w-4" />{intl.formatMessage({ id: "web.routes.theme_settings.reset_to_defaults", defaultMessage: "Reset to Defaults", description: "Theme settings: text in Button" })}</Button>
+                  <RotateCcw className="mr-1.5 h-4 w-4" />{intl.formatMessage({ id: "web.routes.theme_settings.reset_to_defaults", defaultMessage: "Reset to Defaults", description: "Theme settings: button that opens the reset-to-defaults confirmation; keep it short" })}</Button>
                 <div className="flex items-center gap-3">
                   {lastError?.where === "save" && (
                     <span role="alert" className="text-xs text-danger">{lastError.message}</span>
                   )}
                   {resetError && <span className="text-xs text-danger">{resetError}</span>}
-                  {lastDone?.where === "save" && <span className="text-xs text-success">{intl.formatMessage({ id: "web.routes.theme_settings.saved", defaultMessage: "Saved", description: "Theme settings: text in span" })}</span>}
+                  {lastDone?.where === "save" && <span className="text-xs text-success">{intl.formatMessage({ id: "web.routes.theme_settings.saved", defaultMessage: "Saved", description: "Theme settings: status text beside the save button confirming the theme was saved; keep it short" })}</span>}
                   {lastDone?.where === "import" && (
-                    <span className="text-xs text-success">{intl.formatMessage({ id: "web.routes.theme_settings.import_applied", defaultMessage: "Import applied", description: "Theme settings: text in span" })}</span>
+                    <span className="text-xs text-success">{intl.formatMessage({ id: "web.routes.theme_settings.import_applied", defaultMessage: "Import applied", description: "Theme settings: status text confirming the imported theme was applied; keep it short" })}</span>
                   )}
                   <Button
                     variant="primary"
@@ -874,9 +874,9 @@ export function ThemeSettingsPage() {
         onOpenChange={(open) => {
           if (!open) setConfirmingReset(false);
         }}
-        title={intl.formatMessage({ id: "web.routes.theme_settings.reset_to_defaults_2", defaultMessage: "Reset to Defaults?", description: "Theme settings: title of ConfirmDialog" })}
-        description={intl.formatMessage({ id: "web.routes.theme_settings.this_deletes_your_custom_colors_and", defaultMessage: "This deletes your custom colors and custom CSS and restores the selected preset. Continue?", description: "Theme settings: description of ConfirmDialog" })}
-        confirmLabel={intl.formatMessage({ id: "web.routes.theme_settings.reset", defaultMessage: "Reset", description: "Theme settings: confirmLabel of ConfirmDialog" })}
+        title={intl.formatMessage({ id: "web.routes.theme_settings.reset_to_defaults_2", defaultMessage: "Reset to Defaults?", description: "Theme settings: title of the reset-to-defaults confirmation dialog" })}
+        description={intl.formatMessage({ id: "web.routes.theme_settings.this_deletes_your_custom_colors_and", defaultMessage: "This deletes your custom colors and custom CSS and restores the selected preset. Continue?", description: "Theme settings: description in the reset confirmation: deletes custom colors and custom CSS, restores the selected preset, and asks whether to continue" })}
+        confirmLabel={intl.formatMessage({ id: "web.routes.theme_settings.reset", defaultMessage: "Reset", description: "Theme settings: confirm button of the reset-to-defaults dialog; keep it short" })}
         destructive
         busy={reset.isPending}
         onConfirm={() => reset.mutate()}

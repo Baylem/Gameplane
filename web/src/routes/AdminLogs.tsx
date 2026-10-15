@@ -88,13 +88,13 @@ async function streamSystemLogs(opts: {
 export function AdminLogsPage() {
   const intl = useOptionalIntl();
   const installation = useInstallation();
-  if (installation.isPending) return <LoadingCard message={intl.formatMessage({ id: "web.routes.admin_logs.loading_installation", defaultMessage: "Loading installation…", description: "Admin logs: message of LoadingCard" })} />;
-  if (installation.isError) return <ErrorCard message={intl.formatMessage({ id: "web.routes.admin_logs.couldn_t_load_installation_capabilities", defaultMessage: "Couldn't load installation capabilities.", description: "Admin logs: message of ErrorCard" })} onRetry={() => void installation.refetch()} />;
+  if (installation.isPending) return <LoadingCard message={intl.formatMessage({ id: "web.routes.admin_logs.loading_installation", defaultMessage: "Loading installation…", description: "Admin logs: loading text shown in place of the page while installation details are fetched" })} />;
+  if (installation.isError) return <ErrorCard message={intl.formatMessage({ id: "web.routes.admin_logs.couldn_t_load_installation_capabilities", defaultMessage: "Couldn't load installation capabilities.", description: "Admin logs: error message shown when installation details fail to load; a retry button follows it" })} onRetry={() => void installation.refetch()} />;
   if (installation.data.standalone) return <div className="space-y-4 p-6">
-    <PageHeader title={intl.formatMessage({ id: "web.routes.admin_logs.system_logs", defaultMessage: "System logs", description: "Admin logs: title of PageHeader" })} description={intl.formatMessage({ id: "web.routes.admin_logs.logs_for_this_standalone_panel", defaultMessage: "Logs for this standalone panel.", description: "Admin logs: description of PageHeader" })} />
+    <PageHeader title={intl.formatMessage({ id: "web.routes.admin_logs.system_logs", defaultMessage: "System logs", description: "Admin logs: page title at the top of the system logs screen; keep it short" })} description={intl.formatMessage({ id: "web.routes.admin_logs.logs_for_this_standalone_panel", defaultMessage: "Logs for this standalone panel.", description: "Admin logs: description under the title in the standalone panel view, saying these logs belong to this panel only" })} />
     <Card><CardContent className="space-y-2 p-6">
-      <h2 className="font-medium">{intl.formatMessage({ id: "web.routes.admin_logs.view_logs_through_your_container_runtime", defaultMessage: "View logs through your container runtime", description: "Admin logs: text in h2" })}</h2>
-      <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.admin_logs.for_docker_compose_run", defaultMessage: "For Docker Compose, run", description: "Admin logs: text in p" })} <code className="font-mono">{intl.formatMessage({ id: "web.routes.admin_logs.docker_compose_logs_follow", defaultMessage: "docker compose logs --follow", description: "Admin logs: text in code" })}</code> {intl.formatMessage({ id: "web.routes.admin_logs.from_your_panel_installation_directory", defaultMessage: "from your panel installation directory. Operator logs are available on each workload cluster.", description: "Admin logs: text in p" })}</p>
+      <h2 className="font-medium">{intl.formatMessage({ id: "web.routes.admin_logs.view_logs_through_your_container_runtime", defaultMessage: "View logs through your container runtime", description: "Admin logs: heading in the standalone panel view that introduces how to read logs through the container runtime" })}</h2>
+      <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.admin_logs.for_docker_compose_run", defaultMessage: "For Docker Compose, run", description: "Admin logs: opening words of the standalone hint paragraph, followed by a command in monospace and the rest of the sentence" })} <code className="font-mono">{intl.formatMessage({ id: "web.routes.admin_logs.docker_compose_logs_follow", defaultMessage: "docker compose logs --follow", description: "Admin logs: shell command shown in monospace inside the standalone hint, the Docker Compose command to stream logs; technical term, usually left untranslated" })}</code> {intl.formatMessage({ id: "web.routes.admin_logs.from_your_panel_installation_directory", defaultMessage: "from your panel installation directory. Operator logs are available on each workload cluster.", description: "Admin logs: end of the standalone hint, asking to run the command from the install directory; also notes operator logs are on each workload cluster" })}</p>
     </CardContent></Card>
   </div>;
   return <ClusterSystemLogs />;
@@ -203,11 +203,11 @@ function ClusterSystemLogs() {
   return (
     <div className="flex h-full flex-col gap-4 p-6">
       <PageHeader
-        title={intl.formatMessage({ id: "web.routes.admin_logs.system_logs", defaultMessage: "System logs", description: "Admin logs: title of PageHeader" })}
-        description={intl.formatMessage({ id: "web.routes.admin_logs.live_logs_from_the_gameplane_control", defaultMessage: "Live logs from the Gameplane control-plane pods.", description: "Admin logs: description of PageHeader" })}
+        title={intl.formatMessage({ id: "web.routes.admin_logs.system_logs", defaultMessage: "System logs", description: "Admin logs: page title at the top of the system logs screen; keep it short" })}
+        description={intl.formatMessage({ id: "web.routes.admin_logs.live_logs_from_the_gameplane_control", defaultMessage: "Live logs from the Gameplane control-plane pods.", description: "Admin logs: description under the title of the cluster logs view, saying the lines come from the Gameplane control-plane pods" })}
       />
 
-      <Tabs selectedKey={component} onSelectionChange={(key) => setComponent(key as LogComponent)} variant="secondary" aria-label={intl.formatMessage({ id: "web.routes.admin_logs.log_source", defaultMessage: "Log source", description: "Admin logs: aria-label of Tabs" })}>
+      <Tabs selectedKey={component} onSelectionChange={(key) => setComponent(key as LogComponent)} variant="secondary" aria-label={intl.formatMessage({ id: "web.routes.admin_logs.log_source", defaultMessage: "Log source", description: "Admin logs: accessible name of the tab group for choosing which component's logs to show" })}>
         <Tabs.List className="w-fit">
           {COMPONENTS.map((c) => (
             <TabComponent key={c.value} id={c.value}>{intl.formatMessage(c.label)}</TabComponent>
@@ -216,8 +216,8 @@ function ClusterSystemLogs() {
       </Tabs>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 text-xs text-muted">{intl.formatMessage({ id: "web.routes.admin_logs.tail", defaultMessage: "Tail", description: "Admin logs: text in div" })}<Select
-            aria-label={intl.formatMessage({ id: "web.routes.admin_logs.tail_lines", defaultMessage: "Tail lines", description: "Admin logs: aria-label of Select" })}
+        <div className="flex items-center gap-2 text-xs text-muted">{intl.formatMessage({ id: "web.routes.admin_logs.tail", defaultMessage: "Tail", description: "Admin logs: label in front of the line-count dropdown in the log toolbar; keep it short" })}<Select
+            aria-label={intl.formatMessage({ id: "web.routes.admin_logs.tail_lines", defaultMessage: "Tail lines", description: "Admin logs: accessible name of the dropdown that sets how many recent lines to load" })}
             selectedKey={String(tail)}
             onSelectionChange={(key) => setTail(Number(key))}
           >
@@ -226,7 +226,7 @@ function ClusterSystemLogs() {
               <Select.Indicator />
             </Select.Trigger>
             <Select.Popover>
-              <ListBox aria-label={intl.formatMessage({ id: "web.routes.admin_logs.tail_lines", defaultMessage: "Tail lines", description: "Admin logs: aria-label of Select" })}>
+              <ListBox aria-label={intl.formatMessage({ id: "web.routes.admin_logs.tail_lines", defaultMessage: "Tail lines", description: "Admin logs: accessible name of the dropdown that sets how many recent lines to load" })}>
                 {TAIL_OPTIONS.map((n) => (
                   <ListBoxItem key={n} id={String(n)}>{intl.formatMessage({ id: "web.routes.admin_logs.n_lines", defaultMessage: "{n} lines", description: "Admin logs: sentence with n in ListBoxItem" }, { n: n })}</ListBoxItem>
                 ))}
@@ -235,7 +235,7 @@ function ClusterSystemLogs() {
           </Select>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-muted">{intl.formatMessage({ id: "web.routes.admin_logs.follow", defaultMessage: "Follow", description: "Admin logs: text in div" })}<Switch isSelected={follow} onChange={setFollow} aria-label={intl.formatMessage({ id: "web.routes.admin_logs.follow", defaultMessage: "Follow", description: "Admin logs: text in div" })}>
+        <div className="flex items-center gap-2 text-xs text-muted">{intl.formatMessage({ id: "web.routes.admin_logs.follow", defaultMessage: "Follow", description: "Admin logs: label of the switch that keeps the log view following new lines as they arrive; keep it short" })}<Switch isSelected={follow} onChange={setFollow} aria-label={intl.formatMessage({ id: "web.routes.admin_logs.follow", defaultMessage: "Follow", description: "Admin logs: label of the switch that keeps the log view following new lines as they arrive; keep it short" })}>
             <Switch.Content>
               <Switch.Control>
                 <Switch.Thumb />
@@ -246,14 +246,14 @@ function ClusterSystemLogs() {
 
         <span
           className="inline-flex h-6 items-center rounded bg-primary/10 px-2 font-mono text-xs text-primary"
-          title={intl.formatMessage({ id: "web.routes.admin_logs.pod_currently_streamed", defaultMessage: "Pod currently streamed", description: "Admin logs: title of span" })}
+          title={intl.formatMessage({ id: "web.routes.admin_logs.pod_currently_streamed", defaultMessage: "Pod currently streamed", description: "Admin logs: badge showing the pod whose logs are being streamed right now; keep it short" })}
         >
           {pod || intl.formatMessage({ id: "web.common.empty_value", defaultMessage: "—", description: "Shown in place of a value that is not set" })}
         </span>
 
         <div className="ml-auto">
           <Button variant="outline" onPress={() => void downloadLogs()}>
-            <Download className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.admin_logs.download", defaultMessage: "Download", description: "Admin logs: text in Button" })}</Button>
+            <Download className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.admin_logs.download", defaultMessage: "Download", description: "Admin logs: button that downloads the logs shown on screen as a file; keep it short" })}</Button>
         </div>
       </div>
 
