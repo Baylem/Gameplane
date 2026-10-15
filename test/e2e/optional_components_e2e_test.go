@@ -51,9 +51,9 @@ type ocMCPSession struct {
 	cancel context.CancelFunc
 }
 
-func ocStartMCP(t *testing.T) *ocMCPSession {
+func ocStartMCP(ctx context.Context, t *testing.T) *ocMCPSession {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	cmd := exec.CommandContext(ctx, "kubectl", "--context", envInstance.Context, "exec", "-i", "-n", ocNS, "deploy/gameplane-mcp-server", "--", "/mcp-server", "serve")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -172,9 +172,9 @@ func ocTunnelReady(obj *unstructured.Unstructured) (bool, string) {
 }
 
 // ocFrpsProxyOnline asks the frps dashboard whether the noop proxy is online.
-func ocFrpsProxyOnline(t *testing.T, port int) (bool, string) {
+func ocFrpsProxyOnline(ctx context.Context, t *testing.T, port int) (bool, string) {
 	t.Helper()
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/api/proxy/tcp", port), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/api/proxy/tcp", port), nil)
 	if err != nil {
 		return false, err.Error()
 	}
@@ -217,8 +217,7 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 	t.Parallel()
 	parent := t
 
-	ctx, cancel := context.WithTimeout(context.Background(), 18*time.Minute)
-	defer cancel()
+	ctx := context.Background()
 
 	suffix := time.Now().UnixNano()
 	tmplName := fmt.Sprintf("e2e-oc-tmpl-%d", suffix)
@@ -303,7 +302,7 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 	}
 
 	if !t.Run("mcp", func(t *testing.T) {
-		m := ocStartMCP(t)
+		m := ocStartMCP(ctx, t)
 		defer m.close()
 
 		initRes := m.call(t, 1, "initialize", map[string]any{
@@ -406,7 +405,12 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 		port, stop := detachedPortForward(ctx, t, ocNS, "svc/gameplane-audit-syslog-bridge", 8514)
 		defer stop()
 		client := &http.Client{Timeout: 15 * time.Second}
-		bridgeResp, err := client.Post(fmt.Sprintf("http://127.0.0.1:%d/", port), "application/json", strings.NewReader("{}"))
+		bridgeReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf("http://127.0.0.1:%d/", port), strings.NewReader("{}"))
+		if err != nil {
+			t.Fatalf("build unauthenticated bridge request: %v", err)
+		}
+		bridgeReq.Header.Set("Content-Type", "application/json")
+		bridgeResp, err := client.Do(bridgeReq)
 		if err != nil {
 			t.Fatalf("unauthenticated POST to bridge: %v", err)
 		}
@@ -500,7 +504,7 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 		dashPort, stopDash := detachedPortForward(ctx, t, ocNS, "svc/e2e-frps", 7500)
 		defer stopDash()
 		envInstance.Eventually(t, 3*time.Minute, func() (bool, string) {
-			return ocFrpsProxyOnline(t, dashPort)
+			return ocFrpsProxyOnline(ctx, t, dashPort)
 		})
 
 		var podName, podUID string
@@ -562,7 +566,7 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 		})
 
 		envInstance.Eventually(t, 3*time.Minute, func() (bool, string) {
-			return ocFrpsProxyOnline(t, dashPort)
+			return ocFrpsProxyOnline(ctx, t, dashPort)
 		})
 
 		// frpc was restarted inside the container, not by the kubelet.
