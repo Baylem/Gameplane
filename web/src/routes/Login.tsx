@@ -115,14 +115,14 @@ export function LoginPage() {
               <ShieldCheck className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="font-mono text-lg font-semibold">{intl.formatMessage({ id: "web.routes.login.gameplane", defaultMessage: "gameplane", description: "Login: text in div" })}</div>
-              <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.login.game_server_control_panel", defaultMessage: "game server control panel", description: "Login: text in div" })}</div>
+              <div className="font-mono text-lg font-semibold">{intl.formatMessage({ id: "web.routes.login.gameplane", defaultMessage: "gameplane", description: "Login: product name shown next to the logo at the top of the sign-in page; a brand name, usually kept as is" })}</div>
+              <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.login.game_server_control_panel", defaultMessage: "game server control panel", description: "Login: tagline under the product name next to the logo on the sign-in page" })}</div>
             </div>
           </div>
 
           <div className="mb-6">
-            <h1 className="font-mono text-[22px] font-semibold">{intl.formatMessage({ id: "web.routes.login.sign_in", defaultMessage: "Sign in", description: "Login: text in h1" })}</h1>
-            <p className="pt-1 text-sm text-muted">{intl.formatMessage({ id: "web.routes.login.welcome_to_gameplane", defaultMessage: "Welcome to Gameplane.", description: "Login: text in p" })}</p>
+            <h1 className="font-mono text-[22px] font-semibold">{intl.formatMessage({ id: "web.routes.login.sign_in", defaultMessage: "Sign in", description: "Login: main heading of the sign-in form" })}</h1>
+            <p className="pt-1 text-sm text-muted">{intl.formatMessage({ id: "web.routes.login.welcome_to_gameplane", defaultMessage: "Welcome to Gameplane.", description: "Login: short line under the sign-in heading that greets the user" })}</p>
           </div>
 
           {localEnabled ? (
@@ -134,7 +134,7 @@ export function LoginPage() {
               }}
             >
               <div className="space-y-1.5">
-                <Label htmlFor="username" className="font-mono text-xs text-muted">{intl.formatMessage({ id: "web.routes.login.email_or_username", defaultMessage: "Email or username", description: "Login: text in Label" })}</Label>
+                <Label htmlFor="username" className="font-mono text-xs text-muted">{intl.formatMessage({ id: "web.routes.login.email_or_username", defaultMessage: "Email or username", description: "Login: label of the username field on the sign-in form; the field accepts an email address or a username" })}</Label>
                 <Input
                   id="username"
                   name="username"
@@ -153,14 +153,14 @@ export function LoginPage() {
                     readers (and tests) resolve the label to the button, not the
                     password input. */}
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="font-mono text-xs text-muted">{intl.formatMessage({ id: "web.routes.login.password", defaultMessage: "Password", description: "Login: text in Label" })}</Label>
+                  <Label htmlFor="password" className="font-mono text-xs text-muted">{intl.formatMessage({ id: "web.routes.login.password", defaultMessage: "Password", description: "Login: label of the password field on the sign-in form" })}</Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="font-mono text-xs text-accent hover:text-accent/80"
                     onPress={() => setForgot((v) => !v)}
-                  >{intl.formatMessage({ id: "web.routes.login.forgot", defaultMessage: "Forgot?", description: "Login: text in Button" })}</Button>
+                  >{intl.formatMessage({ id: "web.routes.login.forgot", defaultMessage: "Forgot?", description: "Login: small button beside the password label that shows the password-reset hint; keep it short" })}</Button>
                 </div>
                 <div className="relative">
                   <Input
@@ -190,7 +190,7 @@ export function LoginPage() {
                   </Button>
                 </div>
                 {forgot && (
-                  <p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.login.contact_your_administrator_to_reset", defaultMessage: "Contact your administrator to reset your password.", description: "Login: text in p" })}</p>
+                  <p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.login.contact_your_administrator_to_reset", defaultMessage: "Contact your administrator to reset your password.", description: "Login: hint shown under the password field after the forgot button is pressed, telling the user to ask an administrator to reset the password" })}</p>
                 )}
               </div>
 
@@ -212,11 +212,11 @@ export function LoginPage() {
                 fullWidth
                 className="rounded-full font-mono"
               >
-                {busy && <Spinner size="sm" color="current" className="mr-2" />}{intl.formatMessage({ id: "web.routes.login.sign_in_2", defaultMessage: "Sign in →", description: "Login: text in Button" })}</Button>
+                {busy && <Spinner size="sm" color="current" className="mr-2" />}{intl.formatMessage({ id: "web.routes.login.sign_in_2", defaultMessage: "Sign in →", description: "Login: main submit button of the sign-in form; a spinner shows while the sign-in runs; keep it short" })}</Button>
 
               {sso.length > 0 && (
                 <div className="relative py-2 text-center text-[11px] text-muted">
-                  <span className="relative z-10 bg-background px-2">{intl.formatMessage({ id: "web.routes.login.or", defaultMessage: "or", description: "Login: text in span" })}</span>
+                  <span className="relative z-10 bg-background px-2">{intl.formatMessage({ id: "web.routes.login.or", defaultMessage: "or", description: "Login: small word between the sign-in form and the single sign-on buttons; keep it short" })}</span>
                   <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" />
                 </div>
               )}
@@ -237,7 +237,7 @@ export function LoginPage() {
                     void login(true);
                   }}
                   className="font-mono text-xs text-accent hover:text-accent/80"
-                >{intl.formatMessage({ id: "web.routes.login.sign_in_with_safe_mode_custom_styling", defaultMessage: "Sign in with safe mode (custom styling disabled)", description: "Login: text in a" })}</a>
+                >{intl.formatMessage({ id: "web.routes.login.sign_in_with_safe_mode_custom_styling", defaultMessage: "Sign in with safe mode (custom styling disabled)", description: "Login: link below the sign-in form that signs in with safe mode, which turns off custom styling" })}</a>
               </div>
             </form>
           ) : (
@@ -246,7 +246,7 @@ export function LoginPage() {
             </div>
           )}
 
-          <p className="mt-10 text-center text-[11px] text-muted">{intl.formatMessage({ id: "web.routes.login.agpl_3_0_licensed", defaultMessage: "AGPL-3.0 licensed", description: "Login: text in p" })}</p>
+          <p className="mt-10 text-center text-[11px] text-muted">{intl.formatMessage({ id: "web.routes.login.agpl_3_0_licensed", defaultMessage: "AGPL-3.0 licensed", description: "Login: footer line below the sign-in form stating the license; AGPL-3.0 is the license name, a technical term usually left untranslated" })}</p>
         </div>
       </section>
 
@@ -254,15 +254,15 @@ export function LoginPage() {
         <div className="max-w-md">
           <div className="mb-2">
             <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 font-mono text-[11px] text-muted">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent" />{intl.formatMessage({ id: "web.routes.login.agpl_3_0", defaultMessage: "AGPL-3.0", description: "Login: text in span" })}</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" />{intl.formatMessage({ id: "web.routes.login.agpl_3_0", defaultMessage: "AGPL-3.0", description: "Login: small badge above the side panel headline showing the license name; AGPL-3.0 is a technical term, usually left untranslated; keep it short" })}</span>
           </div>
-          <h2 className="text-[44px] font-semibold leading-tight font-mono">{intl.formatMessage({ id: "web.routes.login.kubernetes_native", defaultMessage: "Kubernetes-native", description: "Login: text in h2" })}<br />{intl.formatMessage({ id: "web.routes.login.game_server_hosting", defaultMessage: "game server hosting.", description: "Login: text in h2" })}</h2>
-          <p className="mt-4 text-sm text-muted">{intl.formatMessage({ id: "web.routes.login.an_open_source_alternative_to", defaultMessage: "An open-source alternative to proprietary game panels — CRDs, Operators, and StatefulSets all the way down.", description: "Login: text in p" })}</p>
+          <h2 className="text-[44px] font-semibold leading-tight font-mono">{intl.formatMessage({ id: "web.routes.login.kubernetes_native", defaultMessage: "Kubernetes-native", description: "Login: first line of the large headline on the side panel of the sign-in page; Kubernetes-native is a technical term, usually left untranslated" })}<br />{intl.formatMessage({ id: "web.routes.login.game_server_hosting", defaultMessage: "game server hosting.", description: "Login: second line of the large headline on the side panel, completing the phrase that starts with the first line" })}</h2>
+          <p className="mt-4 text-sm text-muted">{intl.formatMessage({ id: "web.routes.login.an_open_source_alternative_to", defaultMessage: "An open-source alternative to proprietary game panels — CRDs, Operators, and StatefulSets all the way down.", description: "Login: paragraph under the side panel headline describing the product; CRDs, Operators and StatefulSets are technical terms, usually left untranslated" })}</p>
           <ul className="mt-10 space-y-4">
-            <MarketingRow icon={<HardDrive className="h-5 w-5" />}>{intl.formatMessage({ id: "web.routes.login.deploy_any_game_minecraft_valheim", defaultMessage: "Deploy any game. Minecraft, Valheim, Factorio, Palworld, ARK, CS2, Terraria, and more.", description: "Login: text in MarketingRow" })}</MarketingRow>
-            <MarketingRow icon={<Network className="h-5 w-5" />}>{intl.formatMessage({ id: "web.routes.login.scale_from_single_node_k3s_to_multi", defaultMessage: "Scale from single-node k3s to multi-node bare metal or cloud.", description: "Login: text in MarketingRow" })}</MarketingRow>
-            <MarketingRow icon={<Archive className="h-5 w-5" />}>{intl.formatMessage({ id: "web.routes.login.backups_auto_restart_rolling_upgrades", defaultMessage: "Backups, auto-restart, rolling upgrades, RBAC. Production-grade defaults.", description: "Login: text in MarketingRow" })}</MarketingRow>
-            <MarketingRow icon={<Code className="h-5 w-5" />}>{intl.formatMessage({ id: "web.routes.login.gitops_friendly", defaultMessage: "GitOps-friendly.", description: "Login: text in MarketingRow" })} <code className="text-xs">{intl.formatMessage({ id: "web.routes.login.kubectl_get_gameservers", defaultMessage: "kubectl get gameservers", description: "Login: text in code" })}</code> {intl.formatMessage({ id: "web.routes.login.just_works", defaultMessage: "just works.", description: "Login: text in MarketingRow" })}</MarketingRow>
+            <MarketingRow icon={<HardDrive className="h-5 w-5" />}>{intl.formatMessage({ id: "web.routes.login.deploy_any_game_minecraft_valheim", defaultMessage: "Deploy any game. Minecraft, Valheim, Factorio, Palworld, ARK, CS2, Terraria, and more.", description: "Login: first feature point on the side panel saying any game can be deployed; the game names are product names, usually kept as is" })}</MarketingRow>
+            <MarketingRow icon={<Network className="h-5 w-5" />}>{intl.formatMessage({ id: "web.routes.login.scale_from_single_node_k3s_to_multi", defaultMessage: "Scale from single-node k3s to multi-node bare metal or cloud.", description: "Login: feature point on the side panel about scaling from a single k3s node to multi-node bare metal or cloud; k3s is a technical term, usually left untranslated" })}</MarketingRow>
+            <MarketingRow icon={<Archive className="h-5 w-5" />}>{intl.formatMessage({ id: "web.routes.login.backups_auto_restart_rolling_upgrades", defaultMessage: "Backups, auto-restart, rolling upgrades, RBAC. Production-grade defaults.", description: "Login: feature point on the side panel listing backups, auto-restart, rolling upgrades and RBAC as production-ready defaults; RBAC is a technical term, usually left untranslated" })}</MarketingRow>
+            <MarketingRow icon={<Code className="h-5 w-5" />}>{intl.formatMessage({ id: "web.routes.login.gitops_friendly", defaultMessage: "GitOps-friendly.", description: "Login: opening words of the last feature point on the side panel; GitOps is a technical term, usually left untranslated; a command sample and closing words follow" })} <code className="text-xs">{intl.formatMessage({ id: "web.routes.login.kubectl_get_gameservers", defaultMessage: "kubectl get gameservers", description: "Login: command sample shown in code style inside the last feature point; kubectl is a technical term, usually left untranslated" })}</code> {intl.formatMessage({ id: "web.routes.login.just_works", defaultMessage: "just works.", description: "Login: closing words after the command sample in the last feature point on the side panel" })}</MarketingRow>
           </ul>
         </div>
       </section>

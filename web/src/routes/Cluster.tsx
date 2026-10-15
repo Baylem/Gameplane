@@ -57,14 +57,14 @@ export function ClusterPage() {
   const registry = useQuery({ queryKey: ["clusters"], queryFn: () => Clusters.list(), enabled: installation.data?.standalone === true });
   const available = installation.data?.localCluster || registry.data?.items.some((cluster) => cluster.name === clusterId);
   return <><div className="px-6 pt-6"><ClusterSelector /></div>
-    {installation.isPending ? <LoadingCard message={intl.formatMessage({ id: "web.routes.cluster.loading_installation", defaultMessage: "Loading installation…", description: "Cluster: message of LoadingCard" })} />
-      : installation.isError ? <ErrorCard message={intl.formatMessage({ id: "web.routes.cluster.couldn_t_load_installation_capabilities", defaultMessage: "Couldn't load installation capabilities.", description: "Cluster: message of ErrorCard" })} onRetry={() => void installation.refetch()} />
+    {installation.isPending ? <LoadingCard message={intl.formatMessage({ id: "web.routes.cluster.loading_installation", defaultMessage: "Loading installation…", description: "Cluster: loading text shown in place of the node inventory while the installation capabilities are being fetched" })} />
+      : installation.isError ? <ErrorCard message={intl.formatMessage({ id: "web.routes.cluster.couldn_t_load_installation_capabilities", defaultMessage: "Couldn't load installation capabilities.", description: "Cluster: error message shown when the installation capabilities cannot be fetched; a retry button appears below it" })} onRetry={() => void installation.refetch()} />
       : available ? <ClusterInventory key={clusterId} clusterId={clusterId} />
-      : registry.isPending ? <LoadingCard message={intl.formatMessage({ id: "web.routes.cluster.loading_clusters", defaultMessage: "Loading clusters…", description: "Cluster: message of LoadingCard" })} />
-      : registry.isError ? <ErrorCard message={intl.formatMessage({ id: "web.routes.cluster.couldn_t_load_registered_clusters", defaultMessage: "Couldn't load registered clusters.", description: "Cluster: message of ErrorCard" })} onRetry={() => void registry.refetch()} />
+      : registry.isPending ? <LoadingCard message={intl.formatMessage({ id: "web.routes.cluster.loading_clusters", defaultMessage: "Loading clusters…", description: "Cluster: loading text shown while the list of registered clusters is being fetched, before a cluster can be chosen" })} />
+      : registry.isError ? <ErrorCard message={intl.formatMessage({ id: "web.routes.cluster.couldn_t_load_registered_clusters", defaultMessage: "Couldn't load registered clusters.", description: "Cluster: error message shown when the list of registered clusters fails to load; a retry button appears below it" })} onRetry={() => void registry.refetch()} />
       : <Card className="m-6"><CardContent className="space-y-2 p-6">
-        <h2 className="font-medium">{intl.formatMessage({ id: "web.routes.cluster.select_a_workload_cluster", defaultMessage: "Select a workload cluster", description: "Cluster: text in h2" })}</h2>
-        <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.cluster.choose_a_registered_cluster_to_view_its", defaultMessage: "Choose a registered cluster to view its node inventory. Register workload clusters on the Clusters page.", description: "Cluster: text in p" })}</p>
+        <h2 className="font-medium">{intl.formatMessage({ id: "web.routes.cluster.select_a_workload_cluster", defaultMessage: "Select a workload cluster", description: "Cluster: heading of the empty-state card shown when no workload cluster is selected" })}</h2>
+        <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.cluster.choose_a_registered_cluster_to_view_its", defaultMessage: "Choose a registered cluster to view its node inventory. Register workload clusters on the Clusters page.", description: "Cluster: hint under the empty-state heading saying a registered cluster must be picked to see its nodes and that clusters are registered on the Clusters page" })}</p>
       </CardContent></Card>}
   </>;
 }
@@ -130,7 +130,7 @@ function ClusterInventory({ clusterId }: { clusterId: string }) {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title={intl.formatMessage({ id: "web.routes.cluster.cluster", defaultMessage: "Cluster", description: "Cluster: title of PageHeader" })}
+        title={intl.formatMessage({ id: "web.routes.cluster.cluster", defaultMessage: "Cluster", description: "Cluster: page title of the node inventory view at the top of the page; keep it short" })}
         description={
           data && (data.name || data.version || nodes.length > 0)
             ? intl.formatMessage({ id: "web.routes.cluster.summary", defaultMessage: "{name} · {version} · {ready}/{total} nodes healthy", description: "Cluster: page subtitle; {name} is the cluster name, {version} the Kubernetes version, {ready} and {total} the node counts" }, { name: data.name || clusterId, version: data.version || emptyValue, ready: data.ready ?? nodes.filter(n => n.status === "Ready").length, total: data.total ?? nodes.length })
@@ -145,14 +145,14 @@ function ClusterInventory({ clusterId }: { clusterId: string }) {
                   onPress={() => void downloadKubeconfig()}
                   isDisabled={opsDisabled}
                 >
-                  <Download className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.cluster.download_kubeconfig", defaultMessage: "Download kubeconfig", description: "Cluster: text in Button" })}</Button>
+                  <Download className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.cluster.download_kubeconfig", defaultMessage: "Download kubeconfig", description: "Cluster: button that downloads the cluster's kubeconfig file; keep it short; kubeconfig is a technical term, usually left untranslated" })}</Button>
               </div>
               <div title={disabledHint}>
                 <Button
                   onPress={() => addNode.mutate()}
                   isDisabled={addNode.isPending || opsDisabled}
                 >
-                  <Plus className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.cluster.add_node", defaultMessage: "Add node", description: "Cluster: text in Button" })}</Button>
+                  <Plus className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.cluster.add_node", defaultMessage: "Add node", description: "Cluster: button that creates a node-join token so a new machine can be added to the cluster; keep it short" })}</Button>
               </div>
             </div>
             {opsDisabled && (
@@ -179,12 +179,12 @@ function ClusterInventory({ clusterId }: { clusterId: string }) {
         <Card>
           <CardContent className="space-y-2 p-4">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.cluster.join_a_node", defaultMessage: "Join a node", description: "Cluster: text in div" })}</div>
+              <div className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.cluster.join_a_node", defaultMessage: "Join a node", description: "Cluster: heading of the card that shows the command to run on a machine that should join the cluster as a node" })}</div>
               <button
                 type="button"
                 onClick={() => setJoinInfo(null)}
                 className="text-xs text-muted hover:text-foreground"
-              >{intl.formatMessage({ id: "web.routes.cluster.dismiss", defaultMessage: "Dismiss", description: "Cluster: text in button" })}</button>
+              >{intl.formatMessage({ id: "web.routes.cluster.dismiss", defaultMessage: "Dismiss", description: "Cluster: button that closes the join-a-node card; keep it short" })}</button>
             </div>
             <p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.cluster.run_this_on_the_machine_you_want_to", defaultMessage: "Run this on the machine you want to join (token expires {expiresAt}):", description: "Cluster: sentence with expiresAt in p" }, { expiresAt: joinInfo.expiresAt })}</p>
             <div className="flex items-center gap-2">
@@ -195,7 +195,7 @@ function ClusterInventory({ clusterId }: { clusterId: string }) {
                 variant="outline"
                 size="sm"
                 onPress={() => void navigator.clipboard?.writeText(joinInfo.command)}
-              >{intl.formatMessage({ id: "web.routes.cluster.copy", defaultMessage: "Copy", description: "Cluster: text in Button" })}</Button>
+              >{intl.formatMessage({ id: "web.routes.cluster.copy", defaultMessage: "Copy", description: "Cluster: button that copies the join command to the clipboard; keep it short" })}</Button>
             </div>
           </CardContent>
         </Card>
@@ -210,8 +210,8 @@ function ClusterInventory({ clusterId }: { clusterId: string }) {
               <ServerIcon className="h-5 w-5" />
             </div>
             <div>
-              <div className="font-medium">{intl.formatMessage({ id: "web.routes.cluster.no_node_data_yet", defaultMessage: "No node data yet.", description: "Cluster: text in div" })}</div>
-              <div className="pt-1 text-sm text-muted">{intl.formatMessage({ id: "web.routes.cluster.no_nodes_are_reporting_yet_check_the", defaultMessage: "No nodes are reporting yet — check the API and operator connection.", description: "Cluster: text in div" })}</div>
+              <div className="font-medium">{intl.formatMessage({ id: "web.routes.cluster.no_node_data_yet", defaultMessage: "No node data yet.", description: "Cluster: empty-state heading shown when no node information has arrived for the cluster; the line below it says what to check" })}</div>
+              <div className="pt-1 text-sm text-muted">{intl.formatMessage({ id: "web.routes.cluster.no_nodes_are_reporting_yet_check_the", defaultMessage: "No nodes are reporting yet — check the API and operator connection.", description: "Cluster: hint under the empty-state heading asking the user to check the API and operator connection because no nodes report yet" })}</div>
             </div>
           </CardContent>
         </Card>
@@ -221,15 +221,15 @@ function ClusterInventory({ clusterId }: { clusterId: string }) {
         <Card>
           <CardContent className="space-y-4 p-5">
             <div className="space-y-1">
-              <h3 className="text-base font-medium">{intl.formatMessage({ id: "web.routes.cluster.storage", defaultMessage: "Storage", description: "Cluster: text in h3" })}</h3>
-              <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.cluster.set_at_install_time_via_helm_values_not", defaultMessage: "Set at install time via Helm values — not editable from the dashboard.", description: "Cluster: text in p" })}</p>
+              <h3 className="text-base font-medium">{intl.formatMessage({ id: "web.routes.cluster.storage", defaultMessage: "Storage", description: "Cluster: section heading for the storage settings that are fixed at install time; shown only to users who can read the cluster configuration" })}</h3>
+              <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.cluster.set_at_install_time_via_helm_values_not", defaultMessage: "Set at install time via Helm values — not editable from the dashboard.", description: "Cluster: hint under the storage heading explaining that these values come from Helm values at install time and cannot be edited in the dashboard" })}</p>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-6">
                 <div className="flex-1 space-y-1">
-                  <div className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.cluster.game_data_storage_class", defaultMessage: "Game data storage class", description: "Cluster: text in div" })}</div>
-                  <p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.cluster.storageclass_for_new_gameservers_game", defaultMessage: "StorageClass for new GameServers' game-data volumes — set by the operator.gameDataStorage.storageClassName Helm value and applied by the operator to every new PVC; the API is passed the same value as --game-data-storage-class only to report it here.", description: "Cluster: text in p" })} {config.installTimeSettings.gameDataStorageClass === "" &&
+                  <div className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.cluster.game_data_storage_class", defaultMessage: "Game data storage class", description: "Cluster: label of the setting that names the storage class used for new game server data volumes; storage class is a technical term, usually left untranslated" })}</div>
+                  <p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.cluster.storageclass_for_new_gameservers_game", defaultMessage: "StorageClass for new GameServers' game-data volumes — set by the operator.gameDataStorage.storageClassName Helm value and applied by the operator to every new PVC; the API is passed the same value as --game-data-storage-class only to report it here.", description: "Cluster: explanation under the game data storage class label; a Helm value sets it and it applies to new volumes; StorageClass is a technical term, usually left untranslated" })} {config.installTimeSettings.gameDataStorageClass === "" &&
                       intl.formatMessage({ id: "web.routes.cluster.storage_class_unset", defaultMessage: "Left unset, so new volumes use the cluster's default StorageClass.", description: "Cluster: note under the StorageClass description when no StorageClass is set" })}
                   </p>
                 </div>
@@ -238,7 +238,7 @@ function ClusterInventory({ clusterId }: { clusterId: string }) {
                     {config.installTimeSettings.gameDataStorageClass}
                   </div>
                 ) : (
-                  <div className="rounded-full bg-surface px-3 py-1 text-sm text-muted">{intl.formatMessage({ id: "web.routes.cluster.cluster_default", defaultMessage: "Cluster default", description: "Cluster: text in div" })}</div>
+                  <div className="rounded-full bg-surface px-3 py-1 text-sm text-muted">{intl.formatMessage({ id: "web.routes.cluster.cluster_default", defaultMessage: "Cluster default", description: "Cluster: badge shown instead of a storage class name when none is set, meaning new volumes use the cluster's default; keep it short" })}</div>
                 )}
               </div>
             </div>
@@ -287,15 +287,15 @@ function NodeCard({ node }: { node: ClusterNode }) {
         </div>
 
         <div className="grid grid-cols-3 gap-3 text-xs">
-          <Stat label={intl.formatMessage({ id: "web.routes.cluster.uptime", defaultMessage: "Uptime", description: "Cluster: label of Stat" })} value={uptime} />
-          <Stat label={intl.formatMessage({ id: "web.routes.cluster.pods", defaultMessage: "Pods", description: "Cluster: label of Stat" })} value={node.pods?.used !== undefined ? intl.formatMessage({ id: "web.routes.cluster.pods_used_of_capacity", defaultMessage: "{used}/{capacity}", description: "Cluster: node pod count as used/capacity; {used} and {capacity} are numbers" }, { used: node.pods.used, capacity: node.pods.capacity ?? 0 }) : node.pods?.capacity ? intl.formatMessage({ id: "web.routes.cluster.pods_of_capacity", defaultMessage: "of {capacity}", description: "Cluster: node pod capacity shown when usage is unknown; {capacity} is the pod limit" }, { capacity: node.pods.capacity }) : emptyValue} />
-          <Stat label={intl.formatMessage({ id: "web.routes.cluster.cpu", defaultMessage: "CPU", description: "Cluster: label of Stat" })} value={node.cpu?.capacity ? intl.formatMessage({ id: "web.routes.cluster.cpu_cores", defaultMessage: "{cores} cores", description: "Cluster: node CPU capacity; {cores} is the core count" }, { cores: node.cpu.capacity }) : emptyValue} />
+          <Stat label={intl.formatMessage({ id: "web.routes.cluster.uptime", defaultMessage: "Uptime", description: "Cluster: label of the uptime figure on a node card, showing how long the node has been running; keep it short" })} value={uptime} />
+          <Stat label={intl.formatMessage({ id: "web.routes.cluster.pods", defaultMessage: "Pods", description: "Cluster: label of the pod figure on a node card; the value shows pods in use out of the node's pod capacity, or only the capacity when usage is unknown" })} value={node.pods?.used !== undefined ? intl.formatMessage({ id: "web.routes.cluster.pods_used_of_capacity", defaultMessage: "{used}/{capacity}", description: "Cluster: node pod count as used/capacity; {used} and {capacity} are numbers" }, { used: node.pods.used, capacity: node.pods.capacity ?? 0 }) : node.pods?.capacity ? intl.formatMessage({ id: "web.routes.cluster.pods_of_capacity", defaultMessage: "of {capacity}", description: "Cluster: node pod capacity shown when usage is unknown; {capacity} is the pod limit" }, { capacity: node.pods.capacity }) : emptyValue} />
+          <Stat label={intl.formatMessage({ id: "web.routes.cluster.cpu", defaultMessage: "CPU", description: "Cluster: label for CPU on a node card, used both for the core count figure and for the CPU usage bar; CPU is a technical term, usually left untranslated" })} value={node.cpu?.capacity ? intl.formatMessage({ id: "web.routes.cluster.cpu_cores", defaultMessage: "{cores} cores", description: "Cluster: node CPU capacity; {cores} is the core count" }, { cores: node.cpu.capacity }) : emptyValue} />
         </div>
 
         <div className="space-y-2">
-          <Meter label={intl.formatMessage({ id: "web.routes.cluster.cpu", defaultMessage: "CPU", description: "Cluster: label of Stat" })} pct={cpuPct} unknown={!cpuKnown} accent="primary" />
+          <Meter label={intl.formatMessage({ id: "web.routes.cluster.cpu", defaultMessage: "CPU", description: "Cluster: label for CPU on a node card, used both for the core count figure and for the CPU usage bar; CPU is a technical term, usually left untranslated" })} pct={cpuPct} unknown={!cpuKnown} accent="primary" />
           <Meter
-            label={intl.formatMessage({ id: "web.routes.cluster.memory", defaultMessage: "Memory", description: "Cluster: label of Meter" })}
+            label={intl.formatMessage({ id: "web.routes.cluster.memory", defaultMessage: "Memory", description: "Cluster: label of the memory usage bar on a node card, showing memory in use against the node's total memory" })}
             pct={memPct}
             unknown={!memKnown}
             sub={

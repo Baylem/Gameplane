@@ -5581,35 +5581,35 @@
   },
   "web.routes.cluster.add_node": {
     "defaultMessage": "Add node",
-    "description": "Cluster: text in Button"
+    "description": "Cluster: button that creates a node-join token so a new machine can be added to the cluster; keep it short"
   },
   "web.routes.cluster.choose_a_registered_cluster_to_view_its": {
     "defaultMessage": "Choose a registered cluster to view its node inventory. Register workload clusters on the Clusters page.",
-    "description": "Cluster: text in p"
+    "description": "Cluster: hint under the empty-state heading saying a registered cluster must be picked to see its nodes and that clusters are registered on the Clusters page"
   },
   "web.routes.cluster.cluster": {
     "defaultMessage": "Cluster",
-    "description": "Cluster: title of PageHeader"
+    "description": "Cluster: page title of the node inventory view at the top of the page; keep it short"
   },
   "web.routes.cluster.cluster_default": {
     "defaultMessage": "Cluster default",
-    "description": "Cluster: text in div"
+    "description": "Cluster: badge shown instead of a storage class name when none is set, meaning new volumes use the cluster's default; keep it short"
   },
   "web.routes.cluster.copy": {
     "defaultMessage": "Copy",
-    "description": "Cluster: text in Button"
+    "description": "Cluster: button that copies the join command to the clipboard; keep it short"
   },
   "web.routes.cluster.couldn_t_load_installation_capabilities": {
     "defaultMessage": "Couldn't load installation capabilities.",
-    "description": "Cluster: message of ErrorCard"
+    "description": "Cluster: error message shown when the installation capabilities cannot be fetched; a retry button appears below it"
   },
   "web.routes.cluster.couldn_t_load_registered_clusters": {
     "defaultMessage": "Couldn't load registered clusters.",
-    "description": "Cluster: message of ErrorCard"
+    "description": "Cluster: error message shown when the list of registered clusters fails to load; a retry button appears below it"
   },
   "web.routes.cluster.cpu": {
     "defaultMessage": "CPU",
-    "description": "Cluster: label of Stat"
+    "description": "Cluster: label for CPU on a node card, used both for the core count figure and for the CPU usage bar; CPU is a technical term, usually left untranslated"
   },
   "web.routes.cluster.cpu_cores": {
     "defaultMessage": "{cores} cores",
@@ -5617,11 +5617,11 @@
   },
   "web.routes.cluster.dismiss": {
     "defaultMessage": "Dismiss",
-    "description": "Cluster: text in button"
+    "description": "Cluster: button that closes the join-a-node card; keep it short"
   },
   "web.routes.cluster.download_kubeconfig": {
     "defaultMessage": "Download kubeconfig",
-    "description": "Cluster: text in Button"
+    "description": "Cluster: button that downloads the cluster's kubeconfig file; keep it short; kubeconfig is a technical term, usually left untranslated"
   },
   "web.routes.cluster.enable_helm_note": {
     "defaultMessage": "Enable {setting} in the Helm values to mint node-join tokens and kubeconfigs.",
@@ -5629,19 +5629,19 @@
   },
   "web.routes.cluster.game_data_storage_class": {
     "defaultMessage": "Game data storage class",
-    "description": "Cluster: text in div"
+    "description": "Cluster: label of the setting that names the storage class used for new game server data volumes; storage class is a technical term, usually left untranslated"
   },
   "web.routes.cluster.join_a_node": {
     "defaultMessage": "Join a node",
-    "description": "Cluster: text in div"
+    "description": "Cluster: heading of the card that shows the command to run on a machine that should join the cluster as a node"
   },
   "web.routes.cluster.loading_clusters": {
     "defaultMessage": "Loading clusters…",
-    "description": "Cluster: message of LoadingCard"
+    "description": "Cluster: loading text shown while the list of registered clusters is being fetched, before a cluster can be chosen"
   },
   "web.routes.cluster.loading_installation": {
     "defaultMessage": "Loading installation…",
-    "description": "Cluster: message of LoadingCard"
+    "description": "Cluster: loading text shown in place of the node inventory while the installation capabilities are being fetched"
   },
   "web.routes.cluster.loading_nodes_for": {
     "defaultMessage": "Loading nodes for {clusterId}…",
@@ -5649,7 +5649,7 @@
   },
   "web.routes.cluster.memory": {
     "defaultMessage": "Memory",
-    "description": "Cluster: label of Meter"
+    "description": "Cluster: label of the memory usage bar on a node card, showing memory in use against the node's total memory"
   },
   "web.routes.cluster.memory_of_capacity": {
     "defaultMessage": "of {capacity}",
@@ -5661,11 +5661,11 @@
   },
   "web.routes.cluster.no_node_data_yet": {
     "defaultMessage": "No node data yet.",
-    "description": "Cluster: text in div"
+    "description": "Cluster: empty-state heading shown when no node information has arrived for the cluster; the line below it says what to check"
   },
   "web.routes.cluster.no_nodes_are_reporting_yet_check_the": {
     "defaultMessage": "No nodes are reporting yet — check the API and operator connection.",
-    "description": "Cluster: text in div"
+    "description": "Cluster: hint under the empty-state heading asking the user to check the API and operator connection because no nodes report yet"
   },
   "web.routes.cluster.node_inventory_for": {
     "defaultMessage": "Node inventory for selected cluster: {clusterId}.",
@@ -5697,7 +5697,7 @@
   },
   "web.routes.cluster.pods": {
     "defaultMessage": "Pods",
-    "description": "Cluster: label of Stat"
+    "description": "Cluster: label of the pod figure on a node card; the value shows pods in use out of the node's pod capacity, or only the capacity when usage is unknown"
   },
   "web.routes.cluster.pods_of_capacity": {
     "defaultMessage": "of {capacity}",
@@ -5721,11 +5721,11 @@
   },
   "web.routes.cluster.select_a_workload_cluster": {
     "defaultMessage": "Select a workload cluster",
-    "description": "Cluster: text in h2"
+    "description": "Cluster: heading of the empty-state card shown when no workload cluster is selected"
   },
   "web.routes.cluster.set_at_install_time_via_helm_values_not": {
     "defaultMessage": "Set at install time via Helm values — not editable from the dashboard.",
-    "description": "Cluster: text in p"
+    "description": "Cluster: hint under the storage heading explaining that these values come from Helm values at install time and cannot be edited in the dashboard"
   },
   "web.routes.cluster.status_not_ready": {
     "defaultMessage": "NotReady",
@@ -5741,7 +5741,7 @@
   },
   "web.routes.cluster.storage": {
     "defaultMessage": "Storage",
-    "description": "Cluster: text in h3"
+    "description": "Cluster: section heading for the storage settings that are fixed at install time; shown only to users who can read the cluster configuration"
   },
   "web.routes.cluster.storage_class_unset": {
     "defaultMessage": "Left unset, so new volumes use the cluster's default StorageClass.",
@@ -5749,7 +5749,7 @@
   },
   "web.routes.cluster.storageclass_for_new_gameservers_game": {
     "defaultMessage": "StorageClass for new GameServers' game-data volumes — set by the operator.gameDataStorage.storageClassName Helm value and applied by the operator to every new PVC; the API is passed the same value as --game-data-storage-class only to report it here.",
-    "description": "Cluster: text in p"
+    "description": "Cluster: explanation under the game data storage class label; a Helm value sets it and it applies to new volumes; StorageClass is a technical term, usually left untranslated"
   },
   "web.routes.cluster.summary": {
     "defaultMessage": "{name} · {version} · {ready}/{total} nodes healthy",
@@ -5757,15 +5757,15 @@
   },
   "web.routes.cluster.uptime": {
     "defaultMessage": "Uptime",
-    "description": "Cluster: label of Stat"
+    "description": "Cluster: label of the uptime figure on a node card, showing how long the node has been running; keep it short"
   },
   "web.routes.clusters.administration_of_registered_locations": {
     "defaultMessage": "Administration of registered locations, connectivity and node inventory.",
-    "description": "Clusters: description of PageHeader"
+    "description": "Clusters: subtitle under the page title saying the page covers registered locations, their connectivity and node inventory"
   },
   "web.routes.clusters.api": {
     "defaultMessage": "API:",
-    "description": "Clusters: text in p"
+    "description": "Clusters: label before the API health value on a cluster card, such as Healthy or Unhealthy; the value is colored by its state; keep it short"
   },
   "web.routes.clusters.ask_administrator_for_access": {
     "defaultMessage": "Ask your administrator for access to a registered cluster.",
@@ -5777,23 +5777,23 @@
   },
   "web.routes.clusters.central_cluster": {
     "defaultMessage": "Central cluster",
-    "description": "Clusters: text in p"
+    "description": "Clusters: note on the cluster card of the built-in local cluster that the panel itself runs in"
   },
   "web.routes.clusters.cluster_administration_requires": {
     "defaultMessage": "Cluster administration requires inventory or cluster-management access.",
-    "description": "Clusters: message of ErrorCard"
+    "description": "Clusters: error card shown instead of the cluster list to users who have neither cluster management nor inventory access"
   },
   "web.routes.clusters.clusters": {
     "defaultMessage": "Clusters",
-    "description": "Clusters: title of PageHeader"
+    "description": "Clusters: page title at the top of the cluster administration page; keep it short"
   },
   "web.routes.clusters.couldn_t_load_registered_clusters_try": {
     "defaultMessage": "Couldn't load registered clusters. Try again.",
-    "description": "Clusters: message of ErrorCard"
+    "description": "Clusters: error card shown when the cluster list fails to load; a retry button appears below it"
   },
   "web.routes.clusters.couldn_t_remove_the_cluster": {
     "defaultMessage": "Couldn't remove the cluster registration. Try again.",
-    "description": "Clusters: text in p"
+    "description": "Clusters: error message in the remove-cluster dialog shown when removing the registration fails; the user can try again"
   },
   "web.routes.clusters.kubernetes_serverversion": {
     "defaultMessage": "Kubernetes {serverVersion}",
@@ -5801,15 +5801,15 @@
   },
   "web.routes.clusters.last_checked": {
     "defaultMessage": "Last checked",
-    "description": "Clusters: text in p"
+    "description": "Clusters: label before the time of the last health check on a cluster card; the relative time follows it"
   },
   "web.routes.clusters.loading_clusters": {
     "defaultMessage": "Loading clusters…",
-    "description": "Clusters: message of LoadingCard"
+    "description": "Clusters: loading text shown while the list of registered clusters is being fetched"
   },
   "web.routes.clusters.no_clusters_available": {
     "defaultMessage": "No clusters available",
-    "description": "Clusters: text in h2"
+    "description": "Clusters: heading of the empty-state card shown when no cluster is registered or visible to the user"
   },
   "web.routes.clusters.phase_healthy": {
     "defaultMessage": "Healthy",
@@ -5825,7 +5825,7 @@
   },
   "web.routes.clusters.register_cluster": {
     "defaultMessage": "Register cluster",
-    "description": "Clusters: text in Button"
+    "description": "Clusters: button at the top right that opens the dialog for registering a new cluster; shown only to users who can manage clusters; keep it short"
   },
   "web.routes.clusters.register_workload_cluster_hint": {
     "defaultMessage": "Register a workload cluster to deploy and manage game servers. This panel can run without a local cluster.",
@@ -5833,11 +5833,11 @@
   },
   "web.routes.clusters.remove": {
     "defaultMessage": "Remove",
-    "description": "Clusters: text in Button"
+    "description": "Clusters: button on a cluster card that removes its registration; not shown for the local cluster; keep it short"
   },
   "web.routes.clusters.remove_cluster": {
     "defaultMessage": "Remove cluster",
-    "description": "Clusters: confirmLabel of ConfirmDialog"
+    "description": "Clusters: confirm button in the remove-cluster dialog, shown in a destructive style; keep it short"
   },
   "web.routes.clusters.remove_cluster_named": {
     "defaultMessage": "Remove cluster {name}",
@@ -5849,15 +5849,15 @@
   },
   "web.routes.clusters.removes_this_panel_s_connection_to_the": {
     "defaultMessage": "Removes this panel's connection to the cluster. Running workloads remain on the cluster.",
-    "description": "Clusters: text in p"
+    "description": "Clusters: text in the remove-cluster confirmation dialog saying the panel's connection is removed while running workloads stay on the cluster"
   },
   "web.routes.clusters.selected": {
     "defaultMessage": "Selected",
-    "description": "Clusters: text in span"
+    "description": "Clusters: small badge on a cluster card marking the cluster currently selected; keep it short"
   },
   "web.routes.clusters.view_nodes": {
     "defaultMessage": "View nodes",
-    "description": "Clusters: text in Button"
+    "description": "Clusters: button on a cluster card that opens the node inventory for that cluster; shown only when the user can view inventory; keep it short"
   },
   "web.routes.clusters.view_nodes_in": {
     "defaultMessage": "View nodes in {name}",
@@ -5865,7 +5865,7 @@
   },
   "web.routes.clusters.view_servers": {
     "defaultMessage": "View servers",
-    "description": "Clusters: text in Button"
+    "description": "Clusters: button on a cluster card that opens the server list for that cluster; keep it short; its screen-reader name also includes the cluster name"
   },
   "web.routes.clusters.view_servers_in": {
     "defaultMessage": "View servers in {name}",
@@ -6569,7 +6569,7 @@
   },
   "web.routes.dashboard.backups": {
     "defaultMessage": "Backups",
-    "description": "Dashboard: label of FleetCoverage"
+    "description": "Dashboard: label naming the backup data in the coverage status line; that line warns when backup data is partial or failed"
   },
   "web.routes.dashboard.backups_load_failed": {
     "defaultMessage": "Couldn't load backups. Backup status is unavailable.",
@@ -6577,15 +6577,15 @@
   },
   "web.routes.dashboard.central_gameplane_audit_activity": {
     "defaultMessage": "Central Gameplane audit activity",
-    "description": "Dashboard: text in p"
+    "description": "Dashboard: small caption above the recent audit events card, shown only to users who can view the audit log"
   },
   "web.routes.dashboard.cluster_resources": {
     "defaultMessage": "Cluster resources",
-    "description": "Dashboard: text in h3"
+    "description": "Dashboard: heading of the card showing CPU, memory and storage use across the clusters the user can see"
   },
   "web.routes.dashboard.cpu": {
     "defaultMessage": "CPU",
-    "description": "Dashboard: label of Meter"
+    "description": "Dashboard: label of the CPU usage bar in the cluster resources card; CPU is a technical term, usually left untranslated"
   },
   "web.routes.dashboard.cpu_used_of_capacity": {
     "defaultMessage": "{used} / {capacity} cores",
@@ -6593,11 +6593,11 @@
   },
   "web.routes.dashboard.create_server": {
     "defaultMessage": "Create server",
-    "description": "Dashboard: text in Button"
+    "description": "Dashboard: button at the top right that opens the form to create a new game server; keep it short"
   },
   "web.routes.dashboard.dashboard": {
     "defaultMessage": "Dashboard",
-    "description": "Dashboard: title of PageHeader"
+    "description": "Dashboard: page title at the top of the dashboard; keep it short"
   },
   "web.routes.dashboard.everything_healthy": {
     "defaultMessage": "Everything looks healthy.",
@@ -6605,11 +6605,11 @@
   },
   "web.routes.dashboard.fleet_status": {
     "defaultMessage": "Fleet status",
-    "description": "Dashboard: text in h3"
+    "description": "Dashboard: heading of the card showing how many game servers are running, stopped or failed and which ones need attention"
   },
   "web.routes.dashboard.inventory": {
     "defaultMessage": "Inventory",
-    "description": "Dashboard: label of FleetCoverage"
+    "description": "Dashboard: label naming the cluster inventory data in the coverage status line; that line warns when inventory is partial or failed"
   },
   "web.routes.dashboard.inventory_unavailable": {
     "defaultMessage": "inventory unavailable",
@@ -6629,11 +6629,11 @@
   },
   "web.routes.dashboard.loading_dashboard": {
     "defaultMessage": "Loading dashboard…",
-    "description": "Dashboard: message of LoadingCard"
+    "description": "Dashboard: loading text shown in place of the dashboard cards while the data loads"
   },
   "web.routes.dashboard.memory": {
     "defaultMessage": "Memory",
-    "description": "Dashboard: label of Meter"
+    "description": "Dashboard: label of the memory usage bar in the cluster resources card"
   },
   "web.routes.dashboard.memory_used_of_capacity": {
     "defaultMessage": "{used} / {capacity}",
@@ -6645,7 +6645,7 @@
   },
   "web.routes.dashboard.needs_attention": {
     "defaultMessage": "Needs attention",
-    "description": "Dashboard: text in div"
+    "description": "Dashboard: small uppercase label above the list of up to four servers that need attention in the fleet status card"
   },
   "web.routes.dashboard.no_backup_data": {
     "defaultMessage": "No backup data available.",
@@ -6665,7 +6665,7 @@
   },
   "web.routes.dashboard.no_recent_activity": {
     "defaultMessage": "No recent activity.",
-    "description": "Dashboard: text in div"
+    "description": "Dashboard: empty-state text in the recent activity card shown when there are no audit events"
   },
   "web.routes.dashboard.node_cpu": {
     "defaultMessage": "cpu {percent}%",
@@ -6677,7 +6677,7 @@
   },
   "web.routes.dashboard.nodes": {
     "defaultMessage": "Nodes",
-    "description": "Dashboard: text in div"
+    "description": "Dashboard: small uppercase label above the list of up to four nodes in the cluster resources card"
   },
   "web.routes.dashboard.nodes_need_attention": {
     "defaultMessage": "needs attention",
@@ -6685,7 +6685,7 @@
   },
   "web.routes.dashboard.nodes_ready": {
     "defaultMessage": "Nodes ready",
-    "description": "Dashboard: label of StatCard"
+    "description": "Dashboard: label of the summary card counting ready nodes; the value shows ready nodes out of all nodes"
   },
   "web.routes.dashboard.nodes_ready_of_total": {
     "defaultMessage": "{ready}/{total} nodes ready",
@@ -6705,7 +6705,7 @@
   },
   "web.routes.dashboard.players_online": {
     "defaultMessage": "Players online",
-    "description": "Dashboard: label of StatCard"
+    "description": "Dashboard: label of the summary card for players online; the line under the number shows the peak or a note when counts are unavailable"
   },
   "web.routes.dashboard.ready_of_total": {
     "defaultMessage": "{ready}/{total}",
@@ -6721,11 +6721,11 @@
   },
   "web.routes.dashboard.recent_activity": {
     "defaultMessage": "Recent activity",
-    "description": "Dashboard: text in h3"
+    "description": "Dashboard: heading of the card listing the latest audit events; a link to the full audit log sits beside it"
   },
   "web.routes.dashboard.recent_backups": {
     "defaultMessage": "Recent backups",
-    "description": "Dashboard: text in h3"
+    "description": "Dashboard: heading of the card listing the latest backups; a link to the backups page sits beside it"
   },
   "web.routes.dashboard.returned_inventory_cores": {
     "defaultMessage": "returned inventory cores",
@@ -6737,7 +6737,7 @@
   },
   "web.routes.dashboard.running": {
     "defaultMessage": "Running",
-    "description": "Dashboard: label of StatCard"
+    "description": "Dashboard: label of the summary card counting running game servers"
   },
   "web.routes.dashboard.server_status_unavailable": {
     "defaultMessage": "server status unavailable",
@@ -6745,7 +6745,7 @@
   },
   "web.routes.dashboard.server_totals": {
     "defaultMessage": "Server totals",
-    "description": "Dashboard: label of FleetCoverage"
+    "description": "Dashboard: label naming the server data in the coverage status line; that line warns when server data is partial or failed"
   },
   "web.routes.dashboard.servers_load_failed": {
     "defaultMessage": "Couldn't load servers. Status and player totals are unavailable.",
@@ -6753,11 +6753,11 @@
   },
   "web.routes.dashboard.storage": {
     "defaultMessage": "Storage",
-    "description": "Dashboard: label of Meter"
+    "description": "Dashboard: label of the storage usage bar in the cluster resources card"
   },
   "web.routes.dashboard.storage_provisioned": {
     "defaultMessage": "Storage provisioned",
-    "description": "Dashboard: label of StatCard"
+    "description": "Dashboard: label of the summary card with the total provisioned storage; the line under it says whether the figure covers returned or all authorized inventory"
   },
   "web.routes.dashboard.target_and_reason": {
     "defaultMessage": "{target} · {reason}",
@@ -6769,39 +6769,39 @@
   },
   "web.routes.dashboard.vcpus": {
     "defaultMessage": "vCPUs",
-    "description": "Dashboard: label of StatCard"
+    "description": "Dashboard: label of the summary card with the total vCPU count; vCPU is a technical term, usually left untranslated"
   },
   "web.routes.dashboard.view_all": {
     "defaultMessage": "View all",
-    "description": "Dashboard: text in Link"
+    "description": "Dashboard: link in the recent activity card to the full audit log, and in the recent backups card to the backups page; keep it short"
   },
   "web.routes.dashboard.view_clusters": {
     "defaultMessage": "View clusters",
-    "description": "Dashboard: text in Link"
+    "description": "Dashboard: link at the top right of the cluster resources card that opens the clusters page; keep it short"
   },
   "web.routes.dashboard.your_game_servers_and_resources_across": {
     "defaultMessage": "Your game servers and resources across authorized locations.",
-    "description": "Dashboard: subtitle of PageHeader"
+    "description": "Dashboard: subtitle under the page title saying the page shows game servers and resources in the locations the user may access"
   },
   "web.routes.login.agpl_3_0": {
     "defaultMessage": "AGPL-3.0",
-    "description": "Login: text in span"
+    "description": "Login: small badge above the side panel headline showing the license name; AGPL-3.0 is a technical term, usually left untranslated; keep it short"
   },
   "web.routes.login.agpl_3_0_licensed": {
     "defaultMessage": "AGPL-3.0 licensed",
-    "description": "Login: text in p"
+    "description": "Login: footer line below the sign-in form stating the license; AGPL-3.0 is the license name, a technical term usually left untranslated"
   },
   "web.routes.login.an_open_source_alternative_to": {
     "defaultMessage": "An open-source alternative to proprietary game panels — CRDs, Operators, and StatefulSets all the way down.",
-    "description": "Login: text in p"
+    "description": "Login: paragraph under the side panel headline describing the product; CRDs, Operators and StatefulSets are technical terms, usually left untranslated"
   },
   "web.routes.login.backups_auto_restart_rolling_upgrades": {
     "defaultMessage": "Backups, auto-restart, rolling upgrades, RBAC. Production-grade defaults.",
-    "description": "Login: text in MarketingRow"
+    "description": "Login: feature point on the side panel listing backups, auto-restart, rolling upgrades and RBAC as production-ready defaults; RBAC is a technical term, usually left untranslated"
   },
   "web.routes.login.contact_your_administrator_to_reset": {
     "defaultMessage": "Contact your administrator to reset your password.",
-    "description": "Login: text in p"
+    "description": "Login: hint shown under the password field after the forgot button is pressed, telling the user to ask an administrator to reset the password"
   },
   "web.routes.login.continue_with_label": {
     "defaultMessage": "Continue with {label}",
@@ -6809,31 +6809,31 @@
   },
   "web.routes.login.deploy_any_game_minecraft_valheim": {
     "defaultMessage": "Deploy any game. Minecraft, Valheim, Factorio, Palworld, ARK, CS2, Terraria, and more.",
-    "description": "Login: text in MarketingRow"
+    "description": "Login: first feature point on the side panel saying any game can be deployed; the game names are product names, usually kept as is"
   },
   "web.routes.login.email_or_username": {
     "defaultMessage": "Email or username",
-    "description": "Login: text in Label"
+    "description": "Login: label of the username field on the sign-in form; the field accepts an email address or a username"
   },
   "web.routes.login.forgot": {
     "defaultMessage": "Forgot?",
-    "description": "Login: text in Button"
+    "description": "Login: small button beside the password label that shows the password-reset hint; keep it short"
   },
   "web.routes.login.game_server_control_panel": {
     "defaultMessage": "game server control panel",
-    "description": "Login: text in div"
+    "description": "Login: tagline under the product name next to the logo on the sign-in page"
   },
   "web.routes.login.game_server_hosting": {
     "defaultMessage": "game server hosting.",
-    "description": "Login: text in h2"
+    "description": "Login: second line of the large headline on the side panel, completing the phrase that starts with the first line"
   },
   "web.routes.login.gameplane": {
     "defaultMessage": "gameplane",
-    "description": "Login: text in div"
+    "description": "Login: product name shown next to the logo at the top of the sign-in page; a brand name, usually kept as is"
   },
   "web.routes.login.gitops_friendly": {
     "defaultMessage": "GitOps-friendly.",
-    "description": "Login: text in MarketingRow"
+    "description": "Login: opening words of the last feature point on the side panel; GitOps is a technical term, usually left untranslated; a command sample and closing words follow"
   },
   "web.routes.login.hide_password": {
     "defaultMessage": "Hide password",
@@ -6845,15 +6845,15 @@
   },
   "web.routes.login.just_works": {
     "defaultMessage": "just works.",
-    "description": "Login: text in MarketingRow"
+    "description": "Login: closing words after the command sample in the last feature point on the side panel"
   },
   "web.routes.login.kubectl_get_gameservers": {
     "defaultMessage": "kubectl get gameservers",
-    "description": "Login: text in code"
+    "description": "Login: command sample shown in code style inside the last feature point; kubectl is a technical term, usually left untranslated"
   },
   "web.routes.login.kubernetes_native": {
     "defaultMessage": "Kubernetes-native",
-    "description": "Login: text in h2"
+    "description": "Login: first line of the large headline on the side panel of the sign-in page; Kubernetes-native is a technical term, usually left untranslated"
   },
   "web.routes.login.network_error": {
     "defaultMessage": "Network error",
@@ -6861,15 +6861,15 @@
   },
   "web.routes.login.or": {
     "defaultMessage": "or",
-    "description": "Login: text in span"
+    "description": "Login: small word between the sign-in form and the single sign-on buttons; keep it short"
   },
   "web.routes.login.password": {
     "defaultMessage": "Password",
-    "description": "Login: text in Label"
+    "description": "Login: label of the password field on the sign-in form"
   },
   "web.routes.login.scale_from_single_node_k3s_to_multi": {
     "defaultMessage": "Scale from single-node k3s to multi-node bare metal or cloud.",
-    "description": "Login: text in MarketingRow"
+    "description": "Login: feature point on the side panel about scaling from a single k3s node to multi-node bare metal or cloud; k3s is a technical term, usually left untranslated"
   },
   "web.routes.login.show_password": {
     "defaultMessage": "Show password",
@@ -6877,19 +6877,19 @@
   },
   "web.routes.login.sign_in": {
     "defaultMessage": "Sign in",
-    "description": "Login: text in h1"
+    "description": "Login: main heading of the sign-in form"
   },
   "web.routes.login.sign_in_2": {
     "defaultMessage": "Sign in →",
-    "description": "Login: text in Button"
+    "description": "Login: main submit button of the sign-in form; a spinner shows while the sign-in runs; keep it short"
   },
   "web.routes.login.sign_in_with_safe_mode_custom_styling": {
     "defaultMessage": "Sign in with safe mode (custom styling disabled)",
-    "description": "Login: text in a"
+    "description": "Login: link below the sign-in form that signs in with safe mode, which turns off custom styling"
   },
   "web.routes.login.welcome_to_gameplane": {
     "defaultMessage": "Welcome to Gameplane.",
-    "description": "Login: text in p"
+    "description": "Login: short line under the sign-in heading that greets the user"
   },
   "web.routes.modules.all_categories": {
     "defaultMessage": "All categories",
@@ -6977,15 +6977,15 @@
   },
   "web.routes.not_found.go_to_dashboard": {
     "defaultMessage": "Go to dashboard",
-    "description": "Not found: text in Link"
+    "description": "Not found: link styled as a button under the explanation that returns the user to the dashboard; keep it short"
   },
   "web.routes.not_found.page_not_found": {
     "defaultMessage": "Page not found",
-    "description": "Not found: text in h1"
+    "description": "Not found: heading of the 404 page saying the address matches no page"
   },
   "web.routes.not_found.the_page_you_re_looking_for_doesn_t": {
     "defaultMessage": "The page you're looking for doesn't exist or has moved.",
-    "description": "Not found: text in p"
+    "description": "Not found: explanation under the heading saying the page does not exist or has moved"
   },
   "web.routes.server_detail.loading": {
     "defaultMessage": "Loading…",
@@ -7089,11 +7089,11 @@
   },
   "web.routes.servers.actions": {
     "defaultMessage": "Actions",
-    "description": "Servers: text in Table.Column"
+    "description": "Servers: column heading for the row buttons such as start, stop and restart; keep it short"
   },
   "web.routes.servers.all": {
     "defaultMessage": "All",
-    "description": "Servers: text in span"
+    "description": "Servers: status filter tab that shows all servers, followed by their count; keep it short"
   },
   "web.routes.servers.authorized_inventory_cores": {
     "defaultMessage": "authorized inventory cores",
@@ -7105,7 +7105,7 @@
   },
   "web.routes.servers.cpu": {
     "defaultMessage": "CPU",
-    "description": "Servers: text in Table.Column"
+    "description": "Servers: column heading for CPU use per server; CPU is a technical term, usually left untranslated; keep it short"
   },
   "web.routes.servers.cpu_cores": {
     "defaultMessage": "{cores} cores",
@@ -7117,23 +7117,23 @@
   },
   "web.routes.servers.create_server": {
     "defaultMessage": "Create server",
-    "description": "Servers: text in Link"
+    "description": "Servers: button at the top right that opens the form to create a new game server; shown only to users who can create servers; keep it short"
   },
   "web.routes.servers.filter": {
     "defaultMessage": "Filter",
-    "description": "Servers: text in div"
+    "description": "Servers: button that opens the filter panel, with a count of applied filters; keep it short"
   },
   "web.routes.servers.game": {
     "defaultMessage": "Game",
-    "description": "Servers: text in Table.Column"
+    "description": "Servers: column heading for the game each server runs; keep it short"
   },
   "web.routes.servers.inventory": {
     "defaultMessage": "Inventory",
-    "description": "Servers: label of FleetCoverage"
+    "description": "Servers: label of the coverage status for the cluster inventory data; it warns when the inventory is partial or failed"
   },
   "web.routes.servers.inventory_nodes": {
     "defaultMessage": "Inventory nodes",
-    "description": "Servers: label of StatCard"
+    "description": "Servers: label of the summary card counting the nodes in the cluster inventory"
   },
   "web.routes.servers.inventory_unavailable": {
     "defaultMessage": "inventory unavailable",
@@ -7141,7 +7141,7 @@
   },
   "web.routes.servers.loading": {
     "defaultMessage": "Loading…",
-    "description": "Servers: text in Card"
+    "description": "Servers: text shown in a card while the server list is loading, in place of the list"
   },
   "web.routes.servers.loading_servers": {
     "defaultMessage": "Loading…",
@@ -7149,15 +7149,15 @@
   },
   "web.routes.servers.location": {
     "defaultMessage": "Location",
-    "description": "Servers: text in div"
+    "description": "Servers: label of the location filter in the filter panel; the choices are the clusters the user can access"
   },
   "web.routes.servers.manage_your_game_servers_across_all": {
     "defaultMessage": "Manage your game servers across all authorized locations.",
-    "description": "Servers: subtitle of PageHeader"
+    "description": "Servers: subtitle under the page title saying the list covers game servers in all locations the user may access"
   },
   "web.routes.servers.memory": {
     "defaultMessage": "Memory",
-    "description": "Servers: text in Table.Column"
+    "description": "Servers: column heading for memory use per server; keep it short"
   },
   "web.routes.servers.memory_percent": {
     "defaultMessage": "{percent}%",
@@ -7165,7 +7165,7 @@
   },
   "web.routes.servers.name": {
     "defaultMessage": "Name",
-    "description": "Servers: text in Table.Column"
+    "description": "Servers: column heading for the server name; keep it short"
   },
   "web.routes.servers.no_data_for_filter": {
     "defaultMessage": "No server data available for this filter.",
@@ -7181,7 +7181,7 @@
   },
   "web.routes.servers.node": {
     "defaultMessage": "Node",
-    "description": "Servers: text in Table.Column"
+    "description": "Servers: column heading for the cluster node each server runs on; keep it short"
   },
   "web.routes.servers.peak_players": {
     "defaultMessage": "peak {count}",
@@ -7197,7 +7197,7 @@
   },
   "web.routes.servers.players": {
     "defaultMessage": "Players",
-    "description": "Servers: text in Table.Column"
+    "description": "Servers: column heading for the number of players online on each server; keep it short"
   },
   "web.routes.servers.players_of_max": {
     "defaultMessage": "{players}/{max}",
@@ -7205,11 +7205,11 @@
   },
   "web.routes.servers.players_online": {
     "defaultMessage": "Players online",
-    "description": "Servers: label of StatCard"
+    "description": "Servers: label of the summary card for players online; the line under the number shows the peak or a note when counts are unavailable"
   },
   "web.routes.servers.restart": {
     "defaultMessage": "Restart",
-    "description": "Servers: title of ActionButton"
+    "description": "Servers: tooltip of the icon button that restarts a server; keep it short"
   },
   "web.routes.servers.returned_inventory_cores": {
     "defaultMessage": "returned inventory cores",
@@ -7221,31 +7221,31 @@
   },
   "web.routes.servers.running": {
     "defaultMessage": "Running",
-    "description": "Servers: label of StatCard"
+    "description": "Servers: 'Running' is both a summary card label counting running servers and a status filter tab that lists them with their count; keep it short"
   },
   "web.routes.servers.search": {
     "defaultMessage": "Search…",
-    "description": "Servers: placeholder of Input"
+    "description": "Servers: placeholder inside the search box shown on narrow screens; the short form of the search prompt"
   },
   "web.routes.servers.search_servers": {
     "defaultMessage": "Search servers…",
-    "description": "Servers: placeholder of Input"
+    "description": "Servers: placeholder text inside the search box above the server list on wide screens, shown while the box is empty"
   },
   "web.routes.servers.search_servers_2": {
     "defaultMessage": "Search servers",
-    "description": "Servers: aria-label of Input"
+    "description": "Servers: screen-reader name of the server search box on wide and narrow screens; not shown on screen"
   },
   "web.routes.servers.server_list": {
     "defaultMessage": "Server list",
-    "description": "Servers: aria-label of Table.Content"
+    "description": "Servers: hidden name of the server list table, read only by screen readers"
   },
   "web.routes.servers.server_results": {
     "defaultMessage": "Server results",
-    "description": "Servers: label of FleetCoverage"
+    "description": "Servers: label of the coverage status for the server data behind the list; it warns when the data is partial or failed"
   },
   "web.routes.servers.server_status_filter": {
     "defaultMessage": "Server status filter",
-    "description": "Servers: aria-label of Tabs.List"
+    "description": "Servers: hidden name of the row of status filter tabs, read only by screen readers"
   },
   "web.routes.servers.server_status_unavailable": {
     "defaultMessage": "server status unavailable",
@@ -7253,51 +7253,51 @@
   },
   "web.routes.servers.servers": {
     "defaultMessage": "Servers",
-    "description": "Servers: title of PageHeader"
+    "description": "Servers: page title of the server list page; keep it short"
   },
   "web.routes.servers.start": {
     "defaultMessage": "Start",
-    "description": "Servers: title of ActionButton"
+    "description": "Servers: tooltip of the icon button that starts a stopped server; keep it short"
   },
   "web.routes.servers.status": {
     "defaultMessage": "Status",
-    "description": "Servers: text in Table.Column"
+    "description": "Servers: column heading for the server state, such as running or stopped; keep it short"
   },
   "web.routes.servers.stop": {
     "defaultMessage": "Stop",
-    "description": "Servers: title of ActionButton"
+    "description": "Servers: tooltip of the icon button that stops a running server; keep it short"
   },
   "web.routes.servers.stopped": {
     "defaultMessage": "Stopped",
-    "description": "Servers: text in span"
+    "description": "Servers: status filter tab that shows only stopped servers, followed by their count; keep it short"
   },
   "web.routes.servers.storage_provisioned": {
     "defaultMessage": "Storage provisioned",
-    "description": "Servers: label of StatCard"
+    "description": "Servers: label of the summary card with the total provisioned storage; the line under it says whether it covers returned or all authorized inventory"
   },
   "web.routes.servers.vcpus": {
     "defaultMessage": "vCPUs",
-    "description": "Servers: label of StatCard"
+    "description": "Servers: label of the summary card with the total vCPU count; vCPU is a technical term, usually left untranslated"
   },
   "web.routes.servers.wake": {
     "defaultMessage": "Wake",
-    "description": "Servers: title of ActionButton"
+    "description": "Servers: tooltip of the icon button that wakes a sleeping server; keep it short"
   },
   "web.routes.share.asleep": {
     "defaultMessage": "Asleep",
-    "description": "Share: text in span"
+    "description": "Share: status badge under the server name when the server is asleep; keep it short"
   },
   "web.routes.share.connect_at": {
     "defaultMessage": "CONNECT AT",
-    "description": "Share: text in div"
+    "description": "Share: small label above the server address on the share page; keep it short"
   },
   "web.routes.share.copy_address": {
     "defaultMessage": "Copy address",
-    "description": "Share: title of button"
+    "description": "Share: tooltip of the icon button that copies the server address to the clipboard; keep it short"
   },
   "web.routes.share.gameplane": {
     "defaultMessage": "gameplane",
-    "description": "Share: text in div"
+    "description": "Share: product name above the shared server title on the public share page; a brand name, usually kept as is"
   },
   "web.routes.share.host_port": {
     "defaultMessage": "{host}:{port}",
@@ -7305,19 +7305,19 @@
   },
   "web.routes.share.link_not_available": {
     "defaultMessage": "Link not available",
-    "description": "Share: text in h1"
+    "description": "Share: heading of the error page shown when the shared link is invalid or cannot be used"
   },
   "web.routes.share.not_exposed": {
     "defaultMessage": "Not exposed",
-    "description": "Share: text in div"
+    "description": "Share: text shown in place of the server address when the server has no address to share"
   },
   "web.routes.share.online": {
     "defaultMessage": "Online",
-    "description": "Share: text in span"
+    "description": "Share: status badge under the server name on the share page, shown when the server is running; keep it short"
   },
   "web.routes.share.players": {
     "defaultMessage": "PLAYERS",
-    "description": "Share: text in div"
+    "description": "Share: small label above the players-online line on the share page"
   },
   "web.routes.share.playersonline_players_online": {
     "defaultMessage": "{playersOnline} players online",
@@ -7325,7 +7325,7 @@
   },
   "web.routes.share.shared_server_link": {
     "defaultMessage": "shared server link",
-    "description": "Share: text in div"
+    "description": "Share: caption under the product name on the public share page, identifying the page as a shared server link"
   },
   "web.routes.share.start_server": {
     "defaultMessage": "Start server",
@@ -7333,7 +7333,7 @@
   },
   "web.routes.share.starting": {
     "defaultMessage": "Starting...",
-    "description": "Share: text in span"
+    "description": "Share: status badge with a spinner under the server name while the server is starting; keep it short"
   },
   "web.routes.share.starting_ellipsis": {
     "defaultMessage": "Starting...",
@@ -7341,19 +7341,19 @@
   },
   "web.routes.share.the_server_is_starting_up_this_usually": {
     "defaultMessage": "The server is starting up. This usually takes a minute or two — this page updates on its own.",
-    "description": "Share: text in p"
+    "description": "Share: explanation under the starting badge saying startup takes a minute or two and the page updates by itself"
   },
   "web.routes.share.this_link_may_be_invalid_expired_or": {
     "defaultMessage": "This link may be invalid, expired, or revoked. Ask the person who shared it for a new one.",
-    "description": "Share: text in p"
+    "description": "Share: explanation under the link-not-available heading telling the visitor to ask the person who shared the link for a new one"
   },
   "web.routes.share.this_server_is_asleep_right_now_check": {
     "defaultMessage": "This server is asleep right now. Check back later, or ask the server owner to start it.",
-    "description": "Share: text in p"
+    "description": "Share: explanation under the asleep badge telling the visitor to check back later or ask the server owner to start the server"
   },
   "web.routes.share.this_server_is_asleep_to_save_resources": {
     "defaultMessage": "This server is asleep to save resources. Start it and it'll be ready in a minute or two.",
-    "description": "Share: text in p"
+    "description": "Share: explanation under the asleep badge saying the server sleeps to save resources and takes a minute or two to be ready after it is started"
   },
   "web.routes.share.try_again_shortly": {
     "defaultMessage": "Try again shortly",

@@ -18,6 +18,7 @@ import formatjs from "eslint-plugin-formatjs";
 const MIGRATED_I18N_PATHS = [
   "src/lib/i18n/**/*.{ts,tsx}",
   "src/components/**/*.{ts,tsx}",
+  "src/routes/{Login,Share,NotFound,Dashboard,Servers,Clusters,Cluster}.tsx",
 ];
 
 export default [

@@ -103,30 +103,30 @@ export function DashboardPage() {
   return (
     <div className="space-y-6 p-6">
       <PageHeader
-        title={intl.formatMessage({ id: "web.routes.dashboard.dashboard", defaultMessage: "Dashboard", description: "Dashboard: title of PageHeader" })}
-        subtitle={intl.formatMessage({ id: "web.routes.dashboard.your_game_servers_and_resources_across", defaultMessage: "Your game servers and resources across authorized locations.", description: "Dashboard: subtitle of PageHeader" })}
+        title={intl.formatMessage({ id: "web.routes.dashboard.dashboard", defaultMessage: "Dashboard", description: "Dashboard: page title at the top of the dashboard; keep it short" })}
+        subtitle={intl.formatMessage({ id: "web.routes.dashboard.your_game_servers_and_resources_across", defaultMessage: "Your game servers and resources across authorized locations.", description: "Dashboard: subtitle under the page title saying the page shows game servers and resources in the locations the user may access" })}
         actions={canCreate ?
           <Button
             variant="primary"
             className="rounded-full"
             onPress={() => void navigate({ to: "/servers/new" })}
           >
-            <Plus className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.dashboard.create_server", defaultMessage: "Create server", description: "Dashboard: text in Button" })}</Button> : undefined
+            <Plus className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.dashboard.create_server", defaultMessage: "Create server", description: "Dashboard: button at the top right that opens the form to create a new game server; keep it short" })}</Button> : undefined
         }
       />
 
       <FleetScopeFilter value={location} onChange={setLocation} clusters={[...(scopes?.scopes ?? []).map((scope) => scope.cluster), ...(scopes?.items ?? []).map((item) => item.target.cluster), ...(scopes?.issues ?? []).map((issue) => issue.cluster), ...(inventory?.items ?? []).map((item) => item.cluster)]} />
-      <FleetCoverage partial={fleet?.partial} issues={fleet?.issues} error={serversError} label={intl.formatMessage({ id: "web.routes.dashboard.server_totals", defaultMessage: "Server totals", description: "Dashboard: label of FleetCoverage" })} />
-      <FleetCoverage partial={inventory?.partial} issues={inventory?.issues} error={clusterError} label={intl.formatMessage({ id: "web.routes.dashboard.inventory", defaultMessage: "Inventory", description: "Dashboard: label of FleetCoverage" })} />
-      <FleetCoverage partial={backupsFleet?.partial} issues={backupsFleet?.issues} error={backupsError} label={intl.formatMessage({ id: "web.routes.dashboard.backups", defaultMessage: "Backups", description: "Dashboard: label of FleetCoverage" })} />
+      <FleetCoverage partial={fleet?.partial} issues={fleet?.issues} error={serversError} label={intl.formatMessage({ id: "web.routes.dashboard.server_totals", defaultMessage: "Server totals", description: "Dashboard: label naming the server data in the coverage status line; that line warns when server data is partial or failed" })} />
+      <FleetCoverage partial={inventory?.partial} issues={inventory?.issues} error={clusterError} label={intl.formatMessage({ id: "web.routes.dashboard.inventory", defaultMessage: "Inventory", description: "Dashboard: label naming the cluster inventory data in the coverage status line; that line warns when inventory is partial or failed" })} />
+      <FleetCoverage partial={backupsFleet?.partial} issues={backupsFleet?.issues} error={backupsError} label={intl.formatMessage({ id: "web.routes.dashboard.backups", defaultMessage: "Backups", description: "Dashboard: label naming the backup data in the coverage status line; that line warns when backup data is partial or failed" })} />
 
       {isLoading ? (
-        <LoadingCard message={intl.formatMessage({ id: "web.routes.dashboard.loading_dashboard", defaultMessage: "Loading dashboard…", description: "Dashboard: message of LoadingCard" })} />
+        <LoadingCard message={intl.formatMessage({ id: "web.routes.dashboard.loading_dashboard", defaultMessage: "Loading dashboard…", description: "Dashboard: loading text shown in place of the dashboard cards while the data loads" })} />
       ) : (
         <>
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
             <StatCard
-              label={intl.formatMessage({ id: "web.routes.dashboard.running", defaultMessage: "Running", description: "Dashboard: label of StatCard" })}
+              label={intl.formatMessage({ id: "web.routes.dashboard.running", defaultMessage: "Running", description: "Dashboard: label of the summary card counting running game servers" })}
               icon={<Activity className="h-4 w-4" />}
               value={countsUnavailable ? emptyValue : counts.running}
               sub={countsUnavailable
@@ -137,7 +137,7 @@ export function DashboardPage() {
               accent={countsUnavailable ? "warning" : "success"}
             />
             <StatCard
-              label={intl.formatMessage({ id: "web.routes.dashboard.players_online", defaultMessage: "Players online", description: "Dashboard: label of StatCard" })}
+              label={intl.formatMessage({ id: "web.routes.dashboard.players_online", defaultMessage: "Players online", description: "Dashboard: label of the summary card for players online; the line under the number shows the peak or a note when counts are unavailable" })}
               icon={<UsersIcon className="h-4 w-4" />}
               value={countsUnavailable || !players.known ? emptyValue : counts.players}
               sub={countsUnavailable || !players.known
@@ -148,7 +148,7 @@ export function DashboardPage() {
               accent="primary"
             />
             <StatCard
-              label={intl.formatMessage({ id: "web.routes.dashboard.vcpus", defaultMessage: "vCPUs", description: "Dashboard: label of StatCard" })}
+              label={intl.formatMessage({ id: "web.routes.dashboard.vcpus", defaultMessage: "vCPUs", description: "Dashboard: label of the summary card with the total vCPU count; vCPU is a technical term, usually left untranslated" })}
               icon={<Cpu className="h-4 w-4" />}
               value={vcpus > 0 ? vcpus : emptyValue}
               sub={inventory?.partial
@@ -157,14 +157,14 @@ export function DashboardPage() {
               accent="warning"
             />
             <StatCard
-              label={intl.formatMessage({ id: "web.routes.dashboard.storage_provisioned", defaultMessage: "Storage provisioned", description: "Dashboard: label of StatCard" })}
+              label={intl.formatMessage({ id: "web.routes.dashboard.storage_provisioned", defaultMessage: "Storage provisioned", description: "Dashboard: label of the summary card with the total provisioned storage; the line under it says whether the figure covers returned or all authorized inventory" })}
               icon={<HardDrive className="h-4 w-4" />}
               value={storage.valueText}
               sub={storage.subText ?? emptyValue}
               accent={storage.overcommitted ? "warning" : "violet"}
             />
             <StatCard
-              label={intl.formatMessage({ id: "web.routes.dashboard.nodes_ready", defaultMessage: "Nodes ready", description: "Dashboard: label of StatCard" })}
+              label={intl.formatMessage({ id: "web.routes.dashboard.nodes_ready", defaultMessage: "Nodes ready", description: "Dashboard: label of the summary card counting ready nodes; the value shows ready nodes out of all nodes" })}
               icon={<ServerIcon className="h-4 w-4" />}
               value={!clusterError && nodesTotal > 0 ? intl.formatMessage({ id: "web.routes.dashboard.ready_of_total", defaultMessage: "{ready}/{total}", description: "Dashboard: nodes ready shown as ready/total; both are counts" }, { ready: nodesReady, total: nodesTotal }) : emptyValue}
               sub={
@@ -199,7 +199,7 @@ export function DashboardPage() {
           </div>
 
           <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
-            {canAudit && <div className="space-y-2"><p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.dashboard.central_gameplane_audit_activity", defaultMessage: "Central Gameplane audit activity", description: "Dashboard: text in p" })}</p><RecentActivityCard events={audit ?? []} /></div>}
+            {canAudit && <div className="space-y-2"><p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.dashboard.central_gameplane_audit_activity", defaultMessage: "Central Gameplane audit activity", description: "Dashboard: small caption above the recent audit events card, shown only to users who can view the audit log" })}</p><RecentActivityCard events={audit ?? []} /></div>}
             {backupsError
               ? <ErrorCard message={intl.formatMessage({ id: "web.routes.dashboard.backups_load_failed", defaultMessage: "Couldn't load backups. Backup status is unavailable.", description: "Dashboard: error card when the backup list cannot be loaded" })} />
               : <RecentBackupsCard complete={!backupsFleet?.partial} backups={recentBackups} gameCodes={gameCodes} byName={byName} servers={serversData?.items} />}
@@ -233,7 +233,7 @@ function FleetStatusCard({
   return (
     <Card className="min-w-0 space-y-4 p-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.dashboard.fleet_status", defaultMessage: "Fleet status", description: "Dashboard: text in h3" })}</h3>
+        <h3 className="text-sm font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.dashboard.fleet_status", defaultMessage: "Fleet status", description: "Dashboard: heading of the card showing how many game servers are running, stopped or failed and which ones need attention" })}</h3>
         <span className="text-xs text-muted">{intl.formatMessage(complete
           ? { id: "web.routes.dashboard.servers_count", defaultMessage: "{count} servers", description: "Dashboard: server count in the Fleet status card; {count} is the number of servers" }
           : { id: "web.routes.dashboard.returned_servers_count", defaultMessage: "{count} returned servers", description: "Dashboard: server count in the Fleet status card when the list is partial; {count} is the number of returned servers" }, { count: groups.total })}</span>
@@ -253,7 +253,7 @@ function FleetStatusCard({
       </div>
 
       <div className="space-y-3 border-t border-border pt-4">
-        <div className="text-[10px] font-medium uppercase tracking-wider text-muted">{intl.formatMessage({ id: "web.routes.dashboard.needs_attention", defaultMessage: "Needs attention", description: "Dashboard: text in div" })}</div>
+        <div className="text-[10px] font-medium uppercase tracking-wider text-muted">{intl.formatMessage({ id: "web.routes.dashboard.needs_attention", defaultMessage: "Needs attention", description: "Dashboard: small uppercase label above the list of up to four servers that need attention in the fleet status card" })}</div>
         {attention.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-muted">
             <CheckCircle2 className="h-4 w-4 text-success" /> {complete
@@ -342,9 +342,9 @@ function ClusterResourcesCard({
   return (
     <Card className="min-w-0 space-y-4 p-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.dashboard.cluster_resources", defaultMessage: "Cluster resources", description: "Dashboard: text in h3" })}</h3>
+        <h3 className="text-sm font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.dashboard.cluster_resources", defaultMessage: "Cluster resources", description: "Dashboard: heading of the card showing CPU, memory and storage use across the clusters the user can see" })}</h3>
         {canViewCluster ? (
-          <Link to="/clusters" className="text-xs text-primary hover:underline">{intl.formatMessage({ id: "web.routes.dashboard.view_clusters", defaultMessage: "View clusters", description: "Dashboard: text in Link" })}</Link>
+          <Link to="/clusters" className="text-xs text-primary hover:underline">{intl.formatMessage({ id: "web.routes.dashboard.view_clusters", defaultMessage: "View clusters", description: "Dashboard: link at the top right of the cluster resources card that opens the clusters page; keep it short" })}</Link>
         ) : (
           <span className="text-xs text-muted">
             {nodesTotal > 0 ? intl.formatMessage({ id: "web.routes.dashboard.nodes_ready_of_total", defaultMessage: "{ready}/{total} nodes ready", description: "Dashboard: node readiness in the Cluster resources card; {ready} and {total} are counts" }, { ready: nodesReady, total: nodesTotal }) : intl.formatMessage({ id: "web.common.empty_value", defaultMessage: "—", description: "Shown in place of a value that is not set" })}
@@ -353,10 +353,10 @@ function ClusterResourcesCard({
       </div>
 
       <div className="space-y-3">
-        <Meter label={intl.formatMessage({ id: "web.routes.dashboard.cpu", defaultMessage: "CPU", description: "Dashboard: label of Meter" })} pct={cpu.pct} sub={cpu.sub} unknown={!cpu.known} accent="primary" />
-        <Meter label={intl.formatMessage({ id: "web.routes.dashboard.memory", defaultMessage: "Memory", description: "Dashboard: label of Meter" })} pct={mem.pct} sub={mem.sub} unknown={!mem.known} accent="violet" />
+        <Meter label={intl.formatMessage({ id: "web.routes.dashboard.cpu", defaultMessage: "CPU", description: "Dashboard: label of the CPU usage bar in the cluster resources card; CPU is a technical term, usually left untranslated" })} pct={cpu.pct} sub={cpu.sub} unknown={!cpu.known} accent="primary" />
+        <Meter label={intl.formatMessage({ id: "web.routes.dashboard.memory", defaultMessage: "Memory", description: "Dashboard: label of the memory usage bar in the cluster resources card" })} pct={mem.pct} sub={mem.sub} unknown={!mem.known} accent="violet" />
         <Meter
-          label={intl.formatMessage({ id: "web.routes.dashboard.storage", defaultMessage: "Storage", description: "Dashboard: label of Meter" })}
+          label={intl.formatMessage({ id: "web.routes.dashboard.storage", defaultMessage: "Storage", description: "Dashboard: label of the storage usage bar in the cluster resources card" })}
           pct={storagePct}
           sub={storage.subText}
           unknown={storage.valueText === "—"}
@@ -366,7 +366,7 @@ function ClusterResourcesCard({
 
       {nodes.length > 0 && (
         <div className="space-y-2 border-t border-border pt-4">
-          <div className="text-[10px] font-medium uppercase tracking-wider text-muted">{intl.formatMessage({ id: "web.routes.dashboard.nodes", defaultMessage: "Nodes", description: "Dashboard: text in div" })}</div>
+          <div className="text-[10px] font-medium uppercase tracking-wider text-muted">{intl.formatMessage({ id: "web.routes.dashboard.nodes", defaultMessage: "Nodes", description: "Dashboard: small uppercase label above the list of up to four nodes in the cluster resources card" })}</div>
           {nodes.slice(0, 4).map((n) => (
             <NodeRow key={n.name} node={n} />
           ))}
@@ -401,11 +401,11 @@ function RecentActivityCard({ events }: { events: AuditEvent[] }) {
   return (
     <Card className="min-w-0 space-y-4 p-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.dashboard.recent_activity", defaultMessage: "Recent activity", description: "Dashboard: text in h3" })}</h3>
-        <Link to="/admin/audit" className="text-xs text-primary hover:underline">{intl.formatMessage({ id: "web.routes.dashboard.view_all", defaultMessage: "View all", description: "Dashboard: text in Link" })}</Link>
+        <h3 className="text-sm font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.dashboard.recent_activity", defaultMessage: "Recent activity", description: "Dashboard: heading of the card listing the latest audit events; a link to the full audit log sits beside it" })}</h3>
+        <Link to="/admin/audit" className="text-xs text-primary hover:underline">{intl.formatMessage({ id: "web.routes.dashboard.view_all", defaultMessage: "View all", description: "Dashboard: link in the recent activity card to the full audit log, and in the recent backups card to the backups page; keep it short" })}</Link>
       </div>
       {events.length === 0 ? (
-        <div className="py-6 text-center text-sm text-muted">{intl.formatMessage({ id: "web.routes.dashboard.no_recent_activity", defaultMessage: "No recent activity.", description: "Dashboard: text in div" })}</div>
+        <div className="py-6 text-center text-sm text-muted">{intl.formatMessage({ id: "web.routes.dashboard.no_recent_activity", defaultMessage: "No recent activity.", description: "Dashboard: empty-state text in the recent activity card shown when there are no audit events" })}</div>
       ) : (
         <div className="space-y-3">
           {events.map((e) => (
@@ -453,8 +453,8 @@ function RecentBackupsCard({
   return (
     <Card className="min-w-0 space-y-4 p-5">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.dashboard.recent_backups", defaultMessage: "Recent backups", description: "Dashboard: text in h3" })}</h3>
-        <Link to="/backups" className="text-xs text-primary hover:underline">{intl.formatMessage({ id: "web.routes.dashboard.view_all", defaultMessage: "View all", description: "Dashboard: text in Link" })}</Link>
+        <h3 className="text-sm font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.dashboard.recent_backups", defaultMessage: "Recent backups", description: "Dashboard: heading of the card listing the latest backups; a link to the backups page sits beside it" })}</h3>
+        <Link to="/backups" className="text-xs text-primary hover:underline">{intl.formatMessage({ id: "web.routes.dashboard.view_all", defaultMessage: "View all", description: "Dashboard: link in the recent activity card to the full audit log, and in the recent backups card to the backups page; keep it short" })}</Link>
       </div>
       {backups.length === 0 ? (
         <div className="py-6 text-center text-sm text-muted">{complete

@@ -292,18 +292,18 @@ function ShareView({ token }: { token: string }) {
               </div>
             </div>
             <div className="mb-2 text-center">
-              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.gameplane", defaultMessage: "gameplane", description: "Share: text in div" })}</div>
-              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.shared_server_link", defaultMessage: "shared server link", description: "Share: text in div" })}</div>
+              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.gameplane", defaultMessage: "gameplane", description: "Share: product name above the shared server title on the public share page; a brand name, usually kept as is" })}</div>
+              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.shared_server_link", defaultMessage: "shared server link", description: "Share: caption under the product name on the public share page, identifying the page as a shared server link" })}</div>
             </div>
             <h1 className="font-mono text-2xl font-semibold">{data.serverName}</h1>
             <div className="mt-3 flex justify-center">
-              <span className="inline-block rounded-full bg-success/20 px-3 py-1 text-sm font-medium text-success">{intl.formatMessage({ id: "web.routes.share.online", defaultMessage: "Online", description: "Share: text in span" })}</span>
+              <span className="inline-block rounded-full bg-success/20 px-3 py-1 text-sm font-medium text-success">{intl.formatMessage({ id: "web.routes.share.online", defaultMessage: "Online", description: "Share: status badge under the server name on the share page, shown when the server is running; keep it short" })}</span>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <div className="text-xs text-muted mb-1">{intl.formatMessage({ id: "web.routes.share.connect_at", defaultMessage: "CONNECT AT", description: "Share: text in div" })}</div>
+              <div className="text-xs text-muted mb-1">{intl.formatMessage({ id: "web.routes.share.connect_at", defaultMessage: "CONNECT AT", description: "Share: small label above the server address on the share page; keep it short" })}</div>
               {data.address ? (
                 <div className="flex items-center gap-2 rounded-lg bg-surface p-3">
                   <code className="flex-1 text-sm font-mono">
@@ -313,7 +313,7 @@ function ShareView({ token }: { token: string }) {
                     type="button"
                     className="p-1 text-muted hover:text-fg transition-colors"
                     onClick={handleCopyAddress}
-                    title={intl.formatMessage({ id: "web.routes.share.copy_address", defaultMessage: "Copy address", description: "Share: title of button" })}
+                    title={intl.formatMessage({ id: "web.routes.share.copy_address", defaultMessage: "Copy address", description: "Share: tooltip of the icon button that copies the server address to the clipboard; keep it short" })}
                   >
                     {copied ? (
                       <Check className="h-4 w-4 text-success" />
@@ -323,13 +323,13 @@ function ShareView({ token }: { token: string }) {
                   </button>
                 </div>
               ) : (
-                <div className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.not_exposed", defaultMessage: "Not exposed", description: "Share: text in div" })}</div>
+                <div className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.not_exposed", defaultMessage: "Not exposed", description: "Share: text shown in place of the server address when the server has no address to share" })}</div>
               )}
             </div>
 
             {data.playersOnline !== undefined && (
               <div>
-                <div className="text-xs text-muted mb-1">{intl.formatMessage({ id: "web.routes.share.players", defaultMessage: "PLAYERS", description: "Share: text in div" })}</div>
+                <div className="text-xs text-muted mb-1">{intl.formatMessage({ id: "web.routes.share.players", defaultMessage: "PLAYERS", description: "Share: small label above the players-online line on the share page" })}</div>
                 <div className="text-sm">{intl.formatMessage({ id: "web.routes.share.playersonline_players_online", defaultMessage: "{playersOnline} players online", description: "Share: sentence with playersOnline in div" }, { playersOnline: data.playersOnline })}</div>
               </div>
             )}
@@ -347,18 +347,18 @@ function ShareView({ token }: { token: string }) {
               </div>
             </div>
             <div className="mb-2 text-center">
-              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.gameplane", defaultMessage: "gameplane", description: "Share: text in div" })}</div>
-              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.shared_server_link", defaultMessage: "shared server link", description: "Share: text in div" })}</div>
+              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.gameplane", defaultMessage: "gameplane", description: "Share: product name above the shared server title on the public share page; a brand name, usually kept as is" })}</div>
+              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.shared_server_link", defaultMessage: "shared server link", description: "Share: caption under the product name on the public share page, identifying the page as a shared server link" })}</div>
             </div>
             <h1 className="font-mono text-2xl font-semibold">{data.serverName}</h1>
             <div className="mt-3 flex justify-center">
               <span className="status-focus inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium">
-                <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />{intl.formatMessage({ id: "web.routes.share.asleep", defaultMessage: "Asleep", description: "Share: text in span" })}</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />{intl.formatMessage({ id: "web.routes.share.asleep", defaultMessage: "Asleep", description: "Share: status badge under the server name when the server is asleep; keep it short" })}</span>
             </div>
           </div>
 
           <div className="mb-6">
-            <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.this_server_is_asleep_to_save_resources", defaultMessage: "This server is asleep to save resources. Start it and it'll be ready in a minute or two.", description: "Share: text in p" })}</p>
+            <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.this_server_is_asleep_to_save_resources", defaultMessage: "This server is asleep to save resources. Start it and it'll be ready in a minute or two.", description: "Share: explanation under the asleep badge saying the server sleeps to save resources and takes a minute or two to be ready after it is started" })}</p>
           </div>
 
           <Button
@@ -382,17 +382,17 @@ function ShareView({ token }: { token: string }) {
               </div>
             </div>
             <div className="mb-2 text-center">
-              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.gameplane", defaultMessage: "gameplane", description: "Share: text in div" })}</div>
-              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.shared_server_link", defaultMessage: "shared server link", description: "Share: text in div" })}</div>
+              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.gameplane", defaultMessage: "gameplane", description: "Share: product name above the shared server title on the public share page; a brand name, usually kept as is" })}</div>
+              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.shared_server_link", defaultMessage: "shared server link", description: "Share: caption under the product name on the public share page, identifying the page as a shared server link" })}</div>
             </div>
             <h1 className="font-mono text-2xl font-semibold">{data.serverName}</h1>
             <div className="mt-3 flex justify-center">
               <span className="status-focus inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium">
-                <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />{intl.formatMessage({ id: "web.routes.share.asleep", defaultMessage: "Asleep", description: "Share: text in span" })}</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />{intl.formatMessage({ id: "web.routes.share.asleep", defaultMessage: "Asleep", description: "Share: status badge under the server name when the server is asleep; keep it short" })}</span>
             </div>
           </div>
 
-          <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.this_server_is_asleep_right_now_check", defaultMessage: "This server is asleep right now. Check back later, or ask the server owner to start it.", description: "Share: text in p" })}</p>
+          <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.this_server_is_asleep_right_now_check", defaultMessage: "This server is asleep right now. Check back later, or ask the server owner to start it.", description: "Share: explanation under the asleep badge telling the visitor to check back later or ask the server owner to start the server" })}</p>
         </Card>
       )}
 
@@ -406,19 +406,19 @@ function ShareView({ token }: { token: string }) {
               </div>
             </div>
             <div className="mb-2 text-center">
-              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.gameplane", defaultMessage: "gameplane", description: "Share: text in div" })}</div>
-              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.shared_server_link", defaultMessage: "shared server link", description: "Share: text in div" })}</div>
+              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.gameplane", defaultMessage: "gameplane", description: "Share: product name above the shared server title on the public share page; a brand name, usually kept as is" })}</div>
+              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.shared_server_link", defaultMessage: "shared server link", description: "Share: caption under the product name on the public share page, identifying the page as a shared server link" })}</div>
             </div>
             <h1 className="font-mono text-2xl font-semibold">{data.serverName}</h1>
             <div className="mt-3 flex justify-center">
               <div className="inline-flex items-center gap-2 rounded-full border border-warning/50 bg-warning/10 px-3 py-1">
                 <Spinner size="sm" color="warning" />
-                <span className="text-sm font-medium text-warning">{intl.formatMessage({ id: "web.routes.share.starting", defaultMessage: "Starting...", description: "Share: text in span" })}</span>
+                <span className="text-sm font-medium text-warning">{intl.formatMessage({ id: "web.routes.share.starting", defaultMessage: "Starting...", description: "Share: status badge with a spinner under the server name while the server is starting; keep it short" })}</span>
               </div>
             </div>
           </div>
 
-          <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.the_server_is_starting_up_this_usually", defaultMessage: "The server is starting up. This usually takes a minute or two — this page updates on its own.", description: "Share: text in p" })}</p>
+          <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.the_server_is_starting_up_this_usually", defaultMessage: "The server is starting up. This usually takes a minute or two — this page updates on its own.", description: "Share: explanation under the starting badge saying startup takes a minute or two and the page updates by itself" })}</p>
         </Card>
       )}
 
@@ -432,14 +432,14 @@ function ShareView({ token }: { token: string }) {
               </div>
             </div>
             <div className="mb-2 text-center">
-              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.gameplane", defaultMessage: "gameplane", description: "Share: text in div" })}</div>
-              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.shared_server_link", defaultMessage: "shared server link", description: "Share: text in div" })}</div>
+              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.gameplane", defaultMessage: "gameplane", description: "Share: product name above the shared server title on the public share page; a brand name, usually kept as is" })}</div>
+              <div className="font-mono text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.shared_server_link", defaultMessage: "shared server link", description: "Share: caption under the product name on the public share page, identifying the page as a shared server link" })}</div>
             </div>
           </div>
 
           <div className="text-center">
-            <h1 className="font-mono text-2xl font-semibold">{intl.formatMessage({ id: "web.routes.share.link_not_available", defaultMessage: "Link not available", description: "Share: text in h1" })}</h1>
-            <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.this_link_may_be_invalid_expired_or", defaultMessage: "This link may be invalid, expired, or revoked. Ask the person who shared it for a new one.", description: "Share: text in p" })}</p>
+            <h1 className="font-mono text-2xl font-semibold">{intl.formatMessage({ id: "web.routes.share.link_not_available", defaultMessage: "Link not available", description: "Share: heading of the error page shown when the shared link is invalid or cannot be used" })}</h1>
+            <p className="mt-2 text-sm text-muted">{intl.formatMessage({ id: "web.routes.share.this_link_may_be_invalid_expired_or", defaultMessage: "This link may be invalid, expired, or revoked. Ask the person who shared it for a new one.", description: "Share: explanation under the link-not-available heading telling the visitor to ask the person who shared the link for a new one" })}</p>
           </div>
         </Card>
       )}
