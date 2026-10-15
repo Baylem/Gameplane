@@ -360,6 +360,15 @@ TestTelemetryLifecycle
 EOF
 }
 
+# optional-components owns its cluster: TestOptionalComponents_Lifecycle runs
+# `helm upgrade --reuse-values` to enable the MCP server and the audit-syslog
+# bridge, so it is the bucket's only test. Login budget: 2 (one admin, one
+# restricted user).
+bucket_optional_components() { cat <<'EOF'
+TestOptionalComponents_Lifecycle
+EOF
+}
+
 # capture-overhead is kept OUT of bot-fast on purpose: bot-fast's matrix legs
 # are blocking, while this bucket feeds the non-blocking e2e-capture-overhead
 # job (continue-on-error, never blocks a merge — spec 007 OD-1) and runs only
@@ -376,7 +385,7 @@ EOF
 unbucketed() { :; }
 
 bucket_names() {
-	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade telemetry capture-overhead
+	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade telemetry capture-overhead optional-components
 }
 
 list_bucket() {
@@ -394,6 +403,7 @@ list_bucket() {
 	upgrade) bucket_upgrade ;;
 	telemetry) bucket_telemetry ;;
 	capture-overhead) bucket_capture_overhead ;;
+	optional-components) bucket_optional_components ;;
 	*)
 		echo "unknown bucket: $1 (known: $(bucket_names | tr '\n' ' '))" >&2
 		exit 2

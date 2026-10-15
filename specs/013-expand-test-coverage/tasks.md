@@ -287,9 +287,9 @@ description: "Task list for 013-expand-test-coverage"
 
 **PR**: `test(e2e): optional components lifecycle`. Depends on Phase 2.
 
-- [ ] T045 [P] [US3] Add `test/e2e/fixtures/syslog-sink.yaml`: a Deployment and Service on TCP 514 running a digest-pinned image (e.g. `alpine/socat`) that prints every received line to stdout. Use a fixed name, `e2e-syslog-sink`.
-- [ ] T046 [P] [US3] Add `test/e2e/fixtures/frps.yaml`: an frp server Deployment and Service, with a digest-pinned image whose version matches the `frpc` that `tunnel/Dockerfile.frp` installs. Include a token Secret, the bind port, and the dashboard API port with fixed credentials.
-- [ ] T047 [US3] Write `test/e2e/optional_components_e2e_test.go` with `TestOptionalComponents_Lifecycle`. It calls `t.Parallel()`, owns its cluster, and runs these subtests in order:
+- [X] T045 [P] [US3] Add `test/e2e/fixtures/syslog-sink.yaml`: a Deployment and Service on TCP 514 running a digest-pinned image (e.g. `alpine/socat`) that prints every received line to stdout. Use a fixed name, `e2e-syslog-sink`.
+- [X] T046 [P] [US3] Add `test/e2e/fixtures/frps.yaml`: an frp server Deployment and Service, with a digest-pinned image whose version matches the `frpc` that `tunnel/Dockerfile.frp` installs. Include a token Secret, the bind port, and the dashboard API port with fixed credentials.
+- [X] T047 [US3] Write `test/e2e/optional_components_e2e_test.go` with `TestOptionalComponents_Lifecycle`. It calls `t.Parallel()`, owns its cluster, and runs these subtests in order:
   - `disabled`: none of the three components has a Deployment or Service.
   - `enable`: apply T045 and T046, create the shared auth Secret, then `helm upgrade --reuse-values` with `mcpServer.enabled=true`, `api.audit.webhook.syslogBridge.enabled=true`, `…syslog.addr=e2e-syslog-sink:514`, and `…authSecretRef.name`. Wait for rollout.
   - `mcp`: exec `/mcp-server serve` over stdio. `initialize` succeeds. `tools/list` returns exactly the six read tools. `list_gameplane_resources` for gameservers includes a seeded GameServer. `get_gameplane_resource` for `clusters` returns an error result.
@@ -302,13 +302,15 @@ description: "Task list for 013-expand-test-coverage"
   - `core-unaffected`: a GameServer reaches `Running` through the existing helper, and a restricted user gets 403 on an admin route (second login).
 
   Use unique names and `t.Cleanup`. Use the `e2e-test-authoring` skill.
-- [ ] T048 [US3] Add `bucket_optional_components` to `test/e2e/buckets.sh`, containing `TestOptionalComponents_Lifecycle`. Add a comment that it owns its cluster through `helm upgrade` and its login budget is 2, and add the bucket to `bucket_names`. Depends on T047.
-- [ ] T049 [US3] In `.github/workflows/ci.yaml`:
+
+  Implementation note (#704): `tools/list` expects seven tools, the six read tools plus `propose_fix` (valgul's "Expect seven" card, 2026-10-15). The bridge sends octet-counted RFC 5424 frames with no trailing newline, so the T045 sink appends to `/tmp/syslog.log` and the test reads it with `kubectl exec … cat` instead of `kubectl logs`. The tunnel image is distroless, so `frpc` is killed from an ephemeral `kubectl debug` container (busybox, `--target=tunnel`, uid 65532) instead of `kubectl exec`.
+- [X] T048 [US3] Add `bucket_optional_components` to `test/e2e/buckets.sh`, containing `TestOptionalComponents_Lifecycle`. Add a comment that it owns its cluster through `helm upgrade` and its login budget is 2, and add the bucket to `bucket_names`. Depends on T047.
+- [X] T049 [US3] In `.github/workflows/ci.yaml`:
   - add `optional-components` to the `bucket:` lists of `e2e-go` and `e2e-go-arm64`, with an `include` entry that mirrors `telemetry`'s (its own cluster and timeout)
   - extend the three `e2e (operator|…|telemetry) /` regexes in the `report` script (`JOB_MATCHERS` and the bucket parser) with `|optional-components`
 
   Depends on T048.
-- [ ] T050 [US3] After the first green run on both arches, flip G-13, G-14, G-15 and G-18.
+- [X] T050 [US3] After the first green run on both arches, flip G-13, G-14, G-15 and G-18.
 
 **Checkpoint**: SC-003 is met. All four documented optional components have E2E coverage.
 
