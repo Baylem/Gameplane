@@ -25,7 +25,7 @@ var ErrInvalidPayload = errors.New("invalid payload")
 var ErrUnsupportedSchema = fmt.Errorf("%w: unsupported ext schema", ErrInvalidPayload)
 
 // SchemaVersion is the extended-tier schema this package reads and writes.
-const SchemaVersion = 1
+const SchemaVersion = 2
 
 // keySize is the length in bytes of an Ed25519 public key.
 const keySize = 32
@@ -270,13 +270,13 @@ func decodeExt(raw json.RawMessage) (*Extended, error) {
 		return nil, err
 	}
 	var e Extended
-	if e.Schema, err = asCount(o.m["schema"], "ext.schema", SchemaVersion); err != nil {
+	if e.Schema, err = asCount(o.m["schema"], "ext.schema", 1); err != nil {
 		return nil, err
 	}
 	if e.InstallID, err = asString(o.m["installId"], "ext.installId"); err != nil {
 		return nil, err
 	}
-	if e.Env, err = decodeEnv(o.m["env"]); err != nil {
+	if e.Env, err = decodeEnv(o.m["env"], e.Schema); err != nil {
 		return nil, err
 	}
 	if e.Games, err = decodeGames(o.m["games"]); err != nil {
@@ -307,37 +307,85 @@ func decodeExt(raw json.RawMessage) (*Extended, error) {
 	return &e, nil
 }
 
-// decodeEnv validates ext.env.
-func decodeEnv(raw json.RawMessage) (Env, error) {
+// decodeEnv validates ext.env. Schema 1 carries k8s and distro as single
+// strings and no deployment: they decode as one-value sets, and Deployment is
+// "other" (OD-14). Schema 2 carries k8s and distro as non-empty sets and a
+// required deployment (OD-13, OD-15). nodes is one band in both.
+func decodeEnv(raw json.RawMessage, schema int) (Env, error) {
 	o, err := readNested(raw, "ext.env")
 	if err != nil {
 		return Env{}, err
 	}
-	if err := o.expect([]string{"k8s", "distro", "arch", "nodes"}, nil); err != nil {
+	keys := []string{"k8s", "distro", "arch", "nodes"}
+	if schema >= 2 {
+		keys = append(keys, "deployment")
+	}
+	if err := o.expect(keys, nil); err != nil {
 		return Env{}, err
 	}
 	var e Env
-	k8s, err := asString(o.m["k8s"], "ext.env.k8s")
-	if err != nil {
-		return Env{}, err
-	}
-	e.K8s = other
-	if K8sMinorRE.MatchString(k8s) {
-		e.K8s = k8s
-	}
-	if e.Distro, err = asEnum(o.m["distro"], "ext.env.distro", Distros); err != nil {
-		return Env{}, err
+	if schema >= 2 {
+		if e.K8s, err = asK8sSet(o.m["k8s"]); err != nil {
+			return Env{}, err
+		}
+		if e.Distro, err = asEnumSet(o.m["distro"], "ext.env.distro", Distros); err != nil {
+			return Env{}, err
+		}
+		if e.Deployment, err = asEnum(o.m["deployment"], "ext.env.deployment", Deployments); err != nil {
+			return Env{}, err
+		}
+	} else {
+		var k8s, distro string
+		if k8s, err = asString(o.m["k8s"], "ext.env.k8s"); err != nil {
+			return Env{}, err
+		}
+		if distro, err = asEnum(o.m["distro"], "ext.env.distro", Distros); err != nil {
+			return Env{}, err
+		}
+		e.K8s, e.Distro, e.Deployment = []string{k8sMinor(k8s)}, []string{distro}, other
 	}
 	if e.Arch, err = asEnumSet(o.m["arch"], "ext.env.arch", Arches); err != nil {
 		return Env{}, err
 	}
-	if len(e.Arch) == 0 {
-		return Env{}, fmt.Errorf("%w: ext.env.arch must not be empty", ErrInvalidPayload)
+	for _, f := range []struct {
+		name string
+		set  []string
+	}{{"k8s", e.K8s}, {"distro", e.Distro}, {"arch", e.Arch}} {
+		if len(f.set) == 0 {
+			return Env{}, fmt.Errorf("%w: ext.env.%s must not be empty", ErrInvalidPayload, f.name)
+		}
 	}
 	if e.Nodes, err = asEnum(o.m["nodes"], "ext.env.nodes", NodeBands); err != nil {
 		return Env{}, err
 	}
 	return e, nil
+}
+
+// k8sMinor returns v when it is a 1.<minor> version and "other" otherwise.
+func k8sMinor(v string) string {
+	if K8sMinorRE.MatchString(v) {
+		return v
+	}
+	return other
+}
+
+// asK8sSet decodes schema 2's ext.env.k8s: an array of strings, each folded by
+// k8sMinor, returned sorted and de-duplicated and never nil. An element that is
+// null or not a string is invalid.
+func asK8sSet(raw json.RawMessage) ([]string, error) {
+	var in []*string
+	if err := json.Unmarshal(raw, &in); err != nil {
+		return nil, fmt.Errorf("%w: ext.env.k8s must be an array of strings: %w", ErrInvalidPayload, err)
+	}
+	out := make([]string, 0, len(in))
+	for _, p := range in {
+		if p == nil {
+			return nil, fmt.Errorf("%w: ext.env.k8s must not contain null", ErrInvalidPayload)
+		}
+		out = append(out, k8sMinor(*p))
+	}
+	sort.Strings(out)
+	return slices.Compact(out), nil
 }
 
 // decodeGames validates ext.games. Counts of modules outside the catalog are

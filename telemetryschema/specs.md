@@ -53,7 +53,7 @@ The wire contract is [`specs/022-default-telemetry-dashboard/contracts/report-sc
 |---|---|
 | `Report` | `Version string`, `Servers int`, `Templates int`, `Ext *Extended` (nil on a basic-only report) |
 | `Extended` | `Schema int`, `InstallID string`, `Env Env`, `Games Games`, `Features Features`, `Key string`, `SentAt time.Time` |
-| `Env` | `K8s string`, `Distro string`, `Arch []string`, `Nodes string` |
+| `Env` | `K8s []string`, `Distro []string`, `Arch []string`, `Nodes string`, `Deployment string` (schema 2; `other` on a schema 1 report) |
 | `Games` | `Official map[string]int`, `Custom int` |
 | `Features` | `WakeOnConnect`, `Capture`, `Backups`, `SSO`, `AuditForwarding bool`; `Tunnels []string`; `Clusters`, `DB`, `Language string` |
 
@@ -73,6 +73,8 @@ JSON tags are the camelCase names in the contract (`installId`, `wakeOnConnect`,
 
 `SanitizeEnum(set, v)` returns `v` when it is in `set` and `other` otherwise. `K8sMinorRE` is `^1\.[0-9]{1,3}$`; any other `env.k8s` value becomes `other`. `VersionRE` is `^[A-Za-z0-9][A-Za-z0-9._+-]{0,31}$`.
 
+`Deployments` is `cluster`, `standalone` (FR-045).
+
 ### Bands
 
 | Function | Input to band |
@@ -86,13 +88,14 @@ JSON tags are the camelCase names in the contract (`installId`, `wakeOnConnect`,
 `Decode(body) (Report, DecodeInfo, error)` accepts exactly one JSON object and nothing after it except whitespace.
 
 - **Rejected** (the error wraps `ErrInvalidPayload`), at every nesting level: unknown keys, duplicate keys, `null` values, wrongly typed values, keys with the wrong case, and missing required keys. `version`, `servers` and `templates` are required; `ext` is optional; every `ext` field is required.
-- **Range rules:** `servers`, `templates` and `games.custom` are at least 0; `games.official` counts are at least 1; `env.arch` is non-empty; `ext.schema` is 1; `ext.key` is unpadded base64url of exactly 32 bytes; `ext.sentAt` parses as RFC 3339 and is returned in UTC.
-- **Folded, not rejected:** out-of-set enumeration values become `other`. `env.arch` and `features.tunnels` are returned sorted, de-duplicated after folding, and never nil.
+- **Range rules:** `servers`, `templates` and `games.custom` are at least 0; `games.official` counts are at least 1; `env.arch`, `env.k8s` and `env.distro` are non-empty; `ext.schema` is 1 or 2; `ext.key` is unpadded base64url of exactly 32 bytes; `ext.sentAt` parses as RFC 3339 and is returned in UTC.
+- **Folded, not rejected:** out-of-set enumeration values become `other`. `env.arch`, `env.k8s`, `env.distro` and `features.tunnels` are returned sorted, de-duplicated after folding, and never nil.
 - **Catalog:** `games.official` keys outside the embedded catalog add their count to `games.custom`; the returned `Official` map holds catalog names only.
-- **Schema gate:** `ext.schema` above 1 returns `ErrUnsupportedSchema`, checked before the other `ext` rules. It wraps `ErrInvalidPayload`, so one `errors.Is` check covers both.
+- **Schema gate:** `ext.schema` above 2 returns `ErrUnsupportedSchema`, checked before the other `ext` rules. It wraps `ErrInvalidPayload`, so one `errors.Is` check covers both.
+- **Schema 1 and 2:** schema 2 requires `env.deployment` and sends `env.k8s` and `env.distro` as arrays (OD-13, OD-15). Schema 1 refuses `env.deployment` as an unknown key and sends `env.k8s` and `env.distro` as strings; they decode as one-value sets, and `Deployment` is `other` (OD-14).
 - **Install ID:** when `ext.installId` is not a lowercase UUIDv4, the rest of `ext` is validated, then `DecodeInfo.ExtDropped` is set and `Ext` is nil. The basic report stays valid.
 
-`Encode(Report)` is deterministic: struct field order is fixed, map keys and arrays are sorted, nil arrays and maps are written as `[]` and `{}`, and `sentAt` is written in UTC at second precision. `Decode(Encode(r))` returns `r` for a valid report.
+`Encode(Report)` is deterministic: struct field order is fixed, map keys and arrays are sorted, nil arrays and maps are written as `[]` and `{}`, and `sentAt` is written in UTC at second precision. `Decode(Encode(r))` returns `r` for a valid schema 2 report. Schema 1 writes `env.k8s` and `env.distro` as single values and no deployment.
 
 ### Catalog
 
