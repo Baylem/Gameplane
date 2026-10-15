@@ -272,7 +272,8 @@ description: "Task list for 013-expand-test-coverage"
 
   Error path: adding the same name twice shows the 409 message inline. Selectors come from `AdminSettings_modregistries.test.tsx`.
   *Implementation note (2026-10-14)*: Reworded (valgul card 2026-10-14, "Test current"): mod registries are fixed keyed providers with no add-by-name, so the spec sets, reloads and removes the Nexus Mods key. The 409 path is an unmanaged Secret that already has the provider's Secret name.
-- [ ] T044 [US2] Run `npm run typecheck:e2e` in `web/`, then push. After the first green live run, record the job's login count and duration in `coverage-gaps.md` (contracts/e2e-additions.md requires ≤ 10 logins), and flip G-07 to G-11.
+- [X] T044 [US2] Run `npm run typecheck:e2e` in `web/`, then push. After the first green live run, record the job's login count and duration in `coverage-gaps.md` (contracts/e2e-additions.md requires ≤ 10 logins), and flip G-07 to G-11.
+  *Implementation note (2026-10-15)*: `npm run typecheck:e2e` passes once #696 (fleet.ts) merged. First green live run 38500956044: 9 logins (limit 10), arm64 live job about 8.6 min, Playwright 5.2 min (recorded on G-11). G-07 to G-11 closed; G-08 closed on run 38649266488 after #699.
 
 **Checkpoint**: SC-002 is met. Every major dashboard flow has a live spec.
 
