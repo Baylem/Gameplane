@@ -598,10 +598,37 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 		if err := os.WriteFile(debugFile, []byte(`{"securityContext":{"runAsUser":65532,"runAsNonRoot":true}}`), 0o600); err != nil {
 			t.Fatalf("write debug profile: %v", err)
 		}
+		// The script prints who it runs as and the process table, so a
+		// failed kill shows whether frpc was visible at all.
+		const killScript = `id; ps -o pid,user,comm,args; pids=$(pidof frpc); echo "frpc pids: $pids"; [ -n "$pids" ] && kill -9 $pids`
+		debugName := fmt.Sprintf("e2e-kill-frpc-%d", time.Now().UnixNano()%100000)
 		if out, err := envInstance.Kubectl(ctx, "debug", "-n", ocGamesNS, "pod/"+podName,
 			"--image=busybox:1.36", "--target=tunnel", "--profile=general",
-			"--custom="+debugFile, "--", "pkill", "-9", "-x", "frpc"); err != nil {
+			"--container="+debugName, "--custom="+debugFile,
+			"--", "sh", "-c", killScript); err != nil {
 			t.Fatalf("kill frpc via debug container: %v\n%s", err, out)
+		}
+		var exitCode int32
+		envInstance.Eventually(t, 2*time.Minute, func() (bool, string) {
+			pod, err := envInstance.K8s.CoreV1().Pods(ocGamesNS).Get(ctx, podName, metav1.GetOptions{})
+			if err != nil {
+				return false, err.Error()
+			}
+			for _, cs := range pod.Status.EphemeralContainerStatuses {
+				if cs.Name != debugName {
+					continue
+				}
+				if cs.State.Terminated != nil {
+					exitCode = cs.State.Terminated.ExitCode
+					return true, ""
+				}
+				return false, fmt.Sprintf("debug container %s state: %+v", debugName, cs.State)
+			}
+			return false, fmt.Sprintf("debug container %s has no status yet", debugName)
+		})
+		if exitCode != 0 {
+			out, _ := envInstance.Kubectl(ctx, "logs", "-n", ocGamesNS, "pod/"+podName, "-c", debugName)
+			t.Fatalf("kill frpc via debug container exited %d:\n%s", exitCode, out)
 		}
 
 		envInstance.Eventually(t, 2*time.Minute, func() (bool, string) {
