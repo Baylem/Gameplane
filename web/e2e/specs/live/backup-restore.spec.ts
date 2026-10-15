@@ -179,7 +179,9 @@ test.describe("live: backup and restore a running server", () => {
     // The restore suspends and resumes the pod, so reload and wait for it to run again.
     await page.reload();
     const runningAgain = await waitForRunning(page);
-    test.skip(!runningAgain, "pod did not return to Running after restore within budget");
+    // The pod was Running before the backup, so not coming back after a
+    // successful restore is a regression, not a slow runner: fail, don't skip.
+    expect(runningAgain, "pod did not return to Running after restore within budget").toBe(true);
 
     // The marker file was created after the backup, so the restore must remove it.
     // The file list can error while the agent restarts, so retry the refresh.
