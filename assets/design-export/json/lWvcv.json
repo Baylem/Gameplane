@@ -1,15 +1,15 @@
 {
   "type": "frame",
   "id": "lWvcv",
-  "x": 40120,
-  "y": -7988,
+  "x": 0,
+  "y": 75369,
   "name": "Screen/Theme Settings",
   "theme": {
     "semantic": "dark"
   },
   "clip": true,
   "width": 1440,
-  "height": 2344,
+  "height": 2000,
   "fill": "$background/background",
   "children": [
     {
@@ -206,8 +206,20 @@
                     "eIjoV": {
                       "fill": "#00000000"
                     },
+                    "XuGUZ": {
+                      "fill": "$muted"
+                    },
+                    "DpMnt": {
+                      "fill": "$muted"
+                    },
                     "vbQ98": {
                       "fill": "$surface/secondary"
+                    },
+                    "dY0be": {
+                      "fill": "$foreground/foreground"
+                    },
+                    "qeqG6": {
+                      "fill": "$foreground/foreground"
                     }
                   }
                 },
@@ -219,257 +231,6 @@
                   "layout": "vertical",
                   "gap": 16,
                   "children": [
-                    {
-                      "id": "FVPqf",
-                      "type": "ref",
-                      "ref": "XDZ0E",
-                      "name": "Card Language",
-                      "width": "fill_container",
-                      "padding": 0,
-                      "gap": 0,
-                      "children": [
-                        {
-                          "id": "E5N1t",
-                          "type": "ref",
-                          "ref": "FRpsu",
-                          "name": "Card Header",
-                          "width": "fill_container",
-                          "padding": [
-                            20,
-                            20,
-                            16,
-                            20
-                          ],
-                          "gap": 4,
-                          "descendants": {
-                            "fuZHB": {
-                              "content": "Language"
-                            },
-                            "BZG9o": {
-                              "content": "Choose the language of the dashboard. Your choice is saved to your account and follows you to every browser and device.",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container"
-                            }
-                          }
-                        },
-                        {
-                          "type": "frame",
-                          "id": "lVKGT",
-                          "name": "Card Fields",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 16,
-                          "padding": [
-                            0,
-                            20,
-                            20,
-                            20
-                          ],
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "KBpgk",
-                              "name": "tsLangList",
-                              "width": "fill_container",
-                              "layout": "vertical",
-                              "gap": 8,
-                              "children": [
-                                {
-                                  "type": "frame",
-                                  "id": "g2mRPb",
-                                  "name": "tsLangAuto",
-                                  "width": "fill_container",
-                                  "fill": "$field/background",
-                                  "cornerRadius": 10,
-                                  "stroke": "$border/border",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "gap": 12,
-                                  "padding": [
-                                    12,
-                                    14
-                                  ],
-                                  "justifyContent": "space_between",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "id": "rbSF2",
-                                      "type": "ref",
-                                      "ref": "z2mDh",
-                                      "name": "tsLangAuto Radio",
-                                      "descendants": {
-                                        "ocqPf": {
-                                          "content": "Automatic (browser language)",
-                                          "fontWeight": "500"
-                                        }
-                                      }
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "rwNZQ",
-                                  "name": "tsLangEn",
-                                  "width": "fill_container",
-                                  "fill": "$field/background",
-                                  "cornerRadius": 10,
-                                  "stroke": "$accent/accent",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "gap": 12,
-                                  "padding": [
-                                    12,
-                                    14
-                                  ],
-                                  "justifyContent": "space_between",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "id": "e5R4W",
-                                      "type": "ref",
-                                      "ref": "T8ZnV",
-                                      "name": "tsLangEn Radio",
-                                      "descendants": {
-                                        "jAx6p": {
-                                          "content": "English",
-                                          "fontWeight": "500"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "gdYrd",
-                                      "name": "tsLangEn Completeness",
-                                      "fill": "$muted",
-                                      "content": "100% translated",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 12,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "XxjWX",
-                                  "name": "tsLangFr",
-                                  "width": "fill_container",
-                                  "fill": "$field/background",
-                                  "cornerRadius": 10,
-                                  "stroke": "$border/border",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "gap": 12,
-                                  "padding": [
-                                    12,
-                                    14
-                                  ],
-                                  "justifyContent": "space_between",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "id": "MU5SM",
-                                      "type": "ref",
-                                      "ref": "z2mDh",
-                                      "name": "tsLangFr Radio",
-                                      "descendants": {
-                                        "ocqPf": {
-                                          "content": "Français",
-                                          "fontWeight": "500"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "Xeuio",
-                                      "name": "tsLangFr Completeness",
-                                      "fill": "$muted",
-                                      "content": "100% translated",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 12,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "Ip3AK",
-                                  "name": "tsLangDe",
-                                  "width": "fill_container",
-                                  "fill": "$field/background",
-                                  "cornerRadius": 10,
-                                  "stroke": "$border/border",
-                                  "strokeWidth": 1,
-                                  "strokeAlignment": "inner",
-                                  "gap": 12,
-                                  "padding": [
-                                    12,
-                                    14
-                                  ],
-                                  "justifyContent": "space_between",
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "id": "VlbLF",
-                                      "type": "ref",
-                                      "ref": "z2mDh",
-                                      "name": "tsLangDe Radio",
-                                      "descendants": {
-                                        "ocqPf": {
-                                          "content": "Deutsch",
-                                          "fontWeight": "500"
-                                        }
-                                      }
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "dl77o",
-                                      "name": "tsLangDe Completeness",
-                                      "fill": "$muted",
-                                      "content": "86% translated",
-                                      "fontFamily": "$typography/font-sans",
-                                      "fontSize": 12,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "jQ1Jm",
-                              "name": "tsLangNote",
-                              "width": "fill_container",
-                              "gap": 8,
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "l5IVh",
-                                  "name": "tsLangNoteIcon",
-                                  "width": 14,
-                                  "height": 14,
-                                  "icon": "info",
-                                  "library": "lucide",
-                                  "fill": "$muted"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "qaRbL",
-                                  "name": "tsLangNoteText",
-                                  "fill": "$muted",
-                                  "textGrowth": "fixed-width",
-                                  "width": "fill_container",
-                                  "content": "Text that has not been translated yet is shown in English.",
-                                  "fontFamily": "$typography/font-sans",
-                                  "fontSize": 12,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            }
-                          ]
-                        }
-                      ]
-                    },
                     {
                       "id": "T6d1Wb",
                       "type": "ref",

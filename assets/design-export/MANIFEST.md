@@ -2600,33 +2600,6 @@ JSON: `Print(JSON.stringify(Get("U9xSg", {depth: 12})))`, `python3 -m json.tool`
 
 `Ne5TA` is unaffected. All four have MCP `Get` JSON exports (depth 20, zero elisions; `OC804`/`QFEg9` patched from the prior export with the `Get` result for the changed field subtree) and 2× PNG exports via `Export`. Validated by grepping `Password will be removed` (only `BguST`) and `Remove password` (`OC804`, `QFEg9`, `BguST`).
 
-## Spec 019 language pickers and language settings (2026-10-12)
-
-T043, T072 and T094 of `specs/019-localization-language-packs/`. Placement follows OD-015 to OD-017 of that spec.
-
-| Object ID | Name | Change |
-| --- | --- | --- |
-| `Jf27F` | Gameplane/Language Picker Compact | **New** reusable component: lucide `globe`, the native name of the language ("English") and `chevron-down`. 32 px high, no fill and no border. It shows a language name and nothing else. |
-| `CDbjX` | Gameplane/Login Card With Language | **New** reusable component: one instance of `loginCard` (`J14ME`) and an absolute `loginLangRow` (x 0, y 12, 420 wide, right-aligned, 12 px inset) that holds the picker. It exists because `J14ME` cannot take a new child (see the note below). |
-| `N1GkB` | Screen/Login | **Changed.** `loginL` is a new instance of `fjQjb` (`TbEIq`, was `sUdzl`) whose card is swapped for `CDbjX`, so the picker sits in the top-right corner of the card. |
-| `gX7um` | Screen/Login (Light) | **Changed.** Same swap (`gsDFd`, was `UQZOa`). |
-| `g2HLxz` | loginCardError | **Changed.** `loginLangRow` with the picker in the top-right corner. Seen on `jmoi3`. |
-| `ljdA5` | Screen/Login — SSO only | **Changed.** The same row inside the inline card `ohWEp`. |
-| `G7OwqK` | Screen/Login — Language menu open | **New.** Copy of `N1GkB` with the picker's menu open under it (170 px wide, right edges level): English (current, check icon), Français, Deutsch. Native names only. |
-| `HKEl2` | Gameplane/Share Card | **Changed.** `shareLangRow` with the picker in the top-right corner. Seen on every share screen (`C2LQE4`, `q31B6w`, `qFLfB`, `EcoGD`, `epZO2`, `FBiMN`). |
-| `lWvcv` | Screen/Theme Settings | **Changed.** New first card "Language" (`FVPqf`): four radio rows, "Automatic (browser language)", "English" (selected, "100% translated"), "Français" ("100% translated") and "Deutsch" ("86% translated"), then the note "Text that has not been translated yet is shown in English." Frame height 2000 → 2344. |
-| `T1wkiT` | Screen/Theme Settings — Warnings | **Changed.** The same card first (`wPAnz`). Frame height 2146 → 2490. |
-| `g5e2fM` | Screen/Mobile — Theme Settings · Language | **New.** 390 px wide: Mobile TopBar ("Settings"), page header, the settings navigation stacked full width, then the Language card with the same four rows. |
-| `n6Xlo` | Screen/Admin Settings — Notifications | **Changed.** Each sink row has a third line "Language" with a 200 px select ("Français" on ops-discord, "Instance default" on pager). |
-| `eaNkj` | Screen/Admin Settings — Notifications (Add sink) | **New.** Copy of `n6Xlo` with the inline Add sink form open where the "Add sink" button was: Name, Kind, Webhook URL, Language (select "Instance default", helper "Notifications sent to this sink are written in this language."), the six event checkboxes, Cancel and Add sink. The form was not in the design before. |
-| `WZdnw` | Screen/Admin Settings | **Changed.** The General card and a new "Language" card are stacked in a `Panel Column` (`v38YR`). The Language card (`noNHt`) has one select "Default language" set to "English", its helper text and its own Save changes button, because the value is saved to its own config section (`i18n`). |
-
-- **JSON:** `JSON.stringify(Get(id, {depth: 30, includePathGeometry: true}))` for `lWvcv`, `T1wkiT`, `g2HLxz`, `HKEl2`, `ljdA5`, `WZdnw`, `n6Xlo`, `N1GkB`, `gX7um`, `Jf27F`, `CDbjX`, `G7OwqK`, `g5e2fM` and `eaNkj`. Each string was taken from the tool result by a script, never retyped, and its length and FNV-1a hash equal the values computed on the canvas in the same call. Zero `"..."` elisions, `jq empty` passes. Files that were one line stay one line; the others are formatted with `jq .`.
-- **Screenshots:** `Export(ids, "png", …, {scale: 2})` for the 14 ids above and, PNG only, for the screens that show a changed component: `jmoi3`, `C2LQE4`, `q31B6w`, `qFLfB`, `EcoGD`, `epZO2` and `FBiMN`.
-- **Pixel check against the previous PNGs:** `ljdA5`, `g2HLxz`, `HKEl2`, `C2LQE4`, `EcoGD`, `epZO2` and `q31B6w` differ only in the picker's rectangle. `WZdnw` differs only below the General card. `FBiMN` and `qFLfB` also show sub-pixel text anti-aliasing differences. `N1GkB`, `gX7um` and `jmoi3` also show the safe-mode link in the accent colour, and `n6Xlo` also shows the current sidebar ("Clusters") and top bar: the canvas already had both, the previous PNGs were out of date.
-- **Body-text check:** `86% translated` appears only in `lWvcv`, `T1wkiT` and `g5e2fM`; `Notifications sent to this sink are written in this language.` only in `eaNkj`; `Default language for this Gameplane instance.` only in `WZdnw`; `langItemDeutsch` only in `G7OwqK`.
-- **Do not insert a child into `J14ME` through the MCP.** `Insert("J14ME", …)` throws `TypeError: Cannot read properties of undefined (reading 'id')`, and the rollback is not clean: afterwards the two screens with a plain instance of `fjQjb` (`N1GkB`, `gX7um`) showed two login cards and `Get` failed on those instances. `J14ME` is nested in `fjQjb`, and the instances of `fjQjb` on `jmoi3` and `ljdA5` replace that nested card through a children override, which is the likely cause. The two instances were replaced by new ones (so their ids changed) and the picker was added through the wrapper `CDbjX`. `J14ME` (nine children) and `fjQjb` (one child) are unchanged.
-
 ## Incremental export 2026-10-14 — Central management banner on Modules Catalog and Admin Authentication (PR #685)
 
 | Node | Name | Change |
@@ -2655,3 +2628,76 @@ re-exported with full Get JSON plus 2x PNGs to assets/design-export. No reusable
 component was changed. Modules keeps upstream spacing, filter width, grid
 alignment and outline Create action alongside explicit target permissions and
 retained-draft error handling.
+
+## Canvas regroup 2026-10-15 — component boards and one row per page
+
+The canvas was reorganised so that every reusable component sits on a board at the top and every screen sits in one row per page, in dashboard navigation order, with its variants to the right. The rules are in `.claude/skills/pen-canvas-layout/SKILL.md`, and `check-layout.js` next to it verifies them. No node's content, size, style or component changed; only positions moved and, for components, the parent.
+
+- **Component band (y = 0).** `HeroUI: Design System Components` (`LtgNm`) moved to (0, 0). A new board, `Gameplane: App Components` (`i7OTip`, 4668×9022) at (3516, 0), holds all 105 Gameplane reusable components in nine labelled sections: Shell & navigation; Login & public pages; Buttons & form controls; Cards, rows & stats; Status rows, badges & chips; Banners; Menus, popovers & panels; Modals & dialogs; Page blocks. That count includes the 19 added by the component reuse pass below. The board's fill is transparent (`#00000000`) so the components show against the canvas. The `Shared Components Band` note (`ZThbo`) sits above it. The first screen row starts at y = 10222.
+- **Screen rows.** 161 root nodes sit in 57 rows, each labelled by a `Row NN · …` note at x = −1400. Row order: Login → App loading → Dashboard → Servers → Create server steps → Server detail tabs → Server settings sections → Modules → Backups → Clusters → Cluster settings → Users & RBAC → Audit log → System logs → Admin settings sections → Share link → Not found. Standalone, Mobile, Light and dialog-state variants moved into the row of the page they vary. Screens start at x = 0 with 200 px gaps, and rows are 400 px apart.
+- **Notes.** `m8wjom` and `I96cW` sit under `uMiwd`, `R6iab` under `QgW58`, `x71Cb` under `zqzr4`, and `zfi3t` under `x7MJI`.
+- **`o6u1PG`.** This unnamed, empty instance of the HeroUI `Modal` (`b9PGwR`) belonged to no page. At the maintainer's request it moved onto the HeroUI board at (2367, 3533), below `Modal Example`, as a Modal usage example. `LtgNm` grew from 3588 to 3853 px tall to fit it.
+
+**Export method & validation:**
+
+- **JSON files whose node only moved** changed only their top-level `"x"`/`"y"`; components are now positioned relative to `i7OTip`. These are the files not re-exported by the component reuse pass below. The new positions came from a `Get(id, {depth: 0})` dump read straight from the agent transcript and checked against a checksum line. Each file was rewritten in place without re-serialising, keeping its line endings (36 files use CRLF), then re-parsed to confirm that only `x` and `y` changed (0 skipped).
+- `LtgNm.json` also gained the `o6u1PG` child and the new height, and `LtgNm.png` was re-exported (`Export(["LtgNm"], "png", …, {scale: 2})`, 6232×7706). No other screenshot was re-exported, because moving a node does not change its pixels.
+- `i7OTip`, a container whose components are exported individually, and the 57 row-label notes are not exported, like `ZThbo` and the other notes.
+- `check-layout.js` reports NO ISSUES: no loose components at the root, no overlapping root nodes, and every root node in a row.
+
+## Component reuse pass 2026-10-15 — screens use instances instead of copies
+
+Screens that rebuilt an existing component by hand now use instances of it, and UI repeated across screens became components. The procedure and its tools (`audit.js`, `promote.js`) are in `.claude/skills/pen-componentize/SKILL.md`.
+
+**New components (19), all on `i7OTip`:**
+
+| Id | Name | Replaced |
+| --- | --- | --- |
+| `vp8BJ` | `loginCardSso` | SSO-only login card in `ljdA5` |
+| `WbZKI` | `Gameplane/Metric Pill` | hand-built icon + value pills |
+| `Xjvn1` | `Gameplane/Tag` | hand-built outline tags |
+| `eJFRe` | `Gameplane/Filter Pill/Selected` | selected filter pills |
+| `X3uvsU` | `Gameplane/Filter Pill/Default` | unselected filter pills |
+| `rYAg3` | `Gameplane/Fleet Status Card` | 6 of 6 copies |
+| `Y96CaE` | `Gameplane/Cluster Resources Card` | 5 of 5 |
+| `DlNh6` | `Gameplane/Central Audit Activity Card` | 5 of 5 |
+| `Vl96v` | `Gameplane/Recent Backups Card` | 6 of 15 (the others are different cards with the same layout) |
+| `P9THP` | `Gameplane/Quick Actions Card` | 2 of 3 |
+| `nyU5X` | `Gameplane/Game Status Card` | 2 of 3 |
+| `qYOZe` | `Gameplane/Console Toolbar` | 3 of 3 |
+| `E9qpx` | `Gameplane/Create Server Preview` | 6 of 6 |
+| `BHT29` | `Gameplane/Port Overrides` | 6 of 6 |
+| `P6el1o` | `Gameplane/Expose Setting` | 6 of 6 |
+| `AqY5l` | `Gameplane/Modules Filter Bar` | 3 of 3 |
+| `Mv1XP` | `Gameplane/Module Card/Installed` | 15 of 15 |
+| `MRJ8b` | `Gameplane/Module Card/Available` | 9 of 9 |
+| `yJovP` | `Gameplane/YAML Block` | 3 of 3 |
+
+Each promoted occurrence was replaced only when the resolved instance matched the original frame exactly; otherwise the original was kept. `w34N9`'s "Recent activity" card had matched the Recent Backups Card's layout and was restored as its own frame.
+
+**Other changes:**
+
+- Hand-built navigation and header copies now use the shell components: Server Settings Sub Nav (`EV8mp`) on `hLB9Z` and `dQV9N`, Admin Settings Nav (`Mp7Ep`) on `nNGDX`, `QgW58` and `zqzr4`, Server Detail Header (`S4k0x`) on `FtdkI`, and the `loginCardSso` instance in `ljdA5`.
+- 176 hand-built buttons, chips, inputs and pills on 23 screens became HeroUI or Gameplane component instances. Their labels, icons and monospace fonts were kept as overrides. The control's shape follows the component.
+- `Gameplane/Error Banner` (`igj2U`) gained the red `circle-alert` icon that `web/src/components/ui/ErrorBanner.tsx` renders. Its instances on `Bbnga`, `QgW58` and `akr4I` show it.
+- Admin Settings Nav instances on 23 screens now give the active item bright text and the General item muted text. Before, only the background moved.
+- 12 button instances that still read "Button" now carry the app's labels: Download kubeconfig, Audit log, Add, Add variable, Add from secret, Save role mappings. The 12 role-mapping inputs that read "Placeholder" now read "Add IdP group name…".
+
+**Intended visual differences** (everything else was compared before and after and matches):
+
+- Button and chip shapes follow their components (radius, padding, label weight).
+- `hLB9Z` and `dQV9N` show the server-settings sub nav like the other 29 server-settings screens and the app (centred labels, no icons).
+- The admin nav on `nNGDX`, `QgW58` and `zqzr4` includes Theme.
+- Provenance badges on `nNGDX` and `QgW58` use the Provenance Badge components, as `ProvenanceBadge.tsx` does.
+
+**Export method & validation:**
+
+- **93 JSON files** re-exported in full: 74 updated and 19 new. Source: `JSON.stringify(Get(id, {depth: 60, includePathGeometry: true}))`, printed in 20,000-character chunks and stitched from the agent transcripts. Each file is checked to parse, to have a matching root id, and to contain no `"..."` elision, and it keeps its previous indentation and line endings.
+- **95 PNGs** re-exported with `Export(ids, "png", …, {scale: 2})`: the 93 nodes plus `Bbnga` and `akr4I`.
+- Every other exported node's top-level `x`/`y` was re-patched after the board repack and row shift. A second dump shows 0 remaining differences across all 427 previously exported ids. `m1hP1j` has no position.
+- `check-layout.js` reports NO ISSUES (226 root nodes, 282 components on boards, 57 rows, 161 screens).
+- `audit.js` still lists the following. They are left for a design decision:
+  - the Game Status and Quick Actions blocks on four Overview variants (`EZFW0`, `o4LH8W`, `Hy9r0`, `sSISK`), built differently from the new components;
+  - `vUqMl`'s code block next to YAML Block;
+  - hand-built controls in the Build Module dialog (`IdbiB`, `O5kaV`), `Y5cmvI` and the Overview variants;
+  - 23 repeated structures (Metrics Row, Modal container, Build Module stepper and others).

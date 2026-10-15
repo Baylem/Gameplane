@@ -207,10 +207,10 @@ func TestUsers_Update_Branches(t *testing.T) {
 			t.Fatalf("status=%d want 404", status)
 		}
 	})
-	t.Run("role update on a missing user surfaces an error (RowsAffected path)", func(t *testing.T) {
+	t.Run("role update on a missing user is 404 (RowsAffected path)", func(t *testing.T) {
 		status, _ := doReq(t, "PATCH", srv.URL+"/users/535353", map[string]any{"role": "operator"})
-		if status != http.StatusInternalServerError {
-			t.Fatalf("status=%d want 500", status)
+		if status != http.StatusNotFound {
+			t.Fatalf("status=%d want 404", status)
 		}
 	})
 }

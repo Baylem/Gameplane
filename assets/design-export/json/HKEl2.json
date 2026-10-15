@@ -1,8 +1,8 @@
 {
   "type": "frame",
   "id": "HKEl2",
-  "x": -13350.0544367535,
-  "y": 26612.997924316056,
+  "x": 2632,
+  "y": 2089,
   "name": "Gameplane/Share Card",
   "reusable": true,
   "width": 440,
@@ -207,29 +207,6 @@
           "fontFamily": "$typography/font-sans",
           "fontSize": 12,
           "fontWeight": "normal"
-        }
-      ]
-    },
-    {
-      "type": "frame",
-      "id": "Ukl0w",
-      "layoutPosition": "absolute",
-      "x": 0,
-      "y": 12,
-      "name": "shareLangRow",
-      "width": 440,
-      "padding": [
-        0,
-        12
-      ],
-      "justifyContent": "end",
-      "alignItems": "center",
-      "children": [
-        {
-          "id": "XqZ2v",
-          "type": "ref",
-          "ref": "Jf27F",
-          "name": "langPicker"
         }
       ]
     }
