@@ -4,9 +4,11 @@ import { isValidQuantity } from "@/lib/validation";
 import { ResourceInput } from "@/components/ui/ResourceInput";
 import { Field } from "./Field";
 import type { SectionProps } from "./types";
+import { useOptionalIntl } from "@/lib/i18n/format";
 
 
 export function ResourcesSection({ draft, onChange }: SectionProps) {
+  const intl = useOptionalIntl();
   const res = draft.spec.resources ?? {};
 
   const setResources = (next: ResourceRequirements) => {
@@ -54,8 +56,8 @@ export function ResourcesSection({ draft, onChange }: SectionProps) {
   return (
     <div className="space-y-6">
       <Field
-        label="CPU cores"
-        hint="Sets requests=limits to the same value (Guaranteed QoS)."
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.resources.cpu_cores", defaultMessage: "CPU cores", description: "Resources: label of Field" })}
+        hint={intl.formatMessage({ id: "web.routes.tabs.settings.resources.sets_requests_limits_to_the_same_value", defaultMessage: "Sets requests=limits to the same value (Guaranteed QoS).", description: "Resources: hint of Field" })}
       >
         <ResourceInput
           kind="cpu"
@@ -64,7 +66,7 @@ export function ResourcesSection({ draft, onChange }: SectionProps) {
         />
       </Field>
 
-      <Field label="Memory (GiB)" hint="Sets requests=limits to the same value.">
+      <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.resources.memory_gib", defaultMessage: "Memory (GiB)", description: "Resources: label of Field" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.resources.sets_requests_limits_to_the_same_value_2", defaultMessage: "Sets requests=limits to the same value.", description: "Resources: hint of Field" })}>
         <ResourceInput
           kind="memory"
           value={res.limits?.memory ?? res.requests?.memory ?? "4Gi"}
@@ -73,13 +75,14 @@ export function ResourcesSection({ draft, onChange }: SectionProps) {
       </Field>
 
       <Field
-        label="Storage size"
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.resources.storage_size", defaultMessage: "Storage size", description: "Resources: label of Field" })}
         hint={
           <>
-            <div>K8s quantity (e.g. 10Gi, 200Gi).</div>
-            <div className="pt-1">
-              Resizing requires a StorageClass with{" "}
-              <span className="font-mono">allowVolumeExpansion: true</span>.
+            <div>{intl.formatMessage({ id: "web.routes.tabs.settings.resources.k8s_quantity_e_g_10gi_200gi", defaultMessage: "K8s quantity (e.g. 10Gi, 200Gi).", description: "Resources: text in div" })}</div>
+            <div className="pt-1">{intl.formatMessage(
+              { id: "web.routes.tabs.settings.resources.resizing_requires_a_storageclass_with", defaultMessage: "Resizing requires a StorageClass with {setting}.", description: "Resources: hint under the storage size field saying resizing needs a StorageClass that allows volume expansion; {setting} is the allowVolumeExpansion: true field, shown in monospace" },
+              { setting: <span className="font-mono">{intl.formatMessage({ id: "web.routes.tabs.settings.resources.allowvolumeexpansion_true", defaultMessage: "allowVolumeExpansion: true", description: "Resources: Kubernetes StorageClass field name shown in the storage size hint" })}</span> },
+            )}
             </div>
           </>
         }
@@ -88,24 +91,24 @@ export function ResourcesSection({ draft, onChange }: SectionProps) {
           type="text"
           value={storage.size ?? ""}
           onChange={(e) => setStorage({ ...storage, size: e.target.value || undefined })}
-          placeholder="10Gi"
+          placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.resources.10gi", defaultMessage: "10Gi", description: "Resources: placeholder of Input" })}
           className={sizeValid ? "" : "border-danger focus:border-danger focus:ring-danger"}
-          aria-label="Storage size"
+          aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.resources.storage_size", defaultMessage: "Storage size", description: "Resources: label of Field" })}
         />
         {!sizeValid && (
-          <div className="pt-1 text-xs text-danger">Invalid quantity (e.g. &quot;10Gi&quot;).</div>
+          <div className="pt-1 text-xs text-danger">{intl.formatMessage({ id: "web.routes.tabs.settings.resources.invalid_quantity_e_g_10gi", defaultMessage: "Invalid quantity (e.g. \"10Gi\").", description: "Resources: text in div" })}</div>
         )}
       </Field>
 
-      <Field label="StorageClass" hint="Leave blank to use the cluster default.">
+      <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.resources.storageclass", defaultMessage: "StorageClass", description: "Resources: label of Field" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.resources.leave_blank_to_use_the_cluster_default", defaultMessage: "Leave blank to use the cluster default.", description: "Resources: hint of Field" })}>
         <Input
           type="text"
           value={storage.storageClassName ?? ""}
           onChange={(e) =>
             setStorage({ ...storage, storageClassName: e.target.value || undefined })
           }
-          placeholder="fast-ssd"
-          aria-label="StorageClass"
+          placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.resources.fast_ssd", defaultMessage: "fast-ssd", description: "Resources: placeholder of Input" })}
+          aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.resources.storageclass", defaultMessage: "StorageClass", description: "Resources: label of Field" })}
         />
       </Field>
     </div>

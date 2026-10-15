@@ -16,7 +16,8 @@ import {
 } from "@heroui/react";
 import { AlertCircle } from "lucide-react";
 
-import { errorText } from "@/lib/errors";
+import { errorTextIntl } from "@/lib/errors";
+import { useOptionalIntl } from "@/lib/i18n/format";
 
 interface Props {
   target?: ResourceTarget;
@@ -33,6 +34,7 @@ interface Props {
 // Settings danger zone and the server action menus.
 export function WipeServerDialog({
   target: explicitTarget, name, ns, open, onOpenChange, onWiped }: Props) {
+  const intl = useOptionalIntl();
   const qc = useQueryClient();
   const resourceTarget = useResourceTarget({ name, namespace: ns }, explicitTarget);
   const resourceClient = useResourceClient(resourceTarget);
@@ -57,14 +59,10 @@ export function WipeServerDialog({
 
   const description: ReactNode = (
     <div className="space-y-4">
-      <div className="text-sm text-muted">
-        This permanently deletes the world data for{" "}
-        <span className="font-mono text-foreground">{name}</span>. Backups are not
-        removed. This cannot be undone.
-      </div>
+      <div className="text-sm text-muted">{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.this_permanently_deletes_the_world_data", defaultMessage: "This permanently deletes the world data for", description: "Wipe server dialog: text in div" })} <span className="font-mono text-foreground">{name}</span>{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.backups_are_not_removed_this_cannot_be", defaultMessage: ". Backups are not removed. This cannot be undone.", description: "Wipe server dialog: text in div" })}</div>
       {wipe.isError && (
         <div className="rounded-lg bg-danger/10 p-3 text-sm text-danger">
-          {errorText(wipe.error, "wipe failed")}
+          {errorTextIntl(intl, wipe.error, intl.formatMessage({ id: "web.components.server.wipe_server_dialog.wipe_failed", defaultMessage: "wipe failed", description: "Wipe server dialog: fallback error text when the wipe request fails without a message" }))}
         </div>
       )}
     </div>
@@ -86,7 +84,7 @@ export function WipeServerDialog({
                 >
                   <AlertCircle className="h-5 w-5" />
                 </AlertDialogIcon>
-                <AlertDialogHeading>Wipe world?</AlertDialogHeading>
+                <AlertDialogHeading>{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.wipe_world", defaultMessage: "Wipe world?", description: "Wipe server dialog: text in AlertDialogHeading" })}</AlertDialogHeading>
               </div>
             </AlertDialogHeader>
 
@@ -99,9 +97,7 @@ export function WipeServerDialog({
                   onChange={() => setConfirmed(!confirmed)}
                 >
                   <Checkbox.Control />
-                  <Checkbox.Content className="text-sm text-foreground">
-                    I understand this will permanently delete the world data
-                  </Checkbox.Content>
+                  <Checkbox.Content className="text-sm text-foreground">{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.i_understand_this_will_permanently", defaultMessage: "I understand this will permanently delete the world data", description: "Wipe server dialog: text in Checkbox.Content" })}</Checkbox.Content>
                 </Checkbox>
               </div>
             </AlertDialogBody>
@@ -112,16 +108,14 @@ export function WipeServerDialog({
                 size="sm"
                 isDisabled={wipe.isPending}
                 onPress={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
+              >{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.cancel", defaultMessage: "Cancel", description: "Wipe server dialog: text in Button" })}</Button>
               <Button
                 size="sm"
                 variant="danger"
                 isDisabled={!confirmed || wipe.isPending}
                 onPress={() => wipe.mutate()}
               >
-                {wipe.isPending ? "Working…" : "Wipe world"}
+                {wipe.isPending ? intl.formatMessage({ id: "web.components.server.wipe_server_dialog.working", defaultMessage: "Working…", description: "Wipe server dialog: submit button label while the wipe runs" }) : intl.formatMessage({ id: "web.components.server.wipe_server_dialog.wipe_world_button", defaultMessage: "Wipe world", description: "Wipe server dialog: submit button label" })}
               </Button>
             </AlertDialogFooter>
           </AlertDialogDialog>

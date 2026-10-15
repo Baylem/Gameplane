@@ -9,8 +9,10 @@ import { resolveConsoleMode } from "@/lib/capabilities";
 
 import { ConsoleShell } from "./ConsoleShell";
 import { useConsoleTerminal } from "./useConsoleTerminal";
+import { useOptionalIntl } from "@/lib/i18n/format";
 
 export function ConsoleTab({ name, ns }: { name: string; ns?: string }) {
+  const intl = useOptionalIntl();
   const target = useResourceTarget({ name, namespace: ns });
   const client = useResourceClient(target);
   const { data: gs } = useQuery({
@@ -28,7 +30,7 @@ export function ConsoleTab({ name, ns }: { name: string; ns?: string }) {
   if (!gs || !tmpl) {
     return (
       <div className="p-4">
-        <LoadingCard message="Loading console…" />
+        <LoadingCard message={intl.formatMessage({ id: "web.routes.tabs.console.loading_console", defaultMessage: "Loading console…", description: "Console: message of LoadingCard" })} />
       </div>
     );
   }
@@ -36,8 +38,8 @@ export function ConsoleTab({ name, ns }: { name: string; ns?: string }) {
     return (
       <div className="p-4">
         <ErrorCard
-          title="No console available"
-          message="This game template doesn't expose a console."
+          title={intl.formatMessage({ id: "web.routes.tabs.console.no_console_available", defaultMessage: "No console available", description: "Console: title of ErrorCard" })}
+          message={intl.formatMessage({ id: "web.routes.tabs.console.this_game_template_doesn_t_expose_a", defaultMessage: "This game template doesn't expose a console.", description: "Console: message of ErrorCard" })}
         />
       </div>
     );

@@ -3,8 +3,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, Input, Label, Modal, ModalBackdrop, ModalContainer, ModalDialog, ModalHeader, ModalHeading, ModalBody, ModalFooter, TextArea } from "@heroui/react";
 import { Clusters } from "@/lib/endpoints";
 import { APIError } from "@/lib/api";
+import { useOptionalIntl } from "@/lib/i18n/format";
 
 export function RegisterClusterDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const intl = useOptionalIntl();
   const client = useQueryClient();
   const [name, setName] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -21,16 +23,16 @@ export function RegisterClusterDialog({ open, onOpenChange }: { open: boolean; o
   return <Modal isOpen={open} onOpenChange={onOpenChange}>
     <ModalBackdrop isDismissable={!register.isPending} isKeyboardDismissDisabled={register.isPending}>
       <ModalContainer><ModalDialog className="w-[480px] max-w-full">
-        <ModalHeader><ModalHeading>Register cluster</ModalHeading></ModalHeader>
+        <ModalHeader><ModalHeading>{intl.formatMessage({ id: "web.components.register_cluster_dialog.register_cluster", defaultMessage: "Register cluster", description: "Register cluster dialog: text in ModalHeading" })}</ModalHeading></ModalHeader>
         <ModalBody className="gap-4">
-          <p className="text-sm text-muted">Connect an existing workload cluster with the Gameplane operator and CRDs installed. The panel host does not become a workload node.</p>
-          <div className="space-y-1"><Label htmlFor="cluster-name">Name</Label><Input id="cluster-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="production" /></div>
-          <div className="space-y-1"><Label htmlFor="cluster-display-name">Display name</Label><Input id="cluster-display-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></div>
-          <div className="space-y-1"><Label htmlFor="cluster-kubeconfig">Kubeconfig</Label><TextArea id="cluster-kubeconfig" value={kubeconfig} onChange={(event) => setKubeconfig(event.target.value)} rows={8} className="font-mono text-xs" /></div>
-          <p className="text-xs text-muted">Use a self-contained kubeconfig with credentials and an API address reachable from this panel. Agent console, files and logs also require remote gateway configuration.</p>
+          <p className="text-sm text-muted">{intl.formatMessage({ id: "web.components.register_cluster_dialog.connect_an_existing_workload_cluster", defaultMessage: "Connect an existing workload cluster with the Gameplane operator and CRDs installed. The panel host does not become a workload node.", description: "Register cluster dialog: text in p" })}</p>
+          <div className="space-y-1"><Label htmlFor="cluster-name">{intl.formatMessage({ id: "web.components.register_cluster_dialog.name", defaultMessage: "Name", description: "Register cluster dialog: text in Label" })}</Label><Input id="cluster-name" value={name} onChange={(event) => setName(event.target.value)} placeholder={intl.formatMessage({ id: "web.components.register_cluster_dialog.production", defaultMessage: "production", description: "Register cluster dialog: placeholder of Input" })} /></div>
+          <div className="space-y-1"><Label htmlFor="cluster-display-name">{intl.formatMessage({ id: "web.components.register_cluster_dialog.display_name", defaultMessage: "Display name", description: "Register cluster dialog: text in Label" })}</Label><Input id="cluster-display-name" value={displayName} onChange={(event) => setDisplayName(event.target.value)} /></div>
+          <div className="space-y-1"><Label htmlFor="cluster-kubeconfig">{intl.formatMessage({ id: "web.components.register_cluster_dialog.kubeconfig", defaultMessage: "Kubeconfig", description: "Register cluster dialog: text in Label" })}</Label><TextArea id="cluster-kubeconfig" value={kubeconfig} onChange={(event) => setKubeconfig(event.target.value)} rows={8} className="font-mono text-xs" /></div>
+          <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.register_cluster_dialog.use_a_self_contained_kubeconfig_with", defaultMessage: "Use a self-contained kubeconfig with credentials and an API address reachable from this panel. Agent console, files and logs also require remote gateway configuration.", description: "Register cluster dialog: text in p" })}</p>
           {register.error && <p role="alert" className="text-sm text-danger">{register.error instanceof APIError ? register.error.body || register.error.message : register.error.message}</p>}
         </ModalBody>
-        <ModalFooter><Button variant="outline" isDisabled={register.isPending} onPress={() => onOpenChange(false)}>Cancel</Button><Button isDisabled={register.isPending || !name.trim() || !kubeconfig.trim()} onPress={() => register.mutate()}>Register</Button></ModalFooter>
+        <ModalFooter><Button variant="outline" isDisabled={register.isPending} onPress={() => onOpenChange(false)}>{intl.formatMessage({ id: "web.components.register_cluster_dialog.cancel", defaultMessage: "Cancel", description: "Register cluster dialog: text in Button" })}</Button><Button isDisabled={register.isPending || !name.trim() || !kubeconfig.trim()} onPress={() => register.mutate()}>{intl.formatMessage({ id: "web.components.register_cluster_dialog.register", defaultMessage: "Register", description: "Register cluster dialog: text in Button" })}</Button></ModalFooter>
       </ModalDialog></ModalContainer>
     </ModalBackdrop>
   </Modal>;

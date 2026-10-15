@@ -15,7 +15,7 @@ import formatjs from "eslint-plugin-formatjs";
 
 // Files whose user-facing strings have moved to the i18n runtime. This list
 // grows with each string-migration task and switches to all of src in T058.
-const MIGRATED_I18N_PATHS = ["src/lib/i18n/**/*.{ts,tsx}"];
+const MIGRATED_I18N_PATHS = ["src/lib/i18n/**/*.{ts,tsx}", "src/components/settings/**/*.{ts,tsx}"];
 
 export default [
   {

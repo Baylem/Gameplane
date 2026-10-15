@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { APIError } from "@/lib/api";
 import { useMe, can } from "@/lib/auth";
 import { Button, Card } from "@heroui/react";
+import { useOptionalIntl } from "@/lib/i18n/format";
 
 function isUnauthorized(error: unknown): boolean {
   return error instanceof APIError && error.status === 401;
@@ -50,6 +51,7 @@ function RoleSkeleton() {
  * state instead of a false denial.
  */
 export function IdentityUnavailable({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const intl = useOptionalIntl();
   const detail = error instanceof APIError ? `HTTP ${error.status}` : null;
   return (
     <div className="flex h-full items-center justify-center p-6">
@@ -59,22 +61,16 @@ export function IdentityUnavailable({ error, onRetry }: { error: unknown; onRetr
             <PlugZap className="h-6 w-6" />
           </div>
         </div>
-        <div className="pt-4 text-base font-medium text-fg">
-          Can&apos;t reach the control plane
-        </div>
-        <p className="pt-1 text-sm text-muted">
-          We couldn&apos;t confirm who you are{detail ? ` (${detail})` : ""}. This is usually
-          temporary — the API may be restarting.
-        </p>
-        <Button className="mt-4" onClick={onRetry}>
-          Try again
-        </Button>
+        <div className="pt-4 text-base font-medium text-fg">{intl.formatMessage({ id: "web.components.require_role.can_t_reach_the_control_plane", defaultMessage: "Can't reach the control plane", description: "Require role: text in div" })}</div>
+        <p className="pt-1 text-sm text-muted">{intl.formatMessage({ id: "web.components.require_role.we_couldn_t_confirm_who_you_are", defaultMessage: "We couldn't confirm who you are", description: "Require role: text in p" })}{detail && intl.formatMessage({ id: "web.components.require_role.detail", defaultMessage: " ({detail})", description: "Require role: error detail in parentheses after the message; {detail} is the error detail" }, { detail: detail })}{intl.formatMessage({ id: "web.components.require_role.this_is_usually_temporary_the_api_may", defaultMessage: ". This is usually temporary — the API may be restarting.", description: "Require role: text in p" })}</p>
+        <Button className="mt-4" onClick={onRetry}>{intl.formatMessage({ id: "web.components.require_role.try_again", defaultMessage: "Try again", description: "Require role: text in Button" })}</Button>
       </Card>
     </div>
   );
 }
 
 function Forbidden() {
+  const intl = useOptionalIntl();
   return (
     <div className="flex h-full items-center justify-center p-6">
       <Card className="max-w-md p-8 text-center">
@@ -83,17 +79,12 @@ function Forbidden() {
             <ShieldAlert className="h-6 w-6" />
           </div>
         </div>
-        <div className="pt-4 text-base font-medium text-fg">Access denied</div>
-        <p className="pt-1 text-sm text-muted">
-          Your role doesn&apos;t permit access to this page. Ask an
-          administrator if you believe this is a mistake.
-        </p>
+        <div className="pt-4 text-base font-medium text-fg">{intl.formatMessage({ id: "web.components.require_role.access_denied", defaultMessage: "Access denied", description: "Require role: text in div" })}</div>
+        <p className="pt-1 text-sm text-muted">{intl.formatMessage({ id: "web.components.require_role.your_role_doesn_t_permit_access_to_this", defaultMessage: "Your role doesn't permit access to this page. Ask an administrator if you believe this is a mistake.", description: "Require role: text in p" })}</p>
         <Link
           to="/"
           className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm text-primary-fg hover:opacity-90"
-        >
-          Back to dashboard
-        </Link>
+        >{intl.formatMessage({ id: "web.components.require_role.back_to_dashboard", defaultMessage: "Back to dashboard", description: "Require role: text in Link" })}</Link>
       </Card>
     </div>
   );

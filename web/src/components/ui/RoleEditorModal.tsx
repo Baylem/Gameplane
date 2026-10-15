@@ -18,6 +18,7 @@ import {
 import type { Role, PermissionGroup } from "@/types";
 import { Roles } from "@/lib/endpoints";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { useOptionalIntl } from "@/lib/i18n/format";
 
 export interface RoleEditorModalProps {
   open: boolean;
@@ -34,6 +35,7 @@ export function RoleEditorModal({
   groups,
   onSaved,
 }: RoleEditorModalProps) {
+  const intl = useOptionalIntl();
   const creating = role === null;
   const [name, setName] = useState(() => role?.name ?? "");
   const [description, setDescription] = useState(() => role?.description ?? "");
@@ -75,10 +77,8 @@ export function RoleEditorModal({
         <ModalContainer>
           <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
-              <ModalHeading>{role ? `Edit role: ${role.name}` : "New role"}</ModalHeading>
-              <Description className="text-sm leading-[18px] text-muted">
-                Grant a curated set of permissions.
-              </Description>
+              <ModalHeading>{role ? intl.formatMessage({ id: "web.components.ui.role_editor_modal.edit_role", defaultMessage: "Edit role: {name}", description: "Role editor modal: heading when editing an existing role; {name} is the role name" }, { name: role.name }) : intl.formatMessage({ id: "web.components.ui.role_editor_modal.new_role", defaultMessage: "New role", description: "Role editor modal: heading when creating a role" })}</ModalHeading>
+              <Description className="text-sm leading-[18px] text-muted">{intl.formatMessage({ id: "web.components.ui.role_editor_modal.grant_a_curated_set_of_permissions", defaultMessage: "Grant a curated set of permissions.", description: "Role editor modal: text in Description" })}</Description>
             </ModalHeader>
 
             <ModalBody className="gap-3">
@@ -87,28 +87,24 @@ export function RoleEditorModal({
 
             {creating && (
               <div className="space-y-2">
-                <Label htmlFor="role-name" className="text-xs">
-                  Name
-                </Label>
+                <Label htmlFor="role-name" className="text-xs">{intl.formatMessage({ id: "web.components.ui.role_editor_modal.name", defaultMessage: "Name", description: "Role editor modal: text in Label" })}</Label>
                 <Input
                   id="role-name"
                   autoFocus
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="support"
+                  placeholder={intl.formatMessage({ id: "web.components.ui.role_editor_modal.support", defaultMessage: "support", description: "Role editor modal: placeholder of Input" })}
                 />
               </div>
             )}
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="role-description" className="text-xs">
-                Description
-              </Label>
+              <Label htmlFor="role-description" className="text-xs">{intl.formatMessage({ id: "web.components.ui.role_editor_modal.description", defaultMessage: "Description", description: "Role editor modal: text in Label" })}</Label>
               <Input
                 id="role-description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Manage game servers, backups, templates, and schedules."
+                placeholder={intl.formatMessage({ id: "web.components.ui.role_editor_modal.manage_game_servers_backups_templates", defaultMessage: "Manage game servers, backups, templates, and schedules.", description: "Role editor modal: placeholder of Input" })}
               />
             </div>
 
@@ -133,9 +129,7 @@ export function RoleEditorModal({
                         <Checkbox.Content>
                           <span className="font-mono text-xs">{perm.key}</span>
                           {perm.namespaced && (
-                            <span className="text-[9px] text-muted bg-[#94949426] px-1 rounded">
-                              ns
-                            </span>
+                            <span className="text-[9px] text-muted bg-[#94949426] px-1 rounded">{intl.formatMessage({ id: "web.components.ui.role_editor_modal.ns", defaultMessage: "ns", description: "Role editor modal: text in span" })}</span>
                           )}
                         </Checkbox.Content>
                       </Checkbox>
@@ -153,9 +147,7 @@ export function RoleEditorModal({
               className="h-9 px-4"
               onPress={() => onOpenChange(false)}
               isDisabled={save.isPending}
-            >
-              Cancel
-            </Button>
+            >{intl.formatMessage({ id: "web.components.ui.role_editor_modal.cancel", defaultMessage: "Cancel", description: "Role editor modal: text in Button" })}</Button>
             <Button
               size="sm"
               variant="primary"
@@ -163,7 +155,11 @@ export function RoleEditorModal({
               isDisabled={submitDisabled}
               onPress={() => save.mutate()}
             >
-              {save.isPending ? "Saving…" : creating ? "Create role" : "Save role"}
+              {save.isPending
+                ? intl.formatMessage({ id: "web.components.ui.role_editor_modal.saving", defaultMessage: "Saving…", description: "Role editor modal: save button label while the role is being saved" })
+                : creating
+                  ? intl.formatMessage({ id: "web.components.ui.role_editor_modal.create_role", defaultMessage: "Create role", description: "Role editor modal: save button label when creating a role" })
+                  : intl.formatMessage({ id: "web.components.ui.role_editor_modal.save_role", defaultMessage: "Save role", description: "Role editor modal: save button label when editing a role" })}
             </Button>
             </ModalFooter>
           </ModalDialog>

@@ -1,6 +1,7 @@
 import { useResourceAccess, useResourcePermissions, resourceCan } from "@/lib/resourceTarget";
 import { useFormat } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
+import { defineMessages, type MessageDescriptor } from "react-intl";
 import {
   Input,
   Select,
@@ -14,6 +15,7 @@ import {
 } from "@heroui/react";
 import type { CaptureConfiguration } from "@/types";
 import type { SectionProps } from "./types";
+import { useOptionalIntl } from "@/lib/i18n/format";
 
 // Cluster ceiling on the per-server retention override (operator/api/v1alpha1
 // CaptureConfiguration.RetentionSeconds: kubebuilder Minimum=1/Maximum=604800,
@@ -32,11 +34,18 @@ const UNIT_SECONDS: Record<RetentionUnit, number> = {
   days: 86400,
 };
 
-const UNIT_OPTIONS = [
-  { value: "seconds", label: "seconds" },
-  { value: "minutes", label: "minutes" },
-  { value: "hours", label: "hours" },
-  { value: "days", label: "days" },
+const UNIT_LABELS = defineMessages({
+  seconds: { id: "web.routes.tabs.settings.network_capture.unit_seconds", defaultMessage: "seconds", description: "Network capture: retention window unit option, seconds" },
+  minutes: { id: "web.routes.tabs.settings.network_capture.unit_minutes", defaultMessage: "minutes", description: "Network capture: retention window unit option, minutes" },
+  hours: { id: "web.routes.tabs.settings.network_capture.unit_hours", defaultMessage: "hours", description: "Network capture: retention window unit option, hours" },
+  days: { id: "web.routes.tabs.settings.network_capture.unit_days", defaultMessage: "days", description: "Network capture: retention window unit option, days" },
+});
+
+const UNIT_OPTIONS: { value: RetentionUnit; label: MessageDescriptor }[] = [
+  { value: "seconds", label: UNIT_LABELS.seconds },
+  { value: "minutes", label: UNIT_LABELS.minutes },
+  { value: "hours", label: UNIT_LABELS.hours },
+  { value: "days", label: UNIT_LABELS.days },
 ];
 
 // Picks the coarsest unit that displays the given second count as a whole
@@ -49,6 +58,7 @@ function bestUnit(seconds: number): RetentionUnit {
 }
 
 export function NetworkCaptureSection({ draft, onChange, onValidityChange }: SectionProps) {
+  const intl = useOptionalIntl();
   const fmt = useFormat();
   const access = useResourceAccess();
   const permissionsReady = access?.permissions !== undefined;
@@ -87,13 +97,16 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
     }
     const n = Number(valueStr);
     if (!Number.isFinite(n) || n <= 0) {
-      setRetentionError("Enter a positive number.");
+      setRetentionError(intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.enter_a_positive_number", defaultMessage: "Enter a positive number.", description: "Network capture: validation error under the retention window input when the value is not a positive number" }));
       return;
     }
     const seconds = Math.round(n * UNIT_SECONDS[u]);
     if (seconds > CLUSTER_MAX_RETENTION_SECONDS) {
       setRetentionError(
-        `Exceeds the cluster maximum of 7 days (${fmt.number(CLUSTER_MAX_RETENTION_SECONDS)} seconds).`,
+        intl.formatMessage(
+          { id: "web.routes.tabs.settings.network_capture.exceeds_cluster_maximum", defaultMessage: "Exceeds the cluster maximum of 7 days ({seconds} seconds).", description: "Network capture: validation error when the retention window is longer than the cluster maximum; {seconds} is the maximum in seconds, formatted with thousands separators" },
+          { seconds: fmt.number(CLUSTER_MAX_RETENTION_SECONDS) },
+        ),
       );
       return;
     }
@@ -110,11 +123,8 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
     <div className="space-y-8">
       <div className="space-y-4">
         <div>
-          <Label className="text-base font-semibold">Enable Capture</Label>
-          <Description className="text-sm">
-            Records raw network protocol traffic from a sidecar container for later download and
-            analysis.
-          </Description>
+          <Label className="text-base font-semibold">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.enable_capture", defaultMessage: "Enable Capture", description: "Label for the switch that turns network capture on or off" })}</Label>
+          <Description className="text-sm">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.records_raw_network_protocol_traffic", defaultMessage: "Records raw network protocol traffic from a sidecar container for later download and analysis.", description: "Network capture: text in Description" })}</Description>
         </div>
 
         <div className="space-y-3">
@@ -123,7 +133,7 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
               isSelected={enabled}
               isDisabled={disabled}
               onChange={(v) => setCaptureField("enabled", v)}
-              aria-label="Enable Capture"
+              aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.enable_capture", defaultMessage: "Enable Capture", description: "Label for the switch that turns network capture on or off" })}
             >
               <Switch.Content>
                 <Switch.Control>
@@ -131,39 +141,27 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
                 </Switch.Control>
               </Switch.Content>
             </Switch>
-            <span className="text-sm text-default-500">{enabled ? "Enabled" : "Disabled"}</span>
+            <span className="text-sm text-default-500">{enabled
+              ? intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.enabled", defaultMessage: "Enabled", description: "Network capture: status label next to the enable switch when capture is on" })
+              : intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.disabled", defaultMessage: "Disabled", description: "Network capture: status label next to the enable switch when capture is off" })}</span>
           </div>
 
-          <p className="text-xs leading-relaxed text-default-500">
-            Turning this off stops any running capture and blocks new ones immediately. The
-            capture container itself stays in the pod, idle, until the pod is next recreated —
-            Kubernetes has no API to remove an ephemeral container.
-          </p>
-          <p className="text-xs leading-relaxed text-default-500">
-            Network packet capture requires admin access. Captures contain real player data
-            (IP addresses, chat, credentials) and are not redacted.
-          </p>
+          <p className="text-xs leading-relaxed text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.turning_this_off_stops_any_running", defaultMessage: "Turning this off stops any running capture and blocks new ones immediately. The capture container itself stays in the pod, idle, until the pod is next recreated — Kubernetes has no API to remove an ephemeral container.", description: "Network capture: text in p" })}</p>
+          <p className="text-xs leading-relaxed text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.network_packet_capture_requires_admin", defaultMessage: "Network packet capture requires admin access. Captures contain real player data (IP addresses, chat, credentials) and are not redacted.", description: "Network capture: text in p" })}</p>
           {permissionsReady && !canManage && (
-            <p className="text-xs leading-relaxed text-warning">
-              You don&apos;t have permission to change capture settings for this server.
-            </p>
+            <p className="text-xs leading-relaxed text-warning">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.you_don_t_have_permission_to_change", defaultMessage: "You don't have permission to change capture settings for this server.", description: "Network capture: text in p" })}</p>
           )}
 
           <div>
-            <a href="/docs/capture" className="text-xs text-primary hover:underline">
-              Learn more
-            </a>
+            <a href="/docs/capture" className="text-xs text-primary hover:underline">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.learn_more", defaultMessage: "Learn more", description: "Network capture: text in a" })}</a>
           </div>
         </div>
       </div>
 
       <div className="space-y-4">
         <div>
-          <Label className="text-base font-semibold">Retention Window</Label>
-          <Description className="text-sm">
-            Captures are automatically deleted after this window. Leave blank to use the cluster
-            default.
-          </Description>
+          <Label className="text-base font-semibold">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.retention_window", defaultMessage: "Retention Window", description: "Section heading for how long captures are kept before automatic deletion" })}</Label>
+          <Description className="text-sm">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.captures_are_automatically_deleted", defaultMessage: "Captures are automatically deleted after this window. Leave blank to use the cluster default.", description: "Network capture: text in Description" })}</Description>
         </div>
 
         <TextField isInvalid={retentionError !== null} className="space-y-3">
@@ -178,7 +176,7 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
                 setRawValue(e.target.value);
                 applyRetention(e.target.value, unit);
               }}
-              aria-label="Retention window value"
+              aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.retention_window_value", defaultMessage: "Retention window value", description: "Network capture: aria-label of Input" })}
               className="w-24"
             />
             <Select
@@ -191,19 +189,19 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
               }}
               className="w-32"
             >
-              <Label className="sr-only">Retention window unit</Label>
+              <Label className="sr-only">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.retention_window_unit", defaultMessage: "Retention window unit", description: "Label and accessible name for the retention window unit picker (seconds, minutes, hours, days)" })}</Label>
               <Select.Trigger
-                aria-label="Retention window unit"
+                aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.retention_window_unit", defaultMessage: "Retention window unit", description: "Label and accessible name for the retention window unit picker (seconds, minutes, hours, days)" })}
                 className="rounded border border-default-200 bg-default-50 px-3 py-2 text-sm"
               >
                 <Select.Value />
                 <Select.Indicator />
               </Select.Trigger>
               <Select.Popover className="rounded border border-default-200">
-                <ListBox aria-label="Retention window unit">
+                <ListBox aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.retention_window_unit", defaultMessage: "Retention window unit", description: "Label and accessible name for the retention window unit picker (seconds, minutes, hours, days)" })}>
                   {UNIT_OPTIONS.map((opt) => (
                     <ListBoxItem key={opt.value} id={opt.value}>
-                      {opt.label}
+                      {intl.formatMessage(opt.label)}
                     </ListBoxItem>
                   ))}
                 </ListBox>
@@ -214,10 +212,10 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
           {retentionError ? (
             <FieldError className="text-xs">{retentionError}</FieldError>
           ) : (
-            <p className="text-xs text-default-500">
-              Cluster maximum: 7 days ({fmt.number(CLUSTER_MAX_RETENTION_SECONDS)} seconds)
-              — a storage-limitation-informed default, not a legal requirement.
-            </p>
+            <p className="text-xs text-default-500">{intl.formatMessage(
+              { id: "web.routes.tabs.settings.network_capture.cluster_maximum_7_days", defaultMessage: "Cluster maximum: 7 days ({seconds} seconds) — a storage-limitation-informed default, not a legal requirement.", description: "Network capture: hint under the retention window input stating the cluster maximum; {seconds} is the maximum in seconds, formatted with thousands separators" },
+              { seconds: fmt.number(CLUSTER_MAX_RETENTION_SECONDS) },
+            )}</p>
           )}
         </TextField>
       </div>

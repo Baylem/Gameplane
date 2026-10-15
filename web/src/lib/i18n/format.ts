@@ -76,15 +76,15 @@ export function makeFormat(locale: string): FormatApi {
   };
 }
 
-// FALLBACK_INTL serves components rendered outside an IntlProvider (isolated
+// englishIntl serves components rendered outside an IntlProvider (isolated
 // tests); it is English with no catalog.
-const FALLBACK_INTL: IntlShape = createIntl({ locale: "en", defaultLocale: "en", onError: onIntlError });
+export const englishIntl: IntlShape = createIntl({ locale: "en", defaultLocale: "en", onError: onIntlError });
 
 // useOptionalIntl returns the provided IntlShape, or the English fallback when
 // no IntlProvider is mounted. Unlike useIntl() it never throws.
 export function useOptionalIntl(): IntlShape {
   const provided: IntlShape | null = useContext(IntlContext);
-  return provided ?? FALLBACK_INTL;
+  return provided ?? englishIntl;
 }
 
 export function useFormat(): FormatApi {
