@@ -55,3 +55,14 @@ One record per correction (FR-012): page, old value, new value, confirming sourc
 | GP | docs/install.md:126 | default StorageClass "(unreleased; ships in the next release)" | "(since v0.3.0)" | CHANGELOG.md:286 (inside [0.3.0]) |
 | GP | docs/install.md:148 | Helm-seeded role mapping "(unreleased; ships in the next release)" | "(since v0.3.0)" | CHANGELOG.md:280 (inside [0.3.0]) |
 | GP | charts/gameplane/values.yaml:121 (comment) | "StorageClassNotFound" reason | "PVCProvisioningFailed" reason | operator/internal/controller/gameserver_status.go:30 |
+
+## Quickstart results (T044, 2026-10-15, master 8b7c85cb)
+
+1. Catalog (SC-001): 144 rows, each with one evidence record; label rule and Docs links checked by two sonnet reviews (no findings on the final grouping).
+2. Roadmap (SC-002): every non-`done_` spec folder has an In progress line; spec 024 moved to shipped and the renumbered `025-standalone-panel` line corrected in the archive PR.
+3. Stale counts (SC-003): `grep -rn "30 ready\|30 game\|30 templates" README.md docs website/src` finds nothing.
+4. Repo and website agree (SC-004): `check-features-sync` passed in the "docs and repository checks" job of PR #703 (32 passed, 0 failed).
+5. Sync check catches drift (SC-005): `test-features-sync` passed in the same run with 12 fixtures (incl. `fail/duplicate-row`).
+6. Doc gates (FR-011): `check-links` and `check-doc-versions` passed with `FEATURES.md` audited.
+7. Website: `npm run check` and `npm run build` passed; website#18 CI green; Features page sits in Reference, Releases & Roadmap.
+8. README: Features section is a summary linking `FEATURES.md`; competitor columns unchanged (reviewed diff).

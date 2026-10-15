@@ -5,8 +5,8 @@
 #   Implements spec 024 FR-015 (docs-feature-list-refresh). FEATURES.md (repo root) is the catalog
 #   source; website/src/content/docs/features.mdx must list the same areas, capabilities, maturity and
 #   default values in the same order. Description and Docs cells may differ.
-#   Grammar:  specs/024-docs-feature-list-refresh/contracts/features-catalog.md
-#   Behaviour: specs/024-docs-feature-list-refresh/contracts/features-sync-check.md
+#   Grammar:  specs/done_024-docs-feature-list-refresh/contracts/features-catalog.md
+#   Behaviour: specs/done_024-docs-feature-list-refresh/contracts/features-sync-check.md
 #
 # Parsing rules:
 #   - Area = level-2 heading ("## ") that owns a catalog table. Level-1 and level-3+ headings are ignored.
