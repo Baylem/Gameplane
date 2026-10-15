@@ -2,7 +2,7 @@
   "type": "frame",
   "id": "n6Xlo",
   "x": 0,
-  "y": 85524,
+  "y": 85868,
   "name": "Screen/Admin Settings — Notifications",
   "theme": {
     "semantic": "dark"
@@ -235,6 +235,17 @@
                                       "fontFamily": "$typography/font-sans",
                                       "fontSize": 12,
                                       "fontWeight": "normal"
+                                    },
+                                    {
+                                      "id": "eJXos",
+                                      "type": "ref",
+                                      "ref": "TSXYO",
+                                      "name": "sinkLangRow",
+                                      "descendants": {
+                                        "JeJkG/cFsFk": {
+                                          "content": "Français"
+                                        }
+                                      }
                                     }
                                   ]
                                 },
@@ -371,6 +382,17 @@
                                       "fontFamily": "$typography/font-sans",
                                       "fontSize": 12,
                                       "fontWeight": "normal"
+                                    },
+                                    {
+                                      "id": "Gzl9V",
+                                      "type": "ref",
+                                      "ref": "TSXYO",
+                                      "name": "sinkLangRow",
+                                      "descendants": {
+                                        "JeJkG/cFsFk": {
+                                          "content": "Instance default"
+                                        }
+                                      }
                                     }
                                   ]
                                 },

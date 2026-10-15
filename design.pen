@@ -21,7 +21,15 @@
           "ref": "fjQjb",
           "name": "loginL",
           "width": "fill_container",
-          "height": "fill_container"
+          "height": "fill_container",
+          "children": [
+            {
+              "id": "eAPaq",
+              "type": "ref",
+              "ref": "S0P4bl",
+              "name": "loginCard"
+            }
+          ]
         },
         {
           "id": "X7z8B",
@@ -94,13 +102,13 @@
           "name": "loginL",
           "width": "fill_container",
           "height": "fill_container",
-          "descendants": {
-            "KkNQA": {
+          "children": [
+            {
               "id": "bwHis",
               "type": "ref",
               "ref": "vp8BJ"
             }
-          }
+          ]
         },
         {
           "id": "B7L9d9",
@@ -27999,127 +28007,166 @@
                       "width": 220
                     },
                     {
-                      "id": "l4Iw3z",
-                      "type": "ref",
-                      "ref": "XDZ0E",
-                      "name": "Settings Panel",
+                      "type": "frame",
+                      "id": "R3NDA",
+                      "name": "Panel Column",
                       "width": "fill_container",
-                      "padding": 0,
-                      "gap": 0,
+                      "layout": "vertical",
+                      "gap": 24,
                       "children": [
                         {
-                          "id": "tXDnN",
+                          "id": "l4Iw3z",
                           "type": "ref",
-                          "ref": "FRpsu",
-                          "name": "Card Header",
+                          "ref": "XDZ0E",
+                          "name": "Settings Panel",
                           "width": "fill_container",
-                          "padding": [
-                            20,
-                            20,
-                            16,
-                            20
-                          ],
-                          "gap": 4,
-                          "descendants": {
-                            "fuZHB": {
-                              "content": "General"
-                            },
-                            "BZG9o": {
-                              "content": "Basic identity for this Gameplane instance."
-                            }
-                          }
-                        },
-                        {
-                          "type": "frame",
-                          "id": "DI9X5",
-                          "name": "Card Fields",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 16,
-                          "padding": [
-                            0,
-                            20
-                          ],
+                          "padding": 0,
+                          "gap": 0,
                           "children": [
                             {
+                              "id": "tXDnN",
+                              "type": "ref",
+                              "ref": "FRpsu",
+                              "name": "Card Header",
+                              "width": "fill_container",
+                              "padding": [
+                                20,
+                                20,
+                                16,
+                                20
+                              ],
+                              "gap": 4,
+                              "descendants": {
+                                "fuZHB": {
+                                  "content": "General"
+                                },
+                                "BZG9o": {
+                                  "content": "Basic identity for this Gameplane instance."
+                                }
+                              }
+                            },
+                            {
                               "type": "frame",
-                              "id": "BGqdF",
-                              "name": "fieldInstanceName",
+                              "id": "DI9X5",
+                              "name": "Card Fields",
                               "width": "fill_container",
                               "layout": "vertical",
+                              "gap": 16,
+                              "padding": [
+                                0,
+                                20
+                              ],
                               "children": [
                                 {
-                                  "id": "E8BwC",
-                                  "type": "ref",
-                                  "ref": "aRqX6",
-                                  "name": "Input/Primary",
+                                  "type": "frame",
+                                  "id": "BGqdF",
+                                  "name": "fieldInstanceName",
                                   "width": "fill_container",
-                                  "descendants": {
-                                    "ANxU1": {
-                                      "content": "Instance name"
-                                    },
-                                    "hokJ3": {
-                                      "content": "",
-                                      "fill": "$field/placeholder"
-                                    },
-                                    "wolxN": {
-                                      "content": "Optional. Names this install on the Cluster page and in notifications."
+                                  "layout": "vertical",
+                                  "children": [
+                                    {
+                                      "id": "E8BwC",
+                                      "type": "ref",
+                                      "ref": "aRqX6",
+                                      "name": "Input/Primary",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "ANxU1": {
+                                          "content": "Instance name"
+                                        },
+                                        "hokJ3": {
+                                          "content": "",
+                                          "fill": "$field/placeholder"
+                                        },
+                                        "wolxN": {
+                                          "content": "Optional. Names this install on the Cluster page and in notifications."
+                                        }
+                                      }
                                     }
-                                  }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "yjujL",
+                                  "name": "fieldExternalURL",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "children": [
+                                    {
+                                      "id": "YesmO",
+                                      "type": "ref",
+                                      "ref": "aRqX6",
+                                      "name": "Input/Primary",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "ANxU1": {
+                                          "content": "External URL"
+                                        },
+                                        "hokJ3": {
+                                          "content": "",
+                                          "fill": "$field/placeholder"
+                                        },
+                                        "wolxN": {
+                                          "content": "Canonical base URL, used in emails, webhooks, OIDC callbacks."
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "l6wE1E",
+                                  "name": "fieldDefaultNamespace",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "children": [
+                                    {
+                                      "id": "SVLor",
+                                      "type": "ref",
+                                      "ref": "aRqX6",
+                                      "name": "Input/Primary",
+                                      "width": "fill_container",
+                                      "descendants": {
+                                        "ANxU1": {
+                                          "content": "Default namespace"
+                                        },
+                                        "hokJ3": {
+                                          "content": "gameplane-games",
+                                          "fill": "$foreground/foreground"
+                                        },
+                                        "wolxN": {
+                                          "content": "Where new GameServers land by default."
+                                        }
+                                      }
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "yjujL",
-                              "name": "fieldExternalURL",
+                              "id": "Aey03",
+                              "name": "Card Actions",
                               "width": "fill_container",
-                              "layout": "vertical",
+                              "padding": [
+                                8,
+                                20,
+                                20,
+                                20
+                              ],
+                              "justifyContent": "end",
                               "children": [
                                 {
-                                  "id": "YesmO",
+                                  "id": "KmwSz",
                                   "type": "ref",
-                                  "ref": "aRqX6",
-                                  "name": "Input/Primary",
-                                  "width": "fill_container",
+                                  "ref": "tpKRk",
+                                  "name": "Btn Save Changes",
                                   "descendants": {
-                                    "ANxU1": {
-                                      "content": "External URL"
+                                    "q58In/Xpn7K": {
+                                      "enabled": false
                                     },
-                                    "hokJ3": {
-                                      "content": "",
-                                      "fill": "$field/placeholder"
-                                    },
-                                    "wolxN": {
-                                      "content": "Canonical base URL, used in emails, webhooks, OIDC callbacks."
-                                    }
-                                  }
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "l6wE1E",
-                              "name": "fieldDefaultNamespace",
-                              "width": "fill_container",
-                              "layout": "vertical",
-                              "children": [
-                                {
-                                  "id": "SVLor",
-                                  "type": "ref",
-                                  "ref": "aRqX6",
-                                  "name": "Input/Primary",
-                                  "width": "fill_container",
-                                  "descendants": {
-                                    "ANxU1": {
-                                      "content": "Default namespace"
-                                    },
-                                    "hokJ3": {
-                                      "content": "gameplane-games",
-                                      "fill": "$foreground/foreground"
-                                    },
-                                    "wolxN": {
-                                      "content": "Where new GameServers land by default."
+                                    "q58In/U6q13B": {
+                                      "content": "Save changes"
                                     }
                                   }
                                 }
@@ -28128,31 +28175,138 @@
                           ]
                         },
                         {
-                          "type": "frame",
-                          "id": "Aey03",
-                          "name": "Card Actions",
+                          "id": "cf7cY",
+                          "type": "ref",
+                          "ref": "XDZ0E",
+                          "name": "Language Panel",
                           "width": "fill_container",
-                          "padding": [
-                            8,
-                            20,
-                            20,
-                            20
-                          ],
-                          "justifyContent": "end",
+                          "padding": 0,
+                          "gap": 0,
                           "children": [
                             {
-                              "id": "KmwSz",
+                              "id": "UHVCB",
                               "type": "ref",
-                              "ref": "tpKRk",
-                              "name": "Btn Save Changes",
+                              "ref": "FRpsu",
+                              "name": "Card Header",
+                              "width": "fill_container",
+                              "padding": [
+                                20,
+                                20,
+                                16,
+                                20
+                              ],
+                              "gap": 4,
                               "descendants": {
-                                "q58In/Xpn7K": {
-                                  "enabled": false
+                                "fuZHB": {
+                                  "content": "Language"
                                 },
-                                "q58In/U6q13B": {
-                                  "content": "Save changes"
+                                "BZG9o": {
+                                  "content": "Default language for this Gameplane instance.",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container"
                                 }
                               }
+                            },
+                            {
+                              "type": "frame",
+                              "id": "syeHU",
+                              "name": "Card Fields",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 16,
+                              "padding": [
+                                0,
+                                20
+                              ],
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "Dd4lM",
+                                  "name": "fieldDefaultLanguage",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "mqYJz",
+                                      "name": "defaultLanguageLabel",
+                                      "fill": "$foreground/foreground",
+                                      "content": "Default language",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 14,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "id": "lbEVy",
+                                      "type": "ref",
+                                      "ref": "AT7ya",
+                                      "name": "defaultLanguageSelect",
+                                      "width": "fill_container",
+                                      "height": 40,
+                                      "descendants": {
+                                        "cFsFk": {
+                                          "content": "English",
+                                          "fill": "$foreground/foreground"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "Wzge1",
+                                      "name": "defaultLanguageHintWrap",
+                                      "width": "fill_container",
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "Eufbk",
+                                          "name": "defaultLanguageHint",
+                                          "fill": "$muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Used when someone has not chosen a language and none of their browser's languages are available. Notification sinks set to Instance default use it too.",
+                                          "fontFamily": "$typography/font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "hs88V",
+                              "name": "Card Actions",
+                              "width": "fill_container",
+                              "padding": [
+                                8,
+                                20,
+                                20,
+                                20
+                              ],
+                              "justifyContent": "end",
+                              "children": [
+                                {
+                                  "id": "aUTud",
+                                  "type": "ref",
+                                  "ref": "tpKRk",
+                                  "name": "Btn Save Changes",
+                                  "descendants": {
+                                    "q58In/Xpn7K": {
+                                      "enabled": false
+                                    },
+                                    "q58In/U6q13B": {
+                                      "content": "Save changes"
+                                    }
+                                  }
+                                }
+                              ]
                             }
                           ]
                         }
@@ -28170,7 +28324,7 @@
       "type": "frame",
       "id": "uMiwd",
       "x": 0,
-      "y": 77915,
+      "y": 78259,
       "name": "Screen/Admin Settings — Authentication",
       "theme": {
         "semantic": "dark"
@@ -29673,7 +29827,7 @@
       "type": "frame",
       "id": "RC3Kf",
       "x": 0,
-      "y": 81624,
+      "y": 81968,
       "name": "Screen/Admin Settings — Backup destinations",
       "theme": {
         "semantic": "dark"
@@ -29914,7 +30068,7 @@
       "type": "frame",
       "id": "g5mEpx",
       "x": 0,
-      "y": 82924,
+      "y": 83268,
       "name": "Screen/Admin Settings — Module sources",
       "theme": {
         "semantic": "dark"
@@ -30473,7 +30627,7 @@
       "type": "frame",
       "id": "n6Xlo",
       "x": 0,
-      "y": 85524,
+      "y": 85868,
       "name": "Screen/Admin Settings — Notifications",
       "theme": {
         "semantic": "dark"
@@ -30706,6 +30860,17 @@
                                           "fontFamily": "$typography/font-sans",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "eJXos",
+                                          "type": "ref",
+                                          "ref": "TSXYO",
+                                          "name": "sinkLangRow",
+                                          "descendants": {
+                                            "JeJkG/cFsFk": {
+                                              "content": "Français"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -30842,6 +31007,17 @@
                                           "fontFamily": "$typography/font-sans",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
+                                        },
+                                        {
+                                          "id": "Gzl9V",
+                                          "type": "ref",
+                                          "ref": "TSXYO",
+                                          "name": "sinkLangRow",
+                                          "descendants": {
+                                            "JeJkG/cFsFk": {
+                                              "content": "Instance default"
+                                            }
+                                          }
                                         }
                                       ]
                                     },
@@ -30956,7 +31132,7 @@
       "type": "frame",
       "id": "uoxQW",
       "x": 0,
-      "y": 86824,
+      "y": 87233,
       "name": "Screen/Admin Settings — Telemetry",
       "theme": {
         "semantic": "dark"
@@ -31188,7 +31364,7 @@
       "type": "frame",
       "id": "M2sA4u",
       "x": 0,
-      "y": 88256,
+      "y": 88665,
       "name": "Screen/Admin Settings — Updates",
       "theme": {
         "semantic": "dark"
@@ -31406,7 +31582,7 @@
       "type": "frame",
       "id": "zM0VF",
       "x": 0,
-      "y": 89556,
+      "y": 89965,
       "name": "Screen/Admin Settings — About",
       "theme": {
         "semantic": "dark"
@@ -33629,7 +33805,7 @@
       "type": "frame",
       "id": "Wj0V4",
       "x": 0,
-      "y": 84224,
+      "y": 84568,
       "name": "Screen/Admin Settings — Mod registries",
       "context": "Central Mod registries administration. The banner describes central ownership; navigation includes registered Clusters and Cluster inventory. Exported against the unchanged screenshot scenario.",
       "theme": {
@@ -39289,7 +39465,7 @@
       "type": "frame",
       "id": "C2LQE4",
       "x": 0,
-      "y": 90856,
+      "y": 91265,
       "name": "Screen/Share Link — Up",
       "theme": {
         "semantic": "dark"
@@ -39315,7 +39491,7 @@
       "type": "frame",
       "id": "q31B6w",
       "x": 1640,
-      "y": 90856,
+      "y": 91265,
       "name": "Screen/Share Link — Asleep (can start)",
       "theme": {
         "semantic": "dark"
@@ -39409,7 +39585,7 @@
       "type": "frame",
       "id": "qFLfB",
       "x": 8200,
-      "y": 90856,
+      "y": 91265,
       "name": "Historical/Share Link — Asleep (view only)",
       "context": "Historical reference. The public resolve response does not expose start capability; an asleep poll must not infer denied permission. Current behavior retains Start, with a cooldown after transient Start failures.",
       "theme": {
@@ -39489,7 +39665,7 @@
       "type": "frame",
       "id": "EcoGD",
       "x": 4920,
-      "y": 90856,
+      "y": 91265,
       "name": "Screen/Share Link — Starting",
       "theme": {
         "semantic": "dark"
@@ -39601,7 +39777,7 @@
       "type": "frame",
       "id": "epZO2",
       "x": 6560,
-      "y": 90856,
+      "y": 91265,
       "name": "Screen/Share Link — Invalid or expired",
       "theme": {
         "semantic": "dark"
@@ -45092,7 +45268,7 @@
       "type": "frame",
       "id": "nNGDX",
       "x": 1640,
-      "y": 77915,
+      "y": 78259,
       "name": "Screen/Admin Settings — Authentication (No OIDC mappings)",
       "theme": {
         "semantic": "dark"
@@ -46640,7 +46816,7 @@
       "type": "note",
       "id": "m8wjom",
       "x": 0,
-      "y": 79631,
+      "y": 79975,
       "name": "Note — Helm admin mapping banner is conditional",
       "width": 640,
       "height": 0,
@@ -46650,7 +46826,7 @@
       "type": "note",
       "id": "I96cW",
       "x": 0,
-      "y": 80011,
+      "y": 80355,
       "name": "Note — Confirm Admin Mapping trigger rule",
       "width": 560,
       "height": 0,
@@ -46660,7 +46836,7 @@
       "type": "frame",
       "id": "QgW58",
       "x": 3280,
-      "y": 77915,
+      "y": 78259,
       "name": "Screen/Admin Settings — Authentication (Save rejected)",
       "theme": {
         "semantic": "dark"
@@ -48197,7 +48373,7 @@
       "type": "note",
       "id": "R6iab",
       "x": 3280,
-      "y": 79655,
+      "y": 79999,
       "name": "Note — Role mapping overrides error states",
       "width": 700,
       "height": 0,
@@ -48207,7 +48383,7 @@
       "type": "frame",
       "id": "zqzr4",
       "x": 4920,
-      "y": 77915,
+      "y": 78259,
       "name": "Screen/Admin Settings — Authentication (Admin mapping warning)",
       "theme": {
         "semantic": "dark"
@@ -50082,7 +50258,7 @@
       "type": "note",
       "id": "x71Cb",
       "x": 4920,
-      "y": 80483,
+      "y": 80827,
       "name": "Note — FR-015 confirm step on this surface",
       "width": 640,
       "height": 0,
@@ -69943,7 +70119,15 @@
           "ref": "fjQjb",
           "name": "loginL",
           "width": "fill_container",
-          "height": "fill_container"
+          "height": "fill_container",
+          "children": [
+            {
+              "id": "rv6KO",
+              "type": "ref",
+              "ref": "S0P4bl",
+              "name": "loginCard"
+            }
+          ]
         },
         {
           "id": "YTPcQ",
@@ -77571,7 +77755,7 @@
       },
       "clip": true,
       "width": 1440,
-      "height": 2000,
+      "height": 2344,
       "fill": "$background/background",
       "children": [
         {
@@ -77793,6 +77977,13 @@
                       "layout": "vertical",
                       "gap": 16,
                       "children": [
+                        {
+                          "id": "Ic8dQ",
+                          "type": "ref",
+                          "ref": "Ii9Hy",
+                          "name": "Language Card",
+                          "width": "fill_container"
+                        },
                         {
                           "id": "T6d1Wb",
                           "type": "ref",
@@ -79006,7 +79197,7 @@
       },
       "clip": true,
       "width": 1440,
-      "height": 2146,
+      "height": 2490,
       "fill": "$background/background",
       "children": [
         {
@@ -79243,6 +79434,13 @@
                       "layout": "vertical",
                       "gap": 16,
                       "children": [
+                        {
+                          "id": "l2Ffjl",
+                          "type": "ref",
+                          "ref": "Ii9Hy",
+                          "name": "Language Card",
+                          "width": "fill_container"
+                        },
                         {
                           "id": "eT135",
                           "type": "ref",
@@ -96057,7 +96255,7 @@
       "type": "frame",
       "id": "Ne5TA",
       "x": 0,
-      "y": 92156,
+      "y": 92565,
       "name": "Screen/Not Found",
       "theme": {
         "semantic": "dark"
@@ -96216,7 +96414,7 @@
       "type": "frame",
       "id": "FBiMN",
       "x": 3280,
-      "y": 90856,
+      "y": 91265,
       "name": "Screen/Share Link — Asleep (Start cooldown)",
       "theme": {
         "semantic": "dark"
@@ -96496,7 +96694,7 @@
       "type": "frame",
       "id": "l7TRz9",
       "x": 1640,
-      "y": 86824,
+      "y": 87233,
       "name": "Screen/Admin Settings — Telemetry (default)",
       "theme": {
         "semantic": "dark"
@@ -97219,7 +97417,7 @@
       "type": "frame",
       "id": "r0heh",
       "x": 3280,
-      "y": 86824,
+      "y": 87233,
       "name": "Screen/Admin Settings — Telemetry (custom)",
       "theme": {
         "semantic": "dark"
@@ -97788,7 +97986,7 @@
       "type": "frame",
       "id": "cDiNb",
       "x": 4920,
-      "y": 86824,
+      "y": 87233,
       "name": "Screen/Admin Settings — Telemetry (bundled)",
       "theme": {
         "semantic": "dark"
@@ -98331,7 +98529,7 @@
       "type": "frame",
       "id": "DBQyF",
       "x": 6560,
-      "y": 86824,
+      "y": 87233,
       "name": "Screen/Admin Settings — Telemetry (disabled)",
       "theme": {
         "semantic": "dark"
@@ -98866,7 +99064,7 @@
       "type": "frame",
       "id": "K5XinZ",
       "x": 8200,
-      "y": 86824,
+      "y": 87233,
       "name": "Screen/Admin Settings — Telemetry (none)",
       "theme": {
         "semantic": "dark"
@@ -99399,7 +99597,7 @@
       "type": "frame",
       "id": "yrxK2",
       "x": 9840,
-      "y": 86824,
+      "y": 87233,
       "name": "Screen/Admin Settings — Telemetry (Reset ID confirm)",
       "theme": {
         "semantic": "dark"
@@ -102273,7 +102471,7 @@
       "type": "frame",
       "id": "D9QYZ",
       "x": 1640,
-      "y": 81624,
+      "y": 81968,
       "name": "Screen/Standalone — Settings · Backup destinations",
       "context": "PR #630 standalone installation. No local Kubernetes metadata or local workload fallback. Master-key storage and offline rotation have no dashboard controls.",
       "theme": {
@@ -102556,7 +102754,7 @@
       "type": "frame",
       "id": "l64bd",
       "x": 1640,
-      "y": 82924,
+      "y": 83268,
       "name": "Screen/Standalone — Settings · Module sources",
       "context": "PR #630 standalone installation. No local Kubernetes metadata or local workload fallback. Master-key storage and offline rotation have no dashboard controls.",
       "theme": {
@@ -102839,7 +103037,7 @@
       "type": "frame",
       "id": "Uzzje",
       "x": 1640,
-      "y": 88256,
+      "y": 88665,
       "name": "Screen/Standalone — Settings · Updates",
       "context": "PR #630 standalone installation. No local Kubernetes metadata or local workload fallback. Master-key storage and offline rotation have no dashboard controls.",
       "theme": {
@@ -103099,7 +103297,7 @@
       "type": "frame",
       "id": "FOVMf",
       "x": 1640,
-      "y": 89556,
+      "y": 89965,
       "name": "Screen/Standalone — Settings · About",
       "context": "Panel build version comes from authenticated installation metadata; standalone About does not fetch local Kubernetes metadata.",
       "theme": {
@@ -110012,7 +110210,7 @@
       "y": 0,
       "name": "Gameplane: App Components",
       "width": 4668,
-      "height": 9022,
+      "height": 9498,
       "fill": "#00000000",
       "layout": "none",
       "children": [
@@ -114256,6 +114454,29 @@
               "fontFamily": "$typography/font-sans",
               "fontSize": 11,
               "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "Xteul",
+              "layoutPosition": "absolute",
+              "x": 0,
+              "y": 12,
+              "name": "loginLangRow",
+              "width": 420,
+              "padding": [
+                0,
+                12
+              ],
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "Rn3e2",
+                  "type": "ref",
+                  "ref": "z3mtgc",
+                  "name": "langPicker"
+                }
+              ]
             }
           ]
         },
@@ -114468,6 +114689,29 @@
                   "fontFamily": "$typography/font-sans",
                   "fontSize": 12,
                   "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qFvPq",
+              "layoutPosition": "absolute",
+              "x": 0,
+              "y": 12,
+              "name": "shareLangRow",
+              "width": 440,
+              "padding": [
+                0,
+                12
+              ],
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "grgNP",
+                  "type": "ref",
+                  "ref": "z3mtgc",
+                  "name": "langPicker"
                 }
               ]
             }
@@ -122624,6 +122868,29 @@
               "fontFamily": "$typography/font-sans",
               "fontSize": 11,
               "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "tAIQI",
+              "layoutPosition": "absolute",
+              "x": 0,
+              "y": 12,
+              "name": "loginLangRow",
+              "width": 420,
+              "padding": [
+                0,
+                12
+              ],
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "H9PRsa",
+                  "type": "ref",
+                  "ref": "z3mtgc",
+                  "name": "langPicker"
+                }
+              ]
             }
           ]
         },
@@ -126551,6 +126818,408 @@
           "fontFamily": "Inter",
           "fontSize": 11,
           "fontWeight": "500"
+        },
+        {
+          "type": "frame",
+          "id": "z3mtgc",
+          "x": 3588,
+          "y": 2089,
+          "name": "Gameplane/Language Picker Compact",
+          "reusable": true,
+          "height": 32,
+          "cornerRadius": "$radius/3xl",
+          "gap": 6,
+          "padding": [
+            6,
+            10
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "RJSp4",
+              "name": "lpGlobe",
+              "width": 14,
+              "height": 14,
+              "icon": "globe",
+              "library": "lucide",
+              "fill": "$muted"
+            },
+            {
+              "type": "text",
+              "id": "h0q9DF",
+              "name": "lpLabel",
+              "fill": "$foreground/foreground",
+              "content": "English",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 13,
+              "fontWeight": "500"
+            },
+            {
+              "type": "icon",
+              "id": "D2Bk2",
+              "name": "lpChevron",
+              "width": 14,
+              "height": 14,
+              "icon": "chevron-down",
+              "library": "lucide",
+              "fill": "$muted"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "S0P4bl",
+          "x": 3741,
+          "y": 2089,
+          "name": "Gameplane/Login Card With Language",
+          "reusable": true,
+          "width": 420,
+          "children": [
+            {
+              "id": "wEzYX",
+              "type": "ref",
+              "ref": "J14ME",
+              "name": "loginCard",
+              "width": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "JnUVw",
+              "layoutPosition": "absolute",
+              "x": 0,
+              "y": 12,
+              "name": "loginLangRow",
+              "width": 420,
+              "padding": [
+                0,
+                12
+              ],
+              "justifyContent": "end",
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "f9nNEn",
+                  "type": "ref",
+                  "ref": "z3mtgc",
+                  "name": "langPicker"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Ii9Hy",
+          "x": 160,
+          "y": 8910,
+          "name": "Gameplane/Language Card",
+          "reusable": true,
+          "width": 400,
+          "fill": "$surface/surface",
+          "cornerRadius": "$radius/3xl",
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#0000000A",
+            "offset": {
+              "x": 0,
+              "y": 2
+            },
+            "blur": 4
+          },
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 16,
+          "children": [
+            {
+              "id": "bjbtk",
+              "type": "ref",
+              "ref": "FRpsu",
+              "name": "Card Header",
+              "width": "fill_container",
+              "padding": [
+                20,
+                20,
+                16,
+                20
+              ],
+              "gap": 4,
+              "descendants": {
+                "fuZHB": {
+                  "content": "Language"
+                },
+                "BZG9o": {
+                  "content": "Choose the language of the dashboard. Your choice is saved to your account and follows you to every browser and device.",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "Oqax2",
+              "name": "Card Fields",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": [
+                0,
+                20,
+                20,
+                20
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "dxtzd",
+                  "name": "tsLangList",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "i70dwB",
+                      "name": "tsLangAuto",
+                      "width": "fill_container",
+                      "fill": "$field/background",
+                      "cornerRadius": 10,
+                      "stroke": "$border/border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "ak3ix",
+                          "type": "ref",
+                          "ref": "z2mDh",
+                          "name": "tsLangAuto Radio",
+                          "descendants": {
+                            "ocqPf": {
+                              "content": "Automatic (browser language)",
+                              "fontWeight": "500"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "y1BzjR",
+                      "name": "tsLangEn",
+                      "width": "fill_container",
+                      "fill": "$field/background",
+                      "cornerRadius": 10,
+                      "stroke": "$accent/accent",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "dS2Rd",
+                          "type": "ref",
+                          "ref": "T8ZnV",
+                          "name": "tsLangEn Radio",
+                          "descendants": {
+                            "jAx6p": {
+                              "content": "English",
+                              "fontWeight": "500"
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "DK9Dy",
+                          "name": "tsLangEn Completeness",
+                          "fill": "$muted",
+                          "content": "100% translated",
+                          "fontFamily": "$typography/font-sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "l9qY7",
+                      "name": "tsLangFr",
+                      "width": "fill_container",
+                      "fill": "$field/background",
+                      "cornerRadius": 10,
+                      "stroke": "$border/border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "EPK0Z",
+                          "type": "ref",
+                          "ref": "z2mDh",
+                          "name": "tsLangFr Radio",
+                          "descendants": {
+                            "ocqPf": {
+                              "content": "Français",
+                              "fontWeight": "500"
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "A3u1z",
+                          "name": "tsLangFr Completeness",
+                          "fill": "$muted",
+                          "content": "100% translated",
+                          "fontFamily": "$typography/font-sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "z5wdL",
+                      "name": "tsLangDe",
+                      "width": "fill_container",
+                      "fill": "$field/background",
+                      "cornerRadius": 10,
+                      "stroke": "$border/border",
+                      "strokeWidth": 1,
+                      "strokeAlignment": "inner",
+                      "gap": 12,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "f0Hxt",
+                          "type": "ref",
+                          "ref": "z2mDh",
+                          "name": "tsLangDe Radio",
+                          "descendants": {
+                            "ocqPf": {
+                              "content": "Deutsch",
+                              "fontWeight": "500"
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "tmRkc",
+                          "name": "tsLangDe Completeness",
+                          "fill": "$muted",
+                          "content": "86% translated",
+                          "fontFamily": "$typography/font-sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ms9FY",
+                  "name": "tsLangNote",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "GwpwV",
+                      "name": "tsLangNoteIcon",
+                      "width": 14,
+                      "height": 14,
+                      "icon": "info",
+                      "library": "lucide",
+                      "fill": "$muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "iItSQ",
+                      "name": "tsLangNoteText",
+                      "fill": "$muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Text that has not been translated yet is shown in English.",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TSXYO",
+          "x": 2712,
+          "y": 3109,
+          "name": "Gameplane/Sink Language Row",
+          "reusable": true,
+          "gap": 8,
+          "padding": [
+            6,
+            0,
+            0,
+            0
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "a2jUf",
+              "name": "sinkLangLabel",
+              "fill": "$muted",
+              "content": "Language",
+              "fontFamily": "$typography/font-sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "id": "JeJkG",
+              "type": "ref",
+              "ref": "AT7ya",
+              "name": "sinkLangSelect",
+              "width": 200,
+              "height": 32,
+              "padding": [
+                6,
+                10
+              ],
+              "descendants": {
+                "cFsFk": {
+                  "content": "English",
+                  "fill": "$foreground/foreground",
+                  "fontSize": 13
+                }
+              }
+            }
+          ]
         }
       ]
     },
@@ -127028,7 +127697,7 @@
       "type": "note",
       "id": "QZcdP",
       "x": -1400,
-      "y": 77915,
+      "y": 78259,
       "name": "Row 48 · Admin settings · Authentication",
       "width": 1000,
       "height": 240,
@@ -127038,7 +127707,7 @@
       "type": "note",
       "id": "i0LdOM",
       "x": -1400,
-      "y": 81624,
+      "y": 81968,
       "name": "Row 49 · Admin settings · Backup destinations",
       "width": 1000,
       "height": 240,
@@ -127048,7 +127717,7 @@
       "type": "note",
       "id": "su0IR",
       "x": -1400,
-      "y": 82924,
+      "y": 83268,
       "name": "Row 50 · Admin settings · Module sources",
       "width": 1000,
       "height": 240,
@@ -127058,7 +127727,7 @@
       "type": "note",
       "id": "T40Bd",
       "x": -1400,
-      "y": 84224,
+      "y": 84568,
       "name": "Row 51 · Admin settings · Mod registries",
       "width": 1000,
       "height": 240,
@@ -127068,7 +127737,7 @@
       "type": "note",
       "id": "RGitr",
       "x": -1400,
-      "y": 85524,
+      "y": 85868,
       "name": "Row 52 · Admin settings · Notifications",
       "width": 1000,
       "height": 240,
@@ -127078,7 +127747,7 @@
       "type": "note",
       "id": "W6YgwP",
       "x": -1400,
-      "y": 86824,
+      "y": 87233,
       "name": "Row 53 · Admin settings · Telemetry",
       "width": 1000,
       "height": 240,
@@ -127088,7 +127757,7 @@
       "type": "note",
       "id": "Mfaof",
       "x": -1400,
-      "y": 88256,
+      "y": 88665,
       "name": "Row 54 · Admin settings · Updates",
       "width": 1000,
       "height": 240,
@@ -127098,7 +127767,7 @@
       "type": "note",
       "id": "SeCFN",
       "x": -1400,
-      "y": 89556,
+      "y": 89965,
       "name": "Row 55 · Admin settings · About",
       "width": 1000,
       "height": 240,
@@ -127108,7 +127777,7 @@
       "type": "note",
       "id": "FtgQt",
       "x": -1400,
-      "y": 90856,
+      "y": 91265,
       "name": "Row 56 · Share link (public)",
       "width": 1000,
       "height": 240,
@@ -127118,11 +127787,1193 @@
       "type": "note",
       "id": "R2nH3",
       "x": -1400,
-      "y": 92156,
+      "y": 92565,
       "name": "Row 57 · Not found",
       "width": 1000,
       "height": 240,
       "content": "57 · Not found"
+    },
+    {
+      "type": "frame",
+      "id": "GsofJ",
+      "x": 6560,
+      "y": 10222,
+      "name": "Screen/Login — Language menu open",
+      "theme": {
+        "semantic": "dark"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 900,
+      "fill": "$background/background",
+      "children": [
+        {
+          "id": "dnFzb",
+          "type": "ref",
+          "ref": "fjQjb",
+          "name": "loginL",
+          "width": "fill_container",
+          "height": "fill_container",
+          "children": [
+            {
+              "id": "C3wPmq",
+              "type": "ref",
+              "ref": "S0P4bl",
+              "name": "loginCard"
+            }
+          ]
+        },
+        {
+          "id": "Z1Dlq",
+          "type": "ref",
+          "ref": "T8Hug",
+          "name": "loginR",
+          "width": "fill_container",
+          "height": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "Xdxg9",
+          "layoutPosition": "absolute",
+          "x": 388,
+          "y": 184,
+          "name": "langMenu",
+          "width": 170,
+          "fill": "$surface/surface",
+          "cornerRadius": "$radius/md",
+          "stroke": "$border/border",
+          "strokeWidth": 1,
+          "strokeAlignment": "inner",
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#00000059",
+            "offset": {
+              "x": 0,
+              "y": 4
+            },
+            "blur": 12
+          },
+          "layout": "vertical",
+          "padding": 4,
+          "children": [
+            {
+              "id": "Wh2w2",
+              "type": "ref",
+              "ref": "B5sYje",
+              "name": "langItemEnglish",
+              "width": "fill_container",
+              "descendants": {
+                "ghUsw": {
+                  "icon": "check"
+                },
+                "bpSQ7": {
+                  "content": "English",
+                  "fontFamily": "$typography/font-sans"
+                }
+              }
+            },
+            {
+              "id": "FxQal",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "langItemFrancais",
+              "width": "fill_container",
+              "descendants": {
+                "Sr2Q5": {
+                  "opacity": 0
+                },
+                "Ra9NK": {
+                  "content": "Français"
+                }
+              }
+            },
+            {
+              "id": "XwrsI",
+              "type": "ref",
+              "ref": "W8XiN",
+              "name": "langItemDeutsch",
+              "width": "fill_container",
+              "descendants": {
+                "Sr2Q5": {
+                  "opacity": 0
+                },
+                "Ra9NK": {
+                  "content": "Deutsch"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "lCTci",
+      "x": 3280,
+      "y": 75369,
+      "name": "Screen/Mobile — Theme Settings · Language",
+      "theme": {
+        "semantic": "dark"
+      },
+      "clip": true,
+      "width": 390,
+      "height": 972,
+      "fill": "$background/background",
+      "layout": "vertical",
+      "children": [
+        {
+          "id": "IVqV8",
+          "type": "ref",
+          "ref": "fGbVF",
+          "name": "Mobile TopBar",
+          "width": "fill_container",
+          "descendants": {
+            "WOloN": {
+              "content": "Settings"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "p8758s",
+          "name": "Body",
+          "width": "fill_container",
+          "fill": "$background/background",
+          "layout": "vertical",
+          "gap": 16,
+          "padding": 16,
+          "children": [
+            {
+              "id": "gBeWz",
+              "type": "ref",
+              "ref": "xCDF7",
+              "name": "Page Header",
+              "width": "fill_container",
+              "descendants": {
+                "fLVEl": {
+                  "width": "fill_container"
+                },
+                "spCmk": {
+                  "content": "Theme & Appearance",
+                  "fontSize": 20
+                },
+                "VbHwU": {
+                  "content": "Personal theme presets, colors, custom CSS, and theme portability.",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container"
+                },
+                "TgdLz": {
+                  "enabled": false
+                }
+              }
+            },
+            {
+              "id": "ngv6t",
+              "type": "ref",
+              "ref": "Mp7Ep",
+              "name": "Settings Nav",
+              "width": "fill_container",
+              "descendants": {
+                "eIjoV": {
+                  "fill": "#00000000"
+                },
+                "XuGUZ": {
+                  "fill": "$muted"
+                },
+                "DpMnt": {
+                  "fill": "$muted"
+                },
+                "vbQ98": {
+                  "fill": "$surface/secondary"
+                },
+                "dY0be": {
+                  "fill": "$foreground/foreground"
+                },
+                "qeqG6": {
+                  "fill": "$foreground/foreground"
+                }
+              }
+            },
+            {
+              "id": "SUO59",
+              "type": "ref",
+              "ref": "Ii9Hy",
+              "name": "Language Card",
+              "width": "fill_container"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "SUcad",
+      "x": 1640,
+      "y": 85868,
+      "name": "Screen/Admin Settings — Notifications (Add sink)",
+      "theme": {
+        "semantic": "dark"
+      },
+      "clip": true,
+      "width": 1440,
+      "height": 965,
+      "fill": "$background/background",
+      "children": [
+        {
+          "id": "u7xPV3",
+          "type": "ref",
+          "ref": "kKFX9",
+          "height": "fill_container",
+          "descendants": {
+            "iTbd8": {
+              "fill": "#00000000"
+            },
+            "iTbd8/ghUsw": {
+              "fill": "$foreground/foreground"
+            },
+            "iTbd8/bpSQ7": {
+              "fill": "$foreground/foreground"
+            },
+            "ya5KB": {
+              "fill": "$accent/soft"
+            },
+            "ya5KB/Sr2Q5": {
+              "fill": "$accent/soft-foreground"
+            },
+            "ya5KB/Ra9NK": {
+              "fill": "$accent/soft-foreground"
+            }
+          }
+        },
+        {
+          "type": "frame",
+          "id": "ibrj8",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$background/background",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "EDkI7",
+              "type": "ref",
+              "ref": "gu5WY",
+              "width": "fill_container",
+              "descendants": {
+                "Gl7AY": {
+                  "content": "Settings"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "OiOjg",
+              "name": "Body",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 24,
+              "padding": 24,
+              "children": [
+                {
+                  "id": "vjnZt",
+                  "type": "ref",
+                  "ref": "xCDF7",
+                  "width": "fill_container",
+                  "descendants": {
+                    "spCmk": {
+                      "content": "Admin settings"
+                    },
+                    "VbHwU": {
+                      "content": "Platform-wide configuration for this Gameplane instance."
+                    },
+                    "TgdLz": {
+                      "enabled": false
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "LuKjc",
+                  "name": "Settings Layout",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "gap": 24,
+                  "children": [
+                    {
+                      "id": "JFuM8",
+                      "type": "ref",
+                      "ref": "Mp7Ep",
+                      "name": "Settings Nav",
+                      "width": 220,
+                      "descendants": {
+                        "eIjoV": {
+                          "fill": "#00000000"
+                        },
+                        "XuGUZ": {
+                          "fill": "$muted"
+                        },
+                        "DpMnt": {
+                          "fill": "$muted"
+                        },
+                        "KSTX4": {
+                          "fill": "$surface/secondary"
+                        },
+                        "EdwLK": {
+                          "fill": "$foreground/foreground"
+                        },
+                        "IT8Ch": {
+                          "fill": "$foreground/foreground"
+                        }
+                      }
+                    },
+                    {
+                      "id": "mXm3N",
+                      "type": "ref",
+                      "ref": "XDZ0E",
+                      "name": "Settings Panel",
+                      "width": "fill_container",
+                      "padding": 0,
+                      "gap": 0,
+                      "cornerRadius": 10,
+                      "height": "fit_content",
+                      "clip": false,
+                      "children": [
+                        {
+                          "id": "WKvCG",
+                          "type": "ref",
+                          "ref": "FRpsu",
+                          "width": "fill_container",
+                          "padding": [
+                            20,
+                            20,
+                            16,
+                            20
+                          ],
+                          "descendants": {
+                            "fuZHB": {
+                              "content": "Notifications"
+                            },
+                            "BZG9o": {
+                              "content": "Deliver server health and backup/restore events to Discord, Slack, ntfy, email, or webhooks. Credentials are entered when adding a sink and stored as a labelled Secret in the control-plane namespace.",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container"
+                            }
+                          }
+                        },
+                        {
+                          "id": "R7cnBg",
+                          "type": "ref",
+                          "ref": "I9ZPb",
+                          "width": "fill_container",
+                          "padding": [
+                            0,
+                            20
+                          ],
+                          "gap": 16,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "s0Ous",
+                              "name": "sinkList",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "V4XO5S",
+                                  "name": "sinkDiscord",
+                                  "width": "fill_container",
+                                  "stroke": "$border/border",
+                                  "strokeWidth": {
+                                    "bottom": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "gap": 12,
+                                  "padding": [
+                                    12,
+                                    0
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "ANzOV",
+                                      "name": "iconBox",
+                                      "width": 32,
+                                      "height": 32,
+                                      "fill": "$surface/secondary",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "F5NvRN",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "messages-square",
+                                          "library": "lucide",
+                                          "fill": "$muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "CwaWK",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "Rm5r7",
+                                          "fill": "$foreground/foreground",
+                                          "content": "ops-discord",
+                                          "fontFamily": "$typography/font-sans",
+                                          "fontSize": 14,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "e40KMi",
+                                          "fill": "$muted",
+                                          "content": "discord · Secret: gameplane-notify-ops-discord",
+                                          "fontFamily": "$typography/font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "RmQdP",
+                                          "name": "sinkLangRow",
+                                          "gap": 8,
+                                          "padding": [
+                                            6,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "A8YOF",
+                                              "name": "sinkLangLabel",
+                                              "fill": "$muted",
+                                              "content": "Language",
+                                              "fontFamily": "$typography/font-sans",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "id": "OlQKC",
+                                              "type": "ref",
+                                              "ref": "AT7ya",
+                                              "name": "sinkLangSelect",
+                                              "width": 200,
+                                              "height": 32,
+                                              "padding": [
+                                                6,
+                                                10
+                                              ],
+                                              "descendants": {
+                                                "cFsFk": {
+                                                  "content": "Français",
+                                                  "fill": "$foreground/foreground",
+                                                  "fontSize": 13
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "kU8X3",
+                                      "name": "eventChips",
+                                      "gap": 6,
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "id": "OfyxC",
+                                          "type": "ref",
+                                          "ref": "KmZnF",
+                                          "descendants": {
+                                            "xZ9ah": {
+                                              "content": "server.unhealthy"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "t2URzN",
+                                          "type": "ref",
+                                          "ref": "KmZnF",
+                                          "descendants": {
+                                            "xZ9ah": {
+                                              "content": "backup.failed"
+                                            }
+                                          }
+                                        },
+                                        {
+                                          "id": "eLxVl",
+                                          "type": "ref",
+                                          "ref": "KmZnF",
+                                          "descendants": {
+                                            "xZ9ah": {
+                                              "content": "+2"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "K8cB0H",
+                                      "type": "ref",
+                                      "ref": "FIB65",
+                                      "name": "btnSendTest",
+                                      "height": 32,
+                                      "descendants": {
+                                        "K8d1zg": {
+                                          "enabled": false
+                                        },
+                                        "zMNkR": {
+                                          "content": "Send test"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "qawTW",
+                                      "type": "ref",
+                                      "ref": "hl7R3",
+                                      "name": "switchOn"
+                                    },
+                                    {
+                                      "id": "PH6Ba",
+                                      "type": "ref",
+                                      "ref": "j9sz4",
+                                      "name": "btnDelete",
+                                      "width": 36,
+                                      "height": 36,
+                                      "descendants": {
+                                        "uQ9KQ": {
+                                          "icon": "trash-2"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "c12AJZ",
+                                  "name": "sinkWebhook",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "padding": [
+                                    12,
+                                    0
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "Z8bOs5",
+                                      "name": "iconBox",
+                                      "width": 32,
+                                      "height": 32,
+                                      "fill": "$surface/secondary",
+                                      "cornerRadius": 6,
+                                      "justifyContent": "center",
+                                      "alignItems": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "id": "U5ChF",
+                                          "width": 16,
+                                          "height": 16,
+                                          "icon": "webhook",
+                                          "library": "lucide",
+                                          "fill": "$muted"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "nh7Lz",
+                                      "width": "fill_container",
+                                      "layout": "vertical",
+                                      "gap": 2,
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "DwbkD",
+                                          "fill": "$foreground/foreground",
+                                          "content": "pager",
+                                          "fontFamily": "$typography/font-sans",
+                                          "fontSize": 14,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "LXfD4",
+                                          "fill": "$muted",
+                                          "content": "webhook · no Secret configured",
+                                          "fontFamily": "$typography/font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "wO9SK",
+                                          "name": "sinkLangRow",
+                                          "gap": 8,
+                                          "padding": [
+                                            6,
+                                            0,
+                                            0,
+                                            0
+                                          ],
+                                          "alignItems": "center",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "sGPi6",
+                                              "name": "sinkLangLabel",
+                                              "fill": "$muted",
+                                              "content": "Language",
+                                              "fontFamily": "$typography/font-sans",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            },
+                                            {
+                                              "id": "kcvh6",
+                                              "type": "ref",
+                                              "ref": "AT7ya",
+                                              "name": "sinkLangSelect",
+                                              "width": 200,
+                                              "height": 32,
+                                              "padding": [
+                                                6,
+                                                10
+                                              ],
+                                              "descendants": {
+                                                "cFsFk": {
+                                                  "content": "Instance default",
+                                                  "fill": "$foreground/foreground",
+                                                  "fontSize": 13
+                                                }
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "TLwtl",
+                                      "type": "ref",
+                                      "ref": "eg3vM",
+                                      "name": "needsSecret",
+                                      "descendants": {
+                                        "S2JwD": {
+                                          "content": "Needs secret"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "H7CPss",
+                                      "type": "ref",
+                                      "ref": "FIB65",
+                                      "name": "btnSendTest",
+                                      "height": 32,
+                                      "opacity": 0.5,
+                                      "descendants": {
+                                        "K8d1zg": {
+                                          "enabled": false
+                                        },
+                                        "zMNkR": {
+                                          "content": "Send test"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "id": "wRuSu",
+                                      "type": "ref",
+                                      "ref": "rh2QH",
+                                      "name": "switchOff"
+                                    },
+                                    {
+                                      "id": "K5AIPm",
+                                      "type": "ref",
+                                      "ref": "j9sz4",
+                                      "name": "btnDelete",
+                                      "width": 36,
+                                      "height": 36,
+                                      "descendants": {
+                                        "uQ9KQ": {
+                                          "icon": "trash-2"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "g6ucq9",
+                              "type": "ref",
+                              "ref": "FIB65",
+                              "name": "btnAddSink",
+                              "enabled": false,
+                              "descendants": {
+                                "K8d1zg": {
+                                  "icon": "plus"
+                                },
+                                "zMNkR": {
+                                  "content": "Add sink"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "G32C8k",
+                          "name": "addSinkForm",
+                          "width": "fill_container",
+                          "fill": "$surface/surface",
+                          "cornerRadius": 8,
+                          "stroke": "$border/border",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "xiPUh",
+                              "name": "addSinkTitle",
+                              "fill": "$foreground/foreground",
+                              "content": "Add sink",
+                              "fontFamily": "$typography/font-sans",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "hdxRa",
+                              "name": "addSinkRow1",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "children": [
+                                {
+                                  "id": "w5juv",
+                                  "type": "ref",
+                                  "ref": "aRqX6",
+                                  "name": "fieldSinkName",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "ANxU1": {
+                                      "content": "Name"
+                                    },
+                                    "hokJ3": {
+                                      "content": "team-alerts",
+                                      "fill": "$foreground/foreground"
+                                    },
+                                    "OiyAM": {
+                                      "width": "fill_container"
+                                    },
+                                    "wolxN": {
+                                      "content": "A short lowercase identifier (letters, digits, and dashes) used to name the sink and its Secret — like team-alerts.",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container"
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "kPqOQ",
+                                  "name": "fieldSinkKind",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "ll2hs",
+                                      "name": "fieldSinkKind Label",
+                                      "fill": "$foreground/foreground",
+                                      "content": "Kind",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 14,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "id": "g5T85",
+                                      "type": "ref",
+                                      "ref": "AT7ya",
+                                      "name": "fieldSinkKind Select",
+                                      "width": "fill_container",
+                                      "height": 40,
+                                      "descendants": {
+                                        "cFsFk": {
+                                          "content": "discord",
+                                          "fill": "$foreground/foreground"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "IiYTE",
+                              "name": "addSinkRow2",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "children": [
+                                {
+                                  "id": "Ykt5A",
+                                  "type": "ref",
+                                  "ref": "aRqX6",
+                                  "name": "fieldSinkUrl",
+                                  "width": "fill_container",
+                                  "descendants": {
+                                    "ANxU1": {
+                                      "content": "Webhook URL"
+                                    },
+                                    "hokJ3": {
+                                      "content": "https://discord.com/api/webhooks/…",
+                                      "fill": "$field/placeholder"
+                                    },
+                                    "OiyAM": {
+                                      "enabled": false
+                                    }
+                                  }
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "LZrw9",
+                                  "name": "fieldSinkLanguage",
+                                  "width": "fill_container",
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "Tc79Z",
+                                      "name": "fieldSinkLanguage Label",
+                                      "fill": "$foreground/foreground",
+                                      "content": "Language",
+                                      "fontFamily": "$typography/font-sans",
+                                      "fontSize": 14,
+                                      "fontWeight": "500"
+                                    },
+                                    {
+                                      "id": "Te0jh",
+                                      "type": "ref",
+                                      "ref": "AT7ya",
+                                      "name": "fieldSinkLanguage Select",
+                                      "width": "fill_container",
+                                      "height": 40,
+                                      "descendants": {
+                                        "cFsFk": {
+                                          "content": "Instance default",
+                                          "fill": "$foreground/foreground"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "GTlqd",
+                                      "name": "fieldSinkLanguage Hint Wrap",
+                                      "width": "fill_container",
+                                      "padding": [
+                                        0,
+                                        4
+                                      ],
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "K3o9SI",
+                                          "name": "fieldSinkLanguage Hint",
+                                          "fill": "$muted",
+                                          "textGrowth": "fixed-width",
+                                          "width": "fill_container",
+                                          "content": "Notifications sent to this sink are written in this language.",
+                                          "fontFamily": "$typography/font-sans",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "OeG30",
+                              "name": "addSinkEvents",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "eA3U8",
+                                  "name": "addSinkEventsLabel",
+                                  "fill": "$muted",
+                                  "content": "Events (failures and recovery are pre-selected)",
+                                  "fontFamily": "$typography/font-sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "bhuSi",
+                                  "name": "addSinkEventRow",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "YNb9a",
+                                      "name": "eventCell server.unhealthy",
+                                      "width": "fill_container",
+                                      "children": [
+                                        {
+                                          "id": "TbhT4",
+                                          "type": "ref",
+                                          "ref": "v6WNtR",
+                                          "name": "event server.unhealthy",
+                                          "descendants": {
+                                            "x7vJxB": {
+                                              "content": "server.unhealthy",
+                                              "fontFamily": "$typography/font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "noGqI",
+                                      "name": "eventCell server.recovered",
+                                      "width": "fill_container",
+                                      "children": [
+                                        {
+                                          "id": "CAJ4z",
+                                          "type": "ref",
+                                          "ref": "v6WNtR",
+                                          "name": "event server.recovered",
+                                          "descendants": {
+                                            "x7vJxB": {
+                                              "content": "server.recovered",
+                                              "fontFamily": "$typography/font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "tVvHJ",
+                                  "name": "addSinkEventRow",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "wtIK3",
+                                      "name": "eventCell backup.failed",
+                                      "width": "fill_container",
+                                      "children": [
+                                        {
+                                          "id": "WX8fT",
+                                          "type": "ref",
+                                          "ref": "v6WNtR",
+                                          "name": "event backup.failed",
+                                          "descendants": {
+                                            "x7vJxB": {
+                                              "content": "backup.failed",
+                                              "fontFamily": "$typography/font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "HD3VO",
+                                      "name": "eventCell backup.succeeded",
+                                      "width": "fill_container",
+                                      "children": [
+                                        {
+                                          "id": "YHs1v",
+                                          "type": "ref",
+                                          "ref": "aOvvm",
+                                          "name": "event backup.succeeded",
+                                          "descendants": {
+                                            "rKaQI": {
+                                              "content": "backup.succeeded",
+                                              "fontFamily": "$typography/font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "z3qLuU",
+                                  "name": "addSinkEventRow",
+                                  "width": "fill_container",
+                                  "gap": 12,
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "w2SN1t",
+                                      "name": "eventCell restore.failed",
+                                      "width": "fill_container",
+                                      "children": [
+                                        {
+                                          "id": "CRKen",
+                                          "type": "ref",
+                                          "ref": "v6WNtR",
+                                          "name": "event restore.failed",
+                                          "descendants": {
+                                            "x7vJxB": {
+                                              "content": "restore.failed",
+                                              "fontFamily": "$typography/font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "Z9fxO",
+                                      "name": "eventCell restore.succeeded",
+                                      "width": "fill_container",
+                                      "children": [
+                                        {
+                                          "id": "Oonk6",
+                                          "type": "ref",
+                                          "ref": "aOvvm",
+                                          "name": "event restore.succeeded",
+                                          "descendants": {
+                                            "rKaQI": {
+                                              "content": "restore.succeeded",
+                                              "fontFamily": "$typography/font-mono",
+                                              "fontSize": 12,
+                                              "fontWeight": "normal"
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ZjxPR",
+                              "name": "addSinkActions",
+                              "width": "fill_container",
+                              "gap": 8,
+                              "justifyContent": "end",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "fBvOO",
+                                  "type": "ref",
+                                  "ref": "LMIom",
+                                  "name": "btnCancelAddSink",
+                                  "descendants": {
+                                    "vWtyO/bevQZ": {
+                                      "enabled": false
+                                    },
+                                    "vWtyO/ezEy1": {
+                                      "content": "Cancel"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "QWp8Z",
+                                  "type": "ref",
+                                  "ref": "tpKRk",
+                                  "name": "btnConfirmAddSink",
+                                  "descendants": {
+                                    "q58In/Xpn7K": {
+                                      "enabled": false
+                                    },
+                                    "q58In/U6q13B": {
+                                      "content": "Add sink"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "u7AIUb",
+                          "type": "ref",
+                          "ref": "VvBaY",
+                          "name": "Card Actions",
+                          "width": "fill_container",
+                          "padding": [
+                            8,
+                            20,
+                            20,
+                            20
+                          ],
+                          "justifyContent": "end",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "id": "SlNIe",
+                              "type": "ref",
+                              "ref": "tpKRk",
+                              "name": "Btn Save Changes",
+                              "descendants": {
+                                "q58In/Xpn7K": {
+                                  "enabled": false
+                                },
+                                "q58In/U6q13B": {
+                                  "content": "Save changes"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {
