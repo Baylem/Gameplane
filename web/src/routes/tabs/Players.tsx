@@ -123,15 +123,15 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
     <div className="space-y-6 p-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard
-          label={intl.formatMessage({ id: "web.routes.tabs.players.online", defaultMessage: "Online", description: "Players: label of StatCard" })}
+          label={intl.formatMessage({ id: "web.routes.tabs.players.online", defaultMessage: "Online", description: "Players tab: stat card label for the number of online players; keep it short" })}
           value={data && data.online >= 0 ? (data.max >= 0 ? intl.formatMessage({ id: "web.routes.tabs.players.online_of_max", defaultMessage: "{online} / {max}", description: "Players: online player count against the server maximum; {online} is the current count, {max} the maximum" }, { online: String(data.online), max: String(data.max) }) : String(data.online)) : intl.formatMessage(PLAYERS_TEXT.empty_value)}
           accent="success"
         />
         {caps?.whitelist && (
-          <StatCard label={intl.formatMessage({ id: "web.routes.tabs.players.whitelisted", defaultMessage: "Whitelisted", description: "Players: label of StatCard" })} value={whitelist?.length ?? intl.formatMessage(PLAYERS_TEXT.empty_value)} accent="primary" />
+          <StatCard label={intl.formatMessage({ id: "web.routes.tabs.players.whitelisted", defaultMessage: "Whitelisted", description: "Players tab: stat card label for the number of whitelisted players; shown only when the game supports a whitelist" })} value={whitelist?.length ?? intl.formatMessage(PLAYERS_TEXT.empty_value)} accent="primary" />
         )}
         {caps?.unban && (
-          <StatCard label={intl.formatMessage({ id: "web.routes.tabs.players.banned", defaultMessage: "Banned", description: "Players: label of StatCard" })} value={banned?.length ?? intl.formatMessage(PLAYERS_TEXT.empty_value)} accent="danger" />
+          <StatCard label={intl.formatMessage({ id: "web.routes.tabs.players.banned", defaultMessage: "Banned", description: "Players tab: stat card label for banned players and heading of the collapsible banned list, followed by a count; keep it short" })} value={banned?.length ?? intl.formatMessage(PLAYERS_TEXT.empty_value)} accent="danger" />
         )}
       </div>
 
@@ -151,9 +151,9 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
           size="sm"
           onClick={() => refetch()}
           isDisabled={isFetching}
-          aria-label={intl.formatMessage({ id: "web.routes.tabs.players.refresh_players", defaultMessage: "Refresh players", description: "Players: aria-label of Button" })}
+          aria-label={intl.formatMessage({ id: "web.routes.tabs.players.refresh_players", defaultMessage: "Refresh players", description: "Players tab: icon-only button that reloads the player list; read by screen readers; keep it short" })}
         >
-          <span title={intl.formatMessage({ id: "web.routes.tabs.players.refresh", defaultMessage: "Refresh", description: "Players: title of span" })}>
+          <span title={intl.formatMessage({ id: "web.routes.tabs.players.refresh", defaultMessage: "Refresh", description: "Players tab: tooltip on the refresh icon, same action as the Refresh players button" })}>
             <RotateCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
           </span>
         </Button>
@@ -168,12 +168,12 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
       {status && status.kind === "ok" && (
         <div className="flex items-start justify-between gap-3 rounded border border-border bg-surface/30 px-3 py-2 text-sm">
           <span className="font-mono">{status.text}</span>
-          <button onClick={() => setStatus(null)} className="text-xs text-muted hover:text-fg">{intl.formatMessage({ id: "web.routes.tabs.players.dismiss", defaultMessage: "dismiss", description: "Players: text in button" })}</button>
+          <button onClick={() => setStatus(null)} className="text-xs text-muted hover:text-fg">{intl.formatMessage({ id: "web.routes.tabs.players.dismiss", defaultMessage: "dismiss", description: "Players tab: small text button that closes the result message; keep it short" })}</button>
         </div>
       )}
 
       {noModeration && (
-        <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.players.player_moderation_isn_t_supported_for", defaultMessage: "Player moderation isn't supported for this game.", description: "Players: text in p" })}</p>
+        <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.players.player_moderation_isn_t_supported_for", defaultMessage: "Player moderation isn't supported for this game.", description: "Players tab: text shown when this game does not support player moderation such as bans" })}</p>
       )}
 
       <ul className="grid gap-1 md:grid-cols-2 lg:grid-cols-3">
@@ -226,7 +226,7 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
             )}
           </li>
         ))}
-        {data && rows.length === 0 && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.players.nobody_online", defaultMessage: "Nobody online.", description: "Players: text in p" })}</p>}
+        {data && rows.length === 0 && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.players.nobody_online", defaultMessage: "Nobody online.", description: "Players tab: empty-state text in the player list when nobody is online" })}</p>}
       </ul>
 
       {pending && (
@@ -258,7 +258,7 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
             className="flex items-center gap-1 text-sm text-muted hover:text-fg"
           >
             {showWhitelist ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            <ListChecks className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.tabs.players.whitelist", defaultMessage: "Whitelist", description: "Players: text in button" })} {whitelist ? intl.formatMessage({ id: "web.routes.tabs.players.count_in_parens", defaultMessage: "({count})", description: "Players: entry count shown in parentheses after a list heading; {count} is the number of entries" }, { count: whitelist.length }) : ""}
+            <ListChecks className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.tabs.players.whitelist", defaultMessage: "Whitelist", description: "Players tab: collapsible heading of the whitelist section; the count in brackets follows when the list is loaded" })} {whitelist ? intl.formatMessage({ id: "web.routes.tabs.players.count_in_parens", defaultMessage: "({count})", description: "Players: entry count shown in parentheses after a list heading; {count} is the number of entries" }, { count: whitelist.length }) : ""}
           </button>
           {showWhitelist && (
             <div className="mt-2 space-y-2">
@@ -272,7 +272,7 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
               >
                 <Input
                   className="flex-1"
-                  placeholder={intl.formatMessage({ id: "web.routes.tabs.players.add_player_to_whitelist", defaultMessage: "Add player to whitelist…", description: "Players: placeholder of Input" })}
+                  placeholder={intl.formatMessage({ id: "web.routes.tabs.players.add_player_to_whitelist", defaultMessage: "Add player to whitelist…", description: "Players tab: placeholder in the box used to add a player name to the whitelist" })}
                   value={wlName}
                   onChange={(e) => setWlName(e.target.value)}
                   maxLength={32}
@@ -283,7 +283,7 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
                   isDisabled={!canControl || !wlName.trim() || whitelistMut.isPending}
                   variant="primary"
                 >
-                  <UserPlus className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.tabs.players.add", defaultMessage: "Add", description: "Players: text in Button" })}</Button>
+                  <UserPlus className="h-4 w-4" /> {intl.formatMessage({ id: "web.routes.tabs.players.add", defaultMessage: "Add", description: "Players tab: button that adds the typed player name to the whitelist; keep it short" })}</Button>
               </form>
               {whitelistFetching && !whitelist && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.players.loading", defaultMessage: "Loading…", description: "Players: shown while the player list is loading" })}</p>}
               {whitelist?.map((w) => (
@@ -300,13 +300,13 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
                     isDisabled={!canControl || whitelistMut.isPending}
                     onClick={() => whitelistMut.mutate({ op: "remove", player: w })}
                   >
-                    <span title={intl.formatMessage({ id: "web.routes.tabs.players.remove_from_whitelist", defaultMessage: "Remove from whitelist", description: "Players: title of span" })}>
+                    <span title={intl.formatMessage({ id: "web.routes.tabs.players.remove_from_whitelist", defaultMessage: "Remove from whitelist", description: "Players tab: tooltip on the icon button that removes a player from the whitelist; the same action is named in the button's accessible label" })}>
                       <UserMinus className="h-4 w-4" />
                     </span>
                   </Button>
                 </div>
               ))}
-              {whitelist?.length === 0 && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.players.whitelist_is_empty", defaultMessage: "Whitelist is empty.", description: "Players: text in p" })}</p>}
+              {whitelist?.length === 0 && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.players.whitelist_is_empty", defaultMessage: "Whitelist is empty.", description: "Players tab: empty-state text in the whitelist section when no player is whitelisted" })}</p>}
             </div>
           )}
         </section>
@@ -318,7 +318,7 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
             onClick={() => setShowBanned((v) => !v)}
             className="flex items-center gap-1 text-sm text-muted hover:text-fg"
           >
-            {showBanned ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}{intl.formatMessage({ id: "web.routes.tabs.players.banned", defaultMessage: "Banned", description: "Players: label of StatCard" })} {banned ? intl.formatMessage({ id: "web.routes.tabs.players.count_in_parens", defaultMessage: "({count})", description: "Players: entry count shown in parentheses after a list heading; {count} is the number of entries" }, { count: banned.length }) : ""}
+            {showBanned ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}{intl.formatMessage({ id: "web.routes.tabs.players.banned", defaultMessage: "Banned", description: "Players tab: stat card label for banned players and heading of the collapsible banned list, followed by a count; keep it short" })} {banned ? intl.formatMessage({ id: "web.routes.tabs.players.count_in_parens", defaultMessage: "({count})", description: "Players: entry count shown in parentheses after a list heading; {count} is the number of entries" }, { count: banned.length }) : ""}
           </button>
           {showBanned && (
             <div className="mt-2 space-y-1">
@@ -345,12 +345,12 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
                     isDisabled={!canControl || moderate.isPending}
                     onClick={() => moderate.mutate({ action: "unban", player: b.name })}
                   >
-                    <span title={intl.formatMessage({ id: "web.routes.tabs.players.unban", defaultMessage: "Unban", description: "Players: text in Button" })}>
+                    <span title={intl.formatMessage({ id: "web.routes.tabs.players.unban", defaultMessage: "Unban", description: "Players tab: row button that lifts a ban on one player; the text is also its accessible label with the player name; keep it short" })}>
                       <Undo2 className="h-4 w-4" />
-                    </span> {intl.formatMessage({ id: "web.routes.tabs.players.unban", defaultMessage: "Unban", description: "Players: text in Button" })}</Button>
+                    </span> {intl.formatMessage({ id: "web.routes.tabs.players.unban", defaultMessage: "Unban", description: "Players tab: row button that lifts a ban on one player; the text is also its accessible label with the player name; keep it short" })}</Button>
                 </div>
               ))}
-              {banned?.length === 0 && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.players.nobody_is_banned", defaultMessage: "Nobody is banned.", description: "Players: text in p" })}</p>}
+              {banned?.length === 0 && <p className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.players.nobody_is_banned", defaultMessage: "Nobody is banned.", description: "Players tab: empty-state text in the banned section when no player is banned" })}</p>}
             </div>
           )}
         </section>
@@ -394,7 +394,7 @@ function ConfirmAction({
       </p>
       <Input
         className="mt-3"
-        placeholder={intl.formatMessage({ id: "web.routes.tabs.players.reason_optional_max_256_chars", defaultMessage: "Reason (optional, max 256 chars)", description: "Players: placeholder of Input" })}
+        placeholder={intl.formatMessage({ id: "web.routes.tabs.players.reason_optional_max_256_chars", defaultMessage: "Reason (optional, max 256 chars)", description: "Players tab: placeholder in the reason box of the kick or ban confirmation, saying the reason is optional and limited to 256 characters" })}
         value={reason}
         onChange={(e) => onReasonChange(e.target.value)}
         maxLength={256}
@@ -406,7 +406,7 @@ function ConfirmAction({
           size="sm"
           onClick={onCancel}
           isDisabled={submitting}
-        >{intl.formatMessage({ id: "web.routes.tabs.players.cancel", defaultMessage: "Cancel", description: "Players: text in Button" })}</Button>
+        >{intl.formatMessage({ id: "web.routes.tabs.players.cancel", defaultMessage: "Cancel", description: "Players tab: button that closes the kick or ban confirmation without acting; keep it short" })}</Button>
         <Button
           size="sm"
           variant="primary"

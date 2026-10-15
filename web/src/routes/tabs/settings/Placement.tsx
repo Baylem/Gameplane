@@ -99,7 +99,7 @@ export function PlacementSection({
       <div className="grid grid-cols-1 items-start gap-1.5 sm:grid-cols-[200px_1fr] sm:gap-4">
         <div className="sm:pt-2">
           <Label id="tolerations-label" className="text-sm">{intl.formatMessage({ id: "web.routes.tabs.settings.placement.tolerations", defaultMessage: "Tolerations", description: "Label for the tolerations JSON editor" })}</Label>
-          <Description className="pt-1 text-xs">{intl.formatMessage({ id: "web.routes.tabs.settings.placement.pod_tolerations_for_kubernetes_node", defaultMessage: "Pod tolerations for Kubernetes node taints. Array of toleration objects (optional).", description: "Placement: text in Description" })}</Description>
+          <Description className="pt-1 text-xs">{intl.formatMessage({ id: "web.routes.tabs.settings.placement.pod_tolerations_for_kubernetes_node", defaultMessage: "Pod tolerations for Kubernetes node taints. Array of toleration objects (optional).", description: "Placement: hint under the Tolerations label saying the field takes an optional JSON array of toleration objects for Kubernetes node taints" })}</Description>
         </div>
         <div className="space-y-2">
           <div
@@ -125,7 +125,7 @@ export function PlacementSection({
       <div className="grid grid-cols-1 items-start gap-1.5 sm:grid-cols-[200px_1fr] sm:gap-4">
         <div className="sm:pt-2">
           <Label id="affinity-label" className="text-sm">{intl.formatMessage({ id: "web.routes.tabs.settings.placement.affinity", defaultMessage: "Affinity", description: "Label for the affinity JSON editor" })}</Label>
-          <Description className="pt-1 text-xs">{intl.formatMessage({ id: "web.routes.tabs.settings.placement.pod_affinity_anti_affinity_and_node", defaultMessage: "Pod affinity/anti-affinity and node affinity constraints. JSON object (optional).", description: "Placement: text in Description" })}</Description>
+          <Description className="pt-1 text-xs">{intl.formatMessage({ id: "web.routes.tabs.settings.placement.pod_affinity_anti_affinity_and_node", defaultMessage: "Pod affinity/anti-affinity and node affinity constraints. JSON object (optional).", description: "Placement: hint under the Affinity label saying the field takes an optional JSON object with pod and node affinity constraints" })}</Description>
         </div>
         <div className="space-y-2">
           <div

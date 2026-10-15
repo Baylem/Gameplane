@@ -61,9 +61,9 @@ export function BackupsTab({ name, ns }: { name: string; ns?: string }) {
   const backupNowDisabled = !resourceCan(permissions, "backups:write") || !lone || createNow.isPending;
   const backupNowHint =
     destinations.length === 0
-      ? "No backup destination configured. Add one in admin settings."
+      ? intl.formatMessage({ id: "web.routes.tabs.backups.backup_now_hint_no_destination", defaultMessage: "No backup destination configured. Add one in admin settings.", description: "Backups tab: hint under the Back up now button when no backup destination exists; points to admin settings" })
       : destinations.length > 1
-        ? "Multiple destinations configured — use the Backups page to pick one."
+        ? intl.formatMessage({ id: "web.routes.tabs.backups.backup_now_hint_many_destinations", defaultMessage: "Multiple destinations configured — use the Backups page to pick one.", description: "Backups tab: hint under the Back up now button when several backup destinations exist; points to the dashboard Backups page to choose one" })
         : undefined;
 
   const serverBackups = backups?.items.filter((b) => b.spec.serverRef.name === name) ?? [];
@@ -94,25 +94,25 @@ export function BackupsTab({ name, ns }: { name: string; ns?: string }) {
       {restoresError && <ErrorBanner err={restoresError} />}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
-          label={intl.formatMessage({ id: "web.routes.tabs.backups.last_backup", defaultMessage: "Last backup", description: "Backups: label of StatCard" })}
+          label={intl.formatMessage({ id: "web.routes.tabs.backups.last_backup", defaultMessage: "Last backup", description: "Backups tab: stat card label for the time of the most recent backup; the value shows that time relative to now, or Unavailable" })}
           value={backupsError ? unavailable : formatRelative(lastBackupAt, intl)}
           icon={<Clock size={16} />}
           accent="primary"
         />
         <StatCard
-          label={intl.formatMessage({ id: "web.routes.tabs.backups.next_backup", defaultMessage: "Next backup", description: "Backups: label of StatCard" })}
+          label={intl.formatMessage({ id: "web.routes.tabs.backups.next_backup", defaultMessage: "Next backup", description: "Backups tab: stat card label for when the next scheduled backup will run; the value shows a relative time or a dash" })}
           value={schedulesError ? unavailable : nextBackupAt ? formatRelativeFuture(nextBackupAt, intl) : emptyValue}
           icon={<CalendarClock size={16} />}
           accent="success"
         />
         <StatCard
-          label={intl.formatMessage({ id: "web.routes.tabs.backups.backups", defaultMessage: "Backups", description: "Backups: label of StatCard" })}
+          label={intl.formatMessage({ id: "web.routes.tabs.backups.backups", defaultMessage: "Backups", description: "Backups tab: stat card label for the number of backups; also the section heading above the backup list" })}
           value={backups ? serverBackups.length : emptyValue}
           icon={<Archive size={16} />}
           accent="violet"
         />
         <StatCard
-          label={intl.formatMessage({ id: "web.routes.tabs.backups.total_size", defaultMessage: "Total size", description: "Backups: label of StatCard" })}
+          label={intl.formatMessage({ id: "web.routes.tabs.backups.total_size", defaultMessage: "Total size", description: "Backups tab: stat card label for the combined size of all backups of this server" })}
           value={backupsError ? unavailable : totalBytes ? formatBytes(totalBytes) : emptyValue}
           icon={<HardDrive size={16} />}
           accent="warning"
@@ -121,19 +121,19 @@ export function BackupsTab({ name, ns }: { name: string; ns?: string }) {
 
       <section>
         <div className="flex items-center justify-between pb-3">
-          <h2 className="text-sm text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.schedules", defaultMessage: "Schedules", description: "Backups: text in h2" })}</h2>
+          <h2 className="text-sm text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.schedules", defaultMessage: "Schedules", description: "Backups tab: section heading above the list of backup schedules for this server" })}</h2>
           <Button
             size="sm"
             variant="outline"
             onPress={() => setCreatingSchedule(true)}
             isDisabled={creatingSchedule || !resourceCan(permissions, "schedules:write")}
-          >{intl.formatMessage({ id: "web.routes.tabs.backups.new_schedule", defaultMessage: "New schedule", description: "Backups: text in Button" })}</Button>
+          >{intl.formatMessage({ id: "web.routes.tabs.backups.new_schedule", defaultMessage: "New schedule", description: "Backups tab: button that opens the form to create a new backup schedule; keep it short" })}</Button>
         </div>
         {creatingSchedule && (
           <ScheduleForm serverName={name} ns={ns} onClose={() => setCreatingSchedule(false)} />
         )}
         {serverSchedules.length > 1 && (
-          <div className="mb-3 rounded border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.this_server_has_multiple_backup", defaultMessage: "This server has multiple backup schedules — consider consolidating to avoid duplicate backups.", description: "Backups: text in div" })}</div>
+          <div className="mb-3 rounded border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.this_server_has_multiple_backup", defaultMessage: "This server has multiple backup schedules — consider consolidating to avoid duplicate backups.", description: "Backups tab: warning note shown when the server has more than one backup schedule, advising to combine them to avoid duplicate backups" })}</div>
         )}
         <div className="space-y-1 pt-2">
           {serverSchedules.map((s) => {
@@ -146,23 +146,23 @@ export function BackupsTab({ name, ns }: { name: string; ns?: string }) {
                 <div className="flex items-center gap-2">
                   <span className="font-mono">{s.spec.schedule}</span>
                   {isAutoManaged && (
-                    <Chip size="sm" color="default" variant="soft">{intl.formatMessage({ id: "web.routes.tabs.backups.managed_by_server_settings", defaultMessage: "Managed by server settings", description: "Backups: text in Chip" })}</Chip>
+                    <Chip size="sm" color="default" variant="soft">{intl.formatMessage({ id: "web.routes.tabs.backups.managed_by_server_settings", defaultMessage: "Managed by server settings", description: "Backups tab: small badge on a schedule row meaning the schedule is set by the server settings and not edited here; keep it short" })}</Chip>
                   )}
                 </div>
-                <span className="text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.next", defaultMessage: "Next:", description: "Backups: text in span" })} {formatRelativeFuture(s.status?.nextScheduleTime, intl)}
+                <span className="text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.next", defaultMessage: "Next:", description: "Backups tab: label in front of the next run time shown on a backup schedule row" })} {formatRelativeFuture(s.status?.nextScheduleTime, intl)}
                 </span>
               </div>
             );
           })}
           {schedules && serverSchedules.length === 0 && !creatingSchedule && (
-            <p className="text-sm text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.no_schedules_yet", defaultMessage: "No schedules yet.", description: "Backups: text in p" })}</p>
+            <p className="text-sm text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.no_schedules_yet", defaultMessage: "No schedules yet.", description: "Backups tab: empty-state text in the schedules section, shown when the server has no backup schedules" })}</p>
           )}
         </div>
       </section>
 
       {serverRestores.length > 0 && (
         <section>
-          <h2 className="pb-3 text-sm text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.recent_restores", defaultMessage: "Recent restores", description: "Backups: text in h2" })}</h2>
+          <h2 className="pb-3 text-sm text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.recent_restores", defaultMessage: "Recent restores", description: "Backups tab: section heading above the list of recent restores; shown only when there are restores" })}</h2>
           <div className="space-y-1">
             {serverRestores.map((r) => (
               <div
@@ -183,7 +183,7 @@ export function BackupsTab({ name, ns }: { name: string; ns?: string }) {
 
       <section>
         <div className="flex items-center justify-between pb-3">
-          <h2 className="text-sm text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.backups", defaultMessage: "Backups", description: "Backups: label of StatCard" })}</h2>
+          <h2 className="text-sm text-foreground/60">{intl.formatMessage({ id: "web.routes.tabs.backups.backups", defaultMessage: "Backups", description: "Backups tab: stat card label for the number of backups; also the section heading above the backup list" })}</h2>
           {/* The disabled reason lives on a wrapping element's title
               (react-aria's Button strips a bare `title` prop) so the
               button's accessible name stays its visible text. */}
@@ -202,13 +202,13 @@ export function BackupsTab({ name, ns }: { name: string; ns?: string }) {
         {createNow.error && <ErrorBanner err={createNow.error} />}
         <Table.Root>
           <Table.ScrollContainer>
-            <Table.Content aria-label={intl.formatMessage({ id: "web.routes.tabs.backups.backups_table", defaultMessage: "Backups table", description: "Backups: aria-label of Table.Content" })} keyboardNavigationBehavior="arrow">
+            <Table.Content aria-label={intl.formatMessage({ id: "web.routes.tabs.backups.backups_table", defaultMessage: "Backups table", description: "Backups tab: accessible label of the backups table, read by screen readers; not shown as text" })} keyboardNavigationBehavior="arrow">
               <Table.Header>
-                <Table.Column key="name" isRowHeader>{intl.formatMessage({ id: "web.routes.tabs.backups.name", defaultMessage: "Name", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="phase">{intl.formatMessage({ id: "web.routes.tabs.backups.phase", defaultMessage: "Phase", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="size">{intl.formatMessage({ id: "web.routes.tabs.backups.size", defaultMessage: "Size", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="completed">{intl.formatMessage({ id: "web.routes.tabs.backups.completed", defaultMessage: "Completed", description: "Backups: text in Table.Column" })}</Table.Column>
-                <Table.Column key="actions" id="actions" className="text-end">{intl.formatMessage({ id: "web.routes.tabs.backups.actions", defaultMessage: "Actions", description: "Backups: text in Table.Column" })}</Table.Column>
+                <Table.Column key="name" isRowHeader>{intl.formatMessage({ id: "web.routes.tabs.backups.name", defaultMessage: "Name", description: "Backups tab: column heading for the backup name in the backups table; keep it short" })}</Table.Column>
+                <Table.Column key="phase">{intl.formatMessage({ id: "web.routes.tabs.backups.phase", defaultMessage: "Phase", description: "Backups tab: column heading for the current phase of each backup in the backups table; keep it short" })}</Table.Column>
+                <Table.Column key="size">{intl.formatMessage({ id: "web.routes.tabs.backups.size", defaultMessage: "Size", description: "Backups tab: column heading for the size of each backup in the backups table; keep it short" })}</Table.Column>
+                <Table.Column key="completed">{intl.formatMessage({ id: "web.routes.tabs.backups.completed", defaultMessage: "Completed", description: "Backups tab: column heading for when each backup finished in the backups table; keep it short" })}</Table.Column>
+                <Table.Column key="actions" id="actions" className="text-end">{intl.formatMessage({ id: "web.routes.tabs.backups.actions", defaultMessage: "Actions", description: "Backups tab: column heading for the row action buttons at the end of the backups table; keep it short" })}</Table.Column>
               </Table.Header>
               <Table.Body>
                 {serverBackups.map((b) => {
@@ -235,7 +235,7 @@ export function BackupsTab({ name, ns }: { name: string; ns?: string }) {
                             variant="outline"
                             isDisabled={!restorable || !resourceCan(permissions, "backups:restore")}
                             onPress={() => setRestoringBackup(b)}
-                          >{intl.formatMessage({ id: "web.routes.tabs.backups.restore", defaultMessage: "Restore", description: "Backups: text in Button" })}</Button>
+                          >{intl.formatMessage({ id: "web.routes.tabs.backups.restore", defaultMessage: "Restore", description: "Backups tab: row button that opens the restore dialog for one backup; disabled when the backup cannot be restored; keep it short" })}</Button>
                         </div>
                       </Table.Cell>
                     </Table.Row>

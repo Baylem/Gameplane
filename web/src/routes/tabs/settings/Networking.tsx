@@ -164,8 +164,8 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
   return (
     <div className="space-y-6">
       <Field
-        label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.expose", defaultMessage: "Expose", description: "Networking: label of Field" })}
-        hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.service_type_fronting_the_game_pod", defaultMessage: "Service type fronting the game pod. Still applies when a tunnel is enabled.", description: "Networking: hint of Field" })}>
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.expose", defaultMessage: "Expose", description: "Networking: field label for the service type that exposes the game pod; keeps applying when a tunnel is enabled" })}
+        hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.service_type_fronting_the_game_pod", defaultMessage: "Service type fronting the game pod. Still applies when a tunnel is enabled.", description: "Networking: hint under the Expose field saying the service type fronts the game pod and still applies when a tunnel is enabled" })}>
         <Select
           selectedKey={net.expose ?? "ClusterIP"}
           onSelectionChange={(v) => setNet({ ...net, expose: v as Expose })}
@@ -199,7 +199,7 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
                     : undefined;
                   setNet({ ...net, tunnel: newTunnel });
                 }}
-                aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.enable_tunnel", defaultMessage: "Enable tunnel", description: "Networking: aria-label of Switch" })}
+                aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.enable_tunnel", defaultMessage: "Enable tunnel", description: "Networking: switch that turns a relay tunnel on or off; the text is its accessible name, not shown as text" })}
               >
                 <Switch.Content>
                   <Switch.Control>
@@ -207,14 +207,14 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
                   </Switch.Control>
                 </Switch.Content>
               </Switch>
-              <span className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.enable_tunnel", defaultMessage: "Enable tunnel", description: "Networking: aria-label of Switch" })}</span>
+              <span className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.enable_tunnel", defaultMessage: "Enable tunnel", description: "Networking: switch that turns a relay tunnel on or off; the text is its accessible name, not shown as text" })}</span>
             </div>
-            <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.route_players_through_a_relay_so_they", defaultMessage: "Route players through a relay so they can connect without port-forwarding or a public IP.", description: "Networking: text in div" })}</div>
+            <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.route_players_through_a_relay_so_they", defaultMessage: "Route players through a relay so they can connect without port-forwarding or a public IP.", description: "Networking: hint under the Enable tunnel switch explaining a relay lets players connect without port forwarding or a public IP" })}</div>
           </div>
 
           {tunnel?.enabled && tunnel && (
             <div className="space-y-4 rounded-lg border border-border bg-surface/40 p-4">
-              <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.provider", defaultMessage: "Provider", description: "Networking: label of Field" })} hint="">
+              <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.provider", defaultMessage: "Provider", description: "Networking: field label for the tunnel provider picker, shown when a tunnel is enabled" })} hint="">
                 <Select
                   selectedKey={tunnel.provider}
                   onSelectionChange={(v) =>
@@ -245,8 +245,8 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
                   <div className="flex gap-2">
                     <AlertCircle className="h-5 w-5 shrink-0 text-warning-soft-foreground" />
                     <div>
-                      <div className="font-medium text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.tailnet_only_not_public", defaultMessage: "Tailnet only — not public", description: "Networking: text in div" })}</div>
-                      <div className="pt-0.5 text-xs text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.the_server_becomes_reachable_only_from", defaultMessage: "The server becomes reachable only from your Tailscale network, never from the public internet.", description: "Networking: text in div" })}</div>
+                      <div className="font-medium text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.tailnet_only_not_public", defaultMessage: "Tailnet only — not public", description: "Networking: warning title shown for the Tailscale provider; the line below says the server is reachable only from the Tailscale network" })}</div>
+                      <div className="pt-0.5 text-xs text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.the_server_becomes_reachable_only_from", defaultMessage: "The server becomes reachable only from your Tailscale network, never from the public internet.", description: "Networking: text under the Tailnet only warning saying the server is reachable only from the user's Tailscale network, never from the public internet" })}</div>
                     </div>
                   </div>
                 </div>
@@ -279,7 +279,7 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
 
               {tunnel.provider === "frp" && (
                 <>
-                  <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.server_address", defaultMessage: "Server address", description: "Networking: label of Field" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.frp_server_address", defaultMessage: "frp server address.", description: "Networking: hint of Field" })}>
+                  <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.server_address", defaultMessage: "Server address", description: "Networking: field label for the frp relay server address" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.frp_server_address", defaultMessage: "frp server address.", description: "Networking: hint under the frp server address field; frp is a technical term, usually left untranslated" })}>
                     <Input
                       value={tunnel.frp?.serverAddr ?? ""}
                       onChange={(e) =>
@@ -295,11 +295,11 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
                           },
                         })
                       }
-                      placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.relay_example_com", defaultMessage: "relay.example.com", description: "Networking: placeholder of Input" })}
+                      placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.relay_example_com", defaultMessage: "relay.example.com", description: "Networking: example placeholder in the frp server address box; an example host, not a default" })}
                       spellCheck={false}
                     />
                   </Field>
-                  <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.server_port", defaultMessage: "Server port", description: "Networking: label of Field" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.frp_server_port_default_7000", defaultMessage: "frp server port (default 7000).", description: "Networking: hint of Field" })}>
+                  <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.server_port", defaultMessage: "Server port", description: "Networking: field label for the port of the frp relay server" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.frp_server_port_default_7000", defaultMessage: "frp server port (default 7000).", description: "Networking: hint under the frp server port field giving the default port 7000" })}>
                     <Input
                       type="number"
                       value={tunnel.frp?.serverPort ?? 7000}
@@ -321,8 +321,8 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
                     />
                   </Field>
                   <div>
-                    <div className="text-sm text-fg">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.port_mappings", defaultMessage: "Port mappings", description: "Networking: text in div" })}</div>
-                    <div className="pt-1 text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.name_and_remote_port_for_each_game_port", defaultMessage: "Name and remote port for each game port.", description: "Networking: text in div" })}</div>
+                    <div className="text-sm text-fg">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.port_mappings", defaultMessage: "Port mappings", description: "Networking: heading of the frp port mappings list; the line under it explains each entry names a game port and its remote port" })}</div>
+                    <div className="pt-1 text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.name_and_remote_port_for_each_game_port", defaultMessage: "Name and remote port for each game port.", description: "Networking: hint under the port mappings heading saying each entry holds a name and the remote port for each game port" })}</div>
                     <div className="pt-2">
                       <FrpPortMappingEditor
                         values={tunnel.frp?.remotePorts ?? []}
@@ -347,7 +347,7 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
 
               {tunnel.provider === "tailscale" && (
                 <>
-                  <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.hostname", defaultMessage: "Hostname", description: "Networking: label of Field" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.hostname_in_your_tailnet_optional", defaultMessage: "Hostname in your tailnet (optional).", description: "Networking: hint of Field" })}>
+                  <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.hostname", defaultMessage: "Hostname", description: "Networking: field label for an optional hostname, used for Tailscale or for ingress and external-dns annotations" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.hostname_in_your_tailnet_optional", defaultMessage: "Hostname in your tailnet (optional).", description: "Networking: hint under the Tailscale hostname field saying it is the hostname in the tailnet and is optional" })}>
                     <Input
                       value={tunnel.tailscale?.hostname ?? ""}
                       onChange={(e) =>
@@ -363,11 +363,11 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
                           },
                         })
                       }
-                      placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.game_server", defaultMessage: "game-server", description: "Networking: placeholder of Input" })}
+                      placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.game_server", defaultMessage: "game-server", description: "Networking: example placeholder in the Tailscale hostname box; an example value, not a default" })}
                       spellCheck={false}
                     />
                   </Field>
-                  <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.tags", defaultMessage: "Tags", description: "Networking: label of Field" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.comma_separated_tags_optional", defaultMessage: "Comma-separated tags (optional).", description: "Networking: hint of Field" })}>
+                  <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.tags", defaultMessage: "Tags", description: "Networking: field label for the optional Tailscale tags" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.comma_separated_tags_optional", defaultMessage: "Comma-separated tags (optional).", description: "Networking: hint under the Tailscale tags field saying tags are comma-separated and optional" })}>
                     <Input
                       value={(tunnel.tailscale?.tags ?? []).join(", ")}
                       onChange={(e) =>
@@ -387,7 +387,7 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
                           },
                         })
                       }
-                      placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.tag_server_tag_minecraft", defaultMessage: "tag:server, tag:minecraft", description: "Networking: placeholder of Input" })}
+                      placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.tag_server_tag_minecraft", defaultMessage: "tag:server, tag:minecraft", description: "Networking: example placeholder in the Tailscale tags box showing the tag format; an example value, not a default" })}
                       spellCheck={false}
                     />
                   </Field>
@@ -395,7 +395,7 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
               )}
 
               {tunnel.provider === "playit" && (
-                <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.tunnel_name", defaultMessage: "Tunnel name", description: "Label for the playit.gg tunnel name" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.name_of_the_tunnel_on_playit_gg", defaultMessage: "Name of the tunnel on playit.gg.", description: "Networking: hint of Field" })}>
+                <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.tunnel_name", defaultMessage: "Tunnel name", description: "Label for the playit.gg tunnel name" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.name_of_the_tunnel_on_playit_gg", defaultMessage: "Name of the tunnel on playit.gg.", description: "Networking: hint under the playit tunnel name field saying it is the name of the tunnel on playit.gg; playit is a technical term" })}>
                   <Input
                     value={tunnel.playit?.tunnelName ?? ""}
                     onChange={(e) =>
@@ -409,15 +409,15 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
                         },
                       })
                     }
-                    placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.my_server", defaultMessage: "my-server", description: "Networking: placeholder of Input" })}
+                    placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.my_server", defaultMessage: "my-server", description: "Networking: example placeholder in the playit tunnel name box; an example value, not a default" })}
                     spellCheck={false}
                   />
                 </Field>
               )}
               {tunnel.provider === "playit" && (
                 <div className="rounded-md border-l-4 border-info bg-info/10 p-3 text-sm">
-                  <div className="text-xs font-medium text-info">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.public_address_assigned_at_runtime", defaultMessage: "Public address assigned at runtime", description: "Networking: text in div" })}</div>
-                  <div className="pt-0.5 text-xs text-info/80">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.the_tunnel_s_public_address_will_be", defaultMessage: "The tunnel's public address will be assigned by playit.gg and displayed on the connection card.", description: "Networking: text in div" })}</div>
+                  <div className="text-xs font-medium text-info">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.public_address_assigned_at_runtime", defaultMessage: "Public address assigned at runtime", description: "Networking: title of the info note for playit saying the public address is assigned at runtime" })}</div>
+                  <div className="pt-0.5 text-xs text-info/80">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.the_tunnel_s_public_address_will_be", defaultMessage: "The tunnel's public address will be assigned by playit.gg and displayed on the connection card.", description: "Networking: text under the playit info note saying playit.gg assigns the public address, which then shows on the connection card" })}</div>
                 </div>
               )}
               {computedValidityError && (
@@ -433,18 +433,18 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
         </div>
       </div>
 
-      <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.hostname", defaultMessage: "Hostname", description: "Networking: label of Field" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.optional_dns_name_for_ingress_external", defaultMessage: "Optional DNS name for ingress / external-dns annotations.", description: "Networking: hint of Field" })}>
+      <Field label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.hostname", defaultMessage: "Hostname", description: "Networking: field label for an optional hostname, used for Tailscale or for ingress and external-dns annotations" })} hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.optional_dns_name_for_ingress_external", defaultMessage: "Optional DNS name for ingress / external-dns annotations.", description: "Networking: hint under the Hostname field of the general network settings, saying it is an optional DNS name for ingress or external-dns annotations" })}>
         <Input
           value={net.hostname ?? ""}
           onChange={(e) => setNet({ ...net, hostname: e.target.value || undefined })}
-          placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.mc_example_com", defaultMessage: "mc.example.com", description: "Networking: placeholder of Input" })}
+          placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.mc_example_com", defaultMessage: "mc.example.com", description: "Networking: example placeholder in the general hostname field; an example value, not a default" })}
           spellCheck={false}
         />
       </Field>
 
       <Field
-        label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.service_annotations", defaultMessage: "Service annotations", description: "Networking: label of Field" })}
-        hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.merged_into_the_service_useful_for", defaultMessage: "Merged into the Service. Useful for cloud LB or external-dns config.", description: "Networking: hint of Field" })}
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.service_annotations", defaultMessage: "Service annotations", description: "Networking: field label for the optional annotations added to the Kubernetes Service" })}
+        hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.merged_into_the_service_useful_for", defaultMessage: "Merged into the Service. Useful for cloud LB or external-dns config.", description: "Networking: hint under the service annotations field saying they are merged into the Service and are useful for cloud load balancer or external-dns setup" })}
       >
         <KVEditor
           values={net.serviceAnnotations ?? {}}
@@ -455,8 +455,8 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
       </Field>
 
       <Field
-        label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.port_overrides", defaultMessage: "Port overrides", description: "Networking: label of Field" })}
-        hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.pin_a_nodeport_or_override_the_service", defaultMessage: "Pin a NodePort or override the Service port for a named template port.", description: "Networking: hint of Field" })}
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.port_overrides", defaultMessage: "Port overrides", description: "Networking: field label for the port overrides list that pins a NodePort or changes the Service port of a template port" })}
+        hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.pin_a_nodeport_or_override_the_service", defaultMessage: "Pin a NodePort or override the Service port for a named template port.", description: "Networking: hint under the port overrides label explaining that overrides pin a NodePort or change the Service port for a template port" })}
       >
         <PortOverridesEditor
           values={net.portOverrides ?? []}
@@ -466,8 +466,8 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
 
       {net.expose === "LoadBalancer" && (
         <Field
-          label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.loadbalancer_ip_allow_list", defaultMessage: "LoadBalancer IP allow-list", description: "Networking: label of Field" })}
-          hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.one_cidr_per_line_restricts_which", defaultMessage: "One CIDR per line. Restricts which clients reach the LoadBalancer; empty allows all.", description: "Networking: hint of Field" })}
+          label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.loadbalancer_ip_allow_list", defaultMessage: "LoadBalancer IP allow-list", description: "Networking: field label for the LoadBalancer IP allow-list, shown only when Expose is LoadBalancer; the accessible name of its text box is the same" })}
+          hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.one_cidr_per_line_restricts_which", defaultMessage: "One CIDR per line. Restricts which clients reach the LoadBalancer; empty allows all.", description: "Networking: hint under the IP allow-list saying one CIDR goes on each line and an empty list allows all clients" })}
         >
           <textarea
             className="block w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-sm"
@@ -483,7 +483,7 @@ export function NetworkingSection({ draft, onChange, onValidityChange }: Section
               })
             }
             placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.allow_list_placeholder", defaultMessage: "203.0.113.0/24\n10.0.0.0/8", description: "Networking: example CIDR ranges, one per line, shown as the LoadBalancer IP allow-list placeholder" })}
-            aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.loadbalancer_ip_allow_list", defaultMessage: "LoadBalancer IP allow-list", description: "Networking: label of Field" })}
+            aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.loadbalancer_ip_allow_list", defaultMessage: "LoadBalancer IP allow-list", description: "Networking: field label for the LoadBalancer IP allow-list, shown only when Expose is LoadBalancer; the accessible name of its text box is the same" })}
           />
         </Field>
       )}
@@ -564,8 +564,8 @@ function AddressAssignmentSection({
     <div className="space-y-4 border-t border-border pt-6">
       {currentAddress && (
         <Field
-          label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.current_assignment", defaultMessage: "Current assignment", description: "Networking: label of Field" })}
-          hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.address_and_pool_currently_bound_to", defaultMessage: "Address and pool currently bound to this server by the operator.", description: "Networking: hint of Field" })}
+          label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.current_assignment", defaultMessage: "Current assignment", description: "Networking: field label for the address and pool the operator has currently bound to this server" })}
+          hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.address_and_pool_currently_bound_to", defaultMessage: "Address and pool currently bound to this server by the operator.", description: "Networking: hint under the current assignment label saying the address and pool are bound to this server by the operator" })}
         >
           <div className="rounded-md border border-border bg-surface px-3 py-2">
             <div className="flex items-center gap-2">
@@ -579,25 +579,25 @@ function AddressAssignmentSection({
       )}
 
       <Field
-        label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.address_pool", defaultMessage: "Address pool", description: "Networking: label of Field" })}
-        hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.name_of_a_load_balancer_address_pool", defaultMessage: "Name of a load-balancer address pool configured by your cluster admin. Leave blank to let the address manager choose.", description: "Networking: hint of Field" })}
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.address_pool", defaultMessage: "Address pool", description: "Networking: field label for the load balancer address pool name; the hint says leaving it blank lets the address manager choose" })}
+        hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.name_of_a_load_balancer_address_pool", defaultMessage: "Name of a load-balancer address pool configured by your cluster admin. Leave blank to let the address manager choose.", description: "Networking: hint under the address pool field saying the pool is configured by the cluster admin and blank lets the address manager choose" })}
       >
         <Input
           value={addressPool}
           onChange={(e) => updateAddressPool(e.target.value)}
-          placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.pool_name", defaultMessage: "pool-name", description: "Networking: placeholder of Input" })}
+          placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.pool_name", defaultMessage: "pool-name", description: "Networking: example placeholder in the address pool box; an example name, not a default" })}
           spellCheck={false}
         />
       </Field>
 
       <Field
-        label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.requested_address", defaultMessage: "Requested address", description: "Networking: label of Field" })}
-        hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.a_specific_address_to_request_from_the", defaultMessage: "A specific address to request from the pool. Must be free — the address manager rejects addresses already in use. Leave blank unless you need a specific address.", description: "Networking: hint of Field" })}
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.requested_address", defaultMessage: "Requested address", description: "Networking: field label for an optional specific address to request from the address pool" })}
+        hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.a_specific_address_to_request_from_the", defaultMessage: "A specific address to request from the pool. Must be free — the address manager rejects addresses already in use. Leave blank unless you need a specific address.", description: "Networking: hint under the requested address field saying the address must be free and should be left blank unless a specific address is needed" })}
       >
         <Input
           value={address}
           onChange={(e) => updateAddress(e.target.value)}
-          placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.e_g_203_0_113_50", defaultMessage: "e.g. 203.0.113.50", description: "Networking: placeholder of Input" })}
+          placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.e_g_203_0_113_50", defaultMessage: "e.g. 203.0.113.50", description: "Networking: example placeholder in the requested address box; an example address, not a default" })}
           spellCheck={false}
         />
       </Field>
@@ -611,7 +611,7 @@ function AddressAssignmentSection({
         <div className="flex items-start gap-4 rounded-lg border border-warning-soft-foreground bg-warning-soft px-5 py-4 text-sm">
           <Megaphone className="mt-0.5 h-4 w-4 shrink-0 text-warning-soft-foreground" />
           <div className="flex-1">
-            <div className="mb-0.5 font-medium text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.address_preference_ignored", defaultMessage: "Address preference ignored", description: "Networking: text in div" })}</div>
+            <div className="mb-0.5 font-medium text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.address_preference_ignored", defaultMessage: "Address preference ignored", description: "Networking: notice title shown when an address preference is set but Expose is not LoadBalancer, so the preference has no effect; the line below names the Expose value" })}</div>
             <div className="text-xs text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.address_pool_and_requested_address_only", defaultMessage: "Expose is set to {expose}. Address pool and requested address only take effect when Expose (above) is set to LoadBalancer.", description: "Networking: note under the ignored address preference banner; {expose} is the current Expose type, such as ClusterIP" }, { expose: net.expose || "ClusterIP" })}</div>
           </div>
         </div>
@@ -622,8 +622,8 @@ function AddressAssignmentSection({
           <div className="flex gap-2">
             <AlertCircle className="h-5 w-5 shrink-0 text-warning-soft-foreground" />
             <div>
-              <div className="font-medium text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.no_address_manager_configured", defaultMessage: "No address manager configured", description: "Networking: text in div" })}</div>
-              <div className="pt-0.5 text-xs text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.this_cluster_has_no_metallb_or_cilium", defaultMessage: "This cluster has no MetalLB or Cilium address manager. Your pool and address preference will be saved but never applied.", description: "Networking: text in div" })}</div>
+              <div className="font-medium text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.no_address_manager_configured", defaultMessage: "No address manager configured", description: "Networking: warning title shown when the cluster has no address manager; the line below says the pool and address preference will be saved but not applied" })}</div>
+              <div className="pt-0.5 text-xs text-warning-soft-foreground">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.this_cluster_has_no_metallb_or_cilium", defaultMessage: "This cluster has no MetalLB or Cilium address manager. Your pool and address preference will be saved but never applied.", description: "Networking: note under the no-address-manager warning; without MetalLB or Cilium the pool and address preference are saved but never applied" })}</div>
             </div>
           </div>
         </div>
@@ -714,8 +714,8 @@ function AddressStatusField({
 
   return (
     <Field
-      label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.address_status", defaultMessage: "Address status", description: "Networking: label of Field" })}
-      hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.reflects_the_gameserver_s", defaultMessage: "Reflects the GameServer's AddressAssignment condition.", description: "Networking: hint of Field" })}
+      label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.address_status", defaultMessage: "Address status", description: "Networking: field label for the status of the address assignment, taken from the server's address condition" })}
+      hint={intl.formatMessage({ id: "web.routes.tabs.settings.networking.reflects_the_gameserver_s", defaultMessage: "Reflects the GameServer's AddressAssignment condition.", description: "Networking: hint under the address status label saying it reflects the game server's address assignment condition" })}
     >
       <div className="space-y-4">
         <div className="flex items-start gap-3">
@@ -810,7 +810,7 @@ function FrpPortMappingEditor({
           <Input
             value={p.name}
             onChange={(e) => update(idx, { name: e.target.value })}
-            placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.game", defaultMessage: "game", description: "Networking: placeholder of Input" })}
+            placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.networking.game", defaultMessage: "game", description: "Networking: example placeholder in a frp port mapping's name box; an example value, not a default" })}
           />
           <Input
             type="number"
@@ -828,7 +828,7 @@ function FrpPortMappingEditor({
             size="sm"
             isIconOnly
             className="justify-self-start sm:justify-self-auto"
-            aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.remove", defaultMessage: "Remove", description: "Networking: aria-label of Button" })}
+            aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.remove", defaultMessage: "Remove", description: "Networking: icon-only button that removes one port mapping or key-value entry; read by screen readers; keep it short" })}
             onPress={() => remove(idx)}
           >
             <X className="h-3 w-3" />
@@ -873,7 +873,7 @@ function KVEditor({
             variant="ghost"
             size="sm"
             isIconOnly
-            aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.remove", defaultMessage: "Remove", description: "Networking: aria-label of Button" })}
+            aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.remove", defaultMessage: "Remove", description: "Networking: icon-only button that removes one port mapping or key-value entry; read by screen readers; keep it short" })}
             onPress={() => {
               const next = { ...values };
               delete next[k];
@@ -949,7 +949,7 @@ function TunnelCredentialField({
           <div className="flex items-center gap-2">
             <Check className="h-4 w-4 text-success" />
             <div className="text-sm">
-              <div className="text-foreground font-medium">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.configured", defaultMessage: "Configured", description: "Networking: text in div" })}</div>
+              <div className="text-foreground font-medium">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.configured", defaultMessage: "Configured", description: "Networking: status text beside the tunnel credentials, shown when credentials are already stored" })}</div>
               {secretName && <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.networking.secret_secretname", defaultMessage: "Secret: {secretName}", description: "Networking: sentence with secretName in div" }, { secretName: secretName })}</div>}
             </div>
           </div>
@@ -964,7 +964,7 @@ function TunnelCredentialField({
               size="sm"
               variant="ghost"
               isIconOnly
-              aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.remove_tunnel_credentials", defaultMessage: "Remove tunnel credentials", description: "Networking: aria-label of Button" })}
+              aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.networking.remove_tunnel_credentials", defaultMessage: "Remove tunnel credentials", description: "Networking: icon-only button that removes the stored tunnel credentials; read by screen readers; keep it short" })}
               onPress={onRemove}
               isDisabled={isLoading}
               className="text-danger hover:text-danger"

@@ -54,7 +54,7 @@ export function EventsTab({
       <Card className="border border-border bg-surface">
         <Card.Header className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.tabs.events.events", defaultMessage: "Events", description: "Events: text in h2" })}</h2>
+            <h2 className="text-base font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.tabs.events.events", defaultMessage: "Events", description: "Events tab: heading of the events card that lists the server's events, with filter buttons beside it" })}</h2>
             <div className="flex gap-1">
               {["all", "info", "warnings"].map((f) => {
                 const filterValue = f as FilterType;

@@ -212,7 +212,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
   });
 
   if (!draft) {
-    return <div className="p-6 text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.loading", defaultMessage: "Loading…", description: "Settings: text in div" })}</div>;
+    return <div className="p-6 text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.loading", defaultMessage: "Loading…", description: "Settings tab: loading text shown while the settings are fetched or a settings section is still loading" })}</div>;
   }
 
   const reset = () => {
@@ -303,7 +303,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
           {section === "backups"    && <BackupsSection    draft={draft} onChange={onChangeDraft} template={template} />}
           {section === "capture"    && <NetworkCaptureSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={validityCallbacks.capture} />}
           {section === "placement"  && (
-            <Suspense fallback={<div className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.loading", defaultMessage: "Loading…", description: "Settings: text in div" })}</div>}>
+            <Suspense fallback={<div className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.loading", defaultMessage: "Loading…", description: "Settings tab: loading text shown while the settings are fetched or a settings section is still loading" })}</div>}>
               <PlacementSection
                 draft={draft}
                 onChange={onChangeDraft}
@@ -321,25 +321,25 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
           <footer className="flex items-center justify-between gap-4 border-t border-border bg-surface/30 px-6 py-3">
             <div className="min-w-0 text-xs">
               {conflict && !error && (
-                <span className="text-warning">{intl.formatMessage({ id: "web.routes.tabs.settings.server_changed_since_you_opened_this", defaultMessage: "Server changed since you opened this page.", description: "Settings: text in span" })} <button onClick={() => void reload()} className="underline hover:text-fg">{intl.formatMessage({ id: "web.routes.tabs.settings.reload", defaultMessage: "Reload", description: "Settings: text in button" })}</button> {intl.formatMessage({ id: "web.routes.tabs.settings.to_discard_your_edits_and_load_the", defaultMessage: "to discard your edits and load the latest.", description: "Settings: text in span" })}</span>
+                <span className="text-warning">{intl.formatMessage({ id: "web.routes.tabs.settings.server_changed_since_you_opened_this", defaultMessage: "Server changed since you opened this page.", description: "Settings tab: warning in the footer saying the server changed after the page was opened; followed by a Reload button and the sentence after it" })} <button onClick={() => void reload()} className="underline hover:text-fg">{intl.formatMessage({ id: "web.routes.tabs.settings.reload", defaultMessage: "Reload", description: "Settings tab: inline button in the footer warning that reloads the latest server settings; keep it short" })}</button> {intl.formatMessage({ id: "web.routes.tabs.settings.to_discard_your_edits_and_load_the", defaultMessage: "to discard your edits and load the latest.", description: "Settings tab: sentence after the Reload button in the footer warning, saying reloading discards edits and loads the latest settings" })}</span>
               )}
               {error && (
                 <span className="text-danger">
                   {error}
                   {conflict && (
-                    <> <button onClick={() => void reload()} className="underline hover:text-fg">{intl.formatMessage({ id: "web.routes.tabs.settings.retry_reload", defaultMessage: "Retry reload", description: "Settings: text in button" })}</button>
+                    <> <button onClick={() => void reload()} className="underline hover:text-fg">{intl.formatMessage({ id: "web.routes.tabs.settings.retry_reload", defaultMessage: "Retry reload", description: "Settings tab: inline button shown after a failed reload that tries the reload again; keep it short" })}</button>
                     </>
                   )}
                 </span>
               )}
               {!conflict && !error && dirty && (
-                <span className="text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.unsaved_changes", defaultMessage: "Unsaved changes", description: "Settings: text in span" })}</span>
+                <span className="text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.unsaved_changes", defaultMessage: "Unsaved changes", description: "Settings tab: footer status text shown when the settings form has edits that are not saved yet" })}</span>
               )}
               {!conflict && !error && !dirty && savedAt && (
-                <span className="text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.saved", defaultMessage: "Saved.", description: "Settings: text in span" })}</span>
+                <span className="text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.saved", defaultMessage: "Saved.", description: "Settings tab: footer status text shown briefly after the settings are saved" })}</span>
               )}
               {readOnlyConfig && (
-                <span className="text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.you_need_permission_to_change_this", defaultMessage: "You need permission to change this server's settings.", description: "Settings: text in span" })}</span>
+                <span className="text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.you_need_permission_to_change_this", defaultMessage: "You need permission to change this server's settings.", description: "Settings tab: footer text shown to users who can view but not change this server's settings" })}</span>
               )}
             </div>
             {!readOnlyConfig && (
@@ -349,7 +349,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
                 size="sm"
                 onPress={reset}
                 isDisabled={!dirty || save.isPending}
-              >{intl.formatMessage({ id: "web.routes.tabs.settings.discard", defaultMessage: "Discard", description: "Settings: text in Button" })}</Button>
+              >{intl.formatMessage({ id: "web.routes.tabs.settings.discard", defaultMessage: "Discard", description: "Settings tab: footer button that throws away unsaved settings edits; disabled when nothing changed; keep it short" })}</Button>
               <Button
                 size="sm"
                 onPress={() => save.mutate(draft)}

@@ -33,11 +33,11 @@ export function VersionSection({ draft, onChange, template }: SectionProps) {
   return (
     <div className="max-w-2xl space-y-5">
       <div>
-        <h2 className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.tabs.settings.version.game_version", defaultMessage: "Game version", description: "Version: text in h2" })}</h2>
-        <p className="pt-1 text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.version.pick_a_version_loader_from_the_template", defaultMessage: "Pick a version + loader from the template's catalog. Saving restarts the server on the new version.", description: "Version: text in p" })}</p>
+        <h2 className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.tabs.settings.version.game_version", defaultMessage: "Game version", description: "Version: heading of the game version section, where the version and loader are picked" })}</h2>
+        <p className="pt-1 text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.version.pick_a_version_loader_from_the_template", defaultMessage: "Pick a version + loader from the template's catalog. Saving restarts the server on the new version.", description: "Version: hint under the game version heading saying the version and loader come from the template catalog and saving restarts the server" })}</p>
       </div>
 
-      <RadioGroup value={selectedId} onChange={pick} aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.version.game_version", defaultMessage: "Game version", description: "Version: text in h2" })} className="space-y-2">
+      <RadioGroup value={selectedId} onChange={pick} aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.version.game_version", defaultMessage: "Game version", description: "Version: heading of the game version section, where the version and loader are picked" })} className="space-y-2">
         {versions.map((v) => (
           <Radio key={v.id} value={v.id}>
             <Radio.Content className="flex w-full items-start gap-3 rounded-lg border border-border px-3 py-3 transition-colors hover:bg-surface/60 data-[selected]:border-primary data-[selected]:bg-primary/5">
@@ -70,7 +70,7 @@ export function VersionSection({ draft, onChange, template }: SectionProps) {
       {hasLoaderVolumes && (
         <div className="flex items-start gap-2 rounded-lg border border-border bg-surface/40 px-3 py-2.5">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.version.each_loader_keeps_its_own_mod_volume_a", defaultMessage: "Each loader keeps its own mod volume — a loader's mods are preserved and restored if you switch back to it later.", description: "Version: text in p" })}</p>
+          <p className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.version.each_loader_keeps_its_own_mod_volume_a", defaultMessage: "Each loader keeps its own mod volume — a loader's mods are preserved and restored if you switch back to it later.", description: "Version: info note under the version choices saying each loader keeps its own mod volume, so its mods come back if you switch to it again" })}</p>
         </div>
       )}
 
@@ -91,7 +91,7 @@ export function VersionSection({ draft, onChange, template }: SectionProps) {
         </div>
       )}
 
-      <p className="text-[11px] text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.version.downgrading_across_game_versions_may_be", defaultMessage: "Downgrading across game versions may be unsupported by the game's world data — take a backup first.", description: "Version: text in p" })}</p>
+      <p className="text-[11px] text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.version.downgrading_across_game_versions_may_be", defaultMessage: "Downgrading across game versions may be unsupported by the game's world data — take a backup first.", description: "Version: warning under the version section saying a downgrade may not work with the game's world data, so a backup should be taken first" })}</p>
     </div>
   );
 }

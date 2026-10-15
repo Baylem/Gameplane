@@ -167,27 +167,27 @@ export function LogsTab({
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2">
         {logPath ? (
-          <Tabs selectedKey={source} onSelectionChange={(key) => setSource(key as LogSource)} variant="secondary" aria-label={intl.formatMessage({ id: "web.routes.tabs.logs.log_source", defaultMessage: "Log source", description: "Logs: aria-label of Tabs" })}>
+          <Tabs selectedKey={source} onSelectionChange={(key) => setSource(key as LogSource)} variant="secondary" aria-label={intl.formatMessage({ id: "web.routes.tabs.logs.log_source", defaultMessage: "Log source", description: "Logs tab: accessible label of the tabs that choose between container output and game log; not shown as text" })}>
             <Tabs.List>
-              <TabComponent id="pod">{intl.formatMessage({ id: "web.routes.tabs.logs.container_output", defaultMessage: "Container output", description: "Logs: text in TabComponent" })}</TabComponent>
-              <TabComponent id="file">{intl.formatMessage({ id: "web.routes.tabs.logs.game_log", defaultMessage: "Game log", description: "Logs: text in TabComponent" })}</TabComponent>
+              <TabComponent id="pod">{intl.formatMessage({ id: "web.routes.tabs.logs.container_output", defaultMessage: "Container output", description: "Logs tab: tab name for the container output of the pod, the setup and startup output; when no log file exists it is shown as plain text" })}</TabComponent>
+              <TabComponent id="file">{intl.formatMessage({ id: "web.routes.tabs.logs.game_log", defaultMessage: "Game log", description: "Logs tab: tab name for the game log file written by the game itself" })}</TabComponent>
             </Tabs.List>
           </Tabs>
         ) : (
           <span
             className="text-xs font-medium text-muted"
-            title={intl.formatMessage({ id: "web.routes.tabs.logs.follow_the_pod_s_setup_game_container", defaultMessage: "Follow the pod's setup + game container output (install/startup)", description: "Logs: title of span" })}
-          >{intl.formatMessage({ id: "web.routes.tabs.logs.container_output", defaultMessage: "Container output", description: "Logs: text in TabComponent" })}</span>
+            title={intl.formatMessage({ id: "web.routes.tabs.logs.follow_the_pod_s_setup_game_container", defaultMessage: "Follow the pod's setup + game container output (install/startup)", description: "Logs tab: tooltip on the plain container output label explaining it holds the pod setup and game container output for install and startup" })}
+          >{intl.formatMessage({ id: "web.routes.tabs.logs.container_output", defaultMessage: "Container output", description: "Logs tab: tab name for the container output of the pod, the setup and startup output; when no log file exists it is shown as plain text" })}</span>
         )}
         <div className="w-64 shrink-0">
           <Input
-            placeholder={intl.formatMessage({ id: "web.routes.tabs.logs.filter", defaultMessage: "filter…", description: "Logs: placeholder of Input" })}
+            placeholder={intl.formatMessage({ id: "web.routes.tabs.logs.filter", defaultMessage: "filter…", description: "Logs tab: placeholder in the search box that filters the log lines by the text typed" })}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             className="font-mono text-xs"
           />
         </div>
-        <Tabs selectedKey={level} onSelectionChange={(key) => setLevel(key as "all" | LogLevel)} variant="secondary" aria-label={intl.formatMessage({ id: "web.routes.tabs.logs.log_level", defaultMessage: "Log level", description: "Logs: aria-label of Tabs" })}>
+        <Tabs selectedKey={level} onSelectionChange={(key) => setLevel(key as "all" | LogLevel)} variant="secondary" aria-label={intl.formatMessage({ id: "web.routes.tabs.logs.log_level", defaultMessage: "Log level", description: "Logs tab: accessible label of the tabs that filter log lines by level, with an All option; not shown as text" })}>
           <Tabs.List className="w-fit">
             {(["all", ...LEVELS] as const).map((lv) => (
               <TabComponent key={lv} id={lv}>
@@ -196,7 +196,7 @@ export function LogsTab({
             ))}
           </Tabs.List>
         </Tabs>
-        <span className="text-xs text-muted">{fmt.number(filtered.length)} {intl.formatMessage({ id: "web.routes.tabs.logs.lines", defaultMessage: "lines", description: "Logs: text in span" })}</span>
+        <span className="text-xs text-muted">{fmt.number(filtered.length)} {intl.formatMessage({ id: "web.routes.tabs.logs.lines", defaultMessage: "lines", description: "Logs tab: word lines after the count shown beside the log; the number is how many lines remain after filtering" })}</span>
         <div className="ml-auto">
           <Button
             size="sm"
@@ -205,7 +205,7 @@ export function LogsTab({
               window.location.href = Logs.downloadURL(name, ns);
             }}
           >
-            <Download className="h-4 w-4" />{intl.formatMessage({ id: "web.routes.tabs.logs.download", defaultMessage: "Download", description: "Logs: text in Button" })}</Button>
+            <Download className="h-4 w-4" />{intl.formatMessage({ id: "web.routes.tabs.logs.download", defaultMessage: "Download", description: "Logs tab: button that downloads the log as a file; keep it short" })}</Button>
         </div>
       </div>
       <div ref={scrollerRef} className="flex-1 overflow-auto bg-[#0b0b0d] font-mono text-xs">
@@ -220,7 +220,7 @@ export function LogsTab({
                   <div className="text-sm font-medium text-foreground">
                     {progressMessage ? capitalize(progressMessage) : intl.formatMessage({ id: "web.routes.tabs.logs.server_failed_to_start", defaultMessage: "The server failed to start.", description: "Logs: shown when the server failed to start and gives no reason" })}
                   </div>
-                  <div className="mt-1 max-w-md text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.logs.no_container_output_was_captured_check", defaultMessage: "No container output was captured. Check the Overview events for image-pull or scheduling errors.", description: "Logs: text in div" })}</div>
+                  <div className="mt-1 max-w-md text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.logs.no_container_output_was_captured_check", defaultMessage: "No container output was captured. Check the Overview events for image-pull or scheduling errors.", description: "Logs tab: explanation under the empty log state saying no container output was captured and pointing to the Overview events for pull or scheduling errors" })}</div>
                 </div>
               </>
             ) : fileUnavailable ? (
@@ -229,15 +229,15 @@ export function LogsTab({
                   <AlertTriangle className="h-6 w-6 text-warning" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-foreground">{intl.formatMessage({ id: "web.routes.tabs.logs.game_log_unavailable", defaultMessage: "Game log unavailable", description: "Logs: text in div" })}</div>
-                  <div className="mt-1 max-w-md text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.logs.couldn_t_reach_the_agent_to_tail_the", defaultMessage: "Couldn't reach the agent to tail the game log file. Container output is still available.", description: "Logs: text in div" })}</div>
+                  <div className="text-sm font-medium text-foreground">{intl.formatMessage({ id: "web.routes.tabs.logs.game_log_unavailable", defaultMessage: "Game log unavailable", description: "Logs tab: title of the notice shown when the game log file cannot be read" })}</div>
+                  <div className="mt-1 max-w-md text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.logs.couldn_t_reach_the_agent_to_tail_the", defaultMessage: "Couldn't reach the agent to tail the game log file. Container output is still available.", description: "Logs tab: message under the game log unavailable title saying the agent could not be reached and container output is still available" })}</div>
                 </div>
                 <Button
                   size="sm"
                   variant="primary"
                   onPress={() => setSource("pod")}
                   className="mt-2"
-                >{intl.formatMessage({ id: "web.routes.tabs.logs.use_container_output", defaultMessage: "Use container output", description: "Logs: text in Button" })}</Button>
+                >{intl.formatMessage({ id: "web.routes.tabs.logs.use_container_output", defaultMessage: "Use container output", description: "Logs tab: button that switches the log view to container output; keep it short" })}</Button>
               </>
             ) : (
               <>
@@ -248,7 +248,7 @@ export function LogsTab({
                       <div className="text-sm font-medium text-foreground">
                         {progressMessage ? capitalize(progressMessage) : intl.formatMessage({ id: "web.routes.tabs.logs.starting_the_server", defaultMessage: "Starting the server…", description: "Logs: shown while the server is starting and no progress message is available yet" })}
                       </div>
-                      <div className="mt-1 max-w-md text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.logs.downloading_game_files_and_starting_up", defaultMessage: "Downloading game files and starting up. The first start can take a few minutes — install output appears here as it streams from the container.", description: "Logs: text in div" })}</div>
+                      <div className="mt-1 max-w-md text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.logs.downloading_game_files_and_starting_up", defaultMessage: "Downloading game files and starting up. The first start can take a few minutes — install output appears here as it streams from the container.", description: "Logs tab: message shown while the server starts for the first time, saying install output streams here from the container" })}</div>
                     </div>
                   </>
                 ) : (

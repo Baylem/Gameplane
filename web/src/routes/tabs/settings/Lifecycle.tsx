@@ -189,11 +189,11 @@ export function LifecycleSection({ draft, onChange, template }: SectionProps) {
   return (
     <div className="space-y-6">
       <Field
-        label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.auto_restart", defaultMessage: "Auto-restart", description: "Lifecycle: label of Field" })}
-        hint={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.when_off_the_statefulset_is_scaled_to", defaultMessage: "When off, the StatefulSet is scaled to zero (Suspended). Data is preserved.", description: "Lifecycle: hint of Field" })}
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.auto_restart", defaultMessage: "Auto-restart", description: "Lifecycle: field label for the switch that restarts the server automatically; the same text is its accessible name" })}
+        hint={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.when_off_the_statefulset_is_scaled_to", defaultMessage: "When off, the StatefulSet is scaled to zero (Suspended). Data is preserved.", description: "Lifecycle: hint under the auto-restart switch saying that when it is off the server is suspended and its data is kept" })}
       >
         <div className="flex items-center gap-3 pt-1">
-          <Switch isSelected={autoRestart} onChange={(v) => setSuspend(!v)} aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.auto_restart", defaultMessage: "Auto-restart", description: "Lifecycle: label of Field" })}>
+          <Switch isSelected={autoRestart} onChange={(v) => setSuspend(!v)} aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.auto_restart", defaultMessage: "Auto-restart", description: "Lifecycle: field label for the switch that restarts the server automatically; the same text is its accessible name" })}>
             <Switch.Content>
               <Switch.Control>
                 <Switch.Thumb />
@@ -209,8 +209,8 @@ export function LifecycleSection({ draft, onChange, template }: SectionProps) {
       </Field>
 
       <Field
-        label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.termination_grace_period", defaultMessage: "Termination grace period", description: "Lifecycle: label of Field" })}
-        hint={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.seconds_the_operator_waits_for_the", defaultMessage: "Seconds the operator waits for the template's stop sequence to finish before scaling the pod down. Range 0–600; defaults to 30. No effect when the template declares no stop sequence.", description: "Lifecycle: hint of Field" })}
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.termination_grace_period", defaultMessage: "Termination grace period", description: "Lifecycle: field label for the number of seconds given to the server to stop cleanly before it is shut down" })}
+        hint={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.seconds_the_operator_waits_for_the", defaultMessage: "Seconds the operator waits for the template's stop sequence to finish before scaling the pod down. Range 0–600; defaults to 30. No effect when the template declares no stop sequence.", description: "Lifecycle: hint under the termination grace period field giving the allowed range 0 to 600 and the default of 30 seconds" })}
       >
         <div className="flex items-center gap-2">
           <Input
@@ -224,13 +224,13 @@ export function LifecycleSection({ draft, onChange, template }: SectionProps) {
           <span className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.seconds", defaultMessage: "seconds", description: "Unit label after the termination grace period input" })}</span>
         </div>
         {graceInvalid && (
-          <div className="pt-1 text-xs text-danger">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.must_be_an_integer_between_0_and_600", defaultMessage: "Must be an integer between 0 and 600.", description: "Lifecycle: text in div" })}</div>
+          <div className="pt-1 text-xs text-danger">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.must_be_an_integer_between_0_and_600", defaultMessage: "Must be an integer between 0 and 600.", description: "Lifecycle: validation error under the grace period field when the value is not a whole number from 0 to 600" })}</div>
         )}
       </Field>
 
       <Field
-        label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.health_probes", defaultMessage: "Health probes", description: "Lifecycle: label of Field" })}
-        hint={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.per_server_overrides_for_the_template_s", defaultMessage: "Per-server overrides for the template's readiness/liveness/startup probe timing. The probe action is inherited from the template.", description: "Lifecycle: hint of Field" })}
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.health_probes", defaultMessage: "Health probes", description: "Lifecycle: field label for the per-server overrides of the health probe timing" })}
+        hint={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.per_server_overrides_for_the_template_s", defaultMessage: "Per-server overrides for the template's readiness/liveness/startup probe timing. The probe action is inherited from the template.", description: "Lifecycle: hint under the health probes label explaining the overrides for probe timing; the probe action comes from the template" })}
       >
         <div className="space-y-4">
           {PROBE_KINDS.map((kind) => {
@@ -240,7 +240,7 @@ export function LifecycleSection({ draft, onChange, template }: SectionProps) {
             if (!tmplProbe && !override) {
               return (
                 <div key={kind} className="text-xs text-muted">
-                  <span className="font-medium capitalize text-fg">{intl.formatMessage(PROBE_KIND_LABELS[kind])}</span>{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.not_defined_by_the_template", defaultMessage: ": not defined by the template.", description: "Lifecycle: text in div" })}</div>
+                  <span className="font-medium capitalize text-fg">{intl.formatMessage(PROBE_KIND_LABELS[kind])}</span>{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.not_defined_by_the_template", defaultMessage: ": not defined by the template.", description: "Lifecycle: text after a probe kind name, shown when neither the template nor this server defines that probe" })}</div>
               );
             }
             return (
@@ -280,15 +280,15 @@ export function LifecycleSection({ draft, onChange, template }: SectionProps) {
       </Field>
 
       <Field
-        label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.idle_auto_sleep", defaultMessage: "Idle auto-sleep", description: "Lifecycle: label of Field" })}
-        hint={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.when_enabled_scales_the_server_to_zero", defaultMessage: "When enabled, scales the server to zero after it reports zero players for the configured duration. A wake window cron or an explicit :wake brings it back.", description: "Lifecycle: hint of Field" })}
+        label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.idle_auto_sleep", defaultMessage: "Idle auto-sleep", description: "Lifecycle: field label for the idle auto-sleep setting that scales the server to zero when nobody is playing" })}
+        hint={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.when_enabled_scales_the_server_to_zero", defaultMessage: "When enabled, scales the server to zero after it reports zero players for the configured duration. A wake window cron or an explicit :wake brings it back.", description: "Lifecycle: hint under the idle auto-sleep label explaining the server sleeps after zero players for the set time and wake windows bring it back" })}
       >
         <div className="space-y-3">
           <div className="flex items-center gap-3 pt-1">
             <Switch
               isSelected={draft.spec.idle?.enabled ?? false}
               onChange={setIdleEnabled}
-              aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.enable_idle_auto_sleep", defaultMessage: "Enable idle auto-sleep", description: "Lifecycle: aria-label of Switch" })}
+              aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.enable_idle_auto_sleep", defaultMessage: "Enable idle auto-sleep", description: "Lifecycle: switch that turns idle auto-sleep on or off; the text is its accessible name, not shown as text" })}
             >
               <Switch.Content>
                 <Switch.Control>
@@ -306,7 +306,7 @@ export function LifecycleSection({ draft, onChange, template }: SectionProps) {
           {draft.spec.idle?.enabled && (
             <div className="space-y-3 rounded border border-border p-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.sleep_after", defaultMessage: "Sleep after", description: "Lifecycle: text in label" })}</label>
+                <label className="text-xs font-medium text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.sleep_after", defaultMessage: "Sleep after", description: "Lifecycle: small label in front of the minutes box that sets how long the server waits with zero players before sleeping" })}</label>
                 <Input
                   value={idleMinutesText}
                   onChange={(e) =>
@@ -314,18 +314,18 @@ export function LifecycleSection({ draft, onChange, template }: SectionProps) {
                   }
                   placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.idle_minutes_placeholder", defaultMessage: "30", description: "Lifecycle: example idle sleep duration in minutes, shown as the input placeholder" })}
                   inputMode="numeric"
-                  aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.idle_sleep_after", defaultMessage: "Idle sleep after", description: "Lifecycle: aria-label of Input" })}
+                  aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.idle_sleep_after", defaultMessage: "Idle sleep after", description: "Lifecycle: accessible label of the minutes box for the idle sleep delay; not shown as text" })}
                   aria-invalid={idleInvalid || undefined}
                 />
-                <span className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.minutes_of_zero_players_5_1440", defaultMessage: "minutes of zero players (5–1440)", description: "Lifecycle: text in span" })}</span>
+                <span className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.minutes_of_zero_players_5_1440", defaultMessage: "minutes of zero players (5–1440)", description: "Lifecycle: unit text after the minutes box, saying the value counts minutes of zero players and must be from 5 to 1440" })}</span>
                 {idleInvalid && (
-                  <div className="pt-1 text-xs text-danger">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.must_be_an_integer_between_5_and_1440", defaultMessage: "Must be an integer between 5 and 1440.", description: "Lifecycle: text in div" })}</div>
+                  <div className="pt-1 text-xs text-danger">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.must_be_an_integer_between_5_and_1440", defaultMessage: "Must be an integer between 5 and 1440.", description: "Lifecycle: validation error under the idle minutes box when the value is not a whole number from 5 to 1440" })}</div>
                 )}
               </div>
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="text-xs font-medium text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.wake_windows", defaultMessage: "Wake windows", description: "Lifecycle: text in label" })}</label>
+                  <label className="text-xs font-medium text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.wake_windows", defaultMessage: "Wake windows", description: "Lifecycle: field label for the list of wake windows, the times the server is woken on a schedule" })}</label>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -354,18 +354,18 @@ export function LifecycleSection({ draft, onChange, template }: SectionProps) {
                           >{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.remove", defaultMessage: "Remove", description: "Button that removes this wake window" })}</Button>
                         </div>
                         {invalid && (
-                          <div className="text-xs text-danger">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.must_be_a_five_field_cron_expression_e", defaultMessage: "Must be a five-field cron expression (e.g. 0 9 * * 1-5).", description: "Lifecycle: text in div" })}</div>
+                          <div className="text-xs text-danger">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.must_be_a_five_field_cron_expression_e", defaultMessage: "Must be a five-field cron expression (e.g. 0 9 * * 1-5).", description: "Lifecycle: validation error under a wake window when its text is not a five-field cron expression; the example 0 9 * * 1-5 is shown" })}</div>
                         )}
                       </div>
                     );
                   })}
                 </div>
-                <span className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.standard_five_field_cron_max_8_entries", defaultMessage: "Standard five-field cron. Max 8 entries.", description: "Lifecycle: text in span" })}</span>
+                <span className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.standard_five_field_cron_max_8_entries", defaultMessage: "Standard five-field cron. Max 8 entries.", description: "Lifecycle: hint under the wake windows list saying the entries use standard five-field cron and at most 8 are allowed" })}</span>
               </div>
 
               <div className="space-y-1 rounded bg-surface/40 p-2">
-                <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.a_game_that_reports_no_player_count", defaultMessage: "A game that reports no player count will never sleep.", description: "Lifecycle: text in div" })}</div>
-                <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.a_wake_window_never_restarts_a_server", defaultMessage: "A wake window never restarts a server you stopped by hand.", description: "Lifecycle: text in div" })}</div>
+                <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.a_game_that_reports_no_player_count", defaultMessage: "A game that reports no player count will never sleep.", description: "Lifecycle: warning note that a game reporting no player count will never sleep, since idle detection cannot work" })}</div>
+                <div className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.settings.lifecycle.a_wake_window_never_restarts_a_server", defaultMessage: "A wake window never restarts a server you stopped by hand.", description: "Lifecycle: note that a wake window does not restart a server the user stopped by hand" })}</div>
               </div>
             </div>
           )}

@@ -78,7 +78,7 @@ export function ConsoleShell({ handle }: { handle: ConsoleHandle }) {
             variant="ghost"
             size="sm"
             onPress={clear}
-            aria-label={intl.formatMessage({ id: "web.routes.tabs.console_shell.clear_terminal", defaultMessage: "Clear terminal", description: "Console shell: aria-label of Button" })}
+            aria-label={intl.formatMessage({ id: "web.routes.tabs.console_shell.clear_terminal", defaultMessage: "Clear terminal", description: "Console shell: icon-only button that clears the console output; read by screen readers; keep it short" })}
           >
             <Eraser className="h-4 w-4" />
           </Button>
@@ -87,7 +87,7 @@ export function ConsoleShell({ handle }: { handle: ConsoleHandle }) {
             variant="ghost"
             size="sm"
             onPress={download}
-            aria-label={intl.formatMessage({ id: "web.routes.tabs.console_shell.download_terminal_buffer", defaultMessage: "Download terminal buffer", description: "Console shell: aria-label of Button" })}
+            aria-label={intl.formatMessage({ id: "web.routes.tabs.console_shell.download_terminal_buffer", defaultMessage: "Download terminal buffer", description: "Console shell: icon-only button that downloads the console output as a file; read by screen readers; keep it short" })}
           >
             <Download className="h-4 w-4" />
           </Button>
@@ -96,7 +96,7 @@ export function ConsoleShell({ handle }: { handle: ConsoleHandle }) {
             variant="ghost"
             size="sm"
             onPress={toggleFullscreen}
-            aria-label={intl.formatMessage({ id: "web.routes.tabs.console_shell.toggle_fullscreen", defaultMessage: "Toggle fullscreen", description: "Console shell: aria-label of Button" })}
+            aria-label={intl.formatMessage({ id: "web.routes.tabs.console_shell.toggle_fullscreen", defaultMessage: "Toggle fullscreen", description: "Console shell: icon-only button that switches the console between normal and full-screen view; read by screen readers; keep it short" })}
           >
             <Maximize2 className="h-4 w-4" />
           </Button>
@@ -121,7 +121,7 @@ export function ConsoleShell({ handle }: { handle: ConsoleHandle }) {
         }}
       >
         <Input
-          placeholder={intl.formatMessage({ id: "web.routes.tabs.console_shell.type_a_command_recalls_history", defaultMessage: "Type a command… (↑/↓ recalls history)", description: "Console shell: placeholder of Input" })}
+          placeholder={intl.formatMessage({ id: "web.routes.tabs.console_shell.type_a_command_recalls_history", defaultMessage: "Type a command… (↑/↓ recalls history)", description: "Console shell: placeholder text in the command box, shown before typing; the arrow keys recall earlier commands" })}
           value={cmd}
           onChange={(e) => setCmd(e.target.value)}
           onKeyDown={onHistoryKey}
@@ -132,7 +132,7 @@ export function ConsoleShell({ handle }: { handle: ConsoleHandle }) {
           size="sm"
           variant="primary"
           isDisabled={!cmd.trim()}
-        >{intl.formatMessage({ id: "web.routes.tabs.console_shell.send", defaultMessage: "Send", description: "Console shell: text in Button" })}</Button>
+        >{intl.formatMessage({ id: "web.routes.tabs.console_shell.send", defaultMessage: "Send", description: "Console shell: button that sends the typed command to the server; disabled while the command box is empty; keep it short" })}</Button>
       </form>
     </div>
   );

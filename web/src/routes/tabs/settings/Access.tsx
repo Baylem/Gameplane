@@ -45,7 +45,7 @@ export function AccessSection({ gs }: Props) {
   });
 
   if (!gs) {
-    return <div className="p-6 text-sm text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.access.loading", defaultMessage: "Loading…", description: "Access: text in div" })}</div>;
+    return <div className="p-6 text-sm text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.access.loading", defaultMessage: "Loading…", description: "Settings access section: loading text shown while the server access details are fetched" })}</div>;
   }
 
   const ann = gs.metadata.annotations ?? {};
@@ -104,12 +104,12 @@ export function AccessSection({ gs }: Props) {
           <div className="space-y-3">
             <div>
               <Label className="text-sm font-medium">{intl.formatMessage({ id: "web.routes.tabs.settings.access.collaborators", defaultMessage: "Collaborators", description: "Label for the list of users who can manage this server" })}</Label>
-              <p className="pt-1 text-xs text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.access.collaborators_get_full_control_of_this", defaultMessage: "Collaborators get full control of this server (console, files, settings). They can't transfer ownership or edit this list.", description: "Access: text in p" })}</p>
+              <p className="pt-1 text-xs text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.access.collaborators_get_full_control_of_this", defaultMessage: "Collaborators get full control of this server (console, files, settings). They can't transfer ownership or edit this list.", description: "Settings access section: hint under the Collaborators label saying collaborators get full control of the server but cannot transfer ownership or edit this list" })}</p>
             </div>
 
             <div className="space-y-2">
               {!isAligned && (
-                <div className="rounded border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-warning-600 dark:text-warning-400">{intl.formatMessage({ id: "web.routes.tabs.settings.access.collaborators_were_modified_outside_the", defaultMessage: "Collaborators were modified outside the dashboard.", description: "Access: text in div" })}</div>
+                <div className="rounded border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-warning-600 dark:text-warning-400">{intl.formatMessage({ id: "web.routes.tabs.settings.access.collaborators_were_modified_outside_the", defaultMessage: "Collaborators were modified outside the dashboard.", description: "Settings access section: warning shown when the collaborators list was changed outside the dashboard" })}</div>
               )}
               {collaboratorNames.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
@@ -138,7 +138,7 @@ export function AccessSection({ gs }: Props) {
                   ))}
                 </div>
               ) : (
-                <div className="text-xs text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.access.none_yet", defaultMessage: "None yet", description: "Access: text in div" })}</div>
+                <div className="text-xs text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.access.none_yet", defaultMessage: "None yet", description: "Settings access section: empty-state text in the collaborators area when there are no collaborators" })}</div>
               )}
             </div>
 
@@ -152,7 +152,7 @@ export function AccessSection({ gs }: Props) {
                       handleAddCollaborator();
                     }
                   }}
-                  placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.access.add_collaborator_by_username", defaultMessage: "Add collaborator by username…", description: "Access: placeholder of Input" })}
+                  placeholder={intl.formatMessage({ id: "web.routes.tabs.settings.access.add_collaborator_by_username", defaultMessage: "Add collaborator by username…", description: "Settings access section: placeholder in the box for adding a collaborator by username; pressing Enter adds them" })}
                   className="flex-1"
                   disabled={setCollab.isPending}
                   type="text"

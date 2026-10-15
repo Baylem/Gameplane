@@ -99,8 +99,8 @@ export function ModpacksTab({
   return (
     <div className="flex h-full flex-col gap-4 p-6">
       <header className="space-y-0.5">
-        <h2 className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.modpacks.browse_modpacks", defaultMessage: "Browse modpacks", description: "Modpacks: text in h2" })}</h2>
-        <p className="text-[11px] text-muted">{intl.formatMessage({ id: "web.routes.tabs.modpacks.installing_a_modpack_either_pins_it_on", defaultMessage: "Installing a modpack either pins it on the server (and restarts) or adds all of its mods, depending on the registry.", description: "Modpacks: text in p" })}</p>
+        <h2 className="text-sm text-muted">{intl.formatMessage({ id: "web.routes.tabs.modpacks.browse_modpacks", defaultMessage: "Browse modpacks", description: "Modpacks tab: heading of the section where modpacks are browsed from a registry" })}</h2>
+        <p className="text-[11px] text-muted">{intl.formatMessage({ id: "web.routes.tabs.modpacks.installing_a_modpack_either_pins_it_on", defaultMessage: "Installing a modpack either pins it on the server (and restarts) or adds all of its mods, depending on the registry.", description: "Modpacks tab: hint under the modpacks heading saying an install either pins the modpack and restarts the server, or adds all its mods, depending on the registry" })}</p>
       </header>
 
 
@@ -109,7 +109,7 @@ export function ModpacksTab({
           <Alert.Content className="flex flex-1 flex-col gap-0.5">
             <Alert.Description className="text-sm">{banner.text}</Alert.Description>
           </Alert.Content>
-          <Button variant="ghost" size="sm" onPress={() => setBanner(null)} isIconOnly aria-label={intl.formatMessage({ id: "web.routes.tabs.modpacks.dismiss", defaultMessage: "dismiss", description: "Modpacks: aria-label of Button" })}>
+          <Button variant="ghost" size="sm" onPress={() => setBanner(null)} isIconOnly aria-label={intl.formatMessage({ id: "web.routes.tabs.modpacks.dismiss", defaultMessage: "dismiss", description: "Modpacks tab: icon-only button that closes the result banner; read by screen readers; keep it short" })}>
             <X className="h-3 w-3" />
           </Button>
         </Alert>

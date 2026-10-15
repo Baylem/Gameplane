@@ -5873,27 +5873,27 @@
   },
   "web.routes.create_server.50gi": {
     "defaultMessage": "50Gi",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: example placeholder in the storage size field showing the size format; an example value, not a default"
   },
   "web.routes.create_server.add_port_mapping": {
     "defaultMessage": "Add port mapping",
-    "description": "Create server: text in Button"
+    "description": "Create server: button that adds a new empty tunnel port mapping row to the list; keep it short"
   },
   "web.routes.create_server.address_pool": {
     "defaultMessage": "Address pool",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the load balancer address pool the server draws its address from"
   },
   "web.routes.create_server.address_preference_ignored": {
     "defaultMessage": "Address preference ignored",
-    "description": "Create server: text in div"
+    "description": "Create server: warning title of a notice shown when an address pool or requested address is set but Expose is not LoadBalancer"
   },
   "web.routes.create_server.back": {
     "defaultMessage": "Back",
-    "description": "Create server: text in Button"
+    "description": "Create server: footer button that returns to the previous wizard step; keep it short"
   },
   "web.routes.create_server.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Create server: text in Button"
+    "description": "Create server: footer button that closes the wizard without creating a server; keep it short"
   },
   "web.routes.create_server.category_all": {
     "defaultMessage": "All",
@@ -5901,15 +5901,15 @@
   },
   "web.routes.create_server.changing_location_starts_a_fresh_draft": {
     "defaultMessage": "Changing location starts a fresh draft. The chosen location handles all creation steps.",
-    "description": "Create server: text in p"
+    "description": "Create server: hint under the location dropdown warning that switching location starts a fresh draft and the chosen location handles all steps"
   },
   "web.routes.create_server.choose_a_version": {
     "defaultMessage": "Choose a version",
-    "description": "Create server: text in div"
+    "description": "Create server: heading of the version step, shown above the list of versions and loaders to pick from"
   },
   "web.routes.create_server.close": {
     "defaultMessage": "Close",
-    "description": "Create server: aria-label of Button"
+    "description": "Create server: accessible label of the icon-only close button in the wizard header; read by screen readers, not shown as text"
   },
   "web.routes.create_server.cluster_namespace": {
     "defaultMessage": "{cluster} / {namespace}",
@@ -5917,7 +5917,7 @@
   },
   "web.routes.create_server.comma_or_space_separated": {
     "defaultMessage": "Comma or space separated.",
-    "description": "Create server: text in span"
+    "description": "Create server: hint under the Tailscale tags field saying the tags can be separated by commas or spaces"
   },
   "web.routes.create_server.continue_to_stepindex": {
     "defaultMessage": "Continue to {stepIndex}",
@@ -5925,47 +5925,47 @@
   },
   "web.routes.create_server.cpu": {
     "defaultMessage": "CPU",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the CPU amount given to the server; technical term, usually left untranslated"
   },
   "web.routes.create_server.create_server": {
     "defaultMessage": "Create server",
-    "description": "Create server: text in Fragment"
+    "description": "Create server: label of the final footer button that submits the wizard and creates the server; keep it short"
   },
   "web.routes.create_server.creating": {
     "defaultMessage": "Creating…",
-    "description": "Create server: text in Fragment"
+    "description": "Create server: label of the final footer button while the server is being created, shown with a spinner; keep it short"
   },
   "web.routes.create_server.credentials": {
     "defaultMessage": "Credentials *",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the tunnel credentials; the asterisk marks the field as required"
   },
   "web.routes.create_server.default": {
     "defaultMessage": "Default",
-    "description": "Create server: text in span"
+    "description": "Create server: small badge on a version card marking the default version; keep it short"
   },
   "web.routes.create_server.default_7000_must_be_between_1_and_65535": {
     "defaultMessage": "Default 7000. Must be between 1 and 65535.",
-    "description": "Create server: text in span"
+    "description": "Create server: hint under the frp server port field giving the default port 7000 and the allowed range from 1 to 65535"
   },
   "web.routes.create_server.delete": {
     "defaultMessage": "Delete",
-    "description": "Create server: aria-label of Button"
+    "description": "Create server: icon-only button that removes one tunnel port mapping row; read by screen readers; keep it short"
   },
   "web.routes.create_server.description": {
     "defaultMessage": "Description",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the optional free-text description of the new server"
   },
   "web.routes.create_server.docs_creating_game_servers": {
     "defaultMessage": "Docs: Creating game servers",
-    "description": "Create server: text in a"
+    "description": "Create server: link at the bottom of the wizard that opens the documentation page about creating game servers in a new tab"
   },
   "web.routes.create_server.edit": {
     "defaultMessage": "Edit",
-    "description": "Create server: text in Button"
+    "description": "Create server: review step button that opens the matching wizard step so that section can be changed; keep it short"
   },
   "web.routes.create_server.enable_tunnel": {
     "defaultMessage": "Enable tunnel",
-    "description": "Create server: text in span"
+    "description": "Create server: checkbox label that turns on a tunnel for reaching the server from outside the cluster"
   },
   "web.routes.create_server.error_api_rejected": {
     "defaultMessage": "The API rejected the request.",
@@ -6005,7 +6005,7 @@
   },
   "web.routes.create_server.expose": {
     "defaultMessage": "Expose",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for how the server is exposed to players; the choice is shown as option cards"
   },
   "web.routes.create_server.expose_clusterip_hint": {
     "defaultMessage": "Internal to cluster only.",
@@ -6025,11 +6025,11 @@
   },
   "web.routes.create_server.factor_in_mod_plugin_overhead_minecraft": {
     "defaultMessage": "Factor in mod/plugin overhead; Minecraft Vanilla uses ~1.5 GB at 4 players.",
-    "description": "Create server: text in div"
+    "description": "Create server: memory hint in the YAML preview panel asking the user to allow for mod or plugin overhead; the example is about 1.5 GB for 4 Minecraft Vanilla players"
   },
   "web.routes.create_server.finding_available_locations": {
     "defaultMessage": "Finding available locations…",
-    "description": "Create server: message of LoadingCard"
+    "description": "Create server: loading text shown while the list of server locations is being fetched"
   },
   "web.routes.create_server.frp_server_port_placeholder": {
     "defaultMessage": "7000",
@@ -6045,27 +6045,27 @@
   },
   "web.routes.create_server.game_port": {
     "defaultMessage": "game-port",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: example placeholder in a tunnel port mapping's port name field; an example value, not a default"
   },
   "web.routes.create_server.hardcore_survival_realm_with_curated": {
     "defaultMessage": "Hardcore survival realm with curated mods. Invite only.",
-    "description": "Create server: placeholder of textarea"
+    "description": "Create server: example placeholder shown in the description box before the user types; an example text, not a default"
   },
   "web.routes.create_server.hostname_optional": {
     "defaultMessage": "Hostname (optional)",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the optional hostname, shown in the Tailscale section and in the general network settings"
   },
   "web.routes.create_server.ip_allow_list": {
     "defaultMessage": "IP allow-list",
-    "description": "Create server: aria-label of textarea"
+    "description": "Create server: accessible label of the multi-line IP allow-list box, read by screen readers; the same text as the visible field label"
   },
   "web.routes.create_server.ip_allow_list_cidrs_optional": {
     "defaultMessage": "IP allow-list (CIDRs, optional)",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the optional IP allow-list, shown only when the expose choice is LoadBalancer; CIDR is a technical term"
   },
   "web.routes.create_server.load_balancer_address_optional": {
     "defaultMessage": "Load balancer address (optional)",
-    "description": "Create server: text in label"
+    "description": "Create server: label of the optional load balancer address group, which holds the address pool and requested address fields"
   },
   "web.routes.create_server.loader_loader": {
     "defaultMessage": "Loader: {loader}",
@@ -6073,15 +6073,15 @@
   },
   "web.routes.create_server.location": {
     "defaultMessage": "Location",
-    "description": "Create server: aria-label of Select"
+    "description": "Create server: label of the location dropdown in the wizard header, which chooses the cluster and namespace the server is created in"
   },
   "web.routes.create_server.locations_unavailable": {
     "defaultMessage": "Locations unavailable",
-    "description": "Create server: title of ErrorCard"
+    "description": "Create server: title of the error card shown when the list of authorized server locations fails to load"
   },
   "web.routes.create_server.map_at_least_one_port_name_to_a_remote": {
     "defaultMessage": "Map at least one port name to a remote port (1–65535).",
-    "description": "Create server: text in span"
+    "description": "Create server: hint under the port mappings editor saying at least one port name must map to a remote port from 1 to 65535"
   },
   "web.routes.create_server.max_maxcpu_largest_node": {
     "defaultMessage": "Max {maxCpu} (largest node)",
@@ -6093,51 +6093,51 @@
   },
   "web.routes.create_server.mc_example_dev": {
     "defaultMessage": "mc.example.dev",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: example placeholder in the optional hostname field; an example value, not a default"
   },
   "web.routes.create_server.mc_hardcore": {
     "defaultMessage": "mc-hardcore",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: example placeholder shown in the server name field before the user types; an example value, not a default"
   },
   "web.routes.create_server.memory": {
     "defaultMessage": "Memory",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the memory amount given to the server"
   },
   "web.routes.create_server.memory_tip": {
     "defaultMessage": "Memory tip.",
-    "description": "Create server: text in span"
+    "description": "Create server: bold label that starts the memory hint at the bottom of the YAML preview panel"
   },
   "web.routes.create_server.mounted_at_data_rwo_pvc": {
     "defaultMessage": "Mounted at /data (RWO PVC).",
-    "description": "Create server: text in span"
+    "description": "Create server: hint under the storage field saying the storage is mounted at /data as a RWO PVC; PVC is a technical term, usually left untranslated"
   },
   "web.routes.create_server.my_game_server": {
     "defaultMessage": "my-game-server",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: example placeholder in the playit tunnel name field; an example value, not a default"
   },
   "web.routes.create_server.my_server": {
     "defaultMessage": "my-server",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: example placeholder in the Tailscale hostname field; an example value, not a default"
   },
   "web.routes.create_server.my_tunnel_secret": {
     "defaultMessage": "my-tunnel-secret",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: example placeholder in the existing Secret name field; an example name, not a default"
   },
   "web.routes.create_server.name_of_a_load_balancer_address_pool": {
     "defaultMessage": "Name of a load-balancer address pool configured by your cluster admin, plus an optional specific address to request. Applies only when Expose is set to LoadBalancer — ignored otherwise.",
-    "description": "Create server: text in span"
+    "description": "Create server: hint under the address pool and requested address fields; they apply only when Expose is LoadBalancer and are ignored otherwise"
   },
   "web.routes.create_server.name_of_a_pre_existing_kubernetes": {
     "defaultMessage": "Name of a pre-existing Kubernetes Secret. Leave empty to create a new one from the credentials above.",
-    "description": "Create server: text in span"
+    "description": "Create server: hint under the existing Secret name field saying to leave it empty to create a new secret from the credentials above"
   },
   "web.routes.create_server.new_game_server": {
     "defaultMessage": "New game server",
-    "description": "Create server: text in div"
+    "description": "Create server: heading of the wizard dialog for creating a new game server, shown at the top left"
   },
   "web.routes.create_server.no_available_location": {
     "defaultMessage": "No available location",
-    "description": "Create server: title of ErrorCard"
+    "description": "Create server: title of the error card shown when no location is available to create a server in"
   },
   "web.routes.create_server.no_description": {
     "defaultMessage": "No description.",
@@ -6145,11 +6145,11 @@
   },
   "web.routes.create_server.no_templates_match_your_search": {
     "defaultMessage": "No templates match your search.",
-    "description": "Create server: text in p"
+    "description": "Create server: message shown in the template list when the search text matches no template"
   },
   "web.routes.create_server.node_placement": {
     "defaultMessage": "Node placement",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for choosing which Kubernetes node runs the server, with automatic or pinned options"
   },
   "web.routes.create_server.node_placement_auto": {
     "defaultMessage": "Auto (scheduler)",
@@ -6177,15 +6177,15 @@
   },
   "web.routes.create_server.one_cidr_per_line_restricts_which": {
     "defaultMessage": "One CIDR per line. Restricts which clients reach the LoadBalancer; empty allows all.",
-    "description": "Create server: text in span"
+    "description": "Create server: hint under the IP allow-list box saying one CIDR goes on each line and an empty list allows all clients to reach the LoadBalancer"
   },
   "web.routes.create_server.or_use_existing_secret_gitops": {
     "defaultMessage": "Or use existing Secret (GitOps)",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for an option to reuse an existing Kubernetes Secret for the tunnel credentials instead of entering them"
   },
   "web.routes.create_server.persistent_storage": {
     "defaultMessage": "Persistent storage",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the storage size reserved for the server's data"
   },
   "web.routes.create_server.pick_a_template": {
     "defaultMessage": "Pick a template",
@@ -6193,11 +6193,11 @@
   },
   "web.routes.create_server.pick_the_version_and_loader_for_this": {
     "defaultMessage": "Pick the version and loader for this server. Each loader keeps its own mods on a separate volume, so switching never clobbers another.",
-    "description": "Create server: text in p"
+    "description": "Create server: hint under the version step heading explaining that each loader keeps its own mods on a separate volume, so switching never removes other mods"
   },
   "web.routes.create_server.pin_a_nodeport_or_override_the_service": {
     "defaultMessage": "Pin a NodePort or override the Service port for a named template port.",
-    "description": "Create server: text in span"
+    "description": "Create server: hint under the port overrides editor explaining that overrides pin a NodePort or change the Service port for a template port"
   },
   "web.routes.create_server.playit_secret_key_hint": {
     "defaultMessage": "Your playit.gg secret key",
@@ -6209,19 +6209,19 @@
   },
   "web.routes.create_server.pool_us_west": {
     "defaultMessage": "pool-us-west",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: example placeholder in the address pool name field; an example name, not a default"
   },
   "web.routes.create_server.port_mappings": {
     "defaultMessage": "Port mappings *",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the list of frp port mappings; the asterisk marks it required"
   },
   "web.routes.create_server.port_name": {
     "defaultMessage": "Port name",
-    "description": "Create server: text in label"
+    "description": "Create server: small field label for the port name in a tunnel port mapping row"
   },
   "web.routes.create_server.port_overrides_optional": {
     "defaultMessage": "Port overrides (optional)",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for optional port overrides that pin a NodePort or change the Service port for a named template port; NodePort is a technical term"
   },
   "web.routes.create_server.provider_frp": {
     "defaultMessage": "frp",
@@ -6237,15 +6237,15 @@
   },
   "web.routes.create_server.relay_example_com": {
     "defaultMessage": "relay.example.com",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: example placeholder in the frp server address field; an example host, not a default"
   },
   "web.routes.create_server.remote_port": {
     "defaultMessage": "Remote port",
-    "description": "Create server: text in label"
+    "description": "Create server: small field label for the remote port number in a tunnel port mapping row"
   },
   "web.routes.create_server.requested_address": {
     "defaultMessage": "Requested address",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for an optional specific load balancer address the server should request"
   },
   "web.routes.create_server.requested_address_placeholder": {
     "defaultMessage": "203.0.113.50",
@@ -6349,27 +6349,27 @@
   },
   "web.routes.create_server.search": {
     "defaultMessage": "Search…",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: placeholder text in the template search box, shown before the user types; typing filters the template list"
   },
   "web.routes.create_server.search_templates": {
     "defaultMessage": "Search templates",
-    "description": "Create server: aria-label of Input"
+    "description": "Create server: accessible label of the template search box, read by screen readers; the box shows a placeholder instead"
   },
   "web.routes.create_server.server_address": {
     "defaultMessage": "Server address *",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the frp relay server address; the asterisk marks it required; frp is a technical term, usually left untranslated"
   },
   "web.routes.create_server.server_name": {
     "defaultMessage": "Server name",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the name of the new server; the name is used as the pod name and subdomain"
   },
   "web.routes.create_server.server_port": {
     "defaultMessage": "Server port",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the port of the frp relay server"
   },
   "web.routes.create_server.some_locations_are_unavailable": {
     "defaultMessage": "Some locations are unavailable. Available locations are shown.",
-    "description": "Create server: text in p"
+    "description": "Create server: status note under the location dropdown shown when some locations are unavailable and only the available ones are listed"
   },
   "web.routes.create_server.source_ranges_placeholder": {
     "defaultMessage": "203.0.113.0/24 10.0.0.0/8",
@@ -6401,15 +6401,15 @@
   },
   "web.routes.create_server.tag_game_tag_public": {
     "defaultMessage": "tag:game,tag:public",
-    "description": "Create server: placeholder of Input"
+    "description": "Create server: example placeholder in the Tailscale tags field showing the tag format; an example value, not a default"
   },
   "web.routes.create_server.tags_optional": {
     "defaultMessage": "Tags (optional)",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for optional Tailscale tags; Tailscale is a technical term, usually left untranslated"
   },
   "web.routes.create_server.tailscale_access_is_tailnet_private": {
     "defaultMessage": "Tailscale access is tailnet-private only and not reachable from the internet.",
-    "description": "Create server: text in p"
+    "description": "Create server: warning note in the Tailscale section saying access stays private to the tailnet and cannot be reached from the internet; Tailscale is a technical term"
   },
   "web.routes.create_server.tailscale_auth_key_placeholder": {
     "defaultMessage": "Tailscale auth key",
@@ -6421,23 +6421,23 @@
   },
   "web.routes.create_server.template": {
     "defaultMessage": "Template:",
-    "description": "Create server: text in div"
+    "description": "Create server: label before the template name in the YAML preview header; shows a dash when no template is chosen yet"
   },
   "web.routes.create_server.template_config": {
     "defaultMessage": "Template config",
-    "description": "Create server: text in div"
+    "description": "Create server: small uppercase heading above the code block showing the chosen template configuration values on the review step"
   },
   "web.routes.create_server.template_configuration": {
     "defaultMessage": "Template configuration",
-    "description": "Create server: text in div"
+    "description": "Create server: small uppercase heading above the template-specific settings, shown only when the template has such settings"
   },
   "web.routes.create_server.the_selected_location_is_unavailable_or": {
     "defaultMessage": "The selected location is unavailable or no reachable location permits creation. Restore its access or return to the server list to choose an available location.",
-    "description": "Create server: message of ErrorCard"
+    "description": "Create server: explanation under the no-location title; tells the user to restore access to the location or go back to the server list"
   },
   "web.routes.create_server.tunnel_name_optional": {
     "defaultMessage": "Tunnel name (optional)",
-    "description": "Create server: text in label"
+    "description": "Create server: field label for the optional playit tunnel name; playit is a technical term, usually left untranslated"
   },
   "web.routes.create_server.tunnel_port_placeholder": {
     "defaultMessage": "25565",
@@ -6445,15 +6445,15 @@
   },
   "web.routes.create_server.tunnel_provider": {
     "defaultMessage": "Tunnel provider",
-    "description": "Create server: text in label"
+    "description": "Create server: field label above the choice of tunnel provider, shown when the tunnel is enabled"
   },
   "web.routes.create_server.unable_to_load_authorized_server": {
     "defaultMessage": "Unable to load authorized server locations.",
-    "description": "Create server: message of ErrorCard"
+    "description": "Create server: message under the locations error title, saying the authorized server locations could not be loaded"
   },
   "web.routes.create_server.used_as_pod_name_and_subdomain": {
     "defaultMessage": "Used as pod name and subdomain. Lowercase, dash-separated.",
-    "description": "Create server: text in span"
+    "description": "Create server: hint under the server name field saying the name becomes the pod name and subdomain and should be lowercase with dashes"
   },
   "web.routes.create_server.validation_choose_version": {
     "defaultMessage": "Choose a version to continue",
@@ -6989,11 +6989,11 @@
   },
   "web.routes.server_detail.loading": {
     "defaultMessage": "Loading…",
-    "description": "Server detail: text in div"
+    "description": "Server detail: loading text shown in the body of a tab while that tab's content is still loading"
   },
   "web.routes.server_detail.loading_server": {
     "defaultMessage": "Loading server…",
-    "description": "Server detail: message of LoadingCard"
+    "description": "Server detail: loading text shown while the server and the user's access to it are being fetched"
   },
   "web.routes.server_detail.ns_namespace": {
     "defaultMessage": "ns: {namespace}",
@@ -7001,15 +7001,15 @@
   },
   "web.routes.server_detail.open_console": {
     "defaultMessage": "Open console",
-    "description": "Server detail: text in Button"
+    "description": "Server detail: header button that switches to the console tab; shown only when a console is available; keep it short"
   },
   "web.routes.server_detail.restart": {
     "defaultMessage": "Restart",
-    "description": "Server detail: text in Button"
+    "description": "Server detail: header button that restarts the running server; disabled without control access; keep it short"
   },
   "web.routes.server_detail.server_detail_tabs": {
     "defaultMessage": "Server detail tabs",
-    "description": "Server detail: aria-label of Tabs.List"
+    "description": "Server detail: accessible label of the row of server tabs, read by screen readers; not shown as text"
   },
   "web.routes.server_detail.server_failed_to_start": {
     "defaultMessage": "The server failed to start.",
@@ -7021,11 +7021,11 @@
   },
   "web.routes.server_detail.start": {
     "defaultMessage": "Start",
-    "description": "Server detail: text in Button"
+    "description": "Server detail: header button that starts a stopped server; keep it short"
   },
   "web.routes.server_detail.stop": {
     "defaultMessage": "Stop",
-    "description": "Server detail: text in Button"
+    "description": "Server detail: header button that stops the running server, or puts a sleeping server to sleep fully; keep it short"
   },
   "web.routes.server_detail.tab_backups": {
     "defaultMessage": "Backups",
@@ -7073,11 +7073,11 @@
   },
   "web.routes.server_detail.this_server_changed_while_it_was_being": {
     "defaultMessage": "This server changed while it was being loaded. Reload its current identity before continuing.",
-    "description": "Server detail: message of ErrorCard"
+    "description": "Server detail: error card shown when the server's identity no longer matches the one the link was for; asks the user to reload its current identity"
   },
   "web.routes.server_detail.this_server_could_not_be_loaded_at_its": {
     "defaultMessage": "This server could not be loaded at its recorded location. Check your access and the site's connection.",
-    "description": "Server detail: message of ErrorCard"
+    "description": "Server detail: error card shown when the server or the user's access to it cannot be loaded at its recorded location; a retry button is on the card"
   },
   "web.routes.server_detail.up_uptime": {
     "defaultMessage": "up {uptime}",
@@ -7085,7 +7085,7 @@
   },
   "web.routes.server_detail.wake": {
     "defaultMessage": "Wake",
-    "description": "Server detail: text in Button"
+    "description": "Server detail: header button that wakes a sleeping server; disabled without control access; keep it short"
   },
   "web.routes.servers.actions": {
     "defaultMessage": "Actions",
@@ -7361,63 +7361,71 @@
   },
   "web.routes.tabs.backups.actions": {
     "defaultMessage": "Actions",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups tab: column heading for the row action buttons at the end of the backups table; keep it short"
   },
   "web.routes.tabs.backups.back_up_now": {
     "defaultMessage": "Back up now",
     "description": "Backups: label of the button that starts a backup immediately"
   },
+  "web.routes.tabs.backups.backup_now_hint_many_destinations": {
+    "defaultMessage": "Multiple destinations configured — use the Backups page to pick one.",
+    "description": "Backups tab: hint under the Back up now button when several backup destinations exist; points to the dashboard Backups page to choose one"
+  },
+  "web.routes.tabs.backups.backup_now_hint_no_destination": {
+    "defaultMessage": "No backup destination configured. Add one in admin settings.",
+    "description": "Backups tab: hint under the Back up now button when no backup destination exists; points to admin settings"
+  },
   "web.routes.tabs.backups.backups": {
     "defaultMessage": "Backups",
-    "description": "Backups: label of StatCard"
+    "description": "Backups tab: stat card label for the number of backups; also the section heading above the backup list"
   },
   "web.routes.tabs.backups.backups_table": {
     "defaultMessage": "Backups table",
-    "description": "Backups: aria-label of Table.Content"
+    "description": "Backups tab: accessible label of the backups table, read by screen readers; not shown as text"
   },
   "web.routes.tabs.backups.completed": {
     "defaultMessage": "Completed",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups tab: column heading for when each backup finished in the backups table; keep it short"
   },
   "web.routes.tabs.backups.last_backup": {
     "defaultMessage": "Last backup",
-    "description": "Backups: label of StatCard"
+    "description": "Backups tab: stat card label for the time of the most recent backup; the value shows that time relative to now, or Unavailable"
   },
   "web.routes.tabs.backups.managed_by_server_settings": {
     "defaultMessage": "Managed by server settings",
-    "description": "Backups: text in Chip"
+    "description": "Backups tab: small badge on a schedule row meaning the schedule is set by the server settings and not edited here; keep it short"
   },
   "web.routes.tabs.backups.name": {
     "defaultMessage": "Name",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups tab: column heading for the backup name in the backups table; keep it short"
   },
   "web.routes.tabs.backups.new_schedule": {
     "defaultMessage": "New schedule",
-    "description": "Backups: text in Button"
+    "description": "Backups tab: button that opens the form to create a new backup schedule; keep it short"
   },
   "web.routes.tabs.backups.next": {
     "defaultMessage": "Next:",
-    "description": "Backups: text in span"
+    "description": "Backups tab: label in front of the next run time shown on a backup schedule row"
   },
   "web.routes.tabs.backups.next_backup": {
     "defaultMessage": "Next backup",
-    "description": "Backups: label of StatCard"
+    "description": "Backups tab: stat card label for when the next scheduled backup will run; the value shows a relative time or a dash"
   },
   "web.routes.tabs.backups.no_schedules_yet": {
     "defaultMessage": "No schedules yet.",
-    "description": "Backups: text in p"
+    "description": "Backups tab: empty-state text in the schedules section, shown when the server has no backup schedules"
   },
   "web.routes.tabs.backups.phase": {
     "defaultMessage": "Phase",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups tab: column heading for the current phase of each backup in the backups table; keep it short"
   },
   "web.routes.tabs.backups.recent_restores": {
     "defaultMessage": "Recent restores",
-    "description": "Backups: text in h2"
+    "description": "Backups tab: section heading above the list of recent restores; shown only when there are restores"
   },
   "web.routes.tabs.backups.restore": {
     "defaultMessage": "Restore",
-    "description": "Backups: text in Button"
+    "description": "Backups tab: row button that opens the restore dialog for one backup; disabled when the backup cannot be restored; keep it short"
   },
   "web.routes.tabs.backups.restore_completed_relative": {
     "defaultMessage": "· {time}",
@@ -7425,11 +7433,11 @@
   },
   "web.routes.tabs.backups.schedules": {
     "defaultMessage": "Schedules",
-    "description": "Backups: text in h2"
+    "description": "Backups tab: section heading above the list of backup schedules for this server"
   },
   "web.routes.tabs.backups.size": {
     "defaultMessage": "Size",
-    "description": "Backups: text in Table.Column"
+    "description": "Backups tab: column heading for the size of each backup in the backups table; keep it short"
   },
   "web.routes.tabs.backups.starting": {
     "defaultMessage": "Starting…",
@@ -7437,11 +7445,11 @@
   },
   "web.routes.tabs.backups.this_server_has_multiple_backup": {
     "defaultMessage": "This server has multiple backup schedules — consider consolidating to avoid duplicate backups.",
-    "description": "Backups: text in div"
+    "description": "Backups tab: warning note shown when the server has more than one backup schedule, advising to combine them to avoid duplicate backups"
   },
   "web.routes.tabs.backups.total_size": {
     "defaultMessage": "Total size",
-    "description": "Backups: label of StatCard"
+    "description": "Backups tab: stat card label for the combined size of all backups of this server"
   },
   "web.routes.tabs.backups.unavailable": {
     "defaultMessage": "Unavailable",
@@ -7449,11 +7457,27 @@
   },
   "web.routes.tabs.console.loading_console": {
     "defaultMessage": "Loading console…",
-    "description": "Console: message of LoadingCard"
+    "description": "Console tab: loading text shown while the console is being prepared"
   },
   "web.routes.tabs.console.no_console_available": {
     "defaultMessage": "No console available",
-    "description": "Console: title of ErrorCard"
+    "description": "Console tab: title of the error card shown when the game template provides no console"
+  },
+  "web.routes.tabs.console.pty_attached": {
+    "defaultMessage": "— attached —",
+    "description": "Console: line written into the terminal console when the terminal attaches to the server; the dashes are part of the text"
+  },
+  "web.routes.tabs.console.pty_detached": {
+    "defaultMessage": "— detached —",
+    "description": "Console: line written into the terminal console when the terminal detaches from the server; the dashes are part of the text"
+  },
+  "web.routes.tabs.console.rcon_connected": {
+    "defaultMessage": "— connected —",
+    "description": "Console: line written into the RCON console terminal when the connection opens; the dashes are part of the text"
+  },
+  "web.routes.tabs.console.rcon_disconnected": {
+    "defaultMessage": "— disconnected —",
+    "description": "Console: line written into the RCON console terminal when the connection closes; the dashes are part of the text"
   },
   "web.routes.tabs.console.status_connecting": {
     "defaultMessage": "connecting…",
@@ -7473,27 +7497,27 @@
   },
   "web.routes.tabs.console.this_game_template_doesn_t_expose_a": {
     "defaultMessage": "This game template doesn't expose a console.",
-    "description": "Console: message of ErrorCard"
+    "description": "Console tab: message under the no-console title explaining that the game template does not expose a console"
   },
   "web.routes.tabs.console_shell.clear_terminal": {
     "defaultMessage": "Clear terminal",
-    "description": "Console shell: aria-label of Button"
+    "description": "Console shell: icon-only button that clears the console output; read by screen readers; keep it short"
   },
   "web.routes.tabs.console_shell.download_terminal_buffer": {
     "defaultMessage": "Download terminal buffer",
-    "description": "Console shell: aria-label of Button"
+    "description": "Console shell: icon-only button that downloads the console output as a file; read by screen readers; keep it short"
   },
   "web.routes.tabs.console_shell.send": {
     "defaultMessage": "Send",
-    "description": "Console shell: text in Button"
+    "description": "Console shell: button that sends the typed command to the server; disabled while the command box is empty; keep it short"
   },
   "web.routes.tabs.console_shell.toggle_fullscreen": {
     "defaultMessage": "Toggle fullscreen",
-    "description": "Console shell: aria-label of Button"
+    "description": "Console shell: icon-only button that switches the console between normal and full-screen view; read by screen readers; keep it short"
   },
   "web.routes.tabs.console_shell.type_a_command_recalls_history": {
     "defaultMessage": "Type a command… (↑/↓ recalls history)",
-    "description": "Console shell: placeholder of Input"
+    "description": "Console shell: placeholder text in the command box, shown before typing; the arrow keys recall earlier commands"
   },
   "web.routes.tabs.events.empty_all": {
     "defaultMessage": "No events yet.",
@@ -7509,7 +7533,7 @@
   },
   "web.routes.tabs.events.events": {
     "defaultMessage": "Events",
-    "description": "Events: text in h2"
+    "description": "Events tab: heading of the events card that lists the server's events, with filter buttons beside it"
   },
   "web.routes.tabs.events.filter_all": {
     "defaultMessage": "All",
@@ -7525,23 +7549,23 @@
   },
   "web.routes.tabs.files.back_to_files": {
     "defaultMessage": "Back to files",
-    "description": "Files: aria-label of Button"
+    "description": "Files tab: icon-only button that returns from a file view to the file tree; read by screen readers"
   },
   "web.routes.tabs.files.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Files: text in Button"
+    "description": "Files tab: button in the name prompt dialog that closes it without creating anything; keep it short"
   },
   "web.routes.tabs.files.config_yaml": {
     "defaultMessage": "config.yaml",
-    "description": "Files: placeholder of NamePromptDialog"
+    "description": "Files tab: example placeholder in the new file name field; an example name, not a default"
   },
   "web.routes.tabs.files.create": {
     "defaultMessage": "Create",
-    "description": "Files: confirmLabel of NamePromptDialog"
+    "description": "Files tab: confirm button of the new file and new folder prompts that creates the item; keep it short"
   },
   "web.routes.tabs.files.delete": {
     "defaultMessage": "Delete",
-    "description": "Files: text in Button"
+    "description": "Files tab: red button that deletes the selected file or folder, and the confirm button of the delete dialog; keep it short"
   },
   "web.routes.tabs.files.delete_entry_aria": {
     "defaultMessage": "Delete {name}",
@@ -7565,43 +7589,43 @@
   },
   "web.routes.tabs.files.download": {
     "defaultMessage": "Download",
-    "description": "Files: text in Button"
+    "description": "Files tab: button that downloads the selected file to the user's computer; keep it short"
   },
   "web.routes.tabs.files.empty_folder": {
     "defaultMessage": "Empty folder",
-    "description": "Files: text in li"
+    "description": "Files tab: text shown in the file list when the current folder has no entries"
   },
   "web.routes.tabs.files.file_name": {
     "defaultMessage": "File name",
-    "description": "Files: label of NamePromptDialog"
+    "description": "Files tab: field label for the name of a new file in the new file prompt"
   },
   "web.routes.tabs.files.files": {
     "defaultMessage": "Files",
-    "description": "Files: text in span"
+    "description": "Files tab: label beside the back button in the file pane header, naming the files area"
   },
   "web.routes.tabs.files.folder_name": {
     "defaultMessage": "Folder name",
-    "description": "Files: label of NamePromptDialog"
+    "description": "Files tab: field label for the name of a new folder in the new folder prompt"
   },
   "web.routes.tabs.files.modified": {
     "defaultMessage": "· modified",
-    "description": "Files: text in span"
+    "description": "Files tab: warning marker shown beside the open file name when it has unsaved edits"
   },
   "web.routes.tabs.files.my_folder": {
     "defaultMessage": "my-folder",
-    "description": "Files: placeholder of NamePromptDialog"
+    "description": "Files tab: example placeholder in the new folder name field; an example name, not a default"
   },
   "web.routes.tabs.files.names_can_t_contain_or_be_or": {
     "defaultMessage": "Names can't contain \"/\" or be \".\" or \"..\".",
-    "description": "Files: text in p"
+    "description": "Files tab: validation error under a file or folder name field when the name contains a slash or is a single or double dot"
   },
   "web.routes.tabs.files.new_file": {
     "defaultMessage": "New file",
-    "description": "Files: text in Button"
+    "description": "Files tab: button that opens the prompt to create a new file, and the title of that prompt dialog; keep it short"
   },
   "web.routes.tabs.files.new_folder": {
     "defaultMessage": "New folder",
-    "description": "Files: text in Button"
+    "description": "Files tab: button that opens the prompt to create a new folder, and the title of that prompt dialog; keep it short"
   },
   "web.routes.tabs.files.parent_directory": {
     "defaultMessage": "..",
@@ -7613,7 +7637,7 @@
   },
   "web.routes.tabs.files.refresh": {
     "defaultMessage": "Refresh",
-    "description": "Files: aria-label of Button"
+    "description": "Files tab: icon-only button that reloads the file list; read by screen readers; keep it short"
   },
   "web.routes.tabs.files.root_crumb": {
     "defaultMessage": "/",
@@ -7621,15 +7645,15 @@
   },
   "web.routes.tabs.files.save": {
     "defaultMessage": "Save",
-    "description": "Files: text in Button"
+    "description": "Files tab: button that saves edits to the open file; shows a spinner while saving; keep it short"
   },
   "web.routes.tabs.files.select_a_file_to_edit": {
     "defaultMessage": "Select a file to edit.",
-    "description": "Files: text in div"
+    "description": "Files tab: empty-state text in the editor pane shown when no file is selected"
   },
   "web.routes.tabs.files.upload": {
     "defaultMessage": "Upload",
-    "description": "Files: text in Button"
+    "description": "Files tab: button that uploads a file to the current folder; shows a spinner while the upload runs; keep it short"
   },
   "web.routes.tabs.files.working": {
     "defaultMessage": "Working…",
@@ -7645,35 +7669,35 @@
   },
   "web.routes.tabs.logs.container_output": {
     "defaultMessage": "Container output",
-    "description": "Logs: text in TabComponent"
+    "description": "Logs tab: tab name for the container output of the pod, the setup and startup output; when no log file exists it is shown as plain text"
   },
   "web.routes.tabs.logs.couldn_t_reach_the_agent_to_tail_the": {
     "defaultMessage": "Couldn't reach the agent to tail the game log file. Container output is still available.",
-    "description": "Logs: text in div"
+    "description": "Logs tab: message under the game log unavailable title saying the agent could not be reached and container output is still available"
   },
   "web.routes.tabs.logs.download": {
     "defaultMessage": "Download",
-    "description": "Logs: text in Button"
+    "description": "Logs tab: button that downloads the log as a file; keep it short"
   },
   "web.routes.tabs.logs.downloading_game_files_and_starting_up": {
     "defaultMessage": "Downloading game files and starting up. The first start can take a few minutes — install output appears here as it streams from the container.",
-    "description": "Logs: text in div"
+    "description": "Logs tab: message shown while the server starts for the first time, saying install output streams here from the container"
   },
   "web.routes.tabs.logs.filter": {
     "defaultMessage": "filter…",
-    "description": "Logs: placeholder of Input"
+    "description": "Logs tab: placeholder in the search box that filters the log lines by the text typed"
   },
   "web.routes.tabs.logs.follow_the_pod_s_setup_game_container": {
     "defaultMessage": "Follow the pod's setup + game container output (install/startup)",
-    "description": "Logs: title of span"
+    "description": "Logs tab: tooltip on the plain container output label explaining it holds the pod setup and game container output for install and startup"
   },
   "web.routes.tabs.logs.game_log": {
     "defaultMessage": "Game log",
-    "description": "Logs: text in TabComponent"
+    "description": "Logs tab: tab name for the game log file written by the game itself"
   },
   "web.routes.tabs.logs.game_log_unavailable": {
     "defaultMessage": "Game log unavailable",
-    "description": "Logs: text in div"
+    "description": "Logs tab: title of the notice shown when the game log file cannot be read"
   },
   "web.routes.tabs.logs.level_all": {
     "defaultMessage": "All",
@@ -7701,19 +7725,19 @@
   },
   "web.routes.tabs.logs.lines": {
     "defaultMessage": "lines",
-    "description": "Logs: text in span"
+    "description": "Logs tab: word lines after the count shown beside the log; the number is how many lines remain after filtering"
   },
   "web.routes.tabs.logs.log_level": {
     "defaultMessage": "Log level",
-    "description": "Logs: aria-label of Tabs"
+    "description": "Logs tab: accessible label of the tabs that filter log lines by level, with an All option; not shown as text"
   },
   "web.routes.tabs.logs.log_source": {
     "defaultMessage": "Log source",
-    "description": "Logs: aria-label of Tabs"
+    "description": "Logs tab: accessible label of the tabs that choose between container output and game log; not shown as text"
   },
   "web.routes.tabs.logs.no_container_output_was_captured_check": {
     "defaultMessage": "No container output was captured. Check the Overview events for image-pull or scheduling errors.",
-    "description": "Logs: text in div"
+    "description": "Logs tab: explanation under the empty log state saying no container output was captured and pointing to the Overview events for pull or scheduling errors"
   },
   "web.routes.tabs.logs.server_failed_to_start": {
     "defaultMessage": "The server failed to start.",
@@ -7725,7 +7749,7 @@
   },
   "web.routes.tabs.logs.use_container_output": {
     "defaultMessage": "Use container output",
-    "description": "Logs: text in Button"
+    "description": "Logs tab: button that switches the log view to container output; keep it short"
   },
   "web.routes.tabs.modpacks.banner_installed": {
     "defaultMessage": "Installed {title} — {count, plural, one {# mod} other {# mods}}.",
@@ -7737,7 +7761,7 @@
   },
   "web.routes.tabs.modpacks.browse_modpacks": {
     "defaultMessage": "Browse modpacks",
-    "description": "Modpacks: text in h2"
+    "description": "Modpacks tab: heading of the section where modpacks are browsed from a registry"
   },
   "web.routes.tabs.modpacks.category_adventure": {
     "defaultMessage": "Adventure",
@@ -7761,7 +7785,7 @@
   },
   "web.routes.tabs.modpacks.dismiss": {
     "defaultMessage": "dismiss",
-    "description": "Modpacks: aria-label of Button"
+    "description": "Modpacks tab: icon-only button that closes the result banner; read by screen readers; keep it short"
   },
   "web.routes.tabs.modpacks.error_not_permitted": {
     "defaultMessage": "Your role does not allow managing this server.",
@@ -7785,7 +7809,7 @@
   },
   "web.routes.tabs.modpacks.installing_a_modpack_either_pins_it_on": {
     "defaultMessage": "Installing a modpack either pins it on the server (and restarts) or adds all of its mods, depending on the registry.",
-    "description": "Modpacks: text in p"
+    "description": "Modpacks tab: hint under the modpacks heading saying an install either pins the modpack and restarts the server, or adds all its mods, depending on the registry"
   },
   "web.routes.tabs.modpacks.requires_operator_role": {
     "defaultMessage": "Requires operator role",
@@ -7809,19 +7833,19 @@
   },
   "web.routes.tabs.mods.allowed_hosts": {
     "defaultMessage": "Allowed hosts:",
-    "description": "Mods: text in p"
+    "description": "Mods tab: hint under the download URL form; the list after the label shows the host names the URL may come from"
   },
   "web.routes.tabs.mods.available": {
     "defaultMessage": "available",
-    "description": "Mods: text in span"
+    "description": "Mods tab: word after the latest version number in the update badge, meaning a newer version is available; keep it short"
   },
   "web.routes.tabs.mods.back_to_installed_mods": {
     "defaultMessage": "Back to installed mods",
-    "description": "Mods: aria-label of Button"
+    "description": "Mods tab: accessible label of the back button that returns to the installed mods list; read by screen readers; keep it short"
   },
   "web.routes.tabs.mods.back_to_selected_mods": {
     "defaultMessage": "Back to selected mods",
-    "description": "Mods: aria-label of Button"
+    "description": "Mods tab: accessible label of the back button that returns from the registry browser to the selected mods list; keep it short"
   },
   "web.routes.tabs.mods.banner_installed": {
     "defaultMessage": "Installed {name}",
@@ -7849,11 +7873,11 @@
   },
   "web.routes.tabs.mods.browse": {
     "defaultMessage": "Browse",
-    "description": "Mods: text in h2"
+    "description": "Mods tab: word Browse that starts the registry browse heading and button; the registry name follows it; keep it short"
   },
   "web.routes.tabs.mods.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Mods: text in Button"
+    "description": "Mods tab: ghost button that closes the download URL or upload form without installing; keep it short"
   },
   "web.routes.tabs.mods.category_adventure": {
     "defaultMessage": "Adventure",
@@ -7901,15 +7925,15 @@
   },
   "web.routes.tabs.mods.discard": {
     "defaultMessage": "Discard",
-    "description": "Mods: text in Button"
+    "description": "Mods tab: footer button that throws away unsaved mod list changes; disabled when nothing changed; keep it short"
   },
   "web.routes.tabs.mods.dismiss": {
     "defaultMessage": "dismiss",
-    "description": "Mods: aria-label of Button"
+    "description": "Mods tab: icon-only button that closes the message banner; read by screen readers; keep it short"
   },
   "web.routes.tabs.mods.download_url": {
     "defaultMessage": "Download URL",
-    "description": "Mods: text in label"
+    "description": "Mods tab: field label for the download URL of a mod; the red asterisk marks the field as required"
   },
   "web.routes.tabs.mods.drop_mod_file": {
     "defaultMessage": "Drop a mod file here, or click to browse",
@@ -7945,15 +7969,15 @@
   },
   "web.routes.tabs.mods.filename": {
     "defaultMessage": "Filename",
-    "description": "Mods: text in label"
+    "description": "Mods tab: field label for the optional file name the mod is saved under"
   },
   "web.routes.tabs.mods.from_the_server_it_will_be_gone_on_the": {
     "defaultMessage": "from the server? It will be gone on the next restart.",
-    "description": "Mods: text in Fragment"
+    "description": "Mods tab: rest of the removal confirmation sentence after the mod name, saying the mod will be gone on the next restart"
   },
   "web.routes.tabs.mods.https_cdn_modrinth_com_mod_jar": {
     "defaultMessage": "https://cdn.modrinth.com/…/mod.jar",
-    "description": "Mods: placeholder of Input"
+    "description": "Mods tab: example placeholder in the download URL field showing the expected form; an example address, not a default"
   },
   "web.routes.tabs.mods.id_id": {
     "defaultMessage": "ID {id}",
@@ -7977,11 +8001,11 @@
   },
   "web.routes.tabs.mods.install_mod": {
     "defaultMessage": "Install mod",
-    "description": "Mods: text in Button"
+    "description": "Mods tab: button that opens the form to add a mod; disabled for users without the operator role; keep it short"
   },
   "web.routes.tabs.mods.install_mods": {
     "defaultMessage": "Install mods",
-    "description": "Mods: text in h2"
+    "description": "Mods tab: heading of the page for installing mods, shown above the install options"
   },
   "web.routes.tabs.mods.installed_count": {
     "defaultMessage": "{count} installed",
@@ -7989,7 +8013,7 @@
   },
   "web.routes.tabs.mods.installed_mods": {
     "defaultMessage": "Installed mods",
-    "description": "Mods: text in Button"
+    "description": "Mods tab: visible text of the back button that returns to the installed mods list; keep it short"
   },
   "web.routes.tabs.mods.installing": {
     "defaultMessage": "Installing…",
@@ -8005,11 +8029,11 @@
   },
   "web.routes.tabs.mods.loading_versions": {
     "defaultMessage": "Loading versions…",
-    "description": "Mods: text in span"
+    "description": "Mods tab: loading text in a mod row's version area while the list of versions is fetched"
   },
   "web.routes.tabs.mods.marked_for_removal": {
     "defaultMessage": "Marked for removal",
-    "description": "Mods: text in Chip"
+    "description": "Mods tab: badge on a mod row showing it is marked for removal and will be removed when saved; keep it short"
   },
   "web.routes.tabs.mods.mode_browse_registry": {
     "defaultMessage": "Browse registry",
@@ -8029,7 +8053,7 @@
   },
   "web.routes.tabs.mods.must_be_an_http_s_url": {
     "defaultMessage": "Must be an http(s) URL.",
-    "description": "Mods: text in p"
+    "description": "Mods tab: validation error under the download URL field when the text is not an http or https address"
   },
   "web.routes.tabs.mods.new_version": {
     "defaultMessage": "new version",
@@ -8037,23 +8061,23 @@
   },
   "web.routes.tabs.mods.no_compatible_files": {
     "defaultMessage": "No compatible files.",
-    "description": "Mods: text in span"
+    "description": "Mods tab: text in a mod row's version area when no file fits the server's version and loader"
   },
   "web.routes.tabs.mods.no_mods_installed": {
     "defaultMessage": "No mods installed.",
-    "description": "Mods: text in p"
+    "description": "Mods tab: empty-state text shown when no mods are installed; a hint below it explains how to add one"
   },
   "web.routes.tabs.mods.no_mods_selected": {
     "defaultMessage": "No mods selected.",
-    "description": "Mods: text in p"
+    "description": "Mods tab: empty-state text in the selected mods list when no mods are selected"
   },
   "web.routes.tabs.mods.optional_derived_from_the_url": {
     "defaultMessage": "optional — derived from the URL",
-    "description": "Mods: placeholder of Input"
+    "description": "Mods tab: placeholder in the file name field saying the name is taken from the URL when the field is left empty"
   },
   "web.routes.tabs.mods.or_add_a_mod_id": {
     "defaultMessage": "or add a mod ID.",
-    "description": "Mods: text in p"
+    "description": "Mods tab: end of the empty-state hint that tells the user to browse a registry or add a mod ID"
   },
   "web.routes.tabs.mods.paste_mod_id": {
     "defaultMessage": "Paste a mod ID…",
@@ -8065,11 +8089,15 @@
   },
   "web.routes.tabs.mods.placed_outside_the_panel_no_update": {
     "defaultMessage": "Placed outside the panel — no update checks",
-    "description": "Mods: aria-label of span"
+    "description": "Mods tab: accessible label of the grey tag on a mod placed outside the panel; the tag tells the user update checks do not run for it"
+  },
+  "web.routes.tabs.mods.provider_mod_ids": {
+    "defaultMessage": "{provider} mod IDs",
+    "description": "Mods: subtitle line naming the mod provider whose mod IDs are listed; {provider} is the provider name"
   },
   "web.routes.tabs.mods.refresh": {
     "defaultMessage": "Refresh",
-    "description": "Mods: aria-label of Button"
+    "description": "Mods tab: icon-only button that reloads the mod list and checks for updates; read by screen readers; keep it short"
   },
   "web.routes.tabs.mods.registry": {
     "defaultMessage": "registry",
@@ -8077,11 +8105,11 @@
   },
   "web.routes.tabs.mods.remove": {
     "defaultMessage": "Remove",
-    "description": "Mods: text in Fragment"
+    "description": "Mods tab: the word Remove, used as the confirm button of the removal dialog, as the start of its sentence, and as a row button marking a mod for removal; keep it short"
   },
   "web.routes.tabs.mods.remove_mod": {
     "defaultMessage": "Remove mod",
-    "description": "Mods: title of ConfirmDialog"
+    "description": "Mods tab: title of the confirmation dialog that asks before a mod is removed from the server"
   },
   "web.routes.tabs.mods.remove_mod_aria": {
     "defaultMessage": "Remove {name}",
@@ -8109,7 +8137,7 @@
   },
   "web.routes.tabs.mods.saving_restarts_the_server_to_apply_the": {
     "defaultMessage": "Saving restarts the server to apply the new mod list.",
-    "description": "Mods: text in div"
+    "description": "Mods tab: warning note above the save bar saying that saving restarts the server to apply the new mod list"
   },
   "web.routes.tabs.mods.selected_count": {
     "defaultMessage": "{count} selected",
@@ -8117,27 +8145,27 @@
   },
   "web.routes.tabs.mods.selected_mods": {
     "defaultMessage": "Selected mods",
-    "description": "Mods: text in Button"
+    "description": "Mods tab: visible text of the back button in the registry browser, and the heading of the selected mods list; keep it short"
   },
   "web.routes.tabs.mods.this_game_s_server_downloads_its_own": {
     "defaultMessage": "This game’s server downloads its own mods. Select them here — Gameplane passes the list to the server at launch.",
-    "description": "Mods: text in p"
+    "description": "Mods tab: info note at the top of the by-ID mods view saying the game server downloads its own mods and Gameplane passes the list at launch"
   },
   "web.routes.tabs.mods.this_registry_s_downloads_need_your_own": {
     "defaultMessage": "This registry's downloads need your own account credentials appended to the URL",
-    "description": "Mods: title of span"
+    "description": "Mods tab: tooltip on the Use URL form button explaining the registry needs the user's own account credentials appended to the URL"
   },
   "web.routes.tabs.mods.undo": {
     "defaultMessage": "Undo",
-    "description": "Mods: text in Button"
+    "description": "Mods tab: row button that cancels a pending removal of a mod; keep it short"
   },
   "web.routes.tabs.mods.unmanaged": {
     "defaultMessage": "unmanaged",
-    "description": "Mods: text in span"
+    "description": "Mods tab: grey tag on a mod that was placed outside the panel, meaning no update checks run for it; keep it short"
   },
   "web.routes.tabs.mods.update": {
     "defaultMessage": "Update",
-    "description": "Mods: text in Button"
+    "description": "Mods tab: button on a mod row that updates it to the newer version; keep it short"
   },
   "web.routes.tabs.mods.update_all_count": {
     "defaultMessage": "Update all ({count})",
@@ -8161,15 +8189,15 @@
   },
   "web.routes.tabs.mods.uploads_are_recorded_as_provider_upload": {
     "defaultMessage": "Uploads are recorded as provider “upload” in the manifest — they’re never update-checked.",
-    "description": "Mods: text in p"
+    "description": "Mods tab: note under the upload field saying uploaded mods are recorded with the upload provider and are never checked for updates"
   },
   "web.routes.tabs.mods.use_url_form": {
     "defaultMessage": "Use URL form",
-    "description": "Mods: text in Button"
+    "description": "Mods tab: button that moves a mod to the URL form so the user can add their own credentials; it is not a one-click install; keep it short"
   },
   "web.routes.tabs.mods.version": {
     "defaultMessage": "Version",
-    "description": "Mods: aria-label of select"
+    "description": "Mods tab: accessible label of the version dropdown in a mod row; not shown as text"
   },
   "web.routes.tabs.mods.version_file_suffix": {
     "defaultMessage": "· {filename}",
@@ -8177,19 +8205,19 @@
   },
   "web.routes.tabs.overview.cluster_address": {
     "defaultMessage": "Cluster Address",
-    "description": "Overview: text in div"
+    "description": "Overview tab: small heading above the cluster-internal address group, shown when it differs from the external address"
   },
   "web.routes.tabs.overview.connection": {
     "defaultMessage": "Connection",
-    "description": "Overview: text in h3"
+    "description": "Overview tab: small uppercase heading of the connection card that lists the server's addresses"
   },
   "web.routes.tabs.overview.copy": {
     "defaultMessage": "Copy",
-    "description": "Overview: title of button"
+    "description": "Overview tab: icon-only button tooltip that copies the address to the clipboard; keep it short"
   },
   "web.routes.tabs.overview.cpu": {
     "defaultMessage": "CPU",
-    "description": "Overview: label of ResourceCard"
+    "description": "Overview tab: label of the CPU usage card; technical term, usually left untranslated"
   },
   "web.routes.tabs.overview.cpu_cores": {
     "defaultMessage": "{cores} cores",
@@ -8201,15 +8229,15 @@
   },
   "web.routes.tabs.overview.disk": {
     "defaultMessage": "Disk",
-    "description": "Overview: label of ResourceCard"
+    "description": "Overview tab: label of the disk usage card"
   },
   "web.routes.tabs.overview.external_address": {
     "defaultMessage": "External Address",
-    "description": "Overview: label of EndpointRow"
+    "description": "Overview tab: label of the row with the public address of the server, shown without a port"
   },
   "web.routes.tabs.overview.host": {
     "defaultMessage": "Host",
-    "description": "Overview: label of EndpointRow"
+    "description": "Overview tab: label of the host name row in an address group"
   },
   "web.routes.tabs.overview.host_port_suffix": {
     "defaultMessage": ":{port}",
@@ -8225,19 +8253,19 @@
   },
   "web.routes.tabs.overview.loading": {
     "defaultMessage": "Loading…",
-    "description": "Overview: text in div"
+    "description": "Overview tab: loading text shown until the server status is available"
   },
   "web.routes.tabs.overview.memory": {
     "defaultMessage": "Memory",
-    "description": "Overview: label of ResourceCard"
+    "description": "Overview tab: label of the memory usage card"
   },
   "web.routes.tabs.overview.no_events_yet_lifecycle_backup_and": {
     "defaultMessage": "No events yet. Lifecycle, backup, and agent activity will appear here.",
-    "description": "Overview: emptyMessage of EventList"
+    "description": "Overview tab: empty-state text in the recent events card shown when there are no events yet"
   },
   "web.routes.tabs.overview.no_players_connected": {
     "defaultMessage": "No players connected.",
-    "description": "Overview: text in p"
+    "description": "Overview tab: text in the players card shown when no player is connected"
   },
   "web.routes.tabs.overview.online_online_names_not_yet_available": {
     "defaultMessage": "{online} online · names not yet available.",
@@ -8245,15 +8273,15 @@
   },
   "web.routes.tabs.overview.player_count_unknown": {
     "defaultMessage": "Player count unknown.",
-    "description": "Overview: text in p"
+    "description": "Overview tab: text in the players card shown when the online player count cannot be read"
   },
   "web.routes.tabs.overview.player_list_not_supported_for_this_game": {
     "defaultMessage": "Player list not supported for this game.",
-    "description": "Overview: text in p"
+    "description": "Overview tab: text in the players card saying this game does not provide a player list"
   },
   "web.routes.tabs.overview.players_online": {
     "defaultMessage": "Players online ·",
-    "description": "Overview: text in h3"
+    "description": "Overview tab: heading of the players card, followed by the online player count or a dash when the count is unknown"
   },
   "web.routes.tabs.overview.pool_pool": {
     "defaultMessage": "pool: {pool}",
@@ -8261,7 +8289,7 @@
   },
   "web.routes.tabs.overview.port": {
     "defaultMessage": "Port",
-    "description": "Overview: label of EndpointRow"
+    "description": "Overview tab: label of the port number row in the cluster address group"
   },
   "web.routes.tabs.overview.ready_condition_reason_message": {
     "defaultMessage": "Ready condition: {reason} — {message}",
@@ -8269,15 +8297,15 @@
   },
   "web.routes.tabs.overview.recent_events": {
     "defaultMessage": "Recent events",
-    "description": "Overview: text in h3"
+    "description": "Overview tab: small uppercase heading of the recent events card"
   },
   "web.routes.tabs.overview.tailnet_only": {
     "defaultMessage": "Tailnet only",
-    "description": "Overview: text in span"
+    "description": "Overview tab: warning badge beside a tunnel address meaning it is reachable only inside the tailnet; keep it short"
   },
   "web.routes.tabs.overview.tunnel": {
     "defaultMessage": "Tunnel",
-    "description": "Overview: label of EndpointRow"
+    "description": "Overview tab: label of the tunnel address row, shown only when a tunnel endpoint exists"
   },
   "web.routes.tabs.overview.used_of_total": {
     "defaultMessage": "{used} / {total}",
@@ -8285,7 +8313,7 @@
   },
   "web.routes.tabs.overview.view_all": {
     "defaultMessage": "View all",
-    "description": "Overview: text in button"
+    "description": "Overview tab: link-style button in the recent events heading that opens the full events list; keep it short"
   },
   "web.routes.tabs.overview.waiting_for_tunnel_address": {
     "defaultMessage": "Waiting for tunnel address…",
@@ -8293,7 +8321,7 @@
   },
   "web.routes.tabs.overview.waiting_on_storage_the_server_can_t": {
     "defaultMessage": "Waiting on storage — the server can't provision yet",
-    "description": "Overview: text in Alert.Title"
+    "description": "Overview tab: title of the alert shown while the server waits for storage before it can be created; the line below gives the ready condition"
   },
   "web.routes.tabs.players.action_add": {
     "defaultMessage": "add",
@@ -8325,11 +8353,11 @@
   },
   "web.routes.tabs.players.add": {
     "defaultMessage": "Add",
-    "description": "Players: text in Button"
+    "description": "Players tab: button that adds the typed player name to the whitelist; keep it short"
   },
   "web.routes.tabs.players.add_player_to_whitelist": {
     "defaultMessage": "Add player to whitelist…",
-    "description": "Players: placeholder of Input"
+    "description": "Players tab: placeholder in the box used to add a player name to the whitelist"
   },
   "web.routes.tabs.players.ban": {
     "defaultMessage": "Ban",
@@ -8341,7 +8369,7 @@
   },
   "web.routes.tabs.players.banned": {
     "defaultMessage": "Banned",
-    "description": "Players: label of StatCard"
+    "description": "Players tab: stat card label for banned players and heading of the collapsible banned list, followed by a count; keep it short"
   },
   "web.routes.tabs.players.banning": {
     "defaultMessage": "Banning",
@@ -8353,7 +8381,7 @@
   },
   "web.routes.tabs.players.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Players: text in Button"
+    "description": "Players tab: button that closes the kick or ban confirmation without acting; keep it short"
   },
   "web.routes.tabs.players.count_in_parens": {
     "defaultMessage": "({count})",
@@ -8365,7 +8393,7 @@
   },
   "web.routes.tabs.players.dismiss": {
     "defaultMessage": "dismiss",
-    "description": "Players: text in button"
+    "description": "Players tab: small text button that closes the result message; keep it short"
   },
   "web.routes.tabs.players.kick": {
     "defaultMessage": "Kick",
@@ -8381,15 +8409,15 @@
   },
   "web.routes.tabs.players.nobody_is_banned": {
     "defaultMessage": "Nobody is banned.",
-    "description": "Players: text in p"
+    "description": "Players tab: empty-state text in the banned section when no player is banned"
   },
   "web.routes.tabs.players.nobody_online": {
     "defaultMessage": "Nobody online.",
-    "description": "Players: text in p"
+    "description": "Players tab: empty-state text in the player list when nobody is online"
   },
   "web.routes.tabs.players.online": {
     "defaultMessage": "Online",
-    "description": "Players: label of StatCard"
+    "description": "Players tab: stat card label for the number of online players; keep it short"
   },
   "web.routes.tabs.players.online_count": {
     "defaultMessage": "{online} online",
@@ -8409,7 +8437,7 @@
   },
   "web.routes.tabs.players.player_moderation_isn_t_supported_for": {
     "defaultMessage": "Player moderation isn't supported for this game.",
-    "description": "Players: text in p"
+    "description": "Players tab: text shown when this game does not support player moderation such as bans"
   },
   "web.routes.tabs.players.question_mark": {
     "defaultMessage": "?",
@@ -8417,19 +8445,19 @@
   },
   "web.routes.tabs.players.reason_optional_max_256_chars": {
     "defaultMessage": "Reason (optional, max 256 chars)",
-    "description": "Players: placeholder of Input"
+    "description": "Players tab: placeholder in the reason box of the kick or ban confirmation, saying the reason is optional and limited to 256 characters"
   },
   "web.routes.tabs.players.refresh": {
     "defaultMessage": "Refresh",
-    "description": "Players: title of span"
+    "description": "Players tab: tooltip on the refresh icon, same action as the Refresh players button"
   },
   "web.routes.tabs.players.refresh_players": {
     "defaultMessage": "Refresh players",
-    "description": "Players: aria-label of Button"
+    "description": "Players tab: icon-only button that reloads the player list; read by screen readers; keep it short"
   },
   "web.routes.tabs.players.remove_from_whitelist": {
     "defaultMessage": "Remove from whitelist",
-    "description": "Players: title of span"
+    "description": "Players tab: tooltip on the icon button that removes a player from the whitelist; the same action is named in the button's accessible label"
   },
   "web.routes.tabs.players.remove_from_whitelist_aria": {
     "defaultMessage": "Remove {player} from whitelist",
@@ -8441,7 +8469,7 @@
   },
   "web.routes.tabs.players.unban": {
     "defaultMessage": "Unban",
-    "description": "Players: text in Button"
+    "description": "Players tab: row button that lifts a ban on one player; the text is also its accessible label with the player name; keep it short"
   },
   "web.routes.tabs.players.unban_player_aria": {
     "defaultMessage": "Unban {player}",
@@ -8453,11 +8481,11 @@
   },
   "web.routes.tabs.players.whitelist": {
     "defaultMessage": "Whitelist",
-    "description": "Players: text in button"
+    "description": "Players tab: collapsible heading of the whitelist section; the count in brackets follows when the list is loaded"
   },
   "web.routes.tabs.players.whitelist_is_empty": {
     "defaultMessage": "Whitelist is empty.",
-    "description": "Players: text in p"
+    "description": "Players tab: empty-state text in the whitelist section when no player is whitelisted"
   },
   "web.routes.tabs.players.whitelist_player_ok": {
     "defaultMessage": "whitelist {op} {player} ok",
@@ -8465,7 +8493,7 @@
   },
   "web.routes.tabs.players.whitelisted": {
     "defaultMessage": "Whitelisted",
-    "description": "Players: label of StatCard"
+    "description": "Players tab: stat card label for the number of whitelisted players; shown only when the game supports a whitelist"
   },
   "web.routes.tabs.settings.access.add": {
     "defaultMessage": "Add",
@@ -8473,7 +8501,7 @@
   },
   "web.routes.tabs.settings.access.add_collaborator_by_username": {
     "defaultMessage": "Add collaborator by username…",
-    "description": "Access: placeholder of Input"
+    "description": "Settings access section: placeholder in the box for adding a collaborator by username; pressing Enter adds them"
   },
   "web.routes.tabs.settings.access.collaborators": {
     "defaultMessage": "Collaborators",
@@ -8481,11 +8509,11 @@
   },
   "web.routes.tabs.settings.access.collaborators_get_full_control_of_this": {
     "defaultMessage": "Collaborators get full control of this server (console, files, settings). They can't transfer ownership or edit this list.",
-    "description": "Access: text in p"
+    "description": "Settings access section: hint under the Collaborators label saying collaborators get full control of the server but cannot transfer ownership or edit this list"
   },
   "web.routes.tabs.settings.access.collaborators_were_modified_outside_the": {
     "defaultMessage": "Collaborators were modified outside the dashboard.",
-    "description": "Access: text in div"
+    "description": "Settings access section: warning shown when the collaborators list was changed outside the dashboard"
   },
   "web.routes.tabs.settings.access.failed": {
     "defaultMessage": "failed",
@@ -8493,11 +8521,11 @@
   },
   "web.routes.tabs.settings.access.loading": {
     "defaultMessage": "Loading…",
-    "description": "Access: text in div"
+    "description": "Settings access section: loading text shown while the server access details are fetched"
   },
   "web.routes.tabs.settings.access.none_yet": {
     "defaultMessage": "None yet",
-    "description": "Access: text in div"
+    "description": "Settings access section: empty-state text in the collaborators area when there are no collaborators"
   },
   "web.routes.tabs.settings.access.owner": {
     "defaultMessage": "Owner",
@@ -8513,19 +8541,19 @@
   },
   "web.routes.tabs.settings.backups.automatically_create_backups_on_a_cron": {
     "defaultMessage": "Automatically create backups on a cron schedule. The operator manages the BackupSchedule CR.",
-    "description": "Backups: hint of Field"
+    "description": "Settings backups section: hint under the scheduled backups switch saying backups are created on a cron schedule and the operator manages the schedule resource"
   },
   "web.routes.tabs.settings.backups.backup_destination": {
     "defaultMessage": "Backup destination",
-    "description": "Backups: aria-label of ListBox"
+    "description": "Backups: accessible label of the list of backup destinations shown when the destination picker opens; not shown as text"
   },
   "web.routes.tabs.settings.backups.configure_a_backup_destination_first": {
     "defaultMessage": "Configure a backup destination first.",
-    "description": "Backups: text in div"
+    "description": "Settings backups section: note shown when no backup destination exists yet, so scheduled backups cannot be set up"
   },
   "web.routes.tabs.settings.backups.destination": {
     "defaultMessage": "Destination",
-    "description": "Backups: label of Field"
+    "description": "Backups: field label for the backup destination picker, which opens a list of configured destinations"
   },
   "web.routes.tabs.settings.backups.disabled": {
     "defaultMessage": "Disabled",
@@ -8533,7 +8561,7 @@
   },
   "web.routes.tabs.settings.backups.enable_scheduled_backups": {
     "defaultMessage": "Enable scheduled backups",
-    "description": "Backups: label of Field"
+    "description": "Settings backups section: label of the switch that turns scheduled backups on or off; the same text is its accessible name"
   },
   "web.routes.tabs.settings.backups.enabled": {
     "defaultMessage": "Enabled",
@@ -8541,11 +8569,11 @@
   },
   "web.routes.tabs.settings.backups.retention_policy": {
     "defaultMessage": "Retention policy",
-    "description": "Backups: text in div"
+    "description": "Backups: small heading above the retention fields that decide how many backups are kept"
   },
   "web.routes.tabs.settings.backups.schedule_cron": {
     "defaultMessage": "Schedule (cron)",
-    "description": "Backups: label of Field"
+    "description": "Settings backups section: label of the cron expression field that sets when backups run; the hint shows an example expression"
   },
   "web.routes.tabs.settings.backups.schedule_placeholder": {
     "defaultMessage": "0 */6 * * *",
@@ -8557,7 +8585,7 @@
   },
   "web.routes.tabs.settings.backups.suspend_schedule": {
     "defaultMessage": "Suspend schedule",
-    "description": "Backups: label of Field"
+    "description": "Backups: label of the switch that pauses scheduled backups; the same text is its accessible name"
   },
   "web.routes.tabs.settings.backups.suspended": {
     "defaultMessage": "Suspended",
@@ -8565,11 +8593,11 @@
   },
   "web.routes.tabs.settings.backups.when_enabled_scheduled_backups_will_not": {
     "defaultMessage": "When enabled, scheduled backups will not run, but the schedule is preserved.",
-    "description": "Backups: hint of Field"
+    "description": "Backups: hint under the suspend switch saying scheduled backups stop running while it is on, but the schedule itself is kept"
   },
   "web.routes.tabs.settings.backups.when_to_run_backups_example_0_6_for": {
     "defaultMessage": "When to run backups. Example: '0 */6 * * *' for every 6 hours.",
-    "description": "Backups: hint of Field"
+    "description": "Backups: hint under the cron schedule field saying when backups run, with the example 0 */6 * * * for every 6 hours"
   },
   "web.routes.tabs.settings.correct_invalid_before_saving": {
     "defaultMessage": "Correct invalid settings before saving.",
@@ -8581,7 +8609,7 @@
   },
   "web.routes.tabs.settings.danger.delete_server": {
     "defaultMessage": "Delete server",
-    "description": "Danger: title of Row"
+    "description": "Danger: title of the danger row that deletes the whole server, including its persistent volume; the text below warns it cannot be undone"
   },
   "web.routes.tabs.settings.danger.delete_server_body": {
     "defaultMessage": "Removes the GameServer and its persistent volume. This cannot be undone.",
@@ -8593,7 +8621,7 @@
   },
   "web.routes.tabs.settings.danger.transfer_ownership": {
     "defaultMessage": "Transfer ownership",
-    "description": "Danger: title of Row"
+    "description": "Danger: title of the danger row that hands the server to another user; the text after it explains the user keeps access only as a collaborator"
   },
   "web.routes.tabs.settings.danger.transfer_ownership_body": {
     "defaultMessage": "Hand this server to another user. You keep access only if you stay a collaborator.",
@@ -8609,11 +8637,11 @@
   },
   "web.routes.tabs.settings.danger.wipe_world_data": {
     "defaultMessage": "Wipe world data",
-    "description": "Danger: title of Row"
+    "description": "Danger: title of the danger row that deletes all world data and restarts on a fresh world"
   },
   "web.routes.tabs.settings.discard": {
     "defaultMessage": "Discard",
-    "description": "Settings: text in Button"
+    "description": "Settings tab: footer button that throws away unsaved settings edits; disabled when nothing changed; keep it short"
   },
   "web.routes.tabs.settings.env_vars.actions": {
     "defaultMessage": "Actions",
@@ -8629,15 +8657,15 @@
   },
   "web.routes.tabs.settings.env_vars.duplicate_name": {
     "defaultMessage": "Duplicate name",
-    "description": "Env vars: text in FieldError"
+    "description": "Env vars: validation error under the variable name box when another variable already uses that name"
   },
   "web.routes.tabs.settings.env_vars.environment_variables": {
     "defaultMessage": "Environment variables",
-    "description": "Env vars: aria-label of Table.Content"
+    "description": "Env vars: accessible label of the environment variables table, read by screen readers; not shown as text"
   },
   "web.routes.tabs.settings.env_vars.key": {
     "defaultMessage": "key",
-    "description": "Env vars: placeholder of Input"
+    "description": "Env vars: placeholder in an environment variable row's key box, shown before typing; the value box beside it has its own placeholder"
   },
   "web.routes.tabs.settings.env_vars.literal": {
     "defaultMessage": "Literal",
@@ -8645,7 +8673,7 @@
   },
   "web.routes.tabs.settings.env_vars.must_match_a_z_a_z0_9": {
     "defaultMessage": "Must match [A-Z_][A-Z0-9_]*",
-    "description": "Env vars: text in FieldError"
+    "description": "Env vars: validation error under the variable name box when the name does not match the allowed upper-case pattern"
   },
   "web.routes.tabs.settings.env_vars.name": {
     "defaultMessage": "Name",
@@ -8653,7 +8681,7 @@
   },
   "web.routes.tabs.settings.env_vars.no_environment_variables_click_below_to": {
     "defaultMessage": "No environment variables. Click below to add one.",
-    "description": "Env vars: text in p"
+    "description": "Env vars: empty-state text shown when the server has no environment variables; points to the add button below"
   },
   "web.routes.tabs.settings.env_vars.remove": {
     "defaultMessage": "Remove",
@@ -8665,15 +8693,15 @@
   },
   "web.routes.tabs.settings.env_vars.secret_key": {
     "defaultMessage": "Secret key",
-    "description": "Env vars: aria-label of Input"
+    "description": "Env vars: accessible label of the box that holds the key inside the Kubernetes Secret for a secret-backed variable; not shown as text"
   },
   "web.routes.tabs.settings.env_vars.secret_name": {
     "defaultMessage": "Secret name",
-    "description": "Env vars: aria-label of Input"
+    "description": "Env vars: accessible label of the box that holds the Kubernetes Secret name for a secret-backed variable; not shown as text"
   },
   "web.routes.tabs.settings.env_vars.secret_name_2": {
     "defaultMessage": "secret-name",
-    "description": "Env vars: placeholder of Input"
+    "description": "Env vars: example placeholder in the Secret name box showing the expected format; an example value, not a default"
   },
   "web.routes.tabs.settings.env_vars.type": {
     "defaultMessage": "Type",
@@ -8685,27 +8713,27 @@
   },
   "web.routes.tabs.settings.env_vars.value_2": {
     "defaultMessage": "value",
-    "description": "Env vars: placeholder of Input"
+    "description": "Env vars: placeholder in a variable row's value box, shown before typing a literal value"
   },
   "web.routes.tabs.settings.env_vars.var_name": {
     "defaultMessage": "VAR_NAME",
-    "description": "Env vars: placeholder of Input"
+    "description": "Env vars: example placeholder in the variable name box, showing the naming style; an example name, not a default"
   },
   "web.routes.tabs.settings.env_vars.variable_name": {
     "defaultMessage": "Variable name",
-    "description": "Env vars: aria-label of Input"
+    "description": "Env vars: accessible label of the variable name box in a row of the environment variables table; not shown as text"
   },
   "web.routes.tabs.settings.env_vars.variable_value": {
     "defaultMessage": "Variable value",
-    "description": "Env vars: aria-label of Input"
+    "description": "Env vars: accessible label of the box that holds the value of a variable row; not shown as text"
   },
   "web.routes.tabs.settings.game_config.game_configuration": {
     "defaultMessage": "Game configuration",
-    "description": "Game config: text in h2"
+    "description": "Game config: heading of the game configuration section, shown at the top of the section"
   },
   "web.routes.tabs.settings.game_config.no_longer_in_the_template": {
     "defaultMessage": "No longer in the template",
-    "description": "Game config: text in p"
+    "description": "Game config: note on a saved setting that the game template no longer offers; shown next to a Remove button"
   },
   "web.routes.tabs.settings.game_config.remove": {
     "defaultMessage": "Remove",
@@ -8713,19 +8741,19 @@
   },
   "web.routes.tabs.settings.game_config.saving_changes_restarts_the_server_so": {
     "defaultMessage": "Saving changes restarts the server so they apply.",
-    "description": "Game config: text in Alert.Content"
+    "description": "Game config: warning note saying that saving changes restarts the server so they apply; shown to users who can write the settings"
   },
   "web.routes.tabs.settings.game_config.settings_from_this_server_s_game": {
     "defaultMessage": "Settings from this server's game template. Saving restarts the server.",
-    "description": "Game config: text in p"
+    "description": "Game config: hint under the heading saying these settings come from the game template and that saving restarts the server"
   },
   "web.routes.tabs.settings.game_config.the_operator_rejected_this_configuration": {
     "defaultMessage": "The operator rejected this configuration",
-    "description": "Game config: text in div"
+    "description": "Game config: title of the danger alert shown when the operator rejects the configuration; the detail line below gives the reason"
   },
   "web.routes.tabs.settings.game_config.this_template_has_no_configurable": {
     "defaultMessage": "This template has no configurable settings.",
-    "description": "Game config: text in p"
+    "description": "Game config: empty-state text shown when the game template has no configurable settings"
   },
   "web.routes.tabs.settings.gameconfig.hidden": {
     "defaultMessage": "Hidden",
@@ -8737,19 +8765,19 @@
   },
   "web.routes.tabs.settings.general.description": {
     "defaultMessage": "Description",
-    "description": "General: label of Field"
+    "description": "General: field label for the free-text description of the server"
   },
   "web.routes.tabs.settings.general.free_form_kubernetes_labels": {
     "defaultMessage": "Free-form Kubernetes labels.",
-    "description": "General: hint of Field"
+    "description": "General: hint under the labels field saying labels are free-form Kubernetes labels"
   },
   "web.routes.tabs.settings.general.image_override": {
     "defaultMessage": "Image override",
-    "description": "General: label of Field"
+    "description": "General: field label for an optional container image that replaces the template's image"
   },
   "web.routes.tabs.settings.general.key": {
     "defaultMessage": "key",
-    "description": "General: placeholder of Input"
+    "description": "General: placeholder in the label key box of the new label row, shown before typing"
   },
   "web.routes.tabs.settings.general.key_value_separator": {
     "defaultMessage": "=",
@@ -8757,35 +8785,35 @@
   },
   "web.routes.tabs.settings.general.labels": {
     "defaultMessage": "Labels",
-    "description": "General: label of Field"
+    "description": "General: field label for the list of Kubernetes labels set on the server"
   },
   "web.routes.tabs.settings.general.long_standing_survival_realm_invite_only": {
     "defaultMessage": "Long-standing survival realm. Invite-only.",
-    "description": "General: placeholder of TextArea"
+    "description": "General: example placeholder in the description box before typing; an example text, not a default"
   },
   "web.routes.tabs.settings.general.name": {
     "defaultMessage": "Name",
-    "description": "General: label of Field"
+    "description": "General: field label for the server name, which is fixed and cannot be edited here"
   },
   "web.routes.tabs.settings.general.pin_a_specific_game_container_image": {
     "defaultMessage": "Pin a specific game-container image. Leave blank to use the template default.",
-    "description": "General: hint of Field"
+    "description": "General: hint under the image override field; leave it blank to use the template's default image"
   },
   "web.routes.tabs.settings.general.pinned_to_the_gameserver_uid_cannot": {
     "defaultMessage": "Pinned to the GameServer UID; cannot change.",
-    "description": "General: hint of Field"
+    "description": "General: hint under the server name field saying the name is pinned to the game server's unique ID and cannot be changed"
   },
   "web.routes.tabs.settings.general.remove_label": {
     "defaultMessage": "Remove label",
-    "description": "General: title of span"
+    "description": "General: tooltip and accessible label of the icon button that removes one label row; keep it short"
   },
   "web.routes.tabs.settings.general.shown_in_the_dashboard_server_list": {
     "defaultMessage": "Shown in the dashboard server list.",
-    "description": "General: hint of Field"
+    "description": "General: hint under the description field saying the text is shown in the dashboard server list"
   },
   "web.routes.tabs.settings.general.template": {
     "defaultMessage": "Template",
-    "description": "General: label of Field"
+    "description": "General: field label for the game template the server was created from; the field is read-only"
   },
   "web.routes.tabs.settings.general.template_image": {
     "defaultMessage": "(template image)",
@@ -8793,15 +8821,15 @@
   },
   "web.routes.tabs.settings.general.value": {
     "defaultMessage": "value",
-    "description": "General: placeholder of Input"
+    "description": "General: placeholder in the label value box of the new label row, shown before typing"
   },
   "web.routes.tabs.settings.lifecycle.a_game_that_reports_no_player_count": {
     "defaultMessage": "A game that reports no player count will never sleep.",
-    "description": "Lifecycle: text in div"
+    "description": "Lifecycle: warning note that a game reporting no player count will never sleep, since idle detection cannot work"
   },
   "web.routes.tabs.settings.lifecycle.a_wake_window_never_restarts_a_server": {
     "defaultMessage": "A wake window never restarts a server you stopped by hand.",
-    "description": "Lifecycle: text in div"
+    "description": "Lifecycle: note that a wake window does not restart a server the user stopped by hand"
   },
   "web.routes.tabs.settings.lifecycle.add_wake_window": {
     "defaultMessage": "Add wake window",
@@ -8809,7 +8837,7 @@
   },
   "web.routes.tabs.settings.lifecycle.auto_restart": {
     "defaultMessage": "Auto-restart",
-    "description": "Lifecycle: label of Field"
+    "description": "Lifecycle: field label for the switch that restarts the server automatically; the same text is its accessible name"
   },
   "web.routes.tabs.settings.lifecycle.disabled": {
     "defaultMessage": "Disabled",
@@ -8817,7 +8845,7 @@
   },
   "web.routes.tabs.settings.lifecycle.enable_idle_auto_sleep": {
     "defaultMessage": "Enable idle auto-sleep",
-    "description": "Lifecycle: aria-label of Switch"
+    "description": "Lifecycle: switch that turns idle auto-sleep on or off; the text is its accessible name, not shown as text"
   },
   "web.routes.tabs.settings.lifecycle.from_template": {
     "defaultMessage": "from template",
@@ -8829,11 +8857,11 @@
   },
   "web.routes.tabs.settings.lifecycle.health_probes": {
     "defaultMessage": "Health probes",
-    "description": "Lifecycle: label of Field"
+    "description": "Lifecycle: field label for the per-server overrides of the health probe timing"
   },
   "web.routes.tabs.settings.lifecycle.idle_auto_sleep": {
     "defaultMessage": "Idle auto-sleep",
-    "description": "Lifecycle: label of Field"
+    "description": "Lifecycle: field label for the idle auto-sleep setting that scales the server to zero when nobody is playing"
   },
   "web.routes.tabs.settings.lifecycle.idle_auto_sleep_enabled": {
     "defaultMessage": "Idle auto-sleep enabled",
@@ -8845,31 +8873,31 @@
   },
   "web.routes.tabs.settings.lifecycle.idle_sleep_after": {
     "defaultMessage": "Idle sleep after",
-    "description": "Lifecycle: aria-label of Input"
+    "description": "Lifecycle: accessible label of the minutes box for the idle sleep delay; not shown as text"
   },
   "web.routes.tabs.settings.lifecycle.minutes_of_zero_players_5_1440": {
     "defaultMessage": "minutes of zero players (5–1440)",
-    "description": "Lifecycle: text in span"
+    "description": "Lifecycle: unit text after the minutes box, saying the value counts minutes of zero players and must be from 5 to 1440"
   },
   "web.routes.tabs.settings.lifecycle.must_be_a_five_field_cron_expression_e": {
     "defaultMessage": "Must be a five-field cron expression (e.g. 0 9 * * 1-5).",
-    "description": "Lifecycle: text in div"
+    "description": "Lifecycle: validation error under a wake window when its text is not a five-field cron expression; the example 0 9 * * 1-5 is shown"
   },
   "web.routes.tabs.settings.lifecycle.must_be_an_integer_between_0_and_600": {
     "defaultMessage": "Must be an integer between 0 and 600.",
-    "description": "Lifecycle: text in div"
+    "description": "Lifecycle: validation error under the grace period field when the value is not a whole number from 0 to 600"
   },
   "web.routes.tabs.settings.lifecycle.must_be_an_integer_between_5_and_1440": {
     "defaultMessage": "Must be an integer between 5 and 1440.",
-    "description": "Lifecycle: text in div"
+    "description": "Lifecycle: validation error under the idle minutes box when the value is not a whole number from 5 to 1440"
   },
   "web.routes.tabs.settings.lifecycle.not_defined_by_the_template": {
     "defaultMessage": ": not defined by the template.",
-    "description": "Lifecycle: text in div"
+    "description": "Lifecycle: text after a probe kind name, shown when neither the template nor this server defines that probe"
   },
   "web.routes.tabs.settings.lifecycle.per_server_overrides_for_the_template_s": {
     "defaultMessage": "Per-server overrides for the template's readiness/liveness/startup probe timing. The probe action is inherited from the template.",
-    "description": "Lifecycle: hint of Field"
+    "description": "Lifecycle: hint under the health probes label explaining the overrides for probe timing; the probe action comes from the template"
   },
   "web.routes.tabs.settings.lifecycle.pod_desired_running": {
     "defaultMessage": "Pod is desired Running",
@@ -8929,19 +8957,19 @@
   },
   "web.routes.tabs.settings.lifecycle.seconds_the_operator_waits_for_the": {
     "defaultMessage": "Seconds the operator waits for the template's stop sequence to finish before scaling the pod down. Range 0–600; defaults to 30. No effect when the template declares no stop sequence.",
-    "description": "Lifecycle: hint of Field"
+    "description": "Lifecycle: hint under the termination grace period field giving the allowed range 0 to 600 and the default of 30 seconds"
   },
   "web.routes.tabs.settings.lifecycle.sleep_after": {
     "defaultMessage": "Sleep after",
-    "description": "Lifecycle: text in label"
+    "description": "Lifecycle: small label in front of the minutes box that sets how long the server waits with zero players before sleeping"
   },
   "web.routes.tabs.settings.lifecycle.standard_five_field_cron_max_8_entries": {
     "defaultMessage": "Standard five-field cron. Max 8 entries.",
-    "description": "Lifecycle: text in span"
+    "description": "Lifecycle: hint under the wake windows list saying the entries use standard five-field cron and at most 8 are allowed"
   },
   "web.routes.tabs.settings.lifecycle.termination_grace_period": {
     "defaultMessage": "Termination grace period",
-    "description": "Lifecycle: label of Field"
+    "description": "Lifecycle: field label for the number of seconds given to the server to stop cleanly before it is shut down"
   },
   "web.routes.tabs.settings.lifecycle.wake_window_aria": {
     "defaultMessage": "Wake window {n}",
@@ -8953,23 +8981,23 @@
   },
   "web.routes.tabs.settings.lifecycle.wake_windows": {
     "defaultMessage": "Wake windows",
-    "description": "Lifecycle: text in label"
+    "description": "Lifecycle: field label for the list of wake windows, the times the server is woken on a schedule"
   },
   "web.routes.tabs.settings.lifecycle.when_enabled_scales_the_server_to_zero": {
     "defaultMessage": "When enabled, scales the server to zero after it reports zero players for the configured duration. A wake window cron or an explicit :wake brings it back.",
-    "description": "Lifecycle: hint of Field"
+    "description": "Lifecycle: hint under the idle auto-sleep label explaining the server sleeps after zero players for the set time and wake windows bring it back"
   },
   "web.routes.tabs.settings.lifecycle.when_off_the_statefulset_is_scaled_to": {
     "defaultMessage": "When off, the StatefulSet is scaled to zero (Suspended). Data is preserved.",
-    "description": "Lifecycle: hint of Field"
+    "description": "Lifecycle: hint under the auto-restart switch saying that when it is off the server is suspended and its data is kept"
   },
   "web.routes.tabs.settings.loading": {
     "defaultMessage": "Loading…",
-    "description": "Settings: text in div"
+    "description": "Settings tab: loading text shown while the settings are fetched or a settings section is still loading"
   },
   "web.routes.tabs.settings.network_capture.captures_are_automatically_deleted": {
     "defaultMessage": "Captures are automatically deleted after this window. Leave blank to use the cluster default.",
-    "description": "Network capture: text in Description"
+    "description": "Network capture: description under the Retention Window heading saying captures are deleted after this window, and blank uses the cluster default"
   },
   "web.routes.tabs.settings.network_capture.cluster_maximum_7_days": {
     "defaultMessage": "Cluster maximum: 7 days ({seconds} seconds) — a storage-limitation-informed default, not a legal requirement.",
@@ -8997,15 +9025,15 @@
   },
   "web.routes.tabs.settings.network_capture.learn_more": {
     "defaultMessage": "Learn more",
-    "description": "Network capture: text in a"
+    "description": "Network capture: link at the bottom of the capture section that opens the capture documentation"
   },
   "web.routes.tabs.settings.network_capture.network_packet_capture_requires_admin": {
     "defaultMessage": "Network packet capture requires admin access. Captures contain real player data (IP addresses, chat, credentials) and are not redacted.",
-    "description": "Network capture: text in p"
+    "description": "Network capture: warning under the capture status saying packet capture needs admin access and captures hold real player data that is not redacted"
   },
   "web.routes.tabs.settings.network_capture.records_raw_network_protocol_traffic": {
     "defaultMessage": "Records raw network protocol traffic from a sidecar container for later download and analysis.",
-    "description": "Network capture: text in Description"
+    "description": "Network capture: description under the Enable Capture heading saying it records raw network traffic from a sidecar for later download and analysis"
   },
   "web.routes.tabs.settings.network_capture.retention_window": {
     "defaultMessage": "Retention Window",
@@ -9017,11 +9045,11 @@
   },
   "web.routes.tabs.settings.network_capture.retention_window_value": {
     "defaultMessage": "Retention window value",
-    "description": "Network capture: aria-label of Input"
+    "description": "Network capture: accessible label of the box for the retention window amount; not shown as text; its placeholder is the default amount"
   },
   "web.routes.tabs.settings.network_capture.turning_this_off_stops_any_running": {
     "defaultMessage": "Turning this off stops any running capture and blocks new ones immediately. The capture container itself stays in the pod, idle, until the pod is next recreated — Kubernetes has no API to remove an ephemeral container.",
-    "description": "Network capture: text in p"
+    "description": "Network capture: hint under the enabled status saying that turning capture off stops running captures and blocks new ones, though the idle capture container stays until the pod is recreated"
   },
   "web.routes.tabs.settings.network_capture.unit_days": {
     "defaultMessage": "days",
@@ -9041,11 +9069,11 @@
   },
   "web.routes.tabs.settings.network_capture.you_don_t_have_permission_to_change": {
     "defaultMessage": "You don't have permission to change capture settings for this server.",
-    "description": "Network capture: text in p"
+    "description": "Network capture: warning shown to users who cannot change the capture settings for this server"
   },
   "web.routes.tabs.settings.networking.a_specific_address_to_request_from_the": {
     "defaultMessage": "A specific address to request from the pool. Must be free — the address manager rejects addresses already in use. Leave blank unless you need a specific address.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the requested address field saying the address must be free and should be left blank unless a specific address is needed"
   },
   "web.routes.tabs.settings.networking.add": {
     "defaultMessage": "Add",
@@ -9057,7 +9085,7 @@
   },
   "web.routes.tabs.settings.networking.address_and_pool_currently_bound_to": {
     "defaultMessage": "Address and pool currently bound to this server by the operator.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the current assignment label saying the address and pool are bound to this server by the operator"
   },
   "web.routes.tabs.settings.networking.address_in_use": {
     "defaultMessage": "Requested address {address} is already in use by <link>GameServer \"{name}\"</link>.",
@@ -9065,7 +9093,7 @@
   },
   "web.routes.tabs.settings.networking.address_pool": {
     "defaultMessage": "Address pool",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the load balancer address pool name; the hint says leaving it blank lets the address manager choose"
   },
   "web.routes.tabs.settings.networking.address_pool_and_requested_address_only": {
     "defaultMessage": "Expose is set to {expose}. Address pool and requested address only take effect when Expose (above) is set to LoadBalancer.",
@@ -9073,11 +9101,11 @@
   },
   "web.routes.tabs.settings.networking.address_preference_ignored": {
     "defaultMessage": "Address preference ignored",
-    "description": "Networking: text in div"
+    "description": "Networking: notice title shown when an address preference is set but Expose is not LoadBalancer, so the preference has no effect; the line below names the Expose value"
   },
   "web.routes.tabs.settings.networking.address_status": {
     "defaultMessage": "Address status",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the status of the address assignment, taken from the server's address condition"
   },
   "web.routes.tabs.settings.networking.allow_list_placeholder": {
     "defaultMessage": "203.0.113.0/24 10.0.0.0/8",
@@ -9093,27 +9121,27 @@
   },
   "web.routes.tabs.settings.networking.comma_separated_tags_optional": {
     "defaultMessage": "Comma-separated tags (optional).",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the Tailscale tags field saying tags are comma-separated and optional"
   },
   "web.routes.tabs.settings.networking.configured": {
     "defaultMessage": "Configured",
-    "description": "Networking: text in div"
+    "description": "Networking: status text beside the tunnel credentials, shown when credentials are already stored"
   },
   "web.routes.tabs.settings.networking.current_assignment": {
     "defaultMessage": "Current assignment",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the address and pool the operator has currently bound to this server"
   },
   "web.routes.tabs.settings.networking.e_g_203_0_113_50": {
     "defaultMessage": "e.g. 203.0.113.50",
-    "description": "Networking: placeholder of Input"
+    "description": "Networking: example placeholder in the requested address box; an example address, not a default"
   },
   "web.routes.tabs.settings.networking.enable_tunnel": {
     "defaultMessage": "Enable tunnel",
-    "description": "Networking: aria-label of Switch"
+    "description": "Networking: switch that turns a relay tunnel on or off; the text is its accessible name, not shown as text"
   },
   "web.routes.tabs.settings.networking.expose": {
     "defaultMessage": "Expose",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the service type that exposes the game pod; keeps applying when a tunnel is enabled"
   },
   "web.routes.tabs.settings.networking.expose_cluster_ip": {
     "defaultMessage": "ClusterIP (in-cluster only)",
@@ -9141,7 +9169,7 @@
   },
   "web.routes.tabs.settings.networking.frp_server_address": {
     "defaultMessage": "frp server address.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the frp server address field; frp is a technical term, usually left untranslated"
   },
   "web.routes.tabs.settings.networking.frp_server_address_required": {
     "defaultMessage": "Server address is required for frp",
@@ -9149,7 +9177,7 @@
   },
   "web.routes.tabs.settings.networking.frp_server_port_default_7000": {
     "defaultMessage": "frp server port (default 7000).",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the frp server port field giving the default port 7000"
   },
   "web.routes.tabs.settings.networking.frp_server_port_placeholder": {
     "defaultMessage": "7000",
@@ -9157,19 +9185,19 @@
   },
   "web.routes.tabs.settings.networking.game": {
     "defaultMessage": "game",
-    "description": "Networking: placeholder of Input"
+    "description": "Networking: example placeholder in a frp port mapping's name box; an example value, not a default"
   },
   "web.routes.tabs.settings.networking.game_server": {
     "defaultMessage": "game-server",
-    "description": "Networking: placeholder of Input"
+    "description": "Networking: example placeholder in the Tailscale hostname box; an example value, not a default"
   },
   "web.routes.tabs.settings.networking.hostname": {
     "defaultMessage": "Hostname",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for an optional hostname, used for Tailscale or for ingress and external-dns annotations"
   },
   "web.routes.tabs.settings.networking.hostname_in_your_tailnet_optional": {
     "defaultMessage": "Hostname in your tailnet (optional).",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the Tailscale hostname field saying it is the hostname in the tailnet and is optional"
   },
   "web.routes.tabs.settings.networking.key_value_separator": {
     "defaultMessage": "=",
@@ -9177,51 +9205,51 @@
   },
   "web.routes.tabs.settings.networking.loadbalancer_ip_allow_list": {
     "defaultMessage": "LoadBalancer IP allow-list",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the LoadBalancer IP allow-list, shown only when Expose is LoadBalancer; the accessible name of its text box is the same"
   },
   "web.routes.tabs.settings.networking.mc_example_com": {
     "defaultMessage": "mc.example.com",
-    "description": "Networking: placeholder of Input"
+    "description": "Networking: example placeholder in the general hostname field; an example value, not a default"
   },
   "web.routes.tabs.settings.networking.merged_into_the_service_useful_for": {
     "defaultMessage": "Merged into the Service. Useful for cloud LB or external-dns config.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the service annotations field saying they are merged into the Service and are useful for cloud load balancer or external-dns setup"
   },
   "web.routes.tabs.settings.networking.my_server": {
     "defaultMessage": "my-server",
-    "description": "Networking: placeholder of Input"
+    "description": "Networking: example placeholder in the playit tunnel name box; an example value, not a default"
   },
   "web.routes.tabs.settings.networking.name_and_remote_port_for_each_game_port": {
     "defaultMessage": "Name and remote port for each game port.",
-    "description": "Networking: text in div"
+    "description": "Networking: hint under the port mappings heading saying each entry holds a name and the remote port for each game port"
   },
   "web.routes.tabs.settings.networking.name_of_a_load_balancer_address_pool": {
     "defaultMessage": "Name of a load-balancer address pool configured by your cluster admin. Leave blank to let the address manager choose.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the address pool field saying the pool is configured by the cluster admin and blank lets the address manager choose"
   },
   "web.routes.tabs.settings.networking.name_of_the_tunnel_on_playit_gg": {
     "defaultMessage": "Name of the tunnel on playit.gg.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the playit tunnel name field saying it is the name of the tunnel on playit.gg; playit is a technical term"
   },
   "web.routes.tabs.settings.networking.no_address_manager_configured": {
     "defaultMessage": "No address manager configured",
-    "description": "Networking: text in div"
+    "description": "Networking: warning title shown when the cluster has no address manager; the line below says the pool and address preference will be saved but not applied"
   },
   "web.routes.tabs.settings.networking.one_cidr_per_line_restricts_which": {
     "defaultMessage": "One CIDR per line. Restricts which clients reach the LoadBalancer; empty allows all.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the IP allow-list saying one CIDR goes on each line and an empty list allows all clients"
   },
   "web.routes.tabs.settings.networking.optional_dns_name_for_ingress_external": {
     "defaultMessage": "Optional DNS name for ingress / external-dns annotations.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the Hostname field of the general network settings, saying it is an optional DNS name for ingress or external-dns annotations"
   },
   "web.routes.tabs.settings.networking.pin_a_nodeport_or_override_the_service": {
     "defaultMessage": "Pin a NodePort or override the Service port for a named template port.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the port overrides label explaining that overrides pin a NodePort or change the Service port for a template port"
   },
   "web.routes.tabs.settings.networking.pool_name": {
     "defaultMessage": "pool-name",
-    "description": "Networking: placeholder of Input"
+    "description": "Networking: example placeholder in the address pool box; an example name, not a default"
   },
   "web.routes.tabs.settings.networking.port_mapping_name_required": {
     "defaultMessage": "Port mapping {index}: name is required",
@@ -9233,7 +9261,7 @@
   },
   "web.routes.tabs.settings.networking.port_mappings": {
     "defaultMessage": "Port mappings",
-    "description": "Networking: text in div"
+    "description": "Networking: heading of the frp port mappings list; the line under it explains each entry names a game port and its remote port"
   },
   "web.routes.tabs.settings.networking.port_name": {
     "defaultMessage": "Port name",
@@ -9241,11 +9269,11 @@
   },
   "web.routes.tabs.settings.networking.port_overrides": {
     "defaultMessage": "Port overrides",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the port overrides list that pins a NodePort or changes the Service port of a template port"
   },
   "web.routes.tabs.settings.networking.provider": {
     "defaultMessage": "Provider",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the tunnel provider picker, shown when a tunnel is enabled"
   },
   "web.routes.tabs.settings.networking.provider_and_credential_required": {
     "defaultMessage": "Provider and credential value required",
@@ -9257,15 +9285,15 @@
   },
   "web.routes.tabs.settings.networking.public_address_assigned_at_runtime": {
     "defaultMessage": "Public address assigned at runtime",
-    "description": "Networking: text in div"
+    "description": "Networking: title of the info note for playit saying the public address is assigned at runtime"
   },
   "web.routes.tabs.settings.networking.reflects_the_gameserver_s": {
     "defaultMessage": "Reflects the GameServer's AddressAssignment condition.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the address status label saying it reflects the game server's address assignment condition"
   },
   "web.routes.tabs.settings.networking.relay_example_com": {
     "defaultMessage": "relay.example.com",
-    "description": "Networking: placeholder of Input"
+    "description": "Networking: example placeholder in the frp server address box; an example host, not a default"
   },
   "web.routes.tabs.settings.networking.remote_port": {
     "defaultMessage": "Remote port",
@@ -9277,7 +9305,7 @@
   },
   "web.routes.tabs.settings.networking.remove": {
     "defaultMessage": "Remove",
-    "description": "Networking: aria-label of Button"
+    "description": "Networking: icon-only button that removes one port mapping or key-value entry; read by screen readers; keep it short"
   },
   "web.routes.tabs.settings.networking.remove_credential_failed": {
     "defaultMessage": "Failed to remove the credential",
@@ -9285,7 +9313,7 @@
   },
   "web.routes.tabs.settings.networking.remove_tunnel_credentials": {
     "defaultMessage": "Remove tunnel credentials",
-    "description": "Networking: aria-label of Button"
+    "description": "Networking: icon-only button that removes the stored tunnel credentials; read by screen readers; keep it short"
   },
   "web.routes.tabs.settings.networking.replace": {
     "defaultMessage": "Replace",
@@ -9293,11 +9321,11 @@
   },
   "web.routes.tabs.settings.networking.requested_address": {
     "defaultMessage": "Requested address",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for an optional specific address to request from the address pool"
   },
   "web.routes.tabs.settings.networking.route_players_through_a_relay_so_they": {
     "defaultMessage": "Route players through a relay so they can connect without port-forwarding or a public IP.",
-    "description": "Networking: text in div"
+    "description": "Networking: hint under the Enable tunnel switch explaining a relay lets players connect without port forwarding or a public IP"
   },
   "web.routes.tabs.settings.networking.save_credential": {
     "defaultMessage": "Save credential",
@@ -9317,43 +9345,43 @@
   },
   "web.routes.tabs.settings.networking.server_address": {
     "defaultMessage": "Server address",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the frp relay server address"
   },
   "web.routes.tabs.settings.networking.server_port": {
     "defaultMessage": "Server port",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the port of the frp relay server"
   },
   "web.routes.tabs.settings.networking.service_annotations": {
     "defaultMessage": "Service annotations",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the optional annotations added to the Kubernetes Service"
   },
   "web.routes.tabs.settings.networking.service_type_fronting_the_game_pod": {
     "defaultMessage": "Service type fronting the game pod. Still applies when a tunnel is enabled.",
-    "description": "Networking: hint of Field"
+    "description": "Networking: hint under the Expose field saying the service type fronts the game pod and still applies when a tunnel is enabled"
   },
   "web.routes.tabs.settings.networking.tag_server_tag_minecraft": {
     "defaultMessage": "tag:server, tag:minecraft",
-    "description": "Networking: placeholder of Input"
+    "description": "Networking: example placeholder in the Tailscale tags box showing the tag format; an example value, not a default"
   },
   "web.routes.tabs.settings.networking.tags": {
     "defaultMessage": "Tags",
-    "description": "Networking: label of Field"
+    "description": "Networking: field label for the optional Tailscale tags"
   },
   "web.routes.tabs.settings.networking.tailnet_only_not_public": {
     "defaultMessage": "Tailnet only — not public",
-    "description": "Networking: text in div"
+    "description": "Networking: warning title shown for the Tailscale provider; the line below says the server is reachable only from the Tailscale network"
   },
   "web.routes.tabs.settings.networking.the_server_becomes_reachable_only_from": {
     "defaultMessage": "The server becomes reachable only from your Tailscale network, never from the public internet.",
-    "description": "Networking: text in div"
+    "description": "Networking: text under the Tailnet only warning saying the server is reachable only from the user's Tailscale network, never from the public internet"
   },
   "web.routes.tabs.settings.networking.the_tunnel_s_public_address_will_be": {
     "defaultMessage": "The tunnel's public address will be assigned by playit.gg and displayed on the connection card.",
-    "description": "Networking: text in div"
+    "description": "Networking: text under the playit info note saying playit.gg assigns the public address, which then shows on the connection card"
   },
   "web.routes.tabs.settings.networking.this_cluster_has_no_metallb_or_cilium": {
     "defaultMessage": "This cluster has no MetalLB or Cilium address manager. Your pool and address preference will be saved but never applied.",
-    "description": "Networking: text in div"
+    "description": "Networking: note under the no-address-manager warning; without MetalLB or Cilium the pool and address preference are saved but never applied"
   },
   "web.routes.tabs.settings.networking.tunnel_credentials": {
     "defaultMessage": "Tunnel credentials",
@@ -9381,11 +9409,11 @@
   },
   "web.routes.tabs.settings.placement.pod_affinity_anti_affinity_and_node": {
     "defaultMessage": "Pod affinity/anti-affinity and node affinity constraints. JSON object (optional).",
-    "description": "Placement: text in Description"
+    "description": "Placement: hint under the Affinity label saying the field takes an optional JSON object with pod and node affinity constraints"
   },
   "web.routes.tabs.settings.placement.pod_tolerations_for_kubernetes_node": {
     "defaultMessage": "Pod tolerations for Kubernetes node taints. Array of toleration objects (optional).",
-    "description": "Placement: text in Description"
+    "description": "Placement: hint under the Tolerations label saying the field takes an optional JSON array of toleration objects for Kubernetes node taints"
   },
   "web.routes.tabs.settings.placement.tolerations": {
     "defaultMessage": "Tolerations",
@@ -9397,11 +9425,11 @@
   },
   "web.routes.tabs.settings.reload": {
     "defaultMessage": "Reload",
-    "description": "Settings: text in button"
+    "description": "Settings tab: inline button in the footer warning that reloads the latest server settings; keep it short"
   },
   "web.routes.tabs.settings.resources.10gi": {
     "defaultMessage": "10Gi",
-    "description": "Resources: placeholder of Input"
+    "description": "Resources: example placeholder in the storage size box; an example value, not a default"
   },
   "web.routes.tabs.settings.resources.allowvolumeexpansion_true": {
     "defaultMessage": "allowVolumeExpansion: true",
@@ -9409,27 +9437,27 @@
   },
   "web.routes.tabs.settings.resources.cpu_cores": {
     "defaultMessage": "CPU cores",
-    "description": "Resources: label of Field"
+    "description": "Resources: field label for the number of CPU cores reserved for the server; CPU is a technical term, usually left untranslated"
   },
   "web.routes.tabs.settings.resources.fast_ssd": {
     "defaultMessage": "fast-ssd",
-    "description": "Resources: placeholder of Input"
+    "description": "Resources: example placeholder in the StorageClass box; an example class name, not a default"
   },
   "web.routes.tabs.settings.resources.invalid_quantity_e_g_10gi": {
     "defaultMessage": "Invalid quantity (e.g. \"10Gi\").",
-    "description": "Resources: text in div"
+    "description": "Resources: validation error under the storage size box when the value is not a valid quantity such as 10Gi"
   },
   "web.routes.tabs.settings.resources.k8s_quantity_e_g_10gi_200gi": {
     "defaultMessage": "K8s quantity (e.g. 10Gi, 200Gi).",
-    "description": "Resources: text in div"
+    "description": "Resources: hint under the storage size field saying the value is a Kubernetes quantity such as 10Gi or 200Gi; Kubernetes is a technical term"
   },
   "web.routes.tabs.settings.resources.leave_blank_to_use_the_cluster_default": {
     "defaultMessage": "Leave blank to use the cluster default.",
-    "description": "Resources: hint of Field"
+    "description": "Resources: hint under the StorageClass field saying a blank value uses the cluster default storage class"
   },
   "web.routes.tabs.settings.resources.memory_gib": {
     "defaultMessage": "Memory (GiB)",
-    "description": "Resources: label of Field"
+    "description": "Resources: field label for the memory amount in GiB reserved for the server"
   },
   "web.routes.tabs.settings.resources.resizing_requires_a_storageclass_with": {
     "defaultMessage": "Resizing requires a StorageClass with {setting}.",
@@ -9437,23 +9465,23 @@
   },
   "web.routes.tabs.settings.resources.sets_requests_limits_to_the_same_value": {
     "defaultMessage": "Sets requests=limits to the same value (Guaranteed QoS).",
-    "description": "Resources: hint of Field"
+    "description": "Resources: hint under the CPU cores field saying the request and limit are set to the same value, which gives the Guaranteed QoS class; QoS is a technical term"
   },
   "web.routes.tabs.settings.resources.sets_requests_limits_to_the_same_value_2": {
     "defaultMessage": "Sets requests=limits to the same value.",
-    "description": "Resources: hint of Field"
+    "description": "Resources: hint under the memory field saying the request and limit are set to the same value"
   },
   "web.routes.tabs.settings.resources.storage_size": {
     "defaultMessage": "Storage size",
-    "description": "Resources: label of Field"
+    "description": "Resources: field label for the size of the server's persistent storage; the accessible name of its box is the same"
   },
   "web.routes.tabs.settings.resources.storageclass": {
     "defaultMessage": "StorageClass",
-    "description": "Resources: label of Field"
+    "description": "Resources: field label for the optional storage class that provides the server's storage; the hint below says blank uses the cluster default"
   },
   "web.routes.tabs.settings.retry_reload": {
     "defaultMessage": "Retry reload",
-    "description": "Settings: text in button"
+    "description": "Settings tab: inline button shown after a failed reload that tries the reload again; keep it short"
   },
   "web.routes.tabs.settings.save_changes": {
     "defaultMessage": "Save changes",
@@ -9465,7 +9493,7 @@
   },
   "web.routes.tabs.settings.saved": {
     "defaultMessage": "Saved.",
-    "description": "Settings: text in span"
+    "description": "Settings tab: footer status text shown briefly after the settings are saved"
   },
   "web.routes.tabs.settings.saving": {
     "defaultMessage": "Saving…",
@@ -9525,11 +9553,11 @@
   },
   "web.routes.tabs.settings.server_changed_since_you_opened_this": {
     "defaultMessage": "Server changed since you opened this page.",
-    "description": "Settings: text in span"
+    "description": "Settings tab: warning in the footer saying the server changed after the page was opened; followed by a Reload button and the sentence after it"
   },
   "web.routes.tabs.settings.share_links.allow_starting_the_server": {
     "defaultMessage": "Allow starting the server",
-    "description": "Share links: aria-label of Switch"
+    "description": "Share links: switch that lets the link holder wake the server from sleep; the text is its accessible name"
   },
   "web.routes.tabs.settings.share_links.anyone_using_this_link_will_immediately": {
     "defaultMessage": "Anyone using this link will immediately lose access to {serverName}'s status page. This action cannot be undone.",
@@ -9537,7 +9565,7 @@
   },
   "web.routes.tabs.settings.share_links.anyone_with_this_link_can_check_the": {
     "defaultMessage": "Anyone with this link can check the server's status and connection address without signing in.",
-    "description": "Share links: text in Description"
+    "description": "Share links: description under the Create share link heading saying anyone with the link can view the server status and address without signing in"
   },
   "web.routes.tabs.settings.share_links.can_start": {
     "defaultMessage": "Can start",
@@ -9561,11 +9589,11 @@
   },
   "web.routes.tabs.settings.share_links.copy_url": {
     "defaultMessage": "Copy URL",
-    "description": "Share links: aria-label of Button"
+    "description": "Share links: icon-only button in the created-link box that copies the URL; read by screen readers; keep it short"
   },
   "web.routes.tabs.settings.share_links.create_a_link_so_a_friend_without_a": {
     "defaultMessage": "Create a link so a friend without a Gameplane account can check this server's status and connect — without giving them access to the dashboard.",
-    "description": "Share links: text in p"
+    "description": "Share links: empty-state text shown when the server has no share links, explaining a link lets someone check status without dashboard access"
   },
   "web.routes.tabs.settings.share_links.create_failed": {
     "defaultMessage": "Failed to create link",
@@ -9633,15 +9661,15 @@
   },
   "web.routes.tabs.settings.share_links.gameplane_stores_only_a_one_way_hash_of": {
     "defaultMessage": "Gameplane stores only a one-way hash of the token, so it can't be shown or recovered after you close this dialog. Copy it now.",
-    "description": "Share links: text in p"
+    "description": "Share links: warning text under the title saying only a hash of the token is stored, so the link cannot be shown again and must be copied now"
   },
   "web.routes.tabs.settings.share_links.let_people_without_a_gameplane_account": {
     "defaultMessage": "Let people without a Gameplane account check this server's status and connection address. Only the owner can create or revoke links.",
-    "description": "Share links: text in p"
+    "description": "Share links: hint under the Share links heading saying people without an account can check the status and address, and only the owner can create or revoke links"
   },
   "web.routes.tabs.settings.share_links.long_lived_link_it_stays_valid_for_over": {
     "defaultMessage": "Long-lived link — it stays valid for over a year unless you revoke it.",
-    "description": "Share links: text in p"
+    "description": "Share links: warning under the expiry date field shown when the chosen date is more than a year away"
   },
   "web.routes.tabs.settings.share_links.never": {
     "defaultMessage": "Never",
@@ -9665,7 +9693,7 @@
   },
   "web.routes.tabs.settings.share_links.revoke_this_share_link": {
     "defaultMessage": "Revoke this share link?",
-    "description": "Share links: text in AlertDialogHeading"
+    "description": "Share links: title of the confirmation dialog that asks before a share link is revoked"
   },
   "web.routes.tabs.settings.share_links.revoking": {
     "defaultMessage": "Revoking…",
@@ -9673,15 +9701,15 @@
   },
   "web.routes.tabs.settings.share_links.send_this_to_your_friend_it_works": {
     "defaultMessage": "Send this to your friend. It works without a Gameplane account.",
-    "description": "Share links: text in Description"
+    "description": "Share links: description in the created-link dialog telling the user to send the link to a friend, who needs no Gameplane account"
   },
   "web.routes.tabs.settings.share_links.share_link_created": {
     "defaultMessage": "Share link created",
-    "description": "Share links: text in ModalHeading"
+    "description": "Share links: heading of the dialog shown after a share link is created"
   },
   "web.routes.tabs.settings.share_links.share_links": {
     "defaultMessage": "Share links",
-    "description": "Share links: text in h3"
+    "description": "Share links: section heading and table label for the list of share links; the table name is read by screen readers"
   },
   "web.routes.tabs.settings.share_links.status": {
     "defaultMessage": "Status",
@@ -9705,7 +9733,7 @@
   },
   "web.routes.tabs.settings.share_links.this_link_works_until_you_revoke_it": {
     "defaultMessage": "This link works until you revoke it.",
-    "description": "Share links: text in p"
+    "description": "Share links: warning under the expiry picker shown when the link never expires; it works until revoked"
   },
   "web.routes.tabs.settings.share_links.view_only": {
     "defaultMessage": "View only",
@@ -9713,15 +9741,15 @@
   },
   "web.routes.tabs.settings.share_links.you_will_not_see_this_link_again": {
     "defaultMessage": "You will not see this link again",
-    "description": "Share links: text in strong"
+    "description": "Share links: bold warning title in the created-link dialog saying the link cannot be seen again"
   },
   "web.routes.tabs.settings.to_discard_your_edits_and_load_the": {
     "defaultMessage": "to discard your edits and load the latest.",
-    "description": "Settings: text in span"
+    "description": "Settings tab: sentence after the Reload button in the footer warning, saying reloading discards edits and loads the latest settings"
   },
   "web.routes.tabs.settings.unsaved_changes": {
     "defaultMessage": "Unsaved changes",
-    "description": "Settings: text in span"
+    "description": "Settings tab: footer status text shown when the settings form has edits that are not saved yet"
   },
   "web.routes.tabs.settings.version.clear_override": {
     "defaultMessage": "Clear override",
@@ -9733,11 +9761,11 @@
   },
   "web.routes.tabs.settings.version.downgrading_across_game_versions_may_be": {
     "defaultMessage": "Downgrading across game versions may be unsupported by the game's world data — take a backup first.",
-    "description": "Version: text in p"
+    "description": "Version: warning under the version section saying a downgrade may not work with the game's world data, so a backup should be taken first"
   },
   "web.routes.tabs.settings.version.each_loader_keeps_its_own_mod_volume_a": {
     "defaultMessage": "Each loader keeps its own mod volume — a loader's mods are preserved and restored if you switch back to it later.",
-    "description": "Version: text in p"
+    "description": "Version: info note under the version choices saying each loader keeps its own mod volume, so its mods come back if you switch to it again"
   },
   "web.routes.tabs.settings.version.game_meta": {
     "defaultMessage": "game {version}",
@@ -9745,7 +9773,7 @@
   },
   "web.routes.tabs.settings.version.game_version": {
     "defaultMessage": "Game version",
-    "description": "Version: text in h2"
+    "description": "Version: heading of the game version section, where the version and loader are picked"
   },
   "web.routes.tabs.settings.version.loader_meta": {
     "defaultMessage": "loader {loader}",
@@ -9761,7 +9789,7 @@
   },
   "web.routes.tabs.settings.version.pick_a_version_loader_from_the_template": {
     "defaultMessage": "Pick a version + loader from the template's catalog. Saving restarts the server on the new version.",
-    "description": "Version: text in p"
+    "description": "Version: hint under the game version heading saying the version and loader come from the template catalog and saving restarts the server"
   },
   "web.routes.tabs.settings.version.the_selected_version_s_image_is_ignored": {
     "defaultMessage": "Image override active ({image}) — the selected version's image is ignored until cleared.",
@@ -9769,7 +9797,7 @@
   },
   "web.routes.tabs.settings.you_need_permission_to_change_this": {
     "defaultMessage": "You need permission to change this server's settings.",
-    "description": "Settings: text in span"
+    "description": "Settings tab: footer text shown to users who can view but not change this server's settings"
   },
   "web.routes.theme_settings.a_stylesheet_layered_on_top_of_the": {
     "defaultMessage": "A stylesheet layered on top of the active base theme.",

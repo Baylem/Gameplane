@@ -124,7 +124,7 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
       <div className="space-y-4">
         <div>
           <Label className="text-base font-semibold">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.enable_capture", defaultMessage: "Enable Capture", description: "Label for the switch that turns network capture on or off" })}</Label>
-          <Description className="text-sm">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.records_raw_network_protocol_traffic", defaultMessage: "Records raw network protocol traffic from a sidecar container for later download and analysis.", description: "Network capture: text in Description" })}</Description>
+          <Description className="text-sm">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.records_raw_network_protocol_traffic", defaultMessage: "Records raw network protocol traffic from a sidecar container for later download and analysis.", description: "Network capture: description under the Enable Capture heading saying it records raw network traffic from a sidecar for later download and analysis" })}</Description>
         </div>
 
         <div className="space-y-3">
@@ -146,14 +146,14 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
               : intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.disabled", defaultMessage: "Disabled", description: "Network capture: status label next to the enable switch when capture is off" })}</span>
           </div>
 
-          <p className="text-xs leading-relaxed text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.turning_this_off_stops_any_running", defaultMessage: "Turning this off stops any running capture and blocks new ones immediately. The capture container itself stays in the pod, idle, until the pod is next recreated — Kubernetes has no API to remove an ephemeral container.", description: "Network capture: text in p" })}</p>
-          <p className="text-xs leading-relaxed text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.network_packet_capture_requires_admin", defaultMessage: "Network packet capture requires admin access. Captures contain real player data (IP addresses, chat, credentials) and are not redacted.", description: "Network capture: text in p" })}</p>
+          <p className="text-xs leading-relaxed text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.turning_this_off_stops_any_running", defaultMessage: "Turning this off stops any running capture and blocks new ones immediately. The capture container itself stays in the pod, idle, until the pod is next recreated — Kubernetes has no API to remove an ephemeral container.", description: "Network capture: hint under the enabled status saying that turning capture off stops running captures and blocks new ones, though the idle capture container stays until the pod is recreated" })}</p>
+          <p className="text-xs leading-relaxed text-default-500">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.network_packet_capture_requires_admin", defaultMessage: "Network packet capture requires admin access. Captures contain real player data (IP addresses, chat, credentials) and are not redacted.", description: "Network capture: warning under the capture status saying packet capture needs admin access and captures hold real player data that is not redacted" })}</p>
           {permissionsReady && !canManage && (
-            <p className="text-xs leading-relaxed text-warning">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.you_don_t_have_permission_to_change", defaultMessage: "You don't have permission to change capture settings for this server.", description: "Network capture: text in p" })}</p>
+            <p className="text-xs leading-relaxed text-warning">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.you_don_t_have_permission_to_change", defaultMessage: "You don't have permission to change capture settings for this server.", description: "Network capture: warning shown to users who cannot change the capture settings for this server" })}</p>
           )}
 
           <div>
-            <a href="/docs/capture" className="text-xs text-primary hover:underline">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.learn_more", defaultMessage: "Learn more", description: "Network capture: text in a" })}</a>
+            <a href="/docs/capture" className="text-xs text-primary hover:underline">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.learn_more", defaultMessage: "Learn more", description: "Network capture: link at the bottom of the capture section that opens the capture documentation" })}</a>
           </div>
         </div>
       </div>
@@ -161,7 +161,7 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
       <div className="space-y-4">
         <div>
           <Label className="text-base font-semibold">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.retention_window", defaultMessage: "Retention Window", description: "Section heading for how long captures are kept before automatic deletion" })}</Label>
-          <Description className="text-sm">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.captures_are_automatically_deleted", defaultMessage: "Captures are automatically deleted after this window. Leave blank to use the cluster default.", description: "Network capture: text in Description" })}</Description>
+          <Description className="text-sm">{intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.captures_are_automatically_deleted", defaultMessage: "Captures are automatically deleted after this window. Leave blank to use the cluster default.", description: "Network capture: description under the Retention Window heading saying captures are deleted after this window, and blank uses the cluster default" })}</Description>
         </div>
 
         <TextField isInvalid={retentionError !== null} className="space-y-3">
@@ -176,7 +176,7 @@ export function NetworkCaptureSection({ draft, onChange, onValidityChange }: Sec
                 setRawValue(e.target.value);
                 applyRetention(e.target.value, unit);
               }}
-              aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.retention_window_value", defaultMessage: "Retention window value", description: "Network capture: aria-label of Input" })}
+              aria-label={intl.formatMessage({ id: "web.routes.tabs.settings.network_capture.retention_window_value", defaultMessage: "Retention window value", description: "Network capture: accessible label of the box for the retention window amount; not shown as text; its placeholder is the default amount" })}
               className="w-24"
             />
             <Select
