@@ -95,7 +95,7 @@ export function GlobalSearch(): JSX.Element {
   return (
     <div className="relative hidden w-[300px] md:block">
       <SearchFieldRoot
-        aria-label={intl.formatMessage({ id: "web.components.ui.global_search.search_servers", defaultMessage: "Search servers", description: "Global search: aria-label of SearchFieldRoot" })}
+        aria-label={intl.formatMessage({ id: "web.components.ui.global_search.search_servers", defaultMessage: "Search servers", description: "Global search: screen-reader name of the server search box, which is hidden on narrow screens; not visible on screen" })}
         value={q}
         onChange={(value) => {
           setQ(value);
@@ -107,7 +107,7 @@ export function GlobalSearch(): JSX.Element {
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <SearchFieldInput
           ref={inputRef}
-          placeholder={intl.formatMessage({ id: "web.components.ui.global_search.search_servers_2", defaultMessage: "Search servers…", description: "Global search: placeholder of SearchFieldInput" })}
+          placeholder={intl.formatMessage({ id: "web.components.ui.global_search.search_servers_2", defaultMessage: "Search servers…", description: "Global search: example hint inside the server search box telling the user what to type; the ellipsis is part of the text" })}
           data-testid="search-input"
           role="combobox"
           aria-expanded={open}
@@ -139,7 +139,7 @@ export function GlobalSearch(): JSX.Element {
         placement="bottom start"
         className="w-72 overflow-hidden rounded-md border border-border bg-background p-0 shadow-lg"
       >
-        {data?.partial && <p role="status" className="px-3 py-2 text-xs text-warning">{intl.formatMessage({ id: "web.components.ui.global_search.search_results_are_partial", defaultMessage: "Search results are partial.", description: "Global search: text in p" })}</p>}
+        {data?.partial && <p role="status" className="px-3 py-2 text-xs text-warning">{intl.formatMessage({ id: "web.components.ui.global_search.search_results_are_partial", defaultMessage: "Search results are partial.", description: "Global search: status note at the top of the results list saying some results may be missing" })}</p>}
         <ul role="listbox" id="global-search-results" className="max-h-72 overflow-auto">
           {matches.length === 0 ? (
             <li className="px-3 py-2 text-sm text-muted">

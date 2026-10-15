@@ -215,7 +215,7 @@ export function ServerActionsCard({
     return (
       <Card className="border border-border bg-card p-0">
         <CardHeader className="flex flex-col gap-0 px-6 pt-5 pb-2">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">{intl.formatMessage({ id: "web.components.server.server_actions_card.quick_actions", defaultMessage: "Quick actions", description: "Server actions card: text in h2" })}</h2>
+          <h2 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">{intl.formatMessage({ id: "web.components.server.server_actions_card.quick_actions", defaultMessage: "Quick actions", description: "Server actions card: heading of the card that holds the server's quick action buttons" })}</h2>
         </CardHeader>
         <CardContent className="space-y-1 px-0 py-2">
           {lifecycle.error && (
@@ -225,20 +225,20 @@ export function ServerActionsCard({
           )}
           <LifecycleButton
             icon={RotateCw}
-            label={intl.formatMessage({ id: "web.components.server.server_actions_card.restart", defaultMessage: "Restart", description: "Server actions card: label of LifecycleButton" })}
+            label={intl.formatMessage({ id: "web.components.server.server_actions_card.restart", defaultMessage: "Restart", description: "Server actions card: button that restarts the server; keep it short" })}
             onClick={() => lifecycle.mutate("restart")}
             disabled={!canRun || !running || lifecycle.isPending}
           />
           <LifecycleButton
             icon={Square}
-            label={intl.formatMessage({ id: "web.components.server.server_actions_card.stop", defaultMessage: "Stop", description: "Server actions card: label of LifecycleButton" })}
+            label={intl.formatMessage({ id: "web.components.server.server_actions_card.stop", defaultMessage: "Stop", description: "Server actions card: button that stops the running server; keep it short" })}
             onClick={() => lifecycle.mutate("stop")}
             disabled={!canRun || (!running && !asleep) || lifecycle.isPending}
           />
           {asleep && (
             <LifecycleButton
               icon={Sunrise}
-              label={intl.formatMessage({ id: "web.components.server.server_actions_card.wake", defaultMessage: "Wake", description: "Server actions card: label of LifecycleButton" })}
+              label={intl.formatMessage({ id: "web.components.server.server_actions_card.wake", defaultMessage: "Wake", description: "Server actions card: button that wakes a sleeping server; keep it short" })}
               onClick={() => lifecycle.mutate("wake")}
               disabled={!canRun || lifecycle.isPending}
             />
@@ -246,13 +246,13 @@ export function ServerActionsCard({
           {canStart && (
             <LifecycleButton
               icon={Play}
-              label={intl.formatMessage({ id: "web.components.server.server_actions_card.start", defaultMessage: "Start", description: "Server actions card: label of LifecycleButton" })}
+              label={intl.formatMessage({ id: "web.components.server.server_actions_card.start", defaultMessage: "Start", description: "Server actions card: button that starts a stopped server; keep it short" })}
               onClick={() => lifecycle.mutate("start")}
               disabled={!canRun || lifecycle.isPending}
             />
           )}
           {onOpenConsole && (
-            <LifecycleButton icon={Terminal} label={intl.formatMessage({ id: "web.components.server.server_actions_card.open_console", defaultMessage: "Open console", description: "Server actions card: label of LifecycleButton" })} onClick={onOpenConsole} />
+            <LifecycleButton icon={Terminal} label={intl.formatMessage({ id: "web.components.server.server_actions_card.open_console", defaultMessage: "Open console", description: "Server actions card: button that opens the server's console; keep it short" })} onClick={onOpenConsole} />
           )}
         </CardContent>
       </Card>
@@ -309,7 +309,7 @@ export function ServerActionsCard({
   return (
     <Card className="border border-border bg-card p-0">
       <CardHeader className="flex flex-col gap-0 px-6 pt-5 pb-2">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">{intl.formatMessage({ id: "web.components.server.server_actions_card.quick_actions", defaultMessage: "Quick actions", description: "Server actions card: text in h2" })}</h2>
+        <h2 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">{intl.formatMessage({ id: "web.components.server.server_actions_card.quick_actions", defaultMessage: "Quick actions", description: "Server actions card: heading of the card that holds the server's quick action buttons" })}</h2>
       </CardHeader>
       <CardContent className="space-y-3.5 px-3 pt-1 pb-3">
         {actions.some((a) => !transportReady(a)) && (
@@ -345,7 +345,7 @@ export function ServerActionsCard({
                   ? "shrink-0 text-xs text-success hover:text-success/80"
                   : "shrink-0 text-xs text-muted hover:text-foreground"
               }
-            >{intl.formatMessage({ id: "web.components.server.server_actions_card.dismiss", defaultMessage: "dismiss", description: "Server actions card: text in button" })}</button>
+            >{intl.formatMessage({ id: "web.components.server.server_actions_card.dismiss", defaultMessage: "dismiss", description: "Server actions card: small button that clears the status message shown after an action; keep it short" })}</button>
           </div>
         )}
         {groupOrder.length > 0 ? (
@@ -360,7 +360,7 @@ export function ServerActionsCard({
             ))}
             {ungrouped.length > 0 && (
               <div className="space-y-0.5">
-                <div className="px-2 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-[1px] text-muted">{intl.formatMessage({ id: "web.components.server.server_actions_card.actions", defaultMessage: "Actions", description: "Server actions card: text in div" })}</div>
+                <div className="px-2 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-[1px] text-muted">{intl.formatMessage({ id: "web.components.server.server_actions_card.actions", defaultMessage: "Actions", description: "Server actions card: small heading above the actions that do not belong to a group" })}</div>
                 {ungrouped.map(renderActionButton)}
               </div>
             )}
@@ -440,12 +440,12 @@ function ActionDialog({
                   />
                 ))}
                 {params.length === 0 && (
-                  <p className="text-sm text-muted">{intl.formatMessage({ id: "web.components.server.server_actions_card.run_this_action_now", defaultMessage: "Run this action now?", description: "Server actions card: text in p" })}</p>
+                  <p className="text-sm text-muted">{intl.formatMessage({ id: "web.components.server.server_actions_card.run_this_action_now", defaultMessage: "Run this action now?", description: "Server actions card: question in the confirmation dialog asking whether to run the action; shown when the action has no parameters to fill in" })}</p>
                 )}
               </div>
             </ModalBody>
             <ModalFooter>
-              <Button variant="ghost" onPress={onCancel} isDisabled={pending}>{intl.formatMessage({ id: "web.components.server.server_actions_card.cancel", defaultMessage: "Cancel", description: "Server actions card: text in Button" })}</Button>
+              <Button variant="ghost" onPress={onCancel} isDisabled={pending}>{intl.formatMessage({ id: "web.components.server.server_actions_card.cancel", defaultMessage: "Cancel", description: "Server actions card: button that closes the action confirmation dialog without running the action; keep it short" })}</Button>
               <Button
                 variant={action.danger ? "danger" : "primary"}
                 isDisabled={!valid || pending}

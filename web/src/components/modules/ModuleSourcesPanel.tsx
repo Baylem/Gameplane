@@ -69,21 +69,21 @@ export function ClusterModuleSources({ cluster, canManage }: { cluster: string; 
   });
 
   if (isLoading) {
-    return <LoadingCard message={intl.formatMessage({ id: "web.components.modules.module_sources_panel.loading_module_sources", defaultMessage: "Loading module sources…", description: "Module sources panel: message of LoadingCard" })} />;
+    return <LoadingCard message={intl.formatMessage({ id: "web.components.modules.module_sources_panel.loading_module_sources", defaultMessage: "Loading module sources…", description: "Module sources panel: loading text shown while the list of module sources is being fetched" })} />;
   }
   if (isError && !data) {
-    return <ErrorCard message={intl.formatMessage({ id: "web.components.modules.module_sources_panel.failed_to_load_module_sources", defaultMessage: "Failed to load module sources.", description: "Module sources panel: message of ErrorCard" })} onRetry={() => void refetch()} />;
+    return <ErrorCard message={intl.formatMessage({ id: "web.components.modules.module_sources_panel.failed_to_load_module_sources", defaultMessage: "Failed to load module sources.", description: "Module sources panel: error card message shown when the module sources cannot be loaded; the card has a retry button" })} onRetry={() => void refetch()} />;
   }
 
   const sources = data?.items ?? [];
 
   return (
     <Card className="p-5 space-y-3">
-      {isError && <ErrorCard message={intl.formatMessage({ id: "web.components.modules.module_sources_panel.failed_to_load_module_sources", defaultMessage: "Failed to load module sources.", description: "Module sources panel: message of ErrorCard" })} onRetry={() => void refetch()} />}
+      {isError && <ErrorCard message={intl.formatMessage({ id: "web.components.modules.module_sources_panel.failed_to_load_module_sources", defaultMessage: "Failed to load module sources.", description: "Module sources panel: error card message shown when the module sources cannot be loaded; the card has a retry button" })} onRetry={() => void refetch()} />}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="font-medium">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.module_sources", defaultMessage: "Module sources", description: "Module sources panel: text in div" })}</div>
-          <div className="pt-0.5 text-xs text-muted">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.registries_git_repositories_archives", defaultMessage: "Registries, git repositories, archives, and uploads the operator pulls module bundles from. Equivalent to applying", description: "Module sources panel: text in div" })} <code className="font-mono">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.modulesource", defaultMessage: "ModuleSource", description: "Module sources panel: text in code" })}</code> {intl.formatMessage({ id: "web.components.modules.module_sources_panel.resources_directly", defaultMessage: "resources directly.", description: "Module sources panel: text in div" })}</div>
+          <div className="font-medium">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.module_sources", defaultMessage: "Module sources", description: "Module sources panel: heading of the panel that lists the sources module bundles are pulled from" })}</div>
+          <div className="pt-0.5 text-xs text-muted">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.registries_git_repositories_archives", defaultMessage: "Registries, git repositories, archives, and uploads the operator pulls module bundles from. Equivalent to applying", description: "Module sources panel: explanation under the heading saying sources are registries, git repositories, archives or uploads, the same as applying ModuleSource resources directly" })} <code className="font-mono">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.modulesource", defaultMessage: "ModuleSource", description: "Module sources panel: resource name ModuleSource, shown in code style inside the explanation; technical term, usually left untranslated" })}</code> {intl.formatMessage({ id: "web.components.modules.module_sources_panel.resources_directly", defaultMessage: "resources directly.", description: "Module sources panel: last words of the explanation under the heading, after the ModuleSource name, saying the resources are applied directly" })}</div>
         </div>
         <Button
           size="sm"
@@ -94,7 +94,7 @@ export function ClusterModuleSources({ cluster, canManage }: { cluster: string; 
             setDialogOpen(true);
           }}
         >
-          <Plus className="h-3.5 w-3.5" /> {intl.formatMessage({ id: "web.components.modules.module_sources_panel.add_source", defaultMessage: "Add source", description: "Module sources panel: text in Button" })}</Button>
+          <Plus className="h-3.5 w-3.5" /> {intl.formatMessage({ id: "web.components.modules.module_sources_panel.add_source", defaultMessage: "Add source", description: "Module sources panel: button that opens the dialog to add a new module source; keep it short" })}</Button>
       </div>
 
       {panelError && (
@@ -104,7 +104,7 @@ export function ClusterModuleSources({ cluster, canManage }: { cluster: string; 
       )}
 
       {sources.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-card/40 p-6 text-center text-sm text-muted">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.no", defaultMessage: "No", description: "Module sources panel: text in div" })} <code className="font-mono">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.modulesource", defaultMessage: "ModuleSource", description: "Module sources panel: text in code" })}</code> {intl.formatMessage({ id: "web.components.modules.module_sources_panel.resources_configured", defaultMessage: "resources configured.", description: "Module sources panel: text in div" })}</div>
+        <div className="rounded-lg border border-dashed border-border bg-card/40 p-6 text-center text-sm text-muted">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.no", defaultMessage: "No", description: "Module sources panel: first word of the empty-state box shown when no module sources are configured, followed by the ModuleSource name" })} <code className="font-mono">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.modulesource", defaultMessage: "ModuleSource", description: "Module sources panel: resource name ModuleSource, shown in code style inside the explanation; technical term, usually left untranslated" })}</code> {intl.formatMessage({ id: "web.components.modules.module_sources_panel.resources_configured", defaultMessage: "resources configured.", description: "Module sources panel: end of the empty-state sentence, after the ModuleSource name, saying the resources are configured" })}</div>
       ) : (
         <ul className="divide-y divide-border">
           {sources.map((s) => (
@@ -204,7 +204,7 @@ function SourceRow({
         <div className="truncate text-xs text-muted">
           <span className="font-mono">{sourceLocation(source.spec, intl)}</span>
           {insecure && (
-            <span className="ml-2 rounded bg-warning/15 px-1.5 py-0.5 font-mono text-[10px] text-warning">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.insecure", defaultMessage: "insecure", description: "Module sources panel: text in span" })}</span>
+            <span className="ml-2 rounded bg-warning/15 px-1.5 py-0.5 font-mono text-[10px] text-warning">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.insecure", defaultMessage: "insecure", description: "Module sources panel: small warning badge on a source row marking a source that allows plain HTTP; keep it short" })}</span>
           )}
         </div>
       </div>
@@ -215,10 +215,10 @@ function SourceRow({
         </div>
         <div>{intl.formatMessage({ id: "web.components.modules.module_sources_panel.modulecount_module", defaultMessage: "{moduleCount, plural, one {# module} other {# modules}}", description: "Module sources panel: module count in a source card; {moduleCount} is the number of modules" }, { moduleCount: moduleCount })}
           {source.status?.lastSync && (
-            <> {intl.formatMessage({ id: "web.components.modules.module_sources_panel.synced", defaultMessage: "· synced", description: "Module sources panel: text in Fragment" })} {formatRelative(source.status.lastSync, intl)}</>
+            <> {intl.formatMessage({ id: "web.components.modules.module_sources_panel.synced", defaultMessage: "· synced", description: "Module sources panel: text after the module count on a source row, followed by the time of the last sync in relative time; the leading dot is part of the text" })} {formatRelative(source.status.lastSync, intl)}</>
           )}
         </div>
-        {stale && <div className="text-warning">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.serving_stale_catalog", defaultMessage: "serving stale catalog", description: "Module sources panel: text in div" })}</div>}
+        {stale && <div className="text-warning">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.serving_stale_catalog", defaultMessage: "serving stale catalog", description: "Module sources panel: warning text on a source row shown when the source is still serving an old catalog of modules" })}</div>}
       </div>
       <div className="flex items-center gap-1">
         <Button size="sm" variant="ghost" isDisabled={!canManage} onPress={onEdit} aria-label={intl.formatMessage({ id: "web.components.modules.module_sources_panel.edit_source_aria", defaultMessage: "Edit {name}", description: "Module sources panel: aria-label of the edit button; {name} is the source name" }, { name: source.metadata.name })}>

@@ -68,7 +68,7 @@ export function buildCrumbs(pathname: string, intl: IntlShape = englishIntl): Cr
 export function Breadcrumbs({ items }: { items: Crumb[] }): JSX.Element {
   const intl = useOptionalIntl();
   return (
-    <nav aria-label={intl.formatMessage({ id: "web.components.ui.breadcrumbs.breadcrumb", defaultMessage: "Breadcrumb", description: "Breadcrumbs: aria-label of nav" })}>
+    <nav aria-label={intl.formatMessage({ id: "web.components.ui.breadcrumbs.breadcrumb", defaultMessage: "Breadcrumb", description: "Breadcrumbs: screen-reader name of the navigation area holding the breadcrumb trail; not visible on screen" })}>
       <HeroBreadcrumbs separator={<ChevronRight className="h-3.5 w-3.5 text-muted" />}>
         {items.map((crumb, index) => {
           const isLast = index === items.length - 1;

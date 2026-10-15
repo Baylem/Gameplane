@@ -88,7 +88,7 @@ export function SettingsNav({
   const intl = useOptionalIntl();
   const items = showAdminSections ? navItems : navItems.filter((i) => i.key === "theme");
   return (
-    <nav className="space-y-0.5" aria-label={intl.formatMessage({ id: "web.components.ui.settings_nav.settings_sections", defaultMessage: "Settings sections", description: "Settings nav: aria-label of nav" })}>
+    <nav className="space-y-0.5" aria-label={intl.formatMessage({ id: "web.components.ui.settings_nav.settings_sections", defaultMessage: "Settings sections", description: "Settings navigation: screen-reader name of the list of settings sections; not visible on screen" })}>
       {items.map(({ key, label, icon: Icon }) =>
         key === "theme" ? (
           <Link key={key} to="/settings/theme" className={itemClass(active === key)} aria-current={active === key ? "page" : undefined}>

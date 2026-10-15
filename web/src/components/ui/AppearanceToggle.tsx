@@ -37,7 +37,7 @@ export function AppearanceToggle({ value, onChange, disabled = false }: Appearan
   return (
     <div
       role="group"
-      aria-label={intl.formatMessage({ id: "web.components.ui.appearance_toggle.appearance", defaultMessage: "Appearance", description: "Appearance toggle: aria-label of div" })}
+      aria-label={intl.formatMessage({ id: "web.components.ui.appearance_toggle.appearance", defaultMessage: "Appearance", description: "Appearance toggle: screen-reader name of the group of theme buttons for dark, light or system appearance; not visible on screen" })}
       aria-describedby={disabled ? noteId : undefined}
       className="flex items-center justify-center gap-1 rounded-lg bg-surface p-1"
     >

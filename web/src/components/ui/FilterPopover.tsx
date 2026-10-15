@@ -94,7 +94,7 @@ export function FilterPopover({
           {/* Game section header */}
           {games.length > 0 && (
             <>
-              <div className="px-2 py-1.5 text-xs font-semibold text-muted">{intl.formatMessage({ id: "web.components.ui.filter_popover.game", defaultMessage: "Game", description: "Filter popover: text in div" })}</div>
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted">{intl.formatMessage({ id: "web.components.ui.filter_popover.game", defaultMessage: "Game", description: "Filter popover: small heading above the game choices in the filter menu" })}</div>
               {games.map((game) => (
                 <div
                   key={game}
@@ -125,7 +125,7 @@ export function FilterPopover({
           {/* Namespace section header */}
           {namespaces.length > 0 && (
             <>
-              <div className="px-2 py-1.5 text-xs font-semibold text-muted">{intl.formatMessage({ id: "web.components.ui.filter_popover.namespace", defaultMessage: "Namespace", description: "Filter popover: text in div" })}</div>
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted">{intl.formatMessage({ id: "web.components.ui.filter_popover.namespace", defaultMessage: "Namespace", description: "Filter popover: small heading above the namespace choices in the filter menu" })}</div>
               {namespaces.map((ns) => (
                 <div
                   key={ns}
@@ -160,13 +160,13 @@ export function FilterPopover({
               variant="ghost"
               className="h-7"
               onPress={onClear}
-            >{intl.formatMessage({ id: "web.components.ui.filter_popover.clear", defaultMessage: "Clear", description: "Filter popover: text in Button" })}</Button>
+            >{intl.formatMessage({ id: "web.components.ui.filter_popover.clear", defaultMessage: "Clear", description: "Filter popover: button that clears all chosen filters; keep it short" })}</Button>
             <Button
               size="sm"
               variant="primary"
               className="h-7"
               onPress={onApply}
-            >{intl.formatMessage({ id: "web.components.ui.filter_popover.apply", defaultMessage: "Apply", description: "Filter popover: text in Button" })}</Button>
+            >{intl.formatMessage({ id: "web.components.ui.filter_popover.apply", defaultMessage: "Apply", description: "Filter popover: button that applies the chosen filters; keep it short" })}</Button>
           </div>
         </div>
       </Popover.Content>

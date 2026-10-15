@@ -139,7 +139,7 @@ export function NotificationsPanel({ enabled = true }: NotificationsPanelProps):
     >
       <Popover.Trigger>
         <div
-          aria-label={intl.formatMessage({ id: "web.components.ui.notifications_panel.notifications", defaultMessage: "Notifications", description: "Notifications panel: aria-label of div" })}
+          aria-label={intl.formatMessage({ id: "web.components.ui.notifications_panel.notifications", defaultMessage: "Notifications", description: "Notifications panel: screen-reader name of the trigger that opens the notifications list; not visible on screen" })}
           className="inline-flex items-center justify-center w-10 h-10 rounded-lg hover:bg-default-100 cursor-pointer transition-colors relative"
         >
           <Bell className="h-[18px] w-[18px]" />
@@ -152,9 +152,9 @@ export function NotificationsPanel({ enabled = true }: NotificationsPanelProps):
       </Popover.Trigger>
       <Popover.Content className="w-72 p-0">
         <Card className="border-none shadow-lg">
-          <div className="border-b border-divider px-3 py-2 text-xs font-medium text-default-500">{intl.formatMessage({ id: "web.components.ui.notifications_panel.recent_activity", defaultMessage: "Recent activity", description: "Notifications panel: text in div" })}</div>
+          <div className="border-b border-divider px-3 py-2 text-xs font-medium text-default-500">{intl.formatMessage({ id: "web.components.ui.notifications_panel.recent_activity", defaultMessage: "Recent activity", description: "Notifications panel: heading at the top of the notifications list showing recent activity" })}</div>
           {notices.length === 0 ? (
-            <div className="px-3 py-4 text-sm text-default-500">{intl.formatMessage({ id: "web.components.ui.notifications_panel.no_recent_activity", defaultMessage: "No recent activity.", description: "Notifications panel: text in div" })}</div>
+            <div className="px-3 py-4 text-sm text-default-500">{intl.formatMessage({ id: "web.components.ui.notifications_panel.no_recent_activity", defaultMessage: "No recent activity.", description: "Notifications panel: empty-state text shown when there are no recent notifications" })}</div>
           ) : (
             <ul className="max-h-80 overflow-auto">
               {notices.map((n) => (

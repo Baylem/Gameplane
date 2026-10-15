@@ -254,7 +254,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
         <Card>
           <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
             <Loader2 className="h-7 w-7 animate-spin text-default-500" />
-            <p className="text-sm text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.checking_access", defaultMessage: "Checking access…", description: "Capture widget: text in p" })}</p>
+            <p className="text-sm text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.checking_access", defaultMessage: "Checking access…", description: "Capture widget: loading text shown in the capture panel while the user's packet capture access is being checked" })}</p>
           </CardContent>
         </Card>
       </div>
@@ -276,8 +276,8 @@ export function CaptureWidget({ name, ns, gs }: Props) {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-default-100">
               <Lock className="h-7 w-7 text-default-500" />
             </div>
-            <p className="text-sm font-medium">{intl.formatMessage({ id: "web.components.capture_widget.you_don_t_have_access_to_packet_capture", defaultMessage: "You don't have access to packet capture on this server.", description: "Capture widget: text in p" })}</p>
-            <p className="max-w-md text-xs text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.viewing_starting_and_downloading", defaultMessage: "Viewing, starting and downloading captures requires capture access for this server. Ask an administrator if you need it.", description: "Capture widget: text in p" })}</p>
+            <p className="text-sm font-medium">{intl.formatMessage({ id: "web.components.capture_widget.you_don_t_have_access_to_packet_capture", defaultMessage: "You don't have access to packet capture on this server.", description: "Capture widget: heading in the empty-state card shown when the user has no packet capture access on this server" })}</p>
+            <p className="max-w-md text-xs text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.viewing_starting_and_downloading", defaultMessage: "Viewing, starting and downloading captures requires capture access for this server. Ask an administrator if you need it.", description: "Capture widget: hint under the no-access heading saying capture access is needed to view, start or download captures; users should ask an administrator" })}</p>
           </CardContent>
         </Card>
       </div>
@@ -292,8 +292,8 @@ export function CaptureWidget({ name, ns, gs }: Props) {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-default-100">
               <Inbox className="h-7 w-7 text-default-500" />
             </div>
-            <p className="text-sm font-medium">{intl.formatMessage({ id: "web.components.capture_widget.capture_is_not_enabled_on_this_server", defaultMessage: "Capture is not enabled on this server.", description: "Capture widget: text in p" })}</p>
-            <p className="max-w-md text-xs text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.network_packet_capture_is_an_optional", defaultMessage: "Network packet capture is an optional feature that records raw game protocol traffic. Enable it to capture packets from joining players for protocol analysis.", description: "Capture widget: text in p" })}</p>
+            <p className="text-sm font-medium">{intl.formatMessage({ id: "web.components.capture_widget.capture_is_not_enabled_on_this_server", defaultMessage: "Capture is not enabled on this server.", description: "Capture widget: heading in the empty-state card shown when packet capture is turned off for this server" })}</p>
+            <p className="max-w-md text-xs text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.network_packet_capture_is_an_optional", defaultMessage: "Network packet capture is an optional feature that records raw game protocol traffic. Enable it to capture packets from joining players for protocol analysis.", description: "Capture widget: explanation under the not-enabled heading of what packet capture does, recording raw game protocol traffic for protocol analysis once enabled" })}</p>
             {enableMut.error && <ErrorBanner err={enableMut.error} />}
             {capabilityMessage && <p role="status" className="text-sm text-muted">{capabilityMessage}</p>}
             <Button
@@ -336,7 +336,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
               size="sm"
               onPress={() => disableMut.mutate()}
               isDisabled={!canManage || disableMut.isPending}
-            >{intl.formatMessage({ id: "web.components.capture_widget.disable_capture", defaultMessage: "Disable Capture", description: "Capture widget: text in Button" })}</Button>
+            >{intl.formatMessage({ id: "web.components.capture_widget.disable_capture", defaultMessage: "Disable Capture", description: "Capture widget: button that turns capture off for this server; keep it short" })}</Button>
             <Button
               variant="primary"
               size="sm"
@@ -361,19 +361,19 @@ export function CaptureWidget({ name, ns, gs }: Props) {
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
                 <div className="font-mono text-sm">{activeCapture.captureId}</div>
-                <div className="text-xs text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.filter", defaultMessage: "Filter:", description: "Capture widget: text in div" })} {activeCapture.filter || intl.formatMessage({ id: "web.components.capture_widget.default_filter", defaultMessage: "default", description: "Capture widget and table: shown when a capture has no packet filter, lowercase" })}</div>
+                <div className="text-xs text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.filter", defaultMessage: "Filter:", description: "Capture widget: label before the packet filter text of the active capture card, or the word 'default' when no filter is set" })} {activeCapture.filter || intl.formatMessage({ id: "web.components.capture_widget.default_filter", defaultMessage: "default", description: "Capture widget and table: shown when a capture has no packet filter, lowercase" })}</div>
               </div>
               <Button
                 size="sm"
                 variant="outline"
                 onPress={() => stopMut.mutate(activeCapture.captureId)}
                 isDisabled={!canManage || stopMut.isPending}
-              >{intl.formatMessage({ id: "web.components.capture_widget.stop_capture", defaultMessage: "Stop Capture", description: "Capture widget: text in Button" })}</Button>
+              >{intl.formatMessage({ id: "web.components.capture_widget.stop_capture", defaultMessage: "Stop Capture", description: "Capture widget: button that stops the running capture; keep it short" })}</Button>
             </div>
             {stopMut.error && <ErrorBanner err={stopMut.error} />}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-xs font-medium">{intl.formatMessage({ id: "web.components.capture_widget.max_duration", defaultMessage: "Max duration", description: "Capture widget: text in label" })}</label>
+                <label className="text-xs font-medium">{intl.formatMessage({ id: "web.components.capture_widget.max_duration", defaultMessage: "Max duration", description: "Capture widget: label above the time-remaining value on the active capture card, showing the run-time limit" })}</label>
                 <div className="space-y-1">
                   <div className="h-2 overflow-hidden rounded-full bg-default-200">
                     <div
@@ -395,7 +395,7 @@ export function CaptureWidget({ name, ns, gs }: Props) {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-medium">{intl.formatMessage({ id: "web.components.capture_widget.max_size", defaultMessage: "Max size", description: "Capture widget: text in label" })}</label>
+                <label className="text-xs font-medium">{intl.formatMessage({ id: "web.components.capture_widget.max_size", defaultMessage: "Max size", description: "Capture widget: label above the space-remaining value on the active capture card, showing the file size limit" })}</label>
                 <div className="space-y-1">
                   <div className="h-2 overflow-hidden rounded-full bg-default-200">
                     <div
@@ -414,37 +414,37 @@ export function CaptureWidget({ name, ns, gs }: Props) {
               </div>
             </div>
             <div className="text-xs text-default-500">
-              {fmt.number(activeCaptureDetails?.packetsWritten ?? activeCapture.packetsWritten)} {intl.formatMessage({ id: "web.components.capture_widget.packets_captured", defaultMessage: "packets captured", description: "Capture widget: text in div" })}</div>
+              {fmt.number(activeCaptureDetails?.packetsWritten ?? activeCapture.packetsWritten)} {intl.formatMessage({ id: "web.components.capture_widget.packets_captured", defaultMessage: "packets captured", description: "Capture widget: unit word shown right after the packet count of the active capture; the number before it is the packets written so far" })}</div>
           </CardContent>
         </Card>
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-2 p-10 text-center">
             <Inbox className="h-8 w-8 text-default-500" />
-            <p className="text-sm text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.no_captures_yet", defaultMessage: "No captures yet.", description: "Capture widget: text in p" })}</p>
+            <p className="text-sm text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.no_captures_yet", defaultMessage: "No captures yet.", description: "Capture widget: empty-state text in the captures list shown when this server has no captures yet" })}</p>
           </CardContent>
         </Card>
       ) : (
         <section className="space-y-3">
-          <h2 className="text-sm text-default-500 font-medium">{intl.formatMessage({ id: "web.components.capture_widget.captures", defaultMessage: "Captures", description: "Capture widget: text in h2" })}</h2>
+          <h2 className="text-sm text-default-500 font-medium">{intl.formatMessage({ id: "web.components.capture_widget.captures", defaultMessage: "Captures", description: "Capture widget: section heading above the table of completed and failed captures for this server" })}</h2>
           {fileMut.error && <ErrorBanner err={fileMut.error} />}
           <div className="overflow-x-auto rounded-lg border border-default-200">
             <Table.Root className="w-full">
               <Table.ScrollContainer>
                 <Table.Content
-                  aria-label={intl.formatMessage({ id: "web.components.capture_widget.completed_and_failed_packet_captures", defaultMessage: "Completed and failed packet captures for this server", description: "Capture widget: aria-label of Table.Content" })}
+                  aria-label={intl.formatMessage({ id: "web.components.capture_widget.completed_and_failed_packet_captures", defaultMessage: "Completed and failed packet captures for this server", description: "Capture widget: accessible table name read by screen readers for the list of this server's completed and failed packet captures; not visible on screen" })}
                   keyboardNavigationBehavior="arrow"
                 >
                   <TableHeader>
-                    <TableColumn isRowHeader>{intl.formatMessage({ id: "web.components.capture_widget.id", defaultMessage: "ID", description: "Capture widget: text in TableColumn" })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.status", defaultMessage: "Status", description: "Capture widget: text in TableColumn" })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.size", defaultMessage: "Size", description: "Capture widget: text in TableColumn" })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.packets", defaultMessage: "Packets", description: "Capture widget: text in TableColumn" })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.duration", defaultMessage: "Duration", description: "Capture widget: text in TableColumn" })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.completed_at", defaultMessage: "Completed at", description: "Capture widget: text in TableColumn" })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.expires_in", defaultMessage: "Expires in", description: "Capture widget: text in TableColumn" })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.filter_2", defaultMessage: "Filter", description: "Capture widget: text in TableColumn" })}</TableColumn>
-                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.actions", defaultMessage: "Actions", description: "Capture widget: text in TableColumn" })}</TableColumn>
+                    <TableColumn isRowHeader>{intl.formatMessage({ id: "web.components.capture_widget.id", defaultMessage: "ID", description: "Capture widget: column heading for the capture ID in the captures table; keep it short" })}</TableColumn>
+                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.status", defaultMessage: "Status", description: "Capture widget: column heading for the state of each capture in the captures table; keep it short" })}</TableColumn>
+                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.size", defaultMessage: "Size", description: "Capture widget: column heading for the file size of each capture in the captures table; keep it short" })}</TableColumn>
+                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.packets", defaultMessage: "Packets", description: "Capture widget: column heading for the number of packets recorded by each capture in the captures table; keep it short" })}</TableColumn>
+                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.duration", defaultMessage: "Duration", description: "Capture widget: column heading for how long each capture ran in the captures table; keep it short" })}</TableColumn>
+                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.completed_at", defaultMessage: "Completed at", description: "Capture widget: column heading for when each capture finished in the captures table; keep it short" })}</TableColumn>
+                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.expires_in", defaultMessage: "Expires in", description: "Capture widget: column heading for the time left before each capture is auto-deleted; keep it short" })}</TableColumn>
+                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.filter_2", defaultMessage: "Filter", description: "Capture widget: column heading for the packet filter used by each capture in the captures table; keep it short" })}</TableColumn>
+                    <TableColumn>{intl.formatMessage({ id: "web.components.capture_widget.actions", defaultMessage: "Actions", description: "Capture widget: column heading for the per-capture row actions in the captures table; keep it short" })}</TableColumn>
                   </TableHeader>
                   <TableBody>
                     {completed.flatMap((c) => {
@@ -516,11 +516,11 @@ export function CaptureWidget({ name, ns, gs }: Props) {
                           <TableRow key={`${c.captureId}-detail`}>
                             <TableCell colSpan={9} className="bg-default-50 px-4 py-3 text-xs text-default-500">
                               <dl className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
-                                <dt className="font-medium">{intl.formatMessage({ id: "web.components.capture_widget.created", defaultMessage: "Created", description: "Capture widget: text in dt" })}</dt>
+                                <dt className="font-medium">{intl.formatMessage({ id: "web.components.capture_widget.created", defaultMessage: "Created", description: "Capture widget: label in the expanded details of a capture row, followed by when the capture was created" })}</dt>
                                 <dd>{formatRelative(c.createdAt, intl)}</dd>
-                                <dt className="font-medium">{intl.formatMessage({ id: "web.components.capture_widget.started", defaultMessage: "Started", description: "Capture widget: text in dt" })}</dt>
+                                <dt className="font-medium">{intl.formatMessage({ id: "web.components.capture_widget.started", defaultMessage: "Started", description: "Capture widget: label in the expanded details of a capture row, followed by when recording started or a dash if it has not started" })}</dt>
                                 <dd>{c.startedAt ? formatRelative(c.startedAt, intl) : intl.formatMessage({ id: "web.common.empty_value", defaultMessage: "—", description: "Shown in place of a value that is not set" })}</dd>
-                                <dt className="font-medium">{intl.formatMessage({ id: "web.components.capture_widget.server", defaultMessage: "Server", description: "Capture widget: text in dt" })}</dt>
+                                <dt className="font-medium">{intl.formatMessage({ id: "web.components.capture_widget.server", defaultMessage: "Server", description: "Capture widget: label in the expanded details of a capture row, followed by the name of the server the capture belongs to" })}</dt>
                                 <dd className="font-mono">{c.serverName}</dd>
                               </dl>
                             </TableCell>
@@ -561,17 +561,17 @@ export function CaptureWidget({ name, ns, gs }: Props) {
           <AlertDialogContainer>
             <AlertDialogDialog className="max-w-md">
               <AlertDialogHeader className="flex flex-col gap-1">
-                <AlertDialogHeading>{intl.formatMessage({ id: "web.components.capture_widget.delete_capture", defaultMessage: "Delete capture?", description: "Capture widget: text in AlertDialogHeading" })}</AlertDialogHeading>
+                <AlertDialogHeading>{intl.formatMessage({ id: "web.components.capture_widget.delete_capture", defaultMessage: "Delete capture?", description: "Capture widget: title of the confirmation dialog that asks whether the selected capture should be deleted" })}</AlertDialogHeading>
               </AlertDialogHeader>
               <AlertDialogBody className="flex flex-col gap-3">
-                <p className="text-sm">{intl.formatMessage({ id: "web.components.capture_widget.this_permanently_deletes_capture", defaultMessage: "This permanently deletes capture", description: "Capture widget: text in p" })} <span className="font-mono">{deleteTarget?.captureId}</span> {intl.formatMessage({ id: "web.components.capture_widget.and_its_recorded_packets_this_cannot_be", defaultMessage: "and its recorded packets. This cannot be undone.", description: "Capture widget: text in p" })}</p>
+                <p className="text-sm">{intl.formatMessage({ id: "web.components.capture_widget.this_permanently_deletes_capture", defaultMessage: "This permanently deletes capture", description: "Capture widget: first part of the delete warning in the confirmation dialog; the capture ID is shown right after it" })} <span className="font-mono">{deleteTarget?.captureId}</span> {intl.formatMessage({ id: "web.components.capture_widget.and_its_recorded_packets_this_cannot_be", defaultMessage: "and its recorded packets. This cannot be undone.", description: "Capture widget: second part of the delete warning in the confirmation dialog, after the capture ID; says the recorded packets are removed and the action cannot be undone" })}</p>
                 {deleteMut.error && <ErrorBanner err={deleteMut.error} />}
               </AlertDialogBody>
               <AlertDialogFooter>
                 <Button
                   variant="ghost"
                   onPress={() => setDeleteTarget(null)}
-                >{intl.formatMessage({ id: "web.components.capture_widget.cancel", defaultMessage: "Cancel", description: "Capture widget: text in Button" })}</Button>
+                >{intl.formatMessage({ id: "web.components.capture_widget.cancel", defaultMessage: "Cancel", description: "Capture widget: button that closes the delete confirmation or the Start Capture dialog without making changes; keep it short" })}</Button>
                 <Button
                   variant="danger"
                   isDisabled={!canManage || deleteMut.isPending}
@@ -661,7 +661,7 @@ function StartCaptureModal({
               <ModalHeading>{intl.formatMessage({ id: "web.components.capture_widget.start_capture", defaultMessage: "Start Capture", description: "Capture widget: label of the button that starts a capture" })}</ModalHeading>
             </ModalHeader>
             <ModalBody>
-              <p className="text-sm text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.records_raw_network_traffic_on_this", defaultMessage: "Records raw network traffic on this server’s advertised ports (or a custom filter) for later download.", description: "Capture widget: text in p" })}</p>
+              <p className="text-sm text-default-500">{intl.formatMessage({ id: "web.components.capture_widget.records_raw_network_traffic_on_this", defaultMessage: "Records raw network traffic on this server’s advertised ports (or a custom filter) for later download.", description: "Capture widget: sentence under the Start Capture dialog heading saying the capture records raw network traffic on the server's ports or a custom filter for later download" })}</p>
   
               <form
                 className="space-y-4"
@@ -671,14 +671,14 @@ function StartCaptureModal({
                 }}
               >
                 <div className="space-y-2">
-                  <Label htmlFor="packet-filter">{intl.formatMessage({ id: "web.components.capture_widget.packet_filter", defaultMessage: "Packet Filter", description: "Capture widget: text in Label" })}</Label>
+                  <Label htmlFor="packet-filter">{intl.formatMessage({ id: "web.components.capture_widget.packet_filter", defaultMessage: "Packet Filter", description: "Capture widget: label for the optional packet filter text field in the Start Capture dialog" })}</Label>
                   <div className="relative">
                     <Input
                       id="packet-filter"
-                      aria-label={intl.formatMessage({ id: "web.components.capture_widget.packet_filter", defaultMessage: "Packet Filter", description: "Capture widget: text in Label" })}
+                      aria-label={intl.formatMessage({ id: "web.components.capture_widget.packet_filter", defaultMessage: "Packet Filter", description: "Capture widget: label for the optional packet filter text field in the Start Capture dialog" })}
                       value={filter}
                       onChange={(e) => handleFilterChange(e.target.value)}
-                      placeholder={intl.formatMessage({ id: "web.components.capture_widget.tcp_port_25565", defaultMessage: "tcp port 25565", description: "Capture widget: placeholder of Input" })}
+                      placeholder={intl.formatMessage({ id: "web.components.capture_widget.tcp_port_25565", defaultMessage: "tcp port 25565", description: "Capture widget: example text shown inside the empty packet filter field in the Start Capture dialog; it is a sample filter, not a default value" })}
                       spellCheck={false}
                       aria-invalid={!!filterError}
                     />
@@ -692,7 +692,7 @@ function StartCaptureModal({
                       </div>
                     )}
                   </div>
-                  <Description>{intl.formatMessage({ id: "web.components.capture_widget.optional_use_pcap_filter_syntax_e_g_tcp", defaultMessage: "Optional. Use pcap-filter syntax (e.g. \"tcp port 8080\", \"host 192.168.1.5\"). Leave blank to capture only on this server’s game ports.", description: "Capture widget: text in Description" })}</Description>
+                  <Description>{intl.formatMessage({ id: "web.components.capture_widget.optional_use_pcap_filter_syntax_e_g_tcp", defaultMessage: "Optional. Use pcap-filter syntax (e.g. \"tcp port 8080\", \"host 192.168.1.5\"). Leave blank to capture only on this server’s game ports.", description: "Capture widget: hint under the packet filter field saying the filter is optional, uses pcap-filter syntax with example expressions, and that blank captures only the server's game ports" })}</Description>
                   {filterError && (
                     <p role="alert" className="text-xs text-danger">
                       {filterError}
@@ -701,7 +701,7 @@ function StartCaptureModal({
                 </div>
   
                 <div className="space-y-2">
-                  <Label htmlFor="duration-value">{intl.formatMessage({ id: "web.components.capture_widget.max_duration_2", defaultMessage: "Max Duration *", description: "Capture widget: text in Label" })}</Label>
+                  <Label htmlFor="duration-value">{intl.formatMessage({ id: "web.components.capture_widget.max_duration_2", defaultMessage: "Max Duration *", description: "Capture widget: label of the run-time field in the Start Capture dialog; the asterisk marks the field as required" })}</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="duration-value"
@@ -711,7 +711,7 @@ function StartCaptureModal({
                       value={String(durationValue)}
                       onChange={(e) => setDurationValue(Number(e.target.value))}
                       className="w-[140px]"
-                      aria-label={intl.formatMessage({ id: "web.components.capture_widget.max_duration_value", defaultMessage: "Max duration value", description: "Capture widget: aria-label of Input" })}
+                      aria-label={intl.formatMessage({ id: "web.components.capture_widget.max_duration_value", defaultMessage: "Max duration value", description: "Capture widget: screen-reader label for the number box that sets how long the capture runs; not visible on screen" })}
                       required
                     />
                     <Select
@@ -719,23 +719,23 @@ function StartCaptureModal({
                       onChange={(v) => setDurationUnit(String(v) as "seconds" | "minutes")}
                       className="w-[140px]"
                     >
-                      <Select.Trigger className="rounded border border-default-200 bg-default-50 px-3 py-2 text-sm" aria-label={intl.formatMessage({ id: "web.components.capture_widget.max_duration_unit", defaultMessage: "Max duration unit", description: "Capture widget: aria-label of Select.Trigger" })}>
+                      <Select.Trigger className="rounded border border-default-200 bg-default-50 px-3 py-2 text-sm" aria-label={intl.formatMessage({ id: "web.components.capture_widget.max_duration_unit", defaultMessage: "Max duration unit", description: "Capture widget: screen-reader label for the unit dropdown (seconds or minutes) next to the run-time number; not visible on screen" })}>
                         <Select.Value />
                         <Select.Indicator className="ml-auto h-4 w-4" />
                       </Select.Trigger>
                       <Select.Popover className="rounded border border-default-200">
                         <ListBox>
-                          <ListBoxItem key="seconds" id="seconds">{intl.formatMessage({ id: "web.components.capture_widget.seconds", defaultMessage: "seconds", description: "Capture widget: text in ListBoxItem" })}</ListBoxItem>
-                          <ListBoxItem key="minutes" id="minutes">{intl.formatMessage({ id: "web.components.capture_widget.minutes", defaultMessage: "minutes", description: "Capture widget: text in ListBoxItem" })}</ListBoxItem>
+                          <ListBoxItem key="seconds" id="seconds">{intl.formatMessage({ id: "web.components.capture_widget.seconds", defaultMessage: "seconds", description: "Capture widget: option in the run-time unit dropdown meaning seconds; keep it short" })}</ListBoxItem>
+                          <ListBoxItem key="minutes" id="minutes">{intl.formatMessage({ id: "web.components.capture_widget.minutes", defaultMessage: "minutes", description: "Capture widget: option in the run-time unit dropdown meaning minutes; keep it short" })}</ListBoxItem>
                         </ListBox>
                       </Select.Popover>
                     </Select>
                   </div>
-                  <Description>{intl.formatMessage({ id: "web.components.capture_widget.how_long_the_capture_runs_before_auto", defaultMessage: "How long the capture runs before auto-stopping. Range 1–3600 seconds.", description: "Capture widget: text in Description" })}</Description>
+                  <Description>{intl.formatMessage({ id: "web.components.capture_widget.how_long_the_capture_runs_before_auto", defaultMessage: "How long the capture runs before auto-stopping. Range 1–3600 seconds.", description: "Capture widget: hint under the run-time field saying how long the capture runs before it stops automatically; the allowed range is 1 to 3600 seconds" })}</Description>
                 </div>
   
                 <div className="space-y-2">
-                  <Label htmlFor="size-value">{intl.formatMessage({ id: "web.components.capture_widget.max_size_2", defaultMessage: "Max Size *", description: "Capture widget: text in Label" })}</Label>
+                  <Label htmlFor="size-value">{intl.formatMessage({ id: "web.components.capture_widget.max_size_2", defaultMessage: "Max Size *", description: "Capture widget: label of the maximum file size field in the Start Capture dialog; the asterisk marks the field as required" })}</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="size-value"
@@ -746,7 +746,7 @@ function StartCaptureModal({
                       value={String(sizeValue)}
                       onChange={(e) => setSizeValue(Number(e.target.value))}
                       className="w-[140px]"
-                      aria-label={intl.formatMessage({ id: "web.components.capture_widget.max_size_value", defaultMessage: "Max size value", description: "Capture widget: aria-label of Input" })}
+                      aria-label={intl.formatMessage({ id: "web.components.capture_widget.max_size_value", defaultMessage: "Max size value", description: "Capture widget: screen-reader label for the number box that sets the maximum capture file size; not visible on screen" })}
                       required
                     />
                     <Select
@@ -754,23 +754,23 @@ function StartCaptureModal({
                       onChange={(v) => setSizeUnit(String(v) as "MB" | "GB")}
                       className="w-[140px]"
                     >
-                      <Select.Trigger className="rounded border border-default-200 bg-default-50 px-3 py-2 text-sm" aria-label={intl.formatMessage({ id: "web.components.capture_widget.max_size_unit", defaultMessage: "Max size unit", description: "Capture widget: aria-label of Select.Trigger" })}>
+                      <Select.Trigger className="rounded border border-default-200 bg-default-50 px-3 py-2 text-sm" aria-label={intl.formatMessage({ id: "web.components.capture_widget.max_size_unit", defaultMessage: "Max size unit", description: "Capture widget: screen-reader label for the size unit dropdown (MB or GB) next to the maximum size number; not visible on screen" })}>
                         <Select.Value />
                         <Select.Indicator className="ml-auto h-4 w-4" />
                       </Select.Trigger>
                       <Select.Popover className="rounded border border-default-200">
                         <ListBox>
-                          <ListBoxItem key="MB" id="MB">{intl.formatMessage({ id: "web.components.capture_widget.mb", defaultMessage: "MB", description: "Capture widget: text in ListBoxItem" })}</ListBoxItem>
-                          <ListBoxItem key="GB" id="GB">{intl.formatMessage({ id: "web.components.capture_widget.gb", defaultMessage: "GB", description: "Capture widget: text in ListBoxItem" })}</ListBoxItem>
+                          <ListBoxItem key="MB" id="MB">{intl.formatMessage({ id: "web.components.capture_widget.mb", defaultMessage: "MB", description: "Capture widget: option in the size unit dropdown meaning megabytes; keep it short" })}</ListBoxItem>
+                          <ListBoxItem key="GB" id="GB">{intl.formatMessage({ id: "web.components.capture_widget.gb", defaultMessage: "GB", description: "Capture widget: option in the size unit dropdown meaning gigabytes; keep it short" })}</ListBoxItem>
                         </ListBox>
                       </Select.Popover>
                     </Select>
                   </div>
-                  <Description>{intl.formatMessage({ id: "web.components.capture_widget.maximum_file_size", defaultMessage: "Maximum file size:", description: "Capture widget: text in Description" })} {formatBytes(limits.defaultMaxSizeBytes)}{intl.formatMessage({ id: "web.components.capture_widget.capture_stops_when_reached", defaultMessage: ". Capture stops when reached.", description: "Capture widget: text in Description" })}</Description>
+                  <Description>{intl.formatMessage({ id: "web.components.capture_widget.maximum_file_size", defaultMessage: "Maximum file size:", description: "Capture widget: first part of the hint under the maximum size field, followed by the server's size limit formatted with a unit" })} {formatBytes(limits.defaultMaxSizeBytes)}{intl.formatMessage({ id: "web.components.capture_widget.capture_stops_when_reached", defaultMessage: ". Capture stops when reached.", description: "Capture widget: second part of the maximum size hint, after the size limit; says the capture stops once that size is reached" })}</Description>
                 </div>
   
                 <div className="space-y-2">
-                  <Label htmlFor="retention-value">{intl.formatMessage({ id: "web.components.capture_widget.retention", defaultMessage: "Retention", description: "Capture widget: text in Label" })}</Label>
+                  <Label htmlFor="retention-value">{intl.formatMessage({ id: "web.components.capture_widget.retention", defaultMessage: "Retention", description: "Capture widget: label of the retention field in the Start Capture dialog, which sets how long the capture is kept before auto-delete" })}</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="retention-value"
@@ -781,21 +781,21 @@ function StartCaptureModal({
                       value={String(retentionValue)}
                       onChange={(e) => setRetentionValue(Number(e.target.value))}
                       className="w-[140px]"
-                      aria-label={intl.formatMessage({ id: "web.components.capture_widget.retention_value", defaultMessage: "Retention value", description: "Capture widget: aria-label of Input" })}
+                      aria-label={intl.formatMessage({ id: "web.components.capture_widget.retention_value", defaultMessage: "Retention value", description: "Capture widget: screen-reader label for the number box that sets how long the capture is kept; not visible on screen" })}
                     />
                     <Select
                       value={retentionUnit}
                       onChange={(v) => setRetentionUnit(String(v) as "hours" | "days")}
                       className="w-[140px]"
                     >
-                      <Select.Trigger className="rounded border border-default-200 bg-default-50 px-3 py-2 text-sm" aria-label={intl.formatMessage({ id: "web.components.capture_widget.retention_unit", defaultMessage: "Retention unit", description: "Capture widget: aria-label of Select.Trigger" })}>
+                      <Select.Trigger className="rounded border border-default-200 bg-default-50 px-3 py-2 text-sm" aria-label={intl.formatMessage({ id: "web.components.capture_widget.retention_unit", defaultMessage: "Retention unit", description: "Capture widget: screen-reader label for the retention unit dropdown (hours or days) next to the retention number; not visible on screen" })}>
                         <Select.Value />
                         <Select.Indicator className="ml-auto h-4 w-4" />
                       </Select.Trigger>
                       <Select.Popover className="rounded border border-default-200">
                         <ListBox>
-                          <ListBoxItem key="hours" id="hours">{intl.formatMessage({ id: "web.components.capture_widget.hours", defaultMessage: "hours", description: "Capture widget: text in ListBoxItem" })}</ListBoxItem>
-                          <ListBoxItem key="days" id="days">{intl.formatMessage({ id: "web.components.capture_widget.days", defaultMessage: "days", description: "Capture widget: text in ListBoxItem" })}</ListBoxItem>
+                          <ListBoxItem key="hours" id="hours">{intl.formatMessage({ id: "web.components.capture_widget.hours", defaultMessage: "hours", description: "Capture widget: retention unit dropdown option meaning hours; keep it short" })}</ListBoxItem>
+                          <ListBoxItem key="days" id="days">{intl.formatMessage({ id: "web.components.capture_widget.days", defaultMessage: "days", description: "Capture widget: retention unit dropdown option meaning days; keep it short" })}</ListBoxItem>
                         </ListBox>
                       </Select.Popover>
                     </Select>
@@ -808,7 +808,7 @@ function StartCaptureModal({
               </form>
             </ModalBody>
             <ModalFooter>
-              <Button variant="ghost" onPress={onClose} isDisabled={start.isPending}>{intl.formatMessage({ id: "web.components.capture_widget.cancel", defaultMessage: "Cancel", description: "Capture widget: text in Button" })}</Button>
+              <Button variant="ghost" onPress={onClose} isDisabled={start.isPending}>{intl.formatMessage({ id: "web.components.capture_widget.cancel", defaultMessage: "Cancel", description: "Capture widget: button that closes the delete confirmation or the Start Capture dialog without making changes; keep it short" })}</Button>
               <Button
                 variant="primary"
                 isPending={start.isPending}

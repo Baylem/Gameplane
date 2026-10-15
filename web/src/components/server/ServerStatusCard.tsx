@@ -57,18 +57,18 @@ export function ServerStatusCard({
     return (
       <Card className="border border-border bg-card p-0">
         <div className="flex items-center justify-between px-6 pt-5 pb-3">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">{intl.formatMessage({ id: "web.components.server.server_status_card.game_status", defaultMessage: "Game status", description: "Server status card: text in h3" })}</h3>
+          <h3 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">{intl.formatMessage({ id: "web.components.server.server_status_card.game_status", defaultMessage: "Game status", description: "Server status card: heading of the card that shows the game's status figures" })}</h3>
           <Activity className="h-4 w-4 text-muted" />
         </div>
         <div className="px-6 pb-5">
           <dl className="space-y-3 text-[13px]">
-            <GenericStatusRow label={intl.formatMessage({ id: "web.components.server.server_status_card.phase", defaultMessage: "Phase", description: "Server status card: label of GenericStatusRow" })} value={status.phase ?? "—"} />
-            <GenericStatusRow label={intl.formatMessage({ id: "web.components.server.server_status_card.uptime", defaultMessage: "Uptime", description: "Server status card: label of GenericStatusRow" })} value={formatUptime(status.startedAt, intl)} />
+            <GenericStatusRow label={intl.formatMessage({ id: "web.components.server.server_status_card.phase", defaultMessage: "Phase", description: "Server status card: label of the row showing the server's current phase; a dash is shown when it is unknown" })} value={status.phase ?? "—"} />
+            <GenericStatusRow label={intl.formatMessage({ id: "web.components.server.server_status_card.uptime", defaultMessage: "Uptime", description: "Server status card: label of the row showing how long the server has been running" })} value={formatUptime(status.startedAt, intl)} />
             <GenericStatusRow
-              label={intl.formatMessage({ id: "web.components.server.server_status_card.version", defaultMessage: "Version", description: "Server status card: label of GenericStatusRow" })}
+              label={intl.formatMessage({ id: "web.components.server.server_status_card.version", defaultMessage: "Version", description: "Server status card: label of the row showing the installed game version; a dash is shown when it is unknown" })}
               value={status.agent?.gameVersion ?? "—"}
             />
-            <GenericStatusRow label={intl.formatMessage({ id: "web.components.server.server_status_card.players", defaultMessage: "Players", description: "Server status card: label of GenericStatusRow" })} value={players} />
+            <GenericStatusRow label={intl.formatMessage({ id: "web.components.server.server_status_card.players", defaultMessage: "Players", description: "Server status card: label of the row showing how many players are online" })} value={players} />
           </dl>
         </div>
       </Card>
@@ -80,7 +80,7 @@ export function ServerStatusCard({
   return (
     <Card className="border border-border bg-card p-0">
       <div className="flex items-center justify-between px-6 pt-5 pb-3">
-        <h3 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">{intl.formatMessage({ id: "web.components.server.server_status_card.game_status", defaultMessage: "Game status", description: "Server status card: text in h3" })}</h3>
+        <h3 className="text-[11px] font-semibold uppercase tracking-[1px] text-muted">{intl.formatMessage({ id: "web.components.server.server_status_card.game_status", defaultMessage: "Game status", description: "Server status card: heading of the card that shows the game's status figures" })}</h3>
         <Activity className="h-4 w-4 text-muted" />
       </div>
       <div className="px-6 pb-5">

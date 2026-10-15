@@ -64,7 +64,7 @@ export function ClusterSelector() {
           querying), so the trigger content is a plain `<div>` and the a11y
           label moves onto DropdownTrigger, which forwards it to that button. */}
       <DropdownTrigger
-        aria-label={intl.formatMessage({ id: "web.components.cluster_selector.select_cluster", defaultMessage: "Select cluster", description: "Cluster selector: aria-label of DropdownTrigger" })}
+        aria-label={intl.formatMessage({ id: "web.components.cluster_selector.select_cluster", defaultMessage: "Select cluster", description: "Cluster selector: screen-reader label for the cluster switcher button; not visible on screen" })}
         className={cn(
           "flex max-w-[42vw] items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-sm sm:max-w-64",
           "text-fg hover:bg-surface transition-colors cursor-pointer",
@@ -72,14 +72,14 @@ export function ClusterSelector() {
       >
         <>
           <span className={cn("h-2 w-2 shrink-0 rounded-full", phaseColor)} aria-hidden="true" />
-          <span className="hidden text-muted sm:inline">{intl.formatMessage({ id: "web.components.cluster_selector.cluster", defaultMessage: "Cluster:", description: "Cluster selector: text in span" })}</span>
+          <span className="hidden text-muted sm:inline">{intl.formatMessage({ id: "web.components.cluster_selector.cluster", defaultMessage: "Cluster:", description: "Cluster selector: label before the current cluster's name on the switcher button; hidden on small screens" })}</span>
           <span className="truncate">{displayName}</span>
           <ChevronDown className="h-3.5 w-3.5 text-muted shrink-0" />
         </>
       </DropdownTrigger>
 
       <DropdownPopover placement="bottom start">
-        <DropdownMenu aria-label={intl.formatMessage({ id: "web.components.cluster_selector.cluster_options", defaultMessage: "Cluster options", description: "Cluster selector: aria-label of DropdownMenu" })} className="min-w-[200px]">
+        <DropdownMenu aria-label={intl.formatMessage({ id: "web.components.cluster_selector.cluster_options", defaultMessage: "Cluster options", description: "Cluster selector: screen-reader name of the dropdown menu that lists clusters and actions; not visible on screen" })} className="min-w-[200px]">
           {isLoading || error ? (
             <DropdownItem isDisabled>
               <span className="text-sm text-muted">
@@ -88,11 +88,11 @@ export function ClusterSelector() {
             </DropdownItem>
           ) : clusters.length === 0 ? (
             <DropdownItem onPress={handleViewClusters} textValue={intl.formatMessage({ id: "web.components.cluster_selector.manage_clusters", defaultMessage: "Manage clusters", description: "Cluster selector: typeahead text of the manage-clusters item" })}>
-              <span className="text-sm text-muted">{intl.formatMessage({ id: "web.components.cluster_selector.no_clusters_available_manage_clusters", defaultMessage: "No clusters available · Manage clusters", description: "Cluster selector: text in span" })}</span>
+              <span className="text-sm text-muted">{intl.formatMessage({ id: "web.components.cluster_selector.no_clusters_available_manage_clusters", defaultMessage: "No clusters available · Manage clusters", description: "Cluster selector: dropdown message shown when no clusters exist, followed by the words 'Manage clusters' in the same text" })}</span>
             </DropdownItem>
           ) : (
             <>
-              <DropdownSection aria-label={intl.formatMessage({ id: "web.components.cluster_selector.clusters", defaultMessage: "Clusters", description: "Cluster selector: aria-label of DropdownSection" })}>
+              <DropdownSection aria-label={intl.formatMessage({ id: "web.components.cluster_selector.clusters", defaultMessage: "Clusters", description: "Cluster selector: screen-reader name of the dropdown section that holds the cluster choices; not visible on screen" })}>
                 {clusters.map((cluster) => (
                   <DropdownItem
                     key={cluster.name}
@@ -113,7 +113,7 @@ export function ClusterSelector() {
                 ))}
               </DropdownSection>
 
-              <DropdownSection aria-label={intl.formatMessage({ id: "web.components.cluster_selector.actions", defaultMessage: "Actions", description: "Cluster selector: aria-label of DropdownSection" })}>
+              <DropdownSection aria-label={intl.formatMessage({ id: "web.components.cluster_selector.actions", defaultMessage: "Actions", description: "Cluster selector: screen-reader name of the dropdown section that holds the 'View all clusters' action; not visible on screen" })}>
                 <DropdownItem
                   key="view-clusters"
                   onPress={handleViewClusters}
@@ -121,7 +121,7 @@ export function ClusterSelector() {
                   className="flex items-center gap-2"
                 >
                   <Network className="h-3.5 w-3.5 text-muted shrink-0" />
-                  <span>{intl.formatMessage({ id: "web.components.cluster_selector.view_all_clusters", defaultMessage: "View all clusters", description: "Cluster selector: text in span" })}</span>
+                  <span>{intl.formatMessage({ id: "web.components.cluster_selector.view_all_clusters", defaultMessage: "View all clusters", description: "Cluster selector: dropdown menu item that navigates to the clusters view; keep it short" })}</span>
                 </DropdownItem>
               </DropdownSection>
             </>

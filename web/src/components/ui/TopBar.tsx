@@ -70,7 +70,7 @@ export function TopBar({
           isIconOnly
           variant="ghost"
           size="sm"
-          aria-label={intl.formatMessage({ id: "web.components.ui.top_bar.open_navigation", defaultMessage: "Open navigation", description: "Top bar: aria-label of Button" })}
+          aria-label={intl.formatMessage({ id: "web.components.ui.top_bar.open_navigation", defaultMessage: "Open navigation", description: "Top bar: icon-only button that opens the navigation on small screens; screen-reader name, not visible on screen" })}
           onClick={onMenuClick}
           className="shrink-0 lg:hidden"
         >
@@ -98,7 +98,7 @@ export function TopBar({
         {/* User avatar dropdown menu */}
         <Dropdown>
           <DropdownTrigger
-            aria-label={intl.formatMessage({ id: "web.components.ui.top_bar.user_menu", defaultMessage: "User menu", description: "Top bar: aria-label of DropdownTrigger" })}
+            aria-label={intl.formatMessage({ id: "web.components.ui.top_bar.user_menu", defaultMessage: "User menu", description: "Top bar: screen-reader name of the user avatar dropdown menu; not visible on screen" })}
             className="cursor-pointer"
           >
             <Avatar
@@ -124,7 +124,7 @@ export function TopBar({
                   onClick={() => void navigate({ to: "/settings/theme" })}
                 >
                   <div className="flex items-center gap-2">
-                    <Palette className="h-4 w-4" />{intl.formatMessage({ id: "web.components.ui.top_bar.theme_appearance", defaultMessage: "Theme & Appearance", description: "Top bar: text in div" })}</div>
+                    <Palette className="h-4 w-4" />{intl.formatMessage({ id: "web.components.ui.top_bar.theme_appearance", defaultMessage: "Theme & Appearance", description: "Top bar: user menu item that opens the Theme and Appearance settings; keep it short" })}</div>
                 </DropdownItem>
                 <DropdownItem
                   key="logout"
@@ -132,7 +132,7 @@ export function TopBar({
                   className="text-danger"
                 >
                   <div className="flex items-center gap-2">
-                    <LogOut className="h-4 w-4" />{intl.formatMessage({ id: "web.components.ui.top_bar.sign_out", defaultMessage: "Sign out", description: "Top bar: text in div" })}</div>
+                    <LogOut className="h-4 w-4" />{intl.formatMessage({ id: "web.components.ui.top_bar.sign_out", defaultMessage: "Sign out", description: "Top bar: user menu item that signs the user out; keep it short" })}</div>
                 </DropdownItem>
               </DropdownSection>
             </DropdownMenu>

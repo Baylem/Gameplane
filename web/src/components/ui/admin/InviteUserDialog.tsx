@@ -137,51 +137,51 @@ export function InviteUserDialog({
             <ModalHeader>
               <ModalHeading>{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.invite_user", defaultMessage: "Invite user", description: "Invite user dialog: heading and default submit button label" })}</ModalHeading>
               {contactFieldsOptional && (
-                <Description className="text-sm leading-[21px] text-muted">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.create_a_local_account_leave_password", defaultMessage: "Create a local account. Leave password blank to send an OIDC invite later.", description: "Invite user dialog: text in Description" })}</Description>
+                <Description className="text-sm leading-[21px] text-muted">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.create_a_local_account_leave_password", defaultMessage: "Create a local account. Leave password blank to send an OIDC invite later.", description: "Invite user dialog: explanation under the Invite user title saying a local account is created, and that a blank password sends an OIDC invite later; OIDC is a technical term, usually left untranslated" })}</Description>
               )}
             </ModalHeader>
 
             <ModalBody className="gap-3">
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="invite-username" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.username", defaultMessage: "Username", description: "Invite user dialog: text in Label" })}</Label>
+              <Label htmlFor="invite-username" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.username", defaultMessage: "Username", description: "Invite user dialog: label above the username field" })}</Label>
               <Input
                 id="invite-username"
                 fullWidth
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder={intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.alice", defaultMessage: "alice", description: "Invite user dialog: placeholder of Input" })}
+                placeholder={intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.alice", defaultMessage: "alice", description: "Invite user dialog: example value shown inside the empty username field; a sample name, not a default value" })}
                 disabled={isLoading}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="invite-display-name" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.display_name", defaultMessage: "Display name", description: "Invite user dialog: text in Label" })}</Label>
+              <Label htmlFor="invite-display-name" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.display_name", defaultMessage: "Display name", description: "Invite user dialog: label above the display name field" })}</Label>
               <Input
                 id="invite-display-name"
                 fullWidth
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder={intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.alice_operator", defaultMessage: "Alice Operator", description: "Invite user dialog: placeholder of Input" })}
+                placeholder={intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.alice_operator", defaultMessage: "Alice Operator", description: "Invite user dialog: example value shown inside the empty display name field; a sample name, not a default value" })}
                 disabled={isLoading}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="invite-email" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.email", defaultMessage: "Email", description: "Invite user dialog: text in Label" })}</Label>
+              <Label htmlFor="invite-email" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.email", defaultMessage: "Email", description: "Invite user dialog: label above the email field" })}</Label>
               <Input
                 id="invite-email"
                 fullWidth
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.alice_example_com", defaultMessage: "alice@example.com", description: "Invite user dialog: placeholder of Input" })}
+                placeholder={intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.alice_example_com", defaultMessage: "alice@example.com", description: "Invite user dialog: example value shown inside the empty email field; a sample address, keep it as written" })}
                 type="email"
                 disabled={isLoading}
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="invite-password" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.initial_password", defaultMessage: "Initial password", description: "Invite user dialog: text in Label" })}</Label>
+              <Label htmlFor="invite-password" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.initial_password", defaultMessage: "Initial password", description: "Invite user dialog: label above the initial password field, which can be left blank" })}</Label>
               <Input
                 id="invite-password"
                 fullWidth
@@ -196,7 +196,7 @@ export function InviteUserDialog({
             {hasRoles && (
               <div>
                 <Select className="flex flex-col gap-1.5" value={role} onChange={(v) => setRole(String(v))} isDisabled={isLoading}>
-                  <Label htmlFor="invite-role" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.role", defaultMessage: "Role", description: "Invite user dialog: text in Label" })}</Label>
+                  <Label htmlFor="invite-role" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.role", defaultMessage: "Role", description: "Invite user dialog: label above the role dropdown, shown only when roles are available" })}</Label>
                   <Select.Trigger
                     id="invite-role"
                     className="w-full items-center rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80"
@@ -205,7 +205,7 @@ export function InviteUserDialog({
                     <Select.Indicator className="ml-auto h-4 w-4" />
                   </Select.Trigger>
                   <Select.Popover className="rounded border border-border">
-                    <ListBox className="p-0" aria-label={intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.role", defaultMessage: "Role", description: "Invite user dialog: text in Label" })}>
+                    <ListBox className="p-0" aria-label={intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.role", defaultMessage: "Role", description: "Invite user dialog: label above the role dropdown, shown only when roles are available" })}>
                       {roles?.map((r) => (
                         <ListBoxItem key={r} id={r}>
                           {r}
@@ -221,7 +221,7 @@ export function InviteUserDialog({
           </ModalBody>
 
           <ModalFooter className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="sm" className="text-xs" onPress={handleClose} isDisabled={isLoading}>{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.cancel", defaultMessage: "Cancel", description: "Invite user dialog: text in Button" })}</Button>
+            <Button variant="ghost" size="sm" className="text-xs" onPress={handleClose} isDisabled={isLoading}>{intl.formatMessage({ id: "web.components.ui.admin.invite_user_dialog.cancel", defaultMessage: "Cancel", description: "Invite user dialog: button that closes the dialog without inviting the user; keep it short" })}</Button>
             <Button
               size="sm"
               variant="primary"

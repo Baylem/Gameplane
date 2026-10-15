@@ -142,7 +142,7 @@ export function RegistryBrowser({
 
   // No usable provider (none declared, or all need config like a CurseForge key).
   if (!providersQ.isLoading && available.length === 0) {
-    return <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.registry_browser.in_app_browse_isn_t_available_for_this", defaultMessage: "In-app browse isn’t available for this server.", description: "Registry browser: text in p" })}</p>;
+    return <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.registry_browser.in_app_browse_isn_t_available_for_this", defaultMessage: "In-app browse isn’t available for this server.", description: "Registry browser: message shown instead of the results when no usable registry provider exists for this server, so in-app browsing is unavailable" })}</p>;
   }
 
   return (
@@ -245,11 +245,11 @@ export function RegistryBrowser({
 
       <div className="min-h-0 flex-1 overflow-auto">
         {q.isLoading || providersQ.isLoading ? (
-          <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.registry_browser.loading", defaultMessage: "Loading…", description: "Registry browser: text in p" })}</p>
+          <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.registry_browser.loading", defaultMessage: "Loading…", description: "Registry browser: loading text shown while registry results are being fetched" })}</p>
         ) : q.isError ? (
           <p className="text-xs text-danger">{errText(q.error, intl)}</p>
         ) : items.length === 0 ? (
-          <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.registry_browser.no_results", defaultMessage: "No results.", description: "Registry browser: text in p" })}</p>
+          <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.registry_browser.no_results", defaultMessage: "No results.", description: "Registry browser: empty-state text shown when the registry search returns nothing" })}</p>
         ) : (
           <>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

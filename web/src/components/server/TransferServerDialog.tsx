@@ -85,7 +85,7 @@ export function TransferServerDialog({
                 </div>
 
                 {usersError ? (
-                  <div className="text-xs text-danger">{intl.formatMessage({ id: "web.components.server.transfer_server_dialog.you_need_permission_to_list_users_to", defaultMessage: "You need permission to list users to pick a recipient.", description: "Transfer server dialog: text in div" })}</div>
+                  <div className="text-xs text-danger">{intl.formatMessage({ id: "web.components.server.transfer_server_dialog.you_need_permission_to_list_users_to", defaultMessage: "You need permission to list users to pick a recipient.", description: "Transfer server dialog: error text shown when the user lacks permission to list users, so no new owner can be picked" })}</div>
                 ) : (
                   <Popover isOpen={popoverOpen} onOpenChange={setPopoverOpen}>
                     <PopoverTrigger
@@ -101,7 +101,7 @@ export function TransferServerDialog({
                     </PopoverTrigger>
                     <PopoverContent className="min-w-[200px]">
                       <ListBox
-                        aria-label={intl.formatMessage({ id: "web.components.server.transfer_server_dialog.transfer_to", defaultMessage: "Transfer to", description: "Transfer server dialog: aria-label of ListBox" })}
+                        aria-label={intl.formatMessage({ id: "web.components.server.transfer_server_dialog.transfer_to", defaultMessage: "Transfer to", description: "Transfer server dialog: screen-reader name of the list of users to pick as the new owner; not visible on screen" })}
                         selectionMode="single"
                         onSelectionChange={(selected) => {
                           const [id] = selected === "all" ? [] : selected;
@@ -133,7 +133,7 @@ export function TransferServerDialog({
                 size="sm"
                 isDisabled={transfer.isPending}
                 onPress={() => onOpenChange(false)}
-              >{intl.formatMessage({ id: "web.components.server.transfer_server_dialog.cancel", defaultMessage: "Cancel", description: "Transfer server dialog: text in Button" })}</Button>
+              >{intl.formatMessage({ id: "web.components.server.transfer_server_dialog.cancel", defaultMessage: "Cancel", description: "Transfer server dialog: button that closes the dialog without transferring the server; keep it short" })}</Button>
               <Button
                 size="sm"
                 isDisabled={!userId || transfer.isPending}

@@ -66,8 +66,8 @@ export function BackupFilters({
     <div className="flex flex-wrap items-center justify-between gap-3">
       <Input
         className="min-w-0 flex-1 basis-40 max-w-xs"
-        placeholder={intl.formatMessage({ id: "web.components.backups.backup_filters.search_by_name_or_server", defaultMessage: "Search by name or server…", description: "Backup filters: placeholder of Input" })}
-        aria-label={intl.formatMessage({ id: "web.components.backups.backup_filters.search_backups_schedules_or_restores", defaultMessage: "Search backups, schedules or restores", description: "Backup filters: aria-label of Input" })}
+        placeholder={intl.formatMessage({ id: "web.components.backups.backup_filters.search_by_name_or_server", defaultMessage: "Search by name or server…", description: "Backup filters: placeholder text inside the search box giving an example of what to type, a backup name or server name" })}
+        aria-label={intl.formatMessage({ id: "web.components.backups.backup_filters.search_backups_schedules_or_restores", defaultMessage: "Search backups, schedules or restores", description: "Backup filters: screen-reader label for the search box that finds backups, schedules or restores; not visible on screen" })}
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
         type="text"
@@ -90,19 +90,19 @@ export function BackupFilters({
           }}
           fields={<>
             <div className="space-y-1">
-              <div className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "web.components.backups.backup_filters.location", defaultMessage: "Location", description: "Backup filters: text in div" })}</div>
+              <div className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "web.components.backups.backup_filters.location", defaultMessage: "Location", description: "Backup filters: label above the location dropdown in the filter panel" })}</div>
               <FleetScopeFilter value={draftLocation} onChange={(next) => {
                 setDraftLocation(next);
                 if (next && servers.find((item) => serverOptionID(item) === draftServer)?.fleetTarget?.cluster !== next) setDraftServer("");
               }} clusters={locations} />
             </div>
             <div className="space-y-1">
-              <div className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "web.components.backups.backup_filters.server", defaultMessage: "Server", description: "Backup filters: text in div" })}</div>
-              <Select value={draftServer} onChange={(v) => setDraftServer(String(v ?? ""))} className="w-full" aria-label={intl.formatMessage({ id: "web.components.backups.backup_filters.filter_by_server", defaultMessage: "Filter by server", description: "Backup filters: aria-label of Select" })}>
+              <div className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "web.components.backups.backup_filters.server", defaultMessage: "Server", description: "Backup filters: label above the server dropdown in the filter panel" })}</div>
+              <Select value={draftServer} onChange={(v) => setDraftServer(String(v ?? ""))} className="w-full" aria-label={intl.formatMessage({ id: "web.components.backups.backup_filters.filter_by_server", defaultMessage: "Filter by server", description: "Backup filters: screen-reader label for the server dropdown in the filter panel; not visible on screen" })}>
                 <Select.Trigger><Select.Value /><Select.Indicator className="ml-auto h-4 w-4" /></Select.Trigger>
                 <Select.Popover>
-                  <ListBox aria-label={intl.formatMessage({ id: "web.components.backups.backup_filters.server_options", defaultMessage: "Server options", description: "Backup filters: aria-label of ListBox" })}>
-                    <ListBoxItem id="" textValue={intl.formatMessage({ id: "web.components.backups.backup_filters.all_servers_text", defaultMessage: "All servers", description: "Backup filters: typeahead text of the all-servers option" })}>{intl.formatMessage({ id: "web.components.backups.backup_filters.all_servers", defaultMessage: "All servers", description: "Backup filters: text in ListBoxItem" })}</ListBoxItem>
+                  <ListBox aria-label={intl.formatMessage({ id: "web.components.backups.backup_filters.server_options", defaultMessage: "Server options", description: "Backup filters: screen-reader name of the list of server choices in the server dropdown; not visible on screen" })}>
+                    <ListBoxItem id="" textValue={intl.formatMessage({ id: "web.components.backups.backup_filters.all_servers_text", defaultMessage: "All servers", description: "Backup filters: typeahead text of the all-servers option" })}>{intl.formatMessage({ id: "web.components.backups.backup_filters.all_servers", defaultMessage: "All servers", description: "Backup filters: first server dropdown option that clears the server filter so backups from all servers show; keep it short" })}</ListBoxItem>
                     {availableServers.map((s) => (
                       <ListBoxItem key={serverOptionID(s)} id={serverOptionID(s)} textValue={serverOptionLabel(s, intl)}>
                         {serverOptionLabel(s, intl)}
@@ -113,12 +113,12 @@ export function BackupFilters({
               </Select>
             </div>
             {phases.length > 0 && <div className="space-y-1">
-              <div className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "web.components.backups.backup_filters.phase", defaultMessage: "Phase", description: "Backup filters: text in div" })}</div>
-              <Select value={draftPhase} onChange={(v) => setDraftPhase(String(v ?? ""))} className="w-full" aria-label={intl.formatMessage({ id: "web.components.backups.backup_filters.filter_by_phase", defaultMessage: "Filter by phase", description: "Backup filters: aria-label of Select" })}>
+              <div className="text-xs font-semibold text-muted">{intl.formatMessage({ id: "web.components.backups.backup_filters.phase", defaultMessage: "Phase", description: "Backup filters: label above the phase dropdown in the filter panel; the dropdown appears only when phases exist" })}</div>
+              <Select value={draftPhase} onChange={(v) => setDraftPhase(String(v ?? ""))} className="w-full" aria-label={intl.formatMessage({ id: "web.components.backups.backup_filters.filter_by_phase", defaultMessage: "Filter by phase", description: "Backup filters: screen-reader label for the phase dropdown in the filter panel; not visible on screen" })}>
                 <Select.Trigger><Select.Value /><Select.Indicator className="ml-auto h-4 w-4" /></Select.Trigger>
                 <Select.Popover>
-                  <ListBox aria-label={intl.formatMessage({ id: "web.components.backups.backup_filters.phase_options", defaultMessage: "Phase options", description: "Backup filters: aria-label of ListBox" })}>
-                    <ListBoxItem id="" textValue={intl.formatMessage({ id: "web.components.backups.backup_filters.all_phases_text", defaultMessage: "All phases", description: "Backup filters: typeahead text of the all-phases option" })}>{intl.formatMessage({ id: "web.components.backups.backup_filters.all_phases", defaultMessage: "All phases", description: "Backup filters: text in ListBoxItem" })}</ListBoxItem>
+                  <ListBox aria-label={intl.formatMessage({ id: "web.components.backups.backup_filters.phase_options", defaultMessage: "Phase options", description: "Backup filters: screen-reader name of the list of phase choices in the phase dropdown; not visible on screen" })}>
+                    <ListBoxItem id="" textValue={intl.formatMessage({ id: "web.components.backups.backup_filters.all_phases_text", defaultMessage: "All phases", description: "Backup filters: typeahead text of the all-phases option" })}>{intl.formatMessage({ id: "web.components.backups.backup_filters.all_phases", defaultMessage: "All phases", description: "Backup filters: first phase dropdown option that clears the phase filter so backups in every phase show; keep it short" })}</ListBoxItem>
                     {phases.map((p) => <ListBoxItem key={p} id={p} textValue={phaseLabel(intl, p)}>{phaseLabel(intl, p)}</ListBoxItem>)}
                   </ListBox>
                 </Select.Popover>
@@ -127,7 +127,7 @@ export function BackupFilters({
           </>}
         >
           <div className="inline-flex items-center gap-2 rounded-[6px] px-3 py-2 text-sm font-medium border border-default-300 bg-default-100 hover:bg-default-200 cursor-pointer transition-colors">
-            <Filter className="h-4 w-4" /> {intl.formatMessage({ id: "web.components.backups.backup_filters.filter", defaultMessage: "Filter", description: "Backup filters: text in div" })}{count > 0 && <Chip size="sm" variant="soft">{count}</Chip>}
+            <Filter className="h-4 w-4" /> {intl.formatMessage({ id: "web.components.backups.backup_filters.filter", defaultMessage: "Filter", description: "Backup filters: label of the Filter button that opens the filter panel, with a count chip showing how many filters are set; keep it short" })}{count > 0 && <Chip size="sm" variant="soft">{count}</Chip>}
           </div>
         </FilterPopover>
       </div>

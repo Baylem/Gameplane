@@ -100,7 +100,7 @@ export function RestoreDialog({ backup, defaultServer, ns, onClose, target: expl
         <ModalContainer>
           <ModalDialog className="w-[480px] max-w-[480px]">
           <ModalHeader>
-            <ModalHeading>{intl.formatMessage({ id: "web.components.backups.restore_dialog.restore_backup", defaultMessage: "Restore backup", description: "Restore dialog: text in ModalHeading" })}</ModalHeading>
+            <ModalHeading>{intl.formatMessage({ id: "web.components.backups.restore_dialog.restore_backup", defaultMessage: "Restore backup", description: "Restore dialog: title of the dialog for restoring a backup onto a server" })}</ModalHeading>
             <Description className="text-sm text-muted">
               {isVolumeSnapshot
                 ? intl.formatMessage({ id: "web.components.backups.restore_dialog.new_server_note", defaultMessage: "A new server will be provisioned from this snapshot. The original server is left untouched.", description: "Restore dialog: explains that restoring creates a new server" })
@@ -112,7 +112,7 @@ export function RestoreDialog({ backup, defaultServer, ns, onClose, target: expl
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="source-backup" className="text-xs">{intl.formatMessage({ id: "web.components.backups.restore_dialog.source_backup", defaultMessage: "Source backup", description: "Restore dialog: text in Label" })}</Label>
+                <Label htmlFor="source-backup" className="text-xs">{intl.formatMessage({ id: "web.components.backups.restore_dialog.source_backup", defaultMessage: "Source backup", description: "Restore dialog: field label above the read-only name of the backup being restored" })}</Label>
                 <div className="mt-1.5 flex items-center rounded-lg border border-[var(--field-border)] bg-[var(--field-background)] px-3 py-2 font-mono text-xs text-fg">
                   {backup?.metadata.name}
                 </div>
@@ -120,7 +120,7 @@ export function RestoreDialog({ backup, defaultServer, ns, onClose, target: expl
 
               {isVolumeSnapshot ? (
                 <div>
-                  <Label htmlFor="new-server-name" className="text-xs">{intl.formatMessage({ id: "web.components.backups.restore_dialog.new_server_name", defaultMessage: "New server name", description: "Restore dialog: text in Label" })}</Label>
+                  <Label htmlFor="new-server-name" className="text-xs">{intl.formatMessage({ id: "web.components.backups.restore_dialog.new_server_name", defaultMessage: "New server name", description: "Restore dialog: field label for the name of the new server to create from the backup; shown in the volume snapshot restore mode" })}</Label>
                   <Input
                     id="new-server-name"
                     autoFocus
@@ -128,7 +128,7 @@ export function RestoreDialog({ backup, defaultServer, ns, onClose, target: expl
                     onChange={(e) => setTarget(e.target.value)}
                     spellCheck={false}
                     autoComplete="off"
-                    placeholder={intl.formatMessage({ id: "web.components.backups.restore_dialog.my_restored_server", defaultMessage: "my-restored-server", description: "Restore dialog: placeholder of Input" })}
+                    placeholder={intl.formatMessage({ id: "web.components.backups.restore_dialog.my_restored_server", defaultMessage: "my-restored-server", description: "Restore dialog: example value shown inside the empty new server name field; a sample name, not a default value" })}
                     className="mt-1"
                   />
                   {nameTaken && (
@@ -137,7 +137,7 @@ export function RestoreDialog({ backup, defaultServer, ns, onClose, target: expl
                 </div>
               ) : (
                 <div>
-                  <Label htmlFor="target-server" className="text-xs">{intl.formatMessage({ id: "web.components.backups.restore_dialog.target_game_server", defaultMessage: "Target game server", description: "Restore dialog: text in Label" })}</Label>
+                  <Label htmlFor="target-server" className="text-xs">{intl.formatMessage({ id: "web.components.backups.restore_dialog.target_game_server", defaultMessage: "Target game server", description: "Restore dialog: field label for choosing the existing server to restore the backup onto" })}</Label>
                   <Popover isOpen={popoverOpen} onOpenChange={setPopoverOpen}>
                     <PopoverTrigger
                       id="target-server"
@@ -153,7 +153,7 @@ export function RestoreDialog({ backup, defaultServer, ns, onClose, target: expl
                     </PopoverTrigger>
                     <PopoverContent className="min-w-[200px]">
                       <ListBox
-                        aria-label={intl.formatMessage({ id: "web.components.backups.restore_dialog.select_target_server", defaultMessage: "Select target server", description: "Restore dialog: aria-label of ListBox" })}
+                        aria-label={intl.formatMessage({ id: "web.components.backups.restore_dialog.select_target_server", defaultMessage: "Select target server", description: "Restore dialog: screen-reader name of the list of existing servers shown when picking the restore target; not visible on screen" })}
                         selectionMode="single"
                         onSelectionChange={(selected) => {
                           const [id] = selected;
@@ -178,7 +178,7 @@ export function RestoreDialog({ backup, defaultServer, ns, onClose, target: expl
                 <Alert status="danger" className="text-xs">
                   <div className="flex gap-2">
                     <AlertCircle className="h-4 w-4 flex-shrink-0 text-danger" />
-                    <span className="text-danger">{intl.formatMessage({ id: "web.components.backups.restore_dialog.this_will_overwrite_all_data_on_the", defaultMessage: "This will overwrite all data on the target server. Players will be disconnected during the restore.", description: "Restore dialog: text in span" })}</span>
+                    <span className="text-danger">{intl.formatMessage({ id: "web.components.backups.restore_dialog.this_will_overwrite_all_data_on_the", defaultMessage: "This will overwrite all data on the target server. Players will be disconnected during the restore.", description: "Restore dialog: red warning under the restore mode choice saying the target server's data will be overwritten and players will be disconnected during the restore" })}</span>
                   </div>
                 </Alert>
               )}
@@ -198,7 +198,7 @@ export function RestoreDialog({ backup, defaultServer, ns, onClose, target: expl
               className="text-xs"
               onPress={onClose}
               isDisabled={create.isPending}
-            >{intl.formatMessage({ id: "web.components.backups.restore_dialog.cancel", defaultMessage: "Cancel", description: "Restore dialog: text in Button" })}</Button>
+            >{intl.formatMessage({ id: "web.components.backups.restore_dialog.cancel", defaultMessage: "Cancel", description: "Restore dialog: button that closes the restore dialog without restoring; keep it short" })}</Button>
             <Button
               size="sm"
               variant={isVolumeSnapshot ? "primary" : "danger"}

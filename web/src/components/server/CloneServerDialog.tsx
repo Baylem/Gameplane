@@ -91,23 +91,23 @@ export function CloneServerDialog({
           <ModalDialog>
             <ModalHeader>
               <ModalHeading>{intl.formatMessage({ id: "web.components.server.clone_server_dialog.clone_server", defaultMessage: "Clone server", description: "Clone server dialog: heading and submit button label" })}</ModalHeading>
-              <Description className="text-sm text-muted">{intl.formatMessage({ id: "web.components.server.clone_server_dialog.creates_a_new_server_with_the_same", defaultMessage: "Creates a new server with the same configuration. World data is not copied.", description: "Clone server dialog: text in Description" })}</Description>
+              <Description className="text-sm text-muted">{intl.formatMessage({ id: "web.components.server.clone_server_dialog.creates_a_new_server_with_the_same", defaultMessage: "Creates a new server with the same configuration. World data is not copied.", description: "Clone server dialog: explanation under the Clone server title saying the copy gets the same configuration and that world data is not copied" })}</Description>
             </ModalHeader>
 
             <ModalBody className="gap-4">
 
               <TextField isInvalid={!valid || clone.isError}>
-                <Label className="text-xs">{intl.formatMessage({ id: "web.components.server.clone_server_dialog.new_name", defaultMessage: "New name", description: "Clone server dialog: text in Label" })}</Label>
+                <Label className="text-xs">{intl.formatMessage({ id: "web.components.server.clone_server_dialog.new_name", defaultMessage: "New name", description: "Clone server dialog: label above the new name field for the copied server" })}</Label>
                 <Input
                   autoFocus
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   spellCheck={false}
-                  placeholder={intl.formatMessage({ id: "web.components.server.clone_server_dialog.mc_survival_copy", defaultMessage: "mc-survival-copy", description: "Clone server dialog: placeholder of Input" })}
+                  placeholder={intl.formatMessage({ id: "web.components.server.clone_server_dialog.mc_survival_copy", defaultMessage: "mc-survival-copy", description: "Clone server dialog: example value shown inside the empty new name field; a sample name, not a default value" })}
                   className="mt-1"
                 />
                 {!valid && (
-                  <FieldError className="mt-1 text-xs">{intl.formatMessage({ id: "web.components.server.clone_server_dialog.name_must_be_lowercase_letters_digits", defaultMessage: "Name must be lowercase letters, digits, dashes (max 63)", description: "Clone server dialog: text in FieldError" })}</FieldError>
+                  <FieldError className="mt-1 text-xs">{intl.formatMessage({ id: "web.components.server.clone_server_dialog.name_must_be_lowercase_letters_digits", defaultMessage: "Name must be lowercase letters, digits, dashes (max 63)", description: "Clone server dialog: validation error under the new name field shown when the name has invalid characters or is longer than the limit" })}</FieldError>
                 )}
                 {clone.isError && (
                   <FieldError className="mt-1 text-xs">
@@ -123,7 +123,7 @@ export function CloneServerDialog({
                 size="sm"
                 onPress={() => onOpenChange(false)}
                 isDisabled={clone.isPending}
-              >{intl.formatMessage({ id: "web.components.server.clone_server_dialog.cancel", defaultMessage: "Cancel", description: "Clone server dialog: text in Button" })}</Button>
+              >{intl.formatMessage({ id: "web.components.server.clone_server_dialog.cancel", defaultMessage: "Cancel", description: "Clone server dialog: button that closes the dialog without cloning; keep it short" })}</Button>
               <Button
                 size="sm"
                 variant="primary"

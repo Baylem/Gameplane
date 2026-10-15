@@ -61,9 +61,9 @@ export function IdentityUnavailable({ error, onRetry }: { error: unknown; onRetr
             <PlugZap className="h-6 w-6" />
           </div>
         </div>
-        <div className="pt-4 text-base font-medium text-fg">{intl.formatMessage({ id: "web.components.require_role.can_t_reach_the_control_plane", defaultMessage: "Can't reach the control plane", description: "Require role: text in div" })}</div>
-        <p className="pt-1 text-sm text-muted">{intl.formatMessage({ id: "web.components.require_role.we_couldn_t_confirm_who_you_are", defaultMessage: "We couldn't confirm who you are", description: "Require role: text in p" })}{detail && intl.formatMessage({ id: "web.components.require_role.detail", defaultMessage: " ({detail})", description: "Require role: error detail in parentheses after the message; {detail} is the error detail" }, { detail: detail })}{intl.formatMessage({ id: "web.components.require_role.this_is_usually_temporary_the_api_may", defaultMessage: ". This is usually temporary — the API may be restarting.", description: "Require role: text in p" })}</p>
-        <Button className="mt-4" onClick={onRetry}>{intl.formatMessage({ id: "web.components.require_role.try_again", defaultMessage: "Try again", description: "Require role: text in Button" })}</Button>
+        <div className="pt-4 text-base font-medium text-fg">{intl.formatMessage({ id: "web.components.require_role.can_t_reach_the_control_plane", defaultMessage: "Can't reach the control plane", description: "Require role: heading of the error card shown when the user's identity cannot be confirmed because the API cannot be reached" })}</div>
+        <p className="pt-1 text-sm text-muted">{intl.formatMessage({ id: "web.components.require_role.we_couldn_t_confirm_who_you_are", defaultMessage: "We couldn't confirm who you are", description: "Require role: first part of the explanation under the unreachable heading saying the user's identity could not be confirmed; an optional detail in parentheses may follow" })}{detail && intl.formatMessage({ id: "web.components.require_role.detail", defaultMessage: " ({detail})", description: "Require role: error detail in parentheses after the message; {detail} is the error detail" }, { detail: detail })}{intl.formatMessage({ id: "web.components.require_role.this_is_usually_temporary_the_api_may", defaultMessage: ". This is usually temporary — the API may be restarting.", description: "Require role: closing part of the unreachable explanation, after any detail, saying the problem is usually temporary and the API may be restarting" })}</p>
+        <Button className="mt-4" onClick={onRetry}>{intl.formatMessage({ id: "web.components.require_role.try_again", defaultMessage: "Try again", description: "Require role: button on the unreachable error card that retries the identity check; keep it short" })}</Button>
       </Card>
     </div>
   );
@@ -79,12 +79,12 @@ function Forbidden() {
             <ShieldAlert className="h-6 w-6" />
           </div>
         </div>
-        <div className="pt-4 text-base font-medium text-fg">{intl.formatMessage({ id: "web.components.require_role.access_denied", defaultMessage: "Access denied", description: "Require role: text in div" })}</div>
-        <p className="pt-1 text-sm text-muted">{intl.formatMessage({ id: "web.components.require_role.your_role_doesn_t_permit_access_to_this", defaultMessage: "Your role doesn't permit access to this page. Ask an administrator if you believe this is a mistake.", description: "Require role: text in p" })}</p>
+        <div className="pt-4 text-base font-medium text-fg">{intl.formatMessage({ id: "web.components.require_role.access_denied", defaultMessage: "Access denied", description: "Require role: heading of the card shown when the user's role does not allow the page they opened" })}</div>
+        <p className="pt-1 text-sm text-muted">{intl.formatMessage({ id: "web.components.require_role.your_role_doesn_t_permit_access_to_this", defaultMessage: "Your role doesn't permit access to this page. Ask an administrator if you believe this is a mistake.", description: "Require role: explanation under the access denied heading saying the user's role does not allow this page and to ask an administrator if this is a mistake" })}</p>
         <Link
           to="/"
           className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm text-primary-fg hover:opacity-90"
-        >{intl.formatMessage({ id: "web.components.require_role.back_to_dashboard", defaultMessage: "Back to dashboard", description: "Require role: text in Link" })}</Link>
+        >{intl.formatMessage({ id: "web.components.require_role.back_to_dashboard", defaultMessage: "Back to dashboard", description: "Require role: link on the access denied card that returns to the home dashboard; keep it short" })}</Link>
       </Card>
     </div>
   );

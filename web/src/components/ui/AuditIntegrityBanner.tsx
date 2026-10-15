@@ -36,13 +36,13 @@ export function AuditIntegrityBanner({
             onPress={onRefetch}
             isDisabled={isRefetching}
             className="text-danger-foreground hover:bg-black/10"
-          >{intl.formatMessage({ id: "web.components.ui.audit_integrity_banner.re_check", defaultMessage: "Re-check", description: "Audit integrity banner: text in Button" })}</Button>
+          >{intl.formatMessage({ id: "web.components.ui.audit_integrity_banner.re_check", defaultMessage: "Re-check", description: "Audit integrity banner: button that runs the audit integrity check again; keep it short" })}</Button>
         ) : null}
         {onDismiss ? (
           <button
             onClick={onDismiss}
             className="inline-flex shrink-0 items-center justify-center rounded px-2 py-1 text-danger-foreground hover:bg-black/10 focus:outline-none focus:ring-1 focus:ring-danger-foreground"
-            aria-label={intl.formatMessage({ id: "web.components.ui.audit_integrity_banner.dismiss_audit_integrity_alert", defaultMessage: "Dismiss audit integrity alert", description: "Audit integrity banner: aria-label of button" })}
+            aria-label={intl.formatMessage({ id: "web.components.ui.audit_integrity_banner.dismiss_audit_integrity_alert", defaultMessage: "Dismiss audit integrity alert", description: "Audit integrity banner: screen-reader name of the icon-only close button on the alert; not visible on screen" })}
           >
             <span className="text-xs font-bold">{intl.formatMessage({ id: "web.common.close_glyph", defaultMessage: "×", description: "Multiplication sign used as the close icon on dismiss buttons" })}</span>
           </button>

@@ -41,7 +41,7 @@ export function BackupRow({ backup, showServer, onSelect, onRestore, target, per
           variant="outline"
           isDisabled={!restorable || !resourceCan(permissions, "backups:restore")}
           onPress={() => onRestore(backup)}
-        >{intl.formatMessage({ id: "web.components.backups.backup_row.restore", defaultMessage: "Restore", description: "Backup row: text in Button" })}</Button>
+        >{intl.formatMessage({ id: "web.components.backups.backup_row.restore", defaultMessage: "Restore", description: "Backup row: button in each backup table row that starts restoring that backup; keep it short" })}</Button>
       </Table.Cell>
     </Table.Row>
   );

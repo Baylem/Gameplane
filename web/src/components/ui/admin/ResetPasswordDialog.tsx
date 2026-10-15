@@ -82,12 +82,12 @@ export function ResetPasswordDialog({
           <ModalDialog className="w-[480px] max-w-[480px]">
             <ModalHeader>
               <ModalHeading>{intl.formatMessage({ id: "web.components.ui.admin.reset_password_dialog.reset_password_for_username", defaultMessage: "Reset password for {username}", description: "Reset password dialog: heading; {username} is the account whose password is being reset" }, { username: username })}</ModalHeading>
-              <Description className="text-sm leading-[21px] text-muted">{intl.formatMessage({ id: "web.components.ui.admin.reset_password_dialog.they_will_need_to_sign_in_again_with", defaultMessage: "They will need to sign in again with the new password.", description: "Reset password dialog: text in Description" })}</Description>
+              <Description className="text-sm leading-[21px] text-muted">{intl.formatMessage({ id: "web.components.ui.admin.reset_password_dialog.they_will_need_to_sign_in_again_with", defaultMessage: "They will need to sign in again with the new password.", description: "Reset password dialog: explanation under the Reset password title saying the user must sign in again with the new password" })}</Description>
             </ModalHeader>
 
             <ModalBody className="gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="reset-password" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.reset_password_dialog.new_password", defaultMessage: "New password", description: "Reset password dialog: text in Label" })}</Label>
+              <Label htmlFor="reset-password" className="text-xs">{intl.formatMessage({ id: "web.components.ui.admin.reset_password_dialog.new_password", defaultMessage: "New password", description: "Reset password dialog: label above the new password field" })}</Label>
               <Input
                 id="reset-password"
                 value={password}
@@ -103,7 +103,7 @@ export function ResetPasswordDialog({
           </ModalBody>
 
           <ModalFooter className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="sm" className="text-xs" onPress={handleClose} isDisabled={isLoading}>{intl.formatMessage({ id: "web.components.ui.admin.reset_password_dialog.cancel", defaultMessage: "Cancel", description: "Reset password dialog: text in Button" })}</Button>
+            <Button variant="ghost" size="sm" className="text-xs" onPress={handleClose} isDisabled={isLoading}>{intl.formatMessage({ id: "web.components.ui.admin.reset_password_dialog.cancel", defaultMessage: "Cancel", description: "Reset password dialog: button that closes the dialog without resetting the password; keep it short" })}</Button>
             <Button
               size="sm"
               variant="primary"

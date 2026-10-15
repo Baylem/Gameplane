@@ -192,7 +192,7 @@ export function ModuleCard({
               isDisabled={busy || !canManage}
               className="h-8"
             >
-              <ArrowUpCircle className="h-3.5 w-3.5" />{intl.formatMessage({ id: "web.components.modules.module_card.upgrade", defaultMessage: "Upgrade", description: "Module card: text in Button" })}</Button>
+              <ArrowUpCircle className="h-3.5 w-3.5" />{intl.formatMessage({ id: "web.components.modules.module_card.upgrade", defaultMessage: "Upgrade", description: "Module card: button that upgrades an installed module to its latest version; keep it short" })}</Button>
           )}
           {versionUnavailable && (
             <Button
@@ -210,7 +210,7 @@ export function ModuleCard({
               isDisabled={busy || !canManage}
               className="h-8"
             >
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}{intl.formatMessage({ id: "web.components.modules.module_card.install", defaultMessage: "Install", description: "Module card: text in Button" })}</Button>
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}{intl.formatMessage({ id: "web.components.modules.module_card.install", defaultMessage: "Install", description: "Module card: button that installs a module that is not installed yet; keep it short" })}</Button>
           )}
           {entry.installed && (
             <Button
@@ -219,7 +219,7 @@ export function ModuleCard({
               onPress={() => onUninstall(entry)}
               isDisabled={busy || !!inFlight || !canManage}
               className="h-8"
-            >{intl.formatMessage({ id: "web.components.modules.module_card.uninstall", defaultMessage: "Uninstall", description: "Module card: text in Button" })}</Button>
+            >{intl.formatMessage({ id: "web.components.modules.module_card.uninstall", defaultMessage: "Uninstall", description: "Module card: button that removes an installed module; keep it short" })}</Button>
           )}
           {entry.sources.some((s) => s.type === "upload") && (
             <Button
@@ -229,7 +229,7 @@ export function ModuleCard({
               isDisabled={busy || !canManage}
               className="h-8"
             >
-              <Trash2 className="h-3.5 w-3.5" />{intl.formatMessage({ id: "web.components.modules.module_card.remove_upload", defaultMessage: "Remove upload", description: "Module card: text in Button" })}</Button>
+              <Trash2 className="h-3.5 w-3.5" />{intl.formatMessage({ id: "web.components.modules.module_card.remove_upload", defaultMessage: "Remove upload", description: "Module card: button that removes an uploaded module bundle; keep it short" })}</Button>
           )}
         </div>
       </CardFooter>
@@ -264,7 +264,7 @@ function VerifyBadge({ verify }: { verify: EntryVerify }) {
         className="font-mono text-[10px] uppercase font-normal inline-flex items-center gap-1"
         data-color="success"
       >
-        <ShieldCheck className="h-3 w-3" />{intl.formatMessage({ id: "web.components.modules.module_card.verified", defaultMessage: "verified", description: "Module card: text in Chip" })}</Chip>
+        <ShieldCheck className="h-3 w-3" />{intl.formatMessage({ id: "web.components.modules.module_card.verified", defaultMessage: "verified", description: "Module card: small badge meaning the module's signature was verified; its tooltip says whether keyless (Fulcio) verification passed; keep it short" })}</Chip>
     );
   }
   return (
@@ -276,7 +276,7 @@ function VerifyBadge({ verify }: { verify: EntryVerify }) {
       className="font-mono text-[10px] uppercase font-normal inline-flex items-center gap-1"
       data-color="success"
     >
-      <ShieldQuestion className="h-3 w-3" />{intl.formatMessage({ id: "web.components.modules.module_card.policy", defaultMessage: "policy", description: "Module card: text in Chip" })}</Chip>
+      <ShieldQuestion className="h-3 w-3" />{intl.formatMessage({ id: "web.components.modules.module_card.policy", defaultMessage: "policy", description: "Module card: small badge meaning a signature policy is declared for the module; its tooltip says whether keyless (Fulcio) signing is used; keep it short" })}</Chip>
   );
 }
 

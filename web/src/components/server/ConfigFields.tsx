@@ -14,9 +14,9 @@ import { useOptionalIntl } from "@/lib/i18n/format";
 
 export type ConfigFieldVariant = "wizard" | "settings";
 
-// The two placeholder constants below are the English reference for the
-// rendered placeholders (formatted through intl with the same defaultMessage).
-// The tests compare against them, so keep them in step with the messages.
+// The constants below are the English reference for messages rendered through
+// intl. Each must stay equal to the defaultMessage of its intl descriptor; the
+// tests import them.
 export const STORED_PASSWORD_PLACEHOLDER = "Unchanged — type to replace";
 export const REMOVING_PASSWORD_PLACEHOLDER = "Password will be removed";
 export const REMOVING_PASSWORD_NOTE = "Removed when you save. Undo to keep the stored password.";
@@ -92,7 +92,7 @@ export function ConfigFieldInput({
         onChange={(e) => onChange(e.target.value)}
       >
         {current === "" && (
-          <option value="">{stored ? UNCHANGED_OPTION_LABEL : UNSET_OPTION_LABEL}</option>
+          <option value="">{stored ? intl.formatMessage({ id: "web.components.server.config_fields.option_unchanged", defaultMessage: "Unchanged", description: "Config fields: option label of an empty select whose stored value is kept as unchanged" }) : intl.formatMessage({ id: "web.components.server.config_fields.option_select", defaultMessage: "Select…", description: "Config fields: option label of an empty select with no value and no default, shown until a value is picked" })}</option>
         )}
         {field.enum?.map((v) => (
           <option key={v} value={v}>
@@ -114,10 +114,10 @@ export function ConfigFieldInput({
         onChange={(e) => onChange(e.target.value)}
       >
         {current === "" && (
-          <option value="">{stored ? UNCHANGED_OPTION_LABEL : UNSET_OPTION_LABEL}</option>
+          <option value="">{stored ? intl.formatMessage({ id: "web.components.server.config_fields.option_unchanged", defaultMessage: "Unchanged", description: "Config fields: option label of an empty select whose stored value is kept as unchanged" }) : intl.formatMessage({ id: "web.components.server.config_fields.option_select", defaultMessage: "Select…", description: "Config fields: option label of an empty select with no value and no default, shown until a value is picked" })}</option>
         )}
-        <option value="true">{intl.formatMessage({ id: "web.components.server.config_fields.true", defaultMessage: "true", description: "Config fields: text in option" })}</option>
-        <option value="false">{intl.formatMessage({ id: "web.components.server.config_fields.false", defaultMessage: "false", description: "Config fields: text in option" })}</option>
+        <option value="true">{intl.formatMessage({ id: "web.components.server.config_fields.true", defaultMessage: "true", description: "Config fields: dropdown option meaning the setting is on, the value true; keep it short" })}</option>
+        <option value="false">{intl.formatMessage({ id: "web.components.server.config_fields.false", defaultMessage: "false", description: "Config fields: dropdown option meaning the setting is off, the value false; keep it short" })}</option>
       </select>
     );
   } else {
@@ -150,7 +150,7 @@ export function ConfigFieldInput({
         size="sm"
         aria-describedby={labelId}
         onPress={onUndo}
-      >{intl.formatMessage({ id: "web.components.server.config_fields.undo", defaultMessage: "Undo", description: "Config fields: text in Button" })}</Button>
+      >{intl.formatMessage({ id: "web.components.server.config_fields.undo", defaultMessage: "Undo", description: "Config fields: button under a password field that cancels the pending removal of the stored password; keep it short" })}</Button>
     );
   } else if (settings && stored && field.type === "password" && !field.required && onRemove && !disabled) {
     removeAction = (
@@ -159,7 +159,7 @@ export function ConfigFieldInput({
         size="sm"
         aria-describedby={labelId}
         onPress={onRemove}
-      >{intl.formatMessage({ id: "web.components.server.config_fields.remove_password", defaultMessage: "Remove password", description: "Config fields: text in Button" })}</Button>
+      >{intl.formatMessage({ id: "web.components.server.config_fields.remove_password", defaultMessage: "Remove password", description: "Config fields: button under a stored password field that marks the password for removal; keep it short" })}</Button>
     );
   }
 
@@ -192,12 +192,12 @@ export function ConfigFieldInput({
         {field.type === "password" &&
           (removing ? (
             <p id={noteId} className="text-xs text-danger">
-              {REMOVING_PASSWORD_NOTE}
+              {intl.formatMessage({ id: "web.components.server.config_fields.removing_password_note", defaultMessage: "Removed when you save. Undo to keep the stored password.", description: "Config fields: note under a stored password field marked for removal; explains that the stored value is removed on save and Undo keeps it" })}
             </p>
           ) : (
-            <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.server.config_fields.write_only", defaultMessage: "Write-only", description: "Config fields: text in p" })}</p>
+            <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.server.config_fields.write_only", defaultMessage: "Write-only", description: "Config fields: small note under a password field saying the stored value is write-only and cannot be shown again" })}</p>
           ))}
-        {field.target === "file" && <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.server.config_fields.written_to_file", defaultMessage: "Written to file", description: "Config fields: text in p" })}</p>}
+        {field.target === "file" && <p className="text-xs text-muted">{intl.formatMessage({ id: "web.components.server.config_fields.written_to_file", defaultMessage: "Written to file", description: "Config fields: small note under a setting saying its value is written to a file rather than set directly" })}</p>}
         {invalid && (
           <p id={errorId} role="alert" className="text-xs text-danger">
             {error}

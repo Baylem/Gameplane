@@ -59,7 +59,7 @@ export function WipeServerDialog({
 
   const description: ReactNode = (
     <div className="space-y-4">
-      <div className="text-sm text-muted">{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.this_permanently_deletes_the_world_data", defaultMessage: "This permanently deletes the world data for", description: "Wipe server dialog: text in div" })} <span className="font-mono text-foreground">{name}</span>{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.backups_are_not_removed_this_cannot_be", defaultMessage: ". Backups are not removed. This cannot be undone.", description: "Wipe server dialog: text in div" })}</div>
+      <div className="text-sm text-muted">{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.this_permanently_deletes_the_world_data", defaultMessage: "This permanently deletes the world data for", description: "Wipe server dialog: first part of the warning that the world data is permanently deleted; the server name follows it" })} <span className="font-mono text-foreground">{name}</span>{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.backups_are_not_removed_this_cannot_be", defaultMessage: ". Backups are not removed. This cannot be undone.", description: "Wipe server dialog: second part of the warning after the server name, saying backups are kept and the action cannot be undone" })}</div>
       {wipe.isError && (
         <div className="rounded-lg bg-danger/10 p-3 text-sm text-danger">
           {errorTextIntl(intl, wipe.error, intl.formatMessage({ id: "web.components.server.wipe_server_dialog.wipe_failed", defaultMessage: "wipe failed", description: "Wipe server dialog: fallback error text when the wipe request fails without a message" }))}
@@ -84,7 +84,7 @@ export function WipeServerDialog({
                 >
                   <AlertCircle className="h-5 w-5" />
                 </AlertDialogIcon>
-                <AlertDialogHeading>{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.wipe_world", defaultMessage: "Wipe world?", description: "Wipe server dialog: text in AlertDialogHeading" })}</AlertDialogHeading>
+                <AlertDialogHeading>{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.wipe_world", defaultMessage: "Wipe world?", description: "Wipe server dialog: title of the danger-styled confirmation dialog asking whether to wipe the world" })}</AlertDialogHeading>
               </div>
             </AlertDialogHeader>
 
@@ -97,7 +97,7 @@ export function WipeServerDialog({
                   onChange={() => setConfirmed(!confirmed)}
                 >
                   <Checkbox.Control />
-                  <Checkbox.Content className="text-sm text-foreground">{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.i_understand_this_will_permanently", defaultMessage: "I understand this will permanently delete the world data", description: "Wipe server dialog: text in Checkbox.Content" })}</Checkbox.Content>
+                  <Checkbox.Content className="text-sm text-foreground">{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.i_understand_this_will_permanently", defaultMessage: "I understand this will permanently delete the world data", description: "Wipe server dialog: checkbox label where the user confirms that the world data will be permanently deleted" })}</Checkbox.Content>
                 </Checkbox>
               </div>
             </AlertDialogBody>
@@ -108,7 +108,7 @@ export function WipeServerDialog({
                 size="sm"
                 isDisabled={wipe.isPending}
                 onPress={() => onOpenChange(false)}
-              >{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.cancel", defaultMessage: "Cancel", description: "Wipe server dialog: text in Button" })}</Button>
+              >{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.cancel", defaultMessage: "Cancel", description: "Wipe server dialog: button that closes the dialog without wiping the world; keep it short" })}</Button>
               <Button
                 size="sm"
                 variant="danger"

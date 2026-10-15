@@ -81,9 +81,9 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
         <ModalContainer>
           <ModalDialog>
           <ModalHeader>
-            <ModalHeading className="text-base font-semibold">{intl.formatMessage({ id: "web.components.modules.install_dialog.install", defaultMessage: "Install", description: "Install dialog: text in ModalHeading" })} {entry.displayName ?? entry.name}
+            <ModalHeading className="text-base font-semibold">{intl.formatMessage({ id: "web.components.modules.install_dialog.install", defaultMessage: "Install", description: "Install dialog: the word Install used as the dialog title, followed by the module name, and as the confirm button; keep it short" })} {entry.displayName ?? entry.name}
             </ModalHeading>
-            <Description className="text-sm text-muted">{intl.formatMessage({ id: "web.components.modules.install_dialog.pulls_the_module_bundle_and_creates_a", defaultMessage: "Pulls the module bundle and creates a Module resource. The cluster operator materializes the GameTemplate in the background.", description: "Install dialog: text in Description" })}</Description>
+            <Description className="text-sm text-muted">{intl.formatMessage({ id: "web.components.modules.install_dialog.pulls_the_module_bundle_and_creates_a", defaultMessage: "Pulls the module bundle and creates a Module resource. The cluster operator materializes the GameTemplate in the background.", description: "Install dialog: explanation under the title saying the install pulls the module bundle and creates a Module resource; Module and GameTemplate are Kubernetes resource names, usually left untranslated" })}</Description>
           </ModalHeader>
 
           <ModalBody className="gap-4">
@@ -96,13 +96,13 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
                     selectedKey={source}
                     onSelectionChange={(v) => setSource(String(v))}
                   >
-                    <Label className="text-xs">{intl.formatMessage({ id: "web.components.modules.install_dialog.source", defaultMessage: "Source", description: "Install dialog: text in Label" })}</Label>
+                    <Label className="text-xs">{intl.formatMessage({ id: "web.components.modules.install_dialog.source", defaultMessage: "Source", description: "Install dialog: label above the source field, which is a dropdown or a fixed read-only box depending on the available sources" })}</Label>
                     <Select.Trigger className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80">
                       <Select.Value />
                       <Select.Indicator className="ml-auto h-4 w-4" />
                     </Select.Trigger>
                     <Select.Popover className="rounded border border-border">
-                      <ListBox className="p-0" aria-label={intl.formatMessage({ id: "web.components.modules.install_dialog.source", defaultMessage: "Source", description: "Install dialog: text in Label" })}>
+                      <ListBox className="p-0" aria-label={intl.formatMessage({ id: "web.components.modules.install_dialog.source", defaultMessage: "Source", description: "Install dialog: label above the source field, which is a dropdown or a fixed read-only box depending on the available sources" })}>
                         {entry.sources.map((s) => (
                           <ListBoxItem key={s.name} id={s.name}>
                             {intl.formatMessage({ id: "web.components.modules.install_dialog.source_label", defaultMessage: "{name} ({type})", description: "Install dialog: module source name and type; {name} is the source name, {type} is the source type" }, { name: s.name, type: s.type })}
@@ -114,7 +114,7 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
                 </div>
               ) : (
                 <div className="space-y-1">
-                  <Label className="text-xs">{intl.formatMessage({ id: "web.components.modules.install_dialog.source", defaultMessage: "Source", description: "Install dialog: text in Label" })}</Label>
+                  <Label className="text-xs">{intl.formatMessage({ id: "web.components.modules.install_dialog.source", defaultMessage: "Source", description: "Install dialog: label above the source field, which is a dropdown or a fixed read-only box depending on the available sources" })}</Label>
                   <div className="flex h-10 w-full items-center rounded-md border border-border bg-surface/40 px-3 font-mono text-sm text-fg">
                     {entry.sources[0]
                       ? intl.formatMessage({ id: "web.components.modules.install_dialog.source_label", defaultMessage: "{name} ({type})", description: "Install dialog: module source name and type; {name} is the source name, {type} is the source type" }, { name: entry.sources[0].name, type: entry.sources[0].type })
@@ -130,13 +130,13 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
                     selectedKey={version}
                     onSelectionChange={(v) => setVersion(String(v))}
                   >
-                    <Label className="text-xs">{intl.formatMessage({ id: "web.components.modules.install_dialog.version", defaultMessage: "Version", description: "Install dialog: text in Label" })}</Label>
+                    <Label className="text-xs">{intl.formatMessage({ id: "web.components.modules.install_dialog.version", defaultMessage: "Version", description: "Install dialog: label above the version field, a dropdown of module versions or a fixed read-only box depending on what is available" })}</Label>
                     <Select.Trigger className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80">
                       <Select.Value />
                       <Select.Indicator className="ml-auto h-4 w-4" />
                     </Select.Trigger>
                     <Select.Popover className="rounded border border-border">
-                      <ListBox className="p-0" aria-label={intl.formatMessage({ id: "web.components.modules.install_dialog.version", defaultMessage: "Version", description: "Install dialog: text in Label" })}>
+                      <ListBox className="p-0" aria-label={intl.formatMessage({ id: "web.components.modules.install_dialog.version", defaultMessage: "Version", description: "Install dialog: label above the version field, a dropdown of module versions or a fixed read-only box depending on what is available" })}>
                         {versions.map((v) => (
                           <ListBoxItem key={v} id={v}>
                             {v}
@@ -148,7 +148,7 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
                 </div>
               ) : (
                 <div className="space-y-1">
-                  <Label className="text-xs">{intl.formatMessage({ id: "web.components.modules.install_dialog.version", defaultMessage: "Version", description: "Install dialog: text in Label" })}</Label>
+                  <Label className="text-xs">{intl.formatMessage({ id: "web.components.modules.install_dialog.version", defaultMessage: "Version", description: "Install dialog: label above the version field, a dropdown of module versions or a fixed read-only box depending on what is available" })}</Label>
                   <div className="flex h-10 w-full items-center rounded-md border border-border bg-surface/40 px-3 font-mono text-sm text-fg">
                     {versions[0] ?? intl.formatMessage({ id: "web.common.empty_value", defaultMessage: "—", description: "Shown in place of a value that is not set" })}
                   </div>
@@ -157,7 +157,7 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
 
               {/* Install as */}
               <div className="space-y-1">
-                <Label htmlFor="install-name" className="text-xs">{intl.formatMessage({ id: "web.components.modules.install_dialog.install_as", defaultMessage: "Install as", description: "Install dialog: text in Label" })}</Label>
+                <Label htmlFor="install-name" className="text-xs">{intl.formatMessage({ id: "web.components.modules.install_dialog.install_as", defaultMessage: "Install as", description: "Install dialog: label above the name field that sets the name the installed module will get" })}</Label>
                 <Input
                   id="install-name"
                   value={name}
@@ -165,7 +165,7 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
                   placeholder={entry.name}
                   className="mt-0"
                 />
-                <Description className="text-xs text-muted">{intl.formatMessage({ id: "web.components.modules.install_dialog.the_module_gametemplate_name_must_be_a", defaultMessage: "The Module + GameTemplate name. Must be a DNS label.", description: "Install dialog: text in Description" })}</Description>
+                <Description className="text-xs text-muted">{intl.formatMessage({ id: "web.components.modules.install_dialog.the_module_gametemplate_name_must_be_a", defaultMessage: "The Module + GameTemplate name. Must be a DNS label.", description: "Install dialog: hint under the install name field saying the name is shared by the Module and GameTemplate and must be a DNS label; these resource names are usually left untranslated" })}</Description>
               </div>
             </div>
 
@@ -185,13 +185,13 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
               size="sm"
               onPress={() => onOpenChange(false)}
               isDisabled={busy}
-            >{intl.formatMessage({ id: "web.components.modules.install_dialog.cancel", defaultMessage: "Cancel", description: "Install dialog: text in Button" })}</Button>
+            >{intl.formatMessage({ id: "web.components.modules.install_dialog.cancel", defaultMessage: "Cancel", description: "Install dialog: button that closes the install dialog without installing; keep it short" })}</Button>
             <Button
               size="sm"
               variant="primary"
               isDisabled={busy}
               onPress={submit}
-            >{intl.formatMessage({ id: "web.components.modules.install_dialog.install", defaultMessage: "Install", description: "Install dialog: text in ModalHeading" })}</Button>
+            >{intl.formatMessage({ id: "web.components.modules.install_dialog.install", defaultMessage: "Install", description: "Install dialog: the word Install used as the dialog title, followed by the module name, and as the confirm button; keep it short" })}</Button>
           </ModalFooter>
           </ModalDialog>
         </ModalContainer>

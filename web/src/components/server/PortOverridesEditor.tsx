@@ -26,9 +26,9 @@ export function PortOverridesEditor({
     <div className="space-y-2">
       {values.length > 0 && (
         <div className="hidden gap-2 text-xs text-muted sm:grid sm:grid-cols-[1fr_120px_120px_32px] sm:items-center">
-          <span>{intl.formatMessage({ id: "web.components.server.port_overrides_editor.port_name", defaultMessage: "Port name", description: "Port overrides editor: text in span" })}</span>
-          <span>{intl.formatMessage({ id: "web.components.server.port_overrides_editor.service_port", defaultMessage: "Service port", description: "Port overrides editor: text in span" })}</span>
-          <span>{intl.formatMessage({ id: "web.components.server.port_overrides_editor.nodeport", defaultMessage: "NodePort", description: "Port overrides editor: text in span" })}</span>
+          <span>{intl.formatMessage({ id: "web.components.server.port_overrides_editor.port_name", defaultMessage: "Port name", description: "Port overrides editor: column heading for the port name in the list of port overrides; keep it short" })}</span>
+          <span>{intl.formatMessage({ id: "web.components.server.port_overrides_editor.service_port", defaultMessage: "Service port", description: "Port overrides editor: column heading for the service port number in the list of port overrides; keep it short" })}</span>
+          <span>{intl.formatMessage({ id: "web.components.server.port_overrides_editor.nodeport", defaultMessage: "NodePort", description: "Port overrides editor: column heading for the NodePort number in the list of port overrides; NodePort is a technical term, usually left untranslated; keep it short" })}</span>
           <span />
         </div>
       )}
@@ -40,7 +40,7 @@ export function PortOverridesEditor({
           <Input
             value={p.name}
             onChange={(e) => update(idx, { name: e.target.value })}
-            placeholder={intl.formatMessage({ id: "web.components.server.port_overrides_editor.game", defaultMessage: "game", description: "Port overrides editor: placeholder of Input" })}
+            placeholder={intl.formatMessage({ id: "web.components.server.port_overrides_editor.game", defaultMessage: "game", description: "Port overrides editor: example value shown inside the empty port name field of a row; a sample port name, not a default value" })}
           />
           <Input
             value={p.servicePort?.toString() ?? ""}
@@ -67,16 +67,16 @@ export function PortOverridesEditor({
             size="sm"
             isIconOnly
             className="justify-self-start sm:justify-self-auto"
-            aria-label={intl.formatMessage({ id: "web.components.server.port_overrides_editor.remove", defaultMessage: "Remove", description: "Port overrides editor: aria-label of Button" })}
+            aria-label={intl.formatMessage({ id: "web.components.server.port_overrides_editor.remove", defaultMessage: "Remove", description: "Port overrides editor: icon-only button that removes this override row; its screen-reader name and tooltip read Remove; keep it short" })}
             onPress={() => remove(idx)}
           >
-            <span title={intl.formatMessage({ id: "web.components.server.port_overrides_editor.remove", defaultMessage: "Remove", description: "Port overrides editor: aria-label of Button" })}>
+            <span title={intl.formatMessage({ id: "web.components.server.port_overrides_editor.remove", defaultMessage: "Remove", description: "Port overrides editor: icon-only button that removes this override row; its screen-reader name and tooltip read Remove; keep it short" })}>
               <X className="h-4 w-4" />
             </span>
           </Button>
         </div>
       ))}
-      <Button size="sm" variant="secondary" onPress={add}>{intl.formatMessage({ id: "web.components.server.port_overrides_editor.add_override", defaultMessage: "Add override", description: "Port overrides editor: text in Button" })}</Button>
+      <Button size="sm" variant="secondary" onPress={add}>{intl.formatMessage({ id: "web.components.server.port_overrides_editor.add_override", defaultMessage: "Add override", description: "Port overrides editor: button that adds a new port override row; keep it short" })}</Button>
     </div>
   );
 }

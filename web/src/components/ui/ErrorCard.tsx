@@ -51,14 +51,14 @@ export function ErrorCard({
             <button
               onClick={onRetry}
               className="inline-flex items-center justify-center rounded px-2 py-1 text-xs text-danger hover:bg-danger/20 focus:outline-none focus:ring-1 focus:ring-danger"
-              aria-label={intl.formatMessage({ id: "web.components.ui.error_card.retry", defaultMessage: "Retry", description: "Error card: text in button" })}
-            >{intl.formatMessage({ id: "web.components.ui.error_card.retry", defaultMessage: "Retry", description: "Error card: text in button" })}</button>
+              aria-label={intl.formatMessage({ id: "web.components.ui.error_card.retry", defaultMessage: "Retry", description: "Error card: button that retries the failed request; keep it short" })}
+            >{intl.formatMessage({ id: "web.components.ui.error_card.retry", defaultMessage: "Retry", description: "Error card: button that retries the failed request; keep it short" })}</button>
           )}
           {onDismiss && (
             <button
               onClick={onDismiss}
               className="inline-flex items-center justify-center rounded px-2 py-1 hover:bg-danger/20 focus:outline-none focus:ring-1 focus:ring-danger"
-              aria-label={intl.formatMessage({ id: "web.components.ui.error_card.dismiss_error", defaultMessage: "Dismiss error", description: "Error card: aria-label of button" })}
+              aria-label={intl.formatMessage({ id: "web.components.ui.error_card.dismiss_error", defaultMessage: "Dismiss error", description: "Error card: screen-reader name of the icon-only button that hides the error card; not visible on screen" })}
             >
               <span className="text-xs text-danger">{intl.formatMessage({ id: "web.common.close_glyph", defaultMessage: "×", description: "Multiplication sign used as the close icon on dismiss buttons" })}</span>
             </button>

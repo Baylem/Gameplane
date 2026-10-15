@@ -81,7 +81,7 @@ export function ConfirmDialog({
                       value={typed}
                       onChange={(e) => setTyped(e.target.value)}
                       spellCheck={false}
-                      placeholder={intl.formatMessage({ id: "web.components.ui.confirm_dialog.type_to_confirm", defaultMessage: "Type to confirm", description: "Confirm dialog: placeholder of Input" })}
+                      placeholder={intl.formatMessage({ id: "web.components.ui.confirm_dialog.type_to_confirm", defaultMessage: "Type to confirm", description: "Confirm dialog: placeholder inside the field where the user retypes the phrase shown above to confirm" })}
                     />
                   </div>
                 )}
@@ -94,7 +94,7 @@ export function ConfirmDialog({
                 size="sm"
                 isDisabled={busy}
                 onPress={() => onOpenChange(false)}
-              >{intl.formatMessage({ id: "web.components.ui.confirm_dialog.cancel", defaultMessage: "Cancel", description: "Confirm dialog: text in Button" })}</Button>
+              >{intl.formatMessage({ id: "web.components.ui.confirm_dialog.cancel", defaultMessage: "Cancel", description: "Confirm dialog: button that closes the confirmation dialog without confirming; keep it short" })}</Button>
               <Button
                 size="sm"
                 variant={destructive ? "danger" : "primary"}

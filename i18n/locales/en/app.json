@@ -1001,7 +1001,7 @@
   },
   "web.components.app_layout.this_catalog_account_or_installation": {
     "defaultMessage": "This catalog, account or installation setting belongs to the central Gameplane installation. Server actions use each server’s location.",
-    "description": "App layout: text in div"
+    "description": "App layout: note shown when central management applies; catalog, account or installation settings belong to the central installation, while server actions use each server's location"
   },
   "web.components.app_layout.users_rbac": {
     "defaultMessage": "Users & RBAC",
@@ -1009,11 +1009,11 @@
   },
   "web.components.backups.backup_detail_drawer.backup_details": {
     "defaultMessage": "Backup details",
-    "description": "Backup detail drawer: text in Drawer.Heading"
+    "description": "Backup details drawer: heading at the top of the side panel for one backup; the backup name is shown below it"
   },
   "web.components.backups.backup_detail_drawer.completed": {
     "defaultMessage": "Completed",
-    "description": "Backup detail drawer: label of Field"
+    "description": "Backup details drawer: field label above the time the backup completed, shown in relative time"
   },
   "web.components.backups.backup_detail_drawer.delete": {
     "defaultMessage": "Delete",
@@ -1025,35 +1025,35 @@
   },
   "web.components.backups.backup_detail_drawer.phase": {
     "defaultMessage": "Phase",
-    "description": "Backup detail drawer: label of Field"
+    "description": "Backup details drawer: field label above the backup's current phase, shown as a status chip"
   },
   "web.components.backups.backup_detail_drawer.restore": {
     "defaultMessage": "Restore",
-    "description": "Backup detail drawer: text in Button"
+    "description": "Backup details drawer: visible text of the restore button in the drawer header and of the primary restore button in the footer; keep it short"
   },
   "web.components.backups.backup_detail_drawer.restore_backup": {
     "defaultMessage": "Restore backup",
-    "description": "Backup detail drawer: aria-label of Button"
+    "description": "Backup details drawer: screen-reader name of the restore button in the drawer header, read instead of its visible word Restore; not visible on screen"
   },
   "web.components.backups.backup_detail_drawer.server": {
     "defaultMessage": "Server",
-    "description": "Backup detail drawer: label of Field"
+    "description": "Backup details drawer: field label above the name of the server the backup belongs to"
   },
   "web.components.backups.backup_detail_drawer.size": {
     "defaultMessage": "Size",
-    "description": "Backup detail drawer: label of Field"
+    "description": "Backup details drawer: field label above the backup's size; a dash is shown when the size is unknown"
   },
   "web.components.backups.backup_detail_drawer.snapshot_id": {
     "defaultMessage": "Snapshot ID",
-    "description": "Backup detail drawer: label of Field"
+    "description": "Backup details drawer: field label above the snapshot identifier of the backup; a dash is shown when there is none"
   },
   "web.components.backups.backup_detail_drawer.started": {
     "defaultMessage": "Started",
-    "description": "Backup detail drawer: label of Field"
+    "description": "Backup details drawer: field label above the time the backup started, shown in relative time"
   },
   "web.components.backups.backup_filters.all_phases": {
     "defaultMessage": "All phases",
-    "description": "Backup filters: text in ListBoxItem"
+    "description": "Backup filters: first phase dropdown option that clears the phase filter so backups in every phase show; keep it short"
   },
   "web.components.backups.backup_filters.all_phases_text": {
     "defaultMessage": "All phases",
@@ -1061,7 +1061,7 @@
   },
   "web.components.backups.backup_filters.all_servers": {
     "defaultMessage": "All servers",
-    "description": "Backup filters: text in ListBoxItem"
+    "description": "Backup filters: first server dropdown option that clears the server filter so backups from all servers show; keep it short"
   },
   "web.components.backups.backup_filters.all_servers_text": {
     "defaultMessage": "All servers",
@@ -1069,23 +1069,23 @@
   },
   "web.components.backups.backup_filters.filter": {
     "defaultMessage": "Filter",
-    "description": "Backup filters: text in div"
+    "description": "Backup filters: label of the Filter button that opens the filter panel, with a count chip showing how many filters are set; keep it short"
   },
   "web.components.backups.backup_filters.filter_by_phase": {
     "defaultMessage": "Filter by phase",
-    "description": "Backup filters: aria-label of Select"
+    "description": "Backup filters: screen-reader label for the phase dropdown in the filter panel; not visible on screen"
   },
   "web.components.backups.backup_filters.filter_by_server": {
     "defaultMessage": "Filter by server",
-    "description": "Backup filters: aria-label of Select"
+    "description": "Backup filters: screen-reader label for the server dropdown in the filter panel; not visible on screen"
   },
   "web.components.backups.backup_filters.location": {
     "defaultMessage": "Location",
-    "description": "Backup filters: text in div"
+    "description": "Backup filters: label above the location dropdown in the filter panel"
   },
   "web.components.backups.backup_filters.phase": {
     "defaultMessage": "Phase",
-    "description": "Backup filters: text in div"
+    "description": "Backup filters: label above the phase dropdown in the filter panel; the dropdown appears only when phases exist"
   },
   "web.components.backups.backup_filters.phase_failed": {
     "defaultMessage": "Failed",
@@ -1093,7 +1093,7 @@
   },
   "web.components.backups.backup_filters.phase_options": {
     "defaultMessage": "Phase options",
-    "description": "Backup filters: aria-label of ListBox"
+    "description": "Backup filters: screen-reader name of the list of phase choices in the phase dropdown; not visible on screen"
   },
   "web.components.backups.backup_filters.phase_pending": {
     "defaultMessage": "Pending",
@@ -1117,15 +1117,15 @@
   },
   "web.components.backups.backup_filters.search_backups_schedules_or_restores": {
     "defaultMessage": "Search backups, schedules or restores",
-    "description": "Backup filters: aria-label of Input"
+    "description": "Backup filters: screen-reader label for the search box that finds backups, schedules or restores; not visible on screen"
   },
   "web.components.backups.backup_filters.search_by_name_or_server": {
     "defaultMessage": "Search by name or server…",
-    "description": "Backup filters: placeholder of Input"
+    "description": "Backup filters: placeholder text inside the search box giving an example of what to type, a backup name or server name"
   },
   "web.components.backups.backup_filters.server": {
     "defaultMessage": "Server",
-    "description": "Backup filters: text in div"
+    "description": "Backup filters: label above the server dropdown in the filter panel"
   },
   "web.components.backups.backup_filters.server_option_label": {
     "defaultMessage": "{name} · {cluster} / {namespace}",
@@ -1133,7 +1133,7 @@
   },
   "web.components.backups.backup_filters.server_options": {
     "defaultMessage": "Server options",
-    "description": "Backup filters: aria-label of ListBox"
+    "description": "Backup filters: screen-reader name of the list of server choices in the server dropdown; not visible on screen"
   },
   "web.components.backups.backup_row.cluster_namespace": {
     "defaultMessage": "{cluster} / {namespace}",
@@ -1141,7 +1141,7 @@
   },
   "web.components.backups.backup_row.restore": {
     "defaultMessage": "Restore",
-    "description": "Backup row: text in Button"
+    "description": "Backup row: button in each backup table row that starts restoring that backup; keep it short"
   },
   "web.components.backups.restore_dialog.a_server_named_target_already_exists": {
     "defaultMessage": "A server named \"{target}\" already exists — choose a new name.",
@@ -1149,7 +1149,7 @@
   },
   "web.components.backups.restore_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Restore dialog: text in Button"
+    "description": "Restore dialog: button that closes the restore dialog without restoring; keep it short"
   },
   "web.components.backups.restore_dialog.in_place_note": {
     "defaultMessage": "The target server will be suspended, the volume restored from the snapshot, then resumed.",
@@ -1157,11 +1157,11 @@
   },
   "web.components.backups.restore_dialog.my_restored_server": {
     "defaultMessage": "my-restored-server",
-    "description": "Restore dialog: placeholder of Input"
+    "description": "Restore dialog: example value shown inside the empty new server name field; a sample name, not a default value"
   },
   "web.components.backups.restore_dialog.new_server_name": {
     "defaultMessage": "New server name",
-    "description": "Restore dialog: text in Label"
+    "description": "Restore dialog: field label for the name of the new server to create from the backup; shown in the volume snapshot restore mode"
   },
   "web.components.backups.restore_dialog.new_server_note": {
     "defaultMessage": "A new server will be provisioned from this snapshot. The original server is left untouched.",
@@ -1173,7 +1173,7 @@
   },
   "web.components.backups.restore_dialog.restore_backup": {
     "defaultMessage": "Restore backup",
-    "description": "Restore dialog: text in ModalHeading"
+    "description": "Restore dialog: title of the dialog for restoring a backup onto a server"
   },
   "web.components.backups.restore_dialog.restore_failed": {
     "defaultMessage": "Restore failed",
@@ -1189,11 +1189,11 @@
   },
   "web.components.backups.restore_dialog.select_target_server": {
     "defaultMessage": "Select target server",
-    "description": "Restore dialog: aria-label of ListBox"
+    "description": "Restore dialog: screen-reader name of the list of existing servers shown when picking the restore target; not visible on screen"
   },
   "web.components.backups.restore_dialog.source_backup": {
     "defaultMessage": "Source backup",
-    "description": "Restore dialog: text in Label"
+    "description": "Restore dialog: field label above the read-only name of the backup being restored"
   },
   "web.components.backups.restore_dialog.starting": {
     "defaultMessage": "Starting…",
@@ -1201,7 +1201,7 @@
   },
   "web.components.backups.restore_dialog.target_game_server": {
     "defaultMessage": "Target game server",
-    "description": "Restore dialog: text in Label"
+    "description": "Restore dialog: field label for choosing the existing server to restore the backup onto"
   },
   "web.components.backups.restore_dialog.the_new_server_copies_name_s": {
     "defaultMessage": "The new server copies {name}'s configuration and starts with the snapshot's data. Nothing on the original server changes.",
@@ -1209,7 +1209,7 @@
   },
   "web.components.backups.restore_dialog.this_will_overwrite_all_data_on_the": {
     "defaultMessage": "This will overwrite all data on the target server. Players will be disconnected during the restore.",
-    "description": "Restore dialog: text in span"
+    "description": "Restore dialog: red warning under the restore mode choice saying the target server's data will be overwritten and players will be disconnected during the restore"
   },
   "web.components.backups.retention_fields.placeholder_zero": {
     "defaultMessage": "0",
@@ -1217,11 +1217,11 @@
   },
   "web.components.backups.schedule_form.backup_type": {
     "defaultMessage": "Backup type",
-    "description": "Schedule form: text in Label"
+    "description": "Schedule form: label above the backup type dropdown that chooses between a repository snapshot and a volume snapshot; also the screen-reader name of its option list"
   },
   "web.components.backups.schedule_form.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Schedule form: text in Button"
+    "description": "Schedule form: button that closes the form without creating a schedule; keep it short"
   },
   "web.components.backups.schedule_form.create_schedule": {
     "defaultMessage": "Create schedule",
@@ -1241,19 +1241,19 @@
   },
   "web.components.backups.schedule_form.destination": {
     "defaultMessage": "Destination",
-    "description": "Schedule form: text in Label"
+    "description": "Schedule form: label above the dropdown that picks the backup destination"
   },
   "web.components.backups.schedule_form.new_backup_schedule": {
     "defaultMessage": "New backup schedule",
-    "description": "Schedule form: text in h3"
+    "description": "Schedule form: heading of the card for creating a new backup schedule"
   },
   "web.components.backups.schedule_form.no_destinations_configured": {
     "defaultMessage": "No destinations configured",
-    "description": "Schedule form: text in ListBoxItem"
+    "description": "Schedule form: disabled option in the destination dropdown shown when no backup destinations have been set up"
   },
   "web.components.backups.schedule_form.repo_secret_key": {
     "defaultMessage": "Repo secret · key",
-    "description": "Schedule form: text in Label"
+    "description": "Schedule form: label above the field that names the key inside the repository secret; not shown for volume snapshot schedules"
   },
   "web.components.backups.schedule_form.restic_hint": {
     "defaultMessage": "Cron-based recurring snapshot, stored in a configured restic repository.",
@@ -1261,27 +1261,27 @@
   },
   "web.components.backups.schedule_form.restic_snapshot_to_a_repository": {
     "defaultMessage": "Restic snapshot (to a repository)",
-    "description": "Schedule form: text in ListBoxItem"
+    "description": "Schedule form: option in the backup type dropdown for backups stored in a configured restic repository; restic is a technical term, usually left untranslated; keep it short"
   },
   "web.components.backups.schedule_form.retention_policy": {
     "defaultMessage": "Retention policy",
-    "description": "Schedule form: text in Label"
+    "description": "Schedule form: label above the retention settings that decide how many old backups are kept"
   },
   "web.components.backups.schedule_form.schedule_cron": {
     "defaultMessage": "Schedule (cron)",
-    "description": "Schedule form: text in Label"
+    "description": "Schedule form: label above the cron schedule text field that sets when backups run; cron is a technical term, usually left untranslated"
   },
   "web.components.backups.schedule_form.volume_snapshot_csi": {
     "defaultMessage": "Volume snapshot (CSI)",
-    "description": "Schedule form: text in ListBoxItem"
+    "description": "Schedule form: option in the backup type dropdown for a cluster volume snapshot that needs no repository; CSI is a technical term, usually left untranslated; keep it short"
   },
   "web.components.capture_widget.actions": {
     "defaultMessage": "Actions",
-    "description": "Capture widget: text in TableColumn"
+    "description": "Capture widget: column heading for the per-capture row actions in the captures table; keep it short"
   },
   "web.components.capture_widget.and_its_recorded_packets_this_cannot_be": {
     "defaultMessage": "and its recorded packets. This cannot be undone.",
-    "description": "Capture widget: text in p"
+    "description": "Capture widget: second part of the delete warning in the confirmation dialog, after the capture ID; says the recorded packets are removed and the action cannot be undone"
   },
   "web.components.capture_widget.auto_delete_after": {
     "defaultMessage": "Captures will auto-delete after {hours, plural, one {# hour} other {# hours}}",
@@ -1289,7 +1289,7 @@
   },
   "web.components.capture_widget.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Capture widget: text in Button"
+    "description": "Capture widget: button that closes the delete confirmation or the Start Capture dialog without making changes; keep it short"
   },
   "web.components.capture_widget.capture_access_unavailable": {
     "defaultMessage": "Capture access is temporarily unavailable at this location.",
@@ -1297,7 +1297,7 @@
   },
   "web.components.capture_widget.capture_is_not_enabled_on_this_server": {
     "defaultMessage": "Capture is not enabled on this server.",
-    "description": "Capture widget: text in p"
+    "description": "Capture widget: heading in the empty-state card shown when packet capture is turned off for this server"
   },
   "web.components.capture_widget.capture_started_ago": {
     "defaultMessage": "Capture started {duration} ago",
@@ -1305,11 +1305,11 @@
   },
   "web.components.capture_widget.capture_stops_when_reached": {
     "defaultMessage": ". Capture stops when reached.",
-    "description": "Capture widget: text in Description"
+    "description": "Capture widget: second part of the maximum size hint, after the size limit; says the capture stops once that size is reached"
   },
   "web.components.capture_widget.captures": {
     "defaultMessage": "Captures",
-    "description": "Capture widget: text in h2"
+    "description": "Capture widget: section heading above the table of completed and failed captures for this server"
   },
   "web.components.capture_widget.captures_disabled_at_location": {
     "defaultMessage": "New captures are disabled at this location. Existing capture files remain available.",
@@ -1321,7 +1321,7 @@
   },
   "web.components.capture_widget.checking_access": {
     "defaultMessage": "Checking access…",
-    "description": "Capture widget: text in p"
+    "description": "Capture widget: loading text shown in the capture panel while the user's packet capture access is being checked"
   },
   "web.components.capture_widget.checking_capture_support": {
     "defaultMessage": "Checking capture support…",
@@ -1329,19 +1329,19 @@
   },
   "web.components.capture_widget.completed_and_failed_packet_captures": {
     "defaultMessage": "Completed and failed packet captures for this server",
-    "description": "Capture widget: aria-label of Table.Content"
+    "description": "Capture widget: accessible table name read by screen readers for the list of this server's completed and failed packet captures; not visible on screen"
   },
   "web.components.capture_widget.completed_at": {
     "defaultMessage": "Completed at",
-    "description": "Capture widget: text in TableColumn"
+    "description": "Capture widget: column heading for when each capture finished in the captures table; keep it short"
   },
   "web.components.capture_widget.created": {
     "defaultMessage": "Created",
-    "description": "Capture widget: text in dt"
+    "description": "Capture widget: label in the expanded details of a capture row, followed by when the capture was created"
   },
   "web.components.capture_widget.days": {
     "defaultMessage": "days",
-    "description": "Capture widget: text in ListBoxItem"
+    "description": "Capture widget: retention unit dropdown option meaning days; keep it short"
   },
   "web.components.capture_widget.default_filter": {
     "defaultMessage": "default",
@@ -1349,7 +1349,7 @@
   },
   "web.components.capture_widget.delete_capture": {
     "defaultMessage": "Delete capture?",
-    "description": "Capture widget: text in AlertDialogHeading"
+    "description": "Capture widget: title of the confirmation dialog that asks whether the selected capture should be deleted"
   },
   "web.components.capture_widget.delete_capture_aria": {
     "defaultMessage": "Delete capture {id}",
@@ -1361,7 +1361,7 @@
   },
   "web.components.capture_widget.disable_capture": {
     "defaultMessage": "Disable Capture",
-    "description": "Capture widget: text in Button"
+    "description": "Capture widget: button that turns capture off for this server; keep it short"
   },
   "web.components.capture_widget.download_capture_aria": {
     "defaultMessage": "Download capture {id}",
@@ -1369,7 +1369,7 @@
   },
   "web.components.capture_widget.duration": {
     "defaultMessage": "Duration",
-    "description": "Capture widget: text in TableColumn"
+    "description": "Capture widget: column heading for how long each capture ran in the captures table; keep it short"
   },
   "web.components.capture_widget.enable_capture": {
     "defaultMessage": "Enable Capture",
@@ -1381,15 +1381,15 @@
   },
   "web.components.capture_widget.expires_in": {
     "defaultMessage": "Expires in",
-    "description": "Capture widget: text in TableColumn"
+    "description": "Capture widget: column heading for the time left before each capture is auto-deleted; keep it short"
   },
   "web.components.capture_widget.filter": {
     "defaultMessage": "Filter:",
-    "description": "Capture widget: text in div"
+    "description": "Capture widget: label before the packet filter text of the active capture card, or the word 'default' when no filter is set"
   },
   "web.components.capture_widget.filter_2": {
     "defaultMessage": "Filter",
-    "description": "Capture widget: text in TableColumn"
+    "description": "Capture widget: column heading for the packet filter used by each capture in the captures table; keep it short"
   },
   "web.components.capture_widget.gateway_update_needed": {
     "defaultMessage": "This location needs a gateway update before captures can be managed here.",
@@ -1397,11 +1397,11 @@
   },
   "web.components.capture_widget.gb": {
     "defaultMessage": "GB",
-    "description": "Capture widget: text in ListBoxItem"
+    "description": "Capture widget: option in the size unit dropdown meaning gigabytes; keep it short"
   },
   "web.components.capture_widget.hours": {
     "defaultMessage": "hours",
-    "description": "Capture widget: text in ListBoxItem"
+    "description": "Capture widget: retention unit dropdown option meaning hours; keep it short"
   },
   "web.components.capture_widget.how_long_the_capture_is_retained_before": {
     "defaultMessage": "How long the capture is retained before auto-delete. Maximum: {duration}.",
@@ -1409,79 +1409,79 @@
   },
   "web.components.capture_widget.how_long_the_capture_runs_before_auto": {
     "defaultMessage": "How long the capture runs before auto-stopping. Range 1–3600 seconds.",
-    "description": "Capture widget: text in Description"
+    "description": "Capture widget: hint under the run-time field saying how long the capture runs before it stops automatically; the allowed range is 1 to 3600 seconds"
   },
   "web.components.capture_widget.id": {
     "defaultMessage": "ID",
-    "description": "Capture widget: text in TableColumn"
+    "description": "Capture widget: column heading for the capture ID in the captures table; keep it short"
   },
   "web.components.capture_widget.max_duration": {
     "defaultMessage": "Max duration",
-    "description": "Capture widget: text in label"
+    "description": "Capture widget: label above the time-remaining value on the active capture card, showing the run-time limit"
   },
   "web.components.capture_widget.max_duration_2": {
     "defaultMessage": "Max Duration *",
-    "description": "Capture widget: text in Label"
+    "description": "Capture widget: label of the run-time field in the Start Capture dialog; the asterisk marks the field as required"
   },
   "web.components.capture_widget.max_duration_unit": {
     "defaultMessage": "Max duration unit",
-    "description": "Capture widget: aria-label of Select.Trigger"
+    "description": "Capture widget: screen-reader label for the unit dropdown (seconds or minutes) next to the run-time number; not visible on screen"
   },
   "web.components.capture_widget.max_duration_value": {
     "defaultMessage": "Max duration value",
-    "description": "Capture widget: aria-label of Input"
+    "description": "Capture widget: screen-reader label for the number box that sets how long the capture runs; not visible on screen"
   },
   "web.components.capture_widget.max_size": {
     "defaultMessage": "Max size",
-    "description": "Capture widget: text in label"
+    "description": "Capture widget: label above the space-remaining value on the active capture card, showing the file size limit"
   },
   "web.components.capture_widget.max_size_2": {
     "defaultMessage": "Max Size *",
-    "description": "Capture widget: text in Label"
+    "description": "Capture widget: label of the maximum file size field in the Start Capture dialog; the asterisk marks the field as required"
   },
   "web.components.capture_widget.max_size_unit": {
     "defaultMessage": "Max size unit",
-    "description": "Capture widget: aria-label of Select.Trigger"
+    "description": "Capture widget: screen-reader label for the size unit dropdown (MB or GB) next to the maximum size number; not visible on screen"
   },
   "web.components.capture_widget.max_size_value": {
     "defaultMessage": "Max size value",
-    "description": "Capture widget: aria-label of Input"
+    "description": "Capture widget: screen-reader label for the number box that sets the maximum capture file size; not visible on screen"
   },
   "web.components.capture_widget.maximum_file_size": {
     "defaultMessage": "Maximum file size:",
-    "description": "Capture widget: text in Description"
+    "description": "Capture widget: first part of the hint under the maximum size field, followed by the server's size limit formatted with a unit"
   },
   "web.components.capture_widget.mb": {
     "defaultMessage": "MB",
-    "description": "Capture widget: text in ListBoxItem"
+    "description": "Capture widget: option in the size unit dropdown meaning megabytes; keep it short"
   },
   "web.components.capture_widget.minutes": {
     "defaultMessage": "minutes",
-    "description": "Capture widget: text in ListBoxItem"
+    "description": "Capture widget: option in the run-time unit dropdown meaning minutes; keep it short"
   },
   "web.components.capture_widget.network_packet_capture_is_an_optional": {
     "defaultMessage": "Network packet capture is an optional feature that records raw game protocol traffic. Enable it to capture packets from joining players for protocol analysis.",
-    "description": "Capture widget: text in p"
+    "description": "Capture widget: explanation under the not-enabled heading of what packet capture does, recording raw game protocol traffic for protocol analysis once enabled"
   },
   "web.components.capture_widget.no_captures_yet": {
     "defaultMessage": "No captures yet.",
-    "description": "Capture widget: text in p"
+    "description": "Capture widget: empty-state text in the captures list shown when this server has no captures yet"
   },
   "web.components.capture_widget.optional_use_pcap_filter_syntax_e_g_tcp": {
     "defaultMessage": "Optional. Use pcap-filter syntax (e.g. \"tcp port 8080\", \"host 192.168.1.5\"). Leave blank to capture only on this server’s game ports.",
-    "description": "Capture widget: text in Description"
+    "description": "Capture widget: hint under the packet filter field saying the filter is optional, uses pcap-filter syntax with example expressions, and that blank captures only the server's game ports"
   },
   "web.components.capture_widget.packet_filter": {
     "defaultMessage": "Packet Filter",
-    "description": "Capture widget: text in Label"
+    "description": "Capture widget: label for the optional packet filter text field in the Start Capture dialog"
   },
   "web.components.capture_widget.packets": {
     "defaultMessage": "Packets",
-    "description": "Capture widget: text in TableColumn"
+    "description": "Capture widget: column heading for the number of packets recorded by each capture in the captures table; keep it short"
   },
   "web.components.capture_widget.packets_captured": {
     "defaultMessage": "packets captured",
-    "description": "Capture widget: text in div"
+    "description": "Capture widget: unit word shown right after the packet count of the active capture; the number before it is the packets written so far"
   },
   "web.components.capture_widget.phase_completed": {
     "defaultMessage": "Completed",
@@ -1509,27 +1509,27 @@
   },
   "web.components.capture_widget.records_raw_network_traffic_on_this": {
     "defaultMessage": "Records raw network traffic on this server’s advertised ports (or a custom filter) for later download.",
-    "description": "Capture widget: text in p"
+    "description": "Capture widget: sentence under the Start Capture dialog heading saying the capture records raw network traffic on the server's ports or a custom filter for later download"
   },
   "web.components.capture_widget.retention": {
     "defaultMessage": "Retention",
-    "description": "Capture widget: text in Label"
+    "description": "Capture widget: label of the retention field in the Start Capture dialog, which sets how long the capture is kept before auto-delete"
   },
   "web.components.capture_widget.retention_unit": {
     "defaultMessage": "Retention unit",
-    "description": "Capture widget: aria-label of Select.Trigger"
+    "description": "Capture widget: screen-reader label for the retention unit dropdown (hours or days) next to the retention number; not visible on screen"
   },
   "web.components.capture_widget.retention_value": {
     "defaultMessage": "Retention value",
-    "description": "Capture widget: aria-label of Input"
+    "description": "Capture widget: screen-reader label for the number box that sets how long the capture is kept; not visible on screen"
   },
   "web.components.capture_widget.seconds": {
     "defaultMessage": "seconds",
-    "description": "Capture widget: text in ListBoxItem"
+    "description": "Capture widget: option in the run-time unit dropdown meaning seconds; keep it short"
   },
   "web.components.capture_widget.server": {
     "defaultMessage": "Server",
-    "description": "Capture widget: text in dt"
+    "description": "Capture widget: label in the expanded details of a capture row, followed by the name of the server the capture belongs to"
   },
   "web.components.capture_widget.showing_length_of": {
     "defaultMessage": "Showing {length} of {total} {total, plural, one {capture} other {captures}}",
@@ -1537,7 +1537,7 @@
   },
   "web.components.capture_widget.size": {
     "defaultMessage": "Size",
-    "description": "Capture widget: text in TableColumn"
+    "description": "Capture widget: column heading for the file size of each capture in the captures table; keep it short"
   },
   "web.components.capture_widget.space_remaining": {
     "defaultMessage": "Space remaining: ~{size}",
@@ -1549,7 +1549,7 @@
   },
   "web.components.capture_widget.started": {
     "defaultMessage": "Started",
-    "description": "Capture widget: text in dt"
+    "description": "Capture widget: label in the expanded details of a capture row, followed by when recording started or a dash if it has not started"
   },
   "web.components.capture_widget.starting": {
     "defaultMessage": "Starting…",
@@ -1557,19 +1557,19 @@
   },
   "web.components.capture_widget.status": {
     "defaultMessage": "Status",
-    "description": "Capture widget: text in TableColumn"
+    "description": "Capture widget: column heading for the state of each capture in the captures table; keep it short"
   },
   "web.components.capture_widget.stop_capture": {
     "defaultMessage": "Stop Capture",
-    "description": "Capture widget: text in Button"
+    "description": "Capture widget: button that stops the running capture; keep it short"
   },
   "web.components.capture_widget.tcp_port_25565": {
     "defaultMessage": "tcp port 25565",
-    "description": "Capture widget: placeholder of Input"
+    "description": "Capture widget: example text shown inside the empty packet filter field in the Start Capture dialog; it is a sample filter, not a default value"
   },
   "web.components.capture_widget.this_permanently_deletes_capture": {
     "defaultMessage": "This permanently deletes capture",
-    "description": "Capture widget: text in p"
+    "description": "Capture widget: first part of the delete warning in the confirmation dialog; the capture ID is shown right after it"
   },
   "web.components.capture_widget.time_remaining": {
     "defaultMessage": "Time remaining: ~{duration}",
@@ -1581,7 +1581,7 @@
   },
   "web.components.capture_widget.viewing_starting_and_downloading": {
     "defaultMessage": "Viewing, starting and downloading captures requires capture access for this server. Ask an administrator if you need it.",
-    "description": "Capture widget: text in p"
+    "description": "Capture widget: hint under the no-access heading saying capture access is needed to view, start or download captures; users should ask an administrator"
   },
   "web.components.capture_widget.working": {
     "defaultMessage": "Working…",
@@ -1589,23 +1589,23 @@
   },
   "web.components.capture_widget.you_don_t_have_access_to_packet_capture": {
     "defaultMessage": "You don't have access to packet capture on this server.",
-    "description": "Capture widget: text in p"
+    "description": "Capture widget: heading in the empty-state card shown when the user has no packet capture access on this server"
   },
   "web.components.cluster_selector.actions": {
     "defaultMessage": "Actions",
-    "description": "Cluster selector: aria-label of DropdownSection"
+    "description": "Cluster selector: screen-reader name of the dropdown section that holds the 'View all clusters' action; not visible on screen"
   },
   "web.components.cluster_selector.cluster": {
     "defaultMessage": "Cluster:",
-    "description": "Cluster selector: text in span"
+    "description": "Cluster selector: label before the current cluster's name on the switcher button; hidden on small screens"
   },
   "web.components.cluster_selector.cluster_options": {
     "defaultMessage": "Cluster options",
-    "description": "Cluster selector: aria-label of DropdownMenu"
+    "description": "Cluster selector: screen-reader name of the dropdown menu that lists clusters and actions; not visible on screen"
   },
   "web.components.cluster_selector.clusters": {
     "defaultMessage": "Clusters",
-    "description": "Cluster selector: aria-label of DropdownSection"
+    "description": "Cluster selector: screen-reader name of the dropdown section that holds the cluster choices; not visible on screen"
   },
   "web.components.cluster_selector.error_loading": {
     "defaultMessage": "Error loading clusters",
@@ -1621,11 +1621,11 @@
   },
   "web.components.cluster_selector.no_clusters_available_manage_clusters": {
     "defaultMessage": "No clusters available · Manage clusters",
-    "description": "Cluster selector: text in span"
+    "description": "Cluster selector: dropdown message shown when no clusters exist, followed by the words 'Manage clusters' in the same text"
   },
   "web.components.cluster_selector.select_cluster": {
     "defaultMessage": "Select cluster",
-    "description": "Cluster selector: aria-label of DropdownTrigger"
+    "description": "Cluster selector: screen-reader label for the cluster switcher button; not visible on screen"
   },
   "web.components.cluster_selector.select_cluster_label": {
     "defaultMessage": "Select cluster",
@@ -1633,7 +1633,7 @@
   },
   "web.components.cluster_selector.view_all_clusters": {
     "defaultMessage": "View all clusters",
-    "description": "Cluster selector: text in span"
+    "description": "Cluster selector: dropdown menu item that navigates to the clusters view; keep it short"
   },
   "web.components.cluster_selector.view_all_clusters_text": {
     "defaultMessage": "View all clusters",
@@ -1641,7 +1641,7 @@
   },
   "web.components.fleet_scope.all_locations": {
     "defaultMessage": "All locations",
-    "description": "Fleet scope: text in ListBoxItem"
+    "description": "Fleet scope: first option in the location dropdown that clears the location filter and shows every location; keep it short"
   },
   "web.components.fleet_scope.all_locations_text": {
     "defaultMessage": "All locations",
@@ -1649,11 +1649,11 @@
   },
   "web.components.fleet_scope.counts_cover_only_returned_resources": {
     "defaultMessage": "Counts cover only returned resources.",
-    "description": "Fleet scope: text in div"
+    "description": "Fleet scope: second part of the partial-results warning, after the heading, saying counts include only the resources that were returned"
   },
   "web.components.fleet_scope.filter_by_location": {
     "defaultMessage": "Filter by location",
-    "description": "Fleet scope: aria-label of Select"
+    "description": "Fleet scope: screen-reader label for the location dropdown that narrows the view to one location; not visible on screen"
   },
   "web.components.fleet_scope.label_are_partial": {
     "defaultMessage": "{label} are partial.",
@@ -1669,7 +1669,7 @@
   },
   "web.components.fleet_scope.location_options": {
     "defaultMessage": "Location options",
-    "description": "Fleet scope: aria-label of ListBox"
+    "description": "Fleet scope: screen-reader name of the list of location choices inside the location dropdown; not visible on screen"
   },
   "web.components.fleet_scope.results": {
     "defaultMessage": "Results",
@@ -1689,15 +1689,15 @@
   },
   "web.components.module_target.couldn_t_load_installation_capabilities": {
     "defaultMessage": "Couldn't load installation capabilities.",
-    "description": "Module target: message of ErrorCard"
+    "description": "Module target: error card message shown when the installation's capabilities cannot be loaded; the card has a retry button"
   },
   "web.components.module_target.couldn_t_load_registered_clusters": {
     "defaultMessage": "Couldn't load registered clusters.",
-    "description": "Module target: message of ErrorCard"
+    "description": "Module target: error card message shown when the list of registered clusters cannot be loaded; the card has a retry button"
   },
   "web.components.module_target.loading_clusters": {
     "defaultMessage": "Loading clusters…",
-    "description": "Module target: message of LoadingCard"
+    "description": "Module target: loading text shown while the list of registered clusters is being fetched"
   },
   "web.components.module_target.loading_installation": {
     "defaultMessage": "Loading installation…",
@@ -1709,11 +1709,11 @@
   },
   "web.components.module_target.manage_clusters": {
     "defaultMessage": "Manage clusters",
-    "description": "Module target: text in Link"
+    "description": "Module target: link in the select-a-cluster empty state that opens the clusters page; keep it short"
   },
   "web.components.module_target.modules_and_their_sources_are_managed": {
     "defaultMessage": "Modules and their sources are managed by the operator on a registered workload cluster.",
-    "description": "Module target: text in p"
+    "description": "Module target: explanation under the select-a-cluster heading saying modules and their sources are managed by the operator on a registered workload cluster"
   },
   "web.components.module_target.no_permission": {
     "defaultMessage": "You don't have permission to view modules on this cluster.",
@@ -1725,27 +1725,27 @@
   },
   "web.components.module_target.select_a_workload_cluster": {
     "defaultMessage": "Select a workload cluster",
-    "description": "Module target: text in h2"
+    "description": "Module target: heading of the empty state asking the user to pick a workload cluster before its modules can be shown"
   },
   "web.components.modules.build_module_dialog.add_custom_tag": {
     "defaultMessage": "Add custom tag...",
-    "description": "Build module dialog: placeholder of Input"
+    "description": "Build module dialog: placeholder inside the custom tag text field asking the user to type a tag; the trailing dots are part of the text"
   },
   "web.components.modules.build_module_dialog.add_port": {
     "defaultMessage": "Add Port",
-    "description": "Build module dialog: text in Button"
+    "description": "Build module dialog: button that adds another row to the port mappings list; keep it short"
   },
   "web.components.modules.build_module_dialog.add_tag": {
     "defaultMessage": "Add tag",
-    "description": "Build module dialog: aria-label of Button"
+    "description": "Build module dialog: button that adds the typed custom tag to the categories; keep it short"
   },
   "web.components.modules.build_module_dialog.advertise": {
     "defaultMessage": "Advertise",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: checkbox label on a port row that sets whether the port is advertised"
   },
   "web.components.modules.build_module_dialog.all_schema_constraints_dns_names_and": {
     "defaultMessage": "All schema constraints, DNS names, and image rules passed.",
-    "description": "Build module dialog: text in p"
+    "description": "Build module dialog: explanation under the validation result saying the module passed the schema, DNS name and image checks; shown only when there are no errors"
   },
   "web.components.modules.build_module_dialog.archetype_or_image_required": {
     "defaultMessage": "Please select an archetype or provide a container image.",
@@ -1753,19 +1753,19 @@
   },
   "web.components.modules.build_module_dialog.archetype_preset": {
     "defaultMessage": "Archetype preset",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the archetype preset choice on step 1 that fills the form from a starting preset"
   },
   "web.components.modules.build_module_dialog.back": {
     "defaultMessage": "Back",
-    "description": "Build module dialog: text in Button"
+    "description": "Build module dialog: button that returns to the previous step; keep it short"
   },
   "web.components.modules.build_module_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Build module dialog: text in Button"
+    "description": "Build module dialog: button that closes the wizard without creating the module; keep it short"
   },
   "web.components.modules.build_module_dialog.categories": {
     "defaultMessage": "Categories",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the category tags, which are chosen from suggestions or typed in as custom tags"
   },
   "web.components.modules.build_module_dialog.category_adventure": {
     "defaultMessage": "Adventure",
@@ -1817,7 +1817,7 @@
   },
   "web.components.modules.build_module_dialog.cluster_destination_source": {
     "defaultMessage": "Cluster destination source",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the dropdown that picks where the module is uploaded in the cluster; shown only when sources exist"
   },
   "web.components.modules.build_module_dialog.config_key_label": {
     "defaultMessage": "{key}:",
@@ -1825,31 +1825,31 @@
   },
   "web.components.modules.build_module_dialog.container_image": {
     "defaultMessage": "Container Image",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the container image field on step 2; the image reference should be pinned by digest"
   },
   "web.components.modules.build_module_dialog.container_ports": {
     "defaultMessage": "Container & Ports",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: name of step 2 in the wizard's progress bar, for the container image and ports; keep it short"
   },
   "web.components.modules.build_module_dialog.continue_to_container_ports": {
     "defaultMessage": "Continue to Container & Ports",
-    "description": "Build module dialog: text in Button"
+    "description": "Build module dialog: button on step 1 that moves on to the container and ports step; keep it short"
   },
   "web.components.modules.build_module_dialog.continue_to_review_export": {
     "defaultMessage": "Continue to Review & Export",
-    "description": "Build module dialog: text in Button"
+    "description": "Build module dialog: button on step 2 that moves on to the review and export step; keep it short"
   },
   "web.components.modules.build_module_dialog.create_game_module": {
     "defaultMessage": "Create game module",
-    "description": "Build module dialog: text in ModalHeading"
+    "description": "Build module dialog: title of the three-step wizard for creating a new game module"
   },
   "web.components.modules.build_module_dialog.custom_tag_input": {
     "defaultMessage": "Custom tag input",
-    "description": "Build module dialog: aria-label of Input"
+    "description": "Build module dialog: screen-reader label for the custom tag text field; not visible on screen"
   },
   "web.components.modules.build_module_dialog.display_name": {
     "defaultMessage": "Display Name",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the display name field, the friendly name shown for the module"
   },
   "web.components.modules.build_module_dialog.dns_invalid": {
     "defaultMessage": "Must be lowercase alphanumeric with hyphens",
@@ -1861,27 +1861,27 @@
   },
   "web.components.modules.build_module_dialog.download_tar_gz": {
     "defaultMessage": "Download .tar.gz",
-    "description": "Build module dialog: text in Button"
+    "description": "Build module dialog: button on step 3 that downloads the built module as an archive; keep the file extension as written; keep it short"
   },
   "web.components.modules.build_module_dialog.e_g_10gi": {
     "defaultMessage": "e.g. 10Gi",
-    "description": "Build module dialog: placeholder of Input"
+    "description": "Build module dialog: example text shown inside the empty volume size field; a sample size value, not a default"
   },
   "web.components.modules.build_module_dialog.e_g_counter_strike_2": {
     "defaultMessage": "e.g. Counter-Strike 2",
-    "description": "Build module dialog: placeholder of Input"
+    "description": "Build module dialog: example text shown inside the empty display name field; a sample name, not a default value"
   },
   "web.components.modules.build_module_dialog.e_g_cs2_match": {
     "defaultMessage": "e.g. cs2-match",
-    "description": "Build module dialog: placeholder of Input"
+    "description": "Build module dialog: example text shown inside the empty module name field; a sample name, not a default value"
   },
   "web.components.modules.build_module_dialog.e_g_data": {
     "defaultMessage": "e.g. /data",
-    "description": "Build module dialog: placeholder of Input"
+    "description": "Build module dialog: example text shown inside the empty mount path field; a sample folder path, not a default"
   },
   "web.components.modules.build_module_dialog.e_g_ghcr_io_valgul_game_v1_0_sha256": {
     "defaultMessage": "e.g. ghcr.io/valgul/game:v1.0@sha256:...",
-    "description": "Build module dialog: placeholder of Input"
+    "description": "Build module dialog: example image reference shown inside the empty container image field; keep the reference format as written"
   },
   "web.components.modules.build_module_dialog.env_name_label": {
     "defaultMessage": "{name}:",
@@ -1889,31 +1889,31 @@
   },
   "web.components.modules.build_module_dialog.errors": {
     "defaultMessage": "errors,",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: word after the error count in the validation summary; the number shown before it is the count of errors"
   },
   "web.components.modules.build_module_dialog.failed_to_load_archetypes": {
     "defaultMessage": "Failed to load archetypes",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: error message shown in place of the archetype preset choices when they cannot be loaded"
   },
   "web.components.modules.build_module_dialog.install_to_cluster": {
     "defaultMessage": "Install to Cluster",
-    "description": "Build module dialog: text in Button"
+    "description": "Build module dialog: button on step 3 that installs the built module into the chosen cluster source; keep it short"
   },
   "web.components.modules.build_module_dialog.loading_archetypes": {
     "defaultMessage": "Loading archetypes...",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: loading text shown in place of the archetype preset choices while they are fetched; the dots are part of the text"
   },
   "web.components.modules.build_module_dialog.memory_simulation": {
     "defaultMessage": "Memory Simulation",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: label of the memory estimate card on step 3; the value beside it is the simulated memory"
   },
   "web.components.modules.build_module_dialog.module_definition_source": {
     "defaultMessage": "Module definition source",
-    "description": "Build module dialog: aria-label of textarea"
+    "description": "Build module dialog: screen-reader name of the large text box holding the module definition source; not visible on screen"
   },
   "web.components.modules.build_module_dialog.module_name": {
     "defaultMessage": "Module Name",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the module name field; the name must be a DNS-1123 label of lowercase letters, digits and hyphens; DNS-1123 is a technical term, usually left untranslated"
   },
   "web.components.modules.build_module_dialog.module_name_invalid": {
     "defaultMessage": "Module name must be a valid lowercase DNS-1123 label.",
@@ -1921,19 +1921,19 @@
   },
   "web.components.modules.build_module_dialog.module_validated_cleanly": {
     "defaultMessage": "Module Validated Cleanly",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: success heading in the validation panel, shown when the module passes validation with no errors or warnings"
   },
   "web.components.modules.build_module_dialog.mount_path": {
     "defaultMessage": "Mount Path",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the mount path field, the folder inside the server where the volume is attached"
   },
   "web.components.modules.build_module_dialog.name": {
     "defaultMessage": "name",
-    "description": "Build module dialog: placeholder of Input"
+    "description": "Build module dialog: example text shown inside the port name field of a port row; a short placeholder word, not a default value"
   },
   "web.components.modules.build_module_dialog.persistent_storage": {
     "defaultMessage": "Persistent Storage",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the persistent storage settings, the volume size and mount path, on step 2"
   },
   "web.components.modules.build_module_dialog.pinned_digest": {
     "defaultMessage": "✓ Pinned by digest (@sha256:...)",
@@ -1941,51 +1941,51 @@
   },
   "web.components.modules.build_module_dialog.port": {
     "defaultMessage": "port",
-    "description": "Build module dialog: placeholder of Input"
+    "description": "Build module dialog: example text shown inside the container port number field of a port row; a placeholder word, not a default value"
   },
   "web.components.modules.build_module_dialog.port_mappings": {
     "defaultMessage": "Port Mappings",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the list of port mappings on step 2"
   },
   "web.components.modules.build_module_dialog.preset_metadata": {
     "defaultMessage": "Preset & Metadata",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: name of step 1 in the wizard's progress bar, where the preset and module details are set; keep it short"
   },
   "web.components.modules.build_module_dialog.protocol": {
     "defaultMessage": "Protocol",
-    "description": "Build module dialog: aria-label of Select"
+    "description": "Build module dialog: screen-reader label for the protocol dropdown of a port row; not visible on screen"
   },
   "web.components.modules.build_module_dialog.protocol_options": {
     "defaultMessage": "Protocol options",
-    "description": "Build module dialog: aria-label of ListBox"
+    "description": "Build module dialog: screen-reader name of the list of protocol choices in a port row's dropdown; not visible on screen"
   },
   "web.components.modules.build_module_dialog.recommended": {
     "defaultMessage": "Recommended",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: small note beside the Categories label marking the suggested tags"
   },
   "web.components.modules.build_module_dialog.remove_port": {
     "defaultMessage": "Remove port",
-    "description": "Build module dialog: aria-label of Button"
+    "description": "Build module dialog: button that removes this port row; keep it short"
   },
   "web.components.modules.build_module_dialog.review_export": {
     "defaultMessage": "Review & Export",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: name of step 3 in the wizard's progress bar, for checking the module and exporting it; keep it short"
   },
   "web.components.modules.build_module_dialog.selected_tags": {
     "defaultMessage": "Selected Tags",
-    "description": "Build module dialog: text in div"
+    "description": "Build module dialog: heading above the list of custom tags already added; shown only when at least one custom tag exists"
   },
   "web.components.modules.build_module_dialog.short_description_of_the_game_server": {
     "defaultMessage": "Short description of the game server",
-    "description": "Build module dialog: placeholder of Input"
+    "description": "Build module dialog: example text shown inside the empty summary field, hinting what to write there"
   },
   "web.components.modules.build_module_dialog.source_options": {
     "defaultMessage": "Source options",
-    "description": "Build module dialog: aria-label of ListBox"
+    "description": "Build module dialog: screen-reader name of the list of upload source choices in the cluster destination dropdown; not visible on screen"
   },
   "web.components.modules.build_module_dialog.step_1_of_3": {
     "defaultMessage": "Step 1 of 3",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: footer text on step 1 showing that this is the first of the three wizard steps"
   },
   "web.components.modules.build_module_dialog.step_container_ports": {
     "defaultMessage": "Container & Ports",
@@ -2021,15 +2021,15 @@
   },
   "web.components.modules.build_module_dialog.summary": {
     "defaultMessage": "Summary",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the summary field, a short description of the module"
   },
   "web.components.modules.build_module_dialog.tcp": {
     "defaultMessage": "TCP",
-    "description": "Build module dialog: text in ListBoxItem"
+    "description": "Build module dialog: protocol option TCP in a port row's dropdown; technical term, usually left untranslated; keep it short"
   },
   "web.components.modules.build_module_dialog.udp": {
     "defaultMessage": "UDP",
-    "description": "Build module dialog: text in ListBoxItem"
+    "description": "Build module dialog: protocol option UDP in a port row's dropdown; technical term, usually left untranslated; keep it short"
   },
   "web.components.modules.build_module_dialog.unpinned_image": {
     "defaultMessage": "⚠ Unpinned image (recommend @sha256:...)",
@@ -2045,15 +2045,15 @@
   },
   "web.components.modules.build_module_dialog.volume_size": {
     "defaultMessage": "Volume Size",
-    "description": "Build module dialog: text in label"
+    "description": "Build module dialog: label above the volume size field, the storage size requested for the module's data"
   },
   "web.components.modules.build_module_dialog.warnings": {
     "defaultMessage": "warnings",
-    "description": "Build module dialog: text in span"
+    "description": "Build module dialog: word after the warning count at the end of the validation summary; the number shown before it is the count of warnings"
   },
   "web.components.modules.install_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Install dialog: text in Button"
+    "description": "Install dialog: button that closes the install dialog without installing; keep it short"
   },
   "web.components.modules.install_dialog.fields_required": {
     "defaultMessage": "source, version, and name are all required",
@@ -2061,19 +2061,19 @@
   },
   "web.components.modules.install_dialog.install": {
     "defaultMessage": "Install",
-    "description": "Install dialog: text in ModalHeading"
+    "description": "Install dialog: the word Install used as the dialog title, followed by the module name, and as the confirm button; keep it short"
   },
   "web.components.modules.install_dialog.install_as": {
     "defaultMessage": "Install as",
-    "description": "Install dialog: text in Label"
+    "description": "Install dialog: label above the name field that sets the name the installed module will get"
   },
   "web.components.modules.install_dialog.pulls_the_module_bundle_and_creates_a": {
     "defaultMessage": "Pulls the module bundle and creates a Module resource. The cluster operator materializes the GameTemplate in the background.",
-    "description": "Install dialog: text in Description"
+    "description": "Install dialog: explanation under the title saying the install pulls the module bundle and creates a Module resource; Module and GameTemplate are Kubernetes resource names, usually left untranslated"
   },
   "web.components.modules.install_dialog.source": {
     "defaultMessage": "Source",
-    "description": "Install dialog: text in Label"
+    "description": "Install dialog: label above the source field, which is a dropdown or a fixed read-only box depending on the available sources"
   },
   "web.components.modules.install_dialog.source_label": {
     "defaultMessage": "{name} ({type})",
@@ -2081,11 +2081,11 @@
   },
   "web.components.modules.install_dialog.the_module_gametemplate_name_must_be_a": {
     "defaultMessage": "The Module + GameTemplate name. Must be a DNS label.",
-    "description": "Install dialog: text in Description"
+    "description": "Install dialog: hint under the install name field saying the name is shared by the Module and GameTemplate and must be a DNS label; these resource names are usually left untranslated"
   },
   "web.components.modules.install_dialog.version": {
     "defaultMessage": "Version",
-    "description": "Install dialog: text in Label"
+    "description": "Install dialog: label above the version field, a dropdown of module versions or a fixed read-only box depending on what is available"
   },
   "web.components.modules.module_card.deploy_locally": {
     "defaultMessage": "Deploy locally",
@@ -2097,7 +2097,7 @@
   },
   "web.components.modules.module_card.install": {
     "defaultMessage": "Install",
-    "description": "Module card: text in Button"
+    "description": "Module card: button that installs a module that is not installed yet; keep it short"
   },
   "web.components.modules.module_card.installed_version": {
     "defaultMessage": "v{version} installed",
@@ -2129,11 +2129,11 @@
   },
   "web.components.modules.module_card.policy": {
     "defaultMessage": "policy",
-    "description": "Module card: text in Chip"
+    "description": "Module card: small badge meaning a signature policy is declared for the module; its tooltip says whether keyless (Fulcio) signing is used; keep it short"
   },
   "web.components.modules.module_card.remove_upload": {
     "defaultMessage": "Remove upload",
-    "description": "Module card: text in Button"
+    "description": "Module card: button that removes an uploaded module bundle; keep it short"
   },
   "web.components.modules.module_card.rollback_target_vpreviousversion": {
     "defaultMessage": "rollback target · v{previousVersion}",
@@ -2177,7 +2177,7 @@
   },
   "web.components.modules.module_card.uninstall": {
     "defaultMessage": "Uninstall",
-    "description": "Module card: text in Button"
+    "description": "Module card: button that removes an installed module; keep it short"
   },
   "web.components.modules.module_card.update_available_suffix": {
     "defaultMessage": "· v{version} available",
@@ -2189,15 +2189,15 @@
   },
   "web.components.modules.module_card.upgrade": {
     "defaultMessage": "Upgrade",
-    "description": "Module card: text in Button"
+    "description": "Module card: button that upgrades an installed module to its latest version; keep it short"
   },
   "web.components.modules.module_card.verified": {
     "defaultMessage": "verified",
-    "description": "Module card: text in Chip"
+    "description": "Module card: small badge meaning the module's signature was verified; its tooltip says whether keyless (Fulcio) verification passed; keep it short"
   },
   "web.components.modules.module_sources_panel.add_source": {
     "defaultMessage": "Add source",
-    "description": "Module sources panel: text in Button"
+    "description": "Module sources panel: button that opens the dialog to add a new module source; keep it short"
   },
   "web.components.modules.module_sources_panel.delete_source_aria": {
     "defaultMessage": "Delete {name}",
@@ -2209,15 +2209,15 @@
   },
   "web.components.modules.module_sources_panel.failed_to_load_module_sources": {
     "defaultMessage": "Failed to load module sources.",
-    "description": "Module sources panel: message of ErrorCard"
+    "description": "Module sources panel: error card message shown when the module sources cannot be loaded; the card has a retry button"
   },
   "web.components.modules.module_sources_panel.insecure": {
     "defaultMessage": "insecure",
-    "description": "Module sources panel: text in span"
+    "description": "Module sources panel: small warning badge on a source row marking a source that allows plain HTTP; keep it short"
   },
   "web.components.modules.module_sources_panel.loading_module_sources": {
     "defaultMessage": "Loading module sources…",
-    "description": "Module sources panel: message of LoadingCard"
+    "description": "Module sources panel: loading text shown while the list of module sources is being fetched"
   },
   "web.components.modules.module_sources_panel.loading_sources": {
     "defaultMessage": "Loading module sources…",
@@ -2229,7 +2229,7 @@
   },
   "web.components.modules.module_sources_panel.module_sources": {
     "defaultMessage": "Module sources",
-    "description": "Module sources panel: text in div"
+    "description": "Module sources panel: heading of the panel that lists the sources module bundles are pulled from"
   },
   "web.components.modules.module_sources_panel.modulecount_module": {
     "defaultMessage": "{moduleCount, plural, one {# module} other {# modules}}",
@@ -2237,31 +2237,31 @@
   },
   "web.components.modules.module_sources_panel.modulesource": {
     "defaultMessage": "ModuleSource",
-    "description": "Module sources panel: text in code"
+    "description": "Module sources panel: resource name ModuleSource, shown in code style inside the explanation; technical term, usually left untranslated"
   },
   "web.components.modules.module_sources_panel.no": {
     "defaultMessage": "No",
-    "description": "Module sources panel: text in div"
+    "description": "Module sources panel: first word of the empty-state box shown when no module sources are configured, followed by the ModuleSource name"
   },
   "web.components.modules.module_sources_panel.registries_git_repositories_archives": {
     "defaultMessage": "Registries, git repositories, archives, and uploads the operator pulls module bundles from. Equivalent to applying",
-    "description": "Module sources panel: text in div"
+    "description": "Module sources panel: explanation under the heading saying sources are registries, git repositories, archives or uploads, the same as applying ModuleSource resources directly"
   },
   "web.components.modules.module_sources_panel.resources_configured": {
     "defaultMessage": "resources configured.",
-    "description": "Module sources panel: text in div"
+    "description": "Module sources panel: end of the empty-state sentence, after the ModuleSource name, saying the resources are configured"
   },
   "web.components.modules.module_sources_panel.resources_directly": {
     "defaultMessage": "resources directly.",
-    "description": "Module sources panel: text in div"
+    "description": "Module sources panel: last words of the explanation under the heading, after the ModuleSource name, saying the resources are applied directly"
   },
   "web.components.modules.module_sources_panel.serving_stale_catalog": {
     "defaultMessage": "serving stale catalog",
-    "description": "Module sources panel: text in div"
+    "description": "Module sources panel: warning text on a source row shown when the source is still serving an old catalog of modules"
   },
   "web.components.modules.module_sources_panel.synced": {
     "defaultMessage": "· synced",
-    "description": "Module sources panel: text in Fragment"
+    "description": "Module sources panel: text after the module count on a source row, followed by the time of the last sync in relative time; the leading dot is part of the text"
   },
   "web.components.modules.module_sources_panel.type_oci": {
     "defaultMessage": "oci",
@@ -2273,11 +2273,11 @@
   },
   "web.components.modules.source_dialog.1h": {
     "defaultMessage": "1h",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty refresh interval field; a sample duration, keep it as written"
   },
   "web.components.modules.source_dialog.a_tar_gz_or_zip_of_module_directories": {
     "defaultMessage": "A .tar.gz or .zip of module directories.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the archive URL field saying the archive is a .tar.gz or .zip of module directories; file extensions are kept as written"
   },
   "web.components.modules.source_dialog.add_source": {
     "defaultMessage": "Add source",
@@ -2289,63 +2289,63 @@
   },
   "web.components.modules.source_dialog.allow_list": {
     "defaultMessage": "Allow list",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the allow list field, an optional filter of module names for the source"
   },
   "web.components.modules.source_dialog.allow_plain_http_local_registries_only": {
     "defaultMessage": "Allow plain HTTP (local registries only)",
-    "description": "Source dialog: text in Checkbox.Content"
+    "description": "Source dialog: checkbox label that allows plain HTTP for a source, meant only for local registries; the same label appears in the edit view"
   },
   "web.components.modules.source_dialog.archive_creds": {
     "defaultMessage": "archive-creds",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty credentials secret field for archive sources; a sample secret name, not a default value"
   },
   "web.components.modules.source_dialog.archive_url": {
     "defaultMessage": "Archive URL",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the archive URL field, shown for archive sources, where the archive is downloaded from"
   },
   "web.components.modules.source_dialog.branch_or_tag_defaults_to_main": {
     "defaultMessage": "Branch or tag. Defaults to main.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the git ref field saying the value is a branch or tag and that it defaults to main"
   },
   "web.components.modules.source_dialog.bundles": {
     "defaultMessage": "bundles",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty path field for local sources; a sample folder name, not a default value"
   },
   "web.components.modules.source_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Source dialog: text in Button"
+    "description": "Source dialog: button that closes the source dialog without saving; keep it short"
   },
   "web.components.modules.source_dialog.certificate_identity": {
     "defaultMessage": "Certificate identity",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the certificate identity field, shown for keyless verification; it names the identity that signed the bundle"
   },
   "web.components.modules.source_dialog.clone_url": {
     "defaultMessage": "Clone URL",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the clone URL field, shown for git sources, where the repository is fetched from"
   },
   "web.components.modules.source_dialog.comma_separated_module_names_registries": {
     "defaultMessage": "Comma-separated module names (registries can't be enumerated).",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the modules field saying the names are comma-separated and that registries cannot be listed in full"
   },
   "web.components.modules.source_dialog.community": {
     "defaultMessage": "community",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty source name field; a sample name, not a default value"
   },
   "web.components.modules.source_dialog.cosign_pub": {
     "defaultMessage": "cosign-pub",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty public key secret field; a sample secret name, not a default value"
   },
   "web.components.modules.source_dialog.credentials_secret": {
     "defaultMessage": "Credentials secret",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the credentials secret name field, shown for git and archive sources; the secret holds access credentials"
   },
   "web.components.modules.source_dialog.dns_label_identifying_this_source": {
     "defaultMessage": "DNS label identifying this source.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the source name field saying it is a DNS label that identifies the source; DNS label is a technical term, usually left untranslated"
   },
   "web.components.modules.source_dialog.dockerconfigjson_secret_in_the_operator": {
     "defaultMessage": "dockerconfigjson Secret in the operator namespace (optional).",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the pull secret field saying it is an optional dockerconfigjson Secret in the operator namespace; dockerconfigjson is a technical term, usually left untranslated"
   },
   "web.components.modules.source_dialog.edit_source_title": {
     "defaultMessage": "Edit source {name}",
@@ -2353,39 +2353,39 @@
   },
   "web.components.modules.source_dialog.gh_creds": {
     "defaultMessage": "gh-creds",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty credentials secret field; a sample secret name, not a default value"
   },
   "web.components.modules.source_dialog.ghcr_io_gameplanepanel_gameplane_modules": {
     "defaultMessage": "ghcr.io/gameplanepanel/gameplane-modules",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty registry URL field; a sample registry address, keep it as written"
   },
   "web.components.modules.source_dialog.github_com_org_repo_github_workflows": {
     "defaultMessage": "github.com/org/repo/.github/workflows/release.yml@refs/heads/main",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty certificate identity field; a sample identity path, keep it as written"
   },
   "web.components.modules.source_dialog.how_often_the_catalog_re_indexes": {
     "defaultMessage": "How often the catalog re-indexes. Defaults to 1h.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the refresh interval field saying how often the catalog is re-indexed and that the default is 1h"
   },
   "web.components.modules.source_dialog.https_example_com_modules_tar_gz": {
     "defaultMessage": "https://example.com/modules.tar.gz",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty archive URL field; a sample address, keep it as written"
   },
   "web.components.modules.source_dialog.https_github_com_example_gameplane": {
     "defaultMessage": "https://github.com/example/gameplane-modules",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty clone URL field; a sample repository address, keep it as written"
   },
   "web.components.modules.source_dialog.https_token_actions_githubusercontent": {
     "defaultMessage": "https://token.actions.githubusercontent.com",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty OIDC issuer field; a sample issuer address, keep it as written"
   },
   "web.components.modules.source_dialog.indexes_bundles_uploaded_through_the": {
     "defaultMessage": "Indexes bundles uploaded through the dashboard (stored as ConfigMaps in the operator namespace). No further configuration.",
-    "description": "Source dialog: text in div"
+    "description": "Source dialog: note for upload sources saying uploaded bundles are indexed and kept as ConfigMaps in the operator namespace; ConfigMaps is a technical term, usually left untranslated"
   },
   "web.components.modules.source_dialog.issuer_embedded_in_the_signing": {
     "defaultMessage": "Issuer embedded in the signing certificate.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the OIDC issuer field saying it is the issuer embedded in the signing certificate"
   },
   "web.components.modules.source_dialog.keyed_secret_required": {
     "defaultMessage": "keyed verification needs a public key secret name",
@@ -2397,27 +2397,27 @@
   },
   "web.components.modules.source_dialog.main": {
     "defaultMessage": "main",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty git ref field; the branch name main as a sample"
   },
   "web.components.modules.source_dialog.minecraft": {
     "defaultMessage": "minecraft-*",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty allow list field; a sample name pattern with a wildcard, keep it as written"
   },
   "web.components.modules.source_dialog.minecraft_java_valheim": {
     "defaultMessage": "minecraft-java, valheim",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty modules field; a sample list of module names separated by commas"
   },
   "web.components.modules.source_dialog.modules": {
     "defaultMessage": "Modules",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the modules field for registry sources, which lists the module names to pull"
   },
   "web.components.modules.source_dialog.modules_2": {
     "defaultMessage": "modules",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty subdirectory field; a sample folder name, not a default value"
   },
   "web.components.modules.source_dialog.name": {
     "defaultMessage": "Name",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the source name field; the field is shown only when adding a new source, not when editing"
   },
   "web.components.modules.source_dialog.name_required": {
     "defaultMessage": "name is required",
@@ -2429,51 +2429,51 @@
   },
   "web.components.modules.source_dialog.oidc_issuer": {
     "defaultMessage": "OIDC issuer",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the OIDC issuer field, shown for keyless verification; OIDC is a technical term, usually left untranslated"
   },
   "web.components.modules.source_dialog.optional_module_name_filter_exact_names": {
     "defaultMessage": "Optional module name filter — exact names or globs, comma-separated.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the allow list field saying the optional filter takes exact module names or globs, separated by commas"
   },
   "web.components.modules.source_dialog.path": {
     "defaultMessage": "Path",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the path field for local sources, the folder path inside the operator's module mount"
   },
   "web.components.modules.source_dialog.public_key_secret": {
     "defaultMessage": "Public key secret",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the public key secret field, shown only for key-based verification"
   },
   "web.components.modules.source_dialog.pull_secret": {
     "defaultMessage": "Pull secret",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the pull secret name field for registry sources; the secret holds registry credentials"
   },
   "web.components.modules.source_dialog.ref": {
     "defaultMessage": "Ref",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the git ref field, the branch or tag to use from the repository"
   },
   "web.components.modules.source_dialog.refresh_interval": {
     "defaultMessage": "Refresh interval",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the refresh interval field, how often the module catalog is re-indexed"
   },
   "web.components.modules.source_dialog.registry_creds": {
     "defaultMessage": "registry-creds",
-    "description": "Source dialog: placeholder of Input"
+    "description": "Source dialog: example value shown inside the empty pull secret field; a sample secret name, not a default value"
   },
   "web.components.modules.source_dialog.registry_url": {
     "defaultMessage": "Registry URL",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the registry URL field, shown for OCI registry sources; OCI is a technical term, usually left untranslated"
   },
   "web.components.modules.source_dialog.relative_to_the_operator_s_module_mount": {
     "defaultMessage": "Relative to the operator's module mount (Helm: operator.localModules). Empty scans the mount root.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the local path field; the path is relative to the operator's module mount (Helm value operator.localModules) and empty scans the mount root"
   },
   "web.components.modules.source_dialog.require_a_valid_cosign_signature_on": {
     "defaultMessage": "Require a valid cosign signature on every bundle pulled from this source.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the signature verification dropdown saying every bundle from the source must have a valid cosign signature; cosign is a technical term, usually left untranslated"
   },
   "web.components.modules.source_dialog.san_identity_that_must_have_produced": {
     "defaultMessage": "SAN identity that must have produced the signature.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the certificate identity field saying it is the SAN identity that must have produced the signature; SAN is a technical term, usually left untranslated"
   },
   "web.components.modules.source_dialog.save": {
     "defaultMessage": "Save",
@@ -2481,39 +2481,39 @@
   },
   "web.components.modules.source_dialog.scan_only_this_path_inside_the_repo": {
     "defaultMessage": "Scan only this path inside the repo (optional).",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the subdirectory field saying only this path inside the repository is scanned and that the field is optional"
   },
   "web.components.modules.source_dialog.secret_holding_the_cosign_public_key": {
     "defaultMessage": "Secret holding the cosign public key under the cosign.pub data key.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the public key secret field saying the secret holds the cosign public key under the cosign.pub data key; key names are kept as written"
   },
   "web.components.modules.source_dialog.secret_with_token_bearer_or_username": {
     "defaultMessage": "Secret with token (Bearer) or username+password. Optional.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the archive credentials secret field saying the secret holds a Bearer token or a username and password; the field is optional"
   },
   "web.components.modules.source_dialog.secret_with_token_username_password": {
     "defaultMessage": "Secret with token / username+password (https) or ssh-privatekey + known_hosts (ssh). Optional.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: hint under the credentials secret field saying the secret holds a token or username and password for https, or an SSH key and known hosts for ssh; the field is optional"
   },
   "web.components.modules.source_dialog.signature_verification": {
     "defaultMessage": "Signature verification",
-    "description": "Source dialog: aria-label of Select"
+    "description": "Source dialog: label above the signature verification dropdown that sets how bundles are checked; also the screen-reader name of that dropdown"
   },
   "web.components.modules.source_dialog.signature_verification_options": {
     "defaultMessage": "Signature verification options",
-    "description": "Source dialog: aria-label of ListBox"
+    "description": "Source dialog: screen-reader name of the list of signature verification choices; not visible on screen"
   },
   "web.components.modules.source_dialog.subdirectory": {
     "defaultMessage": "Subdirectory",
-    "description": "Source dialog: text in Label"
+    "description": "Source dialog: label above the subdirectory field for git sources, the folder inside the repository to scan"
   },
   "web.components.modules.source_dialog.type": {
     "defaultMessage": "Type",
-    "description": "Source dialog: aria-label of Select"
+    "description": "Source dialog: label above the source type dropdown that picks the kind of source; also the screen-reader name of that dropdown"
   },
   "web.components.modules.source_dialog.type_options": {
     "defaultMessage": "Type options",
-    "description": "Source dialog: aria-label of ListBox"
+    "description": "Source dialog: screen-reader name of the list of source type choices; not visible on screen"
   },
   "web.components.modules.source_dialog.url_required": {
     "defaultMessage": "url is required",
@@ -2521,15 +2521,15 @@
   },
   "web.components.modules.source_dialog.where_the_operator_discovers_and_pulls": {
     "defaultMessage": "Where the operator discovers and pulls module bundles from.",
-    "description": "Source dialog: text in Description"
+    "description": "Source dialog: explanation under the Add or Edit source heading saying where the operator discovers and pulls module bundles from"
   },
   "web.components.modules.upload_module_dialog.a_tar_gz_or_zip_holding_one_module": {
     "defaultMessage": "A .tar.gz or .zip holding one module directory (module.yaml + template.yaml). Stored in the cluster; the catalog indexes it immediately.",
-    "description": "Upload module dialog: text in Description"
+    "description": "Upload module dialog: explanation under the title; the file is a .tar.gz or .zip holding one module directory, stored and indexed right away"
   },
   "web.components.modules.upload_module_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Upload module dialog: text in Button"
+    "description": "Upload module dialog: button that closes the dialog without uploading; keep it short"
   },
   "web.components.modules.upload_module_dialog.choose_archive": {
     "defaultMessage": "Choose a bundle archive…",
@@ -2537,7 +2537,7 @@
   },
   "web.components.modules.upload_module_dialog.game": {
     "defaultMessage": "game:",
-    "description": "Upload module dialog: text in div"
+    "description": "Upload module dialog: label before the game identifier in the preview card of the chosen bundle; the value after it is the game name"
   },
   "web.components.modules.upload_module_dialog.pick_bundle_first": {
     "defaultMessage": "pick a bundle file first",
@@ -2549,15 +2549,15 @@
   },
   "web.components.modules.upload_module_dialog.upload": {
     "defaultMessage": "Upload",
-    "description": "Upload module dialog: text in Button"
+    "description": "Upload module dialog: button that uploads the chosen bundle; keep it short"
   },
   "web.components.modules.upload_module_dialog.upload_module": {
     "defaultMessage": "Upload module",
-    "description": "Upload module dialog: text in ModalHeading"
+    "description": "Upload module dialog: title of the dialog for uploading a module bundle"
   },
   "web.components.modules.upload_module_dialog.upload_to": {
     "defaultMessage": "Upload to",
-    "description": "Upload module dialog: text in Label"
+    "description": "Upload module dialog: label above the dropdown that picks the cluster source the module is uploaded to"
   },
   "web.components.modules.upload_module_dialog.vversion": {
     "defaultMessage": "v{version}",
@@ -2565,39 +2565,39 @@
   },
   "web.components.register_cluster_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Register cluster dialog: text in Button"
+    "description": "Register cluster dialog: button that closes the dialog without registering the cluster; keep it short"
   },
   "web.components.register_cluster_dialog.connect_an_existing_workload_cluster": {
     "defaultMessage": "Connect an existing workload cluster with the Gameplane operator and CRDs installed. The panel host does not become a workload node.",
-    "description": "Register cluster dialog: text in p"
+    "description": "Register cluster dialog: intro under the title saying the cluster needs the Gameplane operator and CRDs installed and that the panel host does not become a workload node"
   },
   "web.components.register_cluster_dialog.display_name": {
     "defaultMessage": "Display name",
-    "description": "Register cluster dialog: text in Label"
+    "description": "Register cluster dialog: label for the cluster display name field"
   },
   "web.components.register_cluster_dialog.kubeconfig": {
     "defaultMessage": "Kubeconfig",
-    "description": "Register cluster dialog: text in Label"
+    "description": "Register cluster dialog: label for the large text box where the cluster's kubeconfig is pasted; technical term, usually left untranslated"
   },
   "web.components.register_cluster_dialog.name": {
     "defaultMessage": "Name",
-    "description": "Register cluster dialog: text in Label"
+    "description": "Register cluster dialog: label for the cluster name field, the short identifier of the cluster"
   },
   "web.components.register_cluster_dialog.production": {
     "defaultMessage": "production",
-    "description": "Register cluster dialog: placeholder of Input"
+    "description": "Register cluster dialog: example value shown inside the empty cluster name field; a sample name, not a default value"
   },
   "web.components.register_cluster_dialog.register": {
     "defaultMessage": "Register",
-    "description": "Register cluster dialog: text in Button"
+    "description": "Register cluster dialog: button that submits the form and registers the cluster; keep it short"
   },
   "web.components.register_cluster_dialog.register_cluster": {
     "defaultMessage": "Register cluster",
-    "description": "Register cluster dialog: text in ModalHeading"
+    "description": "Register cluster dialog: title of the dialog for adding an existing workload cluster to the panel"
   },
   "web.components.register_cluster_dialog.use_a_self_contained_kubeconfig_with": {
     "defaultMessage": "Use a self-contained kubeconfig with credentials and an API address reachable from this panel. Agent console, files and logs also require remote gateway configuration.",
-    "description": "Register cluster dialog: text in p"
+    "description": "Register cluster dialog: hint under the kubeconfig box saying the file must be self-contained with an API address this panel can reach, and that console, files and logs also need gateway setup"
   },
   "web.components.registry_browser.all_categories": {
     "defaultMessage": "All",
@@ -2609,7 +2609,7 @@
   },
   "web.components.registry_browser.in_app_browse_isn_t_available_for_this": {
     "defaultMessage": "In-app browse isn’t available for this server.",
-    "description": "Registry browser: text in p"
+    "description": "Registry browser: message shown instead of the results when no usable registry provider exists for this server, so in-app browsing is unavailable"
   },
   "web.components.registry_browser.load_more": {
     "defaultMessage": "Load more",
@@ -2621,7 +2621,7 @@
   },
   "web.components.registry_browser.loading": {
     "defaultMessage": "Loading…",
-    "description": "Registry browser: text in p"
+    "description": "Registry browser: loading text shown while registry results are being fetched"
   },
   "web.components.registry_browser.mod_registry_aria": {
     "defaultMessage": "Mod registry",
@@ -2633,7 +2633,7 @@
   },
   "web.components.registry_browser.no_results": {
     "defaultMessage": "No results.",
-    "description": "Registry browser: text in p"
+    "description": "Registry browser: empty-state text shown when the registry search returns nothing"
   },
   "web.components.registry_browser.request_failed": {
     "defaultMessage": "request failed",
@@ -2661,15 +2661,15 @@
   },
   "web.components.require_role.access_denied": {
     "defaultMessage": "Access denied",
-    "description": "Require role: text in div"
+    "description": "Require role: heading of the card shown when the user's role does not allow the page they opened"
   },
   "web.components.require_role.back_to_dashboard": {
     "defaultMessage": "Back to dashboard",
-    "description": "Require role: text in Link"
+    "description": "Require role: link on the access denied card that returns to the home dashboard; keep it short"
   },
   "web.components.require_role.can_t_reach_the_control_plane": {
     "defaultMessage": "Can't reach the control plane",
-    "description": "Require role: text in div"
+    "description": "Require role: heading of the error card shown when the user's identity cannot be confirmed because the API cannot be reached"
   },
   "web.components.require_role.detail": {
     "defaultMessage": "({detail})",
@@ -2677,23 +2677,23 @@
   },
   "web.components.require_role.this_is_usually_temporary_the_api_may": {
     "defaultMessage": ". This is usually temporary — the API may be restarting.",
-    "description": "Require role: text in p"
+    "description": "Require role: closing part of the unreachable explanation, after any detail, saying the problem is usually temporary and the API may be restarting"
   },
   "web.components.require_role.try_again": {
     "defaultMessage": "Try again",
-    "description": "Require role: text in Button"
+    "description": "Require role: button on the unreachable error card that retries the identity check; keep it short"
   },
   "web.components.require_role.we_couldn_t_confirm_who_you_are": {
     "defaultMessage": "We couldn't confirm who you are",
-    "description": "Require role: text in p"
+    "description": "Require role: first part of the explanation under the unreachable heading saying the user's identity could not be confirmed; an optional detail in parentheses may follow"
   },
   "web.components.require_role.your_role_doesn_t_permit_access_to_this": {
     "defaultMessage": "Your role doesn't permit access to this page. Ask an administrator if you believe this is a mistake.",
-    "description": "Require role: text in p"
+    "description": "Require role: explanation under the access denied heading saying the user's role does not allow this page and to ask an administrator if this is a mistake"
   },
   "web.components.server.clone_server_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Clone server dialog: text in Button"
+    "description": "Clone server dialog: button that closes the dialog without cloning; keep it short"
   },
   "web.components.server.clone_server_dialog.clone_failed_status": {
     "defaultMessage": "Clone failed ({status}).",
@@ -2709,7 +2709,7 @@
   },
   "web.components.server.clone_server_dialog.creates_a_new_server_with_the_same": {
     "defaultMessage": "Creates a new server with the same configuration. World data is not copied.",
-    "description": "Clone server dialog: text in Description"
+    "description": "Clone server dialog: explanation under the Clone server title saying the copy gets the same configuration and that world data is not copied"
   },
   "web.components.server.clone_server_dialog.forbidden": {
     "defaultMessage": "Your role does not allow cloning servers.",
@@ -2717,11 +2717,11 @@
   },
   "web.components.server.clone_server_dialog.mc_survival_copy": {
     "defaultMessage": "mc-survival-copy",
-    "description": "Clone server dialog: placeholder of Input"
+    "description": "Clone server dialog: example value shown inside the empty new name field; a sample name, not a default value"
   },
   "web.components.server.clone_server_dialog.name_must_be_lowercase_letters_digits": {
     "defaultMessage": "Name must be lowercase letters, digits, dashes (max 63)",
-    "description": "Clone server dialog: text in FieldError"
+    "description": "Clone server dialog: validation error under the new name field shown when the name has invalid characters or is longer than the limit"
   },
   "web.components.server.clone_server_dialog.name_taken": {
     "defaultMessage": "A server named {name} already exists.",
@@ -2729,7 +2729,7 @@
   },
   "web.components.server.clone_server_dialog.new_name": {
     "defaultMessage": "New name",
-    "description": "Clone server dialog: text in Label"
+    "description": "Clone server dialog: label above the new name field for the copied server"
   },
   "web.components.server.clone_server_dialog.unknown_error": {
     "defaultMessage": "Unknown error",
@@ -2741,7 +2741,15 @@
   },
   "web.components.server.config_fields.false": {
     "defaultMessage": "false",
-    "description": "Config fields: text in option"
+    "description": "Config fields: dropdown option meaning the setting is off, the value false; keep it short"
+  },
+  "web.components.server.config_fields.option_select": {
+    "defaultMessage": "Select…",
+    "description": "Config fields: option label of an empty select with no value and no default, shown until a value is picked"
+  },
+  "web.components.server.config_fields.option_unchanged": {
+    "defaultMessage": "Unchanged",
+    "description": "Config fields: option label of an empty select whose stored value is kept as unchanged"
   },
   "web.components.server.config_fields.password_will_be_removed": {
     "defaultMessage": "Password will be removed",
@@ -2749,11 +2757,15 @@
   },
   "web.components.server.config_fields.remove_password": {
     "defaultMessage": "Remove password",
-    "description": "Config fields: text in Button"
+    "description": "Config fields: button under a stored password field that marks the password for removal; keep it short"
+  },
+  "web.components.server.config_fields.removing_password_note": {
+    "defaultMessage": "Removed when you save. Undo to keep the stored password.",
+    "description": "Config fields: note under a stored password field marked for removal; explains that the stored value is removed on save and Undo keeps it"
   },
   "web.components.server.config_fields.true": {
     "defaultMessage": "true",
-    "description": "Config fields: text in option"
+    "description": "Config fields: dropdown option meaning the setting is on, the value true; keep it short"
   },
   "web.components.server.config_fields.unchanged_type_to_replace": {
     "defaultMessage": "Unchanged — type to replace",
@@ -2761,15 +2773,15 @@
   },
   "web.components.server.config_fields.undo": {
     "defaultMessage": "Undo",
-    "description": "Config fields: text in Button"
+    "description": "Config fields: button under a password field that cancels the pending removal of the stored password; keep it short"
   },
   "web.components.server.config_fields.write_only": {
     "defaultMessage": "Write-only",
-    "description": "Config fields: text in p"
+    "description": "Config fields: small note under a password field saying the stored value is write-only and cannot be shown again"
   },
   "web.components.server.config_fields.written_to_file": {
     "defaultMessage": "Written to file",
-    "description": "Config fields: text in p"
+    "description": "Config fields: small note under a setting saying its value is written to a file rather than set directly"
   },
   "web.components.server.delete_server_dialog.delete_failed": {
     "defaultMessage": "delete failed",
@@ -2777,11 +2789,11 @@
   },
   "web.components.server.delete_server_dialog.delete_server": {
     "defaultMessage": "Delete server",
-    "description": "Delete server dialog: confirmLabel of ConfirmDialog"
+    "description": "Delete server dialog: confirm button that deletes the server once the user has typed the server name; keep it short"
   },
   "web.components.server.delete_server_dialog.this_will_permanently_remove_the": {
     "defaultMessage": "This will permanently remove the GameServer resource and detach its persistent volume. Data will be reclaimed by the cluster according to the StorageClass reclaim policy.",
-    "description": "Delete server dialog: text in Fragment"
+    "description": "Delete server dialog: warning that the GameServer resource is removed permanently and its volume detached, with data reclaimed per the StorageClass policy; resource names are kept in English"
   },
   "web.components.server.delete_server_dialog.title": {
     "defaultMessage": "Delete {name}?",
@@ -2797,19 +2809,19 @@
   },
   "web.components.server.port_overrides_editor.add_override": {
     "defaultMessage": "Add override",
-    "description": "Port overrides editor: text in Button"
+    "description": "Port overrides editor: button that adds a new port override row; keep it short"
   },
   "web.components.server.port_overrides_editor.game": {
     "defaultMessage": "game",
-    "description": "Port overrides editor: placeholder of Input"
+    "description": "Port overrides editor: example value shown inside the empty port name field of a row; a sample port name, not a default value"
   },
   "web.components.server.port_overrides_editor.nodeport": {
     "defaultMessage": "NodePort",
-    "description": "Port overrides editor: text in span"
+    "description": "Port overrides editor: column heading for the NodePort number in the list of port overrides; NodePort is a technical term, usually left untranslated; keep it short"
   },
   "web.components.server.port_overrides_editor.port_name": {
     "defaultMessage": "Port name",
-    "description": "Port overrides editor: text in span"
+    "description": "Port overrides editor: column heading for the port name in the list of port overrides; keep it short"
   },
   "web.components.server.port_overrides_editor.port_range_placeholder": {
     "defaultMessage": "30000-32767",
@@ -2817,11 +2829,11 @@
   },
   "web.components.server.port_overrides_editor.remove": {
     "defaultMessage": "Remove",
-    "description": "Port overrides editor: aria-label of Button"
+    "description": "Port overrides editor: icon-only button that removes this override row; its screen-reader name and tooltip read Remove; keep it short"
   },
   "web.components.server.port_overrides_editor.service_port": {
     "defaultMessage": "Service port",
-    "description": "Port overrides editor: text in span"
+    "description": "Port overrides editor: column heading for the service port number in the list of port overrides; keep it short"
   },
   "web.components.server.server_actions_card.action_failed": {
     "defaultMessage": "action failed",
@@ -2837,15 +2849,15 @@
   },
   "web.components.server.server_actions_card.actions": {
     "defaultMessage": "Actions",
-    "description": "Server actions card: text in div"
+    "description": "Server actions card: small heading above the actions that do not belong to a group"
   },
   "web.components.server.server_actions_card.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Server actions card: text in Button"
+    "description": "Server actions card: button that closes the action confirmation dialog without running the action; keep it short"
   },
   "web.components.server.server_actions_card.dismiss": {
     "defaultMessage": "dismiss",
-    "description": "Server actions card: text in button"
+    "description": "Server actions card: small button that clears the status message shown after an action; keep it short"
   },
   "web.components.server.server_actions_card.forbidden_run": {
     "defaultMessage": "Your role does not allow running actions.",
@@ -2869,7 +2881,7 @@
   },
   "web.components.server.server_actions_card.open_console": {
     "defaultMessage": "Open console",
-    "description": "Server actions card: label of LifecycleButton"
+    "description": "Server actions card: button that opens the server's console; keep it short"
   },
   "web.components.server.server_actions_card.param_required": {
     "defaultMessage": "{name} is required",
@@ -2881,7 +2893,7 @@
   },
   "web.components.server.server_actions_card.quick_actions": {
     "defaultMessage": "Quick actions",
-    "description": "Server actions card: text in h2"
+    "description": "Server actions card: heading of the card that holds the server's quick action buttons"
   },
   "web.components.server.server_actions_card.request_failed_status": {
     "defaultMessage": "request failed ({status})",
@@ -2893,7 +2905,7 @@
   },
   "web.components.server.server_actions_card.restart": {
     "defaultMessage": "Restart",
-    "description": "Server actions card: label of LifecycleButton"
+    "description": "Server actions card: button that restarts the server; keep it short"
   },
   "web.components.server.server_actions_card.run": {
     "defaultMessage": "Run",
@@ -2901,7 +2913,7 @@
   },
   "web.components.server.server_actions_card.run_this_action_now": {
     "defaultMessage": "Run this action now?",
-    "description": "Server actions card: text in p"
+    "description": "Server actions card: question in the confirmation dialog asking whether to run the action; shown when the action has no parameters to fill in"
   },
   "web.components.server.server_actions_card.running": {
     "defaultMessage": "Running…",
@@ -2909,23 +2921,23 @@
   },
   "web.components.server.server_actions_card.start": {
     "defaultMessage": "Start",
-    "description": "Server actions card: label of LifecycleButton"
+    "description": "Server actions card: button that starts a stopped server; keep it short"
   },
   "web.components.server.server_actions_card.stop": {
     "defaultMessage": "Stop",
-    "description": "Server actions card: label of LifecycleButton"
+    "description": "Server actions card: button that stops the running server; keep it short"
   },
   "web.components.server.server_actions_card.wake": {
     "defaultMessage": "Wake",
-    "description": "Server actions card: label of LifecycleButton"
+    "description": "Server actions card: button that wakes a sleeping server; keep it short"
   },
   "web.components.server.server_actions_menu.clone_server": {
     "defaultMessage": "Clone server",
-    "description": "Server actions menu: label of DropdownMenuItem"
+    "description": "Server actions menu: menu item that opens the Clone server dialog; keep it short"
   },
   "web.components.server.server_actions_menu.delete_server": {
     "defaultMessage": "Delete server",
-    "description": "Server actions menu: label of DropdownMenuItem"
+    "description": "Server actions menu: destructive menu item that opens the delete server dialog; keep it short"
   },
   "web.components.server.server_actions_menu.requires_operator_role": {
     "defaultMessage": "Requires operator role",
@@ -2937,15 +2949,15 @@
   },
   "web.components.server.server_actions_menu.server_actions": {
     "defaultMessage": "Server actions",
-    "description": "Server actions menu: aria-label of DropdownMenuTrigger"
+    "description": "Server actions menu: screen-reader label for the icon-only menu button that opens the server actions; not visible on screen"
   },
   "web.components.server.server_actions_menu.transfer_ownership": {
     "defaultMessage": "Transfer ownership",
-    "description": "Server actions menu: label of DropdownMenuItem"
+    "description": "Server actions menu: menu item that opens the transfer ownership dialog; disabled with a hint for users without the operator role; keep it short"
   },
   "web.components.server.server_actions_menu.wipe_world_data": {
     "defaultMessage": "Wipe world data",
-    "description": "Server actions menu: label of DropdownMenuItem"
+    "description": "Server actions menu: menu item that opens the wipe world data dialog; disabled with a hint for users without owner or operator rights; keep it short"
   },
   "web.components.server.server_sleep_card.afterminutes_minute": {
     "defaultMessage": "{afterMinutes, plural, one {# minute} other {# minutes}}",
@@ -2953,15 +2965,15 @@
   },
   "web.components.server.server_sleep_card.asleep": {
     "defaultMessage": "Asleep",
-    "description": "Server sleep card: text in dd"
+    "description": "Server sleep card: value shown for the sleep state when the server is asleep"
   },
   "web.components.server.server_sleep_card.asleep_since": {
     "defaultMessage": "Asleep since",
-    "description": "Server sleep card: text in dt"
+    "description": "Server sleep card: label in the sleep details for when the server fell asleep, shown in relative time"
   },
   "web.components.server.server_sleep_card.configured": {
     "defaultMessage": "Configured",
-    "description": "Server sleep card: text in div"
+    "description": "Server sleep card: small heading above the configured sleep settings"
   },
   "web.components.server.server_sleep_card.counting_down": {
     "defaultMessage": "Counting down",
@@ -2969,19 +2981,19 @@
   },
   "web.components.server.server_sleep_card.empty_since": {
     "defaultMessage": "Empty since",
-    "description": "Server sleep card: text in dt"
+    "description": "Server sleep card: label in the sleep details for when the server became empty of players, shown in relative time"
   },
   "web.components.server.server_sleep_card.idle_auto_sleep_needs_a_live_player": {
     "defaultMessage": "Idle auto-sleep needs a live player count. This game exposes none over RCON or a query protocol, so the countdown never starts.",
-    "description": "Server sleep card: text in p"
+    "description": "Server sleep card: note under the never-sleep warning; idle auto-sleep needs a live player count this game cannot give, so the countdown never starts"
   },
   "web.components.server.server_sleep_card.last_woken": {
     "defaultMessage": "Last woken",
-    "description": "Server sleep card: text in dt"
+    "description": "Server sleep card: label in the sleep details for when the server was last woken, shown in relative time"
   },
   "web.components.server.server_sleep_card.not_configured": {
     "defaultMessage": "Not configured",
-    "description": "Server sleep card: text in dd"
+    "description": "Server sleep card: value shown in the scheduled sleep line when no cron schedule is set"
   },
   "web.components.server.server_sleep_card.reason_sentence": {
     "defaultMessage": "{reason}.",
@@ -2989,31 +3001,31 @@
   },
   "web.components.server.server_sleep_card.sleep": {
     "defaultMessage": "Sleep",
-    "description": "Server sleep card: text in h3"
+    "description": "Server sleep card: heading of the card that shows the server's sleep state"
   },
   "web.components.server.server_sleep_card.sleep_after": {
     "defaultMessage": "Sleep after",
-    "description": "Server sleep card: text in dt"
+    "description": "Server sleep card: label for the idle time before the server sleeps; the value beside it is the configured number of minutes"
   },
   "web.components.server.server_sleep_card.state": {
     "defaultMessage": "State",
-    "description": "Server sleep card: text in dt"
+    "description": "Server sleep card: label in the sleep details for the current sleep state, such as Asleep or Counting down"
   },
   "web.components.server.server_sleep_card.waiting_for_the_operator": {
     "defaultMessage": "Waiting for the operator",
-    "description": "Server sleep card: text in span"
+    "description": "Server sleep card: status text shown after sleep is enabled, until the operator has applied the change"
   },
   "web.components.server.server_sleep_card.waking_takes_normal_boot_time_before": {
     "defaultMessage": "Waking takes normal boot time before players can connect.",
-    "description": "Server sleep card: text in div"
+    "description": "Server sleep card: note in the countdown state saying that waking takes normal boot time before players can connect"
   },
   "web.components.server.server_sleep_card.will_never_sleep": {
     "defaultMessage": "Will never sleep",
-    "description": "Server sleep card: text in div"
+    "description": "Server sleep card: heading of the warning shown when the server will never go to sleep; the reason is shown in the text below"
   },
   "web.components.server.server_status_card.game_status": {
     "defaultMessage": "Game status",
-    "description": "Server status card: text in h3"
+    "description": "Server status card: heading of the card that shows the game's status figures"
   },
   "web.components.server.server_status_card.offline": {
     "defaultMessage": "offline",
@@ -3021,23 +3033,23 @@
   },
   "web.components.server.server_status_card.phase": {
     "defaultMessage": "Phase",
-    "description": "Server status card: label of GenericStatusRow"
+    "description": "Server status card: label of the row showing the server's current phase; a dash is shown when it is unknown"
   },
   "web.components.server.server_status_card.players": {
     "defaultMessage": "Players",
-    "description": "Server status card: label of GenericStatusRow"
+    "description": "Server status card: label of the row showing how many players are online"
   },
   "web.components.server.server_status_card.uptime": {
     "defaultMessage": "Uptime",
-    "description": "Server status card: label of GenericStatusRow"
+    "description": "Server status card: label of the row showing how long the server has been running"
   },
   "web.components.server.server_status_card.version": {
     "defaultMessage": "Version",
-    "description": "Server status card: label of GenericStatusRow"
+    "description": "Server status card: label of the row showing the installed game version; a dash is shown when it is unknown"
   },
   "web.components.server.transfer_server_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Transfer server dialog: text in Button"
+    "description": "Transfer server dialog: button that closes the dialog without transferring the server; keep it short"
   },
   "web.components.server.transfer_server_dialog.current_owner": {
     "defaultMessage": "Current owner: {owner}.",
@@ -3061,7 +3073,7 @@
   },
   "web.components.server.transfer_server_dialog.transfer_to": {
     "defaultMessage": "Transfer to",
-    "description": "Transfer server dialog: aria-label of ListBox"
+    "description": "Transfer server dialog: screen-reader name of the list of users to pick as the new owner; not visible on screen"
   },
   "web.components.server.transfer_server_dialog.transferring": {
     "defaultMessage": "Transferring…",
@@ -3073,23 +3085,23 @@
   },
   "web.components.server.transfer_server_dialog.you_need_permission_to_list_users_to": {
     "defaultMessage": "You need permission to list users to pick a recipient.",
-    "description": "Transfer server dialog: text in div"
+    "description": "Transfer server dialog: error text shown when the user lacks permission to list users, so no new owner can be picked"
   },
   "web.components.server.wipe_server_dialog.backups_are_not_removed_this_cannot_be": {
     "defaultMessage": ". Backups are not removed. This cannot be undone.",
-    "description": "Wipe server dialog: text in div"
+    "description": "Wipe server dialog: second part of the warning after the server name, saying backups are kept and the action cannot be undone"
   },
   "web.components.server.wipe_server_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Wipe server dialog: text in Button"
+    "description": "Wipe server dialog: button that closes the dialog without wiping the world; keep it short"
   },
   "web.components.server.wipe_server_dialog.i_understand_this_will_permanently": {
     "defaultMessage": "I understand this will permanently delete the world data",
-    "description": "Wipe server dialog: text in Checkbox.Content"
+    "description": "Wipe server dialog: checkbox label where the user confirms that the world data will be permanently deleted"
   },
   "web.components.server.wipe_server_dialog.this_permanently_deletes_the_world_data": {
     "defaultMessage": "This permanently deletes the world data for",
-    "description": "Wipe server dialog: text in div"
+    "description": "Wipe server dialog: first part of the warning that the world data is permanently deleted; the server name follows it"
   },
   "web.components.server.wipe_server_dialog.wipe_failed": {
     "defaultMessage": "wipe failed",
@@ -3097,7 +3109,7 @@
   },
   "web.components.server.wipe_server_dialog.wipe_world": {
     "defaultMessage": "Wipe world?",
-    "description": "Wipe server dialog: text in AlertDialogHeading"
+    "description": "Wipe server dialog: title of the danger-styled confirmation dialog asking whether to wipe the world"
   },
   "web.components.server.wipe_server_dialog.wipe_world_button": {
     "defaultMessage": "Wipe world",
@@ -3109,11 +3121,11 @@
   },
   "web.components.ui.admin.edit_user_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Edit user dialog: text in Button"
+    "description": "Edit user dialog: button that closes the dialog without saving; keep it short"
   },
   "web.components.ui.admin.edit_user_dialog.display_name": {
     "defaultMessage": "Display name",
-    "description": "Edit user dialog: text in Label"
+    "description": "Edit user dialog: label above the display name field; the same words are the field's placeholder"
   },
   "web.components.ui.admin.edit_user_dialog.display_name_is_required": {
     "defaultMessage": "Display name is required",
@@ -3121,15 +3133,15 @@
   },
   "web.components.ui.admin.edit_user_dialog.edit_user": {
     "defaultMessage": "Edit user",
-    "description": "Edit user dialog: text in ModalHeading"
+    "description": "Edit user dialog: title of the dialog for editing a user; the username appears under the title"
   },
   "web.components.ui.admin.edit_user_dialog.email": {
     "defaultMessage": "Email",
-    "description": "Edit user dialog: text in Label"
+    "description": "Edit user dialog: label above the email address field"
   },
   "web.components.ui.admin.edit_user_dialog.email_example_com": {
     "defaultMessage": "email@example.com",
-    "description": "Edit user dialog: placeholder of Input"
+    "description": "Edit user dialog: example value shown inside the empty email field; a sample address, keep it as written"
   },
   "web.components.ui.admin.edit_user_dialog.email_is_required": {
     "defaultMessage": "Email is required",
@@ -3137,11 +3149,11 @@
   },
   "web.components.ui.admin.edit_user_dialog.primary_role": {
     "defaultMessage": "Primary role",
-    "description": "Edit user dialog: aria-label of ListBox"
+    "description": "Edit user dialog: screen-reader name of the list of roles in the primary role dropdown; not visible on screen"
   },
   "web.components.ui.admin.edit_user_dialog.primary_role_cluster_wide": {
     "defaultMessage": "Primary role (cluster-wide)",
-    "description": "Edit user dialog: text in Label"
+    "description": "Edit user dialog: label above the primary role dropdown; the role applies across the whole cluster"
   },
   "web.components.ui.admin.edit_user_dialog.role_is_required": {
     "defaultMessage": "Role is required",
@@ -3157,19 +3169,19 @@
   },
   "web.components.ui.admin.edit_user_dialog.you_can_t_remove_your_own_ability_to": {
     "defaultMessage": "You can’t remove your own ability to manage users.",
-    "description": "Edit user dialog: text in p"
+    "description": "Edit user dialog: warning shown under the role dropdown when the change would remove the user's own ability to manage users"
   },
   "web.components.ui.admin.invite_user_dialog.alice": {
     "defaultMessage": "alice",
-    "description": "Invite user dialog: placeholder of Input"
+    "description": "Invite user dialog: example value shown inside the empty username field; a sample name, not a default value"
   },
   "web.components.ui.admin.invite_user_dialog.alice_example_com": {
     "defaultMessage": "alice@example.com",
-    "description": "Invite user dialog: placeholder of Input"
+    "description": "Invite user dialog: example value shown inside the empty email field; a sample address, keep it as written"
   },
   "web.components.ui.admin.invite_user_dialog.alice_operator": {
     "defaultMessage": "Alice Operator",
-    "description": "Invite user dialog: placeholder of Input"
+    "description": "Invite user dialog: example value shown inside the empty display name field; a sample name, not a default value"
   },
   "web.components.ui.admin.invite_user_dialog.at_least_characters": {
     "defaultMessage": "At least {min} characters.",
@@ -3177,15 +3189,15 @@
   },
   "web.components.ui.admin.invite_user_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Invite user dialog: text in Button"
+    "description": "Invite user dialog: button that closes the dialog without inviting the user; keep it short"
   },
   "web.components.ui.admin.invite_user_dialog.create_a_local_account_leave_password": {
     "defaultMessage": "Create a local account. Leave password blank to send an OIDC invite later.",
-    "description": "Invite user dialog: text in Description"
+    "description": "Invite user dialog: explanation under the Invite user title saying a local account is created, and that a blank password sends an OIDC invite later; OIDC is a technical term, usually left untranslated"
   },
   "web.components.ui.admin.invite_user_dialog.display_name": {
     "defaultMessage": "Display name",
-    "description": "Invite user dialog: text in Label"
+    "description": "Invite user dialog: label above the display name field"
   },
   "web.components.ui.admin.invite_user_dialog.display_name_is_required": {
     "defaultMessage": "Display name is required",
@@ -3193,7 +3205,7 @@
   },
   "web.components.ui.admin.invite_user_dialog.email": {
     "defaultMessage": "Email",
-    "description": "Invite user dialog: text in Label"
+    "description": "Invite user dialog: label above the email field"
   },
   "web.components.ui.admin.invite_user_dialog.email_is_required": {
     "defaultMessage": "Email is required",
@@ -3201,7 +3213,7 @@
   },
   "web.components.ui.admin.invite_user_dialog.initial_password": {
     "defaultMessage": "Initial password",
-    "description": "Invite user dialog: text in Label"
+    "description": "Invite user dialog: label above the initial password field, which can be left blank"
   },
   "web.components.ui.admin.invite_user_dialog.invite_user": {
     "defaultMessage": "Invite user",
@@ -3225,11 +3237,11 @@
   },
   "web.components.ui.admin.invite_user_dialog.role": {
     "defaultMessage": "Role",
-    "description": "Invite user dialog: text in Label"
+    "description": "Invite user dialog: label above the role dropdown, shown only when roles are available"
   },
   "web.components.ui.admin.invite_user_dialog.username": {
     "defaultMessage": "Username",
-    "description": "Invite user dialog: text in Label"
+    "description": "Invite user dialog: label above the username field"
   },
   "web.components.ui.admin.invite_user_dialog.username_is_required": {
     "defaultMessage": "Username is required",
@@ -3241,7 +3253,7 @@
   },
   "web.components.ui.admin.reset_password_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Reset password dialog: text in Button"
+    "description": "Reset password dialog: button that closes the dialog without resetting the password; keep it short"
   },
   "web.components.ui.admin.reset_password_dialog.must_be_at_least_characters": {
     "defaultMessage": "Must be at least {min} characters.",
@@ -3249,7 +3261,7 @@
   },
   "web.components.ui.admin.reset_password_dialog.new_password": {
     "defaultMessage": "New password",
-    "description": "Reset password dialog: text in Label"
+    "description": "Reset password dialog: label above the new password field"
   },
   "web.components.ui.admin.reset_password_dialog.password_hint": {
     "defaultMessage": "At least {min} characters",
@@ -3273,27 +3285,27 @@
   },
   "web.components.ui.admin.reset_password_dialog.they_will_need_to_sign_in_again_with": {
     "defaultMessage": "They will need to sign in again with the new password.",
-    "description": "Reset password dialog: text in Description"
+    "description": "Reset password dialog: explanation under the Reset password title saying the user must sign in again with the new password"
   },
   "web.components.ui.app_loading_skeleton.admin": {
     "defaultMessage": "Admin",
-    "description": "App loading skeleton: text in div"
+    "description": "App loading skeleton: placeholder heading above the admin group of navigation items while the page loads"
   },
   "web.components.ui.app_loading_skeleton.gameplane": {
     "defaultMessage": "gameplane",
-    "description": "App loading skeleton: text in div"
+    "description": "App loading skeleton: product name shown in the placeholder header while the app loads; keep the name as written"
   },
   "web.components.ui.app_loading_skeleton.general": {
     "defaultMessage": "General",
-    "description": "App loading skeleton: text in div"
+    "description": "App loading skeleton: placeholder heading above the first group of navigation items while the page loads"
   },
   "web.components.ui.app_loading_skeleton.loading": {
     "defaultMessage": "Loading",
-    "description": "App loading skeleton: aria-label of div"
+    "description": "App loading skeleton: screen-reader label announced while the app is loading; not visible on screen"
   },
   "web.components.ui.appearance_toggle.appearance": {
     "defaultMessage": "Appearance",
-    "description": "Appearance toggle: aria-label of div"
+    "description": "Appearance toggle: screen-reader name of the group of theme buttons for dark, light or system appearance; not visible on screen"
   },
   "web.components.ui.appearance_toggle.dark": {
     "defaultMessage": "Dark",
@@ -3313,11 +3325,11 @@
   },
   "web.components.ui.audit_integrity_banner.dismiss_audit_integrity_alert": {
     "defaultMessage": "Dismiss audit integrity alert",
-    "description": "Audit integrity banner: aria-label of button"
+    "description": "Audit integrity banner: screen-reader name of the icon-only close button on the alert; not visible on screen"
   },
   "web.components.ui.audit_integrity_banner.re_check": {
     "defaultMessage": "Re-check",
-    "description": "Audit integrity banner: text in Button"
+    "description": "Audit integrity banner: button that runs the audit integrity check again; keep it short"
   },
   "web.components.ui.breadcrumbs.audit_log": {
     "defaultMessage": "Audit log",
@@ -3329,7 +3341,7 @@
   },
   "web.components.ui.breadcrumbs.breadcrumb": {
     "defaultMessage": "Breadcrumb",
-    "description": "Breadcrumbs: aria-label of nav"
+    "description": "Breadcrumbs: screen-reader name of the navigation area holding the breadcrumb trail; not visible on screen"
   },
   "web.components.ui.breadcrumbs.cluster": {
     "defaultMessage": "Cluster",
@@ -3373,47 +3385,47 @@
   },
   "web.components.ui.capture_warning_banner.caution_network_packet_captures_contain": {
     "defaultMessage": "Caution: network packet captures contain real player data",
-    "description": "Capture warning banner: text in Alert.Title"
+    "description": "Capture warning banner: title of the warning shown with captures, saying they contain real player data"
   },
   "web.components.ui.capture_warning_banner.dismiss": {
     "defaultMessage": "Dismiss",
-    "description": "Capture warning banner: text in button"
+    "description": "Capture warning banner: link-style button that hides the warning; keep it short"
   },
   "web.components.ui.capture_warning_banner.for_some_games_in_band_credentials": {
     "defaultMessage": "• For some games, in-band credentials (passwords, tokens, session keys)",
-    "description": "Capture warning banner: text in li"
+    "description": "Capture warning banner: third bullet saying some games send passwords, tokens or session keys in captures; the bullet mark is part of the text"
   },
   "web.components.ui.capture_warning_banner.network_timing_and_game_protocol": {
     "defaultMessage": "• Network timing and game protocol messages",
-    "description": "Capture warning banner: text in li"
+    "description": "Capture warning banner: second bullet in the list of what captures can contain, naming network timing and game protocol messages; the bullet mark is part of the text"
   },
   "web.components.ui.capture_warning_banner.player_ip_addresses_and_port_numbers": {
     "defaultMessage": "• Player IP addresses and port numbers",
-    "description": "Capture warning banner: text in li"
+    "description": "Capture warning banner: first bullet in the list of what captures can contain, naming player IP addresses and port numbers; the bullet mark is part of the text"
   },
   "web.components.ui.confirm_admin_mapping_dialog.confirm_admin_role_mapping": {
     "defaultMessage": "Confirm admin role mapping?",
-    "description": "Confirm admin mapping dialog: title of ConfirmDialog"
+    "description": "Confirm admin mapping dialog: title of the dialog asking the user to confirm the admin role mapping"
   },
   "web.components.ui.confirm_admin_mapping_dialog.full_admin_access": {
     "defaultMessage": "Full admin access",
-    "description": "Confirm admin mapping dialog: text in div"
+    "description": "Confirm admin mapping dialog: bold warning heading shown above the explanation of mapping users to the admin role"
   },
   "web.components.ui.confirm_admin_mapping_dialog.group_s_being_mapped_to_admin": {
     "defaultMessage": "Group(s) being mapped to admin:",
-    "description": "Confirm admin mapping dialog: text in p"
+    "description": "Confirm admin mapping dialog: label above the list of groups that are being mapped to the admin role"
   },
   "web.components.ui.confirm_admin_mapping_dialog.map_to_admin_role": {
     "defaultMessage": "Map to admin role",
-    "description": "Confirm admin mapping dialog: confirmLabel of ConfirmDialog"
+    "description": "Confirm admin mapping dialog: confirm button that maps the groups to the admin role; keep it short"
   },
   "web.components.ui.confirm_admin_mapping_dialog.mapping_users_to_the_admin_role_grants": {
     "defaultMessage": "Mapping users to the admin role grants full cluster control. Ensure the mapped group contains only authorized personnel. Anyone in these groups gets full admin access from their next login.",
-    "description": "Confirm admin mapping dialog: text in p"
+    "description": "Confirm admin mapping dialog: warning that the admin role grants full cluster control, so only trusted people belong in the mapped groups; applies at next sign-in"
   },
   "web.components.ui.confirm_dialog.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Confirm dialog: text in Button"
+    "description": "Confirm dialog: button that closes the confirmation dialog without confirming; keep it short"
   },
   "web.components.ui.confirm_dialog.confirm": {
     "defaultMessage": "Confirm",
@@ -3425,7 +3437,7 @@
   },
   "web.components.ui.confirm_dialog.type_to_confirm": {
     "defaultMessage": "Type to confirm",
-    "description": "Confirm dialog: placeholder of Input"
+    "description": "Confirm dialog: placeholder inside the field where the user retypes the phrase shown above to confirm"
   },
   "web.components.ui.confirm_dialog.working": {
     "defaultMessage": "Working…",
@@ -3441,31 +3453,31 @@
   },
   "web.components.ui.error_banner.dismiss_error": {
     "defaultMessage": "Dismiss error",
-    "description": "Error banner: aria-label of button"
+    "description": "Error banner: screen-reader name of the icon-only close button on an error message; not visible on screen"
   },
   "web.components.ui.error_card.dismiss_error": {
     "defaultMessage": "Dismiss error",
-    "description": "Error card: aria-label of button"
+    "description": "Error card: screen-reader name of the icon-only button that hides the error card; not visible on screen"
   },
   "web.components.ui.error_card.retry": {
     "defaultMessage": "Retry",
-    "description": "Error card: text in button"
+    "description": "Error card: button that retries the failed request; keep it short"
   },
   "web.components.ui.filter_popover.apply": {
     "defaultMessage": "Apply",
-    "description": "Filter popover: text in Button"
+    "description": "Filter popover: button that applies the chosen filters; keep it short"
   },
   "web.components.ui.filter_popover.clear": {
     "defaultMessage": "Clear",
-    "description": "Filter popover: text in Button"
+    "description": "Filter popover: button that clears all chosen filters; keep it short"
   },
   "web.components.ui.filter_popover.game": {
     "defaultMessage": "Game",
-    "description": "Filter popover: text in div"
+    "description": "Filter popover: small heading above the game choices in the filter menu"
   },
   "web.components.ui.filter_popover.namespace": {
     "defaultMessage": "Namespace",
-    "description": "Filter popover: text in div"
+    "description": "Filter popover: small heading above the namespace choices in the filter menu"
   },
   "web.components.ui.global_search.no_matches_in_available_results": {
     "defaultMessage": "No matches in available results.",
@@ -3481,15 +3493,15 @@
   },
   "web.components.ui.global_search.search_results_are_partial": {
     "defaultMessage": "Search results are partial.",
-    "description": "Global search: text in p"
+    "description": "Global search: status note at the top of the results list saying some results may be missing"
   },
   "web.components.ui.global_search.search_servers": {
     "defaultMessage": "Search servers",
-    "description": "Global search: aria-label of SearchFieldRoot"
+    "description": "Global search: screen-reader name of the server search box, which is hidden on narrow screens; not visible on screen"
   },
   "web.components.ui.global_search.search_servers_2": {
     "defaultMessage": "Search servers…",
-    "description": "Global search: placeholder of SearchFieldInput"
+    "description": "Global search: example hint inside the server search box telling the user what to type; the ellipsis is part of the text"
   },
   "web.components.ui.loading_card.loading": {
     "defaultMessage": "Loading…",
@@ -3505,15 +3517,15 @@
   },
   "web.components.ui.notifications_panel.no_recent_activity": {
     "defaultMessage": "No recent activity.",
-    "description": "Notifications panel: text in div"
+    "description": "Notifications panel: empty-state text shown when there are no recent notifications"
   },
   "web.components.ui.notifications_panel.notifications": {
     "defaultMessage": "Notifications",
-    "description": "Notifications panel: aria-label of div"
+    "description": "Notifications panel: screen-reader name of the trigger that opens the notifications list; not visible on screen"
   },
   "web.components.ui.notifications_panel.recent_activity": {
     "defaultMessage": "Recent activity",
-    "description": "Notifications panel: text in div"
+    "description": "Notifications panel: heading at the top of the notifications list showing recent activity"
   },
   "web.components.ui.notifications_panel.unread_overflow": {
     "defaultMessage": "9+",
@@ -3601,7 +3613,7 @@
   },
   "web.components.ui.role_editor_modal.cancel": {
     "defaultMessage": "Cancel",
-    "description": "Role editor modal: text in Button"
+    "description": "Role editor dialog: button that closes the role editor without saving; keep it short"
   },
   "web.components.ui.role_editor_modal.create_role": {
     "defaultMessage": "Create role",
@@ -3609,7 +3621,7 @@
   },
   "web.components.ui.role_editor_modal.description": {
     "defaultMessage": "Description",
-    "description": "Role editor modal: text in Label"
+    "description": "Role editor dialog: label above the optional description field for the role"
   },
   "web.components.ui.role_editor_modal.edit_role": {
     "defaultMessage": "Edit role: {name}",
@@ -3617,15 +3629,15 @@
   },
   "web.components.ui.role_editor_modal.grant_a_curated_set_of_permissions": {
     "defaultMessage": "Grant a curated set of permissions.",
-    "description": "Role editor modal: text in Description"
+    "description": "Role editor dialog: explanation under the title saying the role grants a curated set of permissions"
   },
   "web.components.ui.role_editor_modal.manage_game_servers_backups_templates": {
     "defaultMessage": "Manage game servers, backups, templates, and schedules.",
-    "description": "Role editor modal: placeholder of Input"
+    "description": "Role editor dialog: example value shown inside the empty role description field, hinting what a role can cover"
   },
   "web.components.ui.role_editor_modal.name": {
     "defaultMessage": "Name",
-    "description": "Role editor modal: text in Label"
+    "description": "Role editor dialog: label above the role name field; shown only when creating a new role, not when editing"
   },
   "web.components.ui.role_editor_modal.new_role": {
     "defaultMessage": "New role",
@@ -3633,7 +3645,7 @@
   },
   "web.components.ui.role_editor_modal.ns": {
     "defaultMessage": "ns",
-    "description": "Role editor modal: text in span"
+    "description": "Role editor dialog: small tag shown next to a permission name to mark it as namespaced; ns is short for namespace; keep it short"
   },
   "web.components.ui.role_editor_modal.save_role": {
     "defaultMessage": "Save role",
@@ -3645,19 +3657,19 @@
   },
   "web.components.ui.role_editor_modal.support": {
     "defaultMessage": "support",
-    "description": "Role editor modal: placeholder of Input"
+    "description": "Role editor dialog: example value shown inside the empty role name field; a sample role name, not a default value"
   },
   "web.components.ui.safe_mode_banner.dismiss": {
     "defaultMessage": "Dismiss",
-    "description": "Safe mode banner: text in button"
+    "description": "Safe mode banner: link-style button that hides the Safe Mode banner; keep it short"
   },
   "web.components.ui.safe_mode_banner.open_appearance_settings": {
     "defaultMessage": "Open Appearance Settings",
-    "description": "Safe mode banner: text in button"
+    "description": "Safe mode banner: link-style button that opens the Appearance settings; keep it short"
   },
   "web.components.ui.safe_mode_banner.safe_mode_active_custom_css_is_suspended": {
     "defaultMessage": "Safe Mode Active: Custom CSS is suspended.",
-    "description": "Safe mode banner: text in p"
+    "description": "Safe mode banner: warning saying Safe Mode is active and custom CSS is suspended; CSS is a technical term, usually left untranslated"
   },
   "web.components.ui.settings_nav.about": {
     "defaultMessage": "About",
@@ -3689,7 +3701,7 @@
   },
   "web.components.ui.settings_nav.settings_sections": {
     "defaultMessage": "Settings sections",
-    "description": "Settings nav: aria-label of nav"
+    "description": "Settings navigation: screen-reader name of the list of settings sections; not visible on screen"
   },
   "web.components.ui.settings_nav.telemetry": {
     "defaultMessage": "Telemetry",
@@ -3705,15 +3717,15 @@
   },
   "web.components.ui.sidebar.close_navigation": {
     "defaultMessage": "Close navigation",
-    "description": "Sidebar: aria-label of button"
+    "description": "Sidebar: icon-only button that closes the navigation drawer on small screens; screen-reader name, not visible on screen"
   },
   "web.components.ui.sidebar.customize_theme": {
     "defaultMessage": "Customize theme",
-    "description": "Sidebar: aria-label of button"
+    "description": "Sidebar: icon-only button for changing the theme; its tooltip and screen-reader name read Customize theme; keep it short"
   },
   "web.components.ui.sidebar.gameplane": {
     "defaultMessage": "gameplane",
-    "description": "Sidebar: text in div"
+    "description": "Sidebar: product name shown at the top of the side navigation, with the cluster name beneath it; keep the name as written"
   },
   "web.components.ui.sidebar.guest": {
     "defaultMessage": "guest",
@@ -3729,51 +3741,51 @@
   },
   "web.components.ui.sidebar.sidebar": {
     "defaultMessage": "Sidebar",
-    "description": "Sidebar: aria-label of aside"
+    "description": "Sidebar: screen-reader name of the side navigation panel; not visible on screen"
   },
   "web.components.ui.sidebar.sidebar_footer": {
     "defaultMessage": "Sidebar footer",
-    "description": "Sidebar: aria-label of div"
+    "description": "Sidebar: screen-reader name of the footer area at the bottom of the side navigation; not visible on screen"
   },
   "web.components.ui.sidebar.sign_out": {
     "defaultMessage": "Sign out",
-    "description": "Sidebar: aria-label of button"
+    "description": "Sidebar: icon-only button that signs the user out; screen-reader name, not visible on screen; keep it short"
   },
   "web.components.ui.telemetry_notice.anonymous_usage_metrics_are_on_for_this": {
     "defaultMessage": "Anonymous usage metrics are on for this install.",
-    "description": "Telemetry notice: text in p"
+    "description": "Telemetry notice: bold heading saying anonymous usage metrics are on for this installation"
   },
   "web.components.ui.telemetry_notice.basic_metrics": {
     "defaultMessage": "Basic metrics",
-    "description": "Telemetry notice: text in p"
+    "description": "Telemetry notice: heading of the first group of shared data, the basic metrics"
   },
   "web.components.ui.telemetry_notice.could_not_save_your_choice_try_again": {
     "defaultMessage": "Could not save your choice. Try again.",
-    "description": "Telemetry notice: text in p"
+    "description": "Telemetry notice: error message shown when saving the telemetry choice fails; it asks the user to try again"
   },
   "web.components.ui.telemetry_notice.data_handling_statement": {
     "defaultMessage": "Data-handling statement",
-    "description": "Telemetry notice: text in a"
+    "description": "Telemetry notice: link to the data-handling statement, which opens in a new tab; keep it short"
   },
   "web.components.ui.telemetry_notice.extended_metrics": {
     "defaultMessage": "Extended metrics",
-    "description": "Telemetry notice: text in p"
+    "description": "Telemetry notice: heading of the second group of shared data, the extended metrics"
   },
   "web.components.ui.telemetry_notice.gameplane_version_number_of_servers": {
     "defaultMessage": "Gameplane version, number of servers, number of templates.",
-    "description": "Telemetry notice: text in p"
+    "description": "Telemetry notice: description of the basic metrics, listing the Gameplane version, number of servers and number of templates"
   },
   "web.components.ui.telemetry_notice.keep_sharing": {
     "defaultMessage": "Keep sharing",
-    "description": "Telemetry notice: text in Button"
+    "description": "Telemetry notice: button that keeps the current telemetry sharing on; keep it short"
   },
   "web.components.ui.telemetry_notice.kubernetes_version_distribution_cpu": {
     "defaultMessage": "Kubernetes version, distribution, CPU architecture and node-count band; servers per official game module (others counted as custom); which optional features are in use; and a random install ID.",
-    "description": "Telemetry notice: text in p"
+    "description": "Telemetry notice: description of the extended metrics, listing the Kubernetes version, distribution, CPU architecture, node-count band, servers per game module, optional features and an install ID"
   },
   "web.components.ui.telemetry_notice.open_telemetry_settings": {
     "defaultMessage": "Open Telemetry settings",
-    "description": "Telemetry notice: text in button"
+    "description": "Telemetry notice: link-style button that opens the Telemetry settings; keep it short"
   },
   "web.components.ui.telemetry_notice.reports_are_sent_to_bundled": {
     "defaultMessage": "Reports are sent to <b>{host}</b>, the receiver bundled with this install. Reports stay inside your cluster.",
@@ -3789,15 +3801,15 @@
   },
   "web.components.ui.telemetry_notice.telemetry_notice": {
     "defaultMessage": "Telemetry notice",
-    "description": "Telemetry notice: aria-label of section"
+    "description": "Telemetry notice: screen-reader name of the notice about anonymous usage metrics; not visible on screen"
   },
   "web.components.ui.telemetry_notice.turn_off_all": {
     "defaultMessage": "Turn off all",
-    "description": "Telemetry notice: text in Button"
+    "description": "Telemetry notice: button that turns off all telemetry sharing; keep it short"
   },
   "web.components.ui.telemetry_notice.turn_off_extended": {
     "defaultMessage": "Turn off extended",
-    "description": "Telemetry notice: text in Button"
+    "description": "Telemetry notice: button that turns off the extended metrics only; keep it short"
   },
   "web.components.ui.top_bar.guest": {
     "defaultMessage": "guest",
@@ -3805,19 +3817,19 @@
   },
   "web.components.ui.top_bar.open_navigation": {
     "defaultMessage": "Open navigation",
-    "description": "Top bar: aria-label of Button"
+    "description": "Top bar: icon-only button that opens the navigation on small screens; screen-reader name, not visible on screen"
   },
   "web.components.ui.top_bar.sign_out": {
     "defaultMessage": "Sign out",
-    "description": "Top bar: text in div"
+    "description": "Top bar: user menu item that signs the user out; keep it short"
   },
   "web.components.ui.top_bar.theme_appearance": {
     "defaultMessage": "Theme & Appearance",
-    "description": "Top bar: text in div"
+    "description": "Top bar: user menu item that opens the Theme and Appearance settings; keep it short"
   },
   "web.components.ui.top_bar.user_menu": {
     "defaultMessage": "User menu",
-    "description": "Top bar: aria-label of DropdownTrigger"
+    "description": "Top bar: screen-reader name of the user avatar dropdown menu; not visible on screen"
   },
   "web.lib.errors.request_failed": {
     "defaultMessage": "request failed",

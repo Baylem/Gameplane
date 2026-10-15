@@ -371,7 +371,7 @@ export function BuildModuleDialog({
           <ModalDialog className="w-[840px] max-w-[calc(100vw-2rem)] overflow-hidden flex flex-col max-h-[90vh]">
             <ModalHeader>
               <div className="w-full">
-                <ModalHeading className="text-lg font-semibold">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.create_game_module", defaultMessage: "Create game module", description: "Build module dialog: text in ModalHeading" })}</ModalHeading>
+                <ModalHeading className="text-lg font-semibold">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.create_game_module", defaultMessage: "Create game module", description: "Build module dialog: title of the three-step wizard for creating a new game module" })}</ModalHeading>
                 <Description className="text-xs text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.step_step_of_3", defaultMessage: "Step {step} of 3 ·", description: "Build module dialog: sentence with step in Description" }, { step: step })} {step === 1
                     ? intl.formatMessage({ id: "web.components.modules.build_module_dialog.step_preset_metadata", defaultMessage: "Preset & Metadata", description: "Build module dialog: name of step 1 in the step header" })
                     : step === 2
@@ -395,7 +395,7 @@ export function BuildModuleDialog({
                     >
                       {step > 1 ? intl.formatMessage({ id: "web.components.modules.build_module_dialog.step_done", defaultMessage: "\u2713", description: "Build module dialog: mark shown on a completed step" }) : intl.formatMessage({ id: "web.components.modules.build_module_dialog.step_number_1", defaultMessage: "1", description: "Build module dialog: number of step 1 in the step indicator" })}
                     </span>
-                    <span className={step === 1 ? "font-medium text-fg" : "text-muted"}>{intl.formatMessage({ id: "web.components.modules.build_module_dialog.preset_metadata", defaultMessage: "Preset & Metadata", description: "Build module dialog: text in span" })}</span>
+                    <span className={step === 1 ? "font-medium text-fg" : "text-muted"}>{intl.formatMessage({ id: "web.components.modules.build_module_dialog.preset_metadata", defaultMessage: "Preset & Metadata", description: "Build module dialog: name of step 1 in the wizard's progress bar, where the preset and module details are set; keep it short" })}</span>
                   </div>
                   <span className="text-muted">{intl.formatMessage({ id: "web.common.separator_dot", defaultMessage: "·", description: "Visual separator between two items" })}</span>
                   <div className="flex items-center gap-2">
@@ -408,7 +408,7 @@ export function BuildModuleDialog({
                     >
                       {step > 2 ? intl.formatMessage({ id: "web.components.modules.build_module_dialog.step_done", defaultMessage: "\u2713", description: "Build module dialog: mark shown on a completed step" }) : intl.formatMessage({ id: "web.components.modules.build_module_dialog.step_number_2", defaultMessage: "2", description: "Build module dialog: number of step 2 in the step indicator" })}
                     </span>
-                    <span className={step === 2 ? "font-medium text-fg" : "text-muted"}>{intl.formatMessage({ id: "web.components.modules.build_module_dialog.container_ports", defaultMessage: "Container & Ports", description: "Build module dialog: text in span" })}</span>
+                    <span className={step === 2 ? "font-medium text-fg" : "text-muted"}>{intl.formatMessage({ id: "web.components.modules.build_module_dialog.container_ports", defaultMessage: "Container & Ports", description: "Build module dialog: name of step 2 in the wizard's progress bar, for the container image and ports; keep it short" })}</span>
                   </div>
                   <span className="text-muted">{intl.formatMessage({ id: "web.common.separator_dot", defaultMessage: "·", description: "Visual separator between two items" })}</span>
                   <div className="flex items-center gap-2">
@@ -421,7 +421,7 @@ export function BuildModuleDialog({
                     >
                       {intl.formatMessage({ id: "web.components.modules.build_module_dialog.step_number_3", defaultMessage: "3", description: "Build module dialog: number of step 3 in the step indicator" })}
                     </span>
-                    <span className={step === 3 ? "font-medium text-fg" : "text-muted"}>{intl.formatMessage({ id: "web.components.modules.build_module_dialog.review_export", defaultMessage: "Review & Export", description: "Build module dialog: text in span" })}</span>
+                    <span className={step === 3 ? "font-medium text-fg" : "text-muted"}>{intl.formatMessage({ id: "web.components.modules.build_module_dialog.review_export", defaultMessage: "Review & Export", description: "Build module dialog: name of step 3 in the wizard's progress bar, for checking the module and exporting it; keep it short" })}</span>
                   </div>
                 </div>
 
@@ -438,19 +438,19 @@ export function BuildModuleDialog({
             {step === 1 && (
               <div className="space-y-5">
                 <div>
-                  <label className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.archetype_preset", defaultMessage: "Archetype preset", description: "Build module dialog: text in label" })}</label>
+                  <label className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.archetype_preset", defaultMessage: "Archetype preset", description: "Build module dialog: label above the archetype preset choice on step 1 that fills the form from a starting preset" })}</label>
 
                   {archetypesLoading && (
                     <div className="mt-2 flex items-center justify-center gap-2 py-8 text-muted">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="text-xs">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.loading_archetypes", defaultMessage: "Loading archetypes...", description: "Build module dialog: text in span" })}</span>
+                      <span className="text-xs">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.loading_archetypes", defaultMessage: "Loading archetypes...", description: "Build module dialog: loading text shown in place of the archetype preset choices while they are fetched; the dots are part of the text" })}</span>
                     </div>
                   )}
 
                   {archetypesError && (
                     <div className="flex items-center gap-2 rounded-md bg-danger/10 p-3 text-xs text-danger mt-2">
                       <AlertCircle className="h-4 w-4 shrink-0" />
-                      <span>{intl.formatMessage({ id: "web.components.modules.build_module_dialog.failed_to_load_archetypes", defaultMessage: "Failed to load archetypes", description: "Build module dialog: text in span" })}</span>
+                      <span>{intl.formatMessage({ id: "web.components.modules.build_module_dialog.failed_to_load_archetypes", defaultMessage: "Failed to load archetypes", description: "Build module dialog: error message shown in place of the archetype preset choices when they cannot be loaded" })}</span>
                     </div>
                   )}
 
@@ -486,7 +486,7 @@ export function BuildModuleDialog({
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between">
-                      <label htmlFor={nameInputId} className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.module_name", defaultMessage: "Module Name", description: "Build module dialog: text in label" })}</label>
+                      <label htmlFor={nameInputId} className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.module_name", defaultMessage: "Module Name", description: "Build module dialog: label above the module name field; the name must be a DNS-1123 label of lowercase letters, digits and hyphens; DNS-1123 is a technical term, usually left untranslated" })}</label>
                       {name && (
                         <span
                           className={`text-[11px] ${
@@ -501,37 +501,37 @@ export function BuildModuleDialog({
                       id={nameInputId}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.e_g_cs2_match", defaultMessage: "e.g. cs2-match", description: "Build module dialog: placeholder of Input" })}
+                      placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.e_g_cs2_match", defaultMessage: "e.g. cs2-match", description: "Build module dialog: example text shown inside the empty module name field; a sample name, not a default value" })}
                       className="mt-1"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor={displayNameInputId} className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.display_name", defaultMessage: "Display Name", description: "Build module dialog: text in label" })}</label>
+                    <label htmlFor={displayNameInputId} className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.display_name", defaultMessage: "Display Name", description: "Build module dialog: label above the display name field, the friendly name shown for the module" })}</label>
                     <Input
                       id={displayNameInputId}
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.e_g_counter_strike_2", defaultMessage: "e.g. Counter-Strike 2", description: "Build module dialog: placeholder of Input" })}
+                      placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.e_g_counter_strike_2", defaultMessage: "e.g. Counter-Strike 2", description: "Build module dialog: example text shown inside the empty display name field; a sample name, not a default value" })}
                       className="mt-1"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor={summaryInputId} className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.summary", defaultMessage: "Summary", description: "Build module dialog: text in label" })}</label>
+                    <label htmlFor={summaryInputId} className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.summary", defaultMessage: "Summary", description: "Build module dialog: label above the summary field, a short description of the module" })}</label>
                     <Input
                       id={summaryInputId}
                       value={summary}
                       onChange={(e) => setSummary(e.target.value)}
-                      placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.short_description_of_the_game_server", defaultMessage: "Short description of the game server", description: "Build module dialog: placeholder of Input" })}
+                      placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.short_description_of_the_game_server", defaultMessage: "Short description of the game server", description: "Build module dialog: example text shown inside the empty summary field, hinting what to write there" })}
                       className="mt-1"
                     />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.categories", defaultMessage: "Categories", description: "Build module dialog: text in label" })}</label>
-                      <span className="text-[11px] text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.recommended", defaultMessage: "Recommended", description: "Build module dialog: text in span" })}</span>
+                      <label className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.categories", defaultMessage: "Categories", description: "Build module dialog: label above the category tags, which are chosen from suggestions or typed in as custom tags" })}</label>
+                      <span className="text-[11px] text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.recommended", defaultMessage: "Recommended", description: "Build module dialog: small note beside the Categories label marking the suggested tags" })}</span>
                     </div>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {CANONICAL_CATEGORIES.map((cat) => {
@@ -566,16 +566,16 @@ export function BuildModuleDialog({
                             addCustomTag(customTagInput);
                           }
                         }}
-                        placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.add_custom_tag", defaultMessage: "Add custom tag...", description: "Build module dialog: placeholder of Input" })}
+                        placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.add_custom_tag", defaultMessage: "Add custom tag...", description: "Build module dialog: placeholder inside the custom tag text field asking the user to type a tag; the trailing dots are part of the text" })}
                         className="text-xs"
-                        aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.custom_tag_input", defaultMessage: "Custom tag input", description: "Build module dialog: aria-label of Input" })}
+                        aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.custom_tag_input", defaultMessage: "Custom tag input", description: "Build module dialog: screen-reader label for the custom tag text field; not visible on screen" })}
                       />
                       <Button
                         size="sm"
                         onPress={() => addCustomTag(customTagInput)}
                         isDisabled={busy || !customTagInput.trim()}
                         className="h-10"
-                        aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.add_tag", defaultMessage: "Add tag", description: "Build module dialog: aria-label of Button" })}
+                        aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.add_tag", defaultMessage: "Add tag", description: "Build module dialog: button that adds the typed custom tag to the categories; keep it short" })}
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </Button>
@@ -584,7 +584,7 @@ export function BuildModuleDialog({
                     {/* Selected tags (custom only) */}
                     {categories.filter((c) => !CANONICAL_CATEGORIES.includes(c)).length > 0 && (
                       <>
-                        <div className="text-xs font-medium text-fg mt-3">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.selected_tags", defaultMessage: "Selected Tags", description: "Build module dialog: text in div" })}</div>
+                        <div className="text-xs font-medium text-fg mt-3">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.selected_tags", defaultMessage: "Selected Tags", description: "Build module dialog: heading above the list of custom tags already added; shown only when at least one custom tag exists" })}</div>
                         <div className="flex flex-wrap gap-1.5">
                           {categories
                             .filter((c) => !CANONICAL_CATEGORIES.includes(c))
@@ -611,7 +611,7 @@ export function BuildModuleDialog({
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center justify-between">
-                    <label htmlFor={imageInputId} className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.container_image", defaultMessage: "Container Image", description: "Build module dialog: text in label" })}</label>
+                    <label htmlFor={imageInputId} className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.container_image", defaultMessage: "Container Image", description: "Build module dialog: label above the container image field on step 2; the image reference should be pinned by digest" })}</label>
                     {image && (
                       <span
                         className={`text-[11px] ${
@@ -628,16 +628,16 @@ export function BuildModuleDialog({
                     id={imageInputId}
                     value={image}
                     onChange={(e) => setImage(e.target.value)}
-                    placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.e_g_ghcr_io_valgul_game_v1_0_sha256", defaultMessage: "e.g. ghcr.io/valgul/game:v1.0@sha256:...", description: "Build module dialog: placeholder of Input" })}
+                    placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.e_g_ghcr_io_valgul_game_v1_0_sha256", defaultMessage: "e.g. ghcr.io/valgul/game:v1.0@sha256:...", description: "Build module dialog: example image reference shown inside the empty container image field; keep the reference format as written" })}
                     className="mt-1 font-mono text-xs"
                   />
                 </div>
 
                 <div>
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.port_mappings", defaultMessage: "Port Mappings", description: "Build module dialog: text in label" })}</label>
+                    <label className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.port_mappings", defaultMessage: "Port Mappings", description: "Build module dialog: label above the list of port mappings on step 2" })}</label>
                     <Button variant="outline" size="sm" onPress={addPort} className="h-7 text-xs">
-                      <Plus className="mr-1 h-3.5 w-3.5" />{intl.formatMessage({ id: "web.components.modules.build_module_dialog.add_port", defaultMessage: "Add Port", description: "Build module dialog: text in Button" })}</Button>
+                      <Plus className="mr-1 h-3.5 w-3.5" />{intl.formatMessage({ id: "web.components.modules.build_module_dialog.add_port", defaultMessage: "Add Port", description: "Build module dialog: button that adds another row to the port mappings list; keep it short" })}</Button>
                   </div>
 
                   <div className="mt-2 space-y-2">
@@ -646,7 +646,7 @@ export function BuildModuleDialog({
                         <Input
                           value={p.name}
                           onChange={(e) => updatePort(idx, { name: e.target.value })}
-                          placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.name", defaultMessage: "name", description: "Build module dialog: placeholder of Input" })}
+                          placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.name", defaultMessage: "name", description: "Build module dialog: example text shown inside the port name field of a port row; a short placeholder word, not a default value" })}
                           className="w-36 text-xs"
                         />
                         <Input
@@ -655,7 +655,7 @@ export function BuildModuleDialog({
                           onChange={(e) =>
                             updatePort(idx, { containerPort: parseInt(e.target.value, 10) || 0 })
                           }
-                          placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.port", defaultMessage: "port", description: "Build module dialog: placeholder of Input" })}
+                          placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.port", defaultMessage: "port", description: "Build module dialog: example text shown inside the container port number field of a port row; a placeholder word, not a default value" })}
                           className="w-28 text-xs font-mono"
                         />
                         <div className="w-24">
@@ -663,16 +663,16 @@ export function BuildModuleDialog({
                             value={p.protocol}
                             onChange={(v) => updatePort(idx, { protocol: (v ?? p.protocol) as string })}
                             className="w-24"
-                            aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.protocol", defaultMessage: "Protocol", description: "Build module dialog: aria-label of Select" })}
+                            aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.protocol", defaultMessage: "Protocol", description: "Build module dialog: screen-reader label for the protocol dropdown of a port row; not visible on screen" })}
                           >
                             <Select.Trigger>
                               <Select.Value />
                               <Select.Indicator className="ml-auto h-4 w-4" />
                             </Select.Trigger>
                             <Select.Popover>
-                              <ListBox aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.protocol_options", defaultMessage: "Protocol options", description: "Build module dialog: aria-label of ListBox" })}>
-                                <ListBoxItem id="UDP" textValue="UDP">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.udp", defaultMessage: "UDP", description: "Build module dialog: text in ListBoxItem" })}</ListBoxItem>
-                                <ListBoxItem id="TCP" textValue="TCP">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.tcp", defaultMessage: "TCP", description: "Build module dialog: text in ListBoxItem" })}</ListBoxItem>
+                              <ListBox aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.protocol_options", defaultMessage: "Protocol options", description: "Build module dialog: screen-reader name of the list of protocol choices in a port row's dropdown; not visible on screen" })}>
+                                <ListBoxItem id="UDP" textValue="UDP">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.udp", defaultMessage: "UDP", description: "Build module dialog: protocol option UDP in a port row's dropdown; technical term, usually left untranslated; keep it short" })}</ListBoxItem>
+                                <ListBoxItem id="TCP" textValue="TCP">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.tcp", defaultMessage: "TCP", description: "Build module dialog: protocol option TCP in a port row's dropdown; technical term, usually left untranslated; keep it short" })}</ListBoxItem>
                               </ListBox>
                             </Select.Popover>
                           </Select>
@@ -683,7 +683,7 @@ export function BuildModuleDialog({
                             checked={!!p.advertise}
                             onChange={(e) => updatePort(idx, { advertise: e.target.checked })}
                             className="rounded border-border"
-                          />{intl.formatMessage({ id: "web.components.modules.build_module_dialog.advertise", defaultMessage: "Advertise", description: "Build module dialog: text in label" })}</label>
+                          />{intl.formatMessage({ id: "web.components.modules.build_module_dialog.advertise", defaultMessage: "Advertise", description: "Build module dialog: checkbox label on a port row that sets whether the port is advertised" })}</label>
                         {ports.length > 1 && (
                           <Button
                             isIconOnly
@@ -691,7 +691,7 @@ export function BuildModuleDialog({
                             size="sm"
                             onPress={() => removePort(idx)}
                             className="text-muted hover:text-danger"
-                            aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.remove_port", defaultMessage: "Remove port", description: "Build module dialog: aria-label of Button" })}
+                            aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.remove_port", defaultMessage: "Remove port", description: "Build module dialog: button that removes this port row; keep it short" })}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -702,25 +702,25 @@ export function BuildModuleDialog({
                 </div>
 
                 <div className="pt-2">
-                  <label className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.persistent_storage", defaultMessage: "Persistent Storage", description: "Build module dialog: text in label" })}</label>
+                  <label className="text-xs font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.persistent_storage", defaultMessage: "Persistent Storage", description: "Build module dialog: label above the persistent storage settings, the volume size and mount path, on step 2" })}</label>
                   <div className="mt-2 grid grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor={storageSizeInputId} className="text-[11px] text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.volume_size", defaultMessage: "Volume Size", description: "Build module dialog: text in label" })}</label>
+                      <label htmlFor={storageSizeInputId} className="text-[11px] text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.volume_size", defaultMessage: "Volume Size", description: "Build module dialog: label above the volume size field, the storage size requested for the module's data" })}</label>
                       <Input
                         id={storageSizeInputId}
                         value={storageSize}
                         onChange={(e) => setStorageSize(e.target.value)}
-                        placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.e_g_10gi", defaultMessage: "e.g. 10Gi", description: "Build module dialog: placeholder of Input" })}
+                        placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.e_g_10gi", defaultMessage: "e.g. 10Gi", description: "Build module dialog: example text shown inside the empty volume size field; a sample size value, not a default" })}
                         className="mt-1 text-xs"
                       />
                     </div>
                     <div>
-                      <label htmlFor={storageMountPathInputId} className="text-[11px] text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.mount_path", defaultMessage: "Mount Path", description: "Build module dialog: text in label" })}</label>
+                      <label htmlFor={storageMountPathInputId} className="text-[11px] text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.mount_path", defaultMessage: "Mount Path", description: "Build module dialog: label above the mount path field, the folder inside the server where the volume is attached" })}</label>
                       <Input
                         id={storageMountPathInputId}
                         value={storageMountPath}
                         onChange={(e) => setStorageMountPath(e.target.value)}
-                        placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.e_g_data", defaultMessage: "e.g. /data", description: "Build module dialog: placeholder of Input" })}
+                        placeholder={intl.formatMessage({ id: "web.components.modules.build_module_dialog.e_g_data", defaultMessage: "e.g. /data", description: "Build module dialog: example text shown inside the empty mount path field; a sample folder path, not a default" })}
                         className="mt-1 text-xs font-mono"
                       />
                     </div>
@@ -752,7 +752,7 @@ export function BuildModuleDialog({
                   </div>
                   <div className="p-3">
                     <textarea
-                      aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.module_definition_source", defaultMessage: "Module definition source", description: "Build module dialog: aria-label of textarea" })}
+                      aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.module_definition_source", defaultMessage: "Module definition source", description: "Build module dialog: screen-reader name of the large text box holding the module definition source; not visible on screen" })}
                       value={
                         activeTab === "module.yaml"
                           ? moduleYaml
@@ -792,18 +792,18 @@ export function BuildModuleDialog({
                       {validationResult?.clean ? (
                         <>
                           <CheckCircle2 className="h-4 w-4" />
-                          <span>{intl.formatMessage({ id: "web.components.modules.build_module_dialog.module_validated_cleanly", defaultMessage: "Module Validated Cleanly", description: "Build module dialog: text in span" })}</span>
+                          <span>{intl.formatMessage({ id: "web.components.modules.build_module_dialog.module_validated_cleanly", defaultMessage: "Module Validated Cleanly", description: "Build module dialog: success heading in the validation panel, shown when the module passes validation with no errors or warnings" })}</span>
                         </>
                       ) : (
                         <>
                           <AlertCircle className="h-4 w-4" />
                           <span>
-                            {validationResult?.errorCount ?? 0} {intl.formatMessage({ id: "web.components.modules.build_module_dialog.errors", defaultMessage: "errors,", description: "Build module dialog: text in span" })} {validationResult?.warningCount ?? 0} {intl.formatMessage({ id: "web.components.modules.build_module_dialog.warnings", defaultMessage: "warnings", description: "Build module dialog: text in span" })}</span>
+                            {validationResult?.errorCount ?? 0} {intl.formatMessage({ id: "web.components.modules.build_module_dialog.errors", defaultMessage: "errors,", description: "Build module dialog: word after the error count in the validation summary; the number shown before it is the count of errors" })} {validationResult?.warningCount ?? 0} {intl.formatMessage({ id: "web.components.modules.build_module_dialog.warnings", defaultMessage: "warnings", description: "Build module dialog: word after the warning count at the end of the validation summary; the number shown before it is the count of warnings" })}</span>
                         </>
                       )}
                     </div>
                     {validationResult?.clean ? (
-                      <p className="mt-1 text-[11px] text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.all_schema_constraints_dns_names_and", defaultMessage: "All schema constraints, DNS names, and image rules passed.", description: "Build module dialog: text in p" })}</p>
+                      <p className="mt-1 text-[11px] text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.all_schema_constraints_dns_names_and", defaultMessage: "All schema constraints, DNS names, and image rules passed.", description: "Build module dialog: explanation under the validation result saying the module passed the schema, DNS name and image checks; shown only when there are no errors" })}</p>
                     ) : (
                       <div className="mt-2 space-y-1.5 max-h-32 overflow-y-auto">
                         {validationResult?.findings.map((f, i) => (
@@ -821,7 +821,7 @@ export function BuildModuleDialog({
                   {/* Memory Simulation Card */}
                   <div className="rounded-lg border border-border bg-surface/50 p-3.5 text-xs space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.memory_simulation", defaultMessage: "Memory Simulation", description: "Build module dialog: text in span" })}</span>
+                      <span className="font-medium text-fg">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.memory_simulation", defaultMessage: "Memory Simulation", description: "Build module dialog: label of the memory estimate card on step 3; the value beside it is the simulated memory" })}</span>
                       <span className="font-mono text-primary font-semibold">{simMemory}</span>
                     </div>
                     <div className="flex gap-1.5">
@@ -868,20 +868,20 @@ export function BuildModuleDialog({
                   {/* Target upload destination */}
                   {sources.length > 0 && (
                     <div className="text-xs">
-                      <label className="text-muted text-[11px]">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.cluster_destination_source", defaultMessage: "Cluster destination source", description: "Build module dialog: text in label" })}</label>
+                      <label className="text-muted text-[11px]">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.cluster_destination_source", defaultMessage: "Cluster destination source", description: "Build module dialog: label above the dropdown that picks where the module is uploaded in the cluster; shown only when sources exist" })}</label>
                       <div className="mt-1">
                         <Select
                           value={targetSource}
                           onChange={(v) => setTargetSource((v ?? targetSource) as string)}
                           className="w-full"
-                          aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.cluster_destination_source", defaultMessage: "Cluster destination source", description: "Build module dialog: text in label" })}
+                          aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.cluster_destination_source", defaultMessage: "Cluster destination source", description: "Build module dialog: label above the dropdown that picks where the module is uploaded in the cluster; shown only when sources exist" })}
                         >
                           <Select.Trigger>
                             <Select.Value />
                             <Select.Indicator className="ml-auto h-4 w-4" />
                           </Select.Trigger>
                           <Select.Popover>
-                            <ListBox aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.source_options", defaultMessage: "Source options", description: "Build module dialog: aria-label of ListBox" })}>
+                            <ListBox aria-label={intl.formatMessage({ id: "web.components.modules.build_module_dialog.source_options", defaultMessage: "Source options", description: "Build module dialog: screen-reader name of the list of upload source choices in the cluster destination dropdown; not visible on screen" })}>
                               {sources.map((s) => (
                                 <ListBoxItem key={s} id={s} textValue={s}>
                                   {s}
@@ -908,9 +908,9 @@ export function BuildModuleDialog({
                   onPress={() => setStep((s) => (s - 1) as 1 | 2)}
                   isDisabled={busy}
                 >
-                  <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />{intl.formatMessage({ id: "web.components.modules.build_module_dialog.back", defaultMessage: "Back", description: "Build module dialog: text in Button" })}</Button>
+                  <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />{intl.formatMessage({ id: "web.components.modules.build_module_dialog.back", defaultMessage: "Back", description: "Build module dialog: button that returns to the previous step; keep it short" })}</Button>
               ) : (
-                <span className="text-xs text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.step_1_of_3", defaultMessage: "Step 1 of 3", description: "Build module dialog: text in span" })}</span>
+                <span className="text-xs text-muted">{intl.formatMessage({ id: "web.components.modules.build_module_dialog.step_1_of_3", defaultMessage: "Step 1 of 3", description: "Build module dialog: footer text on step 1 showing that this is the first of the three wizard steps" })}</span>
               )}
 
               <div className="flex items-center gap-2.5">
@@ -919,20 +919,20 @@ export function BuildModuleDialog({
                   size="sm"
                   onPress={() => onOpenChange(false)}
                   isDisabled={busy}
-                >{intl.formatMessage({ id: "web.components.modules.build_module_dialog.cancel", defaultMessage: "Cancel", description: "Build module dialog: text in Button" })}</Button>
+                >{intl.formatMessage({ id: "web.components.modules.build_module_dialog.cancel", defaultMessage: "Cancel", description: "Build module dialog: button that closes the wizard without creating the module; keep it short" })}</Button>
 
                 {step === 1 && (
                   <Button
                     size="sm"
                     onPress={goToStep2}
                     isDisabled={!isDnsValid || busy || archetypesLoading || !!archetypesError || !image}
-                  >{intl.formatMessage({ id: "web.components.modules.build_module_dialog.continue_to_container_ports", defaultMessage: "Continue to Container & Ports", description: "Build module dialog: text in Button" })}<ChevronRight className="ml-1 h-3.5 w-3.5" />
+                  >{intl.formatMessage({ id: "web.components.modules.build_module_dialog.continue_to_container_ports", defaultMessage: "Continue to Container & Ports", description: "Build module dialog: button on step 1 that moves on to the container and ports step; keep it short" })}<ChevronRight className="ml-1 h-3.5 w-3.5" />
                   </Button>
                 )}
 
                 {step === 2 && (
                   <Button size="sm" onPress={goToStep3} isDisabled={busy}>
-                    {busy && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}{intl.formatMessage({ id: "web.components.modules.build_module_dialog.continue_to_review_export", defaultMessage: "Continue to Review & Export", description: "Build module dialog: text in Button" })}<ChevronRight className="ml-1 h-3.5 w-3.5" />
+                    {busy && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}{intl.formatMessage({ id: "web.components.modules.build_module_dialog.continue_to_review_export", defaultMessage: "Continue to Review & Export", description: "Build module dialog: button on step 2 that moves on to the review and export step; keep it short" })}<ChevronRight className="ml-1 h-3.5 w-3.5" />
                   </Button>
                 )}
 
@@ -948,7 +948,7 @@ export function BuildModuleDialog({
                         <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <Download className="mr-1.5 h-3.5 w-3.5" />
-                      )}{intl.formatMessage({ id: "web.components.modules.build_module_dialog.download_tar_gz", defaultMessage: "Download .tar.gz", description: "Build module dialog: text in Button" })}</Button>
+                      )}{intl.formatMessage({ id: "web.components.modules.build_module_dialog.download_tar_gz", defaultMessage: "Download .tar.gz", description: "Build module dialog: button on step 3 that downloads the built module as an archive; keep the file extension as written; keep it short" })}</Button>
                     {sources.length > 0 && (
                       <Button
                         size="sm"
@@ -959,7 +959,7 @@ export function BuildModuleDialog({
                           <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                         ) : (
                           <UploadCloud className="mr-1.5 h-3.5 w-3.5" />
-                        )}{intl.formatMessage({ id: "web.components.modules.build_module_dialog.install_to_cluster", defaultMessage: "Install to Cluster", description: "Build module dialog: text in Button" })}</Button>
+                        )}{intl.formatMessage({ id: "web.components.modules.build_module_dialog.install_to_cluster", defaultMessage: "Install to Cluster", description: "Build module dialog: button on step 3 that installs the built module into the chosen cluster source; keep it short" })}</Button>
                     )}
                   </>
                 )}

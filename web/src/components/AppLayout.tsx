@@ -258,7 +258,7 @@ export function AppLayout() {
         {can(me, "config:manage") && <TelemetryNotice onOpenSettings={openTelemetrySettings} />}
         {centralManagement && (
           <div role="note" className="border-b border-border bg-surface px-4 py-3 text-sm text-muted sm:px-6">
-            <strong className="font-medium text-foreground">{intl.formatMessage({ id: "web.components.app_layout.central_management_lead", defaultMessage: "Central management.", description: "Bold lead-in of the central-management note shown above page content" })}</strong> {intl.formatMessage({ id: "web.components.app_layout.this_catalog_account_or_installation", defaultMessage: "This catalog, account or installation setting belongs to the central Gameplane installation. Server actions use each server’s location.", description: "App layout: text in div" })}</div>
+            <strong className="font-medium text-foreground">{intl.formatMessage({ id: "web.components.app_layout.central_management_lead", defaultMessage: "Central management.", description: "Bold lead-in of the central-management note shown above page content" })}</strong> {intl.formatMessage({ id: "web.components.app_layout.this_catalog_account_or_installation", defaultMessage: "This catalog, account or installation setting belongs to the central Gameplane installation. Server actions use each server’s location.", description: "App layout: note shown when central management applies; catalog, account or installation settings belong to the central installation, while server actions use each server's location" })}</div>
         )}
         <Outlet />
       </AppShell>
