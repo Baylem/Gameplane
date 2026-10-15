@@ -233,7 +233,7 @@ Spec 022 is reopened for one more slice on a new branch and PR; the shipped feat
 7. **Reporting through the central panel** (OD-11–OD-13, research R23; OD-11 to OD-16 all ruled):
    - `telemetryschema`: extended schema `2` with `env.deployment` (`cluster`, `standalone`); `Decode` accepts schemas `1` and `2`
    - receiver: store `deployment` as a `daily_dim` dimension and show it as an environment breakdown, designed first in `telemetry-receiver/telemetry-dashboard.pen` on the local machine
-   - API: `telemetry.Deps` gains the cluster registry; `Collect` sums servers, templates, games and the cluster-derived features over every reachable managed cluster, skips unreachable ones, and sets the marker
+   - API: `telemetry.Deps` gains the cluster registry; `Collect` sums servers, templates and per-module game counts, and combines the cluster-derived features (any-cluster for wake-on-connect and backups, union for tunnels), over every reachable managed cluster, skips unreachable ones, and sets the marker
    - API notice field list and the web `TelemetryInfo` type gain `env.deployment`; the admin preview prints the report as JSON, so it needs no design change
    - docs: the extended field list wherever it is published (`docs/`, the website data-handling statement through the submodule's PR flow)
 

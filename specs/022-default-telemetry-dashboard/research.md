@@ -300,6 +300,8 @@ No new RBAC is needed; every source is already readable (see the baseline facts)
 
 **Counting scope**: servers, templates and games are counted on the **local cluster only**, the same as today's basic `servers` and `templates`. FR-010 keeps the basic semantics unchanged, and remote reads can fail. Multi-cluster use shows up through `features.clusters`.
 
+**Superseded by R23 (amendment 2026-10-14)**: from extended schema 2, the counts, games, cluster-derived features and environment fields cover every reachable managed cluster, not the local cluster only (OD-11, OD-15, OD-16). The table above describes schema 1.
+
 ## R15. Official modules and look-alikes (FR-011, FR-034)
 
 **Decision**:
