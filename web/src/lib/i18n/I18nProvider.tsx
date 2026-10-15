@@ -5,7 +5,6 @@ import { IntlProvider, ReactIntlErrorCode } from "react-intl";
 import type { IntlConfig } from "react-intl";
 import { I18nProvider as AriaI18nProvider } from "@react-aria/i18n";
 
-import { Auth } from "@/lib/endpoints";
 import type { User } from "@/types";
 import { directionFor, listedLanguages, loadMessages } from "./languages";
 import type { CompiledCatalog } from "./languages";
@@ -131,7 +130,10 @@ export function AppI18nProvider({ children }: { children: ReactNode }) {
   const userLanguage = useCachedUserLanguage();
   const locale = useQuery({
     queryKey: ["auth-locale"],
-    queryFn: () => Auth.locale(),
+    // Loaded on first use: endpoints.ts builds its clients from @/lib/api at
+    // import time, so a static import would pull that into every module that
+    // only needs useLanguage (the public share page among them).
+    queryFn: async () => (await import("@/lib/endpoints")).Auth.locale(),
     staleTime: Infinity,
     retry: false,
   });
