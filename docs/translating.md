@@ -189,6 +189,68 @@ will be added here once the project exists. Only translations that a
 human reviewer approves are merged. They arrive as a pull request from the
 `weblate/translations` branch and pass the same checks.
 
+## Adding text to the dashboard (developers)
+
+Every user-visible string in the dashboard goes through `intl`. Do not
+put English text straight into JSX. Get the helper from `useOptionalIntl`:
+
+```tsx
+import { useOptionalIntl } from "@/lib/i18n/format";
+
+const intl = useOptionalIntl();
+
+intl.formatMessage(
+  {
+    id: "web.servers.deleted",
+    defaultMessage: "Server {name} was deleted.",
+    description: "Toast after a server is deleted. {name} is the server name.",
+  },
+  { name: server.name },
+);
+```
+
+- `id`, `defaultMessage` and `description` must be string literals. The
+  extractor reads them at build time.
+- Dashboard ids use `web.<path>.<slug>`. Audit labels use `audit.*`.
+  The `server.*`, `notify.*` and `condition.*` ids come from the API and
+  the operator. Do not invent them in the dashboard.
+- The description tells a translator what the text is and where it
+  appears. Explain every `{placeholder}`.
+- When you migrate a string, keep the rendered English the same.
+
+### Extract and commit
+
+- After you change text, run `cd web && npm run i18n:extract`.
+- Commit `i18n/locales/en/app.json` in the same commit as the code.
+
+### Migrate literal text
+
+- `npm run i18n:migrate -- [--dry-run] <paths>` wraps literal JSX text.
+  It also wraps `aria-label`, `title`, `placeholder` and `alt` values.
+  Run it with `--dry-run` first.
+- `node scripts/i18n-migrate.ts --check src` reports what the lint rules
+  would flag.
+
+### Lint and CI
+
+- ESLint with `eslint-plugin-formatjs` checks all of `web/src`, except
+  tests and `src/test`.
+- CI fails on extraction drift. It also fails on server and condition
+  drift. It fails on reference ids that no code uses (`i18n-check
+  --used-ids`).
+
+### Text from other sources
+
+Some text does not come from a literal in the dashboard. Use a helper
+for it:
+
+- API errors: `serverMessageText` and `errorTextIntl`.
+- Operator conditions: `conditionMessageText` in
+  `src/lib/i18n/conditionMessage.ts`. English keeps the operator's message.
+- Module text: `useModuleText` and `useModuleTexts` in
+  `src/lib/i18n/moduleText.ts`. English uses the template text and
+  fetches nothing.
+
 ## Related docs
 
 - [Contributing](contributing.md): the general pull request process.
