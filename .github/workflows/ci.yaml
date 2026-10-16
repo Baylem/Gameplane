@@ -877,9 +877,10 @@ jobs:
         # cite a measured figure.
         if: matrix.module == 'api' && matrix.arch == 'amd64'
         run: |
-          awk '$1 ~ /\/internal\/handlers\/secrets_managed\.go:/ { total += $2; if ($3 > 0) covered += $2 }
+          awk '$1 ~ /\/internal\/handlers\/secrets_managed\.go:/ { total += $2; if ($3 > 0) covered += $2; else { split($1, pos, ":"); missed = missed " " pos[2] } }
                END { if (total == 0) { print "secrets_managed.go not found in profile"; exit 1 }
-                     printf "G-19 coverage of secrets_managed.go = %d/%d statements (%.1f%%)\n", covered, total, 100 * covered / total }' \
+                     printf "G-19 coverage of secrets_managed.go = %d/%d statements (%.1f%%)\n", covered, total, 100 * covered / total
+                     printf "G-19 uncovered blocks (startLine.col,endLine.col):%s\n", missed }' \
             api/coverage/merged.out
           (cd api && go tool cover -func=coverage/merged.out | grep -F 'internal/handlers/secrets_managed.go')
 

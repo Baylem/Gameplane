@@ -63,7 +63,7 @@ Documented exceptions with longer timeouts are the five e2e jobs (60 minutes eac
 
 ### Security and drift gates
 
-These jobs block merging. Each one has a `hack/*_test.sh` self-test that proves it can fail. Fix the cause: never add an ignore file, a suppression comment or a looser threshold.
+These jobs block merging. Each gate with a fixture has a `hack/*_test.sh` self-test that proves it can fail; dependency review is validated by configuration review only. Fix the cause: never add an ignore file, a suppression comment or a looser threshold.
 
 - **`vuln (go)`** runs `hack/govulncheck-all.sh`, which runs govulncheck over every module in `go.work`. It fails when a module reaches a symbol with a known vulnerability. Bump the affected dependency (or the Go toolchain) in that module's `go.mod`, run `make tidy`, and commit both.
 - **`vuln (images)`** runs `hack/trivy-scan-images.sh` over the built images. It fails on any HIGH or CRITICAL vulnerability that has a fix. Bump the base-image digest, or bump the Go or npm dependency the finding names in that image's module.
