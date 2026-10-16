@@ -7,6 +7,13 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Standalone Helm CRD isolation:** the central panel profile excludes bundled
+  native CRDs and their apply hook/RBAC without requiring `--skip-crds`.
+  Default operator installations keep Helm's native CRD lifecycle; existing
+  CRDs and their custom resources are retained when a profile omits them.
+
 ### Upgrade Notes
 
 - **Standalone panel/API:** run the central panel with Docker Compose or the
@@ -146,6 +153,36 @@ reaches `1.0.0`. Pre-1.0 minor versions may contain breaking changes.
 - **Nuclear Option player lists are structured:** the agent's player output
   for JSON player lists now includes an entry per player (`steamId` and
   `faction`), which the API uses for display-name lookup.
+- **Language selection and translations (spec 019):** the dashboard can be
+  shown in another language. A user's language choice is saved to the account (or
+  to the browser when signed out), and an admin sets the instance default. Languages are
+  shared packs under `i18n/locales/`; a language is listed once its pack is at
+  least 80% translated, and anything missing falls back to English. French is
+  the first pack and is listed once it reaches 80%.
+  Dates, numbers and relative times follow the active language. A pseudo
+  language (`en-XA`) exists for maintainers behind `VITE_I18N_PSEUDO=1` and is
+  never listed in a release. See [`docs/translating.md`](docs/translating.md).
+- **Translated server messages (opt-in `problem+json`):** API errors are sent
+  as `application/problem+json` with a stable `messageId` and arguments only
+  when the request lists that type in `Accept`; every other client keeps the
+  unchanged English plain-text body. The dashboard opts in and shows the
+  message in the active language. Game server condition messages carry
+  `status.conditionArgs` so the dashboard can translate them too; the English
+  `message` is unchanged.
+- **Notification language per destination:** each notification destination
+  has an optional `language`; notifications and test sends to Discord, email
+  and webhooks are rendered in it, and destinations with none use the
+  instance default. Webhook payloads gain additive `language`, `title` and
+  `text` fields; existing fields are unchanged.
+- **Module translations:** a module can ship `locales/<tag>.json` next to
+  `module.yaml` (OCI layer type `application/vnd.gameplane.module.locale.v1+json`
+  and the same files in every other source). The operator validates them on
+  install, stores the valid entries in a `<template>-locales` ConfigMap and
+  reports problems as the `LocalesValid` condition; install never fails
+  because of translations. Each file is read up to 900 KiB and all of a
+  bundle's files together up to 4 MiB. `gp-module i18n extract|stamp` and
+  `gp-module validate` support authoring. See
+  [`docs/module-authoring.md`](docs/module-authoring.md).
 
 ### Changed
 

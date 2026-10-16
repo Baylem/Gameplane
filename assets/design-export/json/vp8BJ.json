@@ -152,6 +152,29 @@
       "fontFamily": "$typography/font-sans",
       "fontSize": 11,
       "fontWeight": "normal"
+    },
+    {
+      "type": "frame",
+      "id": "tAIQI",
+      "layoutPosition": "absolute",
+      "x": 0,
+      "y": 12,
+      "name": "loginLangRow",
+      "width": 420,
+      "padding": [
+        0,
+        12
+      ],
+      "justifyContent": "end",
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "H9PRsa",
+          "type": "ref",
+          "ref": "z3mtgc",
+          "name": "langPicker"
+        }
+      ]
     }
   ]
 }

@@ -9,7 +9,7 @@
   },
   "clip": true,
   "width": 1440,
-  "height": 2000,
+  "height": 2344,
   "fill": "$background/background",
   "children": [
     {
@@ -231,6 +231,13 @@
                   "layout": "vertical",
                   "gap": 16,
                   "children": [
+                    {
+                      "id": "Ic8dQ",
+                      "type": "ref",
+                      "ref": "Ii9Hy",
+                      "name": "Language Card",
+                      "width": "fill_container"
+                    },
                     {
                       "id": "T6d1Wb",
                       "type": "ref",

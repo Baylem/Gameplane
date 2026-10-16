@@ -209,6 +209,29 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "qFvPq",
+      "layoutPosition": "absolute",
+      "x": 0,
+      "y": 12,
+      "name": "shareLangRow",
+      "width": 440,
+      "padding": [
+        0,
+        12
+      ],
+      "justifyContent": "end",
+      "alignItems": "center",
+      "children": [
+        {
+          "id": "grgNP",
+          "type": "ref",
+          "ref": "z3mtgc",
+          "name": "langPicker"
+        }
+      ]
     }
   ]
 }

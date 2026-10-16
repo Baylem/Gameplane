@@ -2701,3 +2701,81 @@ Each promoted occurrence was replaced only when the resolved instance matched th
   - `vUqMl`'s code block next to YAML Block;
   - hand-built controls in the Build Module dialog (`IdbiB`, `O5kaV`), `Y5cmvI` and the Overview variants;
   - 23 repeated structures (Metrics Row, Modal container, Build Module stepper and others).
+
+## Spec 019 language pickers and language settings (redrawn 2026-10-15)
+
+Redraws the Spec 019 language pass on the regrouped canvas. It replaces the 2026-10-12 pass (commit ad4e684b), which was dropped in the canvas regroup. Re-exported with `Get` (depth 10-12, `includePathGeometry: true`) for JSON and `Export` at 2x for PNG. Root x/y of moved screens were patched in place. Measured against the live document at export time.
+
+**New (JSON + PNG):**
+
+| ID | Name | Change |
+|---|---|---|
+| `lCTci` | Screen/Mobile — Theme Settings · Language | new screen: mobile theme settings with the Language card |
+| `GsofJ` | Screen/Login — Language menu open | new screen: login with the language menu open (EN, FR, DE) |
+| `SUcad` | Screen/Admin Settings — Notifications (Add sink) | new screen: add-sink form with the sink language select and event rows |
+| `z3mtgc` | Gameplane/Language Picker Compact | new component: compact language picker (globe, label, chevron) |
+| `S0P4bl` | Gameplane/Login Card With Language | new component: login card with the language picker in the top-right corner |
+| `Ii9Hy` | Gameplane/Language Card | new component: language card with Automatic, English, Français and Deutsch radios |
+| `TSXYO` | Gameplane/Sink Language Row | new component: language row for a notification sink |
+
+**Changed (JSON + PNG):**
+
+| ID | Name | Change |
+|---|---|---|
+| `N1GkB` | Screen/Login | changed: login card is now the language-aware instance `S0P4bl` |
+| `gX7um` | Screen/Login (Light) | changed: login card is now the language-aware instance `S0P4bl` |
+| `g2HLxz` | loginCardError | changed: includes the `langPicker` instance `z3mtgc` |
+| `vp8BJ` | loginCardSso | changed: includes the `langPicker` instance `z3mtgc` |
+| `HKEl2` | Gameplane/Share Card | changed: includes the `langPicker` instance `z3mtgc` |
+| `WZdnw` | Screen/Admin Settings | changed: adds the Language panel (`XDZ0E` instance, default language select) |
+| `lWvcv` | Screen/Theme Settings | changed: adds the Language card `Ii9Hy`; root height 2344 |
+| `T1wkiT` | Screen/Theme Settings — Warnings | changed: adds the Language card `Ii9Hy`; root height 2490 |
+
+**PNG only (JSON unchanged, the screen shows a changed component):**
+
+| ID | Name | Change |
+|---|---|---|
+| `jmoi3` | Screen/Login — Invalid credentials | PNG re-exported: login card now shows the language picker |
+| `ljdA5` | Screen/Login — SSO only | PNG re-exported: login card now shows the language picker |
+
+**Moved (JSON root x/y patched, PNG re-exported):**
+
+| ID | Name | Change |
+|---|---|---|
+| `C2LQE4` | Screen/Share Link — Up | moved: y 90856 → 91265 |
+| `q31B6w` | Screen/Share Link — Asleep (can start) | moved: y 90856 → 91265 |
+| `EcoGD` | Screen/Share Link — Starting | moved: y 90856 → 91265 |
+| `FBiMN` | Screen/Share Link — Asleep (Start cooldown) | moved: y 90856 → 91265 |
+| `epZO2` | Screen/Share Link — Invalid or expired | moved: y 90856 → 91265 |
+| `qFLfB` | Historical/Share Link — Asleep (view only) | moved: y 90856 → 91265 |
+| `n6Xlo` | Screen/Admin Settings — Notifications | moved: y 85524 → 85868 |
+
+**Root x/y re-sync (JSON x/y only, no PNG change):** every root node in the live document was compared with its `json/<id>.json` root `x`/`y`. The 21 files below had a stale root position and were patched in place. Rows below y 75369 moved +344 and rows below y 85868 moved a further +65.
+
+| ID | Change |
+|---|---|
+| `uMiwd` | y 77915 → 78259 |
+| `RC3Kf` | y 81624 → 81968 |
+| `g5mEpx` | y 82924 → 83268 |
+| `uoxQW` | y 86824 → 87233 |
+| `M2sA4u` | y 88256 → 88665 |
+| `zM0VF` | y 89556 → 89965 |
+| `Wj0V4` | y 84224 → 84568 |
+| `nNGDX` | y 77915 → 78259 |
+| `QgW58` | y 77915 → 78259 |
+| `zqzr4` | y 77915 → 78259 |
+| `Ne5TA` | y 92156 → 92565 |
+| `l7TRz9` | y 86824 → 87233 |
+| `r0heh` | y 86824 → 87233 |
+| `cDiNb` | y 86824 → 87233 |
+| `DBQyF` | y 86824 → 87233 |
+| `K5XinZ` | y 86824 → 87233 |
+| `yrxK2` | y 86824 → 87233 |
+| `D9QYZ` | y 81624 → 81968 |
+| `l64bd` | y 82924 → 83268 |
+| `Uzzje` | y 88256 → 88665 |
+| `FOVMf` | y 89556 → 89965 |
+
+**Re-exported:** `n6Xlo` was re-exported in full from `Get(id, {depth: 30, includePathGeometry: true})` (sink Language rows added).
+
+**Verification method:** for each of the 16 spec 019 JSON exports (`lWvcv`, `T1wkiT`, `N1GkB`, `gX7um`, `WZdnw`, `g2HLxz`, `vp8BJ`, `HKEl2`, `lCTci`, `GsofJ`, `SUcad`, `z3mtgc`, `S0P4bl`, `Ii9Hy`, `TSXYO`, `n6Xlo`), the live export `JSON.stringify(Get(id, {depth: 30, includePathGeometry: true}))` and the file `JSON.stringify(JSON.parse(file))` were compared by length and FNV-1a 32-bit hash over UTF-16 code units. All 16 match. None contains the `"..."` truncation marker.

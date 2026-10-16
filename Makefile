@@ -40,7 +40,7 @@ KUBECONFIG_ENV :=
 KUBE_CONTEXT   := kind-$(KIND_CLUSTER)
 endif
 
-GO_MODULES     := netguard gameaction gameproto telemetryschema gp-module operator api agent audit-syslog-bridge telemetry-receiver sentinel mcp-server capture-sidecar svcutil tunnel
+GO_MODULES     := netguard gameaction gameproto telemetryschema i18n gp-module operator api agent audit-syslog-bridge telemetry-receiver sentinel mcp-server capture-sidecar svcutil tunnel
 GO_INTEGRATION_MODULES := operator api
 
 # test/e2e is a separate module (its own go.mod, excluded from the coverage
@@ -255,9 +255,32 @@ test-doc-versions: ## Run the fixture tests for hack/check-doc-versions.sh
 check-links: ## Verify internal documentation links and anchors resolve
 	hack/check-links.sh
 
+.PHONY: check-features-sync
+check-features-sync: ## Verify FEATURES.md and the website features page carry the same capability catalog
+	bash hack/check-features-sync.sh
+
+.PHONY: test-features-sync
+test-features-sync: ## Run the fixture tests for hack/check-features-sync.sh
+	bash hack/test-check-features-sync.sh
+
 .PHONY: check-telemetry-catalog
 check-telemetry-catalog: ## Verify telemetryschema/catalog.txt matches the chart's official module list
 	hack/check-telemetry-catalog.sh
+
+.PHONY: i18n-sync
+i18n-sync: ## Write the API message registry (server.* and notify.*) and the operator condition.* ids into the English reference (i18n/locales/en/app.json)
+	cd api && go run ./cmd/messages-export > ../i18n/.registry.json
+	cd i18n && go run ./cmd/i18n-check --registry .registry.json --sync-server locales
+	rm -f i18n/.registry.json
+	cd operator && go run ./hack/condition-ids -app ../i18n/locales/en/app.json
+
+.PHONY: check-i18n
+check-i18n: ## Verify language packs, server.*, notify.*, operator condition.* drift, dashboard extraction drift and unused reference ids (spec 019)
+	cd web && npm run i18n:extract-only
+	cd operator && go run ./hack/condition-ids -check -app ../i18n/locales/en/app.json -ids ../i18n/.condition-ids.txt
+	cd api && go run ./cmd/messages-export > ../i18n/.registry.json
+	cd i18n && { jq -r 'keys[]' ../web/src/generated/i18n/extracted.json; jq -r '.[].id' .registry.json; cat .condition-ids.txt; } | sort -u > .used-ids.txt
+	cd i18n && status=0; go run ./cmd/i18n-check --extracted ../web/src/generated/i18n/extracted.json --registry .registry.json --check-server --used-ids .used-ids.txt locales || status=$$?; rm -f .registry.json .condition-ids.txt .used-ids.txt; exit $$status
 
 .PHONY: check-dev-load-images
 check-dev-load-images: ## Verify `dev-load` loads every image `images` builds
@@ -273,7 +296,7 @@ test-up-registry: ## Run the fixture tests for deploy/kind/up.sh's registry/cont
 	hack/test-up-registry.sh
 
 .PHONY: lint
-lint: check-doc-versions check-links check-specs check-telemetry-catalog check-dev-load-images check-coverage-gaps test-up-registry lint-go lint-web ## Run all linters
+lint: check-doc-versions check-links check-features-sync check-specs check-telemetry-catalog check-i18n check-dev-load-images check-coverage-gaps test-up-registry lint-go lint-web ## Run all linters
 
 .PHONY: lint-go
 lint-go: ## Run golangci-lint across all modules
@@ -331,7 +354,7 @@ manifests: ## Regenerate CRDs + RBAC manifests (and sync chart CRD copies)
 		paths=./... \
 		output:crd:artifacts:config=config/crd \
 		output:rbac:artifacts:config=config/rbac
-	# Copy the CRDs into the chart's crds/ and crd-manifests/ (the same CRDs
+	# Copy the CRDs into the conditional CRD subchart and crd-manifests/ (the same CRDs
 	# where Helm's .Files can read them -- it can't read the special crds/
 	# dir -- so the crds.autoApply hook can apply them), stamping each copy
 	# with a bundle hash the hook compares against the live CRDs to tell

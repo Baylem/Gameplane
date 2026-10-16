@@ -287,12 +287,12 @@ description: "Task list for 013-expand-test-coverage"
 
 **PR**: `test(e2e): optional components lifecycle`. Depends on Phase 2.
 
-- [ ] T045 [P] [US3] Add `test/e2e/fixtures/syslog-sink.yaml`: a Deployment and Service on TCP 514 running a digest-pinned image (e.g. `alpine/socat`) that prints every received line to stdout. Use a fixed name, `e2e-syslog-sink`.
-- [ ] T046 [P] [US3] Add `test/e2e/fixtures/frps.yaml`: an frp server Deployment and Service, with a digest-pinned image whose version matches the `frpc` that `tunnel/Dockerfile.frp` installs. Include a token Secret, the bind port, and the dashboard API port with fixed credentials.
-- [ ] T047 [US3] Write `test/e2e/optional_components_e2e_test.go` with `TestOptionalComponents_Lifecycle`. It calls `t.Parallel()`, owns its cluster, and runs these subtests in order:
+- [X] T045 [P] [US3] Add `test/e2e/fixtures/syslog-sink.yaml`: a Deployment and Service on TCP 514 running a digest-pinned image (e.g. `alpine/socat`) that prints every received line to stdout. Use a fixed name, `e2e-syslog-sink`.
+- [X] T046 [P] [US3] Add `test/e2e/fixtures/frps.yaml`: an frp server Deployment and Service, with a digest-pinned image whose version matches the `frpc` that `tunnel/Dockerfile.frp` installs. Include a token Secret, the bind port, and the dashboard API port with fixed credentials.
+- [X] T047 [US3] Write `test/e2e/optional_components_e2e_test.go` with `TestOptionalComponents_Lifecycle`. It calls `t.Parallel()`, owns its cluster, and runs these subtests in order:
   - `disabled`: none of the three components has a Deployment or Service.
   - `enable`: apply T045 and T046, create the shared auth Secret, then `helm upgrade --reuse-values` with `mcpServer.enabled=true`, `api.audit.webhook.syslogBridge.enabled=true`, `…syslog.addr=e2e-syslog-sink:514`, and `…authSecretRef.name`. Wait for rollout.
-  - `mcp`: exec `/mcp-server serve` over stdio. `initialize` succeeds. `tools/list` returns exactly the six read tools. `list_gameplane_resources` for gameservers includes a seeded GameServer. `get_gameplane_resource` for `clusters` returns an error result.
+  - `mcp`: exec `/mcp-server serve` over stdio. `initialize` succeeds. `tools/list` returns exactly seven tools: the six read tools plus `propose_fix`. `list_gameplane_resources` for gameservers includes a seeded GameServer. `get_gameplane_resource` for `clusters` returns an error result.
   - `syslog`: create a role through the API with one admin login, then poll the sink's logs for an RFC 5424 line with APP-NAME `gameplane-audit` naming that role. An unauthenticated POST to the bridge returns 401.
   - `tunnel-frp`: create a busybox GameServer with `spec.tunnel` pointing at frp `e2e-frps`. Assert:
     - `TunnelReady=True`
@@ -302,13 +302,15 @@ description: "Task list for 013-expand-test-coverage"
   - `core-unaffected`: a GameServer reaches `Running` through the existing helper, and a restricted user gets 403 on an admin route (second login).
 
   Use unique names and `t.Cleanup`. Use the `e2e-test-authoring` skill.
-- [ ] T048 [US3] Add `bucket_optional_components` to `test/e2e/buckets.sh`, containing `TestOptionalComponents_Lifecycle`. Add a comment that it owns its cluster through `helm upgrade` and its login budget is 2, and add the bucket to `bucket_names`. Depends on T047.
-- [ ] T049 [US3] In `.github/workflows/ci.yaml`:
+
+  Implementation note (#704): `tools/list` expects seven tools, the six read tools plus `propose_fix` (valgul's "Expect seven" card, 2026-10-15). The bridge sends octet-counted RFC 5424 frames with no trailing newline, so the T045 sink appends to `/tmp/syslog.log` and the test reads it with `kubectl exec … cat` instead of `kubectl logs`. The tunnel image is distroless, so `frpc` is killed from an ephemeral `kubectl debug` container (busybox, `--target=tunnel`, uid 65532) instead of `kubectl exec`.
+- [X] T048 [US3] Add `bucket_optional_components` to `test/e2e/buckets.sh`, containing `TestOptionalComponents_Lifecycle`. Add a comment that it owns its cluster through `helm upgrade` and its login budget is 2, and add the bucket to `bucket_names`. Depends on T047.
+- [X] T049 [US3] In `.github/workflows/ci.yaml`:
   - add `optional-components` to the `bucket:` lists of `e2e-go` and `e2e-go-arm64`, with an `include` entry that mirrors `telemetry`'s (its own cluster and timeout)
   - extend the three `e2e (operator|…|telemetry) /` regexes in the `report` script (`JOB_MATCHERS` and the bucket parser) with `|optional-components`
 
   Depends on T048.
-- [ ] T050 [US3] After the first green run on both arches, flip G-13, G-14, G-15 and G-18.
+- [X] T050 [US3] After the first green run on both arches, flip G-13, G-14, G-15 and G-18.
 
 **Checkpoint**: SC-003 is met. All four documented optional components have E2E coverage.
 
@@ -316,9 +318,9 @@ description: "Task list for 013-expand-test-coverage"
 
 ## Phase 6: User Story 4 – Unit coverage gaps (Priority: P2)
 
-**Goal**: 100 % of `secrets_managed.go`, and ≥ 80 % lines for ConsoleShell, CloneServerDialog and ServerActionsMenu (research R8, SC-004).
+**Goal**: 100 % of the reachable statements in `secrets_managed.go`, and ≥ 80 % lines for ConsoleShell, CloneServerDialog and ServerActionsMenu (research R8, SC-004).
 
-**Independent Test**: the `go (api / amd64)` coverage artifact shows `secrets_managed.go` at 100 %, and the `web` job's lcov shows each of the three components at ≥ 80 % lines.
+**Independent Test**: the `go (api / amd64)` step "per-file coverage of secrets_managed.go" shows every statement covered except the uncovered blocks it lists, and each of those is unreachable (on #710: 27/28, the one miss being the `existing.Labels == nil` branch at lines 66–68), and the `web` job's lcov shows each of the three components at ≥ 80 % lines.
 
 **PR**: `test: unit coverage for managed secrets and console shell`. Independent of every other phase.
 
@@ -349,7 +351,7 @@ description: "Task list for 013-expand-test-coverage"
 
   *Implementation note (2026-10-12)*: lcov from run 38189418314: `CloneServerDialog.tsx` 89.29 % lines / 69.23 % branches, with a Cancel case but no API-error case, so T053 adds the API-error and cancel-discards-changes cases. `ServerActionsMenu.tsx` 100 % lines / branches / functions; it makes no API calls, so cancel and API errors are dialog-level (G-22 note). `ConsoleShell.tsx` 100 % lines. G-19 stays in progress: CI reports only package coverage for Go.
 
-**Checkpoint**: SC-004 stays pending until G-19 has per-file proof for `secrets_managed.go` (G-20 to G-22 are proven). Module thresholds stay unchanged.
+**Checkpoint**: G-19 to G-22 are proven. G-19 was measured in CI at 27/28 statements (96.4 %) for `secrets_managed.go`, which is 100 % of its reachable statements: the one miss is the unreachable `existing.Labels == nil` branch (lines 66–68). valgul chose "Measure in CI" and amended SC-004 to match, 2026-10-16. Module thresholds stay unchanged.
 
 ---
 
@@ -361,20 +363,20 @@ description: "Task list for 013-expand-test-coverage"
 
 **PR**: `test: postgres-backed e2e`. Depends on Phase 2 (T008–T010).
 
-- [ ] T054 [P] [US5] Add `TestPostgres_MigrateFromFrozenBaseline` to `api/internal/db/db_postgres_test.go`. Under the existing `GAMEPLANE_TEST_POSTGRES_DSN` skip guard it:
+- [X] T054 [P] [US5] Add `TestPostgres_MigrateFromFrozenBaseline` to `api/internal/db/db_postgres_test.go`. Under the existing `GAMEPLANE_TEST_POSTGRES_DSN` skip guard it:
   1. Creates a fresh schema.
   2. Applies only the frozen `migrations/postgres/001`–`012` files.
   3. Inserts a user, a role binding, a share link and an audit row with the 012-era columns.
   4. Runs `Store.Migrate` to head.
   5. Asserts the rows read back unchanged through the current store API and that `schema_migrations` lists every version.
-- [ ] T055 [P] [US5] Add `deploy/kind/postgres.yaml`: a single-replica PostgreSQL 17 StatefulSet, Service and Secret (`gameplane-postgres`) in the release namespace. Pin the image by the same digest as the `api-postgres` job's service.
-- [ ] T056 [US5] Add a `postgres` profile to `deploy/kind/e2e.sh`:
+- [X] T055 [P] [US5] Add `deploy/kind/postgres.yaml`: a single-replica PostgreSQL 17 StatefulSet, Service and Secret (`gameplane-postgres`) in the release namespace. Pin the image by the same digest as the `api-postgres` job's service.
+- [X] T056 [US5] Add a `postgres` profile to `deploy/kind/e2e.sh`:
   1. Apply `postgres.yaml` and wait for `pg_isready` with `kubectl exec`.
   2. Retag `gameplane-test/api:e2e-postgres` as `gameplane-test/api:${TAG}` before `kind load`.
   3. Install with every `e2e` value plus `--set api.db.driver=postgres` and `--set api.db.dsn=<from Secret>`.
 
   Follow contracts/e2e-additions.md. Depends on T055.
-- [ ] T057 [US5] Add an `e2e-postgres` job named `e2e postgres / amd64 (kind)` to `.github/workflows/ci.yaml`, modeled on `e2e-capture-overhead`'s step list but without `continue-on-error`. Settings:
+- [X] T057 [US5] Add an `e2e-postgres` job named `e2e postgres / amd64 (kind)` to `.github/workflows/ci.yaml`, modeled on `e2e-capture-overhead`'s step list but without `continue-on-error`. Settings:
   - `needs: [changes, build-images]`
   - `if: needs.changes.outputs.e2e == 'true'`
   - brings the cluster up with `./deploy/kind/e2e.sh up "$CLUSTER" postgres`
@@ -383,7 +385,8 @@ description: "Task list for 013-expand-test-coverage"
   - the dump-on-failure step
 
   Register it in `report`. Depends on T056.
-- [ ] T058 [US5] After the first green run, flip G-23 and G-24.
+- [X] T058 [US5] After the first green run, flip G-23 and G-24.
+  Implementation note (#707): `e2e.sh up` takes the profile as a 4th argument (`up "$CLUSTER" e2e postgres`), and the job restarts the API Deployment between buckets to reset its in-memory login rate limiter. The chart now also sets `GAMEPLANE_DB_DRIVER`/`GAMEPLANE_DB_DSN` on the API container, because `kubectl exec … /api bootstrap-admin` does not see the container args and fell back to SQLite (valgul's "Fix in #707" card, 2026-10-15).
 
 **Checkpoint**: SC-005 is met.
 
@@ -391,9 +394,11 @@ description: "Task list for 013-expand-test-coverage"
 
 ## Phase 8: Polish & cross-cutting
 
-- [ ] T059 [P] Update `docs/contributing.md`, under "CI and workflows", with one short paragraph per new gate: what fails it, and how to fix it without suppressing it. Update "E2E testing" for the `optional-components` bucket and the `e2e-postgres` job. CI's `make check-links` verifies the new anchors.
-- [ ] T060 [P] Grep the full feature diff for forbidden directives: `git diff origin/master -- . ':!specs' | grep -nE "nolint|eslint-disable|@ts-ignore|hadolint ignore|trivyignore|allow-ghsas"` must print nothing (SC-006).
-- [ ] T061 Confirm `coverage-gaps.md` has no `open` or `in-progress` rows and that `make check-coverage-gaps` passes in CI. Then run `/speckit-analyze` on this folder.
+- [X] T059 [P] Update `docs/contributing.md`, under "CI and workflows", with one short paragraph per new gate: what fails it, and how to fix it without suppressing it. Update "E2E testing" for the `optional-components` bucket and the `e2e-postgres` job. CI's `make check-links` verifies the new anchors.
+- [X] T060 [P] Grep the full feature diff for forbidden directives: `git diff origin/master -- . ':!specs' ':!*.md' | grep -nE "nolint|eslint-disable|@ts-ignore|hadolint ignore|trivyignore|allow-ghsas"` must print nothing (SC-006).
+  Result (2026-10-16): over the feature diff, from before #671 to master after #707, the command prints nothing. Markdown is excluded (valgul, 2026-10-16) because its only matches are prose in CLAUDE.md and the agent and skill docs telling contributors not to use these directives; SC-006 covers in-source directives.
+- [X] T061 Confirm `coverage-gaps.md` has no `open` or `in-progress` rows and that `make check-coverage-gaps` passes in CI. Then run `/speckit-analyze` on this folder.
+  Result (2026-10-16): no open or in-progress rows; `make check-coverage-gaps` passed in "docs and repository checks" on #710 (https://github.com/GameplanePanel/Gameplane/actions/runs/38951995010/job/117146106043). `/speckit-analyze` found 0 critical issues; its two medium findings (the tasks.md checkpoint and the plan.md decision count) are fixed on #710, and SC-004 was amended.
 - [ ] T062 Once every PR above is merged and every task is checked or withdrawn, `git mv specs/013-expand-test-coverage specs/done_013-expand-test-coverage` and update every in-repo reference (including `hack/check-coverage-gaps.sh`'s default path) in one `docs:` commit (Constitution IV).
 
 ---

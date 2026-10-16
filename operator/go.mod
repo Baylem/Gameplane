@@ -15,7 +15,12 @@ require (
 // both inside the workspace (go.work) and in standalone module/Docker builds.
 replace github.com/GameplanePanel/gameplane/netguard => ../netguard
 
+// i18n is an in-repo module (no published version); resolve it locally
+// both inside the go.work workspace and in standalone/Docker builds.
+replace github.com/GameplanePanel/gameplane/i18n => ../i18n
+
 require (
+	github.com/GameplanePanel/gameplane/i18n v0.0.0
 	github.com/go-git/go-billy/v5 v5.9.2
 	github.com/go-git/go-git/v5 v5.19.3
 	github.com/go-logr/logr v1.4.4

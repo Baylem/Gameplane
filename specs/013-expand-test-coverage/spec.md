@@ -290,7 +290,9 @@ migrations and queries work identically.
   telemetry-receiver) have at least one E2E test in a CI bucket, and the test verifies
   the component's primary operation works correctly.
 - **SC-004**: api/internal/handlers/secrets_managed.go (92 lines, upsertLabelledSecret,
-  deleteManagedSecret) has 100% test coverage; web components ConsoleShell,
+  deleteManagedSecret) has 100% test coverage of reachable statements (the
+  `existing.Labels == nil` branch in upsertLabelledSecret cannot run, because the
+  feature-label check above it has already returned); web components ConsoleShell,
   CloneServerDialog, ServerActionsMenu each have a .test.tsx file with ≥ 80% line
   coverage.
 - **SC-005**: When the Postgres build tag is enabled, a named e2e bucket runs the same

@@ -111,9 +111,9 @@ Open `https://<ingress.host>` and log in.
 Top-level knobs (see `values.yaml` for the full list):
 
 - `image.registry` / `image.tag` — container image pinning
-- `operator.enabled` — enable the workload operator (default `true`). Set to `false` for a standalone central panel.
+- `operator.enabled` — enable the workload operator and bundled native CRDs (default `true`). Set to `false` for a standalone central panel; the CRD subchart is excluded before Helm installs CRDs.
 - `api.enabled` — enable the central API and dashboard (default `true`). Set to `false` on a remote operator/gateway installation.
-- `api.standalone` — store management records and encrypted credentials in SQL without a local cluster (default `false`). Requires `operator.enabled=false`, one API replica, and `--skip-crds` when installing the panel. See the [standalone guide](standalone-panel.md).
+- `api.standalone` — store management records and encrypted credentials in SQL without a local cluster (default `false`). Requires `operator.enabled=false` and one API replica. The standalone profile omits native CRDs and the CRD apply hook/RBAC without an additional CLI flag. See the [standalone guide](standalone-panel.md).
 - `operator.replicas` — leader-elected, safe at 2+
 - `operator.configInitImage` / `operator.resticImage` — the two images the operator
   injects into workloads it creates: the config-init container on game pods
@@ -123,7 +123,7 @@ Top-level knobs (see `values.yaml` for the full list):
   `--config-init-image` / `--restic-image` flags, mirroring `operator.agentImage`
 - `operator.backupJobBackoffLimit` / `operator.backupJobActiveDeadlineSeconds` — retry limit (default `2`, must be >= 0) and wall-clock deadline in seconds (default `86400`, must be > 0) for the restic backup/restore Jobs. They map to the operator's `--backup-job-backoff-limit` / `--backup-job-active-deadline-seconds` flags. Negative or non-integer values fail the render; an unset key (e.g. `helm upgrade --reuse-values` from an older release) or a `0` deadline uses the default, while an explicit `0` backoff is honoured.
 - `operator.gameDataStorage.storageClassName` — install-time default storage class
-  for game server data volumes (unreleased; ships in the next release) (default `""`). Empty string uses the cluster's
+  for game server data volumes (since v0.3.0) (default `""`). Empty string uses the cluster's
   default StorageClass. Applies to all GameServers where neither the GameTemplate
   nor GameServer-level override specifies a class. **Precedence**: GameServer
   override > GameTemplate default > install-time default > cluster default.
@@ -145,7 +145,7 @@ Top-level knobs (see `values.yaml` for the full list):
   - Core connection: `issuer` / `clientID` / `clientSecretRef` / `redirectURL` /
     `displayName` — OIDC provider credentials and endpoints. Per-IdP walkthroughs
     (Keycloak, Authentik, Google) live in [oidc.md](oidc.md)
-  - Role mapping (new, seeded at install time) (unreleased; ships in the next release):
+  - Role mapping (new, seeded at install time) (since v0.3.0):
     - `groupsClaim` — OIDC claim name containing group memberships (default `""`).
       Typically `"groups"` or `"roles"` depending on your IdP. Empty/omitted =
       read the `"groups"` claim. This only chooses which claim is read; it does
@@ -773,8 +773,17 @@ remote workloads running. Keep cookie jars and kubeconfig files private.
 ### Helm CRD caveat
 
 This section applies to combined and remote workload installations. A standalone
-central Helm release skips CRDs and their apply hook; follow its
+central Helm release uses `operator.enabled=false` to exclude the bundled
+`gameplane-crds` subchart and `api.standalone=true` to skip the CRD apply hook and
+its RBAC. No `--skip-crds` argument is needed; follow its
 [panel profile](standalone-panel.md#central-panel-on-kubernetes).
+
+With the default `operator.enabled=true`, the subchart supplies CRDs through
+Helm's native `crds/` phase before the release's custom resources are installed.
+CRDs already present on the cluster remain in place when switching to a profile
+that omits them; this setting does not delete CRDs or their custom resources.
+Combined API-only installs retain the existing apply hook when
+`api.standalone=false` and `crds.autoApply.enabled=true`.
 
 **`helm upgrade` never updates CRDs.** That is a documented Helm limitation,
 not a Gameplane one: files under a chart's `crds/` directory are installed on
@@ -792,7 +801,7 @@ hook:
 
 ```sh
 # only when crds.autoApply.enabled=false
-kubectl apply --server-side -f charts/gameplane/crds/
+kubectl apply --server-side -f charts/gameplane/crd-manifests/
 ```
 
 The hook fires on pre-upgrade always. On `helm install` it fires only when
