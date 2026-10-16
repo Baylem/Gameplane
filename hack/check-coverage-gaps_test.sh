@@ -13,7 +13,7 @@ cd "$SCRIPT_DIR/.."
 
 VALIDATOR="$SCRIPT_DIR/check-coverage-gaps.sh"
 FIXTURES="$SCRIPT_DIR/testdata/coverage-gaps"
-REAL="specs/013-expand-test-coverage/coverage-gaps.md"
+REAL="specs/done_013-expand-test-coverage/coverage-gaps.md"
 
 shopt -s nullglob
 pass_files=("$FIXTURES"/pass/*.md)

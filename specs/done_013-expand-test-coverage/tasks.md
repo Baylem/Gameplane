@@ -399,7 +399,7 @@ description: "Task list for 013-expand-test-coverage"
   Result (2026-10-16): over the feature diff, from before #671 to master after #707, the command prints nothing. Markdown is excluded (valgul, 2026-10-16) because its only matches are prose in CLAUDE.md and the agent and skill docs telling contributors not to use these directives; SC-006 covers in-source directives.
 - [X] T061 Confirm `coverage-gaps.md` has no `open` or `in-progress` rows and that `make check-coverage-gaps` passes in CI. Then run `/speckit-analyze` on this folder.
   Result (2026-10-16): no open or in-progress rows; `make check-coverage-gaps` passed in "docs and repository checks" on #710 (https://github.com/GameplanePanel/Gameplane/actions/runs/38951995010/job/117146106043). `/speckit-analyze` found 0 critical issues; its two medium findings (the tasks.md checkpoint and the plan.md decision count) are fixed on #710, and SC-004 was amended.
-- [ ] T062 Once every PR above is merged and every task is checked or withdrawn, `git mv specs/013-expand-test-coverage specs/done_013-expand-test-coverage` and update every in-repo reference (including `hack/check-coverage-gaps.sh`'s default path) in one `docs:` commit (Constitution IV).
+- [X] T062 Once every PR above is merged and every task is checked or withdrawn, `git mv specs/013-expand-test-coverage specs/done_013-expand-test-coverage` and update every in-repo reference (including `hack/check-coverage-gaps.sh`'s default path) in one `docs:` commit (Constitution IV).
 
 ---
 
