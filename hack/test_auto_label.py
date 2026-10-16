@@ -99,6 +99,41 @@ class PlannedLabels(unittest.TestCase):
     def test_unknown_prefix_still_gets_area(self):
         self.assertEqual(planned_labels("Update stuff", ["web/a.ts"], []), ["area: web"])
 
+    def test_translation_pack_gets_docs_and_shared(self):
+        files = ["i18n/locales/fr/app.json", "i18n/locales/fr/meta.json"]
+        self.assertEqual(
+            planned_labels("Add French pack", files, []),
+            ["type: docs", "area: shared"],
+        )
+
+    def test_translation_pack_keeps_title_type(self):
+        files = ["i18n/locales/fr/app.json", "i18n/locales/fr/meta.json"]
+        self.assertEqual(
+            planned_labels("feat(i18n): add French", files, []),
+            ["type: feature", "area: shared"],
+        )
+
+    def test_translation_pack_with_other_files_is_not_docs(self):
+        files = ["i18n/locales/fr/app.json", "web/a.ts"]
+        self.assertEqual(
+            planned_labels("Add French pack", files, []),
+            ["area: shared", "area: web"],
+        )
+
+    def test_translation_pack_existing_type_untouched(self):
+        files = ["i18n/locales/fr/app.json"]
+        self.assertEqual(
+            planned_labels("Add French pack", files, ["type: fix"]),
+            ["area: shared"],
+        )
+
+
+class TranslationPackAreas(unittest.TestCase):
+    def test_i18n_locales_is_shared(self):
+        for path in ("i18n/locales/fr/app.json", "i18n/locales/fr/meta.json"):
+            with self.subTest(path=path):
+                self.assertEqual(area_for_path(path), "area: shared")
+
 
 if __name__ == "__main__":
     unittest.main()

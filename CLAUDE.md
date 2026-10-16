@@ -36,6 +36,7 @@ netguard/            SSRF dial-guard: IsAllowed (operator module sources, API si
 gameaction/          console-injection guard + command renderer (api, agent)
 gameproto/           Minecraft/Terraria handshake parser (sentinel)
 telemetryschema/     shared telemetry report contract (api, telemetry-receiver)
+i18n/                shared language packs, ICU formatter, pack validator, i18n-check (api, web, operator, gp-module)
 gp-module/           module authoring CLI: init/validate/preview/package
 operator/            controller-runtime operator
   api/v1alpha1/      CRD types (edit here, then `make generate manifests`); zz_generated.deepcopy.go GENERATED
@@ -60,7 +61,7 @@ test/e2e/            Kind E2E suite (//go:build e2e)
 docs/                architecture, security, modules
 design.pen           canonical Pencil dashboard design
 signing/             cosign public keys, dated legacy key + cross-signature (image + module)
-go.work              links all 16 Go modules (incl. test/e2e)
+go.work              links all 17 Go modules (incl. test/e2e)
 Makefile             canonical task runner
 ```
 
@@ -75,7 +76,7 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
 - **E2E conventions:** register new tests in `test/e2e/buckets.sh`; `t.Parallel()` + unique names; guard shared resources (`ociPushMu` for module pushes, `ensureResticRepo(t)` for shared backup repos). Rate limits per cluster: IP burst 10 (5/min), user burst 6 (3/min) — cap an API bucket at ~7 admin logins.
 - **Lint:** `make lint` = gofmt, go vet, golangci-lint, ESLint, `check-specs`, `check-doc-versions`, `check-links`.
 
-**Coverage minimums:** netguard 91, gameaction 91, gameproto 90, telemetryschema 90, gp-module 80, operator 72, api 80, agent 90, svcutil 90; audit-syslog-bridge, telemetry-receiver, sentinel, capture-sidecar, mcp-server, tunnel 70; web 92 lines / 76 functions / 82 branches / 92 statements.
+**Coverage minimums:** netguard 91, gameaction 91, gameproto 90, telemetryschema 90, i18n 90, gp-module 80, operator 72, api 80, agent 90, svcutil 90; audit-syslog-bridge, telemetry-receiver, sentinel, capture-sidecar, mcp-server, tunnel 70; web 92 lines / 76 functions / 82 branches / 92 statements.
 
 ## Core rules
 
@@ -116,6 +117,7 @@ After cloning: `git submodule update --init` (`modules/` required for `make dev-
 | gameaction | Go | validates console input against schemas; escapes injection |
 | gameproto | Go | Minecraft/Terraria wire parser for connection filtering |
 | telemetryschema | Go | stdlib-only shared telemetry report contract: types, strict decode, official module catalog, report signing (api, telemetry-receiver) |
+| i18n | Go | shared language packs (`go:embed`), ICU MessageFormat subset, pack validator, `i18n-check` CI tool (api, web, operator, gp-module) |
 | gp-module | Go | module CLI: scaffold, offline validate, dry-run preview, OCI package |
 | svcutil | Go | stdlib-only env + graceful shutdown (`RunHTTP`) |
 | operator | Go, controller-runtime | authoritative reconciler for 9 CRDs (`GameServer`, `GameTemplate`, …) |

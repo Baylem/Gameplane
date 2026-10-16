@@ -176,6 +176,15 @@ work on your own fork of a submodule, repoint it locally:
 `git submodule set-url modules https://github.com/<you>/module.git`
 (don't commit that change).
 
+## Translating
+
+Language packs live in `i18n/locales/<tag>/`. Adding a language or
+improving one does not need code changes. See
+[`docs/translating.md`](translating.md) for the folder layout, the message
+rules, the 80% listing threshold, and how to check a pack. A PR that touches
+only `i18n/locales/**` and has no type prefix in its title is labelled
+`type: docs` and `area: shared`.
+
 ## Code review
 
 PRs receive an automated advisory review from the CodeRabbit GitHub App, configured by `.coderabbit.yaml`. CodeRabbit's rules encode the repo's style guide and house rules — wrapping errors with `%w`, no unjustified `any`, fix rather than silence linter warnings, etc. Its feedback does not block merges. If you think a rule is wrong, raise it with the maintainers rather than working around it — this keeps the rules canonical and consistent across the codebase.
