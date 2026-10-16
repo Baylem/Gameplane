@@ -21,6 +21,9 @@ export const ENGLISH: LanguageInfo = {
   listed: true,
 };
 
+// PSEUDO_TAG is the pseudo-language built only with VITE_I18N_PSEUDO=1 (T099).
+export const PSEUDO_TAG = "en-XA";
+
 // CompiledCatalog maps each message id to its compiled AST (formatjs --ast).
 export type CompiledCatalog = Record<string, MessageFormatElement[]>;
 

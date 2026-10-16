@@ -23,6 +23,7 @@
     "typecheck:e2e": "tsc --noEmit -p e2e/tsconfig.json",
     "screenshots": "GAMEPLANE_E2E_TARGET=mock GAMEPLANE_SCREENSHOTS=1 playwright test",
     "screenshots:design": "GAMEPLANE_E2E_TARGET=mock GAMEPLANE_SCREENSHOTS=1 playwright test e2e/screenshots",
+    "screenshots:pseudo": "GAMEPLANE_E2E_TARGET=mock GAMEPLANE_SCREENSHOTS=1 VITE_I18N_PSEUDO=1 playwright test e2e/screenshots",
     "diff:screenshots": "node scripts/compare-screenshots.mjs"
   },
   "dependencies": {

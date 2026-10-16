@@ -145,3 +145,15 @@ Affects: FR-001, T043, T044
 Settled 2026-10-12 by valgul. The compact picker sits inside the card, in its top-right corner, on every state of the login and share pages. It shows only the native names of the languages.
 
 Affects: FR-005, T043, T045
+
+## OD-018: How the en-XA screenshot run drives the specs - RESOLVED: switch at capture (valgul, 2026-10-16)
+
+Settled 2026-10-16 by valgul. The screenshot specs find elements by their English names, so they keep driving the UI in English. In the en-XA run the capture helper switches the dashboard to en-XA just before each screenshot, through a test hook that only builds listing the pseudo-language have, and switches back afterwards. The specs themselves do not change. Screenshots a spec takes with page.screenshot directly stay English.
+
+Affects: FR-010, FR-038, T100
+
+## OD-019: Clipping found by the en-XA run - RESOLVED: fail the run (valgul, 2026-10-16)
+
+Settled 2026-10-16 by valgul. Text that is cut off without a way to show it in full on hover or focus fails the en-XA run through soft assertions, so every screen is still captured and the run lists each clipped element. A fix is designed in design.pen first, then built.
+
+Affects: FR-010, T100

@@ -6,10 +6,17 @@ import type { IntlConfig } from "react-intl";
 import { I18nProvider as AriaI18nProvider } from "@react-aria/i18n";
 
 import type { User } from "@/types";
-import { directionFor, listedLanguages, loadMessages } from "./languages";
+import { PSEUDO_TAG, directionFor, listedLanguages, loadMessages } from "./languages";
 import type { CompiledCatalog } from "./languages";
 import { resolveLanguage } from "./resolve";
 import { readLanguageStorage, writeLanguageStorage } from "./storage";
+
+declare global {
+  interface Window {
+    // Present only in builds that list the pseudo-language (spec 019 T100).
+    gameplaneI18nTest?: { setOverride: (tag: string | null) => void };
+  }
+}
 
 export interface I18nContextValue {
   language: string;
@@ -56,13 +63,20 @@ export function I18nProvider({ children, userLanguage, instanceDefault }: I18nPr
   const [choice, setChoice] = useState<string | null>(() => readLanguageStorage().choice);
   const listed = useMemo(() => listedLanguages().map((row) => row.tag), []);
 
-  const language = resolveLanguage({
+  // Test override (spec 019 T100, OD-018): builds that list the pseudo-language
+  // (VITE_I18N_PSEUDO=1, never a release) expose window.gameplaneI18nTest so the
+  // en-XA screenshot run can switch the language right before each capture.
+  const pseudoBuild = listed.includes(PSEUDO_TAG);
+  const [override, setOverride] = useState<string | null>(null);
+
+  const resolved = resolveLanguage({
     userChoice: userLanguage,
     browserChoice: choice,
     navigatorLanguages: navigator.languages,
     instanceDefault,
     listed,
   });
+  const language = pseudoBuild && override !== null && listed.includes(override) ? override : resolved;
   const direction = directionFor(language);
 
   const [loaded, setLoaded] = useState<LoadedMessages>({ tag: "en", messages: {} });
@@ -87,6 +101,20 @@ export function I18nProvider({ children, userLanguage, instanceDefault }: I18nPr
     document.documentElement.dir = direction;
     writeLanguageStorage({ applied: language });
   }, [language, direction]);
+
+  useEffect(() => {
+    if (!pseudoBuild) return undefined;
+    window.gameplaneI18nTest = { setOverride };
+    return () => {
+      delete window.gameplaneI18nTest;
+    };
+  }, [pseudoBuild]);
+
+  // data-i18n-loaded names the language whose catalog is in place, so a test
+  // can wait for a language switch to finish rendering.
+  useEffect(() => {
+    document.documentElement.dataset.i18nLoaded = loaded.tag;
+  }, [loaded.tag]);
 
   const setLanguage = useCallback((tag: string | null) => {
     writeLanguageStorage({ choice: tag });
