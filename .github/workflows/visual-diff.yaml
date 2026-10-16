@@ -5,11 +5,13 @@ on:
     branches: [master]
     paths:
       - 'web/**'
+      - 'i18n/locales/**'
       - 'assets/design-export/**'
       - '.github/workflows/visual-diff.yaml'
   pull_request:
     paths:
       - 'web/**'
+      - 'i18n/locales/**'
       - 'assets/design-export/**'
       - '.github/workflows/visual-diff.yaml'
   workflow_dispatch:
