@@ -615,11 +615,12 @@ function ServerCard({
               params={{ name: gs.metadata.name }}
               search={targetSearch(resourceTarget(gs))}
               className="block truncate font-medium text-sm text-foreground hover:text-primary"
+              title={gs.metadata.name}
             >
               {gs.metadata.name}
             </Link>
-            <div className="truncate text-xs text-muted">{targetLabel(resourceTarget(gs))}</div>
-            <div className="truncate text-xs text-foreground/60 font-mono">
+            <div className="truncate text-xs text-muted" title={targetLabel(resourceTarget(gs))}>{targetLabel(resourceTarget(gs))}</div>
+            <div className="truncate text-xs text-foreground/60 font-mono" title={address}>
               {address}
             </div>
           </div>

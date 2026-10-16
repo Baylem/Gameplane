@@ -349,7 +349,7 @@ function FilesBrowser({ resourceTarget }: { resourceTarget: ResourceTarget }) {
                 ) : (
                   <FileIcon className="h-3 w-3 text-default-500" />
                 )}
-                <span className="truncate">{e.name}</span>
+                <span className="truncate" title={e.name}>{e.name}</span>
                 {e.dir ? (
                   // Folders open on click, so the delete action sits in its own
                   // button and the wrapper keeps its click from reaching the row.

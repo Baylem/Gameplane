@@ -207,7 +207,10 @@ export function OverviewTab({
                   {primary.host ? (
                     <>
                       <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <span className="truncate font-mono text-foreground">
+                        <span
+                          className="truncate font-mono text-foreground"
+                          title={primary.host + (primary.port !== undefined ? intl.formatMessage({ id: "web.routes.tabs.overview.host_port_suffix", defaultMessage: ":{port}", description: "Overview: port shown after the host of an endpoint; {port} is the port number" }, { port: primary.port }) : "")}
+                        >
                           {primary.host}
                           {primary.port !== undefined ? intl.formatMessage({ id: "web.routes.tabs.overview.host_port_suffix", defaultMessage: ":{port}", description: "Overview: port shown after the host of an endpoint; {port} is the port number" }, { port: primary.port }) : ""}
                         </span>
@@ -238,7 +241,7 @@ export function OverviewTab({
                 {primary?.host ? (
                   <>
                     <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate font-mono text-foreground">{primary.host}</span>
+                      <span className="truncate font-mono text-foreground" title={primary.host}>{primary.host}</span>
                       {primary.pool && (
                         <span className="text-xs text-muted">{intl.formatMessage({ id: "web.routes.tabs.overview.pool_pool", defaultMessage: "pool: {pool}", description: "Overview: load balancer address pool line; {pool} is the pool name" }, { pool: primary.pool })}</span>
                       )}
@@ -266,7 +269,7 @@ export function OverviewTab({
                 <div className="space-y-2">
                   <div className="px-1 text-xs font-medium text-muted">{intl.formatMessage({ id: "web.routes.tabs.overview.cluster_address", defaultMessage: "Cluster Address", description: "Overview tab: small heading above the cluster-internal address group, shown when it differs from the external address" })}</div>
                   <EndpointRow label={intl.formatMessage({ id: "web.routes.tabs.overview.host", defaultMessage: "Host", description: "Overview tab: label of the host name row in an address group" })}>
-                    <span className="truncate font-mono text-foreground">{clusterEndpoint.host}</span>
+                    <span className="truncate font-mono text-foreground" title={clusterEndpoint.host}>{clusterEndpoint.host}</span>
                     <button
                       className="rounded p-1 text-muted hover:bg-border hover:text-foreground"
                       onClick={() => navigator.clipboard?.writeText(clusterEndpoint.host)}

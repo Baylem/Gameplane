@@ -157,3 +157,9 @@ Affects: FR-010, FR-038, T100
 Settled 2026-10-16 by valgul. Text that is cut off without a way to show it in full on hover or focus fails the en-XA run through soft assertions, so every screen is still captured and the run lists each clipped element. A fix is designed in design.pen first, then built.
 
 Affects: FR-010, T100
+
+## OD-020: How cut-off data text is revealed - RESOLVED: title attribute (valgul, 2026-10-16)
+
+Settled 2026-10-16 by valgul. The first en-XA run found only data text that is already truncated in English and in design.pen: server names and addresses on the mobile Servers cards, the endpoint hosts on the Overview tab, module summaries on the module cards and file names on the Files tab. Each truncated element gets a title attribute with its full text, so hovering shows it. Nothing changes visually, so design.pen is not updated.
+
+Affects: FR-010, T100

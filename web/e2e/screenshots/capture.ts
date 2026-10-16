@@ -87,7 +87,9 @@ async function auditClipping(page: Page, id: string, scope?: ElementHandle<Node>
     }
     return out;
   }, scope ?? null);
-  fs.writeFileSync(path.join(SCREENSHOTS_DIR, "clipping", `${id}.json`), JSON.stringify(clipped, null, 2) + "\n");
+  const report = path.join(SCREENSHOTS_DIR, "clipping", `${id}.json`);
+  fs.mkdirSync(path.dirname(report), { recursive: true });
+  fs.writeFileSync(report, JSON.stringify(clipped, null, 2) + "\n");
   expect.soft(clipped, `${id}: text cut off without a hover reveal (FR-010)`).toEqual([]);
 }
 
@@ -228,6 +230,7 @@ export async function captureLocator(page: Page, id: string, locator: Locator): 
     }
   }
 
+  await fs.promises.mkdir(path.dirname(screenshotPath), { recursive: true });
   await fs.promises.writeFile(screenshotPath, out);
   if (handle) {
     await auditClipping(page, id, handle);

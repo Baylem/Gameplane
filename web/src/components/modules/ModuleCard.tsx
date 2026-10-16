@@ -145,7 +145,7 @@ export function ModuleCard({
         )}
       </CardHeader>
       <CardContent className="flex flex-col gap-3 flex-1 py-0">
-        <p className="line-clamp-4 text-xs text-muted leading-[1.4]">
+        <p className="line-clamp-4 text-xs text-muted leading-[1.4]" title={entry.summary ?? undefined}>
           {entry.summary ?? intl.formatMessage({ id: "web.components.modules.module_card.no_summary", defaultMessage: "No summary.", description: "Module card: text shown when a module has no summary" })}
         </p>
         {versionUnavailable ? (
