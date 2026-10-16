@@ -2115,6 +2115,82 @@ jobs:
           context: ${{ env.CTX }}
           namespaces: "gameplane-system,gameplane-games"
 
+  # Re-runs the api-auth, api-roles and api-rbac buckets against a
+  # Postgres-backed API (spec 013 US5, OD-3). amd64 only. The API is restarted
+  # between buckets: its login rate limiter lives in memory and each bucket is
+  # sized to one fresh limiter's budget (see test/e2e/buckets.sh). The restart
+  # also means each later bucket runs on data the earlier ones left in Postgres.
+  e2e-postgres:
+    name: e2e postgres / amd64 (kind)
+    needs: [changes, build-images]
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75 # Boots a kind cluster with PostgreSQL, installs the chart, runs three buckets.
+    permissions:
+      contents: read
+    env:
+      CLUSTER: gameplane-e2e
+      CTX: kind-gameplane-e2e
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/go-cache
+        with:
+          key-suffix: e2e
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - name: install kind
+        uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+        with:
+          install_only: true
+      - name: load images
+        uses: ./.github/actions/e2e-images
+      - name: bring up cluster + helm install (postgres)
+        run: ./deploy/kind/e2e.sh up "$CLUSTER" e2e postgres
+      - name: assert the API runs on postgres
+        run: |
+          args="$(kubectl --context "$CTX" --namespace gameplane-system get deployment gameplane-api \
+            -o jsonpath='{.spec.template.spec.containers[?(@.name=="api")].args}')"
+          echo "api args: ${args}"
+          if ! grep -q -- '--db-driver=postgres' <<<"${args}"; then
+            echo "the gameplane-api Deployment does not run with --db-driver=postgres" >&2
+            exit 1
+          fi
+      - name: run go e2e (api-auth on postgres)
+        run: |
+          RUN_REGEX="$(./test/e2e/buckets.sh regex api-auth)"
+          cd test/e2e && \
+            GAMEPLANE_E2E_REUSE_CLUSTER=1 \
+            GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
+            go test -tags=e2e -timeout 15m -v -parallel 4 -run "$RUN_REGEX" ./...
+      - name: restart the API (fresh login limiter)
+        run: |
+          kubectl --context "$CTX" --namespace gameplane-system rollout restart deployment/gameplane-api
+          kubectl --context "$CTX" --namespace gameplane-system rollout status deployment/gameplane-api --timeout=180s
+      - name: run go e2e (api-roles on postgres)
+        run: |
+          RUN_REGEX="$(./test/e2e/buckets.sh regex api-roles)"
+          cd test/e2e && \
+            GAMEPLANE_E2E_REUSE_CLUSTER=1 \
+            GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
+            go test -tags=e2e -timeout 10m -v -parallel 3 -run "$RUN_REGEX" ./...
+      - name: restart the API again (fresh login limiter)
+        run: |
+          kubectl --context "$CTX" --namespace gameplane-system rollout restart deployment/gameplane-api
+          kubectl --context "$CTX" --namespace gameplane-system rollout status deployment/gameplane-api --timeout=180s
+      - name: run go e2e (api-rbac on postgres)
+        run: |
+          RUN_REGEX="$(./test/e2e/buckets.sh regex api-rbac)"
+          cd test/e2e && \
+            GAMEPLANE_E2E_REUSE_CLUSTER=1 \
+            GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
+            go test -tags=e2e -timeout 10m -v -parallel 4 -run "$RUN_REGEX" ./...
+      - name: dump cluster state on failure (e2e-postgres)
+        if: failure()
+        uses: ./.github/actions/dump-cluster-state
+        with:
+          context: ${{ env.CTX }}
+          namespaces: "gameplane-system,gameplane-games"
+          include-previous-logs: "true"
+
   # Smoke-tests the dev ingress-nginx manifest pin (deploy/kind/up.sh,
   # INGRESS_NGINX_VERSION) on the same Kind node config `make dev-up` uses
   # (deploy/kind/cluster.yaml — the ingress-ready control-plane node label
@@ -2237,6 +2313,7 @@ jobs:
         e2e-web-live-arm64,
         e2e-game-bot,
         e2e-capture-overhead,
+        e2e-postgres,
         e2e-kind-ingress-smoke,
       ]
     if: always()
@@ -2332,7 +2409,7 @@ jobs:
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'standalone-compose', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-go-arm64', 'e2e-multicluster', 'e2e-multicluster-arm64', 'e2e-upgrade', 'e2e-upgrade-arm64',
-              'e2e-web-live', 'e2e-web-live-arm64', 'e2e-game-bot', 'e2e-capture-overhead', 'e2e-kind-ingress-smoke',
+              'e2e-web-live', 'e2e-web-live-arm64', 'e2e-game-bot', 'e2e-capture-overhead', 'e2e-postgres', 'e2e-kind-ingress-smoke',
             ];
 
             // Maps each workflow job id to how its `name:` field (as reported by
@@ -2367,6 +2444,7 @@ jobs:
               'e2e-web-live-arm64': (n) => n.startsWith('e2e web live /') && n.includes('/ arm64 '),
               'e2e-game-bot': (n) => n.startsWith('e2e game bot /'),
               'e2e-capture-overhead': (n) => n === 'e2e capture overhead (kind)',
+              'e2e-postgres': (n) => n === 'e2e postgres / amd64 (kind)',
               'e2e-kind-ingress-smoke': (n) => n === 'ingress-nginx smoke (kind)',
               'submodule-freshness': (n) => n === 'submodule freshness',
               'dependency-review': (n) => n === 'dependency review',

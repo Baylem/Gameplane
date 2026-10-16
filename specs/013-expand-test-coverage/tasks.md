@@ -363,20 +363,20 @@ description: "Task list for 013-expand-test-coverage"
 
 **PR**: `test: postgres-backed e2e`. Depends on Phase 2 (T008–T010).
 
-- [ ] T054 [P] [US5] Add `TestPostgres_MigrateFromFrozenBaseline` to `api/internal/db/db_postgres_test.go`. Under the existing `GAMEPLANE_TEST_POSTGRES_DSN` skip guard it:
+- [X] T054 [P] [US5] Add `TestPostgres_MigrateFromFrozenBaseline` to `api/internal/db/db_postgres_test.go`. Under the existing `GAMEPLANE_TEST_POSTGRES_DSN` skip guard it:
   1. Creates a fresh schema.
   2. Applies only the frozen `migrations/postgres/001`–`012` files.
   3. Inserts a user, a role binding, a share link and an audit row with the 012-era columns.
   4. Runs `Store.Migrate` to head.
   5. Asserts the rows read back unchanged through the current store API and that `schema_migrations` lists every version.
-- [ ] T055 [P] [US5] Add `deploy/kind/postgres.yaml`: a single-replica PostgreSQL 17 StatefulSet, Service and Secret (`gameplane-postgres`) in the release namespace. Pin the image by the same digest as the `api-postgres` job's service.
-- [ ] T056 [US5] Add a `postgres` profile to `deploy/kind/e2e.sh`:
+- [X] T055 [P] [US5] Add `deploy/kind/postgres.yaml`: a single-replica PostgreSQL 17 StatefulSet, Service and Secret (`gameplane-postgres`) in the release namespace. Pin the image by the same digest as the `api-postgres` job's service.
+- [X] T056 [US5] Add a `postgres` profile to `deploy/kind/e2e.sh`:
   1. Apply `postgres.yaml` and wait for `pg_isready` with `kubectl exec`.
   2. Retag `gameplane-test/api:e2e-postgres` as `gameplane-test/api:${TAG}` before `kind load`.
   3. Install with every `e2e` value plus `--set api.db.driver=postgres` and `--set api.db.dsn=<from Secret>`.
 
   Follow contracts/e2e-additions.md. Depends on T055.
-- [ ] T057 [US5] Add an `e2e-postgres` job named `e2e postgres / amd64 (kind)` to `.github/workflows/ci.yaml`, modeled on `e2e-capture-overhead`'s step list but without `continue-on-error`. Settings:
+- [X] T057 [US5] Add an `e2e-postgres` job named `e2e postgres / amd64 (kind)` to `.github/workflows/ci.yaml`, modeled on `e2e-capture-overhead`'s step list but without `continue-on-error`. Settings:
   - `needs: [changes, build-images]`
   - `if: needs.changes.outputs.e2e == 'true'`
   - brings the cluster up with `./deploy/kind/e2e.sh up "$CLUSTER" postgres`
@@ -385,7 +385,8 @@ description: "Task list for 013-expand-test-coverage"
   - the dump-on-failure step
 
   Register it in `report`. Depends on T056.
-- [ ] T058 [US5] After the first green run, flip G-23 and G-24.
+- [X] T058 [US5] After the first green run, flip G-23 and G-24.
+  Implementation note (#707): `e2e.sh up` takes the profile as a 4th argument (`up "$CLUSTER" e2e postgres`), and the job restarts the API Deployment between buckets to reset its in-memory login rate limiter. The chart now also sets `GAMEPLANE_DB_DRIVER`/`GAMEPLANE_DB_DSN` on the API container, because `kubectl exec … /api bootstrap-admin` does not see the container args and fell back to SQLite (valgul's "Fix in #707" card, 2026-10-15).
 
 **Checkpoint**: SC-005 is met.
 
