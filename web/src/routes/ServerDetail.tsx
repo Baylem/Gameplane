@@ -35,6 +35,7 @@ import { PlayersTab } from "./tabs/Players";
 import { BackupsTab } from "./tabs/Backups";
 import { SettingsTab } from "./tabs/Settings";
 import { useOptionalIntl } from "@/lib/i18n/format";
+import { conditionMessageText } from "@/lib/i18n/conditionMessage";
 import { defineMessages, type MessageDescriptor } from "react-intl";
 
 // Console (xterm) and Files (Monaco) bring in heavy vendor deps; load on demand.
@@ -166,17 +167,21 @@ function ServerDetailView({ lookupTarget }: { lookupTarget: ResourceTarget }) {
   // with what the pod is doing (pulling image, installing server files,
   // waiting for the agent) — surface it under the phase badge.
   const provisioning = phase === "Starting" || phase === "Pending";
-  const progressMessage = gs?.status?.conditions?.find(
-    (c) => c.type === "Progressing",
-  )?.message;
+  const progressMessage = conditionMessageText(
+    intl,
+    gs?.status?.conditions?.find((c) => c.type === "Progressing"),
+    gs?.status?.conditionArgs,
+  );
   // When startup terminally fails the operator sets phase=Failed and puts
   // the reason on the Ready condition (image pull, crash-loop, exit). Both
   // the operator's escalation and a build-error setPhase write Ready, so
   // read the failure message from there.
   const failed = phase === "Failed";
-  const failureMessage = gs?.status?.conditions?.find(
-    (c) => c.type === "Ready",
-  )?.message;
+  const failureMessage = conditionMessageText(
+    intl,
+    gs?.status?.conditions?.find((c) => c.type === "Ready"),
+    gs?.status?.conditionArgs,
+  );
   // Gate lifecycle actions on phase so they aren't fired during a
   // transition (Starting/Stopping/Pending): Start only from a stopped
   // state, Stop/Restart only while Running. act.isPending blocks

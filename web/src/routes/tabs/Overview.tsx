@@ -14,6 +14,7 @@ import { formatBytes } from "@/lib/utils";
 import { mapServerEvent, type NormalizedServerEvent } from "@/lib/events";
 import { playerRows } from "@/lib/players";
 import { useOptionalIntl } from "@/lib/i18n/format";
+import { conditionMessageText } from "@/lib/i18n/conditionMessage";
 import { defineMessages } from "react-intl";
 
 const OVERVIEW_TEXT = defineMessages({
@@ -125,7 +126,7 @@ export function OverviewTab({
           </Alert.Indicator>
           <Alert.Content className="flex flex-1 flex-col gap-1">
             <Alert.Title className="font-semibold text-sm">{intl.formatMessage({ id: "web.routes.tabs.overview.waiting_on_storage_the_server_can_t", defaultMessage: "Waiting on storage — the server can't provision yet", description: "Overview tab: title of the alert shown while the server waits for storage before it can be created; the line below gives the ready condition" })}</Alert.Title>
-            <Alert.Description className="text-sm">{intl.formatMessage({ id: "web.routes.tabs.overview.ready_condition_reason_message", defaultMessage: "Ready condition: {reason} — {message}", description: "Overview: alert text for the Ready condition; {reason} is the condition reason and {message} the condition message" }, { reason: provisioningFailure.reason, message: provisioningFailure.message })}</Alert.Description>
+            <Alert.Description className="text-sm">{intl.formatMessage({ id: "web.routes.tabs.overview.ready_condition_reason_message", defaultMessage: "Ready condition: {reason} — {message}", description: "Overview: alert text for the Ready condition; {reason} is the condition reason and {message} the condition message" }, { reason: provisioningFailure.reason, message: conditionMessageText(intl, provisioningFailure, status.conditionArgs) })}</Alert.Description>
           </Alert.Content>
         </Alert>
       )}
@@ -224,7 +225,7 @@ export function OverviewTab({
                     </>
                   ) : (
                     <span className="text-muted italic">
-                      {tunnelReady?.message ?? intl.formatMessage({ id: "web.routes.tabs.overview.waiting_for_tunnel_address", defaultMessage: "Waiting for tunnel address…", description: "Overview: endpoint text shown while the tunnel has not yet published an address" })}
+                      {conditionMessageText(intl, tunnelReady, status.conditionArgs) ?? intl.formatMessage({ id: "web.routes.tabs.overview.waiting_for_tunnel_address", defaultMessage: "Waiting for tunnel address…", description: "Overview: endpoint text shown while the tunnel has not yet published an address" })}
                     </span>
                   )}
                 </EndpointRow>

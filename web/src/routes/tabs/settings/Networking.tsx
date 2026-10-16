@@ -19,6 +19,7 @@ import { errorTextIntl } from "@/lib/errors";
 import { Field } from "./Field";
 import type { SectionProps } from "./types";
 import { useOptionalIntl } from "@/lib/i18n/format";
+import { conditionMessageText } from "@/lib/i18n/conditionMessage";
 
 const EXPOSE_LABELS = defineMessages({
   clusterIp: { id: "web.routes.tabs.settings.networking.expose_cluster_ip", defaultMessage: "ClusterIP (in-cluster only)", description: "Networking: Expose option label for ClusterIP, a service reachable only inside the cluster" },
@@ -604,6 +605,7 @@ function AddressAssignmentSection({
 
       <AddressStatusField
         condition={condition}
+        messageText={conditionMessageText(intl, condition, status?.conditionArgs)}
         serverNamespace={draft.metadata.namespace}
       />
 
@@ -634,9 +636,11 @@ function AddressAssignmentSection({
 
 function AddressStatusField({
   condition,
+  messageText,
   serverNamespace,
 }: {
   condition?: { reason?: string; message?: string; status?: string };
+  messageText?: string;
   serverNamespace?: string;
 }) {
   const intl = useOptionalIntl();
@@ -742,7 +746,7 @@ function AddressStatusField({
                 },
               )}</>
             ) : (
-              condition.message
+              messageText ?? condition.message
             )}
           </div>
         </div>
