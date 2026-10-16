@@ -275,11 +275,12 @@ i18n-sync: ## Write the API message registry (server.* and notify.*) and the ope
 	cd operator && go run ./hack/condition-ids -app ../i18n/locales/en/app.json
 
 .PHONY: check-i18n
-check-i18n: ## Verify language packs, server.*, notify.* and operator condition.* drift and dashboard extraction drift (spec 019)
+check-i18n: ## Verify language packs, server.*, notify.*, operator condition.* drift, dashboard extraction drift and unused reference ids (spec 019)
 	cd web && npm run i18n:extract-only
-	cd operator && go run ./hack/condition-ids -check -app ../i18n/locales/en/app.json
+	cd operator && go run ./hack/condition-ids -check -app ../i18n/locales/en/app.json -ids ../i18n/.condition-ids.txt
 	cd api && go run ./cmd/messages-export > ../i18n/.registry.json
-	cd i18n && status=0; go run ./cmd/i18n-check --extracted ../web/src/generated/i18n/extracted.json --registry .registry.json --check-server locales || status=$$?; rm -f .registry.json; exit $$status
+	cd i18n && { jq -r 'keys[]' ../web/src/generated/i18n/extracted.json; jq -r '.[].id' .registry.json; cat .condition-ids.txt; } | sort -u > .used-ids.txt
+	cd i18n && status=0; go run ./cmd/i18n-check --extracted ../web/src/generated/i18n/extracted.json --registry .registry.json --check-server --used-ids .used-ids.txt locales || status=$$?; rm -f .registry.json .condition-ids.txt .used-ids.txt; exit $$status
 
 .PHONY: check-dev-load-images
 check-dev-load-images: ## Verify `dev-load` loads every image `images` builds

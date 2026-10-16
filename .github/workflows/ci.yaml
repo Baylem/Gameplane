@@ -908,6 +908,12 @@ jobs:
           set -euo pipefail
           (cd web && npm run i18n:extract-only)
           (cd api && go run ./cmd/messages-export > "$RUNNER_TEMP/registry.json")
+          (cd operator && go run ./hack/condition-ids -check -app ../i18n/locales/en/app.json -ids "$RUNNER_TEMP/condition-ids.txt")
+          {
+            jq -r 'keys[]' web/src/generated/i18n/extracted.json
+            jq -r '.[].id' "$RUNNER_TEMP/registry.json"
+            cat "$RUNNER_TEMP/condition-ids.txt"
+          } | sort -u > "$RUNNER_TEMP/used-ids.txt"
           base_flag=()
           if [ -n "${BASE_SHA:-}" ] && [ "$BASE_SHA" != "0000000000000000000000000000000000000000" ]; then
             if git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null \
@@ -921,6 +927,7 @@ jobs:
           go run ./cmd/i18n-check \
             --extracted ../web/src/generated/i18n/extracted.json \
             --registry "$RUNNER_TEMP/registry.json" --check-server \
+            --used-ids "$RUNNER_TEMP/used-ids.txt" \
             "${base_flag[@]}" \
             --summary "$GITHUB_STEP_SUMMARY" \
             locales

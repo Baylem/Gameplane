@@ -7,6 +7,9 @@
 // scans the controllers' Go source for the reason literals they set and fails
 // when a reason is missing from the table, or when a table reason is no longer
 // set anywhere. It reports the mismatch instead of editing the table.
+//
+// With -ids <file> the generated condition.* ids are also written to that file,
+// one per line, for the unused-id check (spec 019).
 package main
 
 import (
@@ -207,21 +210,33 @@ func main() {
 	app := flag.String("app", "../i18n/locales/en/app.json", "English reference app.json to update")
 	controllers := flag.String("controllers", "internal/controller", "controller package directory scanned by the coverage guard")
 	check := flag.Bool("check", false, "report drift against the table and exit 1 instead of writing")
+	ids := flag.String("ids", "", "also write the generated condition.* ids to this file, one per line")
 	flag.Parse()
 
-	if err := run(*app, *controllers, *check); err != nil {
+	if err := run(*app, *controllers, *ids, *check); err != nil {
 		fmt.Fprintln(os.Stderr, "condition-ids:", err)
 		os.Exit(1)
 	}
 }
 
-func run(appPath, controllersDir string, check bool) error {
+func run(appPath, controllersDir, idsPath string, check bool) error {
 	entries, err := generate()
 	if err != nil {
 		return err
 	}
 	if err := guardReasons(controllersDir); err != nil {
 		return err
+	}
+	if idsPath != "" {
+		ids := make([]string, 0, len(entries))
+		for _, e := range entries {
+			ids = append(ids, e.id)
+		}
+		sort.Strings(ids)
+		data := []byte(strings.Join(ids, "\n") + "\n")
+		if err := os.WriteFile(filepath.Clean(idsPath), data, 0o600); err != nil {
+			return fmt.Errorf("write %s: %w", idsPath, err)
+		}
 	}
 
 	appPath = filepath.Clean(appPath)
