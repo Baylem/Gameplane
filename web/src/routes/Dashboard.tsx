@@ -48,7 +48,14 @@ import type {
   GameTemplate,
 } from "@/types";
 import { useOptionalIntl } from "@/lib/i18n/format";
-import { defineMessages } from "react-intl";
+import { defineMessages, type MessageDescriptor } from "react-intl";
+
+const COUNT_LABELS = defineMessages({
+  ofReturned: { id: "web.routes.dashboard.of_returned", defaultMessage: "of {count} returned", description: "Dashboard: sub-label on the Running card when the server list is partial; {count} is the number of returned servers" },
+  ofTotal: { id: "web.routes.dashboard.of_total", defaultMessage: "of {count} total", description: "Dashboard: sub-label on the Running card; {count} is the total number of servers" },
+  serversCount: { id: "web.routes.dashboard.servers_count", defaultMessage: "{count} servers", description: "Dashboard: server count in the Fleet status card; {count} is the number of servers" },
+  returnedServersCount: { id: "web.routes.dashboard.returned_servers_count", defaultMessage: "{count} returned servers", description: "Dashboard: server count in the Fleet status card when the list is partial; {count} is the number of returned servers" },
+});
 
 export function DashboardPage() {
   const intl = useOptionalIntl();
@@ -97,6 +104,8 @@ export function DashboardPage() {
   const emptyValue = intl.formatMessage({ id: "web.common.empty_value", defaultMessage: "—", description: "Shown in place of a value that is not set" });
   const inventoryUnavailable = intl.formatMessage({ id: "web.routes.dashboard.inventory_unavailable", defaultMessage: "inventory unavailable", description: "Dashboard: sub-label on the storage and nodes cards when inventory cannot be read" });
   const storage = clusterView.usedStorageBytes === undefined ? { valueText: emptyValue, subText: inventoryUnavailable, overcommitted: false } : describeStorageProvisioned(clusterView.usedStorageBytes, clusterView.totalStorageBytes, intl);
+  const runningSubLabel: MessageDescriptor = fleet?.partial ? COUNT_LABELS.ofReturned : COUNT_LABELS.ofTotal;
+  const storageKnown = clusterView.usedStorageBytes !== undefined;
   const storagePct = clusterView.totalStorageBytes ? ((clusterView.usedStorageBytes ?? 0) / clusterView.totalStorageBytes) * 100 : 0;
   const isLoading = serversLoading || clusterLoading || backupsLoading || (canAudit && auditLoading);
 
@@ -131,9 +140,7 @@ export function DashboardPage() {
               value={countsUnavailable ? emptyValue : counts.running}
               sub={countsUnavailable
                 ? intl.formatMessage({ id: "web.routes.dashboard.server_status_unavailable", defaultMessage: "server status unavailable", description: "Dashboard: sub-label on the Running card when server data cannot be read" })
-                : intl.formatMessage(fleet?.partial
-                  ? { id: "web.routes.dashboard.of_returned", defaultMessage: "of {count} returned", description: "Dashboard: sub-label on the Running card when the server list is partial; {count} is the number of returned servers" }
-                  : { id: "web.routes.dashboard.of_total", defaultMessage: "of {count} total", description: "Dashboard: sub-label on the Running card; {count} is the total number of servers" }, { count: groups.total })}
+                : intl.formatMessage(runningSubLabel, { count: groups.total })}
               accent={countsUnavailable ? "warning" : "success"}
             />
             <StatCard
@@ -190,6 +197,7 @@ export function DashboardPage() {
               cpu={cpu}
               mem={mem}
               storage={storage}
+              storageKnown={storageKnown}
               storagePct={storagePct}
               nodes={nodes}
               nodesReady={nodesReady}
@@ -222,6 +230,7 @@ function FleetStatusCard({
   byName: Map<string, GameTemplate>;
 }) {
   const intl = useOptionalIntl();
+  const serverCountLabel: MessageDescriptor = complete ? COUNT_LABELS.serversCount : COUNT_LABELS.returnedServersCount;
   const stopped = groups.stopped + groups.other;
   const segments = [
     { n: groups.running, cls: "bg-success" },
@@ -234,9 +243,7 @@ function FleetStatusCard({
     <Card className="min-w-0 space-y-4 p-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">{intl.formatMessage({ id: "web.routes.dashboard.fleet_status", defaultMessage: "Fleet status", description: "Dashboard: heading of the card showing how many game servers are running, stopped or failed and which ones need attention" })}</h3>
-        <span className="text-xs text-muted">{intl.formatMessage(complete
-          ? { id: "web.routes.dashboard.servers_count", defaultMessage: "{count} servers", description: "Dashboard: server count in the Fleet status card; {count} is the number of servers" }
-          : { id: "web.routes.dashboard.returned_servers_count", defaultMessage: "{count} returned servers", description: "Dashboard: server count in the Fleet status card when the list is partial; {count} is the number of returned servers" }, { count: groups.total })}</span>
+        <span className="text-xs text-muted">{intl.formatMessage(serverCountLabel, { count: groups.total })}</span>
       </div>
 
       <div className="flex h-2 overflow-hidden rounded-full bg-surface">
@@ -323,6 +330,7 @@ function ClusterResourcesCard({
   cpu,
   mem,
   storage,
+  storageKnown,
   storagePct,
   nodes,
   nodesReady,
@@ -332,6 +340,7 @@ function ClusterResourcesCard({
   cpu: Usage;
   mem: Usage;
   storage: StorageReading;
+  storageKnown: boolean;
   storagePct: number;
   nodes: ClusterNode[];
   nodesReady: number;
@@ -359,7 +368,7 @@ function ClusterResourcesCard({
           label={intl.formatMessage({ id: "web.routes.dashboard.storage", defaultMessage: "Storage", description: "Dashboard: label of the storage usage bar in the cluster resources card" })}
           pct={storagePct}
           sub={storage.subText}
-          unknown={storage.valueText === "—"}
+          unknown={!storageKnown}
           accent={storage.overcommitted ? "warning" : "success"}
         />
       </div>

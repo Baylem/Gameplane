@@ -57,7 +57,6 @@ const HEX_COLOR_RE = /^#([0-9a-fA-F]{6})$/;
 // pre-existing entry point (keyboard shortcut, login-page safe-mode link).
 let urlSafeModeSeen = false;
 
-/** Test-only: clears the in-memory URL safe-mode latch, simulating a fresh page load. */
 const THEME_MESSAGES = defineMessages({
   update_failed: {
     id: "web.lib.use_theme_preferences.update_failed",
@@ -66,6 +65,7 @@ const THEME_MESSAGES = defineMessages({
   },
 });
 
+/** Test-only: clears the in-memory URL safe-mode latch, simulating a fresh page load. */
 export function resetUrlSafeModeForTests(): void {
   urlSafeModeSeen = false;
 }

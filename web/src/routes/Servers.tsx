@@ -34,11 +34,17 @@ import { countByState } from "@/lib/servers";
 import { useFleetLocation, Fleet, inventoryTotals, playerCoverage, templateKey, useFleetGameCodes, located, resourceTarget, targetKey, targetLabel, targetSearch, useFleetPlacements, useFleetServerSelection, useFleetServers, type FleetTarget, type Located } from "@/lib/fleet";
 import { FleetCoverage, FleetScopeFilter } from "@/components/FleetScope";
 import { useOptionalIntl } from "@/lib/i18n/format";
+import { defineMessages, type MessageDescriptor } from "react-intl";
 
 type FilterKey = "all" | "running" | "stopped";
 
 // Namespace of the shared game-server namespace; a machine value, not copy.
 const DEFAULT_NAMESPACE = "gameplane-games";
+
+const RUNNING_SUB_LABELS = defineMessages({
+  ofReturned: { id: "web.routes.servers.of_returned", defaultMessage: "of {count} returned", description: "Servers: sub-label on the Running card when the server list is partial; {count} is the number of returned servers" },
+  ofTotal: { id: "web.routes.servers.of_total", defaultMessage: "of {count} total", description: "Servers: sub-label on the Running card; {count} is the total number of servers" },
+});
 
 export function ServersPage() {
   const intl = useOptionalIntl();
@@ -57,6 +63,7 @@ export function ServersPage() {
 
   const { data: scopes } = useFleetServers();
   const { data: fleet, isLoading, error } = useFleetServerSelection(location, appliedNamespaces);
+  const runningSubLabel: MessageDescriptor = fleet?.partial ? RUNNING_SUB_LABELS.ofReturned : RUNNING_SUB_LABELS.ofTotal;
   const { data: inventory, error: inventoryError } = useQuery({
     queryKey: ["fleet", "inventory", location],
     queryFn: ({ signal }) => Fleet.inventory({ cluster: location || undefined }, signal),
@@ -194,9 +201,7 @@ export function ServersPage() {
             value={error || (fleet?.partial && servers.length === 0) ? emptyValue : counts.running}
             sub={error || (fleet?.partial && servers.length === 0)
               ? intl.formatMessage({ id: "web.routes.servers.server_status_unavailable", defaultMessage: "server status unavailable", description: "Servers: sub-label on the Running card when server data cannot be read" })
-              : intl.formatMessage(fleet?.partial
-                ? { id: "web.routes.servers.of_returned", defaultMessage: "of {count} returned", description: "Servers: sub-label on the Running card when the server list is partial; {count} is the number of returned servers" }
-                : { id: "web.routes.servers.of_total", defaultMessage: "of {count} total", description: "Servers: sub-label on the Running card; {count} is the total number of servers" }, { count: servers.length })}
+              : intl.formatMessage(runningSubLabel, { count: servers.length })}
             accent={error || (fleet?.partial && servers.length === 0) ? "warning" : "success"}
           />
           <StatCard

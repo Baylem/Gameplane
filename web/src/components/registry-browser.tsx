@@ -19,16 +19,22 @@ import type { RegistryProject } from "@/types";
 import { useResourceTarget, useResourceClient, resourceKey } from "@/lib/resourceTarget";
 import { errorTextIntl } from "@/lib/errors";
 import { useOptionalIntl } from "@/lib/i18n/format";
-import type { IntlShape, MessageDescriptor } from "react-intl";
+import { defineMessages, type IntlShape, type MessageDescriptor } from "react-intl";
 
 const PAGE = 24;
 
 export type RegistrySort = "downloads" | "updated" | "newest";
 
+const SORT_LABELS = defineMessages({
+  downloads: { id: "web.components.registry_browser.sort_downloads", defaultMessage: "Downloads", description: "Registry browser: sort option that orders results by download count" },
+  updated: { id: "web.components.registry_browser.sort_updated", defaultMessage: "Recently updated", description: "Registry browser: sort option that orders results by last update" },
+  newest: { id: "web.components.registry_browser.sort_newest", defaultMessage: "Newest", description: "Registry browser: sort option that orders results by release date" },
+});
+
 const SORTS: { value: RegistrySort; label: MessageDescriptor }[] = [
-  { value: "downloads", label: { id: "web.components.registry_browser.sort_downloads", defaultMessage: "Downloads", description: "Registry browser: sort option that orders results by download count" } },
-  { value: "updated", label: { id: "web.components.registry_browser.sort_updated", defaultMessage: "Recently updated", description: "Registry browser: sort option that orders results by last update" } },
-  { value: "newest", label: { id: "web.components.registry_browser.sort_newest", defaultMessage: "Newest", description: "Registry browser: sort option that orders results by release date" } },
+  { value: "downloads", label: SORT_LABELS.downloads },
+  { value: "updated", label: SORT_LABELS.updated },
+  { value: "newest", label: SORT_LABELS.newest },
 ];
 
 // Display labels for the provider switch.

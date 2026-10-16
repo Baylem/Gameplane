@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { MessageDescriptor } from "react-intl";
+import { defineMessages, type MessageDescriptor } from "react-intl";
 import { Loader2 } from "lucide-react";
 import {
   Modal,
@@ -32,20 +32,34 @@ interface SourceDialogProps {
   busy?: boolean;
 }
 
+const TYPE_LABELS = defineMessages({
+  oci: { id: "web.components.modules.source_dialog.type_oci", defaultMessage: "OCI registry", description: "Source dialog: source type option for an OCI registry" },
+  git: { id: "web.components.modules.source_dialog.type_git", defaultMessage: "Git repository", description: "Source dialog: source type option for a git repository" },
+  http: { id: "web.components.modules.source_dialog.type_http", defaultMessage: "HTTP archive (.tar.gz / .zip)", description: "Source dialog: source type option for an HTTP archive" },
+  local: { id: "web.components.modules.source_dialog.type_local", defaultMessage: "Local directory (operator mount)", description: "Source dialog: source type option for a directory mounted into the operator" },
+  upload: { id: "web.components.modules.source_dialog.type_upload", defaultMessage: "Uploaded bundles", description: "Source dialog: source type option for bundles uploaded to the dashboard" },
+});
+
 const TYPE_OPTIONS: Array<{ value: ModuleSourceType; label: MessageDescriptor }> = [
-  { value: "oci", label: { id: "web.components.modules.source_dialog.type_oci", defaultMessage: "OCI registry", description: "Source dialog: source type option for an OCI registry" } },
-  { value: "git", label: { id: "web.components.modules.source_dialog.type_git", defaultMessage: "Git repository", description: "Source dialog: source type option for a git repository" } },
-  { value: "http", label: { id: "web.components.modules.source_dialog.type_http", defaultMessage: "HTTP archive (.tar.gz / .zip)", description: "Source dialog: source type option for an HTTP archive" } },
-  { value: "local", label: { id: "web.components.modules.source_dialog.type_local", defaultMessage: "Local directory (operator mount)", description: "Source dialog: source type option for a directory mounted into the operator" } },
-  { value: "upload", label: { id: "web.components.modules.source_dialog.type_upload", defaultMessage: "Uploaded bundles", description: "Source dialog: source type option for bundles uploaded to the dashboard" } },
+  { value: "oci", label: TYPE_LABELS.oci },
+  { value: "git", label: TYPE_LABELS.git },
+  { value: "http", label: TYPE_LABELS.http },
+  { value: "local", label: TYPE_LABELS.local },
+  { value: "upload", label: TYPE_LABELS.upload },
 ];
 
 type VerifyMode = "none" | "keyed" | "keyless";
 
+const VERIFY_LABELS = defineMessages({
+  none: { id: "web.components.modules.source_dialog.verify_none", defaultMessage: "None", description: "Source dialog: signature verification option that turns verification off" },
+  keyed: { id: "web.components.modules.source_dialog.verify_keyed", defaultMessage: "Keyed (cosign public key)", description: "Source dialog: signature verification option that checks a cosign public key" },
+  keyless: { id: "web.components.modules.source_dialog.verify_keyless", defaultMessage: "Keyless (Fulcio)", description: "Source dialog: signature verification option that checks a keyless Fulcio signature" },
+});
+
 const VERIFY_OPTIONS: Array<{ value: VerifyMode; label: MessageDescriptor }> = [
-  { value: "none", label: { id: "web.components.modules.source_dialog.verify_none", defaultMessage: "None", description: "Source dialog: signature verification option that turns verification off" } },
-  { value: "keyed", label: { id: "web.components.modules.source_dialog.verify_keyed", defaultMessage: "Keyed (cosign public key)", description: "Source dialog: signature verification option that checks a cosign public key" } },
-  { value: "keyless", label: { id: "web.components.modules.source_dialog.verify_keyless", defaultMessage: "Keyless (Fulcio)", description: "Source dialog: signature verification option that checks a keyless Fulcio signature" } },
+  { value: "none", label: VERIFY_LABELS.none },
+  { value: "keyed", label: VERIFY_LABELS.keyed },
+  { value: "keyless", label: VERIFY_LABELS.keyless },
 ];
 
 // form mirrors the spec union flattened into editable strings.

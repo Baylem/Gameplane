@@ -28,6 +28,19 @@ const EXPOSE_LABELS = defineMessages({
   hostport: { id: "web.routes.tabs.settings.networking.expose_hostport", defaultMessage: "Hostport", description: "Networking: Expose option label for Hostport, a port bound on the node host" },
 });
 
+const BADGE_LABELS = defineMessages({
+  assigned: { id: "web.routes.tabs.settings.networking.badge_assigned", defaultMessage: "Assigned", description: "Networking: address status badge when the address is assigned" },
+  pending: { id: "web.routes.tabs.settings.networking.badge_pending", defaultMessage: "Pending", description: "Networking: address status badge when the address assignment is still pending" },
+  ignored: { id: "web.routes.tabs.settings.networking.badge_ignored", defaultMessage: "Ignored", description: "Networking: address status badge when the address preference is ignored in the current expose mode" },
+  error: { id: "web.routes.tabs.settings.networking.badge_error", defaultMessage: "Error", description: "Networking: address status badge when address assignment failed" },
+});
+
+const CREDENTIAL_LABELS = defineMessages({
+  frp: { id: "web.routes.tabs.settings.networking.credential_label_frp", defaultMessage: "frp token", description: "Networking: name of the frp credential, shown as the credential input placeholder and in the help text" },
+  tailscale: { id: "web.routes.tabs.settings.networking.credential_label_tailscale", defaultMessage: "Tailscale auth key", description: "Networking: name of the Tailscale credential, shown as the credential input placeholder and in the help text" },
+  playit: { id: "web.routes.tabs.settings.networking.credential_label_playit", defaultMessage: "playit secret key", description: "Networking: name of the playit.gg credential, shown as the credential input placeholder and in the help text" },
+});
+
 const EXPOSE_OPTIONS: Array<{ value: Expose; label: MessageDescriptor }> = [
   { value: "ClusterIP", label: EXPOSE_LABELS.clusterIp },
   { value: "NodePort", label: EXPOSE_LABELS.nodePort },
@@ -657,7 +670,7 @@ function AddressStatusField({
       return {
         bgColor: "bg-success/20",
         textColor: "text-success",
-        label: { id: "web.routes.tabs.settings.networking.badge_assigned", defaultMessage: "Assigned", description: "Networking: address status badge when the address is assigned" },
+        label: BADGE_LABELS.assigned,
       };
     }
 
@@ -666,7 +679,7 @@ function AddressStatusField({
       return {
         bgColor: "bg-warning/20",
         textColor: "text-warning",
-        label: { id: "web.routes.tabs.settings.networking.badge_pending", defaultMessage: "Pending", description: "Networking: address status badge when the address assignment is still pending" },
+        label: BADGE_LABELS.pending,
       };
     }
 
@@ -674,8 +687,8 @@ function AddressStatusField({
       bgColor: "bg-danger/20",
       textColor: "text-danger",
       label: reason === "IgnoredForExposureMode"
-        ? { id: "web.routes.tabs.settings.networking.badge_ignored", defaultMessage: "Ignored", description: "Networking: address status badge when the address preference is ignored in the current expose mode" }
-        : { id: "web.routes.tabs.settings.networking.badge_error", defaultMessage: "Error", description: "Networking: address status badge when address assignment failed" },
+        ? BADGE_LABELS.ignored
+        : BADGE_LABELS.error,
     };
   };
 
@@ -937,11 +950,7 @@ function TunnelCredentialField({
   hasSecretRef,
 }: TunnelCredentialFieldProps) {
   const intl = useOptionalIntl();
-  const labels: Record<"frp" | "tailscale" | "playit", MessageDescriptor> = {
-    frp: { id: "web.routes.tabs.settings.networking.credential_label_frp", defaultMessage: "frp token", description: "Networking: name of the frp credential, shown as the credential input placeholder and in the help text" },
-    tailscale: { id: "web.routes.tabs.settings.networking.credential_label_tailscale", defaultMessage: "Tailscale auth key", description: "Networking: name of the Tailscale credential, shown as the credential input placeholder and in the help text" },
-    playit: { id: "web.routes.tabs.settings.networking.credential_label_playit", defaultMessage: "playit secret key", description: "Networking: name of the playit.gg credential, shown as the credential input placeholder and in the help text" },
-  };
+  const labels: Record<"frp" | "tailscale" | "playit", MessageDescriptor> = CREDENTIAL_LABELS;
 
   if (!showInput && (configured || hasSecretRef)) {
     return (

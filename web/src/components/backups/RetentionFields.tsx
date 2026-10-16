@@ -1,6 +1,6 @@
 import { Input, Label } from "@heroui/react";
 import { useOptionalIntl } from "@/lib/i18n/format";
-import type { MessageDescriptor } from "react-intl";
+import { defineMessages, type MessageDescriptor } from "react-intl";
 
 export interface RetentionForm {
   keepLast?: number;
@@ -16,18 +16,27 @@ interface Props {
   onChange: (v: RetentionForm) => void;
 }
 
+const RETENTION_LABELS = defineMessages({
+  keepLast: { id: "web.components.backups.retention_fields.keep_last", defaultMessage: "Keep last", description: "Retention field: label of the keep-last-N snapshots input" },
+  hourly: { id: "web.components.backups.retention_fields.hourly", defaultMessage: "Hourly", description: "Retention field: label of the hourly snapshot count input" },
+  daily: { id: "web.components.backups.retention_fields.daily", defaultMessage: "Daily", description: "Retention field: label of the daily snapshot count input" },
+  weekly: { id: "web.components.backups.retention_fields.weekly", defaultMessage: "Weekly", description: "Retention field: label of the weekly snapshot count input" },
+  monthly: { id: "web.components.backups.retention_fields.monthly", defaultMessage: "Monthly", description: "Retention field: label of the monthly snapshot count input" },
+  yearly: { id: "web.components.backups.retention_fields.yearly", defaultMessage: "Yearly", description: "Retention field: label of the yearly snapshot count input" },
+});
+
 export function RetentionFields({ value, onChange }: Props) {
   const intl = useOptionalIntl();
   const buckets: Array<{
     key: keyof RetentionForm;
     label: MessageDescriptor;
   }> = [
-    { key: "keepLast", label: { id: "web.components.backups.retention_fields.keep_last", defaultMessage: "Keep last", description: "Retention field: label of the keep-last-N snapshots input" } },
-    { key: "keepHourly", label: { id: "web.components.backups.retention_fields.hourly", defaultMessage: "Hourly", description: "Retention field: label of the hourly snapshot count input" } },
-    { key: "keepDaily", label: { id: "web.components.backups.retention_fields.daily", defaultMessage: "Daily", description: "Retention field: label of the daily snapshot count input" } },
-    { key: "keepWeekly", label: { id: "web.components.backups.retention_fields.weekly", defaultMessage: "Weekly", description: "Retention field: label of the weekly snapshot count input" } },
-    { key: "keepMonthly", label: { id: "web.components.backups.retention_fields.monthly", defaultMessage: "Monthly", description: "Retention field: label of the monthly snapshot count input" } },
-    { key: "keepYearly", label: { id: "web.components.backups.retention_fields.yearly", defaultMessage: "Yearly", description: "Retention field: label of the yearly snapshot count input" } },
+    { key: "keepLast", label: RETENTION_LABELS.keepLast },
+    { key: "keepHourly", label: RETENTION_LABELS.hourly },
+    { key: "keepDaily", label: RETENTION_LABELS.daily },
+    { key: "keepWeekly", label: RETENTION_LABELS.weekly },
+    { key: "keepMonthly", label: RETENTION_LABELS.monthly },
+    { key: "keepYearly", label: RETENTION_LABELS.yearly },
   ];
 
   const handleChange = (key: keyof RetentionForm, input: string) => {

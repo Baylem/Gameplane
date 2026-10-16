@@ -81,7 +81,7 @@ export function InstallDialog({ open, onOpenChange, entry, onConfirm, busy }: In
         <ModalContainer>
           <ModalDialog>
           <ModalHeader>
-            <ModalHeading className="text-base font-semibold">{intl.formatMessage({ id: "web.components.modules.install_dialog.install", defaultMessage: "Install", description: "Install dialog: the word Install used as the dialog title, followed by the module name, and as the confirm button; keep it short" })} {entry.displayName ?? entry.name}
+            <ModalHeading className="text-base font-semibold">{intl.formatMessage({ id: "web.components.modules.install_dialog.title", defaultMessage: "Install {name}", description: "Install dialog: dialog title; {name} is the module display name" }, { name: entry.displayName ?? entry.name })}
             </ModalHeading>
             <Description className="text-sm text-muted">{intl.formatMessage({ id: "web.components.modules.install_dialog.pulls_the_module_bundle_and_creates_a", defaultMessage: "Pulls the module bundle and creates a Module resource. The cluster operator materializes the GameTemplate in the background.", description: "Install dialog: explanation under the title saying the install pulls the module bundle and creates a Module resource; Module and GameTemplate are Kubernetes resource names, usually left untranslated" })}</Description>
           </ModalHeader>

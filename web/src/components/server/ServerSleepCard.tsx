@@ -131,7 +131,7 @@ export function ServerSleepCard({ gs }: { gs?: GameServer }) {
 
             <div className="flex items-center justify-between rounded-[8px] border border-border bg-[var(--default)] px-3.5 py-2.5">
               <dt className="text-[13px] text-muted">{intl.formatMessage({ id: "web.components.server.server_sleep_card.sleep_after", defaultMessage: "Sleep after", description: "Server sleep card: label for the idle time before the server sleeps; the value beside it is the configured number of minutes" })}</dt>
-              <dd className="font-mono text-[13px] text-foreground">{intl.formatMessage({ id: "web.components.server.server_sleep_card.afterminutes_minute", defaultMessage: "{afterMinutes, plural, one {# minute} other {# minutes}}", description: "Server sleep card: minutes until the server sleeps; {afterMinutes} is the number of minutes" }, { afterMinutes: afterMinutes })}
+              <dd className="font-mono text-[13px] text-foreground">{intl.formatMessage({ id: "web.components.server.server_sleep_card.afterminutes_minute", defaultMessage: "{afterMinutes, plural, one {{minutes} minute} other {{minutes} minutes}}", description: "Server sleep card: minutes until the server sleeps; {afterMinutes} is the number of minutes (selects the plural form) and {minutes} is the same number shown as digits without grouping" }, { afterMinutes, minutes: String(afterMinutes) })}
               </dd>
             </div>
 
