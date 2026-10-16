@@ -46,6 +46,13 @@ spec:
           # fatedier/frps:v0.71.0 (multi-arch index digest); entrypoint /usr/bin/frps
           image: fatedier/frps@sha256:cd8b947ba61678b200baa4f71ccc33f3c52e4e2cc0059700ba3b8354e36af7c3
           args: ["-c", "/etc/frp/frps.toml"]
+          # frps binds 7000/7500 and only reads its ConfigMap, so it needs no root.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
           env:
             - name: FRP_AUTH_TOKEN
               valueFrom:

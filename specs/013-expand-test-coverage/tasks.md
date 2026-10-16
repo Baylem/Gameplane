@@ -292,7 +292,7 @@ description: "Task list for 013-expand-test-coverage"
 - [X] T047 [US3] Write `test/e2e/optional_components_e2e_test.go` with `TestOptionalComponents_Lifecycle`. It calls `t.Parallel()`, owns its cluster, and runs these subtests in order:
   - `disabled`: none of the three components has a Deployment or Service.
   - `enable`: apply T045 and T046, create the shared auth Secret, then `helm upgrade --reuse-values` with `mcpServer.enabled=true`, `api.audit.webhook.syslogBridge.enabled=true`, `…syslog.addr=e2e-syslog-sink:514`, and `…authSecretRef.name`. Wait for rollout.
-  - `mcp`: exec `/mcp-server serve` over stdio. `initialize` succeeds. `tools/list` returns exactly the six read tools. `list_gameplane_resources` for gameservers includes a seeded GameServer. `get_gameplane_resource` for `clusters` returns an error result.
+  - `mcp`: exec `/mcp-server serve` over stdio. `initialize` succeeds. `tools/list` returns exactly seven tools: the six read tools plus `propose_fix`. `list_gameplane_resources` for gameservers includes a seeded GameServer. `get_gameplane_resource` for `clusters` returns an error result.
   - `syslog`: create a role through the API with one admin login, then poll the sink's logs for an RFC 5424 line with APP-NAME `gameplane-audit` naming that role. An unauthenticated POST to the bridge returns 401.
   - `tunnel-frp`: create a busybox GameServer with `spec.tunnel` pointing at frp `e2e-frps`. Assert:
     - `TunnelReady=True`
