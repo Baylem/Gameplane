@@ -1500,8 +1500,8 @@
     "description": "Capture widget: delete button label in the delete confirmation"
   },
   "web.components.capture_widget.delete_warning": {
-    "defaultMessage": "This permanently deletes capture <id>{captureId}</id> and its recorded packets. This cannot be undone.",
-    "description": "Capture widget: warning in the delete confirmation dialog that the capture and its recorded packets are permanently removed and the action cannot be undone; {captureId} is the capture ID, shown in monospace inside the <id> tag, which must be kept around it"
+    "defaultMessage": "This permanently deletes capture <b>{captureId}</b> and its recorded packets. This cannot be undone.",
+    "description": "Capture widget: warning in the delete confirmation dialog that the capture and its recorded packets are permanently removed and the action cannot be undone; {captureId} is the capture ID, shown in monospace inside the <b> tag, which must be kept around it"
   },
   "web.components.capture_widget.disable_capture": {
     "defaultMessage": "Disable Capture",
@@ -2352,8 +2352,8 @@
     "description": "Module sources panel: aria-label of the edit button; {name} is the source name"
   },
   "web.components.modules.module_sources_panel.empty": {
-    "defaultMessage": "No <code>ModuleSource</code> resources configured.",
-    "description": "Module sources panel: empty-state sentence shown when no module sources are configured; the <code> tag wraps the resource name ModuleSource, a technical term usually left untranslated, and must be kept around it"
+    "defaultMessage": "No <b>ModuleSource</b> resources configured.",
+    "description": "Module sources panel: empty-state sentence shown when no module sources are configured; the <b> tag wraps the resource name ModuleSource, a technical term usually left untranslated, and must be kept around it"
   },
   "web.components.modules.module_sources_panel.failed_to_load_module_sources": {
     "defaultMessage": "Failed to load module sources.",
@@ -2364,8 +2364,8 @@
     "description": "Module sources panel: small warning badge on a source row marking a source that allows plain HTTP; keep it short"
   },
   "web.components.modules.module_sources_panel.intro": {
-    "defaultMessage": "Registries, git repositories, archives, and uploads the operator pulls module bundles from. Equivalent to applying <code>ModuleSource</code> resources directly.",
-    "description": "Module sources panel: explanation under the heading saying sources are registries, git repositories, archives or uploads, the same as applying ModuleSource resources directly; the <code> tag wraps the resource name ModuleSource, a technical term usually left untranslated, and must be kept around it"
+    "defaultMessage": "Registries, git repositories, archives, and uploads the operator pulls module bundles from. Equivalent to applying <b>ModuleSource</b> resources directly.",
+    "description": "Module sources panel: explanation under the heading saying sources are registries, git repositories, archives or uploads, the same as applying ModuleSource resources directly; the <b> tag wraps the resource name ModuleSource, a technical term usually left untranslated, and must be kept around it"
   },
   "web.components.modules.module_sources_panel.loading_module_sources": {
     "defaultMessage": "Loading module sources…",
@@ -3268,8 +3268,8 @@
     "description": "Wipe server dialog: fallback error text when the wipe request fails without a message"
   },
   "web.components.server.wipe_server_dialog.wipe_warning": {
-    "defaultMessage": "This permanently deletes the world data for <name>{serverName}</name>. Backups are not removed. This cannot be undone.",
-    "description": "Wipe server dialog: warning that the world data is permanently deleted, backups are kept and the action cannot be undone; {serverName} is the server name, shown in monospace inside the <name> tag, which must be kept around it"
+    "defaultMessage": "This permanently deletes the world data for <b>{serverName}</b>. Backups are not removed. This cannot be undone.",
+    "description": "Wipe server dialog: warning that the world data is permanently deleted, backups are kept and the action cannot be undone; {serverName} is the server name, shown in monospace inside the <b> tag, which must be kept around it"
   },
   "web.components.server.wipe_server_dialog.wipe_world": {
     "defaultMessage": "Wipe world?",

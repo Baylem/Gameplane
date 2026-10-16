@@ -59,7 +59,7 @@ export function WipeServerDialog({
 
   const description: ReactNode = (
     <div className="space-y-4">
-      <div className="text-sm text-muted">{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.wipe_warning", defaultMessage: "This permanently deletes the world data for <name>{serverName}</name>. Backups are not removed. This cannot be undone.", description: "Wipe server dialog: warning that the world data is permanently deleted, backups are kept and the action cannot be undone; {serverName} is the server name, shown in monospace inside the <name> tag, which must be kept around it" }, { serverName: name, name: (chunks) => <span className="font-mono text-foreground">{chunks}</span> })}</div>
+      <div className="text-sm text-muted">{intl.formatMessage({ id: "web.components.server.wipe_server_dialog.wipe_warning", defaultMessage: "This permanently deletes the world data for <b>{serverName}</b>. Backups are not removed. This cannot be undone.", description: "Wipe server dialog: warning that the world data is permanently deleted, backups are kept and the action cannot be undone; {serverName} is the server name, shown in monospace inside the <b> tag, which must be kept around it" }, { serverName: name, b: (chunks) => <span className="font-mono text-foreground">{chunks}</span> })}</div>
       {wipe.isError && (
         <div className="rounded-lg bg-danger/10 p-3 text-sm text-danger">
           {errorTextIntl(intl, wipe.error, intl.formatMessage({ id: "web.components.server.wipe_server_dialog.wipe_failed", defaultMessage: "wipe failed", description: "Wipe server dialog: fallback error text when the wipe request fails without a message" }))}

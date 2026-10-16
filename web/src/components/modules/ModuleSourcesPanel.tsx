@@ -83,7 +83,7 @@ export function ClusterModuleSources({ cluster, canManage }: { cluster: string; 
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="font-medium">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.module_sources", defaultMessage: "Module sources", description: "Module sources panel: heading of the panel that lists the sources module bundles are pulled from" })}</div>
-          <div className="pt-0.5 text-xs text-muted">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.intro", defaultMessage: "Registries, git repositories, archives, and uploads the operator pulls module bundles from. Equivalent to applying <code>ModuleSource</code> resources directly.", description: "Module sources panel: explanation under the heading saying sources are registries, git repositories, archives or uploads, the same as applying ModuleSource resources directly; the <code> tag wraps the resource name ModuleSource, a technical term usually left untranslated, and must be kept around it" }, { code: (chunks) => <code className="font-mono">{chunks}</code> })}</div>
+          <div className="pt-0.5 text-xs text-muted">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.intro", defaultMessage: "Registries, git repositories, archives, and uploads the operator pulls module bundles from. Equivalent to applying <b>ModuleSource</b> resources directly.", description: "Module sources panel: explanation under the heading saying sources are registries, git repositories, archives or uploads, the same as applying ModuleSource resources directly; the <b> tag wraps the resource name ModuleSource, a technical term usually left untranslated, and must be kept around it" }, { b: (chunks) => <code className="font-mono">{chunks}</code> })}</div>
         </div>
         <Button
           size="sm"
@@ -104,7 +104,7 @@ export function ClusterModuleSources({ cluster, canManage }: { cluster: string; 
       )}
 
       {sources.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border bg-card/40 p-6 text-center text-sm text-muted">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.empty", defaultMessage: "No <code>ModuleSource</code> resources configured.", description: "Module sources panel: empty-state sentence shown when no module sources are configured; the <code> tag wraps the resource name ModuleSource, a technical term usually left untranslated, and must be kept around it" }, { code: (chunks) => <code className="font-mono">{chunks}</code> })}</div>
+        <div className="rounded-lg border border-dashed border-border bg-card/40 p-6 text-center text-sm text-muted">{intl.formatMessage({ id: "web.components.modules.module_sources_panel.empty", defaultMessage: "No <b>ModuleSource</b> resources configured.", description: "Module sources panel: empty-state sentence shown when no module sources are configured; the <b> tag wraps the resource name ModuleSource, a technical term usually left untranslated, and must be kept around it" }, { b: (chunks) => <code className="font-mono">{chunks}</code> })}</div>
       ) : (
         <ul className="divide-y divide-border">
           {sources.map((s) => (
