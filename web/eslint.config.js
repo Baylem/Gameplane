@@ -13,16 +13,9 @@ import reactPlugin from "eslint-plugin-react";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import formatjs from "eslint-plugin-formatjs";
 
-// Files whose user-facing strings have moved to the i18n runtime. This list
-// grows with each string-migration task and switches to all of src in T058.
-const MIGRATED_I18N_PATHS = [
-  "src/lib/i18n/**/*.{ts,tsx}",
-  "src/components/**/*.{ts,tsx}",
-  "src/routes/{Login,Share,NotFound,Dashboard,Servers,Clusters,Cluster}.tsx",
-  "src/routes/{CreateServer,ServerDetail}.tsx",
-  "src/routes/tabs/**/*.{ts,tsx}",
-  "src/routes/{Modules,Backups,Users,AuditLog,AdminLogs,AdminSettings,ThemeSettings}.tsx",
-];
+// The formatjs rules cover all dashboard source (spec 019 T058). Test files
+// and test helpers are exempt.
+const MIGRATED_I18N_PATHS = ["src/**/*.{ts,tsx}"];
 
 export default [
   {
@@ -82,7 +75,7 @@ export default [
   },
   {
     files: MIGRATED_I18N_PATHS,
-    ignores: ["**/*.test.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}", "src/test/**"],
     plugins: { formatjs },
     rules: {
       "formatjs/enforce-description": ["error", "literal"],
