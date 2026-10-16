@@ -239,7 +239,7 @@ The telemetry receiver is already covered by `TestTelemetryLifecycle` (R0). This
 
 ## R10: Coverage Gap Record
 
-**Decision**: one Markdown file, `specs/013-expand-test-coverage/coverage-gaps.md`, with one table row per gap. Columns and allowed values are fixed in [contracts/coverage-gap-record.md](contracts/coverage-gap-record.md). It is seeded from R0 by the first implementation task, and every PR that closes a gap flips its row in the same commit. A lightweight `hack/check-coverage-gaps.sh`, run in the `docs` job, validates the table: allowed statuses only, and `closed` rows must cite a test path or CI job plus proof link.
+**Decision**: one Markdown file, `specs/done_013-expand-test-coverage/coverage-gaps.md`, with one table row per gap. Columns and allowed values are fixed in [contracts/coverage-gap-record.md](contracts/coverage-gap-record.md). It is seeded from R0 by the first implementation task, and every PR that closes a gap flips its row in the same commit. A lightweight `hack/check-coverage-gaps.sh`, run in the `docs` job, validates the table: allowed statuses only, and `closed` rows must cite a test path or CI job plus proof link.
 
 **Rationale**:
 - One readable file meets SC-007's ten-minute read.

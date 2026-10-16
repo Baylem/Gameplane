@@ -1,6 +1,6 @@
 # Contract: Coverage Gap Record
 
-**File**: `specs/013-expand-test-coverage/coverage-gaps.md` (moves with the folder to `done_013-…` on completion).
+**File**: `specs/done_013-expand-test-coverage/coverage-gaps.md` (moved here with the folder on completion).
 
 ## Layout
 

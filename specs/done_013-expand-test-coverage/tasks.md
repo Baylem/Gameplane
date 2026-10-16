@@ -4,7 +4,7 @@ description: "Task list for 013-expand-test-coverage"
 
 # Tasks: Expand Test Coverage
 
-**Input**: Design documents from `specs/013-expand-test-coverage/`. These are [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md) and [OPEN-DECISIONS.md](OPEN-DECISIONS.md) (all five, OD-1 to OD-5, are ruled).
+**Input**: Design documents from `specs/done_013-expand-test-coverage/`. These are [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md) and [OPEN-DECISIONS.md](OPEN-DECISIONS.md) (all five, OD-1 to OD-5, are ruled).
 
 **Tests**: tests *are* this feature's deliverables (FR-002 to FR-005). Every user-story phase therefore consists mostly of test, fixture and CI tasks. Each gate also has a "proof it can fail" task (FR-006).
 
@@ -32,7 +32,7 @@ description: "Task list for 013-expand-test-coverage"
   - uses actions pinned by SHA with a version comment
   - has a display name that does not start with `go (`
   - is added to the `report` job's `needs:` list and to its `NEEDS_ORDER` array and `JOB_MATCHERS` map (`hack/check-ci-report-coverage.sh` enforces this)
-- **Gap record**: every task that closes a gap flips its row in `specs/013-expand-test-coverage/coverage-gaps.md` in the same commit (contracts/coverage-gap-record.md).
+- **Gap record**: every task that closes a gap flips its row in `specs/done_013-expand-test-coverage/coverage-gaps.md` in the same commit (contracts/coverage-gap-record.md).
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -50,14 +50,14 @@ description: "Task list for 013-expand-test-coverage"
   - `cosign.pub` is now `signing/cosign.pub`
   - `e2e-capture-overhead` is a new job and new `report` member, and is the template for the `e2e-postgres` job in T057
 
-  Edit `specs/013-expand-test-coverage/{plan.md,research.md,contracts/e2e-additions.md}` where a cited path or line changed.
-- [X] T002 Create `specs/013-expand-test-coverage/coverage-gaps.md` using the layout and the 24 seed rows in contracts/coverage-gap-record.md. Fill these rows' Evidence:
+  Edit `specs/done_013-expand-test-coverage/{plan.md,research.md,contracts/e2e-additions.md}` where a cited path or line changed.
+- [X] T002 Create `specs/done_013-expand-test-coverage/coverage-gaps.md` using the layout and the 24 seed rows in contracts/coverage-gap-record.md. Fill these rows' Evidence:
   - G-12: the `web/e2e/specs/live/*` specs
   - G-17: `TestTelemetryLifecycle` / `e2e telemetry`
   - G-16: Notes say the Tailscale/playit providers need external accounts (research R7)
 
   Fill the Summary and Last updated lines.
-- [X] T003 [P] Write `hack/check-coverage-gaps.sh`, which validates a gap-record file (default `specs/013-expand-test-coverage/coverage-gaps.md`, overridable with `COVERAGE_GAPS_FILE`) against rules 1–8 of contracts/coverage-gap-record.md. It exits non-zero with a `file:line` message per violation.
+- [X] T003 [P] Write `hack/check-coverage-gaps.sh`, which validates a gap-record file (default `specs/done_013-expand-test-coverage/coverage-gaps.md`, overridable with `COVERAGE_GAPS_FILE`) against rules 1–8 of contracts/coverage-gap-record.md. It exits non-zero with a `file:line` message per violation.
 - [X] T004 [P] Add the fixtures `hack/testdata/coverage-gaps/pass/ok.md` and `hack/testdata/coverage-gaps/fail/{bad-status,closed-no-evidence,wrong-summary,unproven-no-ruling}.md`.
 - [X] T005 Write `hack/check-coverage-gaps_test.sh`. It must fail unless every `fail/*.md` is rejected and `pass/ok.md` is accepted (depends on T003, T004).
 - [X] T006 Add a `check-coverage-gaps` target (running both scripts) to `Makefile`, include it in the `lint:` prerequisites, and add a `run: make check-coverage-gaps` step to the `docs` job in `.github/workflows/ci.yaml`, next to `make check-specs`.
