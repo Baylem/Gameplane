@@ -211,7 +211,7 @@ jobs:
               - 'Makefile'
               - 'hack/sync-chart-crds.sh'
               - 'operator/config/**'
-              - 'charts/gameplane/crds/**'
+              - 'charts/gameplane/charts/gameplane-crds/**'
               - 'charts/gameplane/crd-manifests/**'
               - 'hack/check-codegen-drift_test.sh'
             ci:
@@ -1346,7 +1346,7 @@ jobs:
           trap 'cp /tmp/values.yaml.orig charts/gameplane/values.yaml' EXIT
           cp charts/gameplane/values.yaml /tmp/values.yaml.orig
           cp charts/gameplane/testdata/upgrade-from-v0.2.0-beta.8-values.yaml charts/gameplane/values.yaml
-          helm template gameplane charts/gameplane > /tmp/rendered-reuse-values.yaml
+          helm template gameplane charts/gameplane --include-crds > /tmp/rendered-reuse-values.yaml
           python3 - <<'PY'
           import yaml
           docs = [d for d in yaml.safe_load_all(open('/tmp/rendered-reuse-values.yaml')) if d]
@@ -1354,6 +1354,8 @@ jobs:
           required = {('Deployment', 'gameplane-api'), ('Deployment', 'gameplane-web'),
                       ('PersistentVolumeClaim', 'gameplane-api-data')}
           assert required <= resources, f"reuse-values removed existing resources: {required - resources}"
+          crds = {name for kind, name in resources if kind == 'CustomResourceDefinition'}
+          assert len(crds) == 9, f"reuse-values disabled the bundled CRDs: {crds}"
           assert ('Deployment', 'gameplane-gateway') not in resources
           assert ('NetworkPolicy', 'allow-api-to-agent') in resources
           assert ('NetworkPolicy', 'allow-api-to-capture') not in resources, "legacy values without capture enabled its ingress"
@@ -1389,7 +1391,7 @@ jobs:
         # The CRD-apply hook serves CRDs from crd-manifests/ (crds/ isn't
         # readable by Helm .Files). make manifests keeps both in sync; guard
         # against a drift that would apply stale CRDs on upgrade.
-        run: diff -r charts/gameplane/crds charts/gameplane/crd-manifests
+        run: diff -r charts/gameplane/charts/gameplane-crds/crds charts/gameplane/crd-manifests
       - name: chart CRDs carry the current bundle-hash stamp (F-218)
         # crd-apply-hook.yaml fires on pre-install only when the live CRDs'
         # gameplane.local/crd-bundle-sha256 differs from the chart's. A stale
@@ -1399,7 +1401,7 @@ jobs:
         # difference.
         run: |
           hack/sync-chart-crds.sh
-          git diff --exit-code -- charts/gameplane/crds charts/gameplane/crd-manifests
+          git diff --exit-code -- charts/gameplane/charts/gameplane-crds/crds charts/gameplane/crd-manifests
       - name: chart cosign key matches signing/cosign.pub
         # values.yaml embeds a copy of the signing public key so the operator
         # can verify official module bundles. Nothing regenerates it, so a key
@@ -1650,7 +1652,7 @@ jobs:
         # (operator does zero logins and is wait-dominated, so it runs
         # wide; the api buckets stay within the login limiter's budget).
         # The arm64 job below uses the same steps and per-bucket settings.
-        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry]
+        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components]
         arch: [amd64]
         include:
           - bucket: operator
@@ -1682,6 +1684,10 @@ jobs:
             parallel: 1
             test_timeout: 45m # the lifecycle test waits on 1m report intervals for every subtest
             job_timeout: 75 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+          - bucket: optional-components
+            parallel: 1
+            test_timeout: 20m # one lifecycle test: helm upgrade, then mcp, syslog, frp tunnel and core checks in order
+            job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
     env:
       CLUSTER: gameplane-e2e
       CTX: kind-gameplane-e2e
@@ -1745,7 +1751,7 @@ jobs:
         # (operator does zero logins and is wait-dominated, so it runs
         # wide; the api buckets stay within the login limiter's budget).
         # Mirrors e2e-go's steps and per-bucket settings.
-        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry]
+        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components]
         arch: [arm64]
         include:
           - bucket: operator
@@ -1777,6 +1783,10 @@ jobs:
             parallel: 1
             test_timeout: 45m # the lifecycle test waits on 1m report intervals for every subtest
             job_timeout: 75 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+          - bucket: optional-components
+            parallel: 1
+            test_timeout: 20m # one lifecycle test: helm upgrade, then mcp, syslog, frp tunnel and core checks in order
+            job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
     env:
       CLUSTER: gameplane-e2e
       CTX: kind-gameplane-e2e
@@ -2169,6 +2179,82 @@ jobs:
           context: ${{ env.CTX }}
           namespaces: "gameplane-system,gameplane-games"
 
+  # Re-runs the api-auth, api-roles and api-rbac buckets against a
+  # Postgres-backed API (spec 013 US5, OD-3). amd64 only. The API is restarted
+  # between buckets: its login rate limiter lives in memory and each bucket is
+  # sized to one fresh limiter's budget (see test/e2e/buckets.sh). The restart
+  # also means each later bucket runs on data the earlier ones left in Postgres.
+  e2e-postgres:
+    name: e2e postgres / amd64 (kind)
+    needs: [changes, build-images]
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75 # Boots a kind cluster with PostgreSQL, installs the chart, runs three buckets.
+    permissions:
+      contents: read
+    env:
+      CLUSTER: gameplane-e2e
+      CTX: kind-gameplane-e2e
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/go-cache
+        with:
+          key-suffix: e2e
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - name: install kind
+        uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+        with:
+          install_only: true
+      - name: load images
+        uses: ./.github/actions/e2e-images
+      - name: bring up cluster + helm install (postgres)
+        run: ./deploy/kind/e2e.sh up "$CLUSTER" e2e postgres
+      - name: assert the API runs on postgres
+        run: |
+          args="$(kubectl --context "$CTX" --namespace gameplane-system get deployment gameplane-api \
+            -o jsonpath='{.spec.template.spec.containers[?(@.name=="api")].args}')"
+          echo "api args: ${args}"
+          if ! grep -q -- '--db-driver=postgres' <<<"${args}"; then
+            echo "the gameplane-api Deployment does not run with --db-driver=postgres" >&2
+            exit 1
+          fi
+      - name: run go e2e (api-auth on postgres)
+        run: |
+          RUN_REGEX="$(./test/e2e/buckets.sh regex api-auth)"
+          cd test/e2e && \
+            GAMEPLANE_E2E_REUSE_CLUSTER=1 \
+            GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
+            go test -tags=e2e -timeout 15m -v -parallel 4 -run "$RUN_REGEX" ./...
+      - name: restart the API (fresh login limiter)
+        run: |
+          kubectl --context "$CTX" --namespace gameplane-system rollout restart deployment/gameplane-api
+          kubectl --context "$CTX" --namespace gameplane-system rollout status deployment/gameplane-api --timeout=180s
+      - name: run go e2e (api-roles on postgres)
+        run: |
+          RUN_REGEX="$(./test/e2e/buckets.sh regex api-roles)"
+          cd test/e2e && \
+            GAMEPLANE_E2E_REUSE_CLUSTER=1 \
+            GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
+            go test -tags=e2e -timeout 10m -v -parallel 3 -run "$RUN_REGEX" ./...
+      - name: restart the API again (fresh login limiter)
+        run: |
+          kubectl --context "$CTX" --namespace gameplane-system rollout restart deployment/gameplane-api
+          kubectl --context "$CTX" --namespace gameplane-system rollout status deployment/gameplane-api --timeout=180s
+      - name: run go e2e (api-rbac on postgres)
+        run: |
+          RUN_REGEX="$(./test/e2e/buckets.sh regex api-rbac)"
+          cd test/e2e && \
+            GAMEPLANE_E2E_REUSE_CLUSTER=1 \
+            GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
+            go test -tags=e2e -timeout 10m -v -parallel 4 -run "$RUN_REGEX" ./...
+      - name: dump cluster state on failure (e2e-postgres)
+        if: failure()
+        uses: ./.github/actions/dump-cluster-state
+        with:
+          context: ${{ env.CTX }}
+          namespaces: "gameplane-system,gameplane-games"
+          include-previous-logs: "true"
+
   # Smoke-tests the dev ingress-nginx manifest pin (deploy/kind/up.sh,
   # INGRESS_NGINX_VERSION) on the same Kind node config `make dev-up` uses
   # (deploy/kind/cluster.yaml — the ingress-ready control-plane node label
@@ -2291,6 +2377,7 @@ jobs:
         e2e-web-live-arm64,
         e2e-game-bot,
         e2e-capture-overhead,
+        e2e-postgres,
         e2e-kind-ingress-smoke,
       ]
     if: always()
@@ -2386,7 +2473,7 @@ jobs:
               'web', 'web-e2e-mock', 'helm', 'chart-template', 'standalone-compose', 'workflow-lint', 'go-e2e-unit',
               'api-postgres',
               'e2e-buckets', 'e2e-go', 'e2e-go-arm64', 'e2e-multicluster', 'e2e-multicluster-arm64', 'e2e-upgrade', 'e2e-upgrade-arm64',
-              'e2e-web-live', 'e2e-web-live-arm64', 'e2e-game-bot', 'e2e-capture-overhead', 'e2e-kind-ingress-smoke',
+              'e2e-web-live', 'e2e-web-live-arm64', 'e2e-game-bot', 'e2e-capture-overhead', 'e2e-postgres', 'e2e-kind-ingress-smoke',
             ];
 
             // Maps each workflow job id to how its `name:` field (as reported by
@@ -2411,8 +2498,8 @@ jobs:
               'go-e2e-unit': (n) => n === 'go (test/e2e)',
               'api-postgres': (n) => n === 'api (postgres)',
               'e2e-buckets': (n) => n === 'e2e bucket coverage',
-              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry) \//.test(n) && n.includes('/ amd64 '),
-              'e2e-go-arm64': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry) \//.test(n) && n.includes('/ arm64 '),
+              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components) \//.test(n) && n.includes('/ amd64 '),
+              'e2e-go-arm64': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components) \//.test(n) && n.includes('/ arm64 '),
               'e2e-multicluster': (n) => n.startsWith('e2e multicluster /') && n.includes('/ amd64 '),
               'e2e-multicluster-arm64': (n) => n.startsWith('e2e multicluster /') && n.includes('/ arm64 '),
               'e2e-upgrade': (n) => n.startsWith('e2e upgrade /') && n.includes('/ amd64 '),
@@ -2421,6 +2508,7 @@ jobs:
               'e2e-web-live-arm64': (n) => n.startsWith('e2e web live /') && n.includes('/ arm64 '),
               'e2e-game-bot': (n) => n.startsWith('e2e game bot /'),
               'e2e-capture-overhead': (n) => n === 'e2e capture overhead (kind)',
+              'e2e-postgres': (n) => n === 'e2e postgres / amd64 (kind)',
               'e2e-kind-ingress-smoke': (n) => n === 'ingress-nginx smoke (kind)',
               'submodule-freshness': (n) => n === 'submodule freshness',
               'dependency-review': (n) => n === 'dependency review',
@@ -2563,7 +2651,7 @@ jobs:
             const bucketSet = new Set();
             for (const j of apiJobs) {
               const n = j.name || '';
-              const m = n.match(/^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry) \//);
+              const m = n.match(/^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components) \//);
               if (m) bucketSet.add(m[1]);
               if (/^e2e multicluster \//.test(n)) bucketSet.add('multicluster');
               if (/^e2e upgrade \//.test(n)) bucketSet.add('upgrade');
