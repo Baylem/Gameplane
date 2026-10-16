@@ -318,9 +318,9 @@ description: "Task list for 013-expand-test-coverage"
 
 ## Phase 6: User Story 4 – Unit coverage gaps (Priority: P2)
 
-**Goal**: 100 % of `secrets_managed.go`, and ≥ 80 % lines for ConsoleShell, CloneServerDialog and ServerActionsMenu (research R8, SC-004).
+**Goal**: 100 % of the reachable statements in `secrets_managed.go`, and ≥ 80 % lines for ConsoleShell, CloneServerDialog and ServerActionsMenu (research R8, SC-004).
 
-**Independent Test**: the `go (api / amd64)` coverage artifact shows `secrets_managed.go` at 100 %, and the `web` job's lcov shows each of the three components at ≥ 80 % lines.
+**Independent Test**: the `go (api / amd64)` step "per-file coverage of secrets_managed.go" shows every statement covered except the uncovered blocks it lists, and each of those is unreachable (on #710: 27/28, the one miss being the `existing.Labels == nil` branch at lines 66–68), and the `web` job's lcov shows each of the three components at ≥ 80 % lines.
 
 **PR**: `test: unit coverage for managed secrets and console shell`. Independent of every other phase.
 
@@ -351,7 +351,7 @@ description: "Task list for 013-expand-test-coverage"
 
   *Implementation note (2026-10-12)*: lcov from run 38189418314: `CloneServerDialog.tsx` 89.29 % lines / 69.23 % branches, with a Cancel case but no API-error case, so T053 adds the API-error and cancel-discards-changes cases. `ServerActionsMenu.tsx` 100 % lines / branches / functions; it makes no API calls, so cancel and API errors are dialog-level (G-22 note). `ConsoleShell.tsx` 100 % lines. G-19 stays in progress: CI reports only package coverage for Go.
 
-**Checkpoint**: SC-004 stays pending until G-19 has per-file proof for `secrets_managed.go` (G-20 to G-22 are proven). Module thresholds stay unchanged.
+**Checkpoint**: G-19 to G-22 are proven. G-19 was measured in CI at 27/28 statements (96.4 %) for `secrets_managed.go`, which is 100 % of its reachable statements: the one miss is the unreachable `existing.Labels == nil` branch (lines 66–68). valgul chose "Measure in CI" and amended SC-004 to match, 2026-10-16. Module thresholds stay unchanged.
 
 ---
 
@@ -394,9 +394,11 @@ description: "Task list for 013-expand-test-coverage"
 
 ## Phase 8: Polish & cross-cutting
 
-- [ ] T059 [P] Update `docs/contributing.md`, under "CI and workflows", with one short paragraph per new gate: what fails it, and how to fix it without suppressing it. Update "E2E testing" for the `optional-components` bucket and the `e2e-postgres` job. CI's `make check-links` verifies the new anchors.
-- [ ] T060 [P] Grep the full feature diff for forbidden directives: `git diff origin/master -- . ':!specs' | grep -nE "nolint|eslint-disable|@ts-ignore|hadolint ignore|trivyignore|allow-ghsas"` must print nothing (SC-006).
-- [ ] T061 Confirm `coverage-gaps.md` has no `open` or `in-progress` rows and that `make check-coverage-gaps` passes in CI. Then run `/speckit-analyze` on this folder.
+- [X] T059 [P] Update `docs/contributing.md`, under "CI and workflows", with one short paragraph per new gate: what fails it, and how to fix it without suppressing it. Update "E2E testing" for the `optional-components` bucket and the `e2e-postgres` job. CI's `make check-links` verifies the new anchors.
+- [X] T060 [P] Grep the full feature diff for forbidden directives: `git diff origin/master -- . ':!specs' ':!*.md' | grep -nE "nolint|eslint-disable|@ts-ignore|hadolint ignore|trivyignore|allow-ghsas"` must print nothing (SC-006).
+  Result (2026-10-16): over the feature diff, from before #671 to master after #707, the command prints nothing. Markdown is excluded (valgul, 2026-10-16) because its only matches are prose in CLAUDE.md and the agent and skill docs telling contributors not to use these directives; SC-006 covers in-source directives.
+- [X] T061 Confirm `coverage-gaps.md` has no `open` or `in-progress` rows and that `make check-coverage-gaps` passes in CI. Then run `/speckit-analyze` on this folder.
+  Result (2026-10-16): no open or in-progress rows; `make check-coverage-gaps` passed in "docs and repository checks" on #710 (https://github.com/GameplanePanel/Gameplane/actions/runs/38951995010/job/117146106043). `/speckit-analyze` found 0 critical issues; its two medium findings (the tasks.md checkpoint and the plan.md decision count) are fixed on #710, and SC-004 was amended.
 - [ ] T062 Once every PR above is merged and every task is checked or withdrawn, `git mv specs/013-expand-test-coverage specs/done_013-expand-test-coverage` and update every in-repo reference (including `hack/check-coverage-gaps.sh`'s default path) in one `docs:` commit (Constitution IV).
 
 ---
