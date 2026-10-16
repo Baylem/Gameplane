@@ -381,7 +381,7 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	replicas, stopRequeue, err := r.desiredReplicas(ctx, &gs, &tmpl, idle)
+	replicas, stopRequeue, err := r.desiredReplicas(ctx, &gs, &tmpl, idle, &wipeState)
 	if err != nil {
 		logger.Error(err, "compute desired replicas")
 		return ctrl.Result{}, err
@@ -1192,9 +1192,15 @@ func svcPortsFromTemplate(
 func (r *GameServerReconciler) desiredReplicas(
 	ctx context.Context, gs *gameplanev1alpha1.GameServer, tmpl *gameplanev1alpha1.GameTemplate,
 	idle idleState,
+	inventory ...*wipeWorkerState,
 ) (int32, time.Duration, error) {
 	if gs.Annotations[wipeGuardAnnotation] != "" || pendingWipe(gs) {
 		replicas, poll, err := r.softStop(ctx, gs, tmpl)
+		if err == nil && r.settledWipeFailure(ctx, gs, wipeInventory(inventory)) {
+			// Retain softStop's own deadline. The owned failed Job and current
+			// request changes are watched; no worker drain needs a 5s backstop.
+			return replicas, poll, nil
+		}
 		if poll == 0 || poll > wipeDrainPoll {
 			poll = wipeDrainPoll
 		}

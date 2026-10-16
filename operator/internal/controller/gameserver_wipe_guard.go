@@ -9,6 +9,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,6 +66,26 @@ func wipeInventory(supplied []*wipeWorkerState) *wipeWorkerState {
 		return supplied[0]
 	}
 	return &wipeWorkerState{}
+}
+
+// A failure condition is not token-bound: annotation-only replacement requests
+// can retain it. Drop the drain timer only with the current owned failed Job
+// and a drained inventory; cancellation, success cleanup and unknown reads
+// must keep their retry. The authoritative wipe step reports inventory errors.
+func (r *GameServerReconciler) settledWipeFailure(ctx context.Context, gs *gameplanev1alpha1.GameServer, state *wipeWorkerState) bool {
+	condition := meta.FindStatusCondition(gs.Status.Conditions, gameplanev1alpha1.GameServerConditionDataWipe)
+	guard := gs.Annotations[wipeGuardAnnotation]
+	if condition == nil || condition.Status != metav1.ConditionFalse || condition.Reason != "JobFailed" ||
+		guard == "" || guard != gs.Annotations[WipeRequestedAnnotation] || !pendingWipe(gs) ||
+		gs.Annotations[wipeSuccessAnnotation] != "" || gs.Annotations[restoreGuardAnnotation] != "" {
+		return false
+	}
+	if err := r.loadWipeWorkers(ctx, gs, state); err != nil {
+		return false
+	}
+	job := state.job
+	return !state.busy && job != nil && metav1.IsControlledBy(job, gs) &&
+		job.Labels[wipeTokenLabel] == guard && job.Status.Succeeded == 0 && jobPermanentlyFailed(job)
 }
 
 // Inventory bypasses the cache and keeps terminating/orphan pods visible after
