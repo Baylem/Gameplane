@@ -24,6 +24,10 @@ spec:
           # alpine/socat:1.8.0.3 (multi-arch index digest)
           image: alpine/socat@sha256:beb4a68d9e4fe6b0f21ea774a0fde6c31f580dde6368939ed70100c5385b015e
           args: ["-u", "TCP-LISTEN:514,fork,reuseaddr", "OPEN:/tmp/syslog.log,creat,append"]
+          # socat listens on 514, so it keeps root with only NET_BIND_SERVICE.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL], add: [NET_BIND_SERVICE] }
           ports:
             - { name: syslog, containerPort: 514, protocol: TCP }
           readinessProbe:

@@ -51,6 +51,7 @@ type ocMCPSession struct {
 	cancel context.CancelFunc
 }
 
+// ocStartMCP execs /mcp-server serve in the MCP server pod and returns a stdio JSON-RPC session to it.
 func ocStartMCP(ctx context.Context, t *testing.T) *ocMCPSession {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -106,6 +107,7 @@ func (m *ocMCPSession) call(t *testing.T, id int, method string, params any) map
 	return nil
 }
 
+// notify sends a JSON-RPC notification (no id, no reply expected).
 func (m *ocMCPSession) notify(t *testing.T, method string) {
 	t.Helper()
 	line, err := json.Marshal(map[string]any{"jsonrpc": "2.0", "method": method})
@@ -117,6 +119,7 @@ func (m *ocMCPSession) notify(t *testing.T, method string) {
 	}
 }
 
+// close ends the session: it closes stdin, waits for the exec to exit and cancels its context.
 func (m *ocMCPSession) close() {
 	_ = m.stdin.Close()
 	_ = m.cmd.Wait()
@@ -201,39 +204,42 @@ func ocTunnelReady(obj *unstructured.Unstructured) (bool, string) {
 	return false, "no TunnelReady condition yet"
 }
 
-// ocFrpsProxyOnline asks the frps dashboard whether the noop proxy is online.
-func ocFrpsProxyOnline(ctx context.Context, t *testing.T, port int) (bool, string) {
+// ocFrpsProxyStatus asks the frps dashboard whether the noop proxy is online
+// and returns its lastStartTime, which changes each time frpc opens a new
+// session for it.
+func ocFrpsProxyStatus(ctx context.Context, t *testing.T, port int) (online bool, lastStart, detail string) {
 	t.Helper()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/api/proxy/tcp", port), nil)
 	if err != nil {
-		return false, err.Error()
+		return false, "", err.Error()
 	}
 	req.SetBasicAuth(ocFrpsDashUser, ocFrpsDashPass)
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return false, err.Error()
+		return false, "", err.Error()
 	}
 	defer func() { _ = resp.Body.Close() }()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return false, err.Error()
+		return false, "", err.Error()
 	}
 	var out struct {
 		Proxies []struct {
-			Name   string `json:"name"`
-			Status string `json:"status"`
+			Name          string `json:"name"`
+			Status        string `json:"status"`
+			LastStartTime string `json:"lastStartTime"`
 		} `json:"proxies"`
 	}
 	if err := json.Unmarshal(body, &out); err != nil {
-		return false, fmt.Sprintf("decode frps proxies: %v body=%s", err, body)
+		return false, "", fmt.Sprintf("decode frps proxies: %v body=%s", err, body)
 	}
 	for _, p := range out.Proxies {
 		if p.Name == "noop" && p.Status == "online" {
-			return true, ""
+			return true, p.LastStartTime, string(body)
 		}
 	}
-	return false, string(body)
+	return false, "", string(body)
 }
 
 // TestOptionalComponents_Lifecycle walks spec 013 US3 (research R7) on the
@@ -550,8 +556,16 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 
 		dashPort, stopDash := detachedPortForward(ctx, t, ocNS, "svc/e2e-frps", 7500)
 		defer stopDash()
+		// lastStartTime of the frpc session before the kill; recovery must
+		// show a different one, proving frpc opened a new session.
+		var firstStart string
 		envInstance.Eventually(t, 3*time.Minute, func() (bool, string) {
-			return ocFrpsProxyOnline(ctx, t, dashPort)
+			online, start, detail := ocFrpsProxyStatus(ctx, t, dashPort)
+			if !online || start == "" {
+				return false, detail
+			}
+			firstStart = start
+			return true, ""
 		})
 
 		var podName, podUID string
@@ -640,7 +654,11 @@ func TestOptionalComponents_Lifecycle(t *testing.T) {
 		})
 
 		envInstance.Eventually(t, 3*time.Minute, func() (bool, string) {
-			return ocFrpsProxyOnline(ctx, t, dashPort)
+			online, start, detail := ocFrpsProxyStatus(ctx, t, dashPort)
+			if !online || start == "" || start == firstStart {
+				return false, fmt.Sprintf("want a new session (lastStartTime != %q): %s", firstStart, detail)
+			}
+			return true, ""
 		})
 
 		// frpc was restarted inside the container, not by the kubelet.
