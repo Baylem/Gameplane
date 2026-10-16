@@ -12,7 +12,10 @@ FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS i18n
 WORKDIR /src
 COPY i18n/ ./i18n/
 WORKDIR /src/i18n
-RUN mkdir -p /out && go build -o /tmp/i18n-check ./cmd/i18n-check && /tmp/i18n-check --manifest /out/languages.json --valid-out /out/valid locales
+# i18n-check exit 1 = findings: it still writes the filtered packs and manifest,
+# so the image build accepts exit 1. CI fails on findings separately. Exit 2+ is a
+# real failure and still fails the build. The manifest must exist either way.
+RUN mkdir -p /out && go build -o /tmp/i18n-check ./cmd/i18n-check && { /tmp/i18n-check --manifest /out/languages.json --valid-out /out/valid locales || [ $? -eq 1 ]; } && test -f /out/languages.json
 
 # ---- build the SPA ----
 FROM node:26-bookworm-slim AS build
