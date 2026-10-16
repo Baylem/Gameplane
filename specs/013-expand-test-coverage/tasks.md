@@ -394,8 +394,9 @@ description: "Task list for 013-expand-test-coverage"
 
 ## Phase 8: Polish & cross-cutting
 
-- [ ] T059 [P] Update `docs/contributing.md`, under "CI and workflows", with one short paragraph per new gate: what fails it, and how to fix it without suppressing it. Update "E2E testing" for the `optional-components` bucket and the `e2e-postgres` job. CI's `make check-links` verifies the new anchors.
-- [ ] T060 [P] Grep the full feature diff for forbidden directives: `git diff origin/master -- . ':!specs' | grep -nE "nolint|eslint-disable|@ts-ignore|hadolint ignore|trivyignore|allow-ghsas"` must print nothing (SC-006).
+- [X] T059 [P] Update `docs/contributing.md`, under "CI and workflows", with one short paragraph per new gate: what fails it, and how to fix it without suppressing it. Update "E2E testing" for the `optional-components` bucket and the `e2e-postgres` job. CI's `make check-links` verifies the new anchors.
+- [X] T060 [P] Grep the full feature diff for forbidden directives: `git diff origin/master -- . ':!specs' | grep -nE "nolint|eslint-disable|@ts-ignore|hadolint ignore|trivyignore|allow-ghsas"` must print nothing (SC-006).
+  Result (2026-10-16): the feature diff runs from before #671 to master after #707, excluding `specs/`. Its only added lines that match are prose in `.md` files (CLAUDE.md, agent and skill docs) telling contributors not to use these directives. No code, config or Dockerfile it adds contains one.
 - [ ] T061 Confirm `coverage-gaps.md` has no `open` or `in-progress` rows and that `make check-coverage-gaps` passes in CI. Then run `/speckit-analyze` on this folder.
 - [ ] T062 Once every PR above is merged and every task is checked or withdrawn, `git mv specs/013-expand-test-coverage specs/done_013-expand-test-coverage` and update every in-repo reference (including `hack/check-coverage-gaps.sh`'s default path) in one `docs:` commit (Constitution IV).
 
