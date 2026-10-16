@@ -318,9 +318,9 @@ description: "Task list for 013-expand-test-coverage"
 
 ## Phase 6: User Story 4 – Unit coverage gaps (Priority: P2)
 
-**Goal**: 100 % of `secrets_managed.go`, and ≥ 80 % lines for ConsoleShell, CloneServerDialog and ServerActionsMenu (research R8, SC-004).
+**Goal**: 100 % of the reachable statements in `secrets_managed.go`, and ≥ 80 % lines for ConsoleShell, CloneServerDialog and ServerActionsMenu (research R8, SC-004).
 
-**Independent Test**: the `go (api / amd64)` coverage artifact shows `secrets_managed.go` at 100 %, and the `web` job's lcov shows each of the three components at ≥ 80 % lines.
+**Independent Test**: the `go (api / amd64)` step "per-file coverage of secrets_managed.go" shows every statement covered except the uncovered blocks it lists, and each of those is unreachable (on #710: 27/28, the one miss being the `existing.Labels == nil` branch at lines 66–68), and the `web` job's lcov shows each of the three components at ≥ 80 % lines.
 
 **PR**: `test: unit coverage for managed secrets and console shell`. Independent of every other phase.
 

@@ -65,12 +65,12 @@ Documented exceptions with longer timeouts are the five e2e jobs (60 minutes eac
 
 These jobs block merging. Each gate with a fixture has a `hack/*_test.sh` self-test that proves it can fail; dependency review is validated by configuration review only. Fix the cause: never add an ignore file, a suppression comment or a looser threshold.
 
-- **`vuln (go)`** runs `hack/govulncheck-all.sh`, which runs govulncheck over every module in `go.work`. It fails when a module reaches a symbol with a known vulnerability. Bump the affected dependency (or the Go toolchain) in that module's `go.mod`, run `make tidy`, and commit both.
-- **`vuln (images)`** runs `hack/trivy-scan-images.sh` over the built images. It fails on any HIGH or CRITICAL vulnerability that has a fix. Bump the base-image digest, or bump the Go or npm dependency the finding names in that image's module.
+- **`vuln (go)`** runs `hack/govulncheck-all.sh`, which runs govulncheck over every module in `go.work`. It fails when a module reaches a symbol with a known vulnerability, and also when govulncheck itself hits a build or tool error. For a vulnerability, bump the affected dependency (or the Go toolchain) in that module's `go.mod`, run `make tidy`, and commit both. For any other error, fix the build or tool problem it reports.
+- **`vuln (images)`** runs `hack/trivy-scan-images.sh` over the e2e images CI builds (`gameplane-test/<name>:e2e` and `:e2e-postgres`). It fails on any HIGH or CRITICAL vulnerability that has a fix, and on a scan error. For a vulnerability, bump the base-image digest, or bump the Go or npm dependency the finding names in that image's module. For a scan error, fix what Trivy reports and re-run.
 - **`workflow lint`** also runs hadolint over every tracked Dockerfile, failing on any warning (`.hadolint.yaml`). Fix the Dockerfile: pin `apk`/`apt` package versions, and set a `SHELL` with `-o pipefail` before any piped `RUN` step.
 - **`dependency review`** runs on pull requests only. It fails when the PR adds a dependency with a HIGH or CRITICAL advisory. Pick a version without the advisory, or drop the dependency.
 - **`codegen drift`** runs `make generate manifests` and `make tidy`, then fails if `git diff` is not empty. Run the same commands locally and commit what they change (CLAUDE.md rule 7).
-- **`submodule freshness`** runs `hack/check-submodule-freshness.sh`. It fails when the `modules` or `website` pointer names a commit that is not on that repo's `main`. Merge the submodule PR first, then bump the pointer to the merged commit.
+- **`submodule freshness`** runs `hack/check-submodule-freshness.sh`. It fails when the `modules` or `website` pointer names a commit that is not on that repo's `main`, when a gitlink is missing, or when the script cannot fetch that repo's `main`. For a pointer that is not on `main`, merge the submodule PR first, then bump the pointer to the merged commit. Otherwise restore the gitlink, or fix the fetch error, and re-run.
 
 ## Testing
 
