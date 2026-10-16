@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # check-codegen-drift_test.sh: Proof that the "codegen drift" CI gate fails on a
 # types edit committed without regenerating (spec 013 G5,
-# specs/013-expand-test-coverage/contracts/static-gates.md).
+# specs/done_013-expand-test-coverage/contracts/static-gates.md).
 #
 # The gate is: make generate manifests && make tidy && git diff --exit-code
 # run inside a checkout. This script runs it in a throwaway detached worktree:

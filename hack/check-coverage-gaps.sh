@@ -3,7 +3,7 @@
 # (expand-test-coverage).
 #
 # Purpose:
-#   specs/013-expand-test-coverage/contracts/coverage-gap-record.md defines the
+#   specs/done_013-expand-test-coverage/contracts/coverage-gap-record.md defines the
 #   layout and rules of coverage-gaps.md. This script enforces them so that a
 #   gap row cannot be marked closed without evidence, and the Summary counts
 #   cannot drift from the table. It runs in the `docs` CI job.
@@ -11,7 +11,7 @@
 # Usage:
 #   hack/check-coverage-gaps.sh [FILE]
 #   COVERAGE_GAPS_FILE=path hack/check-coverage-gaps.sh
-#   Default: specs/013-expand-test-coverage/coverage-gaps.md
+#   Default: specs/done_013-expand-test-coverage/coverage-gaps.md
 #   An optional first argument overrides COVERAGE_GAPS_FILE.
 #
 # Rules checked (contracts/coverage-gap-record.md):
@@ -35,7 +35,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
-FILE="${1:-${COVERAGE_GAPS_FILE:-specs/013-expand-test-coverage/coverage-gaps.md}}"
+FILE="${1:-${COVERAGE_GAPS_FILE:-specs/done_013-expand-test-coverage/coverage-gaps.md}}"
 
 if [[ ! -f "$FILE" ]]; then
   echo "$FILE:1: file not found" >&2

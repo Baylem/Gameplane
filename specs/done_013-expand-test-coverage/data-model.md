@@ -62,7 +62,7 @@ One row in the Coverage Gap Record.
 
 ## Coverage Gap Record
 
-The single file `specs/013-expand-test-coverage/coverage-gaps.md` (format: [contracts/coverage-gap-record.md](contracts/coverage-gap-record.md)). It contains every Coverage Gap row, seeded from research R0, plus a status summary line computed by hand on each update and checked by `hack/check-coverage-gaps.sh`.
+The single file `specs/done_013-expand-test-coverage/coverage-gaps.md` (format: [contracts/coverage-gap-record.md](contracts/coverage-gap-record.md)). It contains every Coverage Gap row, seeded from research R0, plus a status summary line computed by hand on each update and checked by `hack/check-coverage-gaps.sh`.
 
 ## Optional Component
 

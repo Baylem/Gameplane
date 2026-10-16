@@ -2,7 +2,7 @@
 
 **Branch**: `claude/project-thread-nuvx3j` (the spec-kit script derived `013-expand-test-coverage`) | **Date**: 2026-10-09 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `specs/013-expand-test-coverage/spec.md`
+**Input**: Feature specification from `specs/done_013-expand-test-coverage/spec.md`
 
 ## Summary
 
@@ -89,7 +89,7 @@ Test-side: Playwright 1.63, vitest 5, `client-go/kubernetes/fake`, existing e2e 
 ### Documentation (this feature)
 
 ```text
-specs/013-expand-test-coverage/
+specs/done_013-expand-test-coverage/
 ├── spec.md
 ├── plan.md                         # this file
 ├── research.md                     # Phase 0 (R0 baseline + R1–R11 decisions)
