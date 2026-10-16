@@ -604,7 +604,7 @@ function ServerCard({
   const address = endpoint ? `${endpoint.host}:${endpoint.port}` : intl.formatMessage({ id: "web.common.empty_value", defaultMessage: "—", description: "Shown in place of a value that is not set" });
 
   return (
-    <Card className="border border-border bg-card p-3.5">
+    <Card className="border border-border bg-card p-3.5 shadow-none">
       {/* Row 1: Icon + Name + Address on left, Status pill on right */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
@@ -625,12 +625,12 @@ function ServerCard({
               {gs.metadata.name}
             </Link>
             <div className="truncate text-xs text-muted" title={targetLabel(resourceTarget(gs))}>{targetLabel(resourceTarget(gs))}</div>
-            <div className="truncate text-xs text-foreground/60 font-mono" title={address}>
+            <div className="truncate text-xs text-muted font-mono" title={address}>
               {address}
             </div>
           </div>
         </div>
-        <PhaseChip phase={phase} asleep={asleep} className="px-1 py-0.5 text-[11px] font-medium rounded-2xl" />
+        <PhaseChip phase={phase} asleep={asleep} className="px-1 py-0.5 text-[11px] leading-[13px] font-medium rounded-full" />
       </div>
 
       {/* Row 2: Game label */}
@@ -649,7 +649,7 @@ function ServerCard({
 
 function StatChip({ icon, value }: { icon: ReactNode; value: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-1.5 text-[12px] text-muted">
+    <span className="inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-[5px] text-[12px] leading-4 text-muted">
       {icon}
       <span className="font-mono">{value}</span>
     </span>
