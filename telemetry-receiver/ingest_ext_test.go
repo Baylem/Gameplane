@@ -325,7 +325,7 @@ func TestIngestExtendedStructuralErrorIs400(t *testing.T) {
 	in := newExtInstall(1)
 	before := extDump(t, s.store)
 	for name, mod := range map[string]func(*telemetryschema.Report){
-		"schema 2":        func(r *telemetryschema.Report) { r.Ext.Schema = 2 },
+		"schema 3":        func(r *telemetryschema.Report) { r.Ext.Schema = 3 },
 		"no architecture": func(r *telemetryschema.Report) { r.Ext.Env.Arch = nil },
 		"bad key":         func(r *telemetryschema.Report) { r.Ext.Key = "short" },
 	} {

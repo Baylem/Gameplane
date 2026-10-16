@@ -620,7 +620,7 @@ func TestEncodeDeterministicRoundTrip(t *testing.T) {
 	back.Ext.SentAt = time.Time{}
 	wantExt := &Extended{
 		Schema: 1, InstallID: testID,
-		Env:   Env{K8s: []string{"1.31"}, Distro: []string{"k3s"}, Arch: []string{"amd64", "arm64"}, Nodes: "1"},
+		Env:   Env{K8s: []string{"1.31"}, Distro: []string{"k3s"}, Arch: []string{"amd64", "arm64"}, Nodes: "1", Deployment: "other"},
 		Games: Games{Official: map[string]int{"minecraft-java": 2, "terraria": 1}},
 		Features: Features{
 			WakeOnConnect: true, Tunnels: []string{"frp", "playit"}, Backups: true,
