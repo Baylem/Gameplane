@@ -200,13 +200,15 @@ var rules = []rule{
 	{method: "GET", segment: "fleet", suffix: "/fleet/placements", perm: ""},
 	// Own profile: every authenticated user reads /users/me and their own
 	// servers (/users/me/servers), and reads/writes/resets their own theme
-	// preferences (feature 016). The rest of /users is gated; must precede
+	// preferences (feature 016), and sets their own language (spec 019).
+	// The rest of /users is gated; must precede
 	// the segment-wide users rules.
 	{method: "GET", segment: "users", suffix: "/users/me", perm: ""},
 	{method: "GET", segment: "users", suffix: "/users/me/servers", perm: ""},
 	{method: "GET", segment: "users", suffix: "/users/me/preferences", perm: ""},
 	{method: "PUT", segment: "users", suffix: "/users/me/preferences", perm: ""},
 	{method: "POST", segment: "users", suffix: "/users/me/preferences/reset", perm: ""},
+	{method: "PUT", segment: "users", suffix: "/users/me/language", perm: ""},
 	{method: "GET", segment: "users", perm: "users:read"},
 	{segment: "users", perm: "users:manage"},
 
