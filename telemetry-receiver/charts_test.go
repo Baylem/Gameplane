@@ -120,7 +120,7 @@ func seedExtendedDash(t *testing.T, s *server) {
 	for n := 1; n <= 2; n++ {
 		body, sig := newExtInstall(n).report(t, s.now(), func(r *telemetryschema.Report) {
 			if n == 2 {
-				r.Ext.Env.Distro, r.Ext.Features.DB, r.Ext.Features.Clusters = "eks", "postgres", "2-3"
+				r.Ext.Env.Distro, r.Ext.Features.DB, r.Ext.Features.Clusters = []string{"eks"}, "postgres", "2-3"
 			}
 		})
 		if w := extSend(t, s, body, sig); w.Code != http.StatusNoContent {

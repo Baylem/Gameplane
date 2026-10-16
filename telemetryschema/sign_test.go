@@ -149,7 +149,7 @@ func TestSignVerifyRoundTrip(t *testing.T) {
 		Version: "0.3.0", Servers: 1, Templates: 1,
 		Ext: &Extended{
 			Schema: 1, InstallID: testID,
-			Env:      Env{K8s: "1.31", Distro: "k3s", Arch: []string{"amd64"}, Nodes: "1"},
+			Env:      Env{K8s: []string{"1.31"}, Distro: []string{"k3s"}, Arch: []string{"amd64"}, Nodes: "1"},
 			Features: Features{Clusters: "1", DB: "sqlite", Language: "en"},
 			Key:      PublicKeyString(priv),
 			SentAt:   time.Date(2026, 10, 6, 9, 12, 44, 0, time.UTC),

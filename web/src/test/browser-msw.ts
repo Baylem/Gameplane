@@ -69,13 +69,14 @@ function getHandlerSet(): Parameters<typeof setupWorker>[0][] {
           servers: 3,
           templates: 8,
           ext: {
-            schema: 1,
+            schema: 2,
             installId: telemetryInstallId,
             env: {
-              k8s: "v1.28.0",
-              distro: "ubuntu",
+              k8s: ["v1.28.0"],
+              distro: ["ubuntu"],
               arch: ["amd64"],
               nodes: "1",
+              deployment: "cluster",
             },
             games: {
               official: { minecraft: 2, terraria: 1 },

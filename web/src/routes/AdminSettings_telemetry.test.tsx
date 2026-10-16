@@ -25,9 +25,9 @@ const PREVIEW: NonNullable<TelemetryInfo["preview"]> = {
   servers: 3,
   templates: 7,
   ext: {
-    schema: 1,
+    schema: 2,
     installId: ID,
-    env: { k8s: "1.31", distro: "k3s", arch: ["amd64"], nodes: "1" },
+    env: { k8s: ["1.31"], distro: ["k3s"], arch: ["amd64"], nodes: "1", deployment: "cluster" },
     games: { official: { "minecraft-java": 2, terraria: 1 }, custom: 0 },
     features: {
       wakeOnConnect: true, tunnels: ["playit"], capture: false, backups: true,
