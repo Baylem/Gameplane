@@ -13,6 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
 
 	"github.com/GameplanePanel/gameplane/api/internal/db"
 	"github.com/GameplanePanel/gameplane/api/internal/kube"
@@ -75,12 +77,16 @@ type Deps struct {
 }
 
 // clusterData is what one reachable managed cluster contributes to a report.
+// The fields after templates are read only for an extended report.
 type clusterData struct {
-	// deps is the caller's Deps with Kube set to this cluster's client, so
-	// the single-cluster helpers read this cluster.
-	deps      Deps
-	servers   []unstructured.Unstructured
-	templates []unstructured.Unstructured
+	servers    []unstructured.Unstructured
+	templates  []unstructured.Unstructured
+	nodes      []corev1.Node
+	nodesOK    bool
+	gitVersion string
+	minor      string
+	games      telemetryschema.Games
+	backups    bool
 }
 
 // Collect builds the report the reporter would send now, and the same value
@@ -130,9 +136,11 @@ func managedClusters(deps Deps) []*kube.Client {
 	return out
 }
 
-// readClusters lists GameServers and GameTemplates on every managed cluster
-// at once, each under clusterTimeout. A cluster whose GameServer list fails
-// is left out of the report (FR-044). The result keeps the registry's order.
+// readClusters reads every managed cluster at once, each under its own
+// clusterTimeout, so slow clusters can't add up (FR-044). It lists GameServers
+// and GameTemplates and, for an extended report, nodes, the server version,
+// game counts and backup schedules. A cluster whose GameServer list fails is
+// left out of the report. The result keeps the registry's order.
 func readClusters(ctx context.Context, deps Deps) []clusterData {
 	clients := managedClusters(deps)
 	results := make([]*clusterData, len(clients))
@@ -149,7 +157,14 @@ func readClusters(ctx context.Context, deps Deps) []clusterData {
 			if err != nil {
 				return
 			}
-			results[i] = &clusterData{deps: cd, servers: servers, templates: listItems(cctx, cd, "templates")}
+			r := &clusterData{servers: servers, templates: listItems(cctx, cd, "templates")}
+			if deps.Extended {
+				r.nodes, r.nodesOK = listNodes(cctx, cd)
+				r.gitVersion, r.minor = serverVersionCtx(cctx, cd)
+				r.games = countGames(cctx, cd, r.servers, r.templates)
+				r.backups = len(listItems(cctx, cd, "schedules")) > 0
+			}
+			results[i] = r
 		}()
 	}
 	wg.Wait()
@@ -220,24 +235,17 @@ func collectExtended(ctx context.Context, deps Deps, clusters []clusterData) (*t
 	nodesOK, backups := false, false
 	games := telemetryschema.Games{Official: map[string]int{}}
 	for _, c := range clusters {
-		cctx, cancel := context.WithTimeout(ctx, clusterTimeout)
-		nodes, ok := listNodes(cctx, c.deps)
-		gitVersion, minor := serverVersionCtx(cctx, c.deps)
-		g := countGames(cctx, c.deps, c.servers, c.templates)
-		if len(listItems(cctx, c.deps, "schedules")) > 0 {
-			backups = true
-		}
-		cancel()
-		if ok {
+		if c.nodesOK {
 			nodesOK = true
-			allNodes = append(allNodes, nodes...)
+			allNodes = append(allNodes, c.nodes...)
 		}
-		k8s[minor] = true
-		distros[detectDistro(gitVersion, nodes)] = true
-		for m, n := range g.Official {
+		backups = backups || c.backups
+		k8s[c.minor] = true
+		distros[detectDistro(c.gitVersion, c.nodes)] = true
+		for m, n := range c.games.Official {
 			games.Official[m] += n
 		}
-		games.Custom += g.Custom
+		games.Custom += c.games.Custom
 		servers = append(servers, c.servers...)
 	}
 	nodeBand := other
@@ -295,7 +303,8 @@ func listNodes(ctx context.Context, deps Deps) ([]corev1.Node, bool) {
 }
 
 // serverVersionCtx is serverVersion bounded by ctx: the discovery call takes
-// no context, so it runs aside and an expired ctx reads as "other".
+// no context, so it runs aside and an expired ctx reads as "other". The call
+// itself is bounded by discoveryClient's timeout.
 func serverVersionCtx(ctx context.Context, deps Deps) (gitVersion, minor string) {
 	type result struct{ git, minor string }
 	ch := make(chan result, 1)
@@ -319,7 +328,7 @@ func serverVersion(deps Deps) (gitVersion, minor string) {
 	if deps.Kube == nil || deps.Kube.Typed == nil {
 		return "", other
 	}
-	v, err := deps.Kube.Typed.Discovery().ServerVersion()
+	v, err := discoveryClient(deps.Kube).ServerVersion()
 	if err != nil || v == nil {
 		return "", other
 	}
@@ -328,6 +337,23 @@ func serverVersion(deps Deps) (gitVersion, minor string) {
 		minor = other
 	}
 	return v.GitVersion, minor
+}
+
+// discoveryClient returns a discovery client for c whose requests time out
+// after clusterTimeout, so a hung cluster can't hold a discovery call open
+// after the report gave up on it. Clients built without a rest.Config (test
+// fakes) use their own discovery client.
+func discoveryClient(c *kube.Client) discovery.DiscoveryInterface {
+	if c.Config == nil {
+		return c.Typed.Discovery()
+	}
+	cfg := rest.CopyConfig(c.Config)
+	cfg.Timeout = clusterTimeout
+	d, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		return c.Typed.Discovery()
+	}
+	return d
 }
 
 // nodeArches returns the sorted, unique CPU architectures of nodes. Values
