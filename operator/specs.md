@@ -422,7 +422,8 @@ Regenerates and commits atomically:
 - `operator/api/v1alpha1/zz_generated.deepcopy.go` — struct deepcopy methods (includes CaptureConfiguration, CaptureStatus, NetworkCapture, NetworkCaptureList, NetworkCaptureSpec, NetworkCaptureStatus deepcopy functions).
 - `operator/config/crd/gameplane.local_*.yaml` — 9 CRD manifests (includes gameplane.local_networkcaptures.yaml; gameplane.local_gameservers.yaml extended with capture spec/status schemas).
 - `operator/config/rbac/*.yaml` — ServiceAccount, Roles, RoleBindings, ClusterRoles, ClusterRoleBindings (includes pods/ephemeralcontainers and networkcaptures CRUD permissions).
-- `charts/gameplane/crds/*.yaml` — copy of CRDs for Helm integration (Helm `crds/` directory + pre-upgrade hook for `kubectl apply --server-side`).
+- `charts/gameplane/charts/gameplane-crds/crds/*.yaml` — native Helm CRDs in the bundled subchart, gated by `operator.enabled`.
+- `charts/gameplane/crd-manifests/*.yaml` — CRD copies used by the pre-upgrade hook for `kubectl apply --server-side`.
 
 Forgetting codegen leaves the YAML out of sync with types — CI's `make manifests` verify gate will catch it, but envtest runs will fail mysteriously first.
 
@@ -434,7 +435,7 @@ Forgetting codegen leaves the YAML out of sync with types — CI's `make manifes
 
 3. **Codegen is mandatory after CRD type edits.** Generated deepcopy + YAML must ship in the same commit as type changes.
 
-4. **CRDs are owned by the control plane, not Helm.** Helm's `crds/` is applied only on first install; updates come from a pre-upgrade hook running `kubectl apply --server-side --server-side-apply-manager=gameplane` on every `helm upgrade`, which also fires on a `helm install` over leftover CRDs whose `gameplane.local/crd-bundle-sha256` stamp (written by `make manifests` via `hack/sync-chart-crds.sh`) differs from the chart's (F-218). CRDs are never owned or deleted by Helm.
+4. **CRDs use Helm's native lifecycle.** The bundled CRD subchart is enabled by `operator.enabled`. Helm 3 installs missing native CRDs and skips existing ones; Helm 4 server-side applies native CRDs with field manager `helm`. When `crds.autoApply.enabled=true` and `api.standalone=false`, the pre-upgrade hook updates CRDs using `kubectl apply --server-side --force-conflicts --field-manager=helm`. The hook also runs on installs with leftover CRDs whose `gameplane.local/crd-bundle-sha256` stamp (written by `make manifests` via `hack/sync-chart-crds.sh`) differs from the chart's (F-218). Native CRDs remain outside Helm's release-owned resources and survive uninstall.
 
 5. **Agent mTLS is optional but recommended.** Operator boots without `--agent-ca-bundle`/`--agent-client-cert`/`--agent-client-key` (client.Disabled=true); Agent methods silently no-op. Production installs should supply all three.
 
@@ -536,4 +537,4 @@ CI run: `make cover` generates merged profile (unit + envtest), `make cover-ratc
 - **`go.mod` / `go.sum`** — dependency lock files.
 - **CRD YAML:** `operator/config/crd/gameplane.local_*.yaml` (generated from types).
 - **RBAC YAML:** `operator/config/rbac/*.yaml` (generated, defines operator ServiceAccount + permissions).
-- **Helm integration:** `charts/gameplane/crds/` + `charts/gameplane/templates/crd-apply-hook.yaml` (pre-upgrade CRD sync).
+- **Helm integration:** `charts/gameplane/charts/gameplane-crds/crds/` (native CRDs) + `charts/gameplane/crd-manifests/` and `charts/gameplane/templates/crd-apply-hook.yaml` (pre-upgrade CRD sync).
