@@ -19,7 +19,7 @@ const INVALID_CONFIG_PREFIX = "invalid config:";
 // draft until the user types, and the PUT then keeps the stored value. An
 // optional stored password is cleared only through the explicit Remove button
 // (spec 021 OD-2); emptying a typed value still returns to "unchanged".
-export function GameConfigSection({ draft, onChange, template, storedConfig, onValidityChange }: SectionProps) {
+export function GameConfigSection({ draft, onChange, template, moduleText, storedConfig, onValidityChange }: SectionProps) {
   const intl = useOptionalIntl();
   const access = useResourceAccess();
   const canWrite = access?.canWrite === true;
@@ -168,6 +168,7 @@ export function GameConfigSection({ draft, onChange, template, storedConfig, onV
           onChange={setValue}
           variant="settings"
           disabled={!canWrite}
+          text={moduleText}
           errors={errorText}
           removing={removing}
           onRemove={removePassword}

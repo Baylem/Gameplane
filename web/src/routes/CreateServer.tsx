@@ -28,6 +28,7 @@ import { cn, ignoreRejection } from "@/lib/utils";
 import { categoryFilters, categoryLabel, matchesCategory, resolveCategories } from "@/lib/games";
 import type { GameTemplate, PortOverride, GameServerTunnel } from "@/types";
 import { useOptionalIntl } from "@/lib/i18n/format";
+import { moduleIds, useModuleText, useModuleTexts, type ModuleText } from "@/lib/i18n/moduleText";
 import { defineMessages, type IntlShape, type MessageDescriptor } from "react-intl";
 
 
@@ -359,6 +360,7 @@ function PlacedServerWizard({ placement, choices, onPlacementChange, partial }: 
   const [state, setState] = useState<WizardState>(initial);
   const nav = useNavigate();
   const qc = useQueryClient();
+  const templateText = useModuleTexts(placement.templates.map((t) => t.metadata.name), clusterId);
   // Cancel/Close just leave the wizard; a rejected navigation (e.g. the
   // route change was interrupted) has nothing useful to show, but must not
   // become an unhandled promise rejection.
@@ -471,13 +473,14 @@ function PlacedServerWizard({ placement, choices, onPlacementChange, partial }: 
 
         <div className="grid flex-1 min-h-0 overflow-auto gap-6 px-6 py-6 md:grid-cols-[1fr_260px]">
           <fieldset disabled={create.isPending} className="min-w-0">
-            {currentKey === "template" && <PickTemplate templates={placement.templates} state={state} setState={setState} gameCodes={gameCodes} byName={byName} />}
-            {currentKey === "version" && <PickVersion state={state} setState={setState} />}
-            {currentKey === "configure" && <Configure caps={caps} state={state} setState={setState} />}
+            {currentKey === "template" && <PickTemplate templates={placement.templates} state={state} setState={setState} gameCodes={gameCodes} byName={byName} templateText={templateText} />}
+            {currentKey === "version" && <PickVersion state={state} setState={setState} cluster={clusterId} />}
+            {currentKey === "configure" && <Configure caps={caps} state={state} setState={setState} cluster={clusterId} />}
             {currentKey === "network" && <Network state={state} setState={setState} />}
             {currentKey === "review" && (
               <Review
                 location={`${placement.cluster} / ${placement.namespace}`}
+                cluster={clusterId}
                 state={state}
                 onEdit={(key) => {
                   const idx = steps.indexOf(key);
@@ -486,7 +489,7 @@ function PlacedServerWizard({ placement, choices, onPlacementChange, partial }: 
               />
             )}
           </fieldset>
-          <Preview state={state} gameCodes={gameCodes} byName={byName} />
+          <Preview state={state} gameCodes={gameCodes} byName={byName} cluster={clusterId} />
         </div>
 
         {create.isError && (
@@ -586,12 +589,14 @@ function PickTemplate({
   setState,
   gameCodes,
   byName,
+  templateText,
 }: {
   state: WizardState;
   setState: (s: WizardState) => void;
   gameCodes: Map<string, string>;
   byName: Map<string, GameTemplate>;
   templates: GameTemplate[];
+  templateText: (moduleName: string) => ModuleText;
 }) {
   const intl = useOptionalIntl();
   const data = { items: templates };
@@ -612,7 +617,8 @@ function PickTemplate({
   const filtered = (data?.items ?? []).filter((t) => {
     if (!matchesCategory(t.spec.categories, t.spec.game, activeCat)) return false;
     if (needle) {
-      const hay = `${t.spec.displayName} ${t.spec.game} ${t.spec.description ?? ""}`.toLowerCase();
+      const text = templateText(t.metadata.name);
+      const hay = `${t.spec.displayName} ${t.spec.game} ${t.spec.description ?? ""} ${text(moduleIds.templateDisplayName, t.spec.displayName)} ${text(moduleIds.templateDescription, t.spec.description ?? "")}`.toLowerCase();
       if (!hay.includes(needle)) return false;
     }
     return true;
@@ -649,6 +655,7 @@ function PickTemplate({
       <div className="grid gap-3 sm:grid-cols-2">
         {filtered.map((t) => {
           const active = state.template?.metadata.name === t.metadata.name;
+          const text = templateText(t.metadata.name);
           return (
             <button
               key={t.metadata.name}
@@ -667,12 +674,14 @@ function PickTemplate({
                   size="md"
                 />
                 <div>
-                  <div className="text-sm font-medium">{t.spec.displayName}</div>
+                  <div className="text-sm font-medium">{text(moduleIds.templateDisplayName, t.spec.displayName)}</div>
                   <div className="text-[11px] text-muted">{intl.formatMessage({ id: "web.routes.create_server.vversion", defaultMessage: "v{version}", description: "Create server: template version shown under a template card; {version} is the version string" }, { version: t.spec.version })}</div>
                 </div>
               </div>
               <p className="pt-2 text-xs text-muted line-clamp-2">
-                {t.spec.description ?? intl.formatMessage({ id: "web.routes.create_server.no_description", defaultMessage: "No description.", description: "Create server: shown under a template that has no description" })}
+                {t.spec.description === undefined
+                  ? intl.formatMessage({ id: "web.routes.create_server.no_description", defaultMessage: "No description.", description: "Create server: shown under a template that has no description" })
+                  : text(moduleIds.templateDescription, t.spec.description)}
               </p>
             </button>
           );
@@ -685,8 +694,9 @@ function PickTemplate({
   );
 }
 
-function PickVersion({ state, setState }: { state: WizardState; setState: (s: WizardState) => void }) {
+function PickVersion({ state, setState, cluster }: { state: WizardState; setState: (s: WizardState) => void; cluster: string }) {
   const intl = useOptionalIntl();
+  const text = useModuleText(state.template?.metadata.name, cluster);
   const versions = state.template?.spec.versions ?? [];
   return (
     <div className="space-y-3">
@@ -706,7 +716,7 @@ function PickVersion({ state, setState }: { state: WizardState; setState: (s: Wi
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="text-sm font-medium">{v.displayName}</div>
+                <div className="text-sm font-medium">{text(moduleIds.versionDisplayName(v.id), v.displayName)}</div>
                 {v.default && (
                   <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] text-primary">{intl.formatMessage({ id: "web.routes.create_server.default", defaultMessage: "Default", description: "Create server: small badge on a version card marking the default version; keep it short" })}</span>
                 )}
@@ -720,8 +730,9 @@ function PickVersion({ state, setState }: { state: WizardState; setState: (s: Wi
   );
 }
 
-function Configure({ state, setState, caps }: { state: WizardState; setState: (s: WizardState) => void; caps: { maxCpu: number; maxMemGi: number } }) {
+function Configure({ state, setState, caps, cluster }: { state: WizardState; setState: (s: WizardState) => void; caps: { maxCpu: number; maxMemGi: number }; cluster: string }) {
   const intl = useOptionalIntl();
+  const text = useModuleText(state.template?.metadata.name, cluster);
   const fields = state.template?.spec.configSchema ?? [];
   // Cap CPU/memory at the largest single node's capacity — the scheduler
   // can never place a pod that requests more than one node provides, so
@@ -820,6 +831,7 @@ function Configure({ state, setState, caps }: { state: WizardState; setState: (s
             onChange={(name, value) =>
               setState({ ...state, config: { ...state.config, [name]: value } })
             }
+            text={text}
           />
         </div>
       )}
@@ -1170,15 +1182,16 @@ const PLACEMENT_LABELS = defineMessages({
   gpu: { id: "web.routes.create_server.node_placement_gpu", defaultMessage: "GPU-enabled", description: "Create server: node placement option requiring a GPU-capable node" },
 });
 
-function Review({ state, onEdit, location }: { state: WizardState; onEdit: (key: StepKey) => void; location: string }) {
+function Review({ state, onEdit, location, cluster }: { state: WizardState; onEdit: (key: StepKey) => void; location: string; cluster: string }) {
   const intl = useOptionalIntl();
+  const text = useModuleText(state.template?.metadata.name, cluster);
   const hasVersions = (state.template?.spec.versions?.length ?? 0) > 0;
   const empty = intl.formatMessage({ id: "web.common.empty_value", defaultMessage: "—", description: "Shown in place of a value that is not set" });
   const sections = [
     {
       key: "template",
       title: intl.formatMessage(REVIEW_LABELS.template),
-      rows: [[intl.formatMessage(REVIEW_LABELS.template), state.template?.spec.displayName ?? empty]] as Array<[string, string]>,
+      rows: [[intl.formatMessage(REVIEW_LABELS.template), state.template ? text(moduleIds.templateDisplayName, state.template.spec.displayName) : empty]] as Array<[string, string]>,
     },
     ...(hasVersions
       ? [{ key: "version", title: intl.formatMessage(REVIEW_LABELS.version), rows: [[intl.formatMessage(REVIEW_LABELS.version), state.version || empty]] as Array<[string, string]> }]
@@ -1285,13 +1298,16 @@ function Preview({
   state,
   gameCodes,
   byName,
+  cluster,
 }: {
   state: WizardState;
   gameCodes: Map<string, string>;
   byName: Map<string, GameTemplate>;
+  cluster: string;
 }) {
   const intl = useOptionalIntl();
-  const name = state.template?.spec.displayName ?? intl.formatMessage({ id: "web.routes.create_server.pick_a_template", defaultMessage: "Pick a template", description: "Create server: preview pane title shown until a template is picked" });
+  const text = useModuleText(state.template?.metadata.name, cluster);
+  const name = state.template ? text(moduleIds.templateDisplayName, state.template.spec.displayName) : intl.formatMessage({ id: "web.routes.create_server.pick_a_template", defaultMessage: "Pick a template", description: "Create server: preview pane title shown until a template is picked" });
   const yaml = state.template
     ? `apiVersion: gameplane.local/v1alpha1
 kind: GameServer

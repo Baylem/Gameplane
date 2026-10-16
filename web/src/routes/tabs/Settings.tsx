@@ -38,6 +38,7 @@ import { AccessSection } from "./settings/Access";
 import { ShareLinksSection } from "./settings/ShareLinks";
 import { DangerSection } from "./settings/Danger";
 import { useOptionalIntl } from "@/lib/i18n/format";
+import { useModuleText } from "@/lib/i18n/moduleText";
 import { defineMessages, type IntlShape, type MessageDescriptor } from "react-intl";
 const PlacementSection = lazy(() =>
   import("./settings/Placement").then((m) => ({ default: m.PlacementSection })),
@@ -164,6 +165,7 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
     queryFn: ({ signal }) => resourceClient.withSignal(signal).Templates.get(draft!.spec.templateRef.name),
     enabled: !!draft?.spec.templateRef.name,
   });
+  const moduleText = useModuleText(draft?.spec.templateRef.name, resourceTarget.cluster);
 
   // Validate config from the shared draft even when its section is unmounted.
   // Other sections retain their reported validity across navigation, including
@@ -294,8 +296,8 @@ export function SettingsTab({ gs, name, ns, onDirtyChange }: SettingsTabProps) {
             A status refresh must not discard a newly issued, one-time token. */}
         <fieldset key={section === "sharelinks" ? "sharelinks" : draftRevision} disabled={save.isPending} inert={save.isPending} className="min-w-0 flex-1 overflow-auto border-0 p-6 scrollbar-thin">
           {section === "general"    && <GeneralSection    draft={draft} onChange={onChangeDraft} template={template} />}
-          {section === "version"    && <VersionSection    draft={draft} onChange={onChangeDraft} template={template} />}
-          {section === "config"     && <GameConfigSection draft={draft} onChange={onChangeDraft} template={template} storedConfig={baselineConfig} onValidityChange={validityCallbacks.config} />}
+          {section === "version"    && <VersionSection    draft={draft} onChange={onChangeDraft} template={template} moduleText={moduleText} />}
+          {section === "config"     && <GameConfigSection draft={draft} onChange={onChangeDraft} template={template} moduleText={moduleText} storedConfig={baselineConfig} onValidityChange={validityCallbacks.config} />}
           {section === "resources"  && <ResourcesSection  draft={draft} onChange={onChangeDraft} template={template} />}
           {section === "networking" && <NetworkingSection draft={draft} onChange={onChangeDraft} template={template} onValidityChange={validityCallbacks.networking} />}
           {section === "env"        && <EnvVarsSection    draft={draft} onChange={onChangeDraft} template={template} />}

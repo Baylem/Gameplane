@@ -3,13 +3,14 @@ import { AlertTriangle, Info } from "lucide-react";
 import { RadioGroup, Radio, Button, Chip } from "@heroui/react";
 import type { SectionProps } from "./types";
 import { useOptionalIntl } from "@/lib/i18n/format";
+import { identityText, moduleIds } from "@/lib/i18n/moduleText";
 
 // VersionSection lets an existing server switch to another entry of the
 // template's version catalog (spec.versions) — the same choice the Create
 // wizard offers, post-create. Saving rides the tab's read-merge-PUT; the
 // operator re-renders the StatefulSet (image/env/per-loader mod volume)
 // and the pod restarts on the new version.
-export function VersionSection({ draft, onChange, template }: SectionProps) {
+export function VersionSection({ draft, onChange, template, moduleText }: SectionProps) {
   const intl = useOptionalIntl();
   const versions = template?.spec.versions ?? [];
   const defaultId = versions.find((v) => v.default)?.id ?? versions[0]?.id ?? "";
@@ -44,7 +45,7 @@ export function VersionSection({ draft, onChange, template }: SectionProps) {
               <Radio.Control className="shrink-0 mt-0.5" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{v.displayName}</span>
+                  <span className="text-sm font-medium">{(moduleText ?? identityText)(moduleIds.versionDisplayName(v.id), v.displayName)}</span>
                   {v.default && (
                     <Chip size="sm" variant="soft" color="accent">{intl.formatMessage({ id: "web.routes.tabs.settings.version.default", defaultMessage: "Default", description: "Badge marking the template's default version" })}</Chip>
                   )}

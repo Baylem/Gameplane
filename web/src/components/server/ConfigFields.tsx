@@ -4,6 +4,7 @@ import { Button, Input } from "@heroui/react";
 import { cn } from "@/lib/utils";
 import { CONFIG_REDACTED_MARKER, type ConfigField } from "@/lib/validation";
 import { useOptionalIntl } from "@/lib/i18n/format";
+import { identityText, moduleIds, type ModuleText } from "@/lib/i18n/moduleText";
 
 // ConfigFields renders a template's configSchema as form fields. It is the
 // single implementation shared by the Create wizard (variant "wizard", the
@@ -34,6 +35,8 @@ export interface ConfigFieldInputProps {
   onChange: (value: string) => void;
   variant?: ConfigFieldVariant;
   disabled?: boolean;
+  /** Module-translated text accessor; the template's own text when omitted. */
+  text?: ModuleText;
   /** Inline error text (rendered by the settings variant only). */
   error?: string;
   /**
@@ -56,13 +59,14 @@ export function ConfigFieldInput({
   removing = false,
   onRemove,
   onUndo,
+  text = identityText,
 }: ConfigFieldInputProps) {
   const intl = useOptionalIntl();
   const id = useId();
   const errorId = `${id}-error`;
   const noteId = `${id}-note`;
   const labelId = `${id}-label`;
-  const label = field.displayName ?? field.name;
+  const label = text(moduleIds.configDisplayName(field.name), field.displayName ?? field.name);
   const settings = variant === "settings";
   const invalid = settings && error !== undefined && error !== "";
   // While the API reports a stored value (the redaction marker: always for a
@@ -96,7 +100,7 @@ export function ConfigFieldInput({
         )}
         {field.enum?.map((v) => (
           <option key={v} value={v}>
-            {v}
+            {text(moduleIds.configOption(field.name, v), v)}
           </option>
         ))}
       </select>
@@ -168,7 +172,7 @@ export function ConfigFieldInput({
       <label className="space-y-1.5 block">
         <div className="text-xs text-muted">{label}</div>
         {control}
-        {field.description && <span className="text-[11px] text-muted">{field.description}</span>}
+        {field.description && <span className="text-[11px] text-muted">{text(moduleIds.configDescription(field.name), field.description)}</span>}
       </label>
     );
   }
@@ -188,7 +192,7 @@ export function ConfigFieldInput({
           <div className="flex-1">{control}</div>
           {removeAction}
         </div>
-        {field.description && <p className="text-xs text-muted">{field.description}</p>}
+        {field.description && <p className="text-xs text-muted">{text(moduleIds.configDescription(field.name), field.description)}</p>}
         {field.type === "password" &&
           (removing ? (
             <p id={noteId} className="text-xs text-danger">
@@ -214,6 +218,8 @@ export interface ConfigFieldsProps {
   onChange: (name: string, value: string) => void;
   variant?: ConfigFieldVariant;
   disabled?: boolean;
+  /** Module-translated text accessor; the template's own text when omitted. */
+  text?: ModuleText;
   errors?: Record<string, string>;
   /** Settings variant: names of stored optional passwords marked for removal. */
   removing?: ReadonlySet<string>;
@@ -227,6 +233,7 @@ export function ConfigFields({
   onChange,
   variant = "wizard",
   disabled = false,
+  text = identityText,
   errors,
   removing,
   onRemove,
@@ -242,6 +249,7 @@ export function ConfigFields({
           onChange={(v) => onChange(f.name, v)}
           variant={variant}
           disabled={disabled}
+          text={text}
           error={errors?.[f.name]}
           removing={removing?.has(f.name)}
           onRemove={onRemove && (() => onRemove(f.name))}
