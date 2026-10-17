@@ -83,6 +83,12 @@ version lower than the newest one seen in the range. The trend is stored as
 daily counts only (`daily_install_version`, `daily_version_change`), never per
 install.
 
+The environment cards count an install once under each value it reports
+across the clusters its panel manages, so Kubernetes version, distribution
+and architecture shares can add up to more than 100%. "Deployment" shows
+whether the panel runs on a cluster or standalone; installs on an older
+version that doesn't report it count as other.
+
 ### Metrics
 
 On the dashboard listener, Bearer token required:
