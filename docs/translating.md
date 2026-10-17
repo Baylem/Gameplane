@@ -184,8 +184,8 @@ shows English.
    from the auto-label workflow. If its title has no type prefix, it also
    gets `type: docs`. Add a `docs:` prefix to be sure.
 
-Translations made with Weblate are also planned. The Weblate project link
-will be added here once the project exists. Only translations that a
+You can also translate in the browser on Hosted Weblate:
+<https://hosted.weblate.org/projects/gameplane/>. Only translations that a
 human reviewer approves are merged. They arrive as a pull request from the
 `weblate/translations` branch and pass the same checks.
 
