@@ -127,8 +127,8 @@ func TestTelemetryNotice_PendingOnlyForManagersOnADefaultInstallWithADestination
 		fields, _ := got["fields"].(map[string]any)
 		basic, _ := fields["basic"].([]any)
 		extended, _ := fields["extended"].([]any)
-		if len(basic) != 3 || len(extended) != 7 {
-			t.Fatalf("fields = %v, want 3 basic and 7 extended", fields)
+		if len(basic) != 3 || len(extended) != 8 {
+			t.Fatalf("fields = %v, want 3 basic and 8 extended", fields)
 		}
 	})
 
