@@ -597,7 +597,7 @@ description: "Task list for feature 022: default telemetry destination, extended
   - new `telemetry-receiver/versionorder_test.go`: semver up, down, equal across `v` prefixes, pre-releases, and every non-semver label as unordered
   - new cases in `ingest_ext_test.go` and `population_test.go` for SC-017, including duplicates and refused reports leaving both tables unchanged, and `views_test.go` for `versionTrend` with and without extended data
   - **needs the user's sign-off before editing** (existing tests whose expectations change): `lifecycle_test.go:11` adds the two tables to `dailyTables` so the retention sweep covers them; `charts_test.go:83` if it asserts the old "Versions" title
-- [ ] T120 Push the branch and open the PR with the `ship-branch` skill; labels `type: feature`, `area: shared`, `area: specs` through REST (rule 14). After merge, `git mv specs/022-default-telemetry-dashboard specs/done_022-default-telemetry-dashboard`, update in-repo references, and delete the branch (rules 12, 16). The re-archive waits until Phase 12 is done too.
+- [X] T120 Push the branch and open the PR with the `ship-branch` skill; labels `type: feature`, `area: shared`, `area: specs` through REST (rule 14). After merge, `git mv specs/022-default-telemetry-dashboard specs/done_022-default-telemetry-dashboard`, update in-repo references, and delete the branch (rules 12, 16). The re-archive waits until Phase 12 is done too.
 
 **Checkpoint**: the trend is visible and every series matches SC-017.
 

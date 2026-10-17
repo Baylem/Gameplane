@@ -2502,7 +2502,7 @@ Server Settings gets a "Game configuration" section (edit `spec.config` from the
 
 ## Spec 022 telemetry notice and settings (2026-10-07)
 
-T041 and T052 of `specs/022-default-telemetry-dashboard/`. New frames sit in an empty region below the Admin Settings row (x 11480–21120, y 25404–28584); no existing frame changed. Destination hosts are samples while OD-1 is unruled: their text nodes are named `host (SAMPLE, OD-1 unruled)` (default) and `host (SAMPLE)` (bundled).
+T041 and T052 of `specs/done_022-default-telemetry-dashboard/`. New frames sit in an empty region below the Admin Settings row (x 11480–21120, y 25404–28584); no existing frame changed. Destination hosts are samples while OD-1 is unruled: their text nodes are named `host (SAMPLE, OD-1 unruled)` (default) and `host (SAMPLE)` (bundled).
 
 | Object ID | Name | Change |
 | --- | --- | --- |
