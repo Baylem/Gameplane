@@ -303,8 +303,12 @@ Design changes go through `design.pen` (Pencil) before any UI code is
 written. See [`docs/contributing.md`](docs/contributing.md) for the
 full guide: code style, test tiers, and the PR process.
 
-Translations are welcome. See [`docs/translating.md`](docs/translating.md)
-to add or improve a language pack.
+Translations are welcome. Translate in the browser on
+[Hosted Weblate](https://hosted.weblate.org/engage/gameplane/), or see
+[`docs/translating.md`](docs/translating.md) to add or improve a language
+pack by hand.
+
+[![Translation status](https://hosted.weblate.org/widget/gameplane/svg-badge.svg)](https://hosted.weblate.org/engage/gameplane/)
 
 ## License
 
