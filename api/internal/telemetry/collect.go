@@ -139,8 +139,10 @@ func managedClusters(deps Deps) []*kube.Client {
 // readClusters reads every managed cluster at once, each under its own
 // clusterTimeout, so slow clusters can't add up (FR-044). It lists GameServers
 // and GameTemplates and, for an extended report, nodes, the server version,
-// game counts and backup schedules. A cluster whose GameServer list fails is
-// left out of the report. The result keeps the registry's order.
+// game counts and backup schedules. A cluster whose GameServer, GameTemplate
+// or (for an extended report) backup schedule list fails is left out of the
+// report (R23), so its servers are never counted with partial data. The result
+// keeps the registry's order.
 func readClusters(ctx context.Context, deps Deps) []clusterData {
 	clients := managedClusters(deps)
 	results := make([]*clusterData, len(clients))
@@ -157,12 +159,20 @@ func readClusters(ctx context.Context, deps Deps) []clusterData {
 			if err != nil {
 				return
 			}
-			r := &clusterData{servers: servers, templates: listItems(cctx, cd, "templates")}
+			templates, err := listKind(cctx, cd, "templates")
+			if err != nil {
+				return
+			}
+			r := &clusterData{servers: servers, templates: templates}
 			if deps.Extended {
 				r.nodes, r.nodesOK = listNodes(cctx, cd)
 				r.gitVersion, r.minor = serverVersionCtx(cctx, cd)
 				r.games = countGames(cctx, cd, r.servers, r.templates)
-				r.backups = len(listItems(cctx, cd, "schedules")) > 0
+				schedules, err := listKind(cctx, cd, "schedules")
+				if err != nil {
+					return
+				}
+				r.backups = len(schedules) > 0
 			}
 			results[i] = r
 		}()
