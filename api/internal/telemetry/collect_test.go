@@ -210,7 +210,7 @@ func TestCollect_NilClients(t *testing.T) {
 		if rep.Servers != 0 || rep.Templates != 0 || rep.Ext == nil {
 			t.Fatalf("%s: report = %+v", name, rep)
 		}
-		if rep.Ext.Env.K8s != "other" || rep.Ext.Env.Nodes != "other" || !reflect.DeepEqual(rep.Ext.Env.Arch, []string{"other"}) {
+		if !reflect.DeepEqual(rep.Ext.Env.K8s, []string{"other"}) || rep.Ext.Env.Nodes != "other" || !reflect.DeepEqual(rep.Ext.Env.Arch, []string{"other"}) {
 			t.Errorf("%s: env = %+v, want other fallbacks", name, rep.Ext.Env)
 		}
 	}
@@ -272,10 +272,10 @@ func TestCollect_ExtendedFullReport(t *testing.T) {
 	if ext == nil {
 		t.Fatal("missing extended part")
 	}
-	if ext.Schema != 1 || ext.InstallID != testInstallID {
+	if ext.Schema != 2 || ext.InstallID != testInstallID {
 		t.Errorf("schema/id = %d/%q", ext.Schema, ext.InstallID)
 	}
-	wantEnv := telemetryschema.Env{K8s: "1.31", Distro: "k3s", Arch: []string{"amd64", "arm64"}, Nodes: telemetryschema.NodeBand(2)}
+	wantEnv := telemetryschema.Env{K8s: []string{"1.31"}, Distro: []string{"k3s"}, Arch: []string{"amd64", "arm64"}, Nodes: telemetryschema.NodeBand(2), Deployment: "cluster"}
 	if !reflect.DeepEqual(ext.Env, wantEnv) {
 		t.Errorf("env = %+v, want %+v", ext.Env, wantEnv)
 	}
@@ -315,7 +315,7 @@ func TestCollect_ExtendedFieldsFallBackWhenSourcesFail(t *testing.T) {
 	if ext == nil {
 		t.Fatal("missing extended part")
 	}
-	wantEnv := telemetryschema.Env{K8s: "other", Distro: "other", Arch: []string{"other"}, Nodes: "other"}
+	wantEnv := telemetryschema.Env{K8s: []string{"other"}, Distro: []string{"other"}, Arch: []string{"other"}, Nodes: "other", Deployment: "cluster"}
 	if !reflect.DeepEqual(ext.Env, wantEnv) {
 		t.Errorf("env = %+v, want %+v", ext.Env, wantEnv)
 	}

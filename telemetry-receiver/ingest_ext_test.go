@@ -50,7 +50,7 @@ func (in extInstall) report(t *testing.T, sentAt time.Time, mod func(*telemetrys
 	}
 	rep := telemetryschema.Report{Version: "1.0.0", Servers: 3, Templates: 2, Ext: &telemetryschema.Extended{
 		Schema: telemetryschema.SchemaVersion, InstallID: in.id,
-		Env:   telemetryschema.Env{K8s: "1.31", Distro: "k3s", Arch: []string{"amd64"}, Nodes: "1"},
+		Env:   telemetryschema.Env{K8s: []string{"1.31"}, Distro: []string{"k3s"}, Arch: []string{"amd64"}, Nodes: "1", Deployment: "cluster"},
 		Games: telemetryschema.Games{Official: map[string]int{"minecraft-java": 2}, Custom: 1},
 		Features: telemetryschema.Features{
 			Backups: true, Tunnels: []string{"playit"}, Clusters: "1", DB: "sqlite", Language: "en",
@@ -325,7 +325,7 @@ func TestIngestExtendedStructuralErrorIs400(t *testing.T) {
 	in := newExtInstall(1)
 	before := extDump(t, s.store)
 	for name, mod := range map[string]func(*telemetryschema.Report){
-		"schema 2":        func(r *telemetryschema.Report) { r.Ext.Schema = 2 },
+		"schema 3":        func(r *telemetryschema.Report) { r.Ext.Schema = 3 },
 		"no architecture": func(r *telemetryschema.Report) { r.Ext.Env.Arch = nil },
 		"bad key":         func(r *telemetryschema.Report) { r.Ext.Key = "short" },
 	} {

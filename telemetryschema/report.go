@@ -32,11 +32,16 @@ type Extended struct {
 }
 
 // Env describes the install's environment, using only enumerated values.
+// From schema 2 it covers every reachable managed cluster: K8s and Distro are
+// sets like Arch, and Deployment says whether the panel runs on a cluster or
+// standalone. A schema 1 report decodes K8s and Distro as one-value sets and
+// Deployment as "other".
 type Env struct {
-	K8s    string   `json:"k8s"`
-	Distro string   `json:"distro"`
-	Arch   []string `json:"arch"`
-	Nodes  string   `json:"nodes"`
+	K8s        []string `json:"k8s"`
+	Distro     []string `json:"distro"`
+	Arch       []string `json:"arch"`
+	Nodes      string   `json:"nodes"`
+	Deployment string   `json:"deployment"`
 }
 
 // Games counts local GameServers: Official maps an official catalog module
@@ -60,15 +65,33 @@ type Features struct {
 }
 
 // wireExtended is Extended as it appears on the wire: SentAt is a
-// second-precision RFC 3339 UTC string.
+// second-precision RFC 3339 UTC string. Env is a wireEnv1 or a wireEnv2, by Schema.
 type wireExtended struct {
 	Schema    int      `json:"schema"`
 	InstallID string   `json:"installId"`
-	Env       Env      `json:"env"`
+	Env       any      `json:"env"`
 	Games     Games    `json:"games"`
 	Features  Features `json:"features"`
 	Key       string   `json:"key"`
 	SentAt    string   `json:"sentAt"`
+}
+
+// wireEnv1 is Env as schema 1 writes it: k8s and distro are single values and
+// there is no deployment.
+type wireEnv1 struct {
+	K8s    string   `json:"k8s"`
+	Distro string   `json:"distro"`
+	Arch   []string `json:"arch"`
+	Nodes  string   `json:"nodes"`
+}
+
+// wireEnv2 is Env as schema 2 writes it (OD-13, OD-15).
+type wireEnv2 struct {
+	K8s        []string `json:"k8s"`
+	Distro     []string `json:"distro"`
+	Arch       []string `json:"arch"`
+	Nodes      string   `json:"nodes"`
+	Deployment string   `json:"deployment"`
 }
 
 // wireReport is Report as it appears on the wire.
@@ -82,7 +105,7 @@ type wireReport struct {
 // Encode returns the canonical JSON body for r. The output is deterministic:
 // arrays are sorted and de-duplicated, object keys are sorted (encoding/json
 // sorts map keys), nil arrays and maps are written as [] and {} (never null),
-// and SentAt is written in UTC at second precision. Encode does not fold
+// and SentAt is written in UTC at second precision. Schema 1 writes env.k8s and env.distro as single values and no deployment; later schemas write them as sets with the deployment. Encode does not fold
 // out-of-set values; Decode does. Negative counts are rejected with
 // ErrInvalidPayload.
 func Encode(r Report) ([]byte, error) {
@@ -95,8 +118,13 @@ func Encode(r Report) ([]byte, error) {
 		for k, v := range e.Games.Official {
 			official[k] = v
 		}
-		env := e.Env
-		env.Arch = sortedSet(env.Arch)
+		var env any = wireEnv2{
+			K8s: sortedSet(e.Env.K8s), Distro: sortedSet(e.Env.Distro), Arch: sortedSet(e.Env.Arch),
+			Nodes: e.Env.Nodes, Deployment: e.Env.Deployment,
+		}
+		if e.Schema < 2 {
+			env = wireEnv1{K8s: single(e.Env.K8s), Distro: single(e.Env.Distro), Arch: sortedSet(e.Env.Arch), Nodes: e.Env.Nodes}
+		}
 		feat := e.Features
 		feat.Tunnels = sortedSet(feat.Tunnels)
 		w.Ext = &wireExtended{
@@ -125,4 +153,17 @@ func sortedSet(in []string) []string {
 	}
 	sort.Strings(out)
 	return slices.Compact(out)
+}
+
+// single returns the one value of a set for a schema 1 field: "" for an
+// empty set, the value for a one-value set, and "other" for more than one.
+func single(set []string) string {
+	switch s := sortedSet(set); len(s) {
+	case 0:
+		return ""
+	case 1:
+		return s[0]
+	default:
+		return other
+	}
 }

@@ -217,7 +217,7 @@ func TestDecodeExtValid(t *testing.T) {
 	want := &Extended{
 		Schema:    1,
 		InstallID: testID,
-		Env:       Env{K8s: "1.31", Distro: "k3s", Arch: []string{"amd64"}, Nodes: "1"},
+		Env:       Env{K8s: []string{"1.31"}, Distro: []string{"k3s"}, Arch: []string{"amd64"}, Nodes: "1", Deployment: "other"},
 		Games:     Games{Official: map[string]int{"minecraft-java": 2, "terraria": 1}, Custom: 0},
 		Features: Features{
 			WakeOnConnect: true, Tunnels: []string{"playit"}, Backups: true,
@@ -384,16 +384,16 @@ func TestDecodeExtFoldsOutOfSetValues(t *testing.T) {
 		got  func(*Extended) any
 		want any
 	}{
-		{"known distro kept", mut(`"k3s"`, `"talos"`), func(e *Extended) any { return e.Env.Distro }, "talos"},
-		{"unknown distro", mut(`"k3s"`, `"mystery"`), func(e *Extended) any { return e.Env.Distro }, "other"},
-		{"wrong-case distro", mut(`"k3s"`, `"K3S"`), func(e *Extended) any { return e.Env.Distro }, "other"},
-		{"empty distro", mut(`"k3s"`, `""`), func(e *Extended) any { return e.Env.Distro }, "other"},
-		{"k8s minor kept", mut(`"1.31"`, `"1.123"`), func(e *Extended) any { return e.Env.K8s }, "1.123"},
-		{"k8s with v prefix", mut(`"1.31"`, `"v1.31"`), func(e *Extended) any { return e.Env.K8s }, "other"},
-		{"k8s with patch", mut(`"1.31"`, `"1.31.2"`), func(e *Extended) any { return e.Env.K8s }, "other"},
-		{"k8s major 2", mut(`"1.31"`, `"2.0"`), func(e *Extended) any { return e.Env.K8s }, "other"},
-		{"k8s four digit minor", mut(`"1.31"`, `"1.1234"`), func(e *Extended) any { return e.Env.K8s }, "other"},
-		{"k8s empty", mut(`"1.31"`, `""`), func(e *Extended) any { return e.Env.K8s }, "other"},
+		{"known distro kept", mut(`"k3s"`, `"talos"`), func(e *Extended) any { return e.Env.Distro }, []string{"talos"}},
+		{"unknown distro", mut(`"k3s"`, `"mystery"`), func(e *Extended) any { return e.Env.Distro }, []string{"other"}},
+		{"wrong-case distro", mut(`"k3s"`, `"K3S"`), func(e *Extended) any { return e.Env.Distro }, []string{"other"}},
+		{"empty distro", mut(`"k3s"`, `""`), func(e *Extended) any { return e.Env.Distro }, []string{"other"}},
+		{"k8s minor kept", mut(`"1.31"`, `"1.123"`), func(e *Extended) any { return e.Env.K8s }, []string{"1.123"}},
+		{"k8s with v prefix", mut(`"1.31"`, `"v1.31"`), func(e *Extended) any { return e.Env.K8s }, []string{"other"}},
+		{"k8s with patch", mut(`"1.31"`, `"1.31.2"`), func(e *Extended) any { return e.Env.K8s }, []string{"other"}},
+		{"k8s major 2", mut(`"1.31"`, `"2.0"`), func(e *Extended) any { return e.Env.K8s }, []string{"other"}},
+		{"k8s four digit minor", mut(`"1.31"`, `"1.1234"`), func(e *Extended) any { return e.Env.K8s }, []string{"other"}},
+		{"k8s empty", mut(`"1.31"`, `""`), func(e *Extended) any { return e.Env.K8s }, []string{"other"}},
 		{"arch sorted and de-duplicated", mut(`["amd64"]`, `["riscv64","arm64","amd64","arm64"]`), func(e *Extended) any { return e.Env.Arch }, []string{"amd64", "arm64", "riscv64"}},
 		{"arch unknown folds and collapses", mut(`["amd64"]`, `["x86","amd64","sparc","other"]`), func(e *Extended) any { return e.Env.Arch }, []string{"amd64", "other"}},
 		{"arch only unknown", mut(`["amd64"]`, `["x86"]`), func(e *Extended) any { return e.Env.Arch }, []string{"other"}},
@@ -515,12 +515,12 @@ func TestDecodeExtDropsMalformedInstallID(t *testing.T) {
 func TestDecodeExtSchema(t *testing.T) {
 	t.Parallel()
 	for name, ext := range map[string]string{
-		"schema 2":              setAt(t, 2, "schema"),
+		"schema 4":              setAt(t, 4, "schema"),
 		"schema 3":              setAt(t, 3, "schema"),
 		"schema 1000":           setAt(t, 1000, "schema"),
-		"schema 2 unknown keys": mut(`"schema":1,`, `"schema":2,"newField":{"x":1},`),
-		"schema 2 missing keys": `{"schema":2}`,
-		"schema 2 bad fields":   strings.Replace(setAt(t, 5, "env"), `"schema":1`, `"schema":2`, 1),
+		"schema 3 unknown keys": mut(`"schema":1,`, `"schema":3,"newField":{"x":1},`),
+		"schema 3 missing keys": `{"schema":3}`,
+		"schema 3 bad fields":   strings.Replace(setAt(t, 5, "env"), `"schema":1`, `"schema":3`, 1),
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, _, err := Decode(withExt(ext))
@@ -571,7 +571,7 @@ func TestEncodeDeterministicRoundTrip(t *testing.T) {
 		Ext: &Extended{
 			Schema:    1,
 			InstallID: testID,
-			Env:       Env{K8s: "1.31", Distro: "k3s", Arch: []string{"arm64", "amd64", "arm64"}, Nodes: "1"},
+			Env:       Env{K8s: []string{"1.31"}, Distro: []string{"k3s"}, Arch: []string{"arm64", "amd64", "arm64"}, Nodes: "1"},
 			Games:     Games{Official: map[string]int{"terraria": 1, "minecraft-java": 2}, Custom: 0},
 			Features: Features{
 				WakeOnConnect: true, Tunnels: []string{"playit", "frp"}, Backups: true,
@@ -620,7 +620,7 @@ func TestEncodeDeterministicRoundTrip(t *testing.T) {
 	back.Ext.SentAt = time.Time{}
 	wantExt := &Extended{
 		Schema: 1, InstallID: testID,
-		Env:   Env{K8s: "1.31", Distro: "k3s", Arch: []string{"amd64", "arm64"}, Nodes: "1"},
+		Env:   Env{K8s: []string{"1.31"}, Distro: []string{"k3s"}, Arch: []string{"amd64", "arm64"}, Nodes: "1", Deployment: "other"},
 		Games: Games{Official: map[string]int{"minecraft-java": 2, "terraria": 1}},
 		Features: Features{
 			WakeOnConnect: true, Tunnels: []string{"frp", "playit"}, Backups: true,

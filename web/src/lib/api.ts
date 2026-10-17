@@ -312,7 +312,7 @@ export interface TelemetryStatus {
 export interface TelemetryPreviewExt {
   schema: number;
   installId: string;
-  env: { k8s: string; distro: string; arch: string[]; nodes: string };
+  env: { k8s: string[]; distro: string[]; arch: string[]; nodes: string; deployment: string };
   games: { official: Record<string, number>; custom: number };
   features: {
     wakeOnConnect: boolean;

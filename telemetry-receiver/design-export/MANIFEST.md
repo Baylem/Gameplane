@@ -72,3 +72,25 @@ Method:
 - **JSON.** `JSON.stringify(Get("i0xK1E", {depth: 40, includePathGeometry: true}))` was checked equal to the written file: 111,299 UTF-16 code units, FNV-1a 710213898. The file has no `"..."` elisions.
 - **PNG.** `Export(["i0xK1E"], "png", …, {scale: 2})` gives 2880×7091. The frame height is 3545.0000000000005, so the export rounds it up by one pixel.
 - **Content checks.** Each string matched only `i0xK1E.json`: "Behind v0.3.0, on its own scale", "Installs by their last reported version" and "Reports by version".
+
+## Incremental export (2026-10-17): deployment card (spec 022 T122, FR-045, OD-13 to OD-16)
+
+| Node | Change |
+|---|---|
+| `i0xK1E` | New row `ISPZo` "Environment row 3" under the Architecture and Cluster nodes row. Its left column holds card `lAzgJ` "Deployment", a copy of the Architecture card with three `wPbIp` Share row instances (cluster 82%, standalone 15%, other 3%). The right column is an empty grid cell `h5Dkd`, so the environment grid stays in pairs. Caption: "Share of install-days by how the panel runs: on a cluster, or standalone. Other is installs on an older version that doesn't report it." The Kubernetes version and Distribution captions now describe sets (OD-15): "Share of install-days reporting each minor version across their managed clusters. Installs with several report each, so shares can add up to more than 100%." Distribution reads the same with "each detected distribution". |
+
+Design notes:
+
+- **Components.** No new component.
+  - The card keeps the environment card layout and tokens (`$surface/surface`, `$radius/3xl`, `$border`, padding 20, gap 14), and its rows are `wPbIp` instances.
+  - Bar widths follow the file's convention: share × the 432 px track.
+  - The "other" label uses `$foreground/muted`, like the Other rows of the neighbouring cards.
+- **Audit.** The `pen-componentize` audit found no detached copies, replaced instances or repeated structures. Its hand-built control findings on `fximY`, `y49Ie` and `jy9Rn` predate this change.
+- **Modes.** The frame stays in dark mode. Light mode was checked by switching the frame's theme for a preview and back.
+- **Narrow layout.** Below 960 px the template's `grid-2` collapses to one column, and the card's SVG scales like its neighbours'.
+
+Method:
+
+- **JSON.** `JSON.stringify(Get("i0xK1E", {depth: 40, includePathGeometry: true}))` was checked equal to the written file: 113,413 UTF-16 code units, FNV-1a 1968389605. The file has no `"..."` elisions.
+- **PNG.** `Export(["i0xK1E"], "png", …, {scale: 2})` gives 2880×7553.
+- **Content checks.** Each string matched only `i0xK1E.json`: "doesn't report it" and "across their managed clusters".

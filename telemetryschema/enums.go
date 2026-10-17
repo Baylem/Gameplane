@@ -26,6 +26,9 @@ var (
 	Distros = []string{"k3s", "rke2", "k0s", "eks", "gke", "aks", "openshift", "microk8s", "minikube", "kind", "doks", "talos", "other"}
 	// Arches lists the recognised CPU architectures.
 	Arches = []string{"amd64", "arm64", "arm", "ppc64le", "s390x", "riscv64", "other"}
+	// Deployments lists how an install runs: on its own cluster, or as a
+	// standalone panel with no local cluster (FR-045).
+	Deployments = []string{"cluster", "standalone"}
 	// Tunnels lists the recognised tunnel providers.
 	Tunnels = []string{"frp", "tailscale", "playit", "other"}
 	// DBs lists the recognised API database drivers.

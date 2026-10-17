@@ -35,11 +35,11 @@
 </div>
 <div class="grid-2">
 <figure class="card chart-card">
-<figcaption class="card-head"><span><span class="card-title">Kubernetes version</span><span class="muted block">Share of install-days by reported minor version.</span></span></figcaption>
+<figcaption class="card-head"><span><span class="card-title">Kubernetes version</span><span class="muted block">Share of install-days reporting each minor version across their managed clusters. Installs with several report each, so shares can add up to more than 100%.</span></span></figcaption>
 {{template "bars" .K8s}}
 </figure>
 <figure class="card chart-card">
-<figcaption class="card-head"><span><span class="card-title">Distribution</span><span class="muted block">Share of install-days by detected distribution.</span></span></figcaption>
+<figcaption class="card-head"><span><span class="card-title">Distribution</span><span class="muted block">Share of install-days reporting each detected distribution across their managed clusters. Installs with several report each, so shares can add up to more than 100%.</span></span></figcaption>
 {{template "bars" .Distro}}
 </figure>
 </div>
@@ -51,6 +51,12 @@
 <figure class="card chart-card">
 <figcaption class="card-head"><span><span class="card-title">Cluster nodes</span><span class="muted block">Share of install-days by node-count band.</span></span></figcaption>
 {{template "bars" .Nodes}}
+</figure>
+</div>
+<div class="grid-2">
+<figure class="card chart-card">
+<figcaption class="card-head"><span><span class="card-title">Deployment</span><span class="muted block">Share of install-days by how the panel runs: on a cluster, or standalone. Other is installs on an older version that doesn't report it.</span></span></figcaption>
+{{template "bars" .Deployment}}
 </figure>
 </div>
 <div class="grid-2">

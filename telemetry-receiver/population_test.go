@@ -331,7 +331,7 @@ func TestBuildViewsExtendedSharesGamesAndFeatures(t *testing.T) {
 		r.Ext.Games = telemetryschema.Games{Official: map[string]int{"minecraft-java": 4}, Custom: 0}
 	})
 	b, bSig := newExtInstall(2).report(t, extStart, func(r *telemetryschema.Report) {
-		r.Ext.Env.Distro, r.Ext.Env.Nodes, r.Ext.Env.K8s = "eks", "2-3", "1.30"
+		r.Ext.Env.Distro, r.Ext.Env.Nodes, r.Ext.Env.K8s = []string{"eks"}, "2-3", []string{"1.30"}
 		r.Ext.Features.Backups, r.Ext.Features.Tunnels = false, []string{}
 		r.Ext.Features.DB, r.Ext.Features.Clusters = "postgres", "2-3"
 		r.Ext.Games = telemetryschema.Games{Official: map[string]int{"terraria": 1}, Custom: 2}

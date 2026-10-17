@@ -4681,7 +4681,7 @@
                       "fill": "$foreground/muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Share of install-days by reported minor version.",
+                      "content": "Share of install-days reporting each minor version across their managed clusters. Installs with several report each, so shares can add up to more than 100%.",
                       "fontFamily": "$typography/font-sans",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -4864,7 +4864,7 @@
                       "fill": "$foreground/muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Share of install-days by detected distribution.",
+                      "content": "Share of install-days reporting each detected distribution across their managed clusters. Installs with several report each, so shares can add up to more than 100%.",
                       "fontFamily": "$typography/font-sans",
                       "fontSize": 13,
                       "fontWeight": "normal"
@@ -5432,6 +5432,155 @@
                   ]
                 }
               ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ISPZo",
+          "name": "Environment row 3",
+          "width": "fill_container",
+          "gap": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "lAzgJ",
+              "name": "Deployment",
+              "width": "fill_container",
+              "fill": "$surface/surface",
+              "cornerRadius": "$radius/3xl",
+              "stroke": "$border",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 14,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "WL8dq",
+                  "name": "Titles",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "tKndJ",
+                      "name": "Title",
+                      "fill": "$foreground/foreground",
+                      "content": "Deployment",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "n15dT",
+                      "name": "Sub",
+                      "fill": "$foreground/muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Share of install-days by how the panel runs: on a cluster, or standalone. Other is installs on an older version that doesn't report it.",
+                      "fontFamily": "$typography/font-sans",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "pFEjb",
+                  "name": "Bars",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "id": "MAjkd",
+                      "type": "ref",
+                      "ref": "wPbIp",
+                      "name": "cluster",
+                      "width": "fill_container",
+                      "descendants": {
+                        "j1J75": {
+                          "content": "cluster",
+                          "fill": "$foreground/foreground"
+                        },
+                        "dMFUm": {
+                          "width": 354,
+                          "cornerRadius": [
+                            0,
+                            4,
+                            4,
+                            0
+                          ]
+                        },
+                        "uTqdm": {
+                          "content": "82%"
+                        }
+                      }
+                    },
+                    {
+                      "id": "bbQZg",
+                      "type": "ref",
+                      "ref": "wPbIp",
+                      "name": "standalone",
+                      "width": "fill_container",
+                      "descendants": {
+                        "j1J75": {
+                          "content": "standalone",
+                          "fill": "$foreground/foreground"
+                        },
+                        "dMFUm": {
+                          "width": 65,
+                          "cornerRadius": [
+                            0,
+                            4,
+                            4,
+                            0
+                          ]
+                        },
+                        "uTqdm": {
+                          "content": "15%"
+                        }
+                      }
+                    },
+                    {
+                      "id": "Km3lN",
+                      "type": "ref",
+                      "ref": "wPbIp",
+                      "name": "other",
+                      "width": "fill_container",
+                      "descendants": {
+                        "j1J75": {
+                          "content": "other",
+                          "fill": "$foreground/muted"
+                        },
+                        "dMFUm": {
+                          "width": 13,
+                          "cornerRadius": [
+                            0,
+                            4,
+                            4,
+                            0
+                          ]
+                        },
+                        "uTqdm": {
+                          "content": "3%"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "h5Dkd",
+              "name": "Empty grid cell",
+              "width": "fill_container",
+              "height": "fill_container"
             }
           ]
         },

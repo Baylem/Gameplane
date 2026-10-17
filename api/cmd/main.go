@@ -354,9 +354,10 @@ func main() {
 
 	// What the telemetry reporter and the admin preview both collect from.
 	telemetryDeps := telemetry.Deps{
-		Kube:    k8s,
-		Store:   store,
-		Version: Version,
+		Kube:     k8s,
+		Registry: reg,
+		Store:    store,
+		Version:  Version,
 		Flags: telemetry.Flags{
 			CaptureEnabled:       cfg.captureFeatureEnabled,
 			OIDCConfigured:       cfg.oidcIssuer != "",

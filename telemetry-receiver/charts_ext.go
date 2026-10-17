@@ -13,6 +13,7 @@ type extCharts struct {
 	Distro          barChart
 	Arch            barChart
 	Nodes           barChart
+	Deployment      barChart
 	Games           barChart
 	Features        barChart
 	VersionsInstall barChart
@@ -56,6 +57,7 @@ func buildExtendedCharts(v Views, table bool) *extCharts {
 	c.Distro = shareChart("Distribution", "Distribution", e.Env.Distro, false)
 	c.Arch = shareChart("Architecture", "Architecture", e.Env.Arch, false)
 	c.Nodes = shareChart("Cluster nodes", "Node band", e.Env.Nodes, false)
+	c.Deployment = shareChart("Deployment", "Deployment", e.Env.Deployment, false)
 
 	games := make([]ShareRow, len(e.Games))
 	for i, g := range e.Games {
@@ -95,7 +97,7 @@ func buildExtendedCharts(v Views, table bool) *extCharts {
 	}
 	c.VersionsInstall = newBarChart("Versions by install", "Version", "Installs", false, countBars(labels, counts))
 	c.Trend = buildTrendChart(e.VersionTrend, table)
-	for _, bc := range []*barChart{&c.K8s, &c.Distro, &c.Arch, &c.Nodes, &c.Games, &c.Features, &c.VersionsInstall} {
+	for _, bc := range []*barChart{&c.K8s, &c.Distro, &c.Arch, &c.Nodes, &c.Deployment, &c.Games, &c.Features, &c.VersionsInstall} {
 		bc.Table = table
 	}
 	c.New.Table, c.Lapsed.Table = table, table

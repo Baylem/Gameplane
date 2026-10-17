@@ -76,7 +76,7 @@ func (c *telemetryTestClient) report(t *testing.T, installID, version string, se
 		Ext: &telemetryschema.Extended{
 			Schema:    telemetryschema.SchemaVersion,
 			InstallID: installID,
-			Env:       telemetryschema.Env{K8s: "1.31", Distro: "other", Arch: []string{"amd64"}, Nodes: "1"},
+			Env:       telemetryschema.Env{K8s: []string{"1.31"}, Distro: []string{"other"}, Arch: []string{"amd64"}, Nodes: "1", Deployment: "cluster"},
 			Games:     telemetryschema.Games{Official: map[string]int{}, Custom: servers},
 			Features:  telemetryschema.Features{Tunnels: []string{}, Clusters: "1", DB: "sqlite", Language: "en"},
 			Key:       telemetryschema.PublicKeyString(priv),
