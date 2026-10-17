@@ -615,7 +615,7 @@ description: "Task list for feature 022: default telemetry destination, extended
 - [X] T124 API, after T121: give `telemetry.Deps` the cluster registry (`api/cmd/main.go:352`), and in `api/internal/telemetry/collect.go` list servers, templates and backup schedules on every cluster in `Registry.IDs()` with a per-cluster timeout, sum them, skip clusters whose list fails (FR-043, FR-044), and set `Env.Deployment` from `IsStandalone()` (FR-045). Read the server version and nodes of every reachable cluster: `k8s` and `distro` as sets, `arch` as the union (OD-15), `nodes` as one band over their total node count (OD-16). Bump `extSchema` to `2`.
 - [X] T125 [P] Add `env.deployment` to `noticeExtendedFields` in `api/internal/handlers/telemetry.go`, to the `env` type in `web/src/lib/api.ts`, and to the extended field list in `docs/` and the website data-handling statement (submodule PR flow, then a pointer bump).
 - [X] T126 Tests (CI only, rule 8): new tests for schema 1 and 2 decoding, the deployment dimension, cross-cluster counting with one unreachable cluster, and the standalone marker (SC-018). Existing tests whose expectations change (for example a schema version or field list they assert) need the user's sign-off before editing, with the exact before and after.
-- [ ] T127 Ship through the open PR or a new one, as the user decides when the phase starts; labels `type: feature`, `area: api`, `area: shared`, `area: specs` (plus `area: web` for T125) through REST (rule 14).
+- [X] T127 Ship through the open PR or a new one, as the user decides when the phase starts; labels `type: feature`, `area: api`, `area: shared`, `area: specs` (plus `area: web` for T125) through REST (rule 14).
 
 ---
 
