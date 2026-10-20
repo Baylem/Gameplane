@@ -2725,10 +2725,11 @@ jobs:
             md += '_' + runLink + ' - attempt ' + RUN_ATTEMPT + '_\n\n';
             const cancelledSeg = cancelled > 0 ? cancelled + ' cancelled - ' : '';
             md += '**' + failed + ' failed - ' + passed + ' passed - ' + skipped + ' skipped - ' + cancelledSeg + elapsed + ' elapsed**\n\n';
-            const changesJob = apiJobs.find((j) => j.name === 'detect changes');
             // ci_scope.py emits every output as JSON, so scope arrives as "full"/"partial" with quotes.
             const scope = safe(() => JSON.parse(process.env.SELECTION_SCOPE), '') || 'unknown';
-            md += 'Test selection: **' + scope + '** - ' + (changesJob && changesJob.html_url ? '[per-suite table](' + changesJob.html_url + ')' : 'see the detect changes job summary') + '\n\n';
+            // The detect changes step summary renders on the run summary page, not the job log page.
+            const summaryUrl = (RUN_ID && REPO_SLUG) ? 'https://github.com/' + REPO_SLUG + '/actions/runs/' + RUN_ID : null;
+            md += 'Test selection: **' + scope + '** - ' + (summaryUrl ? '[per-suite table](' + summaryUrl + ')' : 'see the detect changes job summary') + '\n\n';
 
             if (failed > 0) {
               md += '### Failing\n\n| Job | Log |\n| --- | --- |\n';
