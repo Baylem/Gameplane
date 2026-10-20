@@ -1,6 +1,6 @@
 # Implementation Plan: Edit game configuration from server Settings
 
-**Branch**: `feat/settings-game-config` (stacked on PR #565 `fix/redact-config-passwords`) | **Date**: 2026-10-05 | **Spec**: `specs/021-settings-game-config/spec.md`
+**Branch**: `feat/settings-game-config` (stacked on PR #565 `fix/redact-config-passwords`) | **Date**: 2026-10-05 | **Spec**: `specs/done_021-settings-game-config/spec.md`
 
 ## Summary
 Extract the wizard's inline config field loop into `web/src/components/server/ConfigFields.tsx`, extend `validateConfig` with int/bool/length checks, add `web/src/routes/tabs/settings/GameConfig.tsx` registered in `Settings.tsx` after Version, and add a catch-all 404 route inside the app layout. No API, operator or CRD change.
