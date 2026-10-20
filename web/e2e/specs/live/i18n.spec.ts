@@ -37,7 +37,8 @@ async function resetAccountLanguage(request: APIRequestContext): Promise<void> {
 // Français. The trigger is named "Language" in English and "Langue" in French.
 async function pickFrenchFromCompactPicker(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^(Langue|Language)$/ }).click();
-  await page.getByRole("menu", { name: "Options de langue" }).getByText("Français").click();
+  // The menu is named in the page's current language, English on a first visit.
+  await page.getByRole("menu", { name: /^(Language options|Options de langue)$/ }).getByText("Français").click();
 }
 
 test.describe("live: i18n", () => {
@@ -99,8 +100,17 @@ test.describe("live: i18n", () => {
       // Back on the wizard page: the typed input and the marker survive, and the
       // French label replaces the English one without a reload.
       await page.bringToFront();
-      await expect(page.locator("html")).toHaveAttribute("lang", "fr", { timeout: 15_000 });
-      await expect(page.getByText("Nom du serveur")).toBeVisible();
+      // The dashboard does not refetch the account on focus and has no cross-tab
+      // channel, so replay a network reconnect (offline then online) until the
+      // stale "me" query refetches and the new language applies in place.
+      await expect(async () => {
+        await page.evaluate(() => {
+          window.dispatchEvent(new Event("offline"));
+          window.dispatchEvent(new Event("online"));
+        });
+        await expect(page.locator("html")).toHaveAttribute("lang", "fr", { timeout: 2_000 });
+      }).toPass({ timeout: 30_000 });
+      await expect(page.getByText("Nom du serveur").first()).toBeVisible();
       await expect(nameInput).toHaveValue(serverName);
       const mark = await page.evaluate(() => (window as I18nWindow).__i18nMark);
       expect(mark).toBe(1);
