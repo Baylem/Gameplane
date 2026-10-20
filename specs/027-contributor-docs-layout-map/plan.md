@@ -8,7 +8,7 @@
 
 Docs and structure rules only. Write down which agent instructions file is real (and fix the links), name the two design-doc homes and retire `docs/superpowers/`, add a layout doc (`docs/layout.md`) that gives every Go module and `web/src` a target shape and its current gap for spec 028 to apply, add a "Your first PR" section to `docs/contributing.md` with measured CI times, and extend the task-to-doc map. No source file or package moves (FR-019).
 
-Decision status: **OD-1..OD-5 are open** (see [OPEN-DECISIONS.md](./OPEN-DECISIONS.md)). This plan is written against the recommended option of each; the parts that change with a different answer are marked *(OD-n)*. Implementation does not start until all five are recorded.
+Decision status: **OD-1 settled; OD-2..OD-5 open** (see [OPEN-DECISIONS.md](./OPEN-DECISIONS.md)). This plan is written against the recommended option of each; the parts that change with a different answer are marked *(OD-n)*. Implementation does not start until all five are recorded.
 
 ## Technical Context
 
@@ -45,11 +45,11 @@ No violations; Complexity Tracking empty.
 
 ## Design
 
-### D1. Agent instructions *(OD-1)*
+### D1. Agent instructions (OD-1, settled: `AGENTS.md` canonical in both)
 
-- GP: `git rm AGENT.md` (symlink). `CLAUDE.md` stays the regular file, `AGENTS.md` stays a symlink.
-- `docs/contributing.md` "AI-assisted development": one paragraph naming `CLAUDE.md` as the real file, `AGENTS.md` as a link for tools that read that name, and the Windows note (with `core.symlinks=false` the link checks out as a one-line text file; edit `CLAUDE.md`).
-- WEB: unchanged (its `AGENTS.md`-real choice is recorded in the docs rule as the website's own).
+- GP: replace the `AGENTS.md` symlink with the regular file (content of today's `CLAUDE.md`, unchanged), turn `CLAUDE.md` into a symlink to `AGENTS.md`, and `git rm AGENT.md`. Do it in one commit so `git log --follow AGENTS.md` shows the rename. Paths that cite `CLAUDE.md` (constitution, `docs/contributing.md`, `.claude/` agents and skills, `.coderabbit.yaml`) still resolve through the link and are left as they are, except where a doc names "the real file".
+- `docs/contributing.md` "AI-assisted development": one paragraph naming `AGENTS.md` as the real file, `CLAUDE.md` as a link for tools that read that name, and the Windows note (with `core.symlinks=false` the link checks out as a one-line text file, so edit `AGENTS.md`).
+- WEB: already `AGENTS.md` real, `CLAUDE.md` link. No change.
 
 ### D2. Design-doc homes *(OD-2)*
 
@@ -105,7 +105,8 @@ specs/027-contributor-docs-layout-map/
 ```text
 GP:
   AGENT.md                          (removed, OD-1)
-  CLAUDE.md                         (rule 15 docs-rule line; repo map: docs/layout.md, docs/archive/)
+  AGENTS.md                         (becomes the regular file, OD-1; rule 15 docs-rule line; repo map: docs/layout.md, docs/archive/)
+  CLAUDE.md                         (becomes a symlink to AGENTS.md, OD-1)
   README.md                         (contributing link → first-PR anchor)
   docs/contributing.md              (Your first PR; Where design docs go; AI-assisted development)
   docs/layout.md                    (new)
