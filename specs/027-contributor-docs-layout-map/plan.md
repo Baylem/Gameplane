@@ -8,7 +8,7 @@
 
 Docs and structure rules only. Write down which agent instructions file is real (and fix the links), name the two design-doc homes and retire `docs/superpowers/`, add a layout doc (`docs/layout.md`) that gives every Go module and `web/src` a target shape and its current gap for spec 028 to apply, add a "Your first PR" section to `docs/contributing.md` with measured CI times, and extend the task-to-doc map. No source file or package moves (FR-019).
 
-Decision status: **OD-1..OD-3 settled; OD-4, OD-5 open** (see [OPEN-DECISIONS.md](./OPEN-DECISIONS.md)). This plan is written against the recommended option of each; the parts that change with a different answer are marked *(OD-n)*. Implementation does not start until all five are recorded.
+Decision status: **OD-1..OD-4 settled; OD-5 open** (see [OPEN-DECISIONS.md](./OPEN-DECISIONS.md)). This plan is written against the recommended option of each; the parts that change with a different answer are marked *(OD-n)*. Implementation does not start until all five are recorded.
 
 ## Technical Context
 
@@ -60,7 +60,7 @@ No violations; Complexity Tracking empty.
 - `git mv docs/superpowers docs/archive/superpowers`; prepend to each of the 5 files a banner: historical, superseded by the shipped code; current behavior in `<module>/specs.md` (each banner names the right one: `operator/specs.md`, `agent/specs.md`, `sentinel/specs.md`, `gp-module/specs.md` as applicable). Fix the five internal path references (`docs/superpowers/specs/…` inside the plans).
 - `docs/archive/README.md` (5 lines): what the folder is, that nothing in it is current.
 
-### D3. Layout doc `docs/layout.md` (OD-3 settled: `cmd/main.go` + `internal/`; OD-4 open)
+### D3. Layout doc `docs/layout.md` (OD-3 settled: `cmd/main.go` + `internal/`; OD-4 settled: `pages/` with 500-line section split)
 
 Structure per [contracts/layout-doc.md](./contracts/layout-doc.md):
 
@@ -68,7 +68,7 @@ Structure per [contracts/layout-doc.md](./contracts/layout-doc.md):
    - **Service** (long-running binary): `cmd/main.go` thin wiring (flags/env via `svcutil`, construct, run); behavior in `internal/<concern>/`; tests next to the code they test; `specs.md`, `README.md`, `Dockerfile` at the module root; no other `.go` at the root.
    - **Library**: one flat root package named after the module; subpackages only for a separately importable concern.
    - **CLI tool**: `cmd/<binary>/main.go` + `internal/<concern>/`.
-   - **Web (`web/src`)**: `routes/<Screen>/` holds `<Screen>.tsx`, its section components and their tests; `components/` only for parts used by 2+ screens (`components/ui/` for primitives); `lib/` for API client, hooks and helpers; `router/` for the route tree; generated `api/types.ts` untouched, hand-written `types.ts` stays.
+   - **Web (`web/src`)**: `pages/<Screen>.tsx` holds each screen; a screen over 500 lines is split into section files under `pages/<Screen>/` (e.g. `Footer.tsx`, `UpperSection.tsx`) that `pages/<Screen>.tsx` composes; `routes/` only exposes pages (route definitions, no screen code); `components/` only for parts used by 2+ screens (`components/ui/` for primitives); tests next to the file they test; `lib/` for API client, hooks and helpers; `router/` for the route tree; generated `api/types.ts` untouched, hand-written `types.ts` stays.
 2. Layout map: one row per `go.work` module and `web` (18 rows): kind, target, gap today ("matches" or the concrete move), from research R3/R4.
 3. Exceptions: `test/e2e` (test suite, keeps `internal/<game>/` per-game packages), `operator/api/v1alpha1` (kubebuilder convention), `i18n` (library with a CLI under `cmd/i18n-check/`, matches both kinds).
 4. Enforcement *(OD-5)*: "Spec 028 adds a folder-shape check to `make lint` once every module matches; until then review enforces this doc."

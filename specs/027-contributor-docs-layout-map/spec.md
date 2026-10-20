@@ -143,7 +143,7 @@ An AI agent starting a task reads the task-to-doc map and finds a row for its ki
 **Target layout**
 
 - **FR-009**: A layout doc MUST define target shapes for three Go module kinds (long-running service, library, CLI tool) per OD-3, naming which folders exist, what goes in each, and where tests live.
-- **FR-010**: The layout doc MUST define the target shape for `web/src` per OD-4, including where a screen's sub-sections, its tests, shared components, hooks and API helpers live.
+- **FR-010**: The layout doc MUST define the target shape for `web/src` per OD-4, including where a screen's sub-sections, its tests, shared components, hooks and API helpers live, and the 500-line size at which a screen is split into sections.
 - **FR-011**: The layout doc MUST list every `go.work` module and `web` with its kind, its target shape and its current gap or "matches", measured from `master`.
 - **FR-012**: The layout doc MUST list explicit exceptions (at least `test/e2e`) with a reason each.
 - **FR-013**: Layout enforcement MUST match OD-5 (no check, or a CI check and when it lands). This spec MUST NOT add a check that fails on current `master`.
