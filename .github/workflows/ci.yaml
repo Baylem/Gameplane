@@ -105,6 +105,7 @@ jobs:
       submodules: ${{ steps.combine.outputs.submodules }}
       codegen: ${{ steps.combine.outputs.codegen }}
       scope: ${{ steps.summary.outputs.scope }}
+      scope-reason: ${{ steps.summary.outputs.reason }}
       selection: ${{ steps.summary.outputs.selection }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -2472,6 +2473,7 @@ jobs:
           RUN_ATTEMPT: ${{ github.run_attempt }}
           REPO_SLUG: ${{ github.repository }}
           SELECTION_SCOPE: ${{ needs.changes.outputs.scope }}
+          SELECTION_REASON: ${{ needs.changes.outputs.scope-reason }}
         run: |
           set +e
           printf '%s' "$NEEDS_JSON" > /tmp/needs.json
@@ -2727,9 +2729,11 @@ jobs:
             md += '**' + failed + ' failed - ' + passed + ' passed - ' + skipped + ' skipped - ' + cancelledSeg + elapsed + ' elapsed**\n\n';
             // ci_scope.py emits every output as JSON, so scope arrives as "full"/"partial" with quotes.
             const scope = safe(() => JSON.parse(process.env.SELECTION_SCOPE), '') || 'unknown';
+            // Full scope names its reason (master push, label, error: ...) so a summary failure is not read as a real full run.
+            const scopeReason = safe(() => JSON.parse(process.env.SELECTION_REASON), '');
             // The detect changes step summary renders on the run summary page, not the job log page.
             const summaryUrl = (RUN_ID && REPO_SLUG) ? 'https://github.com/' + REPO_SLUG + '/actions/runs/' + RUN_ID : null;
-            md += 'Test selection: **' + scope + '** - ' + (summaryUrl ? '[per-suite table](' + summaryUrl + ')' : 'see the detect changes job summary') + '\n\n';
+            md += 'Test selection: **' + scope + '**' + (scopeReason ? ' (' + scopeReason + ')' : '') + ' - ' + (summaryUrl ? '[per-suite table](' + summaryUrl + ')' : 'see the detect changes job summary') + '\n\n';
 
             if (failed > 0) {
               md += '### Failing\n\n| Job | Log |\n| --- | --- |\n';
