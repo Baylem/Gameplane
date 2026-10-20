@@ -105,6 +105,7 @@ TestAddressPool_ExplicitAddressRequest
 TestAddressPool_AddressInUseConflict
 TestAddressPool_PoolExhausted
 TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions
+TestAPI_I18n_LanguagePref
 TestE2E_ResticRepoReady
 EOF
 }
@@ -338,7 +339,11 @@ EOF
 # e2e-admin login (account removal also uses fake-OIDC sign-ins, which every
 # e2e.sh cluster deploys), and TestAPI_I18n_ProblemJSON costs one admin login,
 # one viewer login and one failed-login pair, bringing this job to 5 admin
-# logins (ceiling ~7). All run against the primary cluster. api-auth,
+# logins (ceiling ~7). TestAPI_I18n_NotifyLanguage (T062) and
+# TestAPI_I18n_InstanceDefault (T092) add one e2e-admin login each, bringing
+# this job to 7 (ceiling ~7); TestAPI_I18n_InstanceDefault also takes one
+# viewer login. TestAPI_I18n_LanguagePref (T035) sits in operator for the same
+# login-budget reason. All run against the primary cluster. api-auth,
 # api-roles, api-mods, api-rbac and api-agent are at their ceilings (see their
 # comments); do not add to them.
 bucket_multicluster() { cat <<'EOF'
@@ -346,6 +351,8 @@ TestAPI_AccountRemoval_RevokesSharesAndAllowsSSOReprovision
 TestAPI_ModuleUpload_ExtractionStaysWithinBudget
 TestAPI_I18n_ProblemJSON
 TestAPI_I18n_ModuleLocales
+TestAPI_I18n_NotifyLanguage
+TestAPI_I18n_InstanceDefault
 TestMultiCluster_ClusterDispatchAndScopedRBAC
 TestMultiCluster_GatewayParity
 EOF

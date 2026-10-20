@@ -87,7 +87,7 @@ description: "Task list for 019 App Localization & Community Language Packs"
 
 ### Tests for User Story 1
 
-- [ ] T035 [P] [US1] Go API E2E `test/e2e/i18n_language_pref_e2e_test.go`: `PUT /api/v1/users/me/language` `fr` → `GET /users/me/preferences` returns `language: "fr"`; `null` clears; unknown tag → 400 with `server.i18n.unknown_language` problem body; register in `test/e2e/buckets.sh` (bucket `api-auth`, respect its login budget)
+- [X] T035 [P] [US1] Go API E2E `test/e2e/i18n_language_pref_e2e_test.go`: `PUT /api/v1/users/me/language` `fr` → `GET /users/me/preferences` returns `language: "fr"`; `null` clears; unknown tag → 400 with `server.i18n.unknown_language` problem body; register in `test/e2e/buckets.sh` (bucket `api-auth`, respect its login budget)
 - [X] T036 [P] [US1] Go API E2E `test/e2e/i18n_auth_locale_e2e_test.go`: unauthenticated `GET /auth/locale` returns exactly `{"defaultLanguage": …}` and no other keys (rule 3); register in `test/e2e/buckets.sh`
 - [ ] T037 [P] [US1] Playwright `web/e2e/specs/live/i18n.spec.ts`: switch to French in personal settings with create-server dialog open and a typed name (kept, no reload, `<html lang="fr">`), reload and second browser context keep French with no English flash, login and share pages offer a picker remembered per browser, 0%-fixture language shows English everywhere (SC-008)
 
@@ -159,7 +159,7 @@ description: "Task list for 019 App Localization & Community Language Packs"
 ### Tests for User Story 5
 
 - [X] T061 [P] [US5] Go API E2E `test/e2e/i18n_problem_json_e2e_test.go`: forbidden-namespace and validation errors return byte-identical text/plain bodies without the Accept header and problem bodies with `detail`, `messageId`, `args` with it; failed login returns only `server.auth.invalid_credentials` for both unknown user and wrong password (FR-030); register in `test/e2e/buckets.sh`
-- [ ] T062 [P] [US5] Go API E2E `test/e2e/i18n_notify_language_e2e_test.go`: webhook sink with `language: "fr"` and one without; test send to both via `POST /api/v1/admin/notifications/sinks/{name}/test`; first payload has `language: "fr"` and French `title`/`text`, second uses instance default; all pre-existing payload fields unchanged; register in `test/e2e/buckets.sh`
+- [X] T062 [P] [US5] Go API E2E `test/e2e/i18n_notify_language_e2e_test.go`: webhook sink with `language: "fr"` and one without; test send to both via `POST /api/v1/admin/notifications/sinks/{name}/test`; first payload has `language: "fr"` and French `title`/`text`, second uses instance default; all pre-existing payload fields unchanged; register in `test/e2e/buckets.sh`
 - [X] T063 [P] [US5] envtest `operator/internal/controller/gameserver_envtest_test.go` additions: `status.conditionArgs` set with the condition and cleared when the reason no longer has args (done in the new file `gameserver_condition_args_envtest_test.go`, next to the condition-args code)
 
 ### Implementation for User Story 5
@@ -226,7 +226,7 @@ description: "Task list for 019 App Localization & Community Language Packs"
 
 **Independent Test**: quickstart.md scenario 4.
 
-- [ ] T092 [P] [US7] Go API E2E `test/e2e/i18n_instance_default_e2e_test.go`: `PUT /api/v1/admin/config/i18n` `{defaultLanguage:"fr"}` → `GET /auth/locale` returns `fr`; unlisted tag → 400 `server.i18n.unlisted_language`; non-admin → 403; register in `test/e2e/buckets.sh`
+- [X] T092 [P] [US7] Go API E2E `test/e2e/i18n_instance_default_e2e_test.go`: `PUT /api/v1/admin/config/i18n` `{defaultLanguage:"fr"}` → `GET /auth/locale` returns `fr`; unlisted tag → 400 `server.i18n.unlisted_language`; non-admin → 403; register in `test/e2e/buckets.sh`
 - [X] T093 [US7] Add config section `i18n` with `validateI18n` (listed languages only) to the validators map in `api/internal/handlers/config.go`; register `server.i18n.unlisted_language`; tests `config_validators_test.go`
 - [X] T094 [US7] DESIGN (local machine, Pencil MCP): add a Default language field to admin settings in `design.pen`; export touched nodes to `assets/design-export/`. *Done note (redrawn 2026-10-15): on `WZdnw` the General card and a new Language card sit in a Panel Column; the Language card has the Default language select and its own Save changes button, because the value is saved to the separate config section `i18n`.*
 - [X] T095 [US7] Implement the Default language field in `web/src/routes/AdminSettings.tsx` per T094; tests `AdminSettings_sections.test.tsx` *Done note: Language card under General, saved to config section `i18n`; save errors go through `errorTextIntl`, so a 400 `server.i18n.unlisted_language` shows the catalog text.*
