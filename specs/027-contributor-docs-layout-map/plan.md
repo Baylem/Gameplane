@@ -8,7 +8,7 @@
 
 Docs and structure rules only. Write down which agent instructions file is real (and fix the links), name the two design-doc homes and retire `docs/superpowers/`, add a layout doc (`docs/layout.md`) that gives every Go module and `web/src` a target shape and its current gap for spec 028 to apply, add a "Your first PR" section to `docs/contributing.md` with measured CI times, and extend the task-to-doc map. No source file or package moves (FR-019).
 
-Decision status: **OD-1..OD-4 settled; OD-5 open** (see [OPEN-DECISIONS.md](./OPEN-DECISIONS.md)). This plan is written against the recommended option of each; the parts that change with a different answer are marked *(OD-n)*. Implementation does not start until all five are recorded.
+Decision status: **OD-1..OD-5 settled** (see [OPEN-DECISIONS.md](./OPEN-DECISIONS.md)); parts that apply a decision are marked (OD-n).
 
 ## Technical Context
 
@@ -71,7 +71,7 @@ Structure per [contracts/layout-doc.md](./contracts/layout-doc.md):
    - **Web (`web/src`)**: `pages/<Screen>.tsx` holds each screen; a screen over 500 lines is split into section files under `pages/<Screen>/` (e.g. `Footer.tsx`, `UpperSection.tsx`) that `pages/<Screen>.tsx` composes; `routes/` only exposes pages (route definitions, no screen code); `components/` only for parts used by 2+ screens (`components/ui/` for primitives); tests next to the file they test; `lib/` for API client, hooks and helpers; `router/` for the route tree; generated `api/types.ts` untouched, hand-written `types.ts` stays.
 2. Layout map: one row per `go.work` module and `web` (18 rows): kind, target, gap today ("matches" or the concrete move), from research R3/R4.
 3. Exceptions: `test/e2e` (test suite, keeps `internal/<game>/` per-game packages), `operator/api/v1alpha1` (kubebuilder convention), `i18n` (library with a CLI under `cmd/i18n-check/`, matches both kinds).
-4. Enforcement *(OD-5)*: "Spec 028 adds a folder-shape check to `make lint` once every module matches; until then review enforces this doc."
+4. Enforcement (OD-5, settled): "Spec 028 adds a folder-shape check to `make lint` once every module matches; until then review enforces this doc."
 5. Out of scope: per-package split boundaries and file-size thresholds belong to spec 028.
 
 ### D4. First-PR guide

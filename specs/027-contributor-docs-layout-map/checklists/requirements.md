@@ -32,4 +32,4 @@
 ## Notes
 
 - The subject is the repo's own folders and docs, so file names (`CLAUDE.md`, `docs/contributing.md`, `specs.md`) are the user-facing objects, not implementation details.
-- Five choices are tracked as OD-1..OD-5 in `OPEN-DECISIONS.md` instead of inline [NEEDS CLARIFICATION] markers; requirements that depend on them cite the OD. Plan and tasks are not final until all five are settled.
+- Five choices are tracked as OD-1..OD-5 in `OPEN-DECISIONS.md` instead of inline [NEEDS CLARIFICATION] markers; requirements that depend on them cite the OD. All five were settled by valgul on 2026-10-20.

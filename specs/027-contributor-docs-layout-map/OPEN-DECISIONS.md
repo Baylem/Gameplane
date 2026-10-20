@@ -10,7 +10,6 @@ Unsettled items. Do not treat any of the below as decided until a maintainer rul
 - **OD-3 (FR-009, FR-011, FR-012): Go module layout.** Long-running services: thin `cmd/main.go` + `internal/<concern>/` (as `api`, `operator`, `agent`, `capture-sidecar` already do). Libraries stay one flat root package; CLIs use `cmd/<binary>/` (stated on the card as common to every option).
 
 - **OD-4 (FR-010): web/src layout.** valgul's words (2026-10-20): "screen with part reused 2+ time get in components. if html file is more than 500line i get split in section using the following pages/screen_name.html if too big pages/screen_name/footer.html pages/screen_name/upper_section.html etc... then routes expose those pages". Recorded as: a new `web/src/pages/` holds one `pages/<Screen>.tsx` per screen ("html" read as the React `.tsx` files); a screen over 500 lines is split into section files under `pages/<Screen>/` (e.g. `pages/<Screen>/Footer.tsx`, `pages/<Screen>/UpperSection.tsx`) and `pages/<Screen>.tsx` composes them; `routes/` only exposes pages (route definitions, no screen code); `components/` holds parts used by 2+ screens. Tests stay next to the file they test (today's convention).
+- **OD-5 (FR-013): layout enforcement.** Spec 028 (split big packages) adds a folder-shape check to `make lint` once every module matches the layout; this spec adds no check. Until then review enforces `docs/layout.md`.
 
-## Open (asked 2026-10-20)
-
-- **OD-5 (FR-013): CI enforcement of the layout.** Question: does a CI check enforce it, and when? Proposed: a folder-shape check written by the split spec, switched on once modules conform; this spec adds no check.
+No open decisions remain.

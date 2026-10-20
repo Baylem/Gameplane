@@ -13,7 +13,7 @@ description: "Task list for spec 027: contributor docs and layout map"
 
 **Organization**: grouped by user story. Repos: **GP** = `GameplanePanel/Gameplane`, **WEB** = `GameplanePanel/website`. Paths without a prefix are in GP.
 
-**Gate**: no task below starts until OD-1..OD-5 in [OPEN-DECISIONS.md](./OPEN-DECISIONS.md) are recorded as settled and the spec docs PR has merged. Tasks marked (OD-n) or *(OD-n)* follow the recorded answer; this list is written against the recommended options and is revised if an answer differs.
+**Gate**: OD-1..OD-5 are settled in [OPEN-DECISIONS.md](./OPEN-DECISIONS.md). No task below starts until the spec docs PR has merged. Tasks marked *(OD-n)* apply that decision.
 
 **Execution rules (every helper agent repeats these)**: follow the repo CLAUDE.md; implementation runs through one `Workflow` script with `model:` set on every `agent()` call, starting at `haiku`, one tier-up `sonnet` review of the combined diff (rules 13, 18); helpers never call `mcp__hearthbot__` tools; signed commits (`git commit -s`), one branch per repo; no source file or package moves (FR-019); never edit `.pen` files; never edit or weaken tests; only compile checks locally, never test or lint suites; PR bodies carry no session links or attribution block; PRs get `type:` + `area:` labels via REST.
 
@@ -51,8 +51,8 @@ description: "Task list for spec 027: contributor docs and layout map"
 **Independent test**: `git ls-files -s AGENTS.md CLAUDE.md` shows `AGENTS.md` `100644`, `CLAUDE.md` `120000`, and `AGENT.md` is gone (SC-002).
 
 - [ ] T007 [US2] Re-run the reference search for `AGENT.md` across GP (excluding `specs/done_*`); if any hit, stop and report
-- [ ] T008 [US2] (OD-1) Swap the instruction files in one commit: `git rm AGENTS.md` (symlink), `git mv CLAUDE.md AGENTS.md`, `ln -s AGENTS.md CLAUDE.md && git add CLAUDE.md`, `git rm AGENT.md`; check with `git ls-files -s AGENTS.md CLAUDE.md` (`100644` and `120000`) and that the content of `AGENTS.md` is byte-identical to the old `CLAUDE.md`
-- [ ] T009 [US2] (OD-1) Rewrite the "AI-assisted development" section of `docs/contributing.md`: `AGENTS.md` is the real file in both repos, `CLAUDE.md` is a link to it, plus the Windows `core.symlinks=false` note
+- [ ] T008 [US2] *(OD-1)* Swap the instruction files in one commit: `git rm AGENTS.md` (symlink), `git mv CLAUDE.md AGENTS.md`, `ln -s AGENTS.md CLAUDE.md && git add CLAUDE.md`, `git rm AGENT.md`; check with `git ls-files -s AGENTS.md CLAUDE.md` (`100644` and `120000`) and that the content of `AGENTS.md` is byte-identical to the old `CLAUDE.md`
+- [ ] T009 [US2] *(OD-1)* Rewrite the "AI-assisted development" section of `docs/contributing.md`: `AGENTS.md` is the real file in both repos, `CLAUDE.md` is a link to it, plus the Windows `core.symlinks=false` note
 - [ ] T009a [US2] Commit (`docs: make AGENTS.md the single agent instructions file`)
 
 ---
@@ -77,8 +77,8 @@ description: "Task list for spec 027: contributor docs and layout map"
 
 **Independent test**: every `go.work` module and `web` has a row with kind, target and gap (SC-004).
 
-- [ ] T015 [US4] *(OD-3, OD-4)* Write `docs/layout.md` §1 Kinds per [contracts/layout-doc.md](./contracts/layout-doc.md) and plan D3 (service, library, CLI, web)
-- [ ] T016 [US4] Write §2 Layout map (18 rows) from the T002 re-measurement, stating the `master` SHA; §3 Exceptions (`test/e2e`, `operator/api/v1alpha1`, `i18n`); §5 Not decided here
+- [ ] T015 [US4] *(OD-3, OD-4)* Write `docs/layout.md` §1 Kinds per [contracts/layout-doc.md](./contracts/layout-doc.md) and plan D3 (service: `cmd/main.go` + `internal/<concern>/`; library: flat root package; CLI: `cmd/<binary>/`; web: `pages/<Screen>.tsx`, split into `pages/<Screen>/<Section>.tsx` over 500 lines, `routes/` only exposes pages, `components/` for parts used by 2+ screens)
+- [ ] T016 [US4] Write §2 Layout map (18 rows) from the T002 re-measurement; the `web` row lists each screen in `web/src/routes/` over 500 lines as a gap, stating the `master` SHA; §3 Exceptions (`test/e2e`, `operator/api/v1alpha1`, `i18n`); §5 Not decided here
 - [ ] T017 [US4] *(OD-5)* Write §4 Enforcement: spec 028 adds the folder-shape check to `make lint` once every module matches; until then review enforces the doc
 - [ ] T018 [US4] Add `docs/layout.md` and `docs/archive/` to the repository map in `AGENTS.md`
 - [ ] T019 [US4] Commit (`docs: add target layout map for Go modules and web`)
