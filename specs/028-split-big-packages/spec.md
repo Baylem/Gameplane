@@ -90,8 +90,8 @@ every e2e suite pass with the same test names, and the api coverage minimum (80)
 
 **Acceptance Scenarios**:
 
-1. **Given** the handler group chosen by OD-2, **When** its PR merges, **Then** the group's production files and their tests live in the new sub-package, routes are mounted from `api/cmd/main.go` exactly as before (same paths, methods, middleware order), and the OpenAPI document is byte-identical.
-2. **Given** `capture.go` (1,569 lines), **When** the capture group moves, **Then** it is also split into files under the line ceiling (OD-3).
+1. **Given** a resource group (OD-2), **When** its PR merges, **Then** the group's production files and their tests live in the new sub-package, routes are mounted from `api/cmd/main.go` exactly as before (same paths, methods, middleware order), and the OpenAPI document is byte-identical.
+2. **Given** `capture.go` (1,569 lines), **When** the capture group moves, **Then** it is also split into files of 500 lines or fewer (OD-3).
 
 ---
 
@@ -110,7 +110,7 @@ unchanged, and the operator coverage minimum (72) holds.
 **Acceptance Scenarios**:
 
 1. **Given** a reconciler group, **When** its PR merges, **Then** `operator/cmd/main.go` registers the same reconcilers with the same options, `make generate && make manifests` produces no diff, and the RBAC markers produce the same ClusterRole.
-2. **Given** `gameserver_controller.go` (2,740 lines) and `gameserver_status.go` (1,446), **When** the GameServer group is split, **Then** each production file is under the line ceiling.
+2. **Given** `gameserver_controller.go` (2,740 lines) and `gameserver_status.go` (1,446), **When** the GameServer group is split, **Then** each production file is 500 lines or fewer (OD-3).
 
 ---
 
@@ -131,14 +131,14 @@ pass, with the same test names, and the web thresholds (92/76/82/92) hold.
 
 1. **Given** `routes/AdminSettings.tsx` (2,478 lines), **When** its PR merges, **Then** `pages/AdminSettings.tsx` and its section files render the same DOM (visual-diff and screenshot suites unchanged), and its tests sit next to the file they test.
 2. **Given** a part used by two or more screens, **When** it is extracted, **Then** it goes to `components/`; a part used by one screen stays under that screen's `pages/<Screen>/`.
-3. **Given** `web/src/types.ts`, **When** this spec is done, **Then** it is handled as OD-5 decides.
+3. **Given** `web/src/types.ts`, **When** this spec is done, **Then** it stays hand-written and is split by domain into files of 500 lines or fewer behind a `types.ts` that re-exports them, so every `@/types` import keeps working; the generated `web/src/api/types.ts` is untouched (OD-5).
 
 ---
 
 ### User Story 5 - The layout and size rules stay true (Priority: P3)
 
 After the last move, `make lint` fails a PR that adds a flat file at a service module's
-root, a screen file outside `pages/`, or (per OD-4) a production file over the ceiling.
+root, a screen file outside `pages/`, or a production file over 500 lines (OD-4).
 
 **Why this priority**: 027 OD-5 hands the check to this spec; it can only turn on once
 every module conforms, so it comes last.
@@ -155,14 +155,14 @@ with one violation (run by the check's own unit test in CI, not by a throwaway P
 
 ### Edge Cases
 
-- **Unexported identifiers across new package lines.** Moving code into sub-packages turns calls between groups into cross-package calls. Only the identifiers that must cross are exported, with the same behaviour; renames are mechanical (`gopls rename` or `gofmt -r`), never hand-edited logic. Shared helpers used by several groups go to one internal helper package per module, not duplicated.
+- **Unexported identifiers across new package lines.** (OD-2: by resource.) Moving code into sub-packages turns calls between groups into cross-package calls. Only the identifiers that must cross are exported, with the same behaviour; renames are mechanical (`gopls rename` or `gofmt -r`), never hand-edited logic. Shared helpers used by several groups go to one internal helper package per module, not duplicated.
 - **Import cycles.** If two groups call each other, the shared part moves down to the helper package. A group that cannot be cut without a cycle stays in the parent package and is recorded in `research.md` with the cycle.
 - **envtest suites.** Today each big package starts one envtest control plane in one `TestMain`. A sub-package with envtest tests needs its own `TestMain`, which is new test setup (OD-6) and adds one control-plane start per sub-package to CI time; the plan measures it.
 - **Path-based configs.** `.golangci.yml` path exclusions (for example `internal/handlers/capture\.go$` for gosec, `internal/controller/` for revive `exported:`), `.testcoverage.yml` `exclude.paths`, `vitest.config.ts` `coverage.exclude`, `.coderabbit.yaml` path rules, Dockerfiles and Makefile targets name paths. Each move updates them in the same PR to the new path, with the same scope; no exclusion is widened.
 - **Spec 023 mapping.** Components are whole module directories (`ci_scope.py` reads `go.work`), so moves inside a module keep them valid. File-level entries (`suite-components.json` `paths`, `file_consumers`, any test fixture path) are checked in every PR. Package-level selection (023 R4) reads import lines and follows moves on its own.
 - **Spec 023 changed-lines gate.** A partial run checks coverage of "added" lines; a move shows every moved line as added, so a file already below the module minimum would fail the gate though nothing changed. Every move PR therefore carries the `ci: full-run` label (023 OD-7), which keeps the module-wide gate.
 - **Open PRs and the audit fixes.** A move PR conflicts with any open PR touching the same files. Each move PR checks open PRs on its paths first and, when one exists, waits for it or agrees the order with valgul.
-- **Generated files.** `zz_generated.deepcopy.go`, `operator/config/{crd,rbac}` and `web/src/api/types.ts` are never split by hand. CRD types (`gametemplate_types.go`, 1,260 lines) are API surface and stay as they are unless OD-3 says otherwise.
+- **Generated files.** `zz_generated.deepcopy.go`, `operator/config/{crd,rbac}` and `web/src/api/types.ts` are never split by hand. CRD types (`operator/api/v1alpha1/*_types.go`, e.g. `gametemplate_types.go` 1,260 lines) are API surface and exempt from the ceiling (OD-3).
 - **`.pen` files.** `telemetry-receiver/telemetry-dashboard.pen` and `design.pen` stay where they are and are never read or edited (CLAUDE.md rule 2).
 - **No UI change.** Splitting a screen must not change DOM, styles or text. If a split needs a markup change to compose, it stops and asks; design changes go through `design.pen` first, which is out of scope here.
 
@@ -179,9 +179,9 @@ with one violation (run by the check's own unit test in CI, not by a throwaway P
 **Tests**
 
 - **FR-004**: Tests move with their code. A test file moved with `git mv` and no content change is a move and needs no sign-off.
-- **FR-005**: The only edits allowed inside a test file are the mechanical ones the move forces, listed exactly: the `package` clause, import lines, qualified names of identifiers that moved package (`foo` → `pkg.Foo`), relative import or `vi.mock` path strings, and a new `TestMain`/suite file for a new sub-package that copies the existing envtest setup unchanged. Allowing even these needs valgul's written sign-off (OD-6). No assertion, test name, table entry, timeout, skip or fixture changes.
+- **FR-005**: The only edits allowed inside a test file are the mechanical ones the move forces, listed exactly: the `package` clause, import lines, qualified names of identifiers that moved package (`foo` → `pkg.Foo`), relative import or `vi.mock` path strings, and a new `TestMain`/suite file for a new sub-package that copies the existing envtest setup unchanged. valgul signed off on exactly these edit kinds for the whole spec (OD-6, 2026-10-20); each PR lists every touched test file and a script proves no other kind of line changed. No assertion, test name, table entry, timeout, skip or fixture changes.
 - **FR-006**: Every PR MUST show a test-name parity report: the sorted list of test names (Go `go test -list` style names collected from CI output, Vitest and Playwright test titles) before and after is identical. A missing test fails the PR.
-- **FR-007**: Splitting a test file over the ceiling is in scope only if OD-4 says so, and then only by moving whole test functions or `describe` blocks verbatim between files.
+- **FR-007**: Test files are exempt from the ceiling and are not split (OD-4).
 
 **Proof that nothing changed**
 
@@ -193,7 +193,7 @@ with one violation (run by the check's own unit test in CI, not by a throwaway P
 
 **Slicing and process**
 
-- **FR-013**: Work MUST be sliced one package (or one service module, or one screen) per PR, in the order OD-1 sets. A PR touches one module, except for the path-reference updates the move forces elsewhere (Dockerfile, Makefile, docs, specs.md, 023 mapping).
+- **FR-013**: Work MUST be sliced one package (or one service module, or one screen) per PR, in the order OD-1 sets: web, then api, then operator, then the small services (tunnel and sentinel after their audit fixes #721–#723, #729 merge). A PR touches one module, except for the path-reference updates the move forces elsewhere (Dockerfile, Makefile, docs, specs.md, 023 mapping).
 - **FR-014**: Mechanical moves MUST be done by a committed, reviewed script per PR (CLAUDE.md rules 13, 17, 18): one scout writes the move list (file → destination, identifiers to export) as a brief; one `haiku` agent runs the script; one reviewer one tier up checks the diff against the brief.
 - **FR-015**: Each PR MUST update the module's `specs.md` paths, `docs/agent-architecture.md` and any `specs/` or docs path that names a moved file (excluding `specs/done_*` history), in the same PR.
 - **FR-016**: Each PR MUST keep spec 023's mapping valid: `python3 hack/ci_scope.py verify-suites` (once 023 adds it) passes, and every path in `test/e2e/suite-components.json` and `ci_scope.py` `file_consumers` exists.
@@ -201,12 +201,12 @@ with one violation (run by the check's own unit test in CI, not by a throwaway P
 
 **Ceiling and enforcement**
 
-- **FR-018**: Production source files MUST end under the line ceiling set by OD-3 (web screens: 500, settled by 027 OD-4).
-- **FR-019**: After the last move, a folder-shape layout check MUST run in `make lint` (027 OD-5); whether it also checks the line ceiling is OD-4.
+- **FR-018**: Every production source file (Go and web) MUST end at 500 lines or fewer (OD-3). Exempt: generated files (`zz_generated.*`, `web/src/api/types.ts`, `operator/config/`), CRD `operator/api/v1alpha1/*_types.go`, and the e2e harness under `test/e2e/` (out of scope, owned by spec 029). This covers files outside the packages named above too: today `api/internal/audit/audit.go` 1,050, `capture-sidecar/internal/httpserver/handlers.go` 975, `agent/internal/mods/mods.go` 932, `api/cmd/main.go` 914, `i18n/cmd/i18n-check/main.go` 781, `api/internal/auth/oidc.go` 711, `agent/internal/rcon/battleye.go` 703, `agent/internal/files/rooted_linux.go` 603, `operator/cmd/main.go` 519, `agent/internal/players/players.go` 509, and web `lib/endpoints.ts` 1,046, `components/modules/BuildModuleDialog.tsx` 973, `components/CaptureWidget.tsx` 826, `components/server/ServerActionsCard.tsx` 658, `components/modules/SourceDialog.tsx` 573.
+- **FR-019**: After the last move, `make lint` MUST run a layout check that enforces the folder shape (027 OD-5) and the 500-line ceiling for production files; test files are exempt (OD-4).
 
 **Web types**
 
-- **FR-020**: `web/src/types.ts` and `web/src/api/types.ts` are handled as OD-5 decides.
+- **FR-020**: `web/src/types.ts` is not merged into the generated types; it is split by domain behind a re-exporting `types.ts`. `web/src/api/types.ts` is untouched (OD-5).
 
 ### Key Entities
 
@@ -218,8 +218,8 @@ with one violation (run by the check's own unit test in CI, not by a throwaway P
 
 ### Measurable Outcomes
 
-- **SC-001**: No production source file outside generated code is over the ceiling (OD-3); today 9 Go and 6 web production files are over 1,000 lines.
-- **SC-002**: No Go package holds more than the per-package size set in the plan (target: no package over 40 files); today two packages hold 146 and 150.
+- **SC-001**: No production source file outside the FR-018 exemptions is over 500 lines; today 34 Go and 17 web production files are.
+- **SC-002**: `api/internal/handlers/` and `operator/internal/controller/` hold no resource code at their root; each resource group is its own package (today one package each, 146 and 150 files).
 - **SC-003**: Every service module in 027 OD-3 has a thin `cmd/main.go` and no logic files at its root.
 - **SC-004**: Every screen lives under `web/src/pages/`, none over 500 lines, and `routes/` holds no screen code.
 - **SC-005**: Over the whole spec, the test-name list on master after the last PR equals the list before the first PR plus any tests other work added meanwhile; zero tests lost.
@@ -245,4 +245,4 @@ with one violation (run by the check's own unit test in CI, not by a throwaway P
 
 ## Open decisions
 
-See [OPEN-DECISIONS.md](OPEN-DECISIONS.md): OD-1 split order, OD-2 sub-package boundaries, OD-3 line ceiling, OD-4 CI enforcement of the ceiling and test files, OD-5 web types, OD-6 sign-off for the mechanical test edits.
+See [OPEN-DECISIONS.md](OPEN-DECISIONS.md). OD-1 to OD-6 were settled by valgul on 2026-10-20. OD-7 (`routes/` contents), OD-8 (server-detail tabs), OD-9 (relative CRD paths in copied envtest setup) and OD-10 (new e2e test) are open.

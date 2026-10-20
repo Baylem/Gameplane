@@ -6,25 +6,28 @@ Unsettled items. Do not treat any of the below as decided until a maintainer rul
 
 - Spec 027 OD-3 (Go layout), OD-4 (web `pages/` layout, 500-line screens), OD-5 (this spec adds the folder-shape check to `make lint`), OD-2 (`specs.md` stays per module). valgul, 2026-10-20.
 
+## Settled (valgul, 2026-10-20)
+
+- **OD-1 (FR-013): split order.** Web first, then api, then operator; then the small services; tunnel and sentinel wait for their audit fixes (#721–#723, #729) to merge. Chosen on a card.
+- **OD-2 (US2, US3, FR-002): sub-package boundaries.** By resource: `api/internal/handlers/` and `operator/internal/controller/` each become sub-packages per resource group, with helpers shared by several groups in one internal helper package per module, one group per PR. (Premise corrected before asking: a by-layer split does not exist in today's code and would need logic rewrites, which this spec forbids.) Chosen on a card.
+- **OD-3 (FR-018, SC-001): line ceiling.** 500 lines for every production source file (Go and web), the same as web screens (027 OD-4). Generated files and CRD `*_types.go` are exempt. Today 34 Go and 17 web production files are over 500. Chosen on a card.
+- **OD-4 (FR-007, FR-019): enforcement.** `make lint` enforces the 500-line ceiling for production files only. Test files are exempt and are not split. Chosen on a card.
+- **OD-5 (FR-020): web types.** No merge; keep both files. The generated `web/src/api/types.ts` stays untouched. The hand-written `web/src/types.ts` (1,132 lines) is over the 500-line ceiling (OD-3), so it is split by domain into files that re-export through `web/src/types.ts`, keeping every `@/types` import working unchanged. Chosen on a card.
+- **OD-6 (FR-005): mechanical test edits.** valgul signs off, for the whole spec, on exactly these edits inside moved test files: the `package` clause, import lines, qualified names of identifiers that moved package (`foo` → `pkg.Foo`), relative import and `vi.mock` path strings, and one new `TestMain`/suite file per new sub-package that copies today's envtest setup unchanged. Each PR lists every touched test file, and a script proves no other kind of line changed. Nothing else in a test may change (no assertion, test name, table entry, timeout, skip or fixture). Chosen on a card.
+
 ## Open (asked as cards in the "Spec 028 split big packages" thread, 2026-10-20)
 
-- **OD-1 (FR-013): split order.** Premise: the audit fixes (#712–#731) mostly touch the operator (backups, GameServer, templates), tunnel (#721–#723), sentinel (#729) and api (#726, #727); web is barely touched. Moves conflict with open fix PRs on the same files.
-  Options: A web first, then api, then operator, small services after their audit fixes (fewest conflicts); B small services first as a pilot, then api, operator, web; C operator first (biggest package).
+Raised while planning: spec 027 OD-4 does not say these two details, and its thread is closed.
+
+- **OD-7 (US4): what stays in `web/src/routes/`.** 027 says `routes/` "only exposes pages (route definitions, no screen code)" and `router/` holds the route tree. Today all route definitions are in `router/tree.tsx` and `routes/` holds screen code.
+  Options: A one `routes/<Screen>.ts` per page holding its route definition moved out of `router/tree.tsx`, which only assembles the tree; B delete `routes/`, `router/tree.tsx` imports from `pages/`; C thin re-export files.
   Recommendation: A.
-- **OD-2 (US2, US3, FR-002): sub-package boundaries for handlers and controllers.** Premise: both packages are one Go package with every test in the same package and one envtest `TestMain`. "By layer" (HTTP vs logic vs Kubernetes access) does not exist in the code today; handlers mix the three, so a layer split means rewriting logic, which FR-001/FR-002 forbid. Real options:
-  A by resource (api: capture, users/roles/auth, clusters, modules, servers/lifecycle, config/notifications, …; operator: gameserver, backup/restore, networkcapture, module/template, cluster), shared helpers in one internal helper package;
-  B no sub-packages: keep one package each and only split big files under the ceiling (pure moves, no test edits, but the 146/150-file packages stay);
-  C by layer (needs logic rewrite; out of this spec's scope).
-  Recommendation: A, done one resource group per PR, smallest leaf groups first.
-- **OD-3 (FR-018, SC-001): line ceiling for production files** (web screens are already 500 by 027 OD-4). Today, production files over 500 / 800 / 1,000 lines: Go 34 / 14 / 9, web 17 / 10 / 6.
-  Options: A 500 for everything (matches web screens, most work); B 800; C 1,000 (just the worst files).
-  Recommendation: B 800, generated files and CRD `*_types.go` exempt.
-- **OD-4 (FR-007, FR-019): does `make lint` enforce the ceiling, and do test files count?** Test files over 500 / 1,000 lines: 111 / 26.
-  Options: A lint enforces it for production files only, tests exempt; B lint enforces it for tests too, and big test files are split by moving whole test functions verbatim; C no line check, review only (folder-shape check still added per 027 OD-5).
+- **OD-8 (US4): where the server-detail tabs go.** `routes/tabs/` (11 tabs) and `routes/tabs/settings/` (13 sub-tabs) belong to the ServerDetail screen.
+  Options: A sections of ServerDetail: `pages/ServerDetail/<Tab>.tsx`, `pages/ServerDetail/Settings/<Section>.tsx`, split again over 500 lines; B keep a `tabs/` level: `pages/ServerDetail/tabs/...`; C each tab its own top-level page.
   Recommendation: A.
-- **OD-5 (FR-020): `web/src/types.ts` vs the generated `web/src/api/types.ts`.** Premise: the generated file is imported by no file and nothing regenerates it (no script, `openapi-typescript` is not a dependency). `types.ts` mirrors CRD objects; the generated file mirrors REST payloads, so they don't map one to one. Merging changes types, so it is not a move.
-  Options: A keep both, split `types.ts` by domain only if it is over the ceiling; B also delete the unused generated file; C merge `types.ts` into generated types (type changes, needs its own spec).
+- **OD-9 (FR-005, OD-6 follow-up): relative CRD paths in a copied envtest setup.** `operator/internal/controller/suite_envtest_test.go:45,48` and `api/internal/handlers/suite_envtest_test.go:55` find CRDs with `filepath.Join("..", …)`. A copy one folder deeper needs one more `".."`, a path-string edit OD-6 did not name.
+  Options: A allow exactly one extra `".."` per extra folder level in these paths, checked by the edit-check script; B ask per PR.
   Recommendation: A.
-- **OD-6 (FR-005): sign-off for mechanical test edits forced by moves.** Moving Go code into sub-packages forces edits in moved test files: the `package` line, imports, qualified names (`foo` → `pkg.Foo`), and a new `TestMain` per sub-package that copies today's envtest setup. Web moves may need relative import / `vi.mock` path strings changed (most web imports use `@/`, so few).
-  Options: A approve exactly these edit kinds for the whole spec; each PR lists every touched test file and a script proves no other line changed; B sign-off per PR; C no test edits (forces OD-2 B).
+- **OD-10 (constitution I): new e2e test.** Nothing user-facing changes; every move PR runs the full existing e2e suite with `ci: full-run` plus the test-name parity check. 023 OD-4 required an e2e test for a CI-only feature.
+  Options: A no new e2e test (recorded exemption for a behaviour-preserving refactor); B add one (e.g. layout check run from `test/e2e/`).
   Recommendation: A.
