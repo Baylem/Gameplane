@@ -20,6 +20,15 @@ EDGE_IMAGES = [
     {"component": f"tunnel-{name}", "dockerfile": f"tunnel/Dockerfile.{name}"}
     for name in ("frp", "tailscale", "playit")
 ]
+# Mirrors the paths-filter `ci` filter in .github/workflows/ci.yaml; keep both in sync.
+FORCE_ALL_FILES = {
+    ".github/workflows/ci.yaml", "hack/ci_scope.py", "hack/test_ci_scope.py", "Makefile",
+    "go.work", "go.work.sum", "test/e2e/buckets.sh", ".golangci.yml",
+}
+FORCE_ALL_PREFIXES = (".github/actions/",)
+# Mirrors the e2e-go matrix buckets in .github/workflows/ci.yaml.
+E2E_BUCKETS = ["operator", "api-auth", "api-roles", "api-rbac", "api-agent", "api-mods",
+               "telemetry", "optional-components"]
 
 
 def workspace_modules(root):
@@ -174,6 +183,153 @@ def publish_paths(root, repository, branch, event, head):
     return None
 
 
+def full_scope_reason(env, paths):
+    """Return why every suite must run, or None when change-based selection applies."""
+    if env.get("GITHUB_EVENT_NAME") == "push" and env.get("GITHUB_REF") == "refs/heads/master":
+        return "master push"
+    if env.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
+        return "manual run"
+    if env.get("CI_FULL_RUN") == "true":
+        return "label ci: full-run"
+    if paths is None:
+        return "unknown base"
+    if any(p in FORCE_ALL_FILES or p.startswith(FORCE_ALL_PREFIXES) for p in paths):
+        return "selection-rule change"
+    return None
+
+
+def flag(values, key):
+    return str(values.get(key, "")).lower() == "true"
+
+
+def jlist(values, key):
+    value = values.get(key) or "[]"
+    if isinstance(value, list):  # BOT_MATRIX carries a real list, step outputs a JSON string
+        return value
+    try:
+        value = json.loads(value)
+    except (TypeError, ValueError):
+        return []
+    return value if isinstance(value, list) else []
+
+
+def load_json(env, key):
+    value = json.loads(env.get(key) or "{}")
+    if not isinstance(value, dict):
+        raise ValueError(f"{key} must be a JSON object")
+    return value
+
+
+def cite(paths):
+    shown = ", ".join(paths[:5])
+    extra = len(paths) - 5
+    return f"changed: {shown}" + (f" (+{extra})" if extra > 0 else "")
+
+
+def table_cell(value):
+    return str(value).replace("\n", " ").replace("|", "\\|")
+
+
+def summarize(env, paths, reason):
+    """Return (rows, markdown) describing which CI suites run and why."""
+    scope = load_json(env, "SCOPE_OUTPUTS")
+    filters = load_json(env, "FILTER_OUTPUTS")
+    gates = load_json(env, "GATE_OUTPUTS")
+    bots = load_json(env, "BOT_MATRIX")
+    event = env.get("GITHUB_EVENT_NAME", "")
+    modules = sorted(workspace_modules(ROOT))
+    selected = set(jlist(scope, "modules"))
+    changed = list(paths or [])
+
+    def gate(key):
+        return flag(gates, key)
+
+    def under(path, base):
+        return path == base or path.startswith(base + "/")
+
+    def filtered(*keys):
+        return [name for key in keys for name in jlist(filters, f"{key}_files")]
+
+    def go_feed():
+        return [p for p in changed if under(p, "operator/config/crd") or under(p, "modules")
+                or any(under(p, m) for m in modules)]
+
+    def module_feed(module):
+        own = [p for p in go_feed() if under(p, module)]
+        return own or go_feed()
+
+    def e2e_feed():
+        return go_feed() + filtered("charts", "e2etree", "gamecoverage")
+
+    rows = []
+
+    def add(suite, run, feed=(), run_reason="", skip_reason="not affected"):
+        if run and reason:
+            why = f"full: {reason}"
+        elif run and run_reason:
+            why = run_reason
+        elif run:
+            files = list(dict.fromkeys(feed))
+            if files:
+                why = cite(files)
+            else:
+                why = "push event" if event == "push" else "changed: (see filters)"
+        else:
+            why = skip_reason
+        rows.append({"suite": suite, "decision": "run" if run else "skip", "reason": why})
+
+    for m in modules:
+        add(f"lint ({m})", m in selected, module_feed(m))
+    for m in modules:
+        if m != "test/e2e":
+            add(f"go ({m}) (amd64, arm64)", gate("go") and m in selected, module_feed(m))
+    add("go (test/e2e)", flag(scope, "e2e-unit"), module_feed("test/e2e"))
+    add("api (postgres)", "api" in selected, module_feed("api"))
+    add("web", gate("web"), filtered("web"))
+    add("web e2e (mock)", gate("web"), filtered("web"))
+    add("helm lint", gate("charts"), filtered("charts"))
+    add("chart render", gate("charts"), filtered("charts"))
+    add("standalone Compose smoke", gate("standalone"), filtered("standalone"))
+    add("workflow lint", gate("github"), filtered("github"))
+    add("docs and repository checks",
+        flag(scope, "lint") or gate("specs") or gate("docs"),
+        filtered("docs", "specs") + go_feed())
+    add("codegen drift", gate("codegen") or event == "push", filtered("codegen"))
+    add("submodule freshness", gate("submodules") or event == "push", filtered("submodules"))
+    add("vuln (go)", gate("go") or event == "push", go_feed())
+    add("capture-sidecar CAP_NET_RAW survival", gate("go"), go_feed())
+    add("dependency review", event == "pull_request",
+        run_reason="pull request", skip_reason="not a pull request")
+    add("telemetry default gate", True, run_reason="always runs")
+    images_feed = e2e_feed() + filtered("web")
+    add("build e2e images (amd64, arm64)", gate("images"), images_feed)
+    add("vuln (images)", gate("images"), images_feed)
+    add("e2e bucket coverage", gate("e2e"), e2e_feed())
+    for bucket in E2E_BUCKETS:
+        name = "e2e api-auth + ratelimit tail" if bucket == "api-auth" else f"e2e {bucket}"
+        add(f"{name} (amd64, arm64)", gate("e2e"), e2e_feed())
+    add("e2e multicluster (amd64, arm64)", gate("e2e"), e2e_feed())
+    add("e2e upgrade (amd64, arm64)", gate("e2e"), e2e_feed())
+    add("e2e postgres (amd64)", gate("e2e"), e2e_feed())
+    for test in jlist(bots, "test"):
+        add(f"e2e game bot / {test}", gate("e2e"), e2e_feed())
+    add("e2e web live (amd64, arm64)", gate("weblive"), e2e_feed() + filtered("web"))
+    add("e2e capture overhead",
+        (event == "pull_request" and gate("capture_overhead"))
+        or (event in ("push", "workflow_dispatch") and gate("e2e")),
+        filtered("capture_overhead"))
+    add("ingress-nginx smoke (kind)", gate("kindsmoke"), filtered("kindsmoke"))
+
+    kind = "full" if reason else "partial"
+    lines = [f"### Test selection ({kind})", ""]
+    if reason:
+        lines += [f"full: {reason}", ""]
+    lines += ["| Suite | Decision | Why |", "|---|---|---|"]
+    lines += [f"| {table_cell(row['suite'])} | {table_cell(row['decision'])} | "
+              f"{table_cell(row['reason'])} |" for row in rows]
+    return rows, "\n".join(lines) + "\n"
+
+
 def emit(values):
     lines = "".join(f"{key}={json.dumps(value, separators=(',', ':'))}\n"
                     for key, value in values.items())
@@ -191,7 +347,7 @@ def bot_matrix(names):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("modules", "images", "dockerfiles", "bots"))
+    parser.add_argument("mode", choices=("modules", "images", "dockerfiles", "bots", "summary"))
     parser.add_argument("--base", default="")
     parser.add_argument("--head", default="HEAD")
     args = parser.parse_args()
@@ -210,11 +366,34 @@ def main():
         images = select_images(ROOT, EDGE_IMAGES, paths)
         emit({"matrix": {"include": images}, "images": bool(images)})
         return
-    # PRs use affected work; every master push is the full-suite backstop.
-    full = (os.environ.get("GITHUB_EVENT_NAME") == "push"
-            and os.environ.get("GITHUB_REF") == "refs/heads/master")
-    paths = None if full else changed_paths(ROOT, args.base, args.head)
-    selected = affected_modules(ROOT, paths)
+    if args.mode == "summary":
+        env = os.environ
+        try:
+            paths = None if full_scope_reason(env, []) else changed_paths(ROOT, args.base, args.head)
+            reason = full_scope_reason(env, paths)
+            if reason is None and flag(load_json(env, "SCOPE_OUTPUTS"), "all"):
+                reason = "selection fallback (see detect changes log)"
+            rows, markdown = summarize(env, paths, reason)
+        except Exception as exc:  # the summary never blocks CI (continue-on-error in ci.yaml)
+            reason = f"error: {exc}"
+            rows = []
+            markdown = f"### Test selection (full)\n\nfull: error: {exc}\n"
+        emit({"scope": "full" if reason else "partial", "reason": reason or "", "selection": rows})
+        if env.get("GITHUB_STEP_SUMMARY"):
+            with open(env["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+                summary.write(markdown)
+        return
+    # PRs use affected work; every master push, manual run and ci: full-run
+    # label is the full-suite backstop.
+    env = os.environ
+    try:
+        event_reason = full_scope_reason(env, [])
+        paths = None if event_reason else changed_paths(ROOT, args.base, args.head)
+        selected = affected_modules(ROOT, paths)
+    except Exception as exc:  # any doubt selects the full suite (FR-002)
+        print(f"::warning::test selection failed, running everything: {exc}")
+        paths = None
+        selected = sorted(workspace_modules(ROOT))
     modules = sorted(workspace_modules(ROOT))
     emit({
         "all": paths is None,
