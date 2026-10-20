@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,6 +31,6 @@
 
 ## Notes
 
-- Three markers remain, tracked as OD-1, OD-2 and OD-3 in `OPEN-DECISIONS.md`. Asked to valgul on 2026-10-20.
+- OD-1, OD-2 and OD-3 settled by valgul on 2026-10-20; no markers remain. All items pass.
 - The Context section names current files and versions as the baseline being replaced; this is the only place file names appear, and it describes today's state, not the solution.
 - Developer tooling is the product here, so "dev container", "compile check" and "CI" are the user's own vocabulary, not implementation choices.

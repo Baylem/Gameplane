@@ -16,6 +16,14 @@ No component lists its own system dependencies; the only record is the shared se
 
 This feature replaces "one size" with a set of dev container profiles at three sizes: one component, one part of the project (a group of components that are worked on together, such as the dashboard with its API), and the full project. The full profile keeps today's behaviour. Each component also lists its own required system dependencies (toolchains, command-line tools, OS packages, services) in one place, and profiles are built from those lists, so what a component needs is written down once and visible to anyone, inside or outside a dev container.
 
+## Clarifications
+
+### Session 2026-10-20 (valgul, on decision cards)
+
+- Q: Which profiles should spec 026 start with? (OD-1) → A: Main components + 3 parts. Component profiles: web, api, operator, agent, website, modules, and one "Go services and libraries" profile for the smaller Go modules. Parts: "dashboard + API", "control plane" (operator, api, agent, chart, local cluster, end-to-end tests) and "modules + gp-module". Plus full.
+- Q: Should the dashboard + API part include a local Kubernetes cluster? (OD-2) → A: Yes, include kind (in-container Docker and a local cluster) so the dashboard shows real servers.
+- Q: Where should the website and module profiles live? (OD-3) → A: Also in the website and module repos, so each works when cloned on its own.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Open a small profile for one component (Priority: P1)
@@ -46,7 +54,7 @@ A contributor who works across components that change together (for example a da
 **Acceptance Scenarios**:
 
 1. **Given** the "dashboard and API" part profile, **When** setup finishes, **Then** the dashboard, the API and the shared libraries the API depends on all pass their compile checks.
-2. **Given** the "dashboard and API" part profile, **When** the contributor follows its ready message to run the stack, **Then** the dashboard dev server loads in their browser through a forwarded port and talks to a running API. How the API runs is set by [NEEDS CLARIFICATION: OD-2, does this part include a local Kubernetes cluster, or run the API on its own without one?].
+2. **Given** the "dashboard and API" part profile, **When** the contributor follows its ready message to run the stack, **Then** the dashboard dev server loads in their browser through a forwarded port and talks to a running API. The part includes a local Kubernetes cluster, so the API runs in it with the operator and agents and the dashboard shows real game servers (OD-2).
 3. **Given** any part profile, **When** setup finishes, **Then** it contains every tool of each component profile it covers, at the same versions.
 
 ---
@@ -130,7 +138,7 @@ A contributor (or a maintainer setting up a machine without dev containers) open
 ### Functional Requirements
 
 - **FR-001**: The repository MUST offer several named dev container profiles that a dev-container-capable editor lists for the contributor to pick from when opening the repository.
-- **FR-002**: Profiles MUST come in three sizes: component profiles (one component each), part profiles (a named group of components worked on together) and one full profile. The initial catalogue is [NEEDS CLARIFICATION: OD-1, which components get their own profile, and which parts exist?].
+- **FR-002**: Profiles MUST come in three sizes: component profiles (one component each), part profiles (a named group of components worked on together) and one full profile. The initial catalogue (OD-1) is: component profiles for web, api, operator, agent, website and modules, plus one "Go services and libraries" profile covering every other Go module in the workspace; part profiles "dashboard + API" (web, api, the shared libraries they use, and a local Kubernetes cluster per OD-2), "control plane" (operator, api, agent, the Helm chart, a local Kubernetes cluster and the end-to-end test suite) and "modules + gp-module" (game modules and the module authoring tool); and the full profile.
 - **FR-003**: The full profile MUST include everything today's dev container includes: every tool and version, forwarded port, editor extension, editor setting, environment variable and setup step. It MUST be the profile used when no profile is picked.
 - **FR-004**: Each component and part profile MUST install only the tools, dependencies, submodules, editor extensions and forwarded ports its scope needs, as given by its components' dependency lists and the profile catalogue.
 - **FR-004a**: Every component in the profile catalogue MUST list its required system dependencies in its own folder, in one documented location and format used by all components. Each entry names the dependency, its kind (toolchain, command-line tool, OS package, service or submodule), the version it needs (taken from the version source) and a one-line reason. A component with no needs beyond the shared baseline MUST still have a list that says so.
@@ -147,7 +155,7 @@ A contributor (or a maintainer setting up a machine without dev containers) open
 - **FR-014**: A CI check MUST build each profile that a pull request affects, run the compile checks of that profile's scope, and fail naming the profile on any error. It MUST also fail when a Go module in the workspace belongs to no profile, when a profile pins a tool version outside the single version source, when a component in the catalogue has no dependency list, or when a profile installs something that no list, baseline or part extra accounts for.
 - **FR-015**: Switching between profiles on the same clone MUST NOT change the working tree, and MUST NOT need a fresh clone or manual cleanup.
 - **FR-016**: The contributor documentation MUST contain one profile table (name, size, scope, what it installs, typical setup time, when to use it) and the steps to add or change a profile. The public website's local development page MUST describe the profiles and link to that table.
-- **FR-017**: Profiles for work that lives in the submodules (website, game modules) MUST be defined in [NEEDS CLARIFICATION: OD-3, the main repository only, or also in the website and module repositories so they work when those repositories are cloned on their own?].
+- **FR-017**: The website and modules component profiles MUST exist both in the main repository and in the website and module repositories themselves, so each works when that repository is cloned on its own (OD-3). The copy in a submodule repository MUST use the same tool versions as the main repository's version source, and each of those repositories MUST run the FR-014 check for its own profile.
 
 ### Key Entities
 
@@ -174,7 +182,7 @@ A contributor (or a maintainer setting up a machine without dev containers) open
 ## Assumptions
 
 - "Dev container" means the open dev container format that VS Code, GitHub Codespaces and the dev container command-line tool all read. Profiles must work in all three, the same as today's single dev container.
-- Component profiles are for editing and compile checks of that component. Running the whole stack, end-to-end tests and anything that needs a local Kubernetes cluster live in the full profile and in any part profile that OD-2 or OD-1 gives a cluster to.
+- Component profiles are for editing and compile checks of that component. Running the whole stack, end-to-end tests and anything that needs a local Kubernetes cluster live in the full profile and in the "dashboard + API" and "control plane" parts.
 - Following the project's rules, tests and lint run in CI, not in the dev container. Profiles still install the tools those suites need (for example the Go linter) where the scope uses them, as today, so contributors who choose to use them can. The ready messages keep pointing at CI as the place that verifies.
 - The shared baseline keeps today's AI coding CLIs and the AI assistant editor extension in every profile. Purely personal editor items (colour themes, and extensions for languages the project does not use) stay in the full profile only.
 - Design work in Pencil happens on the maintainer's own machine, not inside any dev container; the Pencil extension stays in the full profile as today.
