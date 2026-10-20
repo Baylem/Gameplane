@@ -145,7 +145,7 @@ func i18nCheckNotifyPayload(t *testing.T, want i18nNotifyExpect, raw string) {
 //
 // The test-send delivers to an in-cluster webhook receiver (fixtures/
 // notify-sink.yaml) that logs each request's query and body. Budget: one
-// e2e-admin login, in the multicluster bucket for the login budget.
+// e2e-admin login, in the operator bucket for the login budget.
 func TestAPI_I18n_NotifyLanguage(t *testing.T) {
 	t.Parallel()
 
@@ -154,8 +154,11 @@ func TestAPI_I18n_NotifyLanguage(t *testing.T) {
 	// Close is registered first so it runs last: every cleanup below uses admin.
 	t.Cleanup(admin.Close)
 
+	// Defers, not t.Cleanup, for everything that calls the API: the client's
+	// port-forward is bound to t.Context(), which is canceled before cleanups
+	// run, so a request made from a cleanup never reaches the API.
 	i18nInstanceDefaultMu.Lock()
-	t.Cleanup(i18nInstanceDefaultMu.Unlock)
+	defer i18nInstanceDefaultMu.Unlock()
 
 	// Receiver: a hard gate. The rollout waits for the TCP readiness probe, so
 	// the test-send cannot race the receiver's startup.
@@ -176,7 +179,7 @@ func TestAPI_I18n_NotifyLanguage(t *testing.T) {
 
 	// Restore the notifications section (or an empty one if it was absent).
 	prior, hadPrior := i18nConfigSection(t, admin, "notifications")
-	t.Cleanup(func() {
+	defer func() {
 		body := prior
 		if !hadPrior {
 			body = json.RawMessage(`{"sinks":[]}`)
@@ -185,7 +188,7 @@ func TestAPI_I18n_NotifyLanguage(t *testing.T) {
 		if r != nil {
 			_ = r.Body.Close()
 		}
-	})
+	}()
 
 	sinks := []struct{ name, query string }{
 		{"e2e-notify-fr", "sink=fr"},
@@ -193,12 +196,12 @@ func TestAPI_I18n_NotifyLanguage(t *testing.T) {
 	}
 	for _, s := range sinks {
 		name := s.name
-		t.Cleanup(func() {
+		defer func() {
 			r, _, _ := admin.Delete("/admin/notifications/sinks/" + name + "/secret")
 			if r != nil {
 				_ = r.Body.Close()
 			}
-		})
+		}()
 	}
 
 	// Secrets hold each sink's URL; configRef must name the returned Secret.

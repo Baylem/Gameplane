@@ -48,15 +48,16 @@ func TestAPI_I18n_LanguagePref(t *testing.T) {
 
 	envInstance.BootstrapAdmin(t, adminUsername, adminPassword)
 	admin := envInstance.APIClient(t, adminUsername, adminPassword)
-	// Registered before the reset so the reset runs while the client is open
-	// (cleanups run last-in first-out).
 	t.Cleanup(admin.Close)
-	t.Cleanup(func() {
+	// A defer, not t.Cleanup: the client's port-forward is bound to
+	// t.Context(), which is canceled before cleanups run, so the reset would
+	// never reach the API from a cleanup.
+	defer func() {
 		r, _, _ := admin.Do(http.MethodPut, "/users/me/language", map[string]any{"language": nil})
 		if r != nil {
 			_ = r.Body.Close()
 		}
-	})
+	}()
 
 	// A listed tag is saved and echoed back by the preferences payload.
 	resp, body, err := admin.Do(http.MethodPut, "/users/me/language", map[string]any{"language": "fr"})

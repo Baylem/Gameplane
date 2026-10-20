@@ -11,12 +11,12 @@ import (
 
 // TestAPI_I18n_InstanceDefault proves the instance default language (spec 019,
 // T092): an admin can set it through PUT /admin/config/i18n, the unauthenticated
-// GET /auth/locale reflects it, an unlisted or empty value is rejected without
+// GET /auth/locale reflects it, an unlisted (400) or empty (422) value is rejected without
 // writing, and a viewer cannot change it. The default is process-wide, so the
 // test holds i18nInstanceDefaultMu for its whole body and restores the prior
-// value on cleanup.
+// value in a defer before releasing it.
 //
-// Budget: one e2e-admin login plus one viewer login, in the multicluster
+// Budget: one e2e-admin login plus one viewer login, in the operator
 // bucket for the login budget (see buckets.sh).
 func TestAPI_I18n_InstanceDefault(t *testing.T) {
 	t.Parallel()
@@ -26,22 +26,26 @@ func TestAPI_I18n_InstanceDefault(t *testing.T) {
 	// Close is registered first so it runs last: every cleanup below uses admin.
 	t.Cleanup(admin.Close)
 
+	// Defers, not t.Cleanup, for everything that calls the API: the client's
+	// port-forward is bound to t.Context(), which is canceled before cleanups
+	// run, so a request made from a cleanup never reaches the API. Defers run
+	// last-in first-out, so the lock is released after the default is restored.
 	i18nInstanceDefaultMu.Lock()
-	t.Cleanup(i18nInstanceDefaultMu.Unlock)
+	defer i18nInstanceDefaultMu.Unlock()
 
 	username, password, id := envInstance.CreateUser(t, admin, "viewer", "e2e-i18n-default")
-	t.Cleanup(func() {
+	defer func() {
 		r, _, _ := admin.Delete("/users/" + id)
 		if r != nil {
 			_ = r.Body.Close()
 		}
-	})
+	}()
 	viewer := envInstance.APIClient(t, username, password)
 	t.Cleanup(viewer.Close)
 
 	// Restore the prior i18n section, or en when it was absent.
 	prior, hadPrior := i18nConfigSection(t, admin, "i18n")
-	t.Cleanup(func() {
+	defer func() {
 		body := prior
 		if !hadPrior {
 			body = json.RawMessage(`{"defaultLanguage":"en"}`)
@@ -50,7 +54,7 @@ func TestAPI_I18n_InstanceDefault(t *testing.T) {
 		if r != nil {
 			_ = r.Body.Close()
 		}
-	})
+	}()
 
 	port, stop := envInstance.PortForward(t, "gameplane-system", "svc/gameplane-api", 80)
 	defer stop()
@@ -83,11 +87,12 @@ func TestAPI_I18n_InstanceDefault(t *testing.T) {
 		t.Errorf("PUT /admin/config/i18n tlh: args=%v, want language=tlh", doc["args"])
 	}
 
-	// An empty default is rejected as plain text.
+	// An empty default fails validation as plain text with 422, the status
+	// every config section returns for a validation error (config.go put).
 	status, _, raw = rawDo(t, admin, http.MethodPut, "/admin/config/i18n",
 		map[string]string{"defaultLanguage": ""}, "")
-	if status != http.StatusBadRequest || strings.TrimSpace(string(raw)) != "defaultLanguage is required" {
-		t.Errorf("PUT /admin/config/i18n empty: status=%d body=%q, want 400 \"defaultLanguage is required\"", status, string(raw))
+	if status != http.StatusUnprocessableEntity || strings.TrimSpace(string(raw)) != "defaultLanguage is required" {
+		t.Errorf("PUT /admin/config/i18n empty: status=%d body=%q, want 422 \"defaultLanguage is required\"", status, string(raw))
 	}
 
 	// Neither rejected write changed the default.
