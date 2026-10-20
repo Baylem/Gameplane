@@ -2033,6 +2033,7 @@ jobs:
         env:
           GAMEPLANE_E2E_TARGET: live
           GAMEPLANE_E2E_CLUSTER: ${{ env.CLUSTER }}
+          VITE_I18N_FIXTURES: "1"
         run: |
           cd web && npm run test:e2e:live
       - name: dump cluster state on failure (e2e-web-live)

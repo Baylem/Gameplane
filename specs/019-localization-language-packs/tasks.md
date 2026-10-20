@@ -89,7 +89,7 @@ description: "Task list for 019 App Localization & Community Language Packs"
 
 - [X] T035 [P] [US1] Go API E2E `test/e2e/i18n_language_pref_e2e_test.go`: `PUT /api/v1/users/me/language` `fr` → `GET /users/me/preferences` returns `language: "fr"`; `null` clears; unknown tag → 400 with `server.i18n.unknown_language` problem body; register in `test/e2e/buckets.sh` (bucket `api-auth`, respect its login budget)
 - [X] T036 [P] [US1] Go API E2E `test/e2e/i18n_auth_locale_e2e_test.go`: unauthenticated `GET /auth/locale` returns exactly `{"defaultLanguage": …}` and no other keys (rule 3); register in `test/e2e/buckets.sh`
-- [ ] T037 [P] [US1] Playwright `web/e2e/specs/live/i18n.spec.ts`: switch to French in personal settings with create-server dialog open and a typed name (kept, no reload, `<html lang="fr">`), reload and second browser context keep French with no English flash, login and share pages offer a picker remembered per browser, 0%-fixture language shows English everywhere (SC-008)
+- [X] T037 [P] [US1] Playwright `web/e2e/specs/live/i18n.spec.ts`: switch to French in personal settings with create-server dialog open and a typed name (kept, no reload, `<html lang="fr">`), reload and second browser context keep French with no English flash, login and share pages offer a picker remembered per browser, 0%-fixture language shows English everywhere (SC-008) — same-tab switch per valgul (2026-10-20); kept input covered by I18nProvider.test.tsx; fixture via VITE_I18N_FIXTURES=1 in the live job
 
 ### Implementation for User Story 1
 

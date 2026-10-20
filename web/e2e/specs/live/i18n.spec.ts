@@ -1,11 +1,13 @@
 import { test, expect } from "@playwright/test";
 import type { APIRequestContext, Page } from "@playwright/test";
-import { apiSend, loginIfNeeded, seedTemplate } from "./_seed";
+import { apiSend, loginIfNeeded } from "./_seed";
 
 // Live: spec 019 T037, language switching end to end on the real backend.
 // Covers:
-//   A. Switching language keeps the create-server wizard's typed input and
-//      does not reload the page.
+//   A. Switching language applies in place on the same page, without a reload.
+//      Keeping typed input across a switch is covered by the unit test
+//      web/src/lib/i18n/I18nProvider.test.tsx ("switches language without
+//      unmounting a stateful child").
 //   B. A reload and a new browser context keep French, with no English flash.
 //   C. The logged-out login and share pages offer a picker that is remembered
 //      per browser, and a fresh logged-out context starts in English.
@@ -62,61 +64,33 @@ test.describe("live: i18n", () => {
     }
   });
 
-  test("switching language keeps the wizard input and does not reload", async ({ page, request }) => {
-    const stamp = Date.now();
-    const templateName = `e2e-pw-i18n-tpl-${stamp}`;
-    const serverName = `e2e-pw-i18n-${stamp}`;
-    const template = await seedTemplate(request, templateName);
-    try {
-      // The template is preselected by the query string. The Configure step,
-      // which holds the server name, is the next step.
-      await page.goto(`/servers/new?template=${templateName}`);
-      await page.waitForLoadState("domcontentloaded");
-      await loginIfNeeded(page);
+  test("switching language applies in place without a reload", async ({ page }) => {
+    // One tab, no second page and no reconnect replay: the switch is made on
+    // /settings/theme and the marker shows the page was never reloaded.
+    await page.goto("/settings/theme");
+    await page.waitForLoadState("domcontentloaded");
+    await loginIfNeeded(page);
 
-      await page.getByRole("button", { name: /^Continue to/ }).click();
-      const nameInput = page.getByPlaceholder("mc-hardcore");
-      await expect(nameInput).toBeVisible({ timeout: 15_000 });
-      await nameInput.fill(serverName);
-      await page.evaluate(() => {
-        (window as I18nWindow).__i18nMark = 1;
-      });
+    const french = page.getByRole("radio", { name: /Français/ });
+    await expect(french).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => {
+      (window as I18nWindow).__i18nMark = 1;
+    });
+    await french.click();
 
-      // Switch the account language from a second page of the same browser.
-      const second = await page.context().newPage();
-      try {
-        await second.goto("/settings/theme");
-        await second.waitForLoadState("domcontentloaded");
-        await second.getByRole("radio", { name: /Français/ }).click();
+    const html = page.locator("html");
+    await expect(html).toHaveAttribute("lang", "fr", { timeout: 15_000 });
+    await expect(html).toHaveAttribute("dir", "ltr");
+    await expect(html).toHaveAttribute("data-i18n-loaded", "fr");
+    // The personal Language card title is "Language" in English and "Langue" in French.
+    await expect(page.getByText("Langue", { exact: true }).first()).toBeVisible();
+    expect(await page.evaluate(() => (window as I18nWindow).__i18nMark)).toBe(1);
 
-        const secondHtml = second.locator("html");
-        await expect(secondHtml).toHaveAttribute("lang", "fr", { timeout: 15_000 });
-        await expect(secondHtml).toHaveAttribute("dir", "ltr");
-        await expect(secondHtml).toHaveAttribute("data-i18n-loaded", "fr");
-      } finally {
-        await second.close();
-      }
-
-      // Back on the wizard page: the typed input and the marker survive, and the
-      // French label replaces the English one without a reload.
-      await page.bringToFront();
-      // The dashboard does not refetch the account on focus and has no cross-tab
-      // channel, so replay a network reconnect (offline then online) until the
-      // stale "me" query refetches and the new language applies in place.
-      await expect(async () => {
-        await page.evaluate(() => {
-          window.dispatchEvent(new Event("offline"));
-          window.dispatchEvent(new Event("online"));
-        });
-        await expect(page.locator("html")).toHaveAttribute("lang", "fr", { timeout: 2_000 });
-      }).toPass({ timeout: 30_000 });
-      await expect(page.getByText("Nom du serveur").first()).toBeVisible();
-      await expect(nameInput).toHaveValue(serverName);
-      const mark = await page.evaluate(() => (window as I18nWindow).__i18nMark);
-      expect(mark).toBe(1);
-    } finally {
-      await template.cleanup(request);
-    }
+    // Client-side navigation to Servers keeps the marker and shows French there.
+    await page.getByRole("link", { name: "Serveurs" }).first().click();
+    await expect(page).toHaveURL(/\/servers$/);
+    await expect(page.getByText("Créer un serveur").first()).toBeVisible({ timeout: 15_000 });
+    expect(await page.evaluate(() => (window as I18nWindow).__i18nMark)).toBe(1);
   });
 
   test("reload and a new browser context keep French without an English flash", async ({ page, browser }) => {
@@ -218,8 +192,9 @@ test.describe("live: i18n", () => {
       await expect(page.getByRole("radio", { name: /Français/ })).toBeVisible({ timeout: 15_000 });
 
       // The fixture language exists only when the web server was started with
-      // VITE_I18N_FIXTURES=1 (vite.config.ts). The CI live job does not set it,
-      // so this check reports the subtest as skipped rather than passed.
+      // VITE_I18N_FIXTURES=1 (vite.config.ts). The CI live job sets it on the
+      // Playwright step, so the subtest runs there. Local runs without it report
+      // the subtest as skipped rather than passed.
       const fixture = page.getByRole("radio", { name: /Fixture/ });
       if ((await fixture.count()) === 0) {
         test.skip(true, "VITE_I18N_FIXTURES is not set for the live web server, so the zz fixture language is absent");
