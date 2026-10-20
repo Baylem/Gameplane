@@ -199,10 +199,12 @@ def full_scope_reason(env, paths):
 
 
 def flag(values, key):
+    """Return True when a step-output value equals the string 'true', ignoring case."""
     return str(values.get(key, "")).lower() == "true"
 
 
 def jlist(values, key):
+    """Return the list stored under key, decoding JSON strings and defaulting to empty."""
     value = values.get(key) or "[]"
     if isinstance(value, list):  # BOT_MATRIX carries a real list, step outputs a JSON string
         return value
@@ -214,6 +216,7 @@ def jlist(values, key):
 
 
 def load_json(env, key):
+    """Return the JSON object stored under key, or raise ValueError if it is not one."""
     value = json.loads(env.get(key) or "{}")
     if not isinstance(value, dict):
         raise ValueError(f"{key} must be a JSON object")
@@ -221,12 +224,14 @@ def load_json(env, key):
 
 
 def cite(paths):
+    """Format up to five changed paths, adding a count of any remainder."""
     shown = ", ".join(paths[:5])
     extra = len(paths) - 5
     return f"changed: {shown}" + (f" (+{extra})" if extra > 0 else "")
 
 
 def table_cell(value):
+    """Escape a value so it renders safely inside one Markdown table cell."""
     return str(value).replace("\n", " ").replace("|", "\\|")
 
 
@@ -242,28 +247,35 @@ def summarize(env, paths, reason):
     changed = list(paths or [])
 
     def gate(key):
+        """Return whether the gate output for key is true."""
         return flag(gates, key)
 
     def under(path, base):
+        """Return True when path equals base or lies beneath it."""
         return path == base or path.startswith(base + "/")
 
     def filtered(*keys):
+        """Return the changed files recorded in the filter outputs for each key."""
         return [name for key in keys for name in jlist(filters, f"{key}_files")]
 
     def go_feed():
+        """Return changed paths that can affect Go builds, CRDs, or module sources."""
         return [p for p in changed if under(p, "operator/config/crd") or under(p, "modules")
                 or any(under(p, m) for m in modules)]
 
     def module_feed(module):
+        """Return changed paths for one module, or the whole Go feed when none match."""
         own = [p for p in go_feed() if under(p, module)]
         return own or go_feed()
 
     def e2e_feed():
+        """Return the Go feed plus chart, e2e tree, and game coverage changes."""
         return go_feed() + filtered("charts", "e2etree", "gamecoverage")
 
     rows = []
 
     def add(suite, run, feed=(), run_reason="", skip_reason="not affected"):
+        """Append one selection row with a run or skip decision and its reason."""
         if run and reason:
             why = f"full: {reason}"
         elif run and run_reason:
