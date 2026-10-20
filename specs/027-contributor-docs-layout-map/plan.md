@@ -8,7 +8,7 @@
 
 Docs and structure rules only. Write down which agent instructions file is real (and fix the links), name the two design-doc homes and retire `docs/superpowers/`, add a layout doc (`docs/layout.md`) that gives every Go module and `web/src` a target shape and its current gap for spec 028 to apply, add a "Your first PR" section to `docs/contributing.md` with measured CI times, and extend the task-to-doc map. No source file or package moves (FR-019).
 
-Decision status: **OD-1 settled; OD-2..OD-5 open** (see [OPEN-DECISIONS.md](./OPEN-DECISIONS.md)). This plan is written against the recommended option of each; the parts that change with a different answer are marked *(OD-n)*. Implementation does not start until all five are recorded.
+Decision status: **OD-1..OD-3 settled; OD-4, OD-5 open** (see [OPEN-DECISIONS.md](./OPEN-DECISIONS.md)). This plan is written against the recommended option of each; the parts that change with a different answer are marked *(OD-n)*. Implementation does not start until all five are recorded.
 
 ## Technical Context
 
@@ -51,7 +51,7 @@ No violations; Complexity Tracking empty.
 - `docs/contributing.md` "AI-assisted development": one paragraph naming `AGENTS.md` as the real file, `CLAUDE.md` as a link for tools that read that name, and the Windows note (with `core.symlinks=false` the link checks out as a one-line text file, so edit `AGENTS.md`).
 - WEB: already `AGENTS.md` real, `CLAUDE.md` link. No change.
 
-### D2. Design-doc homes *(OD-2)*
+### D2. Design-doc homes (OD-2, settled: archive superpowers, keep `specs.md` names)
 
 - Docs rule, added to `docs/contributing.md` (new short section "Where design docs go") and CLAUDE.md (one line under rule 15):
   - A change → `specs/NNN-<slug>/` through speckit (renamed `done_` when finished).
@@ -60,7 +60,7 @@ No violations; Complexity Tracking empty.
 - `git mv docs/superpowers docs/archive/superpowers`; prepend to each of the 5 files a banner: historical, superseded by the shipped code; current behavior in `<module>/specs.md` (each banner names the right one: `operator/specs.md`, `agent/specs.md`, `sentinel/specs.md`, `gp-module/specs.md` as applicable). Fix the five internal path references (`docs/superpowers/specs/…` inside the plans).
 - `docs/archive/README.md` (5 lines): what the folder is, that nothing in it is current.
 
-### D3. Layout doc `docs/layout.md` *(OD-3, OD-4)*
+### D3. Layout doc `docs/layout.md` (OD-3 settled: `cmd/main.go` + `internal/`; OD-4 open)
 
 Structure per [contracts/layout-doc.md](./contracts/layout-doc.md):
 
