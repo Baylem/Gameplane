@@ -2,5 +2,11 @@
   "tag": "fr",
   "nativeName": "Français",
   "englishName": "French",
-  "direction": "ltr"
+  "direction": "ltr",
+  "credits": [
+    {
+      "name": "valgul",
+      "url": "https://github.com/ValgulNecron"
+    }
+  ]
 }
