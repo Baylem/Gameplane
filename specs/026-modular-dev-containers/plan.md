@@ -16,7 +16,7 @@ Split today's single dev container into generated profiles at three sizes (compo
 
 **Storage**: Files in git. No runtime storage.
 
-**Testing**: Fixture tests for the generator in `hack/test-gen-devcontainers.py` (same pattern as `hack/test-check-portable-paths.py`), the CI workflow `devcontainers.yaml` that builds real profiles, and the E2E coverage chosen in OD-4. All of this runs in CI only (Principle VI).
+**Testing**: Fixture tests for the generator in `hack/test-gen-devcontainers.py` (same pattern as `hack/test-check-portable-paths.py`), and the CI workflow `devcontainers.yaml` that builds real profiles (the E2E path, OD-4). All of this runs in CI only (Principle VI).
 
 **Target Platform**: Dev container hosts: VS Code Dev Containers, GitHub Codespaces and the dev container CLI, on linux/amd64 and linux/arm64.
 
@@ -34,10 +34,10 @@ Split today's single dev container into generated profiles at three sizes (compo
 
 | Principle | Status | Notes |
 |---|---|---|
-| I. E2E-Tested Delivery | **PENDING OD-4** | The real path is "build profile, run its compile checks", covered by the `devcontainers.yaml` CI build job. Whether a `test/e2e/` Go test is also required is asked as OD-4. Spec 023 OD-4 is the precedent: valgul required one there for CI-only tooling. |
+| I. E2E-Tested Delivery | PASS (exemption, OD-4) | valgul ruled on 2026-10-20 that the `devcontainers.yaml` CI build job is the E2E path: it builds every real profile on amd64 and arm64 and runs its compile checks. No `test/e2e/` Go test is added. |
 | II. Design-First | PASS (exempt) | No dashboard or website screen changes. The website edit is text in `local-development-setup.mdx` and adds no new visual component. |
 | III. Ecosystem Best Practice | PASS | The generator is stdlib Python like the other `hack/` scripts. The setup script uses `set -euo pipefail`. No suppressions. |
-| IV. Spec-Driven | PASS once OD-4 and OD-5 are settled | spec, plan and tasks come before any code. Open items stay in `OPEN-DECISIONS.md`. |
+| IV. Spec-Driven | PASS once OD-5 is settled | spec, plan and tasks come before any code. Open items stay in `OPEN-DECISIONS.md`. |
 | V. Delegate | PASS | Implementation runs through `Workflow` scripts at `haiku`, with review one tier up. Writing the 22 dependency files is scripted from one scout brief (rule 18). |
 | VI. CI Bears the Load | PASS | Profiles are verified only by CI build jobs. The ready messages point to CI for tests and lint. |
 
@@ -108,13 +108,12 @@ modules/ (GameplanePanel/module)
 ## Phasing (PRs)
 
 1. **Main repo, foundation**: `versions.toml`, `profiles.toml`, every main-repo `system-deps.toml`, the generator plus fixture tests, `setup.sh`, the generated full profile (parity with today, plus any OD-5 alignment), drift check, `make devcontainers` / `make check-devcontainers`.
-2. **Main repo, profiles + CI**: the generated component and part profiles, `devcontainers.yaml` build matrix, `need.sh` guards, OD-4 E2E coverage.
+2. **Main repo, profiles + CI**: the generated component and part profiles, `devcontainers.yaml` build matrix, `need.sh` guards.
 3. **Website repo**: `system-deps.toml`, generated `.devcontainer/`, build job, docs page section. **Module repo**: same, minus the docs page. Then the main-repo submodule pointer bump (after both merge).
 4. **Main repo, docs**: `docs/contributing.md` table, `docs/dependencies.md`, `CLAUDE.md`. Then archive the spec.
 
 ## Open items blocking tasks
 
-- **OD-4** (Principle I): E2E coverage shape. See `OPEN-DECISIONS.md`.
 - **OD-5** (FR-003): whether the full profile fixes today's version drift or keeps today's values exactly.
 
 ## Complexity Tracking

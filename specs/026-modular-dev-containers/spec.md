@@ -23,6 +23,7 @@ This feature replaces "one size" with a set of dev container profiles at three s
 - Q: Which profiles should spec 026 start with? (OD-1) → A: Main components + 3 parts. Component profiles: web, api, operator, agent, website, modules, and one "Go services and libraries" profile for the smaller Go modules. Parts: "dashboard + API", "control plane" (operator, api, agent, chart, local cluster, end-to-end tests) and "modules + gp-module". Plus full.
 - Q: Should the dashboard + API part include a local Kubernetes cluster? (OD-2) → A: Yes, include kind (in-container Docker and a local cluster) so the dashboard shows real servers.
 - Q: Where should the website and module profiles live? (OD-3) → A: Also in the website and module repos, so each works when cloned on its own.
+- Q: How should spec 026 meet the E2E rule (Principle I)? (OD-4) → A: The CI build job is the E2E path; no `test/e2e/` Go test.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -186,6 +187,6 @@ A contributor (or a maintainer setting up a machine without dev containers) open
 - Following the project's rules, tests and lint run in CI, not in the dev container. Profiles still install the tools those suites need (for example the Go linter) where the scope uses them, as today, so contributors who choose to use them can. The ready messages keep pointing at CI as the place that verifies.
 - The shared baseline keeps today's AI coding CLIs and the AI assistant editor extension in every profile. Purely personal editor items (colour themes, and extensions for languages the project does not use) stay in the full profile only.
 - Design work in Pencil happens on the maintainer's own machine, not inside any dev container; the Pencil extension stays in the full profile as today.
-- Constitution Principle I (end-to-end testing) is met by the CI check in FR-014: it builds each real profile and runs its real compile checks, which is the end-to-end path for developer tooling. No `test/e2e/` Go test is planned unless the plan step finds one is needed.
+- Constitution Principle I (end-to-end testing) is met by the CI check in FR-014: it builds each real profile and runs its real compile checks, which is the end-to-end path for developer tooling. No `test/e2e/` Go test is added (OD-4, valgul 2026-10-20).
 - A component's dependency list is for system-level needs (toolchains, CLIs, OS packages, services, submodules). Language-level libraries stay in each component's existing package manifests and are not repeated.
 - The current dev container on `master` at commit `8a67f2e` is the baseline for "today's dev container".
