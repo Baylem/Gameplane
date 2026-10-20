@@ -250,7 +250,7 @@ description: "Task list for 019 App Localization & Community Language Packs"
 - [X] T101 [P] Update `docs/architecture.md`, `docs/agent-architecture.md` (task → doc map entry for i18n) and `docs/module-authoring.md` (module translations section)
 - [X] T102 [P] Add a CHANGELOG / release-notes entry describing language selection, French, problem+json negotiation (opt-in) and module translations
 - [ ] T103 Run quickstart.md scenarios 1–13 against a `make dev-up` cluster and record results in the PR description
-- [ ] T104 Confirm the coverage gates (`i18n` 90, api 80, operator 72, gp-module 80, web thresholds) pass on CI; add tests where they do not (never lower thresholds)
+- [X] T104 Confirm the coverage gates (`i18n` 90, api 80, operator 72, gp-module 80, web thresholds) pass on CI; add tests where they do not (never lower thresholds) — confirmed: PR 668 run 38957645731 passed the go (i18n|api|operator|gp-module) threshold gates and the web job; PR 745 web L95.87 S94.37 B89.27 F91.79
 - [ ] T105 After merge and with every task complete or withdrawn: `git mv specs/019-localization-language-packs specs/done_019-localization-language-packs` and update in-repo references (Constitution IV, rule 16)
 
 ---
