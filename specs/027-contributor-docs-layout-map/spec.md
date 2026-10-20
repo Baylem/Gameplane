@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-20
 
-**Status**: Draft
+**Status**: Ready for implementation
 
 **Input**: User description: "Write a speckit spec (spec, plan, tasks) for the Gameplane v1 cleanup 'contributor docs and layout map'. Scope: one canonical agent-instructions file (with what the others become), one home for design/spec docs (with what happens to the existing ones), a written target layout for Go modules and web that the split spec will apply, and a first-PR guide. Docs and structure rules only. No code moves in this spec."
 
@@ -31,7 +31,13 @@ Facts measured on `master` at `8a67f2e` (assessment: project note `notes/v1-read
 
 ## Clarifications
 
-*(Recorded from the maintainer's answers; see `OPEN-DECISIONS.md`.)*
+### Session 2026-10-20
+
+- Q: Which agent instructions file is canonical? → A: `AGENTS.md` in both repos; main repo `CLAUDE.md` becomes a link to it; `AGENT.md` deleted (OD-1).
+- Q: What happens to `docs/superpowers/`, and do `specs.md` files keep their name? → A: archive to `docs/archive/superpowers/` with a banner; `specs.md` names kept (OD-2).
+- Q: Folder shape for long-running Go services? → A: thin `cmd/main.go` + `internal/<concern>/`; libraries flat; CLIs `cmd/<binary>/` (OD-3).
+- Q: Where does a big dashboard screen's code live? → A: `pages/<Screen>.tsx`, split into `pages/<Screen>/<Section>.tsx` over 500 lines; `routes/` only exposes pages; `components/` for parts used by 2+ screens (OD-4).
+- Q: Does CI enforce the layout? → A: spec 028 adds the check once modules conform; none in this spec (OD-5).
 
 ## User Scenarios & Testing *(mandatory)*
 
