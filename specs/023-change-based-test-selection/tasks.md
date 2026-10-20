@@ -32,7 +32,7 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 
 **Purpose**: repository prerequisites shared by every phase.
 
-- [ ] T001 Create the repository label `ci: full-run` (colour neutral, description "Force the full CI suite on this PR") via `POST repos/GameplanePanel/Gameplane/labels`; it is needed by OD-7 and by quickstart scenario 11
+- [X] T001 Create the repository label `ci: full-run` (colour neutral, description "Force the full CI suite on this PR") via `POST repos/GameplanePanel/Gameplane/labels`; it is needed by OD-7 and by quickstart scenario 11
 - [X] T002 [P] Read `hack/ci_scope.py` and `hack/test_ci_scope.py` end to end and write a scout brief at `specs/023-change-based-test-selection/briefs/ci-scope.md` listing every function, its `file:line`, its current outputs and the `changes`-job steps in `.github/workflows/ci.yaml` (lines ~71-301) that consume them (CLAUDE.md rule 18: fix agents edit from this brief only)
 
 ---
