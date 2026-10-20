@@ -19,6 +19,9 @@ type i18nLanguagePrefs struct {
 func i18nGetLanguage(t *testing.T, cli *APIClient) *string {
 	t.Helper()
 	resp, body, err := cli.Get("/users/me/preferences")
+	if resp != nil {
+		defer func() { _ = resp.Body.Close() }()
+	}
 	if err != nil {
 		t.Fatalf("GET /users/me/preferences: %v", err)
 	}
@@ -57,6 +60,9 @@ func TestAPI_I18n_LanguagePref(t *testing.T) {
 
 	// A listed tag is saved and echoed back by the preferences payload.
 	resp, body, err := admin.Do(http.MethodPut, "/users/me/language", map[string]any{"language": "fr"})
+	if resp != nil {
+		defer func() { _ = resp.Body.Close() }()
+	}
 	if err != nil {
 		t.Fatalf("PUT /users/me/language fr: %v", err)
 	}
@@ -69,6 +75,10 @@ func TestAPI_I18n_LanguagePref(t *testing.T) {
 
 	// Null clears the saved choice.
 	resp, body, err = admin.Do(http.MethodPut, "/users/me/language", map[string]any{"language": nil})
+	if resp != nil {
+		r := resp
+		defer func() { _ = r.Body.Close() }()
+	}
 	if err != nil {
 		t.Fatalf("PUT /users/me/language null: %v", err)
 	}

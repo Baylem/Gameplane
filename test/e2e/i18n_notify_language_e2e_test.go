@@ -63,6 +63,9 @@ func i18nAuthLocale(t *testing.T, port int) string {
 func i18nConfigSection(t *testing.T, admin *APIClient, section string) (json.RawMessage, bool) {
 	t.Helper()
 	resp, body, err := admin.Get("/admin/config/")
+	if resp != nil {
+		defer func() { _ = resp.Body.Close() }()
+	}
 	if err != nil {
 		t.Fatalf("GET /admin/config/: %v", err)
 	}
@@ -203,6 +206,10 @@ func TestAPI_I18n_NotifyLanguage(t *testing.T) {
 		url := fmt.Sprintf("http://e2e-notify-sink.gameplane-system.svc.cluster.local:8080/cgi-bin/hook?%s", s.query)
 		resp, body, err := admin.Do(http.MethodPut, "/admin/notifications/sinks/"+s.name+"/secret",
 			map[string]string{"kind": "webhook", "url": url, "authorization": ""})
+		if resp != nil {
+			r := resp
+			defer func() { _ = r.Body.Close() }()
+		}
 		if err != nil {
 			t.Fatalf("PUT secret %s: %v", s.name, err)
 		}
@@ -230,6 +237,9 @@ func TestAPI_I18n_NotifyLanguage(t *testing.T) {
 				"configRef": "gameplane-notify-e2e-notify-default"},
 		},
 	})
+	if resp != nil {
+		defer func() { _ = resp.Body.Close() }()
+	}
 	if err != nil {
 		t.Fatalf("PUT notifications config: %v", err)
 	}
@@ -248,6 +258,10 @@ func TestAPI_I18n_NotifyLanguage(t *testing.T) {
 
 	for _, s := range sinks {
 		resp, body, err := admin.Post("/admin/notifications/sinks/"+s.name+"/test", nil)
+		if resp != nil {
+			r := resp
+			defer func() { _ = r.Body.Close() }()
+		}
 		if err != nil {
 			t.Fatalf("POST test %s: %v", s.name, err)
 		}

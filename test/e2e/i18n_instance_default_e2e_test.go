@@ -57,6 +57,9 @@ func TestAPI_I18n_InstanceDefault(t *testing.T) {
 
 	// The admin sets a listed default; the unauthenticated endpoint reflects it.
 	resp, body, err := admin.Do(http.MethodPut, "/admin/config/i18n", map[string]string{"defaultLanguage": "fr"})
+	if resp != nil {
+		defer func() { _ = resp.Body.Close() }()
+	}
 	if err != nil {
 		t.Fatalf("PUT /admin/config/i18n fr: %v", err)
 	}
