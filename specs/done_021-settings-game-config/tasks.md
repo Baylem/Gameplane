@@ -4,7 +4,7 @@ description: "Task list for Feature 021: Edit game configuration from server Set
 
 # Tasks: Edit game configuration from server Settings
 
-**Input**: `specs/021-settings-game-config/spec.md`, `plan.md`, `OPEN-DECISIONS.md`.
+**Input**: `specs/done_021-settings-game-config/spec.md`, `plan.md`, `OPEN-DECISIONS.md`.
 **Local verification (rule 8)**: none beyond compile checks; CI is the verification authority.
 **Format**: `T### [P?] [Group] Description` — Groups: Web, Test, Docs, Visual.
 
@@ -35,16 +35,16 @@ description: "Task list for Feature 021: Edit game configuration from server Set
 - [X] T016 [Docs] This spec folder.
 
 ## Phase 6: Verification and merge
-- [ ] T017 CI green (web, web e2e mock, design vs browser visual diff).
-- [ ] T018 PR labels `type: feature`, `area: web`; human approval (rule 12).
-- [ ] T019 Archive to `specs/done_021-settings-game-config` after merge (rule 16).
+- [X] T017 CI green (web, web e2e mock, design vs browser visual diff). Done: PR #568 `ci report` passed, merged 2026-10-05.
+- [X] T018 PR labels `type: feature`, `area: web`; human approval (rule 12). Done: PR #568 labelled `type: feature`, `area: web`, `area: specs`; merged by the maintainer.
+- [X] T019 Archive to `specs/done_021-settings-game-config` after merge (rule 16).
 
 ## Phase 7: Clear a stored optional password (OD-2)
 - [X] T020 [Visual] `design.pen` OC804/QFEg9 Remove button, new frames h5clan (will be removed) and ffmEd (new password typed); export to `assets/design-export/`.
 - [X] T021 [Web] `ConfigFields.tsx` (Remove/Undo, removing state) and `GameConfig.tsx` (`removing` set, key absent while removing).
 - [X] T022 [Test] New tests for Remove, Undo, required password, typing after Remove; existing tests untouched.
 - [X] T023 [Visual] `web/e2e/screenshots/slice-gameconfig.spec.ts`: add h5clan and ffmEd states.
-- [ ] T024 CI green, PR labels `type: feature`, `area: web`, `area: specs`; human approval.
+- [X] T024 CI green, PR labels `type: feature`, `area: web`, `area: specs`; human approval. Done: PR #652 `ci report` passed, both CodeRabbit threads resolved (fixed in defc6b8), merged by the maintainer 2026-10-11.
 
 ## Notes
 - No existing test is modified. `wxINm` and `e9FnC` frames are not captured (need per-state fixtures).
