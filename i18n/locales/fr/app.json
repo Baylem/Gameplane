@@ -50,7 +50,7 @@
     "sourceHash": "ca566c8968e7"
   },
   "audit.noun.backup": {
-    "defaultMessage": "backup",
+    "defaultMessage": "sauvegarde",
     "description": "Audit log: object type in an action label, a backup",
     "sourceHash": "54d00d867758"
   },
@@ -80,7 +80,7 @@
     "sourceHash": "9bd535ac63d7"
   },
   "audit.noun.restore": {
-    "defaultMessage": "restore",
+    "defaultMessage": "restauration",
     "description": "Audit log: object type in an action label, a restore",
     "sourceHash": "f329e3a317ee"
   },
@@ -1340,7 +1340,7 @@
     "sourceHash": "e4d36f9a4e22"
   },
   "web.components.app_layout.backups": {
-    "defaultMessage": "Backups",
+    "defaultMessage": "Sauvegardes",
     "description": "Sidebar: navigation link to backups",
     "sourceHash": "3334fee2c77f"
   },
@@ -8865,7 +8865,7 @@
     "sourceHash": "cae7d57bc067"
   },
   "web.routes.server_detail.tab_backups": {
-    "defaultMessage": "Backups",
+    "defaultMessage": "Sauvegardes",
     "description": "Server detail: label of the Backups tab",
     "sourceHash": "3334fee2c77f"
   },
@@ -9310,7 +9310,7 @@
     "sourceHash": "a2502204eb21"
   },
   "web.routes.tabs.backups.backups": {
-    "defaultMessage": "Backups",
+    "defaultMessage": "Sauvegardes",
     "description": "Backups tab: stat card label for the number of backups; also the section heading above the backup list",
     "sourceHash": "3334fee2c77f"
   },
@@ -9370,7 +9370,7 @@
     "sourceHash": "c688cf4c4dda"
   },
   "web.routes.tabs.backups.restore": {
-    "defaultMessage": "Restore",
+    "defaultMessage": "Restaurer",
     "description": "Backups tab: row button that opens the restore dialog for one backup; disabled when the backup cannot be restored; keep it short",
     "sourceHash": "a76e13b98392"
   },
@@ -9965,7 +9965,7 @@
     "sourceHash": "a69c4dece144"
   },
   "web.routes.tabs.mods.category_technology": {
-    "defaultMessage": "Tech",
+    "defaultMessage": "Technologie",
     "description": "Mods: category filter chip for technology mods",
     "sourceHash": "d0da7ab8bc92"
   },
@@ -10515,7 +10515,7 @@
     "sourceHash": "0db10f2c2f33"
   },
   "web.routes.tabs.players.action_player_ok": {
-    "defaultMessage": "{action} {player} ok",
+    "defaultMessage": "{action} {player} : OK",
     "description": "Players: status line after a moderation action succeeds; {action} is the action verb, {player} the player name",
     "sourceHash": "f12766f027f9"
   },
@@ -11830,7 +11830,7 @@
     "sourceHash": "c7f3120ba190"
   },
   "web.routes.tabs.settings.networking.tags": {
-    "defaultMessage": "Tags",
+    "defaultMessage": "Étiquettes",
     "description": "Networking: field label for the optional Tailscale tags",
     "sourceHash": "1331275bc537"
   },
@@ -12560,7 +12560,7 @@
     "sourceHash": "42b95e4f0fe3"
   },
   "web.routes.theme_settings.export_import": {
-    "defaultMessage": "Export / Import",
+    "defaultMessage": "Exportation / Importation",
     "description": "Theme settings: title of the export and import card; keep it short",
     "sourceHash": "566eef188649"
   },
