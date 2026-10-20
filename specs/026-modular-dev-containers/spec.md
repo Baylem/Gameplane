@@ -24,6 +24,7 @@ This feature replaces "one size" with a set of dev container profiles at three s
 - Q: Should the dashboard + API part include a local Kubernetes cluster? (OD-2) → A: Yes, include kind (in-container Docker and a local cluster) so the dashboard shows real servers.
 - Q: Where should the website and module profiles live? (OD-3) → A: Also in the website and module repos, so each works when cloned on its own.
 - Q: How should spec 026 meet the E2E rule (Principle I)? (OD-4) → A: The CI build job is the E2E path; no `test/e2e/` Go test.
+- Q: Should the full profile fix today's version drift? (OD-5) → A: Align to the Makefile/CI values: kubectl 1.36, setup-envtest `release-0.24`, helm pinned. FR-003 allows exactly these changes.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -70,7 +71,7 @@ A maintainer who works across the whole project (releases, end-to-end debugging,
 
 **Acceptance Scenarios**:
 
-1. **Given** the full profile, **When** setup finishes, **Then** every tool, version, forwarded port, editor extension and editor setting of today's dev container is present.
+1. **Given** the full profile, **When** setup finishes, **Then** every tool, version, forwarded port, editor extension and editor setting of today's dev container is present, except that kubectl, setup-envtest and helm use the aligned versions from OD-5.
 2. **Given** an editor that opens the repository without the contributor picking a profile, **When** it starts a dev container, **Then** it uses the full profile, so existing workflows keep working.
 
 ---
@@ -140,7 +141,7 @@ A contributor (or a maintainer setting up a machine without dev containers) open
 
 - **FR-001**: The repository MUST offer several named dev container profiles that a dev-container-capable editor lists for the contributor to pick from when opening the repository.
 - **FR-002**: Profiles MUST come in three sizes: component profiles (one component each), part profiles (a named group of components worked on together) and one full profile. The initial catalogue (OD-1) is: component profiles for web, api, operator, agent, website and modules, plus one "Go services and libraries" profile covering every other Go module in the workspace; part profiles "dashboard + API" (web, api, the shared libraries they use, and a local Kubernetes cluster per OD-2), "control plane" (operator, api, agent, the Helm chart, a local Kubernetes cluster and the end-to-end test suite) and "modules + gp-module" (game modules and the module authoring tool); and the full profile.
-- **FR-003**: The full profile MUST include everything today's dev container includes: every tool and version, forwarded port, editor extension, editor setting, environment variable and setup step. It MUST be the profile used when no profile is picked.
+- **FR-003**: The full profile MUST include everything today's dev container includes: every tool and version, forwarded port, editor extension, editor setting, environment variable and setup step. The only allowed version changes are the three drift fixes from OD-5: kubectl 1.31 → 1.36, `setup-envtest@latest` → `@release-0.24`, and helm `latest` → a pinned version. It MUST be the profile used when no profile is picked.
 - **FR-004**: Each component and part profile MUST install only the tools, dependencies, submodules, editor extensions and forwarded ports its scope needs, as given by its components' dependency lists and the profile catalogue.
 - **FR-004a**: Every component in the profile catalogue MUST list its required system dependencies in its own folder, in one documented location and format used by all components. Each entry names the dependency, its kind (toolchain, command-line tool, OS package, service or submodule), the version it needs (taken from the version source) and a one-line reason. A component with no needs beyond the shared baseline MUST still have a list that says so.
 - **FR-004b**: Profiles MUST be assembled from the component dependency lists (plus the shared baseline and any part-level extras); the lists are the source of truth, not the profile definitions.
@@ -174,7 +175,7 @@ A contributor (or a maintainer setting up a machine without dev containers) open
 
 - **SC-001**: On the same machine, every component profile finishes setup in at most half the time the full profile takes, measured from a cold start with no cached images.
 - **SC-002**: Every component profile uses at most half the disk space of the full profile once setup finishes.
-- **SC-003**: The full profile has 100% of the tools, versions, ports, extensions and settings of today's dev container (zero missing items in the comparison of User Story 3).
+- **SC-003**: The full profile has 100% of the tools, versions, ports, extensions and settings of today's dev container (zero missing items in the comparison of User Story 3), apart from the three OD-5 version alignments.
 - **SC-004**: 100% of profiles pass the CI check on both amd64 and arm64 on the pull request that adds them, and on every later pull request that changes them.
 - **SC-005**: Across all profiles, each tool has exactly one version (zero drift), as reported by the CI check.
 - **SC-006a**: 100% of components in the catalogue have a dependency list, and for each one a plain machine with only the listed items plus the baseline passes that component's compile check.

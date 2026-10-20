@@ -24,7 +24,7 @@ Split today's single dev container into generated profiles at three sizes (compo
 
 **Performance Goals**: SC-001: every component profile finishes setup in at most half the full profile's time. SC-002: every component profile uses at most half the full profile's disk. Both are measured in the CI build job and written to the job summary.
 
-**Constraints**: No credentials in any profile (FR-012). Everything must work on arm64 (FR-013). Setup must be idempotent, and optional steps only warn (FR-011). Full profile parity with `master@8a67f2e` (FR-003), subject to OD-5. No local test or lint runs (Principle VI, CLAUDE.md rule 8).
+**Constraints**: No credentials in any profile (FR-012). Everything must work on arm64 (FR-013). Setup must be idempotent, and optional steps only warn (FR-011). Full profile parity with `master@8a67f2e` (FR-003), except the three OD-5 alignments. No local test or lint runs (Principle VI, CLAUDE.md rule 8).
 
 **Scale/Scope**: 7 component profiles, 3 part profiles and 1 full profile in the main repo, plus 1 profile each in the website and module repos. About 22 `system-deps.toml` files: 17 Go modules, `web/`, `charts/gameplane/`, `deploy/kind/`, `website/` and `modules/`.
 
@@ -37,7 +37,7 @@ Split today's single dev container into generated profiles at three sizes (compo
 | I. E2E-Tested Delivery | PASS (exemption, OD-4) | valgul ruled on 2026-10-20 that the `devcontainers.yaml` CI build job is the E2E path: it builds every real profile on amd64 and arm64 and runs its compile checks. No `test/e2e/` Go test is added. |
 | II. Design-First | PASS (exempt) | No dashboard or website screen changes. The website edit is text in `local-development-setup.mdx` and adds no new visual component. |
 | III. Ecosystem Best Practice | PASS | The generator is stdlib Python like the other `hack/` scripts. The setup script uses `set -euo pipefail`. No suppressions. |
-| IV. Spec-Driven | PASS once OD-5 is settled | spec, plan and tasks come before any code. Open items stay in `OPEN-DECISIONS.md`. |
+| IV. Spec-Driven | PASS (all decisions OD-1..OD-5 settled) | spec, plan and tasks come before any code. Open items stay in `OPEN-DECISIONS.md`. |
 | V. Delegate | PASS | Implementation runs through `Workflow` scripts at `haiku`, with review one tier up. Writing the 22 dependency files is scripted from one scout brief (rule 18). |
 | VI. CI Bears the Load | PASS | Profiles are verified only by CI build jobs. The ready messages point to CI for tests and lint. |
 
@@ -107,14 +107,14 @@ modules/ (GameplanePanel/module)
 
 ## Phasing (PRs)
 
-1. **Main repo, foundation**: `versions.toml`, `profiles.toml`, every main-repo `system-deps.toml`, the generator plus fixture tests, `setup.sh`, the generated full profile (parity with today, plus any OD-5 alignment), drift check, `make devcontainers` / `make check-devcontainers`.
+1. **Main repo, foundation**: `versions.toml`, `profiles.toml`, every main-repo `system-deps.toml`, the generator plus fixture tests, `setup.sh`, the generated full profile (parity with today plus the three OD-5 alignments), drift check, `make devcontainers` / `make check-devcontainers`.
 2. **Main repo, profiles + CI**: the generated component and part profiles, `devcontainers.yaml` build matrix, `need.sh` guards.
 3. **Website repo**: `system-deps.toml`, generated `.devcontainer/`, build job, docs page section. **Module repo**: same, minus the docs page. Then the main-repo submodule pointer bump (after both merge).
 4. **Main repo, docs**: `docs/contributing.md` table, `docs/dependencies.md`, `CLAUDE.md`. Then archive the spec.
 
 ## Open items blocking tasks
 
-- **OD-5** (FR-003): whether the full profile fixes today's version drift or keeps today's values exactly.
+None. OD-1 to OD-5 are settled (see `OPEN-DECISIONS.md`).
 
 ## Complexity Tracking
 

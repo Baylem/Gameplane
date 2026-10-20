@@ -24,7 +24,7 @@ Pick `Gameplane · dashboard + API`, run `make dev-up` and then `make web-dev`. 
 
 ## 4. Full profile parity (US3)
 
-Compare the generated `.devcontainer/devcontainer.json` against `git show 8a67f2e:.devcontainer/devcontainer.json`. Expected: same features, ports, extensions, settings and env. The only differences are the `postCreateCommand` path and any OD-5 alignment. Open Codespaces with default options. Expected: the full profile is used.
+Compare the generated `.devcontainer/devcontainer.json` against `git show 8a67f2e:.devcontainer/devcontainer.json`. Expected: same features, ports, extensions, settings and env. The only differences are the `postCreateCommand` path and the three OD-5 alignments (kubectl 1.36, setup-envtest `release-0.24`, pinned helm). Open Codespaces with default options. Expected: the full profile is used.
 
 ## 5. CI build matrix (FR-014, SC-001, SC-002, SC-004)
 

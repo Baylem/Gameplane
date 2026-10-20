@@ -68,4 +68,4 @@ The scout task (rule 18) confirms each entry, adds anything a Makefile target or
 - `setup-envtest@latest` (`post-create.sh`) against `setup-envtest@release-0.24` (`Makefile:171`).
 - `helm: latest` (feature) against a pinned `azure/setup-helm@v5.0.1` in CI. The action pins the action's own version, not Helm's.
 
-Because FR-003 requires parity with today, aligning any of these is a change valgul has to approve (OD-5).
+Decision (OD-5, valgul 2026-10-20): align all three. `versions.toml` gets `kubectl = "1.36"`, `setup_envtest = "release-0.24"`, `envtest_k8s = "1.36.2"`, and `helm` pinned to the current stable release on the day the foundation PR is written. The generator checks the Makefile's `ENVTEST_K8S_VERSION` and `setup-envtest@` ref against these keys.
