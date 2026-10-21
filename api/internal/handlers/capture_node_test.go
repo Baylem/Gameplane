@@ -118,7 +118,7 @@ func TestNodeExceptionCannotBeGrantedByGenericEditOrClone(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "capture-node-enable") {
 		t.Fatalf("generic create granted exception: %v", err)
 	}
-	rr := do(t, mountLifecycleRouter(k), http.MethodPost, "/servers/alpha:clone", map[string]any{"newName": "beta"})
+	rr := doWithUser(t, mountLifecycleRouter(k), http.MethodPost, "/servers/alpha:clone", map[string]any{"newName": "beta"}, testAdminUser())
 	if rr.Code != http.StatusOK {
 		t.Fatalf("clone: %d %s", rr.Code, rr.Body)
 	}
