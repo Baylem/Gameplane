@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/GameplanePanel/gameplane/capture-sidecar/internal/capture"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/GameplanePanel/gameplane/capture-sidecar/internal/capture"
 )
 
 func TestCgroupIdentityMatchesExactPodAndContainer(t *testing.T) {
