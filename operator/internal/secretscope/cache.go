@@ -19,7 +19,7 @@ func CacheOptions(games, controlPlane, ca, modules string) (cache.Options, error
 	namespaces := make(map[string]cache.Config)
 	for _, namespace := range append(strings.Split(games, ","), controlPlane, ca, modules) {
 		if problems := validation.IsDNS1123Label(namespace); len(problems) != 0 {
-			return cache.Options{}, fmt.Errorf("Secret namespace %q must be an explicit DNS-label namespace: %s", namespace, strings.Join(problems, "; "))
+			return cache.Options{}, fmt.Errorf("secret namespace %q must be an explicit DNS-label namespace: %s", namespace, strings.Join(problems, "; "))
 		}
 		namespaces[namespace] = cache.Config{}
 	}
