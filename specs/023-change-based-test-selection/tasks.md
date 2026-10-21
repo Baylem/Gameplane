@@ -67,7 +67,7 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 - [X] T010 [US4] In `hack/ci_scope.py`, build `SelectionResult` records (data-model.md) for every existing suite and job gate the `changes` job already decides (Go modules, lint legs, e2e buckets, game-bot tests, web, web-e2e-mock, helm, chart-template, docs, images) and emit them as the `selection` output from mode `summary`
 - [X] T011 [US4] In `hack/ci_scope.py` mode `summary`, append the Markdown table to `$GITHUB_STEP_SUMMARY`, with the one-line `full: <reason>` header on full scope
 - [X] T012 [US4] Expose `selection` as a `changes` job output in `.github/workflows/ci.yaml` and add a link line to it in the `report` job's rendered summary (no change to `report.needs`, so `hack/check-ci-report-coverage.sh` stays green)
-- [ ] T013 [US4] Open PR 1 (Phases 2–3) with labels `type: ci`, `area: shared`; verify in its own CI run that the summary table appears and that every job still runs as before
+- [X] T013 [US4] Open PR 1 (Phases 2–3) with labels `type: ci`, `area: shared`; verify in its own CI run that the summary table appears and that every job still runs as before
 
 **Checkpoint**: US4 delivers visibility alone; merge PR 1 before Phase 4.
 
