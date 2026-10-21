@@ -797,13 +797,26 @@ func (f *fakeLogReader) BackupLogs(_ context.Context, _, _ string) (io.ReadClose
 	return io.NopCloser(strings.NewReader(f.body)), nil
 }
 
-// seedGameServer creates a bare GameServer so reconcilers that resolve
-// Backup/Restore serverRefs find their target. No GameServer reconciler
-// runs in these suites, so the object stays inert (no children).
+// seedGameServer creates a GameServer and observed workload for backup tests.
+// No StatefulSet controller runs in envtest; report its generation explicitly
+// so backup admission can exercise the real workload fence.
 func seedGameServer(t *testing.T, ns, name string) {
 	t.Helper()
 	gs := buildGameServer(ns, name, "seed-template")
 	if err := k8sClient.Create(context.Background(), gs); err != nil {
 		t.Fatalf("seed gameserver %s/%s: %v", ns, name, err)
+	}
+	one := int32(1)
+	labels := map[string]string{"app": name}
+	ss := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns, OwnerReferences: []metav1.OwnerReference{{APIVersion: gameplanev1alpha1.GroupVersion.String(), Kind: "GameServer", Name: name, UID: gs.UID, Controller: ownerBoolPtr(true)}}},
+		Spec:       appsv1.StatefulSetSpec{Replicas: &one, ServiceName: name, Selector: &metav1.LabelSelector{MatchLabels: labels}, Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{Labels: labels}, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "game", Image: "test/game:fixture"}}}}},
+	}
+	if err := k8sClient.Create(context.Background(), ss); err != nil {
+		t.Fatalf("seed workload: %v", err)
+	}
+	ss.Status.ObservedGeneration = ss.Generation
+	if err := k8sClient.Status().Update(context.Background(), ss); err != nil {
+		t.Fatalf("observe workload: %v", err)
 	}
 }

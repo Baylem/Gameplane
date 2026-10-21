@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -41,6 +42,9 @@ type RestoreReconciler struct {
 	// DefaultBackupJobBackoffLimit / DefaultBackupJobActiveDeadlineSeconds.
 	JobBackoffLimit          *int32
 	JobActiveDeadlineSeconds int64
+	// OperationQuiescer completes an orphaned backup's cleanup before this
+	// restore can acquire the same target. It never quiesces a restore.
+	OperationQuiescer AgentQuiescer
 }
 
 // apiReader returns the uncached reader for live-consistency checks,
@@ -156,6 +160,9 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	claimed, err := r.claimRestoreTarget(ctx, &rs, &gs)
 	if err != nil {
+		if errors.Is(err, errLifecycleGenerationChanged) {
+			return r.fail(ctx, &rs, err.Error())
+		}
 		return ctrl.Result{}, err
 	}
 	if !claimed {
