@@ -19,6 +19,20 @@ It was one of three `go.work` modules without CI lint coverage until this featur
 - Validate multi-cluster dispatch, upgrade-from-previous-release, wake-on-connect, module signing/SSRF rejection, and backup/restore round trips end to end.
 - Enforce, via `buckets.sh`, that every test in the suite is assigned to exactly one CI bucket so nothing silently drops out of coverage.
 
+### Panel recovery drill
+
+The amd64 `recovery` bucket runs `TestPanel_OfflineRecovery` in a unique namespace
+with its own standalone API, SQL database/archive PVCs, separately mounted keys
+and private login budget. It exercises stopped SQLite backup, working database
+loss, restore and offline bearer invalidation. It verifies correct-key users,
+custom roles/scoped grants, encrypted-registration-backed GameServer UID reads,
+wrong-key startup failure/no HTTP response, old session/share rejection, retained
+audit evidence and an unchanged continuously running game Pod/container. The
+read-only original archive is never changed by invalidation. Actual fixture
+recovery-point age/RTO and acceptance evidence are uploaded as JSON, with no key,
+credential, cookie, share token or raw SQL rows. It does not stop the installed
+panel/operator or claim PostgreSQL PITR coverage. See `docs/panel-recovery.md`.
+
 ### Remote gateway parity acceptance
 
 The multicluster bucket runs `TestMultiCluster_GatewayParity` against two real
