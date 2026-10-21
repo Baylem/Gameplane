@@ -10,6 +10,8 @@ The operator is a Kubernetes controller-runtime-based process that reconciles Ga
 
 ## Responsibilities
 
+- Preserve explicit optional numeric performance declarations in template capabilities passed to the agent; CRD validation restricts signal/unit pairs and finite decimal thresholds. Tunnel containers name their existing 8091 listener `relay-metrics` for PodMonitor discovery; health, resources and provider identity policies remain unchanged.
+
 - **Relay health:** frp identities use GameServer UID without changing advertised port names. frp/Playit Deployments use one replica, Recreate, a wrapper startup probe and a provider readiness probe on TCP 8091. `TunnelReady` requires the current observed generation and updated/ready replicas with the new probe; legacy unprobed Pods cannot report success. Playit v1.0.10's cached IPC assignment cannot confirm a relay connection, so it reports unknown/not ready rather than optimistic success. Preserve `TunnelResources` defaults and override removal. See `docs/relay-health.md` for health bounds, migration and the provider limitation.
 
 - **GameServer lifecycle:** reconcile GameServer CRs into StatefulSets, Services, PVCs, and pod-injected agent sidecars; manage pod affinity, RCON/console integration, file I/O, and graceful stop sequences.

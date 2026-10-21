@@ -163,6 +163,24 @@ spec:
             {{- toYaml . | nindent 12 }}
       ports:
         - { protocol: TCP, port: 9090 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-to-tunnel
+  namespace: {{ $.Values.gamesNamespace }}
+  labels: {{- include "gameplane.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: gameplane-tunnel
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+      ports:
+        - { protocol: TCP, port: 8091 }
 {{- end }}
 {{- end }}
 ---

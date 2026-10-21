@@ -1052,6 +1052,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
       - run: helm lint charts/gameplane
+      - name: evaluate monitoring rules
+        run: bash charts/gameplane/tests/monitoring-rules.sh
 
   standalone-compose:
     name: standalone Compose smoke
@@ -1203,10 +1205,16 @@ jobs:
             | grep -q 'app.kubernetes.io/name: gameplane-telemetry-receiver'
           awk '/kind: Service/,/^---$/' /tmp/telemetry-receiver-scrape.yaml \
             | grep -q 'name: dashboard'
-          # scrapeNamespaceSelector unset (the chart default): neither
-          # exception renders, matching the pre-fix behavior.
+          # Missing scrape ingress must fail with actionable guidance.
+          if helm template gameplane charts/gameplane --set serviceMonitors.enabled=true > /tmp/monitoring-invalid.txt 2>&1; then
+            echo "::error::monitoring without a scrape selector unexpectedly rendered"
+            exit 1
+          fi
+          grep -q 'serviceMonitors.scrapeNamespaceSelector' /tmp/monitoring-invalid.txt
+          # Explicit external policy ownership renders no chart exception.
           helm template gameplane charts/gameplane \
             --set serviceMonitors.enabled=true \
+            --set serviceMonitors.externallyManagedPolicy=true \
             --show-only templates/networkpolicies.yaml > /tmp/netpol-default.yaml
           if grep -q 'allow-prometheus-to-agent' /tmp/netpol-default.yaml; then
             echo "::error::allow-prometheus-to-agent rendered without serviceMonitors.scrapeNamespaceSelector set"
@@ -1383,7 +1391,8 @@ jobs:
           # keeps working without api.telemetry.enabled.
           helm template gameplane charts/gameplane \
             --set api.telemetry.receiver.enabled=true \
-            --set serviceMonitors.enabled=true > /tmp/rendered-reuse-values-receiver.yaml
+            --set serviceMonitors.enabled=true \
+            --set serviceMonitors.externallyManagedPolicy=true > /tmp/rendered-reuse-values-receiver.yaml
           python3 - <<'PY'
           import yaml
           docs = [d for d in yaml.safe_load_all(open('/tmp/rendered-reuse-values-receiver.yaml')) if d]
@@ -1668,9 +1677,13 @@ jobs:
         # (operator does zero logins and is wait-dominated, so it runs
         # wide; the api buckets stay within the login limiter's budget).
         # The arm64 job below uses the same steps and per-bucket settings.
-        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components, management-placement, network-isolation]
+        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components, management-placement, network-isolation, monitoring]
         arch: [amd64]
         include:
+          - bucket: monitoring
+            parallel: 1
+            test_timeout: 20m
+            job_timeout: 75
           - bucket: network-isolation
             parallel: 1
             test_timeout: 15m
@@ -1732,8 +1745,11 @@ jobs:
       - name: bring up cluster + helm install
         env:
           GAMEPLANE_E2E_PROFILE: ${{ matrix.bucket == 'management-placement' && 'management' || 'default' }}
-          GAMEPLANE_E2E_CNI: ${{ matrix.bucket == 'network-isolation' && 'cilium' || 'kindnet' }}
+          GAMEPLANE_E2E_CNI: ${{ (matrix.bucket == 'network-isolation' || matrix.bucket == 'monitoring') && 'cilium' || 'kindnet' }}
         run: ./deploy/kind/e2e.sh up "$CLUSTER" e2e "$GAMEPLANE_E2E_PROFILE"
+      - name: install real monitoring fixture
+        if: matrix.bucket == 'monitoring'
+        run: bash deploy/kind/monitoring.sh
       - name: run go e2e (${{ matrix.bucket }})
         run: |
           RUN_REGEX="$(./test/e2e/buckets.sh regex '${{ matrix.bucket }}')"
@@ -1758,7 +1774,7 @@ jobs:
         uses: ./.github/actions/dump-cluster-state
         with:
           context: ${{ env.CTX }}
-          namespaces: "gameplane-system,gameplane-games"
+          namespaces: "${{ matrix.bucket == 'monitoring' && 'gameplane-system,gameplane-games,monitoring' || 'gameplane-system,gameplane-games' }}"
           include-previous-logs: "true"
 
   e2e-go-arm64:
@@ -2525,7 +2541,7 @@ jobs:
               'go-e2e-unit': (n) => n === 'go (test/e2e)',
               'api-postgres': (n) => n === 'api (postgres)',
               'e2e-buckets': (n) => n === 'e2e bucket coverage',
-              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components) \//.test(n) && n.includes('/ amd64 '),
+              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components|management-placement|network-isolation|monitoring) \//.test(n) && n.includes('/ amd64 '),
               'e2e-go-arm64': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components) \//.test(n) && n.includes('/ arm64 '),
               'e2e-multicluster': (n) => n.startsWith('e2e multicluster /') && n.includes('/ amd64 '),
               'e2e-multicluster-arm64': (n) => n.startsWith('e2e multicluster /') && n.includes('/ arm64 '),
@@ -2678,7 +2694,7 @@ jobs:
             const bucketSet = new Set();
             for (const j of apiJobs) {
               const n = j.name || '';
-              const m = n.match(/^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components) \//);
+              const m = n.match(/^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components|management-placement|network-isolation|monitoring) \//);
               if (m) bucketSet.add(m[1]);
               if (/^e2e multicluster \//.test(n)) bucketSet.add('multicluster');
               if (/^e2e upgrade \//.test(n)) bucketSet.add('upgrade');

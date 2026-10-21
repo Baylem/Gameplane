@@ -19,6 +19,8 @@ It was one of three `go.work` modules without CI lint coverage until this featur
 
 ## Responsibilities
 
+- The serial `monitoring` bucket installs a checksum-pinned Prometheus Operator and Prometheus in a distinct namespace on the Cilium profile. It discovers real agent/tunnel targets through the documented chart values, verifies cached numeric samples, valid zero, invalid-value omission, no scrape-driven commands, policy revocation/recovery and refusal from an unapproved namespace. It performs no API login and does not opt in external modules.
+
 - The optional-components lifecycle's `frp-identity-health` subtest runs two same-template TCP/UDP echo GameServers through one real frps. It asserts backend identity, registration rejection, replacement isolation, invalid credentials, relay outage/recovery and secret-free logs. It shares the lifecycle's controlled fixture and serial bucket; no extra top-level test or login budget is introduced.
 
 - Boot and tear down (or reuse) a kind cluster, install the working-tree Helm chart, and wait for every component to come up healthy.

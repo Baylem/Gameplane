@@ -34,7 +34,8 @@ func (o relayObservation) ready() bool {
 
 type relaySnapshot struct {
 	relayObservation
-	Ready bool `json:"ready"`
+	Ready   bool `json:"ready"`
+	checked time.Time
 }
 
 type relayHealth struct {
@@ -76,11 +77,12 @@ func (h *relayHealth) snapshot(now time.Time) relaySnapshot {
 	if h.checked.IsZero() || now.Sub(h.checked) >= healthStaleAfter {
 		return relaySnapshot{relayObservation: relayObservation{Connection: "unknown"}}
 	}
-	return relaySnapshot{relayObservation: h.observation, Ready: h.observation.ready()}
+	return relaySnapshot{relayObservation: h.observation, Ready: h.observation.ready(), checked: h.checked}
 }
 
 func relayHealthHandler(h *relayHealth) http.Handler {
 	mux := http.NewServeMux()
+	mux.Handle("/metrics", relayMetrics(h))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
 		if !h.snapshot(time.Now()).Ready {

@@ -10,6 +10,8 @@ Relay client supervisor that configures and supervises frp/playit child processe
 
 ## Responsibilities
 
+- Expose cached provider evidence as bounded Prometheus gauges on `/metrics` at the existing health port 8091, including known/unknown connection, confirmed forwards/assignment and observation timestamp. Scraping never queries the provider; unknown or stale connection evidence has no `connected` value. Tailscale uses the same snapshot for readiness and metrics. See `docs/monitoring.md`.
+
 1. Parse environment variables to determine the tunnel provider (frp, tailscale, or playit), backing service address, and provider-specific config.
 2. Read provider-specific credentials from the mounted Secret at `/etc/gameplane/tunnel-auth` (read-only).
 3. Render frp TOML or playit credentials at fixed paths, with secrets excluded from argv.

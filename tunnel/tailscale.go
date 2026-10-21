@@ -80,11 +80,12 @@ func runTailscale(ctx context.Context, cfg Config, authKey string) error {
 		return err
 	}
 	var ready atomic.Bool
+	healthHistory := &relayHealth{}
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", ":8091")
 	if err != nil {
 		return fmt.Errorf("Tailscale health listener: %w", err)
 	}
-	health := &http.Server{Handler: tailscaleHealth(&ready), ReadHeaderTimeout: 2 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second, IdleTimeout: 10 * time.Second}
+	health := &http.Server{Handler: relayHealthHandler(healthHistory), ReadHeaderTimeout: 2 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second, IdleTimeout: 10 * time.Second}
 	healthDone := make(chan error, 1)
 	go func() { healthDone <- health.Serve(listener) }()
 	defer func() { _ = health.Close() }()
@@ -94,7 +95,7 @@ func runTailscale(ctx context.Context, cfg Config, authKey string) error {
 		if err != nil {
 			return err
 		}
-		healthHistory := &relayHealth{}
+		healthHistory.clear()
 		err = serveTailnetObserved(ctx, embeddedTailnet{server}, tags, ports, &ready, 2*time.Second, func(healthy bool) {
 			observation := relayObservation{Connection: "unknown"}
 			if healthy {
@@ -103,6 +104,7 @@ func runTailscale(ctx context.Context, cfg Config, authKey string) error {
 			healthHistory.observe(time.Now(), observation, backoff)
 		})
 		ready.Store(false)
+		healthHistory.clear()
 		_ = server.Close()
 		if ctx.Err() != nil {
 			return nil

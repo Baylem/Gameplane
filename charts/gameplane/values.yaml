@@ -676,6 +676,9 @@ updates:
   channel: ""
 
 serviceMonitors:
+  # Explicit escape for independently managed scrape ingress policies. This
+  # does not open any ports; you must install and verify those policies.
+  externallyManagedPolicy: false
   enabled: false   # when true, creates ServiceMonitors for operator/api/telemetry-receiver and a PodMonitor for agent sidecars on their separate plain metrics port 9090 (the control port 8090 stays mTLS-only)
   labels: {}       # additional labels applied to ServiceMonitor/PodMonitor objects for Prometheus selector matching
   # Namespace selector (standard Kubernetes namespaceSelector label match
@@ -688,8 +691,8 @@ serviceMonitors:
   # api.telemetry.receiver.dashboard.tokenSecretRef.name) when
   # networkPolicies.enabled is also true. Required
   # alongside enabled: true whenever networkPolicies.enabled is also true;
-  # left empty, both stay unreachable to Prometheus even though their
-  # ServiceMonitor/PodMonitor objects are rendered. Example:
+  # left empty, chart validation fails unless externallyManagedPolicy is true.
+  # Also permits tunnel health/metrics on port 8091. Example:
   # `{matchLabels: {kubernetes.io/metadata.name: monitoring}}`.
   scrapeNamespaceSelector: {}
 
