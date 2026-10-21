@@ -91,12 +91,23 @@ func TestBackupGuardSerializesAcrossBackupsAndRestart(t *testing.T) {
 	if len(jobs.Items) != 1 || q.quiesced != 1 || q.unquiesced != 0 {
 		t.Fatalf("overlapping protected copies: jobs=%d, agent=%+v", len(jobs.Items), q)
 	}
+	first := guardGetBackup(t, r, "first")
+	if first.Status.CaptureManifest == nil || first.Status.CaptureManifest.QuiesceOutcome != "confirmed" {
+		t.Fatalf("worker started without confirmed capture-time metadata: %+v", first.Status)
+	}
+	if second := guardGetBackup(t, r, "second"); second.Status.CaptureManifest != nil {
+		t.Fatalf("queued copy recorded metadata before admission: %+v", second.Status.CaptureManifest)
+	}
 	job := &jobs.Items[0]
 	job.Status.Succeeded = 1
 	if err := r.Status().Update(context.Background(), job); err != nil {
 		t.Fatal(err)
 	}
 	guardPass(t, r, "first")
+	first = guardGetBackup(t, r, "first")
+	if condition := meta.FindStatusCondition(first.Status.Conditions, "Consistency"); condition == nil || condition.Status != metav1.ConditionTrue || condition.Reason != "Quiesced" {
+		t.Fatalf("completed copy did not expose achieved quiesce: %+v", first.Status)
+	}
 	guardPass(t, r, "second")
 	if q.quiesced != 2 || q.unquiesced != 1 {
 		t.Fatalf("second did not acquire after first cleanup: %+v", q)

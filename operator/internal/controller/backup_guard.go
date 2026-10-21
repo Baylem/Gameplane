@@ -267,7 +267,16 @@ func (r *BackupReconciler) prepareBackupQuiesce(ctx context.Context, b *gameplan
 	if err != nil || !fenced {
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
 	}
-	return ctrl.Result{}, r.maybeQuiesce(ctx, b)
+	if err := r.maybeQuiesce(ctx, b); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.recordBackupManifest(ctx, b, gs); err != nil {
+		// Metadata must be durable before capture. Do not leave saving paused
+		// indefinitely when a lookup/status write prevents the copy starting.
+		_, failErr := r.fail(ctx, b, "cannot record capture metadata: "+err.Error())
+		return ctrl.Result{RequeueAfter: time.Second}, failErr
+	}
+	return ctrl.Result{}, nil
 }
 
 // Return only the originally bound GameServer. A foreign owner means this

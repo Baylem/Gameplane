@@ -273,6 +273,11 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// Re-entering the full pipeline would re-validate the GameServer and repo
 	// Secret (flipping an already-Succeeded Backup to Failed if either was since
 	// deleted) and would re-create a cleaned-up Job, running a second backup.
+	if b.Status.Phase == gameplanev1alpha1.BackupPhaseSucceeded || b.Status.Phase == gameplanev1alpha1.BackupPhaseFailed {
+		if err := r.syncBackupConsistency(ctx, &b); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 	if b.Status.Phase == gameplanev1alpha1.BackupPhaseSucceeded && b.Status.SnapshotID == "" {
 		return r.retrySnapshotScrape(ctx, &b)
 	}
@@ -537,6 +542,7 @@ func (r *BackupReconciler) mirrorJobStatus(
 		cond.Reason = string(phase)
 	}
 	newConds := upsertCondition(b.Status.Conditions, cond)
+	newConds = upsertCondition(newConds, backupConsistencyCondition(b))
 	if !sameConditions(b.Status.Conditions, newConds) {
 		b.Status.Conditions = newConds
 		dirty = true
@@ -918,6 +924,7 @@ func (r *BackupReconciler) fail(ctx context.Context, b *gameplanev1alpha1.Backup
 		Message:            msg,
 		ObservedGeneration: b.Generation,
 	})
+	b.Status.Conditions = upsertCondition(b.Status.Conditions, backupConsistencyCondition(b))
 	if err := r.Status().Update(ctx, b); err != nil {
 		return ctrl.Result{}, err
 	}
