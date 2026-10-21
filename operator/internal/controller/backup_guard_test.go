@@ -28,13 +28,30 @@ import (
 type guardQuiescer struct {
 	quiesced, unquiesced int
 	quiesceErr           error
+	unquiesceErr         error
+	checkErr             error
+	afterQuiesce         func()
 }
 
 func (q *guardQuiescer) Quiesce(context.Context, string, string) error {
 	q.quiesced++
 	return q.quiesceErr
 }
-func (q *guardQuiescer) Unquiesce(context.Context, string, string) error { q.unquiesced++; return nil }
+func (q *guardQuiescer) Unquiesce(context.Context, string, string) error {
+	q.unquiesced++
+	return q.unquiesceErr
+}
+func (q *guardQuiescer) CheckPod(context.Context, string, string, string) error { return q.checkErr }
+func (q *guardQuiescer) QuiescePod(ctx context.Context, namespace, server, podUID string) error {
+	err := q.Quiesce(ctx, namespace, server)
+	if q.afterQuiesce != nil {
+		q.afterQuiesce()
+	}
+	return err
+}
+func (q *guardQuiescer) UnquiescePod(ctx context.Context, namespace, server, podUID string) error {
+	return q.Unquiesce(ctx, namespace, server)
+}
 
 func guardBackup(name string) *gameplanev1alpha1.Backup {
 	return &gameplanev1alpha1.Backup{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "ns", UID: types.UID(name + "-uid"), Finalizers: []string{gameplanev1alpha1.BackupFinalizer, gameplanev1alpha1.BackupSnapshotFinalizer}}, Spec: gameplanev1alpha1.BackupSpec{ServerRef: gameplanev1alpha1.LocalObjectRef{Name: "server"}, RepoRef: &gameplanev1alpha1.SecretKeySelector{Name: "repo"}, Quiesce: true}}
@@ -52,6 +69,7 @@ func guardFixture(t *testing.T, backups ...*gameplanev1alpha1.Backup) (*BackupRe
 	objects := []client.Object{&gameplanev1alpha1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "server", Namespace: "ns", UID: "server-uid"}, Spec: gameplanev1alpha1.GameServerSpec{TemplateRef: gameplanev1alpha1.GameTemplateRef{Name: "template"}}}, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "repo", Namespace: "ns"}, Data: map[string][]byte{"repo": []byte("repo"), "password": []byte("password")}}}
 	one := int32(1)
 	objects = append(objects, &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "server", Namespace: "ns", UID: "workload-uid", OwnerReferences: []metav1.OwnerReference{{APIVersion: gameplanev1alpha1.GroupVersion.String(), Kind: "GameServer", Name: "server", UID: "server-uid", Controller: ownerBoolPtr(true)}}}, Spec: appsv1.StatefulSetSpec{Replicas: &one}})
+	objects = append(objects, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "server-0", Namespace: "ns", UID: "game-pod-uid", OwnerReferences: []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "StatefulSet", Name: "server", UID: "workload-uid", Controller: ownerBoolPtr(true)}}}, Status: corev1.PodStatus{Phase: corev1.PodRunning}})
 	for _, b := range backups {
 		objects = append(objects, b)
 	}
