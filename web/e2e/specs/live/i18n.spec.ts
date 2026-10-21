@@ -94,7 +94,9 @@ test.describe("live: i18n", () => {
     await page.evaluate(() => {
       (window as I18nWindow).__i18nMark = 1;
     });
-    await french.click();
+    // HeroUI's Radio hides the input under its decorative control, which
+    // intercepts a pointer click; click the visible label text instead.
+    await page.getByText("Français", { exact: true }).click();
 
     const html = page.locator("html");
     await expect(html).toHaveAttribute("lang", "fr", { timeout: 15_000 });
