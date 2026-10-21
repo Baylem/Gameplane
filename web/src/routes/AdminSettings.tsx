@@ -586,7 +586,7 @@ function AuthSection({ initial, general, installTimeSettings }: { initial?: Auth
                 <div className="text-sm">{p.displayName || p.name}</div>
                 <div className="truncate text-xs text-muted">
                   {p.kind}
-                  {p.issuer ? intl.formatMessage({ id: "web.routes.admin_settings.provider_issuer_suffix", defaultMessage: " · {issuer}", description: "Admin settings: issuer shown after the provider type; {issuer} is the issuer URL" }, { issuer: p.issuer }) : p.configRef ? intl.formatMessage({ id: "web.routes.admin_settings.provider_secret_suffix", defaultMessage: " · {ref}", description: "Admin settings: Secret reference shown after the provider type when no issuer is set; {ref} is the Secret name" }, { ref: p.configRef }) : ""}
+                  {p.issuer ? " " + intl.formatMessage({ id: "web.routes.admin_settings.provider_issuer_suffix", defaultMessage: "· {issuer}", description: "Admin settings: issuer shown after the provider type; {issuer} is the issuer URL" }, { issuer: p.issuer }) : p.configRef ? " " + intl.formatMessage({ id: "web.routes.admin_settings.provider_secret_suffix", defaultMessage: "· {ref}", description: "Admin settings: Secret reference shown after the provider type when no issuer is set; {ref} is the Secret name" }, { ref: p.configRef }) : ""}
                 </div>
               </div>
               <button
@@ -1714,7 +1714,7 @@ function NotificationsSection({ initial }: { initial?: NotificationsCfg }) {
                 <div className="truncate text-xs text-muted">
                   {/* The stored kind identifier, not a translated label. */}
                   {s.kind}
-                  {s.configRef ? intl.formatMessage({ id: "web.routes.admin_settings.sink_secret_ref", defaultMessage: " · Secret: {ref}", description: "Admin settings: secret reference shown under a notification sink; {ref} is the Secret name" }, { ref: s.configRef }) : intl.formatMessage({ id: "web.routes.admin_settings.sink_no_secret", defaultMessage: " · no Secret configured", description: "Admin settings: shown under a notification sink that has no Secret configured" })}
+                  {s.configRef ? " " + intl.formatMessage({ id: "web.routes.admin_settings.sink_secret_ref", defaultMessage: "· Secret: {ref}", description: "Admin settings: secret reference shown under a notification sink; {ref} is the Secret name" }, { ref: s.configRef }) : " " + intl.formatMessage({ id: "web.routes.admin_settings.sink_no_secret", defaultMessage: "· no Secret configured", description: "Admin settings: shown under a notification sink that has no Secret configured" })}
                 </div>
               </div>
               {s.configRef ? (

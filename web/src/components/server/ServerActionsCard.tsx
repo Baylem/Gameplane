@@ -484,7 +484,7 @@ function ParamField({
           >
             <Label className="text-sm">
               {label}
-              {param.required && <span className="text-danger">{intl.formatMessage({ id: "web.common.required_marker", defaultMessage: " *", description: "Asterisk shown after the label of a required field" })}</span>}
+              {param.required && <span className="text-danger">{" " + intl.formatMessage({ id: "web.common.required_marker", defaultMessage: "*", description: "Asterisk shown after the label of a required field" })}</span>}
             </Label>
             <Select.Trigger id={id} className="w-full rounded border border-border bg-surface px-3 py-2 text-sm hover:bg-surface/80">
               <Select.Value />
@@ -517,7 +517,7 @@ function ParamField({
             </Checkbox.Control>
             <Checkbox.Content className="text-sm">
               {label}
-              {param.required && <span className="text-danger">{intl.formatMessage({ id: "web.common.required_marker", defaultMessage: " *", description: "Asterisk shown after the label of a required field" })}</span>}
+              {param.required && <span className="text-danger">{" " + intl.formatMessage({ id: "web.common.required_marker", defaultMessage: "*", description: "Asterisk shown after the label of a required field" })}</span>}
             </Checkbox.Content>
           </Checkbox>
         </div>
@@ -525,7 +525,7 @@ function ParamField({
         <div className="space-y-1">
           <Label htmlFor={id} className="text-sm">
             {label}
-            {param.required && <span className="text-danger">{intl.formatMessage({ id: "web.common.required_marker", defaultMessage: " *", description: "Asterisk shown after the label of a required field" })}</span>}
+            {param.required && <span className="text-danger">{" " + intl.formatMessage({ id: "web.common.required_marker", defaultMessage: "*", description: "Asterisk shown after the label of a required field" })}</span>}
           </Label>
           <Input
             id={id}
