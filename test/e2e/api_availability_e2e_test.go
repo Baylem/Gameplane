@@ -93,10 +93,16 @@ func TestUpgrade_PostgresAvailability(t *testing.T) {
 	assertAPIStatus(t, client, "/readyz", http.StatusOK)
 	assertAPIStatus(t, client, "/users/me", http.StatusOK)
 	resp, body, err := client.Patch("/users/"+userID, map[string]string{"displayName": "after singleton upgrade"})
+	if err == nil {
+		_ = resp.Body.Close()
+	}
 	if err != nil || resp.StatusCode != http.StatusOK {
 		t.Fatalf("pre-upgrade user could not be updated: %v %s", err, body)
 	}
 	resp, body, err = client.Get("/admin/audit/verify")
+	if err == nil {
+		_ = resp.Body.Close()
+	}
 	var auditResult struct {
 		OK      bool  `json:"ok"`
 		Checked int64 `json:"checked"`
@@ -131,6 +137,9 @@ func TestUpgrade_PostgresAvailability(t *testing.T) {
 	}
 	envInstance.Eventually(t, 45*time.Second, func() (bool, string) {
 		resp, body, err := client.Get("/readyz")
+		if err == nil {
+			_ = resp.Body.Close()
+		}
 		return err == nil && resp.StatusCode == http.StatusServiceUnavailable && string(body) == "not ready\n", fmt.Sprintf("readiness: %v %s", err, body)
 	})
 	assertAPIStatus(t, client, "/healthz", http.StatusOK)
@@ -149,6 +158,9 @@ func TestUpgrade_PostgresAvailability(t *testing.T) {
 			return false, "API restarted during database outage"
 		}
 		resp, body, err := client.Get("/healthz")
+		if err == nil {
+			_ = resp.Body.Close()
+		}
 		return err == nil && resp.StatusCode == http.StatusOK, fmt.Sprintf("liveness: %v %s", err, body)
 	})
 	current, err := envInstance.K8s.CoreV1().Pods(ns).Get(ctx, pod.Name, metav1.GetOptions{})
@@ -163,6 +175,9 @@ func TestUpgrade_PostgresAvailability(t *testing.T) {
 	restore()
 	envInstance.Eventually(t, 90*time.Second, func() (bool, string) {
 		resp, body, err := client.Get("/readyz")
+		if err == nil {
+			_ = resp.Body.Close()
+		}
 		return err == nil && resp.StatusCode == http.StatusOK, fmt.Sprintf("recovery readiness: %v %s", err, body)
 	})
 	assertAPIStatus(t, client, "/users/me", http.StatusOK)
@@ -211,6 +226,9 @@ func TestUpgrade_PostgresAvailability(t *testing.T) {
 func assertAPIStatus(t *testing.T, client *APIClient, path string, want int) []byte {
 	t.Helper()
 	resp, body, err := client.Get(path)
+	if err == nil {
+		_ = resp.Body.Close()
+	}
 	if err != nil || resp.StatusCode != want {
 		t.Fatalf("%s: want %d: %v %s", path, want, err, body)
 	}
@@ -247,6 +265,7 @@ func writeUsersDuringAPIUpgrade(ctx context.Context, t *testing.T, client *APICl
 				if err != nil {
 					return // The old Pod's port-forward ends with the old process.
 				}
+				_ = resp.Body.Close()
 				if resp.StatusCode == http.StatusOK {
 					successes.Add(1)
 				}
