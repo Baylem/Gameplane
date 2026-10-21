@@ -10,7 +10,8 @@ from subprocess import CompletedProcess
 
 from ci_scope import (E2E_BUCKETS, FORCE_ALL_FILES, ROOT, affected_modules, bot_matrix,
                       bucket_lists, changed_paths, e2e_outputs, full_scope_reason, image_inputs,
-                      load_suites, main, publish_paths, select_images, summarize, verify_suites,
+                      is_unmapped, load_suites, main, publish_paths, select_images, summarize,
+                      verify_suites,
                       workspace_modules)
 
 
@@ -511,6 +512,35 @@ class E2ERunTests(unittest.TestCase):
         self.assertNotIn("ratelimit",
                          e2e_outputs(ROOT, ["agent/internal/console/console.go"], None)["e2e-run"])
         self.assertIn("ratelimit", e2e_outputs(ROOT, ["api/cmd/main.go"], None)["e2e-run"])
+
+
+class UnmappedPathTests(unittest.TestCase):
+    """An unmapped path widens mode modules to every module (spec 023 FR-002)."""
+
+    def setUp(self):
+        """Create the shared Go workspace fixture for each test."""
+        make_go_workspace(self)
+
+    def test_known_and_unknown_paths(self):
+        modules = ["lib", "api", "test/e2e", "other"]
+        for path in ("README.md", "api/x.go", "charts/gameplane/values.yaml", "docs/a.txt",
+                     "hack/ci_scope.py", ".dockerignore", "web/src/App.tsx", "modules"):
+            with self.subTest(path=path):
+                self.assertFalse(is_unmapped(path, modules))
+        self.assertTrue(is_unmapped("tools/x.sh", modules))
+
+    def test_modules_mode_selects_every_module_for_an_unmapped_path(self):
+        output = self.root / "output"
+        output.write_text("", encoding="utf-8")
+        with patch("ci_scope.ROOT", self.root), patch("sys.argv", ["ci_scope.py", "modules"]), \
+                patch.dict("os.environ", {"GITHUB_EVENT_NAME": "pull_request",
+                                          "GITHUB_REF": "refs/pull/7/merge", "CI_FULL_RUN": "false",
+                                          "GITHUB_OUTPUT": str(output)}), \
+                patch("ci_scope.changed_paths", return_value=["tools/x.sh"]):
+            main()
+        values = {key: json.loads(value) for key, value in
+                  (line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines())}
+        self.assertEqual(values, FULL_VALUES)
 
 
 if __name__ == "__main__":

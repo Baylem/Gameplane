@@ -1199,3 +1199,79 @@ with
   `components` may be empty when `paths` is set (the `TestCISelection_` entry).
 - `tasks.md`: tick T014–T029 `[X]` after the PR opens; reword T020/T022–T025 to say mode
   `e2e`, and T025 to say "skip unselected legs with `RUN_REGEX`" instead of `e2e-exclude`.
+
+## 8. Follow-up fix: an unmapped path must also widen mode `modules`
+
+Mode `e2e` sets `all` for an unmapped path, and `combine` folds it into `CI`, which turns
+the `go` and `lint` gates on. But mode `modules` still emits `go-exclude`/`lint-exclude`
+from its own (narrow) selection, so for a change like `tools/x.sh` every module is
+excluded and the `go` matrix has no legs. Mode `modules` must treat an unmapped path as
+an unknown diff (every module), like any other doubt (FR-002).
+
+8a. `hack/ci_scope.py`: after the `EXTRA_COMPONENTS = (...)` line insert
+
+```python
+# Top-level areas a selection rule knows; any other path is unmapped and forces full scope.
+KNOWN_DIRS = ("charts", "containers", "deploy/kind", "signing", "test/e2e", "web", "modules")
+
+
+def is_unmapped(path, modules):
+    """Return True when no selection rule knows path; such a path forces full scope."""
+    if (path.endswith(".md") or path in NO_E2E_FILES or path in FORCE_ALL_FILES
+            or path == ".dockerignore"):
+        return False
+    return not any(path == d or path.startswith(d + "/")
+                   for d in NO_E2E_DIRS + KNOWN_DIRS + tuple(modules))
+```
+
+8b. In `main()`, mode `modules` branch, replace
+
+```python
+        paths = None if event_reason else changed_paths(ROOT, args.base, args.head)
+        selected = affected_modules(ROOT, paths)
+```
+
+with
+
+```python
+        paths = None if event_reason else changed_paths(ROOT, args.base, args.head)
+        if paths is not None and any(is_unmapped(p, workspace_modules(ROOT)) for p in paths):
+            paths = None  # mode e2e reports the path; every module runs (FR-002)
+        selected = affected_modules(ROOT, paths)
+```
+
+(Only the occurrence directly followed by `selected = affected_modules(ROOT, paths)`.)
+
+8c. `hack/test_ci_scope.py`: add `is_unmapped` to the `from ci_scope import (...)` list
+(alphabetical, after `image_inputs`), and insert this class directly before the final
+`if __name__ == "__main__":` line, with two blank lines around it:
+
+```python
+class UnmappedPathTests(unittest.TestCase):
+    """An unmapped path widens mode modules to every module (spec 023 FR-002)."""
+
+    def setUp(self):
+        """Create the shared Go workspace fixture for each test."""
+        make_go_workspace(self)
+
+    def test_known_and_unknown_paths(self):
+        modules = ["lib", "api", "test/e2e", "other"]
+        for path in ("README.md", "api/x.go", "charts/gameplane/values.yaml", "docs/a.txt",
+                     "hack/ci_scope.py", ".dockerignore", "web/src/App.tsx", "modules"):
+            with self.subTest(path=path):
+                self.assertFalse(is_unmapped(path, modules))
+        self.assertTrue(is_unmapped("tools/x.sh", modules))
+
+    def test_modules_mode_selects_every_module_for_an_unmapped_path(self):
+        output = self.root / "output"
+        output.write_text("", encoding="utf-8")
+        with patch("ci_scope.ROOT", self.root), patch("sys.argv", ["ci_scope.py", "modules"]), \
+                patch.dict("os.environ", {"GITHUB_EVENT_NAME": "pull_request",
+                                          "GITHUB_REF": "refs/pull/7/merge", "CI_FULL_RUN": "false",
+                                          "GITHUB_OUTPUT": str(output)}), \
+                patch("ci_scope.changed_paths", return_value=["tools/x.sh"]):
+            main()
+        values = {key: json.loads(value) for key, value in
+                  (line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines())}
+        self.assertEqual(values, FULL_VALUES)
+```

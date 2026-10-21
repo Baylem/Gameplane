@@ -44,6 +44,17 @@ NO_E2E_DIRS = ("docs", "specs", "assets", "website", "hack", ".github", ".claude
 WEB_LIVE_COMPONENTS = {"web", "api", "operator", "agent"}
 # Component ids beside the go.work modules (data-model.md Component).
 EXTRA_COMPONENTS = ("web", "charts", "deploy-kind", "modules", "e2e-harness")
+# Top-level areas a selection rule knows; any other path is unmapped and forces full scope.
+KNOWN_DIRS = ("charts", "containers", "deploy/kind", "signing", "test/e2e", "web", "modules")
+
+
+def is_unmapped(path, modules):
+    """Return True when no selection rule knows path; such a path forces full scope."""
+    if (path.endswith(".md") or path in NO_E2E_FILES or path in FORCE_ALL_FILES
+            or path == ".dockerignore"):
+        return False
+    return not any(path == d or path.startswith(d + "/")
+                   for d in NO_E2E_DIRS + KNOWN_DIRS + tuple(modules))
 
 
 def workspace_modules(root):
@@ -701,6 +712,8 @@ def main():
     try:
         event_reason = full_scope_reason(env, [])
         paths = None if event_reason else changed_paths(ROOT, args.base, args.head)
+        if paths is not None and any(is_unmapped(p, workspace_modules(ROOT)) for p in paths):
+            paths = None  # mode e2e reports the path; every module runs (FR-002)
         selected = affected_modules(ROOT, paths)
     except Exception as exc:  # any doubt selects the full suite (FR-002)
         print(f"::warning::test selection failed, running everything: {exc}")
