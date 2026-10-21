@@ -244,6 +244,11 @@ spec:
   strategy:
     type: Recreate
     rollingUpdate: null
+  {{- else }}
+  # Explicitly restore rolling updates when election is re-enabled after a
+  # singleton install; the migration hook may own the previous Recreate field.
+  strategy:
+    type: RollingUpdate
   {{- end }}
   selector:
     matchLabels:
