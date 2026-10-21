@@ -91,5 +91,18 @@ func validateSnapshotDataSource(ctx context.Context, k *kube.Client, cluster, na
 	if backup.GetUID() != owner.UID || backup.GetDeletionTimestamp() != nil {
 		return errors.New("data source VolumeSnapshot does not belong to the current Backup UID")
 	}
+	// A failed or cancelled CSI capture may remain while the storage driver
+	// reclaims it. Late readyToUse must not turn that capture into a restore
+	// source after the original game has resumed saving.
+	const aborted = "backup.gameplane.local/snapshot-aborted"
+	if snapshot.GetAnnotations()[aborted] == "true" || backup.GetAnnotations()[aborted] == "true" {
+		return errors.New("data source VolumeSnapshot capture was aborted")
+	}
+	phase, _, _ := unstructured.NestedString(backup.Object, "status", "phase")
+	snapshotID, _, _ := unstructured.NestedString(backup.Object, "status", "snapshotID")
+	ready, _, _ := unstructured.NestedBool(snapshot.Object, "status", "readyToUse")
+	if phase != "Succeeded" || snapshotID != snapshot.GetName() || !ready {
+		return errors.New("data source VolumeSnapshot must be a completed, ready Backup capture")
+	}
 	return nil
 }

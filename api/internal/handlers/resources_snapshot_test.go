@@ -31,10 +31,12 @@ func snapshotSourceObjects() (*unstructured.Unstructured, *unstructured.Unstruct
 	backup := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "gameplane.local/v1alpha1", "kind": "Backup",
 		"metadata": map[string]any{"namespace": "gameplane-games", "name": "world-backup", "uid": "backup-original"},
+		"status":   map[string]any{"phase": "Succeeded", "snapshotID": "saved-world"},
 	}}
 	snapshot := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "snapshot.storage.k8s.io/v1", "kind": "VolumeSnapshot",
 		"metadata": map[string]any{"namespace": "gameplane-games", "name": "saved-world", "uid": "snapshot-original"},
+		"status":   map[string]any{"readyToUse": true},
 	}}
 	controller := true
 	snapshot.SetOwnerReferences([]metav1.OwnerReference{{
@@ -133,6 +135,55 @@ func TestResources_SnapshotSourceUnchangedDoesNotRequireRestore(t *testing.T) {
 	rr := doWithUser(t, mountResourcesRouter(fakeKubeClient(live)), http.MethodPut, "/servers/alpha", desired, testOperatorUser())
 	if rr.Code != http.StatusOK {
 		t.Fatalf("got %d %s, want 200", rr.Code, rr.Body)
+	}
+}
+
+func TestResources_SnapshotSourceRejectsUnfinishedOrAbortedCapture(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(*unstructured.Unstructured, *unstructured.Unstructured)
+	}{
+		{"pending", func(_, b *unstructured.Unstructured) { b.Object["status"] = map[string]any{"phase": "Pending"} }},
+		{"running", func(_, b *unstructured.Unstructured) {
+			b.Object["status"] = map[string]any{"phase": "Running", "snapshotID": "saved-world"}
+		}},
+		{"failed with late ready", func(_, b *unstructured.Unstructured) {
+			b.Object["status"] = map[string]any{"phase": "Failed", "snapshotID": "saved-world"}
+		}},
+		{"wrong snapshot", func(_, b *unstructured.Unstructured) {
+			b.Object["status"] = map[string]any{"phase": "Succeeded", "snapshotID": "another-capture"}
+		}},
+		{"not ready", func(s, _ *unstructured.Unstructured) { s.Object["status"] = map[string]any{"readyToUse": false} }},
+		{"unknown readiness", func(s, _ *unstructured.Unstructured) { delete(s.Object, "status") }},
+		{"backup aborted before status update", func(_, b *unstructured.Unstructured) {
+			b.SetAnnotations(map[string]string{"backup.gameplane.local/snapshot-aborted": "true"})
+		}},
+		{"snapshot aborted", func(s, _ *unstructured.Unstructured) {
+			s.SetAnnotations(map[string]string{"backup.gameplane.local/snapshot-aborted": "true"})
+		}},
+	} {
+		for _, method := range []string{http.MethodPost, http.MethodPut, "clone"} {
+			t.Run(tc.name+"/"+method, func(t *testing.T) {
+				snapshot, backup := snapshotSourceObjects()
+				tc.change(snapshot, backup)
+				k := fakeKubeClient(snapshot, backup)
+				router, path, verb := mountResourcesRouter(k), "/servers/", method
+				var body any = snapshotSourceServer("alpha")
+				switch method {
+				case http.MethodPut:
+					k = fakeKubeClient(snapshot, backup, newServerObj("gameplane-games", "alpha"))
+					router, path = mountResourcesRouter(k), "/servers/alpha"
+				case "clone":
+					k = fakeKubeClient(snapshot, backup, snapshotSourceServer("alpha"))
+					router, path, verb = mountLifecycleRouter(k), "/servers/alpha:clone", http.MethodPost
+					body = map[string]any{"newName": "beta"}
+				}
+				rr := doWithUser(t, router, verb, path, body, testAdminUser())
+				if rr.Code != http.StatusForbidden {
+					t.Fatalf("got %d %s, want 403", rr.Code, rr.Body)
+				}
+			})
+		}
 	}
 }
 
