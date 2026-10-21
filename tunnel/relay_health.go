@@ -152,8 +152,10 @@ func superviseRelay(ctx context.Context, cfg Config, h *relayHealth, check relay
 		cancel()
 		h.clear()
 		<-done
-		if ctx.Err() != nil {
+		select {
+		case <-ctx.Done():
 			return nil
+		default:
 		}
 		log.Print("relay process exited; readiness cleared")
 		if isUnrecoverable(cfg, err) {
@@ -264,7 +266,7 @@ func validFrpIdentity(uid string) bool {
 		return false
 	}
 	for _, r := range uid {
-		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-') {
+		if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '-' {
 			return false
 		}
 	}

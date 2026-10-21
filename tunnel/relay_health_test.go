@@ -50,7 +50,7 @@ func TestRelayHealthHTTPSeparatesLivenessAndReadiness(t *testing.T) {
 	handler := relayHealthHandler(h)
 	for _, path := range []string{"/healthz", "/readyz", "/status"} {
 		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
+		handler.ServeHTTP(w, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
 		want := http.StatusOK
 		if path == "/readyz" {
 			want = http.StatusServiceUnavailable
