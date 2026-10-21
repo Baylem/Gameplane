@@ -18,7 +18,8 @@ import (
 func TestLifecycleCASAcrossControllers(t *testing.T) {
 	ns := newNamespace(t)
 	seedGameServer(t, ns, "target")
-	b := &gameplanev1alpha1.Backup{ObjectMeta: metav1.ObjectMeta{Name: "backup", Namespace: ns}, Spec: gameplanev1alpha1.BackupSpec{ServerRef: gameplanev1alpha1.LocalObjectRef{Name: "target"}, RepoRef: &gameplanev1alpha1.SecretKeySelector{Name: "repo"}, Quiesce: false}}
+	b := buildBackup(ns, "backup", "target", "repo")
+	b.Spec.Quiesce = false
 	rs := &gameplanev1alpha1.Restore{ObjectMeta: metav1.ObjectMeta{Name: "restore", Namespace: ns}, Spec: gameplanev1alpha1.RestoreSpec{ServerRef: gameplanev1alpha1.LocalObjectRef{Name: "target"}, BackupRef: gameplanev1alpha1.LocalObjectRef{Name: "source"}}}
 	if err := k8sClient.Create(t.Context(), b); err != nil {
 		t.Fatal(err)
