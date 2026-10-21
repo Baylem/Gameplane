@@ -598,6 +598,7 @@ function PickTemplate({
   templates: GameTemplate[];
   templateText: (moduleName: string) => ModuleText;
 }) {
+  const intl = useOptionalIntl();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string>("all");
 
