@@ -234,12 +234,9 @@ func cloneHandler(reg *kube.Registry) http.HandlerFunc {
 		unstructured.RemoveNestedField(clone.Object, "spec", "capture", "nodeDiagnostic")
 		stampOwner(clone, req)
 
-		cl := req.URL.Query().Get("cluster")
-		if cl == "" {
-			cl = scope.DefaultCluster
-		}
+		cl := scope.RequestedCluster(req)
 		if err := validateAndProtectGameServer(req.Context(), k, cl, ns, body.NewName, clone, nil); err != nil {
-			httperr.WriteCode(w, req, http.StatusForbidden, err)
+			writeServerValidationError(w, req, err)
 			return
 		}
 
