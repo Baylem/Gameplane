@@ -9,8 +9,42 @@ import yaml
 from check_gateway import CHART, one, render, settings
 
 
+def check_operator_migration():
+    """Exercise live-lookup hook output with the longest valid Helm name."""
+    with tempfile.TemporaryDirectory() as directory:
+        chart = Path(directory) / "chart"
+        shutil.copytree(CHART, chart)
+        template = chart / "templates/operator-strategy-migrate.yaml"
+        source = template.read_text()
+        lookup = 'lookup "apps/v1" "Deployment" .Release.Namespace "gameplane-operator"'
+        assert lookup in source
+        # helm template has no API server. Supply only the existing-object
+        # lookup response; leave the actual hook gates and resources intact.
+        template.write_text(source.replace(lookup, 'dict "metadata" (dict "name" "gameplane-operator")'))
+        release = "r" * 53
+        name = release + "-op-roll"
+        values = {"api": {"enabled": False}, "operator": {"leaderElect": False},
+                  "crds": {"autoApply": {"enabled": False, "nodeSelector": {"pool": "management"}}}}
+        objects = render(values, upgrade=True, release=release, chart=chart)
+        job = one(objects, "Job", name)
+        assert len(job["metadata"]["name"]) <= 63
+        pod = job["spec"]["template"]["spec"]
+        assert pod["serviceAccountName"] == name
+        assert pod["nodeSelector"] == {"pool": "management"}
+        assert one(objects, "Role", name)["rules"] == [{"apiGroups": ["apps"], "resources": ["deployments"],
+                                                       "resourceNames": ["gameplane-operator"], "verbs": ["get", "patch"]}]
+        binding = one(objects, "RoleBinding", name)
+        assert binding["roleRef"]["name"] == name and binding["subjects"][0]["name"] == name
+        one(objects, "ServiceAccount", name)
+        assert not any(obj["kind"] == "Job" for obj in render(values, release=release, chart=chart))
+        values["operator"]["leaderElect"] = True
+        assert not any(obj["kind"] == "Job" for obj in render(values, upgrade=True, release=release, chart=chart))
+
+
 def main():
+    check_operator_migration()
     defaults = render()
+    assert one(defaults, "Deployment", "gameplane-operator")["spec"]["strategy"]["type"] == "RollingUpdate"
     assert not any(obj["kind"] == "PodDisruptionBudget" for obj in defaults)
     args = one(defaults, "Deployment", "gameplane-operator")["spec"]["template"]["spec"]["containers"][0]["args"]
     assert not any(arg.startswith("--tunnel-resources=") for arg in args)
