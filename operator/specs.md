@@ -134,6 +134,7 @@ Nine CRD kinds under `gameplane.local/v1alpha1`:
 Primary reconcilers register with the manager in `cmd/main.go` and handle CRD lifecycle:
 
 ### GameServerReconciler
+- **Tailscale forwarding (#722):** the tunnel receives advertised `name:port:protocol` mappings and forwards only to `<server>.<namespace>.svc` through embedded tsnet. Its Deployment uses Recreate and a per-Pod EmptyDir for identity across container restarts. `/readyz` on 8091 requires an online tailnet identity and every TCP/UDP listener. TunnelReady additionally requires the forwarding probe, current Deployment observedGeneration and an updated ready replica; unsupported protocols report InvalidConfig. Tailscale endpoints are withheld while not ready. Pod replacement requires a reusable auth key and an available MagicDNS hostname. No extra privileges or Kubernetes RBAC are added.
 - **Responsibility:** Reconcile GameServer → StatefulSet, Service, Config ConfigMap, PVC, NetworkPolicy.
 - **Template recovery:** A missing template reports Failed and retries every 15 seconds. Template creation or spec changes enqueue referencing servers immediately, so a GameServer applied before its Module/template recovers without a manual edit; template status updates do not enqueue servers.
 - **Key functions:**
