@@ -74,9 +74,20 @@ if [ "${ENABLE_EMBEDDED_DB:-true}" = "true" ]; then
     # existing system tables on the old layout. mariadb-upgrade brings them
     # current and is a no-op when they already are. mysql_install_db --user
     # created gameplane@localhost with unix_socket auth, matching uid 1000.
+    # The socket can appear before MariaDB accepts authenticated connections,
+    # so retry briefly. A final failure only logs: the next start retries it.
     if [ -S /tmp/mysql.sock ]; then
-        mariadb-upgrade --socket=/tmp/mysql.sock --user=gameplane >/dev/null 2>&1 \
-            || echo "[gameplane-fivem] mariadb-upgrade failed; continuing with existing system tables"
+        upgraded=false
+        for i in $(seq 1 10); do
+            if mariadb-upgrade --socket=/tmp/mysql.sock --user=gameplane >/dev/null 2>&1; then
+                upgraded=true
+                break
+            fi
+            sleep 1
+        done
+        if [ "$upgraded" != true ]; then
+            echo "[gameplane-fivem] mariadb-upgrade failed after 10 attempts; continuing with existing system tables"
+        fi
     fi
 fi
 
