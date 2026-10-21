@@ -18,18 +18,18 @@ type forwardPort struct{ network, port, target string }
 // packet can choose a destination, and this node never advertises subnet routes.
 func tailscaleForwardPlan(cfg Config) ([]forwardPort, error) {
 	if cfg.GameServerName == "" || cfg.GameServerNamespace == "" || cfg.BackingServiceDNS != cfg.GameServerName+"."+cfg.GameServerNamespace+".svc" {
-		return nil, errors.New("Tailscale target must be the GameServer's backing Service DNS")
+		return nil, errors.New("tailscale target must be the GameServer's backing Service DNS")
 	}
 	entries := strings.Split(cfg.BackingServicePorts, ",")
 	if len(entries) > 32 {
-		return nil, errors.New("Tailscale supports at most 32 advertised ports")
+		return nil, errors.New("tailscale supports at most 32 advertised ports")
 	}
 	ports := make([]forwardPort, 0, len(entries))
 	seen := map[string]bool{}
 	for _, entry := range entries {
 		parts := strings.Split(entry, ":")
 		if len(parts) != 3 || parts[0] == "" {
-			return nil, fmt.Errorf("Tailscale port %q must be name:port:tcp or name:port:udp; update the operator and tunnel images together", entry)
+			return nil, fmt.Errorf("tailscale port %q must be name:port:tcp or name:port:udp; update the operator and tunnel images together", entry)
 		}
 		port, err := strconv.Atoi(parts[1])
 		if err != nil || port < 1 || port > 65535 {

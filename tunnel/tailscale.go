@@ -62,10 +62,10 @@ func checkTailnetHostname(status *ipnstate.Status, hostname string) (*ipnstate.S
 func tailscaleServer(cfg Config, authKey string) (*tsnet.Server, []string, error) {
 	tags, err := parseTailscaleTags(cfg.TailscaleTags)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Tailscale tags: %w", err)
+		return nil, nil, fmt.Errorf("tailscale tags: %w", err)
 	}
 	if cfg.TailscaleHostname == "" || authKey == "" {
-		return nil, nil, errors.New("Tailscale hostname and authKey are required")
+		return nil, nil, errors.New("tailscale hostname and authKey are required")
 	}
 	return &tsnet.Server{Hostname: cfg.TailscaleHostname, AuthKey: authKey, AdvertiseTags: tags, Dir: tailscaleStateDir,
 		// Neither verbose daemon logs nor interactive login URLs belong in pod
@@ -82,7 +82,7 @@ func runTailscale(ctx context.Context, cfg Config, authKey string) error {
 	var ready atomic.Bool
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", ":8091")
 	if err != nil {
-		return fmt.Errorf("Tailscale health listener: %w", err)
+		return fmt.Errorf("tailscale health listener: %w", err)
 	}
 	health := &http.Server{Handler: tailscaleHealth(&ready), ReadHeaderTimeout: 2 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second, IdleTimeout: 10 * time.Second}
 	healthDone := make(chan error, 1)
@@ -109,7 +109,7 @@ func runTailscale(ctx context.Context, cfg Config, authKey string) error {
 		case <-ctx.Done():
 			return nil
 		case err := <-healthDone:
-			return fmt.Errorf("Tailscale health server: %w", err)
+			return fmt.Errorf("tailscale health server: %w", err)
 		case <-time.After(backoff.next()):
 		}
 	}
