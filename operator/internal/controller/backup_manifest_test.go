@@ -101,6 +101,46 @@ func TestBackupManifestDoesNotInventHistoryForExistingWorker(t *testing.T) {
 	}
 }
 
+func TestBackupManifestDoesNotInventHistoryForAuthorizedPreparedWorker(t *testing.T) {
+	for _, mode := range []string{"authorized", "projected-token", "missing-gate", "foreign-gate"} {
+		t.Run(mode, func(t *testing.T) {
+			b := guardBackup("copy")
+			b.Annotations = map[string]string{backupPreparationDeadlineAnnotation: "persisted-before-preparation"}
+			r, _ := guardFixtureWorkers(t, false, b)
+			job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: b.Name, Namespace: b.Namespace, Annotations: map[string]string{backupWorkerProtocolAnnotation: "v1"},
+				OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(b, gameplanev1alpha1.GroupVersion.WithKind("Backup"))}}}
+			if err := r.Create(t.Context(), job); err != nil {
+				t.Fatal(err)
+			}
+			gate := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: backupStartConfigMapName(b), Namespace: b.Namespace,
+				OwnerReferences: job.OwnerReferences}, Data: map[string]string{backupStartTokenKey: ""}}
+			if mode == "authorized" {
+				b.Annotations[backupAuthorizedWorkerAnnotation] = "previous-worker"
+				if err := r.Update(t.Context(), b); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if mode == "projected-token" {
+				gate.Data[backupStartTokenKey] = "previous-authorization"
+			}
+			if mode == "foreign-gate" {
+				gate.OwnerReferences = nil
+			}
+			if mode != "missing-gate" {
+				if err := r.Create(t.Context(), gate); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := r.recordBackupManifest(t.Context(), b, &gameplanev1alpha1.GameServer{}); err != nil {
+				t.Fatal(err)
+			}
+			if b.Status.CaptureManifest == nil || b.Status.CaptureManifest.State != "LegacyUnknown" || len(b.Status.CaptureManifest.Volumes) != 0 {
+				t.Fatalf("invented history for potentially started copy: %+v", b.Status.CaptureManifest)
+			}
+		})
+	}
+}
+
 func TestBackupConsistencyDescribesAchievedResult(t *testing.T) {
 	for _, tc := range []struct {
 		strategy, outcome, reason string

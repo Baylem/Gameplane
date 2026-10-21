@@ -51,6 +51,17 @@ a cordon, readiness of the surviving replica, and singleton API eviction. Node
 labels and cordons are restored in cleanup. This validates scheduler/PDB behavior,
 not application HA or storage migration.
 
+### Backup preparation acceptance
+
+The `backup-preparation` bucket also uses the `management` Kind profile and zero
+API logins. It verifies a real RWO copy on the game's node across two schedulable
+workers, repository preparation failure before quiesce/authorization, retry after
+repository recovery, token-gated Restic execution and restoration of a marker.
+Kind local-path PV affinity supplies the storage placement constraint; this is
+not an attachable CSI driver or multi-attach qualification. Unit/envtest regressions
+cover stale worker/source identity, persisted budgets, delayed drainage, CSI
+abort/reclamation, retained/replaced content and raw snapshot-source rejection.
+
 ## Non-goals / boundaries
 
 - Does **not** replace the unit or envtest tiers for any other module — it exercises integration behavior, not the exhaustive branch coverage those tiers own (this module carries no `.testcoverage.yml` coverage gate).

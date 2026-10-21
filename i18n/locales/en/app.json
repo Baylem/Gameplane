@@ -155,6 +155,22 @@
     "defaultMessage": "Requested {requestKind, select, addressAndPool {address ''{address}'' from pool ''{pool}''} address {address ''{address}''} other {pool ''{pool}''}}: waiting for the LoadBalancer Service that carries the request to exist.",
     "description": "AddressAssignment condition before the load-balancer Service exists."
   },
+  "condition.captureready.snapshotcapturepending": {
+    "defaultMessage": "Waiting for CSI capture within its persisted deadline.",
+    "description": "Bounded CSI capture is pending."
+  },
+  "condition.captureready.workerauthorized": {
+    "defaultMessage": "The prepared worker is authorized to capture data within its deadline.",
+    "description": "Backup copy authorization granted after preparation."
+  },
+  "condition.captureready.workerdrainpending": {
+    "defaultMessage": "The copy is invalid. Waiting for workers to stop before restoring saving.",
+    "description": "Backup cancellation awaiting worker drainage."
+  },
+  "condition.captureready.workerpreparing": {
+    "defaultMessage": "Waiting for worker scheduling, source mount and repository preparation.",
+    "description": "Backup preparation before saving is disabled."
+  },
   "condition.completed.failed": {
     "defaultMessage": "The backup or restore failed.",
     "description": "Completed condition on a Backup or Restore that failed. The message holds the English detail."
@@ -578,6 +594,22 @@
   "condition.sidecarstopped.stopped": {
     "defaultMessage": "The capture sidecar was told to stop.",
     "description": "SidecarStopped condition after a stop request."
+  },
+  "condition.snapshotcleaned.snapshotcleanupcomplete": {
+    "defaultMessage": "Aborted snapshot resources are absent.",
+    "description": "Snapshot reclamation completed."
+  },
+  "condition.snapshotcleaned.snapshotcleanuppending": {
+    "defaultMessage": "Aborted snapshot reclamation is pending. {detail}",
+    "description": "Aborted snapshot deletion has not completed; detail includes resource identities."
+  },
+  "condition.snapshotcleaned.snapshotcleanupretained": {
+    "defaultMessage": "Snapshot content requires administrator reclamation. {detail}",
+    "description": "Retained or replacement snapshot content is left for an administrator."
+  },
+  "condition.snapshotcleaned.snapshotcleanupunverified": {
+    "defaultMessage": "A snapshot resource was replaced. It was not deleted. {detail}",
+    "description": "Snapshot identity verification refused deletion."
   },
   "condition.snapshotforgotten.forgetabandoned": {
     "defaultMessage": "The snapshot was not removed from the backup repository when the backup was deleted.",

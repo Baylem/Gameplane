@@ -56,7 +56,7 @@ func TestBackup_CreatesJobWithExpectedSpec(t *testing.T) {
 	if !strings.HasPrefix(c.Image, "restic/restic:") {
 		t.Errorf("image = %q, want restic/restic:*", c.Image)
 	}
-	if got, want := c.Args, []string{"backup", "/data", "--json", "--retry-lock", "10m", "--tag", "gameplane"}; !equalStrings(got, want) {
+	if got, want := c.Args, []string{backupWorkerScript, "backup-worker", "backup", "/data", "--json", "--retry-lock", "10m", "--tag", "gameplane"}; !equalStrings(got, want) {
 		t.Errorf("args = %v, want %v", got, want)
 	}
 
@@ -365,6 +365,7 @@ func TestBackup_PassesTagsToRestic(t *testing.T) {
 			return false, "job not yet created"
 		}
 		want := []string{"backup", "/data", "--json", "--retry-lock", "10m", "--tag", "gameplane", "--tag", "nightly", "--tag", "preupgrade"}
+		want = append([]string{backupWorkerScript, "backup-worker"}, want...)
 		if !equalStrings(j.Spec.Template.Spec.Containers[0].Args, want) {
 			return false, "args = " + strings.Join(j.Spec.Template.Spec.Containers[0].Args, " ")
 		}
@@ -372,11 +373,9 @@ func TestBackup_PassesTagsToRestic(t *testing.T) {
 	})
 }
 
-// TestBackup_QuiesceAnnotationSetBeforeJob verifies that with a real
-// agent client (faked) and spec.quiesce=true (the default), the
-// controller calls Quiesce and stamps the quiesced-at annotation
-// before the restic Job appears.
-func TestBackup_QuiesceAnnotationSetBeforeJob(t *testing.T) {
+// The Job must prepare before saving is disabled; authorization follows the
+// durable quiesce annotation and cannot be granted to an unready worker.
+func TestBackup_QuiesceAfterWorkerPreparation(t *testing.T) {
 	ns := newNamespace(t)
 	fa := &fakeAgent{}
 	startMgr(t, ns, withBackupReconciler(backupReconcilerOpts{agent: fa}))
@@ -404,6 +403,16 @@ func TestBackup_QuiesceAnnotationSetBeforeJob(t *testing.T) {
 	if err := k8sClient.Create(context.Background(), b); err != nil {
 		t.Fatalf("create backup: %v", err)
 	}
+	var copyJob *batchv1.Job
+	eventually(t, func() (bool, string) {
+		var ok bool
+		copyJob, ok = getJob(t, ns, "smp-q")
+		return ok, "job not yet created"
+	})
+	if fa.quiesceCount() != 0 {
+		t.Fatal("save-off happened before worker preparation")
+	}
+	prepareEnvtestBackupWorker(t, copyJob)
 
 	eventually(t, func() (bool, string) {
 		got := getBackup(t, ns, "smp-q")
@@ -416,7 +425,7 @@ func TestBackup_QuiesceAnnotationSetBeforeJob(t *testing.T) {
 		return true, ""
 	})
 
-	// Job exists and was created at-or-after the quiesce call.
+	// The prepared Job remains the authorized copy.
 	eventually(t, func() (bool, string) {
 		_, ok := getJob(t, ns, "smp-q")
 		return ok, "job not yet created"

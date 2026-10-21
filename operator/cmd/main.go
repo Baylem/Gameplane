@@ -150,6 +150,10 @@ func main() {
 		captureDefaultMaxSizeBytes       int64
 		backupJobBackoffLimit            int64
 		backupJobActiveDeadlineSeconds   int64
+		backupPreparationTimeout         time.Duration
+		backupQuiesceTimeout             time.Duration
+		backupCSICaptureTimeout          time.Duration
+		backupHardSameNode               bool
 		agentResourcesJSON               string
 		sentinelResourcesJSON            string
 		tunnelResourcesJSON              string
@@ -181,6 +185,10 @@ func main() {
 		"BackoffLimit for the restic backup and restore Jobs (retries before the Job is marked Failed). Must be >= 0. Defaults to 2.")
 	flag.Int64Var(&backupJobActiveDeadlineSeconds, "backup-job-active-deadline-seconds", controller.DefaultBackupJobActiveDeadlineSeconds,
 		"ActiveDeadlineSeconds for the restic backup and restore Jobs. Must be > 0. Defaults to 86400 (24 hours).")
+	flag.DurationVar(&backupPreparationTimeout, "backup-preparation-timeout", controller.DefaultBackupPreparationTimeout, "Maximum worker preparation time before copy authorization; must be positive.")
+	flag.DurationVar(&backupQuiesceTimeout, "backup-quiesce-timeout", controller.DefaultBackupQuiesceTimeout, "Maximum live quiesced Restic copy duration; expiry cancels and drains workers before save-on.")
+	flag.DurationVar(&backupCSICaptureTimeout, "backup-csi-capture-timeout", controller.DefaultBackupCSICaptureTimeout, "Maximum CSI capture duration before invalidation and save-on; must be positive.")
+	flag.BoolVar(&backupHardSameNode, "backup-hard-same-node", false, "Require Restic workers on the observed game node instead of the default preferred placement.")
 	flag.StringVar(&sentinelImage, "sentinel-image", controller.DefaultSentinelImage,
 		"Image for the wake sentinel pod that holds advertised ports while a server is asleep. "+
 			"Point at a private registry mirror for air-gapped installs.")
@@ -298,6 +306,10 @@ func main() {
 	}
 	if backupJobActiveDeadlineSeconds <= 0 {
 		setupLog.Error(nil, "invalid --backup-job-active-deadline-seconds value (must be > 0)", "value", backupJobActiveDeadlineSeconds)
+		os.Exit(1)
+	}
+	if backupPreparationTimeout <= 0 || backupQuiesceTimeout <= 0 || backupCSICaptureTimeout <= 0 {
+		setupLog.Error(nil, "backup preparation, quiesce and CSI capture timeouts must be positive")
 		os.Exit(1)
 	}
 
@@ -455,6 +467,10 @@ func main() {
 		JobBackoffLimit:          &backupJobBackoff32,
 		JobActiveDeadlineSeconds: backupJobActiveDeadlineSeconds,
 		EventRecorder:            mgr.GetEventRecorder("backup-controller"),
+		PreparationTimeout:       backupPreparationTimeout,
+		QuiesceTimeout:           backupQuiesceTimeout,
+		CSICaptureTimeout:        backupCSICaptureTimeout,
+		HardSameNode:             backupHardSameNode,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to set up controller", "controller", "Backup")
 		os.Exit(1)

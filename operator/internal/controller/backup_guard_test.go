@@ -58,6 +58,12 @@ func guardBackup(name string) *gameplanev1alpha1.Backup {
 }
 
 func guardFixture(t *testing.T, backups ...*gameplanev1alpha1.Backup) (*BackupReconciler, *guardQuiescer) {
+	return guardFixtureWorkers(t, true, backups...)
+}
+
+// Most guard tests model a healthy Job controller/kubelet. Budget tests opt
+// out and advance worker scheduling/readiness explicitly.
+func guardFixtureWorkers(t *testing.T, automatic bool, backups ...*gameplanev1alpha1.Backup) (*BackupReconciler, *guardQuiescer) {
 	t.Helper()
 	s := scrapeScheme(t)
 	if err := snapshotv1.AddToScheme(s); err != nil {
@@ -74,6 +80,31 @@ func guardFixture(t *testing.T, backups ...*gameplanev1alpha1.Backup) (*BackupRe
 		objects = append(objects, b)
 	}
 	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(objects...).WithStatusSubresource(&gameplanev1alpha1.Backup{}, &gameplanev1alpha1.GameServer{}, &batchv1.Job{}, &snapshotv1.VolumeSnapshot{}).Build()
+	cl = interceptor.NewClient(cl, interceptor.Funcs{Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+		if obj.GetUID() == "" {
+			obj.SetUID(types.UID(obj.GetName() + "-generated-uid"))
+		}
+		if err := c.Create(ctx, obj, opts...); err != nil {
+			return err
+		}
+		job, ok := obj.(*batchv1.Job)
+		if !automatic || !ok || job.Annotations[backupWorkerProtocolAnnotation] != "v1" {
+			return nil
+		}
+		pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: job.Name + "-automatic", Namespace: job.Namespace, UID: types.UID(job.Name + "-automatic-uid"), Labels: job.Spec.Template.Labels,
+			OwnerReferences: []metav1.OwnerReference{{APIVersion: "batch/v1", Kind: "Job", Name: job.Name, UID: job.UID, Controller: ownerBoolPtr(true)}}}, Spec: job.Spec.Template.Spec,
+			Status: corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}}}
+		pod.Spec.NodeName = "node-a"
+		return c.Create(ctx, pod)
+	}, Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+		if err := c.Delete(ctx, obj, opts...); err != nil {
+			return err
+		}
+		if job, ok := obj.(*batchv1.Job); automatic && ok {
+			return client.IgnoreNotFound(c.Delete(ctx, &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: job.Name + "-automatic", Namespace: job.Namespace}}))
+		}
+		return nil
+	}})
 	q := &guardQuiescer{}
 	return &BackupReconciler{Client: cl, Scheme: s, AgentClient: q, LogReader: scrapeLogReader{body: `{"message_type":"summary","snapshot_id":"abc123"}`}}, q
 }
@@ -81,6 +112,14 @@ func guardFixture(t *testing.T, backups ...*gameplanev1alpha1.Backup) (*BackupRe
 func guardPass(t *testing.T, r *BackupReconciler, name string) {
 	t.Helper()
 	for i := 0; i < 3; i++ {
+		// Model a completed worker after tests advance the Job's terminal
+		// status. Explicitly created live/terminating pods are never removed.
+		var job batchv1.Job
+		if err := r.Get(context.Background(), client.ObjectKey{Namespace: "ns", Name: name}, &job); err == nil && (job.Status.Succeeded > 0 || jobPermanentlyFailed(&job)) {
+			if err := r.Delete(context.Background(), &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: name + "-automatic"}}); err != nil && !apierrors.IsNotFound(err) {
+				t.Fatal(err)
+			}
+		}
 		if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "ns", Name: name}}); err != nil {
 			t.Fatal(err)
 		}
@@ -525,7 +564,7 @@ func TestBackupGuardRecoveryLineageSurvivesRepeatedOwnerDeletion(t *testing.T) {
 	}
 }
 
-func TestBackupGuardPendingSnapshotCleanupWaitsForCapture(t *testing.T) {
+func TestBackupGuardPendingSnapshotCancellationInvalidatesBeforeSaveOn(t *testing.T) {
 	for _, mode := range []string{"delete", "orphan", "legacy"} {
 		t.Run(mode, func(t *testing.T) {
 			a := guardBackup("snapshot")
@@ -546,6 +585,19 @@ func TestBackupGuardPendingSnapshotCleanupWaitsForCapture(t *testing.T) {
 				guardPass(t, r, "snapshot")
 			}
 			guardPass(t, r, "next")
+			if mode != "legacy" {
+				if q.unquiesced != 1 {
+					t.Fatalf("cancelled CSI capture did not restore saving: %+v", q)
+				}
+				var jobs batchv1.JobList
+				if err := r.List(context.Background(), &jobs); err != nil {
+					t.Fatal(err)
+				}
+				if len(jobs.Items) != 1 {
+					t.Fatal("next copy did not start after explicit CSI abort")
+				}
+				return
+			}
 			if q.unquiesced != 0 {
 				t.Fatalf("save-on during pending CSI capture: %+v", q)
 			}
@@ -600,11 +652,8 @@ func TestBackupSnapshotAmbiguousCreateStillCleansUp(t *testing.T) {
 		t.Fatalf("ambiguous create lost abort cleanup: %+v", q)
 	}
 	var vs snapshotv1.VolumeSnapshot
-	if err := r.Get(context.Background(), types.NamespacedName{Namespace: "ns", Name: "snapshot"}, &vs); err != nil {
-		t.Fatal(err)
-	}
-	if vs.Status != nil && vs.Status.ReadyToUse != nil && *vs.Status.ReadyToUse {
-		t.Fatal("expected still-pending ambiguous capture")
+	if err := r.Get(context.Background(), types.NamespacedName{Namespace: "ns", Name: "snapshot"}, &vs); !apierrors.IsNotFound(err) {
+		t.Fatalf("ambiguous aborted capture was not reclaimed: %v", err)
 	}
 }
 

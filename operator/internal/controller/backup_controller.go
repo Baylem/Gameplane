@@ -127,6 +127,10 @@ type BackupReconciler struct {
 	// DefaultBackupJobBackoffLimit / DefaultBackupJobActiveDeadlineSeconds.
 	JobBackoffLimit          *int32
 	JobActiveDeadlineSeconds int64
+	PreparationTimeout       time.Duration
+	QuiesceTimeout           time.Duration
+	CSICaptureTimeout        time.Duration
+	HardSameNode             bool
 	// SnapshotScrapeGracePeriod bounds how long after the restic Job
 	// completes the reconciler keeps retrying to read the snapshot id from
 	// the pod logs before failing the Backup. Zero uses
@@ -235,7 +239,7 @@ func resticImageOrDefault(image string) string {
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshots,verbs=get;list;watch
-// +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshotcontents,verbs=get;list;watch
+// +kubebuilder:rbac:groups=snapshot.storage.k8s.io,resources=volumesnapshotcontents,verbs=get;list;watch;delete
 
 func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	return requeueOnConflict(r.reconcile(ctx, req))
@@ -249,6 +253,12 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	if !b.DeletionTimestamp.IsZero() {
 		return r.finalizeDelete(ctx, &b)
+	}
+	if b.Annotations[backupCopyAbortAnnotation] != "" {
+		return r.abortResticCopy(ctx, &b, b.Annotations[backupCopyAbortAnnotation])
+	}
+	if b.Annotations[backupSnapshotAbortAnnotation] == "true" {
+		return r.abortVolumeSnapshot(ctx, &b, "volume snapshot capture was aborted")
 	}
 	// Every copy owns the source until its workers drain, even without quiesce.
 	if !controllerutil.ContainsFinalizer(&b, gameplanev1alpha1.BackupFinalizer) {
@@ -292,6 +302,12 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// is outstanding, so this stays cheap on the common path.
 	if b.Status.Phase == gameplanev1alpha1.BackupPhaseSucceeded ||
 		b.Status.Phase == gameplanev1alpha1.BackupPhaseFailed {
+		if b.Status.Phase == gameplanev1alpha1.BackupPhaseFailed && b.Spec.Strategy == "volume-snapshot" {
+			return r.abortVolumeSnapshot(ctx, &b, b.Status.Message)
+		}
+		if b.Status.Phase == gameplanev1alpha1.BackupPhaseFailed && b.Annotations[backupPreparationDeadlineAnnotation] != "" {
+			return r.abortResticCopy(ctx, &b, b.Status.Message)
+		}
 		return r.runUnquiesce(ctx, &b)
 	}
 	// Observe pre-upgrade workers even when multiple legacy quiesced copies
@@ -364,26 +380,7 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 			b.Spec.RepoRef.Name, strings.Join(missing, ", ")))
 	}
 
-	if res, err := r.prepareBackupQuiesce(ctx, &b); err != nil || res.RequeueAfter > 0 {
-		return res, err
-	}
-
-	backoff, deadline := resolveJobLimits(r.JobBackoffLimit, r.JobActiveDeadlineSeconds)
-	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: b.Name, Namespace: b.Namespace}}
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, job, func() error {
-		if job.CreationTimestamp.IsZero() {
-			job.Spec.BackoffLimit = &backoff
-			job.Spec.ActiveDeadlineSeconds = &deadline
-			job.Spec.Template.Labels = map[string]string{backupRestoreJobLabel: backupRestoreJobValue, backupUIDLabel: string(b.UID)}
-			job.Spec.Template.Spec = r.buildBackupPodSpec(&b, &tmpl)
-			job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
-		}
-		return controllerutil.SetControllerReference(&b, job, r.Scheme)
-	}); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	return r.mirrorJobStatus(ctx, &b, job)
+	return r.reconcilePreparedRestic(ctx, &b, &tmpl)
 }
 
 // maybeQuiesce calls the agent's /quiesce endpoint once per Backup.
@@ -581,6 +578,9 @@ func (r *BackupReconciler) mirrorJobStatus(
 		cond.Reason = string(phase)
 	}
 	newConds := upsertCondition(b.Status.Conditions, cond)
+	if phase == gameplanev1alpha1.BackupPhaseSucceeded || phase == gameplanev1alpha1.BackupPhaseFailed {
+		meta.RemoveStatusCondition(&newConds, "CaptureReady")
+	}
 	newConds = upsertCondition(newConds, backupConsistencyCondition(b))
 	if !sameConditions(b.Status.Conditions, newConds) {
 		b.Status.Conditions = newConds
@@ -779,6 +779,11 @@ func (r *BackupReconciler) finalizeUnquiesce(ctx context.Context, b *gameplanev1
 			return ctrl.Result{}, err
 		}
 	}
+	if b.Annotations[backupSnapshotAbortAnnotation] == "true" {
+		if res, err := r.cleanupAbortedSnapshot(ctx, b); err != nil || res.RequeueAfter > 0 {
+			return res, err
+		}
+	}
 	controllerutil.RemoveFinalizer(b, gameplanev1alpha1.BackupFinalizer)
 	if err := r.Update(ctx, b); err != nil {
 		return ctrl.Result{}, err
@@ -958,6 +963,7 @@ func (r *BackupReconciler) readResticSummary(ctx context.Context, b *gameplanev1
 func (r *BackupReconciler) fail(ctx context.Context, b *gameplanev1alpha1.Backup, msg string) (ctrl.Result, error) {
 	now := metav1.Now()
 	b.Status.Phase = gameplanev1alpha1.BackupPhaseFailed
+	meta.RemoveStatusCondition(&b.Status.Conditions, "CaptureReady")
 	b.Status.ObservedGeneration = b.Generation
 	if b.Status.Message != msg {
 		b.Status.Message = msg

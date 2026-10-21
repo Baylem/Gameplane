@@ -574,6 +574,13 @@ func (r *GameServerReconciler) reconcilePVC(
 			// size is >= the snapshot's restoreSize by construction (the
 			// snapshot came from a PVC of that size).
 			if gs.Spec.Storage != nil && gs.Spec.Storage.DataSource != nil {
+				reader := r.APIReader
+				if reader == nil {
+					reader = r.Client
+				}
+				if err := validateBackupSnapshotSource(ctx, reader, gs.Namespace, gs.Spec.Storage.DataSource.Name); err != nil {
+					return err
+				}
 				apiGroup := "snapshot.storage.k8s.io"
 				pvc.Spec.DataSource = &corev1.TypedLocalObjectReference{
 					APIGroup: &apiGroup,

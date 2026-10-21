@@ -82,6 +82,11 @@ rules:
   - apiGroups: ["snapshot.storage.k8s.io"]
     resources: [volumesnapshots, volumesnapshotcontents]
     verbs: [get, list, watch]
+  # Abort reclamation is restricted in the controller to recorded snapshot
+  # references and exact content UIDs; VolumeSnapshotContent is cluster-scoped.
+  - apiGroups: [snapshot.storage.k8s.io]
+    resources: [volumesnapshotcontents]
+    verbs: [delete]
   # The GameServer controller registers Owns(&networkingv1.NetworkPolicy{})
   # unconditionally (regardless of networkPolicies.enabled), and the
   # manager's cache is cluster-scoped (no Cache/DefaultNamespaces option
@@ -290,6 +295,18 @@ spec:
             {{- end }}
             {{- if .Values.operator.resticImage }}
             - --restic-image={{ .Values.operator.resticImage }}
+            {{- end }}
+            {{- with .Values.operator.backupPreparationTimeout }}
+            - --backup-preparation-timeout={{ . }}
+            {{- end }}
+            {{- with .Values.operator.backupQuiesceTimeout }}
+            - --backup-quiesce-timeout={{ . }}
+            {{- end }}
+            {{- with .Values.operator.backupCSICaptureTimeout }}
+            - --backup-csi-capture-timeout={{ . }}
+            {{- end }}
+            {{- if and (hasKey .Values.operator "backupHardSameNode") (ne .Values.operator.backupHardSameNode nil) }}
+            - --backup-hard-same-node={{ .Values.operator.backupHardSameNode }}
             {{- end }}
             {{- /* Omit the flags when the keys are absent/null (e.g. --reuse-values
                    from a release predating them) so the operator's defaults

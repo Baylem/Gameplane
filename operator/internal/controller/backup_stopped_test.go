@@ -200,8 +200,12 @@ func TestBackupLiveTimeoutRetainsOwnerUntilOriginalPodGone(t *testing.T) {
 		t.Fatalf("timeout did not fail closed: %+v", first.Status)
 	}
 	var job batchv1.Job
-	if err := r.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: "first"}, &job); !apierrors.IsNotFound(err) {
-		t.Fatal("live timeout created copy")
+	var gate corev1.ConfigMap
+	if err := r.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: backupStartConfigMapName(first)}, &gate); err != nil {
+		t.Fatal(err)
+	}
+	if gate.Data[backupStartTokenKey] != "" {
+		t.Fatal("live timeout authorized prepared worker")
 	}
 	var gs gameplanev1alpha1.GameServer
 	if err := r.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: "server"}, &gs); err != nil {

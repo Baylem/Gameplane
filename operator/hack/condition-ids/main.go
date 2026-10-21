@@ -51,6 +51,8 @@ var guardCalls = map[string]int{
 	"markPending":                   2,
 	"failWithReason":                2,
 	"setSnapshotForgottenCondition": 3,
+	"setBackupProgress":             2,
+	"snapshotCleanupCondition":      3,
 }
 
 // guardReturnFuncs are the functions whose first string result is a reason.
@@ -67,6 +69,14 @@ var guardSkipFiles = map[string]bool{
 
 // rows is the English reference for every condition reason.
 var rows = []row{
+	{types: []string{"CaptureReady"}, reason: "WorkerPreparing", english: "Waiting for worker scheduling, source mount and repository preparation.", description: "Backup preparation before saving is disabled."},
+	{types: []string{"CaptureReady"}, reason: "WorkerAuthorized", english: "The prepared worker is authorized to capture data within its deadline.", description: "Backup copy authorization granted after preparation."},
+	{types: []string{"CaptureReady"}, reason: "WorkerDrainPending", english: "The copy is invalid. Waiting for workers to stop before restoring saving.", description: "Backup cancellation awaiting worker drainage."},
+	{types: []string{"CaptureReady"}, reason: "SnapshotCapturePending", english: "Waiting for CSI capture within its persisted deadline.", description: "Bounded CSI capture is pending."},
+	{types: []string{"SnapshotCleaned"}, reason: "SnapshotCleanupPending", english: "Aborted snapshot reclamation is pending. {detail}", description: "Aborted snapshot deletion has not completed; detail includes resource identities."},
+	{types: []string{"SnapshotCleaned"}, reason: "SnapshotCleanupUnverified", english: "A snapshot resource was replaced. It was not deleted. {detail}", description: "Snapshot identity verification refused deletion."},
+	{types: []string{"SnapshotCleaned"}, reason: "SnapshotCleanupRetained", english: "Snapshot content requires administrator reclamation. {detail}", description: "Retained or replacement snapshot content is left for an administrator."},
+	{types: []string{"SnapshotCleaned"}, reason: "SnapshotCleanupComplete", english: "Aborted snapshot resources are absent.", description: "Snapshot reclamation completed."},
 	// GameServer: Ready
 	{types: []string{"Ready"}, reason: "Running", english: "The server is running and the agent is reporting heartbeats.", description: "Ready condition while the game server is up."},
 	{types: []string{"Ready"}, reason: "Pending", english: "The server is waiting to start.", description: "Ready condition while the game server is being created."},

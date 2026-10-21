@@ -398,10 +398,15 @@ TestManagementPlacementAndDisruption
 EOF
 }
 
+bucket_backup_preparation() { cat <<'EOF'
+TestBackup_PreparationAndSameNodeCopy
+EOF
+}
+
 unbucketed() { :; }
 
 bucket_names() {
-	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade telemetry capture-overhead optional-components management-placement
+	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade telemetry capture-overhead optional-components management-placement backup-preparation
 }
 
 list_bucket() {
@@ -421,6 +426,7 @@ list_bucket() {
 	capture-overhead) bucket_capture_overhead ;;
 	optional-components) bucket_optional_components ;;
 	management-placement) bucket_management_placement ;;
+	backup-preparation) bucket_backup_preparation ;;
 	*)
 		echo "unknown bucket: $1 (known: $(bucket_names | tr '\n' ' '))" >&2
 		exit 2

@@ -15,8 +15,8 @@ import (
 	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
 )
 
-// Called after lifecycle ownership and the workload fence, before creating the
-// copy worker. Requeues and later template edits never rewrite this manifest.
+// Called after lifecycle ownership and the workload fence, before a copy is
+// authorized. Requeues and later template edits never rewrite this manifest.
 func (r *BackupReconciler) recordBackupManifest(ctx context.Context, b *gameplanev1alpha1.Backup, gs *gameplanev1alpha1.GameServer) error {
 	if b.Status.CaptureManifest != nil {
 		return nil
@@ -27,10 +27,25 @@ func (r *BackupReconciler) recordBackupManifest(ctx context.Context, b *gameplan
 		worker = &snapshotv1.VolumeSnapshot{}
 	}
 	if err := reader.Get(ctx, client.ObjectKeyFromObject(b), worker); err == nil {
-		// Existing workers predate this metadata. Current layout cannot prove
-		// what they captured, even if their requested quiesce was successful.
-		b.Status.CaptureManifest = &gameplanev1alpha1.BackupCaptureManifest{State: "LegacyUnknown"}
-		return r.Status().Update(ctx, b)
+		// Current prepared workers exist before capture but cannot read data
+		// without authorization. Its durable annotation is written before the
+		// projected token and never cleared, including during cancellation.
+		// All other existing workers retain unknown historical coverage.
+		waiting := false
+		if job, ok := worker.(*batchv1.Job); ok && metav1.IsControlledBy(job, b) && job.Annotations[backupWorkerProtocolAnnotation] == "v1" &&
+			b.Annotations[backupPreparationDeadlineAnnotation] != "" && b.Annotations[backupAuthorizedWorkerAnnotation] == "" &&
+			job.Status.Succeeded == 0 && !jobPermanentlyFailed(job) {
+			var gate corev1.ConfigMap
+			if err := reader.Get(ctx, client.ObjectKey{Namespace: b.Namespace, Name: backupStartConfigMapName(b)}, &gate); err == nil {
+				waiting = metav1.IsControlledBy(&gate, b) && gate.Data[backupStartTokenKey] == ""
+			} else if !apierrors.IsNotFound(err) {
+				return err
+			}
+		}
+		if !waiting {
+			b.Status.CaptureManifest = &gameplanev1alpha1.BackupCaptureManifest{State: "LegacyUnknown"}
+			return r.Status().Update(ctx, b)
+		}
 	} else if !apierrors.IsNotFound(err) {
 		return err
 	}
