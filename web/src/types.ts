@@ -541,6 +541,7 @@ export interface GameServer {
   metadata: ObjectMeta & { resourceVersion?: string };
   spec: {
     templateRef: { name: string };
+    templateRollout?: { policy?: "Automatic" | "OnRequest"; requestedRevision?: string };
     suspend?: boolean;
     // Seconds the operator waits for the template's stop sequence to run
     // over RCON before scaling the pod down (soft-stop). Range 0–600,
@@ -576,6 +577,7 @@ export interface GameServer {
   };
   status?: {
     phase?: GameServerPhase;
+    templateRevision?: { desired?: string; effective?: string; running?: string };
     endpoints?: GameServerEndpoint[];
     agent?: {
       lastHeartbeat?: string;

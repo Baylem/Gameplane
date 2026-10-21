@@ -62,6 +62,7 @@ TestGameServer_TemplateDefaultOverridesInstallTime
 TestGameServer_ExplicitStorageClassOverridesDefault
 TestGameServer_NonexistentStorageClassSurfacesError
 TestGameServer_VersionSwitch
+TestGameServer_TemplateOnRequestRetainsData
 TestGameServer_WipeReportsFailureOnPermissionDenied
 TestGameServer_CascadingDelete
 TestGameServer_TunnelCredentialRefusalSurfaced
@@ -380,6 +381,12 @@ TestOptionalComponents_Lifecycle
 EOF
 }
 
+# Dedicated release: enables real PSA enforcement and privileged diagnostics.
+bucket_restricted_workloads() { cat <<'EOF'
+TestRestrictedWorkloads_NodeCaptureAndTokenRotation
+EOF
+}
+
 # capture-overhead is kept OUT of bot-fast on purpose: bot-fast's matrix legs
 # are blocking, while this bucket feeds the non-blocking e2e-capture-overhead
 # job (continue-on-error, never blocks a merge — spec 007 OD-1) and runs only
@@ -406,7 +413,7 @@ EOF
 unbucketed() { :; }
 
 bucket_names() {
-	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade telemetry capture-overhead optional-components management-placement backup-preparation
+	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade telemetry capture-overhead optional-components restricted-workloads management-placement backup-preparation
 }
 
 list_bucket() {
@@ -425,6 +432,7 @@ list_bucket() {
 	telemetry) bucket_telemetry ;;
 	capture-overhead) bucket_capture_overhead ;;
 	optional-components) bucket_optional_components ;;
+	restricted-workloads) bucket_restricted_workloads ;;
 	management-placement) bucket_management_placement ;;
 	backup-preparation) bucket_backup_preparation ;;
 	*)

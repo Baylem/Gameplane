@@ -338,13 +338,6 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	// A missing template is not fatal: it only refines the FSGroup, and
-	// buildBackupPodSecurityContext falls back to 65532 for a zero template.
-	var tmpl gameplanev1alpha1.GameTemplate
-	if err := r.Get(ctx, types.NamespacedName{Name: gs.Spec.TemplateRef.Name}, &tmpl); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{}, err
-	}
-
 	// Volume-snapshot backups take a CSI snapshot of the data PVC rather
 	// than running restic, so they branch off here — before the restic
 	// repo Secret checks, which don't apply to them.
@@ -380,7 +373,7 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 			b.Spec.RepoRef.Name, strings.Join(missing, ", ")))
 	}
 
-	return r.reconcilePreparedRestic(ctx, &b, &tmpl)
+	return r.reconcilePreparedRestic(ctx, &b)
 }
 
 // maybeQuiesce calls the agent's /quiesce endpoint once per Backup.

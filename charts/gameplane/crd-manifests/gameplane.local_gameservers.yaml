@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    gameplane.local/crd-bundle-sha256: fc63992190029342d40e8b7cc96ce57b24527f03275df038524b0a3a3e22ae6e
+    gameplane.local/crd-bundle-sha256: dc993913a7a930b00001ba1ee07e5c5e29988ca82915ea217b90ae2f98289f82
     controller-gen.kubebuilder.io/version: v0.20.1
   name: gameservers.gameplane.local
 spec:
@@ -1040,10 +1040,18 @@ spec:
                     description: |-
                       Enabled: opt-in flag for packet-capture capability on this GameServer.
                       If false or omitted, no capture sidecar is injected; the game container is unchanged.
-                      If true, the operator injects the capture sidecar as an ephemeral container via
+                      In the legacy profile, the operator injects the capture sidecar via
                       pods/ephemeralcontainers, live, without restarting the game container.
                       Disabling (true→false) does not remove the sidecar from a running pod — Kubernetes
                       has no API to remove ephemeral containers — but stops accepting new captures.
+                      Restricted workloads require NodeDiagnostic instead and never inject a sidecar.
+                    type: boolean
+                  nodeDiagnostic:
+                    description: |-
+                      NodeDiagnostic permits the separately deployed node capture worker for
+                      this server. Application administrators must explicitly opt in. The
+                      worker has host-level capabilities; it never weakens the game Pod.
+                      Required for capture on Restricted workloads. Off by default.
                     type: boolean
                   retentionSeconds:
                     description: |-
@@ -2296,6 +2304,27 @@ spec:
                 - message: templateRef is immutable; delete and recreate the GameServer
                     to switch templates
                   rule: self == oldSelf
+              templateRollout:
+                description: |-
+                  TemplateRollout controls adoption of changes to the shared GameTemplate.
+                  Omitted preserves Automatic adoption. Per-server overrides remain live.
+                properties:
+                  policy:
+                    default: Automatic
+                    description: Policy defaults to Automatic. OnRequest requires
+                      the exact desired digest.
+                    enum:
+                    - Automatic
+                    - OnRequest
+                    type: string
+                  requestedRevision:
+                    description: |-
+                      RequestedRevision authorizes this SHA256 only, never future revisions.
+                      Read status.templateRevision.desired and copy it here to admit an update.
+                      Initial provisioning always adopts the installed template.
+                    pattern: ^[a-f0-9]{64}$
+                    type: string
+                type: object
               tolerations:
                 items:
                   description: |-
@@ -2631,6 +2660,25 @@ spec:
                   observed as Ready.
                 format: date-time
                 type: string
+              templateRevision:
+                description: |-
+                  TemplateRevision is a read model; operator-owned annotations and immutable
+                  ConfigMaps retain admission state across status resets and leader changes.
+                properties:
+                  desired:
+                    description: Desired is the installed template's SHA256; empty
+                      if it is unavailable.
+                    type: string
+                  effective:
+                    description: Effective is the immutable content used for all derived
+                      resources.
+                    type: string
+                  running:
+                    description: |-
+                      Running comes from an owned Pod with a running game container. Empty
+                      means no running revision is known, including pre-upgrade legacy Pods.
+                    type: string
+                type: object
               tunnelEndpoints:
                 description: |-
                   TunnelEndpoints are the per-port addresses reported by the tunnel pod.

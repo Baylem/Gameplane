@@ -169,7 +169,7 @@ func (r *BackupReconciler) preparedBackupWorker(ctx context.Context, b *gameplan
 	return candidate, nil
 }
 
-func (r *BackupReconciler) reconcilePreparedRestic(ctx context.Context, b *gameplanev1alpha1.Backup, tmpl *gameplanev1alpha1.GameTemplate) (ctrl.Result, error) {
+func (r *BackupReconciler) reconcilePreparedRestic(ctx context.Context, b *gameplanev1alpha1.Backup) (ctrl.Result, error) {
 	// Existing Jobs use their original execution protocol. Never replace a
 	// running pre-upgrade Job with a gated worker or claim it was prepared.
 	var job batchv1.Job
@@ -219,6 +219,20 @@ func (r *BackupReconciler) reconcilePreparedRestic(ctx context.Context, b *gamep
 	}
 	if res, err := r.prepareBackupWorkload(ctx, b); err != nil || res.RequeueAfter > 0 {
 		return res, err
+	}
+	// Admission refreshes the target. Read its effective content only after
+	// owning the workload fence, so a rollout completed before admission
+	// cannot leave the worker using an earlier filesystem layout.
+	bound, err := r.ownedBackupTarget(ctx, b)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if bound == nil {
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+	tmpl, err := effectiveGameTemplate(ctx, r.backupAPIReader(), bound)
+	if err != nil && (bound.Annotations[effectiveTemplateAnnotation] != "" || !apierrors.IsNotFound(err)) {
+		return ctrl.Result{}, err
 	}
 	source, err := r.prepareBackupWorkerSource(ctx, b)
 	if err != nil {

@@ -67,8 +67,8 @@ func (r *BackupReconciler) recordBackupManifest(ctx context.Context, b *gameplan
 			layout, source = pod.Spec, "Pod"
 		}
 	}
-	var tmpl gameplanev1alpha1.GameTemplate
-	if err := reader.Get(ctx, client.ObjectKey{Name: gs.Spec.TemplateRef.Name}, &tmpl); err != nil && !apierrors.IsNotFound(err) {
+	tmpl, err := effectiveGameTemplate(ctx, reader, gs)
+	if err != nil && (gs.Annotations[effectiveTemplateAnnotation] != "" || !apierrors.IsNotFound(err)) {
 		return err
 	}
 	primary := gs.Name + "-data"
@@ -110,7 +110,7 @@ func (r *BackupReconciler) recordBackupManifest(ctx context.Context, b *gameplan
 			volume.ClaimUID = string(claim.UID)
 		}
 	}
-	for _, extra := range effectiveExtraVolumes(gs, &tmpl) {
+	for _, extra := range effectiveExtraVolumes(gs, tmpl) {
 		volume := volumes[extraPVCName(gs, extra.Name)]
 		if volume == nil {
 			continue

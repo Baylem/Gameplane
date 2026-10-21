@@ -46,6 +46,7 @@ type row struct {
 // guardCalls maps a helper that takes a condition reason as a string literal
 // to the index of that argument.
 var guardCalls = map[string]int{
+	"setTemplateCondition":          2,
 	"markUnhealthy":                 2,
 	"markFailed":                    2,
 	"markPending":                   2,
@@ -77,6 +78,11 @@ var rows = []row{
 	{types: []string{"SnapshotCleaned"}, reason: "SnapshotCleanupUnverified", english: "A snapshot resource was replaced. It was not deleted. {detail}", description: "Snapshot identity verification refused deletion."},
 	{types: []string{"SnapshotCleaned"}, reason: "SnapshotCleanupRetained", english: "Snapshot content requires administrator reclamation. {detail}", description: "Retained or replacement snapshot content is left for an administrator."},
 	{types: []string{"SnapshotCleaned"}, reason: "SnapshotCleanupComplete", english: "Aborted snapshot resources are absent.", description: "Snapshot reclamation completed."},
+	{types: []string{"TemplateUpdatePending"}, reason: "AdoptingRevision", english: "The admitted template revision is being adopted.", description: "Template rollout owns the server lifecycle while draining and replacing its workload."},
+	{types: []string{"TemplateUpdatePending"}, reason: "TemplateUnavailable", english: "The installed template is unavailable; the effective snapshot is retained.", description: "Template availability is unknown but the server retains its immutable effective content."},
+	{types: []string{"TemplateUpdatePending"}, reason: "RevisionCurrent", english: "The installed template revision is effective.", description: "No newer template revision is waiting for adoption. Running revision is observed separately."},
+	{types: []string{"TemplateUpdatePending"}, reason: "OperationInProgress", english: "Template adoption waits for the active lifecycle operation to finish.", description: "A backup, restore or wipe prevents admitting an available template revision."},
+	{types: []string{"TemplateUpdatePending"}, reason: "RevisionAvailable", english: "An installed template revision is waiting for admission.", description: "An installed template differs from the server's immutable effective revision."},
 	// GameServer: Ready
 	{types: []string{"Ready"}, reason: "Running", english: "The server is running and the agent is reporting heartbeats.", description: "Ready condition while the game server is up."},
 	{types: []string{"Ready"}, reason: "Pending", english: "The server is waiting to start.", description: "Ready condition while the game server is being created."},

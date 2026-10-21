@@ -6,6 +6,30 @@
 
 ## Purpose
 
+### Restricted workloads and node capture (#714)
+
+`--restricted-workloads` applies nonroot, no escalation, drop ALL and
+RuntimeDefault to game/config-init; incompatible numeric identities fail with
+the existing Ready/Failed condition before workload creation. Every game Pod
+disables token automount and projects token/CA/namespace only into agent.
+Token lifetime is 600–3600s (default 3600); shared PID remains for metrics.
+
+Restricted Pods never receive the legacy capture ephemeral container.
+`spec.capture.nodeDiagnostic` additionally requires cluster capture enablement
+and `--diagnostics-namespace`. The dedicated namespace must explicitly enforce
+privileged and be separate from games/control plane. Live owner UIDs establish
+GameServer→StatefulSet→Pod provenance; Pod UID, node and exact containerd ID are
+pinned before worker creation. A target change drains work before releasing
+the capture lock. A bounded, no-retry Job has hostPID and only SYS_ADMIN,
+SYS_PTRACE/NET_RAW additions, no token/socket/hostPath. Duration <=3600s, bytes
+<=900Mi, PVC 1Gi; deployment quota bounds aggregate retention. Linux/containerd
+with eth0 is the supported target. Artifact serving uses a separate Restricted
+Pod with per-capture mTLS. Direct reads cover diagnostic Secrets and resources.
+Cross-namespace owner references are never used: a NetworkCapture finalizer
+drains worker Pods, deletes a same-namespace ConfigMap anchor with foreground
+GC, then releases finalization. TTL and GameServer owner GC drive this cleanup.
+Terminal captures refresh artifact certificates without recreating targets.
+
 The operator is a Kubernetes controller-runtime-based process that reconciles Gameplane Custom Resource Definitions (CRDs) into operational Kubernetes objects. It is the authoritative owner of all state transformations: a user must be able to `kubectl apply` a GameServer and achieve the same outcome as creating it via the dashboard API. The operator drives the full lifecycle of game servers, backups, restores, and module installation through a set of specialized reconcilers watching CRD status.
 
 ## Responsibilities
@@ -29,6 +53,41 @@ and cleanup, even after sidecar restart or history eviction. Capture admission,
 start/stop and expiry remain reconciler responsibilities; the gateway cannot
 bypass them or operate an arbitrary pod. Existing game resources and storage are
 not recreated to enable remote parity.
+
+## Template revision admission
+
+- `GameServer.spec.templateRollout.policy` defaults to Automatic; OnRequest
+  admits only `requestedRevision == status.templateRevision.desired`. Initial
+  provisioning/baseline always adopts the installed content. No fleet scheduler,
+  canary or maintenance-window controller is implied.
+- First-pin initialization uses shared ownership and a checked metadata update
+  without stopping an existing workload. Its StatefulSet UID and render-input
+  fingerprint preserve the existing Pod template byte-for-byte, including API
+  defaults/admission fields, while those inputs are unchanged. A real workload
+  input change, replaced StatefulSet or observed stopped drain allows revision
+  stamping. An existing unannotated Pod never receives inferred provenance.
+  New servers pin before first rendering. Existing lifecycle owners defer both.
+- Complete template Name/spec content is SHA256-addressed in immutable owned
+  ConfigMaps (900 KiB maximum). The effective annotation is authoritative; status
+  is reconstructible. A missing/foreign/mutable/corrupt pin fails closed.
+- All GameServer config, version/image, init, storage, agent, networking and
+  workload calculations use the effective snapshot. Restic backup resolves the
+  pin after shared ownership, restore resolves its owned target pin, and default
+  capture filters use pinned ports. CSI restore planning persists a Restore-owned
+  source snapshot and copies it to the new server before startup permission.
+- Rollout extends the shared operation owner: no admission during backup,
+  restore or wipe; old effective graceful stop and live observed Pod drain precede
+  a checked pin update. The owner survives restart and catalog changes, releasing
+  after the matching new Pod is observed or a suspended zero-replica template is
+  observed. Startup health remains independent. Per-server power intent survives.
+- Desired/effective/running digests are distinct. Running requires the owned
+  StatefulSet/Pod chain and a running game container; legacy or stopped Pods do
+  not claim the desired revision. TemplateUpdatePending has RevisionAvailable,
+  OperationInProgress, AdoptingRevision, RevisionCurrent and TemplateUnavailable
+  reasons, included in the generated condition translation reference.
+- Obsolete snapshots are pruned only after old workload drain and replacement
+  observation. PVCs are retained; data compatibility and runtime/data rollback
+  remain administrator responsibilities. See `docs/template-rollouts.md`.
 
 ## Non-goals / boundaries
 

@@ -76,6 +76,46 @@ func TestBackupManifestPinsCoverageAndClassification(t *testing.T) {
 	}
 }
 
+func TestBackupManifestUsesEffectiveTemplateClassification(t *testing.T) {
+	r, gs, installed := revisionFixture(t)
+	installed.Spec.Storage.Extra = []gameplanev1alpha1.ExtraVolumeSpec{{Name: "world", MountPath: "/world-extra", BackupRole: "data"}}
+	if err := r.Update(t.Context(), installed); err != nil {
+		t.Fatal(err)
+	}
+	pin, err := r.saveTemplateSnapshot(t.Context(), gs, installed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gs.Annotations[effectiveTemplateAnnotation] = pin
+	if err := r.Update(t.Context(), gs); err != nil {
+		t.Fatal(err)
+	}
+	installed.Spec.Storage.Extra[0].BackupRole = "rebuildable"
+	if err := r.Update(t.Context(), installed); err != nil {
+		t.Fatal(err)
+	}
+	b := &gameplanev1alpha1.Backup{ObjectMeta: metav1.ObjectMeta{Name: "capture", Namespace: gs.Namespace}}
+	ss := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: gs.Name, Namespace: gs.Namespace, OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(gs, gameplanev1alpha1.GroupVersion.WithKind("GameServer"))}}, Spec: appsv1.StatefulSetSpec{Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{
+		Containers: []corev1.Container{{Name: "game", VolumeMounts: []corev1.VolumeMount{{Name: "world", MountPath: "/world-extra"}}}},
+		Volumes:    []corev1.Volume{{Name: "world", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: "game-extra-world"}}}},
+	}}}}
+	for _, obj := range []client.Object{b, ss} {
+		if err := r.Create(t.Context(), obj); err != nil {
+			t.Fatal(err)
+		}
+	}
+	backups := &BackupReconciler{Client: r.Client, APIReader: r.APIReader, Scheme: r.Scheme}
+	if err := backups.recordBackupManifest(t.Context(), b, gs); err != nil {
+		t.Fatal(err)
+	}
+	for _, volume := range b.Status.CaptureManifest.Volumes {
+		if volume.ClaimName == "game-extra-world" && volume.Classification == "data" {
+			return
+		}
+	}
+	t.Fatal("pending catalog revision changed effective volume classification")
+}
+
 func TestBackupManifestDoesNotInventHistoryForExistingWorker(t *testing.T) {
 	for _, strategy := range []string{"restic-snapshot", "volume-snapshot"} {
 		t.Run(strategy, func(t *testing.T) {

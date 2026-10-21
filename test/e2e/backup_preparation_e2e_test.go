@@ -18,7 +18,8 @@ import (
 // nodes. Kind's local-path volume supplies node affinity; attachable CSI
 // drivers still need their own multi-attach qualification. Zero API logins.
 func TestBackup_PreparationAndSameNodeCopy(t *testing.T) {
-	ctx := context.Background()
+	t.Parallel()
+	ctx := t.Context()
 	nodes, err := envInstance.K8s.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -39,7 +40,8 @@ func TestBackup_PreparationAndSameNodeCopy(t *testing.T) {
 	if eligible < 2 {
 		t.Fatal("backup preparation requires the management Kind profile with two schedulable workers")
 	}
-	ns, gs, template, name := "gameplane-games", "e2e-prepared-source", "e2e-prepared-template", "e2e-prepared-copy"
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	ns, gs, template, name := "gameplane-games", "prepared-source-"+suffix, "prepared-template-"+suffix, "prepared-copy-"+suffix
 	ensureResticRepo(t)
 	applyBusyboxTemplate(t, template)
 	applyBusyboxGameServer(t, ns, gs, template)
@@ -70,13 +72,17 @@ func TestBackup_PreparationAndSameNodeCopy(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo = repo.DeepCopy()
-	repo.ObjectMeta = metav1.ObjectMeta{Name: "e2e-prepared-repo", Namespace: ns}
+	repo.ObjectMeta = metav1.ObjectMeta{Name: "prepared-repo-" + suffix, Namespace: ns}
 	validURL := append([]byte(nil), repo.Data["repo"]...)
 	repo.Data["repo"] = []byte("rest:http://127.0.0.1:1")
 	if _, err := envInstance.K8s.CoreV1().Secrets(ns).Create(ctx, repo, metav1.CreateOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = envInstance.K8s.CoreV1().Secrets(ns).Delete(ctx, repo.Name, metav1.DeleteOptions{}) })
+	t.Cleanup(func() {
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+		defer cancel()
+		_ = envInstance.K8s.CoreV1().Secrets(ns).Delete(cleanupCtx, repo.Name, metav1.DeleteOptions{})
+	})
 	backup := &unstructured.Unstructured{Object: map[string]any{"apiVersion": "gameplane.local/v1alpha1", "kind": "Backup", "metadata": map[string]any{"name": name, "namespace": ns},
 		"spec": map[string]any{"serverRef": map[string]any{"name": gs}, "repoRef": map[string]any{"name": repo.Name, "key": "repo"}, "quiesce": true}}}
 	if _, err := envInstance.Dyn.Resource(backupGVR).Namespace(ns).Create(ctx, backup, metav1.CreateOptions{}); err != nil {

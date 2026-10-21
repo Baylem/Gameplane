@@ -99,6 +99,112 @@ func TestBackupWorkerPreparesBeforeQuiesceAndPinsAuthorization(t *testing.T) {
 	}
 }
 
+func TestBackupPreparedWorkerUsesTemplateAdmittedBeforeOwnership(t *testing.T) {
+	for _, adoptBeforeClaim := range []bool{false, true} {
+		t.Run(fmt.Sprintf("adopt-before-claim=%t", adoptBeforeClaim), func(t *testing.T) {
+			r, q := guardFixtureWorkers(t, false, guardBackup("prepared"))
+			base := r.Client.(client.WithWatch)
+			r.APIReader = base
+			var gs gameplanev1alpha1.GameServer
+			if err := base.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: "server"}, &gs); err != nil {
+				t.Fatal(err)
+			}
+			oldGroup, nextGroup := int64(1000), int64(2000)
+			installed := &gameplanev1alpha1.GameTemplate{ObjectMeta: metav1.ObjectMeta{Name: "template", UID: "old-catalog-uid"},
+				Spec: gameplanev1alpha1.GameTemplateSpec{Security: &gameplanev1alpha1.GameSecuritySpec{FSGroup: &oldGroup}}}
+			if err := base.Create(t.Context(), installed); err != nil {
+				t.Fatal(err)
+			}
+			revisions := &GameServerReconciler{Client: base, APIReader: base, Scheme: r.Scheme}
+			oldPin, err := revisions.saveTemplateSnapshot(t.Context(), &gs, installed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gs.Annotations = map[string]string{effectiveTemplateAnnotation: oldPin}
+			if err := base.Update(t.Context(), &gs); err != nil {
+				t.Fatal(err)
+			}
+			// Reinstalling the catalog can change both its UID and filesystem
+			// settings without admitting that content for this GameServer.
+			if err := base.Delete(t.Context(), installed); err != nil {
+				t.Fatal(err)
+			}
+			installed = &gameplanev1alpha1.GameTemplate{ObjectMeta: metav1.ObjectMeta{Name: "template", UID: "new-catalog-uid"},
+				Spec: gameplanev1alpha1.GameTemplateSpec{Security: &gameplanev1alpha1.GameSecuritySpec{FSGroup: &nextGroup}}}
+			if err := base.Create(t.Context(), installed); err != nil {
+				t.Fatal(err)
+			}
+			nextPin, err := revisions.saveTemplateSnapshot(t.Context(), &gs, installed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			adopted := false
+			r.Client = interceptor.NewClient(base, interceptor.Funcs{Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+				if b, ok := obj.(*gameplanev1alpha1.Backup); ok && adoptBeforeClaim && !adopted && b.Annotations[backupTargetAnnotation] != "" {
+					// Finish a rollout after Reconcile reads the GameServer but
+					// before the Backup claims its shared lifecycle ownership.
+					var live gameplanev1alpha1.GameServer
+					if err := c.Get(ctx, client.ObjectKeyFromObject(&gs), &live); err != nil {
+						return err
+					}
+					live.Annotations[effectiveTemplateAnnotation] = nextPin
+					if err := c.Update(ctx, &live); err != nil {
+						return err
+					}
+					adopted = true
+				}
+				return c.Update(ctx, obj, opts...)
+			}})
+			budgetPass(t, r, "prepared")
+			var job batchv1.Job
+			if err := base.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: "prepared"}, &job); err != nil {
+				t.Fatal(err)
+			}
+			want := oldGroup
+			if adoptBeforeClaim {
+				want = nextGroup
+			}
+			security := job.Spec.Template.Spec.SecurityContext
+			if adopted != adoptBeforeClaim || security == nil || security.FSGroup == nil || *security.FSGroup != want {
+				t.Fatalf("prepared worker did not use the admitted source: adopted=%t security=%+v want fsGroup=%d", adopted, security, want)
+			}
+			if q.quiesced != 0 {
+				t.Fatal("template resolution bypassed worker readiness")
+			}
+			budgetReadyWorker(t, r, "prepared", "ready-worker-uid")
+			budgetPass(t, r, "prepared")
+			b := guardGetBackup(t, r, "prepared")
+			if b.Annotations[backupAuthorizedWorkerAnnotation] == "" || b.Status.CaptureManifest == nil || b.Status.CaptureManifest.State != "Recorded" || q.quiesced != 1 {
+				t.Fatalf("pinned preparation did not reach authorized capture: %+v %+v", b, q)
+			}
+		})
+	}
+}
+
+func TestBackupPreparedWorkerRejectsMissingEffectiveTemplate(t *testing.T) {
+	r, q := guardFixtureWorkers(t, false, guardBackup("prepared"))
+	var gs gameplanev1alpha1.GameServer
+	if err := r.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: "server"}, &gs); err != nil {
+		t.Fatal(err)
+	}
+	gs.Annotations = map[string]string{effectiveTemplateAnnotation: strings.Repeat("a", 64)}
+	if err := r.Update(t.Context(), &gs); err != nil {
+		t.Fatal(err)
+	}
+	// A readable catalog must not substitute for the missing admitted content.
+	if err := r.Create(t.Context(), &gameplanev1alpha1.GameTemplate{ObjectMeta: metav1.ObjectMeta{Name: "template"}}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := r.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKey{Namespace: "ns", Name: "prepared"}})
+	if err == nil || !strings.Contains(err.Error(), "read pinned template snapshot") || q.quiesced != 0 {
+		t.Fatalf("missing pin did not fail before save-off: %v %+v", err, q)
+	}
+	var job batchv1.Job
+	if err := r.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: "prepared"}, &job); !apierrors.IsNotFound(err) {
+		t.Fatalf("missing pin created a worker: %v", err)
+	}
+}
+
 func TestBackupPreparationDeadlineNeverDisablesSaving(t *testing.T) {
 	r, q := guardFixtureWorkers(t, false, guardBackup("expired"))
 	budgetPass(t, r, "expired")

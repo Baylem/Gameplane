@@ -581,6 +581,18 @@ func validateAndProtectGameServer(
 	}
 
 	// 2. Validate spec.serviceAccountName
+	// A host-capable diagnostic exception must be a separate, synchronously
+	// audited administrator action. Generic edits may preserve an existing
+	// opt-in, but cannot grant/revoke it or inherit it on a clone.
+	nodeDiagnostic, _, _ := unstructured.NestedBool(desired.Object, "spec", "capture", "nodeDiagnostic")
+	liveNodeDiagnostic := false
+	if live != nil {
+		liveNodeDiagnostic, _, _ = unstructured.NestedBool(live.Object, "spec", "capture", "nodeDiagnostic")
+	}
+	if nodeDiagnostic != liveNodeDiagnostic {
+		return errors.New("change the node diagnostic exception through the administrator capture-node-enable/capture-node-disable action")
+	}
+
 	sa, hasSA, _ := unstructured.NestedString(desired.Object, "spec", "serviceAccountName")
 	if !isAdmin {
 		if live == nil {

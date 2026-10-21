@@ -627,6 +627,26 @@
     "defaultMessage": "Indexing the module source failed.",
     "description": "Synced condition after a failed index."
   },
+  "condition.templateupdatepending.adoptingrevision": {
+    "defaultMessage": "The admitted template revision is being adopted.",
+    "description": "Template rollout owns the server lifecycle while draining and replacing its workload."
+  },
+  "condition.templateupdatepending.operationinprogress": {
+    "defaultMessage": "Template adoption waits for the active lifecycle operation to finish.",
+    "description": "A backup, restore or wipe prevents admitting an available template revision."
+  },
+  "condition.templateupdatepending.revisionavailable": {
+    "defaultMessage": "An installed template revision is waiting for admission.",
+    "description": "An installed template differs from the server's immutable effective revision."
+  },
+  "condition.templateupdatepending.revisioncurrent": {
+    "defaultMessage": "The installed template revision is effective.",
+    "description": "No newer template revision is waiting for adoption. Running revision is observed separately."
+  },
+  "condition.templateupdatepending.templateunavailable": {
+    "defaultMessage": "The installed template is unavailable; the effective snapshot is retained.",
+    "description": "Template availability is unknown but the server retains its immutable effective content."
+  },
   "condition.tunneladdressinvalid.validationfailed": {
     "defaultMessage": "Some tunnel endpoints were rejected: {details}",
     "description": "Condition when endpoints reported by the playit tunnel pod fail validation. details is the English validation text."
