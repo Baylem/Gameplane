@@ -36,7 +36,10 @@ func TestExecContinuousFragmentsRespectAbsoluteDeadline(t *testing.T) {
 				}
 				// Empty fragments cannot trigger the aggregate byte cap. A
 				// continuously readable socket must still reach its hard deadline.
-				for server.writePacket(id, typeRespValue, "") == nil {
+				for {
+					if server.writePacket(id, typeRespValue, "") != nil {
+						return
+					}
 				}
 			}()
 			finished := make(chan struct{})
@@ -138,7 +141,10 @@ func TestAuthContinuousPreambleRespectsAbsoluteDeadline(t *testing.T) {
 		if err != nil {
 			return
 		}
-		for server.writePacket(id, typeRespValue, "") == nil {
+		for {
+			if server.writePacket(id, typeRespValue, "") != nil {
+				return
+			}
 		}
 	}()
 	host, port, err := net.SplitHostPort(listener.Addr().String())

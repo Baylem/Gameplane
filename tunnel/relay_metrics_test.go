@@ -21,7 +21,7 @@ func TestRelayMetricsUnknownStaleAndRecovery(t *testing.T) {
 	} {
 		h.observe(time.Now().Add(-tc.age), tc.state, nil)
 		w := httptest.NewRecorder()
-		relayHealthHandler(h).ServeHTTP(w, httptest.NewRequest("GET", "/metrics", nil))
+		relayHealthHandler(h).ServeHTTP(w, httptest.NewRequestWithContext(t.Context(), "GET", "/metrics", nil))
 		body := w.Body.String()
 		if !strings.Contains(body, "gameplane_tunnel_ready "+tc.ready+"\n") {
 			t.Fatal(body)

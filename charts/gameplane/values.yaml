@@ -690,7 +690,7 @@ serviceMonitors:
   # so the receiver ServiceMonitor also needs
   # api.telemetry.receiver.dashboard.tokenSecretRef.name) when
   # networkPolicies.enabled is also true. Required
-  # alongside enabled: true whenever networkPolicies.enabled is also true;
+  # alongside enabled: true when the operator and networkPolicies are enabled;
   # left empty, chart validation fails unless externallyManagedPolicy is true.
   # Also permits tunnel health/metrics on port 8091. Example:
   # `{matchLabels: {kubernetes.io/metadata.name: monitoring}}`.

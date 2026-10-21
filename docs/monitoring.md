@@ -28,7 +28,7 @@ Check Prometheus **Status → Targets** for agent and tunnel targets with `up=1`
 then query `gameplane_agent_players_online` and `gameplane_tunnel_ready`.
 Unknown player counts are absent even when scraping works.
 
-With NetworkPolicies enabled, the chart requires a nonempty
+With the operator and its NetworkPolicies enabled, the chart requires a nonempty
 `serviceMonitors.scrapeNamespaceSelector`. Missing configuration fails with a
 message naming the setting. If another system owns the policies, set
 `serviceMonitors.externallyManagedPolicy: true`; that flag opens no traffic.

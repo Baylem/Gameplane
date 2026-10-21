@@ -32,7 +32,7 @@ func TestPerformanceCacheZeroFreshnessAndSharedCommand(t *testing.T) {
 	router.Route("/versioned", s.Mount)
 	for _, route := range []string{"/legacy/status", "/versioned/status"} {
 		response := httptest.NewRecorder()
-		router.ServeHTTP(response, httptest.NewRequest("GET", route, nil))
+		router.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), "GET", route, nil))
 		if response.Code != 200 {
 			t.Fatal("shared status cache unavailable")
 		}

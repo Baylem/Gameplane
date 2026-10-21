@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -101,6 +102,16 @@ func TestPlayitAssignmentDoesNotImplyRelayReady(t *testing.T) {
 	t.Parallel()
 	gs := &gameplanev1alpha1.GameServer{Spec: gameplanev1alpha1.GameServerSpec{Networking: gameplanev1alpha1.GameServerNetworking{Tunnel: &gameplanev1alpha1.GameServerTunnel{Provider: "playit", Playit: &gameplanev1alpha1.PlayitTunnelSpec{}, CredentialsSecretRef: &gameplanev1alpha1.SecretNameRef{Name: "relay-credentials"}}}}}
 	dep := tunnelReadyDeployment()
+	// A legacy deployment without the provider probe remains unknown even
+	// when its Pod is Ready; assignment alone cannot bypass that requirement.
+	legacy := meta.FindStatusCondition(computeTunnelConditions(gs, tunnelPlan{wantTunnel: true}, dep), "TunnelReady")
+	if legacy == nil || legacy.Status != metav1.ConditionUnknown || legacy.Reason != "RelayConnectionUnknown" {
+		t.Fatalf("legacy playit readiness=%+v, want unknown connection", legacy)
+	}
+	dep.Generation = 1
+	dep.Status.ObservedGeneration = 1
+	dep.Status.UpdatedReplicas = 1
+	dep.Spec.Template.Spec.Containers = []corev1.Container{{Name: "tunnel", ReadinessProbe: &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/readyz", Port: intstr.FromInt32(8091)}}}}}
 	for _, endpoints := range [][]gameplanev1alpha1.GameServerEndpoint{nil, {{Name: "game", Host: "example.playit.gg", Port: 30000}}} {
 		gs.Status.TunnelEndpoints = endpoints
 		cond := meta.FindStatusCondition(computeTunnelConditions(gs, tunnelPlan{wantTunnel: true}, dep), "TunnelReady")
