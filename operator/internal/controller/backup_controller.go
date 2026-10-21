@@ -314,13 +314,6 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	// A missing template is not fatal: it only refines the FSGroup, and
-	// buildBackupPodSecurityContext falls back to 65532 for a zero template.
-	var tmpl gameplanev1alpha1.GameTemplate
-	if err := r.Get(ctx, types.NamespacedName{Name: gs.Spec.TemplateRef.Name}, &tmpl); err != nil && !apierrors.IsNotFound(err) {
-		return ctrl.Result{}, err
-	}
-
 	// Volume-snapshot backups take a CSI snapshot of the data PVC rather
 	// than running restic, so they branch off here — before the restic
 	// repo Secret checks, which don't apply to them.
@@ -359,6 +352,19 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 	if res, err := r.prepareBackupQuiesce(ctx, &b); err != nil || res.RequeueAfter > 0 {
 		return res, err
 	}
+	// Admission refreshes the target. Resolve the pin only after owning the
+	// lifecycle fence, so a concurrent rollout cannot change the copy layout.
+	bound, err := r.ownedBackupTarget(ctx, &b)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if bound == nil {
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+	tmpl, err := effectiveGameTemplate(ctx, r.backupAPIReader(), bound)
+	if err != nil && (bound.Annotations[effectiveTemplateAnnotation] != "" || !apierrors.IsNotFound(err)) {
+		return ctrl.Result{}, err
+	}
 
 	backoff, deadline := resolveJobLimits(r.JobBackoffLimit, r.JobActiveDeadlineSeconds)
 	job := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{Name: b.Name, Namespace: b.Namespace}}
@@ -367,7 +373,7 @@ func (r *BackupReconciler) reconcile(ctx context.Context, req ctrl.Request) (ctr
 			job.Spec.BackoffLimit = &backoff
 			job.Spec.ActiveDeadlineSeconds = &deadline
 			job.Spec.Template.Labels = map[string]string{backupRestoreJobLabel: backupRestoreJobValue, backupUIDLabel: string(b.UID)}
-			job.Spec.Template.Spec = r.buildBackupPodSpec(&b, &tmpl)
+			job.Spec.Template.Spec = r.buildBackupPodSpec(&b, tmpl)
 			job.Spec.Template.Spec.RestartPolicy = corev1.RestartPolicyNever
 		}
 		return controllerutil.SetControllerReference(&b, job, r.Scheme)

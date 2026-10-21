@@ -34,6 +34,9 @@ type lifecycleIdentity struct {
 	// InitialStartup permits only the first workload of a CSI restore's new
 	// target (including WaitForFirstConsumer PVCs), while other operations wait.
 	InitialStartup bool `json:"initialStartup,omitempty"`
+	// Baseline establishes a first template pin without replacing an existing
+	// workload. Durable intent prevents a leader restart turning it into a drain.
+	Baseline bool `json:"baseline,omitempty"`
 }
 
 type lifecycleOperation struct {
@@ -54,7 +57,7 @@ func parseLifecycleOperation(value string) (lifecycleOperation, error) {
 		return op, fmt.Errorf("decode lifecycle owner: %w", err)
 	}
 	for _, id := range append([]lifecycleIdentity{op.lifecycleIdentity}, op.Recovery...) {
-		if id.Name == "" || id.UID == "" || id.TargetUID == "" || (id.Kind != "Backup" && id.Kind != "Restore" && id.Kind != "Wipe") || (id.Kind == "Wipe" && id.Token == "") {
+		if id.Name == "" || id.UID == "" || id.TargetUID == "" || (id.Kind != "Backup" && id.Kind != "Restore" && id.Kind != "Wipe" && id.Kind != "Rollout") || (id.Kind == "Wipe" && id.Token == "") || (id.Kind == "Rollout" && !validTemplateRevision(id.Token)) {
 			return op, fmt.Errorf("invalid lifecycle owner identity")
 		}
 		if id.TargetUID != op.TargetUID {
@@ -134,7 +137,7 @@ func lifecycleOwnerExists(ctx context.Context, reader client.Reader, namespace s
 		obj = &gameplanev1alpha1.Backup{}
 	case "Restore":
 		obj = &gameplanev1alpha1.Restore{}
-	case "Wipe":
+	case "Wipe", "Rollout":
 		// Only the GameServer reconciler may cancel/replace a wipe token after
 		// its workers drain. A removed request is not proof of worker absence.
 		return true, nil
@@ -160,6 +163,9 @@ func claimLifecycleOperation(ctx context.Context, c client.Client, reader client
 	if live.UID != want.TargetUID || !live.DeletionTimestamp.IsZero() {
 		return false, fmt.Errorf("lifecycle target changed identity or is being deleted")
 	}
+	if want.Kind == "Rollout" && live.Generation != want.Generation {
+		return false, errLifecycleGenerationChanged
+	}
 	*gs = live
 	op, occupied, err := lifecycleOwner(gs)
 	if err != nil {
@@ -178,7 +184,7 @@ func claimLifecycleOperation(ctx context.Context, c client.Client, reader client
 		}
 		op.lifecycleIdentity = want
 	} else if occupied {
-		if gs.Annotations[lifecycleOperationAnnotation] != "" && op.Kind != "Wipe" && op.Generation != want.Generation {
+		if gs.Annotations[lifecycleOperationAnnotation] != "" && op.Kind != "Wipe" && op.Kind != "Rollout" && op.Generation != want.Generation {
 			return false, errLifecycleGenerationChanged
 		}
 		if gs.Annotations[lifecycleOperationAnnotation] == "" {
@@ -193,7 +199,7 @@ func claimLifecycleOperation(ctx context.Context, c client.Client, reader client
 		}
 		// A stop command already sent may still save data and exit. Waiting
 		// here also lets pending restarts finish instead of freezing mid-stop.
-		if want.Kind == "Backup" {
+		if want.Kind == "Backup" || want.Kind == "Rollout" {
 			pending, err := backupLifecycleTransitionPending(ctx, reader, gs)
 			if err != nil || pending {
 				return false, err

@@ -375,6 +375,13 @@ re-pinning `spec.version`.
 
 ### Verifying and pinning bundles
 
+Pin production `Module.spec.version` to avoid following catalog updates across
+the fleet. Servers default to automatic template adoption; opt into
+`GameServer.spec.templateRollout.policy: OnRequest` before installing a new
+version to admit each server separately. See [template adoption and rollback](template-rollouts.md)
+for baseline upgrade behavior, exact revision requests, retained PVCs and the
+difference between reverting a runtime and restoring application data.
+
 Two independent, opt-in controls harden the supply chain for OCI modules:
 
 **Digest pin** (`Module.spec.digest`) refuses to install unless the resolved

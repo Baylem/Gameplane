@@ -30,6 +30,41 @@ start/stop and expiry remain reconciler responsibilities; the gateway cannot
 bypass them or operate an arbitrary pod. Existing game resources and storage are
 not recreated to enable remote parity.
 
+## Template revision admission
+
+- `GameServer.spec.templateRollout.policy` defaults to Automatic; OnRequest
+  admits only `requestedRevision == status.templateRevision.desired`. Initial
+  provisioning/baseline always adopts the installed content. No fleet scheduler,
+  canary or maintenance-window controller is implied.
+- First-pin initialization uses shared ownership and a checked metadata update
+  without stopping an existing workload. Its StatefulSet UID and render-input
+  fingerprint preserve the existing Pod template byte-for-byte, including API
+  defaults/admission fields, while those inputs are unchanged. A real workload
+  input change, replaced StatefulSet or observed stopped drain allows revision
+  stamping. An existing unannotated Pod never receives inferred provenance.
+  New servers pin before first rendering. Existing lifecycle owners defer both.
+- Complete template Name/spec content is SHA256-addressed in immutable owned
+  ConfigMaps (900 KiB maximum). The effective annotation is authoritative; status
+  is reconstructible. A missing/foreign/mutable/corrupt pin fails closed.
+- All GameServer config, version/image, init, storage, agent, networking and
+  workload calculations use the effective snapshot. Restic backup resolves the
+  pin after shared ownership, restore resolves its owned target pin, and default
+  capture filters use pinned ports. CSI restore planning persists a Restore-owned
+  source snapshot and copies it to the new server before startup permission.
+- Rollout extends the shared operation owner: no admission during backup,
+  restore or wipe; old effective graceful stop and live observed Pod drain precede
+  a checked pin update. The owner survives restart and catalog changes, releasing
+  after the matching new Pod is observed or a suspended zero-replica template is
+  observed. Startup health remains independent. Per-server power intent survives.
+- Desired/effective/running digests are distinct. Running requires the owned
+  StatefulSet/Pod chain and a running game container; legacy or stopped Pods do
+  not claim the desired revision. TemplateUpdatePending has RevisionAvailable,
+  OperationInProgress, AdoptingRevision, RevisionCurrent and TemplateUnavailable
+  reasons, included in the generated condition translation reference.
+- Obsolete snapshots are pruned only after old workload drain and replacement
+  observation. PVCs are retained; data compatibility and runtime/data rollback
+  remain administrator responsibilities. See `docs/template-rollouts.md`.
+
 ## Non-goals / boundaries
 
 The operator **does not** handle:

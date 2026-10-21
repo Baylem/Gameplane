@@ -251,16 +251,19 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Resolve the template this GameServer points at. Templates are
-	// cluster-scoped so no namespace is needed.
-	var tmpl gameplanev1alpha1.GameTemplate
-	if err := r.Get(ctx, types.NamespacedName{Name: gs.Spec.TemplateRef.Name}, &tmpl); err != nil {
-		if apierrors.IsNotFound(err) {
-			return ctrl.Result{RequeueAfter: 15 * time.Second}, r.setPhase(ctx, &gs,
-				fmt.Sprintf("GameTemplate %q not found", gs.Spec.TemplateRef.Name))
+	// Snapshot resolution precedes config, images, init containers, storage,
+	// services and every other template-derived resource.
+	effective, changed, err := r.reconcileTemplateRevision(ctx, &gs)
+	if err != nil {
+		if apierrors.IsConflict(err) {
+			return requeueOnConflict(ctrl.Result{}, err)
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: 15 * time.Second}, r.setPhase(ctx, &gs, err.Error())
 	}
+	if changed {
+		return ctrl.Result{RequeueAfter: time.Second}, nil
+	}
+	tmpl := *effective
 
 	// Resolve spec.config against the template's configSchema before
 	// touching any children: invalid config must fail loudly (mirroring
@@ -454,6 +457,9 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// or nothing fires the transition until an unrelated event happens to
 	// wake the reconciler.
 	hints := []time.Duration{stopRequeue, idleRequeue}
+	if _, held, _ := lifecycleOwner(&gs); held {
+		hints = append(hints, 5*time.Second)
+	}
 	if plan.wantSentinel {
 		// Bounded backstop for planSentinel's wait on the sentinel or the
 		// game pod. Both are owned (Owns(&appsv1.Deployment{}),
@@ -484,6 +490,7 @@ func (r *GameServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&networkingv1.NetworkPolicy{}).
 		Owns(&gameplanev1alpha1.BackupSchedule{}).
 		Owns(&corev1.Secret{}).
+		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
@@ -1208,12 +1215,18 @@ func (r *GameServerReconciler) desiredReplicas(
 	}
 	if op, held, err := lifecycleOwner(&live); err != nil {
 		return 0, 0, err
+	} else if held && op.Kind == "Rollout" && !op.Baseline && len(op.Recovery) == 0 && op.Token != live.Annotations[effectiveTemplateAnnotation] {
+		replicas, poll, err := r.softStop(ctx, gs, tmpl)
+		if poll == 0 {
+			poll = restartDrainPoll
+		}
+		return replicas, poll, err
 	} else if held && op.InitialStartup && len(op.Recovery) == 0 {
 		if live.Spec.Suspend {
 			return 0, 5 * time.Second, nil
 		}
 		return 1, 5 * time.Second, nil
-	} else if held && (op.Kind == "Backup" || len(op.Recovery) != 0) {
+	} else if held && (op.Kind == "Backup" || op.Baseline || len(op.Recovery) != 0) {
 		var ss appsv1.StatefulSet
 		err := r.wipeReader().Get(ctx, client.ObjectKeyFromObject(gs), &ss)
 		if apierrors.IsNotFound(err) {
@@ -1494,6 +1507,9 @@ func (r *GameServerReconciler) reconcileStatefulSet(
 		if live.UID != gs.UID {
 			return fmt.Errorf("GameServer changed identity before StatefulSet mutation")
 		}
+		if live.Annotations[effectiveTemplateAnnotation] != gs.Annotations[effectiveTemplateAnnotation] {
+			return fmt.Errorf("effective template changed before StatefulSet mutation")
+		}
 		if owner := metav1.GetControllerOf(ss); owner != nil && owner.UID != live.UID {
 			return fmt.Errorf("StatefulSet belongs to a different GameServer identity")
 		}
@@ -1562,10 +1578,17 @@ func (r *GameServerReconciler) reconcileStatefulSet(
 				}
 			}
 		}
+		preserveBaseline, err := r.preserveBaselinePodTemplate(ctx, &live, ss)
+		if err != nil {
+			return err
+		}
 		ss.Spec.Replicas = &actualReplicas
-		if held && (!ss.CreationTimestamp.IsZero() || ss.ResourceVersion != "") {
+		if held && (op.Kind != "Rollout" || op.Token != live.Annotations[effectiveTemplateAnnotation] || len(op.Recovery) != 0) && (!ss.CreationTimestamp.IsZero() || ss.ResourceVersion != "") {
 			// Restore and wipe may stop the existing workload, but rollout
 			// waits until the operation and its worker cleanup have finished.
+			return nil
+		}
+		if preserveBaseline {
 			return nil
 		}
 		ss.Spec.ServiceName = gs.Name
@@ -1574,6 +1597,12 @@ func (r *GameServerReconciler) reconcileStatefulSet(
 		// Stamp (or clear) the config fingerprint without touching
 		// annotations other actors may have set on the pod template.
 		ann := ss.Spec.Template.Annotations
+		if revision := gs.Annotations[effectiveTemplateAnnotation]; revision != "" {
+			if ann == nil {
+				ann = map[string]string{}
+			}
+			ann[templateRevisionAnnotation] = revision
+		}
 		if mc.hash != "" {
 			if ann == nil {
 				ann = map[string]string{}

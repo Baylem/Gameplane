@@ -12,6 +12,14 @@ It was one of three `go.work` modules without CI lint coverage until this featur
 
 ## Responsibilities
 
+The operator bucket includes `TestGameServer_TemplateOnRequestRetainsData`: a
+live busybox workload keeps its Pod and old rendered config after a shared
+template update, then admits the exact desired digest and verifies a replacement
+Pod, the same PVC UID, preserved save marker and updated config-init output.
+Operator regression sources cover lifecycle exclusion, old-template graceful
+stop, status reset/leader recovery, exact request binding, snapshot integrity,
+complete pinned render inputs and source-template preservation for CSI restore.
+
 - Boot and tear down (or reuse) a kind cluster, install the working-tree Helm chart, and wait for every component to come up healthy.
 - Exercise the full CRD lifecycle for all 8 kinds (GameServer, GameTemplate, Backup, BackupSchedule, Restore, Module, ModuleSource, Cluster) against a real API server and operator.
 - Drive the REST + WebSocket API as a real HTTP client would: login, session/CSRF handling, RBAC matrix checks, console/PTY/log streaming, file upload/download.
