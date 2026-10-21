@@ -151,7 +151,7 @@ func TestUDPWakeWorkerCoalescesAndStops(t *testing.T) {
 }
 
 func TestSuccessfulGameplayOutlivesJoinBudget(t *testing.T) {
-	upstream, err := net.Listen("tcp", "127.0.0.1:0")
+	upstream, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,12 +214,12 @@ func (c observedPacketConn) ReadFrom(p []byte) (int, net.Addr, error) {
 }
 
 func TestUDPReceiveContinuesWhileWakeIsStalled(t *testing.T) {
-	listener, err := net.ListenPacket("udp", "127.0.0.1:0")
+	listener, err := (&net.ListenConfig{}).ListenPacket(t.Context(), "udp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer listener.Close()
-	client, err := net.Dial("udp", listener.LocalAddr().String())
+	client, err := (&net.Dialer{}).DialContext(t.Context(), "udp", listener.LocalAddr().String())
 	if err != nil {
 		t.Fatal(err)
 	}
