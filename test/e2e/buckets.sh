@@ -394,8 +394,10 @@ EOF
 # here are a conscious, reviewed act. Currently empty.
 unbucketed() { :; }
 
+bucket_network_isolation() { echo TestNetworkIsolation_EnforcedAndUpgrade; }
+
 bucket_names() {
-	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade telemetry capture-overhead optional-components
+	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade telemetry capture-overhead optional-components network-isolation
 }
 
 list_bucket() {
@@ -414,6 +416,7 @@ list_bucket() {
 	telemetry) bucket_telemetry ;;
 	capture-overhead) bucket_capture_overhead ;;
 	optional-components) bucket_optional_components ;;
+	network-isolation) bucket_network_isolation ;;
 	*)
 		echo "unknown bucket: $1 (known: $(bucket_names | tr '\n' ' '))" >&2
 		exit 2

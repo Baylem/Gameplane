@@ -6,6 +6,13 @@
 
 ## Purpose
 
+The amd64 `network-isolation` bucket requires the Cilium fixture
+(`GAMEPLANE_E2E_CNI=cilium`) and strict chart CIDRs derived from the single-node
+cluster. It tests actual legacy versus isolated sentinel connections, an
+existing template's opt-in rollout without selector changes, HTTP kubelet
+readiness, fresh agent heartbeats, and API-to-agent mTLS access. It uses one
+admin login and runs separately from the kindnet shape-only checks.
+
 The `test/e2e` module is Gameplane's end-to-end test suite: it stands up a real (kind-based) Kubernetes cluster, installs the Helm chart, and drives the operator/api/agent/sentinel stack as real components rather than mocks — CRDs applied through the typed/dynamic client, HTTP calls through a real port-forward, RCON/wire-protocol joins against real game server containers. Where the other modules' test tiers (unit, envtest) prove a component's own logic in isolation, this module proves the whole product works together on a cluster shaped like the ones users actually run.
 
 It was one of three `go.work` modules without CI lint coverage until this feature (`api`, `agent`, and `test/e2e` — see FR-001); all 13 `go.work` members (`netguard`, `gameaction`, `gameproto`, `operator`, `agent`, `api`, `sentinel`, `audit-syslog-bridge`, `telemetry-receiver`, `mcp-server`, `svcutil`, `tunnel`, and `test/e2e`) are golangci-lint gated in CI now — see the `lint` job's matrix in `.github/workflows/ci.yaml`. `test/e2e` lints with `--build-tags=e2e`, same tier as `operator`/`api`'s `--build-tags=envtest`, run as their own step so the catch-all lint step excludes all three and nothing is linted twice.
