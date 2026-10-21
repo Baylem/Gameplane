@@ -203,6 +203,10 @@
     "defaultMessage": "The primary volume was copied without confirmed application quiesce.",
     "description": "Backup achieved consistency: RawCopy."
   },
+  "condition.consistency.stoppedsource": {
+    "defaultMessage": "The primary volume copy completed from a source that was already stopped and drained before capture. Other volumes remain outside this backup.",
+    "description": "Backup achieved consistency: StoppedSource."
+  },
   "condition.consistency.unsupportedrawcopy": {
     "defaultMessage": "The game does not support quiesce. The primary volume was copied while it could still change.",
     "description": "Backup achieved consistency: UnsupportedRawCopy."
@@ -630,6 +634,10 @@
   "condition.unquiesced.failed": {
     "defaultMessage": "The server could not be resumed after the backup. Its world may still have auto-save turned off.",
     "description": "Unquiesced condition when the unfreeze failed."
+  },
+  "condition.unquiesced.sourceprocessgone": {
+    "defaultMessage": "The original game process has exited. No resume command was needed.",
+    "description": "Unquiesced condition when the original source pod no longer runs."
   },
   "condition.unquiesced.unquiesced": {
     "defaultMessage": "The server was resumed after the backup.",

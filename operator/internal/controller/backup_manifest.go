@@ -124,6 +124,9 @@ func (r *BackupReconciler) recordBackupManifest(ctx context.Context, b *gameplan
 }
 
 func backupQuiesceOutcome(b *gameplanev1alpha1.Backup) string {
+	if preparation, err := parseBackupPreparation(b); err == nil && preparation != nil && preparation.Outcome == "already-stopped" {
+		return "already-stopped"
+	}
 	switch b.Annotations[annoQuiesceAttempted] {
 	case "true":
 		return "confirmed"
@@ -139,7 +142,8 @@ func backupQuiesceOutcome(b *gameplanev1alpha1.Backup) string {
 	}
 }
 
-// Consistency=True means the copy completed after the agent confirmed quiesce.
+// Consistency=True means the copy completed after confirmed quiesce or from an
+// already-stopped source whose writers had drained before capture admission.
 // False is an explicit weaker guarantee, not a synonym for copy failure.
 func backupConsistencyCondition(b *gameplanev1alpha1.Backup) metav1.Condition {
 	condition := metav1.Condition{Type: "Consistency", ObservedGeneration: b.Generation, Status: metav1.ConditionUnknown}
@@ -152,6 +156,8 @@ func backupConsistencyCondition(b *gameplanev1alpha1.Backup) metav1.Condition {
 		condition.Reason, condition.Message = "CapturePending", "The capture has not completed; its achieved consistency is not yet known."
 	case b.Status.CaptureManifest.QuiesceOutcome == "confirmed":
 		condition.Status, condition.Reason, condition.Message = metav1.ConditionTrue, "Quiesced", "The primary volume copy completed after the agent confirmed quiesce. This depends on the module's quiesce commands; other volumes remain outside this backup."
+	case b.Status.CaptureManifest.QuiesceOutcome == "already-stopped":
+		condition.Status, condition.Reason, condition.Message = metav1.ConditionTrue, "StoppedSource", "The primary volume copy completed from a source that was already stopped and drained before capture. Other volumes remain outside this backup."
 	case b.Status.CaptureManifest.Strategy == "volume-snapshot":
 		condition.Status, condition.Reason, condition.Message = metav1.ConditionFalse, "CrashConsistentSnapshot", "The primary CSI snapshot is crash-consistent; application quiesce was not confirmed ("+b.Status.CaptureManifest.QuiesceOutcome+")."
 	case b.Status.CaptureManifest.QuiesceOutcome == "unsupported":

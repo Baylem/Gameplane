@@ -119,11 +119,19 @@ func (r *BackupReconciler) recoverBackupTarget(ctx context.Context, b *gameplane
 			return false, err
 		}
 	}
-	if r.AgentClient == nil {
-		return false, fmt.Errorf("cannot recover orphaned quiesce without an agent client")
+	// Legacy owners have no pod UID. Retire them only on positive absence or
+	// terminal-pod proof; never bind an old RPC to a newly observed identity.
+	gone, err := backupQuiesceProcessGone(ctx, r.backupAPIReader(), b.Namespace, b.Spec.ServerRef.Name, "")
+	if err != nil {
+		return false, err
 	}
-	if err := r.AgentClient.Unquiesce(ctx, b.Namespace, b.Spec.ServerRef.Name); err != nil {
-		return false, fmt.Errorf("recover orphaned quiesce: %w", err)
+	if !gone {
+		if !agentQuiesceAvailable(r.AgentClient) {
+			return false, fmt.Errorf("cannot recover orphaned quiesce without an agent client")
+		}
+		if err := r.AgentClient.Unquiesce(ctx, b.Namespace, b.Spec.ServerRef.Name); err != nil {
+			return false, fmt.Errorf("recover orphaned quiesce: %w", err)
+		}
 	}
 	delete(b.Annotations, backupRecoveryAnnotation)
 	delete(b.Annotations, annoQuiesceAttempted)
@@ -267,8 +275,26 @@ func (r *BackupReconciler) prepareBackupQuiesce(ctx context.Context, b *gameplan
 	if err != nil || !fenced {
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
 	}
+	ready, err := r.prepareBackupSource(ctx, b, gs)
+	if errors.Is(err, errBackupSourceChanged) {
+		_, err = r.fail(ctx, b, err.Error())
+		return ctrl.Result{RequeueAfter: time.Nanosecond}, err
+	}
+	if err != nil || !ready {
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
+	}
 	if err := r.maybeQuiesce(ctx, b); err != nil {
 		return ctrl.Result{}, err
+	}
+	// The Service RPC may overlap a pod replacement. Never start a copy on a
+	// different process from the one pinned before the request.
+	ready, err = r.prepareBackupSource(ctx, b, gs)
+	if errors.Is(err, errBackupSourceChanged) {
+		_, err = r.fail(ctx, b, err.Error())
+		return ctrl.Result{RequeueAfter: time.Nanosecond}, err
+	}
+	if err != nil || !ready {
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
 	}
 	if err := r.recordBackupManifest(ctx, b, gs); err != nil {
 		// Metadata must be durable before capture. Do not leave saving paused

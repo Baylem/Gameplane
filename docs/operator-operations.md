@@ -8,8 +8,10 @@ from `Completed`: Quiesced means the agent confirmed the module's quiesce
 commands before the completed copy; it does not prove those commands flush all
 application state. UnsupportedRawCopy, RawCopy and AgentUnavailableRawCopy
 describe restic copies without confirmed quiesce. CSI without confirmed
-quiesce reports CrashConsistentSnapshot. Failed or unfinished copies cannot
-report achieved quiesce.
+quiesce reports CrashConsistentSnapshot. StoppedSource means the source was
+already stopped and its writers drained before capture; the backup did not stop
+it. Failed or unfinished copies, including completed Jobs still awaiting a
+snapshot ID, cannot report achieved quiesce or stopped-source consistency.
 
 `status.captureManifest` is recorded once before the first copy worker is
 created, after lifecycle ownership and quiesce preparation. It lists the primary

@@ -150,8 +150,8 @@ type BackupCaptureManifest struct {
 	// LayoutSource identifies the frozen workload used for mount paths.
 	// +optional
 	LayoutSource string `json:"layoutSource,omitempty"`
-	// QuiesceOutcome is confirmed, unsupported, not-requested, agent-unavailable,
-	// or unknown. It is independent of whether the copy subsequently succeeds.
+	// QuiesceOutcome is confirmed, already-stopped, unsupported, not-requested,
+	// agent-unavailable, or unknown, independent of subsequent copy success.
 	// +optional
 	QuiesceOutcome string `json:"quiesceOutcome,omitempty"`
 	// +optional

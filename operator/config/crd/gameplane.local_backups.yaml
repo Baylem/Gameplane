@@ -140,8 +140,8 @@ spec:
                     type: string
                   quiesceOutcome:
                     description: |-
-                      QuiesceOutcome is confirmed, unsupported, not-requested, agent-unavailable,
-                      or unknown. It is independent of whether the copy subsequently succeeds.
+                      QuiesceOutcome is confirmed, already-stopped, unsupported, not-requested,
+                      agent-unavailable, or unknown, independent of subsequent copy success.
                     type: string
                   recordedAt:
                     format: date-time
