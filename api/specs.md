@@ -8,8 +8,9 @@
 ### Node diagnostic exception (#714)
 
 `POST /servers/{name}:capture-node-enable` and `:capture-node-disable` require
-administrator authority in the selected cluster/namespace in addition to
-capture-management routing. Enable synchronously audits the server UID and
+cluster-wide administrator authority in the selected cluster in addition to
+capture-management routing; a namespace-only wildcard grant is insufficient.
+Enable synchronously audits the server UID and
 host-privilege intent before a UID/resourceVersion-fenced patch; audit failure
 grants nothing. Generic create/update cannot change `capture.nodeDiagnostic`,
 and clones clear it. Disable requests cancellation of active captures. Other

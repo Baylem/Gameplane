@@ -26,7 +26,7 @@ func revisionFixture(t *testing.T) (*GameServerReconciler, *gameplanev1alpha1.Ga
 	}
 	gs := &gameplanev1alpha1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "game", Namespace: "games", UID: "server-uid"}, Spec: gameplanev1alpha1.GameServerSpec{TemplateRef: gameplanev1alpha1.GameTemplateRef{Name: "template"}, TemplateRollout: &gameplanev1alpha1.TemplateRolloutSpec{Policy: "OnRequest"}}}
 	tmpl := &gameplanev1alpha1.GameTemplate{ObjectMeta: metav1.ObjectMeta{Name: "template"}, Spec: gameplanev1alpha1.GameTemplateSpec{Image: "example.invalid/game:old", Env: []corev1.EnvVar{{Name: "REVISION", Value: "old"}}}}
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(gs, tmpl).WithStatusSubresource(gs, &appsv1.StatefulSet{}).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(gs, tmpl).WithStatusSubresource(gs, &appsv1.StatefulSet{}, &gameplanev1alpha1.Backup{}).Build()
 	r := &GameServerReconciler{Client: c, APIReader: c, Scheme: s}
 	digest, err := r.saveTemplateSnapshot(t.Context(), gs, tmpl)
 	if err != nil {
