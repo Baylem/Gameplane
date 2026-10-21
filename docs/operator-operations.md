@@ -1,5 +1,42 @@
 # Backup, restore and wipe ownership
 
+## Backup consistency and volume coverage
+
+A successful copy is not necessarily a complete server recovery point.
+`status.conditions[type=Consistency]` reports the achieved result separately
+from `Completed`: Quiesced means the agent confirmed the module's quiesce
+commands before the completed copy; it does not prove those commands flush all
+application state. UnsupportedRawCopy, RawCopy and AgentUnavailableRawCopy
+describe restic copies without confirmed quiesce. CSI without confirmed
+quiesce reports CrashConsistentSnapshot. StoppedSource means the source was
+already stopped and its writers drained before capture; the backup did not stop
+it. Failed or unfinished copies, including completed Jobs still awaiting a
+snapshot ID, cannot report achieved quiesce or stopped-source consistency.
+
+`status.captureManifest` is recorded once before the first copy worker is
+created, after lifecycle ownership and quiesce preparation. It lists the primary
+`<server>-data` claim as included and every other observed persistent claim as
+uncovered, including extra volumes, nested mod/loader mounts and retained
+server-owned claims. It records claim UIDs, observed mount paths, source layout
+and optional `data`/`rebuildable` declarations. Included describes copy scope;
+check the Backup's phase and snapshot ID for copy success. A declaration that
+an uncovered claim is rebuildable is not a recovery guarantee.
+
+The API returns this status and the backup details drawer displays consistency
+and coverage. Capture metadata is immutable through ordinary reconciliation:
+editing a template later never changes the historical list. This release does
+not add multi-volume restic, automatic game stopping or a stricter consistency
+request policy.
+
+Pre-upgrade captures have missing metadata or `state: LegacyUnknown`; their
+Consistency condition is Unknown. The operator never reconstructs their history
+from the current template. Before recovery, inspect the original restic snapshot
+or CSI source claim, recover the original module/server configuration and arrange
+separate recovery of extra/mod volumes. Use an isolated recovery server to
+verify those prerequisites before replacing a live world.
+
+## Shared operation ownership
+
 Gameplane serializes these operations per GameServer. All backups participate,
 including backups with `quiesce: false` and CSI VolumeSnapshots. A held operation
 also defers idle sleep/wake, restart, and pod-template rollout. Requests remain
