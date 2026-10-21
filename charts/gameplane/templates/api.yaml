@@ -494,8 +494,9 @@ spec:
             - { name: http,    containerPort: 8000 }
             - { name: metrics, containerPort: {{ .Values.api.metricsPort | default 9090 }} }
           livenessProbe:  { httpGet: { path: /healthz, port: http }, initialDelaySeconds: 15 }
-          # The DB ping has a 2s deadline; allow time for its generic 503 response.
-          readinessProbe: { httpGet: { path: /readyz, port: http }, initialDelaySeconds: 5, timeoutSeconds: 3, periodSeconds: 5, failureThreshold: 1 }
+          # The DB ping has a 2s deadline. Tolerate brief contention on SQLite's
+          # single connection before removing the only API endpoint.
+          readinessProbe: { httpGet: { path: /readyz, port: http }, initialDelaySeconds: 5, timeoutSeconds: 3, periodSeconds: 5, failureThreshold: 3 }
           resources: {{ toYaml .Values.api.resources | nindent 12 }}
           securityContext:
             allowPrivilegeEscalation: false

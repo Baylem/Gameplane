@@ -938,8 +938,9 @@ without queueing more work in SQLite's one-connection pool. Neither endpoint
 returns database addresses, credentials or account details.
 
 The chart checks readiness every five seconds, allows three seconds per probe,
-and marks the Pod unready after one failure (normally within about seven
-seconds of a database outage, plus Kubernetes endpoint propagation). Liveness
+and marks the Pod unready after three consecutive failures (normally within
+about seventeen seconds of a database outage, plus Kubernetes endpoint
+propagation). This tolerates brief SQLite connection contention. Liveness
 stays on `/healthz`, so an external outage does not restart a healthy API.
 Readiness recovers after the database becomes reachable again. Session-store
 errors return a generic 503 without clearing the session; invalid or expired

@@ -104,7 +104,7 @@ The HTTP server listens on `:8000` (configurable) with these route groups. Prome
 - `/auth/oidc/start` (legacy) — GET: single helm-provider start
 - `/auth/oidc/callback` (legacy) — GET: single helm-provider callback
 - `/healthz` — GET: liveness probe
-- `/readyz` — GET: database readiness, a `PingContext` with a two-second deadline. At most one ping runs at once; concurrent probes return a generic 503 without queueing more database work. Success returns `ok`; unavailable or busy returns only `not ready`. The chart probes every five seconds with a three-second timeout and one failed probe removes readiness. `/healthz` remains independent of the database, so outages do not trigger liveness restarts.
+- `/readyz` — GET: database readiness, a `PingContext` with a two-second deadline. At most one ping runs at once; concurrent probes return a generic 503 without queueing more database work. Success returns `ok`; unavailable or busy returns only `not ready`. The chart probes every five seconds with a three-second timeout; three consecutive failed probes remove readiness, tolerating brief SQLite connection contention. `/healthz` remains independent of the database, so outages do not trigger liveness restarts.
 
 **Protected (authenticated + RBAC):**
 - All six `/fleet/*` reads share a per-authenticated-user token bucket: 60 requests/minute sustained, burst 10. Exhausted requests receive 429 with `Retry-After: 1` before cluster discovery or resource listing. Sessions and routes share the account's budget; users behind the same IP do not. This per-process limit bounds request frequency without removing owner/collaborator scans; multiple API replicas have independent budgets.

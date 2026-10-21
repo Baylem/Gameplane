@@ -56,6 +56,8 @@ def check_api_availability():
                 container = next(c for c in deployment["spec"]["template"]["spec"]["containers"] if c["name"] == "api")
                 assert container["livenessProbe"]["httpGet"]["path"] == "/healthz"
                 assert container["readinessProbe"]["httpGet"]["path"] == "/readyz"
+                assert container["readinessProbe"]["failureThreshold"] == 3
+                assert container["readinessProbe"]["periodSeconds"] == 5
                 assert container["readinessProbe"]["timeoutSeconds"] > 2
                 if upgrade and not standalone:
                     role = one(objects, "Role", "gameplane-strategy-migrate")
