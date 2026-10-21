@@ -19,6 +19,17 @@ It was one of three `go.work` modules without CI lint coverage until this featur
 - Validate multi-cluster dispatch, upgrade-from-previous-release, wake-on-connect, module signing/SSRF rejection, and backup/restore round trips end to end.
 - Enforce, via `buckets.sh`, that every test in the suite is assigned to exactly one CI bucket so nothing silently drops out of coverage.
 
+### Hostport wake acceptance
+
+The dedicated `wake-hostport` bucket runs on the `two-node` kind profile. It uses
+a real Hostport HTTP listener and dedicated-node taint, broadens the scheduling
+pool after recording the endpoint, and exercises two sleep/wake cycles at the
+same node address. It observes the old game still serving during termination,
+holds a terminating sentinel Pod to prove the reverse handoff waits, checks a
+cordoned endpoint remains unavailable rather than relocating, and deletes the
+node to exercise the explicit unavailable/replaced-node condition. This bucket
+runs alone because it changes node scheduling. Runtime results come from CI.
+
 ### Remote gateway parity acceptance
 
 The multicluster bucket runs `TestMultiCluster_GatewayParity` against two real

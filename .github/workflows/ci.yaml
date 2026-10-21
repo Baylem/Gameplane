@@ -1664,13 +1664,17 @@ jobs:
         # (operator does zero logins and is wait-dominated, so it runs
         # wide; the api buckets stay within the login limiter's budget).
         # The arm64 job below uses the same steps and per-bucket settings.
-        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components]
+        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components, wake-hostport]
         arch: [amd64]
         include:
           - bucket: operator
             parallel: 8
             test_timeout: 20m
             job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+          - bucket: wake-hostport
+            parallel: 1
+            test_timeout: 15m
+            job_timeout: 60
           - bucket: api-auth
             parallel: 4
             test_timeout: 15m
@@ -1718,7 +1722,9 @@ jobs:
         with:
           arch: ${{ matrix.arch }}
       - name: bring up cluster + helm install
-        run: ./deploy/kind/e2e.sh up "$CLUSTER" e2e
+        env:
+          GAMEPLANE_E2E_PROFILE: ${{ matrix.bucket == 'wake-hostport' && 'two-node' || 'default' }}
+        run: ./deploy/kind/e2e.sh up "$CLUSTER" e2e "$GAMEPLANE_E2E_PROFILE"
       - name: run go e2e (${{ matrix.bucket }})
         run: |
           RUN_REGEX="$(./test/e2e/buckets.sh regex '${{ matrix.bucket }}')"
