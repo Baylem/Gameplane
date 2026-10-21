@@ -806,6 +806,12 @@ func seedGameServer(t *testing.T, ns, name string) {
 	if err := k8sClient.Create(context.Background(), gs); err != nil {
 		t.Fatalf("seed gameserver %s/%s: %v", ns, name, err)
 	}
+	seedBackupWorkload(t, gs)
+}
+
+func seedBackupWorkload(t *testing.T, gs *gameplanev1alpha1.GameServer) {
+	t.Helper()
+	name, ns := gs.Name, gs.Namespace
 	one := int32(1)
 	labels := map[string]string{"app": name}
 	ss := &appsv1.StatefulSet{

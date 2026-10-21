@@ -129,7 +129,10 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		return ctrl.Result{}, err
 	}
-	if src.Spec.Strategy == "volume-snapshot" && rs.Annotations[restoreTargetAnnotation] == "" {
+	// Binding the target does not change the restore strategy. CSI's own
+	// preparation path checks that binding before awaiting startup, repairing
+	// references and enforcing the deadline on every subsequent reconcile.
+	if src.Spec.Strategy == "volume-snapshot" {
 		return r.reconcileVolumeSnapshotRestore(ctx, &rs, &src)
 	}
 
