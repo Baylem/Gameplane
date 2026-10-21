@@ -166,6 +166,7 @@ This module *is* a test tier; it carries no unit tests of its own and no `.testc
 
 - **`buckets.sh verify`** — the "e2e bucket coverage" CI job, structural proof every test is in exactly one bucket.
 - **CI's per-bucket jobs** — `operator`, `api-auth`, `api-roles`, `api-rbac`, `api-agent`, `api-mods`, `ratelimit`, `bot-fast`, `multicluster`, `upgrade` all run against a real kind cluster per job; `bot-heavy` is bucketed but never scheduled (see Non-goals).
+- **`postgres-availability`** runs alone at the end of the `e2e postgres` job. `TestUpgrade_PostgresAvailability` creates a user/session before migrating a live combined PostgreSQL Deployment from RollingUpdate to Recreate, watches API containers for overlapping writers, verifies the populated audit chain, then scales the database fixture down/up. A direct API Pod connection verifies failing readiness, healthy liveness, generic session 503s, no API restart, and recovery with the original session. It must not run in parallel with other tests because it upgrades the shared release and interrupts storage.
 - **`joincoverage.sh`/`joincoverage_test.sh`** — reports which games/protocols the bot suite actually reaches JoinDepth on, cross-referenced with `internal/specs.md`'s JoinDepth model.
 
 ## References
