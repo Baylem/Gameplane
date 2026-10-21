@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -106,7 +107,7 @@ func TestManagementPlacementAndDisruption(t *testing.T) {
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(rendered), 4096)
 	for {
 		var object unstructured.Unstructured
-		if err := decoder.Decode(&object); err == io.EOF {
+		if err := decoder.Decode(&object); errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			t.Fatal(err)
