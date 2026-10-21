@@ -310,7 +310,7 @@ func recoveryRandom(t *testing.T) string { return hex.EncodeToString(recoveryKey
 
 func (f *recoveryFixture) request(c *APIClient, method, path string, body any, want int) []byte {
 	f.t.Helper()
-	resp, data, err := c.Do(method, path, body)
+	resp, data, err := c.DoContext(f.t.Context(), method, path, body)
 	if err != nil {
 		f.t.Fatalf("recovery HTTP request failed (details withheld): %s", method)
 	}
@@ -435,7 +435,7 @@ func recoveryKubeconfig(t *testing.T) string {
 func (f *recoveryFixture) waitServer(c *APIClient, path, uid string) {
 	f.t.Helper()
 	envInstance.Eventually(f.t, 90*time.Second, func() (bool, string) {
-		resp, data, err := c.Get(path)
+		resp, data, err := c.DoContext(f.t.Context(), http.MethodGet, path, nil)
 		if err != nil {
 			return false, "waiting for credential-backed cluster dispatch"
 		}
