@@ -181,8 +181,13 @@ func runCapture(ctx context.Context, c Config, dir string, source capture.Packet
 	if err != nil {
 		return err
 	}
-	identityPath := filepath.Join(dir, "capture-"+c.CaptureID+".identity.json")
-	f, err := os.OpenFile(identityPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	output, err := os.OpenRoot(dir)
+	if err != nil {
+		return fmt.Errorf("open capture output directory: %w", err)
+	}
+	defer func() { _ = output.Close() }()
+	identityName := "capture-" + c.CaptureID + ".identity.json"
+	f, err := output.OpenFile(identityName, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("reserve capture identity: %w", err)
 	}
@@ -194,7 +199,7 @@ func runCapture(ctx context.Context, c Config, dir string, source capture.Packet
 		return err
 	}
 	// fsGroup grants the nonroot artifact server access after the worker exits.
-	if err = os.Chmod(identityPath, 0o640); err != nil { // #nosec G302 -- dedicated PVC group grants only the nonroot artifact server read access.
+	if err = output.Chmod(identityName, 0o640); err != nil { // #nosec G302 -- dedicated PVC group grants only the nonroot artifact server read access.
 		return err
 	}
 	writer, err := capture.NewWriter(filepath.Join(dir, "capture-"+c.CaptureID+".pcapng"), c.DurationSeconds, c.MaxSizeBytes, 0, c.Filter)
