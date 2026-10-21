@@ -42,14 +42,14 @@ func (q *guardQuiescer) Unquiesce(context.Context, string, string) error {
 	return q.unquiesceErr
 }
 func (q *guardQuiescer) CheckPod(context.Context, string, string, string) error { return q.checkErr }
-func (q *guardQuiescer) QuiescePod(ctx context.Context, namespace, server, podUID string) error {
+func (q *guardQuiescer) QuiescePod(ctx context.Context, namespace, server, _ string) error {
 	err := q.Quiesce(ctx, namespace, server)
 	if q.afterQuiesce != nil {
 		q.afterQuiesce()
 	}
 	return err
 }
-func (q *guardQuiescer) UnquiescePod(ctx context.Context, namespace, server, podUID string) error {
+func (q *guardQuiescer) UnquiescePod(ctx context.Context, namespace, server, _ string) error {
 	return q.Unquiesce(ctx, namespace, server)
 }
 
