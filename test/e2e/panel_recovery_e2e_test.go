@@ -130,7 +130,7 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	f.request(admin, http.MethodPost, "/roles", map[string]any{"name": roleName, "description": "Recovery fixture read only", "permissions": []string{"servers:read"}}, http.StatusCreated)
 	userPassword := recoveryRandom(t)
 	created := f.request(admin, http.MethodPost, "/users", map[string]any{"username": "reader", "password": userPassword, "role": roleName}, http.StatusOK)
-	userID := extractIntField(string(created), "id")
+	userID := extractUserID(string(created))
 	if userID == "" {
 		t.Fatal("created reader has no ID")
 	}
