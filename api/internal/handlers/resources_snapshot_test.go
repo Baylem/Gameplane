@@ -230,11 +230,12 @@ func TestResources_SnapshotSourceNormalizesClusterSelector(t *testing.T) {
 				path, want := "/servers/", http.StatusCreated
 				var body any = snapshotSourceServer("alpha")
 				verb := method
-				if method == http.MethodPut {
+				switch method {
+				case http.MethodPut:
 					k = fakeKubeClient(snapshot, backup, newServerObj("gameplane-games", "alpha"))
 					router = mountResourcesRouter(k)
 					path, want = "/servers/alpha", http.StatusOK
-				} else if method == "clone" {
+				case "clone":
 					k = fakeKubeClient(snapshot, backup, snapshotSourceServer("alpha"))
 					router = mountLifecycleRouter(k)
 					path, want, verb = "/servers/alpha:clone", http.StatusOK, http.MethodPost
