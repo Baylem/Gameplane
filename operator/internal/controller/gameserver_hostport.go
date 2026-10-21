@@ -54,8 +54,8 @@ func (r *GameServerReconciler) planHostportSentinel(ctx context.Context, gs *gam
 		}
 	}
 	plan := sentinelPlan{}
-	set := func(reason, message string, ready bool) {
-		plan.hostportCondition = hostportCondition(gs, reason, message, ready)
+	hostportPending := func(reason, message string) {
+		plan.hostportCondition = hostportCondition(gs, reason, message, false)
 	}
 	nodeName := gs.Annotations[hostportNodeAnnotation]
 	// Record the endpoint before the first sleep scales down the game. Doing
@@ -87,13 +87,14 @@ func (r *GameServerReconciler) planHostportSentinel(ctx context.Context, gs *gam
 		}
 	}
 	if nodeName == "" && idle == idleAsleep {
-		set("EndpointNodeUnknown", "No game endpoint node has been recorded; start the game before enabling sleep.", false)
+		hostportPending("EndpointNodeUnknown", "No game endpoint node has been recorded; start the game before enabling sleep.")
 		return plan, nil
 	}
 	if nodeName != "" {
 		var node corev1.Node
 		err := reader.Get(ctx, client.ObjectKey{Name: nodeName}, &node)
-		if err != nil && !apierrors.IsNotFound(err) {
+		nodeMissing := apierrors.IsNotFound(err)
+		if err != nil && !nodeMissing {
 			return plan, err
 		}
 		ready := false
@@ -102,9 +103,9 @@ func (r *GameServerReconciler) planHostportSentinel(ctx context.Context, gs *gam
 				ready = condition.Status == corev1.ConditionTrue
 			}
 		}
-		if err != nil || !node.DeletionTimestamp.IsZero() || !ready || string(node.UID) != gs.Annotations[hostportNodeUIDAnnotation] {
+		if nodeMissing || !node.DeletionTimestamp.IsZero() || !ready || string(node.UID) != gs.Annotations[hostportNodeUIDAnnotation] {
 			plan.blockGame = len(gamePods.Items) == 0
-			set("EndpointNodeUnavailable", fmt.Sprintf("Hostport endpoint node %q is missing, replaced or not Ready; restore that node or explicitly migrate the endpoint.", nodeName), false)
+			hostportPending("EndpointNodeUnavailable", fmt.Sprintf("Hostport endpoint node %q is missing, replaced or not Ready; restore that node or explicitly migrate the endpoint.", nodeName))
 			return plan, nil
 		}
 	}
@@ -115,7 +116,7 @@ func (r *GameServerReconciler) planHostportSentinel(ctx context.Context, gs *gam
 			return plan, err
 		}
 		if len(gamePods.Items) != 0 || (err == nil && (ss.Spec.Replicas == nil || *ss.Spec.Replicas != 0 || ss.Status.ObservedGeneration < ss.Generation || ss.Status.Replicas != 0)) {
-			set("GameDraining", "Waiting for the game Pod to disappear before acquiring its Hostport.", false)
+			hostportPending("GameDraining", "Waiting for the game Pod to disappear before acquiring its Hostport.")
 			return plan, nil
 		}
 		plan.wantSentinel = true
@@ -130,7 +131,7 @@ func (r *GameServerReconciler) planHostportSentinel(ctx context.Context, gs *gam
 	}
 	if err == nil || len(sentinelPods.Items) != 0 {
 		plan.blockGame = true
-		set("SentinelDraining", "Waiting for the sentinel Deployment and Pods to disappear before scheduling the game on its endpoint node.", false)
+		hostportPending("SentinelDraining", "Waiting for the sentinel Deployment and Pods to disappear before scheduling the game on its endpoint node.")
 		return plan, nil
 	}
 	plan.hostportCondition = hostportListenerCondition(gs, gamePods.Items, nodeName)
