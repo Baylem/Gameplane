@@ -1668,7 +1668,7 @@ jobs:
         # (operator does zero logins and is wait-dominated, so it runs
         # wide; the api buckets stay within the login limiter's budget).
         # The arm64 job below uses the same steps and per-bucket settings.
-        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components, management-placement]
+        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components, restricted-workloads, management-placement]
         arch: [amd64]
         include:
           - bucket: operator
@@ -1777,7 +1777,7 @@ jobs:
         # (operator does zero logins and is wait-dominated, so it runs
         # wide; the api buckets stay within the login limiter's budget).
         # Mirrors e2e-go's steps and per-bucket settings.
-        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components]
+        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components, restricted-workloads]
         arch: [arm64]
         include:
           - bucket: operator
@@ -2528,7 +2528,7 @@ jobs:
               'go-e2e-unit': (n) => n === 'go (test/e2e)',
               'api-postgres': (n) => n === 'api (postgres)',
               'e2e-buckets': (n) => n === 'e2e bucket coverage',
-              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components|restricted-workloads) \//.test(n) && n.includes('/ amd64 '),
+              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components|restricted-workloads|management-placement) \//.test(n) && n.includes('/ amd64 '),
               'e2e-go-arm64': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components|restricted-workloads) \//.test(n) && n.includes('/ arm64 '),
               'e2e-multicluster': (n) => n.startsWith('e2e multicluster /') && n.includes('/ amd64 '),
               'e2e-multicluster-arm64': (n) => n.startsWith('e2e multicluster /') && n.includes('/ arm64 '),
@@ -2681,7 +2681,7 @@ jobs:
             const bucketSet = new Set();
             for (const j of apiJobs) {
               const n = j.name || '';
-              const m = n.match(/^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components|restricted-workloads) \//);
+              const m = n.match(/^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components|restricted-workloads|management-placement) \//);
               if (m) bucketSet.add(m[1]);
               if (/^e2e multicluster \//.test(n)) bucketSet.add('multicluster');
               if (/^e2e upgrade \//.test(n)) bucketSet.add('upgrade');
