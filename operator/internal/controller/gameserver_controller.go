@@ -151,6 +151,11 @@ type GameServerReconciler struct {
 	// per-GameServer; when true, it can be toggled on/off per server.
 	CaptureEnabled bool
 
+	// RestrictedWorkloads applies the opt-in PSA-compatible game profile.
+	RestrictedWorkloads         bool
+	AgentTokenExpirationSeconds int64
+	DiagnosticsNamespace        string
+
 	// CaptureSidecarImage is the container image for the network capture sidecar
 	// injected when capture is enabled on a GameServer. Set from the
 	// --capture-sidecar-image operator flag so air-gapped installs can point it
@@ -264,6 +269,11 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// touching any children: invalid config must fail loudly (mirroring
 	// the missing-template path) instead of materializing a pod that
 	// silently ignores what the user asked for.
+	if r.RestrictedWorkloads {
+		if err := validateRestrictedTemplate(&tmpl); err != nil {
+			return ctrl.Result{}, r.setPhase(ctx, &gs, err.Error())
+		}
+	}
 	mc, err := materializeConfig(&gs, &tmpl)
 	if err != nil {
 		return ctrl.Result{}, r.setPhase(ctx, &gs,
@@ -1596,6 +1606,15 @@ func (r *GameServerReconciler) reconcileStatefulSet(
 		// Same unconditional-assign reasoning: removing template.spec.security
 		// must clear a previously-set pod-level FSGroup, not leave it pinned.
 		ss.Spec.Template.Spec.SecurityContext = gamePodSecurityContext(tmpl)
+		if r.RestrictedWorkloads {
+			if ss.Spec.Template.Annotations == nil {
+				ss.Spec.Template.Annotations = map[string]string{}
+			}
+			ss.Spec.Template.Annotations[workloadSecurityLabel] = "restricted"
+		} else {
+			delete(ss.Spec.Template.Annotations, workloadSecurityLabel)
+		}
+		applyWorkloadSecurity(&ss.Spec.Template.Spec, tmpl, r.RestrictedWorkloads, r.AgentTokenExpirationSeconds)
 		// Default to the per-GameServer SA so the agent's heartbeat can
 		// patch gameservers/status (see reconcileAgentRBAC); an explicit
 		// spec.serviceAccountName still wins.
@@ -1877,6 +1896,10 @@ func (r *GameServerReconciler) reconcileCapture(ctx context.Context, gs *gamepla
 		return fmt.Errorf("get game pod for capture reconciliation: %w", podErr)
 	}
 
+	if r.RestrictedWorkloads || pod.Annotations[workloadSecurityLabel] == "restricted" || (gs.Spec.Capture != nil && gs.Spec.Capture.NodeDiagnostic) {
+		gs.Status.Capture.Ready = r.DiagnosticsNamespace != "" && gs.Spec.Capture.NodeDiagnostic && pod.Status.Phase == corev1.PodRunning
+		return r.patchCaptureStatus(ctx, gs, base)
+	}
 	if !hasCaptureEphemeralContainer(&pod) {
 		image := r.CaptureSidecarImage
 		pod.Spec.EphemeralContainers = append(pod.Spec.EphemeralContainers, buildCaptureEphemeralContainer(image, string(gs.UID)))

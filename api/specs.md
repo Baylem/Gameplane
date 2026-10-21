@@ -5,6 +5,19 @@
 
 ## Purpose
 
+### Node diagnostic exception (#714)
+
+`POST /servers/{name}:capture-node-enable` and `:capture-node-disable` require
+administrator authority in the selected cluster/namespace in addition to
+capture-management routing. Enable synchronously audits the server UID and
+host-privilege intent before a UID/resourceVersion-fenced patch; audit failure
+grants nothing. Generic create/update cannot change `capture.nodeDiagnostic`,
+and clones clear it. Disable requests cancellation of active captures. Other
+capture operations retain capture permissions and existing scope/provenance
+checks. A node capture's operator annotation and immutable capture UID derive
+its diagnostic Service; local and gateway file downloads use UID-bound mTLS
+routes. Capture deletion delegates node artifact cleanup to the CR finalizer.
+
 The api module is the REST + WebSocket gateway for Gameplane, serving the web dashboard and external integrations. It exposes the Kubernetes game-server CRDs (GameServer, GameTemplate, Backup, BackupSchedule, Restore, Module, ModuleSource, Cluster) and operator-reconciled state through a type-safe HTTP surface with multi-cluster support, role-based access control, and audit logging.
 
 ## Responsibilities
