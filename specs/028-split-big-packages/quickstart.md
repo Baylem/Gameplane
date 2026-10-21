@@ -5,4 +5,5 @@
 3. Check the PR body's Parity section: test names equal, test-edit check pass, generated outputs unchanged.
 4. Check CI ran full (`ci: full-run` label) and is green on amd64 and arm64, coverage gates included.
 5. Web PRs: visual-diff and screenshot jobs green; the sonnet browser smoke test notes in the PR.
-6. Merge, delete the branch (rule 12); the next PR in the phase starts from the new master.
+6. Check every CodeRabbit comment is answered or fixed and no review thread is open.
+7. Merge, delete the branch (rule 12); the next PR in the phase starts from the new master.

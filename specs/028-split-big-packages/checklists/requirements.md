@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [X] No [NEEDS CLARIFICATION] markers remain (decisions tracked as OD-1..OD-6 in OPEN-DECISIONS.md)
+- [X] No [NEEDS CLARIFICATION] markers remain (decisions tracked as OD-1..OD-10 in OPEN-DECISIONS.md)
 - [X] Requirements are testable and unambiguous
 - [X] Success criteria are measurable
 - [X] Success criteria are technology-agnostic where possible (line/file counts, zero lost tests, identical outputs)

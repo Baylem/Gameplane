@@ -1,6 +1,6 @@
 # Open Decisions: 028-split-big-packages
 
-Unsettled items. Do not treat any of the below as decided until a maintainer rules on it here.
+All decisions for this spec are settled; none is open. A new question gets its own OD entry here and is not treated as decided until a maintainer rules on it.
 
 ## Settled elsewhere (binding, not reopened here)
 

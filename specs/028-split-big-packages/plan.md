@@ -24,7 +24,7 @@ then the services. Details: [research.md](./research.md).
 
 **Storage**: N/A
 
-**Testing**: existing suites only, run in CI with `ci: full-run`: Go unit + envtest, every e2e bucket on amd64 and arm64, Vitest, Playwright mock, visual-diff, screenshots, image builds, lint. New unit tests only for the two new scripts (`hack/test_move_parity.py`, `hack/test_check_layout.py`)
+**Testing**: existing suites only, run in CI with `ci: full-run`: Go unit + envtest, every e2e bucket on amd64 and arm64, Vitest, Playwright mock, visual-diff, screenshots, image builds, lint (which runs `check-specs`). New unit tests only for the two new scripts (`hack/test_move_parity.py`, `hack/test_check_layout.py`)
 
 **Target Platform**: unchanged (Kubernetes; browser dashboard)
 
@@ -34,7 +34,7 @@ then the services. Details: [research.md](./research.md).
 
 **Constraints**: FR-001/FR-002 (move only), OD-6/OD-9 (test edits), FR-009 (coverage minimums), CLAUDE.md rules 8, 11–14, 16–18; `.pen` files never touched; no `//nolint`, `eslint-disable` or widened exclusions
 
-**Scale/Scope**: ~30 PRs: web ≈ 9, api ≈ 10, operator ≈ 7, other-module file splits ≈ 7, services 5, layout check 1, docs/archive 1. Production files over 500 lines today: 34 Go, 17 web
+**Scale/Scope**: about 45 PRs: tooling 1, web 12, api 12, operator 7, other-module file splits 6, services 5, layout check 1, docs/archive 1. Production files over 500 lines today: 34 Go, 17 web
 
 ## Constitution Check
 
@@ -53,10 +53,10 @@ Each phase is a run of PRs; a PR starts after the previous one in its phase merg
 (moves on the same tree conflict). Phase 0 first, then OD-1 order.
 
 0. **Tooling PR**: `hack/move_parity.py` (`names`, `test-edits`) + `hack/test_move_parity.py`, wired into CI next to `make test-ci-scope`; the brief contract ([contracts/move-brief.md](./contracts/move-brief.md)).
-1. **Web** (US4): `types.ts` split (OD-5); one `routes/<Screen>.ts` route file per page (OD-7); one PR per big screen (AdminSettings, CreateServer, ThemeSettings, Users, Servers, Backups, Dashboard); ServerDetail tabs to `pages/ServerDetail/tabs/` (OD-8); one PR moving the remaining small screens; one PR for `lib/endpoints.ts` and the four big components.
-2. **API** (US2): helper package first, then one PR per group in R3, leaf groups first (`mods`, `shares`, `capture`, `settings`, `modules`, `clusters`, `servers`, `access`); then split `api/cmd/main.go`; then `api/internal/audit`, `api/internal/auth/oidc.go`.
+1. **Web** (US4): `types.ts` split (OD-5); one `routes/<Screen>.ts` route file per page (OD-7); one PR per big screen (AdminSettings, CreateServer, ThemeSettings, Users, Servers, Backups, Dashboard); ServerDetail tabs to `pages/ServerDetail/tabs/` (OD-8); one PR moving the remaining small screens; one PR each for `lib/endpoints.ts`, `components/modules/` (BuildModuleDialog, SourceDialog), `components/CaptureWidget.tsx` and `components/server/ServerActionsCard.tsx`.
+2. **API** (US2): helper package first, then one PR per group in R3, leaf groups first (`mods`, `shares`, `capture`, `settings`, `modules`, `clusters`, `servers`, `access`); then one PR each for `api/cmd/main.go`, `api/internal/audit/audit.go` and `api/internal/auth/oidc.go` (one package per PR, FR-013).
 3. **Operator** (US3): helper package; `cluster`, `networkcapture`, `module`, `backup`, `gameserver` (largest last, after the guard coupling is resolved in the helper package); then `operator/cmd/main.go`.
-4. **Other modules** (FR-018): `capture-sidecar/internal/httpserver`, `agent/internal/{mods,rcon,files,players}`, `i18n/cmd/i18n-check` file splits.
+4. **Other modules** (FR-018): `capture-sidecar/internal/httpserver`, `agent/internal/mods`, `agent/internal/rcon`, `agent/internal/files`, `agent/internal/players`, `i18n/cmd/i18n-check` file splits, one PR per package.
 5. **Services** (US1): `audit-syslog-bridge`, `mcp-server`, `telemetry-receiver`, then `tunnel` and `sentinel` once #721–#723 and #729 merge.
 6. **Layout check** (US5): `hack/check_layout.py` + tests + `make lint` target (R9).
 7. **Close**: `docs/agent-architecture.md` sweep, archive the spec.
