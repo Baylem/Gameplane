@@ -87,6 +87,13 @@ updates. The chart rejects multiple replicas with leader election disabled;
 with one replica and election disabled it uses Recreate to avoid overlapping
 reconcilers during upgrades. API replica/process restrictions remain unchanged.
 
+When switching an existing operator to Recreate, a pre-upgrade hook clears the
+server-defaulted RollingUpdate fields before Helm applies the Deployment. The
+hook uses `crds.autoApply.image` and its placement settings, including when CRDs
+are managed externally. It can patch only `gameplane-operator` in the release
+namespace and is skipped when that Deployment does not exist. Upgrades need
+access to the configured kubectl image.
+
 The [example profile](../charts/gameplane/values-production.example.yaml) places
 management services on labeled, tainted workers and spreads redundant operator
 and dashboard pods. First label and taint the selected **worker** nodes:
