@@ -210,7 +210,8 @@ test.describe("live: i18n", () => {
         test.skip(true, "VITE_I18N_FIXTURES is not set for the live web server, so the zz fixture language is absent");
       }
 
-      await fixture.click();
+      // Click the visible name, as above: the radio control intercepts the input.
+      await page.getByText("Fixture 0%", { exact: true }).click();
       await expect(page.locator("html")).toHaveAttribute("lang", "zz", { timeout: 15_000 });
 
       // Every string falls back to English, and no raw message id is shown.
