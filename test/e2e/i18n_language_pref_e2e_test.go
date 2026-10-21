@@ -38,8 +38,8 @@ func i18nGetLanguage(t *testing.T, cli *APIClient) *string {
 // TestAPI_I18n_LanguagePref proves PUT /users/me/language (spec 019, T035):
 // a listed tag is saved and reads back through the preferences payload, null
 // clears it, and a rejected tag returns the registry problem document without
-// writing anything. It acts only on the admin's own account and resets the
-// language to null on cleanup, so later live specs run in English again.
+// writing anything. It acts only on the admin's own account and restores the
+// admin's prior language when it finishes.
 //
 // Budget: one e2e-admin login. It lives in the operator bucket for the login
 // budget, not by subject, the same precedent as the EventStream test there.
@@ -49,11 +49,17 @@ func TestAPI_I18n_LanguagePref(t *testing.T) {
 	envInstance.BootstrapAdmin(t, adminUsername, adminPassword)
 	admin := envInstance.APIClient(t, adminUsername, adminPassword)
 	t.Cleanup(admin.Close)
+	// The shared admin may already have a saved language; put it back after.
+	prior := i18nGetLanguage(t, admin)
 	// A defer, not t.Cleanup: the client's port-forward is bound to
 	// t.Context(), which is canceled before cleanups run, so the reset would
 	// never reach the API from a cleanup.
 	defer func() {
-		r, _, _ := admin.Do(http.MethodPut, "/users/me/language", map[string]any{"language": nil})
+		var restore any
+		if prior != nil {
+			restore = *prior
+		}
+		r, _, _ := admin.Do(http.MethodPut, "/users/me/language", map[string]any{"language": restore})
 		if r != nil {
 			_ = r.Body.Close()
 		}

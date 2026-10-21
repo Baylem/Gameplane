@@ -43,6 +43,28 @@ async function pickFrenchFromCompactPicker(page: Page): Promise<void> {
   await page.getByRole("menu", { name: /^(Language options|Options de langue)$/ }).getByText("Français").click();
 }
 
+// watchForEnglish records whether the English "Create server" label ever shows
+// on the page, from before React renders. Install it before the first goto.
+async function watchForEnglish(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as I18nWindow;
+    w.__englishSeen = false;
+    const watch = () => {
+      const observer = new MutationObserver(() => {
+        if (/Create server/.test(document.body?.textContent ?? "")) {
+          w.__englishSeen = true;
+        }
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    };
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", watch);
+    } else {
+      watch();
+    }
+  });
+}
+
 test.describe("live: i18n", () => {
   test.skip(
     process.env.GAMEPLANE_E2E_TARGET !== "live",
@@ -96,23 +118,7 @@ test.describe("live: i18n", () => {
   test("reload and a new browser context keep French without an English flash", async ({ page, browser }) => {
     // Watch the DOM from before React renders. A later "Create server" text is
     // the English label leaking into the French page.
-    await page.addInitScript(() => {
-      const w = window as I18nWindow;
-      w.__englishSeen = false;
-      const watch = () => {
-        const observer = new MutationObserver(() => {
-          if (/Create server/.test(document.body?.textContent ?? "")) {
-            w.__englishSeen = true;
-          }
-        });
-        observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
-      };
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", watch);
-      } else {
-        watch();
-      }
-    });
+    await watchForEnglish(page);
 
     await page.goto("/servers");
     await page.waitForLoadState("domcontentloaded");
@@ -127,10 +133,12 @@ test.describe("live: i18n", () => {
     const ctx2 = await browser.newContext({ storageState: ADMIN_STATE });
     try {
       const p2 = await ctx2.newPage();
+      await watchForEnglish(p2);
       await p2.goto("/servers");
       await p2.waitForLoadState("domcontentloaded");
       await expect(p2.locator("html")).toHaveAttribute("lang", "fr", { timeout: 15_000 });
       await expect(p2.getByText("Créer un serveur").first()).toBeVisible({ timeout: 15_000 });
+      expect(await p2.evaluate(() => (window as I18nWindow).__englishSeen)).toBe(false);
     } finally {
       await ctx2.close();
     }
@@ -194,9 +202,13 @@ test.describe("live: i18n", () => {
       // The fixture language exists only when the web server was started with
       // VITE_I18N_FIXTURES=1 (vite.config.ts). The CI live job sets it on the
       // Playwright step, so the subtest runs there. Local runs without it report
-      // the subtest as skipped rather than passed.
+      // the subtest as skipped; in CI it fails instead.
       const fixture = page.getByRole("radio", { name: /Fixture/ });
       if ((await fixture.count()) === 0) {
+        // CI sets VITE_I18N_FIXTURES=1, so a missing fixture there is a failure.
+        if (process.env.CI) {
+          throw new Error("zz fixture language missing; CI sets VITE_I18N_FIXTURES=1 on the live web server");
+        }
         test.skip(true, "VITE_I18N_FIXTURES is not set for the live web server, so the zz fixture language is absent");
       }
 
