@@ -61,6 +61,17 @@ are removed through test cleanup. CI sets `GAMEPLANE_E2E_REQUIRE_GATEWAY=1`, so 
 missing second cluster fails instead of skipping the scenario. The multicluster
 Go invocation has a 45-minute deadline within the existing 60-minute job budget.
 
+### Management placement and disruption acceptance
+
+The `management-placement` bucket uses the three-node `management` Kind profile
+and performs no API login. `TestManagementPlacementAndDisruption` applies the
+chart's web placement and API/web PDBs in an isolated namespace, with sleeping
+fixture containers. It verifies real scheduling across labeled workers,
+Unschedulable status for an impossible selector, one-at-a-time eviction during
+a cordon, readiness of the surviving replica, and singleton API eviction. Node
+labels and cordons are restored in cleanup. This validates scheduler/PDB behavior,
+not application HA or storage migration.
+
 ## Non-goals / boundaries
 
 - Does **not** replace the unit or envtest tiers for any other module — it exercises integration behavior, not the exhaustive branch coverage those tiers own (this module carries no `.testcoverage.yml` coverage gate).

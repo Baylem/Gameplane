@@ -257,7 +257,8 @@ func (r *GameServerReconciler) baselineRenderInputs(gs *gameplanev1alpha1.GameSe
 		AgentImagePullPolicy                                 string
 		RestrictedWorkloads                                  bool
 		AgentTokenExpirationSeconds                          int64
-	}{spec, revision, r.AgentImage, r.AgentLogLevel, r.ConfigInitImage, r.AgentImagePullPolicy, r.RestrictedWorkloads, r.AgentTokenExpirationSeconds})
+		AgentResources                                       *corev1.ResourceRequirements
+	}{spec, revision, r.AgentImage, r.AgentLogLevel, r.ConfigInitImage, r.AgentImagePullPolicy, r.RestrictedWorkloads, r.AgentTokenExpirationSeconds, r.AgentResources})
 	if err != nil {
 		return "", err
 	}
