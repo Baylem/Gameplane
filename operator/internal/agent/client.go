@@ -120,10 +120,11 @@ func (c *Client) Unquiesce(ctx context.Context, namespace, server string) error 
 	return c.callQuiesce(ctx, namespace, server, "/unquiesce", false)
 }
 
-// Pod-bound routes reject a replacement process at the final network hop.
-// Older agents return 404 without executing a mutation; never fall back.
+// QuiesceEnabled reports whether this client can perform quiesce operations.
 func (c *Client) QuiesceEnabled() bool { return c != nil && !c.Disabled }
 
+// CheckPod verifies that the responding agent belongs to the selected Pod.
+// Older agents return 404; callers must not fall back to unbound mutations.
 func (c *Client) CheckPod(ctx context.Context, namespace, server, podUID string) error {
 	if c.Disabled || podUID == "" {
 		return fmt.Errorf("agent: pod identity check requires an enabled client and pod UID")
@@ -143,10 +144,12 @@ func (c *Client) CheckPod(ctx context.Context, namespace, server, podUID string)
 	return nil
 }
 
+// QuiescePod disables saving only on the selected Pod's agent.
 func (c *Client) QuiescePod(ctx context.Context, namespace, server, podUID string) error {
 	return c.callPodQuiesce(ctx, namespace, server, podUID, "/quiesce", true)
 }
 
+// UnquiescePod restores saving only on the selected Pod's agent.
 func (c *Client) UnquiescePod(ctx context.Context, namespace, server, podUID string) error {
 	return c.callPodQuiesce(ctx, namespace, server, podUID, "/unquiesce", false)
 }
