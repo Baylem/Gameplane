@@ -492,6 +492,12 @@ func TestTemplateBaselinePreservesLegacyWorkloadUntilAdmittedUpdate(t *testing.T
 					t.Fatal(err)
 				}
 			}
+			// Credential isolation is already applied; provenance alone must
+			// preserve the API-defaulted template without restarting it.
+			applyWorkloadSecurity(&ss.Spec.Template.Spec, installed, false, 3600)
+			if err := r.Update(t.Context(), ss); err != nil {
+				t.Fatal(err)
+			}
 			before, err := json.Marshal(ss.Spec.Template)
 			if err != nil {
 				t.Fatal(err)
@@ -602,7 +608,7 @@ func TestTemplateBaselinePreservesLegacyWorkloadUntilAdmittedUpdate(t *testing.T
 }
 
 func TestTemplateBaselineAllowsRealWorkloadChanges(t *testing.T) {
-	for _, change := range []string{"inputs", "stopped", "new-workload"} {
+	for _, change := range []string{"inputs", "stopped", "new-workload", "credential-isolation", "restricted-profile"} {
 		t.Run(change, func(t *testing.T) {
 			r, gs, _ := revisionFixture(t)
 			pin := gs.Annotations[effectiveTemplateAnnotation]
@@ -613,6 +619,7 @@ func TestTemplateBaselineAllowsRealWorkloadChanges(t *testing.T) {
 			gs.Annotations[baselineTemplateAnnotation], gs.Annotations[baselineWorkloadAnnotation], gs.Annotations[baselineInputsAnnotation] = pin, "legacy", inputs
 			one := int32(1)
 			ss := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{UID: "legacy"}, Spec: appsv1.StatefulSetSpec{Replicas: &one}}
+			applyWorkloadSecurity(&ss.Spec.Template.Spec, &gameplanev1alpha1.GameTemplate{}, false, 3600)
 			if keep, err := r.preserveBaselinePodTemplate(t.Context(), gs, ss); err != nil || !keep {
 				t.Fatalf("baseline not preserved: %v %v", keep, err)
 			}
@@ -624,6 +631,10 @@ func TestTemplateBaselineAllowsRealWorkloadChanges(t *testing.T) {
 				ss.Spec.Replicas = &zero
 			case "new-workload":
 				ss.UID = "replacement"
+			case "credential-isolation":
+				ss.Spec.Template.Spec.AutomountServiceAccountToken = nil
+			case "restricted-profile":
+				r.RestrictedWorkloads = true
 			}
 			if keep, err := r.preserveBaselinePodTemplate(t.Context(), gs, ss); err != nil || keep {
 				t.Fatalf("real workload change frozen: %v %v", keep, err)
@@ -697,5 +708,25 @@ func TestTemplateBaselineDoesNotSwallowConcurrentSpecEdit(t *testing.T) {
 	}
 	if ss.Spec.Template.Spec.Containers[0].Image != gs.Spec.Image {
 		t.Fatal("baseline swallowed the requested image change")
+	}
+}
+
+func TestTemplateRevisionRejectsRestrictedIncompatibleTargetBeforeAdmission(t *testing.T) {
+	r, gs, installed := revisionFixture(t)
+	r.RestrictedWorkloads = true
+	old := gs.Annotations[effectiveTemplateAnnotation]
+	installed.Spec.Image = "example.invalid/game:incompatible"
+	if err := r.Update(t.Context(), installed); err != nil {
+		t.Fatal(err)
+	}
+	gs.Spec.TemplateRollout.Policy = "Automatic"
+	if err := r.Update(t.Context(), gs); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := r.reconcileTemplateRevision(t.Context(), gs); err == nil {
+		t.Fatal("admitted a template without Restricted-compatible identity")
+	}
+	if _, held, _ := lifecycleOwner(gs); held || gs.Annotations[effectiveTemplateAnnotation] != old {
+		t.Fatal("invalid security profile changed the pin or admitted a drain")
 	}
 }

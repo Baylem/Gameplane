@@ -18,6 +18,11 @@ existing Pod template, including API defaults and admission additions, until
 workload inputs change or the workload has stopped and drained. Their `running`
 revision stays unknown until a replacement Pod actually carries a revision.
 
+This baseline exception does not defer actual security changes: installing
+agent-only credential projection or enabling the Restricted profile still
+updates the workload. New template revisions must satisfy the enabled security
+profile before admission and before the old workload is drained.
+
 The baseline records currently installed content; it cannot recover historical
 template contents from an old Pod or prove that the old Pod used that content.
 Pin `Module.spec.version` before upgrading and enable staging before a later

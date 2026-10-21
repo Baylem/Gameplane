@@ -174,6 +174,11 @@ func (r *GameServerReconciler) reconcileTemplateRevision(ctx context.Context, gs
 			if _, err := resolveVersion(gs, target); err != nil {
 				return nil, false, err
 			}
+			if r.RestrictedWorkloads {
+				if err := validateRestrictedTemplate(target); err != nil {
+					return nil, false, err
+				}
+			}
 			drained, err := r.templateWorkloadDrained(ctx, gs)
 			if err != nil || !drained {
 				return effective, false, err
@@ -211,6 +216,11 @@ func (r *GameServerReconciler) reconcileTemplateRevision(ctx context.Context, gs
 			if _, err := resolveVersion(gs, &installed); err != nil {
 				return nil, false, err
 			}
+			if r.RestrictedWorkloads {
+				if err := validateRestrictedTemplate(&installed); err != nil {
+					return nil, false, err
+				}
+			}
 			// Do not replace an unrelated restart or already-issued stop.
 			pending, err := backupLifecycleTransitionPending(ctx, r.wipeReader(), gs)
 			if err != nil || pending {
@@ -245,7 +255,9 @@ func (r *GameServerReconciler) baselineRenderInputs(gs *gameplanev1alpha1.GameSe
 		Spec                                                 *gameplanev1alpha1.GameServerSpec
 		Revision, AgentImage, AgentLogLevel, ConfigInitImage string
 		AgentImagePullPolicy                                 string
-	}{spec, revision, r.AgentImage, r.AgentLogLevel, r.ConfigInitImage, r.AgentImagePullPolicy})
+		RestrictedWorkloads                                  bool
+		AgentTokenExpirationSeconds                          int64
+	}{spec, revision, r.AgentImage, r.AgentLogLevel, r.ConfigInitImage, r.AgentImagePullPolicy, r.RestrictedWorkloads, r.AgentTokenExpirationSeconds})
 	if err != nil {
 		return "", err
 	}
@@ -293,6 +305,20 @@ func (r *GameServerReconciler) preserveBaselinePodTemplate(ctx context.Context, 
 	inputs, err := r.baselineRenderInputs(gs, pin)
 	if err != nil || inputs != gs.Annotations[baselineInputsAnnotation] {
 		return false, err
+	}
+	// Provenance initialization must not suppress a real security upgrade.
+	// This also covers installing credential isolation and revisions together.
+	if ss.Spec.Template.Spec.AutomountServiceAccountToken == nil || *ss.Spec.Template.Spec.AutomountServiceAccountToken || r.RestrictedWorkloads != (ss.Spec.Template.Annotations[workloadSecurityLabel] == "restricted") {
+		return false, nil
+	}
+	projected := false
+	for _, volume := range ss.Spec.Template.Spec.Volumes {
+		if volume.Name == agentTokenVolumeName && volume.Projected != nil {
+			projected = true
+		}
+	}
+	if !projected {
+		return false, nil
 	}
 	// Stamp while already drained, before resume; never stamp an existing
 	// unannotated Pod or use its name as evidence of a known running revision.
