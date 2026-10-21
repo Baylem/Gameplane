@@ -70,6 +70,14 @@ if [ "${ENABLE_EMBEDDED_DB:-true}" = "true" ]; then
         fi
         sleep 0.5
     done
+    # A MariaDB major upgrade (10.11 -> 11.8 with the Alpine 3.24 base) leaves
+    # existing system tables on the old layout. mariadb-upgrade brings them
+    # current and is a no-op when they already are. mysql_install_db --user
+    # created gameplane@localhost with unix_socket auth, matching uid 1000.
+    if [ -S /tmp/mysql.sock ]; then
+        mariadb-upgrade --socket=/tmp/mysql.sock --user=gameplane >/dev/null 2>&1 \
+            || echo "[gameplane-fivem] mariadb-upgrade failed; continuing with existing system tables"
+    fi
 fi
 
 # Ensure txAdmin data directory exists
