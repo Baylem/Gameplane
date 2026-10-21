@@ -40,7 +40,7 @@ then the services. Details: [research.md](./research.md).
 
 | Principle | Status | Notes |
 |---|---|---|
-| **I. E2E-Tested Delivery** | Pending OD-10 (recommend exempt) | No behaviour changes, so there is no new user path. Every PR runs the full existing e2e suite with `ci: full-run`. If valgul rules otherwise, a task adds a test under `test/e2e/`. |
+| **I. E2E-Tested Delivery** | Pass (exempt, OD-10 settled 2026-10-21) | No behaviour changes, so there is no new user path. Every PR runs the full existing e2e suite with `ci: full-run`. |
 | **II. Design-First** | Pass | No visual change. Web splits must keep DOM identical (visual-diff); `design.pen` untouched. |
 | **III. Best Practice** | Pass | No suppressions; path-based lint and coverage rules move with their file, same scope (R8). Go errors untouched. |
 | **IV. Spec-Driven** | Pass | Spec, plan, tasks before code; every PR updates the touched module's `specs.md` paths (FR-015, 027 OD-2). Archive to `specs/done_028-…` after the last merge. |
@@ -53,7 +53,7 @@ Each phase is a run of PRs; a PR starts after the previous one in its phase merg
 (moves on the same tree conflict). Phase 0 first, then OD-1 order.
 
 0. **Tooling PR**: `hack/move_parity.py` (`names`, `test-edits`) + `hack/test_move_parity.py`, wired into CI next to `make test-ci-scope`; the brief contract ([contracts/move-brief.md](./contracts/move-brief.md)).
-1. **Web** (US4): `types.ts` split (OD-5); route files per OD-7; one PR per big screen (AdminSettings, CreateServer, ThemeSettings, Users, Servers, Backups, Dashboard); ServerDetail and its tabs per OD-8; one PR moving the remaining small screens; one PR for `lib/endpoints.ts` and the four big components.
+1. **Web** (US4): `types.ts` split (OD-5); one `routes/<Screen>.ts` route file per page (OD-7); one PR per big screen (AdminSettings, CreateServer, ThemeSettings, Users, Servers, Backups, Dashboard); ServerDetail tabs to `pages/ServerDetail/tabs/` (OD-8); one PR moving the remaining small screens; one PR for `lib/endpoints.ts` and the four big components.
 2. **API** (US2): helper package first, then one PR per group in R3, leaf groups first (`mods`, `shares`, `capture`, `settings`, `modules`, `clusters`, `servers`, `access`); then split `api/cmd/main.go`; then `api/internal/audit`, `api/internal/auth/oidc.go`.
 3. **Operator** (US3): helper package; `cluster`, `networkcapture`, `module`, `backup`, `gameserver` (largest last, after the guard coupling is resolved in the helper package); then `operator/cmd/main.go`.
 4. **Other modules** (FR-018): `capture-sidecar/internal/httpserver`, `agent/internal/{mods,rcon,files,players}`, `i18n/cmd/i18n-check` file splits.
@@ -93,13 +93,14 @@ specs/028-split-big-packages/
 └── tasks.md
 ```
 
-### Source Code (target, per 027 and OD-2..OD-8)
+### Source Code (target, per 027 and OD-2..OD-9)
 
 ```text
 api/internal/handlers/{capture,access,shares,clusters,modules,mods,servers,settings,<helper>}/
 operator/internal/controller/{gameserver,backup,networkcapture,module,cluster,<helper>}/
 web/src/pages/<Screen>.tsx, web/src/pages/<Screen>/<Section>.tsx
-web/src/routes/        # per OD-7
+web/src/routes/<Screen>.ts                 # route definitions only (OD-7)
+web/src/pages/ServerDetail/tabs/{,settings/}  # OD-8
 {tunnel,sentinel,telemetry-receiver,audit-syslog-bridge,mcp-server}/cmd/main.go + internal/<concern>/
 hack/move_parity.py, hack/check_layout.py (+ test_*.py)
 ```

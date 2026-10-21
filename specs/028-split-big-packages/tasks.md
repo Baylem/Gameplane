@@ -14,7 +14,7 @@ description: "Task list for 028 split big packages and files"
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm OD-7..OD-10 are settled in `OPEN-DECISIONS.md` and folded into spec, plan and these tasks; no implementation before
+- [X] T001 Settle OD-1..OD-10 in `OPEN-DECISIONS.md` and fold them into spec, plan and these tasks (valgul, 2026-10-20/21)
 - [ ] T002 Confirm spec 027's `docs/layout.md` has merged to master (027 implementation PR); if not, follow `specs/027-contributor-docs-layout-map/OPEN-DECISIONS.md` and cite it in every brief
 - [ ] T003 Re-measure on current master: production files over 500 lines (Go, web), files per package for `api/internal/handlers` and `operator/internal/controller`, and record the SHA and numbers at the top of `research.md`
 
@@ -30,13 +30,13 @@ description: "Task list for 028 split big packages and files"
 ## Phase 3: User Story 4 — Web screens follow the pages layout (Priority: P2, first by OD-1)
 
 - [ ] T008 [US4] PR: split `web/src/types.ts` (1,132) by domain into files of ≤ 500 lines under `web/src/types/`, with `web/src/types.ts` re-exporting them so every `@/types` import is unchanged; `web/src/api/types.ts` untouched (OD-5)
-- [ ] T009 [US4] PR: create `web/src/pages/`; move route definitions per OD-7; move the screens under 500 lines that only need a move (AdminLogs, AuditLog, Cluster, Clusters, Login, Modules, NotFound, Share, ServerDetail shell) with their tests; update `router/tree.tsx` imports
+- [ ] T009 [US4] PR: create `web/src/pages/`; add one `routes/<Screen>.ts` per page holding its route definition moved out of `router/tree.tsx`, which keeps only the tree assembly (OD-7); move the screens under 500 lines that only need a move (AdminLogs, AuditLog, Cluster, Clusters, Login, Modules, NotFound, Share, ServerDetail shell) with their tests; update `router/tree.tsx` imports
 - [ ] T010 [US4] PR: AdminSettings (2,478) → `pages/AdminSettings.tsx` + `pages/AdminSettings/<Section>.tsx`, each ≤ 500; its five test files move next to the file they test
 - [ ] T011 [US4] PR: CreateServer (1,351) → `pages/CreateServer.tsx` + sections, each ≤ 500; three test files move
 - [ ] T012 [US4] PR: ThemeSettings (886) and Users (825) → pages + sections
 - [ ] T013 [US4] PR: Servers (680), Backups (642), Dashboard (596) → pages + sections
-- [ ] T014 [US4] PR: ServerDetail tabs per OD-8, including Mods (1,290) and Files (670) split into parts
-- [ ] T015 [US4] PR: ServerDetail settings tabs per OD-8, including Networking (1,045) and ShareLinks (658) split
+- [ ] T014 [US4] PR: `routes/tabs/` → `pages/ServerDetail/tabs/` (OD-8), same file names; Mods (1,290) and Files (670) split into `pages/ServerDetail/tabs/<Tab>/<Part>.tsx`, each ≤ 500
+- [ ] T015 [US4] PR: `routes/tabs/settings/` → `pages/ServerDetail/tabs/settings/` (OD-8), same file names; Networking (1,045) and ShareLinks (658) split into parts, each ≤ 500
 - [ ] T016 [US4] PR: `lib/endpoints.ts` (1,046), `components/modules/BuildModuleDialog.tsx` (973), `components/CaptureWidget.tsx` (826), `components/server/ServerActionsCard.tsx` (658), `components/modules/SourceDialog.tsx` (573) split in place, each ≤ 500
 - [ ] T017 [US4] For each web PR: sonnet browser smoke test of the moved screens, visual-diff and screenshot jobs green, `web/specs.md` paths updated
 
@@ -93,7 +93,7 @@ description: "Task list for 028 split big packages and files"
 
 - [ ] T047 [US5] Write `hack/check_layout.py` per [contracts/layout-check.md](./contracts/layout-check.md) and `hack/test_check_layout.py` (pass and fail tree per rule)
 - [ ] T048 [US5] PR: add `check-layout` to the Makefile, to `lint`, and the unit tests to the CI `hack/` test target; master must be green with it (labels `type: ci`, `area: shared`)
-- [ ] T049 [US5] If OD-10 requires it: e2e test in `test/e2e/` registered in `buckets.sh`
+- [ ] T049 [US5] ~~e2e test in `test/e2e/`~~ WITHDRAWN: OD-10 (valgul, 2026-10-21) rules no new e2e test for this refactor
 
 ## Phase 9: Polish
 

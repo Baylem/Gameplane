@@ -93,9 +93,9 @@ extra control-plane starts mostly overlap; the first operator and api PRs record
 envtest job time before and after in the PR description. If a job grows by more than
 two minutes, the thread stops and asks before continuing.
 
-## R6. Web (027 OD-4; OD-7, OD-8 open)
+## R6. Web (027 OD-4; OD-7, OD-8)
 
-- Screens move from `routes/<Screen>.tsx` to `pages/<Screen>.tsx` with their tests.
+- Screens move from `routes/<Screen>.tsx` to `pages/<Screen>.tsx` with their tests. Each page gets `routes/<Screen>.ts` with its route definition moved out of `router/tree.tsx`, which keeps only the tree assembly (OD-7). `routes/tabs/` becomes `pages/ServerDetail/tabs/` and `routes/tabs/settings/` becomes `pages/ServerDetail/tabs/settings/`, same file names (OD-8).
   Screens over 500 lines: AdminSettings 2,478, CreateServer 1,351, ThemeSettings 886,
   Users 825, Servers 680, Backups 642, Dashboard 596; tabs: Mods 1,290, Files 670;
   settings tabs: Networking 1,045, ShareLinks 658.
@@ -150,7 +150,7 @@ current package (pure moves, no test edits): `api/internal/audit`, `api/internal
   `make lint` as `check-layout` in the last PR. Rules: (1) production `.go`/`.ts`/`.tsx`
   files ≤ 500 lines, FR-018 exemptions, test files exempt; (2) service modules
   (027 OD-3 list) have no `.go` file at the module root; code lives under `cmd/` and
-  `internal/`; (3) no screen code under `web/src/routes/` (per OD-7), screens under
+  `internal/`; (3) no screen code under `web/src/routes/` (OD-7), screens under
   `web/src/pages/`. Failures name the file and the `docs/layout.md` rule.
 - **Alternatives**: golangci-lint `funlen`/`lll` (per function or line, not per file;
   doesn't cover web); ESLint `max-lines` for web plus a Go script (two tools for one rule).

@@ -118,7 +118,7 @@ unchanged, and the operator coverage minimum (72) holds.
 
 A contributor looking for the admin settings screen finds `web/src/pages/AdminSettings.tsx`
 composing section files under `pages/AdminSettings/`, each under 500 lines, while
-`routes/` only exposes pages.
+`routes/` holds one route-definition file per page (OD-7) and the server-detail tabs sit in `pages/ServerDetail/tabs/` (OD-8).
 
 **Why this priority**: settled by 027 OD-4; the four biggest screens are the largest web
 files. Ordered against US2/US3 by OD-1.
@@ -241,8 +241,8 @@ with one violation (run by the check's own unit test in CI, not by a throwaway P
 - Spec 027's layout decisions stand as recorded on 2026-10-20; if 027 changes them, this spec follows.
 - The audit-fix PRs (#712–#731) keep landing while this spec runs; move PRs are scheduled around open PRs rather than the other way round.
 - Spec 023 PR 1 (#752) and the `ci: full-run` label exist; if 023's later PRs land midway, FR-016 covers its new files.
-- No new e2e test is needed (constitution I): nothing user-facing changes, and the full existing e2e suite on every PR is the proof.
+- No new e2e test (OD-10, constitution I exemption): nothing user-facing changes, and the full existing e2e suite on every PR is the proof.
 
 ## Open decisions
 
-See [OPEN-DECISIONS.md](OPEN-DECISIONS.md). OD-1 to OD-6 were settled by valgul on 2026-10-20. OD-7 (`routes/` contents), OD-8 (server-detail tabs), OD-9 (relative CRD paths in copied envtest setup) and OD-10 (new e2e test) are open.
+See [OPEN-DECISIONS.md](OPEN-DECISIONS.md). OD-1 to OD-10 were settled by valgul on 2026-10-20 and 2026-10-21; none is open.
