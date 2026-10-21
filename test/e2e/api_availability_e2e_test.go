@@ -136,7 +136,7 @@ func TestUpgrade_PostgresAvailability(t *testing.T) {
 		t.Fatal(err)
 	}
 	envInstance.Eventually(t, 45*time.Second, func() (bool, string) {
-		resp, body, err := client.Get("/readyz")
+		resp, body, err := client.DoContext(ctx, http.MethodGet, "/readyz", nil)
 		if err == nil {
 			_ = resp.Body.Close()
 		}
@@ -157,7 +157,7 @@ func TestUpgrade_PostgresAvailability(t *testing.T) {
 		if current.UID != pod.UID || apiRestartCount(current) != apiRestartCount(&pod) {
 			return false, "API restarted during database outage"
 		}
-		resp, body, err := client.Get("/healthz")
+		resp, body, err := client.DoContext(ctx, http.MethodGet, "/healthz", nil)
 		if err == nil {
 			_ = resp.Body.Close()
 		}
@@ -174,7 +174,7 @@ func TestUpgrade_PostgresAvailability(t *testing.T) {
 	}
 	restore()
 	envInstance.Eventually(t, 90*time.Second, func() (bool, string) {
-		resp, body, err := client.Get("/readyz")
+		resp, body, err := client.DoContext(ctx, http.MethodGet, "/readyz", nil)
 		if err == nil {
 			_ = resp.Body.Close()
 		}
@@ -225,7 +225,7 @@ func TestUpgrade_PostgresAvailability(t *testing.T) {
 
 func assertAPIStatus(t *testing.T, client *APIClient, path string, want int) []byte {
 	t.Helper()
-	resp, body, err := client.Get(path)
+	resp, body, err := client.DoContext(t.Context(), http.MethodGet, path, nil)
 	if err == nil {
 		_ = resp.Body.Close()
 	}
@@ -261,7 +261,7 @@ func writeUsersDuringAPIUpgrade(ctx context.Context, t *testing.T, client *APICl
 					return
 				default:
 				}
-				resp, _, err := client.Patch("/users/"+userID, map[string]string{"displayName": fmt.Sprintf("upgrade writer %d", worker)})
+				resp, _, err := client.DoContext(ctx, http.MethodPatch, "/users/"+userID, map[string]string{"displayName": fmt.Sprintf("upgrade writer %d", worker)})
 				if err != nil {
 					return // The old Pod's port-forward ends with the old process.
 				}
