@@ -33,7 +33,7 @@ const (
 // this exact Backup/pod/source generation. Repository preparation takes a
 // shared restic lock; later lock contention is bounded by the copy timeout.
 // Values and tags are arguments/environment, never interpolated shell code.
-const backupWorkerScript = `set -eu
+const resticWorkerScript = `set -eu
 for utility in timeout date cat touch sleep restic; do command -v "$utility" >/dev/null; done
 timeout -s TERM -k 5 1 /bin/sh -c ':'
 test -d /data && test -r /data && test -x /data
@@ -131,7 +131,7 @@ func (r *BackupReconciler) buildPreparedBackupPodSpec(b *gameplanev1alpha1.Backu
 	spec.Volumes = append(spec.Volumes, corev1.Volume{Name: "start", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: backupStartConfigMapName(b)}}}})
 	worker := &spec.Containers[0]
 	worker.Command = []string{"/bin/sh", "-c"}
-	worker.Args = append([]string{backupWorkerScript, "backup-worker"}, worker.Args...)
+	worker.Args = append([]string{resticWorkerScript, "backup-worker"}, worker.Args...)
 	worker.Env = append(worker.Env, corev1.EnvVar{Name: "BACKUP_UID", Value: string(b.UID)},
 		corev1.EnvVar{Name: "POD_UID", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.uid"}}},
 		corev1.EnvVar{Name: "SOURCE_ID", Value: backupWorkerSourceID(b)},

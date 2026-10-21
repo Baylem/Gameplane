@@ -476,7 +476,7 @@ func TestBackupWorkerScriptRejectsExpiredAndReplayedTokens(t *testing.T) {
 			if err := os.WriteFile(tokenFile, fmt.Appendf(nil, "v1 %s %s %s %d\n", backup, pod, source, expiry), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			script := strings.NewReplacer("/data", dir, "/start/start", tokenFile, "/tmp/prepared", prepared).Replace(backupWorkerScript)
+			script := strings.NewReplacer("/data", dir, "/start/start", tokenFile, "/tmp/prepared", prepared).Replace(resticWorkerScript)
 			ctx, cancel := context.WithTimeout(t.Context(), 4*time.Second)
 			defer cancel()
 			cmd := exec.CommandContext(ctx, "/bin/sh", "-c", script, "backup-worker", "backup", dir)
@@ -575,8 +575,14 @@ func TestBackupCSIAbortReclaimsOnlyVerifiedDeleteContent(t *testing.T) {
 			err := r.Get(t.Context(), client.ObjectKeyFromObject(content), content)
 			switch mode {
 			case "delete":
-				if !apierrors.IsNotFound(err) || condition.Status != metav1.ConditionTrue {
-					t.Fatalf("owned Delete content was not reclaimed: %v %+v", err, condition)
+				if !apierrors.IsNotFound(err) || condition.Status != metav1.ConditionFalse || condition.Reason != "SnapshotCleanupPending" {
+					t.Fatalf("deletion request was not recorded before observing absence: %v %+v", err, condition)
+				}
+				budgetPass(t, r, b.Name)
+				b = guardGetBackup(t, r, b.Name)
+				condition = meta.FindStatusCondition(b.Status.Conditions, "SnapshotCleaned")
+				if condition == nil || condition.Status != metav1.ConditionTrue || condition.Reason != "SnapshotCleanupComplete" {
+					t.Fatalf("observed resource absence did not complete reclamation: %+v", condition)
 				}
 			case "retain":
 				if err != nil || condition.Reason != "SnapshotCleanupRetained" || !strings.Contains(condition.Message, "content-uid") {

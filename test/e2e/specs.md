@@ -76,7 +76,7 @@ not application HA or storage migration.
 
 The `backup-preparation` bucket also uses the `management` Kind profile and zero
 API logins. It verifies a real RWO copy on the game's node across two schedulable
-workers, repository preparation failure before quiesce/authorization, retry after
+workers, repository authentication failure before quiesce/authorization, retry after
 repository recovery, token-gated Restic execution and restoration of a marker.
 Kind local-path PV affinity supplies the storage placement constraint; this is
 not an attachable CSI driver or multi-attach qualification. Unit/envtest regressions

@@ -73,8 +73,11 @@ func TestBackup_PreparationAndSameNodeCopy(t *testing.T) {
 	}
 	repo = repo.DeepCopy()
 	repo.ObjectMeta = metav1.ObjectMeta{Name: "prepared-repo-" + suffix, Namespace: ns}
-	validURL := append([]byte(nil), repo.Data["repo"]...)
-	repo.Data["repo"] = []byte("rest:http://127.0.0.1:1")
+	// Authentication failure against the warm repository is deterministic.
+	// A refused HTTP endpoint exercises Restic's network retry budget and may
+	// keep the init container running longer than this preparation assertion.
+	validPassword := append([]byte(nil), repo.Data["password"]...)
+	repo.Data["password"] = []byte("incorrect-repository-password-" + suffix)
 	if _, err := envInstance.K8s.CoreV1().Secrets(ns).Create(ctx, repo, metav1.CreateOptions{}); err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +123,7 @@ func TestBackup_PreparationAndSameNodeCopy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	repo.Data["repo"] = validURL
+	repo.Data["password"] = validPassword
 	if _, err := envInstance.K8s.CoreV1().Secrets(ns).Update(ctx, repo, metav1.UpdateOptions{}); err != nil {
 		t.Fatal(err)
 	}
