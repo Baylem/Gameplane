@@ -49,19 +49,15 @@ async function watchForEnglish(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const w = window as I18nWindow;
     w.__englishSeen = false;
-    const watch = () => {
-      const observer = new MutationObserver(() => {
-        if (/Create server/.test(document.body?.textContent ?? "")) {
-          w.__englishSeen = true;
-        }
-      });
-      observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+    // Observe from the init script itself: module scripts can render before
+    // DOMContentLoaded, so waiting for it could miss a short English flash.
+    const check = () => {
+      if (/Create server/.test(document.documentElement?.textContent ?? "")) {
+        w.__englishSeen = true;
+      }
     };
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", watch);
-    } else {
-      watch();
-    }
+    new MutationObserver(check).observe(document, { childList: true, subtree: true, characterData: true });
+    check();
   });
 }
 
