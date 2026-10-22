@@ -350,6 +350,7 @@ jobs:
           STANDALONE: ${{ steps.filter.outputs.standalone }}
           E2ETREE: ${{ steps.filter.outputs.e2etree }}
           GAMECOVERAGE: ${{ steps.filter.outputs.gamecoverage }}
+          UNIVERSAL: ${{ steps.e2e.outputs.universal }}
           CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' || steps.e2e.outputs.all == 'true' }}
           CAPTURE: ${{ steps.filter.outputs.capture_overhead }}
           SUBMODULES: ${{ steps.filter.outputs.submodules }}
@@ -363,7 +364,7 @@ jobs:
           webv=false; { [ "$WEB" = true ]    || [ "$CI" = true ]; } && webv=true
           chv=false;  { [ "$CHARTS" = true ] || [ "$CI" = true ]; } && chv=true
           standalonev=false; { [ "$STANDALONE" = true ] || [ "$CI" = true ]; } && standalonev=true
-          e2ev=false; { [ "$GO" = true ] || [ "$CHARTS" = true ] || [ "$E2ETREE" = true ] || [ "$GAMECOVERAGE" = true ] || [ "$CI" = true ]; } && e2ev=true
+          e2ev=false; { [ "$GO" = true ] || [ "$CHARTS" = true ] || [ "$E2ETREE" = true ] || [ "$GAMECOVERAGE" = true ] || [ "$UNIVERSAL" = true ] || [ "$CI" = true ]; } && e2ev=true
           wlv=false;  { [ "$e2ev" = true ] || [ "$WEB" = true ] || [ "$CI" = true ]; } && wlv=true
           ghv=false;  { [ "$GITHUB" = true ] || [ "$CI" = true ]; } && ghv=true
           specsv=false; { [ "$SPECS" = true ] || [ "$CI" = true ]; } && specsv=true
