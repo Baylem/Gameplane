@@ -25,8 +25,8 @@ change, the one compile check to run, and how long CI takes.
 | One small Go service | `<module>/` (e.g. `sentinel/`, `tunnel/`) | `go build ./...` in that module | same as any Go change: 29–75 min, median 37.5 min |
 | Operator / CRD | `operator/` (types in `operator/api/v1alpha1/`) | `make generate && make manifests`, then `go build ./...` in `operator/` | same as any Go change |
 | API route | `api/` (handlers in `api/internal/handlers/`) | `go build ./...` in `api/` | same as any Go change |
-| Game module | `modules/<game>/`: PR in `GameplanePanel/module`, then a pointer bump here | `make module-validate MODULE=<game>` | measured in that repo; the bump PR here runs the docs gates |
-| Website | `website/`: PR in `GameplanePanel/website`, then a pointer bump here | `npm run build` in `website/` | measured in that repo; the bump PR here runs the docs gates |
+| Game module | `modules/<game>/`: PR in `GameplanePanel/module`, then a pointer bump here | `make module-validate MODULE=<game>` | 2.7 min in `GameplanePanel/module` (run 79, 2026-10-20); the bump PR here runs the docs gates |
+| Website | `website/`: PR in `GameplanePanel/website`, then a pointer bump here | `npm run build` in `website/` | 0.6 min in `GameplanePanel/website` (PR 25, 2026-10-22); the bump PR here runs the docs gates |
 
 Times are GitHub Actions wall clock for one PR run, measured 2026-10-20: runs
 2507, 2525 and 2524, and 11 Go PR runs for the median. Change-based test
@@ -243,7 +243,7 @@ login rate limiter. The frozen 001–012 upgrade path is covered separately by
 
 Two homes, nothing else:
 
-- **A change** (feature, fix, cleanup) is specced in `specs/NNN-<slug>/`
+- **A change** (feature, fix, cleanup) is written up in `specs/NNN-<slug>/`
   through speckit (spec, plan, tasks, `OPEN-DECISIONS.md`). Once every task
   is done and merged, the folder is renamed `specs/done_NNN-<slug>/`.
 - **How a module works today** is described in its `<module>/specs.md`,

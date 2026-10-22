@@ -64,7 +64,7 @@ description: "Task list for spec 027: contributor docs and layout map"
 **Independent test**: no design/plan docs outside the named homes except `docs/archive/` (SC-003).
 
 - [X] T010 [US3] Add "Where design docs go" to `docs/contributing.md` (plan D2: change → `specs/NNN-<slug>/`; how a module works today → `<module>/specs.md`; nothing else) and one matching line under rule 15 of `AGENTS.md`
-- [X] T011 [US3] *(OD-2)* `git mv docs/superpowers docs/archive/superpowers`; update the 5 internal `docs/superpowers/` references inside the moved plans to the new paths
+- [X] T011 [US3] *(OD-2)* `git mv docs/superpowers docs/archive/superpowers`; update the 4 internal (count corrected in research R0) `docs/superpowers/` references inside the moved plans to the new paths
 - [X] T012 [US3] *(OD-2)* Prepend the historical banner to each of the 5 moved files naming the `<module>/specs.md` that now describes the shipped behavior (console/actions → `operator/specs.md` and `agent/specs.md`; multi-category modules → `operator/specs.md` and `gp-module/specs.md`; wake-on-connect → `sentinel/specs.md`); write `docs/archive/README.md`
 - [X] T013 [US3] Search GP for any remaining `docs/superpowers` path (excluding `specs/done_*`, which keep historical text) and fix it
 - [X] T014 [US3] Commit (`docs: write design-doc homes rule and archive superpowers docs`)
