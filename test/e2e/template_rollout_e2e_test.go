@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 )
 
 // A real workload remains unchanged while a new shared template is installed,
@@ -22,16 +23,25 @@ func TestGameServer_TemplateOnRequestRetainsData(t *testing.T) {
 	ctx := context.Background()
 	const ns, name, template = "gameplane-games", "e2e-template-stage", "e2e-template-stage"
 	applyBusyboxTemplate(t, template)
-	tmpl, err := envInstance.Dyn.Resource(gameTemplateGVR).Get(ctx, template, metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
+	setConfigFile := func(contents string) {
+		t.Helper()
+		// The template controller updates status concurrently with both
+		// spec changes. Retry the complete read-modify-write on conflict.
+		if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			tmpl, err := envInstance.Dyn.Resource(gameTemplateGVR).Get(ctx, template, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			if err := unstructured.SetNestedSlice(tmpl.Object, []any{map[string]any{"path": "revision.txt", "template": contents}}, "spec", "configFiles"); err != nil {
+				return err
+			}
+			_, err = envInstance.Dyn.Resource(gameTemplateGVR).Update(ctx, tmpl, metav1.UpdateOptions{})
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := unstructured.SetNestedSlice(tmpl.Object, []any{map[string]any{"path": "revision.txt", "template": "old"}}, "spec", "configFiles"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := envInstance.Dyn.Resource(gameTemplateGVR).Update(ctx, tmpl, metav1.UpdateOptions{}); err != nil {
-		t.Fatal(err)
-	}
+	setConfigFile("old")
 	gs := &unstructured.Unstructured{Object: map[string]any{"apiVersion": "gameplane.local/v1alpha1", "kind": "GameServer", "metadata": map[string]any{"name": name, "namespace": ns}, "spec": map[string]any{"templateRef": map[string]any{"name": template}, "templateRollout": map[string]any{"policy": "OnRequest"}}}}
 	if _, err := envInstance.Dyn.Resource(gameServerGVR).Namespace(ns).Create(ctx, gs, metav1.CreateOptions{}); err != nil {
 		t.Fatal(err)
@@ -68,16 +78,7 @@ func TestGameServer_TemplateOnRequestRetainsData(t *testing.T) {
 	if out, err := envInstance.Kubectl(ctx, "exec", "-n", ns, name+"-0", "-c", "game", "--", "sh", "-c", "printf retained > /data/save-marker; cat /data/revision.txt"); err != nil || strings.TrimSpace(out) != "old" {
 		t.Fatalf("seed persisted data: %s %v", out, err)
 	}
-	tmpl, err = envInstance.Dyn.Resource(gameTemplateGVR).Get(ctx, template, metav1.GetOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := unstructured.SetNestedSlice(tmpl.Object, []any{map[string]any{"path": "revision.txt", "template": "new"}}, "spec", "configFiles"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := envInstance.Dyn.Resource(gameTemplateGVR).Update(ctx, tmpl, metav1.UpdateOptions{}); err != nil {
-		t.Fatal(err)
-	}
+	setConfigFile("new")
 	var desired string
 	envInstance.Eventually(t, time.Minute, func() (bool, string) {
 		obj := get()

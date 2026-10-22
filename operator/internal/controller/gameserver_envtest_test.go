@@ -2045,9 +2045,8 @@ func TestGameServer_ConfigFilesMaterialize(t *testing.T) {
 		return true, ""
 	})
 
-	// Dropping configFiles from the template must delete the Secret and
-	// strip the init container + volume. Template edits don't trigger a
-	// GameServer reconcile (no cross-watch), so poke the GameServer.
+	// Dropping configFiles from the template must adopt the new revision,
+	// delete the Secret, and strip the init container + volume.
 	// Retry on conflict — reconcilers patch status concurrently, racing a
 	// bare Get+Update's resourceVersion.
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -2070,14 +2069,19 @@ func TestGameServer_ConfigFilesMaterialize(t *testing.T) {
 		t.Fatalf("update gameserver: %v", err)
 	}
 	eventually(t, func() (bool, string) {
-		// Re-poke each poll: the reconcile racing the template cache
-		// update must not strand the test.
-		poke := getGameServer(t, ns, "smp")
-		if poke.Annotations == nil {
-			poke.Annotations = map[string]string{}
+		// Envtest has no StatefulSet controller. Acknowledge only the
+		// actual stop request before the rollout may change its template.
+		var observed appsv1.StatefulSet
+		if err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: "smp"}, &observed); err != nil {
+			return false, "statefulset: " + err.Error()
 		}
-		poke.Annotations["test.gameplane.local/poke"] = time.Now().Format(time.RFC3339Nano)
-		_ = k8sClient.Update(context.Background(), poke)
+		if observed.Spec.Replicas != nil && *observed.Spec.Replicas == 0 && observed.Status.ObservedGeneration < observed.Generation {
+			observed.Status.ObservedGeneration = observed.Generation
+			observed.Status.Replicas, observed.Status.ReadyReplicas = 0, 0
+			if err := k8sClient.Status().Update(context.Background(), &observed); err != nil {
+				return false, "observe stopped workload: " + err.Error()
+			}
+		}
 
 		var sec corev1.Secret
 		err := k8sClient.Get(context.Background(),
