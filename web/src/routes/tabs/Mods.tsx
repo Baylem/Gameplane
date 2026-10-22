@@ -232,7 +232,7 @@ function FileModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTemplate
                 ? intl.formatMessage({ id: "web.routes.tabs.mods.couldnt_load", defaultMessage: "Couldn’t load mods", description: "Mods: heading shown when the mod list fails to load" })
                 : intl.formatMessage({ id: "web.routes.tabs.mods.loading", defaultMessage: "Loading…", description: "Mods: heading shown while the mod list loads" })}
             {updates.data && updateByName.size > 0 && (
-              <span className="text-primary">{intl.formatMessage({ id: "web.routes.tabs.mods.updates_available", defaultMessage: " · {count, plural, one {# update} other {# updates}} available", description: "Mods: shown beside the installed count when mods have updates; {count} is the number of mods with an update" }, { count: updateByName.size })}</span>
+              <span className="text-primary"> {intl.formatMessage({ id: "web.routes.tabs.mods.updates_available", defaultMessage: "· {count, plural, one {# update} other {# updates}} available", description: "Mods: shown beside the installed count when mods have updates; {count} is the number of mods with an update" }, { count: updateByName.size })}</span>
             )}
           </h2>
           {(activeLabel || updates.data) && (
@@ -302,7 +302,7 @@ function FileModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTemplate
 
       {isError && !mods && (
         <div className="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-          {errMsg(listError, intl)}{intl.formatMessage({ id: "web.routes.tabs.mods.error_retry_separator", defaultMessage: " · ", description: "Mods: separator between the list error and the retry button" })}<Button variant="ghost" size="sm" className="underline" onPress={() => void refetch()} aria-label={intl.formatMessage({ id: "web.routes.tabs.mods.retry", defaultMessage: "retry", description: "Mods: label of the retry button after a failed list load" })}>{intl.formatMessage({ id: "web.routes.tabs.mods.retry", defaultMessage: "retry", description: "Mods: label of the retry button after a failed list load" })}</Button>
+          {errMsg(listError, intl)} {intl.formatMessage({ id: "web.routes.tabs.mods.error_retry_separator", defaultMessage: "·", description: "Mods: separator between the list error and the retry button" })} <Button variant="ghost" size="sm" className="underline" onPress={() => void refetch()} aria-label={intl.formatMessage({ id: "web.routes.tabs.mods.retry", defaultMessage: "retry", description: "Mods: label of the retry button after a failed list load" })}>{intl.formatMessage({ id: "web.routes.tabs.mods.retry", defaultMessage: "retry", description: "Mods: label of the retry button after a failed list load" })}</Button>
         </div>
       )}
 
@@ -347,7 +347,7 @@ function FileModsTab({ name, tmpl, gs, ns }: { name: string; tmpl?: GameTemplate
                     </div>
                     <div className="text-xs text-muted">
                       {formatBytes(m.size)}
-                      {m.modTime ? intl.formatMessage({ id: "web.routes.tabs.mods.modified_relative", defaultMessage: " · {time}", description: "Mods: suffix after a mod's version showing when it was modified; {time} is how long ago" }, { time: formatRelative(m.modTime, intl) }) : ""}
+                      {m.modTime ? <> {intl.formatMessage({ id: "web.routes.tabs.mods.modified_relative", defaultMessage: "· {time}", description: "Mods: suffix after a mod's version showing when it was modified; {time} is how long ago" }, { time: formatRelative(m.modTime, intl) })}</> : ""}
                     </div>
                   </div>
                 </div>
@@ -636,7 +636,7 @@ function ModsByIdTab({
 
       {isError && (
         <div className="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-          {errMsg(listError, intl)}{intl.formatMessage({ id: "web.routes.tabs.mods.error_retry_separator", defaultMessage: " · ", description: "Mods: separator between the list error and the retry button" })}<Button variant="ghost" size="sm" className="underline" onPress={() => void refetch()} aria-label={intl.formatMessage({ id: "web.routes.tabs.mods.retry", defaultMessage: "retry", description: "Mods: label of the retry button after a failed list load" })}>{intl.formatMessage({ id: "web.routes.tabs.mods.retry", defaultMessage: "retry", description: "Mods: label of the retry button after a failed list load" })}</Button>
+          {errMsg(listError, intl)} {intl.formatMessage({ id: "web.routes.tabs.mods.error_retry_separator", defaultMessage: "·", description: "Mods: separator between the list error and the retry button" })} <Button variant="ghost" size="sm" className="underline" onPress={() => void refetch()} aria-label={intl.formatMessage({ id: "web.routes.tabs.mods.retry", defaultMessage: "retry", description: "Mods: label of the retry button after a failed list load" })}>{intl.formatMessage({ id: "web.routes.tabs.mods.retry", defaultMessage: "retry", description: "Mods: label of the retry button after a failed list load" })}</Button>
         </div>
       )}
 
@@ -1222,9 +1222,10 @@ function ModCard({
               >
                 {list.map((v) => {
                   const f = v.files.find((x) => x.primary) ?? v.files[0];
+                  const fileSuffix = f ? " " + intl.formatMessage({ id: "web.routes.tabs.mods.version_file_suffix", defaultMessage: "· {filename}", description: "Mods: suffix on a version option naming its file; {filename} is the file name" }, { filename: f.filename }) : "";
                   return (
                     <option key={v.id} value={v.id}>
-                      {(v.versionNumber ?? v.name ?? v.id) + (f ? intl.formatMessage({ id: "web.routes.tabs.mods.version_file_suffix", defaultMessage: " · {filename}", description: "Mods: suffix on a version option naming its file; {filename} is the file name" }, { filename: f.filename }) : "")}
+                      {(v.versionNumber ?? v.name ?? v.id) + fileSuffix}
                     </option>
                   );
                 })}
