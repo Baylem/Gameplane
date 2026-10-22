@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-05
 
-**Status**: Implemented (pending CI + review)
+**Status**: Done (merged in PR #568 and PR #652; archived)
 
 **Input**: Finding #15 (spec drift: `web/specs.md` invariant 8 says Settings renders `spec.configSchema`, but no Settings section edited `spec.config`) and the accepted UX in the session scout notes, with settled answers Q1-Q7 below. Also adds the 404 page frame `Ne5TA`.
 

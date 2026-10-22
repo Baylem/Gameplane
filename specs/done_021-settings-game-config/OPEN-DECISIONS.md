@@ -1,6 +1,6 @@
 # Open Decisions: 021-settings-game-config
 
-Unsettled items. Do not treat any of the below as decided until a maintainer rules on it here.
+All items are settled by the maintainer; none remain open.
 
 ## Settled (user, 2026-10-05)
 Q1 passwords redacted by the API (PR #565) and write-only in the UI; Q2 always restart; Q3 no API-side schema validation; Q4 separate section after Version; Q5 orphan keys with Remove; Q6 "Written to file" note, selects for bool; Q7 gate on `access.canWrite`.

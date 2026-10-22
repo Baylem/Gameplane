@@ -20,6 +20,41 @@ EDGE_IMAGES = [
     {"component": f"tunnel-{name}", "dockerfile": f"tunnel/Dockerfile.{name}"}
     for name in ("frp", "tailscale", "playit")
 ]
+# Mirrors the paths-filter `ci` filter in .github/workflows/ci.yaml; keep both in sync.
+FORCE_ALL_FILES = {
+    ".github/workflows/ci.yaml", "hack/ci_scope.py", "hack/test_ci_scope.py", "Makefile",
+    "go.work", "go.work.sum", "test/e2e/buckets.sh", ".golangci.yml",
+}
+FORCE_ALL_PREFIXES = (".github/actions/",)
+# Mirrors the e2e-go matrix buckets in .github/workflows/ci.yaml.
+E2E_BUCKETS = ["operator", "api-auth", "api-roles", "api-rbac", "api-agent", "api-mods",
+               "telemetry", "optional-components"]
+SUITES_FILE = "test/e2e/suite-components.json"
+# Paths no Go e2e test reads. Their own jobs keep their paths-filter gates.
+NO_E2E_FILES = {
+    "design.pen", "LICENSE", ".claudeignore", ".coderabbit.yaml", ".editorconfig",
+    ".gitattributes", ".gitignore", ".gitmodules", ".hadolint.yaml",
+    "deploy/kind/up.sh", "deploy/kind/down.sh",
+    "test/e2e/joincoverage.sh", "test/e2e/joincoverage_test.sh",
+    "test/e2e/lint-gate-verify.sh", "test/e2e/lint-gate-verify_test.sh",
+}
+NO_E2E_DIRS = ("docs", "specs", "assets", "website", "hack", ".github", ".claude", ".devcontainer",
+               ".githooks", ".jules", ".specify", "deploy/standalone", "test/e2e/testdata")
+# The dashboard live run drives these components through a real cluster.
+WEB_LIVE_COMPONENTS = {"web", "api", "operator", "agent"}
+# Component ids beside the go.work modules (data-model.md Component).
+EXTRA_COMPONENTS = ("web", "charts", "deploy-kind", "modules", "e2e-harness")
+# Top-level areas a selection rule knows; any other path is unmapped and forces full scope.
+KNOWN_DIRS = ("charts", "containers", "deploy/kind", "signing", "test/e2e", "web", "modules")
+
+
+def is_unmapped(path, modules):
+    """Return True when no selection rule knows path; such a path forces full scope."""
+    if (path.endswith(".md") or path in NO_E2E_FILES or path in FORCE_ALL_FILES
+            or path == ".dockerignore"):
+        return False
+    return not any(path == d or path.startswith(d + "/")
+                   for d in NO_E2E_DIRS + KNOWN_DIRS + tuple(modules))
 
 
 def workspace_modules(root):
@@ -174,6 +209,430 @@ def publish_paths(root, repository, branch, event, head):
     return None
 
 
+def full_scope_reason(env, paths):
+    """Return why every suite must run, or None when change-based selection applies."""
+    if env.get("GITHUB_EVENT_NAME") == "push" and env.get("GITHUB_REF") == "refs/heads/master":
+        return "master push"
+    if env.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
+        return "manual run"
+    if env.get("CI_FULL_RUN") == "true":
+        return "label ci: full-run"
+    if paths is None:
+        return "unknown base"
+    if any(p in FORCE_ALL_FILES or p.startswith(FORCE_ALL_PREFIXES) for p in paths):
+        return "selection-rule change"
+    return None
+
+
+def flag(values, key):
+    """Return True when a step-output value equals the string 'true', ignoring case."""
+    return str(values.get(key, "")).lower() == "true"
+
+
+def jlist(values, key):
+    """Return the list stored under key, decoding JSON strings and defaulting to empty."""
+    value = values.get(key) or "[]"
+    if isinstance(value, list):  # BOT_MATRIX carries a real list, step outputs a JSON string
+        return value
+    try:
+        value = json.loads(value)
+    except (TypeError, ValueError):
+        return []
+    return value if isinstance(value, list) else []
+
+
+def load_json(env, key):
+    """Return the JSON object stored under key, or raise ValueError if it is not one."""
+    value = json.loads(env.get(key) or "{}")
+    if not isinstance(value, dict):
+        raise ValueError(f"{key} must be a JSON object")
+    return value
+
+
+def cite(paths):
+    """Format up to five changed paths, adding a count of any remainder."""
+    shown = ", ".join(paths[:5])
+    extra = len(paths) - 5
+    return f"changed: {shown}" + (f" (+{extra})" if extra > 0 else "")
+
+
+def table_cell(value):
+    """Escape a value so it renders safely inside one Markdown table cell."""
+    return str(value).replace("\n", " ").replace("|", "\\|")
+
+
+def decoded(values, key, default=None):
+    """Return a step output decoded from the JSON that emit() wrote, or default."""
+    value = values.get(key)
+    if value is None or value == "":
+        return default
+    if not isinstance(value, str):
+        return value
+    try:
+        return json.loads(value)
+    except ValueError:
+        return value
+
+
+def under(path, base):
+    """Return True when path equals base or lies beneath it."""
+    return path == base or path.startswith(base + "/")
+
+
+def prefixed(path, prefix):
+    """Match a suite-components prefix: a trailing slash means a directory, else one path."""
+    return path.startswith(prefix) if prefix.endswith("/") else path == prefix
+
+
+def load_suites(root):
+    """Return the parsed test/e2e/suite-components.json."""
+    return json.loads((root / SUITES_FILE).read_text(encoding="utf-8"))
+
+
+def bucket_lists(root):
+    """Return {bucket: [test, ...]} from test/e2e/buckets.sh, in its listed order."""
+    def run(*args):
+        """Run buckets.sh with args and return its output words."""
+        return subprocess.run(["bash", "test/e2e/buckets.sh", *args], cwd=root, check=True,
+                              capture_output=True, text=True).stdout.split()
+    return {name: run("list", name) for name in run("buckets")}
+
+
+def go_tests(text):
+    """Return the Test functions a Go file defines, without TestMain."""
+    return [name for name in re.findall(r"^func (Test[A-Za-z0-9_]*)\(", text, re.MULTILINE)
+            if name != "TestMain"]
+
+
+def helper_pattern(text):
+    """Return a regex matching uses of a Go file's top-level names, or None if it has none.
+
+    Functions match as calls; types, vars, consts and the receiver types of methods
+    match as words, so a changed method selects the users of its type.
+    """
+    funcs = set(re.findall(r"^func ([A-Za-z_]\w*)", text, re.MULTILINE))
+    funcs -= set(go_tests(text)) | {"TestMain"}
+    words = set(re.findall(r"^func \(\s*\w*\s*\*?\s*([A-Za-z_]\w*)", text, re.MULTILINE))
+    words |= set(re.findall(r"^(?:type|var|const)\s+([A-Za-z_]\w*)", text, re.MULTILINE))
+    for block in re.findall(r"^(?:type|var|const)\s*\((.*?)^\)", text,
+                            re.MULTILINE | re.DOTALL):
+        words |= set(re.findall(r"^\s+([A-Za-z_]\w*)", block, re.MULTILINE))
+    parts = ([re.escape(name) + r"\(" for name in sorted(funcs)]
+             + [re.escape(name) + r"\b" for name in sorted(words)])
+    return re.compile(r"\b(?:" + "|".join(parts) + ")") if parts else None
+
+
+def e2e_file_tests(root, path):
+    """Return the tests a changed test/e2e/<file>.go can affect, or None for every test.
+
+    That is the file's own tests plus every test in a file that uses one of its
+    top-level names, following pure helper files (no tests) transitively. A
+    deleted file returns None.
+    """
+    texts = {source.name: source.read_text(encoding="utf-8")
+             for source in sorted((root / "test/e2e").glob("*.go"))}
+    start = Path(path).name
+    if start not in texts:
+        return None
+    seen, queue, tests = {start}, [start], set()
+    while queue:
+        name = queue.pop()
+        own = set(go_tests(texts[name]))
+        tests |= own
+        if own and name != start:
+            continue
+        pattern = helper_pattern(texts[name])
+        if pattern is None:
+            continue
+        for other, text in texts.items():
+            if other not in seen and pattern.search(text):
+                seen.add(other)
+                queue.append(other)
+    return tests
+
+
+def select_e2e(root, paths, reason, suites, buckets):
+    """Select e2e tests for a change (spec 023 US1).
+
+    Returns (selected, unmapped, reason, touched): selected maps each chosen test
+    to the changed paths that chose it, reason is set when every test runs because
+    of the event or an unmapped path, and touched holds the changed component ids
+    ("*" when a universal path changed).
+    """
+    tests = list(dict.fromkeys(name for names in buckets.values() for name in names))
+    if reason is None and paths is None:
+        reason = "unknown base"
+    if reason:
+        return {name: [] for name in tests}, [], reason, {"*"}
+    modules = workspace_modules(root)
+    entries = suites["suites"]
+    picked, components, every, unmapped = {}, {}, [], []
+
+    def matching(entry):
+        """Return the tests one suite entry's pattern matches."""
+        return [name for name in tests if re.search(entry["tests"], name)]
+
+    def pick(names, path):
+        """Record that path selects each test in names."""
+        for name in names:
+            picked.setdefault(name, []).append(path)
+
+    for path in paths:
+        if path.endswith(".md") or path in NO_E2E_FILES:
+            continue
+        if any(prefixed(path, prefix) for prefix in suites["universal"]):
+            every.append(path)
+            continue
+        named = [entry for entry in entries
+                 if any(prefixed(path, prefix) for prefix in entry.get("paths", []))]
+        for entry in named:
+            pick(matching(entry), path)
+        if under(path, "test/e2e"):
+            if path.count("/") == 2 and path.endswith(".go"):
+                own = e2e_file_tests(root, path)
+                if own is None:
+                    every.append(path)
+                else:
+                    pick([name for name in tests if name in own], path)
+            elif not named:
+                every.append(path)
+            continue
+        if named or any(under(path, directory) for directory in NO_E2E_DIRS):
+            continue
+        owner = next((module for module in modules if under(path, module)), None)
+        if owner:
+            components.setdefault(owner, []).append(path)
+        elif under(path, "web"):
+            components.setdefault("web", []).append(path)
+        elif under(path, "modules"):
+            components.setdefault("modules", []).append(path)
+        else:
+            unmapped.append(path)
+    if unmapped:
+        return {name: [] for name in tests}, unmapped, f"unmapped path {unmapped[0]}", {"*"}
+    if every:
+        return {name: list(every) for name in tests}, [], None, {"*"}
+    module_paths = [path for component, owned in components.items()
+                    if component in modules or component == "modules" for path in owned]
+    if module_paths:
+        # Library changes reach the binaries that import them (research R3).
+        for module in affected_modules(root, module_paths):
+            components.setdefault(module, module_paths)
+    for entry in entries:
+        wanted = set(entry.get("components", []))
+        if "*" in wanted:
+            hit = [path for owned in components.values() for path in owned]
+        else:
+            hit = [path for component in sorted(wanted & components.keys())
+                   for path in components[component]]
+        for path in dict.fromkeys(hit):
+            pick(matching(entry), path)
+    selected = {name: list(dict.fromkeys(picked[name])) for name in tests if name in picked}
+    return selected, [], None, set(components)
+
+
+def e2e_outputs(root, paths, reason):
+    """Return the outputs of mode e2e: per-bucket -run regexes, job switches, bot matrix."""
+    buckets = bucket_lists(root)
+    selected, unmapped, reason, touched = select_e2e(root, paths, reason, load_suites(root),
+                                                     buckets)
+
+    def chosen(bucket):
+        """Return the selected tests of one bucket, in buckets.sh order."""
+        return [name for name in buckets.get(bucket, []) if name in selected]
+
+    def describe(names, total):
+        """Return 'N of M tests' plus the changed paths that chose them."""
+        files = list(dict.fromkeys(path for name in names for path in selected[name]))
+        text = f"{len(names)} of {total} tests"
+        return text + (f"; {cite(files)}" if files else "")
+
+    run, why = {}, {}
+    for bucket in E2E_BUCKETS + ["ratelimit", "multicluster", "upgrade", "capture-overhead"]:
+        names = chosen(bucket)
+        if names:
+            why[bucket] = describe(names, len(buckets[bucket]))
+            if bucket in E2E_BUCKETS or bucket == "ratelimit":
+                run[bucket] = "^(" + "|".join(names) + ")$"
+    bots = chosen("bot-fast")
+    for name in bots:
+        why[name] = describe([name], 1)
+    return {
+        "all": bool(reason),
+        "reason": reason or "",
+        "unmapped": unmapped,
+        "e2e-run": run,
+        "e2e-why": why,
+        "e2e-multicluster": bool(chosen("multicluster")),
+        "e2e-upgrade": bool(chosen("upgrade")),
+        "e2e-capture-overhead": bool(chosen("capture-overhead")),
+        "e2e-web-live": bool(reason) or "*" in touched or bool(touched & WEB_LIVE_COMPONENTS),
+        "bot-matrix": {"test": bots},
+        "bots-any": bool(bots),
+        "universal": not reason and "*" in touched,
+    }
+
+
+def verify_suites(suites, buckets, modules):
+    """Return the violations of contracts/suite-components.md rules 1, 2 and 5."""
+    errors = []
+    known = set(modules) | set(EXTRA_COMPONENTS) | {"*"}
+    entries = suites.get("suites", [])
+    patterns = []
+    for entry in entries:
+        try:
+            patterns.append(re.compile(entry["tests"]))
+        except (KeyError, TypeError, re.error) as exc:
+            errors.append(f"entry {entry!r}: bad tests pattern: {exc}")
+            continue
+        if not entry.get("components") and not entry.get("paths"):
+            errors.append(f"entry {entry['tests']}: names no component and no path")
+        for component in entry.get("components", []):
+            if component not in known:
+                errors.append(f"entry {entry['tests']}: unknown component {component}")
+    for bucket, names in buckets.items():
+        for name in names:
+            if not any(pattern.search(name) for pattern in patterns):
+                errors.append(f"test {name} (bucket {bucket}) matches no entry")
+    named = {component for entry in entries for component in entry.get("components", [])}
+    named |= {item.get("component") for item in suites.get("unexercised", [])}
+    if any(prefix.startswith("charts/") for prefix in suites.get("universal", [])):
+        named.add("charts")
+    for component in sorted(set(modules) | {"web", "charts"}):
+        if component not in named:
+            errors.append(f"component {component} is named by no entry and not listed "
+                          "in unexercised")
+    for item in suites.get("unexercised", []):
+        if item.get("component") not in known or not item.get("reason"):
+            errors.append(f"unexercised entry {item!r} needs a known component and a reason")
+    return errors
+
+
+def summarize(env, paths, reason):
+    """Return (rows, markdown) describing which CI suites run and why."""
+    scope = load_json(env, "SCOPE_OUTPUTS")
+    filters = load_json(env, "FILTER_OUTPUTS")
+    gates = load_json(env, "GATE_OUTPUTS")
+    bots = load_json(env, "BOT_MATRIX")
+    e2e = load_json(env, "E2E_OUTPUTS")
+    # Without the e2e step's outputs every e2e suite follows the coarse e2e gate.
+    narrowed = bool(e2e)
+    e2e_run = decoded(e2e, "e2e-run", {})
+    e2e_why = decoded(e2e, "e2e-why", {})
+    e2e_bots = decoded(e2e, "bot-matrix", {}).get("test", [])
+    event = env.get("GITHUB_EVENT_NAME", "")
+    modules = sorted(workspace_modules(ROOT))
+    selected = set(jlist(scope, "modules"))
+    changed = list(paths or [])
+
+    def gate(key):
+        """Return whether the gate output for key is true."""
+        return flag(gates, key)
+
+    def under(path, base):
+        """Return True when path equals base or lies beneath it."""
+        return path == base or path.startswith(base + "/")
+
+    def filtered(*keys):
+        """Return the changed files recorded in the filter outputs for each key."""
+        return [name for key in keys for name in jlist(filters, f"{key}_files")]
+
+    def go_feed():
+        """Return changed paths that can affect Go builds, CRDs, or module sources."""
+        return [p for p in changed if under(p, "operator/config/crd") or under(p, "modules")
+                or any(under(p, m) for m in modules)]
+
+    def module_feed(module):
+        """Return changed paths for one module, or the whole Go feed when none match."""
+        own = [p for p in go_feed() if under(p, module)]
+        return own or go_feed()
+
+    def e2e_feed():
+        """Return the Go feed plus chart, e2e tree, and game coverage changes."""
+        return go_feed() + filtered("charts", "e2etree", "gamecoverage")
+
+    rows = []
+
+    def add(suite, run, feed=(), run_reason="", skip_reason="not affected"):
+        """Append one selection row with a run or skip decision and its reason."""
+        if run and reason:
+            why = f"full: {reason}"
+        elif run and run_reason:
+            why = run_reason
+        elif run:
+            files = list(dict.fromkeys(feed))
+            if files:
+                why = cite(files)
+            else:
+                why = "push event" if event == "push" else "changed: (see filters)"
+        else:
+            why = skip_reason
+        rows.append({"suite": suite, "decision": "run" if run else "skip", "reason": why})
+
+    for m in modules:
+        add(f"lint ({m})", m in selected, module_feed(m))
+    for m in modules:
+        if m != "test/e2e":
+            add(f"go ({m}) (amd64, arm64)", gate("go") and m in selected, module_feed(m))
+    add("go (test/e2e)", flag(scope, "e2e-unit"), module_feed("test/e2e"))
+    add("api (postgres)", "api" in selected, module_feed("api"))
+    add("web", gate("web"), filtered("web"))
+    add("web e2e (mock)", gate("web"), filtered("web"))
+    add("helm lint", gate("charts"), filtered("charts"))
+    add("chart render", gate("charts"), filtered("charts"))
+    add("standalone Compose smoke", gate("standalone"), filtered("standalone"))
+    add("workflow lint", gate("github"), filtered("github"))
+    add("docs and repository checks",
+        flag(scope, "lint") or gate("specs") or gate("docs"),
+        filtered("docs", "specs") + go_feed())
+    add("codegen drift", gate("codegen") or event == "push", filtered("codegen"))
+    add("submodule freshness", gate("submodules") or event == "push", filtered("submodules"))
+    add("vuln (go)", gate("go") or event == "push", go_feed())
+    add("capture-sidecar CAP_NET_RAW survival", gate("go"), go_feed())
+    add("dependency review", event == "pull_request",
+        run_reason="pull request", skip_reason="not a pull request")
+    add("telemetry default gate", True, run_reason="always runs")
+    images_feed = e2e_feed() + filtered("web")
+    add("build e2e images (amd64, arm64)", gate("images"), images_feed)
+    add("vuln (images)", gate("images"), images_feed)
+    add("e2e bucket coverage", gate("e2e"), e2e_feed())
+    def e2e_row(suite, gate_on, picked, key, feed):
+        """Add an e2e row from the coarse gate and, when present, the e2e step's pick."""
+        if narrowed and gate_on and not picked:
+            add(suite, False, skip_reason="no test in this suite is affected")
+        else:
+            add(suite, gate_on, feed, run_reason=e2e_why.get(key, "") if narrowed else "")
+
+    for bucket in E2E_BUCKETS:
+        name = "e2e api-auth + ratelimit tail" if bucket == "api-auth" else f"e2e {bucket}"
+        picked = bucket in e2e_run or (bucket == "api-auth" and "ratelimit" in e2e_run)
+        e2e_row(f"{name} (amd64, arm64)", gate("e2e"), picked, bucket, e2e_feed())
+    e2e_row("e2e multicluster (amd64, arm64)", gate("e2e"), flag(e2e, "e2e-multicluster"),
+            "multicluster", e2e_feed())
+    e2e_row("e2e upgrade (amd64, arm64)", gate("e2e"), flag(e2e, "e2e-upgrade"), "upgrade",
+            e2e_feed())
+    add("e2e postgres (amd64)", gate("e2e"), e2e_feed())
+    for test in jlist(bots, "test"):
+        e2e_row(f"e2e game bot / {test}", gate("e2e"), test in e2e_bots, test, e2e_feed())
+    e2e_row("e2e web live (amd64, arm64)", gate("weblive"), flag(e2e, "e2e-web-live"), "",
+            e2e_feed() + filtered("web"))
+    e2e_row("e2e capture overhead",
+            (event == "pull_request" and gate("capture_overhead"))
+            or (event in ("push", "workflow_dispatch") and gate("e2e")),
+            event != "pull_request" or flag(e2e, "e2e-capture-overhead"), "capture-overhead",
+            filtered("capture_overhead"))
+    add("ingress-nginx smoke (kind)", gate("kindsmoke"), filtered("kindsmoke"))
+
+    kind = "full" if reason else "partial"
+    lines = [f"### Test selection ({kind})", ""]
+    if reason:
+        lines += [f"full: {reason}", ""]
+    lines += ["| Suite | Decision | Why |", "|---|---|---|"]
+    lines += [f"| {table_cell(row['suite'])} | {table_cell(row['decision'])} | "
+              f"{table_cell(row['reason'])} |" for row in rows]
+    return rows, "\n".join(lines) + "\n"
+
+
 def emit(values):
     lines = "".join(f"{key}={json.dumps(value, separators=(',', ':'))}\n"
                     for key, value in values.items())
@@ -191,7 +650,8 @@ def bot_matrix(names):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("modules", "images", "dockerfiles", "bots"))
+    parser.add_argument("mode", choices=("modules", "images", "dockerfiles", "bots", "summary",
+                                         "e2e", "verify-suites"))
     parser.add_argument("--base", default="")
     parser.add_argument("--head", default="HEAD")
     args = parser.parse_args()
@@ -210,11 +670,56 @@ def main():
         images = select_images(ROOT, EDGE_IMAGES, paths)
         emit({"matrix": {"include": images}, "images": bool(images)})
         return
-    # PRs use affected work; every master push is the full-suite backstop.
-    full = (os.environ.get("GITHUB_EVENT_NAME") == "push"
-            and os.environ.get("GITHUB_REF") == "refs/heads/master")
-    paths = None if full else changed_paths(ROOT, args.base, args.head)
-    selected = affected_modules(ROOT, paths)
+    if args.mode == "summary":
+        env = os.environ
+        try:
+            paths = None if full_scope_reason(env, []) else changed_paths(ROOT, args.base, args.head)
+            reason = full_scope_reason(env, paths) or decoded(load_json(env, "E2E_OUTPUTS"),
+                                                              "reason") or None
+            if reason is None and flag(load_json(env, "SCOPE_OUTPUTS"), "all"):
+                reason = "selection fallback (see detect changes log)"
+            rows, markdown = summarize(env, paths, reason)
+        except Exception as exc:  # the summary never blocks CI (continue-on-error in ci.yaml)
+            reason = f"error: {exc}"
+            rows = []
+            markdown = f"### Test selection (full)\n\nfull: error: {exc}\n"
+        emit({"scope": "full" if reason else "partial", "reason": reason or "", "selection": rows})
+        if env.get("GITHUB_STEP_SUMMARY"):
+            with open(env["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+                summary.write(markdown)
+        return
+    if args.mode == "verify-suites":
+        errors = verify_suites(load_suites(ROOT), bucket_lists(ROOT), workspace_modules(ROOT))
+        for error in errors:
+            print(f"::error::{error}")
+        if errors:
+            raise SystemExit(1)
+        print("suite components OK")
+        return
+    if args.mode == "e2e":
+        env = os.environ
+        try:
+            event_reason = full_scope_reason(env, [])
+            paths = None if event_reason else changed_paths(ROOT, args.base, args.head)
+            values = e2e_outputs(ROOT, paths, full_scope_reason(env, paths))
+        except Exception as exc:  # any doubt selects every e2e test (FR-002)
+            print(f"::warning::e2e selection failed, running every e2e test: {exc}")
+            values = e2e_outputs(ROOT, None, f"error: {exc}")
+        emit(values)
+        return
+    # PRs use affected work; every master push, manual run and ci: full-run
+    # label is the full-suite backstop.
+    env = os.environ
+    try:
+        event_reason = full_scope_reason(env, [])
+        paths = None if event_reason else changed_paths(ROOT, args.base, args.head)
+        if paths is not None and any(is_unmapped(p, workspace_modules(ROOT)) for p in paths):
+            paths = None  # mode e2e reports the path; every module runs (FR-002)
+        selected = affected_modules(ROOT, paths)
+    except Exception as exc:  # any doubt selects the full suite (FR-002)
+        print(f"::warning::test selection failed, running everything: {exc}")
+        paths = None
+        selected = sorted(workspace_modules(ROOT))
     modules = sorted(workspace_modules(ROOT))
     emit({
         "all": paths is None,

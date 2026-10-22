@@ -17,4 +17,7 @@ OD-9 (plan R6, R7): on partial runs only Vitest is narrowed (`vitest related`); 
 OD-10 (plan Phasing): rollout is five PRs: summary table, e2e selection, unit selection, CI-config mapping, docs.
 OD-11 (tasks T030, T041, T047; quickstart): keep the throwaway draft PRs from quickstart.md, including scenario 6's deliberate compile error. valgul confirmed this twice on 2026-10-11 as an explicit exception to his no-demo-PR rule, for spec 023 only.
 
+## Settled (user, 2026-10-22)
+OD-12 (US1-1, US1-2, quickstart rows 1-2; found in T030, see validation.md): keep the `suite-components.json` mapping. An agent-only change runs every test that starts a game server, and a sentinel-only change runs the `TestHelmInstall_` smoke tests; US1-1, US1-2 and quickstart rows 1-2 were reworded to match.
+
 No open decisions remain.
