@@ -563,7 +563,11 @@ func TestBackupCSIAbortReclaimsOnlyVerifiedDeleteContent(t *testing.T) {
 			if err := r.Update(t.Context(), b); err != nil {
 				t.Fatal(err)
 			}
-			budgetPass(t, r, b.Name)
+			// First request deletion, then separately observe its completion.
+			// A single pass must not claim backend reclamation was observed.
+			if _, err := r.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(b)}); err != nil {
+				t.Fatal(err)
+			}
 			b = guardGetBackup(t, r, b.Name)
 			if q.unquiesced != 1 || b.Status.Phase != gameplanev1alpha1.BackupPhaseFailed || b.Status.SnapshotID != "" {
 				t.Fatalf("reclamation blocked invalidation/save-on: %+v %+v", b.Status, q)
@@ -577,6 +581,9 @@ func TestBackupCSIAbortReclaimsOnlyVerifiedDeleteContent(t *testing.T) {
 			case "delete":
 				if !apierrors.IsNotFound(err) || condition.Status != metav1.ConditionFalse || condition.Reason != "SnapshotCleanupPending" {
 					t.Fatalf("deletion request was not recorded before observing absence: %v %+v", err, condition)
+				}
+				if err := r.Get(t.Context(), client.ObjectKeyFromObject(&vs), &vs); !apierrors.IsNotFound(err) {
+					t.Fatalf("snapshot remains after deletion: %v", err)
 				}
 				budgetPass(t, r, b.Name)
 				b = guardGetBackup(t, r, b.Name)
