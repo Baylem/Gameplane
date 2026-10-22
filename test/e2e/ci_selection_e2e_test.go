@@ -38,7 +38,7 @@ func ciGit(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	base := []string{"-C", dir, "-c", "user.name=ci-selection",
 		"-c", "user.email=ci-selection@example.invalid", "-c", "commit.gpgsign=false"}
-	out, err := exec.Command("git", append(base, args...)...).CombinedOutput()
+	out, err := exec.CommandContext(t.Context(), "git", append(base, args...)...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 	}
@@ -57,7 +57,7 @@ func ciSelectionCopy(t *testing.T) string {
 	script := `set -o pipefail; git -C "$1" archive --format=tar HEAD -- . ` +
 		`':(exclude)design.pen' ':(exclude)assets' ':(exclude)docs' ':(exclude)specs' ` +
 		`':(exclude)web' | tar -x -C "$2"`
-	if out, err := exec.Command("bash", "-c", script, "bash", root, dir).CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(t.Context(), "bash", "-c", script, "bash", root, dir).CombinedOutput(); err != nil {
 		t.Fatalf("git archive HEAD: %v\n%s", err, out)
 	}
 	ciGit(t, dir, "init", "-q")
@@ -93,7 +93,7 @@ func ciSelectionRun(t *testing.T, dir string, fullRunLabel bool, edit func(dir s
 	ciGit(t, dir, "commit", "-q", "--allow-empty", "-m", "head")
 	head := ciGit(t, dir, "rev-parse", "HEAD")
 	output := filepath.Join(t.TempDir(), "github_output")
-	cmd := exec.Command("python3", "hack/ci_scope.py", "e2e", "--base", base, "--head", head)
+	cmd := exec.CommandContext(t.Context(), "python3", "hack/ci_scope.py", "e2e", "--base", base, "--head", head)
 	cmd.Dir = dir
 	// A clean environment: the e2e job's own GITHUB_EVENT_NAME and GITHUB_REF
 	// would turn a master push into a full-scope answer here.
@@ -148,7 +148,7 @@ func ciSelectionParse(t *testing.T, path string) ciSelection {
 // ciSelectionBucket runs buckets.sh in this package directory.
 func ciSelectionBucket(t *testing.T, args ...string) []string {
 	t.Helper()
-	out, err := exec.Command("bash", append([]string{"buckets.sh"}, args...)...).Output()
+	out, err := exec.CommandContext(t.Context(), "bash", append([]string{"buckets.sh"}, args...)...).Output()
 	if err != nil {
 		t.Fatalf("buckets.sh %s: %v", strings.Join(args, " "), err)
 	}
