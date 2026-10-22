@@ -24,6 +24,7 @@ EDGE_IMAGES = [
 FORCE_ALL_FILES = {
     ".github/workflows/ci.yaml", "hack/ci_scope.py", "hack/test_ci_scope.py", "Makefile",
     "go.work", "go.work.sum", "test/e2e/buckets.sh", ".golangci.yml",
+    "hack/check_changed_coverage.py", "hack/test_check_changed_coverage.py",
 }
 FORCE_ALL_PREFIXES = (".github/actions/",)
 # Mirrors the e2e-go matrix buckets in .github/workflows/ci.yaml.
@@ -46,6 +47,22 @@ WEB_LIVE_COMPONENTS = {"web", "api", "operator", "agent"}
 EXTRA_COMPONENTS = ("web", "charts", "deploy-kind", "modules", "e2e-harness")
 # Top-level areas a selection rule knows; any other path is unmapped and forces full scope.
 KNOWN_DIRS = ("charts", "containers", "deploy/kind", "signing", "test/e2e", "web", "modules")
+# A change to one of these files in a module root reruns that whole module (research R4).
+GO_MODULE_WIDE = {"go.mod", "go.sum", ".testcoverage.yml"}
+# Tests that read files outside their package directory. A changed path under a key also
+# selects these package directories (research R4, the package form of file_consumers).
+FILE_READERS = {
+    "operator/config/crd": ("operator/internal/controller", "api/internal/handlers"),
+    "operator/test/crds": ("operator/internal/controller",),
+    "modules": ("gp-module/internal/validator",),
+    "i18n/testdata": ("i18n/cmd/i18n-check",),
+    "api/internal": ("api/internal/messages",),  # usage_test walks every api/internal file
+}
+# Directories that never hold a package the go job tests.
+SKIP_PACKAGE_DIRS = {"testdata", "vendor", "node_modules"}
+# Web files that change every Vitest run (research R6).
+WEB_ALL_FILES = {"web/package.json", "web/package-lock.json", "web/vitest.config.ts",
+                 "web/vite.config.ts", "web/eslint.config.js"}
 
 
 def is_unmapped(path, modules):
@@ -98,7 +115,9 @@ def affected_modules(root, paths):
     modules = workspace_modules(root)
     shared = {"Makefile", "go.work", "go.work.sum", ".golangci.yml", "test/e2e/buckets.sh"}
     if paths is None or any(
-        p in shared or p.startswith((".github/", "hack/ci_scope", "hack/test_ci_scope"))
+        p in shared or p.startswith((".github/", "hack/ci_scope", "hack/test_ci_scope",
+                                     "hack/check_changed_coverage",
+                                     "hack/test_check_changed_coverage"))
         or Path(p).name in {"go.mod", "go.sum"}
         or ("Dockerfile" in Path(p).name and not any(p.startswith(m + "/") for m in modules))
         for p in paths
@@ -472,6 +491,121 @@ def e2e_outputs(root, paths, reason):
     }
 
 
+def go_imports(text):
+    """Return the import paths named in a Go file's import declarations."""
+    found = re.findall(r'^import\s+(?:[\w.]+\s+)?"([^"]+)"', text, re.MULTILINE)
+    for block in re.findall(r"^import\s*\((.*?)\)", text, re.MULTILINE | re.DOTALL):
+        found += re.findall(r'"([^"]+)"', block)
+    return found
+
+
+def package_index(root, modules):
+    """Return {package dir: imported paths} and {import path: package dir} for the workspace."""
+    imports, dirs = {}, {}
+    for module, name in modules.items():
+        base = root / module
+        for current, subdirs, files in os.walk(base):
+            here = Path(current)
+            subdirs[:] = sorted(d for d in subdirs if not d.startswith((".", "_"))
+                                and d not in SKIP_PACKAGE_DIRS
+                                and not (here / d / "go.mod").exists())
+            sources = [f for f in files if f.endswith(".go")]
+            if not sources:
+                continue
+            directory = here.relative_to(root).as_posix()
+            inner = here.relative_to(base).as_posix()
+            dirs[name if inner == "." else f"{name}/{inner}"] = directory
+            imports[directory] = {path for f in sorted(sources)
+                                  for path in go_imports((here / f).read_text(encoding="utf-8"))}
+    return imports, dirs
+
+
+def owning_module(path, modules):
+    """Return the workspace module directory that contains path, or None."""
+    owners = [m for m in modules if under(path, m)]
+    return max(owners, key=len) if owners else None
+
+
+def go_packages(root, paths, reason):
+    """Return {module: [go test package patterns]} for the go job (research R4, OD-8).
+
+    A changed file selects its package and, unless it is a _test.go file, every package
+    that imports it, across modules. A module's own go.mod, go.sum or .testcoverage.yml,
+    or a file in no package, selects ./... for that module.
+    """
+    modules = workspace_modules(root)
+    targets = [m for m in sorted(modules) if m != "test/e2e"]
+    if reason or paths is None:
+        return {m: ["./..."] for m in targets}
+    imports, dirs = package_index(root, modules)
+    wide, seeds, direct = set(), set(), set()
+    for path in paths:
+        if path.endswith(".md"):
+            continue
+        readers = [d for key, found in FILE_READERS.items() if under(path, key) for d in found]
+        direct.update(readers)  # a reader's tests read the files; its importers do not
+        module = owning_module(path, modules)
+        if module is None:
+            continue
+        if path in {f"{module}/{name}" for name in GO_MODULE_WIDE}:
+            wide.add(module)
+            continue
+        directory = path.rpartition("/")[0]
+        while directory not in imports and directory != module:
+            directory = directory.rpartition("/")[0]
+        if directory in imports:
+            (direct if path.endswith("_test.go") else seeds).add(directory)
+        elif not readers:
+            wide.add(module)
+    importers = {}
+    for directory, imported in imports.items():
+        for name in imported:
+            if name in dirs:
+                importers.setdefault(dirs[name], set()).add(directory)
+    selected, queue = set(), [d for d in seeds if d in imports]
+    while queue:
+        directory = queue.pop()
+        if directory not in selected:
+            selected.add(directory)
+            queue.extend(importers.get(directory, ()))
+    selected |= {d for d in direct if d in imports}
+    result = {}
+    for module in targets:
+        if module in wide:
+            result[module] = ["./..."]
+        else:
+            result[module] = sorted("." if d == module else "./" + d[len(module) + 1:]
+                                    for d in selected if owning_module(d, modules) == module)
+    return result
+
+
+def web_tests(root, paths, reason):
+    """Return "all" or the changed web/src files for `vitest related` (research R6, OD-9)."""
+    if reason or paths is None:
+        return "all"
+    files = []
+    for path in paths:
+        if (path in WEB_ALL_FILES or under(path, "web/src/test") or under(path, "i18n/locales")
+                or fnmatch.fnmatch(path, "web/tsconfig*.json")):
+            return "all"
+        if not under(path, "web") or path.endswith(".md") or under(path, "web/e2e"):
+            continue
+        if not under(path, "web/src") or not (root / path).exists():
+            return "all"  # vitest related cannot follow a deleted file or a non-source input
+        files.append(path)
+    return sorted(files)
+
+
+def unit_outputs(root, paths, reason):
+    """Return the outputs of mode units: Go package patterns per module and web tests."""
+    return {
+        "all": bool(reason),
+        "reason": reason or "",
+        "go-packages": go_packages(root, paths, reason),
+        "web-tests": web_tests(root, paths, reason),
+    }
+
+
 def verify_suites(suites, buckets, modules):
     """Return the violations of contracts/suite-components.md rules 1, 2 and 5."""
     errors = []
@@ -514,6 +648,9 @@ def summarize(env, paths, reason):
     gates = load_json(env, "GATE_OUTPUTS")
     bots = load_json(env, "BOT_MATRIX")
     e2e = load_json(env, "E2E_OUTPUTS")
+    units = load_json(env, "UNITS_OUTPUTS")
+    go_selected = decoded(units, "go-packages", {})
+    web_selected = decoded(units, "web-tests", "all")
     # Without the e2e step's outputs every e2e suite follows the coarse e2e gate.
     narrowed = bool(e2e)
     e2e_run = decoded(e2e, "e2e-run", {})
@@ -552,7 +689,21 @@ def summarize(env, paths, reason):
 
     rows = []
 
-    def add(suite, run, feed=(), run_reason="", skip_reason="not affected"):
+    def go_note(module):
+        """Return the package count note for one go row, or "" for a whole-module run."""
+        packages = go_selected.get(module, ["./..."]) if units else ["./..."]
+        if packages == ["./..."]:
+            return ""
+        return f"{len(packages)} packages; " if packages else "vet only, no affected package; "
+
+    if not units or web_selected == "all":
+        web_note = ""
+    elif web_selected:
+        web_note = f"{len(web_selected)} files for vitest related; "
+    else:
+        web_note = "lint and build only; "
+
+    def add(suite, run, feed=(), run_reason="", skip_reason="not affected", note=""):
         """Append one selection row with a run or skip decision and its reason."""
         if run and reason:
             why = f"full: {reason}"
@@ -566,16 +717,19 @@ def summarize(env, paths, reason):
                 why = "push event" if event == "push" else "changed: (see filters)"
         else:
             why = skip_reason
+        if run and not reason:
+            why = note + why
         rows.append({"suite": suite, "decision": "run" if run else "skip", "reason": why})
 
     for m in modules:
         add(f"lint ({m})", m in selected, module_feed(m))
     for m in modules:
         if m != "test/e2e":
-            add(f"go ({m}) (amd64, arm64)", gate("go") and m in selected, module_feed(m))
+            add(f"go ({m}) (amd64, arm64)", gate("go") and m in selected, module_feed(m),
+                note=go_note(m))
     add("go (test/e2e)", flag(scope, "e2e-unit"), module_feed("test/e2e"))
     add("api (postgres)", "api" in selected, module_feed("api"))
-    add("web", gate("web"), filtered("web"))
+    add("web", gate("web"), filtered("web"), note=web_note)
     add("web e2e (mock)", gate("web"), filtered("web"))
     add("helm lint", gate("charts"), filtered("charts"))
     add("chart render", gate("charts"), filtered("charts"))
@@ -650,7 +804,7 @@ def bot_matrix(names):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("modules", "images", "dockerfiles", "bots", "summary",
-                                         "e2e", "verify-suites"))
+                                         "e2e", "verify-suites", "units"))
     parser.add_argument("--base", default="")
     parser.add_argument("--head", default="HEAD")
     args = parser.parse_args()
@@ -704,6 +858,22 @@ def main():
         except Exception as exc:  # any doubt selects every e2e test (FR-002)
             print(f"::warning::e2e selection failed, running every e2e test: {exc}")
             values = e2e_outputs(ROOT, None, f"error: {exc}")
+        emit(values)
+        return
+    if args.mode == "units":
+        env = os.environ
+        try:
+            event_reason = full_scope_reason(env, [])
+            paths = None if event_reason else changed_paths(ROOT, args.base, args.head)
+            reason = full_scope_reason(env, paths)
+            modules = workspace_modules(ROOT)
+            unmapped = [p for p in paths or [] if is_unmapped(p, modules)]
+            if reason is None and unmapped:
+                reason = f"unmapped path {unmapped[0]}"
+            values = unit_outputs(ROOT, paths, reason)
+        except Exception as exc:  # any doubt runs every unit test (FR-002)
+            print(f"::warning::unit selection failed, running every unit test: {exc}")
+            values = unit_outputs(ROOT, None, f"error: {exc}")
         emit(values)
         return
     # PRs use affected work; every master push, manual run and ci: full-run

@@ -115,6 +115,8 @@ jobs:
       e2e-capture-overhead: ${{ steps.e2e.outputs.e2e-capture-overhead }}
       e2e-bot-matrix: ${{ steps.e2e.outputs.bot-matrix }}
       e2e-bots-any: ${{ steps.e2e.outputs.bots-any }}
+      go-packages: ${{ steps.units.outputs.go-packages }}
+      web-tests: ${{ steps.units.outputs.web-tests }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -139,6 +141,15 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
           CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
         run: python3 hack/ci_scope.py e2e --base "$BASE_SHA" --head "$HEAD_SHA"
+      - name: select the unit test packages and web tests the change affects
+        id: units
+        # Package-level Go and `vitest related` selection (spec 023 US2). Any
+        # doubt emits ./... for every module and "all" for web.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
+        run: python3 hack/ci_scope.py units --base "$BASE_SHA" --head "$HEAD_SHA"
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -247,6 +258,8 @@ jobs:
               - '.github/actions/**'
               - 'hack/ci_scope.py'
               - 'hack/test_ci_scope.py'
+              - 'hack/check_changed_coverage.py'
+              - 'hack/test_check_changed_coverage.py'
               - 'Makefile'
               - 'go.work'
               - 'go.work.sum'
@@ -264,6 +277,8 @@ jobs:
               - '.github/dependabot.yml'
               - 'hack/ci_scope.py'
               - 'hack/test_ci_scope.py'
+              - 'hack/check_changed_coverage.py'
+              - 'hack/test_check_changed_coverage.py'
               - 'hack/check-ci-report-coverage.sh'
               - 'hack/test-check-ci-report-coverage.sh'
               - 'hack/testdata/check-ci-report-coverage/**'
@@ -405,6 +420,7 @@ jobs:
           GATE_OUTPUTS: ${{ toJSON(steps.combine.outputs) }}
           BOT_MATRIX: ${{ steps.bots.outputs.matrix }}
           E2E_OUTPUTS: ${{ toJSON(steps.e2e.outputs) }}
+          UNITS_OUTPUTS: ${{ toJSON(steps.units.outputs) }}
         run: python3 hack/ci_scope.py summary --base "$BASE_SHA" --head "$HEAD_SHA"
 
   # Build the operator/api/agent (+ gameprobe) images ONCE and publish them as
@@ -821,6 +837,12 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    env:
+      # Space-separated package patterns from the changes job (spec 023 US2).
+      # Empty means no package is affected and only vet runs; a module the
+      # selection does not list runs ./... .
+      GO_PACKAGES: ${{ join(fromJSON(needs.changes.outputs.go-packages || '{}')[matrix.module] || fromJSON('["./..."]'), ' ') }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
     strategy:
       fail-fast: false
       matrix:
@@ -865,11 +887,13 @@ jobs:
       # uses -covermode=atomic, which is valid without -race. `make cover`
       # still runs -race for local/manual use.
       - name: unit test + coverage
+        if: env.GO_PACKAGES != ''
         working-directory: ${{ matrix.module }}
         run: |
           mkdir -p coverage
+          read -r -a packages <<<"$GO_PACKAGES"
           go test -covermode=atomic -coverpkg=./... \
-            -coverprofile=coverage/unit.out ./...
+            -coverprofile=coverage/unit.out "${packages[@]}"
       - name: agent file access across real UIDs
         if: matrix.module == 'agent' && matrix.arch == 'amd64'
         working-directory: agent
@@ -879,28 +903,30 @@ jobs:
           go test -c -o "$RUNNER_TEMP/agent-files.test" ./internal/files
           sudo "$RUNNER_TEMP/agent-files.test" -test.run='^TestFileAccessAcrossUIDs$' -test.v -test.timeout=2m
       - name: setup-envtest binary cache
-        if: matrix.module == 'operator' || matrix.module == 'api'
+        if: (matrix.module == 'operator' || matrix.module == 'api') && env.GO_PACKAGES != ''
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/go/bin/setup-envtest
           key: setup-envtest-bin-release-0.24-${{ runner.os }}-${{ runner.arch }}
       - name: envtest assets cache
-        if: matrix.module == 'operator' || matrix.module == 'api'
+        if: (matrix.module == 'operator' || matrix.module == 'api') && env.GO_PACKAGES != ''
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.local/share/kubebuilder-envtest
           key: envtest-1.36.2-${{ runner.os }}-${{ runner.arch }}
       - name: integration (envtest) test + coverage
-        if: matrix.module == 'operator' || matrix.module == 'api'
+        if: (matrix.module == 'operator' || matrix.module == 'api') && env.GO_PACKAGES != ''
         working-directory: ${{ matrix.module }}
         run: |
           [ -x "$HOME/go/bin/setup-envtest" ] || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@release-0.24
           KUBEBUILDER_ASSETS=$("$HOME"/go/bin/setup-envtest use 1.36.2 -p path)
           export KUBEBUILDER_ASSETS
+          read -r -a packages <<<"$GO_PACKAGES"
           go test -tags=envtest -timeout 10m \
             -covermode=atomic -coverpkg=./... \
-            -coverprofile=coverage/envtest.out ./...
+            -coverprofile=coverage/envtest.out "${packages[@]}"
       - name: warm coverage tool cache
+        if: env.GO_PACKAGES != ''
         # cover-go-merge and cover-go-check `go run` pinned tools, so they hit
         # the module mirror as well and fail the same transient way. Fetch them
         # here, with retries, so the gate itself runs from the module cache and
@@ -917,12 +943,25 @@ jobs:
           done
           fetch
       - name: merge profiles + threshold gate
+        # A whole-module run keeps the module total gate (spec 023 OD-1).
+        if: env.GO_PACKAGES == './...'
         run: make cover-go-merge && make cover-go-check
+      - name: merge profiles + changed-lines coverage gate
+        # A package-level run gates the added lines at the module's own
+        # threshold instead (spec 023 OD-1, OD-5).
+        if: env.GO_PACKAGES != '' && env.GO_PACKAGES != './...'
+        env:
+          MODULE: ${{ matrix.module }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          make cover-go-merge
+          python3 hack/check_changed_coverage.py --base "$BASE_SHA" --head "$GITHUB_SHA" \
+            --go-profile "$MODULE/coverage/merged.out" --module "$MODULE"
       - name: per-file coverage of secrets_managed.go (spec 013 G-19)
         # The threshold gate checks package totals only. Print this one file's
         # statement coverage from the merged profile so coverage-gaps.md can
         # cite a measured figure.
-        if: matrix.module == 'api' && matrix.arch == 'amd64'
+        if: matrix.module == 'api' && matrix.arch == 'amd64' && env.GO_PACKAGES != ''
         run: |
           awk '$1 ~ /\/internal\/handlers\/secrets_managed\.go:/ { total += $2; if ($3 > 0) covered += $2; else { split($1, pos, ":"); missed = missed " " pos[2] } }
                END { if (total == 0) { print "secrets_managed.go not found in profile"; exit 1 }
@@ -1015,7 +1054,34 @@ jobs:
       - run: npm run build
       - name: unit tests + coverage
         id: cover
-        run: npm run test:cover
+        # Partial runs test only what the changed web/src files reach and gate
+        # the added lines; "all" keeps the full suite and thresholds (spec 023 OD-9).
+        env:
+          WEB_TESTS: ${{ needs.changes.outputs.web-tests }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -z "$WEB_TESTS" ] || [ "$WEB_TESTS" = '"all"' ]; then
+            npm run test:cover
+            exit 0
+          fi
+          mapfile -t files < <(jq -r '.[] | sub("^web/"; "")' <<<"$WEB_TESTS")
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No dashboard source changed; Vitest skipped, lint and build ran."
+            exit 0
+          fi
+          npx vitest related --run --passWithNoTests --coverage --coverage.reporter=json \
+            --coverage.thresholds.lines=0 --coverage.thresholds.functions=0 \
+            --coverage.thresholds.branches=0 --coverage.thresholds.statements=0 \
+            "${files[@]}"
+          if [ ! -f coverage/coverage-final.json ]; then
+            echo "No coverage report from vitest related; running the full suite."
+            npm run test:cover
+            exit 0
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          cd .. && python3 hack/check_changed_coverage.py --base "$BASE_SHA" --head "$GITHUB_SHA" \
+            --vitest-json web/coverage/coverage-final.json
       - name: report coverage (commit status)
         if: always()
         continue-on-error: true
