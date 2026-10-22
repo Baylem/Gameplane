@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import ClassVar
 from unittest.mock import patch
 from subprocess import CompletedProcess
 
@@ -462,7 +463,7 @@ class E2ESelectionTests(unittest.TestCase):
 class VerifySuitesTests(unittest.TestCase):
     """verify-suites rules 1, 2 and 5 from contracts/suite-components.md (T015)."""
 
-    MODULES = {"api": "example.com/api", "agent": "example.com/agent"}
+    MODULES: ClassVar[dict[str, str]] = {"api": "example.com/api", "agent": "example.com/agent"}
 
     def suites(self, **overrides):
         """Return a valid minimal suite map, with top-level keys replaced by overrides."""
@@ -506,7 +507,7 @@ class E2ERunTests(unittest.TestCase):
     def test_full_scope_regex_equals_buckets_sh_regex(self):
         values = e2e_outputs(ROOT, None, "master push")
         self.assertEqual(values["reason"], "master push")
-        for bucket in E2E_BUCKETS + ["ratelimit"]:
+        for bucket in [*E2E_BUCKETS, "ratelimit"]:
             expected = subprocess.run(["bash", "test/e2e/buckets.sh", "regex", bucket], cwd=ROOT,
                                       check=True, capture_output=True, text=True).stdout.strip()
             self.assertEqual(values["e2e-run"][bucket], expected)

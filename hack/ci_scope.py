@@ -512,7 +512,7 @@ def e2e_outputs(root, paths, reason):
         return text + (f"; {cite(files)}" if files else "")
 
     run, why = {}, {}
-    for bucket in E2E_BUCKETS + ["ratelimit", "multicluster", "upgrade", "capture-overhead"]:
+    for bucket in [*E2E_BUCKETS, "ratelimit", "multicluster", "upgrade", "capture-overhead"]:
         names = chosen(bucket)
         if names:
             why[bucket] = describe(names, len(buckets[bucket]))
