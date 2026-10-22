@@ -195,6 +195,18 @@ test.describe("live: i18n", () => {
   });
 
   test("a 0% fixture language shows English everywhere (SC-008)", async ({ page, request }) => {
+    // The API saves only the languages this release ships, so it refuses the
+    // web-only fixture language "zz" as an account language ("unknown language:
+    // zz"). Use the per-browser choice instead: with no account language, the
+    // browser choice decides (FR-004).
+    await resetAccountLanguage(request);
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem("gameplane-language", JSON.stringify({ choice: "zz", applied: "zz" }));
+      } catch {
+        // Storage can be blocked; the lang check below then fails with a clear message.
+      }
+    });
     try {
       await page.goto("/settings/theme");
       await page.waitForLoadState("domcontentloaded");
@@ -213,8 +225,6 @@ test.describe("live: i18n", () => {
         test.skip(true, "VITE_I18N_FIXTURES is not set for the live web server, so the zz fixture language is absent");
       }
 
-      // Click the visible name, as above: the radio control intercepts the input.
-      await page.getByText("Fixture 0%", { exact: true }).click();
       await expect(page.locator("html")).toHaveAttribute("lang", "zz", { timeout: 15_000 });
 
       // Every string falls back to English, and no raw message id is shown.
