@@ -1,4 +1,4 @@
-{{- $d := (.Values.capture | default dict).nodeDiagnostics | default dict }}
+{{- $d := include "gameplane.nodeDiagnostics" . | fromJson }}
 {{- if $d.enabled }}
 # This namespace is an explicit host-privilege exception. Never share it with
 # games or the control plane; the worker has no Kubernetes token or host mount.

@@ -1,8 +1,37 @@
 """CI-only chart checks for the opt-in Restricted workload and node exception."""
-from check_gateway import one, render, settings
+from pathlib import Path
+import shutil
+import tempfile
+
+import yaml
+
+from check_gateway import CHART, one, render, settings
+
+
+def check_reuse_values():
+    with tempfile.TemporaryDirectory() as directory:
+        chart = Path(directory) / "chart"
+        shutil.copytree(CHART, chart)
+        values_file = chart / "values.yaml"
+        old_values = yaml.safe_load(values_file.read_text())
+        old_values["capture"].pop("nodeDiagnostics", None)
+        values_file.write_text(yaml.safe_dump(old_values))
+        enabled = {"capture": {"enabled": True, "nodeDiagnostics": {"enabled": True}}}
+        objects = render(enabled, upgrade=True, chart=chart)
+        one(objects, "Namespace", "gameplane-diagnostics")
+        quota = one(objects, "ResourceQuota", "gameplane-diagnostics")["spec"]["hard"]
+        assert quota == {"persistentvolumeclaims": "10", "requests.storage": "10Gi", "pods": "20", "count/jobs.batch": "10"}
+        args = one(objects, "Deployment", "gameplane-operator")["spec"]["template"]["spec"]["containers"][0]["args"]
+        assert "--diagnostics-namespace=gameplane-diagnostics" in args
+        enabled["capture"]["nodeDiagnostics"]["maxCaptures"] = 0
+        render(enabled, upgrade=True, chart=chart, failure="maxCaptures must be positive")
+        enabled["capture"]["nodeDiagnostics"].pop("maxCaptures")
+        enabled["capture"]["nodeDiagnostics"]["namespace"] = ""
+        render(enabled, upgrade=True, chart=chart, failure="separate explicit")
 
 
 def main():
+    check_reuse_values()
     defaults = render()
     assert not any(o["metadata"]["name"] == "gameplane-diagnostics" for o in defaults)
     objects = render({"podSecurity": {"enforceRestricted": True}})

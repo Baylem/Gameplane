@@ -1,4 +1,4 @@
-{{- $diagnostics := (.Values.capture | default dict).nodeDiagnostics | default dict }}
+{{- $diagnostics := include "gameplane.nodeDiagnostics" . | fromJson }}
 {{- if $diagnostics.enabled }}
 {{- if or (not .Values.capture.enabled) (ne (include "gameplane.operatorEnabled" .) "true") }}
 {{- fail "capture.nodeDiagnostics requires capture.enabled and the operator" }}
