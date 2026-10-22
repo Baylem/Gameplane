@@ -191,7 +191,7 @@ export function LogsTab({
           <Tabs.List className="w-fit">
             {(["all", ...LEVELS] as const).map((lv) => (
               <TabComponent key={lv} id={lv}>
-                {intl.formatMessage(LEVEL_TABS[lv])}{lv !== "all" && " " + intl.formatMessage({ id: "web.routes.tabs.logs.level_count", defaultMessage: "{count}", description: "Logs: number of lines shown after a log level tab label; {count} is that count" }, { count: counts[lv] })}
+                {intl.formatMessage(LEVEL_TABS[lv])}{lv !== "all" && <> {intl.formatMessage({ id: "web.routes.tabs.logs.level_count", defaultMessage: "{count}", description: "Logs: number of lines shown after a log level tab label; {count} is that count" }, { count: counts[lv] })}</>}
               </TabComponent>
             ))}
           </Tabs.List>

@@ -333,7 +333,7 @@ export function PlayersTab({ name, ns }: { name: string; ns?: string }) {
                     {(b.reason || b.source) && (
                       <div className="truncate text-xs text-muted">
                         {b.source && <span>{intl.formatMessage({ id: "web.routes.tabs.players.by_source", defaultMessage: "by {source}", description: "Players: source of a ban shown under the player; {source} is who issued the ban" }, { source: b.source })}</span>}
-                        {b.source && b.reason && <span>{" " + intl.formatMessage({ id: "web.routes.tabs.players.source_reason_separator", defaultMessage: "·", description: "Players: separator between the ban source and the ban reason" }) + " "}</span>}
+                        {b.source && b.reason && <span> {intl.formatMessage({ id: "web.routes.tabs.players.source_reason_separator", defaultMessage: "·", description: "Players: separator between the ban source and the ban reason" })} </span>}
                         {b.reason && <span>{b.reason}</span>}
                       </div>
                     )}
@@ -389,7 +389,7 @@ function ConfirmAction({
     <div className="rounded border border-border bg-surface/50 p-4">
       <p className="text-sm text-foreground">
         {verb} <span className="font-mono">{player}</span>
-        {playerId !== player && <>{" "}{intl.formatMessage({ id: "web.routes.tabs.players.player_id_in_parens", defaultMessage: "({playerId})", description: "Players: player ID shown in parentheses after the player name; {playerId} is the ID element" }, { playerId: <span className="font-mono">{playerId}</span> })}</>}
+        {playerId !== player && <> {intl.formatMessage({ id: "web.routes.tabs.players.player_id_in_parens", defaultMessage: "({playerId})", description: "Players: player ID shown in parentheses after the player name; {playerId} is the ID element" }, { playerId: <span className="font-mono">{playerId}</span> })}</>}
         {intl.formatMessage({ id: "web.routes.tabs.players.question_mark", defaultMessage: "?", description: "Players: question mark that ends the confirm sentence" })}
       </p>
       <Input

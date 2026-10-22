@@ -151,7 +151,7 @@ export function UploadModuleDialog({ open, onOpenChange, sources, onUploaded, cl
                   {preview.module.displayName} <span className="font-mono text-muted">{intl.formatMessage({ id: "web.components.modules.upload_module_dialog.vversion", defaultMessage: "v{version}", description: "Upload module dialog: sentence with version in span" }, { version: preview.module.version })}</span>
                 </div>
                 <div className="pt-0.5 text-muted">{intl.formatMessage({ id: "web.components.modules.upload_module_dialog.game", defaultMessage: "game:", description: "Upload module dialog: label before the game identifier in the preview card of the chosen bundle; the value after it is the game name" })} <span className="font-mono">{preview.module.game}</span>
-                  {preview.module.summary && " " + intl.formatMessage({ id: "web.components.modules.upload_module_dialog.summary_line", defaultMessage: "— {summary}", description: "Upload module dialog: module summary after an em dash; {summary} is the module summary" }, { summary: preview.module.summary })}
+                  {preview.module.summary && <> {intl.formatMessage({ id: "web.components.modules.upload_module_dialog.summary_line", defaultMessage: "— {summary}", description: "Upload module dialog: module summary after an em dash; {summary} is the module summary" }, { summary: preview.module.summary })}</>}
                 </div>
               </div>
             )}
