@@ -668,7 +668,8 @@ def ci_blocks(text):
             collecting = None
         owner[number] = job
         if collecting:
-            needs[collecting].update(re.findall(r"[A-Za-z0-9_-]+", line.split("#", 1)[0]))
+            needs[collecting].update(re.findall(r"[A-Za-z0-9_][A-Za-z0-9_-]*",
+                                                line.split("#", 1)[0]))
     return owner, needs
 
 
