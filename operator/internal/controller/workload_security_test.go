@@ -1,11 +1,49 @@
 package controller
 
 import (
+	"strings"
 	"testing"
 
 	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+func TestRestrictedHostportFailsBeforeWorkloadCreation(t *testing.T) {
+	scheme := testScheme(t)
+	if err := batchv1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	gs := &gameplanev1alpha1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "hostport", Namespace: "games", UID: "server-uid"}}
+	gs.Spec.TemplateRef.Name = "compatible"
+	gs.Spec.Networking.Expose = "Hostport"
+	tmpl := &gameplanev1alpha1.GameTemplate{ObjectMeta: metav1.ObjectMeta{Name: gs.Spec.TemplateRef.Name}}
+	tmpl.Spec.Security = &gameplanev1alpha1.GameSecuritySpec{RunAsUser: ptrTo(int64(1000)), FSGroup: ptrTo(int64(1000))}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gs, tmpl).WithStatusSubresource(gs).Build()
+	r := &GameServerReconciler{Client: c, APIReader: c, Scheme: scheme, RestrictedWorkloads: true}
+	if _, err := r.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(gs)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(t.Context(), client.ObjectKeyFromObject(gs), gs); err != nil {
+		t.Fatal(err)
+	}
+	if gs.Status.Phase != gameplanev1alpha1.GameServerPhaseFailed || len(gs.Status.Conditions) == 0 || !strings.Contains(gs.Status.Conditions[0].Message, "use NodePort or LoadBalancer") {
+		t.Fatalf("incompatible exposure did not report an actionable failure: %+v", gs.Status)
+	}
+	var workloads appsv1.StatefulSetList
+	if err := c.List(t.Context(), &workloads); err != nil || len(workloads.Items) != 0 {
+		t.Fatalf("created a workload before validation: %+v %v", workloads.Items, err)
+	}
+	var claims corev1.PersistentVolumeClaimList
+	if err := c.List(t.Context(), &claims); err != nil || len(claims.Items) != 0 {
+		t.Fatalf("created storage before validation: %+v %v", claims.Items, err)
+	}
+}
 
 func TestRestrictedTemplateIdentity(t *testing.T) {
 	for _, test := range []struct {

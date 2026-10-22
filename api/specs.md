@@ -13,7 +13,9 @@ capture-management routing; a namespace-only wildcard grant is insufficient.
 Enable synchronously audits the server UID and
 host-privilege intent before a UID/resourceVersion-fenced patch; audit failure
 grants nothing. Generic create/update cannot change `capture.nodeDiagnostic`,
-and clones clear it. Disable requests cancellation of active captures. Other
+and clones clear it. Generic updates that omit the field preserve its live
+value, including clients that omit the entire capture object. Explicit changes
+still require the dedicated audited action. Disable requests cancellation of active captures. Other
 capture operations retain capture permissions and existing scope/provenance
 checks. A node capture's operator annotation and immutable capture UID derive
 its diagnostic Service; local and gateway file downloads use UID-bound mTLS
