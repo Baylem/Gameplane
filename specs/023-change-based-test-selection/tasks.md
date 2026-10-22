@@ -127,7 +127,7 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 - [X] T038 [US2] In the `web` job of `.github/workflows/ci.yaml` (lines ~676-733), keep `npm run lint` and `npm run build`; on partial scope with a file list run `npx vitest related --run --coverage --coverage.thresholds.lines=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --coverage.thresholds.statements=0 <files>` then `hack/check_changed_coverage.py --vitest-json web/coverage/coverage-final.json`; otherwise run `npm run test:cover` unchanged. `web-e2e-mock` stays whole (OD-9)
 - [X] T039 [US2] Extend the `selection` records with per-module package counts and the web related-file count
 - [X] T040 [US2] Compile checks only; open PR 3 with labels `type: ci`, `area: shared`, `area: web`
-- [ ] T041 [US2] Run quickstart scenarios 5–8 as draft PRs on PR 3's branch, record results in `validation.md`, close them and delete their branches
+- [X] T041 [US2] Run quickstart scenarios 5–8 as draft PRs on PR 3's branch, record results in `validation.md`, close them and delete their branches
 
 **Checkpoint**: unit selection and changed-lines coverage work; full runs keep module gates.
 
@@ -149,7 +149,7 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 - [X] T044 [US3] In `hack/ci_scope.py`, narrow the shared-file list per OD-3: remove `.github/` and `.golangci.yml` from the force-all set, map them per research R8, keep `hack/ci_scope*`, `hack/check_changed_coverage.py`, `Makefile`, `go.work*`, `.github/actions/**`, `test/e2e/buckets.sh`, `test/e2e/suite-components.json` as force-all
 - [X] T045 [US3] In `.github/workflows/ci.yaml`, OR each job's existing gate with `contains(fromJSON(needs.changes.outputs.ci-jobs), '<job-id>')`, keeping `workflow-lint` selected for any `.github/` change
 - [X] T046 [US3] Compile checks only; open PR 4 with labels `type: ci`, `area: shared`
-- [ ] T047 [US3] Run quickstart scenarios 9–11 as draft PRs on PR 4's branch, record runner-minutes for scenario 9 (SC-003) in `validation.md`, close them and delete their branches
+- [X] T047 [US3] Run quickstart scenarios 9–11 as draft PRs on PR 4's branch, record runner-minutes for scenario 9 (SC-003) in `validation.md`, close them and delete their branches
 
 **Checkpoint**: all four stories work independently.
 

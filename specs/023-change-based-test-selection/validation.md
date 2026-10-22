@@ -75,3 +75,34 @@ the cause is the agreed `suite-components.json` mapping, not a code defect. Sett
 OD-12 in [OPEN-DECISIONS.md](./OPEN-DECISIONS.md): the mapping stays, and US1-1, US1-2
 and quickstart rows 1-2 were reworded to match it. With the new wording, scenarios 1 and
 2 pass.
+
+## T041 and T047: scenarios 5–11 (2026-10-22)
+
+Each scenario was a throwaway draft PR based on PR 3's branch at `4b90043` (PRs 3–5
+combined), allowed by OD-11. Results come from each run's `detect changes` outputs and
+the jobs that ran. The drafts were closed once their selection was read; their queued
+e2e jobs were cancelled because the selection, not the e2e result, is what each scenario
+checks.
+
+| # | Draft PR | Change | Scope | Result |
+|---|---|---|---|---|
+| 5 | #787 | comment in `api/internal/steam/options.go` | partial | `go api` tested `./cmd ./internal/messages ./internal/steam` (the package and its importers); other modules empty; changed-lines gate line `changed-lines coverage: no added statement lines, passes` (US2-1, US2-2 met) |
+| 6 | #788 | scenario 5 plus `var scenarioSixBreaksTheBuild int = "not an int"` in `api/cmd/main.go` | partial | same packages selected; `go (api)` failed in `go vet` with `cmd/main.go:916:37: cannot use "not an int"` (US2 independent test met) |
+| 7 | #789 | new file `api/internal/steam/testdata/scenario7.txt` | partial | `go api` tested `./cmd ./internal/messages ./internal/steam`, so the owning package ran (US2-3 met) |
+| 8 | #790 | comment in `web/src/routes/AdminLogs.tsx` | partial | `web-tests` = `["web/src/routes/AdminLogs.tsx"]`; Vitest `Affected 2 of 175 test files`, 36 tests passed; changed-lines gate passed; no Go job (US2-4 met) |
+| 9 | #791 | comment line above `jobs:` in `ci.yaml` | partial | `ci-jobs` = `["workflow-lint"]`; jobs that ran: detect changes, workflow lint, ingress-nginx smoke, dependency review, telemetry default gate, ci report; about 3 runner-minutes (SC-003 met) |
+| 10 | #792 | comment in `hack/ci_scope.py` | full: `selection-rule change` | every module `./...`, `web-tests` `"all"`, every e2e test selected, module coverage gates ran (`go api` 84.2% against 80%) (US3-2, FR-011 met) |
+| 11 | #793 | scenario 1 (comment in `agent/internal/console/console.go`), then label `ci: full-run` and a second push | first push partial; second push full: `label ci: full-run` | second run: `all: true`, reason `label ci: full-run` in the e2e and units outputs, 69 jobs scheduled, every e2e suite selected (FR-007 met) |
+
+**Scenario 9.** The ingress-nginx smoke ran because the base still listed `ci.yaml` in
+the `kindsmoke` path filter. Commit `d4ee6ac` removed that entry, so a comment-only
+`ci.yaml` edit now runs only `workflow lint` plus the always-on jobs. The six
+`TestCISelection_*` tests appeared in `e2e-run`, but the e2e gate was off, so no e2e job
+ran.
+
+**Scenarios 5 and 7, e2e.** An `api` change selects most e2e tests (`operator` 64 of 78,
+every API bucket whole), because nearly every e2e test goes through the API. This
+follows the agreed `suite-components.json` mapping (OD-12).
+
+**Scenario 7.** A `testdata/` file is not a `_test.go` file, so its package's importers
+are selected too. That is broader than US2-3 asks for, never narrower.
