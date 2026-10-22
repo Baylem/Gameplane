@@ -371,14 +371,14 @@ jobs:
           E2ETREE: ${{ steps.filter.outputs.e2etree }}
           GAMECOVERAGE: ${{ steps.filter.outputs.gamecoverage }}
           UNIVERSAL: ${{ steps.e2e.outputs.universal }}
-          CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' || steps.e2e.outputs.all == 'true' || steps.jobs.outputs.all == 'true' }}
+          CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' || steps.e2e.outputs.all == 'true' || steps.units.outputs.all == 'true' || steps.jobs.outputs.all == 'true' }}
           CAPTURE: ${{ steps.filter.outputs.capture_overhead }}
           SUBMODULES: ${{ steps.filter.outputs.submodules }}
           CODEGEN: ${{ steps.filter.outputs.codegen }}
           GITHUB: ${{ steps.filter.outputs.github }}
           SPECS: ${{ steps.filter.outputs.specs }}
           DOCS: ${{ steps.filter.outputs.docs }}
-          KINDSMOKE: "${{ steps.filter.outputs.kindsmoke == 'true' || steps.jobs.outputs.all == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
+          KINDSMOKE: "${{ steps.filter.outputs.kindsmoke == 'true' || steps.scope.outputs.all == 'true' || steps.e2e.outputs.all == 'true' || steps.units.outputs.all == 'true' || steps.jobs.outputs.all == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
         run: |
           gov=false;  { [ "$GO" = true ]     || [ "$CI" = true ]; } && gov=true
           webv=false; { [ "$WEB" = true ]    || [ "$CI" = true ]; } && webv=true
