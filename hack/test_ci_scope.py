@@ -11,7 +11,7 @@ from subprocess import CompletedProcess
 from ci_scope import (E2E_BUCKETS, FORCE_ALL_FILES, ROOT, affected_modules, bot_matrix,
                       bucket_lists, changed_paths, e2e_outputs, full_scope_reason, image_inputs,
                       is_unmapped, load_suites, main, publish_paths, select_images, summarize,
-                      verify_suites,
+                      verify_suites, go_packages, web_tests,
                       workspace_modules)
 
 
@@ -541,6 +541,129 @@ class UnmappedPathTests(unittest.TestCase):
         values = {key: json.loads(value) for key, value in
                   (line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines())}
         self.assertEqual(values, FULL_VALUES)
+
+
+class GoPackageTests(unittest.TestCase):
+    """Package-level Go selection from import scanning (spec 023 T031, research R4)."""
+
+    def setUp(self):
+        """Create the shared workspace plus three api packages and one lib package."""
+        make_go_workspace(self)
+        write_file(self.root, "lib/helpers/h.go", "package helpers\n")
+        write_file(self.root, "api/internal/a/a.go",
+                   'package a\n\nimport "example.com/lib/helpers"\n\nvar _ = helpers.X\n')
+        write_file(self.root, "api/internal/a/a_test.go", "package a\n")
+        write_file(self.root, "api/internal/b/b.go",
+                   'package b\n\nimport (\n\t"fmt"\n\tx "example.com/api/internal/a"\n)\n')
+        write_file(self.root, "api/internal/c/c.go", "package c\n")
+        write_file(self.root, "api/internal/c/testdata/in.txt", "fixture\n")
+
+    def packages(self, *paths):
+        """Return the go-packages selection for the changed paths."""
+        return go_packages(self.root, list(paths), None)
+
+    def test_leaf_change_selects_only_its_package(self):
+        self.assertEqual(self.packages("api/internal/b/b.go"),
+                         {"api": ["./internal/b"], "lib": [], "other": []})
+
+    def test_importer_chain_crosses_modules(self):
+        self.assertEqual(self.packages("lib/helpers/h.go"),
+                         {"api": ["./internal/a", "./internal/b"], "lib": ["./helpers"],
+                          "other": []})
+
+    def test_test_file_change_selects_only_its_package(self):
+        self.assertEqual(self.packages("api/internal/a/a_test.go")["api"], ["./internal/a"])
+
+    def test_testdata_and_embedded_files_select_their_package(self):
+        self.assertEqual(self.packages("api/internal/c/testdata/in.txt")["api"],
+                         ["./internal/c"])
+        self.assertEqual(self.packages("api/internal/c/schema.json")["api"], ["./internal/c"])
+
+    def test_module_files_select_the_whole_module(self):
+        for name in ("go.mod", "go.sum", ".testcoverage.yml"):
+            with self.subTest(name=name):
+                self.assertEqual(self.packages(f"api/{name}"),
+                                 {"api": ["./..."], "lib": [], "other": []})
+
+    def test_file_outside_any_package_selects_the_whole_module(self):
+        self.assertEqual(self.packages("api/config/x.yaml")["api"], ["./..."])
+
+    def test_markdown_selects_nothing(self):
+        self.assertEqual(self.packages("api/README.md")["api"], [])
+
+    def test_full_scope_runs_every_module(self):
+        self.assertEqual(go_packages(self.root, None, "master push"),
+                         {"api": ["./..."], "lib": ["./..."], "other": ["./..."]})
+
+
+class WebTestsTests(unittest.TestCase):
+    """Web unit selection for `vitest related` (spec 023 T032, research R6)."""
+
+    def setUp(self):
+        """Create a temporary web tree with one route."""
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        write_file(self.root, "web/src/routes/servers.tsx", "export {};\n")
+
+    def test_route_file_gives_its_source_path(self):
+        self.assertEqual(web_tests(self.root, ["web/src/routes/servers.tsx", "api/x.go"], None),
+                         ["web/src/routes/servers.tsx"])
+
+    def test_shared_web_inputs_give_all(self):
+        for path in ("web/src/test/setup.ts", "web/package.json", "web/package-lock.json",
+                     "web/vitest.config.ts", "web/vite.config.ts", "web/tsconfig.app.json",
+                     "web/tsconfig.json", "web/eslint.config.js", "i18n/locales/en/app.json"):
+            with self.subTest(path=path):
+                self.assertEqual(web_tests(self.root, [path], None), "all")
+
+    def test_deleted_source_gives_all(self):
+        self.assertEqual(web_tests(self.root, ["web/src/routes/gone.tsx"], None), "all")
+
+    def test_playwright_and_unrelated_paths_select_nothing(self):
+        self.assertEqual(web_tests(self.root, ["web/e2e/servers.spec.ts", "web/README.md",
+                                               "docs/a.md"], None), [])
+
+    def test_full_scope_gives_all(self):
+        self.assertEqual(web_tests(self.root, None, "master push"), "all")
+        self.assertEqual(web_tests(self.root, ["web/src/routes/servers.tsx"], "manual run"),
+                         "all")
+
+
+class UnitSummaryNoteTests(unittest.TestCase):
+    """The summary rows name package and file counts from mode units (spec 023 T039)."""
+
+    def setUp(self):
+        """Create the shared Go workspace fixture for each test."""
+        make_go_workspace(self)
+
+    def rows(self, units):
+        """Return the summary rows of a partial run with go and web gates on."""
+        env = {
+            "GITHUB_EVENT_NAME": "pull_request",
+            "SCOPE_OUTPUTS": json.dumps({"modules": json.dumps(["api", "lib"])}),
+            "FILTER_OUTPUTS": json.dumps({}),
+            "GATE_OUTPUTS": json.dumps({"go": "true", "web": "true"}),
+            "BOT_MATRIX": json.dumps({"test": []}),
+            "UNITS_OUTPUTS": json.dumps({key: json.dumps(value) for key, value in units.items()}),
+        }
+        with patch("ci_scope.ROOT", self.root):
+            rows, _ = summarize(env, ["api/internal/a/a.go"], None)
+        return {row["suite"]: row["reason"] for row in rows}
+
+    def test_notes_name_package_and_file_counts(self):
+        rows = self.rows({"go-packages": {"api": ["./internal/a", "./internal/b"], "lib": []},
+                          "web-tests": ["web/src/a.tsx"]})
+        self.assertTrue(rows["go (api) (amd64, arm64)"].startswith("2 packages; "))
+        self.assertTrue(rows["go (lib) (amd64, arm64)"].startswith("vet only, no affected package; "))
+        self.assertTrue(rows["web"].startswith("1 files for vitest related; "))
+
+    def test_whole_runs_add_no_note(self):
+        rows = self.rows({"go-packages": {"api": ["./..."], "lib": ["./..."]}, "web-tests": "all"})
+        self.assertFalse(rows["go (api) (amd64, arm64)"].startswith(("2 packages", "vet only")))
+        self.assertFalse(rows["web"].startswith(("1 files", "lint and build")))
+        rows = self.rows({"go-packages": {}, "web-tests": []})
+        self.assertTrue(rows["web"].startswith("lint and build only; "))
 
 
 if __name__ == "__main__":
