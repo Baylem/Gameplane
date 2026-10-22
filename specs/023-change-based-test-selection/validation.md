@@ -116,7 +116,7 @@ on `54d5819` was the first master push run to finish with every selection change
 place:
 
 - `detect changes` emitted `"all": "true"` and `"reason": "master push"`.
-- 101 jobs ran: 100 succeeded and 1 was skipped. The skipped job was `dependency review`,
-  which runs only on pull requests. No job was skipped by selection, so FR-006 and
-  SC-006 are met.
+- 101 jobs were scheduled: 100 succeeded and `dependency review` was skipped, because it
+  runs only on pull requests. No job was skipped by selection, so FR-006 and SC-006 are
+  met.
 - The jobs took about 386 runner-minutes in total.
