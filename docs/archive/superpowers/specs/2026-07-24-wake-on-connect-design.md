@@ -3,7 +3,7 @@
 # Wake-on-connect for idle auto-sleep
 
 **Date:** 2026-07-24  
-**Status:** approved, not yet implemented
+**Status:** shipped; historical (see the banner above)
 
 ## Problem
 

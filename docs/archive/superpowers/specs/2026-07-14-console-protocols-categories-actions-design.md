@@ -3,7 +3,7 @@
 # Console protocols, multi-category modules, and richer quick actions
 
 **Date:** 2026-07-14
-**Status:** approved, not yet implemented
+**Status:** shipped; historical (see the banner above)
 
 ## Problem
 
