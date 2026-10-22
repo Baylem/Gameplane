@@ -14,8 +14,8 @@ results go in `validation.md` in this folder.
 
 | # | Draft PR changes | Expect in the `detect changes` summary | Expect in the run |
 |---|---|---|---|
-| 1 | One line in `agent/internal/console/` | scope partial; agent suites `run` with only their agent tests in the `-run` regex, `telemetry`, `upgrade`, `api-rbac`, `api-auth`, `api-roles`, `api-mods`, `capture-overhead` `skip` | Full result in ≤ 20 min (SC-001) |
-| 2 | One line in `sentinel/` | operator RBAC and auth suites `skip` (US1-2) | |
+| 1 | One line in `agent/internal/console/` | scope partial; suites with agent-mapped tests `run` with only those tests in the `-run` regex; `api-auth`, `telemetry`, `ratelimit` `skip` (US1-1) | Full result in ≤ 20 min (SC-001) |
+| 2 | One line in `sentinel/` | RBAC and auth suites `skip`; `operator` runs only the `TestHelmInstall_` tests and the sentinel's own test (US1-2) | |
 | 3 | One line in `charts/gameplane/values.yaml` | `full`-equivalent: every e2e suite `run` (US1-3) | |
 | 4 | One line in an existing `test/e2e/*_e2e_test.go` | the bucket holding that file's tests `run` (US1-4) | |
 | 5 | One leaf package in `api/internal/` | `go api` runs only that package and its importers (US2-1, US2-2) | changed-lines coverage line in summary |
