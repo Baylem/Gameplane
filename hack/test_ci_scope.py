@@ -445,6 +445,18 @@ class E2ESelectionTests(unittest.TestCase):
         self.assertEqual(values["e2e-run"], {})
         self.assertFalse(values["bots-any"])
 
+    def test_universal_path_change_selects_every_suite_and_turns_on_the_gate(self):
+        values = self.select(".dockerignore")
+        buckets = bucket_lists(ROOT)
+        self.assertFalse(values["all"])
+        self.assertTrue(values["universal"])
+        for bucket in E2E_BUCKETS:
+            self.assertEqual(values["e2e-run"][bucket], "^(" + "|".join(buckets[bucket]) + ")$")
+
+    def test_component_change_leaves_the_universal_gate_off(self):
+        self.assertFalse(self.select("agent/internal/console/console.go")["universal"])
+        self.assertFalse(self.select("tools/x.sh")["universal"])
+
 
 class VerifySuitesTests(unittest.TestCase):
     """verify-suites rules 1, 2 and 5 from contracts/suite-components.md (T015)."""

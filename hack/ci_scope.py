@@ -488,6 +488,7 @@ def e2e_outputs(root, paths, reason):
         "e2e-web-live": bool(reason) or "*" in touched or bool(touched & WEB_LIVE_COMPONENTS),
         "bot-matrix": {"test": bots},
         "bots-any": bool(bots),
+        "universal": not reason and "*" in touched,
     }
 
 
