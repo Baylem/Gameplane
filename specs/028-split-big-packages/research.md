@@ -11,8 +11,7 @@ Measured on master `8a67f2e` (2026-10-20) unless stated. Decisions reference
   dev codemod outside `web/src/` that no FR names; OD-11 (2026-10-22): split it too (T061).
 - `api/internal/handlers`: 146 `.go` files, 48 production. `operator/internal/controller`:
   150 `.go` files, 41 production.
-- Spec 027's `docs/layout.md` is not on master yet (027 implementation not started), so
-  every brief cites `specs/027-contributor-docs-layout-map/OPEN-DECISIONS.md` (T002).
+- Spec 027's `docs/layout.md` merged via PR #795 (2026-10-22); every brief cites it (T002).
 
 ## R1. What a "move" may change (FR-002, FR-005, OD-6)
 
