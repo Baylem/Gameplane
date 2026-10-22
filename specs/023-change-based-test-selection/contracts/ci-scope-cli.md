@@ -70,6 +70,7 @@ Emits the e2e selection that `e2e_outputs()` computes from
 | `e2e-multicluster`, `e2e-upgrade`, `e2e-web-live`, `e2e-capture-overhead` | boolean | Gates for the matching jobs |
 | `bot-matrix` | JSON object `{"test": [...]}` | Selected `bot-fast` tests, read by `e2e-game-bot` |
 | `bots-any` | boolean | False skips `e2e-game-bot` |
+| `universal` | boolean | True when a universal path selected every test without a full-scope reason; `combine` folds it into the e2e and image gates, because universal paths such as `.dockerignore`, `containers/` and `signing/` match no e2e path filter |
 
 ## Mode `units` (new)
 

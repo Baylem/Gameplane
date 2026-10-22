@@ -68,9 +68,10 @@ designed.
 - `TestCISelection_*` ran in scenarios 3 and 12 (operator, arm64) and passed in
   scenario 3; scenario 12's operator job was still running at close.
 
-### Open item
+### OD-12
 
-Scenarios 1 and 2 select more than the quickstart rows and spec US1-1/US1-2 say, and
-the cause is the agreed `suite-components.json` mapping, not a code defect. Either the
-rows and acceptance text change to match the mapping, or the mapping narrows. This is
-recorded in [OPEN-DECISIONS.md](./OPEN-DECISIONS.md) until it is settled.
+Scenarios 1 and 2 selected more than the quickstart rows and spec US1-1/US1-2 said, and
+the cause is the agreed `suite-components.json` mapping, not a code defect. Settled as
+OD-12 in [OPEN-DECISIONS.md](./OPEN-DECISIONS.md): the mapping stays, and US1-1, US1-2
+and quickstart rows 1-2 were reworded to match it. With the new wording, scenarios 1 and
+2 pass.

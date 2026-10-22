@@ -532,6 +532,7 @@ def e2e_outputs(root, paths, reason):
         "e2e-web-live": bool(reason) or "*" in touched or bool(touched & WEB_LIVE_COMPONENTS),
         "bot-matrix": {"test": bots},
         "bots-any": bool(bots),
+        "universal": not reason and "*" in touched,
     }
 
 
@@ -667,7 +668,8 @@ def ci_blocks(text):
             collecting = None
         owner[number] = job
         if collecting:
-            needs[collecting].update(re.findall(r"[A-Za-z0-9_-]+", line.split("#", 1)[0]))
+            needs[collecting].update(re.findall(r"[A-Za-z0-9_][A-Za-z0-9_-]*",
+                                                line.split("#", 1)[0]))
     return owner, needs
 
 
