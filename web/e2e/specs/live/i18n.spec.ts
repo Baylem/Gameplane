@@ -157,7 +157,7 @@ test.describe("live: i18n", () => {
 
       await expect(page.locator("html")).toHaveAttribute("lang", "fr");
       await expect(page.getByRole("textbox", { name: /E-mail ou nom d'utilisateur/ })).toBeVisible();
-      await expect(page.getByRole("button", { name: /^Connexion$/ })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Connexion", exact: true })).toBeVisible();
 
       try {
         // The browser choice persists across a reload.
@@ -171,7 +171,7 @@ test.describe("live: i18n", () => {
         try {
           const freshPage = await fresh.newPage();
           await freshPage.goto("/login");
-          await expect(freshPage.getByRole("button", { name: /^Sign in$/ })).toBeVisible();
+          await expect(freshPage.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
           await expect(freshPage.locator("html")).toHaveAttribute("lang", "en");
         } finally {
           await fresh.close();
