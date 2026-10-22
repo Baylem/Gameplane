@@ -253,6 +253,11 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	} else if changed {
 		return ctrl.Result{Requeue: true}, nil
 	}
+	// Exposure compatibility depends only on the server. Reject it before
+	// resolving/adopting a template, which may otherwise initiate a rollout.
+	if r.RestrictedWorkloads && gs.Spec.Networking.Expose == "Hostport" {
+		return ctrl.Result{}, r.setPhase(ctx, &gs, "restricted workload cannot use networking.expose=Hostport; use NodePort or LoadBalancer")
+	}
 
 	// Resolve the template this GameServer points at. Templates are
 	// cluster-scoped so no namespace is needed.
@@ -272,9 +277,6 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if r.RestrictedWorkloads {
 		if err := validateRestrictedTemplate(&tmpl); err != nil {
 			return ctrl.Result{}, r.setPhase(ctx, &gs, err.Error())
-		}
-		if gs.Spec.Networking.Expose == "Hostport" {
-			return ctrl.Result{}, r.setPhase(ctx, &gs, "restricted workload cannot use networking.expose=Hostport; use NodePort or LoadBalancer")
 		}
 	}
 	mc, err := materializeConfig(&gs, &tmpl)

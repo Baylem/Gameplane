@@ -43,6 +43,24 @@ func TestRestrictedHostportFailsBeforeWorkloadCreation(t *testing.T) {
 	if err := c.List(t.Context(), &claims); err != nil || len(claims.Items) != 0 {
 		t.Fatalf("created storage before validation: %+v %v", claims.Items, err)
 	}
+	var configs corev1.ConfigMapList
+	if err := c.List(t.Context(), &configs); err != nil || len(configs.Items) != 0 {
+		t.Fatalf("created template/config state before validation: %+v %v", configs.Items, err)
+	}
+	// Exposure validation must also precede template lookup. This keeps
+	// future template admission/rollout work behind the same rejection.
+	if err := c.Delete(t.Context(), tmpl); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(gs)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(t.Context(), client.ObjectKeyFromObject(gs), gs); err != nil {
+		t.Fatal(err)
+	}
+	if len(gs.Status.Conditions) == 0 || !strings.Contains(gs.Status.Conditions[0].Message, "use NodePort or LoadBalancer") {
+		t.Fatalf("template lookup ran before exposure validation: %+v", gs.Status)
+	}
 }
 
 func TestRestrictedTemplateIdentity(t *testing.T) {
