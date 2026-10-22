@@ -34,9 +34,9 @@ description: "Task list for spec 026 modular dev containers"
 
 **Purpose**: the hand-written inputs every profile is generated from.
 
-- [ ] T001 Scout (one agent, `haiku`, read-only): build the system dependency inventory from research R9. For each folder in `go.work`, plus `web/`, `charts/gameplane/`, `deploy/kind/`, `test/e2e/`, `website/` and `modules/`, list every toolchain, CLI, OS package, service and submodule that its Makefile targets, scripts (`modules/build.sh`, `deploy/kind/*.sh`, `web/package.json` scripts, `website/package.json` scripts and `engines`) and today's `.devcontainer/post-create.sh` invoke. Give `file:line` evidence for each entry. Also list each Go module's in-repo `require`/`replace` targets. Write the brief to `specs/026-modular-dev-containers/inventory.md`.
-- [ ] T002 Create `.devcontainer/versions.toml` with one `[tools]` key per tool from today's `.devcontainer/devcontainer.json` and `post-create.sh` (go 1.26, node 24, kind v0.32.0, oras 1.2.0, golangci_lint v2.12.2, envtest_k8s 1.36.2, specify v1.0.3, …). Apply OD-5: `kubectl = "1.36"`, `setup_envtest = "release-0.24"`, and `helm` pinned to the current stable Helm release (record the version and date in a comment).
-- [ ] T003 Create `.devcontainer/profiles.toml` per [contracts/profiles-catalogue.md](contracts/profiles-catalogue.md) and data-model "Profile" and "Baseline". The baseline carries the common-utils, git, github-cli, uv, specify and AI CLI deps (optional), `anthropic.claude-code`, and today's shared editor settings and env (`GOTOOLCHAIN=local`, `CI=1`). `[full].personal` carries today's theme and other-language extensions (Lunar Pink, darkpinkpro, Rust, Vue, Gemini, Pencil, …). It defines the 11 profiles (`web`, `api`, `operator`, `agent`, `go-services`, `website`, `modules`, `dashboard-api`, `control-plane`, `modules-gp`, `full`) with ports, extensions, checks and submodules from the contract.
+- [X] T001 Scout (one agent, `haiku`, read-only): build the system dependency inventory from research R9. For each folder in `go.work`, plus `web/`, `charts/gameplane/`, `deploy/kind/`, `test/e2e/`, `website/` and `modules/`, list every toolchain, CLI, OS package, service and submodule that its Makefile targets, scripts (`modules/build.sh`, `deploy/kind/*.sh`, `web/package.json` scripts, `website/package.json` scripts and `engines`) and today's `.devcontainer/post-create.sh` invoke. Give `file:line` evidence for each entry. Also list each Go module's in-repo `require`/`replace` targets. Write the brief to `specs/026-modular-dev-containers/inventory.md`.
+- [X] T002 Create `.devcontainer/versions.toml` with one `[tools]` key per tool from today's `.devcontainer/devcontainer.json` and `post-create.sh` (go 1.26, node 24, kind v0.32.0, oras 1.2.0, golangci_lint v2.12.2, envtest_k8s 1.36.2, specify v1.0.3, …). Apply OD-5: `kubectl = "1.36"`, `setup_envtest = "release-0.24"`, and `helm` pinned to the current stable Helm release (record the version and date in a comment).
+- [X] T003 Create `.devcontainer/profiles.toml` per [contracts/profiles-catalogue.md](contracts/profiles-catalogue.md) and data-model "Profile" and "Baseline". The baseline carries the common-utils, git, github-cli, uv, specify and AI CLI deps (optional), `anthropic.claude-code`, and today's shared editor settings and env (`GOTOOLCHAIN=local`, `CI=1`). `[full].personal` carries today's theme and other-language extensions (Lunar Pink, darkpinkpro, Rust, Vue, Gemini, Pencil, …). It defines the 11 profiles (`web`, `api`, `operator`, `agent`, `go-services`, `website`, `modules`, `dashboard-api`, `control-plane`, `modules-gp`, `full`) with ports, extensions, checks and submodules from the contract.
 
 ---
 
@@ -44,13 +44,13 @@ description: "Task list for spec 026 modular dev containers"
 
 **Purpose**: the generator, its tests and the shared setup script. They block every story.
 
-- [ ] T004 Implement input loading and validation in `hack/gen-devcontainers.py`: parse `versions.toml`, `profiles.toml` and every `system-deps.toml`, and enforce every rule in [contracts/system-deps-format.md](contracts/system-deps-format.md) and the error list in [contracts/generator-cli.md](contracts/generator-cli.md). Each error names the file and the profile.
-- [ ] T005 Implement composition in `hack/gen-devcontainers.py`: derive each component profile's library folders from `go.mod` in-repo `require`/`replace` targets, build part profiles as unions (FR-005), build the full profile as the union of all plus `[full].personal`, and collapse duplicate deps (data-model invariant).
-- [ ] T006 Implement output in `hack/gen-devcontainers.py`: write `devcontainer.json` (tab-indented, sorted, trailing newline, `name` = `Gameplane · <title>`, `postCreateCommand` = `bash .devcontainer/setup.sh .devcontainer/<id>/setup.env`), the subset `devcontainer-lock.json` from the source lock (research R4), `setup.env`, `ready.txt` ([contracts/setup-and-need.md](contracts/setup-and-need.md)) and `.devcontainer/tool-index.tsv`. The full profile's JSON goes to `.devcontainer/devcontainer.json`, and its other files to `.devcontainer/full/`.
-- [ ] T007 Implement `--check`, `--affected PATH...` and `--submodules` modes in `hack/gen-devcontainers.py` per [contracts/generator-cli.md](contracts/generator-cli.md), including the check that the `Makefile` `ENVTEST_K8S_VERSION` and `setup-envtest@` ref equal `versions.toml` (OD-5).
-- [ ] T008 [P] Write fixture tests in `hack/test-gen-devcontainers.py` (stdlib `unittest`, temp-dir fixture trees). Cover: literal version rejected, unknown `kind`, empty `reason`, `none` together with deps, missing `system-deps.toml`, `go.work` module in no profile, unused version key, union rule for a part, duplicate collapse, hand-edited output detected by `--check`, `--affected` for a deps file and for `versions.toml`, and Makefile pin mismatch.
-- [ ] T009 Create `.devcontainer/setup.sh` per [contracts/setup-and-need.md](contracts/setup-and-need.md): move each block of `.devcontainer/post-create.sh` into a step function with the same guards, read versions and `GO_MODULES` from `setup.env`, run only the listed steps, treat `ai_clis` as warn-only (FR-011), print versions of installed tools only, then print `ready.txt`.
-- [ ] T010 Add Makefile targets `devcontainers` (runs `python3 hack/gen-devcontainers.py --submodules`) and `check-devcontainers` (`--check`), add `check-devcontainers` to the `lint:` prerequisites in `Makefile`, and add a `test-gen-devcontainers` target that runs the fixture tests (CI only).
+- [X] T004 Implement input loading and validation in `hack/gen-devcontainers.py`: parse `versions.toml`, `profiles.toml` and every `system-deps.toml`, and enforce every rule in [contracts/system-deps-format.md](contracts/system-deps-format.md) and the error list in [contracts/generator-cli.md](contracts/generator-cli.md). Each error names the file and the profile.
+- [X] T005 Implement composition in `hack/gen-devcontainers.py`: derive each component profile's library folders from `go.mod` in-repo `require`/`replace` targets, build part profiles as unions (FR-005), build the full profile as the union of all plus `[full].personal`, and collapse duplicate deps (data-model invariant).
+- [X] T006 Implement output in `hack/gen-devcontainers.py`: write `devcontainer.json` (tab-indented, sorted, trailing newline, `name` = `Gameplane · <title>`, `postCreateCommand` = `bash .devcontainer/setup.sh .devcontainer/<id>/setup.env`), the subset `devcontainer-lock.json` from the source lock (research R4), `setup.env`, `ready.txt` ([contracts/setup-and-need.md](contracts/setup-and-need.md)) and `.devcontainer/tool-index.tsv`. The full profile's JSON goes to `.devcontainer/devcontainer.json`, and its other files to `.devcontainer/full/`.
+- [X] T007 Implement `--check`, `--affected PATH...` and `--submodules` modes in `hack/gen-devcontainers.py` per [contracts/generator-cli.md](contracts/generator-cli.md), including the check that the `Makefile` `ENVTEST_K8S_VERSION` and `setup-envtest@` ref equal `versions.toml` (OD-5).
+- [X] T008 [P] Write fixture tests in `hack/test-gen-devcontainers.py` (stdlib `unittest`, temp-dir fixture trees). Cover: literal version rejected, unknown `kind`, empty `reason`, `none` together with deps, missing `system-deps.toml`, `go.work` module in no profile, unused version key, union rule for a part, duplicate collapse, hand-edited output detected by `--check`, `--affected` for a deps file and for `versions.toml`, and Makefile pin mismatch.
+- [X] T009 Create `.devcontainer/setup.sh` per [contracts/setup-and-need.md](contracts/setup-and-need.md): move each block of `.devcontainer/post-create.sh` into a step function with the same guards, read versions and `GO_MODULES` from `setup.env`, run only the listed steps, treat `ai_clis` as warn-only (FR-011), print versions of installed tools only, then print `ready.txt`.
+- [X] T010 Add Makefile targets `devcontainers` (runs `python3 hack/gen-devcontainers.py --submodules`) and `check-devcontainers` (`--check`), add `check-devcontainers` to the `lint:` prerequisites in `Makefile`, and add a `test-gen-devcontainers` target that runs the fixture tests (CI only).
 
 **Checkpoint**: the generator runs and `--check` passes on the PR-A tree.
 
@@ -62,8 +62,8 @@ description: "Task list for spec 026 modular dev containers"
 
 **Independent Test**: open any component folder and read its `system-deps.toml`. The `drift` CI job passes, and it fails when a tool is added to `profiles.toml` extras without a reason or when a list is removed.
 
-- [ ] T011 [US6] Generate every main-repo `system-deps.toml` from the T001 brief with one deterministic script run by one `haiku` agent (rule 13 "scripts over fan-out"): `agent/`, `api/`, `audit-syslog-bridge/`, `capture-sidecar/`, `gameaction/`, `gameproto/`, `gp-module/`, `i18n/`, `mcp-server/`, `netguard/`, `operator/`, `sentinel/`, `svcutil/`, `telemetryschema/`, `telemetry-receiver/`, `test/e2e/`, `tunnel/`, `web/`, `charts/gameplane/`, `deploy/kind/`. Each entry uses a `versions.toml` key and a one-line reason that cites the brief's evidence.
-- [ ] T012 [US6] Remove `.devcontainer/post-create.sh` (its steps now live in `.devcontainer/setup.sh`, T009) and update its references in `docs/dependencies.md`. The website page reference is changed in PR-D (T033).
+- [X] T011 [US6] Generate every main-repo `system-deps.toml` from the T001 brief with one deterministic script run by one `haiku` agent (rule 13 "scripts over fan-out"): `agent/`, `api/`, `audit-syslog-bridge/`, `capture-sidecar/`, `gameaction/`, `gameproto/`, `gp-module/`, `i18n/`, `mcp-server/`, `netguard/`, `operator/`, `sentinel/`, `svcutil/`, `telemetryschema/`, `telemetry-receiver/`, `test/e2e/`, `tunnel/`, `web/`, `charts/gameplane/`, `deploy/kind/`. Each entry uses a `versions.toml` key and a one-line reason that cites the brief's evidence.
+- [X] T012 [US6] Remove `.devcontainer/post-create.sh` (its steps now live in `.devcontainer/setup.sh`, T009) and update its references in `docs/dependencies.md`. The website page reference is changed in PR-D (T033).
 
 ---
 
@@ -73,8 +73,8 @@ description: "Task list for spec 026 modular dev containers"
 
 **Independent Test**: quickstart §4. Diff the generated `.devcontainer/devcontainer.json` against `git show 8a67f2e:.devcontainer/devcontainer.json`.
 
-- [ ] T013 [US3] Run `make devcontainers` and commit the generated `.devcontainer/devcontainer.json`, `.devcontainer/full/*` and `.devcontainer/tool-index.tsv`. In the PR body, include the diff against `8a67f2e`, showing that only the `postCreateCommand` path, the `name`, kubectl 1.36 and the pinned helm differ (setup-envtest lives in `setup.env`).
-- [ ] T014 [US3] Add a temporary `full`-only build to `.github/workflows/devcontainers.yaml` (`drift` job plus one `build` job for `full` on amd64 and arm64, using `devcontainers/ci` pinned by SHA with `push: never`), so PR-A is verified before PR-B adds the matrix. PR-B (T021) extends this file rather than replacing it.
+- [X] T013 [US3] Run `make devcontainers` and commit the generated `.devcontainer/devcontainer.json`, `.devcontainer/full/*` and `.devcontainer/tool-index.tsv`. In the PR body, include the diff against `8a67f2e`, showing that only the `postCreateCommand` path, the `name`, kubectl 1.36 and the pinned helm differ (setup-envtest lives in `setup.env`).
+- [X] T014 [US3] Add a temporary `full`-only build to `.github/workflows/devcontainers.yaml` (`drift` job plus one `build` job for `full` on amd64 and arm64, using `devcontainers/ci` pinned by SHA with `push: never`), so PR-A is verified before PR-B adds the matrix. PR-B (T021) extends this file rather than replacing it.
 
 **Checkpoint (PR-A)**: `drift` green, `full` builds on both arches, `make lint` green. Open PR-A.
 
@@ -86,10 +86,10 @@ description: "Task list for spec 026 modular dev containers"
 
 **Independent Test**: quickstart §2. Each component profile builds in CI and passes its checks, and tools outside its scope are absent.
 
-- [ ] T015 [US1] Run `make devcontainers` and commit `.devcontainer/{web,api,operator,agent,go-services,website,modules}/*` (generated).
+- [X] T015 [US1] Run `make devcontainers` and commit `.devcontainer/{web,api,operator,agent,go-services,website,modules}/*` (generated).
 - [ ] T016 [P] [US1] Create `hack/need.sh` per [contracts/setup-and-need.md](contracts/setup-and-need.md) (reads `.devcontainer/tool-index.tsv`, exits 127, falls back to a plain message when the index is absent).
 - [ ] T017 [US1] Call `hack/need.sh` as the first recipe line of the Makefile targets from research R6 (`dev-up`, `dev-load`, `dev-install`, `modules-push`, `test-e2e`, `test-e2e-bucket`, `lint-go`, `images`, `web-dev`, `build-web`), naming the tools each one runs. Recipe bodies stay otherwise unchanged.
-- [ ] T018 [US1] In the `website` and `modules` component profiles, set submodule init to only that submodule (`SUBMODULES` in `setup.env`), and confirm the generated `setup.env` has no `go_mod_download` or `envtest` step (spec US1 scenarios 2 and 3).
+- [X] T018 [US1] In the `website` and `modules` component profiles, set submodule init to only that submodule (`SUBMODULES` in `setup.env`), and confirm the generated `setup.env` has no `go_mod_download` or `envtest` step (spec US1 scenarios 2 and 3).
 
 ---
 
@@ -99,8 +99,8 @@ description: "Task list for spec 026 modular dev containers"
 
 **Independent Test**: quickstart §3. `dashboard-api` runs `make dev-up` and `make web-dev`, and the dashboard shows the sample servers.
 
-- [ ] T019 [US2] Run `make devcontainers` and commit `.devcontainer/{dashboard-api,control-plane,modules-gp}/*` (generated). Confirm `dashboard-api` has docker-in-docker, kind, kubectl and helm from its `extras` / `deploy/kind` and `charts/gameplane` lists, and forwards 5173, 8080, 8443 and 5001.
-- [ ] T020 [US2] Make the `dashboard-api` ready message, generated from `profiles.toml` `checks` and notes, give the run order `make dev-up` → `make web-dev` → open the forwarded 5173 port.
+- [X] T019 [US2] Run `make devcontainers` and commit `.devcontainer/{dashboard-api,control-plane,modules-gp}/*` (generated). Confirm `dashboard-api` has docker-in-docker, kind, kubectl and helm from its `extras` / `deploy/kind` and `charts/gameplane` lists, and forwards 5173, 8080, 8443 and 5001.
+- [X] T020 [US2] Make the `dashboard-api` ready message, generated from `profiles.toml` `checks` and notes, give the run order `make dev-up` → `make web-dev` → open the forwarded 5173 port.
 
 ---
 
@@ -112,7 +112,7 @@ description: "Task list for spec 026 modular dev containers"
 
 - [ ] T021 [US5] Extend `.github/workflows/devcontainers.yaml` per research R7: path triggers, a `profiles` job that runs `python3 hack/gen-devcontainers.py --affected` on the PR's changed files and emits a JSON matrix, and a `build` matrix of affected profile × {amd64 `ubuntu-latest`, arm64 `ubuntu-24.04-arm`} running each profile's `checks` with `devcontainers/ci` (SHA-pinned, `push: never`). Write setup seconds and `du -sx` of the workspace and image size to `$GITHUB_STEP_SUMMARY`. Every action is SHA-pinned with a version comment (spec 008 rules). Set `permissions: contents: read`.
 - [ ] T022 [US5] Add a `drift` step that runs `make test-gen-devcontainers` (fixture tests) next to `--check` in `.github/workflows/devcontainers.yaml`.
-- [ ] T023 [US5] Add `.github/workflows/devcontainers.yaml` to whatever lists hardened workflows today (the spec 008 action-pin check), if such a list exists. The T001 scout confirms where it is.
+- [X] T023 [US5] Add `.github/workflows/devcontainers.yaml` to whatever lists hardened workflows today (the spec 008 action-pin check), if such a list exists. The T001 scout confirms where it is. Done: nothing to register; zizmor and actionlint discover every workflow (ci.yaml:1592, :1639), see inventory.md Answers (c).
 
 **Checkpoint (PR-B)**: every profile green on both arches. Job summary shows SC-001 and SC-002 numbers. Open PR-B.
 
