@@ -26,7 +26,7 @@ path forces everything (research R8).
 | `e2e-exclude` | Not emitted (decision 2). Unselected legs skip through `RUN_REGEX` instead | Would have been read by `e2e-go` and `e2e-go-arm64` |
 | `e2e-run` | JSON object: bucket → anchored `-run` regex of the selected tests | Emitted by mode `e2e`. Replaces `buckets.sh regex <bucket>` in the e2e jobs (OD-6); equals it on full scope |
 | `e2e-multicluster`, `e2e-upgrade`, `e2e-web-live`, `e2e-capture-overhead` | `"true"`/`"false"` | Emitted by mode `e2e`. Folded into the existing `combine` step booleans |
-| `ci-jobs` | JSON list of job ids selected by the `ci.yaml` line mapper | Folded into each job's gate |
+| `ci-jobs` | JSON list of job ids selected by the `ci.yaml` line mapper | Emitted by mode `jobs`. Folded into each job's gate |
 | `unmapped` | JSON list of paths | Emitted by mode `e2e`. Non-empty forces full scope and fails `selection-rules` |
 | `selection` | JSON list of SelectionResult | Emitted by mode `summary`; read by the summary table and `report` |
 
@@ -90,6 +90,24 @@ module's own `go.mod`, `go.sum` or `.testcoverage.yml`, or a file under no packa
 gives `["./..."]`. For web, `package.json`, `package-lock.json`, `vitest.config.ts`,
 `vite.config.ts`, `tsconfig*.json`, `eslint.config.js`, `src/test/**`, `i18n/locales/**`,
 a deleted `web/src` file and any other `web/` file outside `src` and `e2e` give `"all"`.
+
+## Mode `jobs` (new)
+
+Maps shared CI file changes to `ci.yaml` job ids (research R8, settled OD-3). The `jobs`
+step of the `changes` job runs right after `units`. Outputs: `all` (boolean),
+`reason` (`selection-rule change` when a changed line sits outside any job or inside
+`changes` or `report`, else empty), and `ci-jobs`.
+
+`ci-jobs` lists every job whose block holds a changed line that is neither blank nor a
+comment, plus every job those jobs need. `.golangci.yml` adds `lint`, and any `.github/`
+or `.golangci.yml` change adds `workflow-lint`. Lines are read from `git diff -U0`:
+removed lines map against the base file and added lines against the head file. Each
+listed job's gate is ORed with `contains(fromJSON(needs.changes.outputs.ci-jobs), '<job>')`.
+Modes `modules`, `units` and `e2e` widen the job's own selection, so the job runs all of
+its legs, packages or tests. Still forcing everything (FR-014): `hack/ci_scope.py`,
+`hack/test_ci_scope.py`, `hack/check_changed_coverage.py` and its test, `Makefile`,
+`go.work`, `go.work.sum`, `.github/actions/**`, `test/e2e/buckets.sh`,
+`test/e2e/suite-components.json`.
 
 ## Mode `bots` — changed
 
