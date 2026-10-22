@@ -11,7 +11,8 @@ from subprocess import CompletedProcess
 from ci_scope import (E2E_BUCKETS, FORCE_ALL_FILES, ROOT, affected_modules, bot_matrix,
                       bucket_lists, changed_paths, e2e_outputs, full_scope_reason, image_inputs,
                       is_unmapped, load_suites, main, publish_paths, select_images, summarize,
-                      verify_suites, go_packages, web_tests,
+                      verify_suites, go_packages, web_tests, CI_FILE, ci_blocks, ci_jobs,
+                      widen_e2e, widen_units,
                       workspace_modules)
 
 
@@ -664,6 +665,187 @@ class UnitSummaryNoteTests(unittest.TestCase):
         self.assertFalse(rows["web"].startswith(("1 files", "lint and build")))
         rows = self.rows({"go-packages": {}, "web-tests": []})
         self.assertTrue(rows["web"].startswith("lint and build only; "))
+
+
+GIT = ["git", "-c", "user.name=test", "-c", "user.email=test@example.com",
+       "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null"]
+CI_FIXTURE = """name: ci
+on:
+  push:
+permissions:
+  contents: read
+concurrency:
+  group: ci
+env:
+  A: "1"
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo changes
+  web:
+    needs: [changes]
+    steps:
+      - run: echo web
+  build-images:
+    needs:
+      - changes
+    steps:
+      - run: echo build
+  e2e-go:
+    needs: [changes, build-images]
+    steps:
+      - run: echo e2e
+  report:
+    needs:
+      [
+        changes,
+        web,
+      ]
+    steps:
+      - run: echo report
+"""
+
+
+class CiJobsTests(unittest.TestCase):
+    """ci.yaml lines map to the jobs they sit in (spec 023 T042, research R8, OD-3)."""
+
+    def setUp(self):
+        """Create a git repository holding the fixture workflow."""
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.git("init", "-q")
+        write_file(self.root, CI_FILE, CI_FIXTURE)
+        self.base = self.commit()
+
+    def git(self, *args):
+        """Run git in the fixture repository and return its trimmed output."""
+        return subprocess.run([*GIT, *args], cwd=self.root, check=True, capture_output=True,
+                              text=True).stdout.strip()
+
+    def commit(self):
+        """Commit every change and return the new commit id."""
+        self.git("add", "-A")
+        self.git("commit", "-q", "--allow-empty", "-m", "change")
+        return self.git("rev-parse", "HEAD")
+
+    def edit(self, old, new):
+        """Apply one edit to the base workflow and return ci_jobs for it."""
+        self.git("reset", "-q", "--hard", self.base)
+        text = (self.root / CI_FILE).read_text(encoding="utf-8")
+        self.assertIn(old, text)
+        write_file(self.root, CI_FILE, text.replace(old, new, 1))
+        return ci_jobs(self.root, self.base, self.commit(), [CI_FILE])
+
+    def test_needs_are_parsed_in_every_form(self):
+        self.assertEqual(ci_blocks(CI_FIXTURE)[1], {
+            "changes": set(), "web": {"changes"}, "build-images": {"changes"},
+            "e2e-go": {"changes", "build-images"}, "report": {"changes", "web"}})
+
+    def test_comment_or_blank_line_selects_only_workflow_lint(self):
+        for new in ("      # note\n      - run: echo web\n", "\n      - run: echo web\n"):
+            with self.subTest(new=new):
+                self.assertEqual(self.edit("      - run: echo web\n", new),
+                                 (["workflow-lint"], False))
+
+    def test_step_change_selects_its_job(self):
+        self.assertEqual(self.edit("echo web\n", "echo web2\n"), (["web", "workflow-lint"], False))
+
+    def test_selected_job_brings_the_jobs_it_needs(self):
+        self.assertEqual(self.edit("echo e2e\n", "echo e2e2\n"),
+                         (["build-images", "e2e-go", "workflow-lint"], False))
+
+    def test_removed_line_maps_against_the_base_file(self):
+        self.assertEqual(self.edit("      - run: echo build\n", ""),
+                         (["build-images", "workflow-lint"], False))
+
+    def test_top_level_and_selection_job_edits_force_full_scope(self):
+        for old, new in (("  push:\n", "  push:\n  workflow_dispatch:\n"),
+                         ("contents: read", "contents: write"), ("group: ci", "group: ci2"),
+                         ('A: "1"', 'A: "2"'), ("echo changes", "echo changes2"),
+                         ("echo report", "echo report2")):
+            with self.subTest(old=old):
+                self.assertTrue(self.edit(old, new)[1])
+
+    def test_golangci_selects_lint_legs_only(self):
+        self.assertEqual(ci_jobs(self.root, self.base, self.base, [".golangci.yml"]),
+                         (["lint", "workflow-lint"], False))
+        self.assertIsNone(full_scope_reason({}, [".golangci.yml"]))
+        self.assertIsNone(full_scope_reason({}, [CI_FILE]))
+
+    def test_other_workflow_files_select_workflow_lint_only(self):
+        for path in (".github/workflows/publish-edge.yaml", ".github/zizmor.yml",
+                     ".github/dependabot.yml"):
+            with self.subTest(path=path):
+                self.assertEqual(ci_jobs(self.root, self.base, self.base, [path]),
+                                 (["workflow-lint"], False))
+
+    def test_selection_inputs_still_force_full_scope(self):
+        for path in ("hack/ci_scope.py", "hack/test_ci_scope.py", "Makefile", "go.work",
+                     "go.work.sum", ".github/actions/go-cache/action.yml",
+                     "test/e2e/buckets.sh", "test/e2e/suite-components.json",
+                     "hack/check_changed_coverage.py"):
+            with self.subTest(path=path):
+                self.assertEqual(full_scope_reason({}, [path]), "selection-rule change")
+
+
+class CiJobsModuleTests(unittest.TestCase):
+    """Shared CI config no longer selects every Go module (spec 023 T044)."""
+
+    def setUp(self):
+        """Create the shared Go workspace fixture for each test."""
+        make_go_workspace(self)
+
+    def test_ci_yaml_and_golangci_select_no_module(self):
+        for path in (CI_FILE, ".golangci.yml", ".github/workflows/publish-edge.yaml"):
+            with self.subTest(path=path):
+                self.assertEqual(affected_modules(self.root, [path]), [])
+
+
+class WidenTests(unittest.TestCase):
+    """An edited job widens its own selection (spec 023 T045)."""
+
+    def test_widen_e2e(self):
+        values = {"e2e-run": {"operator": "^(TestA)$"}, "e2e-upgrade": False,
+                  "e2e-web-live": False, "bot-matrix": {"test": []}, "bots-any": False}
+        full = {"e2e-run": {"operator": "^(TestA|TestB)$", "api-auth": "^(TestC)$"},
+                "bot-matrix": {"test": ["TestBot"]}, "bots-any": True}
+        widened = widen_e2e(dict(values), full, ["e2e-go-arm64", "e2e-upgrade", "e2e-game-bot"])
+        self.assertEqual(widened["e2e-run"], full["e2e-run"])
+        self.assertTrue(widened["e2e-upgrade"])
+        self.assertFalse(widened["e2e-web-live"])
+        self.assertEqual((widened["bot-matrix"], widened["bots-any"]), ({"test": ["TestBot"]}, True))
+        self.assertEqual(widen_e2e(dict(values), full, ["web"]), values)
+
+    def test_widen_units(self):
+        values = {"go-packages": {"api": ["./internal/a"], "lib": []}, "web-tests": []}
+        self.assertEqual(widen_units(dict(values), ["go", "web"]),
+                         {"go-packages": {"api": ["./..."], "lib": ["./..."]}, "web-tests": "all"})
+        self.assertEqual(widen_units(dict(values), ["helm"]), values)
+
+
+class EditedJobSummaryTests(unittest.TestCase):
+    """The summary marks rows run by an edited ci.yaml job (spec 023 T045)."""
+
+    def setUp(self):
+        """Create the shared Go workspace fixture for each test."""
+        make_go_workspace(self)
+
+    def test_edited_job_row_runs(self):
+        env = {
+            "GITHUB_EVENT_NAME": "pull_request",
+            "SCOPE_OUTPUTS": json.dumps({}), "FILTER_OUTPUTS": json.dumps({}),
+            "GATE_OUTPUTS": json.dumps({}), "BOT_MATRIX": json.dumps({"test": []}),
+            "CI_JOBS": json.dumps(["web", "workflow-lint"]),
+        }
+        with patch("ci_scope.ROOT", self.root):
+            rows, _ = summarize(env, [CI_FILE], None)
+        rows = {row["suite"]: row for row in rows}
+        self.assertEqual(rows["web"]["decision"], "run")
+        self.assertEqual(rows["web"]["reason"], "ci.yaml: lines in this job changed")
+        self.assertEqual(rows["workflow lint"]["decision"], "run")
+        self.assertEqual(rows["web e2e (mock)"]["decision"], "skip")
 
 
 if __name__ == "__main__":
