@@ -41,6 +41,7 @@ description: "Task list for 028 split big packages and files"
 - [ ] T017 [US4] PR: `components/modules/BuildModuleDialog.tsx` (973) and `components/modules/SourceDialog.tsx` (573) split in place (same folder)
 - [ ] T018 [US4] PR: `components/CaptureWidget.tsx` (826) split in place
 - [ ] T019 [US4] PR: `components/server/ServerActionsCard.tsx` (658) split in place
+- [ ] T061 [US4] PR: `web/scripts/i18n-migrate.ts` (1,195) split in place into files of ≤ 500 lines under `web/scripts/` (OD-11); `npm run i18n:migrate` entry point unchanged
 - [ ] T020 [US4] For each web PR: sonnet browser smoke test of the moved screens, visual-diff and screenshot jobs green, `web/specs.md` paths updated
 
 **Checkpoint**: no screen code in `web/src/routes/`; no web production file over 500 lines.

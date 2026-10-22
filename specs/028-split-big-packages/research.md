@@ -8,7 +8,7 @@ Measured on master `8a67f2e` (2026-10-20) unless stated. Decisions reference
 - Production files over 500 lines (FR-018 exemptions applied): 30 Go, 18 web. The 30 Go
   files are exactly the ones FR-018, R3, R4 and R7 name (the earlier "34" over-counted).
   The 18 web files are the 17 in R6 plus `web/scripts/i18n-migrate.ts` (1,195), a spec 019
-  dev codemod outside `web/src/` that no FR names; see OD-11.
+  dev codemod outside `web/src/` that no FR names; OD-11 (2026-10-22): split it too (T061).
 - `api/internal/handlers`: 146 `.go` files, 48 production. `operator/internal/controller`:
   150 `.go` files, 41 production.
 - Spec 027's `docs/layout.md` is not on master yet (027 implementation not started), so
