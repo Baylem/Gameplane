@@ -180,6 +180,7 @@ def web_inputs(root, report, base, head):
 
 
 def main(argv=None):
+    """Parse arguments, run the gate and return the exit code."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", required=True)
     parser.add_argument("--head", required=True)

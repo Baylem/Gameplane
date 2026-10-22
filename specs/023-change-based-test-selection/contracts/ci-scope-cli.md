@@ -88,7 +88,9 @@ Rules: a changed file selects its package directory (walking up to the nearest o
 unless it is a `_test.go` file, every package that imports it, transitively and across
 modules. `FILE_READERS` adds the packages whose tests read the changed directory. A
 module's own `go.mod`, `go.sum` or `.testcoverage.yml`, or a file under no package,
-gives `["./..."]`. For web, `package.json`, `package-lock.json`, `vitest.config.ts`,
+gives `["./..."]`; `go.mod` and `go.sum` also select every package that imports the
+module, and a deleted `.go` file whose package is gone selects the packages that still
+import that package. For web, `package.json`, `package-lock.json`, `vitest.config.ts`,
 `vite.config.ts`, `tsconfig*.json`, `eslint.config.js`, `src/test/**`, `i18n/locales/**`,
 a deleted `web/src` file and any other `web/` file outside `src` and `e2e` give `"all"`.
 
@@ -105,7 +107,8 @@ or `.golangci.yml` change adds `workflow-lint`. Lines are read from `git diff -U
 removed lines map against the base file and added lines against the head file. Each
 listed job's gate is ORed with `contains(fromJSON(needs.changes.outputs.ci-jobs), '<job>')`.
 Modes `modules`, `units` and `e2e` widen the job's own selection, so the job runs all of
-its legs, packages or tests. Still forcing everything (FR-014): `hack/ci_scope.py`,
+its legs, packages or tests. An e2e job with an `-arm64` twin brings the twin too
+(FR-010). These still force everything (FR-014): `hack/ci_scope.py`,
 `hack/test_ci_scope.py`, `hack/check_changed_coverage.py` and its test, `Makefile`,
 `go.work`, `go.work.sum`, `.github/actions/**`, `test/e2e/buckets.sh`,
 `test/e2e/suite-components.json`.

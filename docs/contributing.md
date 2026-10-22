@@ -82,18 +82,26 @@ everything ran.
 What a partial run narrows:
 
 - **Go unit tests** run only the packages that own a changed file, plus every package
-  that imports them, across modules. A module's own `go.mod`, `go.sum` or
-  `.testcoverage.yml` reruns that whole module. The module coverage gate then becomes a
+  that imports them, across modules. A module's own `go.mod` or `go.sum` reruns that
+  whole module plus every package that imports it, and its `.testcoverage.yml` reruns
+  the whole module. Deleting a package runs the packages that still import it. The
+  module coverage gate then becomes a
   changed-lines gate: the lines you add must meet the module's own minimum
   (`hack/check_changed_coverage.py`).
 - **Web unit tests** run `vitest related` on the changed `web/src` files, with the same
-  changed-lines gate at the Vitest `lines` threshold. Lint and build always run whole.
+  changed-lines gate at the Vitest `lines` threshold. If `vitest related` writes no
+  coverage report, the job runs the full `npm run test:cover` instead. Lint and build
+  always run whole.
   Shared inputs (`package.json`, the lockfile, the Vite/Vitest/TS/ESLint configs,
   `src/test/**`, `i18n/locales/**`) run the full suite.
-- **Go e2e tests** run only the tests whose components changed, per
-  `test/e2e/suite-components.json`. Jobs with no selected test are skipped.
+- **Go e2e tests** run only the tests that `test/e2e/suite-components.json` selects:
+  tests whose components or paths changed, tests that use a changed e2e test or helper
+  file, and every test when a universal path changes (charts, containers, CRD types,
+  the Kind setup, signing keys). Jobs with no selected test are skipped.
 - **`ci.yaml` edits** run only the jobs whose lines changed, plus the jobs they need.
-  `.golangci.yml` runs only the lint legs. Other workflow files run only `workflow lint`.
+  An edited e2e job also runs its other-architecture twin.
+  `.golangci.yml` runs only the lint legs and `workflow lint`. Other workflow files run
+  only `workflow lint`.
 
 Everything still runs on every push to `master`, and when a selection input changes
 (`hack/ci_scope.py`, `hack/check_changed_coverage.py`, their tests, `Makefile`,

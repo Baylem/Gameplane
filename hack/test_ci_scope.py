@@ -598,6 +598,21 @@ class GoPackageTests(unittest.TestCase):
                 self.assertEqual(self.packages(f"api/{name}"),
                                  {"api": ["./..."], "lib": [], "other": []})
 
+    def test_dependency_manifest_selects_importers_across_modules(self):
+        for name in ("go.mod", "go.sum"):
+            with self.subTest(name=name):
+                self.assertEqual(self.packages(f"lib/{name}"),
+                                 {"api": ["./internal/a", "./internal/b"], "lib": ["./..."],
+                                  "other": []})
+        self.assertEqual(self.packages("lib/.testcoverage.yml"),
+                         {"api": [], "lib": ["./..."], "other": []})
+
+    def test_deleted_package_selects_its_former_importers(self):
+        (self.root / "lib/helpers/h.go").unlink()
+        self.assertEqual(self.packages("lib/helpers/h.go"),
+                         {"api": ["./internal/a", "./internal/b"], "lib": ["./..."],
+                          "other": []})
+
     def test_file_outside_any_package_selects_the_whole_module(self):
         self.assertEqual(self.packages("api/config/x.yaml")["api"], ["./..."])
 
@@ -800,6 +815,72 @@ class CiJobsTests(unittest.TestCase):
                      "hack/check_changed_coverage.py"):
             with self.subTest(path=path):
                 self.assertEqual(full_scope_reason({}, [path]), "selection-rule change")
+
+
+CI_ARCH_FIXTURE = """name: ci
+jobs:
+  changes:
+    steps:
+      - run: echo changes
+  build-images:
+    needs: [changes]
+    steps:
+      - run: echo build
+  build-images-arm64:
+    needs: [changes]
+    steps:
+      - run: echo build arm64
+  e2e-go:
+    needs: [changes, build-images]
+    steps:
+      - run: echo e2e
+  e2e-go-arm64:
+    needs: [changes, build-images-arm64]
+    steps:
+      - run: echo e2e arm64
+"""
+
+
+class CiJobsArchitectureTests(unittest.TestCase):
+    """An edited e2e job brings its other-architecture twin (spec 023 FR-010)."""
+
+    def setUp(self):
+        """Create a git repository holding a workflow with paired e2e jobs."""
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.git("init", "-q")
+        write_file(self.root, CI_FILE, CI_ARCH_FIXTURE)
+        self.base = self.commit()
+
+    def git(self, *args):
+        """Run git in the fixture repository and return its trimmed output."""
+        return subprocess.run([*GIT, *args], cwd=self.root, check=True, capture_output=True,
+                              text=True).stdout.strip()
+
+    def commit(self):
+        """Commit every change and return the new commit id."""
+        self.git("add", "-A")
+        self.git("commit", "-q", "--allow-empty", "-m", "change")
+        return self.git("rev-parse", "HEAD")
+
+    def edit(self, old, new):
+        """Apply one edit to the base workflow and return ci_jobs for it."""
+        self.git("reset", "-q", "--hard", self.base)
+        text = (self.root / CI_FILE).read_text(encoding="utf-8")
+        self.assertIn(old, text)
+        write_file(self.root, CI_FILE, text.replace(old, new, 1))
+        return ci_jobs(self.root, self.base, self.commit(), [CI_FILE])
+
+    def test_either_architecture_edit_selects_both(self):
+        both = (["build-images", "build-images-arm64", "e2e-go", "e2e-go-arm64",
+                 "workflow-lint"], False)
+        self.assertEqual(self.edit("echo e2e\n", "echo e2e now\n"), both)
+        self.assertEqual(self.edit("echo e2e arm64\n", "echo e2e arm64 now\n"), both)
+
+    def test_job_without_twin_stays_alone(self):
+        self.assertEqual(self.edit("echo build\n", "echo build now\n"),
+                         (["build-images", "workflow-lint"], False))
 
 
 class CiJobsModuleTests(unittest.TestCase):

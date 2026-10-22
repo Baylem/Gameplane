@@ -227,11 +227,11 @@ jobs:
             # smoke-tests deploy/kind/**'s pinned dev ingress-nginx manifest
             # on a real Kind cluster, and must NOT run on every e2e-affecting
             # change (a Go or chart edit does not touch that manifest pin).
-            # On PRs there is no `ci` fail-safe either — the workflow file
-            # itself is listed directly below. Master pushes always run it.
+            # On PRs there is no `ci` fail-safe either: an edit to this job's own
+            # ci.yaml block selects it through `ci-jobs`, and a full-scope run
+            # turns it on. Master pushes always run it.
             kindsmoke:
               - 'deploy/kind/**'
-              - '.github/workflows/ci.yaml'
             gamecoverage:
               - 'modules'
               - 'modules/**'
@@ -378,7 +378,7 @@ jobs:
           GITHUB: ${{ steps.filter.outputs.github }}
           SPECS: ${{ steps.filter.outputs.specs }}
           DOCS: ${{ steps.filter.outputs.docs }}
-          KINDSMOKE: "${{ steps.filter.outputs.kindsmoke == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
+          KINDSMOKE: "${{ steps.filter.outputs.kindsmoke == 'true' || steps.jobs.outputs.all == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
         run: |
           gov=false;  { [ "$GO" = true ]     || [ "$CI" = true ]; } && gov=true
           webv=false; { [ "$WEB" = true ]    || [ "$CI" = true ]; } && webv=true
@@ -2419,7 +2419,7 @@ jobs:
   # controller no longer reaches Available on the runner's Kind node image,
   # was previously only caught by a developer running `make dev-up` (#521).
   #
-  # Gated on `kindsmoke` (deploy/kind/** or this workflow file), not the
+  # Gated on `kindsmoke` (deploy/kind/** or a full-scope run), not the
   # broad `e2e` gate: a Go/chart/test-tree change doesn't touch the pinned
   # manifest or the cluster config this job exercises, so it stays out of
   # every other PR's critical path.

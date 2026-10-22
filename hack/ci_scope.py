@@ -226,6 +226,7 @@ def image_inputs(dockerfile):
 
 
 def select_images(root, images, paths):
+    """Return the images to rebuild: all of them for a config change, else those with changed inputs."""
     # Signing/configuration changes must rebuild all images even without COPYs.
     if paths is None or any(
         p in {"go.work", "go.work.sum", ".dockerignore", "signing/cosign.pub"}
@@ -576,7 +577,9 @@ def go_packages(root, paths, reason):
 
     A changed file selects its package and, unless it is a _test.go file, every package
     that imports it, across modules. A module's own go.mod, go.sum or .testcoverage.yml,
-    or a file in no package, selects ./... for that module.
+    or a file in no package, selects ./... for that module; go.mod and go.sum also
+    select every package that imports the module, and a deleted package selects the
+    packages that still import it.
     """
     modules = workspace_modules(root)
     targets = [m for m in sorted(modules) if m != "test/e2e"]
@@ -594,8 +597,15 @@ def go_packages(root, paths, reason):
             continue
         if path in {f"{module}/{name}" for name in GO_MODULE_WIDE}:
             wide.add(module)
+            if path.rpartition("/")[2] in {"go.mod", "go.sum"}:
+                # a dependency change can break every package that imports this module
+                seeds.update(d for d in imports if owning_module(d, modules) == module)
             continue
         directory = path.rpartition("/")[0]
+        if path.endswith(".go") and directory not in imports:
+            # the package lost its last Go file: its import path is still in its importers
+            gone = modules[module] + directory[len(module):]
+            seeds.update(d for d, found in imports.items() if gone in found)
         while directory not in imports and directory != module:
             directory = directory.rpartition("/")[0]
         if directory in imports:
@@ -724,6 +734,10 @@ def ci_jobs(root, base, head, paths):
                     forced = True
                 else:
                     jobs.add(job)
+    for name in list(jobs):  # FR-010: an e2e suite runs on amd64 and arm64 together
+        twin = name[:-len("-arm64")] if name.endswith("-arm64") else name + "-arm64"
+        if name.startswith("e2e-") and twin in needs:
+            jobs.add(twin)
     queue = list(jobs)
     while queue:
         for name in needs.get(queue.pop(), ()):
@@ -950,6 +964,7 @@ def summarize(env, paths, reason):
 
 
 def emit(values):
+    """Append each value to the GITHUB_OUTPUT file as one KEY=JSON line."""
     lines = "".join(f"{key}={json.dumps(value, separators=(',', ':'))}\n"
                     for key, value in values.items())
     with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
@@ -957,6 +972,7 @@ def emit(values):
 
 
 def bot_matrix(names):
+    """Return the bot-fast shard matrix {"test": names}, rejecting duplicate or non-Test names."""
     if not names or len(names) != len(set(names)) or any(
         not re.fullmatch(r"Test[A-Za-z0-9_]+", name) for name in names
     ):
@@ -965,6 +981,7 @@ def bot_matrix(names):
 
 
 def main():
+    """Run the CLI mode named on the command line and write its GitHub outputs."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("modules", "images", "dockerfiles", "bots", "summary",
                                          "e2e", "verify-suites", "units", "jobs"))
