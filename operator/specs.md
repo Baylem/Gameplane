@@ -9,10 +9,15 @@
 ### Restricted workloads and node capture (#714)
 
 `--restricted-workloads` applies nonroot, no escalation, drop ALL and
-RuntimeDefault to game/config-init; incompatible numeric identities fail with
+RuntimeDefault to game/config-init; incompatible numeric identities and Hostport exposure fail with
 the existing Ready/Failed condition before workload creation. Every game Pod
 disables token automount and projects token/CA/namespace only into agent.
 Token lifetime is 600–3600s (default 3600); shared PID remains for metrics.
+Use NodePort or LoadBalancer for Restricted workloads. Config-init creates
+files with the declared fsGroup as its primary group in both profiles and
+reconciles copied entries' group-write permission only when needed, so an
+already-correct root-owned file can be reused by the Restricted init UID.
+Existing volumes still need compatible ownership before enabling Restricted.
 
 Restricted Pods never receive the legacy capture ephemeral container.
 `spec.capture.nodeDiagnostic` additionally requires cluster capture enablement

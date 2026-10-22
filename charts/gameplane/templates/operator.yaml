@@ -349,7 +349,7 @@ spec:
             {{- if and .Values.capture .Values.capture.enabled }}
             - --capture-enabled=true
             - --capture-sidecar-image={{ include "gameplane.captureImage" . }}
-            {{- $diagnostics := .Values.capture.nodeDiagnostics | default dict }}
+            {{- $diagnostics := include "gameplane.nodeDiagnostics" . | fromJson }}
             {{- if $diagnostics.enabled }}
             - --diagnostics-namespace={{ $diagnostics.namespace }}
             - --diagnostics-storage-class={{ $diagnostics.storageClass | default "" }}

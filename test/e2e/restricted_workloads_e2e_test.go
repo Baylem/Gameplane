@@ -23,6 +23,7 @@ import (
 
 // Dedicated kind bucket on both architectures: it upgrades namespace policy,
 // checks real PSA admission, and waits for kubelet to rotate an actual token.
+// It runs serially because it upgrades the shared Helm release.
 func TestRestrictedWorkloads_NodeCaptureAndTokenRotation(t *testing.T) {
 	ctx := t.Context()
 	const ns, diagnosticNS = "gameplane-games", "gameplane-diagnostics"
@@ -36,10 +37,22 @@ func TestRestrictedWorkloads_NodeCaptureAndTokenRotation(t *testing.T) {
 		t.Fatal(err)
 	}
 	applyBusyboxGameServer(t, ns, name, template)
+	t.Cleanup(func() {
+		if !t.Failed() {
+			return
+		}
+		logCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+		defer cancel()
+		out, err := envInstance.Kubectl(logCtx, "-n", ns, "logs", "pod/"+name+"-0", "-c", "config-init", "--tail=30")
+		t.Logf("config-init diagnostic: %v\n%s", err, out)
+	})
 	waitGameContainerReady(t, ns, name+"-0", 3*time.Minute)
 	before, err := envInstance.K8s.CoreV1().Pods(ns).Get(ctx, name+"-0", metav1.GetOptions{})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if out, err := envInstance.KubectlExec(t, ns, "pod/"+name+"-0", "sh", "-c", "test $(stat -c %u /data/cfg/profile.txt) = 0 && test $(stat -c %g /data/cfg/profile.txt) = 1000 && echo before-upgrade >> /data/cfg/profile.txt"); err != nil {
+		t.Fatalf("legacy root config must be writable by the game through its shared group: %v %s", err, out)
 	}
 	if out, err := envInstance.KubectlExec(t, ns, "pod/"+name+"-0", "sh", "-c", "echo upgrade-marker > /data/marker && sync"); err != nil {
 		t.Fatalf("write data: %v %s", err, out)

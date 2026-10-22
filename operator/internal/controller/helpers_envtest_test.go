@@ -165,11 +165,10 @@ func startMgr(t *testing.T, ns string, setups ...setupReconciler) client.Client 
 		Scheme: scheme,
 		Logger: logr.Discard(),
 		Cache: cache.Options{
-			// Include the test namespace AND cluster scope (""). Without
-			// the "" entry, controller-runtime's namespace-restricted
-			// cache will refuse to serve reads of cluster-scoped CRDs
-			// like GameTemplate.
-			DefaultNamespaces: map[string]cache.Config{ns: {}, "": {}},
+			// Cluster-scoped kinds use the independent cluster cache. An
+			// empty namespace key means AllNamespaces and would make this
+			// manager reconcile fixtures left by every earlier test.
+			DefaultNamespaces: map[string]cache.Config{ns: {}},
 		},
 		Metrics:                metricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: "0",

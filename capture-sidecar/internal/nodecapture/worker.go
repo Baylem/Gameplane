@@ -24,6 +24,9 @@ var podPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-
 var containerPattern = regexp.MustCompile(`^containerd://[0-9a-f]{64}$`)
 var capturePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
 
+// The separate artifact server reads finalized files through the dedicated PVC group.
+const artifactMode os.FileMode = 0o640
+
 // Config contains immutable identities copied from live Kubernetes objects.
 type Config struct {
 	ServerUID       string `json:"serverUID"`
@@ -199,7 +202,7 @@ func runCapture(ctx context.Context, c Config, dir string, source capture.Packet
 		return err
 	}
 	// fsGroup grants the nonroot artifact server access after the worker exits.
-	if err = output.Chmod(identityName, 0o640); err != nil { // #nosec G302 -- dedicated PVC group grants only the nonroot artifact server read access.
+	if err = output.Chmod(identityName, artifactMode); err != nil {
 		return err
 	}
 	writer, err := capture.NewWriter(filepath.Join(dir, "capture-"+c.CaptureID+".pcapng"), c.DurationSeconds, c.MaxSizeBytes, 0, c.Filter)
@@ -259,16 +262,16 @@ func runCapture(ctx context.Context, c Config, dir string, source capture.Packet
 	}
 	result.PacketsWritten = writer.PacketsWritten()
 	result.BytesWritten = writer.BytesWritten()
-	if err := os.Chmod(filepath.Join(dir, "capture-"+c.CaptureID+".pcapng"), 0o640); err != nil { // #nosec G302 -- only the dedicated artifact server group may read the finalized capture.
+	if err := output.Chmod("capture-"+c.CaptureID+".pcapng", artifactMode); err != nil {
 		return err
 	}
 	raw, err := json.Marshal(result)
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(dir, "capture-"+c.CaptureID+".result.json")
-	if err := os.WriteFile(path+".tmp", raw, 0o640); err != nil { // #nosec G306 -- the separate artifact server reads results through the dedicated PVC group.
+	path := "capture-" + c.CaptureID + ".result.json"
+	if err := output.WriteFile(path+".tmp", raw, artifactMode); err != nil {
 		return err
 	}
-	return os.Rename(path+".tmp", path)
+	return output.Rename(path+".tmp", path)
 }

@@ -391,10 +391,16 @@ well as Restricted admission. Game and config-init containers use a positive
 template UID/GID, `runAsNonRoot`, no privilege escalation, `drop: [ALL]`, and
 `RuntimeDefault` seccomp. The operator rejects templates without positive
 `security.runAsUser` and `security.fsGroup` (and a positive `runAsGroup` when
-supplied) before creating workloads. Administrators must choose a compatible
+supplied) and Hostport exposure before creating workloads; use NodePort or
+LoadBalancer with Restricted admission. Administrators must choose a compatible
 image and migrate existing data ownership; numeric identities cannot prove
 image compatibility. Enabling the profile rolls existing game Pods once. PSA
 is pinned to `v1.34`; `podSecurity.version` accepts another tested minor.
+Config bootstrap uses the declared fsGroup as its primary group even on
+volumes that do not apply fsGroup ownership automatically. Repeated starts
+preserve already-correct group-write permissions on root-owned config files.
+This does not repair arbitrary pre-existing data ownership after root access
+has been removed; migrate that data before enabling the profile.
 
 In both profiles, automatic ServiceAccount mounts are disabled. Only the agent
 gets a projected, rotating token, CA and namespace at the standard client-go

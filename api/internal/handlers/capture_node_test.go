@@ -131,6 +131,39 @@ func TestNodeExceptionCannotBeGrantedByGenericEditOrClone(t *testing.T) {
 	}
 }
 
+func TestNodeExceptionGenericEditPreservesOmittedOptIn(t *testing.T) {
+	manager := &auth.User{Username: "manager", Role: "custom", Perms: map[string]map[string]map[string]struct{}{"local": {"gameplane-games": {"captures:manage": {}}}}}
+	for _, user := range []*auth.User{testAdminUser(), manager} {
+		for _, enabled := range []bool{false, true} {
+			live := newServerObj("gameplane-games", "alpha")
+			if err := unstructured.SetNestedField(live.Object, enabled, "spec", "capture", "nodeDiagnostic"); err != nil {
+				t.Fatal(err)
+			}
+			for _, omitCapture := range []bool{false, true} {
+				desired := live.DeepCopy()
+				unstructured.RemoveNestedField(desired.Object, "spec", "capture", "nodeDiagnostic")
+				if omitCapture {
+					unstructured.RemoveNestedField(desired.Object, "spec", "capture")
+				}
+				if err := validateAndProtectGameServer(auth.WithUser(t.Context(), user), fakeKubeClient(live), "local", "gameplane-games", "alpha", desired, live); err != nil {
+					t.Fatalf("omitted exception rejected for %s, enabled=%t: %v", user.Role, enabled, err)
+				}
+				got, _, _ := unstructured.NestedBool(desired.Object, "spec", "capture", "nodeDiagnostic")
+				if got != enabled {
+					t.Fatal("generic edit changed an omitted exception")
+				}
+			}
+			desired := live.DeepCopy()
+			if err := unstructured.SetNestedField(desired.Object, !enabled, "spec", "capture", "nodeDiagnostic"); err != nil {
+				t.Fatal(err)
+			}
+			if err := validateAndProtectGameServer(auth.WithUser(t.Context(), user), fakeKubeClient(live), "local", "gameplane-games", "alpha", desired, live); err == nil || !strings.Contains(err.Error(), "capture-node-enable") {
+				t.Fatalf("generic edit changed explicit exception for %s: %v", user.Role, err)
+			}
+		}
+	}
+}
+
 func TestNodeCaptureExceptionAuditFailureDoesNotGrant(t *testing.T) {
 	gs := newCaptureServerObj("game", true)
 	gs.SetUID("server-uid")
