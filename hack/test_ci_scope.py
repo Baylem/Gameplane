@@ -695,7 +695,9 @@ class UnitSummaryNoteTests(unittest.TestCase):
 
 
 GIT = ["git", "-c", "user.name=test", "-c", "user.email=test@example.com",
-       "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null"]
+       "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null",
+       # background gc could still be writing .git when the temp dir is removed
+       "-c", "gc.auto=0", "-c", "maintenance.auto=false"]
 CI_FIXTURE = """name: ci
 on:
   push:

@@ -14,7 +14,9 @@ from check_changed_coverage import check, expand, go_config, main, vitest_config
 
 
 GIT = ["git", "-c", "user.name=test", "-c", "user.email=test@example.com",
-       "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null"]
+       "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null",
+       # background gc could still be writing .git when the temp dir is removed
+       "-c", "gc.auto=0", "-c", "maintenance.auto=false"]
 COVERAGE_YML = """threshold:
   file: 0
   total: 80
