@@ -100,7 +100,7 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 - [X] T027 [US1] In `.github/workflows/ci.yaml`, fold the four e2e booleans from T023 into the gates of `e2e-multicluster*`, `e2e-upgrade*`, `e2e-web-live*` and `e2e-capture-overhead`, and gate `e2e-game-bot` on `bots-any`
 - [X] T028 [US1] Extend the `selection` records (T010) with the per-bucket and per-test decisions and reasons from T023
 - [X] T029 [US1] Compile checks only: `python3 -m py_compile hack/ci_scope.py`, `go vet -tags e2e ./...` in `test/e2e`; open PR 2 with labels `type: ci`, `area: shared`, `area: e2e`
-- [ ] T030 [US1] Run quickstart scenarios 1–4 and 12 as draft PRs based on PR 2's branch, record the summaries and wall times in `specs/023-change-based-test-selection/validation.md`, close the draft PRs and delete their branches
+- [X] T030 [US1] Run quickstart scenarios 1–4 and 12 as draft PRs based on PR 2's branch, record the summaries and wall times in `specs/023-change-based-test-selection/validation.md`, close the draft PRs and delete their branches
 
 **Checkpoint**: MVP. A single-component PR boots only its suites (SC-001).
 
