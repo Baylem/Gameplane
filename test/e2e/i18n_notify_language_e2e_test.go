@@ -260,17 +260,28 @@ func TestAPI_I18n_NotifyLanguage(t *testing.T) {
 	}
 
 	for _, s := range sinks {
-		resp, body, err := admin.Post("/admin/notifications/sinks/"+s.name+"/test", nil)
-		if resp != nil {
-			r := resp
-			defer func() { _ = r.Body.Close() }()
-		}
-		if err != nil {
-			t.Fatalf("POST test %s: %v", s.name, err)
-		}
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("POST test %s: status=%d body=%s", s.name, resp.StatusCode, string(body))
-		}
+		// A ready pod can still refuse connections on its Service IP for a
+		// moment while kube-proxy programs the new endpoint, so only that
+		// refusal is retried. A refused send reaches no receiver, so it adds
+		// no log line.
+		var body []byte
+		envInstance.Eventually(t, 30*time.Second, func() (bool, string) {
+			resp, b, err := admin.Post("/admin/notifications/sinks/"+s.name+"/test", nil)
+			if resp != nil {
+				_ = resp.Body.Close()
+			}
+			if err != nil {
+				t.Fatalf("POST test %s: %v", s.name, err)
+			}
+			if resp.StatusCode == http.StatusBadGateway && strings.Contains(string(b), "connection refused") {
+				return false, fmt.Sprintf("POST test %s: receiver not reachable yet: %s", s.name, string(b))
+			}
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("POST test %s: status=%d body=%s", s.name, resp.StatusCode, string(b))
+			}
+			body = b
+			return true, ""
+		})
 		var delivered struct {
 			Delivered bool `json:"delivered"`
 		}
