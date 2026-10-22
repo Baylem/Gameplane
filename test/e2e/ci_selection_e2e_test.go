@@ -34,10 +34,14 @@ type ciSelection struct {
 }
 
 // ciGit runs git in dir with a fixed identity and returns trimmed stdout.
+// Background gc and maintenance are off: committing a whole checkout leaves
+// enough loose objects to start them, and they would still be writing into
+// .git when t.TempDir removes it.
 func ciGit(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	base := []string{"-C", dir, "-c", "user.name=ci-selection",
-		"-c", "user.email=ci-selection@example.invalid", "-c", "commit.gpgsign=false"}
+		"-c", "user.email=ci-selection@example.invalid", "-c", "commit.gpgsign=false",
+		"-c", "gc.auto=0", "-c", "maintenance.auto=false"}
 	out, err := exec.CommandContext(t.Context(), "git", append(base, args...)...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
