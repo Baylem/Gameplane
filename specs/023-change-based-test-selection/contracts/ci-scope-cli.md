@@ -20,7 +20,7 @@ path forces everything (research R8).
 
 | Key | Type | Meaning |
 |---|---|---|
-| `scope` | `"full"` \| `"partial"` | Run-level scope (FR-009 switch) |
+| `scope` | `"full"` \| `"partial"` | Run-level scope (FR-009 switch). Emitted by mode `summary`, not `modules` (see below) |
 | `go-packages` | JSON object: module → list of package patterns | `["./..."]` on full scope or when a module's own `go.mod`/`go.sum` changed |
 | `web-tests` | JSON: `"all"` or list of `web/src/...` source paths for `vitest related` | |
 | `e2e-exclude` | JSON matrix-exclude list of `{bucket}` | For `e2e-go` and `e2e-go-arm64` |
@@ -28,7 +28,31 @@ path forces everything (research R8).
 | `e2e-multicluster`, `e2e-upgrade`, `e2e-web-live`, `e2e-capture-overhead` | `"true"`/`"false"` | Folded into the existing `combine` step booleans |
 | `ci-jobs` | JSON list of job ids selected by the `ci.yaml` line mapper | Folded into each job's gate |
 | `unmapped` | JSON list of paths | Non-empty forces full scope and fails `selection-rules` |
-| `selection` | JSON list of SelectionResult | For the summary and `report` |
+| `selection` | JSON list of SelectionResult | Emitted by mode `summary`; read by the summary table and `report` |
+
+## Mode `summary` — new
+
+Last step of the `changes` job, after `combine`. It reads the real gate values, so it
+never re-implements paths-filter in Python. Its failure never blocks CI (the step is
+`continue-on-error: true`).
+
+Env inputs (JSON strings from `toJSON(steps.*.outputs)` unless noted):
+
+| Env | Source |
+|---|---|
+| `SCOPE_OUTPUTS` | `steps.scope.outputs` (mode `modules` keys) |
+| `FILTER_OUTPUTS` | `steps.filter.outputs` (paths-filter with `list-files: json`, giving `<filter>_files`) |
+| `GATE_OUTPUTS` | `steps.combine.outputs` (the final gate booleans) |
+| `BOT_MATRIX` | `steps.bots.outputs.matrix` |
+| `CI_FULL_RUN` | As in Inputs above |
+
+Outputs (written to `$GITHUB_OUTPUT`):
+
+| Key | Type | Meaning |
+|---|---|---|
+| `scope` | `"full"` \| `"partial"` | Run-level scope, same value as the summary header |
+| `reason` | string | The full-scope reason (`master push`, `manual run`, `label ci: full-run`, `unknown base`, `selection-rule change`, `error: <exception>`, `selection fallback (see detect changes log)`), or empty on partial scope |
+| `selection` | JSON list of SelectionResult | One record per suite and job gate |
 
 ## Mode `bots` — changed
 
@@ -42,7 +66,7 @@ exit 1 and print each violation. No diff needed.
 
 ## Step summary
 
-Appended to `$GITHUB_STEP_SUMMARY` by mode `modules`:
+Appended to `$GITHUB_STEP_SUMMARY` by mode `summary`:
 
 ```markdown
 ### Test selection (partial)

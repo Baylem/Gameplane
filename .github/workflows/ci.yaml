@@ -37,6 +37,8 @@ on:
       # Feature catalog and the website gitlink feed the features sync gate (spec 024).
       - "FEATURES.md"
       - "website"
+  # Manual full-suite run on any branch (spec 023 OD-7).
+  workflow_dispatch:
 # Cancel superseded runs so rapid pushes to the same ref don't waste
 # runner minutes on stale commits.
 concurrency:
@@ -70,8 +72,10 @@ jobs:
   # heavy jobs below can skip when they can't be affected (a web-only PR drops
   # from ~22 jobs to a handful). Any shared/CI-config path (this workflow, the
   # composite actions, the Makefile, go.work, buckets.sh) forces EVERYTHING on
-  # via the `ci` fail-safe. Master pushes and unknown diff bases also select
-  # the full suite through ci_scope.py's `all` output.
+  # via the `ci` fail-safe. Master pushes, unknown diff bases, workflow_dispatch
+  # runs and the `ci: full-run` label also select the full suite through
+  # ci_scope.py's `all` output. The last step writes the per-suite ran/skipped
+  # selection table to this job's summary.
   changes:
     name: detect changes
     runs-on: ubuntu-latest
@@ -100,6 +104,9 @@ jobs:
       capture_overhead: ${{ steps.combine.outputs.capture_overhead }}
       submodules: ${{ steps.combine.outputs.submodules }}
       codegen: ${{ steps.combine.outputs.codegen }}
+      scope: ${{ steps.summary.outputs.scope }}
+      scope-reason: ${{ steps.summary.outputs.reason }}
+      selection: ${{ steps.summary.outputs.selection }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -109,6 +116,8 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.sha }}
+          # The ci: full-run label forces the full suite, read on every run (spec 023 OD-7).
+          CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
         run: python3 hack/ci_scope.py modules --base "$BASE_SHA" --head "$HEAD_SHA"
       - name: partition every bot-fast test onto its own runner
         id: bots
@@ -116,6 +125,8 @@ jobs:
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
+          # list-files: json lets the summary step cite the files each filter matched.
+          list-files: json
           filters: |
             go:
               - 'netguard/**'
@@ -329,7 +340,7 @@ jobs:
           GITHUB: ${{ steps.filter.outputs.github }}
           SPECS: ${{ steps.filter.outputs.specs }}
           DOCS: ${{ steps.filter.outputs.docs }}
-          KINDSMOKE: ${{ steps.filter.outputs.kindsmoke == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
+          KINDSMOKE: "${{ steps.filter.outputs.kindsmoke == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
         run: |
           gov=false;  { [ "$GO" = true ]     || [ "$CI" = true ]; } && gov=true
           webv=false; { [ "$WEB" = true ]    || [ "$CI" = true ]; } && webv=true
@@ -344,7 +355,8 @@ jobs:
           subv=false; { [ "$SUBMODULES" = true ] || [ "$CI" = true ]; } && subv=true
           cgv=false; { [ "$CODEGEN" = true ] || [ "$CI" = true ]; } && cgv=true
           # Keep this gate narrow on PRs; KINDSMOKE also enables it for every
-          # master push, independently of its file filter.
+          # master push and forced full run (manual dispatch or ci: full-run
+          # label), independently of its file filter.
           ksv=false; [ "$KINDSMOKE" = true ] && ksv=true
           {
             echo "go=$gov"
@@ -362,6 +374,20 @@ jobs:
             echo "submodules=$subv"
             echo "codegen=$cgv"
           } >> "$GITHUB_OUTPUT"
+      - name: summarize test selection
+        id: summary
+        # Writes the per-suite ran/skipped table to this job's summary (spec 023
+        # FR-008). Never blocks CI: a failure here only loses the table.
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
+          SCOPE_OUTPUTS: ${{ toJSON(steps.scope.outputs) }}
+          FILTER_OUTPUTS: ${{ toJSON(steps.filter.outputs) }}
+          GATE_OUTPUTS: ${{ toJSON(steps.combine.outputs) }}
+          BOT_MATRIX: ${{ steps.bots.outputs.matrix }}
+        run: python3 hack/ci_scope.py summary --base "$BASE_SHA" --head "$HEAD_SHA"
 
   # Build the operator/api/agent (+ gameprobe) images ONCE and publish them as
   # an artifact, so the 9 heavy e2e jobs load a tar instead of each recompiling
@@ -2138,7 +2164,8 @@ jobs:
     needs: [changes, build-images]
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.e2e == 'true') ||
-      (github.event_name == 'pull_request' && needs.changes.outputs.capture_overhead == 'true')
+      (github.event_name == 'pull_request' && needs.changes.outputs.capture_overhead == 'true') ||
+      (github.event_name == 'workflow_dispatch' && needs.changes.outputs.e2e == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     continue-on-error: true
@@ -2445,6 +2472,8 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           REPO_SLUG: ${{ github.repository }}
+          SELECTION_SCOPE: ${{ needs.changes.outputs.scope }}
+          SELECTION_REASON: ${{ needs.changes.outputs.scope-reason }}
         run: |
           set +e
           printf '%s' "$NEEDS_JSON" > /tmp/needs.json
@@ -2698,6 +2727,13 @@ jobs:
             md += '_' + runLink + ' - attempt ' + RUN_ATTEMPT + '_\n\n';
             const cancelledSeg = cancelled > 0 ? cancelled + ' cancelled - ' : '';
             md += '**' + failed + ' failed - ' + passed + ' passed - ' + skipped + ' skipped - ' + cancelledSeg + elapsed + ' elapsed**\n\n';
+            // ci_scope.py emits every output as JSON, so scope arrives as "full"/"partial" with quotes.
+            const scope = safe(() => JSON.parse(process.env.SELECTION_SCOPE), '') || 'unknown';
+            // Full scope names its reason (master push, label, error: ...) so a summary failure is not read as a real full run.
+            const scopeReason = safe(() => JSON.parse(process.env.SELECTION_REASON), '');
+            // The detect changes step summary renders on the run summary page, not the job log page.
+            const summaryUrl = (RUN_ID && REPO_SLUG) ? 'https://github.com/' + REPO_SLUG + '/actions/runs/' + RUN_ID : null;
+            md += 'Test selection: **' + scope + '**' + (scopeReason ? ' (' + scopeReason + ')' : '') + ' - ' + (summaryUrl ? '[per-suite table](' + summaryUrl + ')' : 'see the detect changes job summary') + '\n\n';
 
             if (failed > 0) {
               md += '### Failing\n\n| Job | Log |\n| --- | --- |\n';

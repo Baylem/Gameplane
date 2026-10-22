@@ -32,8 +32,8 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 
 **Purpose**: repository prerequisites shared by every phase.
 
-- [ ] T001 Create the repository label `ci: full-run` (colour neutral, description "Force the full CI suite on this PR") via `POST repos/GameplanePanel/Gameplane/labels`; it is needed by OD-7 and by quickstart scenario 11
-- [ ] T002 [P] Read `hack/ci_scope.py` and `hack/test_ci_scope.py` end to end and write a scout brief at `specs/023-change-based-test-selection/briefs/ci-scope.md` listing every function, its `file:line`, its current outputs and the `changes`-job steps in `.github/workflows/ci.yaml` (lines ~71-301) that consume them (CLAUDE.md rule 18: fix agents edit from this brief only)
+- [X] T001 Create the repository label `ci: full-run` (colour neutral, description "Force the full CI suite on this PR") via `POST repos/GameplanePanel/Gameplane/labels`; it is needed by OD-7 and by quickstart scenario 11
+- [X] T002 [P] Read `hack/ci_scope.py` and `hack/test_ci_scope.py` end to end and write a scout brief at `specs/023-change-based-test-selection/briefs/ci-scope.md` listing every function, its `file:line`, its current outputs and the `changes`-job steps in `.github/workflows/ci.yaml` (lines ~71-301) that consume them (CLAUDE.md rule 18: fix agents edit from this brief only)
 
 ---
 
@@ -41,12 +41,12 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 
 **Purpose**: the full-scope switch and the `scope`/`selection` outputs every later phase extends. Ships in PR 1 with Phase 3.
 
-- [ ] T003 Add a `workflow_dispatch:` trigger (no inputs) to `on:` in `.github/workflows/ci.yaml` (OD-7)
-- [ ] T004 Pass `CI_FULL_RUN: ${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}` and `GITHUB_EVENT_NAME` into the `ci_scope.py modules` step env of the `changes` job in `.github/workflows/ci.yaml`
-- [ ] T005 In `hack/ci_scope.py`, add `full_scope_reason(env, paths) -> str | None` returning `master push`, `manual run`, `label ci: full-run`, `unknown base`, `selection-rule change` or `None`, and route every existing fail-open branch through it (contracts/ci-scope-cli.md "Inputs")
-- [ ] T006 In `hack/ci_scope.py`, emit the `scope` key (`full` or `partial`) from mode `modules`
-- [ ] T007 In `hack/ci_scope.py`, wrap the whole of mode `modules` so any exception selects full scope and records the exception text as the reason (contracts/ci-scope-cli.md "Failure behaviour")
-- [ ] T008 [P] Add unittest cases to `hack/test_ci_scope.py` for each `full_scope_reason` value, for `scope` output on full and partial runs, and for the exception fallback
+- [X] T003 Add a `workflow_dispatch:` trigger (no inputs) to `on:` in `.github/workflows/ci.yaml` (OD-7)
+- [X] T004 Pass `CI_FULL_RUN: ${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}` and `GITHUB_EVENT_NAME` into the `ci_scope.py modules` step env of the `changes` job in `.github/workflows/ci.yaml`
+- [X] T005 In `hack/ci_scope.py`, add `full_scope_reason(env, paths) -> str | None` returning `master push`, `manual run`, `label ci: full-run`, `unknown base`, `selection-rule change` or `None`, and route every existing fail-open branch through it (contracts/ci-scope-cli.md "Inputs")
+- [X] T006 In `hack/ci_scope.py`, emit the `scope` key (`full` or `partial`) from mode `summary`
+- [X] T007 In `hack/ci_scope.py`, wrap the whole of mode `modules` so any exception selects full scope and records the exception text as the reason (contracts/ci-scope-cli.md "Failure behaviour")
+- [X] T008 [P] Add unittest cases to `hack/test_ci_scope.py` for each `full_scope_reason` value, for `scope` output on full and partial runs, and for the exception fallback
 
 **Checkpoint**: `scope` is emitted, full runs are unchanged, nothing is skipped yet.
 
@@ -60,14 +60,14 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 
 ### Tests for User Story 4
 
-- [ ] T009 [P] [US4] Add cases to `hack/test_ci_scope.py` asserting the `selection` JSON lists every suite id with `decision` and `reason`, cites at most five changed paths with a `(+N)` overflow, and that the Markdown table matches contracts/ci-scope-cli.md "Step summary"
+- [X] T009 [P] [US4] Add cases to `hack/test_ci_scope.py` asserting the `selection` JSON lists every suite id with `decision` and `reason`, cites at most five changed paths with a `(+N)` overflow, and that the Markdown table matches contracts/ci-scope-cli.md "Step summary"
 
 ### Implementation for User Story 4
 
-- [ ] T010 [US4] In `hack/ci_scope.py`, build `SelectionResult` records (data-model.md) for every existing suite and job gate the `changes` job already decides (Go modules, lint legs, e2e buckets, game-bot tests, web, web-e2e-mock, helm, chart-template, docs, images) and emit them as the `selection` output
-- [ ] T011 [US4] In `hack/ci_scope.py`, append the Markdown table to `$GITHUB_STEP_SUMMARY`, with the one-line `full: <reason>` header on full scope
-- [ ] T012 [US4] Expose `selection` as a `changes` job output in `.github/workflows/ci.yaml` and add a link line to it in the `report` job's rendered summary (no change to `report.needs`, so `hack/check-ci-report-coverage.sh` stays green)
-- [ ] T013 [US4] Open PR 1 (Phases 2–3) with labels `type: ci`, `area: shared`; verify in its own CI run that the summary table appears and that every job still runs as before
+- [X] T010 [US4] In `hack/ci_scope.py`, build `SelectionResult` records (data-model.md) for every existing suite and job gate the `changes` job already decides (Go modules, lint legs, e2e buckets, game-bot tests, web, web-e2e-mock, helm, chart-template, docs, images) and emit them as the `selection` output from mode `summary`
+- [X] T011 [US4] In `hack/ci_scope.py` mode `summary`, append the Markdown table to `$GITHUB_STEP_SUMMARY`, with the one-line `full: <reason>` header on full scope
+- [X] T012 [US4] Expose `selection` as a `changes` job output in `.github/workflows/ci.yaml` and add a link line to it in the `report` job's rendered summary (no change to `report.needs`, so `hack/check-ci-report-coverage.sh` stays green)
+- [X] T013 [US4] Open PR 1 (Phases 2–3) with labels `type: ci`, `area: shared`; verify in its own CI run that the summary table appears and that every job still runs as before
 
 **Checkpoint**: US4 delivers visibility alone; merge PR 1 before Phase 4.
 
