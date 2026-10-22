@@ -183,11 +183,48 @@ func isolationHTTP(t *testing.T, source, ip string, port int, allowed bool) {
 		if err != nil {
 			return false, "probe execution failed: " + err.Error() + out
 		}
-		got := strings.TrimSpace(out)
+		got := isolationProbeVerdict(out)
 		want := "DENIED"
 		if allowed {
 			want = "ALLOWED"
 		}
-		return got == want, fmt.Sprintf("%s -> %s: got %q, want %s", source, target, got, want)
+		return got == want, fmt.Sprintf("%s -> %s: got %q, want %s; output: %q", source, target, got, want, out)
 	})
+}
+
+// Kubectl combines stdout and stderr, so wget's expected timeout diagnostic
+// can precede the result. Require one exact marker; never accept missing or
+// contradictory results, and retain the full output in the failure message.
+func isolationProbeVerdict(out string) string {
+	var verdict string
+	for line := range strings.SplitSeq(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "ALLOWED" && line != "DENIED" {
+			continue
+		}
+		if verdict != "" {
+			return ""
+		}
+		verdict = line
+	}
+	return verdict
+}
+
+func TestNetworkIsolation_ProbeOutput(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ name, output, want string }{
+		{"allowed", "ALLOWED\n", "ALLOWED"},
+		{"denied with wget timeout", "wget: download timed out\nDENIED\n", "DENIED"},
+		{"denied with carriage return", "wget: connection refused\r\nDENIED\r\n", "DENIED"},
+		{"diagnostic only", "wget: download timed out\n", ""},
+		{"marker substring", "unexpected ALLOWED response\n", ""},
+		{"contradictory markers", "ALLOWED\nDENIED\n", ""},
+		{"duplicate markers", "DENIED\nDENIED\n", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isolationProbeVerdict(tc.output); got != tc.want {
+				t.Fatalf("probe verdict = %q, want %q for %q", got, tc.want, tc.output)
+			}
+		})
+	}
 }
