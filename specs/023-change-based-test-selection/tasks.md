@@ -114,19 +114,19 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 
 ### Tests for User Story 2
 
-- [ ] T031 [P] [US2] Add `hack/test_ci_scope.py` cases for the package graph: leaf change, importer chain across modules, `_test.go`-only change, `testdata/` and embedded file change, module `go.mod` change giving `./...`
-- [ ] T032 [P] [US2] Add `hack/test_ci_scope.py` cases for `web-tests`: a route file gives its source path, a change under `web/src/test/`, `web/package.json`, `package-lock.json`, `vitest.config.ts`, `vite.config.ts`, `tsconfig*.json` or `eslint.config.js` gives `all`
-- [ ] T033 [P] [US2] Write `hack/test_check_changed_coverage.py` (unittest) with fixture profiles: Go atomic profile covering/missing added lines, Istanbul JSON for web, zero-statement diff passes, threshold read from `.testcoverage.yml` and `vitest.config.ts`, missing threshold fails; extend the `test-ci-scope` target in `Makefile` to discover `test_*.py` in `hack/`
+- [X] T031 [P] [US2] Add `hack/test_ci_scope.py` cases for the package graph: leaf change, importer chain across modules, `_test.go`-only change, `testdata/` and embedded file change, module `go.mod` change giving `./...`
+- [X] T032 [P] [US2] Add `hack/test_ci_scope.py` cases for `web-tests`: a route file gives its source path, a change under `web/src/test/`, `web/package.json`, `package-lock.json`, `vitest.config.ts`, `vite.config.ts`, `tsconfig*.json` or `eslint.config.js` gives `all`
+- [X] T033 [P] [US2] Write `hack/test_check_changed_coverage.py` (unittest) with fixture profiles: Go atomic profile covering/missing added lines, Istanbul JSON for web, zero-statement diff passes, threshold read from `.testcoverage.yml` and `vitest.config.ts`, missing threshold fails; add a second `unittest discover` line for `test_check_changed_coverage.py` to the `test-ci-scope` target in `Makefile` (a `test_*.py` glob would also run `test_auto_label.py`, which has its own workflow)
 
 ### Implementation for User Story 2
 
-- [ ] T034 [US2] In `hack/ci_scope.py`, build the package import graph by scanning `import` blocks of every `.go` file (including `_test.go`) in the selected modules, map changed files (including `testdata/` and embedded files) to their package directory, compute reverse closure, extend `file_consumers` for cross-package file reads, and emit `go-packages` (research R4, OD-8)
-- [ ] T035 [US2] In `hack/ci_scope.py`, emit `web-tests` per research R6 (OD-9)
-- [ ] T036 [US2] Write `hack/check_changed_coverage.py` per contracts/changed-coverage.md (threshold from `.testcoverage.yml` `threshold.total` or `vitest.config.ts` `lines`, OD-5)
-- [ ] T037 [US2] In the `go` job of `.github/workflows/ci.yaml` (lines ~621-674), replace `./...` in the unit and envtest `go test` commands with the module's `go-packages` list, keeping `-coverpkg=./...`; on `scope == full` keep `make cover-go-merge && make cover-go-check`, on `partial` merge profiles and run `hack/check_changed_coverage.py --go-profile ... --module <dir>` instead
-- [ ] T038 [US2] In the `web` job of `.github/workflows/ci.yaml` (lines ~676-733), keep `npm run lint` and `npm run build`; on partial scope with a file list run `npx vitest related --run --coverage --coverage.thresholds.lines=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --coverage.thresholds.statements=0 <files>` then `hack/check_changed_coverage.py --vitest-json web/coverage/coverage-final.json`; otherwise run `npm run test:cover` unchanged. `web-e2e-mock` stays whole (OD-9)
-- [ ] T039 [US2] Extend the `selection` records with per-module package counts and the web related-file count
-- [ ] T040 [US2] Compile checks only; open PR 3 with labels `type: ci`, `area: shared`, `area: web`
+- [X] T034 [US2] In `hack/ci_scope.py`, build the package import graph by scanning `import` blocks of every `.go` file (including `_test.go`) in the selected modules, map changed files (including `testdata/` and embedded files) to their package directory, compute reverse closure, extend `file_consumers` for cross-package file reads, and emit `go-packages` (research R4, OD-8)
+- [X] T035 [US2] In `hack/ci_scope.py`, emit `web-tests` per research R6 (OD-9)
+- [X] T036 [US2] Write `hack/check_changed_coverage.py` per contracts/changed-coverage.md (threshold from `.testcoverage.yml` `threshold.total` or `vitest.config.ts` `lines`, OD-5)
+- [X] T037 [US2] In the `go` job of `.github/workflows/ci.yaml` (lines ~621-674), replace `./...` in the unit and envtest `go test` commands with the module's `go-packages` list, keeping `-coverpkg=./...`; on `scope == full` keep `make cover-go-merge && make cover-go-check`, on `partial` merge profiles and run `hack/check_changed_coverage.py --go-profile ... --module <dir>` instead
+- [X] T038 [US2] In the `web` job of `.github/workflows/ci.yaml` (lines ~676-733), keep `npm run lint` and `npm run build`; on partial scope with a file list run `npx vitest related --run --coverage --coverage.thresholds.lines=0 --coverage.thresholds.functions=0 --coverage.thresholds.branches=0 --coverage.thresholds.statements=0 <files>` then `hack/check_changed_coverage.py --vitest-json web/coverage/coverage-final.json`; otherwise run `npm run test:cover` unchanged. `web-e2e-mock` stays whole (OD-9)
+- [X] T039 [US2] Extend the `selection` records with per-module package counts and the web related-file count
+- [X] T040 [US2] Compile checks only; open PR 3 with labels `type: ci`, `area: shared`, `area: web`
 - [ ] T041 [US2] Run quickstart scenarios 5–8 as draft PRs on PR 3's branch, record results in `validation.md`, close them and delete their branches
 
 **Checkpoint**: unit selection and changed-lines coverage work; full runs keep module gates.

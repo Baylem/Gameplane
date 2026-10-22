@@ -21,8 +21,8 @@ path forces everything (research R8).
 | Key | Type | Meaning |
 |---|---|---|
 | `scope` | `"full"` \| `"partial"` | Run-level scope (FR-009 switch). Emitted by mode `summary`, not `modules` (see below) |
-| `go-packages` | JSON object: module → list of package patterns | `["./..."]` on full scope or when a module's own `go.mod`/`go.sum` changed |
-| `web-tests` | JSON: `"all"` or list of `web/src/...` source paths for `vitest related` | |
+| `go-packages` | JSON object: module → list of package patterns | Emitted by mode `units`. `["./..."]` on full scope or when a module's own `go.mod`/`go.sum`/`.testcoverage.yml` changed |
+| `web-tests` | JSON: `"all"` or list of `web/src/...` source paths for `vitest related` | Emitted by mode `units` |
 | `e2e-exclude` | Not emitted (decision 2). Unselected legs skip through `RUN_REGEX` instead | Would have been read by `e2e-go` and `e2e-go-arm64` |
 | `e2e-run` | JSON object: bucket → anchored `-run` regex of the selected tests | Emitted by mode `e2e`. Replaces `buckets.sh regex <bucket>` in the e2e jobs (OD-6); equals it on full scope |
 | `e2e-multicluster`, `e2e-upgrade`, `e2e-web-live`, `e2e-capture-overhead` | `"true"`/`"false"` | Emitted by mode `e2e`. Folded into the existing `combine` step booleans |
@@ -70,6 +70,26 @@ Emits the e2e selection that `e2e_outputs()` computes from
 | `e2e-multicluster`, `e2e-upgrade`, `e2e-web-live`, `e2e-capture-overhead` | boolean | Gates for the matching jobs |
 | `bot-matrix` | JSON object `{"test": [...]}` | Selected `bot-fast` tests, read by `e2e-game-bot` |
 | `bots-any` | boolean | False skips `e2e-game-bot` |
+
+## Mode `units` (new)
+
+Emits package-level Go selection and the web unit selection (research R4, R6). The
+`units` step of the `changes` job runs right after `e2e`. Outputs:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `all` | boolean | True when `reason` is set |
+| `reason` | string | A full-scope reason, `unmapped path <p>` or `error: <exception>`, or empty |
+| `go-packages` | JSON object: module → list | Package patterns for `go test` (`./...`, `.`, `./internal/x`); an empty list means vet only. Every Go module except `test/e2e` is listed |
+| `web-tests` | `"all"` or JSON list | `web/src` files for `vitest related`; an empty list skips Vitest (lint and build still run) |
+
+Rules: a changed file selects its package directory (walking up to the nearest one) and,
+unless it is a `_test.go` file, every package that imports it, transitively and across
+modules. `FILE_READERS` adds the packages whose tests read the changed directory. A
+module's own `go.mod`, `go.sum` or `.testcoverage.yml`, or a file under no package,
+gives `["./..."]`. For web, `package.json`, `package-lock.json`, `vitest.config.ts`,
+`vite.config.ts`, `tsconfig*.json`, `eslint.config.js`, `src/test/**`, `i18n/locales/**`,
+a deleted `web/src` file and any other `web/` file outside `src` and `e2e` give `"all"`.
 
 ## Mode `bots` — changed
 
