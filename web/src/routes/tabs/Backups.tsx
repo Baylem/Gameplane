@@ -173,7 +173,7 @@ export function BackupsTab({ name, ns }: { name: string; ns?: string }) {
                 <span className="text-foreground/60">
                   <PhaseChip phase={r.status?.phase} />
                   {r.status?.completionTime &&
-                    intl.formatMessage({ id: "web.routes.tabs.backups.restore_completed_relative", defaultMessage: " · {time}", description: "Backups: restore row suffix; {time} is how long ago the restore completed" }, { time: formatRelative(r.status.completionTime, intl) })}
+                    <> {intl.formatMessage({ id: "web.routes.tabs.backups.restore_completed_relative", defaultMessage: "· {time}", description: "Backups: restore row suffix; {time} is how long ago the restore completed" }, { time: formatRelative(r.status.completionTime, intl) })}</>}
                 </span>
               </div>
             ))}

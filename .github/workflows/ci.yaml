@@ -2055,10 +2055,16 @@ jobs:
       - name: install playwright browser
         run: |
           cd web && npm ci && npx playwright install --with-deps chromium
+      - name: i18n catalogs for the live dashboard
+        # The live job serves the dashboard with plain vite, which never builds
+        # the gitignored language list and catalogs (spec 019 T037).
+        run: |
+          cd web && npm run i18n:compile && npm run i18n:manifest
       - name: run playwright (live)
         env:
           GAMEPLANE_E2E_TARGET: live
           GAMEPLANE_E2E_CLUSTER: ${{ env.CLUSTER }}
+          VITE_I18N_FIXTURES: "1"
         run: |
           cd web && npm run test:e2e:live
       - name: dump cluster state on failure (e2e-web-live)
