@@ -20,10 +20,10 @@ description: "Task list for 028 split big packages and files"
 
 ## Phase 2: Foundational (blocks every move PR)
 
-- [ ] T004 Write `hack/move_parity.py` (stdlib) with `names <base> <head>` (static scan of Go `Test*/Fuzz*/Example*` funcs and Vitest/Playwright title chains) and `test-edits <base> <head> --brief <file>` (R2 point 3: allowed kinds from OD-6 and OD-9 only)
-- [ ] T005 Write `hack/test_move_parity.py` unit tests: equal and unequal name lists; a renamed test file with only a package-line change passes; an assertion change fails; an extra `".."` in a copied envtest CRD path passes only when OD-9 allows it; a changed `vi.mock` path passes
-- [ ] T006 Wire `hack/test_move_parity.py` into the target that `make test-ci-scope` runs in CI (`.github/workflows/ci.yaml:1521`), and add a CI step that runs `move_parity.py names` and `move_parity.py test-edits` on every PR carrying a brief under `specs/028-split-big-packages/briefs/`, passing the PR base SHA, head SHA and that brief; coordinating with open spec 023 PRs that edit the same job; PR "ci: add move parity checks (spec 028)", labels `type: ci`, `area: shared`
-- [ ] T007 Create `specs/028-split-big-packages/briefs/README.md` pointing to the brief contract
+- [X] T004 Write `hack/move_parity.py` (stdlib) with `names <base> <head>` (static scan of Go `Test*/Fuzz*/Example*` funcs and Vitest/Playwright title chains) and `test-edits <base> <head> --brief <file>` (R2 point 3: allowed kinds from OD-6 and OD-9 only)
+- [X] T005 Write `hack/test_move_parity.py` unit tests: equal and unequal name lists; a renamed test file with only a package-line change passes; an assertion change fails; an extra `".."` in a copied envtest CRD path passes only when OD-9 allows it; a changed `vi.mock` path passes
+- [X] T006 Wire `hack/test_move_parity.py` into the target that `make test-ci-scope` runs in CI (`.github/workflows/ci.yaml:1521`), and add a CI step that runs `move_parity.py names` and `move_parity.py test-edits` on every PR carrying a brief under `specs/028-split-big-packages/briefs/`, passing the PR base SHA, head SHA and that brief; coordinating with open spec 023 PRs that edit the same job; PR "ci: add move parity checks (spec 028)", labels `type: ci`, `area: shared`
+- [X] T007 Create `specs/028-split-big-packages/briefs/README.md` pointing to the brief contract
 
 **Checkpoint**: parity tooling merged; move PRs can start.
 
