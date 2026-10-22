@@ -22,8 +22,9 @@ EDGE_IMAGES = [
 ]
 # Mirrors the paths-filter `ci` filter in .github/workflows/ci.yaml; keep both in sync.
 FORCE_ALL_FILES = {
-    ".github/workflows/ci.yaml", "hack/ci_scope.py", "hack/test_ci_scope.py", "Makefile",
-    "go.work", "go.work.sum", "test/e2e/buckets.sh", ".golangci.yml",
+    "hack/ci_scope.py", "hack/test_ci_scope.py", "Makefile", "go.work", "go.work.sum",
+    "test/e2e/buckets.sh", "test/e2e/suite-components.json",
+    "hack/check_changed_coverage.py", "hack/test_check_changed_coverage.py",
 }
 FORCE_ALL_PREFIXES = (".github/actions/",)
 # Mirrors the e2e-go matrix buckets in .github/workflows/ci.yaml.
@@ -32,7 +33,7 @@ E2E_BUCKETS = ["operator", "api-auth", "api-roles", "api-rbac", "api-agent", "ap
 SUITES_FILE = "test/e2e/suite-components.json"
 # Paths no Go e2e test reads. Their own jobs keep their paths-filter gates.
 NO_E2E_FILES = {
-    "design.pen", "LICENSE", ".claudeignore", ".coderabbit.yaml", ".editorconfig",
+    "design.pen", "LICENSE", ".claudeignore", ".coderabbit.yaml", ".editorconfig", ".golangci.yml",
     ".gitattributes", ".gitignore", ".gitmodules", ".hadolint.yaml",
     "deploy/kind/up.sh", "deploy/kind/down.sh",
     "test/e2e/joincoverage.sh", "test/e2e/joincoverage_test.sh",
@@ -46,6 +47,65 @@ WEB_LIVE_COMPONENTS = {"web", "api", "operator", "agent"}
 EXTRA_COMPONENTS = ("web", "charts", "deploy-kind", "modules", "e2e-harness")
 # Top-level areas a selection rule knows; any other path is unmapped and forces full scope.
 KNOWN_DIRS = ("charts", "containers", "deploy/kind", "signing", "test/e2e", "web", "modules")
+# A change to one of these files in a module root reruns that whole module (research R4).
+GO_MODULE_WIDE = {"go.mod", "go.sum", ".testcoverage.yml"}
+# Tests that read files outside their package directory. A changed path under a key also
+# selects these package directories (research R4, the package form of file_consumers).
+FILE_READERS = {
+    "operator/config/crd": ("operator/internal/controller", "api/internal/handlers"),
+    "operator/test/crds": ("operator/internal/controller",),
+    "modules": ("gp-module/internal/validator",),
+    "i18n/testdata": ("i18n/cmd/i18n-check",),
+    "api/internal": ("api/internal/messages",),  # usage_test walks every api/internal file
+}
+# Directories that never hold a package the go job tests.
+SKIP_PACKAGE_DIRS = {"testdata", "vendor", "node_modules"}
+# Web files that change every Vitest run (research R6).
+WEB_ALL_FILES = {"web/package.json", "web/package-lock.json", "web/vitest.config.ts",
+                 "web/vite.config.ts", "web/eslint.config.js"}
+CI_FILE = ".github/workflows/ci.yaml"
+# ci.yaml jobs that compute or report the selection; an edit there forces full scope (R8).
+CI_SELECTION_JOBS = {"changes", "report"}
+CI_JOB_KEY = re.compile(r"^  ([A-Za-z0-9_-]+):\s*(?:#.*)?$")
+CI_TOP_KEY = re.compile(r"^[A-Za-z_][\w-]*:")
+# e2e jobs whose own switch output a ci.yaml edit inside them turns on (mode e2e).
+E2E_JOB_SWITCHES = {
+    "e2e-multicluster": "e2e-multicluster", "e2e-multicluster-arm64": "e2e-multicluster",
+    "e2e-upgrade": "e2e-upgrade", "e2e-upgrade-arm64": "e2e-upgrade",
+    "e2e-web-live": "e2e-web-live", "e2e-web-live-arm64": "e2e-web-live",
+    "e2e-capture-overhead": "e2e-capture-overhead",
+}
+# Summary row prefixes and the ci.yaml jobs behind them; the first match wins.
+ROW_JOBS = (
+    ("lint (", ("lint",)),
+    ("go (test/e2e)", ("go-e2e-unit",)),
+    ("go (", ("go",)),
+    ("api (postgres)", ("api-postgres",)),
+    ("web e2e (mock)", ("web-e2e-mock",)),
+    ("web", ("web",)),
+    ("helm lint", ("helm",)),
+    ("chart render", ("chart-template",)),
+    ("standalone Compose smoke", ("standalone-compose",)),
+    ("workflow lint", ("workflow-lint",)),
+    ("docs and repository checks", ("docs",)),
+    ("codegen drift", ("codegen-drift",)),
+    ("submodule freshness", ("submodule-freshness",)),
+    ("vuln (go)", ("vuln-go",)),
+    ("capture-sidecar CAP_NET_RAW survival", ("capture-sidecar-setcap-proof",)),
+    ("dependency review", ("dependency-review",)),
+    ("telemetry default gate", ("telemetry-default-gate",)),
+    ("build e2e images", ("build-images", "build-images-arm64")),
+    ("vuln (images)", ("vuln-images",)),
+    ("e2e bucket coverage", ("e2e-buckets",)),
+    ("e2e multicluster", ("e2e-multicluster", "e2e-multicluster-arm64")),
+    ("e2e upgrade", ("e2e-upgrade", "e2e-upgrade-arm64")),
+    ("e2e postgres", ("e2e-postgres",)),
+    ("e2e game bot", ("e2e-game-bot",)),
+    ("e2e web live", ("e2e-web-live", "e2e-web-live-arm64")),
+    ("e2e capture overhead", ("e2e-capture-overhead",)),
+    ("ingress-nginx smoke", ("e2e-kind-ingress-smoke",)),
+    ("e2e ", ("e2e-go", "e2e-go-arm64")),
+)
 
 
 def is_unmapped(path, modules):
@@ -96,9 +156,12 @@ def changed_paths(root, base, head, *, history=False):
 def affected_modules(root, paths):
     """Select changed modules and the reverse dependency closure, including tests."""
     modules = workspace_modules(root)
-    shared = {"Makefile", "go.work", "go.work.sum", ".golangci.yml", "test/e2e/buckets.sh"}
+    # ci.yaml and .golangci.yml map to their own jobs through ci_jobs() (OD-3).
+    shared = {"Makefile", "go.work", "go.work.sum", "test/e2e/buckets.sh"}
     if paths is None or any(
-        p in shared or p.startswith((".github/", "hack/ci_scope", "hack/test_ci_scope"))
+        p in shared or p.startswith((".github/actions/", "hack/ci_scope", "hack/test_ci_scope",
+                                     "hack/check_changed_coverage",
+                                     "hack/test_check_changed_coverage"))
         or Path(p).name in {"go.mod", "go.sum"}
         or ("Dockerfile" in Path(p).name and not any(p.startswith(m + "/") for m in modules))
         for p in paths
@@ -163,6 +226,7 @@ def image_inputs(dockerfile):
 
 
 def select_images(root, images, paths):
+    """Return the images to rebuild: all of them for a config change, else those with changed inputs."""
     # Signing/configuration changes must rebuild all images even without COPYs.
     if paths is None or any(
         p in {"go.work", "go.work.sum", ".dockerignore", "signing/cosign.pub"}
@@ -448,7 +512,7 @@ def e2e_outputs(root, paths, reason):
         return text + (f"; {cite(files)}" if files else "")
 
     run, why = {}, {}
-    for bucket in E2E_BUCKETS + ["ratelimit", "multicluster", "upgrade", "capture-overhead"]:
+    for bucket in [*E2E_BUCKETS, "ratelimit", "multicluster", "upgrade", "capture-overhead"]:
         names = chosen(bucket)
         if names:
             why[bucket] = describe(names, len(buckets[bucket]))
@@ -471,6 +535,248 @@ def e2e_outputs(root, paths, reason):
         "bots-any": bool(bots),
         "universal": not reason and "*" in touched,
     }
+
+
+def go_imports(text):
+    """Return the import paths named in a Go file's import declarations."""
+    found = re.findall(r'^import\s+(?:[\w.]+\s+)?"([^"]+)"', text, re.MULTILINE)
+    for block in re.findall(r"^import\s*\((.*?)\)", text, re.MULTILINE | re.DOTALL):
+        found += re.findall(r'"([^"]+)"', block)
+    return found
+
+
+def package_index(root, modules):
+    """Return {package dir: imported paths} and {import path: package dir} for the workspace."""
+    imports, dirs = {}, {}
+    for module, name in modules.items():
+        base = root / module
+        for current, subdirs, files in os.walk(base):
+            here = Path(current)
+            subdirs[:] = sorted(d for d in subdirs if not d.startswith((".", "_"))
+                                and d not in SKIP_PACKAGE_DIRS
+                                and not (here / d / "go.mod").exists())
+            sources = [f for f in files if f.endswith(".go")]
+            if not sources:
+                continue
+            directory = here.relative_to(root).as_posix()
+            inner = here.relative_to(base).as_posix()
+            dirs[name if inner == "." else f"{name}/{inner}"] = directory
+            imports[directory] = {path for f in sorted(sources)
+                                  for path in go_imports((here / f).read_text(encoding="utf-8"))}
+    return imports, dirs
+
+
+def owning_module(path, modules):
+    """Return the workspace module directory that contains path, or None."""
+    owners = [m for m in modules if under(path, m)]
+    return max(owners, key=len) if owners else None
+
+
+def go_packages(root, paths, reason):
+    """Return {module: [go test package patterns]} for the go job (research R4, OD-8).
+
+    A changed file selects its package and, unless it is a _test.go file, every package
+    that imports it, across modules. A module's own go.mod, go.sum or .testcoverage.yml,
+    or a file in no package, selects ./... for that module; go.mod and go.sum also
+    select every package that imports the module, and a deleted package selects the
+    packages that still import it.
+    """
+    modules = workspace_modules(root)
+    targets = [m for m in sorted(modules) if m != "test/e2e"]
+    if reason or paths is None:
+        return {m: ["./..."] for m in targets}
+    imports, dirs = package_index(root, modules)
+    wide, seeds, direct = set(), set(), set()
+    for path in paths:
+        if path.endswith(".md"):
+            continue
+        readers = [d for key, found in FILE_READERS.items() if under(path, key) for d in found]
+        direct.update(readers)  # a reader's tests read the files; its importers do not
+        module = owning_module(path, modules)
+        if module is None:
+            continue
+        if path in {f"{module}/{name}" for name in GO_MODULE_WIDE}:
+            wide.add(module)
+            if path.rpartition("/")[2] in {"go.mod", "go.sum"}:
+                # a dependency change can break every package that imports this module
+                seeds.update(d for d in imports if owning_module(d, modules) == module)
+            continue
+        directory = path.rpartition("/")[0]
+        if path.endswith(".go") and directory not in imports:
+            # the package lost its last Go file: its import path is still in its importers
+            gone = modules[module] + directory[len(module):]
+            seeds.update(d for d, found in imports.items() if gone in found)
+        while directory not in imports and directory != module:
+            directory = directory.rpartition("/")[0]
+        if directory in imports:
+            (direct if path.endswith("_test.go") else seeds).add(directory)
+        elif not readers:
+            wide.add(module)
+    importers = {}
+    for directory, imported in imports.items():
+        for name in imported:
+            if name in dirs:
+                importers.setdefault(dirs[name], set()).add(directory)
+    selected, queue = set(), [d for d in seeds if d in imports]
+    while queue:
+        directory = queue.pop()
+        if directory not in selected:
+            selected.add(directory)
+            queue.extend(importers.get(directory, ()))
+    selected |= {d for d in direct if d in imports}
+    result = {}
+    for module in targets:
+        if module in wide:
+            result[module] = ["./..."]
+        else:
+            result[module] = sorted("." if d == module else "./" + d[len(module) + 1:]
+                                    for d in selected if owning_module(d, modules) == module)
+    return result
+
+
+def web_tests(root, paths, reason):
+    """Return "all" or the changed web/src files for `vitest related` (research R6, OD-9)."""
+    if reason or paths is None:
+        return "all"
+    files = []
+    for path in paths:
+        if (path in WEB_ALL_FILES or under(path, "web/src/test") or under(path, "i18n/locales")
+                or fnmatch.fnmatch(path, "web/tsconfig*.json")):
+            return "all"
+        if not under(path, "web") or path.endswith(".md") or under(path, "web/e2e"):
+            continue
+        if not under(path, "web/src") or not (root / path).exists():
+            return "all"  # vitest related cannot follow a deleted file or a non-source input
+        files.append(path)
+    return sorted(files)
+
+
+def unit_outputs(root, paths, reason):
+    """Return the outputs of mode units: Go package patterns per module and web tests."""
+    return {
+        "all": bool(reason),
+        "reason": reason or "",
+        "go-packages": go_packages(root, paths, reason),
+        "web-tests": web_tests(root, paths, reason),
+    }
+
+
+def ci_blocks(text):
+    """Return ({line number: job id or None}, {job id: needed job ids}) for a workflow."""
+    owner, needs = {}, {}
+    job, in_jobs, collecting = None, False, None
+    for number, line in enumerate(text.splitlines(), 1):
+        if CI_TOP_KEY.match(line):
+            in_jobs, job, collecting = line.split(":", 1)[0] == "jobs", None, None
+        elif in_jobs and CI_JOB_KEY.match(line):
+            job, collecting = CI_JOB_KEY.match(line)[1], None
+            needs.setdefault(job, set())
+        elif job and line.startswith("    needs:"):
+            collecting = job
+            line = line[len("    needs:"):]
+        elif re.match(r"^    \S", line):
+            collecting = None
+        owner[number] = job
+        if collecting:
+            needs[collecting].update(re.findall(r"[A-Za-z0-9_][A-Za-z0-9_-]*",
+                                                line.split("#", 1)[0]))
+    return owner, needs
+
+
+def changed_ci_lines(root, base, head):
+    """Return ([(old line, text)], [(new line, text)]) for ci.yaml lines changed base..head."""
+    diff = subprocess.run(["git", "diff", "-U0", "--no-color", base, head, "--", CI_FILE],
+                          cwd=root, check=True, capture_output=True, text=True).stdout
+    removed, added, old, new, started = [], [], 0, 0, False
+    for line in diff.splitlines():
+        hunk = re.match(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+        if hunk:
+            old, new, started = int(hunk[1]), int(hunk[2]), True
+        elif started and line.startswith("-"):
+            removed.append((old, line[1:]))
+            old += 1
+        elif started and line.startswith("+"):
+            added.append((new, line[1:]))
+            new += 1
+    return removed, added
+
+
+def git_text(root, revision, path):
+    """Return a file's text at revision, or "" when it does not exist there."""
+    result = subprocess.run(["git", "show", f"{revision}:{path}"], cwd=root,
+                            capture_output=True, text=True, check=False)
+    return result.stdout if result.returncode == 0 else ""
+
+
+def ci_jobs(root, base, head, paths):
+    """Map shared CI file changes to ci.yaml job ids (research R8, OD-3).
+
+    Returns (jobs, forced). jobs holds every job whose ci.yaml lines changed, `lint` for
+    .golangci.yml, `workflow-lint` for any .github/ or .golangci.yml change, and every job
+    they need. forced is True when a changed ci.yaml line that is not blank or a comment
+    sits outside any job or inside the changes or report job.
+    """
+    jobs, forced, needs = set(), False, {}
+    if any(p.startswith(".github/") or p == ".golangci.yml" for p in paths):
+        jobs.add("workflow-lint")
+    if ".golangci.yml" in paths:
+        jobs.add("lint")
+    if CI_FILE in paths:
+        removed, added = changed_ci_lines(root, base, head)
+        for revision, changes in ((base, removed), (head, added)):
+            owner, found = ci_blocks(git_text(root, revision, CI_FILE))
+            needs.update(found)
+            for number, text in changes:
+                if not text.strip() or text.strip().startswith("#"):
+                    continue
+                job = owner.get(number)
+                if job is None or job in CI_SELECTION_JOBS:
+                    forced = True
+                else:
+                    jobs.add(job)
+    for name in list(jobs):  # FR-010: an e2e suite runs on amd64 and arm64 together
+        twin = name[:-len("-arm64")] if name.endswith("-arm64") else name + "-arm64"
+        if name.startswith("e2e-") and twin in needs:
+            jobs.add(twin)
+    queue = list(jobs)
+    while queue:
+        for name in needs.get(queue.pop(), ()):
+            if name not in jobs:
+                jobs.add(name)
+                queue.append(name)
+    return sorted(jobs - CI_SELECTION_JOBS), forced
+
+
+def scoped(env, base, head):
+    """Return (paths, reason, ci.yaml jobs): the diff, why everything runs, edited jobs."""
+    event_reason = full_scope_reason(env, [])
+    paths = None if event_reason else changed_paths(ROOT, base, head)
+    reason = full_scope_reason(env, paths)
+    if reason:
+        return paths, reason, []
+    jobs, forced = ci_jobs(ROOT, base, head, paths)
+    return paths, ("selection-rule change" if forced else None), jobs
+
+
+def widen_e2e(values, full, jobs):
+    """Run every test of each e2e job whose ci.yaml block changed (research R8)."""
+    if {"e2e-go", "e2e-go-arm64"} & set(jobs):
+        values["e2e-run"] = full["e2e-run"]
+    for job, key in E2E_JOB_SWITCHES.items():
+        if job in jobs:
+            values[key] = True
+    if "e2e-game-bot" in jobs:
+        values["bot-matrix"], values["bots-any"] = full["bot-matrix"], full["bots-any"]
+    return values
+
+
+def widen_units(values, jobs):
+    """Run every package or web test of a go or web job whose ci.yaml block changed."""
+    if "go" in jobs:
+        values["go-packages"] = {m: ["./..."] for m in values["go-packages"]}
+    if "web" in jobs:
+        values["web-tests"] = "all"
+    return values
 
 
 def verify_suites(suites, buckets, modules):
@@ -515,6 +821,10 @@ def summarize(env, paths, reason):
     gates = load_json(env, "GATE_OUTPUTS")
     bots = load_json(env, "BOT_MATRIX")
     e2e = load_json(env, "E2E_OUTPUTS")
+    units = load_json(env, "UNITS_OUTPUTS")
+    edited_jobs = set(jlist(env, "CI_JOBS"))
+    go_selected = decoded(units, "go-packages", {})
+    web_selected = decoded(units, "web-tests", "all")
     # Without the e2e step's outputs every e2e suite follows the coarse e2e gate.
     narrowed = bool(e2e)
     e2e_run = decoded(e2e, "e2e-run", {})
@@ -553,8 +863,25 @@ def summarize(env, paths, reason):
 
     rows = []
 
-    def add(suite, run, feed=(), run_reason="", skip_reason="not affected"):
+    def go_note(module):
+        """Return the package count note for one go row, or "" for a whole-module run."""
+        packages = go_selected.get(module, ["./..."]) if units else ["./..."]
+        if packages == ["./..."]:
+            return ""
+        return f"{len(packages)} packages; " if packages else "vet only, no affected package; "
+
+    if not units or web_selected == "all":
+        web_note = ""
+    elif web_selected:
+        web_note = f"{len(web_selected)} files for vitest related; "
+    else:
+        web_note = "lint and build only; "
+
+    def add(suite, run, feed=(), run_reason="", skip_reason="not affected", note=""):
         """Append one selection row with a run or skip decision and its reason."""
+        jobs = next((found for prefix, found in ROW_JOBS if suite.startswith(prefix)), ())
+        if not run and edited_jobs & set(jobs):
+            run, run_reason = True, "ci.yaml: lines in this job changed"
         if run and reason:
             why = f"full: {reason}"
         elif run and run_reason:
@@ -567,16 +894,19 @@ def summarize(env, paths, reason):
                 why = "push event" if event == "push" else "changed: (see filters)"
         else:
             why = skip_reason
+        if run and not reason:
+            why = note + why
         rows.append({"suite": suite, "decision": "run" if run else "skip", "reason": why})
 
     for m in modules:
         add(f"lint ({m})", m in selected, module_feed(m))
     for m in modules:
         if m != "test/e2e":
-            add(f"go ({m}) (amd64, arm64)", gate("go") and m in selected, module_feed(m))
+            add(f"go ({m}) (amd64, arm64)", gate("go") and m in selected, module_feed(m),
+                note=go_note(m))
     add("go (test/e2e)", flag(scope, "e2e-unit"), module_feed("test/e2e"))
     add("api (postgres)", "api" in selected, module_feed("api"))
-    add("web", gate("web"), filtered("web"))
+    add("web", gate("web"), filtered("web"), note=web_note)
     add("web e2e (mock)", gate("web"), filtered("web"))
     add("helm lint", gate("charts"), filtered("charts"))
     add("chart render", gate("charts"), filtered("charts"))
@@ -634,6 +964,7 @@ def summarize(env, paths, reason):
 
 
 def emit(values):
+    """Append each value to the GITHUB_OUTPUT file as one KEY=JSON line."""
     lines = "".join(f"{key}={json.dumps(value, separators=(',', ':'))}\n"
                     for key, value in values.items())
     with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
@@ -641,6 +972,7 @@ def emit(values):
 
 
 def bot_matrix(names):
+    """Return the bot-fast shard matrix {"test": names}, rejecting duplicate or non-Test names."""
     if not names or len(names) != len(set(names)) or any(
         not re.fullmatch(r"Test[A-Za-z0-9_]+", name) for name in names
     ):
@@ -649,9 +981,10 @@ def bot_matrix(names):
 
 
 def main():
+    """Run the CLI mode named on the command line and write its GitHub outputs."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("modules", "images", "dockerfiles", "bots", "summary",
-                                         "e2e", "verify-suites"))
+                                         "e2e", "verify-suites", "units", "jobs"))
     parser.add_argument("--base", default="")
     parser.add_argument("--head", default="HEAD")
     args = parser.parse_args()
@@ -699,26 +1032,50 @@ def main():
     if args.mode == "e2e":
         env = os.environ
         try:
-            event_reason = full_scope_reason(env, [])
-            paths = None if event_reason else changed_paths(ROOT, args.base, args.head)
-            values = e2e_outputs(ROOT, paths, full_scope_reason(env, paths))
+            paths, reason, jobs = scoped(env, args.base, args.head)
+            values = e2e_outputs(ROOT, paths, reason)
+            if jobs:
+                values = widen_e2e(values, e2e_outputs(ROOT, None, "ci.yaml job edit"), jobs)
         except Exception as exc:  # any doubt selects every e2e test (FR-002)
             print(f"::warning::e2e selection failed, running every e2e test: {exc}")
             values = e2e_outputs(ROOT, None, f"error: {exc}")
+        emit(values)
+        return
+    if args.mode == "jobs":
+        try:
+            _, reason, jobs = scoped(os.environ, args.base, args.head)
+        except Exception as exc:  # any doubt selects the full suite (FR-002)
+            print(f"::warning::ci.yaml job mapping failed, running everything: {exc}")
+            reason, jobs = f"error: {exc}", []
+        emit({"all": bool(reason), "reason": reason or "", "ci-jobs": jobs})
+        return
+    if args.mode == "units":
+        env = os.environ
+        try:
+            paths, reason, jobs = scoped(env, args.base, args.head)
+            modules = workspace_modules(ROOT)
+            unmapped = [p for p in paths or [] if is_unmapped(p, modules)]
+            if reason is None and unmapped:
+                reason = f"unmapped path {unmapped[0]}"
+            values = widen_units(unit_outputs(ROOT, paths, reason), jobs)
+        except Exception as exc:  # any doubt runs every unit test (FR-002)
+            print(f"::warning::unit selection failed, running every unit test: {exc}")
+            values = unit_outputs(ROOT, None, f"error: {exc}")
         emit(values)
         return
     # PRs use affected work; every master push, manual run and ci: full-run
     # label is the full-suite backstop.
     env = os.environ
     try:
-        event_reason = full_scope_reason(env, [])
-        paths = None if event_reason else changed_paths(ROOT, args.base, args.head)
+        paths, reason, jobs = scoped(env, args.base, args.head)
+        if paths is not None and reason and full_scope_reason(env, paths) is None:
+            paths = None  # a ci.yaml edit outside any job or in changes/report (R8)
         if paths is not None and any(is_unmapped(p, workspace_modules(ROOT)) for p in paths):
             paths = None  # mode e2e reports the path; every module runs (FR-002)
         selected = affected_modules(ROOT, paths)
     except Exception as exc:  # any doubt selects the full suite (FR-002)
         print(f"::warning::test selection failed, running everything: {exc}")
-        paths = None
+        paths, jobs = None, []
         selected = sorted(workspace_modules(ROOT))
     modules = sorted(workspace_modules(ROOT))
     emit({
@@ -727,8 +1084,11 @@ def main():
         "lint": bool(selected),
         "go": bool(set(selected) - {"test/e2e"}),
         "e2e-unit": "test/e2e" in selected,
-        "lint-exclude": [{"module": m} for m in modules if m not in selected],
-        "go-exclude": [{"module": m} for m in modules if m not in selected and m != "test/e2e"],
+        # An edit inside the lint or go job of ci.yaml runs that job on every module.
+        "lint-exclude": [{"module": m} for m in modules
+                         if m not in selected and "lint" not in jobs],
+        "go-exclude": [{"module": m} for m in modules
+                       if m not in selected and m != "test/e2e" and "go" not in jobs],
     })
 
 
