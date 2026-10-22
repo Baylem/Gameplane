@@ -15,8 +15,8 @@ description: "Task list for 028 split big packages and files"
 ## Phase 1: Setup
 
 - [X] T001 Settle OD-1..OD-10 in `OPEN-DECISIONS.md` and fold them into spec, plan and these tasks (valgul, 2026-10-20/21)
-- [ ] T002 Confirm spec 027's `docs/layout.md` has merged to master (027 implementation PR); if not, follow `specs/027-contributor-docs-layout-map/OPEN-DECISIONS.md` and cite it in every brief
-- [ ] T003 Re-measure on current master: production files over 500 lines (Go, web), files per package for `api/internal/handlers` and `operator/internal/controller`, and record the SHA and numbers at the top of `research.md`
+- [X] T002 Confirm spec 027's `docs/layout.md` has merged to master (027 implementation PR); if not, follow `specs/027-contributor-docs-layout-map/OPEN-DECISIONS.md` and cite it in every brief *Done note: not merged on `54d5819` (2026-10-22); briefs cite 027 OPEN-DECISIONS.md.*
+- [X] T003 Re-measure on current master: production files over 500 lines (Go, web), files per package for `api/internal/handlers` and `operator/internal/controller`, and record the SHA and numbers at the top of `research.md` *Done note: research.md "Re-measure"; raised OD-11.*
 
 ## Phase 2: Foundational (blocks every move PR)
 

@@ -1,6 +1,6 @@
 # Open Decisions: 028-split-big-packages
 
-All decisions for this spec are settled; none is open. A new question gets its own OD entry here and is not treated as decided until a maintainer rules on it.
+One decision is open (OD-11). A new question gets its own OD entry here and is not treated as decided until a maintainer rules on it.
 
 ## Settled elsewhere (binding, not reopened here)
 
@@ -19,4 +19,6 @@ All decisions for this spec are settled; none is open. A new question gets its o
 - **OD-9 (FR-005): relative CRD paths in a copied envtest setup.** Allowed: a copied `suite_envtest_test.go` may add exactly one `".."` per extra folder level to its CRD directory paths (today `operator/internal/controller/suite_envtest_test.go:45,48`, `api/internal/handlers/suite_envtest_test.go:55`); the test-edit check allows only that and the PR lists it. Chosen on a card (2026-10-21).
 - **OD-10 (constitution I): new e2e test.** None. Nothing user-facing changes; every move PR runs the full existing e2e suite with `ci: full-run` plus the test-name parity check. Recorded as a constitution I exemption for a behaviour-preserving refactor. Chosen on a card (2026-10-21).
 
-No open decisions remain.
+## Open
+
+- **OD-11 (FR-018, contracts/layout-check.md rule 1): dev scripts under `web/scripts/`.** `web/scripts/i18n-migrate.ts` (1,195 lines, spec 019 codemod run with `npm run i18n:migrate`) is a tracked `.ts` file over 500 lines that no FR names and no exemption covers. Options: (a) exempt `web/scripts/` from the ceiling as dev tooling that never ships (recommended: it is not dashboard code and splitting a single-run codemod buys nothing); (b) split it like any other file. Asked 2026-10-22.
