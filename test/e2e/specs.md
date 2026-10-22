@@ -31,7 +31,9 @@ audit evidence and an unchanged continuously running game Pod/container. The
 read-only original archive is never changed by invalidation. Actual fixture
 recovery-point age/RTO and acceptance evidence are uploaded as JSON, with no key,
 credential, cookie, share token or raw SQL rows. It does not stop the installed
-panel/operator or claim PostgreSQL PITR coverage. See `docs/panel-recovery.md`.
+panel/operator or claim PostgreSQL PITR coverage. Initial scoped grants wait for
+the asynchronous cluster registry to load the connection and permit dispatch.
+See `docs/panel-recovery.md`.
 
 ### Remote gateway parity acceptance
 

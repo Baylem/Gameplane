@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -134,11 +135,14 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	if userID == "" {
 		t.Fatal("created reader has no ID")
 	}
+	// Registration persists before the asynchronous registry watcher loads its
+	// client. Prove dispatch works before assigning a binding to that cluster.
+	gameName, gameUID := recoveryGame(t, suffix)
+	serversPath := "/servers?cluster=" + clusterID + "&namespace=gameplane-games"
+	f.waitServer(admin, serversPath, gameUID)
 	f.request(admin, http.MethodPost, "/users/"+userID+"/bindings", map[string]any{"roleName": roleName, "cluster": clusterID, "namespace": "gameplane-games"}, http.StatusCreated)
 	reader := f.login("initial", "reader", userPassword)
 	defer reader.Close()
-	gameName, gameUID := recoveryGame(t, suffix)
-	serversPath := "/servers?cluster=" + clusterID + "&namespace=gameplane-games"
 	f.waitServer(reader, serversPath, gameUID)
 	shareBody := f.request(admin, http.MethodPost, "/servers/"+gameName+":shares?cluster="+clusterID+"&namespace=gameplane-games", map[string]any{"canStart": false, "neverExpires": true}, http.StatusOK)
 	var share struct {
@@ -462,14 +466,11 @@ func recoveryGame(t *testing.T, suffix string) (string, string) {
 	t.Helper()
 	name := "recovery-game-" + suffix
 	applyBusyboxTemplate(t, name)
-	tmpl, err := envInstance.Dyn.Resource(gameTemplateGVR).Get(t.Context(), name, metav1.GetOptions{})
+	patch, err := json.Marshal(map[string]any{"spec": map[string]any{"command": []string{"sh", "-c", "echo retained > /data/recovery-marker; n=0; while true; do n=$((n+1)); echo $n > /data/recovery-counter.next; mv /data/recovery-counter.next /data/recovery-counter; sleep 1; done"}}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := unstructured.SetNestedStringSlice(tmpl.Object, []string{"sh", "-c", "echo retained > /data/recovery-marker; n=0; while true; do n=$((n+1)); echo $n > /data/recovery-counter.next; mv /data/recovery-counter.next /data/recovery-counter; sleep 1; done"}, "spec", "command"); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := envInstance.Dyn.Resource(gameTemplateGVR).Update(t.Context(), tmpl, metav1.UpdateOptions{}); err != nil {
+	if _, err := envInstance.Dyn.Resource(gameTemplateGVR).Patch(t.Context(), name, types.MergePatchType, patch, metav1.PatchOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	applyBusyboxGameServer(t, "gameplane-games", name, name)
