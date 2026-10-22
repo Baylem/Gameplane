@@ -239,6 +239,20 @@ which applies `deploy/kind/postgres.yaml` and installs the chart with
 login rate limiter. The frozen 001–012 upgrade path is covered separately by
 `TestPostgres_MigrateFromFrozenBaseline` in the `api (postgres)` job.
 
+## Where design docs go
+
+Two homes, nothing else:
+
+- **A change** (feature, fix, cleanup) is specced in `specs/NNN-<slug>/`
+  through speckit (spec, plan, tasks, `OPEN-DECISIONS.md`). Once every task
+  is done and merged, the folder is renamed `specs/done_NNN-<slug>/`.
+- **How a module works today** is described in its `<module>/specs.md`,
+  updated in the same PR as the behavior (constitution Principle IV,
+  checked by `make check-specs`).
+
+No other folder holds designs or plans. Older designs from before this rule
+are kept read-only in [`docs/archive/`](archive/README.md).
+
 ## AI-assisted development
 
 Much of this codebase is developed with AI coding assistants (Claude
