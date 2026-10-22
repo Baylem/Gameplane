@@ -58,7 +58,7 @@ website/             SUBMODULE GameplanePanel/website (Astro docs/marketing; has
 charts/gameplane/    Helm chart (crd-manifests/, hooks)
 deploy/kind/         local Kind scripts
 test/e2e/            Kind E2E suite (//go:build e2e)
-docs/                architecture, security, modules
+docs/                architecture, security, modules; layout.md (target folder shape per module); archive/ (read-only old designs)
 design.pen           canonical Pencil dashboard design
 signing/             cosign public keys, dated legacy key + cross-signature (image + module)
 go.work              links all 17 Go modules (incl. test/e2e)
