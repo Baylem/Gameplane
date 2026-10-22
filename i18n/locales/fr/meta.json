@@ -1,0 +1,12 @@
+{
+  "tag": "fr",
+  "nativeName": "Français",
+  "englishName": "French",
+  "direction": "ltr",
+  "credits": [
+    {
+      "name": "valgul",
+      "url": "https://github.com/ValgulNecron"
+    }
+  ]
+}

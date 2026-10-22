@@ -93,7 +93,7 @@ export function ModuleCard({
 
   const versionLabel = entry.installed
     ? `${intl.formatMessage({ id: "web.components.modules.module_card.installed_version", defaultMessage: "v{version} installed", description: "Module card: installed version text; {version} is the installed module version" }, { version: entry.installedVersion ?? "?" })}${
-        upgradeAvailable ? intl.formatMessage({ id: "web.components.modules.module_card.update_available_suffix", defaultMessage: " · v{version} available", description: "Module card: suffix naming the newer version that is available; {version} is that version" }, { version: entry.latestVersion }) : ""
+        upgradeAvailable ? " " + intl.formatMessage({ id: "web.components.modules.module_card.update_available_suffix", defaultMessage: "· v{version} available", description: "Module card: suffix naming the newer version that is available; {version} is that version" }, { version: entry.latestVersion }) : ""
       }`
     : entry.latestVersion
     ? intl.formatMessage({ id: "web.components.modules.module_card.latest_version", defaultMessage: "v{version}", description: "Module card: latest published version; {version} is the version number" }, { version: entry.latestVersion })
