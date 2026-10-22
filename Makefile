@@ -291,12 +291,24 @@ check-coverage-gaps: ## Validate spec 013's coverage gap record and prove the va
 	hack/check-coverage-gaps.sh
 	hack/check-coverage-gaps_test.sh
 
+.PHONY: devcontainers
+devcontainers: ## Regenerate the dev container profiles and submodule copies (spec 026)
+	python3 hack/gen-devcontainers.py --submodules
+
+.PHONY: check-devcontainers
+check-devcontainers: ## Verify generated dev container files match their inputs (spec 026)
+	python3 hack/gen-devcontainers.py --check
+
+.PHONY: test-gen-devcontainers
+test-gen-devcontainers: ## Run the fixture tests for the dev container generator (CI only, spec 026)
+	python3 hack/test-gen-devcontainers.py
+
 .PHONY: test-up-registry
 test-up-registry: ## Run the fixture tests for deploy/kind/up.sh's registry/context bootstrap
 	hack/test-up-registry.sh
 
 .PHONY: lint
-lint: check-doc-versions check-links check-features-sync check-specs check-telemetry-catalog check-i18n check-dev-load-images check-coverage-gaps test-up-registry lint-go lint-web ## Run all linters
+lint: check-doc-versions check-links check-features-sync check-specs check-telemetry-catalog check-i18n check-dev-load-images check-coverage-gaps check-devcontainers test-up-registry lint-go lint-web ## Run all linters
 
 .PHONY: lint-go
 lint-go: ## Run golangci-lint across all modules
