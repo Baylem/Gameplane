@@ -39,8 +39,9 @@ async function resetAccountLanguage(request: APIRequestContext): Promise<void> {
 // Français. The trigger is named "Language" in English and "Langue" in French.
 async function pickFrenchFromCompactPicker(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^(Langue|Language)$/ }).click();
-  // The menu is named in the page's current language, English on a first visit.
-  await page.getByRole("menu", { name: /^(Language options|Options de langue)$/ }).getByText("Français").click();
+  // React Aria labels the menu by its trigger (aria-labelledby wins over
+  // aria-label), so pick the item by its own name.
+  await page.getByRole("menuitem", { name: "Français" }).click();
 }
 
 // watchForEnglish records whether the English servers-page subtitle ever shows
