@@ -109,6 +109,12 @@ TestAPI_I18n_LanguagePref
 TestAPI_I18n_NotifyLanguage
 TestAPI_I18n_InstanceDefault
 TestE2E_ResticRepoReady
+TestCISelection_AgentOnlyChange
+TestCISelection_SentinelOnlyChange
+TestCISelection_ChartChangeRunsEverySuite
+TestCISelection_E2ETestFileSelectsItsTests
+TestCISelection_UnmappedPathRunsEverything
+TestCISelection_FullRunLabel
 EOF
 }
 

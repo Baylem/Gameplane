@@ -1,14 +1,18 @@
 """Behavioral coverage for CI module and image selection (run in CI)."""
 
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 from subprocess import CompletedProcess
 
-from ci_scope import (E2E_BUCKETS, FORCE_ALL_FILES, affected_modules, bot_matrix, changed_paths,
-                      full_scope_reason, image_inputs, main, publish_paths, select_images, summarize)
+from ci_scope import (E2E_BUCKETS, FORCE_ALL_FILES, ROOT, affected_modules, bot_matrix,
+                      bucket_lists, changed_paths, e2e_outputs, full_scope_reason, image_inputs,
+                      is_unmapped, load_suites, main, publish_paths, select_images, summarize,
+                      verify_suites,
+                      workspace_modules)
 
 
 class ScopeTests(unittest.TestCase):
@@ -393,6 +397,162 @@ class SelectionSummaryTests(unittest.TestCase):
                 self.assertTrue(row["reason"].startswith("full: "), row)
         skipped = {row["suite"] for row in rows if row["decision"] == "skip"}
         self.assertEqual(skipped, {"dependency review"})
+
+
+class E2ESelectionTests(unittest.TestCase):
+    """Spec 023 US1 acceptance scenarios 1-4 against this repository's suite map (T014)."""
+
+    def select(self, *paths):
+        """Return the e2e outputs for a partial-scope change to paths."""
+        return e2e_outputs(ROOT, list(paths), None)
+
+    def test_agent_only_change_selects_agent_tests_and_skips_auth_and_telemetry(self):
+        values = self.select("agent/internal/console/console.go")
+        self.assertEqual(values["reason"], "")
+        self.assertIn("TestAPI_ConsolePTYRoundTrip", values["e2e-run"]["api-agent"])
+        for bucket in ("api-auth", "ratelimit", "telemetry"):
+            self.assertNotIn(bucket, values["e2e-run"])
+
+    def test_sentinel_only_change_skips_api_suites_and_keeps_wake_tests(self):
+        values = self.select("sentinel/main.go")
+        for bucket in ("api-auth", "api-roles", "api-rbac", "api-agent", "telemetry"):
+            self.assertNotIn(bucket, values["e2e-run"])
+        self.assertIn("TestGameServer_WakeOnConnect_LoginWakes", values["bot-matrix"]["test"])
+        self.assertNotIn("TestGameServer_MinecraftJavaBot_Joined", values["bot-matrix"]["test"])
+
+    def test_chart_change_selects_every_suite(self):
+        values = self.select("charts/gameplane/values.yaml")
+        buckets = bucket_lists(ROOT)
+        for bucket in E2E_BUCKETS:
+            self.assertEqual(values["e2e-run"][bucket], "^(" + "|".join(buckets[bucket]) + ")$")
+        for key in ("e2e-multicluster", "e2e-upgrade", "e2e-capture-overhead", "e2e-web-live",
+                    "bots-any"):
+            self.assertTrue(values[key], key)
+
+    def test_changed_e2e_test_file_selects_its_own_tests(self):
+        values = self.select("test/e2e/telemetry_e2e_test.go")
+        self.assertEqual(values["e2e-run"].get("telemetry"), "^(TestTelemetryLifecycle)$")
+        self.assertNotIn("api-rbac", values["e2e-run"])
+
+    def test_unmapped_path_forces_full_scope(self):
+        values = self.select("tools/x.sh")
+        self.assertEqual(values["reason"], "unmapped path tools/x.sh")
+        self.assertEqual(values["unmapped"], ["tools/x.sh"])
+        self.assertTrue(values["all"])
+
+    def test_docs_only_change_selects_no_e2e_test(self):
+        values = self.select("docs/architecture.md", "specs/023-change-based-test-selection/plan.md")
+        self.assertEqual(values["e2e-run"], {})
+        self.assertFalse(values["bots-any"])
+
+    def test_universal_path_change_selects_every_suite_and_turns_on_the_gate(self):
+        values = self.select(".dockerignore")
+        buckets = bucket_lists(ROOT)
+        self.assertFalse(values["all"])
+        self.assertTrue(values["universal"])
+        for bucket in E2E_BUCKETS:
+            self.assertEqual(values["e2e-run"][bucket], "^(" + "|".join(buckets[bucket]) + ")$")
+
+    def test_component_change_leaves_the_universal_gate_off(self):
+        self.assertFalse(self.select("agent/internal/console/console.go")["universal"])
+        self.assertFalse(self.select("tools/x.sh")["universal"])
+
+
+class VerifySuitesTests(unittest.TestCase):
+    """verify-suites rules 1, 2 and 5 from contracts/suite-components.md (T015)."""
+
+    MODULES = {"api": "example.com/api", "agent": "example.com/agent"}
+
+    def suites(self, **overrides):
+        """Return a valid minimal suite map, with top-level keys replaced by overrides."""
+        value = {
+            "universal": ["charts/"],
+            "suites": [{"tests": "^TestAPI_", "components": ["api"]},
+                       {"tests": "^TestAgent_", "components": ["agent"]}],
+            "unexercised": [{"component": "web", "reason": "dashboard"}],
+        }
+        value.update(overrides)
+        return value
+
+    def test_valid_map_has_no_errors(self):
+        self.assertEqual(verify_suites(self.suites(), {"b": ["TestAPI_X", "TestAgent_Y"]},
+                                       self.MODULES), [])
+
+    def test_unmatched_test_is_reported(self):
+        errors = verify_suites(self.suites(), {"b": ["TestAPI_X", "TestOther"]}, self.MODULES)
+        self.assertTrue(any("TestOther" in error for error in errors), errors)
+
+    def test_unknown_component_is_reported(self):
+        suites = self.suites(suites=[{"tests": "^Test", "components": ["api", "agent", "nope"]}])
+        errors = verify_suites(suites, {"b": ["TestAPI_X"]}, self.MODULES)
+        self.assertTrue(any("unknown component nope" in error for error in errors), errors)
+
+    def test_unnamed_code_component_is_reported_unless_unexercised(self):
+        suites = self.suites(suites=[{"tests": "^Test", "components": ["api"]}])
+        errors = verify_suites(suites, {"b": ["TestAPI_X"]}, self.MODULES)
+        self.assertTrue(any("component agent" in error for error in errors), errors)
+        suites["unexercised"].append({"component": "agent", "reason": "no e2e image"})
+        self.assertEqual(verify_suites(suites, {"b": ["TestAPI_X"]}, self.MODULES), [])
+
+    def test_repository_suite_map_is_valid(self):
+        self.assertEqual(verify_suites(load_suites(ROOT), bucket_lists(ROOT),
+                                       workspace_modules(ROOT)), [])
+
+
+class E2ERunTests(unittest.TestCase):
+    """The e2e-run regexes that replace buckets.sh regex in the e2e jobs (T016)."""
+
+    def test_full_scope_regex_equals_buckets_sh_regex(self):
+        values = e2e_outputs(ROOT, None, "master push")
+        self.assertEqual(values["reason"], "master push")
+        for bucket in E2E_BUCKETS + ["ratelimit"]:
+            expected = subprocess.run(["bash", "test/e2e/buckets.sh", "regex", bucket], cwd=ROOT,
+                                      check=True, capture_output=True, text=True).stdout.strip()
+            self.assertEqual(values["e2e-run"][bucket], expected)
+
+    def test_partial_regex_lists_only_selected_tests_of_its_bucket(self):
+        values = e2e_outputs(ROOT, ["agent/internal/console/console.go"], None)
+        buckets = bucket_lists(ROOT)
+        for bucket, regex in values["e2e-run"].items():
+            self.assertTrue(regex.startswith("^(") and regex.endswith(")$"), regex)
+            self.assertLessEqual(set(regex[2:-2].split("|")), set(buckets[bucket]))
+        operator = values["e2e-run"]["operator"][2:-2].split("|")
+        self.assertLess(len(operator), len(buckets["operator"]))
+        self.assertNotIn("TestCRD_Validation_GameServerWithoutTemplate", operator)
+
+    def test_ratelimit_tail_runs_only_when_its_test_is_selected(self):
+        self.assertNotIn("ratelimit",
+                         e2e_outputs(ROOT, ["agent/internal/console/console.go"], None)["e2e-run"])
+        self.assertIn("ratelimit", e2e_outputs(ROOT, ["api/cmd/main.go"], None)["e2e-run"])
+
+
+class UnmappedPathTests(unittest.TestCase):
+    """An unmapped path widens mode modules to every module (spec 023 FR-002)."""
+
+    def setUp(self):
+        """Create the shared Go workspace fixture for each test."""
+        make_go_workspace(self)
+
+    def test_known_and_unknown_paths(self):
+        modules = ["lib", "api", "test/e2e", "other"]
+        for path in ("README.md", "api/x.go", "charts/gameplane/values.yaml", "docs/a.txt",
+                     "hack/ci_scope.py", ".dockerignore", "web/src/App.tsx", "modules"):
+            with self.subTest(path=path):
+                self.assertFalse(is_unmapped(path, modules))
+        self.assertTrue(is_unmapped("tools/x.sh", modules))
+
+    def test_modules_mode_selects_every_module_for_an_unmapped_path(self):
+        output = self.root / "output"
+        output.write_text("", encoding="utf-8")
+        with patch("ci_scope.ROOT", self.root), patch("sys.argv", ["ci_scope.py", "modules"]), \
+                patch.dict("os.environ", {"GITHUB_EVENT_NAME": "pull_request",
+                                          "GITHUB_REF": "refs/pull/7/merge", "CI_FULL_RUN": "false",
+                                          "GITHUB_OUTPUT": str(output)}), \
+                patch("ci_scope.changed_paths", return_value=["tools/x.sh"]):
+            main()
+        values = {key: json.loads(value) for key, value in
+                  (line.split("=", 1) for line in output.read_text(encoding="utf-8").splitlines())}
+        self.assertEqual(values, FULL_VALUES)
 
 
 if __name__ == "__main__":

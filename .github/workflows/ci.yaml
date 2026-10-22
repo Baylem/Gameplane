@@ -107,6 +107,14 @@ jobs:
       scope: ${{ steps.summary.outputs.scope }}
       scope-reason: ${{ steps.summary.outputs.reason }}
       selection: ${{ steps.summary.outputs.selection }}
+      e2e-run: ${{ steps.e2e.outputs.e2e-run }}
+      e2e-unmapped: ${{ steps.e2e.outputs.unmapped }}
+      e2e-multicluster: ${{ steps.e2e.outputs.e2e-multicluster }}
+      e2e-upgrade: ${{ steps.e2e.outputs.e2e-upgrade }}
+      e2e-web-live: ${{ steps.e2e.outputs.e2e-web-live }}
+      e2e-capture-overhead: ${{ steps.e2e.outputs.e2e-capture-overhead }}
+      e2e-bot-matrix: ${{ steps.e2e.outputs.bot-matrix }}
+      e2e-bots-any: ${{ steps.e2e.outputs.bots-any }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -122,6 +130,15 @@ jobs:
       - name: partition every bot-fast test onto its own runner
         id: bots
         run: python3 hack/ci_scope.py bots
+      - name: select the e2e tests the change affects
+        id: e2e
+        # Per-test e2e selection from test/e2e/suite-components.json (spec 023 US1).
+        # An unmapped path sets `all`, which `combine` folds into CI below.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
+        run: python3 hack/ci_scope.py e2e --base "$BASE_SHA" --head "$HEAD_SHA"
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -333,7 +350,8 @@ jobs:
           STANDALONE: ${{ steps.filter.outputs.standalone }}
           E2ETREE: ${{ steps.filter.outputs.e2etree }}
           GAMECOVERAGE: ${{ steps.filter.outputs.gamecoverage }}
-          CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' }}
+          UNIVERSAL: ${{ steps.e2e.outputs.universal }}
+          CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' || steps.e2e.outputs.all == 'true' }}
           CAPTURE: ${{ steps.filter.outputs.capture_overhead }}
           SUBMODULES: ${{ steps.filter.outputs.submodules }}
           CODEGEN: ${{ steps.filter.outputs.codegen }}
@@ -346,7 +364,7 @@ jobs:
           webv=false; { [ "$WEB" = true ]    || [ "$CI" = true ]; } && webv=true
           chv=false;  { [ "$CHARTS" = true ] || [ "$CI" = true ]; } && chv=true
           standalonev=false; { [ "$STANDALONE" = true ] || [ "$CI" = true ]; } && standalonev=true
-          e2ev=false; { [ "$GO" = true ] || [ "$CHARTS" = true ] || [ "$E2ETREE" = true ] || [ "$GAMECOVERAGE" = true ] || [ "$CI" = true ]; } && e2ev=true
+          e2ev=false; { [ "$GO" = true ] || [ "$CHARTS" = true ] || [ "$E2ETREE" = true ] || [ "$GAMECOVERAGE" = true ] || [ "$UNIVERSAL" = true ] || [ "$CI" = true ]; } && e2ev=true
           wlv=false;  { [ "$e2ev" = true ] || [ "$WEB" = true ] || [ "$CI" = true ]; } && wlv=true
           ghv=false;  { [ "$GITHUB" = true ] || [ "$CI" = true ]; } && ghv=true
           specsv=false; { [ "$SPECS" = true ] || [ "$CI" = true ]; } && specsv=true
@@ -387,6 +405,7 @@ jobs:
           FILTER_OUTPUTS: ${{ toJSON(steps.filter.outputs) }}
           GATE_OUTPUTS: ${{ toJSON(steps.combine.outputs) }}
           BOT_MATRIX: ${{ steps.bots.outputs.matrix }}
+          E2E_OUTPUTS: ${{ toJSON(steps.e2e.outputs) }}
         run: python3 hack/ci_scope.py summary --base "$BASE_SHA" --head "$HEAD_SHA"
 
   # Build the operator/api/agent (+ gameprobe) images ONCE and publish them as
@@ -1661,6 +1680,18 @@ jobs:
           submodules: true
       - name: verify buckets are disjoint + exhaustive
         run: ./test/e2e/buckets.sh verify
+      - name: verify every e2e test declares what it exercises
+        run: python3 hack/ci_scope.py verify-suites
+      - name: selection rules map every changed path
+        # An unmapped path already forced the full suite; this makes the gap visible
+        # so a rule gets added to hack/ci_scope.py (spec 023 quickstart scenario 12).
+        env:
+          UNMAPPED: ${{ needs.changes.outputs.e2e-unmapped }}
+        run: |
+          if [ -n "$UNMAPPED" ] && [ "$UNMAPPED" != "[]" ]; then
+            echo "::error::no selection rule maps these paths: $UNMAPPED"
+            exit 1
+          fi
       - name: verify game protocol coverage
         run: ./test/e2e/joincoverage.sh verify
       # The fixtures are what prove the gate above can actually fail. Without
@@ -1729,25 +1760,34 @@ jobs:
     env:
       CLUSTER: gameplane-e2e
       CTX: kind-gameplane-e2e
+      # Only this bucket's selected tests (spec 023 OD-6); empty skips the leg.
+      RUN_REGEX: ${{ fromJSON(needs.changes.outputs.e2e-run)[matrix.bucket] || '' }}
+      TAIL_REGEX: ${{ matrix.tail == 'ratelimit' && fromJSON(needs.changes.outputs.e2e-run).ratelimit || '' }}
     steps: &e2e-go-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
       - uses: ./.github/actions/go-cache
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
         with:
           key-suffix: e2e
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
       - name: install kind
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
         uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
         with:
           install_only: true
       - name: load images
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
         uses: ./.github/actions/e2e-images
         with:
           arch: ${{ matrix.arch }}
       - name: bring up cluster + helm install
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
         run: ./deploy/kind/e2e.sh up "$CLUSTER" e2e
       - name: run go e2e (${{ matrix.bucket }})
+        if: env.RUN_REGEX != ''
         run: |
-          RUN_REGEX="$(./test/e2e/buckets.sh regex '${{ matrix.bucket }}')"
           cd test/e2e && \
             GAMEPLANE_E2E_REUSE_CLUSTER=1 \
             GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
@@ -1757,13 +1797,12 @@ jobs:
         # LAST on purpose: this test deliberately drains the shared per-IP
         # and per-username login buckets; anything running after it queues
         # behind the refill.
-        if: matrix.tail == 'ratelimit'
+        if: env.TAIL_REGEX != ''
         run: |
-          RUN_REGEX="$(./test/e2e/buckets.sh regex ratelimit)"
           cd test/e2e && \
             GAMEPLANE_E2E_REUSE_CLUSTER=1 \
             GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
-            go test -tags=e2e -timeout 5m -v -run "$RUN_REGEX" ./...
+            go test -tags=e2e -timeout 5m -v -run "$TAIL_REGEX" ./...
       - name: dump cluster state on failure (e2e-go)
         if: failure()
         uses: ./.github/actions/dump-cluster-state
@@ -1828,6 +1867,9 @@ jobs:
     env:
       CLUSTER: gameplane-e2e
       CTX: kind-gameplane-e2e
+      # Same selection as e2e-go, so both arches always run the same tests (FR-010).
+      RUN_REGEX: ${{ fromJSON(needs.changes.outputs.e2e-run)[matrix.bucket] || '' }}
+      TAIL_REGEX: ${{ matrix.tail == 'ratelimit' && fromJSON(needs.changes.outputs.e2e-run).ratelimit || '' }}
     steps: *e2e-go-steps
 
   # Dual-cluster ?cluster= dispatch + scoped RBAC (test/e2e/multicluster_e2e_test.go).
@@ -1838,7 +1880,7 @@ jobs:
   e2e-multicluster:
     name: e2e multicluster / ${{ matrix.arch }} (kind x2)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true'
+    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-multicluster == 'true'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, across two clusters.
     permissions:
@@ -1903,7 +1945,7 @@ jobs:
   e2e-multicluster-arm64:
     name: e2e multicluster / ${{ matrix.arch }} (kind x2)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.e2e == 'true'
+    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-multicluster == 'true'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, across two clusters.
     permissions:
@@ -1930,7 +1972,7 @@ jobs:
   e2e-upgrade:
     name: e2e upgrade / ${{ matrix.arch }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true'
+    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-upgrade == 'true'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a chart upgrade across versions.
     permissions:
@@ -1980,7 +2022,7 @@ jobs:
   e2e-upgrade-arm64:
     name: e2e upgrade / ${{ matrix.arch }} (kind)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.e2e == 'true'
+    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-upgrade == 'true'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a chart upgrade across versions.
     permissions:
@@ -2000,7 +2042,7 @@ jobs:
   e2e-web-live:
     name: e2e web live / ${{ matrix.arch }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.weblive == 'true'
+    if: needs.changes.outputs.weblive == 'true' && needs.changes.outputs.e2e-web-live == 'true'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a live dashboard drive.
     permissions:
@@ -2086,7 +2128,7 @@ jobs:
   e2e-web-live-arm64:
     name: e2e web live / ${{ matrix.arch }} (kind)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.weblive == 'true'
+    if: needs.changes.outputs.weblive == 'true' && needs.changes.outputs.e2e-web-live == 'true'
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a live dashboard drive.
     permissions:
@@ -2103,7 +2145,7 @@ jobs:
   e2e-game-bot:
     name: e2e game bot / ${{ matrix.test }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true'
+    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-bots-any == 'true'
     # amd64 only: this boots the external itzg/minecraft-server (multi-arch) AND
     # passivelemon/terraria-docker, whose arm64 support is unverified upstream —
     # so an arm64 leg would fail on the Terraria pull. Add an arch axis here once
@@ -2116,7 +2158,7 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.changes.outputs.bot-matrix) }}
+      matrix: ${{ fromJSON(needs.changes.outputs.e2e-bot-matrix) }}
     env:
       BOT_TEST: ${{ matrix.test }}
       CLUSTER: gameplane-e2e
@@ -2170,7 +2212,7 @@ jobs:
     needs: [changes, build-images]
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.e2e == 'true') ||
-      (github.event_name == 'pull_request' && needs.changes.outputs.capture_overhead == 'true') ||
+      (github.event_name == 'pull_request' && needs.changes.outputs.capture_overhead == 'true' && needs.changes.outputs.e2e-capture-overhead == 'true') ||
       (github.event_name == 'workflow_dispatch' && needs.changes.outputs.e2e == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 45
