@@ -72,6 +72,45 @@ These jobs block merging. Each gate with a fixture has a `hack/*_test.sh` self-t
 - **`codegen drift`** runs `make generate manifests` and `make tidy`, then fails if `git diff` is not empty. Run the same commands locally and commit what they change (CLAUDE.md rule 7).
 - **`submodule freshness`** runs `hack/check-submodule-freshness.sh`. It fails when the `modules` or `website` pointer names a commit that is not on that repo's `main`, when a gitlink is missing, or when the script cannot fetch that repo's `main`. For a pointer that is not on `main`, merge the submodule PR first, then bump the pointer to the merged commit. Otherwise restore the gitlink, or fix the fetch error, and re-run.
 
+### How CI picks tests
+
+On a pull request, CI runs only the work your change can affect (spec 023). The
+`detect changes` job decides, and its job summary has a **Test selection** table that
+lists every suite as `run` or `skip`, with the changed files that chose it or the reason
+everything ran.
+
+What a partial run narrows:
+
+- **Go unit tests** run only the packages that own a changed file, plus every package
+  that imports them, across modules. A module's own `go.mod`, `go.sum` or
+  `.testcoverage.yml` reruns that whole module. The module coverage gate then becomes a
+  changed-lines gate: the lines you add must meet the module's own minimum
+  (`hack/check_changed_coverage.py`).
+- **Web unit tests** run `vitest related` on the changed `web/src` files, with the same
+  changed-lines gate at the Vitest `lines` threshold. Lint and build always run whole.
+  Shared inputs (`package.json`, the lockfile, the Vite/Vitest/TS/ESLint configs,
+  `src/test/**`, `i18n/locales/**`) run the full suite.
+- **Go e2e tests** run only the tests whose components changed, per
+  `test/e2e/suite-components.json`. Jobs with no selected test are skipped.
+- **`ci.yaml` edits** run only the jobs whose lines changed, plus the jobs they need.
+  `.golangci.yml` runs only the lint legs. Other workflow files run only `workflow lint`.
+
+Everything still runs on every push to `master`, and when a selection input changes
+(`hack/ci_scope.py`, `hack/check_changed_coverage.py`, their tests, `Makefile`,
+`go.work`, `go.work.sum`, `.github/actions/**`, `test/e2e/buckets.sh`,
+`test/e2e/suite-components.json`). It also runs everything for a `ci.yaml` edit outside
+any job or in `changes`/`report`, a path no rule maps, and any selection error.
+
+To force a full run on your PR, add the label `ci: full-run` (read on the next push), or
+start the `ci` workflow by hand on your branch (`workflow_dispatch`).
+
+When you add an e2e test or a component, keep `test/e2e/suite-components.json` in step:
+add the test name pattern under `suites` with the components and paths it exercises, or
+list the component under `unexercised` with a reason. The `e2e bucket coverage` job
+(`ci_scope.py verify-suites`) fails when a registered test matches no entry or a
+component is missing. The full rules are in
+`specs/023-change-based-test-selection/contracts/suite-components.md`.
+
 ## Testing
 
 Run the whole suite:

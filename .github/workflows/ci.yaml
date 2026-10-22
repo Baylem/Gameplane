@@ -117,6 +117,7 @@ jobs:
       e2e-bots-any: ${{ steps.e2e.outputs.bots-any }}
       go-packages: ${{ steps.units.outputs.go-packages }}
       web-tests: ${{ steps.units.outputs.web-tests }}
+      ci-jobs: ${{ steps.jobs.outputs.ci-jobs }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -150,6 +151,15 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
           CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
         run: python3 hack/ci_scope.py units --base "$BASE_SHA" --head "$HEAD_SHA"
+      - name: map edited ci.yaml lines to their jobs
+        id: jobs
+        # A ci.yaml edit runs only the jobs it sits in, plus the jobs they need;
+        # an edit outside any job or in changes/report sets `all` (spec 023 US3, OD-3).
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
+        run: python3 hack/ci_scope.py jobs --base "$BASE_SHA" --head "$HEAD_SHA"
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
@@ -254,7 +264,7 @@ jobs:
               - 'charts/gameplane/crd-manifests/**'
               - 'hack/check-codegen-drift_test.sh'
             ci:
-              - '.github/workflows/ci.yaml'
+              # ci.yaml and .golangci.yml map to their own jobs (step `jobs`, OD-3).
               - '.github/actions/**'
               - 'hack/ci_scope.py'
               - 'hack/test_ci_scope.py'
@@ -264,12 +274,7 @@ jobs:
               - 'go.work'
               - 'go.work.sum'
               - 'test/e2e/buckets.sh'
-              # golangci-lint walks up from `working-directory` to find this
-              # config, so every `lint (…)` leg picks up an edit here even
-              # though none of them declare it as an input. Force the lint
-              # job on so a config change is tested against real code
-              # instead of silently taking effect on the next unrelated PR.
-              - '.golangci.yml'
+              - 'test/e2e/suite-components.json'
             github:
               - '.github/workflows/**'
               - '.github/actions/**'
@@ -366,7 +371,7 @@ jobs:
           E2ETREE: ${{ steps.filter.outputs.e2etree }}
           GAMECOVERAGE: ${{ steps.filter.outputs.gamecoverage }}
           UNIVERSAL: ${{ steps.e2e.outputs.universal }}
-          CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' || steps.e2e.outputs.all == 'true' }}
+          CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' || steps.e2e.outputs.all == 'true' || steps.jobs.outputs.all == 'true' }}
           CAPTURE: ${{ steps.filter.outputs.capture_overhead }}
           SUBMODULES: ${{ steps.filter.outputs.submodules }}
           CODEGEN: ${{ steps.filter.outputs.codegen }}
@@ -422,6 +427,7 @@ jobs:
           BOT_MATRIX: ${{ steps.bots.outputs.matrix }}
           E2E_OUTPUTS: ${{ toJSON(steps.e2e.outputs) }}
           UNITS_OUTPUTS: ${{ toJSON(steps.units.outputs) }}
+          CI_JOBS: ${{ steps.jobs.outputs.ci-jobs }}
         run: python3 hack/ci_scope.py summary --base "$BASE_SHA" --head "$HEAD_SHA"
 
   # Build the operator/api/agent (+ gameprobe) images ONCE and publish them as
@@ -431,7 +437,7 @@ jobs:
   build-images:
     name: build e2e images
     needs: [changes]
-    if: needs.changes.outputs.images == 'true'
+    if: (needs.changes.outputs.images == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'build-images')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -445,7 +451,7 @@ jobs:
   build-images-arm64:
     name: build e2e images (arm64)
     needs: [changes]
-    if: needs.changes.outputs.images == 'true'
+    if: (needs.changes.outputs.images == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'build-images-arm64')
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     permissions:
@@ -487,7 +493,7 @@ jobs:
   capture-sidecar-setcap-proof:
     name: capture-sidecar CAP_NET_RAW survival
     needs: [changes]
-    if: needs.changes.outputs.go == 'true'
+    if: (needs.changes.outputs.go == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'capture-sidecar-setcap-proof')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -595,7 +601,7 @@ jobs:
   vuln-images:
     name: vuln (images)
     needs: [changes, build-images]
-    if: needs.changes.outputs.images == 'true'
+    if: (needs.changes.outputs.images == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'vuln-images')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -627,7 +633,7 @@ jobs:
   docs:
     name: docs and repository checks
     needs: [changes]
-    if: needs.changes.outputs.lint == 'true' || needs.changes.outputs.specs == 'true' || needs.changes.outputs.docs == 'true'
+    if: (needs.changes.outputs.lint == 'true' || needs.changes.outputs.specs == 'true' || needs.changes.outputs.docs == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'docs')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -665,7 +671,7 @@ jobs:
   codegen-drift:
     name: codegen drift
     needs: [changes]
-    if: needs.changes.outputs.codegen == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.codegen == 'true' || github.event_name == 'push') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'codegen-drift')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -691,7 +697,7 @@ jobs:
   submodule-freshness:
     name: submodule freshness
     needs: [changes]
-    if: needs.changes.outputs.submodules == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.submodules == 'true' || github.event_name == 'push') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'submodule-freshness')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -734,7 +740,7 @@ jobs:
   vuln-go:
     name: vuln (go)
     needs: [changes]
-    if: needs.changes.outputs.go == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.go == 'true' || github.event_name == 'push') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'vuln-go')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -754,7 +760,7 @@ jobs:
   lint:
     name: lint (${{ matrix.module }})
     needs: [changes]
-    if: needs.changes.outputs.lint == 'true'
+    if: (needs.changes.outputs.lint == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'lint')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -830,7 +836,7 @@ jobs:
   go:
     name: go (${{ matrix.module }} / ${{ matrix.arch }})
     needs: [changes]
-    if: needs.changes.outputs.go == 'true'
+    if: (needs.changes.outputs.go == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'go')
     # amd64 on the standard hosted runner; arm64 on the free public-repo
     # arm runner. Unit + envtest run on both arches every PR — this is where
     # real arch bugs (build tags, sqlite codepaths, struct alignment) surface.
@@ -974,7 +980,7 @@ jobs:
   web:
     name: web
     needs: [changes]
-    if: needs.changes.outputs.web == 'true'
+    if: (needs.changes.outputs.web == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'web')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1121,7 +1127,7 @@ jobs:
   web-e2e-mock:
     name: web e2e (mock)
     needs: [changes]
-    if: needs.changes.outputs.web == 'true'
+    if: (needs.changes.outputs.web == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'web-e2e-mock')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1154,7 +1160,7 @@ jobs:
   helm:
     name: helm lint
     needs: [changes]
-    if: needs.changes.outputs.charts == 'true'
+    if: (needs.changes.outputs.charts == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'helm')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1167,7 +1173,7 @@ jobs:
   standalone-compose:
     name: standalone Compose smoke
     needs: [changes]
-    if: needs.changes.outputs.standalone == 'true'
+    if: (needs.changes.outputs.standalone == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'standalone-compose')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1213,7 +1219,7 @@ jobs:
   chart-template:
     name: chart render
     needs: [changes]
-    if: needs.changes.outputs.charts == 'true'
+    if: (needs.changes.outputs.charts == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'chart-template')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1576,7 +1582,7 @@ jobs:
   workflow-lint:
     name: workflow lint
     needs: [changes]
-    if: needs.changes.outputs.github == 'true'
+    if: (needs.changes.outputs.github == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'workflow-lint')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1646,7 +1652,7 @@ jobs:
   go-e2e-unit:
     name: go (test/e2e)
     needs: [changes]
-    if: needs.changes.outputs.e2e-unit == 'true'
+    if: (needs.changes.outputs.e2e-unit == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'go-e2e-unit')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1675,7 +1681,7 @@ jobs:
   api-postgres:
     name: api (postgres)
     needs: [changes]
-    if: contains(fromJSON(needs.changes.outputs.modules), 'api')
+    if: (contains(fromJSON(needs.changes.outputs.modules), 'api')) || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'api-postgres')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1735,7 +1741,7 @@ jobs:
   e2e-buckets:
     name: e2e bucket coverage
     needs: [changes]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-buckets')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -1773,7 +1779,7 @@ jobs:
   e2e-go:
     name: e2e ${{ matrix.bucket }} / ${{ matrix.arch }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-go')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: ${{ matrix.job_timeout }}
     permissions:
@@ -1880,7 +1886,7 @@ jobs:
   e2e-go-arm64:
     name: e2e ${{ matrix.bucket }} / ${{ matrix.arch }} (kind)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-go-arm64')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: ${{ matrix.job_timeout }}
     permissions:
@@ -1946,7 +1952,7 @@ jobs:
   e2e-multicluster:
     name: e2e multicluster / ${{ matrix.arch }} (kind x2)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-multicluster == 'true'
+    if: (needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-multicluster == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-multicluster')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, across two clusters.
     permissions:
@@ -2011,7 +2017,7 @@ jobs:
   e2e-multicluster-arm64:
     name: e2e multicluster / ${{ matrix.arch }} (kind x2)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-multicluster == 'true'
+    if: (needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-multicluster == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-multicluster-arm64')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, across two clusters.
     permissions:
@@ -2038,7 +2044,7 @@ jobs:
   e2e-upgrade:
     name: e2e upgrade / ${{ matrix.arch }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-upgrade == 'true'
+    if: (needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-upgrade == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-upgrade')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a chart upgrade across versions.
     permissions:
@@ -2088,7 +2094,7 @@ jobs:
   e2e-upgrade-arm64:
     name: e2e upgrade / ${{ matrix.arch }} (kind)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-upgrade == 'true'
+    if: (needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-upgrade == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-upgrade-arm64')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a chart upgrade across versions.
     permissions:
@@ -2108,7 +2114,7 @@ jobs:
   e2e-web-live:
     name: e2e web live / ${{ matrix.arch }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.weblive == 'true' && needs.changes.outputs.e2e-web-live == 'true'
+    if: (needs.changes.outputs.weblive == 'true' && needs.changes.outputs.e2e-web-live == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-web-live')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a live dashboard drive.
     permissions:
@@ -2188,7 +2194,7 @@ jobs:
   e2e-web-live-arm64:
     name: e2e web live / ${{ matrix.arch }} (kind)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.weblive == 'true' && needs.changes.outputs.e2e-web-live == 'true'
+    if: (needs.changes.outputs.weblive == 'true' && needs.changes.outputs.e2e-web-live == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-web-live-arm64')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a live dashboard drive.
     permissions:
@@ -2205,7 +2211,7 @@ jobs:
   e2e-game-bot:
     name: e2e game bot / ${{ matrix.test }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-bots-any == 'true'
+    if: (needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-bots-any == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-game-bot')
     # amd64 only: this boots the external itzg/minecraft-server (multi-arch) AND
     # passivelemon/terraria-docker, whose arm64 support is unverified upstream —
     # so an arm64 leg would fail on the Terraria pull. Add an arch axis here once
@@ -2273,7 +2279,8 @@ jobs:
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.e2e == 'true') ||
       (github.event_name == 'pull_request' && needs.changes.outputs.capture_overhead == 'true' && needs.changes.outputs.e2e-capture-overhead == 'true') ||
-      (github.event_name == 'workflow_dispatch' && needs.changes.outputs.e2e == 'true')
+      (github.event_name == 'workflow_dispatch' && needs.changes.outputs.e2e == 'true') ||
+      contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-capture-overhead')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     continue-on-error: true
@@ -2334,7 +2341,7 @@ jobs:
   e2e-postgres:
     name: e2e postgres / amd64 (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-postgres')
     runs-on: ubuntu-latest
     timeout-minutes: 75 # Boots a kind cluster with PostgreSQL, installs the chart, runs three buckets.
     permissions:
@@ -2419,7 +2426,7 @@ jobs:
   e2e-kind-ingress-smoke:
     name: ingress-nginx smoke (kind)
     needs: [changes]
-    if: needs.changes.outputs.kindsmoke == 'true'
+    if: (needs.changes.outputs.kindsmoke == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-kind-ingress-smoke')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

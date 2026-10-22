@@ -141,14 +141,14 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 
 ### Tests for User Story 3
 
-- [ ] T042 [P] [US3] Add `hack/test_ci_scope.py` cases: comment-only `ci.yaml` change selects only `workflow-lint`; a step change inside job `web` selects `web` and `workflow-lint`; a change in `on:`, `env:`, `concurrency:`, `permissions:`, or inside the `changes` or `report` job forces full scope with reason `selection-rule change`; `.golangci.yml` selects only `lint` legs; `hack/ci_scope.py`, `Makefile`, `go.work`, `go.work.sum`, `.github/actions/**` still force full scope
+- [X] T042 [P] [US3] Add `hack/test_ci_scope.py` cases: comment-only `ci.yaml` change selects only `workflow-lint`; a step change inside job `web` selects `web` and `workflow-lint`; a change in `on:`, `env:`, `concurrency:`, `permissions:`, or inside the `changes` or `report` job forces full scope with reason `selection-rule change`; `.golangci.yml` selects only `lint` legs; `hack/ci_scope.py`, `Makefile`, `go.work`, `go.work.sum`, `.github/actions/**` still force full scope
 
 ### Implementation for User Story 3
 
-- [ ] T043 [US3] In `hack/ci_scope.py`, add the `ci.yaml` line mapper from research R8 (job blocks by two-space keys under `jobs:`, blank/comment lines ignored) using `git diff -U0` line numbers, and emit `ci-jobs`
-- [ ] T044 [US3] In `hack/ci_scope.py`, narrow the shared-file list per OD-3: remove `.github/` and `.golangci.yml` from the force-all set, map them per research R8, keep `hack/ci_scope*`, `hack/check_changed_coverage.py`, `Makefile`, `go.work*`, `.github/actions/**`, `test/e2e/buckets.sh`, `test/e2e/suite-components.json` as force-all
-- [ ] T045 [US3] In `.github/workflows/ci.yaml`, OR each job's existing gate with `contains(fromJSON(needs.changes.outputs.ci-jobs), '<job-id>')`, keeping `workflow-lint` selected for any `.github/` change
-- [ ] T046 [US3] Compile checks only; open PR 4 with labels `type: ci`, `area: shared`
+- [X] T043 [US3] In `hack/ci_scope.py`, add the `ci.yaml` line mapper from research R8 (job blocks by two-space keys under `jobs:`, blank/comment lines ignored) using `git diff -U0` line numbers, and emit `ci-jobs`
+- [X] T044 [US3] In `hack/ci_scope.py`, narrow the shared-file list per OD-3: remove `.github/` and `.golangci.yml` from the force-all set, map them per research R8, keep `hack/ci_scope*`, `hack/check_changed_coverage.py`, `Makefile`, `go.work*`, `.github/actions/**`, `test/e2e/buckets.sh`, `test/e2e/suite-components.json` as force-all
+- [X] T045 [US3] In `.github/workflows/ci.yaml`, OR each job's existing gate with `contains(fromJSON(needs.changes.outputs.ci-jobs), '<job-id>')`, keeping `workflow-lint` selected for any `.github/` change
+- [X] T046 [US3] Compile checks only; open PR 4 with labels `type: ci`, `area: shared`
 - [ ] T047 [US3] Run quickstart scenarios 9–11 as draft PRs on PR 4's branch, record runner-minutes for scenario 9 (SC-003) in `validation.md`, close them and delete their branches
 
 **Checkpoint**: all four stories work independently.
@@ -157,9 +157,9 @@ Repository root of `GameplanePanel/Gameplane`. Main files: `hack/ci_scope.py`, `
 
 ## Phase 7: Polish & Docs — PR 5
 
-- [ ] T048 [P] Add a "How CI picks tests" section to `docs/contributing.md`: what a partial run skips, the `ci: full-run` label and manual run, how to add a `suite-components.json` entry, where to read the run summary
-- [ ] T049 [P] Add the new selection files to the task map in `docs/agent-architecture.md`
-- [ ] T050 Compile and link checks only; open PR 5 with labels `type: docs`, `area: shared`
+- [X] T048 [P] Add a "How CI picks tests" section to `docs/contributing.md`: what a partial run skips, the `ci: full-run` label and manual run, how to add a `suite-components.json` entry, where to read the run summary
+- [X] T049 [P] Add the new selection files to the task map in `docs/agent-architecture.md`
+- [X] T050 Compile and link checks only; open PR 5 with labels `type: docs`, `area: shared`
 - [ ] T051 After the first `master` push following PR 5's merge, confirm every job ran (FR-006, SC-006) and record it in `validation.md`
 - [ ] T052 After 30 merged PRs, measure median runner-minutes against the 30 before PR 2 via the Actions API and record SC-002 in `validation.md`; for 60 days review each red `master` run for a selection miss (SC-004)
 
