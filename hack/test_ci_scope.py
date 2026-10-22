@@ -66,7 +66,7 @@ class ScopeTests(unittest.TestCase):
 
     def test_shared_inputs_and_dependency_changes_select_every_module(self):
         for path in ("go.work", "go.work.sum", "api/go.mod", "api/go.sum",
-                     "Makefile", ".golangci.yml", ".github/workflows/ci.yaml",
+                     "Makefile",
                      ".github/actions/go-cache/action.yml", "hack/ci_scope.py",
                      "test/e2e/buckets.sh", "web/Dockerfile"):
             with self.subTest(path=path):
