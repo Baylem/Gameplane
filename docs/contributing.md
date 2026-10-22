@@ -1,5 +1,49 @@
 # Contributing
 
+This guide covers the dev loop, house rules, CI and the review process. New here?
+Start with [Your first PR](#your-first-pr): it tells you which folder owns your
+change, the one compile check to run, and how long CI takes.
+
+## Your first PR
+
+1. Fork the repo and create one branch for the change.
+2. Find the owning folder for your change in the table below. For where new
+   code goes inside a module, see [`docs/layout.md`](layout.md).
+3. Run the local check for that row only. Do not run test or lint suites
+   locally (`make test`, `make lint`, `go test`, `npm test`); CI runs them.
+4. Commit with `git commit -s` and a conventional prefix (`feat:`, `fix:`,
+   `docs:`, `chore:`, …).
+5. Open the PR and check that it has one `type:` label and one `area:` label
+   (see [Submitting a change](#submitting-a-change)).
+6. Wait for CI (times below) and fix what it reports.
+
+| Change | Owning folder | Local check | CI wall clock (2026-10-20) |
+| --- | --- | --- | --- |
+| Docs only | `docs/`, `README.md`, any `*.md` | none | 1.8 min (run 2507) |
+| Spec only | `specs/NNN-<slug>/` | none | 5.3 min (run 2525) |
+| Web only | `web/` | `cd web && npx tsc --noEmit` | 18.3 min (run 2524) |
+| One small Go service | `<module>/` (e.g. `sentinel/`, `tunnel/`) | `go build ./...` in that module | same as any Go change: 29–75 min, median 37.5 min |
+| Operator / CRD | `operator/` (types in `operator/api/v1alpha1/`) | `make generate && make manifests`, then `go build ./...` in `operator/` | same as any Go change |
+| API route | `api/` (handlers in `api/internal/handlers/`) | `go build ./...` in `api/` | same as any Go change |
+| Game module | `modules/<game>/`: PR in `GameplanePanel/module`, then a pointer bump here | `make module-validate MODULE=<game>` | measured in that repo; the bump PR here runs the docs gates |
+| Website | `website/`: PR in `GameplanePanel/website`, then a pointer bump here | `npm run build` in `website/` | measured in that repo; the bump PR here runs the docs gates |
+
+Times are GitHub Actions wall clock for one PR run, measured 2026-10-20: runs
+2507, 2525 and 2524, and 11 Go PR runs for the median. Change-based test
+selection (`specs/023-change-based-test-selection/`) shortens Go runs as it
+lands, so treat these as upper bounds.
+
+Gates a first PR trips on:
+
+- Unsigned commits: every commit needs `git commit -s`.
+- Missing labels: one `type:` and one `area:` label on every PR.
+- Local test or lint runs: only compile checks locally; CI is the verifier.
+- UI without design: dashboard changes start in `design.pen` (Pencil), see
+  [Design first for UI changes](#design-first-for-ui-changes). Never hand-edit
+  `.pen` files.
+- Submodule work in the wrong repo: `modules/` and `website/` changes go to
+  their own repos first, then a pointer bump PR here.
+
 ## Dev loop
 
 ```sh

@@ -300,8 +300,10 @@ bundle format and how to author additional modules.
 ## Contributing
 
 Design changes go through `design.pen` (Pencil) before any UI code is
-written. See [`docs/contributing.md`](docs/contributing.md) for the
-full guide: code style, test tiers, and the PR process.
+written. New contributors start with
+[Your first PR](docs/contributing.md#your-first-pr) (owning folder, local
+check and CI time per change type); [`docs/contributing.md`](docs/contributing.md)
+has the full guide: code style, test tiers, and the PR process.
 
 Translations are welcome. Translate in the browser on
 [Hosted Weblate](https://hosted.weblate.org/engage/gameplane/), or see
