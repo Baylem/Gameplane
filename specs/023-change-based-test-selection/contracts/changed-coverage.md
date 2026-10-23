@@ -29,6 +29,10 @@ python3 hack/check_changed_coverage.py --base <sha> --head <sha> \
    the check passes and says so.
 4. Exit 1 when the share is below the threshold, listing each uncovered `file:line`.
 5. Prints a one-line result to `$GITHUB_STEP_SUMMARY`.
+6. A profile block marks every line from its start to its end line; a line counts as
+   covered when any block over it ran. Istanbul statements are read the same way.
+7. Web: when `vitest related` writes no `coverage-final.json`, the job falls back to the
+   full `npm run test:cover` run instead of calling this script.
 
 ## Not changed
 

@@ -1,7 +1,9 @@
+> **Historical, superseded.** This July 2026 document is kept for reference only. The work it describes has shipped and the code may differ from it. Current behavior is described in `sentinel/specs.md`. See [docs/archive](../../README.md).
+
 # Wake-on-connect for idle auto-sleep
 
 **Date:** 2026-07-24  
-**Status:** approved, not yet implemented
+**Status:** shipped; historical (see the banner above)
 
 ## Problem
 

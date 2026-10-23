@@ -226,10 +226,10 @@ When the pod receives SIGTERM (e.g., during cluster shutdown or pod deletion):
 ## Dependencies
 
 **Internal:** None  
-**External:** `tailscale.com/tsnet` v1.102.5 and Go stdlib. The playit status patch uses plain `net/http` against the API server without adding client-go.
-**Go version:** 1.26.10+ (or 1.27.3+ on the 1.27 line; both include the October 2026 crypto/x509 security fix)
+**External:** `tailscale.com/tsnet` v1.104.2 and Go stdlib. The playit status patch uses plain `net/http` against the API server without adding client-go.
+**Go version:** 1.27.3+ (the minimum required by Tailscale v1.104.2)
 
-The maintainer explicitly approved ending the stdlib-only policy for tsnet in #722. Version 1.102.5 supports Go 1.26 and the required TCP/UDP APIs. CI resolves the latest Go 1.26 patch; tunnel image builders use Go 1.27.3. Track future tsnet/security updates through go.mod/go.sum. frpc and playitd remain external binaries.
+The maintainer explicitly approved ending the stdlib-only policy for tsnet in #722. Version 1.104.2 preserves the upstream Tailscale security update while retaining the embedded TCP/UDP forwarding implementation. CI resolves the latest Go 1.27 patch; the workspace and tunnel module require at least Go 1.27.3, and tunnel image builders use Go 1.27.3. Track future tsnet/security updates through go.mod/go.sum. frpc and playitd remain external binaries.
 
 ## Security Considerations
 

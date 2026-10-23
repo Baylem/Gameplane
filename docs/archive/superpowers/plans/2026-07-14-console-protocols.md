@@ -1,3 +1,5 @@
+> **Historical, superseded.** This July 2026 document is kept for reference only. The work it describes has shipped and the code may differ from it. Current behavior is described in `operator/specs.md` and `agent/specs.md`. See [docs/archive](../../README.md).
+
 # Console Protocols Implementation Plan (Phase 2)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
@@ -10,7 +12,7 @@
 
 ## Global Constraints
 
-- **Phase 2 of** `docs/superpowers/specs/2026-07-14-console-protocols-categories-actions-design.md`. Read §1 first, including the 2026-07-14 correction about Satisfactory's `RunCommand`.
+- **Phase 2 of** `docs/archive/superpowers/specs/2026-07-14-console-protocols-categories-actions-design.md`. Read §1 first, including the 2026-07-14 correction about Satisfactory's `RunCommand`.
 - **Do NOT run tests or linters locally** (CLAUDE.md rule 8). CI is the source of truth. Compile checks ARE allowed and required.
 - **`go vet ./...` SKIPS files behind build tags.** After touching operator test files you MUST also run `cd operator && go vet -tags=envtest ./...`. A bad import in an `*_envtest_test.go` passes the plain check and reddens CI — this has already happened once on this feature.
 - **Sign commits**: `git -c commit.gpgsign=false commit -s -m "..."` (the `-c` MUST precede the subcommand).
