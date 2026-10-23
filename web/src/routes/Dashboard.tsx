@@ -395,7 +395,7 @@ function NodeRow({ node }: { node: ClusterNode }) {
     cpuKnown && node.cpu?.capacity ? intl.formatMessage({ id: "web.routes.dashboard.node_cpu", defaultMessage: "cpu {percent}%", description: "Dashboard: CPU usage on a node row; {percent} is the rounded percentage" }, { percent: Math.round(cpuPct) }) : null,
   ]
     .filter(Boolean)
-    .join(intl.formatMessage({ id: "web.routes.dashboard.meta_separator", defaultMessage: " · ", description: "Separator between items on one line of metadata" }));
+    .join(" " + intl.formatMessage({ id: "web.routes.dashboard.meta_separator", defaultMessage: "·", description: "Separator between items on one line of metadata" }) + " ");
   return (
     <div className="flex min-w-0 items-center gap-2 text-xs">
       <span className={cn("h-2 w-2 shrink-0 rounded-full", ready ? "bg-success" : "bg-danger")} />
