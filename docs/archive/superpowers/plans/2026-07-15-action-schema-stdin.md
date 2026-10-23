@@ -1,3 +1,5 @@
+> **Historical, superseded.** This July 2026 document is kept for reference only. The work it describes has shipped and the code may differ from it. Current behavior is described in `operator/specs.md` and `agent/specs.md`. See [docs/archive](../../README.md).
+
 # Action Schema & Stdin Transport Implementation Plan (Phase 3)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`).
@@ -10,7 +12,7 @@
 
 ## Global Constraints
 
-- **Phase 3 of** `docs/superpowers/specs/2026-07-14-console-protocols-categories-actions-design.md`. Read §3 first.
+- **Phase 3 of** `docs/archive/superpowers/specs/2026-07-14-console-protocols-categories-actions-design.md`. Read §3 first.
 - **Do NOT run tests/linters locally** (CLAUDE.md rule 8); CI is the source of truth. Compile checks (`go build`, `go vet`, `tsc --noEmit`) are allowed and required.
 - **`go vet ./...` SKIPS build-tagged files.** After operator test edits run `cd operator && go vet -tags=envtest ./...` too.
 - **After CRD type edits: `make generate && make manifests`**, commit the regenerated `zz_generated.deepcopy.go`, `operator/config/crd/*.yaml`, `operator/config/rbac/*.yaml`, `charts/gameplane/crds/*.yaml` in the SAME commit (rule 7).
