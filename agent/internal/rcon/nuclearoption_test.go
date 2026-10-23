@@ -1303,8 +1303,8 @@ func runPipeFrameCases(t *testing.T, tests []pipeFrameCase) {
 					return
 				}
 				if len(tt.frame) == 0 {
-					// Exec sets its response deadline after sending the request.
-					// Closing first can fail SetDeadline instead of the status read.
+					// Wait until the deadline is installed before closing so the
+					// intended error comes from the status read, not SetDeadline.
 					select {
 					case <-deadlineSet:
 					case <-t.Context().Done():
