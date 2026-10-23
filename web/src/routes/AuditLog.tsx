@@ -142,7 +142,7 @@ export function AuditLogPage() {
           variant="primary"
         />
 
-        <div className="ml-auto text-xs text-muted">{intl.formatMessage({ id: "web.routes.audit_log.length_of_length2_loaded", defaultMessage: "{length} of {length2} loaded", description: "Audit log: sentence with length, length2 in div" }, { length: filtered.length, length2: all.length })}{query.hasNextPage && intl.formatMessage({ id: "web.routes.audit_log.more_available", defaultMessage: " · more available", description: "Audit log: suffix after the loaded count when older events can still be loaded" })}
+        <div className="ml-auto text-xs text-muted">{intl.formatMessage({ id: "web.routes.audit_log.length_of_length2_loaded", defaultMessage: "{length} of {length2} loaded", description: "Audit log: sentence with length, length2 in div" }, { length: filtered.length, length2: all.length })}{query.hasNextPage && <> {intl.formatMessage({ id: "web.routes.audit_log.more_available", defaultMessage: "· more available", description: "Audit log: suffix after the loaded count when older events can still be loaded" })}</>}
         </div>
       </div>
 
