@@ -183,7 +183,7 @@ export function ConfigFieldInput({
         {label}
         {field.required && (
           <span aria-hidden="true" className="text-danger">
-            {intl.formatMessage({ id: "web.common.required_marker", defaultMessage: " *", description: "Asterisk shown after the label of a required field" })}
+            <> {intl.formatMessage({ id: "web.common.required_marker", defaultMessage: "*", description: "Asterisk shown after the label of a required field" })}</>
           </span>
         )}
       </label>
