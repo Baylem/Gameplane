@@ -37,6 +37,9 @@ The locally bootstrapped administrator receives an explicit fixture-cluster/game
 grant and logs in again after that change invalidates its session. Both administrator
 and reader cookies are accepted before backup and rejected through `/users/me` after
 offline recovery; remote server UID and share checks retain their scoped authorization.
+The Kubernetes-created game initially has no panel owner: the drill requires share
+creation to fail for the scoped administrator until the authorized transfer endpoint
+assigns that administrator ownership, then creates the share used for recovery checks.
 See `docs/panel-recovery.md`.
 
 ### Remote gateway parity acceptance

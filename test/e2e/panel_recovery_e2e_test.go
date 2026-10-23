@@ -122,8 +122,9 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	bootstrapAdmin := f.login("initial", "admin", password)
 	defer bootstrapAdmin.Close()
 	adminID := extractUserID(string(f.request(bootstrapAdmin, http.MethodGet, "/users/me", nil, http.StatusOK)))
-	if adminID == "" {
-		t.Fatal("bootstrap admin has no ID")
+	adminUserID, err := strconv.ParseInt(adminID, 10, 64)
+	if err != nil || adminUserID <= 0 {
+		t.Fatal("bootstrap admin has no valid ID")
 	}
 
 	// Register the existing kind cluster using stored, encrypted credentials.
@@ -160,7 +161,14 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	reader := f.login("initial", "reader", userPassword)
 	defer reader.Close()
 	f.waitServer(reader, serversPath, gameUID)
-	shareBody := f.request(admin, http.MethodPost, "/servers/"+gameName+":shares?cluster="+clusterID+"&namespace=gameplane-games", map[string]any{"canStart": false, "neverExpires": true}, http.StatusOK)
+	sharePath := "/servers/" + gameName + ":shares?cluster=" + clusterID + "&namespace=gameplane-games"
+	shareRequest := map[string]any{"canStart": false, "neverExpires": true}
+	// The game was created directly in Kubernetes, without a panel owner.
+	// Shares remain owner-only even for scoped administrators. Claim this
+	// fixture through the authorized transfer endpoint before minting a share.
+	f.request(admin, http.MethodPost, sharePath, shareRequest, http.StatusForbidden)
+	f.request(admin, http.MethodPost, "/servers/"+gameName+":transfer?cluster="+clusterID+"&namespace=gameplane-games", map[string]any{"userId": adminUserID}, http.StatusNoContent)
+	shareBody := f.request(admin, http.MethodPost, sharePath, shareRequest, http.StatusOK)
 	var share struct {
 		Token string `json:"token"`
 	}
