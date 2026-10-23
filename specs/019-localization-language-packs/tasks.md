@@ -87,9 +87,9 @@ description: "Task list for 019 App Localization & Community Language Packs"
 
 ### Tests for User Story 1
 
-- [ ] T035 [P] [US1] Go API E2E `test/e2e/i18n_language_pref_e2e_test.go`: `PUT /api/v1/users/me/language` `fr` → `GET /users/me/preferences` returns `language: "fr"`; `null` clears; unknown tag → 400 with `server.i18n.unknown_language` problem body; register in `test/e2e/buckets.sh` (bucket `api-auth`, respect its login budget)
+- [X] T035 [P] [US1] Go API E2E `test/e2e/i18n_language_pref_e2e_test.go`: `PUT /api/v1/users/me/language` `fr` → `GET /users/me/preferences` returns `language: "fr"`; `null` clears; unknown tag → 400 with `server.i18n.unknown_language` problem body; register in `test/e2e/buckets.sh` (bucket `operator` for the login budget; see the comment above `bucket_multicluster`)
 - [X] T036 [P] [US1] Go API E2E `test/e2e/i18n_auth_locale_e2e_test.go`: unauthenticated `GET /auth/locale` returns exactly `{"defaultLanguage": …}` and no other keys (rule 3); register in `test/e2e/buckets.sh`
-- [ ] T037 [P] [US1] Playwright `web/e2e/specs/live/i18n.spec.ts`: switch to French in personal settings with create-server dialog open and a typed name (kept, no reload, `<html lang="fr">`), reload and second browser context keep French with no English flash, login and share pages offer a picker remembered per browser, 0%-fixture language shows English everywhere (SC-008)
+- [X] T037 [P] [US1] Playwright `web/e2e/specs/live/i18n.spec.ts`: switch to French in personal settings with create-server dialog open and a typed name (kept, no reload, `<html lang="fr">`), reload and second browser context keep French with no English flash, login and share pages offer a picker remembered per browser, 0%-fixture language shows English everywhere (SC-008) — same-tab switch per valgul (2026-10-20); kept input covered by I18nProvider.test.tsx; fixture via VITE_I18N_FIXTURES=1 in the live job
 
 ### Implementation for User Story 1
 
@@ -159,7 +159,7 @@ description: "Task list for 019 App Localization & Community Language Packs"
 ### Tests for User Story 5
 
 - [X] T061 [P] [US5] Go API E2E `test/e2e/i18n_problem_json_e2e_test.go`: forbidden-namespace and validation errors return byte-identical text/plain bodies without the Accept header and problem bodies with `detail`, `messageId`, `args` with it; failed login returns only `server.auth.invalid_credentials` for both unknown user and wrong password (FR-030); register in `test/e2e/buckets.sh`
-- [ ] T062 [P] [US5] Go API E2E `test/e2e/i18n_notify_language_e2e_test.go`: webhook sink with `language: "fr"` and one without; test send to both via `POST /api/v1/admin/notifications/sinks/{name}/test`; first payload has `language: "fr"` and French `title`/`text`, second uses instance default; all pre-existing payload fields unchanged; register in `test/e2e/buckets.sh`
+- [X] T062 [P] [US5] Go API E2E `test/e2e/i18n_notify_language_e2e_test.go`: webhook sink with `language: "fr"` and one without; test send to both via `POST /api/v1/admin/notifications/sinks/{name}/test`; first payload has `language: "fr"` and French `title`/`text`, second uses instance default; all pre-existing payload fields unchanged; register in `test/e2e/buckets.sh`
 - [X] T063 [P] [US5] envtest `operator/internal/controller/gameserver_envtest_test.go` additions: `status.conditionArgs` set with the condition and cleared when the reason no longer has args (done in the new file `gameserver_condition_args_envtest_test.go`, next to the condition-args code)
 
 ### Implementation for User Story 5
@@ -226,7 +226,7 @@ description: "Task list for 019 App Localization & Community Language Packs"
 
 **Independent Test**: quickstart.md scenario 4.
 
-- [ ] T092 [P] [US7] Go API E2E `test/e2e/i18n_instance_default_e2e_test.go`: `PUT /api/v1/admin/config/i18n` `{defaultLanguage:"fr"}` → `GET /auth/locale` returns `fr`; unlisted tag → 400 `server.i18n.unlisted_language`; non-admin → 403; register in `test/e2e/buckets.sh`
+- [X] T092 [P] [US7] Go API E2E `test/e2e/i18n_instance_default_e2e_test.go`: `PUT /api/v1/admin/config/i18n` `{defaultLanguage:"fr"}` → `GET /auth/locale` returns `fr`; unlisted tag → 400 `server.i18n.unlisted_language`; non-admin → 403; register in `test/e2e/buckets.sh`
 - [X] T093 [US7] Add config section `i18n` with `validateI18n` (listed languages only) to the validators map in `api/internal/handlers/config.go`; register `server.i18n.unlisted_language`; tests `config_validators_test.go`
 - [X] T094 [US7] DESIGN (local machine, Pencil MCP): add a Default language field to admin settings in `design.pen`; export touched nodes to `assets/design-export/`. *Done note (redrawn 2026-10-15): on `WZdnw` the General card and a new Language card sit in a Panel Column; the Language card has the Default language select and its own Save changes button, because the value is saved to the separate config section `i18n`.*
 - [X] T095 [US7] Implement the Default language field in `web/src/routes/AdminSettings.tsx` per T094; tests `AdminSettings_sections.test.tsx` *Done note: Language card under General, saved to config section `i18n`; save errors go through `errorTextIntl`, so a 400 `server.i18n.unlisted_language` shows the catalog text.*
@@ -237,9 +237,9 @@ description: "Task list for 019 App Localization & Community Language Packs"
 
 **Purpose**: French at 100% and the pseudo-language pass. Depends on US4, US5, US6 English references being complete.
 
-- [ ] T096 Create `i18n/locales/fr/meta.json` (`fr`, `Français`, `French`, `ltr`, credits)
-- [ ] T097 Translate `i18n/locales/fr/app.json` to 100% (web, server, condition, notify, audit); drafts may be machine-assisted but every entry is approved by a native French reviewer on Weblate or in PR review; `i18n-check` shows fr 100% and listed
-- [ ] T098 [module repo] Translate `modules/minecraft-java/locales/fr.json`, `modules/terraria/locales/fr.json`, `modules/valheim/locales/fr.json` to 100%; module-repo PR; root pointer bump after merge
+- [X] T096 Create `i18n/locales/fr/meta.json` (`fr`, `Français`, `French`, `ltr`, credits)
+- [X] T097 Translate `i18n/locales/fr/app.json` to 100% (web, server, condition, notify, audit); drafts may be machine-assisted but every entry is approved by a native French reviewer on Weblate or in PR review; `i18n-check` shows fr 100% and listed — reviewed and approved by valgul in PR 745 review (2026-10-20)
+- [X] T098 [module repo] Translate `modules/minecraft-java/locales/fr.json`, `modules/terraria/locales/fr.json`, `modules/valheim/locales/fr.json` to 100%; module-repo PR; root pointer bump after merge
 - [X] T099 Implement pseudo-language `en-XA` generation (accented, ~40% longer, bracketed) behind `VITE_I18N_PSEUDO=1` in the `web/vite.config.ts` build step; never present in release `languages.json` (FR-038)
 - [X] T100 Add an `en-XA` project to `web/playwright.config.ts` running the screenshot suite (`web/e2e/screenshots/`), and fix clipping/overlap found (truncation must reveal full text on hover/focus, FR-010); any visual change goes through `design.pen` first (local machine) *Done note: `npm run screenshots:pseudo` runs the screenshot suite as the Playwright `en-XA` project (`VITE_I18N_PSEUDO=1`). The specs keep driving the UI in English; `e2e/screenshots/capture.ts` switches the dashboard to `en-XA` for each capture through `window.gameplaneI18nTest` (installed by `I18nProvider` only when `en-XA` is listed), then soft-fails on text cut off without a `title` (OD-018, OD-019). The CI job "en-XA screenshots" in `visual-diff.yaml` uploads the captures and clipping reports. The first run found only data text already truncated in English (mobile Servers names and addresses, Overview endpoint hosts, module summaries, file names); each now has a `title` with the full text and nothing changes visually, so `design.pen` is unchanged (OD-020). The run is green (122 passed). Screenshots that specs take with `page.screenshot` directly stay English.*
 
@@ -250,7 +250,7 @@ description: "Task list for 019 App Localization & Community Language Packs"
 - [X] T101 [P] Update `docs/architecture.md`, `docs/agent-architecture.md` (task → doc map entry for i18n) and `docs/module-authoring.md` (module translations section)
 - [X] T102 [P] Add a CHANGELOG / release-notes entry describing language selection, French, problem+json negotiation (opt-in) and module translations
 - [ ] T103 Run quickstart.md scenarios 1–13 against a `make dev-up` cluster and record results in the PR description
-- [ ] T104 Confirm the coverage gates (`i18n` 90, api 80, operator 72, gp-module 80, web thresholds) pass on CI; add tests where they do not (never lower thresholds)
+- [X] T104 Confirm the coverage gates (`i18n` 90, api 80, operator 72, gp-module 80, web thresholds) pass on CI; add tests where they do not (never lower thresholds) — confirmed: PR 668 run 38957645731 passed the go (i18n|api|operator|gp-module) threshold gates and the web job; PR 745 web L95.87 S94.37 B89.27 F91.79
 - [ ] T105 After merge and with every task complete or withdrawn: `git mv specs/019-localization-language-packs specs/done_019-localization-language-packs` and update in-repo references (Constitution IV, rule 16)
 
 ---

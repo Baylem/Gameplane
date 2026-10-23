@@ -83,6 +83,6 @@ describe("LoginPage compact language picker (T045)", () => {
 
     const stored = JSON.parse(localStorage.getItem("gameplane-language") ?? "{}") as { choice?: string };
     expect(stored.choice).toBe("fr");
-    expect(await screen.findByRole("button", { name: "Language" })).toHaveTextContent("Français");
+    expect(await screen.findByRole("button", { name: "Langue" })).toHaveTextContent("Français");
   });
 });

@@ -47,8 +47,18 @@ This document is the **first stop** for AI agents modifying or extending Gamepla
 | Task | Read |
 | --- | --- |
 | Translations, language packs, localized server or module messages (i18n) | `docs/translating.md`, `specs/019-localization-language-packs/contracts/` (`pack-format.md`, `server-messages.md`, `i18n-api.md`, `module-locales.md`, `check-tool.md`), and the Internationalization section of `web/specs.md` |
+| CI test selection: which jobs, packages and tests a PR runs (`hack/ci_scope.py`, `hack/check_changed_coverage.py`, `test/e2e/suite-components.json`, the `changes` job in `.github/workflows/ci.yaml`) | `docs/contributing.md` ("How CI picks tests"), `specs/023-change-based-test-selection/contracts/` (`ci-scope-cli.md`, `suite-components.md`, `changed-coverage.md`) |
+| Add a CRD field | `operator/specs.md`, `AGENTS.md` (rule 7 and "Common workflows"), `docs/architecture.md` |
+| Add an API route | `api/specs.md`, `docs/security.md`, `web/specs.md` (client-side code in `web/src/lib/api.ts`) |
+| Add or change a dashboard screen | `web/specs.md`, `docs/layout.md` (web app), `assets/design-export/MANIFEST.md`, `docs/contributing.md` ("Design first for UI changes") |
+| Add or change a game module | `docs/module-authoring.md`, `modules/<game>/specs.md` (module repo) |
+| Change the website | `website/AGENTS.md` (submodule) |
+| Add a DB migration | `api/specs.md`, `api/internal/db/migrations/README.md` |
+| Change CI or a workflow | `docs/contributing.md` ("CI and workflows", "How CI picks tests") |
+| Decide where new code goes | `docs/layout.md` |
 
 ## How to use this index
 1. Identify the domain of your task (e.g., "Add an auth provider").
 2. Find the component handling this domain (e.g., "API Gateway").
 3. Read the documentation or resource at the path listed in the table (e.g., `api/specs.md`) to understand its architecture, boundaries, and specific rules before modifying code.
+4. Adding a file, package or screen? Check `docs/layout.md` for the target folder shape of that module.
