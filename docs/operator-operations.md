@@ -74,6 +74,13 @@ is allowed under that reservation so storage using WaitForFirstConsumer can bind
 Other operations wait until the restore completes. Existing data-PVC restores
 continue to require an observed stopped workload and drained writers.
 
+If initial startup fails or the Restore is deleted, cleanup first retires its
+startup permission and suspends the target. The operation remains held until the
+StatefulSet has observed zero replicas and every live or terminating game/PVC
+writer has drained. Recovery of a force-deleted Restore applies the same check
+before a successor can proceed, preserving the existing pod template while
+requesting zero replicas. A successful Restore leaves its initial workload running.
+
 Stopped-source preparation (#716), Restic preparation and quiesce deadlines (#717),
 CSI capture deadlines (#719), and staged template adoption (#731) are separate
 changes building on this ownership boundary.

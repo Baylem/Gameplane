@@ -1213,6 +1213,8 @@ func (r *GameServerReconciler) desiredReplicas(
 			return 0, 5 * time.Second, nil
 		}
 		return 1, 5 * time.Second, nil
+	} else if held && lifecycleRecoveryNeedsStop(op) {
+		return 0, 5 * time.Second, nil
 	} else if held && (op.Kind == "Backup" || len(op.Recovery) != 0) {
 		var ss appsv1.StatefulSet
 		err := r.wipeReader().Get(ctx, client.ObjectKeyFromObject(gs), &ss)
@@ -1512,8 +1514,13 @@ func (r *GameServerReconciler) reconcileStatefulSet(
 			}
 			if op.Kind == "Backup" || len(op.Recovery) != 0 {
 				if !ss.CreationTimestamp.IsZero() || ss.ResourceVersion != "" {
-					// Preserve replicas AND the complete pod template, including
-					// config hashes, images, init containers and mount topology.
+					// Orphaned restores may leave a running initial workload.
+					// Stop it while preserving its complete pod template. Other
+					// protected operations also preserve the replica count.
+					if lifecycleRecoveryNeedsStop(op) {
+						zero := int32(0)
+						ss.Spec.Replicas = &zero
+					}
 					return nil
 				}
 				// No workload exists yet. Create it stopped; this gives backup
