@@ -10,6 +10,16 @@ The operator is a Kubernetes controller-runtime-based process that reconciles Ga
 
 ## Responsibilities
 
+Expected write conflicts, create races and persisted lifecycle transitions
+request a fresh reconcile after one second without reporting an error. Module
+catalog/version waits use the existing one-minute source refresh floor as a
+backstop; ModuleSource events can reconcile them sooner. Module deletion polls
+every five seconds while a GameServer references its template and retains the
+finalizer until those references are gone. These explicit waits use
+`RequeueAfter`; genuine errors retain controller-runtime's exponential backoff.
+Existing restore fence-write requeues and writer-drain polling remain unchanged,
+and every resumed restore pass still verifies the workload fence and live writers.
+
 - **GameServer lifecycle:** reconcile GameServer CRs into StatefulSets, Services, PVCs, and pod-injected agent sidecars; manage pod affinity, RCON/console integration, file I/O, and graceful stop sequences.
 - **Module installation:** pull OCI module bundles from remote or local sources, verify signatures (cosign), and materialize GameTemplate CRs; refresh source indexes periodically. Translation files (`locales/<tag>.json`) are carried by every module source (OCI layers, directory, git, HTTP archive, upload, `gp-module package` tarball) and validated against the ids derived from the module (`i18n/modlocale`); valid entries are written to the `<template>-locales` ConfigMap (owned by the GameTemplate, in the operator namespace) and problems surface as the GameTemplate `LocalesValid` condition (reasons `Valid`, `InvalidEntries`, `LocalesTooLarge`, `WriteFailed`) and Warning events, never as an install failure. A file over 900 KiB, or a language that would push the bundle's locale files past 4 MiB together (counted in file-name order), is not read but reported by language tag as `LocalesTooLarge`. Events fire only when the problem list changes (fingerprint annotation `gameplane.local/locales-problems`). The ConfigMap is rewritten on each apply, not recreated if deleted while the Module stays converged.
 - **Backup & restore:** coordinate application-level quiesce with agent, spawn restic backup/restore Jobs, track snapshot IDs, and enforce retention policies.
