@@ -51,7 +51,7 @@ func startupCleanupFixture(t *testing.T) (*RestoreReconciler, *gameplanev1alpha1
 func TestRestoreStartupCleanupDrainsBeforeRelease(t *testing.T) {
 	for _, outcome := range []string{"failed", "deleted", "succeeded"} {
 		t.Run(outcome, func(t *testing.T) {
-			r, gs, rs, ss, pod := startupCleanupFixture(t)
+			r, _, rs, ss, pod := startupCleanupFixture(t)
 			rs.Status.Phase = gameplanev1alpha1.RestorePhaseFailed
 			if outcome == "succeeded" {
 				rs.Status.Phase = gameplanev1alpha1.RestorePhaseSucceeded
@@ -71,7 +71,7 @@ func TestRestoreStartupCleanupDrainsBeforeRelease(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			gs = lifecycleServer(t, r)
+			gs := lifecycleServer(t, r)
 			if outcome == "succeeded" {
 				if gs.Spec.Suspend || gs.Annotations[lifecycleOperationAnnotation] != "" || res.RequeueAfter != 0 {
 					t.Fatalf("successful startup was stopped: %+v %+v", gs, res)
