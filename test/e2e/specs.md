@@ -32,7 +32,11 @@ read-only original archive is never changed by invalidation. Actual fixture
 recovery-point age/RTO and acceptance evidence are uploaded as JSON, with no key,
 credential, cookie, share token or raw SQL rows. It does not stop the installed
 panel/operator or claim PostgreSQL PITR coverage. Initial scoped grants wait for
-the asynchronous cluster registry to load the connection and permit dispatch.
+Healthy cluster discovery so the asynchronous registry has loaded the connection.
+The locally bootstrapped administrator receives an explicit fixture-cluster/gameplane-games
+grant and logs in again after that change invalidates its session. Both administrator
+and reader cookies are accepted before backup and rejected through `/users/me` after
+offline recovery; remote server UID and share checks retain their scoped authorization.
 See `docs/panel-recovery.md`.
 
 ### Remote gateway parity acceptance

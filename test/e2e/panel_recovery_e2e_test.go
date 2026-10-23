@@ -119,14 +119,30 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 		return result["status"] == float64(http.StatusOK), "waiting for recovery HTTP monitor positive control"
 	})
 	report["http_monitor_positive_control"] = true
-	admin := f.login("initial", "admin", password)
-	defer admin.Close()
+	bootstrapAdmin := f.login("initial", "admin", password)
+	defer bootstrapAdmin.Close()
+	adminID := extractUserID(string(f.request(bootstrapAdmin, http.MethodGet, "/users/me", nil, http.StatusOK)))
+	if adminID == "" {
+		t.Fatal("bootstrap admin has no ID")
+	}
 
 	// Register the existing kind cluster using stored, encrypted credentials.
 	// The panel has no service-account token, so successful dispatch depends on
 	// decrypting this registration after recovery.
 	clusterID := "fixture-cluster"
-	f.request(admin, http.MethodPost, "/clusters", map[string]any{"name": clusterID, "displayName": "Recovery fixture", "kubeconfig": recoveryKubeconfig(t)}, http.StatusCreated)
+	f.request(bootstrapAdmin, http.MethodPost, "/clusters", map[string]any{"name": clusterID, "displayName": "Recovery fixture", "kubeconfig": recoveryKubeconfig(t)}, http.StatusCreated)
+	// Bootstrap grants control-plane administration through the local cluster,
+	// but remote server access requires an explicit target namespace binding.
+	// Discovery is safe before that grant; Healthy also proves the asynchronous
+	// registry has loaded the client needed to accept the binding.
+	f.waitClusterHealthy(bootstrapAdmin, clusterID)
+	f.request(bootstrapAdmin, http.MethodPost, "/users/"+adminID+"/bindings", map[string]any{"roleName": "admin", "cluster": clusterID, "namespace": "gameplane-games"}, http.StatusCreated)
+	// A binding change revokes the affected user's sessions. The new cookie,
+	// acquired after the grant, must remain live until the backup is taken.
+	f.request(bootstrapAdmin, http.MethodGet, "/users/me", nil, http.StatusUnauthorized)
+	bootstrapAdmin.Close()
+	admin := f.login("initial", "admin", password)
+	defer admin.Close()
 	roleName := "recovery-reader"
 	f.request(admin, http.MethodPost, "/roles", map[string]any{"name": roleName, "description": "Recovery fixture read only", "permissions": []string{"servers:read"}}, http.StatusCreated)
 	userPassword := recoveryRandom(t)
@@ -135,8 +151,8 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	if userID == "" {
 		t.Fatal("created reader has no ID")
 	}
-	// Registration persists before the asynchronous registry watcher loads its
-	// client. Prove dispatch works before assigning a binding to that cluster.
+	// Prove credential-backed dispatch with the scoped administrator, then
+	// repeat it using only the reader's explicit target namespace grant.
 	gameName, gameUID := recoveryGame(t, suffix)
 	serversPath := "/servers?cluster=" + clusterID + "&namespace=gameplane-games"
 	f.waitServer(admin, serversPath, gameUID)
@@ -153,6 +169,9 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	}
 	public := &APIClient{BaseURL: admin.BaseURL, HTTP: &http.Client{Timeout: 10 * time.Second}}
 	f.request(public, http.MethodGet, "/shares/"+share.Token, nil, http.StatusOK)
+	for _, original := range []*APIClient{admin, reader} {
+		f.request(original, http.MethodGet, "/users/me", nil, http.StatusOK)
+	}
 	beforeGame := recoveryGameIdentity(t, gameName)
 	beforeCounter := recoveryCounter(t, gameName)
 	report["game_before"] = beforeGame
@@ -253,9 +272,12 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	f.waitPodReady("restored")
 	recovered := f.login("restored", "admin", password)
 	defer recovered.Close()
-	// Reuse the original cookie jar against the recovered endpoint, without login.
-	stale := &APIClient{BaseURL: recovered.BaseURL, HTTP: reader.HTTP, CSRF: reader.CSRF}
-	f.request(stale, http.MethodGet, "/auth/me", nil, http.StatusUnauthorized)
+	// Reuse both pre-backup cookie jars against the recovered endpoint, without
+	// login. Each was accepted immediately before the original API stopped.
+	for _, original := range []*APIClient{admin, reader} {
+		stale := &APIClient{BaseURL: recovered.BaseURL, HTTP: original.HTTP, CSRF: original.CSRF}
+		f.request(stale, http.MethodGet, "/users/me", nil, http.StatusUnauthorized)
+	}
 	public.BaseURL = recovered.BaseURL
 	f.request(public, http.MethodGet, "/shares/"+share.Token, nil, http.StatusNotFound)
 	recoveredReader := f.login("restored", "reader", userPassword)
@@ -436,16 +458,45 @@ func recoveryKubeconfig(t *testing.T) string {
 	return string(data)
 }
 
+func (f *recoveryFixture) waitClusterHealthy(c *APIClient, clusterID string) {
+	f.t.Helper()
+	envInstance.Eventually(f.t, 90*time.Second, func() (bool, string) {
+		resp, data, err := c.DoContext(f.t.Context(), http.MethodGet, "/clusters", nil)
+		if err != nil {
+			return false, fmt.Sprintf("cluster discovery request failed (error type=%T; details withheld)", err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+		if resp.StatusCode != http.StatusOK {
+			return false, fmt.Sprintf("cluster discovery: HTTP status=%d (body withheld)", resp.StatusCode)
+		}
+		var discovery struct {
+			Items []struct {
+				Name  string `json:"name"`
+				Phase string `json:"phase"`
+			} `json:"items"`
+		}
+		if json.Unmarshal(data, &discovery) != nil {
+			return false, "invalid cluster discovery response (body withheld)"
+		}
+		for _, item := range discovery.Items {
+			if item.Name == clusterID && item.Phase == "Healthy" {
+				return true, ""
+			}
+		}
+		return false, "registered cluster connection is not Healthy yet"
+	})
+}
+
 func (f *recoveryFixture) waitServer(c *APIClient, path, uid string) {
 	f.t.Helper()
 	envInstance.Eventually(f.t, 90*time.Second, func() (bool, string) {
 		resp, data, err := c.DoContext(f.t.Context(), http.MethodGet, path, nil)
 		if err != nil {
-			return false, "waiting for credential-backed cluster dispatch"
+			return false, fmt.Sprintf("credential-backed cluster dispatch failed (error type=%T; details withheld)", err)
 		}
 		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != http.StatusOK {
-			return false, "waiting for credential-backed cluster dispatch"
+			return false, fmt.Sprintf("credential-backed cluster dispatch: HTTP status=%d (path/body withheld)", resp.StatusCode)
 		}
 		var list struct {
 			Items []unstructured.Unstructured `json:"items"`
