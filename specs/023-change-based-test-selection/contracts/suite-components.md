@@ -37,10 +37,12 @@ from the per-test map in [research.md](../research.md).
    `buckets.sh list <bucket>`. Every test in every bucket, including `bot-heavy`, matches
    at least one entry; a test matching several entries takes the union.
 2. `components` holds component ids from [data-model.md](../data-model.md#component),
-   or `"*"` for "every change selects this test".
+   or `"*"` for "every change selects this test". `components` may be empty when `paths`
+   is set, as in the `^TestCISelection_` entry.
 3. `paths` are repo-relative prefixes. A changed path under one of them selects the test.
    A changed `test/e2e/<file>_test.go` always selects the tests defined in that file
-   (US1 scenario 4), without needing a `paths` entry.
+   (US1 scenario 4), without needing a `paths` entry. A changed `test/e2e/<file>.go` also selects the tests
+   in files that use its top-level names (helpers).
 4. A changed path under any `universal` prefix selects every suite.
 5. Every component with code that is not listed in `unexercised` is named by at least
    one entry. `unexercised` entries carry a one-line reason.
