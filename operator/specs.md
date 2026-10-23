@@ -10,6 +10,16 @@ The operator is a Kubernetes controller-runtime-based process that reconciles Ga
 
 ## Responsibilities
 
+Expected write conflicts, create races and persisted lifecycle transitions
+request a fresh reconcile after one second without reporting an error. Module
+catalog/version waits use the existing one-minute source refresh floor as a
+backstop; ModuleSource events can reconcile them sooner. Module deletion polls
+every five seconds while a GameServer references its template and retains the
+finalizer until those references are gone. These explicit waits use
+`RequeueAfter`; genuine errors retain controller-runtime's exponential backoff.
+Existing restore fence-write requeues and writer-drain polling remain unchanged,
+and every resumed restore pass still verifies the workload fence and live writers.
+
 - **Relay health:** frp identities use GameServer UID without changing advertised port names. frp/Playit Deployments use one replica, Recreate, a wrapper startup probe and a provider readiness probe on TCP 8091. `TunnelReady` requires the current observed generation and updated/ready replicas with the new probe; legacy unprobed Pods cannot report success. Playit v1.0.10's cached IPC assignment cannot confirm a relay connection, so it reports unknown/not ready rather than optimistic success. Preserve `TunnelResources` defaults and override removal. See `docs/relay-health.md` for health bounds, migration and the provider limitation.
 
 - **GameServer lifecycle:** reconcile GameServer CRs into StatefulSets, Services, PVCs, and pod-injected agent sidecars; manage pod affinity, RCON/console integration, file I/O, and graceful stop sequences.
