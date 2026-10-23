@@ -125,6 +125,7 @@ EOF
 bucket_api_auth() { cat <<'EOF'
 TestAPI_BootstrapAndLogin
 TestAPI_LoginPrivacy
+TestAPI_LoginTransportRefusalClassification
 TestAPI_DynamicAuthProviders
 TestAPI_AuditEmitsOnMutation
 TestAPI_AuditPaginationAndFilter

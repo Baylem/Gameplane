@@ -20,7 +20,10 @@ the original 600s token expires. Node capture checks exercise audited per-server
 opt-in, traffic-bearing PCAP download, unchanged game Pod UID/restart counts,
 worker cleanup on completion/revocation, and cross-namespace resource cleanup
 after GameServer deletion. Local work compiles test sources only; CI executes
-the drill and all unit/chart regressions.
+the drill and all unit/chart regressions. Idempotent capture-setting requests
+retry only HTTP 409 conflicts with controller updates; capture creation and
+transport or authorization failures are never retried. Completion still
+requires all capture workers to have been drained before `Completed` is reported.
 
 The `test/e2e` module is Gameplane's end-to-end test suite: it stands up a real (kind-based) Kubernetes cluster, installs the Helm chart, and drives the operator/api/agent/sentinel stack as real components rather than mocks — CRDs applied through the typed/dynamic client, HTTP calls through a real port-forward, RCON/wire-protocol joins against real game server containers. Where the other modules' test tiers (unit, envtest) prove a component's own logic in isolation, this module proves the whole product works together on a cluster shaped like the ones users actually run.
 
@@ -87,6 +90,7 @@ This is a name-matching contract, not a structural one:
 
 - **`Kubectl(ctx, args...)`** and **`KubectlWithStdin(ctx, stdin, args...)`** both run `exec.CommandContext(ctx, "kubectl", all...)`. Both still validate every argument up to a literal `--` separator against shell metacharacters (`|;&$\`<>()\\`) before building `all` — this is the caller-supplied-args gosec finding scoped by the `.golangci.yml` G204 exclusion on `env.go`: gosec can't see that the args come from the suite's own test code and are pre-validated, not from untrusted external input.
 - **`tryPortForward(ctx, ns, target, remotePort)`** (the single-attempt implementation behind the public, retrying `PortForward`) also runs its `kubectl port-forward` child via `exec.CommandContext(ctx, ...)`. **The context passed here must outlive the call that starts the forward** — it only bounds the *maximum* process lifetime, not the normal teardown path. The returned `stop` func is the real owner of the forward's lifecycle: every caller `defer`/`t.Cleanup`s it well before the test (and therefore its context) ends. Binding the forward to anything shorter-lived than the test itself — e.g. a context scoped to just the readiness-poll loop — would risk the process being killed by context expiry out from under an in-flight caller still using the tunnel. `PortForward` retries `tryPortForward` up to 4 times on a fresh local port before giving up, tolerating a loaded self-hosted runner where a single attempt's readiness window is too short.
+- **`APIClient` initial login** may reopen its forward at most once when a typed dial error reports `ECONNREFUSED`, proving the local listener did not receive the request. The reconnect consumes an attempt from the existing seven-attempt login budget and remains bound to the test context. Read/write errors, resets, timeouts, ambiguous failures and HTTP errors retain their existing failure behavior (apart from the existing bounded HTTP 429 backoff). Established clients never reconnect or replay requests. `TestAPI_LoginTransportRefusalClassification` covers accepted and rejected transport errors in `api-auth` without consuming a cluster login.
 
 ## Conventions (already normative via `CLAUDE.md`, restated here for the module's own record)
 
