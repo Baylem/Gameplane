@@ -52,9 +52,9 @@ if ! command -v oras >/dev/null 2>&1; then
 fi
 
 # ---------- golangci-lint ----------
-# v2.13 is the first release line supporting the workspace's Go 1.27.
-# Keep this exact patch version aligned with the CI workflow.
-GOLANGCI_VERSION="v2.13.2"
+# v2.14 includes the importer for Go 1.27.3's export-data version 5.
+# Keep this exact version aligned with CI and lint-gate-verify.sh.
+GOLANGCI_VERSION="v2.14.0"
 GOLANGCI_BIN="/go/bin/golangci-lint"
 if ! "$GOLANGCI_BIN" --version 2>/dev/null | grep -qF "version ${GOLANGCI_VERSION#v} "; then
 	log "installing golangci-lint ${GOLANGCI_VERSION}"
