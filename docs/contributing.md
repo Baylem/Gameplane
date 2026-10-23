@@ -1,5 +1,49 @@
 # Contributing
 
+This guide covers the dev loop, house rules, CI and the review process. New here?
+Start with [Your first PR](#your-first-pr): it tells you which folder owns your
+change, the one compile check to run, and how long CI takes.
+
+## Your first PR
+
+1. Fork the repo and create one branch for the change.
+2. Find the owning folder for your change in the table below. For where new
+   code goes inside a module, see [`docs/layout.md`](layout.md).
+3. Run the local check for that row only. Do not run test or lint suites
+   locally (`make test`, `make lint`, `go test`, `npm test`); CI runs them.
+4. Commit with `git commit -s` and a conventional prefix (`feat:`, `fix:`,
+   `docs:`, `chore:`, …).
+5. Open the PR and check that it has one `type:` label and one `area:` label
+   (see [Submitting a change](#submitting-a-change)).
+6. Wait for CI (times below) and fix what it reports.
+
+| Change | Owning folder | Local check | CI wall clock (2026-10-20) |
+| --- | --- | --- | --- |
+| Docs only | `docs/`, `README.md`, any `*.md` | none | 1.8 min (run 2507) |
+| Spec only | `specs/NNN-<slug>/` | none | 5.3 min (run 2525) |
+| Web only | `web/` | `cd web && npx tsc --noEmit` | 18.3 min (run 2524) |
+| One small Go service | `<module>/` (e.g. `sentinel/`, `tunnel/`) | `go build ./...` in that module | same as any Go change: 29–75 min, median 37.5 min |
+| Operator / CRD | `operator/` (types in `operator/api/v1alpha1/`) | `make generate && make manifests`, then `go build ./...` in `operator/` | same as any Go change |
+| API route | `api/` (handlers in `api/internal/handlers/`) | `go build ./...` in `api/` | same as any Go change |
+| Game module | `modules/<game>/`: PR in `GameplanePanel/module`, then a pointer bump here | `make module-validate MODULE=<game>` | 2.7 min in `GameplanePanel/module` (run 79, 2026-10-20); the bump PR here runs the docs gates |
+| Website | `website/`: PR in `GameplanePanel/website`, then a pointer bump here | `npm run build` in `website/` | 0.6 min in `GameplanePanel/website` (PR 25, 2026-10-22); the bump PR here runs the docs gates |
+
+Times are GitHub Actions wall clock for one PR run, measured 2026-10-20: runs
+2507, 2525 and 2524, and 11 Go PR runs for the median. Change-based test
+selection (`specs/023-change-based-test-selection/`) shortens Go runs as it
+lands, so treat these as upper bounds.
+
+Gates a first PR trips on:
+
+- Unsigned commits: every commit needs `git commit -s`.
+- Missing labels: one `type:` and one `area:` label on every PR.
+- Local test or lint runs: only compile checks locally; CI is the verifier.
+- UI without design: dashboard changes start in `design.pen` (Pencil), see
+  [Design first for UI changes](#design-first-for-ui-changes). Never hand-edit
+  `.pen` files.
+- Submodule work in the wrong repo: `modules/` and `website/` changes go to
+  their own repos first, then a pointer bump PR here.
+
 ## Dev loop
 
 ```sh
@@ -71,6 +115,53 @@ These jobs block merging. Each gate with a fixture has a `hack/*_test.sh` self-t
 - **`dependency review`** runs on pull requests only. It fails when the PR adds a dependency with a HIGH or CRITICAL advisory. Pick a version without the advisory, or drop the dependency.
 - **`codegen drift`** runs `make generate manifests` and `make tidy`, then fails if `git diff` is not empty. Run the same commands locally and commit what they change (CLAUDE.md rule 7).
 - **`submodule freshness`** runs `hack/check-submodule-freshness.sh`. It fails when the `modules` or `website` pointer names a commit that is not on that repo's `main`, when a gitlink is missing, or when the script cannot fetch that repo's `main`. For a pointer that is not on `main`, merge the submodule PR first, then bump the pointer to the merged commit. Otherwise restore the gitlink, or fix the fetch error, and re-run.
+
+### How CI picks tests
+
+On a pull request, CI runs only the work your change can affect (spec 023). The
+`detect changes` job decides, and its job summary has a **Test selection** table that
+lists every suite as `run` or `skip`, with the changed files that chose it or the reason
+everything ran.
+
+What a partial run narrows:
+
+- **Go unit tests** run only the packages that own a changed file, plus every package
+  that imports them, across modules. A module's own `go.mod` or `go.sum` reruns that
+  whole module plus every package that imports it, and its `.testcoverage.yml` reruns
+  the whole module. Deleting a package runs the packages that still import it. The
+  module coverage gate then becomes a
+  changed-lines gate: the lines you add must meet the module's own minimum
+  (`hack/check_changed_coverage.py`).
+- **Web unit tests** run `vitest related` on the changed `web/src` files, with the same
+  changed-lines gate at the Vitest `lines` threshold. If `vitest related` writes no
+  coverage report, the job runs the full `npm run test:cover` instead. Lint and build
+  always run whole.
+  Shared inputs (`package.json`, the lockfile, the Vite/Vitest/TS/ESLint configs,
+  `src/test/**`, `i18n/locales/**`) run the full suite.
+- **Go e2e tests** run only the tests that `test/e2e/suite-components.json` selects:
+  tests whose components or paths changed, tests that use a changed e2e test or helper
+  file, and every test when a universal path changes (charts, containers, CRD types,
+  the Kind setup, signing keys). Jobs with no selected test are skipped.
+- **`ci.yaml` edits** run only the jobs whose lines changed, plus the jobs they need.
+  An edited e2e job also runs its other-architecture twin.
+  `.golangci.yml` runs only the lint legs and `workflow lint`. Other workflow files run
+  only `workflow lint`.
+
+Everything still runs on every push to `master`, and when a selection input changes
+(`hack/ci_scope.py`, `hack/check_changed_coverage.py`, their tests, `Makefile`,
+`go.work`, `go.work.sum`, `.github/actions/**`, `test/e2e/buckets.sh`,
+`test/e2e/suite-components.json`). It also runs everything for a `ci.yaml` edit outside
+any job or in `changes`/`report`, a path no rule maps, and any selection error.
+
+To force a full run on your PR, add the label `ci: full-run` (read on the next push), or
+start the `ci` workflow by hand on your branch (`workflow_dispatch`).
+
+When you add an e2e test or a component, keep `test/e2e/suite-components.json` in step:
+add the test name pattern under `suites` with the components and paths it exercises, or
+list the component under `unexercised` with a reason. The `e2e bucket coverage` job
+(`ci_scope.py verify-suites`) fails when a registered test matches no entry or a
+component is missing. The full rules are in
+`specs/023-change-based-test-selection/contracts/suite-components.md`.
 
 ## Testing
 
@@ -148,15 +239,34 @@ which applies `deploy/kind/postgres.yaml` and installs the chart with
 login rate limiter. The frozen 001–012 upgrade path is covered separately by
 `TestPostgres_MigrateFromFrozenBaseline` in the `api (postgres)` job.
 
+## Where design docs go
+
+Two homes, nothing else:
+
+- **A change** (feature, fix, cleanup) is written up in `specs/NNN-<slug>/`
+  through speckit (spec, plan, tasks, `OPEN-DECISIONS.md`). Once every task
+  is done and merged, the folder is renamed `specs/done_NNN-<slug>/`.
+- **How a module works today** is described in its `<module>/specs.md`,
+  updated in the same PR as the behavior (constitution Principle IV,
+  checked by `make check-specs`).
+
+No other folder holds designs or plans. Older designs from before this rule
+are kept read-only in [`docs/archive/`](archive/README.md).
+
 ## AI-assisted development
 
 Much of this codebase is developed with AI coding assistants (Claude
 Code). The project was started on Claude Opus 4.8 (`claude-opus-4-8`);
 since June 2026 development continues on Claude Fable 5
-(`claude-fable-5`). Agent-facing guidance lives in
-[`CLAUDE.md`](../CLAUDE.md) — keep it current when project structure or
-house rules change. All contributions, AI-assisted or not, go through
-the same review, lint, and test gates below.
+(`claude-fable-5`). Agent-facing guidance lives in one real file,
+[`AGENTS.md`](../AGENTS.md); keep it current when project structure or
+house rules change. `CLAUDE.md` is a symlink to `AGENTS.md` for tools
+that read that name, and the `website/` submodule uses the same pair
+(`AGENTS.md` real, `CLAUDE.md` link). Always edit `AGENTS.md`: with
+`git config core.symlinks false` (the Windows default) the link checks
+out as a one-line text file that only holds the name `AGENTS.md`. All
+contributions, AI-assisted or not, go through the same review, lint,
+and test gates below.
 
 ## Submitting a change
 

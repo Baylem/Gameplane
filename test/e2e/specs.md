@@ -9,6 +9,9 @@
 ### Restricted workload drill (#714)
 
 The dedicated `restricted-workloads` bucket runs on amd64 and arm64. It
+is registered in the CI selector for operator, API, agent and capture-sidecar
+changes, including the node capture worker. Full-scope and affected-component
+runs retain the drill on both architectures. It
 upgrades a compatible existing game to the real enforced PSA profile, asserts
 nonroot config-init/writable data preservation, rejects root admission and an
 incompatible template, and checks agent-only credential mounts. It observes a
