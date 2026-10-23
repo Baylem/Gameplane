@@ -6,7 +6,9 @@ context="${CTX:-kind-gameplane-e2e}"
 kubectl() { command kubectl --context "$context" "$@"; }
 scratch="$(mktemp -d)"
 trap 'rm -rf "$scratch"' EXIT
+# Retry transient upstream failures without relaxing the pinned checksum below.
 curl --fail --silent --show-error --location \
+  --connect-timeout 10 --max-time 30 --retry 5 --retry-max-time 120 \
   https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.94.1/bundle.yaml \
   -o "$scratch/bundle.yaml"
 echo "7ab177610b271c70c57c7d6fc550a1e934eff4f707a5d8b61dfaa3845d52deea  $scratch/bundle.yaml" | sha256sum --check
