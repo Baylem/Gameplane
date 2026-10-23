@@ -268,6 +268,15 @@ func legacyLifecycleCopiesLive(ctx context.Context, c client.Client, reader clie
 	return false, nil
 }
 
+func lifecycleRecoveryNeedsStop(op lifecycleOperation) bool {
+	for _, predecessor := range op.Recovery {
+		if predecessor.Kind == "Restore" {
+			return true
+		}
+	}
+	return false
+}
+
 func recoverLifecycleOperation(ctx context.Context, c client.Client, reader client.Reader, gs *gameplanev1alpha1.GameServer, op lifecycleOperation, quiescer AgentQuiescer) (bool, error) {
 	for _, predecessor := range op.Recovery {
 		var busy bool
@@ -283,6 +292,13 @@ func recoverLifecycleOperation(ctx context.Context, c client.Client, reader clie
 			return false, fmt.Errorf("unsupported orphan lifecycle owner %q", predecessor.Kind)
 		}
 		if err != nil || busy {
+			return false, err
+		}
+	}
+	if lifecycleRecoveryNeedsStop(op) {
+		r := &RestoreReconciler{Client: c, APIReader: reader, Scheme: c.Scheme()}
+		stopped, _, err := r.restoreTargetStopped(ctx, gs)
+		if err != nil || !stopped {
 			return false, err
 		}
 	}
