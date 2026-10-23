@@ -571,12 +571,18 @@ func markBackupSucceeded(t *testing.T, ns, name, snapshotID, size string) {
 // reconciler waits for Suspended/Stopped before advancing to Running.
 func markGameServerPhase(t *testing.T, ns, name string, phase gameplanev1alpha1.GameServerPhase) {
 	t.Helper()
-	var gs gameplanev1alpha1.GameServer
-	if err := k8sClient.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: name}, &gs); err != nil {
-		t.Fatalf("get gameserver: %v", err)
-	}
-	gs.Status.Phase = phase
-	if err := k8sClient.Status().Update(context.Background(), &gs); err != nil {
+	// The Restore reconciler also writes the target's ownership annotations.
+	// Refetch after conflicts so this simulated status observation preserves
+	// concurrent controller writes without turning them into fixture failures.
+	ctx := t.Context()
+	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		var gs gameplanev1alpha1.GameServer
+		if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, &gs); err != nil {
+			return err
+		}
+		gs.Status.Phase = phase
+		return k8sClient.Status().Update(ctx, &gs)
+	}); err != nil {
 		t.Fatalf("status update gameserver: %v", err)
 	}
 }
