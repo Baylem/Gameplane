@@ -13,8 +13,8 @@ already stopped and its writers drained before capture; the backup did not stop
 it. Failed or unfinished copies, including completed Jobs still awaiting a
 snapshot ID, cannot report achieved quiesce or stopped-source consistency.
 
-`status.captureManifest` is recorded once before the first copy worker is
-created, after lifecycle ownership and quiesce preparation. It lists the primary
+`status.captureManifest` is recorded once before copy authorization or CSI
+capture, after lifecycle ownership and quiesce preparation. It lists the primary
 `<server>-data` claim as included and every other observed persistent claim as
 uncovered, including extra volumes, nested mod/loader mounts and retained
 server-owned claims. It records claim UIDs, observed mount paths, source layout
@@ -89,6 +89,12 @@ The preferred node is the game's current node; `operator.backupHardSameNode: tru
 makes that placement mandatory. Source tolerations and `operator.backupResources`
 apply to preparation and copy containers. Stopped sources leave node selection
 to the scheduler and volume affinity.
+
+When the source StatefulSet requests a running workload, initial preparation
+waits for its owned pod to be created and assigned a node before binding the
+worker to that source. This wait uses the preparation budget and does not disable
+saving. A pod or node replacement after binding still fails the copy. Raw backups
+of intentionally stopped workloads remain eligible without a source pod.
 
 The install settings are `operator.backupPreparationTimeout: 10m`,
 `operator.backupQuiesceTimeout: 5m`, and `operator.backupCSICaptureTimeout: 10m`.

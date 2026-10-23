@@ -243,6 +243,81 @@ func TestBackupRawAndStoppedCopiesKeepFullJobBudget(t *testing.T) {
 	}
 }
 
+func TestBackupRawSourceWaitsForInitialScheduling(t *testing.T) {
+	for _, initiallyAbsent := range []bool{false, true} {
+		t.Run(fmt.Sprintf("absent=%t", initiallyAbsent), func(t *testing.T) {
+			b := guardBackup("starting")
+			b.Spec.Quiesce = false
+			r, q := guardFixtureWorkers(t, false, b)
+			var pod corev1.Pod
+			if err := r.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: "server-0"}, &pod); err != nil {
+				t.Fatal(err)
+			}
+			pod.Spec.NodeName = ""
+			if err := r.Update(t.Context(), &pod); err != nil {
+				t.Fatal(err)
+			}
+			if initiallyAbsent {
+				if err := r.Delete(t.Context(), &pod); err != nil {
+					t.Fatal(err)
+				}
+			}
+			budgetPass(t, r, b.Name)
+			b = guardGetBackup(t, r, b.Name)
+			var job batchv1.Job
+			if err := r.Get(t.Context(), client.ObjectKeyFromObject(b), &job); !apierrors.IsNotFound(err) || b.Annotations[backupWorkerSourceAnnotation] != "" || q.quiesced != 0 {
+				t.Fatalf("starting source was bound or quiesced: job=%v annotations=%v calls=%+v", err, b.Annotations, q)
+			}
+			pod.Spec.NodeName = "node-a"
+			if initiallyAbsent {
+				pod.ResourceVersion = ""
+				if err := r.Create(t.Context(), &pod); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := r.Update(t.Context(), &pod); err != nil {
+				t.Fatal(err)
+			}
+			budgetPass(t, r, b.Name)
+			b = guardGetBackup(t, r, b.Name)
+			if err := r.Get(t.Context(), client.ObjectKeyFromObject(b), &job); err != nil || b.Status.Phase == gameplanev1alpha1.BackupPhaseFailed {
+				t.Fatalf("normal source scheduling failed backup: job=%v status=%+v", err, b.Status)
+			}
+			// Once captured in the worker's immutable environment, the source
+			// may not silently change to a different pod at the same name.
+			if err := r.Delete(t.Context(), &pod); err != nil {
+				t.Fatal(err)
+			}
+			pod.UID, pod.ResourceVersion = "replacement-pod", ""
+			if err := r.Create(t.Context(), &pod); err != nil {
+				t.Fatal(err)
+			}
+			budgetPass(t, r, b.Name)
+			b = guardGetBackup(t, r, b.Name)
+			if b.Status.Phase != gameplanev1alpha1.BackupPhaseFailed || b.Annotations[backupAuthorizedWorkerAnnotation] != "" {
+				t.Fatalf("replacement source escaped immutable binding: %+v", b)
+			}
+		})
+	}
+}
+
+func TestBackupPreparedWorkerFailurePreservesJobMessage(t *testing.T) {
+	r, _ := guardFixtureWorkers(t, false, guardBackup("failed-worker"))
+	budgetPass(t, r, "failed-worker")
+	var job batchv1.Job
+	if err := r.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: "failed-worker"}, &job); err != nil {
+		t.Fatal(err)
+	}
+	job.Status.Conditions = []batchv1.JobCondition{{Type: batchv1.JobFailed, Status: corev1.ConditionTrue}}
+	if err := r.Status().Update(t.Context(), &job); err != nil {
+		t.Fatal(err)
+	}
+	budgetPass(t, r, job.Name)
+	b := guardGetBackup(t, r, job.Name)
+	if b.Status.Phase != gameplanev1alpha1.BackupPhaseFailed || b.Status.Message != "backup job reported Failed" || b.Annotations[backupCopyAbortAnnotation] != b.Status.Message {
+		t.Fatalf("prepared worker lost failure compatibility/invalidation: %+v", b)
+	}
+}
+
 func TestBackupQueuedCopyDoesNotSpendPreparationBudget(t *testing.T) {
 	r, _ := guardFixture(t, guardBackup("first"), guardBackup("second"))
 	budgetPass(t, r, "first")

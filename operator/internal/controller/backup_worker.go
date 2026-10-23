@@ -79,6 +79,7 @@ func backupWorkerSourceID(b *gameplanev1alpha1.Backup) string {
 // Raw copies retain their no-agent behavior while pinning any observed game
 // pod for placement and rejecting a replacement before authorization. The
 // stronger stopped/live proof remains #716's preparation for protected copies.
+// A nil source means the initial workload has not reached a stable node yet.
 func (r *BackupReconciler) prepareBackupWorkerSource(ctx context.Context, b *gameplanev1alpha1.Backup) (*backupWorkerSource, error) {
 	var source backupWorkerSource
 	var pod corev1.Pod
@@ -106,6 +107,13 @@ func (r *BackupReconciler) prepareBackupWorkerSource(ctx context.Context, b *gam
 			return nil, fmt.Errorf("%w: worker source relocated or replaced", errBackupSourceChanged)
 		}
 		return &previous, nil
+	}
+	// The StatefulSet controller and scheduler may still be establishing the
+	// first pod. Do not freeze an absent UID or empty node into the worker's
+	// immutable source ID and then mistake normal startup for replacement.
+	// An intentionally stopped workload remains eligible without any pod.
+	if (err == nil && pod.Spec.NodeName == "") || (apierrors.IsNotFound(err) && (ss.Spec.Replicas == nil || *ss.Spec.Replicas != 0)) {
+		return nil, nil
 	}
 	encoded, err := json.Marshal(source)
 	if err != nil {
@@ -238,6 +246,12 @@ func (r *BackupReconciler) reconcilePreparedRestic(ctx context.Context, b *gamep
 	if err != nil {
 		return r.abortResticCopy(ctx, b, err.Error())
 	}
+	if source == nil {
+		if err := r.setBackupProgress(ctx, b, "WorkerPreparing", "waiting for the source workload to be created and scheduled"); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
 	gate := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: backupStartConfigMapName(b), Namespace: b.Namespace}}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, gate, func() error {
 		if !gate.CreationTimestamp.IsZero() && !metav1.IsControlledBy(gate, b) {
@@ -263,7 +277,7 @@ func (r *BackupReconciler) reconcilePreparedRestic(ctx context.Context, b *gamep
 		}
 	}
 	if jobPermanentlyFailed(&job) {
-		return r.abortResticCopy(ctx, b, "backup worker reported Failed")
+		return r.abortResticCopy(ctx, b, "backup job reported Failed")
 	}
 	if job.Status.Succeeded > 0 {
 		if b.Annotations[backupAuthorizedWorkerAnnotation] == "" {

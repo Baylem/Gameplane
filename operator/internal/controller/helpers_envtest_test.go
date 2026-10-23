@@ -879,4 +879,15 @@ func seedBackupWorkload(t *testing.T, gs *gameplanev1alpha1.GameServer) {
 	if err := k8sClient.Status().Update(context.Background(), ss); err != nil {
 		t.Fatalf("observe workload: %v", err)
 	}
+	// Envtest has no StatefulSet controller or scheduler. Model their initial
+	// pod placement before a worker binds its immutable source identity.
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: name + "-0", Namespace: ns, OwnerReferences: []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "StatefulSet", Name: name, UID: ss.UID, Controller: ownerBoolPtr(true)}}},
+		Spec: corev1.PodSpec{NodeName: "fixture-node", Containers: []corev1.Container{{Name: "game", Image: "test/game:fixture"}}}}
+	if err := k8sClient.Create(context.Background(), pod); err != nil {
+		t.Fatalf("seed scheduled source pod: %v", err)
+	}
+	pod.Status.Phase = corev1.PodRunning
+	if err := k8sClient.Status().Update(context.Background(), pod); err != nil {
+		t.Fatalf("observe running source pod: %v", err)
+	}
 }
