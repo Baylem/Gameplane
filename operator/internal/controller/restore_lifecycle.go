@@ -262,9 +262,41 @@ func (r *RestoreReconciler) cleanupRestore(ctx context.Context, rs *gameplanev1a
 				if err != nil {
 					return ctrl.Result{}, err
 				}
+				if !sameLifecycleOwner(op.lifecycleIdentity, restoreLifecycleIdentity(&gs, rs)) {
+					return ctrl.Result{}, fmt.Errorf("restore cleanup target has a different lifecycle owner")
+				}
+				if !success && (op.InitialStartup || !gs.Spec.Suspend) {
+					// A CSI restore may have started the game to bind its PVC.
+					// Retire that permission before asking the workload to stop;
+					// a replacement operation must not overlap the old process.
+					op.InitialStartup = false
+					gs.Spec.Suspend = true
+					gs.Annotations[lifecycleOperationAnnotation] = lifecycleOperationJSON(op)
+					if err := r.Update(ctx, &gs); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
 				ready, err := recoverLifecycleOperation(ctx, r.Client, r.apiReader(), &gs, op, r.OperationQuiescer)
 				if err != nil || !ready {
 					return ctrl.Result{RequeueAfter: 5 * time.Second}, err
+				}
+			}
+			if !success {
+				if !gs.Spec.Suspend {
+					gs.Spec.Suspend = true
+					if err := r.Update(ctx, &gs); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+				stopped, progressed, err := r.restoreTargetStopped(ctx, &gs)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				if progressed {
+					return ctrl.Result{Requeue: true}, nil
+				}
+				if !stopped {
+					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 				}
 			}
 			if err := clearLifecycleOperation(ctx, r.Client, r.apiReader(), &gs, restoreLifecycleIdentity(&gs, rs)); err != nil {
