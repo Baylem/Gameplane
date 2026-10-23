@@ -2,6 +2,16 @@
 
 All facts measured on `master` at `8a67f2e` (2026-10-20) unless stated.
 
+## R0. Re-measurement before implementation (T002)
+
+Re-measured on `master` at `54d5819` (2026-10-22). No change to R1–R5 except:
+
+- R1: unchanged (`AGENT.md`, `AGENTS.md` mode `120000` → `CLAUDE.md`; `CLAUDE.md` regular file). No `AGENT.md` reference outside `specs/`.
+- R2: the superpowers plans hold 4 internal `docs/superpowers/` path references (3 plans; `multi-category-modules.md` has 2), not 5. 19 `specs.md` outside `specs/` (unchanged).
+- R3: `gp-module` also has `pkg/` (5 packages: archetypes, packager, preview, scaffold, validator) imported by `api/internal/handlers/modules_builder.go` and `test/e2e`; `api/cmd/` holds 7 non-test files plus `cmd/messages-export/main.go`; `mcp-server` root holds `main.go`, `tools.go`, `fixadvice.go`; `tunnel` root holds `main.go` (1,052 lines) and `playit_reporter.go` (525). `api/internal/handlers/` 146 and `operator/internal/controller/` 150 `.go` files (unchanged).
+- R4: `web/src/routes/` non-test screens over 500 lines: `AdminSettings.tsx` 2,478, `CreateServer.tsx` 1,352, `tabs/Mods.tsx` 1,291, `tabs/settings/Networking.tsx` 1,045, `ThemeSettings.tsx` 886, `Users.tsx` 825, `Servers.tsx` 680, `tabs/Files.tsx` 670, `tabs/settings/ShareLinks.tsx` 658, `Backups.tsx` 642, `Dashboard.tsx` 596. No `web/src/pages/` yet.
+- R6: `docs/contributing.md` has no opening paragraph (it starts with `# Contributing` then `## Dev loop`); T003 adds one.
+
 ## R1. Agent instruction files
 
 - `git ls-files -s`: `AGENT.md` and `AGENTS.md` are mode `120000` (symlink) with target `CLAUDE.md`; `CLAUDE.md` is a regular file (15,993 bytes). Equal md5 sums come from the links, not from copies.

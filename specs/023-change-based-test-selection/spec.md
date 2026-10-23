@@ -49,10 +49,13 @@ end-to-end suite as skipped with a reason.
 **Acceptance Scenarios**:
 
 1. **Given** a PR that changes only the agent's console code, **When** CI runs, **Then**
-   only the end-to-end suites mapped to the agent run, and the unrelated suites
-   (for example multicluster or upgrade) show as skipped with "not affected by this change".
-2. **Given** a PR that changes only the sentinel, **When** CI runs, **Then** the
-   operator, RBAC and authentication suites do not run.
+   only the end-to-end tests mapped to the agent run (every test that starts a game
+   server, since the agent runs in that pod), and the unrelated suites (for example
+   authentication, telemetry or rate limiting) show as skipped with "not affected by
+   this change".
+2. **Given** a PR that changes only the sentinel, **When** CI runs, **Then** the RBAC
+   and authentication suites do not run, and the operator suite runs only the sentinel's
+   tests plus the `TestHelmInstall_` smoke tests that every component selects.
 3. **Given** a PR that changes a component every suite depends on (the operator's
    resource definitions or the Helm chart), **When** CI runs, **Then** every end-to-end
    suite runs, exactly as today.
