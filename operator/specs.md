@@ -150,7 +150,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - Node affinity: honor spec.nodeSelector and spec.affinity preferences.
   - Ingress NetworkPolicy: enforce per-template advertised ports, admit CIDRs from `--game-ingress-from-cidr`.
   - Fixed-name child cleanup: Delete fixed-name objects (`<gs>-config` Secret, `<gs>-files` Secret, `<gs>-rcon` Secret, `<gs>-auto` BackupSchedule, `<gs>-wipe` Job) only when the GameServer controls them via OwnerReference; unowned objects with these names stay in place (same rule as game-ingress NetworkPolicy). Wipe cleanup carries the verified Job UID as a delete precondition; a foreign Job cannot acknowledge a pending wipe or resume its server.
-  - **Conflict requeue:** When reconcileStatefulSet or reconcileWipe encounters an apierrors.IsConflict error (concurrent update races), requeue without error logging — conflicts are expected and transient. The Module, NetworkCapture and Backup reconcilers apply the same rule to every error they return, via `requeueOnConflict` (`conflict.go`).
+  - **Conflict requeue:** When reconcileStatefulSet or reconcileWipe encounters an apierrors.IsConflict error (concurrent update races), requeue without error logging — conflicts are expected and transient. Idle-transition and restart-acknowledgment conflicts, including wrapped errors, also return before logging and retry after one second with fresh state. Other errors retain their identity, error logging and controller-runtime backoff. The Module, NetworkCapture and Backup reconcilers apply the conflict rule to every error they return, via `requeueOnConflict` (`conflict.go`).
   - Load-balancer address management: translate spec.networking.addressPool / .address preferences onto the Service based on the cluster's address-manager flavor (MetalLB, Cilium, or none), report assignment status via the AddressAssignment condition.
   - **Network capture foundation** (**Phase 2 Foundational**): Pre-provision a `captures` emptyDir (1 GiB) unconditionally on every game pod's StatefulSet template (required because pod.spec.volumes is immutable on running pods; a rolling restart of all existing game pods is incurred once on upgrade). Extend the `<gs>-agent` Service with a second numeric ServicePort 9091 for the capture sidecar's control endpoint. RBAC markers grant `pods/ephemeralcontainers` access (get, list, watch, patch, update) and full CRUD on `networkcaptures` resources. The capture sidecar injection as an ephemeral container is implemented: `buildCaptureEphemeralContainer` (`gameserver_controller.go`) is the single source of truth for the container spec, injected eagerly by `GameServerReconciler.reconcileCapture` when `spec.capture.enabled` is set, with `NetworkCaptureReconciler.injectCaptureContainer` as an idempotent fallback for the case where its own cache is ahead of the GameServer reconciler's write.
 - **Split concerns:**
@@ -274,7 +274,13 @@ lineage is retained on the GameServer across repeated force deletion. Owned Jobs
 are canceled with UID preconditions and foreground propagation; independently
 inventoried live or terminating worker pods and pending CSI captures retain the
 guard. Saving is restored only after recovery workers drain. The workload remains
-frozen during recovery even when the successor is a Restore or wipe. Terminal
+frozen during recovery even when the successor is a Restore or wipe, except
+that an orphaned Restore's initial workload must scale to zero with its template
+preserved. An existing wipe guard does not skip this workload reconciliation.
+Wipe cancellation, replacement, success cleanup and worker creation wait until
+all predecessor workers and quiesce cleanup finish. Immediately before worker
+creation, an uncached read must still show the same durable wipe owner with no
+pending recovery; the compatibility guard alone cannot authorize a launch. Terminal
 state and existing cleanup intent are preserved before releasing the owner;
 failed/canceled restores remain suspended. Generation changes to active Backup
 or Restore specs fail the operation and enter cleanup rather than authorizing a

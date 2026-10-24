@@ -38,6 +38,10 @@ import (
 	gameplanev1alpha1 "github.com/GameplanePanel/gameplane/operator/api/v1alpha1"
 )
 
+// Lifecycle annotation conflicts need a fresh reconcile, not an error backoff.
+// Give concurrent writers and the informer cache a bounded interval to settle.
+const lifecycleConflictRetry = time.Second
+
 // GameServerReconciler reconciles a GameServer object into a StatefulSet,
 // Service, and PVC. The agent sidecar is injected at pod-spec build time.
 type GameServerReconciler struct {
@@ -336,6 +340,9 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// single status patch further down.
 	idle, idleStatus, idleRequeue, idleScheduleErr, err := r.reconcileIdle(ctx, &gs)
 	if err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: lifecycleConflictRetry}, nil
+		}
 		logger.Error(err, "reconcile idle")
 		return ctrl.Result{}, err
 	}
@@ -385,6 +392,9 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	replicas, stopRequeue, err := r.desiredReplicas(ctx, &gs, &tmpl, idle, &wipeState)
 	if err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: lifecycleConflictRetry}, nil
+		}
 		logger.Error(err, "compute desired replicas")
 		return ctrl.Result{}, err
 	}
