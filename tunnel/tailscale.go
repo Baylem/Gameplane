@@ -19,6 +19,26 @@ import (
 
 const tailscaleStateDir = "/var/lib/gameplane-tailscale"
 
+// tailnetRetryHealth requires fresh, uninterrupted confirmation before a
+// previous session can clear retry escalation. Each new session starts empty.
+type tailnetRetryHealth struct {
+	checked, healthySince time.Time
+}
+
+func (h *tailnetRetryHealth) observe(now time.Time, healthy bool, backoff *exponentialBackoff) {
+	if !healthy {
+		h.healthySince = time.Time{}
+	} else {
+		if h.healthySince.IsZero() || now.Sub(h.checked) >= 10*time.Second {
+			h.healthySince = now
+		}
+		if now.Sub(h.healthySince) >= time.Minute {
+			backoff.reset()
+		}
+	}
+	h.checked = now
+}
+
 type tailnetNode interface {
 	Up(context.Context) (*ipnstate.Status, error)
 	Status(context.Context) (*ipnstate.Status, error)
@@ -94,7 +114,10 @@ func runTailscale(ctx context.Context, cfg Config, authKey string) error {
 		if err != nil {
 			return err
 		}
-		err = serveTailnet(ctx, embeddedTailnet{server}, tags, ports, &ready, 2*time.Second)
+		healthHistory := &tailnetRetryHealth{}
+		err = serveTailnetObserved(ctx, embeddedTailnet{server}, tags, ports, &ready, 2*time.Second, func(healthy bool) {
+			healthHistory.observe(time.Now(), healthy, backoff)
+		})
 		ready.Store(false)
 		_ = server.Close()
 		if ctx.Err() != nil {
@@ -142,8 +165,15 @@ func tailnetReady(status *ipnstate.Status, tags []string) bool {
 }
 
 func serveTailnet(ctx context.Context, node tailnetNode, tags []string, ports []forwardPort, ready *atomic.Bool, poll time.Duration) error {
+	return serveTailnetObserved(ctx, node, tags, ports, ready, poll, nil)
+}
+
+func serveTailnetObserved(ctx context.Context, node tailnetNode, tags []string, ports []forwardPort, ready *atomic.Bool, poll time.Duration, observe func(bool)) error {
 	ready.Store(false)
 	defer ready.Store(false)
+	if observe != nil {
+		defer observe(false)
+	}
 	upCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	status, err := node.Up(upCtx)
 	cancel()
@@ -176,6 +206,9 @@ func serveTailnet(ctx context.Context, node tailnetNode, tags []string, ports []
 		}
 	}
 	ready.Store(true)
+	if observe != nil {
+		observe(true)
+	}
 	ticker := time.NewTicker(poll)
 	defer ticker.Stop()
 	for {
@@ -188,7 +221,11 @@ func serveTailnet(ctx context.Context, node tailnetNode, tags []string, ports []
 			statusCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 			status, err := node.Status(statusCtx)
 			cancel()
-			ready.Store(err == nil && tailnetReady(status, tags))
+			healthy := err == nil && tailnetReady(status, tags)
+			ready.Store(healthy)
+			if observe != nil {
+				observe(healthy)
+			}
 			if err == nil && status != nil && !slices.Equal(status.TailscaleIPs, ips) {
 				return errors.New("tailnet addresses changed; recreating forwarding listeners")
 			}

@@ -563,6 +563,12 @@ type exponentialBackoff struct {
 	retries int
 }
 
+func (b *exponentialBackoff) reset() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.retries = 0
+}
+
 // next returns the next backoff duration and increments the retry counter.
 func (b *exponentialBackoff) next() time.Duration {
 	b.mu.Lock()
