@@ -166,10 +166,11 @@ func (r *GameServerReconciler) ensureWipeGuard(ctx context.Context, gs *gameplan
 	}
 	*gs = live
 	if token := gs.Annotations[wipeGuardAnnotation]; token != "" {
-		ready, err := claimLifecycleOperation(ctx, r.Client, r.wipeReader(), gs, wipeLifecycleIdentity(gs, token), r.OperationQuiescer)
-		// Upgrading an existing guard does not require another pass. Only
-		// unfinished predecessor cleanup must prevent this wipe proceeding.
-		return err == nil && !ready, err
+		_, err := claimLifecycleOperation(ctx, r.Client, r.wipeReader(), gs, wipeLifecycleIdentity(gs, token), r.OperationQuiescer)
+		// Existing ownership must not skip workload reconciliation: orphaned
+		// Restore recovery may need it to scale down the initial startup pod.
+		// reconcileWipe separately blocks cleanup and launch until recovery ends.
+		return false, err
 	}
 	state := wipeInventory(inventory)
 	if err := r.loadWipeWorkers(ctx, gs, state); err != nil {
@@ -194,6 +195,20 @@ func (r *GameServerReconciler) ensureWipeGuard(ctx context.Context, gs *gameplan
 	}
 	_, err = claimLifecycleOperation(ctx, r.Client, r.wipeReader(), gs, wipeLifecycleIdentity(gs, token), r.OperationQuiescer)
 	return err == nil && gs.Annotations[wipeGuardAnnotation] == token, err
+}
+
+// wipeLifecycleReady requires the durable owner, not just its compatibility
+// guard. Pending predecessors still own cleanup obligations and cannot be
+// discarded by wipe completion, cancellation, replacement, or a new worker.
+func wipeLifecycleReady(gs *gameplanev1alpha1.GameServer, token string) (bool, error) {
+	if gs.Annotations[lifecycleOperationAnnotation] == "" {
+		return false, nil
+	}
+	op, held, err := lifecycleOwner(gs)
+	if err != nil {
+		return false, err
+	}
+	return held && sameLifecycleOwner(op.lifecycleIdentity, wipeLifecycleIdentity(gs, token)) && len(op.Recovery) == 0, nil
 }
 
 // Stamp the owned workload with a checked write before workers launch. A stale
