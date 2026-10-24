@@ -397,6 +397,7 @@ EOF
 # Zero shared panel logins; the fixture has its own login limiter and storage.
 bucket_recovery() { cat <<'EOF'
 TestPanel_OfflineRecovery
+TestAPIClient_DoContextResponseBody
 EOF
 }
 

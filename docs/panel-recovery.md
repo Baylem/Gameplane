@@ -92,6 +92,9 @@ state and saves through the operational access available during the outage.
    evidence, protect access to it, and tell users that they must log in again and
    recreate shares/tokens. Do not run cleanup against the evidence archive.
 5. Mount the original standalone management key read-only from separate custody.
+   For standalone recovery, start with `--panel-key-provisioned` and set
+   `--panel-key-file` to that mounted original key; this prevents startup from
+   generating a replacement if the key is missing.
    In combined mode, restore/validate required Kubernetes management objects and
    Secrets through the cluster's recovery process instead. Start one API using
    compatible software and the restored database; inspect migration/startup
@@ -118,9 +121,14 @@ state and saves through the operational access available during the outage.
 
 Keep the panel stopped. Recover the exact key version paired with the chosen
 database backup from separate custody. Existing encrypted credentials cannot be
-recovered by generating a new random key. Current startup rejects a missing key
-with `management encryption key is missing`; an inactive/wrong key for a recorded
-key identity reports `management encryption key is inactive`. Other corruption
+recovered by generating a new random key. With `--panel-key-provisioned`, startup
+rejects a missing file with `provisioned management key is missing` and never
+creates a replacement, regardless of database contents. Without provisioned mode,
+a database containing management secrets or key-state records requires its key
+and a missing file reports `management encryption key is missing`; when neither
+is present, startup can generate a new key. Recovery must use provisioned mode
+to avoid that fallback. An inactive/wrong key for a recorded key identity reports
+`management encryption key is inactive`. Other corruption
 may fail authentication of encrypted records. None is permission to serve partial
 management state.
 

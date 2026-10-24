@@ -16,7 +16,7 @@
     "test/e2e/suite-components.json"
   ],
   "suites": [
-    { "tests": "^TestPanel_OfflineRecovery$", "components": ["operator", "api", "agent"],
+    { "tests": "^(TestPanel_OfflineRecovery|TestAPIClient_DoContextResponseBody)$", "components": ["operator", "api", "agent"],
       "paths": ["test/e2e/testdata/recovery/"] },
     { "tests": "^TestHelmInstall_", "components": ["*"] },
     { "tests": "^TestCRD_Validation_", "components": ["operator"] },
