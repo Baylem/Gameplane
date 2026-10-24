@@ -1,6 +1,6 @@
 # Open Decisions: v0.3 Release Readiness Audit
 
-### OD-031: Tailscale game forwarding (F-173) — RESOLVED 2026-10-21
+## OD-031: Tailscale game forwarding (F-173) — RESOLVED 2026-10-21
 
 Decision (maintainer reply on #722): embed `tailscale.com/tsnet` and forward both TCP and UDP from advertised tailnet listeners to the GameServer's backing Service. This explicitly ends the tunnel module's stdlib-only dependency policy. Device registration alone cannot establish readiness; the same change must provide actual tailnet/listener health. The previous Known Gaps entry referred to a decision that had never been recorded.
 
