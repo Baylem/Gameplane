@@ -74,6 +74,9 @@ func TestRestrictedWorkloads_NodeCaptureAndTokenRotation(t *testing.T) {
 	if pod.Spec.AutomountServiceAccountToken == nil || *pod.Spec.AutomountServiceAccountToken || len(pod.Spec.InitContainers) != 1 || len(pod.Spec.EphemeralContainers) != 0 {
 		t.Fatalf("unexpected restricted pod: %+v", pod.Spec)
 	}
+	if pod.Spec.ShareProcessNamespace == nil || !*pod.Spec.ShareProcessNamespace {
+		t.Fatal("restricted profile must retain shared PID for agent metrics")
+	}
 	for _, c := range append(pod.Spec.Containers, pod.Spec.InitContainers...) {
 		sc := c.SecurityContext
 		if sc == nil || sc.RunAsNonRoot == nil || !*sc.RunAsNonRoot || sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation || sc.Capabilities == nil || len(sc.Capabilities.Add) != 0 || len(sc.Capabilities.Drop) != 1 || sc.Capabilities.Drop[0] != "ALL" || sc.SeccompProfile == nil || sc.SeccompProfile.Type != corev1.SeccompProfileTypeRuntimeDefault {
@@ -236,6 +239,9 @@ func TestRestrictedWorkloads_NodeCaptureAndTokenRotation(t *testing.T) {
 		}
 		if live.UID != pod.UID || len(live.Spec.EphemeralContainers) != 0 {
 			t.Fatal("capture restarted or injected into game pod")
+		}
+		if live.Spec.ShareProcessNamespace == nil || !*live.Spec.ShareProcessNamespace {
+			t.Fatal("capture changed the shared PID profile required for agent metrics")
 		}
 		for i, c := range live.Status.ContainerStatuses {
 			if c.RestartCount != pod.Status.ContainerStatuses[i].RestartCount {
