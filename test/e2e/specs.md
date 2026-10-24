@@ -24,6 +24,8 @@ the drill and all unit/chart regressions. Idempotent capture-setting requests
 retry only HTTP 409 conflicts with controller updates; capture creation and
 transport or authorization failures are never retried. Completion still
 requires all capture workers to have been drained before `Completed` is reported.
+The drill explicitly verifies that shared PID remains enabled for agent metrics
+after the Restricted upgrade and after capture completion and revocation.
 
 The `test/e2e` module is Gameplane's end-to-end test suite: it stands up a real (kind-based) Kubernetes cluster, installs the Helm chart, and drives the operator/api/agent/sentinel stack as real components rather than mocks — CRDs applied through the typed/dynamic client, HTTP calls through a real port-forward, RCON/wire-protocol joins against real game server containers. Where the other modules' test tiers (unit, envtest) prove a component's own logic in isolation, this module proves the whole product works together on a cluster shaped like the ones users actually run.
 
