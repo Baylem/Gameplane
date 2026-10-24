@@ -45,4 +45,8 @@ func TestTailscaleAdvertisedProtocolsAndReadiness(t *testing.T) {
 	tmpl.Spec.Ports[0].Protocol = corev1.ProtocolSCTP
 	plan = r.planTunnel(context.Background(), gs, tmpl)
 	assert(metav1.ConditionFalse)
+	condition := meta.FindStatusCondition(computeTunnelConditions(gs, plan, dep), "TunnelReady")
+	if condition == nil || condition.Reason != "UnsupportedProtocol" {
+		t.Fatalf("unsupported protocol condition=%+v, want reason UnsupportedProtocol", condition)
+	}
 }
