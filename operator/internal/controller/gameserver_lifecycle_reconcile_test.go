@@ -283,9 +283,10 @@ func TestWipeLaunchRevalidatesDurableOwnerAfterStopProof(t *testing.T) {
 					op.lifecycleIdentity = lifecycleIdentity{Kind: "Restore", Name: "replacement", UID: "replacement", TargetUID: gs.UID}
 				}
 				live.Annotations[lifecycleOperationAnnotation] = lifecycleOperationJSON(op)
-				if mode == "missing owner" {
+				switch mode {
+				case "missing owner":
 					delete(live.Annotations, lifecycleOperationAnnotation)
-				} else if mode == "malformed owner" {
+				case "malformed owner":
 					live.Annotations[lifecycleOperationAnnotation] = "invalid"
 				}
 				return cl.Update(ctx, live)
@@ -329,7 +330,7 @@ func TestGameServerLifecyclePatchConflictsRetryQuietly(t *testing.T) {
 				}
 				r := lifecycleGameServerFixture(t, gs)
 				cause := errors.New("API unavailable")
-				var patchErr error = cause
+				patchErr := cause
 				if conflict {
 					patchErr = apierrors.NewConflict(schema.GroupResource{Group: "gameplane.local", Resource: "gameservers"}, gs.Name, cause)
 				}
