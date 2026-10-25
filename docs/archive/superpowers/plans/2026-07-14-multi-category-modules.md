@@ -1,3 +1,5 @@
+> **Historical, superseded.** This July 2026 document is kept for reference only. The work it describes has shipped and the code may differ from it. Current behavior is described in `operator/specs.md` and `gp-module/specs.md`. See [docs/archive](../../README.md).
+
 # Multi-Category Modules Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -10,7 +12,7 @@
 
 ## Global Constraints
 
-- **Phase 1 of** `docs/superpowers/specs/2026-07-14-console-protocols-categories-actions-design.md`. Read the spec's §2 before starting.
+- **Phase 1 of** `docs/archive/superpowers/specs/2026-07-14-console-protocols-categories-actions-design.md`. Read the spec's §2 before starting.
 - **Do NOT run tests or linters locally.** Push to a branch; GitHub Actions is the source of truth (CLAUDE.md rule 8). A compile check (`go build ./...`, `go vet ./...`, `tsc --noEmit`) is fine and encouraged. Note `go build` skips test files — use `go vet ./...` to compile-check tests.
 - **After editing CRD Go types, run `make generate && make manifests`** and commit the regenerated `zz_generated.deepcopy.go`, `operator/config/crd/*.yaml`, `operator/config/rbac/*.yaml`, and `charts/gameplane/crds/*.yaml` in the SAME commit as the source change (CLAUDE.md rule 7). Codegen is not a test — running it locally is required.
 - **Sign every commit**: `git -c commit.gpgsign=false commit -s -m "..."` (the `-c` MUST precede the subcommand). Conventional-commit prefixes.
@@ -974,7 +976,7 @@ git push -u origin feat/multi-category-modules
 
 ```bash
 gh pr create --title "feat: modules declare multiple categories" --body "$(cat <<'EOF'
-Phase 1 of docs/superpowers/specs/2026-07-14-console-protocols-categories-actions-design.md.
+Phase 1 of docs/archive/superpowers/specs/2026-07-14-console-protocols-categories-actions-design.md.
 
 `category: string` becomes `categories: []string` across the CRDs, the bundle
 parser, the API catalog DTO, and the dashboard. A module may now belong to
