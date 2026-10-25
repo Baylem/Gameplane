@@ -42,6 +42,12 @@ not recreated to enable remote parity.
 
 ## Non-goals / boundaries
 
+Tailscale tags are normalized and syntax-checked before tunnel Deployment creation.
+Invalid tags remove a previous Deployment and report `TunnelReady=False` with
+`InvalidTailscaleTags`, naming the configuration field to correct. Correcting
+the tags permits normal creation again; denied provider authorization never
+falls back to an untagged identity.
+
 The operator **does not** handle:
 - User authentication or authorization (RBAC is Kubernetes role-based, not application-level).
 - REST API, WebSocket, or dashboard concerns (the API server, not the operator, owns the UX layer).

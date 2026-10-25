@@ -1116,6 +1116,12 @@ func computeTunnelConditions(
 	}
 
 	// Tunnel Deployment not yet created or not ready.
+	if tunnel.Provider == "tailscale" && tunnel.Tailscale != nil && !validTailscaleTags(tunnel.Tailscale.Tags) {
+		tunnelReady.Status = metav1.ConditionFalse
+		tunnelReady.Reason = "InvalidTailscaleTags"
+		tunnelReady.Message = "Tailscale tags must be optional tag: prefixes followed by a letter and only letters, digits or hyphens; correct spec.networking.tunnel.tailscale.tags"
+		return upsertCondition(conds, tunnelReady)
+	}
 	if tunnel.Provider == "tailscale" && len(plan.unsupportedPorts) > 0 {
 		tunnelReady.Status = metav1.ConditionFalse
 		tunnelReady.Reason = "UnsupportedProtocol"

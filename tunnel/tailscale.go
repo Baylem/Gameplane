@@ -128,15 +128,27 @@ func runTailscale(ctx context.Context, cfg Config, authKey string) error {
 		if err != nil {
 			log.Print("Tailscale forwarding unavailable; check credentials, requested tagOwners, device approval, unique hostname, MagicDNS and tailnet connectivity")
 		}
-		select {
-		case <-ctx.Done():
-			return nil
-		case err := <-healthDone:
-			return fmt.Errorf("tailscale health server: %w", err)
-		case <-time.After(backoff.next()):
+		if err := waitTailnetRetry(ctx, healthDone, backoff.next()); err != nil {
+			if ctx.Err() != nil {
+				return nil
+			}
+			return err
 		}
 	}
 	return nil
+}
+
+func waitTailnetRetry(ctx context.Context, healthDone <-chan error, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-healthDone:
+		return fmt.Errorf("tailscale health server: %w", err)
+	case <-timer.C:
+		return nil
+	}
 }
 
 func tailscaleHealth(ready *atomic.Bool) http.Handler {

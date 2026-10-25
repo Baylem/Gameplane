@@ -30,6 +30,11 @@ func TestTailscaleServerPreservesIdentityAndTags(t *testing.T) {
 		t.Fatal("invalid tags silently dropped")
 	}
 	cfg.TailscaleTags = ""
+	cfg.TailscaleHostname = ""
+	if _, _, err := tailscaleServer(cfg, "key"); err == nil {
+		t.Fatal("empty hostname accepted")
+	}
+	cfg.TailscaleHostname = "my-game"
 	if _, _, err := tailscaleServer(cfg, ""); err == nil {
 		t.Fatal("empty auth key accepted")
 	}
@@ -56,6 +61,7 @@ type fakeTailnetNode struct {
 	mu        sync.Mutex
 	status    *ipnstate.Status
 	upErr     error
+	upCalls   int
 	listenErr bool
 	listened  []string
 	listeners []net.Listener
@@ -63,6 +69,7 @@ type fakeTailnetNode struct {
 }
 
 func (f *fakeTailnetNode) Up(ctx context.Context) (*ipnstate.Status, error) {
+	f.upCalls++
 	if f.upErr != nil {
 		return nil, f.upErr
 	}
@@ -163,12 +170,32 @@ func TestTailnetFailuresNeverBecomeReady(t *testing.T) {
 			if err == nil || ready.Load() {
 				t.Fatalf("failure became ready: %v", err)
 			}
+			if node.upCalls != 1 {
+				t.Fatalf("failed registration retried without requested tags: %d attempts", node.upCalls)
+			}
 			for _, listener := range node.listeners {
 				if _, err := listener.Accept(); err == nil {
 					t.Fatal("partially opened listener leaked")
 				}
 			}
 		})
+	}
+}
+
+func TestTailscaleRetryBackoffCancelsImmediately(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(t.Context())
+	healthDone := make(chan error)
+	done := make(chan error, 1)
+	go func() { done <- waitTailnetRetry(ctx, healthDone, time.Hour) }()
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("cancelled retry: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("retry backoff ignored cancellation")
 	}
 }
 
