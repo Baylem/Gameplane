@@ -15,7 +15,7 @@ v1 is the 20 audit issues #712–#731 plus codebase cleanup, with no new feature
 defines the target layout; this spec applies it to the code. Spec 029 (faster e2e buckets)
 waits for spec 023.
 
-Target layout, settled in spec 027 (`specs/027-contributor-docs-layout-map/OPEN-DECISIONS.md`,
+Target layout, settled in spec 027 (`specs/done_027-contributor-docs-layout-map/OPEN-DECISIONS.md`,
 valgul 2026-10-20). This spec applies it and does not reopen it:
 
 - **027 OD-3, Go modules.** Long-running services use a thin `cmd/main.go` plus
