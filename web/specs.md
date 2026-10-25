@@ -42,6 +42,8 @@ The Gameplane dashboard is a React SPA providing a UI layer over the Gameplane A
 
 **API-only:** The dashboard never speaks directly to the operator or agent. All reads/writes flow through the Kubernetes API server and the REST/WebSocket API gateway (`api/`).
 
+**Internal readiness:** Dashboard nginx returns 404 for `/readyz`, including query strings and normalized paths, before SPA routing or API proxying. Kubelet probes reach the API directly; public traffic cannot consume its database readiness slot. The nginx proxy smoke test checks rejection against a live upstream and confirms ordinary proxying still works.
+
 **Pre-auth privacy:** The login page and any unauthenticated screen must not leak internal state: no hostnames, cluster names, server counts, version strings, user lists, or "user not found" errors. See docs/security.md "pre-auth privacy" and CLAUDE.md rule 3.
 
 **Cluster-bound WebSocket:** Server streams carry the open server's explicit cluster and namespace. Reconnects retain that target; leaving the server view closes its streams. Changing an infrastructure selection cannot retarget a stream. Pod logs and PTY attach use the target Kubernetes client; remote agent streams use the configured authenticated gateway and fail closed when unavailable.
