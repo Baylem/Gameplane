@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -25,6 +26,20 @@ const (
 	tunnelAuthVolume   = "tunnel-auth"
 	tunnelAuthMountDir = "/etc/gameplane/tunnel-auth"
 )
+
+var tailscaleTagPattern = regexp.MustCompile(`^(tag:)?[A-Za-z][A-Za-z0-9-]*$`)
+
+// validTailscaleTags mirrors the supervisor's normalization before it can
+// register a node. Invalid configuration must be visible before Pod startup.
+func validTailscaleTags(tags []string) bool {
+	for _, tag := range strings.Split(strings.Join(tags, ","), ",") {
+		tag = strings.TrimSpace(tag)
+		if tag != "" && !tailscaleTagPattern.MatchString(tag) {
+			return false
+		}
+	}
+	return true
+}
 
 // tunnelCredentialKey returns the Secret key name for a given tunnel provider.
 // Must match the keys in tunnel/main.go allowedCredentialKeys and
@@ -186,6 +201,14 @@ func (r *GameServerReconciler) reconcileTunnel(
 
 	tunnel := gs.Spec.Networking.Tunnel
 	if tunnel == nil {
+		return r.clearTunnelCredentialRefused(ctx, gs)
+	}
+	if tunnel.Provider == "tailscale" && tunnel.Tailscale != nil && !validTailscaleTags(tunnel.Tailscale.Tags) {
+		// Stop a previous configuration rather than crash-looping a replacement
+		// or registering without the requested access-control tags.
+		if err := r.deleteTunnel(ctx, gs.Namespace, gs.Name); err != nil {
+			return err
+		}
 		return r.clearTunnelCredentialRefused(ctx, gs)
 	}
 
@@ -427,6 +450,11 @@ func (r *GameServerReconciler) reconcileTunnel(
 			container := &dep.Spec.Template.Spec.Containers[0]
 			container.StartupProbe = &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/healthz", Port: intstr.FromInt32(8091)}}, PeriodSeconds: 2, TimeoutSeconds: 1, FailureThreshold: 30}
 			container.ReadinessProbe = &corev1.Probe{ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/readyz", Port: intstr.FromInt32(8091)}}, PeriodSeconds: 2, TimeoutSeconds: 1, FailureThreshold: 1}
+			if tunnel.Provider == "playit" {
+				// The pinned Playit IPC has no live connection signal. Pod
+				// readiness uses process health; TunnelReady remains Unknown.
+				container.ReadinessProbe.HTTPGet.Path = "/healthz"
+			}
 		}
 
 		return controllerutil.SetControllerReference(gs, dep, r.Scheme)

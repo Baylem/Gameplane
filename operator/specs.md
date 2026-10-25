@@ -44,6 +44,18 @@ not recreated to enable remote parity.
 
 ## Non-goals / boundaries
 
+Tailscale tags are normalized and syntax-checked before tunnel Deployment creation.
+Invalid tags remove a previous Deployment and report `TunnelReady=False` with
+`InvalidTailscaleTags`, naming the configuration field to correct. Correcting
+the tags permits normal creation again; denied provider authorization never
+falls back to an untagged identity.
+
+Playit Pod readiness uses the wrapper's `/healthz` endpoint because the pinned
+provider cannot confirm a live relay connection. This never promotes
+`TunnelReady` to True: relay evidence stays Unknown, or AwaitingAddress before
+assignment. Existing frp Deployments receive `GAMESERVER_UID`, current probes
+and Recreate strategy automatically on reconciliation after an operator upgrade.
+
 The operator **does not** handle:
 - User authentication or authorization (RBAC is Kubernetes role-based, not application-level).
 - REST API, WebSocket, or dashboard concerns (the API server, not the operator, owns the UX layer).

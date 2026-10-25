@@ -1,6 +1,6 @@
 {{- /* SSA cannot remove a server-defaulted rollingUpdate field. Patch it before
 Helm applies Recreate, including installations that manage CRDs externally. */ -}}
-{{- if and .Release.IsUpgrade (eq (include "gameplane.operatorEnabled" .) "true") (not .Values.operator.leaderElect) }}
+{{- if and .Release.IsUpgrade (eq (include "gameplane.operatorEnabled" .) "true") (not (or .Values.operator.leaderElect (gt (int .Values.operator.replicas) 1))) }}
 {{- $existing := lookup "apps/v1" "Deployment" .Release.Namespace "gameplane-operator" }}
 {{- if $existing }}
 {{- $name := printf "%s-op-roll" .Release.Name }}

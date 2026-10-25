@@ -122,6 +122,7 @@ var rows = []row{
 
 	// GameServer: tunnel and other
 	{types: []string{"TunnelReady"}, reason: "UnsupportedProtocol", english: "Tailscale forwards only advertised TCP and UDP ports. Remove unsupported protocols from the advertised ports.", description: "TunnelReady condition when a Tailscale template advertises a protocol other than TCP or UDP."},
+	{types: []string{"TunnelReady"}, reason: "InvalidTailscaleTags", english: "Correct the Tailscale tags: use an optional tag: prefix, a letter first, then only letters, digits or hyphens.", description: "TunnelReady condition when Tailscale access-control tags have invalid syntax."},
 	{types: []string{"TunnelReady"}, reason: "InvalidConfig", english: "{provider, select, none {The tunnel is enabled but the server has no tunnel configuration.} other {The ''{provider}'' tunnel provider is selected but its configuration is missing.}}", description: "TunnelReady condition for an incomplete tunnel setup. provider is the selected provider, or none."},
 	{types: []string{"TunnelReady"}, reason: "DeploymentNotReady", english: "Waiting for the tunnel deployment to become ready.", description: "TunnelReady condition while the tunnel pod is not ready."},
 	{types: []string{"TunnelReady"}, reason: "RelayConnectionUnknown", english: "The relay connection cannot be confirmed. Check the provider's connection status and the tunnel deployment's readiness probe.", description: "TunnelReady condition when provider connection evidence is missing or unsupported."},

@@ -227,6 +227,9 @@ func (f *forwarder) proxyUDP(listener net.PacketConn, peer net.Addr, packets <-c
 			if err != nil {
 				return
 			}
+			// Server-originated traffic is activity too, even when the client
+			// sends nothing after joining this UDP session.
+			_ = upstream.SetReadDeadline(time.Now().Add(f.limits.idle))
 			if n <= 65507 {
 				_ = listener.SetWriteDeadline(time.Now().Add(f.limits.dial))
 				if _, err := listener.WriteTo(buf[:n], peer); err != nil {

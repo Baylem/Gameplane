@@ -138,3 +138,57 @@ func TestTailscaleUDPForwardIsolationLimitAndExpiry(t *testing.T) {
 		t.Fatal("shutdown leaked sessions")
 	}
 }
+
+func TestTailscaleUDPServerTrafficKeepsSessionAlive(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	backend, err := (&net.ListenConfig{}).ListenPacket(ctx, "udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backend.Close()
+	listener, err := (&net.ListenConfig{}).ListenPacket(ctx, "udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := newForwarder(ctx, forwardLimits{sessions: 1, udpQueue: 1, idle: 400 * time.Millisecond, dial: time.Second})
+	f.serveUDP(listener, backend.LocalAddr().String())
+	defer f.Close()
+	client, err := (&net.Dialer{}).DialContext(ctx, "udp", listener.LocalAddr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	if _, err := client.Write([]byte("join")); err != nil {
+		t.Fatal(err)
+	}
+	_ = backend.SetReadDeadline(time.Now().Add(3 * time.Second))
+	buffer := make([]byte, 32)
+	_, peer, err := backend.ReadFrom(buffer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// No more client packets: server updates alone must extend the same session
+	// for several idle windows, then complete silence must still reclaim it.
+	ticker := time.NewTicker(80 * time.Millisecond)
+	defer ticker.Stop()
+	for i := 0; i < 15; i++ {
+		<-ticker.C
+		if _, err := backend.WriteTo([]byte("update"), peer); err != nil {
+			t.Fatal(err)
+		}
+		_ = client.SetReadDeadline(time.Now().Add(time.Second))
+		n, err := client.Read(buffer)
+		if err != nil || string(buffer[:n]) != "update" {
+			t.Fatalf("server update %d lost: %q %v", i, buffer[:n], err)
+		}
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for len(f.slots) != 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if len(f.slots) != 0 {
+		t.Fatal("silent session did not expire")
+	}
+}

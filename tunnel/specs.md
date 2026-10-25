@@ -119,9 +119,10 @@ playit.gg assigns a tunnel's public address server-side, so the supervisor learn
 The maintainer chose embedded `tailscale.com/tsnet` for TCP and UDP; the decision is recorded in [OPEN-DECISIONS.md](../specs/done_018-v0-3-release-readiness/OPEN-DECISIONS.md#od-031-tailscale-game-forwarding-f-173--resolved-2026-10-21). No tailscaled executable, CLI, subnet router, exit node, Serve or Funnel configuration is used.
 
 - `tailscaleForwardPlan` accepts only the exact `<gameserver>.<namespace>.svc` host and explicitly advertised protocol/port pairs. Inbound bytes never select a backend address. TCP listens on both tailnet families; UDP binds each assigned tailnet IP because tsnet requires an explicit address.
-- The ordinary Go network dialer resolves the Service for each new TCP connection or UDP session. Existing streams/sessions can fail during Service/backend replacement; reconnecting clients resolve the current Service. UDP sessions expire after 30 seconds without client packets.
+- The ordinary Go network dialer resolves the Service for each new TCP connection or UDP session. Existing streams/sessions can fail during Service/backend replacement; reconnecting clients resolve the current Service. UDP sessions expire after 30 seconds without traffic in either direction; server-only updates keep an established session alive.
 - A shared 128-session budget covers all ports/protocols/families. Each UDP session queues at most four datagrams (65,507 bytes each) and uses one response buffer. Full budgets or queues drop incoming UDP; excess TCP connections close. Dials and UDP writes time out after five seconds. TCP sockets have five-minute activity timeouts. Shutdown closes listeners and sockets, cancels pending dials, then joins workers.
 - `tsnet.Server` receives the existing hostname, normalized requested tags and mounted auth key. There is no untagged fallback. The fixed state directory `/var/lib/gameplane-tailscale` uses a per-Pod EmptyDir owned through fsGroup 65532. Container restarts reuse identity. Pod replacement loses state and needs a reusable valid auth key; the Deployment uses Recreate. This is not durable identity across Pod replacement. Remove stale devices in the tailnet admin console to free the hostname. A suffixed/conflicting MagicDNS name cannot report the originally advertised name as ready.
+- The operator validates tag syntax before creating the Deployment. Invalid tags remove a prior Deployment and report `TunnelReady=False/InvalidTailscaleTags` with correction guidance; fixing the tags resumes reconciliation. Authentication or tag-authorization failures still fail closed inside tsnet, with no registration attempt that omits requested tags.
 - `Up` has a two-minute attempt deadline; failed attempts use the existing capped retry delay. After binding every listener, the binary polls local tailnet status every two seconds with a two-second deadline. Loss of online status, tags or hostname clears readiness. Address changes recreate listeners. Failed listeners close all forwarding sockets and retry. Credentials and interactive login URLs are excluded from logs.
 - HTTP `:8091/readyz` returns 200 only while that state is ready, otherwise 503. `/healthz` remains independent of tailnet availability. The operator probes every five seconds and requires a current observed Deployment generation with an updated ready replica. Legacy deployments without the forwarding probe cannot report `TunnelReady=True`. Tailscale endpoints are published only while ready.
 - Readiness establishes local forwarding capacity and tailnet authentication. It does not prove a particular player's grant or game application health, and it deliberately remains ready while the game sleeps so traffic can reach the sentinel. Tailnet grants/ACLs still determine which peers may connect. Missing tags, denied registration, device approval and hostname conflicts require administrator repair.
@@ -286,8 +287,9 @@ The maintainer explicitly approved ending the stdlib-only policy for tsnet in #7
 
 `relay_health.go` owns the frp/Playit wrapper health interface and supervised
 attempt lifecycle. `/healthz`, `/readyz` and `/status` listen on Pod TCP 8091.
-The startup probe checks wrapper liveness; the readiness probe requires actual
-provider evidence. No liveness probe restarts a healthy wrapper for a provider
+The startup probe checks wrapper liveness; frp's readiness probe requires actual
+provider evidence. Playit Pod readiness uses `/healthz`, independently of its
+unknown relay connection. No liveness probe restarts a healthy wrapper for a provider
 outage. Each attempt owns its monitor, cancels and joins it on exit, then clears
 readiness so a late response cannot resurrect the exited child. Queries have a
 two-second deadline and two-second cadence. Observations expire after ten
@@ -303,7 +305,8 @@ Recreate and a single replica to avoid simultaneous owners of an identity.
 
 Playit v1.0.10 IPC has no relay heartbeat: `Running` and addresses are cached API
 data that survive refresh errors. Assignment remains reportable, but connection
-readiness stays unknown and the probe fails closed. The operator reports
+readiness stays unknown and `/readyz` fails closed. The Kubernetes probe instead
+uses `/healthz` so the Pod can become ready. The operator reports
 `RelayConnectionUnknown`, or `AwaitingAddress` before assignment. Future positive
 readiness needs a provider interface with fresh connection evidence. Never infer
 it from process lifetime or repeated reads of a cached address.

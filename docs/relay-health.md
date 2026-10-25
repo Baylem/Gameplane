@@ -5,7 +5,8 @@ On Pod TCP port 8091, `/healthz` reports that the wrapper's HTTP server is alive
 `/readyz` returns 200 only when the provider connection and configured forwards
 are confirmed, and `/status` returns a small JSON state without credentials or
 provider response text. The operator installs a startup probe on `/healthz` and
-a readiness probe on `/readyz`. An external relay outage does not trigger a
+a readiness probe on `/readyz` for frp. Playit uses `/healthz` for Pod readiness
+because its pinned provider cannot supply live connection evidence. An external relay outage does not trigger a
 liveness restart of the wrapper.
 
 Provider checks run every two seconds with a two-second query deadline. Local
@@ -42,6 +43,11 @@ Kubernetes probe/reconcile intervals for an outage to reach the dashboard.
 
 Upgrade the operator and tunnel image together. The new image requires
 `GAMESERVER_UID`, so a mixed old-operator/new-image installation fails closed.
+The upgraded operator reconciles existing tunnel Deployments in place, replaces
+their Pod templates with the UID environment variable and current probes, and
+uses Recreate to retire the old client before starting its replacement. No
+manual Deployment environment edit is required; upgrade the operator first or
+together with its configured tunnel image.
 Existing unprefixed proxy names change to UID-prefixed names. Stop the old
 client, wait for frps to unregister its old proxies and release their public
 ports, or remove those registrations using the frps administrator's normal
@@ -65,11 +71,12 @@ response therefore cannot prove that a relay is connected or refresh a health
 lease. Process age and the presence of an assigned address do not prove it
 either.
 
-Gameplane keeps reporting assigned addresses, but Playit's `/readyz` returns
+Gameplane keeps reporting assigned addresses, but Playit's relay `/readyz` returns
 503 and `TunnelReady` reports `RelayConnectionUnknown`; before assignment it
-reports `AwaitingAddress`. `/healthz` remains successful, the child keeps running
-and forwarding when it can, and Kubernetes does not restart it solely for this
-unknown connection state. The JSON status distinguishes known assignment from
+reports `AwaitingAddress`. Its Kubernetes readiness probe uses `/healthz`, so a
+running wrapper can become Pod Ready while its connection evidence remains
+unknown. The child keeps running and forwarding when it can, and Kubernetes does
+not restart it solely for this unknown connection state. The JSON status distinguishes known assignment from
 unknown connection. This is a deliberate limitation of the pinned provider,
 not a claim that every Playit tunnel is disconnected.
 
