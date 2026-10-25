@@ -5,7 +5,7 @@ description: "Task list for spec 027: contributor docs and layout map"
 
 # Tasks: Contributor Docs and Layout Map
 
-**Input**: Design documents from `specs/027-contributor-docs-layout-map/`
+**Input**: Design documents from `specs/done_027-contributor-docs-layout-map/`
 
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/)
 
@@ -27,7 +27,7 @@ description: "Task list for spec 027: contributor docs and layout map"
 ## Phase 1: Setup
 
 - [X] T001 Create branch `claude/027-contributor-docs` in GP from latest `master` (after the spec docs PR merges) and `claude/027-contributing-pointer` in WEB from latest `main` (done on `claude/project-thread-y09b3k` in both repos, the thread branch)
-- [X] T002 Re-measure on the new `master` the facts the docs will state (research R1–R4: symlink modes, `AGENT.md` references, `specs.md` count, module shapes, largest web files) and record the SHA and any drift at the top of `specs/027-contributor-docs-layout-map/research.md`
+- [X] T002 Re-measure on the new `master` the facts the docs will state (research R1–R4: symlink modes, `AGENT.md` references, `specs.md` count, module shapes, largest web files) and record the SHA and any drift at the top of `specs/done_027-contributor-docs-layout-map/research.md`
 
 ---
 
