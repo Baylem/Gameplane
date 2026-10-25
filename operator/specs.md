@@ -22,7 +22,12 @@ Existing volumes still need compatible ownership before enabling Restricted.
 Restricted Pods never receive the legacy capture ephemeral container.
 `spec.capture.nodeDiagnostic` additionally requires cluster capture enablement
 and `--diagnostics-namespace`. The dedicated namespace must explicitly enforce
-privileged and be separate from games/control plane. Live owner UIDs establish
+privileged and be separate from games/control plane. Every reconcile checks
+the recorded namespace against the configured namespace and rechecks live PSA
+labels and namespace separation. Revocation drains workers before failure;
+terminal/deleting captures retain cleanup but cannot rotate certificates in an
+unauthorized namespace. A prefilled namespace annotation alone never skips
+target binding or cleanup finalization. Live owner UIDs establish
 GameServer→StatefulSet→Pod provenance; Pod UID, node and exact containerd ID are
 pinned before worker creation. A target change drains work before releasing
 the capture lock. A bounded, no-retry Job has hostPID and only SYS_ADMIN,
