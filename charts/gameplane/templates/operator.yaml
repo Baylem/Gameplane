@@ -244,7 +244,7 @@ metadata:
   labels: {{- include "gameplane.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.operator.replicas }}
-  {{- if not .Values.operator.leaderElect }}
+  {{- if not (or .Values.operator.leaderElect (gt (int .Values.operator.replicas) 1)) }}
   # Without leader election, prevent a rolling update from overlapping writers.
   strategy:
     type: Recreate
@@ -279,7 +279,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             {{- include "gameplane.auxiliaryResourceArgs" .Values.operator | nindent 12 }}
-            {{- if .Values.operator.leaderElect }}
+            {{- if or .Values.operator.leaderElect (gt (int .Values.operator.replicas) 1) }}
             - --leader-elect
             {{- end }}
             - --agent-image={{ include "gameplane.agentImage" . }}

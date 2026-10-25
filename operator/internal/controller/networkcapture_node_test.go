@@ -63,6 +63,77 @@ func nodeReconcilerFixture(t *testing.T, objects ...client.Object) *NetworkCaptu
 	return &NetworkCaptureReconciler{Client: c, APIReader: c, Scheme: scheme, CaptureEnabled: true, RestrictedWorkloads: true, DiagnosticsNamespace: "diagnostics"}
 }
 
+func TestNodeCaptureValidatesNamespaceOnEveryReconcile(t *testing.T) {
+	for _, test := range []struct {
+		name, configured, recorded, enforcement, controlPlane, want string
+	}{
+		{"prefilled-foreign", "diagnostics", "foreign", "privileged", "system", "configured diagnostics namespace"},
+		{"same-as-games", "games", "games", "privileged", "system", "separate"},
+		{"same-as-control-plane", "system", "system", "privileged", "system", "separate"},
+		{"psa-revoked", "diagnostics", "diagnostics", "restricted", "system", "explicitly permit privileged"},
+		{"psa-omitted", "diagnostics", "diagnostics", "", "system", "explicitly permit privileged"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			nc := &gameplanev1alpha1.NetworkCapture{ObjectMeta: metav1.ObjectMeta{Name: "cap", Namespace: "games", UID: "capture-uid", Annotations: map[string]string{nodeCaptureNamespaceAnnotation: test.recorded}}, Status: gameplanev1alpha1.NetworkCaptureStatus{Phase: gameplanev1alpha1.CapturePhaseRunning}}
+			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: test.configured, Labels: map[string]string{"pod-security.kubernetes.io/enforce": test.enforcement}}}
+			r := nodeReconcilerFixture(t, nc, ns)
+			r.DiagnosticsNamespace = test.configured
+			r.AgentCASecretNamespace = test.controlPlane
+			if _, err := r.reconcileNodeCapture(t.Context(), nc); err != nil {
+				t.Fatal(err)
+			}
+			var live gameplanev1alpha1.NetworkCapture
+			if err := r.Get(t.Context(), client.ObjectKeyFromObject(nc), &live); err != nil {
+				t.Fatal(err)
+			}
+			if live.Status.Phase != gameplanev1alpha1.CapturePhaseFailed || !strings.Contains(live.Status.Message, test.want) {
+				t.Fatalf("namespace authorization bypassed: %+v", live.Status)
+			}
+			var anchors corev1.ConfigMapList
+			if err := r.List(t.Context(), &anchors); err != nil || len(anchors.Items) != 0 {
+				t.Fatalf("invalid namespace acquired artifacts: %v %+v", err, anchors)
+			}
+		})
+	}
+}
+
+func TestNodeCaptureNamespaceRevocationDrainsBeforeFailure(t *testing.T) {
+	nc := &gameplanev1alpha1.NetworkCapture{ObjectMeta: metav1.ObjectMeta{Name: "cap", Namespace: "games", UID: "capture-uid", Annotations: map[string]string{nodeCaptureNamespaceAnnotation: "diagnostics"}}, Status: gameplanev1alpha1.NetworkCaptureStatus{Phase: gameplanev1alpha1.CapturePhaseRunning}}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "diagnostics", Labels: map[string]string{"pod-security.kubernetes.io/enforce": "restricted"}}}
+	worker := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "worker", Namespace: ns.Name, Labels: map[string]string{nodeCaptureUIDLabel: string(nc.UID), nodeCaptureComponentLabel: "worker"}}}
+	r := nodeReconcilerFixture(t, nc, ns, worker)
+	if result, err := r.reconcileNodeCapture(t.Context(), nc); err != nil || result.RequeueAfter == 0 {
+		t.Fatalf("revocation did not wait for worker drain: %+v %v", result, err)
+	}
+	if nc.Status.Phase != gameplanev1alpha1.CapturePhaseRunning {
+		t.Fatal("failure published before worker drain")
+	}
+	if _, err := r.reconcileNodeCapture(t.Context(), nc); err != nil {
+		t.Fatal(err)
+	}
+	if nc.Status.Phase != gameplanev1alpha1.CapturePhaseFailed {
+		t.Fatalf("revocation not reported: %+v", nc.Status)
+	}
+}
+
+func TestNodeCaptureRevokedNamespacePreservesTerminalRetention(t *testing.T) {
+	completed := metav1.NewTime(time.Now().Add(-time.Minute))
+	nc := &gameplanev1alpha1.NetworkCapture{ObjectMeta: metav1.ObjectMeta{Name: "cap", Namespace: "games", UID: "capture-uid", Annotations: map[string]string{nodeCaptureNamespaceAnnotation: "diagnostics"}}, Status: gameplanev1alpha1.NetworkCaptureStatus{Phase: gameplanev1alpha1.CapturePhaseFailed, CompletionTime: &completed}}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "diagnostics", Labels: map[string]string{"pod-security.kubernetes.io/enforce": "restricted"}}}
+	anchor := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: nodeCaptureName(nc), Namespace: ns.Name, Labels: map[string]string{nodeCaptureUIDLabel: string(nc.UID)}}}
+	r := nodeReconcilerFixture(t, nc, ns, anchor)
+	if result, err := r.reconcileNodeCapture(t.Context(), nc); err != nil || result.RequeueAfter == 0 {
+		t.Fatalf("revocation interrupted terminal retention: %+v %v", result, err)
+	}
+	if !nc.Status.CompletionTime.Equal(&completed) {
+		t.Fatal("revocation restarted the retention clock")
+	}
+	var secrets corev1.SecretList
+	if err := r.List(t.Context(), &secrets); err != nil || len(secrets.Items) != 0 {
+		t.Fatalf("revoked namespace received certificate writes: %v %+v", err, secrets)
+	}
+}
+
 type staleCaptureListClient struct{ client.Client }
 
 func (c staleCaptureListClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
@@ -141,7 +212,8 @@ func TestNodeCaptureRefusesWithoutServerOptIn(t *testing.T) {
 	gs := &gameplanev1alpha1.GameServer{ObjectMeta: metav1.ObjectMeta{Name: "game", Namespace: "games", UID: "server-uid"}, Spec: gameplanev1alpha1.GameServerSpec{Capture: &gameplanev1alpha1.CaptureConfiguration{Enabled: true}}}
 	nc := &gameplanev1alpha1.NetworkCapture{ObjectMeta: metav1.ObjectMeta{Name: "cap", Namespace: "games", UID: "capture-uid"}}
 	nc.Spec.ServerRef.Name = gs.Name
-	r := nodeReconcilerFixture(t, gs, nc)
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "diagnostics", Labels: map[string]string{"pod-security.kubernetes.io/enforce": "privileged"}}}
+	r := nodeReconcilerFixture(t, gs, nc, ns)
 	if _, err := r.reconcileNodeCapture(t.Context(), nc); err != nil {
 		t.Fatal(err)
 	}

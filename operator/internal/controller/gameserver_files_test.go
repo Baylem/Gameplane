@@ -102,6 +102,13 @@ func TestBuildConfigInitContainer_GroupWritableWithFSGroup(t *testing.T) {
 	if !strings.Contains(arg, "stat -c %g") || !strings.Contains(arg, "stat -c %a") {
 		t.Errorf("already-correct ownership and modes must be checked before mutation: %q", arg)
 	}
+	if !strings.Contains(arg, `'/data/'"$p"`) {
+		t.Errorf("copied paths must keep the relative path quoted: %q", arg)
+	}
+	groupCheck, groupChange := strings.Index(arg, "stat -c %g"), strings.Index(arg, "chgrp ")
+	if groupCheck < 0 || groupChange < 0 || groupCheck >= groupChange {
+		t.Errorf("group ownership must be checked before chgrp: %q", arg)
+	}
 
 	// Verify the command contains "find ./*"
 	if !strings.Contains(arg, "find ./*") {
@@ -122,7 +129,7 @@ func TestBuildConfigInitContainer_ReusesSharedFilesWithoutOwnership(t *testing.T
 			t.Fatal(err)
 		}
 	}
-	source := filepath.Join(staging, "cfg", "profile.txt")
+	source := filepath.Join(staging, "cfg", "profile with spaces.txt")
 	if err := os.WriteFile(source, []byte("first"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +167,7 @@ func TestBuildConfigInitContainer_ReusesSharedFilesWithoutOwnership(t *testing.T
 	if out, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("repeat copy required ownership of writable files: %v %s", err, out)
 	}
-	if got, err := os.ReadFile(filepath.Join(data, "cfg", "profile.txt")); err != nil || string(got) != "updated" {
+	if got, err := os.ReadFile(filepath.Join(data, "cfg", "profile with spaces.txt")); err != nil || string(got) != "updated" {
 		t.Fatalf("config was not replaced: %q %v", got, err)
 	}
 	if info, err := os.Stat(unrelated); err != nil || info.Mode().Perm() != 0o600 {
