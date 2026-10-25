@@ -65,9 +65,9 @@ go.work              links all 17 Go modules (incl. test/e2e)
 Makefile             canonical task runner
 ```
 
-After cloning: `git submodule update --init` (`modules/` required for `make dev-up`; `website/` optional).
+After cloning: `git submodule update --init modules` (required for `make dev-up`); add `git submodule update --init website` only when working on the website.
 
-## Commands (always via Makefile)
+## Commands (via Makefile; compile checks excepted, see rule 8)
 
 - **Dev:** `make dev-up` (Kind + OCI registry :5001 + Helm), `make web-dev` (Vite, proxies in-cluster API), `make dev-load` (load built images; run `make images` first), `make dev-install` (Helm upgrade), `make dev-down`.
 - **Build:** `make build` (all Go + web), `make build-go` (15 modules in GO_MODULES, all but test/e2e), `make build-web` (`npm ci && npm run build`), `make images`.
