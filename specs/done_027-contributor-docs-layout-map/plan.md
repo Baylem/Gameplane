@@ -2,7 +2,7 @@
 
 **Branch**: `claude/project-thread-yulzhu` (spec docs) | **Date**: 2026-10-20 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `specs/027-contributor-docs-layout-map/spec.md`
+**Input**: Feature specification from `specs/done_027-contributor-docs-layout-map/spec.md`
 
 ## Summary
 
@@ -87,7 +87,7 @@ New section near the top of `docs/contributing.md` per [contracts/first-pr-secti
 ### Documentation (this feature)
 
 ```text
-specs/027-contributor-docs-layout-map/
+specs/done_027-contributor-docs-layout-map/
 ├── spec.md
 ├── OPEN-DECISIONS.md
 ├── research.md
