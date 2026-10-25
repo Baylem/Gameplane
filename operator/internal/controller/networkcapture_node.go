@@ -301,6 +301,31 @@ func (r *NetworkCaptureReconciler) nodeFail(ctx context.Context, nc *gameplanev1
 	return r.fail(ctx, nc, message)
 }
 
+// A recorded annotation identifies cleanup obligations, not permission to
+// create privileged resources. Revalidate deployment authority on every pass.
+func (r *NetworkCaptureReconciler) validateNodeCaptureNamespace(ctx context.Context, nc *gameplanev1alpha1.NetworkCapture) (string, error) {
+	if bound := nc.Annotations[nodeCaptureNamespaceAnnotation]; bound != "" && bound != r.DiagnosticsNamespace {
+		return "node capture annotation must match the configured diagnostics namespace", nil
+	}
+	if r.DiagnosticsNamespace == "" {
+		return "node diagnostics require cluster deployment opt-in and a configured diagnostics namespace", nil
+	}
+	if r.DiagnosticsNamespace == nc.Namespace || r.DiagnosticsNamespace == r.AgentCASecretNamespace {
+		return "node diagnostics namespace must be separate from the games and control-plane namespaces", nil
+	}
+	var namespace corev1.Namespace
+	if err := r.nodeReader().Get(ctx, types.NamespacedName{Name: r.DiagnosticsNamespace}, &namespace); err != nil {
+		if apierrors.IsNotFound(err) {
+			return "configured diagnostics namespace no longer exists", nil
+		}
+		return "", err
+	}
+	if namespace.Labels["pod-security.kubernetes.io/enforce"] != "privileged" {
+		return "diagnostics namespace must explicitly permit privileged node diagnostics", nil
+	}
+	return "", nil
+}
+
 func (r *NetworkCaptureReconciler) reconcileNodeCapture(ctx context.Context, nc *gameplanev1alpha1.NetworkCapture) (ctrl.Result, error) {
 	if nc.DeletionTimestamp != nil {
 		clean, err := r.cleanupNodeCapture(ctx, nc)
@@ -315,6 +340,13 @@ func (r *NetworkCaptureReconciler) reconcileNodeCapture(ctx context.Context, nc 
 		}
 		controllerutil.RemoveFinalizer(nc, nodeCaptureFinalizer)
 		return ctrl.Result{}, r.Update(ctx, nc)
+	}
+	namespaceFailure, err := r.validateNodeCaptureNamespace(ctx, nc)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if namespaceFailure != "" && !isTerminalCapturePhase(nc.Status.Phase) {
+		return r.nodeFail(ctx, nc, namespaceFailure)
 	}
 	if isTerminalCapturePhase(nc.Status.Phase) {
 		drained, err := r.deleteNodeWorkers(ctx, nc)
@@ -332,7 +364,9 @@ func (r *NetworkCaptureReconciler) reconcileNodeCapture(ctx context.Context, nc 
 		if time.Now().Before(nc.Status.CompletionTime.Add(time.Duration(ttl) * time.Second)) {
 			// Retained artifacts need certificate rotation even after the target
 			// game Pod has gone away. No target or worker is recreated here.
-			if ns := nc.Annotations[nodeCaptureNamespaceAnnotation]; ns != "" {
+			// Revoked namespace authority permits cleanup, never fresh writes
+			// such as certificate rotation. Preserve the original retention clock.
+			if ns := nc.Annotations[nodeCaptureNamespaceAnnotation]; ns != "" && namespaceFailure == "" {
 				var anchor corev1.ConfigMap
 				if err := r.nodeReader().Get(ctx, types.NamespacedName{Namespace: ns, Name: nodeCaptureName(nc)}, &anchor); err != nil {
 					if !apierrors.IsNotFound(err) {
@@ -409,17 +443,7 @@ func (r *NetworkCaptureReconciler) reconcileNodeCapture(ctx context.Context, nc 
 	if bound := nc.Annotations[capturePodUIDAnnotation]; bound != "" && (bound != string(pod.UID) || nc.Annotations[nodeCaptureNodeAnnotation] != pod.Spec.NodeName || nc.Annotations[nodeCaptureContainerAnnotation] != containerID) {
 		return r.nodeFail(ctx, nc, "target Pod, node or container identity changed")
 	}
-	if nc.Annotations[nodeCaptureNamespaceAnnotation] == "" {
-		if r.DiagnosticsNamespace == gs.Namespace {
-			return r.nodeFail(ctx, nc, "node diagnostics namespace must be separate from the games namespace")
-		}
-		var namespace corev1.Namespace
-		if err := r.nodeReader().Get(ctx, types.NamespacedName{Name: r.DiagnosticsNamespace}, &namespace); err != nil {
-			return ctrl.Result{}, err
-		}
-		if namespace.Labels["pod-security.kubernetes.io/enforce"] != "privileged" {
-			return r.nodeFail(ctx, nc, "diagnostics namespace must explicitly permit privileged node diagnostics")
-		}
+	if nc.Annotations[capturePodUIDAnnotation] == "" || !controllerutil.ContainsFinalizer(nc, nodeCaptureFinalizer) {
 		var captures gameplanev1alpha1.NetworkCaptureList
 		if err := r.nodeReader().List(ctx, &captures, client.InNamespace(nc.Namespace)); err != nil {
 			return ctrl.Result{}, err

@@ -21,7 +21,10 @@ import (
 func TestBackup_StoppedCopiesRemainRestorable(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	ns, gs, tmpl := "gameplane-games", "e2e-stopped-backup", "e2e-stopped-backup-template"
+	suffix := time.Now().UnixNano()
+	ns := "gameplane-games"
+	gs := fmt.Sprintf("e2e-stopped-backup-%d", suffix)
+	tmpl := fmt.Sprintf("e2e-stopped-backup-template-%d", suffix)
 	ensureResticRepo(t)
 	applyBusyboxTemplate(t, tmpl)
 	applyBusyboxGameServer(t, ns, gs, tmpl)
@@ -56,7 +59,7 @@ func TestBackup_StoppedCopiesRemainRestorable(t *testing.T) {
 		return apierrors.IsNotFound(err), fmt.Sprintf("pod absence: %v", err)
 	})
 	for i := 1; i <= 2; i++ {
-		name := fmt.Sprintf("e2e-stopped-copy-%d", i)
+		name := fmt.Sprintf("e2e-stopped-copy-%d-%d", suffix, i)
 		backup := &unstructured.Unstructured{Object: map[string]any{
 			"apiVersion": "gameplane.local/v1alpha1", "kind": "Backup",
 			"metadata": map[string]any{"name": name, "namespace": ns},

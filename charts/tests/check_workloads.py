@@ -39,6 +39,8 @@ def check_operator_migration():
         assert not any(obj["kind"] == "Job" for obj in render(values, release=release, chart=chart))
         values["operator"]["leaderElect"] = True
         assert not any(obj["kind"] == "Job" for obj in render(values, upgrade=True, release=release, chart=chart))
+        values["operator"].update(replicas=2, leaderElect=False)
+        assert not any(obj["kind"] == "Job" for obj in render(values, upgrade=True, release=release, chart=chart))
 
 
 def main():
@@ -81,7 +83,10 @@ def main():
     assert overrides["--agent-resources"] == {"requests": {"cpu": "80m"}}
     render({"api": {"pdb": {"enabled": True, "minAvailable": 1}}}, failure="api.pdb must allow the singleton API to be evicted")
     render({"api": {"pdb": {"enabled": True, "maxUnavailable": 0}}}, failure="api.pdb must allow the singleton API to be evicted")
-    render({"operator": {"replicas": 2, "leaderElect": False}}, failure="operator.leaderElect must be enabled")
+    upgraded = render({"operator": {"replicas": 2, "leaderElect": False}}, upgrade=True)
+    operator = one(upgraded, "Deployment", "gameplane-operator")
+    assert operator["spec"]["strategy"]["type"] == "RollingUpdate"
+    assert "--leader-elect" in operator["spec"]["template"]["spec"]["containers"][0]["args"]
     single = render({"operator": {"leaderElect": False}})
     assert one(single, "Deployment", "gameplane-operator")["spec"]["strategy"] == {"type": "Recreate", "rollingUpdate": None}
     removed = render({"operator": {"agentResources": None, "tunnelResources": {}}})
@@ -100,12 +105,14 @@ def main():
         old_chart = Path(directory) / "chart"
         shutil.copytree(CHART, old_chart)
         old_values = yaml.safe_load((old_chart / "values.yaml").read_text())
+        old_values["operator"].update(replicas=2, leaderElect=False)
         for key in ["agentResources", "sentinelResources", "tunnelResources", "backupResources", "pdb", *placement]:
             old_values["operator"].pop(key, None)
         (old_chart / "values.yaml").write_text(yaml.safe_dump(old_values))
         old = render(chart=old_chart)
         args = one(old, "Deployment", "gameplane-operator")["spec"]["template"]["spec"]["containers"][0]["args"]
         assert not any(arg.startswith("--tunnel-resources=") for arg in args)
+        assert "--leader-elect" in args
 
 
 if __name__ == "__main__":
