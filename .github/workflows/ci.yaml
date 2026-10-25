@@ -37,6 +37,8 @@ on:
       # Feature catalog and the website gitlink feed the features sync gate (spec 024).
       - "FEATURES.md"
       - "website"
+  # Manual full-suite run on any branch (spec 023 OD-7).
+  workflow_dispatch:
 # Cancel superseded runs so rapid pushes to the same ref don't waste
 # runner minutes on stale commits.
 concurrency:
@@ -70,8 +72,10 @@ jobs:
   # heavy jobs below can skip when they can't be affected (a web-only PR drops
   # from ~22 jobs to a handful). Any shared/CI-config path (this workflow, the
   # composite actions, the Makefile, go.work, buckets.sh) forces EVERYTHING on
-  # via the `ci` fail-safe. Master pushes and unknown diff bases also select
-  # the full suite through ci_scope.py's `all` output.
+  # via the `ci` fail-safe. Master pushes, unknown diff bases, workflow_dispatch
+  # runs and the `ci: full-run` label also select the full suite through
+  # ci_scope.py's `all` output. The last step writes the per-suite ran/skipped
+  # selection table to this job's summary.
   changes:
     name: detect changes
     runs-on: ubuntu-latest
@@ -100,6 +104,20 @@ jobs:
       capture_overhead: ${{ steps.combine.outputs.capture_overhead }}
       submodules: ${{ steps.combine.outputs.submodules }}
       codegen: ${{ steps.combine.outputs.codegen }}
+      scope: ${{ steps.summary.outputs.scope }}
+      scope-reason: ${{ steps.summary.outputs.reason }}
+      selection: ${{ steps.summary.outputs.selection }}
+      e2e-run: ${{ steps.e2e.outputs.e2e-run }}
+      e2e-unmapped: ${{ steps.e2e.outputs.unmapped }}
+      e2e-multicluster: ${{ steps.e2e.outputs.e2e-multicluster }}
+      e2e-upgrade: ${{ steps.e2e.outputs.e2e-upgrade }}
+      e2e-web-live: ${{ steps.e2e.outputs.e2e-web-live }}
+      e2e-capture-overhead: ${{ steps.e2e.outputs.e2e-capture-overhead }}
+      e2e-bot-matrix: ${{ steps.e2e.outputs.bot-matrix }}
+      e2e-bots-any: ${{ steps.e2e.outputs.bots-any }}
+      go-packages: ${{ steps.units.outputs.go-packages }}
+      web-tests: ${{ steps.units.outputs.web-tests }}
+      ci-jobs: ${{ steps.jobs.outputs.ci-jobs }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -109,13 +127,44 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.sha }}
+          # The ci: full-run label forces the full suite, read on every run (spec 023 OD-7).
+          CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
         run: python3 hack/ci_scope.py modules --base "$BASE_SHA" --head "$HEAD_SHA"
       - name: partition every bot-fast test onto its own runner
         id: bots
         run: python3 hack/ci_scope.py bots
+      - name: select the e2e tests the change affects
+        id: e2e
+        # Per-test e2e selection from test/e2e/suite-components.json (spec 023 US1).
+        # An unmapped path sets `all`, which `combine` folds into CI below.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
+        run: python3 hack/ci_scope.py e2e --base "$BASE_SHA" --head "$HEAD_SHA"
+      - name: select the unit test packages and web tests the change affects
+        id: units
+        # Package-level Go and `vitest related` selection (spec 023 US2). Any
+        # doubt emits ./... for every module and "all" for web.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
+        run: python3 hack/ci_scope.py units --base "$BASE_SHA" --head "$HEAD_SHA"
+      - name: map edited ci.yaml lines to their jobs
+        id: jobs
+        # A ci.yaml edit runs only the jobs it sits in, plus the jobs they need;
+        # an edit outside any job or in changes/report sets `all` (spec 023 US3, OD-3).
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
+        run: python3 hack/ci_scope.py jobs --base "$BASE_SHA" --head "$HEAD_SHA"
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: filter
         with:
+          # list-files: json lets the summary step cite the files each filter matched.
+          list-files: json
           filters: |
             go:
               - 'netguard/**'
@@ -178,11 +227,11 @@ jobs:
             # smoke-tests deploy/kind/**'s pinned dev ingress-nginx manifest
             # on a real Kind cluster, and must NOT run on every e2e-affecting
             # change (a Go or chart edit does not touch that manifest pin).
-            # On PRs there is no `ci` fail-safe either — the workflow file
-            # itself is listed directly below. Master pushes always run it.
+            # On PRs there is no `ci` fail-safe either: an edit to this job's own
+            # ci.yaml block selects it through `ci-jobs`, and a full-scope run
+            # turns it on. Master pushes always run it.
             kindsmoke:
               - 'deploy/kind/**'
-              - '.github/workflows/ci.yaml'
             gamecoverage:
               - 'modules'
               - 'modules/**'
@@ -215,20 +264,17 @@ jobs:
               - 'charts/gameplane/crd-manifests/**'
               - 'hack/check-codegen-drift_test.sh'
             ci:
-              - '.github/workflows/ci.yaml'
+              # ci.yaml and .golangci.yml map to their own jobs (step `jobs`, OD-3).
               - '.github/actions/**'
               - 'hack/ci_scope.py'
               - 'hack/test_ci_scope.py'
+              - 'hack/check_changed_coverage.py'
+              - 'hack/test_check_changed_coverage.py'
               - 'Makefile'
               - 'go.work'
               - 'go.work.sum'
               - 'test/e2e/buckets.sh'
-              # golangci-lint walks up from `working-directory` to find this
-              # config, so every `lint (…)` leg picks up an edit here even
-              # though none of them declare it as an input. Force the lint
-              # job on so a config change is tested against real code
-              # instead of silently taking effect on the next unrelated PR.
-              - '.golangci.yml'
+              - 'test/e2e/suite-components.json'
             github:
               - '.github/workflows/**'
               - '.github/actions/**'
@@ -236,6 +282,8 @@ jobs:
               - '.github/dependabot.yml'
               - 'hack/ci_scope.py'
               - 'hack/test_ci_scope.py'
+              - 'hack/check_changed_coverage.py'
+              - 'hack/test_check_changed_coverage.py'
               - 'hack/check-ci-report-coverage.sh'
               - 'hack/test-check-ci-report-coverage.sh'
               - 'hack/testdata/check-ci-report-coverage/**'
@@ -322,20 +370,21 @@ jobs:
           STANDALONE: ${{ steps.filter.outputs.standalone }}
           E2ETREE: ${{ steps.filter.outputs.e2etree }}
           GAMECOVERAGE: ${{ steps.filter.outputs.gamecoverage }}
-          CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' }}
+          UNIVERSAL: ${{ steps.e2e.outputs.universal }}
+          CI: ${{ steps.filter.outputs.ci == 'true' || steps.scope.outputs.all == 'true' || steps.e2e.outputs.all == 'true' || steps.units.outputs.all == 'true' || steps.jobs.outputs.all == 'true' }}
           CAPTURE: ${{ steps.filter.outputs.capture_overhead }}
           SUBMODULES: ${{ steps.filter.outputs.submodules }}
           CODEGEN: ${{ steps.filter.outputs.codegen }}
           GITHUB: ${{ steps.filter.outputs.github }}
           SPECS: ${{ steps.filter.outputs.specs }}
           DOCS: ${{ steps.filter.outputs.docs }}
-          KINDSMOKE: ${{ steps.filter.outputs.kindsmoke == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/master') }}
+          KINDSMOKE: "${{ steps.filter.outputs.kindsmoke == 'true' || steps.scope.outputs.all == 'true' || steps.e2e.outputs.all == 'true' || steps.units.outputs.all == 'true' || steps.jobs.outputs.all == 'true' || (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
         run: |
           gov=false;  { [ "$GO" = true ]     || [ "$CI" = true ]; } && gov=true
           webv=false; { [ "$WEB" = true ]    || [ "$CI" = true ]; } && webv=true
           chv=false;  { [ "$CHARTS" = true ] || [ "$CI" = true ]; } && chv=true
           standalonev=false; { [ "$STANDALONE" = true ] || [ "$CI" = true ]; } && standalonev=true
-          e2ev=false; { [ "$GO" = true ] || [ "$CHARTS" = true ] || [ "$E2ETREE" = true ] || [ "$GAMECOVERAGE" = true ] || [ "$CI" = true ]; } && e2ev=true
+          e2ev=false; { [ "$GO" = true ] || [ "$CHARTS" = true ] || [ "$E2ETREE" = true ] || [ "$GAMECOVERAGE" = true ] || [ "$UNIVERSAL" = true ] || [ "$CI" = true ]; } && e2ev=true
           wlv=false;  { [ "$e2ev" = true ] || [ "$WEB" = true ] || [ "$CI" = true ]; } && wlv=true
           ghv=false;  { [ "$GITHUB" = true ] || [ "$CI" = true ]; } && ghv=true
           specsv=false; { [ "$SPECS" = true ] || [ "$CI" = true ]; } && specsv=true
@@ -344,7 +393,8 @@ jobs:
           subv=false; { [ "$SUBMODULES" = true ] || [ "$CI" = true ]; } && subv=true
           cgv=false; { [ "$CODEGEN" = true ] || [ "$CI" = true ]; } && cgv=true
           # Keep this gate narrow on PRs; KINDSMOKE also enables it for every
-          # master push, independently of its file filter.
+          # master push and forced full run (manual dispatch or ci: full-run
+          # label), independently of its file filter.
           ksv=false; [ "$KINDSMOKE" = true ] && ksv=true
           {
             echo "go=$gov"
@@ -362,6 +412,23 @@ jobs:
             echo "submodules=$subv"
             echo "codegen=$cgv"
           } >> "$GITHUB_OUTPUT"
+      - name: summarize test selection
+        id: summary
+        # Writes the per-suite ran/skipped table to this job's summary (spec 023
+        # FR-008). Never blocks CI: a failure here only loses the table.
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          CI_FULL_RUN: "${{ contains(github.event.pull_request.labels.*.name, 'ci: full-run') }}"
+          SCOPE_OUTPUTS: ${{ toJSON(steps.scope.outputs) }}
+          FILTER_OUTPUTS: ${{ toJSON(steps.filter.outputs) }}
+          GATE_OUTPUTS: ${{ toJSON(steps.combine.outputs) }}
+          BOT_MATRIX: ${{ steps.bots.outputs.matrix }}
+          E2E_OUTPUTS: ${{ toJSON(steps.e2e.outputs) }}
+          UNITS_OUTPUTS: ${{ toJSON(steps.units.outputs) }}
+          CI_JOBS: ${{ steps.jobs.outputs.ci-jobs }}
+        run: python3 hack/ci_scope.py summary --base "$BASE_SHA" --head "$HEAD_SHA"
 
   # Build the operator/api/agent (+ gameprobe) images ONCE and publish them as
   # an artifact, so the 9 heavy e2e jobs load a tar instead of each recompiling
@@ -370,7 +437,7 @@ jobs:
   build-images:
     name: build e2e images
     needs: [changes]
-    if: needs.changes.outputs.images == 'true'
+    if: (needs.changes.outputs.images == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'build-images')
     runs-on: ubuntu-latest
     # Include all image builds, cache exports, artifact upload and cleanup.
     timeout-minutes: 30
@@ -385,7 +452,7 @@ jobs:
   build-images-arm64:
     name: build e2e images (arm64)
     needs: [changes]
-    if: needs.changes.outputs.images == 'true'
+    if: (needs.changes.outputs.images == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'build-images-arm64')
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     permissions:
@@ -427,7 +494,7 @@ jobs:
   capture-sidecar-setcap-proof:
     name: capture-sidecar CAP_NET_RAW survival
     needs: [changes]
-    if: needs.changes.outputs.go == 'true'
+    if: (needs.changes.outputs.go == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'capture-sidecar-setcap-proof')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -535,7 +602,7 @@ jobs:
   vuln-images:
     name: vuln (images)
     needs: [changes, build-images]
-    if: needs.changes.outputs.images == 'true'
+    if: (needs.changes.outputs.images == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'vuln-images')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -567,7 +634,7 @@ jobs:
   docs:
     name: docs and repository checks
     needs: [changes]
-    if: needs.changes.outputs.lint == 'true' || needs.changes.outputs.specs == 'true' || needs.changes.outputs.docs == 'true'
+    if: (needs.changes.outputs.lint == 'true' || needs.changes.outputs.specs == 'true' || needs.changes.outputs.docs == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'docs')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -605,7 +672,7 @@ jobs:
   codegen-drift:
     name: codegen drift
     needs: [changes]
-    if: needs.changes.outputs.codegen == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.codegen == 'true' || github.event_name == 'push') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'codegen-drift')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -631,7 +698,7 @@ jobs:
   submodule-freshness:
     name: submodule freshness
     needs: [changes]
-    if: needs.changes.outputs.submodules == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.submodules == 'true' || github.event_name == 'push') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'submodule-freshness')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -674,7 +741,7 @@ jobs:
   vuln-go:
     name: vuln (go)
     needs: [changes]
-    if: needs.changes.outputs.go == 'true' || github.event_name == 'push'
+    if: (needs.changes.outputs.go == 'true' || github.event_name == 'push') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'vuln-go')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -694,7 +761,7 @@ jobs:
   lint:
     name: lint (${{ matrix.module }})
     needs: [changes]
-    if: needs.changes.outputs.lint == 'true'
+    if: (needs.changes.outputs.lint == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'lint')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -770,7 +837,7 @@ jobs:
   go:
     name: go (${{ matrix.module }} / ${{ matrix.arch }})
     needs: [changes]
-    if: needs.changes.outputs.go == 'true'
+    if: (needs.changes.outputs.go == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'go')
     # amd64 on the standard hosted runner; arm64 on the free public-repo
     # arm runner. Unit + envtest run on both arches every PR — this is where
     # real arch bugs (build tags, sqlite codepaths, struct alignment) surface.
@@ -778,6 +845,12 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+    env:
+      # Space-separated package patterns from the changes job (spec 023 US2).
+      # Empty means no package is affected and only vet runs; a module the
+      # selection does not list runs ./... .
+      GO_PACKAGES: ${{ join(fromJSON(needs.changes.outputs.go-packages || '{}')[matrix.module] || fromJSON('["./..."]'), ' ') }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
     strategy:
       fail-fast: false
       matrix:
@@ -822,11 +895,13 @@ jobs:
       # uses -covermode=atomic, which is valid without -race. `make cover`
       # still runs -race for local/manual use.
       - name: unit test + coverage
+        if: env.GO_PACKAGES != ''
         working-directory: ${{ matrix.module }}
         run: |
           mkdir -p coverage
+          read -r -a packages <<<"$GO_PACKAGES"
           go test -covermode=atomic -coverpkg=./... \
-            -coverprofile=coverage/unit.out ./...
+            -coverprofile=coverage/unit.out "${packages[@]}"
       - name: agent file access across real UIDs
         if: matrix.module == 'agent' && matrix.arch == 'amd64'
         working-directory: agent
@@ -836,28 +911,30 @@ jobs:
           go test -c -o "$RUNNER_TEMP/agent-files.test" ./internal/files
           sudo "$RUNNER_TEMP/agent-files.test" -test.run='^TestFileAccessAcrossUIDs$' -test.v -test.timeout=2m
       - name: setup-envtest binary cache
-        if: matrix.module == 'operator' || matrix.module == 'api'
+        if: (matrix.module == 'operator' || matrix.module == 'api') && env.GO_PACKAGES != ''
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/go/bin/setup-envtest
           key: setup-envtest-bin-release-0.24-${{ runner.os }}-${{ runner.arch }}
       - name: envtest assets cache
-        if: matrix.module == 'operator' || matrix.module == 'api'
+        if: (matrix.module == 'operator' || matrix.module == 'api') && env.GO_PACKAGES != ''
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.local/share/kubebuilder-envtest
           key: envtest-1.36.2-${{ runner.os }}-${{ runner.arch }}
       - name: integration (envtest) test + coverage
-        if: matrix.module == 'operator' || matrix.module == 'api'
+        if: (matrix.module == 'operator' || matrix.module == 'api') && env.GO_PACKAGES != ''
         working-directory: ${{ matrix.module }}
         run: |
           [ -x "$HOME/go/bin/setup-envtest" ] || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@release-0.24
           KUBEBUILDER_ASSETS=$("$HOME"/go/bin/setup-envtest use 1.36.2 -p path)
           export KUBEBUILDER_ASSETS
+          read -r -a packages <<<"$GO_PACKAGES"
           go test -tags=envtest -timeout 10m \
             -covermode=atomic -coverpkg=./... \
-            -coverprofile=coverage/envtest.out ./...
+            -coverprofile=coverage/envtest.out "${packages[@]}"
       - name: warm coverage tool cache
+        if: env.GO_PACKAGES != ''
         # cover-go-merge and cover-go-check `go run` pinned tools, so they hit
         # the module mirror as well and fail the same transient way. Fetch them
         # here, with retries, so the gate itself runs from the module cache and
@@ -874,12 +951,25 @@ jobs:
           done
           fetch
       - name: merge profiles + threshold gate
+        # A whole-module run keeps the module total gate (spec 023 OD-1).
+        if: env.GO_PACKAGES == './...'
         run: make cover-go-merge && make cover-go-check
+      - name: merge profiles + changed-lines coverage gate
+        # A package-level run gates the added lines at the module's own
+        # threshold instead (spec 023 OD-1, OD-5).
+        if: env.GO_PACKAGES != '' && env.GO_PACKAGES != './...'
+        env:
+          MODULE: ${{ matrix.module }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          make cover-go-merge
+          python3 hack/check_changed_coverage.py --base "$BASE_SHA" --head "$GITHUB_SHA" \
+            --go-profile "$MODULE/coverage/merged.out" --module "$MODULE"
       - name: per-file coverage of secrets_managed.go (spec 013 G-19)
         # The threshold gate checks package totals only. Print this one file's
         # statement coverage from the merged profile so coverage-gaps.md can
         # cite a measured figure.
-        if: matrix.module == 'api' && matrix.arch == 'amd64'
+        if: matrix.module == 'api' && matrix.arch == 'amd64' && env.GO_PACKAGES != ''
         run: |
           awk '$1 ~ /\/internal\/handlers\/secrets_managed\.go:/ { total += $2; if ($3 > 0) covered += $2; else { split($1, pos, ":"); missed = missed " " pos[2] } }
                END { if (total == 0) { print "secrets_managed.go not found in profile"; exit 1 }
@@ -891,7 +981,7 @@ jobs:
   web:
     name: web
     needs: [changes]
-    if: needs.changes.outputs.web == 'true'
+    if: (needs.changes.outputs.web == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'web')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -972,7 +1062,34 @@ jobs:
       - run: npm run build
       - name: unit tests + coverage
         id: cover
-        run: npm run test:cover
+        # Partial runs test only what the changed web/src files reach and gate
+        # the added lines; "all" keeps the full suite and thresholds (spec 023 OD-9).
+        env:
+          WEB_TESTS: ${{ needs.changes.outputs.web-tests }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -z "$WEB_TESTS" ] || [ "$WEB_TESTS" = '"all"' ]; then
+            npm run test:cover
+            exit 0
+          fi
+          mapfile -t files < <(jq -r '.[] | sub("^web/"; "")' <<<"$WEB_TESTS")
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No dashboard source changed; Vitest skipped, lint and build ran."
+            exit 0
+          fi
+          npx vitest related --run --passWithNoTests --coverage --coverage.reporter=json \
+            --coverage.thresholds.lines=0 --coverage.thresholds.functions=0 \
+            --coverage.thresholds.branches=0 --coverage.thresholds.statements=0 \
+            "${files[@]}"
+          if [ ! -f coverage/coverage-final.json ]; then
+            echo "No coverage report from vitest related; running the full suite."
+            npm run test:cover
+            exit 0
+          fi
+          git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          cd .. && python3 hack/check_changed_coverage.py --base "$BASE_SHA" --head "$GITHUB_SHA" \
+            --vitest-json web/coverage/coverage-final.json
       - name: report coverage (commit status)
         if: always()
         continue-on-error: true
@@ -1011,7 +1128,7 @@ jobs:
   web-e2e-mock:
     name: web e2e (mock)
     needs: [changes]
-    if: needs.changes.outputs.web == 'true'
+    if: (needs.changes.outputs.web == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'web-e2e-mock')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1044,7 +1161,7 @@ jobs:
   helm:
     name: helm lint
     needs: [changes]
-    if: needs.changes.outputs.charts == 'true'
+    if: (needs.changes.outputs.charts == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'helm')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1057,7 +1174,7 @@ jobs:
   standalone-compose:
     name: standalone Compose smoke
     needs: [changes]
-    if: needs.changes.outputs.standalone == 'true'
+    if: (needs.changes.outputs.standalone == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'standalone-compose')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -1103,7 +1220,7 @@ jobs:
   chart-template:
     name: chart render
     needs: [changes]
-    if: needs.changes.outputs.charts == 'true'
+    if: (needs.changes.outputs.charts == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'chart-template')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1116,6 +1233,8 @@ jobs:
         run: python3 charts/tests/check_gateway.py
       - name: standalone panel isolation and persistence chart renders
         run: python3 charts/tests/check_standalone.py
+      - name: operator Secret namespace permissions and cache configuration
+        run: python3 charts/tests/check_operator_secrets.py
       - name: sanity-check rendered manifests
         run: |
           grep -q 'kind: Deployment' /tmp/rendered.yaml
@@ -1466,7 +1585,7 @@ jobs:
   workflow-lint:
     name: workflow lint
     needs: [changes]
-    if: needs.changes.outputs.github == 'true'
+    if: (needs.changes.outputs.github == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'workflow-lint')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1536,7 +1655,7 @@ jobs:
   go-e2e-unit:
     name: go (test/e2e)
     needs: [changes]
-    if: needs.changes.outputs.e2e-unit == 'true'
+    if: (needs.changes.outputs.e2e-unit == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'go-e2e-unit')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1565,7 +1684,7 @@ jobs:
   api-postgres:
     name: api (postgres)
     needs: [changes]
-    if: contains(fromJSON(needs.changes.outputs.modules), 'api')
+    if: (contains(fromJSON(needs.changes.outputs.modules), 'api')) || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'api-postgres')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1625,7 +1744,7 @@ jobs:
   e2e-buckets:
     name: e2e bucket coverage
     needs: [changes]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-buckets')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -1636,6 +1755,18 @@ jobs:
           submodules: true
       - name: verify buckets are disjoint + exhaustive
         run: ./test/e2e/buckets.sh verify
+      - name: verify every e2e test declares what it exercises
+        run: python3 hack/ci_scope.py verify-suites
+      - name: selection rules map every changed path
+        # An unmapped path already forced the full suite; this makes the gap visible
+        # so a rule gets added to hack/ci_scope.py (spec 023 quickstart scenario 12).
+        env:
+          UNMAPPED: ${{ needs.changes.outputs.e2e-unmapped }}
+        run: |
+          if [ -n "$UNMAPPED" ] && [ "$UNMAPPED" != "[]" ]; then
+            echo "::error::no selection rule maps these paths: $UNMAPPED"
+            exit 1
+          fi
       - name: verify game protocol coverage
         run: ./test/e2e/joincoverage.sh verify
       # The fixtures are what prove the gate above can actually fail. Without
@@ -1651,7 +1782,7 @@ jobs:
   e2e-go:
     name: e2e ${{ matrix.bucket }} / ${{ matrix.arch }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-go')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: ${{ matrix.job_timeout }}
     permissions:
@@ -1704,25 +1835,34 @@ jobs:
     env:
       CLUSTER: gameplane-e2e
       CTX: kind-gameplane-e2e
+      # Only this bucket's selected tests (spec 023 OD-6); empty skips the leg.
+      RUN_REGEX: ${{ fromJSON(needs.changes.outputs.e2e-run)[matrix.bucket] || '' }}
+      TAIL_REGEX: ${{ matrix.tail == 'ratelimit' && fromJSON(needs.changes.outputs.e2e-run).ratelimit || '' }}
     steps: &e2e-go-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
       - uses: ./.github/actions/go-cache
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
         with:
           key-suffix: e2e
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
       - name: install kind
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
         uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
         with:
           install_only: true
       - name: load images
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
         uses: ./.github/actions/e2e-images
         with:
           arch: ${{ matrix.arch }}
       - name: bring up cluster + helm install
+        if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
         run: ./deploy/kind/e2e.sh up "$CLUSTER" e2e
       - name: run go e2e (${{ matrix.bucket }})
+        if: env.RUN_REGEX != ''
         run: |
-          RUN_REGEX="$(./test/e2e/buckets.sh regex '${{ matrix.bucket }}')"
           cd test/e2e && \
             GAMEPLANE_E2E_REUSE_CLUSTER=1 \
             GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
@@ -1732,13 +1872,12 @@ jobs:
         # LAST on purpose: this test deliberately drains the shared per-IP
         # and per-username login buckets; anything running after it queues
         # behind the refill.
-        if: matrix.tail == 'ratelimit'
+        if: env.TAIL_REGEX != ''
         run: |
-          RUN_REGEX="$(./test/e2e/buckets.sh regex ratelimit)"
           cd test/e2e && \
             GAMEPLANE_E2E_REUSE_CLUSTER=1 \
             GAMEPLANE_E2E_CLUSTER="$CLUSTER" \
-            go test -tags=e2e -timeout 5m -v -run "$RUN_REGEX" ./...
+            go test -tags=e2e -timeout 5m -v -run "$TAIL_REGEX" ./...
       - name: dump cluster state on failure (e2e-go)
         if: failure()
         uses: ./.github/actions/dump-cluster-state
@@ -1750,7 +1889,7 @@ jobs:
   e2e-go-arm64:
     name: e2e ${{ matrix.bucket }} / ${{ matrix.arch }} (kind)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-go-arm64')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: ${{ matrix.job_timeout }}
     permissions:
@@ -1803,6 +1942,9 @@ jobs:
     env:
       CLUSTER: gameplane-e2e
       CTX: kind-gameplane-e2e
+      # Same selection as e2e-go, so both arches always run the same tests (FR-010).
+      RUN_REGEX: ${{ fromJSON(needs.changes.outputs.e2e-run)[matrix.bucket] || '' }}
+      TAIL_REGEX: ${{ matrix.tail == 'ratelimit' && fromJSON(needs.changes.outputs.e2e-run).ratelimit || '' }}
     steps: *e2e-go-steps
 
   # Dual-cluster ?cluster= dispatch + scoped RBAC (test/e2e/multicluster_e2e_test.go).
@@ -1813,7 +1955,7 @@ jobs:
   e2e-multicluster:
     name: e2e multicluster / ${{ matrix.arch }} (kind x2)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-multicluster == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-multicluster')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, across two clusters.
     permissions:
@@ -1878,7 +2020,7 @@ jobs:
   e2e-multicluster-arm64:
     name: e2e multicluster / ${{ matrix.arch }} (kind x2)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-multicluster == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-multicluster-arm64')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, across two clusters.
     permissions:
@@ -1905,7 +2047,7 @@ jobs:
   e2e-upgrade:
     name: e2e upgrade / ${{ matrix.arch }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-upgrade == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-upgrade')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a chart upgrade across versions.
     permissions:
@@ -1955,7 +2097,7 @@ jobs:
   e2e-upgrade-arm64:
     name: e2e upgrade / ${{ matrix.arch }} (kind)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-upgrade == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-upgrade-arm64')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a chart upgrade across versions.
     permissions:
@@ -1975,7 +2117,7 @@ jobs:
   e2e-web-live:
     name: e2e web live / ${{ matrix.arch }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.weblive == 'true'
+    if: (needs.changes.outputs.weblive == 'true' && needs.changes.outputs.e2e-web-live == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-web-live')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a live dashboard drive.
     permissions:
@@ -2030,10 +2172,16 @@ jobs:
       - name: install playwright browser
         run: |
           cd web && npm ci && npx playwright install --with-deps chromium
+      - name: i18n catalogs for the live dashboard
+        # The live job serves the dashboard with plain vite, which never builds
+        # the gitignored language list and catalogs (spec 019 T037).
+        run: |
+          cd web && npm run i18n:compile && npm run i18n:manifest
       - name: run playwright (live)
         env:
           GAMEPLANE_E2E_TARGET: live
           GAMEPLANE_E2E_CLUSTER: ${{ env.CLUSTER }}
+          VITE_I18N_FIXTURES: "1"
         run: |
           cd web && npm run test:e2e:live
       - name: dump cluster state on failure (e2e-web-live)
@@ -2055,7 +2203,7 @@ jobs:
   e2e-web-live-arm64:
     name: e2e web live / ${{ matrix.arch }} (kind)
     needs: [changes, build-images-arm64]
-    if: needs.changes.outputs.weblive == 'true'
+    if: (needs.changes.outputs.weblive == 'true' && needs.changes.outputs.e2e-web-live == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-web-live-arm64')
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60 # Same, plus a live dashboard drive.
     permissions:
@@ -2072,7 +2220,7 @@ jobs:
   e2e-game-bot:
     name: e2e game bot / ${{ matrix.test }} (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true' && needs.changes.outputs.e2e-bots-any == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-game-bot')
     # amd64 only: this boots the external itzg/minecraft-server (multi-arch) AND
     # passivelemon/terraria-docker, whose arm64 support is unverified upstream —
     # so an arm64 leg would fail on the Terraria pull. Add an arch axis here once
@@ -2085,7 +2233,7 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.changes.outputs.bot-matrix) }}
+      matrix: ${{ fromJSON(needs.changes.outputs.e2e-bot-matrix) }}
     env:
       BOT_TEST: ${{ matrix.test }}
       CLUSTER: gameplane-e2e
@@ -2139,7 +2287,9 @@ jobs:
     needs: [changes, build-images]
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.changes.outputs.e2e == 'true') ||
-      (github.event_name == 'pull_request' && needs.changes.outputs.capture_overhead == 'true')
+      (github.event_name == 'pull_request' && needs.changes.outputs.capture_overhead == 'true' && needs.changes.outputs.e2e-capture-overhead == 'true') ||
+      (github.event_name == 'workflow_dispatch' && needs.changes.outputs.e2e == 'true') ||
+      contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-capture-overhead')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     continue-on-error: true
@@ -2200,7 +2350,7 @@ jobs:
   e2e-postgres:
     name: e2e postgres / amd64 (kind)
     needs: [changes, build-images]
-    if: needs.changes.outputs.e2e == 'true'
+    if: (needs.changes.outputs.e2e == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-postgres')
     runs-on: ubuntu-latest
     timeout-minutes: 75 # Boots a kind cluster with PostgreSQL, installs the chart, runs three buckets.
     permissions:
@@ -2278,14 +2428,14 @@ jobs:
   # controller no longer reaches Available on the runner's Kind node image,
   # was previously only caught by a developer running `make dev-up` (#521).
   #
-  # Gated on `kindsmoke` (deploy/kind/** or this workflow file), not the
+  # Gated on `kindsmoke` (deploy/kind/** or a full-scope run), not the
   # broad `e2e` gate: a Go/chart/test-tree change doesn't touch the pinned
   # manifest or the cluster config this job exercises, so it stays out of
   # every other PR's critical path.
   e2e-kind-ingress-smoke:
     name: ingress-nginx smoke (kind)
     needs: [changes]
-    if: needs.changes.outputs.kindsmoke == 'true'
+    if: (needs.changes.outputs.kindsmoke == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'e2e-kind-ingress-smoke')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -2446,6 +2596,8 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           REPO_SLUG: ${{ github.repository }}
+          SELECTION_SCOPE: ${{ needs.changes.outputs.scope }}
+          SELECTION_REASON: ${{ needs.changes.outputs.scope-reason }}
         run: |
           set +e
           printf '%s' "$NEEDS_JSON" > /tmp/needs.json
@@ -2699,6 +2851,13 @@ jobs:
             md += '_' + runLink + ' - attempt ' + RUN_ATTEMPT + '_\n\n';
             const cancelledSeg = cancelled > 0 ? cancelled + ' cancelled - ' : '';
             md += '**' + failed + ' failed - ' + passed + ' passed - ' + skipped + ' skipped - ' + cancelledSeg + elapsed + ' elapsed**\n\n';
+            // ci_scope.py emits every output as JSON, so scope arrives as "full"/"partial" with quotes.
+            const scope = safe(() => JSON.parse(process.env.SELECTION_SCOPE), '') || 'unknown';
+            // Full scope names its reason (master push, label, error: ...) so a summary failure is not read as a real full run.
+            const scopeReason = safe(() => JSON.parse(process.env.SELECTION_REASON), '');
+            // The detect changes step summary renders on the run summary page, not the job log page.
+            const summaryUrl = (RUN_ID && REPO_SLUG) ? 'https://github.com/' + REPO_SLUG + '/actions/runs/' + RUN_ID : null;
+            md += 'Test selection: **' + scope + '**' + (scopeReason ? ' (' + scopeReason + ')' : '') + ' - ' + (summaryUrl ? '[per-suite table](' + summaryUrl + ')' : 'see the detect changes job summary') + '\n\n';
 
             if (failed > 0) {
               md += '### Failing\n\n| Job | Log |\n| --- | --- |\n';
