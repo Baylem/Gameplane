@@ -77,6 +77,7 @@ build-go: ## Build all Go binaries
 
 .PHONY: build-web
 build-web: ## Build web dashboard
+	@hack/need.sh npm
 	cd web && npm ci && npm run build
 
 # -------- test --------
@@ -192,6 +193,7 @@ e2e-images: ## Build operator/api/agent/fakeoidc images tagged for e2e
 
 .PHONY: test-e2e
 test-e2e: ## Run E2E tests (CLUSTER=kind spins an ephemeral cluster; CLUSTER=remote reuses REMOTE_KUBECONFIG)
+	@hack/need.sh $(if $(filter remote,$(CLUSTER)),go kubectl helm,go docker kind kubectl helm)
 ifeq ($(CLUSTER),remote)
 	cd test/e2e && GAMEPLANE_E2E_REUSE_CLUSTER=1 \
 		GAMEPLANE_E2E_CONTEXT=$(REMOTE_CONTEXT) KUBECONFIG=$(REMOTE_KUBECONFIG) \
@@ -209,6 +211,7 @@ test-e2e-keep: ## Re-run E2E tests against an already-up cluster (skip create/de
 
 .PHONY: test-e2e-bucket
 test-e2e-bucket: ## Run one CI e2e bucket against an already-up cluster (BUCKET=operator|api-auth|api-roles|api-rbac|api-agent|api-mods|ratelimit|bot-fast|bot-heavy|multicluster|upgrade). BUCKET=multicluster additionally needs a second kind cluster up and GAMEPLANE_E2E_CLUSTER_B set to its name (default gameplane-e2e-b).
+	@hack/need.sh go kubectl helm
 	cd test/e2e && GAMEPLANE_E2E_REUSE_CLUSTER=1 GAMEPLANE_E2E_CLUSTER=$(KIND_E2E_CLUSTER) \
 		go test -tags=e2e -timeout 50m -v -run "$$(./buckets.sh regex $(BUCKET))" ./...
 
@@ -312,6 +315,7 @@ lint: check-doc-versions check-links check-features-sync check-specs check-telem
 
 .PHONY: lint-go
 lint-go: ## Run golangci-lint across all modules
+	@hack/need.sh golangci-lint
 	@for m in $(GO_MODULES); do \
 		(cd $$m && golangci-lint run) || exit $$?; \
 	done
@@ -339,19 +343,24 @@ images: $(addprefix image-,$(IMAGES)) image-audit-syslog image-tunnel-frp image-
 
 # Pattern rule for standard-shaped images
 image-%: ## Build container image
+	@hack/need.sh docker
 	docker build -t $(REGISTRY)/$*:$(TAG) -f $*/Dockerfile .
 
 # Non-standard images (target name ≠ dir, or special Dockerfile paths)
 image-audit-syslog: ## Build audit-syslog-bridge image
+	@hack/need.sh docker
 	docker build -t $(REGISTRY)/audit-syslog-bridge:$(TAG) -f audit-syslog-bridge/Dockerfile .
 
 image-tunnel-frp: ## Build tunnel-frp image
+	@hack/need.sh docker
 	docker build -t $(REGISTRY)/tunnel-frp:$(TAG) -f tunnel/Dockerfile.frp .
 
 image-tunnel-tailscale: ## Build tunnel-tailscale image
+	@hack/need.sh docker
 	docker build -t $(REGISTRY)/tunnel-tailscale:$(TAG) -f tunnel/Dockerfile.tailscale .
 
 image-tunnel-playit: ## Build tunnel-playit image
+	@hack/need.sh docker
 	docker build -t $(REGISTRY)/tunnel-playit:$(TAG) -f tunnel/Dockerfile.playit .
 
 # -------- codegen --------
@@ -427,6 +436,7 @@ ADDRESS_MANAGER ?= metallb
 endif
 
 dev-up: ## Create/prepare cluster + install Gameplane (CLUSTER=kind|remote)
+	@hack/need.sh $(if $(filter remote,$(CLUSTER)),docker kubectl helm oras,docker kind kubectl helm oras)
 ifeq ($(CLUSTER),remote)
 	$(MAKE) images TAG=$(TAG)
 	$(MAKE) dev-push TAG=$(TAG)
@@ -441,6 +451,7 @@ else
 endif
 
 dev-load: ## Load every image `make images` builds into the kind cluster (kind only)
+	@hack/need.sh docker kind
 	@for img in $(ALL_IMAGE_NAMES); do \
 		kind load docker-image $(REGISTRY)/$$img:$(TAG) --name $(KIND_CLUSTER) || exit $$?; \
 	done
@@ -452,6 +463,7 @@ dev-push: ## Push operator/api/web/agent images to REGISTRY (remote clusters)
 	docker push $(REGISTRY)/agent:$(TAG)
 
 dev-install: ## Install Gameplane Helm chart into the selected cluster
+	@hack/need.sh helm
 	# CRD schema changes land in-place on upgrade via the chart's pre-upgrade
 	# hook (crds.autoApply), which runs `kubectl apply --server-side` — no
 	# manual apply needed here anymore, and it works for any `helm upgrade`,
@@ -482,11 +494,13 @@ endif
 .PHONY: modules-push
 MODULE_REGISTRY ?= localhost:5001
 modules-push: ## Push every modules/<name> as an OCI bundle to MODULE_REGISTRY
+	@hack/need.sh oras
 	./modules/build.sh push --registry $(MODULE_REGISTRY) --plain-http
 
 # -------- web dev --------
 .PHONY: web-dev
 web-dev: ## Run web dashboard against in-cluster API
+	@hack/need.sh npm
 	cd web && npm run dev
 
 # -------- tidy --------
