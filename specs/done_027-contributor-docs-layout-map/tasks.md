@@ -5,7 +5,7 @@ description: "Task list for spec 027: contributor docs and layout map"
 
 # Tasks: Contributor Docs and Layout Map
 
-**Input**: Design documents from `specs/027-contributor-docs-layout-map/`
+**Input**: Design documents from `specs/done_027-contributor-docs-layout-map/`
 
 **Prerequisites**: [plan.md](./plan.md), [spec.md](./spec.md), [research.md](./research.md), [data-model.md](./data-model.md), [contracts/](./contracts/)
 
@@ -27,7 +27,7 @@ description: "Task list for spec 027: contributor docs and layout map"
 ## Phase 1: Setup
 
 - [X] T001 Create branch `claude/027-contributor-docs` in GP from latest `master` (after the spec docs PR merges) and `claude/027-contributing-pointer` in WEB from latest `main` (done on `claude/project-thread-y09b3k` in both repos, the thread branch)
-- [X] T002 Re-measure on the new `master` the facts the docs will state (research R1–R4: symlink modes, `AGENT.md` references, `specs.md` count, module shapes, largest web files) and record the SHA and any drift at the top of `specs/027-contributor-docs-layout-map/research.md`
+- [X] T002 Re-measure on the new `master` the facts the docs will state (research R1–R4: symlink modes, `AGENT.md` references, `specs.md` count, module shapes, largest web files) and record the SHA and any drift at the top of `specs/done_027-contributor-docs-layout-map/research.md`
 
 ---
 
@@ -99,9 +99,9 @@ description: "Task list for spec 027: contributor docs and layout map"
 ## Phase 7: Review and delivery
 
 - [X] T022 Tier-up review (`sonnet`) of the combined GP and WEB diffs against spec FR-001..FR-020 and this task list; fixes go to a new `haiku` fix wave
-- [ ] T023 Push both branches; open WEB PR (`type: docs`) and GP PR (`type: docs`, `area: specs`, `area: shared`); check CI green and every CodeRabbit finding fixed or settled before calling either ready
-- [ ] T024 After the WEB PR merges: bump the `website` submodule pointer in GP (`chore: bump website submodule`) in its own PR
-- [ ] T025 After every PR merges: mark tasks `[X]`, `git mv specs/027-contributor-docs-layout-map specs/done_027-contributor-docs-layout-map` and update references in the same commit (rule 16); tell spec 028 that `docs/layout.md` is on `master`
+- [X] T023 Push both branches; open WEB PR (`type: docs`) and GP PR (`type: docs`, `area: specs`, `area: shared`); check CI green and every CodeRabbit finding fixed or settled before calling either ready
+- [X] T024 After the WEB PR merges: bump the `website` submodule pointer in GP (`chore: bump website submodule`) in its own PR
+- [X] T025 After every PR merges: mark tasks `[X]`, `git mv specs/027-contributor-docs-layout-map specs/done_027-contributor-docs-layout-map` and update references in the same commit (rule 16); tell spec 028 that `docs/layout.md` is on `master`
 
 ---
 
