@@ -50,8 +50,8 @@ func TestAPIClient_DoContextResponseBody(t *testing.T) {
 				if !errors.Is(err, io.ErrUnexpectedEOF) || !strings.Contains(err.Error(), "GET /fixture") {
 					t.Fatalf("expected contextual wrapped unexpected EOF, got %v", err)
 				}
-				if resp != nil || body != nil {
-					t.Fatalf("incomplete response escaped: response=%v body=%q", resp, body)
+				if resp == nil || resp.StatusCode != test.status || resp.Header.Get("Content-Length") != strconv.Itoa(len(test.body)+1) || string(body) != test.body {
+					t.Fatalf("incomplete response lost status, headers or partial bytes: response=%v body=%q", resp, body)
 				}
 				return
 			}

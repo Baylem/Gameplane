@@ -121,7 +121,7 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	report["http_monitor_positive_control"] = true
 	bootstrapAdmin := f.login("initial", "admin", password)
 	defer bootstrapAdmin.Close()
-	adminID := extractUserID(string(f.request(bootstrapAdmin, http.MethodGet, "/users/me", nil, http.StatusOK)))
+	adminID := extractIntField(string(f.request(bootstrapAdmin, http.MethodGet, "/users/me", nil, http.StatusOK)), "id")
 	adminUserID, err := strconv.ParseInt(adminID, 10, 64)
 	if err != nil || adminUserID <= 0 {
 		t.Fatal("bootstrap admin has no valid ID")
@@ -148,7 +148,7 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	f.request(admin, http.MethodPost, "/roles", map[string]any{"name": roleName, "description": "Recovery fixture read only", "permissions": []string{"servers:read"}}, http.StatusCreated)
 	userPassword := recoveryRandom(t)
 	created := f.request(admin, http.MethodPost, "/users", map[string]any{"username": "reader", "password": userPassword, "role": roleName}, http.StatusOK)
-	userID := extractUserID(string(created))
+	userID := extractIntField(string(created), "id")
 	if userID == "" {
 		t.Fatal("created reader has no ID")
 	}

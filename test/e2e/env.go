@@ -601,7 +601,7 @@ func (c *APIClient) DoContext(ctx context.Context, method, path string, body any
 	defer func() { _ = resp.Body.Close() }()
 	rb, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, nil, fmt.Errorf("read response for %s %s: %w", method, path, err)
+		return resp, rb, fmt.Errorf("read response for %s %s: %w", method, path, err)
 	}
 	return resp, rb, nil
 }
@@ -699,21 +699,21 @@ func (e *Env) CreateUser(t *testing.T, admin *APIClient, role, prefix string) (u
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("CreateUser %s/%s %d: %s", role, prefix, resp.StatusCode, string(body))
 	}
-	id = extractUserID(string(body))
+	id = extractIntField(string(body), "id")
 	if id == "" {
 		t.Fatalf("CreateUser: could not parse id from response: %s", string(body))
 	}
 	return username, userPhrase, id
 }
 
-// extractUserID is a tiny scanner for `"id":<digits>` inside a JSON
-// blob. It reads the user ID returned by the API without adding a JSON
-// decoding dependency to callers that only need that field.
+// extractIntField is a tiny scanner for `"<key>":<digits>` inside a JSON
+// blob. Lets the e2e tests parse the one or two integer fields they
+// care about (user id, mostly) without pulling in encoding/json.
 //
 // Lives on env.go (not in a _test.go) so non-test helper code like
 // CreateUser can use it.
-func extractUserID(body string) string {
-	const needle = `"id":`
+func extractIntField(body, key string) string {
+	needle := `"` + key + `":`
 	i := strings.Index(body, needle)
 	if i < 0 {
 		return ""
