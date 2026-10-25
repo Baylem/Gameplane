@@ -99,9 +99,9 @@ description: "Task list for spec 027: contributor docs and layout map"
 ## Phase 7: Review and delivery
 
 - [X] T022 Tier-up review (`sonnet`) of the combined GP and WEB diffs against spec FR-001..FR-020 and this task list; fixes go to a new `haiku` fix wave
-- [ ] T023 Push both branches; open WEB PR (`type: docs`) and GP PR (`type: docs`, `area: specs`, `area: shared`); check CI green and every CodeRabbit finding fixed or settled before calling either ready
-- [ ] T024 After the WEB PR merges: bump the `website` submodule pointer in GP (`chore: bump website submodule`) in its own PR
-- [ ] T025 After every PR merges: mark tasks `[X]`, `git mv specs/027-contributor-docs-layout-map specs/done_027-contributor-docs-layout-map` and update references in the same commit (rule 16); tell spec 028 that `docs/layout.md` is on `master`
+- [X] T023 Push both branches; open WEB PR (`type: docs`) and GP PR (`type: docs`, `area: specs`, `area: shared`); check CI green and every CodeRabbit finding fixed or settled before calling either ready
+- [X] T024 After the WEB PR merges: bump the `website` submodule pointer in GP (`chore: bump website submodule`) in its own PR
+- [X] T025 After every PR merges: mark tasks `[X]`, `git mv specs/027-contributor-docs-layout-map specs/done_027-contributor-docs-layout-map` and update references in the same commit (rule 16); tell spec 028 that `docs/layout.md` is on `master`
 
 ---
 
