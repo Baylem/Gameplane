@@ -14,6 +14,25 @@ point. Assume:
 
 ## Authentication
 
+### Snapshot data and namespace storage trust
+
+Creating or changing a GameServer's `spec.storage.dataSource` through the API
+requires both `servers:write` and `backups:restore` in that cluster and namespace.
+The API checks that the named VolumeSnapshot has a Backup controller owner whose
+UID matches the live Backup in the same namespace. Imported snapshots, orphaned
+snapshots and references to replaced Backup objects are rejected, including for
+administrators. Removing the source also requires both permissions; editing
+other fields while retaining an unchanged source does not.
+
+Direct Kubernetes CRD writers bypass this API gate and are trusted over the
+namespace's storage. Kubernetes PVC data sources are name references, so those
+writers must also be trusted not to replace a checked snapshot before PVC
+provisioning. Use separate namespaces for mutually untrusted storage tenants.
+Existing remote-cluster kubeconfigs and manually maintained API Roles need
+`get` on `snapshot.storage.k8s.io/volumesnapshots` in each managed namespace;
+the chart grants this only in its configured games namespace. The operator's
+Restore workflow continues to create its data source directly.
+
 Operator-managed agent and capture-sidecar control traffic uses mTLS with TLS 1.2 or newer and a verified
 client certificate. Both servers reload their serving certificate, key and
 client CA on each new handshake, so operator Secret renewal takes effect
@@ -953,6 +972,23 @@ namespaces. If that blast radius is wider than acceptable for a given
 cluster, don't enable `mcpServer` there.
 
 ## Secrets
+
+The operator's Secret authority is namespace-local. Its manager cache, including
+the GameServer controller's `Owns(Secret)` informer and lazy Secret reads, uses
+the union of configured game, control-plane, CA and module namespaces. The chart
+grants Secret `get/list/watch` with Roles in precisely that set, with Secret writes
+retained only in managed game namespaces. Empty or malformed namespace entries
+fail startup. Other resource informers remain cluster-wide, including cluster-scoped
+Gameplane CRDs; this does not grant Secret reads outside the configured set.
+
+Remote-cluster registration reads the kubeconfig Secret from the configured local
+control-plane namespace and performs remote discovery, without opening remote
+Secret informers. The direct readers used for workload lifecycle checks remain
+subject to the same Kubernetes RBAC boundary. The API's credentials and grants
+are separate from the operator's. A cluster administrator can widen access with
+additional RoleBindings; the boundary assumes no such extra grants. See
+[operator Secret upgrades](install.md#upgrading-the-operator-secret-boundary) for
+namespace registration and migration steps.
 
 Combined installations store management credentials in Kubernetes Secrets.
 Standalone panels store their labelled management credentials, including remote
