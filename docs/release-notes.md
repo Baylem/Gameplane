@@ -16,6 +16,9 @@ keys use the defaults even with `--reuse-values`.
 Chart-managed pods now accept placement, topology-spread and priority settings,
 with optional PDBs for Deployments. API remains a singleton and its PDB uses
 `maxUnavailable: 1`; node drains can cause API downtime. Operator replicas greater
-than one require leader election. Disabling election on a singleton uses Recreate.
+than one automatically enable leader election, including upgrades retaining
+`leaderElect: false` through `--reuse-values`; that old setting no longer fails
+chart rendering. Install notes explain the effective behavior. Disabling
+election on a singleton uses Recreate.
 See [production placement](production-placement.md) for upgrade controls and a
 worker-pool example.

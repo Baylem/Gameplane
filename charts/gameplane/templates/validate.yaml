@@ -1,6 +1,3 @@
-{{- if and (eq (include "gameplane.operatorEnabled" .) "true") (gt (int .Values.operator.replicas) 1) (not .Values.operator.leaderElect) }}
-{{- fail "operator.leaderElect must be enabled with more than one replica" }}
-{{- end }}
 {{- $network := .Values.networkPolicies | default dict }}
 {{- if $network.strict }}
 {{- if not $network.enabled }}

@@ -35,3 +35,19 @@ func TestRelayMetricsUnknownStaleAndRecovery(t *testing.T) {
 		}
 	}
 }
+
+func TestRelayMetricsDistinguishUnsupportedHealth(t *testing.T) {
+	for _, unsupported := range []bool{false, true} {
+		h := &relayHealth{connectionUnsupported: unsupported}
+		h.observe(time.Now(), relayObservation{Connection: "unknown", Assigned: true}, nil)
+		w := httptest.NewRecorder()
+		relayHealthHandler(h).ServeHTTP(w, httptest.NewRequestWithContext(t.Context(), "GET", "/metrics", nil))
+		want := "gameplane_tunnel_connection_supported 1\n"
+		if unsupported {
+			want = "gameplane_tunnel_connection_supported 0\n"
+		}
+		if !strings.Contains(w.Body.String(), want) || !strings.Contains(w.Body.String(), "gameplane_tunnel_connection_known 0\n") {
+			t.Fatal(w.Body.String())
+		}
+	}
+}

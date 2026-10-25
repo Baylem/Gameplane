@@ -39,7 +39,10 @@ type relaySnapshot struct {
 }
 
 type relayHealth struct {
+	// Immutable provider capability, independent of fresh observation state.
+	connectionUnsupported bool
 	mu                    sync.Mutex
+	supervisorUnavailable bool
 	observation           relayObservation
 	checked, healthySince time.Time
 }
@@ -47,7 +50,18 @@ type relayHealth struct {
 func (h *relayHealth) clear() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	h.supervisorUnavailable = false
 	h.observation = relayObservation{Connection: "unknown"}
+	h.checked, h.healthySince = time.Time{}, time.Time{}
+}
+
+// markUnavailable records that no forwarding attempt is serving. Unlike a
+// provider observation, this local fact remains true throughout retry/backoff.
+func (h *relayHealth) markUnavailable() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.supervisorUnavailable = true
+	h.observation = relayObservation{Connection: "unavailable"}
 	h.checked, h.healthySince = time.Time{}, time.Time{}
 }
 
@@ -58,6 +72,7 @@ func (h *relayHealth) observe(now time.Time, observation relayObservation, backo
 }
 
 func (h *relayHealth) observeLocked(now time.Time, observation relayObservation, backoff *exponentialBackoff) {
+	h.supervisorUnavailable = false
 	if !observation.ready() {
 		h.healthySince = time.Time{}
 	} else {
@@ -74,6 +89,9 @@ func (h *relayHealth) observeLocked(now time.Time, observation relayObservation,
 func (h *relayHealth) snapshot(now time.Time) relaySnapshot {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if h.supervisorUnavailable {
+		return relaySnapshot{relayObservation: relayObservation{Connection: "unavailable"}}
+	}
 	if h.checked.IsZero() || now.Sub(h.checked) >= healthStaleAfter {
 		return relaySnapshot{relayObservation: relayObservation{Connection: "unknown"}}
 	}

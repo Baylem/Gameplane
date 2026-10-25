@@ -60,7 +60,13 @@ tests:
       - series: 'gameplane_agent_performance_available{namespace="gameplane-games",pod="game-0",metric="tps",signal="tick_rate",unit="hertz"}'
         values: '1x10 0x10'
       - series: 'gameplane_tunnel_connection_known{namespace="gameplane-games",pod="playit"}'
+        values: '0x20'
+      - series: 'gameplane_tunnel_connection_supported{namespace="gameplane-games",pod="playit"}'
+        values: '0x20'
+      - series: 'gameplane_tunnel_connection_known{namespace="gameplane-games",pod="frp"}'
         values: '0x10 1x10'
+      - series: 'gameplane_tunnel_connection_supported{namespace="gameplane-games",pod="frp"}'
+        values: '1x20'
       - series: 'gameplane_tunnel_ready{namespace="gameplane-games",pod="playit"}'
         values: '0x10 1x10'
     alert_rule_test:
@@ -80,7 +86,7 @@ tests:
       - eval_time: 6m
         alertname: GameplaneRelayHealthUnknown
         exp_alerts:
-          - exp_labels: {namespace: gameplane-games, pod: playit, severity: info}
+          - exp_labels: {namespace: gameplane-games, pod: frp, severity: info}
             exp_annotations: {summary: "Gameplane provider cannot confirm live relay health"}
       - eval_time: 6m
         alertname: GameplaneRelayUnavailable

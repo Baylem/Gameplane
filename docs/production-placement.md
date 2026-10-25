@@ -82,9 +82,10 @@ cause API downtime. A PDB is not an availability guarantee and does not prevent
 node failures. The persistent telemetry receiver is also a singleton; avoid a
 zero-unavailable budget unless intentionally accepting a blocked drain.
 
-Keep operator leader election enabled with redundant replicas and rolling
-updates. The chart rejects multiple replicas with leader election disabled;
-with one replica and election disabled it uses Recreate to avoid overlapping
+Redundant operator replicas use leader election and rolling updates. The chart
+automatically enables election when replicas exceed one, even when an older
+release retained `leaderElect: false`; upgrades continue rendering and install
+notes explain the effective setting. With one replica and election disabled it uses Recreate to avoid overlapping
 reconcilers during upgrades. API replica/process restrictions remain unchanged.
 
 When switching an existing operator to Recreate, a pre-upgrade hook clears the

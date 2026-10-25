@@ -114,14 +114,22 @@ zero; value and timestamp remain absent.
 ## Relays and infrastructure
 
 Tunnel gauges read the same snapshot as readiness: `gameplane_tunnel_ready`,
-`gameplane_tunnel_connection_known`, `gameplane_tunnel_connected`,
+`gameplane_tunnel_connection_supported`, `gameplane_tunnel_connection_known`, `gameplane_tunnel_connected`,
 `gameplane_tunnel_forwards_registered`, `gameplane_tunnel_endpoint_assigned`,
 and `gameplane_tunnel_observation_timestamp_seconds`. `connected` and observation
 timestamp are absent when their evidence is unknown or stale. Readiness and
 registration flags mean *confirmed*, so zero does not invent a disconnected
 provider. The rules distinguish an unavailable relay from unknown health.
-Pinned Playit cannot confirm live connectivity and therefore raises the
-informational unknown-health alert; see [relay-health.md](relay-health.md).
+Pinned Playit cannot confirm live connectivity: its support gauge is zero and
+the informational unknown-health alert excludes it. Its known/connected metrics
+still represent unknown evidence, without claiming a healthy relay. Supported
+providers raise the info alert when their observations become unknown or stale;
+an observed tsnet failure is unavailable and raises the warning-level outage
+alert. Between Tailscale attempts and while a replacement joins, the supervisor
+knows that no forwarding attempt is serving, so that unavailable state remains
+known throughout backoff. It carries no provider observation timestamp. Fresh
+observations resume when forwarding is established and retain their normal
+staleness limit. See [relay-health.md](relay-health.md).
 Tailscale, frp and Playit all use the same metrics path. Metrics contain no
 credentials, login URLs, proxy names or provider error messages.
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -30,6 +31,11 @@ func TestTailscaleServerPreservesIdentityAndTags(t *testing.T) {
 		t.Fatal("invalid tags silently dropped")
 	}
 	cfg.TailscaleTags = ""
+	cfg.TailscaleHostname = ""
+	if _, _, err := tailscaleServer(cfg, "key"); err == nil {
+		t.Fatal("empty hostname accepted")
+	}
+	cfg.TailscaleHostname = "my-game"
 	if _, _, err := tailscaleServer(cfg, ""); err == nil {
 		t.Fatal("empty auth key accepted")
 	}
@@ -56,6 +62,7 @@ type fakeTailnetNode struct {
 	mu        sync.Mutex
 	status    *ipnstate.Status
 	upErr     error
+	upCalls   int
 	listenErr bool
 	listened  []string
 	listeners []net.Listener
@@ -63,6 +70,7 @@ type fakeTailnetNode struct {
 }
 
 func (f *fakeTailnetNode) Up(ctx context.Context) (*ipnstate.Status, error) {
+	f.upCalls++
 	if f.upErr != nil {
 		return nil, f.upErr
 	}
@@ -163,12 +171,32 @@ func TestTailnetFailuresNeverBecomeReady(t *testing.T) {
 			if err == nil || ready.Load() {
 				t.Fatalf("failure became ready: %v", err)
 			}
+			if node.upCalls != 1 {
+				t.Fatalf("failed registration retried without requested tags: %d attempts", node.upCalls)
+			}
 			for _, listener := range node.listeners {
 				if _, err := listener.Accept(); err == nil {
 					t.Fatal("partially opened listener leaked")
 				}
 			}
 		})
+	}
+}
+
+func TestTailscaleRetryBackoffCancelsImmediately(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(t.Context())
+	healthDone := make(chan error)
+	done := make(chan error, 1)
+	go func() { done <- waitTailnetRetry(ctx, healthDone, time.Hour) }()
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("cancelled retry: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("retry backoff ignored cancellation")
 	}
 }
 
@@ -196,19 +224,126 @@ func TestTailnetListenerFailureClearsReady(t *testing.T) {
 	}
 }
 
-func TestTailnetHealthNeedsForwardingReadiness(t *testing.T) {
+type gatedTailnetNode struct {
+	*fakeTailnetNode
+	started chan struct{}
+	release chan struct{}
+}
+
+func (n *gatedTailnetNode) Up(ctx context.Context) (*ipnstate.Status, error) {
+	close(n.started)
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-n.release:
+		return n.fakeTailnetNode.Up(ctx)
+	}
+}
+
+func TestTailnetFailedAttemptRemainsKnownDuringRetry(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	history := &relayHealth{}
+	handler := relayHealthHandler(history)
+	ports := []forwardPort{{network: "tcp", port: "25565", target: "127.0.0.1:1"}}
+	node := &fakeTailnetNode{status: onlineTailnet()}
 	var ready atomic.Bool
-	handler := tailscaleHealth(&ready)
+	done := make(chan error, 1)
+	go func() {
+		done <- serveTailnetWithHealth(ctx, node, nil, ports, &ready, time.Millisecond, history, nil)
+	}()
+	awaitTailnetReady(t, &ready, true)
+	if err := node.listeners[0].Close(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("failed listener was not reported")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("failed attempt did not finish")
+	}
+	assertUnavailable := func() {
+		t.Helper()
+		// Advance beyond the maximum retry delay without sleeping: absence of
+		// a serving attempt is a local fact, not a stale provider observation.
+		if got := history.snapshot(time.Now().Add(6 * time.Minute)); got.Connection != "unavailable" || got.Ready {
+			t.Fatalf("retry forgot the known outage: %+v", got)
+		}
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/readyz", nil))
+		if rec.Code != http.StatusServiceUnavailable {
+			t.Fatalf("failed attempt readyz=%d", rec.Code)
+		}
+		metrics := httptest.NewRecorder()
+		handler.ServeHTTP(metrics, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/metrics", nil))
+		for _, want := range []string{"gameplane_tunnel_connection_known 1\n", "gameplane_tunnel_connected 0\n", "gameplane_tunnel_ready 0\n"} {
+			if !strings.Contains(metrics.Body.String(), want) {
+				t.Fatalf("failed attempt missing %q: %s", want, metrics.Body.String())
+			}
+		}
+		if strings.Contains(metrics.Body.String(), "gameplane_tunnel_observation_timestamp_seconds") {
+			t.Fatalf("supervisor outage invented a provider observation timestamp: %s", metrics.Body.String())
+		}
+	}
+	assertUnavailable()
+
+	// A new registration attempt must retain that state until forwarding is
+	// actually established, even if its Up call takes longer than the lease.
+	retry := &gatedTailnetNode{fakeTailnetNode: &fakeTailnetNode{status: onlineTailnet()}, started: make(chan struct{}), release: make(chan struct{})}
+	go func() {
+		done <- serveTailnetWithHealth(ctx, retry, nil, ports, &ready, time.Millisecond, history, nil)
+	}()
+	select {
+	case <-retry.started:
+	case <-time.After(time.Second):
+		t.Fatal("retry did not start")
+	}
+	assertUnavailable()
+	close(retry.release)
+	awaitTailnetReady(t, &ready, true)
+	deadline := time.Now().Add(time.Second)
+	for !history.snapshot(time.Now()).Ready && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if got := history.snapshot(time.Now()); got.Connection != "connected" || !got.Ready {
+		t.Fatalf("recovered forwarding did not restore health: %+v", got)
+	}
+	if got := history.snapshot(time.Now().Add(2 * healthStaleAfter)); got.Connection != "unknown" || got.Ready {
+		t.Fatalf("live provider observations no longer expire: %+v", got)
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("retry shutdown stalled")
+	}
+}
+
+func TestTailnetHealthNeedsForwardingReadiness(t *testing.T) {
+	history := &relayHealth{}
+	handler := relayHealthHandler(history)
 	for _, check := range []struct {
 		path  string
 		ready bool
 		want  int
 	}{{"/readyz", false, 503}, {"/healthz", false, 200}, {"/readyz", true, 200}, {"/readyz", false, 503}} {
-		ready.Store(check.ready)
+		history.observe(time.Now(), tailnetHealthObservation(check.ready), nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, check.path, nil))
 		if rec.Code != check.want {
 			t.Fatalf("%s=%d want%d", check.path, rec.Code, check.want)
+		}
+	}
+	metrics := httptest.NewRecorder()
+	handler.ServeHTTP(metrics, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/metrics", nil))
+	for _, want := range []string{"gameplane_tunnel_connection_known 1\n", "gameplane_tunnel_connected 0\n", "gameplane_tunnel_ready 0\n"} {
+		if !strings.Contains(metrics.Body.String(), want) {
+			t.Fatalf("confirmed tailnet failure missing %q: %s", want, metrics.Body.String())
 		}
 	}
 }

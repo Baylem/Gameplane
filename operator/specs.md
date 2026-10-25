@@ -46,6 +46,18 @@ not recreated to enable remote parity.
 
 ## Non-goals / boundaries
 
+Tailscale tags are normalized and syntax-checked before tunnel Deployment creation.
+Invalid tags remove a previous Deployment and report `TunnelReady=False` with
+`InvalidTailscaleTags`, naming the configuration field to correct. Correcting
+the tags permits normal creation again; denied provider authorization never
+falls back to an untagged identity.
+
+Playit Pod readiness uses the wrapper's `/healthz` endpoint because the pinned
+provider cannot confirm a live relay connection. This never promotes
+`TunnelReady` to True: relay evidence stays Unknown, or AwaitingAddress before
+assignment. Existing frp Deployments receive `GAMESERVER_UID`, current probes
+and Recreate strategy automatically on reconciliation after an operator upgrade.
+
 The operator **does not** handle:
 - User authentication or authorization (RBAC is Kubernetes role-based, not application-level).
 - REST API, WebSocket, or dashboard concerns (the API server, not the operator, owns the UX layer).
@@ -178,7 +190,7 @@ Primary reconcilers register with the manager in `cmd/main.go` and handle CRD li
   - Graceful stop: if template has Lifecycle.Stop sequence, orchestrate via agent before scaling down.
   - Node affinity: honor spec.nodeSelector and spec.affinity preferences.
   - Ingress NetworkPolicy: enforce per-template advertised ports, admit CIDRs from `--game-ingress-from-cidr`.
-  - Sentinel NetworkPolicies: `GameTemplate.spec.sentinelIsolation` defaults false. When true, reconcile owned `<gs>-sentinel-ingress` and `<gs>-sentinel-egress` policies joining only the same namespace/server instance on advertised protocol/port tuples. Zero advertised ports removes owned grants. Set `gameplane.local/sentinel-isolation=true` on both pod templates, without changing immutable workload selectors. The matching chart excludes opted-in sources and destinations from legacy grants; other policies remain additive.
+  - Sentinel NetworkPolicies: `GameTemplate.spec.sentinelIsolation` defaults false. When true, reconcile owned `<gs>-sentinel-ingress` and `<gs>-sentinel-egress` policies joining only the same namespace/server instance on advertised protocol/port tuples. An opted-in template with zero advertised ports fails before child reconciliation with an actionable `Ready=False` condition; no unrestricted grant is created. Set `gameplane.local/sentinel-isolation=true` on both pod templates, without changing immutable workload selectors. On opt-out, roll the labels off both workloads and retain the per-server grants until uncached reads confirm both controllers observed the unlabeled templates and completed their rollouts, and neither game nor sentinel pods still carry the label. The matching chart excludes opted-in sources and destinations from legacy grants; other policies remain additive.
   - Fixed-name child cleanup: Delete fixed-name objects (`<gs>-config` Secret, `<gs>-files` Secret, `<gs>-rcon` Secret, `<gs>-auto` BackupSchedule, `<gs>-wipe` Job) only when the GameServer controls them via OwnerReference; unowned objects with these names stay in place (same rule as game-ingress NetworkPolicy). Wipe cleanup carries the verified Job UID as a delete precondition; a foreign Job cannot acknowledge a pending wipe or resume its server.
   - **Conflict requeue:** When reconcileStatefulSet or reconcileWipe encounters an apierrors.IsConflict error (concurrent update races), requeue without error logging — conflicts are expected and transient. The Module, NetworkCapture and Backup reconcilers apply the same rule to every error they return, via `requeueOnConflict` (`conflict.go`).
   - Load-balancer address management: translate spec.networking.addressPool / .address preferences onto the Service based on the cluster's address-manager flavor (MetalLB, Cilium, or none), report assignment status via the AddressAssignment condition.

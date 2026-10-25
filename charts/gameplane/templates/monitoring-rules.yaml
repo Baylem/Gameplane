@@ -24,7 +24,7 @@ spec:
           labels: { severity: warning }
           annotations: { summary: "Gameplane relay connection or forwards are unavailable" }
         - alert: GameplaneRelayHealthUnknown
-          expr: max by (namespace, pod) (gameplane_tunnel_connection_known{namespace="{{ .Values.gamesNamespace }}"}) == 0
+          expr: (max by (namespace, pod) (gameplane_tunnel_connection_known{namespace="{{ .Values.gamesNamespace }}"}) == 0) and on (namespace, pod) (max by (namespace, pod) (gameplane_tunnel_connection_supported{namespace="{{ .Values.gamesNamespace }}"}) == 1)
           for: 5m
           labels: { severity: info }
           annotations: { summary: "Gameplane provider cannot confirm live relay health" }

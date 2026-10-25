@@ -19,8 +19,9 @@ func relayMetrics(h *relayHealth) http.Handler {
 			name, help string
 			value      bool
 		}{
+			{"gameplane_tunnel_connection_supported", "Whether the provider can report live connection health.", !h.connectionUnsupported},
 			{"gameplane_tunnel_ready", "Whether the relay and all configured forwards are confirmed ready.", snapshot.Ready},
-			{"gameplane_tunnel_connection_known", "Whether the provider exposes a fresh confirmed connection state.", known},
+			{"gameplane_tunnel_connection_known", "Whether current provider or supervisor evidence confirms the connection state.", known},
 			{"gameplane_tunnel_forwards_registered", "Whether every configured forward is confirmed registered.", snapshot.Forwards},
 			{"gameplane_tunnel_endpoint_assigned", "Whether the configured endpoint is assigned.", snapshot.Assigned},
 		}

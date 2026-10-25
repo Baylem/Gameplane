@@ -266,6 +266,11 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	if tmpl.Spec.SentinelIsolation && len(networkPolicyPortsFromTemplate(&tmpl)) == 0 {
+		return ctrl.Result{}, r.setPhase(ctx, &gs,
+			"sentinelIsolation requires at least one advertised port; advertise a game port or disable sentinelIsolation in the GameTemplate")
+	}
+
 	// Resolve spec.config against the template's configSchema before
 	// touching any children: invalid config must fail loudly (mirroring
 	// the missing-template path) instead of materializing a pod that

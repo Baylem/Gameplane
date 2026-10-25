@@ -4,6 +4,12 @@
   persistence and dashboard blocks are absent.
 */ -}}
 {{- $r := .Values.api.telemetry.receiver }}
+{{- if and (eq (include "gameplane.operatorEnabled" .) "true") (gt (int .Values.operator.replicas) 1) (not .Values.operator.leaderElect) }}
+
+Operator leader election is enabled automatically because operator.replicas is
+greater than one. The saved leaderElect=false value remains compatible with
+upgrades; all operator replicas coordinate through the leader-election Lease.
+{{- end }}
 {{- if .Values.serviceMonitors.enabled }}
 
 Monitoring: configure Prometheus monitor label selectors AND discovery of the

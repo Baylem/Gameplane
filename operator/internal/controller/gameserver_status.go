@@ -1116,6 +1116,12 @@ func computeTunnelConditions(
 	}
 
 	// Tunnel Deployment not yet created or not ready.
+	if tunnel.Provider == "tailscale" && tunnel.Tailscale != nil && !validTailscaleTags(tunnel.Tailscale.Tags) {
+		tunnelReady.Status = metav1.ConditionFalse
+		tunnelReady.Reason = "InvalidTailscaleTags"
+		tunnelReady.Message = "Tailscale tags must be optional tag: prefixes followed by a letter and only letters, digits or hyphens; correct spec.networking.tunnel.tailscale.tags"
+		return upsertCondition(conds, tunnelReady)
+	}
 	if tunnel.Provider == "tailscale" && len(plan.unsupportedPorts) > 0 {
 		tunnelReady.Status = metav1.ConditionFalse
 		tunnelReady.Reason = "UnsupportedProtocol"
@@ -1139,7 +1145,11 @@ func computeTunnelConditions(
 		return conds
 	}
 	if tunnel.Provider == "frp" || tunnel.Provider == "playit" {
-		if !hasRelayReadinessProbe(tunnelDep) || tunnelDep.Status.ObservedGeneration < tunnelDep.Generation || tunnelDep.Status.UpdatedReplicas == 0 {
+		probePresent := hasRelayReadinessProbe(tunnelDep)
+		if tunnel.Provider == "playit" {
+			probePresent = probePresent || hasTunnelReadinessProbe(tunnelDep, "/healthz")
+		}
+		if !probePresent || tunnelDep.Status.ObservedGeneration < tunnelDep.Generation || tunnelDep.Status.UpdatedReplicas == 0 {
 			tunnelReady.Status = metav1.ConditionUnknown
 			tunnelReady.Reason = "RelayConnectionUnknown"
 			tunnelReady.Message = "waiting for the current relay deployment and its connection readiness probe"
@@ -1241,10 +1251,14 @@ func computeTunnelConditions(
 }
 
 func hasRelayReadinessProbe(dep *appsv1.Deployment) bool {
+	return hasTunnelReadinessProbe(dep, "/readyz")
+}
+
+func hasTunnelReadinessProbe(dep *appsv1.Deployment, path string) bool {
 	for _, container := range dep.Spec.Template.Spec.Containers {
 		if container.Name == "tunnel" && container.ReadinessProbe != nil && container.ReadinessProbe.HTTPGet != nil {
 			probe := container.ReadinessProbe.HTTPGet
-			return probe.Path == "/readyz" && probe.Port.IntValue() == 8091
+			return probe.Path == path && probe.Port.IntValue() == 8091
 		}
 	}
 	return false
