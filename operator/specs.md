@@ -43,10 +43,26 @@ node affinity for the recorded endpoint, combined with the game's scheduling
 constraints; the sentinel carries its tolerations. Node gets are read-only RBAC.
 `HostportWakeReady` reports listener readiness, each drain and unavailable or
 unschedulable endpoints without blocking unrelated reconciliation. There is no
-automatic endpoint migration. See the updated
-[July handoff design](../docs/superpowers/specs/2026-07-24-wake-on-connect-design.md#sequencing-and-port-handover)
-for recovery/migration steps. Service-backed wake retains its established-session
-drain behavior. Auxiliary resource defaults are defined separately.
+automatic endpoint migration. Healthy Hostport listeners rely on watches; the
+five-second backstop runs only while `HostportWakeReady` is not True. Endpoint
+diagnostics never replace an existing `Ready=False` game failure.
+
+After restoring node capacity/readiness, reconciliation resumes automatically.
+For intentional migration, suspend the server, wait for both game and sentinel
+Pods to disappear, clear both durable endpoint annotations, update scheduling,
+storage placement and the client-facing node address, then resume the game before
+sleeping it again. Do not clear the annotations while a listener remains active.
+An installation upgraded while already asleep without a recorded game node must
+first start its game to establish placement. Hostport clients reconnect after
+handoff; the historical "briefly Pending, self-heals" sequence in the archived
+[July design](../docs/archive/superpowers/specs/2026-07-24-wake-on-connect-design.md#sequencing-and-port-handover)
+is superseded by this specification. Service-backed wake retains its
+established-session drain behavior. Auxiliary resource defaults are defined separately.
+
+The sentinel starts the join deadline before its Kubernetes wake PATCH, whose
+separate five-second maximum fits inside that budget. Concurrent callers share
+the in-flight PATCH result. UDP reads enqueue coalesced requests to one bounded
+worker, and established TCP sessions use the longer session/drain context.
 
 ## Non-goals / boundaries
 

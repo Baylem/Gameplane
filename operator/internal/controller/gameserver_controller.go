@@ -457,7 +457,7 @@ func (r *GameServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// or nothing fires the transition until an unrelated event happens to
 	// wake the reconciler.
 	hints := []time.Duration{stopRequeue, idleRequeue}
-	if plan.wantSentinel || plan.hostportCondition != nil {
+	if sentinelBackstopPending(plan) {
 		// Bounded backstop for planSentinel's wait on the sentinel or the
 		// game pod. Both are owned (Owns(&appsv1.Deployment{}),
 		// Owns(&appsv1.StatefulSet{})) so a readiness transition normally

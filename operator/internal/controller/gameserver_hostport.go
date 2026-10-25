@@ -31,6 +31,15 @@ func (r *GameServerReconciler) hostportReader() client.Reader {
 	return r.Client
 }
 
+// sentinelBackstopPending polls Hostport only until the listener is ready.
+// Service-backed sentinel handoffs retain their existing watch backstop.
+func sentinelBackstopPending(plan sentinelPlan) bool {
+	if plan.hostportCondition != nil {
+		return plan.hostportCondition.Status != metav1.ConditionTrue
+	}
+	return plan.wantSentinel
+}
+
 func hostportCondition(gs *gameplanev1alpha1.GameServer, reason, message string, ready bool) *metav1.Condition {
 	status := metav1.ConditionFalse
 	if ready {

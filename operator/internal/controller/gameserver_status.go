@@ -196,12 +196,7 @@ func (r *GameServerReconciler) reconcileStatus(
 	// Compute tunnel conditions.
 	gs.Status.Conditions = computeTunnelConditions(gs, tunnelPlan, tunnelDep)
 	if len(hostportConditions) != 0 && hostportConditions[0] != nil {
-		condition := *hostportConditions[0]
-		gs.Status.Conditions = upsertCondition(gs.Status.Conditions, condition)
-		if condition.Status != metav1.ConditionTrue {
-			condition.Type = "Ready"
-			gs.Status.Conditions = upsertCondition(gs.Status.Conditions, condition)
-		}
+		gs.Status.Conditions = applyHostportCondition(gs.Status.Conditions, hostportConditions[0])
 	} else {
 		gs.Status.Conditions = removeCondition(gs.Status.Conditions, hostportWakeCondition)
 	}
@@ -317,6 +312,19 @@ func (r *GameServerReconciler) reconcileStatus(
 		return heartbeatFreshness, nil
 	}
 	return 15 * time.Second, nil
+}
+
+// applyHostportCondition preserves the more specific failure already computed
+// for the game while still exposing the independent endpoint diagnostic.
+func applyHostportCondition(conditions []metav1.Condition, hostport *metav1.Condition) []metav1.Condition {
+	conditions = upsertCondition(conditions, *hostport)
+	ready := meta.FindStatusCondition(conditions, "Ready")
+	if hostport.Status != metav1.ConditionTrue && (ready == nil || ready.Status != metav1.ConditionFalse) {
+		condition := *hostport
+		condition.Type = "Ready"
+		conditions = upsertCondition(conditions, condition)
+	}
+	return conditions
 }
 
 func derivePhase(
