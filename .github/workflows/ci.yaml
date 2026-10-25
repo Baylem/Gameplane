@@ -30,6 +30,7 @@ on:
       - "mcp-server/README.md"
       - "telemetry-receiver/README.md"
       - "CHANGELOG.md"
+      - "AGENTS.md"
       - "CLAUDE.md"
       - "LICENSE"
       - "specs/**/outreach.md"
@@ -345,10 +346,11 @@ jobs:
               - 'charts/gameplane/Chart.yaml'
               # Non-docs/ link targets referenced from the audited files
               # (docs/dependencies.md -> CHANGELOG.md, docs/contributing.md
-              # -> CLAUDE.md and specs/012-.../outreach.md, README.md ->
+              # -> AGENTS.md and specs/012-.../outreach.md, README.md ->
               # LICENSE, signing/cosign.pub, docs/key-rotation.md -> the legacy key
               # files) — renaming or moving any of these must run check-links.
               - 'CHANGELOG.md'
+              - 'AGENTS.md'
               - 'CLAUDE.md'
               - 'LICENSE'
               - 'signing/cosign.pub'
