@@ -15,7 +15,7 @@ v1 is the 20 audit issues #712–#731 plus codebase cleanup, with no new feature
 defines the target layout; this spec applies it to the code. Spec 029 (faster e2e buckets)
 waits for spec 023.
 
-Target layout, settled in spec 027 (`specs/027-contributor-docs-layout-map/OPEN-DECISIONS.md`,
+Target layout, settled in spec 027 (`specs/done_027-contributor-docs-layout-map/OPEN-DECISIONS.md`,
 valgul 2026-10-20). This spec applies it and does not reopen it:
 
 - **027 OD-3, Go modules.** Long-running services use a thin `cmd/main.go` plus
@@ -201,7 +201,7 @@ with one violation (run by the check's own unit test in CI, not by a throwaway P
 
 **Ceiling and enforcement**
 
-- **FR-018**: Every production source file (Go and web) MUST end at 500 lines or fewer (OD-3). Exempt: generated files (`zz_generated.*`, `web/src/api/types.ts`, `operator/config/`), CRD `operator/api/v1alpha1/*_types.go`, and the e2e harness under `test/e2e/` (out of scope, owned by spec 029). This covers files outside the packages named above too: today `api/internal/audit/audit.go` 1,050, `capture-sidecar/internal/httpserver/handlers.go` 975, `agent/internal/mods/mods.go` 932, `api/cmd/main.go` 914, `i18n/cmd/i18n-check/main.go` 781, `api/internal/auth/oidc.go` 711, `agent/internal/rcon/battleye.go` 703, `agent/internal/files/rooted_linux.go` 603, `operator/cmd/main.go` 519, `agent/internal/players/players.go` 509, and web `lib/endpoints.ts` 1,046, `components/modules/BuildModuleDialog.tsx` 973, `components/CaptureWidget.tsx` 826, `components/server/ServerActionsCard.tsx` 658, `components/modules/SourceDialog.tsx` 573.
+- **FR-018**: Every production source file (Go and web) MUST end at 500 lines or fewer (OD-3). Exempt: generated files (`zz_generated.*`, `web/src/api/types.ts`, `operator/config/`), CRD `operator/api/v1alpha1/*_types.go`, and the e2e harness under `test/e2e/` (out of scope, owned by spec 029). This covers files outside the packages named above too: today `api/internal/audit/audit.go` 1,050, `capture-sidecar/internal/httpserver/handlers.go` 975, `agent/internal/mods/mods.go` 932, `api/cmd/main.go` 914, `i18n/cmd/i18n-check/main.go` 781, `api/internal/auth/oidc.go` 711, `agent/internal/rcon/battleye.go` 703, `agent/internal/files/rooted_linux.go` 603, `operator/cmd/main.go` 519, `agent/internal/players/players.go` 509, and web `lib/endpoints.ts` 1,046, `components/modules/BuildModuleDialog.tsx` 973, `components/CaptureWidget.tsx` 826, `components/server/ServerActionsCard.tsx` 658, `components/modules/SourceDialog.tsx` 573, and the dev codemod `web/scripts/i18n-migrate.ts` 1,195 (OD-11).
 - **FR-019**: After the last move, `make lint` MUST run a layout check that enforces the folder shape (027 OD-5) and the 500-line ceiling for production files; test files are exempt (OD-4).
 
 **Web types**
