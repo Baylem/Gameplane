@@ -20,8 +20,11 @@ func TestTailnetRetryHealthRequiresContinuousConfirmation(t *testing.T) {
 			}
 			history := &relayHealth{}
 			start := time.Unix(100, 0)
+			now := start
+			observer := tailnetRetryObserver(history, backoff, func() time.Time { return now })
 			observe := func(seconds int, healthy bool) {
-				observeTailnetRetryHealth(history, start.Add(time.Duration(seconds)*time.Second), healthy, backoff)
+				now = start.Add(time.Duration(seconds) * time.Second)
+				observer(healthy)
 			}
 			for seconds := 0; seconds <= 58; seconds += 2 {
 				observe(seconds, true)
@@ -88,24 +91,18 @@ func TestTailnetFailedAttemptsCannotResetRetryEscalation(t *testing.T) {
 			history := &relayHealth{}
 			var ready atomic.Bool
 			confirmed := false
+			observe := tailnetRetryObserver(history, backoff, func() time.Time { return time.Unix(100, 0) })
 			err := serveTailnetObserved(t.Context(), node, tags, []forwardPort{{network: "udp", port: "19132", target: "127.0.0.1:1"}}, &ready, time.Millisecond, func(healthy bool) {
 				confirmed = confirmed || healthy
-				observeTailnetRetryHealth(history, time.Unix(100, 0), healthy, backoff)
+				observe(healthy)
 			})
-			if err == nil || ready.Load() || confirmed {
-				t.Fatalf("failed attempt reported health: err=%v ready=%v confirmed=%v", err, ready.Load(), confirmed)
+			snapshot := history.snapshot(time.Unix(100, 0))
+			if err == nil || ready.Load() || confirmed || snapshot.Ready {
+				t.Fatalf("failed attempt reported health: err=%v ready=%v confirmed=%v snapshot=%+v", err, ready.Load(), confirmed, snapshot)
 			}
 			if got := backoff.next(); got != 2*time.Second {
 				t.Fatalf("failed attempt reset delay: %v", got)
 			}
 		})
 	}
-}
-
-func observeTailnetRetryHealth(history *relayHealth, now time.Time, healthy bool, backoff *exponentialBackoff) {
-	observation := relayObservation{Connection: "unknown"}
-	if healthy {
-		observation = relayObservation{Connection: "connected", Forwards: true, Assigned: true}
-	}
-	history.observe(now, observation, backoff)
 }

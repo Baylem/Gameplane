@@ -134,9 +134,13 @@ func waitTailnetRetry(ctx context.Context, healthDone <-chan error, delay time.D
 func serveTailnetWithHealth(ctx context.Context, node tailnetNode, tags []string, ports []forwardPort, ready *atomic.Bool, poll time.Duration, history *relayHealth, backoff *exponentialBackoff) error {
 	history.markUnavailable()
 	defer history.markUnavailable()
-	return serveTailnetObserved(ctx, node, tags, ports, ready, poll, func(healthy bool) {
-		history.observe(time.Now(), tailnetHealthObservation(healthy), backoff)
-	})
+	return serveTailnetObserved(ctx, node, tags, ports, ready, poll, tailnetRetryObserver(history, backoff, time.Now))
+}
+
+func tailnetRetryObserver(history *relayHealth, backoff *exponentialBackoff, now func() time.Time) func(bool) {
+	return func(healthy bool) {
+		history.observe(now(), tailnetHealthObservation(healthy), backoff)
+	}
 }
 
 func tailnetHealthObservation(healthy bool) relayObservation {
