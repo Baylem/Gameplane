@@ -35,6 +35,7 @@ cd "$(dirname "$0")"
 
 bucket_operator() { cat <<'EOF'
 TestHelmInstall_AllPodsReady
+TestHelmInstall_OperatorSecretNamespaceBoundary
 TestHelmInstall_AllCRDsPresent
 TestHelmInstall_CRDApplyHookSkippedOnFreshInstall
 TestHelmInstall_APIHealthz
@@ -105,7 +106,16 @@ TestAddressPool_ExplicitAddressRequest
 TestAddressPool_AddressInUseConflict
 TestAddressPool_PoolExhausted
 TestAPI_EventStreamAndRoleEdits_FollowCallerPermissions
+TestAPI_I18n_LanguagePref
+TestAPI_I18n_NotifyLanguage
+TestAPI_I18n_InstanceDefault
 TestE2E_ResticRepoReady
+TestCISelection_AgentOnlyChange
+TestCISelection_SentinelOnlyChange
+TestCISelection_ChartChangeRunsEverySuite
+TestCISelection_E2ETestFileSelectsItsTests
+TestCISelection_UnmappedPathRunsEverything
+TestCISelection_FullRunLabel
 EOF
 }
 
@@ -338,7 +348,12 @@ EOF
 # e2e-admin login (account removal also uses fake-OIDC sign-ins, which every
 # e2e.sh cluster deploys), and TestAPI_I18n_ProblemJSON costs one admin login,
 # one viewer login and one failed-login pair, bringing this job to 5 admin
-# logins (ceiling ~7). All run against the primary cluster. api-auth,
+# logins (ceiling ~7). TestAPI_I18n_LanguagePref (T035),
+# TestAPI_I18n_NotifyLanguage (T062) and TestAPI_I18n_InstanceDefault (T092)
+# sit in operator for the same login-budget reason: two more admin logins here
+# made TestAPI_I18n_ProblemJSON's failed-login pair hit 429. They cost one
+# e2e-admin login each, plus one viewer login for T092 (operator: 4 admin
+# logins with the EventStream test). All run against the primary cluster. api-auth,
 # api-roles, api-mods, api-rbac and api-agent are at their ceilings (see their
 # comments); do not add to them.
 bucket_multicluster() { cat <<'EOF'
@@ -399,10 +414,15 @@ EOF
 # Tests that exist in the suite but deliberately run in NO bucket. Every
 # entry needs a reason; `verify` fails on any unlisted stray so additions
 # here are a conscious, reviewed act. Currently empty.
+bucket_management_placement() { cat <<'EOF'
+TestManagementPlacementAndDisruption
+EOF
+}
+
 unbucketed() { :; }
 
 bucket_names() {
-	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade postgres-availability telemetry capture-overhead optional-components
+	printf '%s\n' operator api-auth api-roles api-rbac api-agent api-mods ratelimit bot-fast bot-heavy multicluster upgrade postgres-availability telemetry capture-overhead optional-components management-placement
 }
 
 list_bucket() {
@@ -422,6 +442,7 @@ list_bucket() {
 	telemetry) bucket_telemetry ;;
 	capture-overhead) bucket_capture_overhead ;;
 	optional-components) bucket_optional_components ;;
+	management-placement) bucket_management_placement ;;
 	*)
 		echo "unknown bucket: $1 (known: $(bucket_names | tr '\n' ' '))" >&2
 		exit 2

@@ -135,3 +135,50 @@ true
 true
 {{- end -}}
 {{- end -}}
+
+{{- /* Shared PodSpec placement fields; absent keys preserve older reuse-values. */ -}}
+{{- define "gameplane.placement" -}}
+{{- range $key := list "nodeSelector" "tolerations" "affinity" "topologySpreadConstraints" "priorityClassName" -}}
+{{- with index $ $key }}
+{{ $key }}: {{ toYaml . | nindent 2 }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- /* Complete auxiliary overrides; empty objects must not become defaults. */ -}}
+{{- define "gameplane.auxiliaryResourceArgs" -}}
+{{- range $name := list "agent" "sentinel" "tunnel" "backup" -}}
+{{- $key := printf "%sResources" $name -}}
+{{- $value := index $ $key -}}
+{{- if and (hasKey $ $key) (not (kindIs "invalid" $value)) -}}
+{{- if not (kindIs "map" $value) -}}
+{{- fail (printf "operator.%s must be a resources object or null" $key) -}}
+{{- end }}
+- {{ printf "--%s-resources=%s" $name (toJson $value) | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- /* Validate every namespace before it can reach RBAC or cache flags. */}}
+{{- define "gameplane.namespace" -}}
+{{- if or (not (kindIs "string" .)) (gt (len (toString .)) 63) (not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" (toString .))) -}}
+{{- fail "operator Secret scope requires explicit DNS-label namespace names (1-63 lowercase letters, digits or hyphens)" -}}
+{{- end -}}
+{{- . -}}
+{{- end -}}
+
+{{- define "gameplane.operatorGameNamespaces" -}}
+{{- $namespaces := list (include "gameplane.namespace" .Values.gamesNamespace) -}}
+{{- range (.Values.operator.gameNamespaces | default list) -}}
+{{- $namespaces = append $namespaces (include "gameplane.namespace" .) -}}
+{{- end -}}
+{{- uniq $namespaces | toJson -}}
+{{- end -}}
+
+{{- define "gameplane.operatorSecretNamespaces" -}}
+{{- $namespaces := include "gameplane.operatorGameNamespaces" . | fromJsonArray -}}
+{{- range list (.Values.operator.controlPlaneNamespace | default .Release.Namespace) (.Values.operator.agentCASecretNamespace | default .Release.Namespace) (.Values.operator.moduleNamespace | default .Release.Namespace) -}}
+{{- $namespaces = append $namespaces (include "gameplane.namespace" .) -}}
+{{- end -}}
+{{- uniq $namespaces | toJson -}}
+{{- end -}}
