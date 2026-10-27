@@ -102,6 +102,11 @@ The golangci-lint job mirrors this: it must be invoked with `--build-tags=e2e` o
 
 ## The bucket contract — the module's most important invariant
 
+The `management-placement` audit bucket is registered in the change-based selector,
+with explicit component mapping and an amd64-only selection-summary row. Its
+matrix leg skips cluster setup only when its selected test pattern is empty;
+full-scope and affected-component runs must include it.
+
 `buckets.sh` is the single source of truth for how CI's e2e suite is sharded into parallel jobs (`operator`, `api-auth`, `api-roles`, `api-rbac`, `api-agent`, `api-mods`, `ratelimit`, `bot-fast`, `bot-heavy`, `multicluster`, `upgrade`). Each bucket is a flat list of **exact Go function names** (e.g. `TestGameServer_MinecraftJavaBot_Joined`), and `buckets.sh regex <name>` turns that list into an **anchored** `^(A|B|...)$` regex passed to `go test -run`.
 
 This is a name-matching contract, not a structural one:
