@@ -418,6 +418,17 @@ class E2ESelectionTests(unittest.TestCase):
                 self.assertIn("TestPanel_OfflineRecovery",
                               self.select(path)["e2e-run"].get("recovery", ""))
 
+    def test_audit_management_placement_has_a_run_pattern(self):
+        """Affected components and the owning test file select the audit bucket."""
+        for path in ("operator/cmd/main.go",
+                     "api/cmd/main.go",
+                     "agent/cmd/main.go",
+                     "test/e2e/management_placement_e2e_test.go"):
+            with self.subTest(path=path):
+                values = self.select(path)
+                self.assertIn("TestManagementPlacementAndDisruption",
+                              values["e2e-run"].get("management-placement", ""))
+
     def test_agent_only_change_selects_agent_tests_and_skips_auth_and_telemetry(self):
         values = self.select("agent/internal/console/console.go")
         self.assertEqual(values["reason"], "")

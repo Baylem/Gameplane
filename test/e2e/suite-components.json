@@ -18,6 +18,8 @@
   "suites": [
     { "tests": "^(TestPanel_OfflineRecovery|TestAPIClient_DoContextResponseBody)$", "components": ["operator", "api", "agent"],
       "paths": ["test/e2e/testdata/recovery/"] },
+
+    { "tests": "^TestManagementPlacementAndDisruption$", "components": ["operator", "api", "agent"] },
     { "tests": "^TestHelmInstall_", "components": ["*"] },
     { "tests": "^TestCRD_Validation_", "components": ["operator"] },
     { "tests": "^TestGameServer_", "components": ["operator", "api", "agent"] },
