@@ -17,6 +17,7 @@ It was one of three `go.work` modules without CI lint coverage until this featur
 - Drive the REST + WebSocket API as a real HTTP client would: login, session/CSRF handling, RBAC matrix checks, console/PTY/log streaming, file upload/download.
 - Launch real game server containers and either speak their wire protocol directly (the CI `bot-fast` bucket: Minecraft, Terraria, Garry's Mod — narrower than `fastGameSet`'s manual/local default scope; see `test/e2e/internal/specs.md`) or query them, proving a Gameplane-managed server is genuinely playable, not merely "Running" in Kubernetes. The per-game protocol clients and the shared probe harness that does this live one level down, in `test/e2e/internal/` — see `test/e2e/internal/specs.md` for that layer's Path A / Path B contract, protocol clients, and JoinDepth model. This file does not duplicate that; it covers the outer suite that hosts and buckets those probes.
 - Validate multi-cluster dispatch, upgrade-from-previous-release, wake-on-connect, module signing/SSRF rejection, and backup/restore round trips end to end.
+- Verify the installed operator identity can read Secrets only in its configured namespaces, can mutate game-namespace Secrets, and cannot read or write unrelated namespace Secrets (`TestHelmInstall_OperatorSecretNamespaceBoundary`, operator bucket).
 - Enforce, via `buckets.sh`, that every test in the suite is assigned to exactly one CI bucket so nothing silently drops out of coverage.
 
 ### Remote gateway parity acceptance
@@ -40,6 +41,17 @@ are removed through test cleanup. CI sets `GAMEPLANE_E2E_REQUIRE_GATEWAY=1`, so 
 missing second cluster fails instead of skipping the scenario. The multicluster
 Go invocation has a 45-minute deadline within the existing 60-minute job budget.
 
+### Management placement and disruption acceptance
+
+The `management-placement` bucket uses the three-node `management` Kind profile
+and performs no API login. `TestManagementPlacementAndDisruption` applies the
+chart's web placement and API/web PDBs in an isolated namespace, with sleeping
+fixture containers. It verifies real scheduling across labeled workers,
+Unschedulable status for an impossible selector, one-at-a-time eviction during
+a cordon, readiness of the surviving replica, and singleton API eviction. Node
+labels and cordons are restored in cleanup. This validates scheduler/PDB behavior,
+not application HA or storage migration.
+
 ## Non-goals / boundaries
 
 - Does **not** replace the unit or envtest tiers for any other module — it exercises integration behavior, not the exhaustive branch coverage those tiers own (this module carries no `.testcoverage.yml` coverage gate).
@@ -55,6 +67,11 @@ Go invocation has a 45-minute deadline within the existing 60-minute job budget.
 The golangci-lint job mirrors this: it must be invoked with `--build-tags=e2e` or it lints an effectively-empty package (only the 29 untagged files: `Dockerfile`-adjacent Go tooling, `internal/` package code not gated by the tag, fixtures, etc.).
 
 ## The bucket contract — the module's most important invariant
+
+The `management-placement` audit bucket is registered in the change-based selector,
+with explicit component mapping and an amd64-only selection-summary row. Its
+matrix leg skips cluster setup only when its selected test pattern is empty;
+full-scope and affected-component runs must include it.
 
 `buckets.sh` is the single source of truth for how CI's e2e suite is sharded into parallel jobs (`operator`, `api-auth`, `api-roles`, `api-rbac`, `api-agent`, `api-mods`, `ratelimit`, `bot-fast`, `bot-heavy`, `multicluster`, `upgrade`). Each bucket is a flat list of **exact Go function names** (e.g. `TestGameServer_MinecraftJavaBot_Joined`), and `buckets.sh regex <name>` turns that list into an **anchored** `^(A|B|...)$` regex passed to `go test -run`.
 
