@@ -38,6 +38,11 @@ The locally bootstrapped administrator receives an explicit fixture-cluster/game
 grant and logs in again after that change invalidates its session. Both administrator
 and reader cookies are accepted before backup and rejected through `/users/me` after
 offline recovery; remote server UID and share checks retain their scoped authorization.
+Because API-token issuance and Bearer authentication are not implemented, the drill
+seeds one row in the reserved `api_tokens` table offline after stopping the API.
+It requires that row in the archive and zero API-token rows after restoration.
+The JSON bearer-invalidation result combines that database check with the actual
+administrator/reader session and share-link HTTP rejection results.
 The Kubernetes-created game initially has no panel owner: the drill requires share
 creation to fail for the scoped administrator until the authorized transfer endpoint
 assigns that administrator ownership, then creates the share used for recovery checks.

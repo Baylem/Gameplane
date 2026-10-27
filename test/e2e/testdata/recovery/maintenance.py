@@ -8,6 +8,7 @@ from contextlib import closing
 import hashlib
 import json
 import pathlib
+import secrets
 import sqlite3
 import sys
 import time
@@ -34,6 +35,7 @@ def inventory(db):
         "audit_digest": hashlib.sha256(json.dumps(rows, separators=(",", ":")).encode()).hexdigest(),
         "users": db.execute("SELECT COUNT(*) FROM users").fetchone()[0],
         "sessions": db.execute("SELECT COUNT(*) FROM sessions").fetchone()[0],
+        "api_tokens": db.execute("SELECT COUNT(*) FROM api_tokens").fetchone()[0],
         "active_shares": db.execute("SELECT COUNT(*) FROM share_links WHERE revoked_at IS NULL").fetchone()[0],
     }
 
@@ -44,7 +46,19 @@ def remove_working_database():
 
 
 op = sys.argv[1]
-if op == "backup":
+if op == "seed-api-token":
+    # The API currently authenticates only session cookies; api_tokens is a
+    # reserved table with no issuance/Bearer-auth route. Seed its cleanup
+    # coverage offline, after the API stops, without exporting the token.
+    assert DATA.is_file() and not ARCHIVE.exists(), "seed before backup"
+    with closing(sqlite3.connect(DATA)) as db:
+        user = db.execute("SELECT id FROM users WHERE username=?", ("admin",)).fetchone()
+        assert user is not None, "fixture administrator missing"
+        db.execute("INSERT INTO api_tokens(token, user_id, name) VALUES (?, ?, ?)",
+                   (secrets.token_urlsafe(32), user[0], "recovery-fixture"))
+        db.commit()
+        result = {"api_tokens": db.execute("SELECT COUNT(*) FROM api_tokens").fetchone()[0]}
+elif op == "backup":
     assert not ARCHIVE.exists(), "archive must not be overwritten"
     with closing(readonly(DATA)) as source, closing(sqlite3.connect(ARCHIVE)) as dest:
         source.backup(dest)
@@ -73,7 +87,7 @@ elif op == "restore":
         dest.commit()
         result = inventory(dest)
         assert result["audit_digest"] == original["audit_digest"]
-        assert result["sessions"] == 0 and result["active_shares"] == 0
+        assert result["sessions"] == 0 and result["api_tokens"] == 0 and result["active_shares"] == 0
     DATA.chmod(0o600)
     assert digest(ARCHIVE) == before
     result["archive_digest"] = before

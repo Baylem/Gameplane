@@ -190,14 +190,20 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	reader.Close()
 	f.stopPod("initial")
 	report["stage"] = "backup"
+	// API-token issuance and Bearer authentication are not implemented yet.
+	// Seed the reserved table offline so removing its restore-time DELETE
+	// cannot pass merely because the real session/share checks still reject.
+	if f.maintenance("seed-api-token")["api_tokens"] != float64(1) {
+		t.Fatal("API-token cleanup fixture was not seeded")
+	}
 	backup := f.maintenance("backup")
 	report["backup"] = backup
 	backupTime, err := time.Parse(time.RFC3339Nano, backup["backup_utc"].(string))
 	if err != nil {
 		t.Fatal("invalid archive recovery-point timestamp")
 	}
-	if backup["sessions"].(float64) < 2 || backup["active_shares"].(float64) < 1 || backup["audit_rows"].(float64) < 1 {
-		t.Fatal("backup lacks session/share/audit fixture evidence")
+	if backup["sessions"].(float64) < 2 || backup["api_tokens"] != float64(1) || backup["active_shares"].(float64) < 1 || backup["audit_rows"].(float64) < 1 {
+		t.Fatal("backup lacks session/API-token/share/audit fixture evidence")
 	}
 	// From here on the archive is mounted read-only even in the maintenance Pod.
 	f.stopPod("maintenance")
@@ -282,12 +288,22 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	defer recovered.Close()
 	// Reuse both pre-backup cookie jars against the recovered endpoint, without
 	// login. Each was accepted immediately before the original API stopped.
-	for _, original := range []*APIClient{admin, reader} {
+	authChecks := map[string]bool{"api_token_rows_deleted": restored["api_tokens"] == float64(0)}
+	for name, original := range map[string]*APIClient{"admin_session_rejected": admin, "reader_session_rejected": reader} {
 		stale := &APIClient{BaseURL: recovered.BaseURL, HTTP: original.HTTP, CSRF: original.CSRF}
-		f.request(stale, http.MethodGet, "/users/me", nil, http.StatusUnauthorized)
+		authChecks[name] = f.status(stale, "/users/me") == http.StatusUnauthorized
 	}
 	public.BaseURL = recovered.BaseURL
-	f.request(public, http.MethodGet, "/shares/"+share.Token, nil, http.StatusNotFound)
+	authChecks["share_rejected"] = f.status(public, "/shares/"+share.Token) == http.StatusNotFound
+	bearersInvalidated := true
+	for _, passed := range authChecks {
+		bearersInvalidated = bearersInvalidated && passed
+	}
+	report["restored_auth_checks"] = authChecks
+	report["restored_bearers_invalidated"] = bearersInvalidated
+	if !bearersInvalidated {
+		t.Fatalf("restored authentication cleanup failed: %v", authChecks)
+	}
 	recoveredReader := f.login("restored", "reader", userPassword)
 	defer recoveredReader.Close()
 	f.waitServer(recoveredReader, serversPath, gameUID)
@@ -324,7 +340,7 @@ func TestPanel_OfflineRecovery(t *testing.T) {
 	e.Eventually(t, 15*time.Second, func() (bool, string) {
 		return recoveryCounter(t, gameName) > beforeCounter, "game counter did not advance"
 	})
-	report["game_after"], report["credential_backed_dispatch_verified"], report["restored_bearers_invalidated"] = afterGame, true, true
+	report["game_after"], report["credential_backed_dispatch_verified"] = afterGame, true
 	report["counter_after"] = recoveryCounter(t, gameName)
 	report["rto_seconds"] = time.Since(lossTime).Seconds()
 	report["rto_scope"] = "loss through restore, auth invalidation, wrong-key trial, and credential-backed acceptance checks"
@@ -341,6 +357,16 @@ func recoveryKey(t *testing.T) []byte {
 }
 
 func recoveryRandom(t *testing.T) string { return hex.EncodeToString(recoveryKey(t)) }
+
+func (f *recoveryFixture) status(c *APIClient, path string) int {
+	f.t.Helper()
+	resp, _, err := c.DoContext(f.t.Context(), http.MethodGet, path, nil)
+	if err != nil {
+		f.t.Fatal("recovery HTTP status request failed (details withheld)")
+	}
+	defer func() { _ = resp.Body.Close() }()
+	return resp.StatusCode
+}
 
 func (f *recoveryFixture) request(c *APIClient, method, path string, body any, want int) []byte {
 	f.t.Helper()
