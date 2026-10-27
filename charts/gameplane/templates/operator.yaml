@@ -269,6 +269,17 @@ metadata:
   labels: {{- include "gameplane.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.operator.replicas }}
+  {{- if not (or .Values.operator.leaderElect (gt (int .Values.operator.replicas) 1)) }}
+  # Without leader election, prevent a rolling update from overlapping writers.
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  {{- else }}
+  # Explicitly restore rolling updates when election is re-enabled after a
+  # singleton install; the migration hook may own the previous Recreate field.
+  strategy:
+    type: RollingUpdate
+  {{- end }}
   selector:
     matchLabels:
       app.kubernetes.io/name: gameplane-operator
@@ -280,6 +291,7 @@ spec:
       annotations:
         checksum/mtls: {{ include "gameplane.mtlsChecksum" . }}
     spec:
+      {{- include "gameplane.placement" .Values.operator | nindent 6 }}
       serviceAccountName: gameplane-operator
       securityContext:
         runAsNonRoot: true
@@ -291,7 +303,8 @@ spec:
           image: {{ include "gameplane.operatorImage" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
-            {{- if .Values.operator.leaderElect }}
+            {{- include "gameplane.auxiliaryResourceArgs" .Values.operator | nindent 12 }}
+            {{- if or .Values.operator.leaderElect (gt (int .Values.operator.replicas) 1) }}
             - --leader-elect
             {{- end }}
             - --agent-image={{ include "gameplane.agentImage" . }}

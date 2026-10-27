@@ -1,5 +1,9 @@
 # Gameplane
 
+[![CI](https://github.com/GameplanePanel/Gameplane/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/GameplanePanel/Gameplane/actions/workflows/ci.yaml?query=branch%3Amaster)
+[![Latest release](https://img.shields.io/github/v/release/GameplanePanel/Gameplane?sort=semver)](https://github.com/GameplanePanel/Gameplane/releases/latest)
+[![Translation status](https://hosted.weblate.org/widget/gameplane/svg-badge.svg)](https://hosted.weblate.org/engage/gameplane/)
+
 A Kubernetes-native game server control panel. Open-source alternative to
 [CubeCoders AMP](https://cubecoders.com/AMP) with a K8s backend instead of
 Docker — scales from a single-node k3s homelab to multi-node production
@@ -309,8 +313,6 @@ Translations are welcome. Translate in the browser on
 [Hosted Weblate](https://hosted.weblate.org/engage/gameplane/), or see
 [`docs/translating.md`](docs/translating.md) to add or improve a language
 pack by hand.
-
-[![Translation status](https://hosted.weblate.org/widget/gameplane/svg-badge.svg)](https://hosted.weblate.org/engage/gameplane/)
 
 ## License
 
