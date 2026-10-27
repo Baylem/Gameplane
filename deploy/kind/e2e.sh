@@ -6,7 +6,7 @@
 #   deploy/kind/e2e.sh down  [cluster-name]
 #
 # Diffs from dev-up (deploy/kind/up.sh):
-#   - Single-node cluster (faster boot, sufficient for E2E coverage).
+#   - Single-node by default; management profile adds two scheduling workers.
 #   - Skips ingress-nginx (the dashboard isn't exercised here).
 #   - Loads pre-built gameplane-test/{operator,api,agent,sentinel,capture-sidecar,telemetry-receiver,fakeoidc}:<tag>
 #     images (and gameplane-test/gameprobe:<tag> when present).
@@ -33,9 +33,9 @@ kindnet | cilium) ;;
 *) echo "unsupported E2E CNI: ${CNI}" >&2; exit 2 ;;
 esac
 case "${PROFILE}" in
-default | postgres) ;;
+default | postgres | management) ;;
 *)
-    echo "unknown profile '${PROFILE}' (want default or postgres)" >&2
+    echo "unknown profile '${PROFILE}' (want default, postgres or management)" >&2
     exit 2
     ;;
 esac
@@ -193,12 +193,16 @@ up)
         echo "removing pre-existing cluster ${CLUSTER} for a clean slate"
         kind delete cluster --name "${CLUSTER}" || true
     fi
-    echo "creating kind cluster ${CLUSTER} (single-node)"
+    echo "creating kind cluster ${CLUSTER} (${PROFILE}, ${CNI})"
     kind_networking=""
     kind_wait=90s
     if [ "${CNI}" = cilium ]; then
         kind_networking=$'networking:\n  disableDefaultCNI: true'
         kind_wait=0s # Nodes become Ready after Cilium is installed below.
+    fi
+    extra_nodes=""
+    if [[ "${PROFILE}" == "management" ]]; then
+        extra_nodes=$'  - role: worker\n  - role: worker'
     fi
     kind create cluster --name "${CLUSTER}" --wait "${kind_wait}" --config - <<EOF
 kind: Cluster
@@ -206,6 +210,7 @@ apiVersion: kind.x-k8s.io/v1alpha4
 ${kind_networking}
 nodes:
   - role: control-plane
+${extra_nodes}
 EOF
 
     kubectl cluster-info --context "kind-${CLUSTER}" >/dev/null

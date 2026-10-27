@@ -17,6 +17,7 @@
   ],
   "suites": [
     { "tests": "^TestNetworkIsolation_", "components": ["operator", "api", "agent"] },
+    { "tests": "^TestManagementPlacementAndDisruption$", "components": ["operator", "api", "agent"] },
     { "tests": "^TestHelmInstall_", "components": ["*"] },
     { "tests": "^TestCRD_Validation_", "components": ["operator"] },
     { "tests": "^TestGameServer_", "components": ["operator", "api", "agent"] },
