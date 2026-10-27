@@ -808,10 +808,13 @@ def render_submodule_copies(model: Model, resolved: dict[str, Resolved], ctx: Co
                             folders: set[str] | None = None) -> dict[str, bytes]:
     """website/.devcontainer and modules/.devcontainer copies. `folders` limits them."""
     out: dict[str, bytes] = {}
-    setup_src = (model.root / DEVC / "setup.sh").read_bytes()
+    setup_src: bytes | None = None
     for res in resolved.values():
         if res.sub_folder is None or (folders is not None and res.sub_folder not in folders):
             continue
+        if setup_src is None:
+            # Read only when a copy is rendered, so --check works without submodule copies.
+            setup_src = (model.root / DEVC / "setup.sh").read_bytes()
         base = f"{res.sub_folder}/{DEVC}"
         out[f"{base}/devcontainer.json"] = devcontainer_bytes(
             model, res, "bash .devcontainer/setup.sh .devcontainer/setup.env")
