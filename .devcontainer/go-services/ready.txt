@@ -12,7 +12,6 @@ Works here:
   cd telemetry-receiver && go build ./...
   cd tunnel && go build ./...
   make build-go
-  make module-validate
 
 Ports: none
 Tests and lint run in CI (CLAUDE.md rule 8).

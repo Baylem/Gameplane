@@ -97,7 +97,7 @@ MAKE_TARGETS = (
     ("make web-dev", frozenset({"node"}), frozenset({"web"})),
     ("make generate", frozenset({"go"}), frozenset({"operator"})),
     ("make manifests", frozenset({"go"}), frozenset({"operator"})),
-    ("make module-validate", frozenset({"go"}), frozenset()),
+    ("make module-validate", frozenset({"go"}), frozenset({"modules"})),
     ("make modules-push", frozenset({"oras"}), frozenset({"modules"})),
     ("make dev-load", frozenset({"docker", "kind"}), frozenset({"deploy/kind"})),
     ("make e2e-up", frozenset({"docker", "kind", "kubectl", "helm"}), frozenset()),
