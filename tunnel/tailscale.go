@@ -95,13 +95,7 @@ func runTailscale(ctx context.Context, cfg Config, authKey string) error {
 			return err
 		}
 		healthHistory := &relayHealth{}
-		err = serveTailnetObserved(ctx, embeddedTailnet{server}, tags, ports, &ready, 2*time.Second, func(healthy bool) {
-			observation := relayObservation{Connection: "unknown"}
-			if healthy {
-				observation = relayObservation{Connection: "connected", Forwards: true, Assigned: true}
-			}
-			healthHistory.observe(time.Now(), observation, backoff)
-		})
+		err = serveTailnetObserved(ctx, embeddedTailnet{server}, tags, ports, &ready, 2*time.Second, tailnetRetryObserver(healthHistory, backoff, time.Now))
 		ready.Store(false)
 		_ = server.Close()
 		if ctx.Err() != nil {
@@ -120,6 +114,16 @@ func runTailscale(ctx context.Context, cfg Config, authKey string) error {
 		}
 	}
 	return nil
+}
+
+func tailnetRetryObserver(history *relayHealth, backoff *exponentialBackoff, now func() time.Time) func(bool) {
+	return func(healthy bool) {
+		observation := relayObservation{Connection: "unknown"}
+		if healthy {
+			observation = relayObservation{Connection: "connected", Forwards: true, Assigned: true}
+		}
+		history.observe(now(), observation, backoff)
+	}
 }
 
 func waitTailnetRetry(ctx context.Context, healthDone <-chan error, delay time.Duration) error {
