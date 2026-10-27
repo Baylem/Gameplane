@@ -216,7 +216,7 @@ Also: `dev-up` and `dev-load` call `kind`; `up.sh` and `e2e.sh` require kind, ku
 | uv | 88-92 | `curl` (astral installer), `sh` |
 | specify | 94-99 | `uv tool install` from GitHub git ref |
 | AI CLIs | 101-115 | `npm install -g` (sudo fallback) |
-| summary | 117-135 | `go`, `node`, `docker`, `kubectl`, `helm`, `kind`, `oras`, `golangci-lint`, `uv`, `specify`, AI CLIs (all `|| true`) |
+| summary | 117-135 | `go`, `node`, `docker`, `kubectl`, `helm`, `kind`, `oras`, `golangci-lint`, `uv`, `specify`, AI CLIs (all `\|\| true`) |
 
 ## 5. Services and pinned component images
 

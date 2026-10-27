@@ -9,7 +9,6 @@ Works here:
   cd svcutil && go build ./...
   cd telemetryschema && go build ./...
   make build-go
-  make module-validate
 
 Ports: none
 Tests and lint run in CI (CLAUDE.md rule 8).

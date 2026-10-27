@@ -18,6 +18,9 @@ on:
       - 'hack/need.sh'
       - 'Makefile'
       - 'go.work'
+      - '**/go.mod'
+      - 'modules'
+      - 'website'
       - 'web/package*.json'
       - '.github/workflows/devcontainers.yaml'
   push:
@@ -30,6 +33,9 @@ on:
       - 'hack/need.sh'
       - 'Makefile'
       - 'go.work'
+      - '**/go.mod'
+      - 'modules'
+      - 'website'
       - 'web/package*.json'
       - '.github/workflows/devcontainers.yaml'
 
@@ -43,6 +49,8 @@ concurrency:
 jobs:
   drift:
     name: drift
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -60,6 +68,8 @@ jobs:
 
   profiles:
     name: profiles
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -130,6 +140,8 @@ jobs:
     name: build (${{ matrix.profile }}, ${{ matrix.arch }})
     needs: [drift, profiles]
     if: needs.profiles.outputs.any == 'true'
+    permissions:
+      contents: read
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     timeout-minutes: 60
     strategy:
