@@ -29,7 +29,9 @@ same node address. It observes the old game still serving during termination,
 holds a terminating sentinel Pod to prove the reverse handoff waits, checks a
 cordoned endpoint remains unavailable rather than relocating, and deletes the
 node to exercise the explicit unavailable/replaced-node condition. This bucket
-runs alone because it changes node scheduling. Runtime results come from CI.
+runs alone because it changes node scheduling. Its GameServer and template names
+are unique per run; it uses the chart-owned game namespace so the operator's
+configured Secret scope and RBAC apply. Runtime results come from CI.
 
 ### Remote gateway parity acceptance
 
@@ -91,7 +93,7 @@ This is a name-matching contract, not a structural one:
 
 ## Conventions (already normative via `CLAUDE.md`, restated here for the module's own record)
 
-- **`t.Parallel()`**: tests call it unless shared infrastructure requires serialization. The `ratelimit` bucket deliberately drains the shared login limiter; gateway parity temporarily changes the shared remote Helm release and trust. These are documented exceptions.
+- **`t.Parallel()`**: tests call it unless shared infrastructure requires serialization. The `ratelimit` bucket deliberately drains the shared login limiter; gateway parity temporarily changes the shared remote Helm release and trust; `wake-hostport` changes shared node scheduling and deletes the endpoint node. These are documented exceptions.
 - **Per-test unique resource names**: CRs, namespaces, and users a test creates get a name unique to that test run (commonly time-based, e.g. `CreateUser`'s `fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())`) so parallel tests never collide on a shared cluster.
 - **`ociPushMu`**: a package-level mutex guarding tests that push through the shared, fixed-name `oras-push` Job (`module_e2e_test.go`, `module_verify_e2e_test.go`). Because the Job's name and namespace are fixed fixtures, two tests racing to apply/wait on it would stomp each other; `ociPushMu.Lock()`/`Unlock()` serializes them.
 - **`ensureResticRepo(t)`**: guards tests that run a backup against the shared restic repository fixture (`backup_e2e_test.go`, `backupschedule_e2e_test.go`, `failure_paths_e2e_test.go`) — restic repo initialization is not safe to race.

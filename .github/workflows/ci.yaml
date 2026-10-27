@@ -1832,7 +1832,7 @@ jobs:
           - bucket: wake-hostport
             parallel: 1
             test_timeout: 15m
-            job_timeout: 60
+            job_timeout: 60 # Boots two-node kind, installs the chart and exercises repeated Hostport sleep/wake handoffs.
           - bucket: api-auth
             parallel: 4
             test_timeout: 15m

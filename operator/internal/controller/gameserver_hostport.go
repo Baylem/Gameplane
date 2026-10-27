@@ -161,7 +161,11 @@ func hostportListenerCondition(gs *gameplanev1alpha1.GameServer, pods []corev1.P
 			}
 		}
 	}
-	return hostportCondition(gs, "ListenerPending", fmt.Sprintf("Waiting for a Ready listener on endpoint node %q.", nodeName), false)
+	message := "Waiting for a Ready Hostport listener."
+	if nodeName != "" {
+		message = fmt.Sprintf("Waiting for a Ready listener on endpoint node %q.", nodeName)
+	}
+	return hostportCondition(gs, "ListenerPending", message, false)
 }
 
 // hostportAffinity ANDs node identity into every OR alternative, retaining

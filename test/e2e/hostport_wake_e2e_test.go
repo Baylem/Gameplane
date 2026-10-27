@@ -24,7 +24,10 @@ import (
 // Pods and changes node scheduling; it must not run with other game tests.
 func TestGameServer_HostportWakeStableEndpoint(t *testing.T) {
 	ctx := t.Context()
-	const ns, name, tmpl, port = "gameplane-games", "hostport-wake", "hostport-wake-template", 12345
+	// The chart owns this namespace and scopes operator Secret access to it.
+	const ns, port = "gameplane-games", 12345
+	name := fmt.Sprintf("hostport-wake-%d", time.Now().UnixNano())
+	tmpl := name + "-template"
 	nodes, err := envInstance.K8s.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		t.Fatal(err)

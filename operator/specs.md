@@ -45,7 +45,8 @@ constraints; the sentinel carries its tolerations. Node gets are read-only RBAC.
 unschedulable endpoints without blocking unrelated reconciliation. There is no
 automatic endpoint migration. Healthy Hostport listeners rely on watches; the
 five-second backstop runs only while `HostportWakeReady` is not True. Endpoint
-diagnostics never replace an existing `Ready=False` game failure.
+diagnostics never replace an existing `Ready=False` game failure. Pending-listener
+messages omit the endpoint node name until it has been recorded.
 
 After restoring node capacity/readiness, reconciliation resumes automatically.
 For intentional migration, suspend the server, wait for both game and sentinel
