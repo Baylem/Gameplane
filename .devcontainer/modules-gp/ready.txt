@@ -1,7 +1,7 @@
 [devcontainer] ready: Gameplane · Modules and gp-module
 
 Works here:
-  make module-validate
+  make module-validate MODULE=minecraft-java
   make build-go
   make modules-push
 
