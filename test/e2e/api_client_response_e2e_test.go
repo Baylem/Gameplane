@@ -12,6 +12,26 @@ import (
 	"testing"
 )
 
+func TestAPIClient_ExtractIntField(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name, body, key, want string
+	}{
+		{name: "user ID", body: `{"id":42,"count":7}`, key: "id", want: "42"},
+		{name: "other integer field", body: `{"id":42,"count":7}`, key: "count", want: "7"},
+		{name: "zero", body: `{"count":0}`, key: "count", want: "0"},
+		{name: "exact key", body: `{"user_id":42}`, key: "id", want: ""},
+		{name: "missing", body: `{"id":42}`, key: "count", want: ""},
+		{name: "string value", body: `{"id":"42"}`, key: "id", want: ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := extractIntField(test.body, test.key); got != test.want {
+				t.Fatalf("extractIntField(%q, %q) = %q, want %q", test.body, test.key, got, test.want)
+			}
+		})
+	}
+}
+
 // TestAPIClient_DoContextResponseBody keeps transport failures distinct from
 // fully received HTTP errors used by recovery's authorization assertions.
 func TestAPIClient_DoContextResponseBody(t *testing.T) {

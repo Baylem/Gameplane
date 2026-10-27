@@ -399,6 +399,7 @@ EOF
 bucket_recovery() { cat <<'EOF'
 TestPanel_OfflineRecovery
 TestAPIClient_DoContextResponseBody
+TestAPIClient_ExtractIntField
 EOF
 }
 
