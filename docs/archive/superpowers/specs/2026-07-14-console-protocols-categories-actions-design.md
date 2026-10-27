@@ -1,7 +1,9 @@
+> **Historical, superseded.** This July 2026 document is kept for reference only. The work it describes has shipped and the code may differ from it. Current behavior is described in `operator/specs.md`, `agent/specs.md` and `gp-module/specs.md`. See [docs/archive](../../README.md).
+
 # Console protocols, multi-category modules, and richer quick actions
 
 **Date:** 2026-07-14
-**Status:** approved, not yet implemented
+**Status:** shipped; historical (see the banner above)
 
 ## Problem
 

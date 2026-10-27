@@ -30,6 +30,7 @@ on:
       - "mcp-server/README.md"
       - "telemetry-receiver/README.md"
       - "CHANGELOG.md"
+      - "AGENTS.md"
       - "CLAUDE.md"
       - "LICENSE"
       - "specs/**/outreach.md"
@@ -284,6 +285,8 @@ jobs:
               - 'hack/test_ci_scope.py'
               - 'hack/check_changed_coverage.py'
               - 'hack/test_check_changed_coverage.py'
+              - 'hack/move_parity.py'
+              - 'hack/test_move_parity.py'
               - 'hack/check-ci-report-coverage.sh'
               - 'hack/test-check-ci-report-coverage.sh'
               - 'hack/testdata/check-ci-report-coverage/**'
@@ -345,10 +348,11 @@ jobs:
               - 'charts/gameplane/Chart.yaml'
               # Non-docs/ link targets referenced from the audited files
               # (docs/dependencies.md -> CHANGELOG.md, docs/contributing.md
-              # -> CLAUDE.md and specs/012-.../outreach.md, README.md ->
+              # -> AGENTS.md and specs/012-.../outreach.md, README.md ->
               # LICENSE, signing/cosign.pub, docs/key-rotation.md -> the legacy key
               # files) — renaming or moving any of these must run check-links.
               - 'CHANGELOG.md'
+              - 'AGENTS.md'
               - 'CLAUDE.md'
               - 'LICENSE'
               - 'signing/cosign.pub'
@@ -439,7 +443,8 @@ jobs:
     needs: [changes]
     if: (needs.changes.outputs.images == 'true') || contains(fromJSON(needs.changes.outputs.ci-jobs || '[]'), 'build-images')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Include all image builds, cache exports, artifact upload and cleanup.
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -712,6 +717,28 @@ jobs:
         run: ./hack/check-submodule-freshness_test.sh
       - name: submodule pointers are on upstream main
         run: ./hack/check-submodule-freshness.sh
+
+  # Spec 028: a PR that adds a move brief under specs/028-split-big-packages/briefs/ must
+  # keep every test name and change test files only in the OD-6/OD-9 mechanical ways.
+  # PR-only and needs no scope: it skips itself when the change carries no brief.
+  move-parity:
+    name: move parity (spec 028)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          submodules: false
+          persist-credentials: false
+      - name: test names and test edits
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: python3 hack/move_parity.py ci --base "$BASE_SHA" --head "$HEAD_SHA"
 
   # Spec 013 G4: block a PR that adds a dependency with a known high or
   # critical advisory. PR-only; on push it is skipped, which the report
@@ -1232,6 +1259,10 @@ jobs:
         run: python3 charts/tests/check_gateway.py
       - name: standalone panel isolation and persistence chart renders
         run: python3 charts/tests/check_standalone.py
+      - name: auxiliary resources and management placement chart renders
+        run: python3 charts/tests/check_workloads.py
+      - name: operator Secret namespace permissions and cache configuration
+        run: python3 charts/tests/check_operator_secrets.py
       - name: sanity-check rendered manifests
         run: |
           grep -q 'kind: Deployment' /tmp/rendered.yaml
@@ -1793,13 +1824,17 @@ jobs:
         # (operator does zero logins and is wait-dominated, so it runs
         # wide; the api buckets stay within the login limiter's budget).
         # The arm64 job below uses the same steps and per-bucket settings.
-        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components]
+        bucket: [operator, api-auth, api-roles, api-rbac, api-agent, api-mods, telemetry, optional-components, management-placement]
         arch: [amd64]
         include:
           - bucket: operator
             parallel: 8
             test_timeout: 20m
             job_timeout: 60 # Boots a kind cluster, installs the chart, runs the bucket's suite.
+          - bucket: management-placement
+            parallel: 1
+            test_timeout: 15m
+            job_timeout: 60
           - bucket: api-auth
             parallel: 4
             test_timeout: 15m
@@ -1856,7 +1891,9 @@ jobs:
           arch: ${{ matrix.arch }}
       - name: bring up cluster + helm install
         if: env.RUN_REGEX != '' || env.TAIL_REGEX != ''
-        run: ./deploy/kind/e2e.sh up "$CLUSTER" e2e
+        env:
+          GAMEPLANE_E2E_PROFILE: ${{ matrix.bucket == 'management-placement' && 'management' || 'default' }}
+        run: ./deploy/kind/e2e.sh up "$CLUSTER" e2e "$GAMEPLANE_E2E_PROFILE"
       - name: run go e2e (${{ matrix.bucket }})
         if: env.RUN_REGEX != ''
         run: |
@@ -2660,7 +2697,7 @@ jobs:
               'go-e2e-unit': (n) => n === 'go (test/e2e)',
               'api-postgres': (n) => n === 'api (postgres)',
               'e2e-buckets': (n) => n === 'e2e bucket coverage',
-              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components) \//.test(n) && n.includes('/ amd64 '),
+              'e2e-go': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components|management-placement) \//.test(n) && n.includes('/ amd64 '),
               'e2e-go-arm64': (n) => /^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components) \//.test(n) && n.includes('/ arm64 '),
               'e2e-multicluster': (n) => n.startsWith('e2e multicluster /') && n.includes('/ amd64 '),
               'e2e-multicluster-arm64': (n) => n.startsWith('e2e multicluster /') && n.includes('/ arm64 '),
@@ -2813,7 +2850,7 @@ jobs:
             const bucketSet = new Set();
             for (const j of apiJobs) {
               const n = j.name || '';
-              const m = n.match(/^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components) \//);
+              const m = n.match(/^e2e (operator|api-auth|api-roles|api-rbac|api-agent|api-mods|telemetry|optional-components|management-placement) \//);
               if (m) bucketSet.add(m[1]);
               if (/^e2e multicluster \//.test(n)) bucketSet.add('multicluster');
               if (/^e2e upgrade \//.test(n)) bucketSet.add('upgrade');
