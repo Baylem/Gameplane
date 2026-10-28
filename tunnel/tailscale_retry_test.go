@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"sync/atomic"
 	"testing"
@@ -68,6 +69,47 @@ func TestTailnetRetryHealthRequiresContinuousConfirmation(t *testing.T) {
 				t.Fatalf("subsequent failure did not escalate: %v", got)
 			}
 		})
+	}
+}
+
+func TestTailnetRetryObserverConfirmedSessionClosesListeners(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	node := &fakeTailnetNode{status: onlineTailnet()}
+	backoff := &exponentialBackoff{}
+	for i := 0; i < 12; i++ {
+		backoff.next()
+	}
+	history := &relayHealth{}
+	var ready atomic.Bool
+	confirmed := 0
+	start := time.Unix(100, 0)
+	observe := tailnetRetryObserver(history, backoff, func() time.Time {
+		return start.Add(time.Duration(confirmed) * 2 * time.Second)
+	})
+	err := serveTailnetObserved(ctx, node, nil, []forwardPort{{network: "tcp", port: "25565", target: "127.0.0.1:1"}}, &ready, time.Millisecond, func(healthy bool) {
+		observe(healthy)
+		if healthy {
+			confirmed++
+			if confirmed == 31 {
+				cancel()
+			}
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if confirmed < 31 || ready.Load() {
+		t.Fatalf("confirmed=%d ready=%v", confirmed, ready.Load())
+	}
+	if got := backoff.next(); got != time.Second {
+		t.Fatalf("confirmed tailnet health did not reset backoff: %v", got)
+	}
+	for _, listener := range node.listeners {
+		if _, err := listener.Accept(); err == nil {
+			t.Fatal("listener survives cancellation")
+		}
 	}
 }
 
