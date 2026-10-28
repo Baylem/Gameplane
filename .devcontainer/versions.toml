@@ -3,7 +3,7 @@
 # Keep this file the only place a version number is written; profiles.toml refers to keys here.
 
 [tools]
-go = "1.26"
+go = "1.27.3"
 node = "24"
 docker = "latest"
 docker_compose = "v2"
@@ -12,7 +12,7 @@ kubectl = "1.36"
 helm = "4.3.1"
 kind = "v0.32.0"
 oras = "1.2.0"
-golangci_lint = "v2.12.2"
+golangci_lint = "v2.14.0"
 setup_envtest = "release-0.24"
 envtest_k8s = "1.36.2"
 specify = "v1.0.3"
