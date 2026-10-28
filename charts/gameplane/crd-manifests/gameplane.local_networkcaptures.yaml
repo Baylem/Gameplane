@@ -3,8 +3,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    gameplane.local/crd-bundle-sha256: dc993913a7a930b00001ba1ee07e5c5e29988ca82915ea217b90ae2f98289f82
-    controller-gen.kubebuilder.io/version: v0.20.1
+    gameplane.local/crd-bundle-sha256: 3839b91bcfc726f69c1df7b23e71af742432cb2dd9b955737f3a274ce3ebb809
+    controller-gen.kubebuilder.io/version: v0.22.0
   name: networkcaptures.gameplane.local
 spec:
   group: gameplane.local
@@ -209,22 +209,15 @@ spec:
                 format: int64
                 type: integer
               phase:
-                allOf:
-                - enum:
-                  - Pending
-                  - Running
-                  - Completed
-                  - Failed
-                  - Expired
-                - enum:
-                  - Pending
-                  - Running
-                  - Completed
-                  - Failed
-                  - Expired
                 description: |-
                   Phase is the current lifecycle phase of the capture.
                   Valid values: Pending, Running, Completed, Failed, Expired.
+                enum:
+                - Pending
+                - Running
+                - Completed
+                - Failed
+                - Expired
                 type: string
               startTime:
                 description: |-
