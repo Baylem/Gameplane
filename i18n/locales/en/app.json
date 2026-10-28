@@ -595,6 +595,14 @@
     "defaultMessage": "Unknown tunnel provider ''{provider}''.",
     "description": "TunnelReady condition when the provider name is not supported."
   },
+  "condition.tunnelready.unsupportedprotocol": {
+    "defaultMessage": "Tailscale forwards only advertised TCP and UDP ports. Remove unsupported protocols from the advertised ports.",
+    "description": "TunnelReady condition when a Tailscale template advertises a protocol other than TCP or UDP."
+  },
+  "condition.tunnelready.invalidtailscaletags": {
+    "defaultMessage": "Correct the Tailscale tags: use an optional tag: prefix, a letter first, then only letters, digits or hyphens.",
+    "description": "TunnelReady condition when Tailscale access-control tags have invalid syntax."
+  },
   "condition.unquiesced.failed": {
     "defaultMessage": "The server could not be resumed after the backup. Its world may still have auto-save turned off.",
     "description": "Unquiesced condition when the unfreeze failed."
