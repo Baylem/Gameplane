@@ -87,8 +87,8 @@ description: "Task list for spec 026 modular dev containers"
 **Independent Test**: quickstart §2. Each component profile builds in CI and passes its checks, and tools outside its scope are absent.
 
 - [X] T015 [US1] Run `make devcontainers` and commit `.devcontainer/{web,api,operator,agent,go-services,website,modules}/*` (generated).
-- [ ] T016 [P] [US1] Create `hack/need.sh` per [contracts/setup-and-need.md](contracts/setup-and-need.md) (reads `.devcontainer/tool-index.tsv`, exits 127, falls back to a plain message when the index is absent).
-- [ ] T017 [US1] Call `hack/need.sh` as the first recipe line of the Makefile targets from research R6 (`dev-up`, `dev-load`, `dev-install`, `modules-push`, `test-e2e`, `test-e2e-bucket`, `lint-go`, `images`, `web-dev`, `build-web`), naming the tools each one runs. Recipe bodies stay otherwise unchanged.
+- [X] T016 [P] [US1] Create `hack/need.sh` per [contracts/setup-and-need.md](contracts/setup-and-need.md) (reads `.devcontainer/tool-index.tsv`, exits 127, falls back to a plain message when the index is absent).
+- [X] T017 [US1] Call `hack/need.sh` as the first recipe line of the Makefile targets from research R6 (`dev-up`, `dev-load`, `dev-install`, `modules-push`, `test-e2e`, `test-e2e-bucket`, `lint-go`, `images`, `web-dev`, `build-web`), naming the tools each one runs. Recipe bodies stay otherwise unchanged.
 - [X] T018 [US1] In the `website` and `modules` component profiles, set submodule init to only that submodule (`SUBMODULES` in `setup.env`), and confirm the generated `setup.env` has no `go_mod_download` or `envtest` step (spec US1 scenarios 2 and 3).
 
 ---
@@ -110,8 +110,8 @@ description: "Task list for spec 026 modular dev containers"
 
 **Independent Test**: quickstart §1 and §5.
 
-- [ ] T021 [US5] Extend `.github/workflows/devcontainers.yaml` per research R7: path triggers, a `profiles` job that runs `python3 hack/gen-devcontainers.py --affected` on the PR's changed files and emits a JSON matrix, and a `build` matrix of affected profile × {amd64 `ubuntu-latest`, arm64 `ubuntu-24.04-arm`} running each profile's `checks` with `devcontainers/ci` (SHA-pinned, `push: never`). Write setup seconds and `du -sx` of the workspace and image size to `$GITHUB_STEP_SUMMARY`. Every action is SHA-pinned with a version comment (spec 008 rules). Set `permissions: contents: read`.
-- [ ] T022 [US5] Add a `drift` step that runs `make test-gen-devcontainers` (fixture tests) next to `--check` in `.github/workflows/devcontainers.yaml`.
+- [X] T021 [US5] Extend `.github/workflows/devcontainers.yaml` per research R7: path triggers, a `profiles` job that runs `python3 hack/gen-devcontainers.py --affected` on the PR's changed files and emits a JSON matrix, and a `build` matrix of affected profile × {amd64 `ubuntu-latest`, arm64 `ubuntu-24.04-arm`} running each profile's `checks` with `devcontainers/ci` (SHA-pinned, `push: never`). Write setup seconds and `du -sx` of the workspace and image size to `$GITHUB_STEP_SUMMARY`. Every action is SHA-pinned with a version comment (spec 008 rules). Set `permissions: contents: read`.
+- [X] T022 [US5] Add a `drift` step that runs `make test-gen-devcontainers` (fixture tests) next to `--check` in `.github/workflows/devcontainers.yaml`.
 - [X] T023 [US5] Add `.github/workflows/devcontainers.yaml` to whatever lists hardened workflows today (the spec 008 action-pin check), if such a list exists. The T001 scout confirms where it is. Done: nothing to register; zizmor and actionlint discover every workflow (ci.yaml:1592, :1639), see inventory.md Answers (c).
 
 **Checkpoint (PR-B)**: every profile green on both arches. Job summary shows SC-001 and SC-002 numbers. Open PR-B.
