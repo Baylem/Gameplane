@@ -61,13 +61,13 @@ The repo ships one dev container per area, so you only install what your change 
 | `api` | component | `api/`, `svcutil/` and their Go libraries | Go, golangci-lint, envtest | 5.1 / 4.7 min | API handlers, auth, DB |
 | `operator` | component | `operator/` and its Go libraries | Go, golangci-lint, envtest | 6.9 / 4.4 min | Reconcilers and CRD types |
 | `agent` | component | `agent/` and its Go libraries | Go, golangci-lint | 5.4 / 3.8 min | The in-pod sidecar |
-| `go-services` | component | sentinel, tunnel, gp-module, mcp-server, telemetry-receiver, audit-syslog-bridge, capture-sidecar, gameproto | Go, golangci-lint | 7.3 / 5.0 min | The smaller Go services |
+| `go-services` | component | sentinel, tunnel, gp-module, mcp-server, telemetry-receiver, audit-syslog-bridge, capture-sidecar, gameproto and their Go libraries | Go, golangci-lint | 7.3 / 5.0 min | The smaller Go services |
 | `website` | component | `website/` submodule | Node, `npm ci` in `website/` | 2.4 / 2.3 min | Docs and marketing site |
 | `modules` | component | `modules/` submodule | Go, Python with PyYAML, oras | 3.0 / 2.7 min | Game module templates |
-| `dashboard-api` | part | web + api + operator + agent, kind, chart | Docker, kind, kubectl, Helm, Go, Node | 9.1 / 7.4 min | Dashboard work against a live local cluster |
-| `control-plane` | part | operator + api + agent, kind, chart, e2e | Docker, kind, kubectl, Helm, Go | 7.1 / 5.9 min | Backend work with a live cluster, e2e code |
+| `dashboard-api` | part | web + api + operator + agent, kind, chart, `modules` submodule | Docker, kind, kubectl, Helm, Go, Node, Python with PyYAML, oras | 9.1 / 7.4 min | Dashboard work against a live local cluster |
+| `control-plane` | part | operator + api + agent, kind, chart, e2e, `modules` submodule | Docker, kind, kubectl, Helm, Go, Python with PyYAML, oras | 7.1 / 5.9 min | Backend work with a live cluster, e2e code |
 | `modules-gp` | part | modules + `gp-module/` | Go, Python with PyYAML, oras | 5.0 / 4.2 min | Module work with the `gp-module` CLI |
-| `full` | full | everything | everything above | 11.1 / 8.4 min | Cross-cutting changes; the default |
+| `full` | full | everything | everything above | 11.1 / 8.4 min | Cross-cutting changes; the default. Leaves out the website's Astro port 4321 and extension (open `website` for those) |
 
 Setup times are the cold "build profile and run its checks" step of the `dev containers` workflow on the PR that added the profiles. They include the profile's own compile checks. Every profile also gets git, GitHub CLI, uv, Spec Kit and the AI coding CLIs (not logged in).
 
