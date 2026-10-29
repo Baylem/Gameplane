@@ -124,8 +124,8 @@ description: "Task list for spec 026 modular dev containers"
 
 **Independent Test**: quickstart §6.
 
-- [ ] T024 [P] [US1] In `GameplanePanel/website` (branch `claude/project-thread-427u3v`), add `system-deps.toml` from the T001 brief.
-- [ ] T025 [P] [US1] In `GameplanePanel/module` (branch `claude/project-thread-427u3v`), add `system-deps.toml` from the T001 brief.
+- [X] T024 [P] [US1] In `GameplanePanel/website` (branch `claude/project-thread-427u3v`), add `system-deps.toml` from the T001 brief. Done in website PR #26.
+- [X] T025 [P] [US1] In `GameplanePanel/module` (branch `claude/project-thread-427u3v`), add `system-deps.toml` from the T001 brief. Done in module PR #53.
 - [X] T026 [US1] From the main repo, run `make devcontainers` (with `--submodules`) to write `website/.devcontainer/*` and `modules/.devcontainer/*` (devcontainer.json, lock, a copied `setup.sh`, setup.env, ready.txt), and commit them in each submodule repo.
 - [X] T027 [P] [US5] Add a dev container build job to `website/.github/workflows/ci.yaml` (amd64 and arm64, `devcontainers/ci` SHA-pinned, runs `npm run check`).
 - [X] T028 [P] [US5] Add a dev container build job to the module repo's CI workflow (amd64 and arm64, runs the validate command from T001).
@@ -139,17 +139,17 @@ description: "Task list for spec 026 modular dev containers"
 
 **Independent Test**: quickstart §7.
 
-- [ ] T030 [P] [US4] Add a "Dev container profiles" section to `docs/contributing.md`: a table (name, size, scope, what it installs, typical setup time from the PR-B job summary, when to use it), how to pick one in VS Code, Codespaces and the CLI, how to add a component or change a version (edit inputs, then `make devcontainers`), and what a `need:` message means.
-- [ ] T031 [P] [US4] Update `docs/dependencies.md` so the devcontainer pin lines point to `.devcontainer/versions.toml`, and drop the stale "built from source" note if T001 shows it is out of date.
-- [ ] T032 [P] [US4] Update `CLAUDE.md` "Repository map" (`.devcontainer/` line, `system-deps.toml` mention) and "Commands" (`make devcontainers`, `make check-devcontainers`).
+- [X] T030 [P] [US4] Add a "Dev container profiles" section to `docs/contributing.md`: a table (name, size, scope, what it installs, typical setup time from the PR-B job summary, when to use it), how to pick one in VS Code, Codespaces and the CLI, how to add a component or change a version (edit inputs, then `make devcontainers`), and what a `need:` message means.
+- [X] T031 [P] [US4] Update `docs/dependencies.md` so the devcontainer pin lines point to `.devcontainer/versions.toml`, and drop the stale "built from source" note if T001 shows it is out of date. Done with T012 in PR #809: every pin line names `versions.toml`; the "built from source" note is still true (`setup.sh` runs `go install` for golangci-lint).
+- [X] T032 [P] [US4] Update `CLAUDE.md` "Repository map" (`.devcontainer/` line, `system-deps.toml` mention) and "Commands" (`make devcontainers`, `make check-devcontainers`).
 - [ ] T033 [US4] In `GameplanePanel/website`, edit `src/content/docs/local-development-setup.mdx`: replace the `.devcontainer/post-create.sh` reference with the profile list and a link to the `docs/contributing.md` table. Text only, no new visual component (Principle II exempt, plan). Open a website PR, then bump the pointer after it merges.
 
 ---
 
 ## Phase 10: Polish & cross-cutting (PR-D)
 
-- [ ] T034 Remove any leftover reference to `post-create.sh` repo-wide (`grep -rn post-create`), excluding `specs/done_*`.
-- [ ] T035 Run quickstart §1–§7 against the merged state and record the results (times, disk, pass/fail) in `specs/026-modular-dev-containers/quickstart.md` under a "Results" heading.
+- [X] T034 Remove any leftover reference to `post-create.sh` repo-wide (`grep -rn post-create`), excluding `specs/done_*`. Checked 2026-10-29: no `post-create.sh` reference remains outside this spec folder (the website page never named it after website PR #25).
+- [X] T035 Run quickstart §1–§7 against the merged state and record the results (times, disk, pass/fail) in `specs/026-modular-dev-containers/quickstart.md` under a "Results" heading. CI results recorded 2026-10-29. The interactive steps in §1–§3 and §7 and the disk numbers were not run; valgul accepted the CI evidence on 2026-10-29 and chose to archive without them.
 - [ ] T036 Archive once every task is done and the last PR is merged: `git mv specs/026-modular-dev-containers specs/done_026-modular-dev-containers` and update in-repo references in the same commit (CLAUDE.md rule 16).
 
 ---
