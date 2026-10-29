@@ -149,7 +149,7 @@ description: "Task list for spec 026 modular dev containers"
 ## Phase 10: Polish & cross-cutting (PR-D)
 
 - [X] T034 Remove any leftover reference to `post-create.sh` repo-wide (`grep -rn post-create`), excluding `specs/done_*`. Checked 2026-10-29: no `post-create.sh` reference remains outside this spec folder (the website page never named it after website PR #25).
-- [ ] T035 Run quickstart §1–§7 against the merged state and record the results (times, disk, pass/fail) in `specs/026-modular-dev-containers/quickstart.md` under a "Results" heading. CI results recorded 2026-10-29; the interactive steps in §1–§3 and §7 and the disk numbers are still open.
+- [X] T035 Run quickstart §1–§7 against the merged state and record the results (times, disk, pass/fail) in `specs/026-modular-dev-containers/quickstart.md` under a "Results" heading. CI results recorded 2026-10-29. The interactive steps in §1–§3 and §7 and the disk numbers were not run; valgul accepted the CI evidence on 2026-10-29 and chose to archive without them.
 - [ ] T036 Archive once every task is done and the last PR is merged: `git mv specs/026-modular-dev-containers specs/done_026-modular-dev-containers` and update in-repo references in the same commit (CLAUDE.md rule 16).
 
 ---
