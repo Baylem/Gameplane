@@ -293,7 +293,7 @@ func (r *RestoreReconciler) cleanupRestore(ctx context.Context, rs *gameplanev1a
 					return ctrl.Result{}, err
 				}
 				if progressed {
-					return ctrl.Result{Requeue: true}, nil
+					return ctrl.Result{RequeueAfter: time.Nanosecond}, nil
 				}
 				if !stopped {
 					return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
