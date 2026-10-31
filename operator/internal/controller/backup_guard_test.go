@@ -230,7 +230,23 @@ func TestBackupGuardRolloutWaitsForLegacyWorkersAndCleanup(t *testing.T) {
 	}
 	guardPass(t, r, "legacy")
 	guardPass(t, r, "new")
-	if q.unquiesced != 1 || q.quiesced != 1 {
+	if q.unquiesced != 0 || q.quiesced != 0 {
+		t.Fatalf("legacy cleanup called an unbound agent: %+v", q)
+	}
+	var pod corev1.Pod
+	if err := r.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: "server-0"}, &pod); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Delete(t.Context(), &pod); err != nil {
+		t.Fatal(err)
+	}
+	guardPass(t, r, "legacy")
+	pod.UID, pod.ResourceVersion = "next-game", ""
+	if err := r.Create(t.Context(), &pod); err != nil {
+		t.Fatal(err)
+	}
+	guardPass(t, r, "new")
+	if q.unquiesced != 0 || q.quiesced != 1 {
 		t.Fatalf("legacy handoff did not progress: %+v", q)
 	}
 }
@@ -557,8 +573,27 @@ func TestBackupGuardPendingSnapshotCleanupWaitsForCapture(t *testing.T) {
 			if mode != "orphan" {
 				guardPass(t, r, "snapshot")
 			}
+			wantUnquiesced := 1
+			if mode == "legacy" {
+				if q.unquiesced != 0 {
+					t.Fatal("legacy snapshot cleanup called an unbound agent")
+				}
+				var pod corev1.Pod
+				if err := r.Get(t.Context(), client.ObjectKey{Namespace: "ns", Name: "server-0"}, &pod); err != nil {
+					t.Fatal(err)
+				}
+				if err := r.Delete(t.Context(), &pod); err != nil {
+					t.Fatal(err)
+				}
+				guardPass(t, r, "snapshot")
+				pod.UID, pod.ResourceVersion = "next-game", ""
+				if err := r.Create(t.Context(), &pod); err != nil {
+					t.Fatal(err)
+				}
+				wantUnquiesced = 0
+			}
 			guardPass(t, r, "next")
-			if q.unquiesced != 1 {
+			if q.unquiesced != wantUnquiesced {
 				t.Fatalf("CSI cleanup did not progress after capture: %+v", q)
 			}
 			if err := r.List(context.Background(), &jobs); err != nil {
@@ -631,7 +666,8 @@ func TestBackupSnapshotAbortSurvivesInterruptedStatusWrite(t *testing.T) {
 	b := guardBackup("snapshot")
 	b.Spec.Strategy = "volume-snapshot"
 	b.Status.Phase = gameplanev1alpha1.BackupPhaseRunning
-	b.Annotations = map[string]string{backupSnapshotAbortAnnotation: "true", annoQuiesceAttempted: "true"}
+	b.Annotations = quiescedBackup().Annotations
+	b.Annotations[backupSnapshotAbortAnnotation] = "true"
 	r, q := guardFixture(t, b)
 	guardPass(t, r, "snapshot")
 	if q.unquiesced != 1 || guardGetBackup(t, r, "snapshot").Status.Phase != gameplanev1alpha1.BackupPhaseFailed {
