@@ -126,12 +126,7 @@ func (r *BackupReconciler) recoverBackupTarget(ctx context.Context, b *gameplane
 		return false, err
 	}
 	if !gone {
-		if !agentQuiesceAvailable(r.AgentClient) {
-			return false, fmt.Errorf("cannot recover orphaned quiesce without an agent client")
-		}
-		if err := r.AgentClient.Unquiesce(ctx, b.Namespace, b.Spec.ServerRef.Name); err != nil {
-			return false, fmt.Errorf("recover orphaned quiesce: %w", err)
-		}
+		return false, fmt.Errorf("cannot recover legacy quiesce without proof that the original process is gone")
 	}
 	delete(b.Annotations, backupRecoveryAnnotation)
 	delete(b.Annotations, annoQuiesceAttempted)
