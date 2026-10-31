@@ -41,6 +41,9 @@ func agentQuiesceAvailable(q AgentQuiescer) bool {
 }
 
 func callBackupQuiesce(ctx context.Context, q AgentQuiescer, namespace, server string, podUID types.UID, undo bool) error {
+	if undo && podUID == "" {
+		return fmt.Errorf("cannot recover legacy quiesce without proof that the original process is gone")
+	}
 	if !agentQuiesceAvailable(q) {
 		return fmt.Errorf("agent quiesce client is not configured")
 	}
@@ -53,9 +56,6 @@ func callBackupQuiesce(ctx context.Context, q AgentQuiescer, namespace, server s
 			return bound.UnquiescePod(ctx, namespace, server, string(podUID))
 		}
 		return bound.QuiescePod(ctx, namespace, server, string(podUID))
-	}
-	if undo {
-		return q.Unquiesce(ctx, namespace, server)
 	}
 	return q.Quiesce(ctx, namespace, server)
 }

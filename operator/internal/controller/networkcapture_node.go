@@ -409,6 +409,12 @@ func (r *NetworkCaptureReconciler) reconcileNodeCapture(ctx context.Context, nc 
 		if !drained {
 			return ctrl.Result{RequeueAfter: time.Second}, nil
 		}
+		if nc.Annotations[nodeCaptureFinishedAnnotation] == "" {
+			nc.Annotations[nodeCaptureFinishedAnnotation] = time.Now().UTC().Format(time.RFC3339)
+			if err := r.Update(ctx, nc); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 		return r.finishNodeCapture(ctx, nc, true)
 	}
 	if nc.Annotations[nodeCaptureFinishedAnnotation] != "" {
@@ -546,11 +552,11 @@ func (r *NetworkCaptureReconciler) finishNodeCapture(ctx context.Context, nc *ga
 	}
 	phase, packets, bytes, message, err := r.SidecarClient.GetCaptureStatus(ctx, nc.Annotations[nodeCaptureNamespaceAnnotation], nodeCaptureName(nc), nc.Name, captureOwnerUID(nc.OwnerReferences, nc.Spec.ServerRef.Name), string(nc.UID))
 	if err != nil {
-		if stopped {
-			return r.fail(ctx, nc, "capture stopped before a completed artifact was available")
-		}
 		finished, parseErr := time.Parse(time.RFC3339, nc.Annotations[nodeCaptureFinishedAnnotation])
 		if parseErr != nil || time.Since(finished) > 2*time.Minute {
+			if stopped {
+				return r.fail(ctx, nc, "capture stopped before a completed artifact was available")
+			}
 			return r.fail(ctx, nc, "node diagnostic worker finished without an available artifact")
 		}
 		return ctrl.Result{RequeueAfter: time.Second}, nil
