@@ -273,20 +273,19 @@ jobs:
             image="ghcr.io/baylem/gameplane/$component"
             digest=$(python3 -c 'import json,os,sys; print(json.load(open(os.environ["RUNNER_TEMP"]+"/storage-publication/run-receipt.json"))["images"][sys.argv[1]]["digest"])' "$component")
             tag="storage-$SOURCE_SHA"
-            # A failed existing-tag lookup is not treated as tag absence. GET
-            # the manifest with the already authenticated registry client.
-            set +e
-            oras manifest fetch --descriptor "$image:$tag" > "$RUNNER_TEMP/tag.json" 2> "$RUNNER_TEMP/tag-error.txt"
-            status=$?
-            set -e
-            if [ "$status" -eq 0 ]; then
-              existing=$(python3 -c 'import json,os; print(json.load(open(os.environ["RUNNER_TEMP"]+"/tag.json"))["digest"])')
-              test "$existing" = "$digest" || { echo 'Refusing to overwrite a source tag with another digest'; exit 1; }
-            elif ! grep -Eq 'MANIFEST_UNKNOWN|manifest unknown|not found' "$RUNNER_TEMP/tag-error.txt"; then
-              echo 'Cannot establish source-tag state'; exit 1
-            fi
+            # Create the package by immutable digest before enumerating its
+            # tags. First-use authorization errors are never treated as absence.
             oras cp --from-oci-layout "$RUNNER_TEMP/storage-publication/$component@$digest" "$image@$digest"
             test "$(oras resolve "$image@$digest")" = "$digest"
+            check_source_tag() {
+              oras repo tags "$image" --format json > "$RUNNER_TEMP/tags.json"
+              present=$(python3 -c 'import json,os,sys; value=json.load(open(os.environ["RUNNER_TEMP"]+"/tags.json")); assert isinstance(value,dict) and set(value)=={"tags"} and isinstance(value["tags"],list) and all(isinstance(tag,str) for tag in value["tags"]); print("yes" if sys.argv[1] in value["tags"] else "no")' "$tag")
+              if [ "$present" = yes ]; then
+                existing=$(oras resolve "$image:$tag")
+                test "$existing" = "$digest" || { echo 'Refusing to overwrite a source tag with another digest'; exit 1; }
+              fi
+            }
+            check_source_tag
             cosign sign --yes --new-bundle-format=false --use-signing-config=false \
               -a "sourceMergeSha=$SOURCE_SHA" -a "headSha=$HEAD_SHA" \
               -a "buildRun=$BUILD_RUN" -a "ciRun=$CI_RUN" "$image@$digest"
@@ -300,6 +299,9 @@ jobs:
               -a "sourceMergeSha=$SOURCE_SHA" -a "headSha=$HEAD_SHA" \
               -a "buildRun=$BUILD_RUN" -a "ciRun=$CI_RUN" "$image@$digest" \
               > "$RUNNER_TEMP/storage-publication/$component-verification.json"
+            # Recheck immediately before tagging. This dedicated workflow is
+            # serialized; registry tag updates are not atomic across other writers.
+            check_source_tag
             oras tag "$image@$digest" "$tag"
             test "$(oras resolve "$image:$tag")" = "$digest"
             printf '%s@%s (%s)\n' "$image" "$digest" "$tag" >> "$GITHUB_STEP_SUMMARY"
