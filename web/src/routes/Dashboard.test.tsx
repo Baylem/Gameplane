@@ -158,9 +158,11 @@ describe("DashboardPage", () => {
       })),
     );
     renderWithQuery(<DashboardPage />);
-    await screen.findByText("Storage provisioned");
-    expect(screen.getByText("20 GiB")).toBeInTheDocument();
-    expect(screen.getByText("of 320 GiB game-data capacity")).toBeInTheDocument();
+    const card = (await screen.findByText("Storage provisioned")).parentElement?.parentElement;
+    expect(card).toBeInstanceOf(HTMLElement);
+    const storageCard = within(card as HTMLElement);
+    expect(await storageCard.findByText("20 GiB")).toBeInTheDocument();
+    expect(storageCard.getByText("of 320 GiB game-data capacity")).toBeInTheDocument();
   });
 
   it("describes mixed pool and system storage as combined capacity", async () => {
@@ -176,9 +178,11 @@ describe("DashboardPage", () => {
       partial: false, issues: [], totalReturned: 2,
     })));
     renderWithQuery(<DashboardPage />);
-    await screen.findByText("Storage provisioned");
-    expect(screen.getByText("30 GiB")).toBeInTheDocument();
-    expect(screen.getByText("of 420 GiB combined capacity")).toBeInTheDocument();
+    const card = (await screen.findByText("Storage provisioned")).parentElement?.parentElement;
+    expect(card).toBeInstanceOf(HTMLElement);
+    const storageCard = within(card as HTMLElement);
+    expect(await storageCard.findByText("30 GiB")).toBeInTheDocument();
+    expect(storageCard.getByText("of 420 GiB combined capacity")).toBeInTheDocument();
   });
 
   it("keeps failed pool inventory unavailable instead of showing a system capacity fallback", async () => {
@@ -200,9 +204,11 @@ describe("DashboardPage", () => {
       totalReturned: 1,
     })));
     renderWithQuery(<DashboardPage />);
-    await screen.findByText("Storage provisioned");
-    expect(screen.getByText("20 GiB")).toBeInTheDocument();
-    expect(screen.getByText("of 320 GiB game-data capacity")).toBeInTheDocument();
+    const card = (await screen.findByText("Storage provisioned")).parentElement?.parentElement;
+    expect(card).toBeInstanceOf(HTMLElement);
+    const storageCard = within(card as HTMLElement);
+    expect(await storageCard.findByText("20 GiB")).toBeInTheDocument();
+    expect(storageCard.getByText("of 320 GiB game-data capacity")).toBeInTheDocument();
     expect(screen.getByText("returned inventory cores")).toBeInTheDocument();
   });
 
