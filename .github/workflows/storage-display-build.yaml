@@ -128,6 +128,82 @@ jobs:
           (directory / f"{component}.oci.tar.sha256").write_text(
               f"{checksum}  {archive.name}\n"
           )
+      - name: install checksum-pinned Trivy 0.74.0
+        uses: ./.github/actions/install-trivy
+      # Trivy 0.74 reads OCI directories, not OCI tar archives. Extract only
+      # regular OCI layout files into a separate scan directory; never execute
+      # archive contents or add extracted files to the uploaded review artifact.
+      - name: safely prepare OCI layout for scanning
+        env:
+          COMPONENT: ${{ matrix.component }}
+        shell: python
+        run: |
+          import os
+          import pathlib
+          import re
+          import shutil
+          import tarfile
+
+          component = os.environ["COMPONENT"]
+          root = pathlib.Path(os.environ["RUNNER_TEMP"])
+          archive = root / "storage-display" / f"{component}.oci.tar"
+          destination = root / "storage-scan" / component
+          destination.mkdir(parents=True)
+          seen = set()
+          with tarfile.open(archive) as tar:
+              for member in tar:
+                  name = member.name.removeprefix("./")
+                  if member.isdir():
+                      if name not in ("", ".", "blobs", "blobs/sha256"):
+                          raise RuntimeError("Unexpected OCI directory")
+                      continue
+                  if not member.isfile() or name in seen:
+                      raise RuntimeError("Duplicate or nonregular OCI entry")
+                  if name not in ("index.json", "oci-layout") and not re.fullmatch(
+                      r"blobs/sha256/[0-9a-f]{64}", name
+                  ):
+                      raise RuntimeError("Unsafe OCI archive path")
+                  seen.add(name)
+                  target = destination / name
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  source = tar.extractfile(member)
+                  if source is None:
+                      raise RuntimeError("Missing OCI file contents")
+                  with target.open("wb") as output:
+                      shutil.copyfileobj(source, output)
+          if not {"index.json", "oci-layout"}.issubset(seen):
+              raise RuntimeError("Incomplete OCI layout")
+      - name: scan exact built image before artifact upload
+        env:
+          COMPONENT: ${{ matrix.component }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          trivy image --input "$RUNNER_TEMP/storage-scan/$COMPONENT" \
+            --platform linux/amd64 --severity HIGH,CRITICAL --ignore-unfixed \
+            --exit-code 1 --no-progress
+      - name: record successful vulnerability policy in review metadata
+        env:
+          COMPONENT: ${{ matrix.component }}
+        shell: python
+        run: |
+          import json
+          import os
+          import pathlib
+
+          path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "storage-display" / (
+              os.environ["COMPONENT"] + ".metadata.json"
+          )
+          metadata = json.loads(path.read_text())
+          metadata["vulnerabilityScan"] = {
+              "scanner": "Trivy",
+              "version": "0.74.0",
+              "platform": "linux/amd64",
+              "severity": ["HIGH", "CRITICAL"],
+              "ignoreUnfixed": True,
+              "result": "passed",
+          }
+          path.write_text(json.dumps(metadata, indent=2) + "\n")
       - name: upload unsigned review artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

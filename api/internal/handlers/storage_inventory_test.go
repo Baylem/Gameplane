@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -153,7 +155,9 @@ func TestStoragePoolInventory_SelectedPoolAndPVScope(t *testing.T) {
 			t.Run(route+"/"+quantity.name, func(t *testing.T) {
 				otherDriver := inventoryPoolPVFixture("other-driver", "19Gi", "openebs-lvm", "openebs-chicago-1", "pool-node", corev1.VolumeBound)
 				otherDriver.Spec.CSI.Driver = "unrelated.csi.example"
-				remote := inventoryPoolClientFixture(inventoryPoolAnnotationFixture, inventoryPoolObjectFixture("pool-node", quantity.size),
+				pool := inventoryPoolObjectFixture("pool-node", quantity.size)
+				pool.Object["volumeGroups"] = append([]any{map[string]any{"name": "unrelated-vg", "size": "600Gi"}}, pool.Object["volumeGroups"].([]any)...)
+				remote := inventoryPoolClientFixture(inventoryPoolAnnotationFixture, pool,
 					inventoryPoolPVFixture("released", "11Gi", "openebs-lvm", "openebs-chicago-1", "pool-node", corev1.VolumeReleased),
 					inventoryPoolPVFixture("wrong-class", "13Gi", "another-class", "openebs-chicago-1", "pool-node", corev1.VolumeBound),
 					inventoryPoolPVFixture("wrong-vg", "17Gi", "openebs-lvm", "another-vg", "pool-node", corev1.VolumeBound),
@@ -197,6 +201,22 @@ func TestStoragePoolInventory_ConfiguredFailuresDoNotFallback(t *testing.T) {
 			{name: "duplicate annotation key", annotation: strings.Replace(inventoryPoolAnnotationFixture, "{", "{\"provider\":\"openebs-lvm\",", 1)},
 			{name: "unknown field", annotation: strings.Replace(inventoryPoolAnnotationFixture, "{", "{\"unexpected\":true,", 1)},
 			{name: "empty classes", annotation: strings.Replace(inventoryPoolAnnotationFixture, "[\"openebs-lvm\"]", "[]", 1)},
+			{name: "oversized annotation", annotation: strings.Repeat("x", 4097)},
+			{name: "nonobject annotation", annotation: "[]"},
+			{name: "truncated annotation value", annotation: `{"provider":`},
+			{name: "trailing JSON", annotation: inventoryPoolAnnotationFixture + "{}"},
+			{name: "wrong class field type", annotation: strings.Replace(inventoryPoolAnnotationFixture, `["openebs-lvm"]`, `"openebs-lvm"`, 1)},
+			{name: "invalid class name", annotation: strings.Replace(inventoryPoolAnnotationFixture, `["openebs-lvm"]`, `["Invalid_Class"]`, 1)},
+			{name: "duplicate classes", annotation: strings.Replace(inventoryPoolAnnotationFixture, `["openebs-lvm"]`, `["openebs-lvm","openebs-lvm"]`, 1)},
+			{name: "nonarray volume groups", modify: func(p *unstructured.Unstructured) { p.Object["volumeGroups"] = map[string]any{} }},
+			{name: "nonobject volume group", modify: func(p *unstructured.Unstructured) { p.Object["volumeGroups"] = []any{"invalid"} }},
+			{name: "nonarray thin pools", modify: func(p *unstructured.Unstructured) {
+				p.Object["volumeGroups"].([]any)[0].(map[string]any)["thinPools"] = map[string]any{}
+			}},
+			{name: "nonobject thin pool", modify: func(p *unstructured.Unstructured) {
+				p.Object["volumeGroups"].([]any)[0].(map[string]any)["thinPools"] = []any{"invalid"}
+			}},
+			{name: "invalid size field type", modify: func(p *unstructured.Unstructured) { inventoryPoolSizeFixture(p, true) }},
 			{name: "invalid quantity", modify: func(p *unstructured.Unstructured) { inventoryPoolSizeFixture(p, "not-a-quantity") }},
 			{name: "zero capacity", modify: func(p *unstructured.Unstructured) { inventoryPoolSizeFixture(p, "0") }},
 			{name: "quantity overflow", modify: func(p *unstructured.Unstructured) { inventoryPoolSizeFixture(p, "9223372036854775808") }},
@@ -255,9 +275,17 @@ func inventoryPoolSizeFixture(pool *unstructured.Unstructured, value any) {
 func TestStoragePoolInventory_SummedCapacityOverflowUnavailable(t *testing.T) {
 	for _, route := range []string{"/cluster/stats", "/fleet/inventory"} {
 		t.Run(route, func(t *testing.T) {
-			remote := inventoryPoolClientFixture(inventoryPoolAnnotationFixture, inventoryPoolObjectFixture("pool-node", "5Ei"), inventoryPoolNodeFixture("second-node", inventoryPoolAnnotationFixture))
-			if err := remote.Dynamic.(*dynamicfake.FakeDynamicClient).Tracker().Add(inventoryPoolObjectFixture("second-node", "5Ei")); err != nil {
-				t.Fatal(err)
+			// Each 1E quantity is exactly representable; ten pools overflow int64
+			// only at aggregation, rather than failing an individual parse.
+			remote := inventoryPoolClientFixture(inventoryPoolAnnotationFixture, inventoryPoolObjectFixture("pool-node", "1E"))
+			for i := range 9 {
+				name := fmt.Sprintf("extra-node-%d", i)
+				if _, err := remote.Typed.CoreV1().Nodes().Create(t.Context(), inventoryPoolNodeFixture(name, inventoryPoolAnnotationFixture), metav1.CreateOptions{}); err != nil {
+					t.Fatal(err)
+				}
+				if err := remote.Dynamic.(*dynamicfake.FakeDynamicClient).Tracker().Add(inventoryPoolObjectFixture(name, "1E")); err != nil {
+					t.Fatal(err)
+				}
 			}
 			rr, _ := inventoryPoolRequestFixture(t, route, remote, inventoryUser("remote", "*", "cluster:read"))
 			if route == "/cluster/stats" {
@@ -356,6 +384,86 @@ func TestStoragePoolInventory_NodeAffinityBooleanScope(t *testing.T) {
 				if stats.TotalStorageBytes != 320<<30 || stats.UsedStorageBytes != tc.want {
 					t.Fatalf("affinity scope: %+v want provisioned=%d", stats, tc.want)
 				}
+			})
+		}
+	}
+}
+
+func TestStoragePoolInventory_InvalidVolumeMetadataUnavailable(t *testing.T) {
+	for _, route := range []string{"/cluster/stats", "/fleet/inventory"} {
+		for _, tc := range []struct {
+			name    string
+			modify  func(*corev1.PersistentVolume)
+			prepare func(*testing.T, *kube.Client)
+		}{
+			{name: "missing affinity", modify: func(p *corev1.PersistentVolume) { p.Spec.NodeAffinity = nil }},
+			{name: "missing required affinity", modify: func(p *corev1.PersistentVolume) { p.Spec.NodeAffinity.Required = nil }},
+			{name: "invalid affinity operator", modify: func(p *corev1.PersistentVolume) {
+				p.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Operator = "Invalid"
+			}},
+			{name: "invalid affinity requirement", modify: func(p *corev1.PersistentVolume) {
+				p.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values = nil
+			}},
+			{name: "unsupported node field", modify: func(p *corev1.PersistentVolume) {
+				p.Spec.NodeAffinity.Required.NodeSelectorTerms = []corev1.NodeSelectorTerm{{MatchFields: []corev1.NodeSelectorRequirement{{Key: "metadata.namespace", Operator: corev1.NodeSelectorOpIn, Values: []string{"invalid"}}}}}
+			}},
+			{name: "invalid node field requirement", modify: func(p *corev1.PersistentVolume) {
+				p.Spec.NodeAffinity.Required.NodeSelectorTerms = []corev1.NodeSelectorTerm{{MatchFields: []corev1.NodeSelectorRequirement{{Key: "metadata.name", Operator: corev1.NodeSelectorOpIn}}}}
+			}},
+			{name: "negative PV capacity", modify: func(p *corev1.PersistentVolume) { p.Spec.Capacity[corev1.ResourceStorage] = resource.MustParse("-1Gi") }},
+			{name: "fractional PV bytes", modify: func(p *corev1.PersistentVolume) { p.Spec.Capacity[corev1.ResourceStorage] = resource.MustParse("500m") }},
+			{name: "unrepresentable PV capacity", modify: func(p *corev1.PersistentVolume) {
+				p.Spec.Capacity[corev1.ResourceStorage] = resource.MustParse("9223372036854775808")
+			}},
+			{name: "provisioned sum overflow", prepare: func(t *testing.T, c *kube.Client) {
+				t.Helper()
+				for i := range 10 {
+					pv := inventoryPoolPVFixture(fmt.Sprintf("huge-volume-%d", i), "1E", "openebs-lvm", "openebs-chicago-1", "pool-node", corev1.VolumeBound)
+					if _, err := c.Typed.CoreV1().PersistentVolumes().Create(t.Context(), pv, metav1.CreateOptions{}); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}},
+			{name: "ambiguous local volume placement", modify: func(p *corev1.PersistentVolume) {
+				p.Spec.NodeAffinity.Required.NodeSelectorTerms[0].MatchExpressions[0].Values = []string{"pool-node", "second-node"}
+			}, prepare: func(t *testing.T, c *kube.Client) {
+				t.Helper()
+				if _, err := c.Typed.CoreV1().Nodes().Create(t.Context(), inventoryPoolNodeFixture("second-node", inventoryPoolAnnotationFixture), metav1.CreateOptions{}); err != nil {
+					t.Fatal(err)
+				}
+				if err := c.Dynamic.(*dynamicfake.FakeDynamicClient).Tracker().Add(inventoryPoolObjectFixture("second-node", "320Gi")); err != nil {
+					t.Fatal(err)
+				}
+			}},
+			{name: "missing dynamic source client", prepare: func(_ *testing.T, c *kube.Client) { c.Dynamic = nil }},
+		} {
+			t.Run(route+"/"+tc.name, func(t *testing.T) {
+				remote := inventoryPoolClientFixture(inventoryPoolAnnotationFixture, inventoryPoolObjectFixture("pool-node", "320Gi"))
+				if tc.modify != nil {
+					pv, err := remote.Typed.CoreV1().PersistentVolumes().Get(t.Context(), "selected", metav1.GetOptions{})
+					if err != nil {
+						t.Fatal(err)
+					}
+					tc.modify(pv)
+					if _, err := remote.Typed.CoreV1().PersistentVolumes().Update(t.Context(), pv, metav1.UpdateOptions{}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if tc.prepare != nil {
+					tc.prepare(t, remote)
+				}
+				rr, home := inventoryPoolRequestFixture(t, route, remote, inventoryUser("remote", "*", "cluster:read"))
+				if route == "/cluster/stats" {
+					if rr.Code == http.StatusOK {
+						t.Fatalf("unsafe volume metadata became known capacity: %s", rr.Body)
+					}
+				} else {
+					var fleet inventoryPoolFleetWire
+					if rr.Code != http.StatusOK || json.Unmarshal(rr.Body.Bytes(), &fleet) != nil || !fleet.Partial || len(fleet.Items) != 0 || len(fleet.Issues) == 0 {
+						t.Fatalf("unsafe volume metadata lost unavailable coverage: status=%d body=%s", rr.Code, rr.Body)
+					}
+				}
+				inventoryPoolNoHomeReadFixture(t, home)
 			})
 		}
 	}
