@@ -1,0 +1,3 @@
+# Show configured OpenEBS game-data capacity
+
+Cluster and fleet inventory can now read an administrator-selected OpenEBS LVM thin pool instead of using the node's system disk capacity. Storage cards use GiB units, distinguish pool capacity from system storage, and continue to show provisioned volume space rather than physical disk usage. Unconfigured clusters keep their existing capacity source; configured lookup failures remain unavailable instead of falling back to the system disk. See the [storage inventory contract](../../api/specs.md) for the annotation and read-only permission requirements. [PR #14](https://github.com/Baylem/Gameplane/pull/14)

@@ -61,8 +61,12 @@ Configured lookup/parse failures are unavailable: cluster stats returns the exis
 
 ## Ordered steps
 
-- [ ] Write route-level regression tests only, using current handler interfaces and raw JSON assertions for the new discriminator.
-- [ ] Parent commits tests and observes expected red in scoped fork CI; do not run tests locally.
-- [ ] After parent approval, implement the shared API resolver and both call sites; run only `go build ./...` in `api/` locally.
+- [x] Write route-level regression tests only, using current handler interfaces and raw JSON assertions for the new discriminator.
+- [x] Parent commits tests and observes expected red in scoped fork CI; do not run tests locally.
+- [x] After parent approval, implement the shared API resolver and both call sites; run only `go build ./...` in `api/` locally.
 - [ ] Web owner implements the agreed storage metadata/caption/IEC changes in parallel; parent reviews the combined diff and runs CI.
 - [ ] Parent applies only reviewed read-only RBAC/annotation and publishes/deploys approved immutable artifacts; verify Chicago 320 GiB, legacy behavior, unknown error handling and unchanged resource ownership.
+
+Implementation status: API compile-only check passed. Red regression CI run
+44020592868/job133829048522 confirmed the original capacity/scope failures.
+Combined final CI, artifact publication and deployment remain pending.

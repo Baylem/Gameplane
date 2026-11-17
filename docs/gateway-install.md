@@ -190,6 +190,39 @@ Remote all-namespace roles may contain `cluster:read`, `modules:read`,
 Wildcard or central-administration permissions are rejected, and a
 role cannot gain them later while it has remote all-namespace bindings.
 
+### Optional OpenEBS thin-pool capacity
+
+Without an explicit pool reference, inventory reports node ephemeral-storage
+capacity and provisioned Bound PV capacity. To report a separate local game-data
+pool, an administrator may annotate each participating Node:
+
+```yaml
+metadata:
+  annotations:
+    gameplane.local/storage-pool: >-
+      {"provider":"openebs-lvm","namespace":"openebs","volumeGroup":"game-vg","thinPool":"game-vg_thinpool","storageClasses":["games"]}
+```
+
+Create a namespace-scoped Role in the annotation's `namespace` (`openebs` in
+this example), granting only named read access to the same-name LVMNode. Bind
+that Role to the remote kubeconfig's existing client identity; its identity does
+not determine the Role namespace. Replace `worker-1` with the Node's exact name:
+
+```yaml
+- apiGroups: [local.openebs.io]
+  resources: [lvmnodes]
+  resourceNames: [worker-1]
+  verbs: [get]
+```
+
+No list/watch, Secret access, pool management or Node mutation grant is needed.
+The selected pool's reported size supplies capacity; matching Bound PV sizes
+remain logical provisioned allocation, not physical usage. Configured source
+errors are unavailable/partial, never a fallback to the node system disk or zero.
+LVMNode has no freshness timestamp, so unchanged object age does not establish
+staleness. This opt-in changes only read-only inventory and does not manage game
+resources or their storage.
+
 ## Private networking
 
 The gateway Service is **ClusterIP on TCP 8443**. Provide private routing or a

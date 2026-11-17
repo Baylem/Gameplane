@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -72,7 +73,7 @@ func inventoryPoolPVFixture(name, size, class, vg, node string, phase corev1.Per
 	pv := boundPV(name, size, true)
 	pv.Status.Phase = phase
 	pv.Spec.StorageClassName = class
-	pv.Spec.PersistentVolumeSource.CSI = &corev1.CSIPersistentVolumeSource{
+	pv.Spec.CSI = &corev1.CSIPersistentVolumeSource{
 		Driver: "local.csi.openebs.io", VolumeHandle: name,
 		VolumeAttributes: map[string]string{"openebs.io/volgroup": vg},
 	}
@@ -192,6 +193,8 @@ func TestStoragePoolInventory_ConfiguredFailuresDoNotFallback(t *testing.T) {
 		}{
 			{name: "malformed annotation", annotation: "{"},
 			{name: "unsupported provider", annotation: strings.Replace(inventoryPoolAnnotationFixture, "openebs-lvm\"", "unsupported\"", 1)},
+			{name: "case-variant annotation alias", annotation: strings.Replace(inventoryPoolAnnotationFixture, "{", "{\"Provider\":\"openebs-lvm\",", 1)},
+			{name: "duplicate annotation key", annotation: strings.Replace(inventoryPoolAnnotationFixture, "{", "{\"provider\":\"openebs-lvm\",", 1)},
 			{name: "unknown field", annotation: strings.Replace(inventoryPoolAnnotationFixture, "{", "{\"unexpected\":true,", 1)},
 			{name: "empty classes", annotation: strings.Replace(inventoryPoolAnnotationFixture, "[\"openebs-lvm\"]", "[]", 1)},
 			{name: "invalid quantity", modify: func(p *unstructured.Unstructured) { inventoryPoolSizeFixture(p, "not-a-quantity") }},
@@ -309,5 +312,51 @@ func TestStoragePoolInventory_LegacyUnconfigured(t *testing.T) {
 			}
 			inventoryPoolNoHomeReadFixture(t, home)
 		})
+	}
+}
+
+func TestStoragePoolInventory_NodeAffinityBooleanScope(t *testing.T) {
+	in := func(key, value string) corev1.NodeSelectorRequirement {
+		return corev1.NodeSelectorRequirement{Key: key, Operator: corev1.NodeSelectorOpIn, Values: []string{value}}
+	}
+	for _, route := range []string{"/cluster/stats", "/fleet/inventory"} {
+		for _, tc := range []struct {
+			name  string
+			terms []corev1.NodeSelectorTerm
+			want  int64
+		}{
+			{"OR terms", []corev1.NodeSelectorTerm{
+				{MatchExpressions: []corev1.NodeSelectorRequirement{in("openebs.io/nodename", "other-node")}},
+				{MatchExpressions: []corev1.NodeSelectorRequirement{in("openebs.io/nodename", "pool-node")}},
+			}, 7 << 30},
+			{"AND requirements", []corev1.NodeSelectorTerm{{MatchExpressions: []corev1.NodeSelectorRequirement{
+				in("openebs.io/nodename", "pool-node"), in("missing-label", "required"),
+			}}}, 0},
+			{"empty term matches no node", []corev1.NodeSelectorTerm{{}}, 0},
+			{"metadata name field", []corev1.NodeSelectorTerm{{MatchFields: []corev1.NodeSelectorRequirement{
+				in("metadata.name", "pool-node"),
+			}}}, 7 << 30},
+			{"fields AND expressions", []corev1.NodeSelectorTerm{{
+				MatchExpressions: []corev1.NodeSelectorRequirement{in("openebs.io/nodename", "pool-node")},
+				MatchFields:      []corev1.NodeSelectorRequirement{in("metadata.name", "other-node")},
+			}}, 0},
+		} {
+			t.Run(route+"/"+tc.name, func(t *testing.T) {
+				remote := inventoryPoolClientFixture(inventoryPoolAnnotationFixture, inventoryPoolObjectFixture("pool-node", "320Gi"))
+				pv, err := remote.Typed.CoreV1().PersistentVolumes().Get(t.Context(), "selected", metav1.GetOptions{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				pv.Spec.NodeAffinity.Required.NodeSelectorTerms = tc.terms
+				if _, err := remote.Typed.CoreV1().PersistentVolumes().Update(t.Context(), pv, metav1.UpdateOptions{}); err != nil {
+					t.Fatal(err)
+				}
+				rr, _ := inventoryPoolRequestFixture(t, route, remote, inventoryUser("remote", "*", "cluster:read"))
+				stats := inventoryPoolDecodeFixture(t, route, rr)
+				if stats.TotalStorageBytes != 320<<30 || stats.UsedStorageBytes != tc.want {
+					t.Fatalf("affinity scope: %+v want provisioned=%d", stats, tc.want)
+				}
+			})
+		}
 	}
 }
