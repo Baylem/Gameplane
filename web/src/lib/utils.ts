@@ -162,17 +162,18 @@ export function describeStorageProvisioned(
   const overcommitted = total > 0 && used > total;
   const valueText = formatStorageBytes(used);
   if (!total) return { valueText, overcommitted: false };
+  const presentationSource = source === "openebs-lvm" ? "pool" : source;
   const subText = overcommitted
     ? intl.formatMessage({
       id: "web.lib.utils.storage_capacity_overcommitted",
-      defaultMessage: "of {total} {source, select, openebs-lvm {game-data capacity} mixed {combined capacity} other {system storage}} — overcommitted",
+      defaultMessage: "of {total} {source, select, pool {game-data capacity} mixed {combined capacity} other {system storage}} — overcommitted",
       description: "Provisioned storage exceeds capacity; total is an IEC size such as 320 GiB. Source distinguishes game-data pools, mixed sources, and legacy node system storage.",
-    }, { total: formatStorageBytes(total), source })
+    }, { total: formatStorageBytes(total), source: presentationSource })
     : intl.formatMessage({
       id: "web.lib.utils.storage_capacity",
-      defaultMessage: "of {total} {source, select, openebs-lvm {game-data capacity} mixed {combined capacity} other {system storage}}",
+      defaultMessage: "of {total} {source, select, pool {game-data capacity} mixed {combined capacity} other {system storage}}",
       description: "Provisioned storage compared with capacity; total is an IEC size such as 320 GiB. Source distinguishes game-data pools, mixed sources, and legacy node system storage.",
-    }, { total: formatStorageBytes(total), source });
+    }, { total: formatStorageBytes(total), source: presentationSource });
   return { valueText, subText, overcommitted };
 }
 
