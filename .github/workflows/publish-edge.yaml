@@ -1,288 +1,315 @@
-name: publish-edge
+name: publish reviewed storage display images
 
-# Continuously publish edge images to GHCR on every push to master, so testers
-# can track the latest build without waiting for a tagged release. Tagged
-# releases (release.yaml, triggered by v* tags) remain the recommended,
-# version-pinned install path; this is the rolling "edge" channel.
-#
-# Images: ghcr.io/<owner>/gameplane/{operator,api,web,agent,audit-syslog-bridge,
-#         telemetry-receiver,sentinel,capture-sidecar,mcp-server,tunnel-frp,
-#         tunnel-tailscale,tunnel-playit}:edge
-#         ...and an immutable :sha-<short> tag for pinning a specific commit.
-# Consume with: helm install ... --set image.tag=edge
-
+# REVIEW ONLY until the owner approves publication and this new keyless identity.
+# Install only on delivery/openebs-storage-capacity, replacing the existing
+# dispatch-capable path. No push/PR/tag trigger; never merge this into upstream.
 on:
-  push:
-    branches: [master]
-    # Only rebuild when something that lands in an image changes. Docs/chart
-    # edits don't need a fresh image push. Every path here is a real `COPY`
-    # input of at least one of the 12 matrix images' Dockerfiles below (or a
-    # transitive Go module dependency of one) — a path missing from this list
-    # means a push that changes it publishes nothing to :edge until a later,
-    # unrelated push happens to also touch a listed path.
-    paths:
-      - "operator/**"
-      - "api/**"
-      - "web/**"
-      - "agent/**"
-      - "netguard/**"
-      - "gameaction/**"
-      - "gameproto/**"
-      - "telemetryschema/**"
-      - "i18n/**"
-      - "svcutil/**"
-      - "gp-module/**"
-      - "audit-syslog-bridge/**"
-      - "telemetry-receiver/**"
-      - "sentinel/**"
-      - "capture-sidecar/**"
-      - "mcp-server/**"
-      - "tunnel/**"
-      - "go.work"
-      - "go.work.sum"
-      - "**/Dockerfile"
-      - "**/Dockerfile.*"
-      - ".github/workflows/publish-edge.yaml"
-      - ".github/actions/install-trivy/**"
-      - "hack/ci_scope.py"
-      - ".dockerignore"
-      - "signing/cosign.pub"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful storage-display-build artifact run ID
+        required: true
+        type: string
+      ci_run_id:
+        description: Successful separate ci.yaml test run ID for the same PR/head
+        required: true
+        type: string
+      source_merge_sha:
+        description: Exact PR merge SHA recorded in the reviewed OCI metadata
+        required: true
+        type: string
+      head_sha:
+        description: Exact reviewed fix branch head SHA
+        required: true
+        type: string
+      delivery_sha:
+        description: Exact approved delivery branch commit containing this workflow
+        required: true
+        type: string
 
 permissions:
   contents: read
 
-# Don't stack edge publishes: a newer master push supersedes an in-flight one.
 concurrency:
-  group: publish-edge
-  cancel-in-progress: true
+  group: storage-display-publication
+  cancel-in-progress: false
 
 jobs:
-  changes:
-    name: select edge images
+  publish:
+    if: github.repository == 'Baylem/Gameplane' && github.ref == 'refs/heads/delivery/openebs-storage-capacity'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: read
-    outputs:
-      matrix: ${{ steps.scope.outputs.matrix }}
-      images: ${{ steps.scope.outputs.images }}
+      packages: write
+      id-token: write
+    env:
+      REPOSITORY: Baylem/Gameplane
+      BASE_SHA: 657462a4d8ec916305b8499995e98c026fc1157c
+      BUILD_RUN: ${{ inputs.run_id }}
+      CI_RUN: ${{ inputs.ci_run_id }}
+      SOURCE_SHA: ${{ inputs.source_merge_sha }}
+      HEAD_SHA: ${{ inputs.head_sha }}
+      DELIVERY_SHA: ${{ inputs.delivery_sha }}
+      DELIVERY_REF: refs/heads/delivery/openebs-storage-capacity
+      CERT_IDENTITY: https://github.com/Baylem/Gameplane/.github/workflows/publish-edge.yaml@refs/heads/delivery/openebs-storage-capacity
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - name: include changes since the last successful publish
-        id: scope
+      - name: verify exact reviewed runs, PR base/head and delivery identity
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.sha }}
-        run: python3 hack/ci_scope.py images --head "$HEAD_SHA"
+        shell: python
+        run: |
+          import base64
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import re
+          import urllib.request
 
-  images:
-    needs: [changes]
-    if: needs.changes.outputs.images == 'true'
-    name: build & push edge image
-    runs-on: ubuntu-latest
-    # 35 min: observed max 31 minutes across 142 job samples on 2026-08-30,
-    # multi-arch buildx plus cosign across the image set
-    timeout-minutes: 35
-    permissions:
-      contents: read
-      packages: write
-    # The signing key is held by this environment, whose deployment policy
-    # admits only master and v* tags (repository settings).
-    environment: release-signing
-    strategy:
-      fail-fast: false
-      # The catalog and COPY-input selector share one source of truth.
-      matrix: ${{ fromJSON(needs.changes.outputs.matrix) }}
-    steps:
+          def require(condition, message):
+              if not condition:
+                  raise RuntimeError(message)
+
+          def api(path):
+              request = urllib.request.Request(
+                  "https://api.github.com/repos/Baylem/Gameplane/" + path,
+                  headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"],
+                           "Accept": "application/vnd.github+json",
+                           "X-GitHub-Api-Version": "2022-11-28"},
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+
+          for name in ("SOURCE_SHA", "HEAD_SHA", "DELIVERY_SHA"):
+              require(re.fullmatch(r"[0-9a-f]{40}", os.environ[name]), "Invalid SHA input")
+          for name in ("BUILD_RUN", "CI_RUN"):
+              require(re.fullmatch(r"[1-9][0-9]*", os.environ[name]), "Invalid run ID")
+          require(os.environ["GITHUB_SHA"] == os.environ["DELIVERY_SHA"], "Unapproved delivery commit")
+          require(os.environ["GITHUB_REF"] == os.environ["DELIVERY_REF"], "Wrong delivery ref")
+          runs = []
+          for name, workflow in (("BUILD_RUN", "storage-display-build.yaml"), ("CI_RUN", "ci.yaml")):
+              run = api("actions/runs/" + os.environ[name])
+              require(run["repository"]["full_name"] == "Baylem/Gameplane", "Wrong run repository")
+              require(run["head_repository"]["full_name"] == "Baylem/Gameplane", "Wrong head repository")
+              require(run["path"] == ".github/workflows/" + workflow, "Wrong workflow")
+              require(run["status"] == "completed" and run["conclusion"] == "success", "Run not successful")
+              require(run["event"] == "pull_request", "Run must be PR-triggered")
+              require(run["head_sha"] == os.environ["HEAD_SHA"], "Wrong run head SHA")
+              require(run["head_branch"] == "fix/openebs-storage-capacity", "Wrong source branch")
+              require(len(run["pull_requests"]) == 1, "Expected one source PR")
+              require(run["pull_requests"][0]["base"]["sha"] == os.environ["BASE_SHA"], "Run used another baseline SHA")
+              require(run["pull_requests"][0]["head"]["sha"] == os.environ["HEAD_SHA"], "Run used another PR head SHA")
+              pr = api("pulls/" + str(run["pull_requests"][0]["number"]))
+              require(pr["base"]["repo"]["full_name"] == "Baylem/Gameplane", "Wrong base repository")
+              require(pr["base"]["ref"] == "review/v0.4.1-storage-base", "Wrong baseline ref")
+              require(pr["base"]["sha"] == os.environ["BASE_SHA"], "Baseline moved")
+              require(pr["head"]["repo"]["full_name"] == "Baylem/Gameplane", "Wrong PR head repository")
+              require(pr["head"]["sha"] == os.environ["HEAD_SHA"], "PR head moved; review a fresh run")
+              runs.append(run)
+          require(runs[0]["pull_requests"][0]["number"] == runs[1]["pull_requests"][0]["number"], "Runs belong to different PRs")
+          commit = api("commits/" + os.environ["SOURCE_SHA"])
+          require([p["sha"] for p in commit["parents"]] == [os.environ["BASE_SHA"], os.environ["HEAD_SHA"]], "Wrong PR merge parents")
+          # Bind metadata to the successful build attempt, including re-runs.
+          receipt = {"buildRun": runs[0]["id"], "buildAttempt": runs[0]["run_attempt"],
+                     "ciRun": runs[1]["id"], "sourceMergeSha": os.environ["SOURCE_SHA"],
+                     "headSha": os.environ["HEAD_SHA"], "deliverySha": os.environ["DELIVERY_SHA"]}
+          receipt["dockerfileSha256"] = {}
+          for component in ("api", "web"):
+              content = api("contents/" + component + "/Dockerfile?ref=" + os.environ["SOURCE_SHA"])
+              require(content["encoding"] == "base64", "Unsupported source encoding")
+              receipt["dockerfileSha256"][component] = hashlib.sha256(base64.b64decode(content["content"])).hexdigest()
+          directory = pathlib.Path(os.environ["RUNNER_TEMP"]) / "storage-publication"
+          directory.mkdir()
+          (directory / "run-receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
+      - name: download only the two reviewed build artifacts
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          repository: Baylem/Gameplane
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          pattern: storage-display-*-amd64-${{ inputs.source_merge_sha }}
+          path: ${{ runner.temp }}/storage-publication/artifacts
+          merge-multiple: false
+      - name: verify metadata, archive checksums and complete OCI graphs
+        shell: python
+        run: |
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import re
+          import shutil
+          import tarfile
+
+          def require(condition, message):
+              if not condition:
+                  raise RuntimeError(message)
+
+          def digest_bytes(data):
+              return "sha256:" + hashlib.sha256(data).hexdigest()
+
+          root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "storage-publication"
+          receipt = json.loads((root / "run-receipt.json").read_text())
+          artifacts = root / "artifacts"
+          expected = {f"storage-display-{c}-amd64-{os.environ['SOURCE_SHA']}" for c in ("api", "web")}
+          require({p.name for p in artifacts.iterdir()} == expected, "Unexpected/missing artifact")
+          images = {}
+          for component in ("api", "web"):
+              directory = artifacts / f"storage-display-{component}-amd64-{os.environ['SOURCE_SHA']}"
+              require({p.name for p in directory.iterdir()} == {f"{component}.oci.tar", f"{component}.oci.tar.sha256", f"{component}.metadata.json"}, "Unexpected artifact files")
+              metadata = json.loads((directory / f"{component}.metadata.json").read_text())
+              for key, expected_value in {
+                  "component": component, "platform": "linux/amd64", "sourceRepository": "Baylem/Gameplane",
+                  "sourceMergeSha": os.environ["SOURCE_SHA"], "pullRequestHeadSha": os.environ["HEAD_SHA"],
+                  "pullRequestBaseSha": os.environ["BASE_SHA"], "runId": str(receipt["buildRun"]),
+                  "runAttempt": str(receipt["buildAttempt"]), "registryPublished": False, "signed": False,
+                  "buildVersion": "0.4.1-storage-" + os.environ["SOURCE_SHA"][:7],
+              }.items():
+                  require(metadata.get(key) == expected_value, "Artifact metadata mismatch: " + key)
+              require(metadata.get("dockerfileSha256") == receipt["dockerfileSha256"][component], "Wrong source Dockerfile hash")
+              require(metadata.get("vulnerabilityScan") == {
+                  "scanner": "Trivy", "version": "0.74.0", "platform": "linux/amd64",
+                  "severity": ["HIGH", "CRITICAL"], "ignoreUnfixed": True, "result": "passed",
+              }, "Missing or mismatched pre-review vulnerability scan")
+              archive = directory / f"{component}.oci.tar"
+              with archive.open("rb") as stream:
+                  checksum = hashlib.file_digest(stream, "sha256").hexdigest()
+              require(checksum == metadata["archiveSha256"], "Archive metadata checksum mismatch")
+              require((directory / f"{component}.oci.tar.sha256").read_text() == f"{checksum}  {archive.name}\n", "Archive checksum file mismatch")
+              layout = root / component
+              layout.mkdir()
+              with tarfile.open(archive) as tar:
+                  seen = set()
+                  for member in tar:
+                      name = member.name.removeprefix("./")
+                      if member.isdir():
+                          require(name in ("", ".", "blobs", "blobs/sha256"), "Unexpected OCI directory")
+                          continue
+                      require(member.isfile() and name not in seen, "Duplicate or nonregular OCI entry")
+                      require(name in ("index.json", "oci-layout") or re.fullmatch(r"blobs/sha256/[0-9a-f]{64}", name), "Unsafe OCI archive path")
+                      seen.add(name)
+                      target = layout / name
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      source = tar.extractfile(member)
+                      require(source is not None, "Missing OCI entry")
+                      with target.open("wb") as output:
+                          shutil.copyfileobj(source, output)
+              require(json.loads((layout / "oci-layout").read_text())["imageLayoutVersion"] == "1.0.0", "Wrong OCI layout")
+              index = json.loads((layout / "index.json").read_text())
+              require(index["manifests"] == metadata["ociDescriptors"] and len(index["manifests"]) == 1, "OCI descriptors differ")
+              descriptor = index["manifests"][0]
+              digest = descriptor["digest"]
+              require(digest == metadata["buildDigest"], "Build/root digest mismatch")
+              visited = set()
+              runtime_configs = []
+
+              def visit(desc):
+                  value = desc["digest"]
+                  require(re.fullmatch(r"sha256:[0-9a-f]{64}", value), "Unsupported OCI digest")
+                  path = layout / "blobs/sha256" / value.split(":")[1]
+                  require(path.is_file() and path.stat().st_size == desc["size"], "Missing/wrong-size OCI blob")
+                  with path.open("rb") as stream:
+                      require("sha256:" + hashlib.file_digest(stream, "sha256").hexdigest() == value, "OCI blob digest mismatch")
+                  if value in visited:
+                      return
+                  visited.add(value)
+                  media = desc["mediaType"]
+                  if media in ("application/vnd.oci.image.index.v1+json", "application/vnd.docker.distribution.manifest.list.v2+json"):
+                      document = json.loads(path.read_text())
+                      for child in document["manifests"]:
+                          visit(child)
+                  elif media in ("application/vnd.oci.image.manifest.v1+json", "application/vnd.docker.distribution.manifest.v2+json"):
+                      document = json.loads(path.read_text())
+                      visit(document["config"])
+                      for child in document["layers"]:
+                          visit(child)
+                  elif media in ("application/vnd.oci.image.config.v1+json", "application/vnd.docker.container.image.v1+json"):
+                      document = json.loads(path.read_text())
+                      if document.get("os") != "unknown":
+                          require(document.get("os") == "linux" and document.get("architecture") == "amd64", "Non-amd64 runtime image")
+                          labels = document.get("config", {}).get("Labels", {})
+                          require(labels.get("org.opencontainers.image.revision") == os.environ["SOURCE_SHA"], "Wrong image source label")
+                          runtime_configs.append(value)
+
+              visit(descriptor)
+              require(len(runtime_configs) == 1, "Expected exactly one amd64 runtime image")
+              images[component] = {"digest": digest, "archiveSha256": checksum}
+          receipt["images"] = images
+          (root / "run-receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
+      # Trusted tools/policy come from the exact reviewed delivery commit, not
+      # from downloaded image archives. Nothing from an archive is executed.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # Signing is mandatory for the official edge channel: fail before anything
-      # is pushed if the key is absent, rather than shipping unsigned images.
-      # The key has been provisioned since module signing went live, so this
-      # never regresses a real run — it only prevents a silently-unsigned one.
-      - name: require signing key
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-        run: |
-          if [ -z "$COSIGN_PRIVATE_KEY" ]; then
-            echo "::error::COSIGN_PRIVATE_KEY is required for edge image publishing"
-            exit 1
-          fi
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      # OCI references must be lowercase; github.repository_owner keeps the
-      # account's original casing, so fold it down for the by-digest push.
-      - id: image
-        run: |
-          owner_lc="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
-          echo "name=ghcr.io/${owner_lc}/gameplane/${{ matrix.component }}" >> "$GITHUB_OUTPUT"
-          # Short SHA, matching the sha-<short> tag. The full 40-char SHA made
-          # edge-<sha> 45 chars, over telemetryschema.VersionRE's 32-char
-          # limit, so every edge install reported its version as "invalid".
-          echo "version=edge-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-      - id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          # Same path as release.yaml so the edge and released images sit side
-          # by side under one package. metadata-action lowercases the owner.
-          images: ghcr.io/${{ github.repository_owner }}/gameplane/${{ matrix.component }}
-          tags: |
-            type=raw,value=edge
-            type=sha,prefix=sha-,format=short
-      # Push by digest only. The edge tags are attached after the digest is
-      # signed and verified, so :edge and :sha-* only ever name a signed image.
-      - id: build
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          file: ${{ matrix.dockerfile || format('{0}/Dockerfile', matrix.component) }}
-          platforms: linux/amd64,linux/arm64
-          outputs: type=image,name=${{ steps.image.outputs.name }},push-by-digest=true,name-canonical=true,push=true
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            VERSION=${{ steps.image.outputs.version }}
-          cache-from: type=gha,scope=edge-${{ matrix.component }}
-          cache-to: type=gha,mode=max,scope=edge-${{ matrix.component }}
-      # Spec 013 G2: never sign an image that has a fixed HIGH/CRITICAL
-      # vulnerability. Same flags as the `vuln (images)` CI gate.
-      - name: install trivy
+          ref: ${{ inputs.delivery_sha }}
+          persist-credentials: false
+      - name: install existing checksum-pinned Trivy 0.74.0
         uses: ./.github/actions/install-trivy
-      - name: scan pushed image
-        env:
-          IMAGE: ${{ steps.image.outputs.name }}
-          DIGEST: ${{ steps.build.outputs.digest }}
-          TRIVY_PLATFORMS: linux/amd64,linux/arm64
-        run: ./hack/trivy-scan-images.sh "${IMAGE}@${DIGEST}"
-      - name: install cosign
-        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
-        with:
-          cosign-release: 'v3.1.2'
-      # Refresh the Sigstore TUF trust root so the runner has the CURRENT
-      # public-good signing config — the Rekor v2 log key + timestamp authority.
-      # cosign's baked-in root can still reference a decommissioned yearly Rekor
-      # shard; without this, signing fails the Rekor-v2 TSA/checkpoint threshold
-      # check ("accepted signatures do not match threshold, Found: 0").
-      - name: refresh sigstore trust root
-        run: cosign initialize
-      # Keyed-sign the pushed image by digest AND record the signature in
-      # Sigstore's public-good Rekor transparency log, so misuse of the project
-      # key becomes publicly detectable.
-      #
-      # Two flags select cosign's classic, widely-compatible signing path over
-      # the new Rekor v2 flow:
-      #   --new-bundle-format=false  → classic OCI `.sig` signature + hashedrekord
-      #                                tlog entry (not a protobuf DSSE bundle),
-      #                                the format existing `cosign verify` clients
-      #                                and the operator's cosign/v2 verifier read.
-      #   --use-signing-config=false → legacy tlog upload to --rekor-url's default
-      #                                (https://rekor.sigstore.dev), NOT the Rekor
-      #                                v2 signing-config path. (cosign requires
-      #                                these two together: use-signing-config
-      #                                implies the new bundle format.)
-      # The default v3 flow targets Rekor v2, which additionally needs an RFC3161
-      # TSA timestamp and a live yearly log shard; keyed signing to it fails
-      # cosign's post-sign threshold self-check ("accepted signatures do not
-      # match threshold, Found: 0"). The classic path needs no TSA. Bounded retry
-      # tolerates a transient Rekor blip; we never fall back to an unlogged
-      # signature (strict verify below would fail anyway).
-      - name: sign image (keyed, logged)
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-          DIGEST: ${{ steps.build.outputs.digest }}
-        run: |
-          owner_lc="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
-          ref="ghcr.io/${owner_lc}/gameplane/${{ matrix.component }}@${DIGEST}"
-          for attempt in 1 2 3; do
-            if cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
-                --new-bundle-format=false --use-signing-config=false "$ref"; then
-              exit 0
-            fi
-            echo "::warning::cosign sign attempt ${attempt} failed; retrying"
-            sleep $((attempt * 10))
-          done
-          echo "::error::cosign sign failed after 3 attempts (Rekor unavailable?)"
-          exit 1
-      # Round-trip check: derive the public key from the signing secret and
-      # strictly verify the signature just pushed — no --insecure-ignore-tlog, so
-      # the Rekor inclusion evidence must be present. A corrupted key or a
-      # sign/verify mismatch fails the publish instead of every user's `cosign
-      # verify`. When signing/cosign.pub is committed in the repo it must match the
-      # derived key — a mismatch means the key was rotated without updating it.
-      - name: verify signature & check published key
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-          DIGEST: ${{ steps.build.outputs.digest }}
-        run: |
-          owner_lc="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
-          cosign public-key --key env://COSIGN_PRIVATE_KEY --outfile "$RUNNER_TEMP/cosign.pub"
-          # --new-bundle-format=false to read the classic signature we produced;
-          # no --insecure-ignore-tlog, so the Rekor log entry must be present.
-          cosign verify --key "$RUNNER_TEMP/cosign.pub" --new-bundle-format=false \
-            "ghcr.io/${owner_lc}/gameplane/${{ matrix.component }}@${DIGEST}"
-          if [ -f signing/cosign.pub ] && ! cmp -s signing/cosign.pub "$RUNNER_TEMP/cosign.pub"; then
-            echo "::error::committed signing/cosign.pub does not match COSIGN_PRIVATE_KEY — update the published key"
-            exit 1
-          fi
-      # Attach the edge tags only now that the digest carries a verified
-      # signature. `oras tag` points each tag at the existing manifest without
-      # rewriting it; the loop confirms every tag resolves to the signed digest.
-      # A run that stops or is superseded before this step leaves only an
-      # untagged digest behind.
-      - name: install oras
-        uses: oras-project/setup-oras@5e2f2482b30b0cb3e14e67f89a80c88c659a7c63 # v2.0.3
-      - name: attach edge tags to the signed digest
-        env:
-          IMAGE: ${{ steps.image.outputs.name }}
-          DIGEST: ${{ steps.build.outputs.digest }}
-          META_TAGS: ${{ steps.meta.outputs.tags }}
+      - name: scan both local images before any registry write
+        shell: bash
         run: |
           set -euo pipefail
-          mapfile -t refs < <(printf '%s\n' "$META_TAGS" | sed '/^[[:space:]]*$/d')
-          if [ "${#refs[@]}" -eq 0 ]; then
-            echo "::error::no edge tags were computed for ${IMAGE}"
-            exit 1
-          fi
-          tags=()
-          for r in "${refs[@]}"; do
-            if [ "${r%:*}" != "$IMAGE" ]; then
-              echo "::error::${r} is not a tag of ${IMAGE}"
-              exit 1
-            fi
-            tags+=("${r##*:}")
+          for component in api web; do
+            trivy image --input "$RUNNER_TEMP/storage-publication/$component" \
+              --platform linux/amd64 --severity HIGH,CRITICAL --ignore-unfixed \
+              --exit-code 1 --no-progress
           done
-          oras tag "${IMAGE}@${DIGEST}" "${tags[@]}"
-          for t in "${tags[@]}"; do
-            got="$(oras resolve "${IMAGE}:${t}")"
-            if [ "$got" != "$DIGEST" ]; then
-              echo "::error::${IMAGE}:${t} resolves to ${got}, not the signed digest ${DIGEST}"
-              exit 1
-            fi
-          done
-      # Surface the verification key (job summary + artifact) so publishing or
-      # rotating the repo's signing/cosign.pub never requires handling the private key
-      # outside CI. One matrix leg is enough — the key is the same for all.
-      - name: export public key
-        if: matrix.component == 'operator'
+      - uses: oras-project/setup-oras@5e2f2482b30b0cb3e14e67f89a80c88c659a7c63 # v2.0.3
+        with:
+          version: 1.3.6
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+        with:
+          cosign-release: v3.1.2
+      - name: publish by digest, keyless sign and verify, then attach exact source tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          {
-            echo '### cosign public key'
-            echo '```'
-            cat "$RUNNER_TEMP/cosign.pub"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-      - name: upload public key artifact
-        if: matrix.component == 'operator'
+          set -euo pipefail
+          printf '%s' "$GH_TOKEN" | oras login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          cosign initialize
+          for component in api web; do
+            image="ghcr.io/baylem/gameplane/$component"
+            digest=$(python3 -c 'import json,os,sys; print(json.load(open(os.environ["RUNNER_TEMP"]+"/storage-publication/run-receipt.json"))["images"][sys.argv[1]]["digest"])' "$component")
+            tag="storage-$SOURCE_SHA"
+            # A failed existing-tag lookup is not treated as tag absence. GET
+            # the manifest with the already authenticated registry client.
+            set +e
+            oras manifest fetch --descriptor "$image:$tag" > "$RUNNER_TEMP/tag.json" 2> "$RUNNER_TEMP/tag-error.txt"
+            status=$?
+            set -e
+            if [ "$status" -eq 0 ]; then
+              existing=$(python3 -c 'import json,os; print(json.load(open(os.environ["RUNNER_TEMP"]+"/tag.json"))["digest"])')
+              test "$existing" = "$digest" || { echo 'Refusing to overwrite a source tag with another digest'; exit 1; }
+            elif ! grep -Eq 'MANIFEST_UNKNOWN|manifest unknown|not found' "$RUNNER_TEMP/tag-error.txt"; then
+              echo 'Cannot establish source-tag state'; exit 1
+            fi
+            oras cp --from-oci-layout "$RUNNER_TEMP/storage-publication/$component@$digest" "$image@$digest"
+            test "$(oras resolve "$image@$digest")" = "$digest"
+            cosign sign --yes --new-bundle-format=false --use-signing-config=false \
+              -a "sourceMergeSha=$SOURCE_SHA" -a "headSha=$HEAD_SHA" \
+              -a "buildRun=$BUILD_RUN" -a "ciRun=$CI_RUN" "$image@$digest"
+            cosign verify --new-bundle-format=false \
+              --certificate-identity "$CERT_IDENTITY" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --certificate-github-workflow-repository Baylem/Gameplane \
+              --certificate-github-workflow-ref "$DELIVERY_REF" \
+              --certificate-github-workflow-sha "$DELIVERY_SHA" \
+              --certificate-github-workflow-trigger workflow_dispatch \
+              -a "sourceMergeSha=$SOURCE_SHA" -a "headSha=$HEAD_SHA" \
+              -a "buildRun=$BUILD_RUN" -a "ciRun=$CI_RUN" "$image@$digest" \
+              > "$RUNNER_TEMP/storage-publication/$component-verification.json"
+            oras tag "$image@$digest" "$tag"
+            test "$(oras resolve "$image:$tag")" = "$digest"
+            printf '%s@%s (%s)\n' "$image" "$digest" "$tag" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - name: upload public publication receipt and signature verification
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: cosign-pub
-          path: ${{ runner.temp }}/cosign.pub
+          name: storage-display-publication-${{ inputs.source_merge_sha }}
+          path: |
+            ${{ runner.temp }}/storage-publication/run-receipt.json
+            ${{ runner.temp }}/storage-publication/*-verification.json
+          if-no-files-found: error
+          retention-days: 30
